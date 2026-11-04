@@ -1,4 +1,5 @@
 import type { PostHog } from 'posthog-node';
+import { resolveFlagTargeting } from './featureFlagTargeting';
 
 const FEATURE_FLAG_DISABLE_VALUES = new Set(['true', '1', 'yes', 'on']);
 const DEFAULT_POSTHOG_API_KEY = 'phc_RiwIhTqFG1NOWw6TS53fpnj3B7fAGv2Ixx7JD2S4IIn';
@@ -36,6 +37,18 @@ const DEFAULT_VARIANT_FLAGS: Record<string, string> = {
   invoice_template: 'standard',
   email_composer: 'rich_text',
 };
+
+// Mirrors isPostHogEnabled() in @alga-psa/analytics: off when explicitly disabled,
+// and off under NODE_ENV=test unless a suite opts in with ALGA_USAGE_STATS=true.
+function usageStatsEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  if (env.ALGA_USAGE_STATS === 'false' || env.NEXT_PUBLIC_ALGA_USAGE_STATS === 'false') {
+    return false;
+  }
+  if (env.NODE_ENV === 'test') {
+    return env.ALGA_USAGE_STATS === 'true';
+  }
+  return true;
+}
 
 export function featureFlagsAreDisabled(env: NodeJS.ProcessEnv = process.env): boolean {
   const raw = env.NEXT_PUBLIC_DISABLE_FEATURE_FLAGS ?? env.DISABLE_FEATURE_FLAGS;
@@ -105,6 +118,11 @@ export class FeatureFlags {
   }
 
   async isEnabled(flagKey: string, context: FeatureFlagContext = {}): Promise<boolean> {
+    // Same targeting source as isFeatureFlagEnabled, so direct callers and the
+    // /api/v1/feature-flags route agree with admission and the bootstrap.
+    const targeted = resolveFlagTargeting(flagKey, context.tenantId);
+    if (targeted !== null) return targeted;
+
     if (featureFlagsAreDisabled()) {
       return true;
     }
@@ -246,7 +264,7 @@ export class FeatureFlags {
     }
 
     this.clientInitialized = true;
-    if (process.env.ALGA_USAGE_STATS === 'false' || process.env.NEXT_PUBLIC_ALGA_USAGE_STATS === 'false') {
+    if (!usageStatsEnabled()) {
       this.client = null;
       return this.client;
     }

@@ -157,6 +157,7 @@ vi.mock('../../../../shared/services/email/inboundEmailDurableStore', () => ({
 }));
 
 import { convertToWorkflowEvent } from '../../../../packages/event-schemas/src/schemas/eventBusSchema';
+import { parseStreamEvent } from '../../../../packages/event-schemas/src/schemas/workflowEventSchema';
 import { workflowEventPayloadSchemas } from '../../../../packages/event-schemas/src/schemas/domain/workflowEventPayloadSchemas';
 import { InboundEmailOutboxEventPublisher } from '../../../../shared/workflow/adapters/inboundEmailOutboxEventPublisher';
 import { WorkflowRuntimeV2EventStreamWorker } from './WorkflowRuntimeV2EventStreamWorker';
@@ -301,6 +302,8 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
       expect.objectContaining({
         matched_run_id: 'run-wait-1'
       })
+   ,
+      'tenant-1'
     );
     expect(workflowRunWaitListEventWaitCandidatesMock).toHaveBeenCalledWith(
       knexMock,
@@ -435,6 +438,14 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
         expect.stringContaining('Skipping workflow launch'),
         expect.objectContaining({ workflowId: 'workflow-1', reason: 'self_trigger' })
       );
+      expect(workflowRuntimeEventUpdateMock).toHaveBeenCalledWith(
+        knexMock,
+        'event-1',
+        expect.objectContaining({
+          error_message: expect.stringContaining('published by a run of this same workflow'),
+        }),
+        'tenant-1'
+      );
     });
 
     it('launches a workflow for another definition and carries causationDepth in trigger metadata', async () => {
@@ -469,6 +480,14 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
       expect(loggerWarnMock).toHaveBeenCalledWith(
         expect.stringContaining('Skipping workflow launch'),
         expect.objectContaining({ reason: 'causation_depth_exceeded', causationDepth: 6 })
+      );
+      expect(workflowRuntimeEventUpdateMock).toHaveBeenCalledWith(
+        knexMock,
+        'event-1',
+        expect.objectContaining({
+          error_message: expect.stringContaining('deeper than the causation limit (depth 6'),
+        }),
+        'tenant-1'
       );
     });
 
@@ -551,6 +570,8 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
       expect.objectContaining({
         error_message: expect.stringContaining('Missing workflow correlation key')
       })
+   ,
+      'tenant-1'
     );
   });
 
@@ -578,6 +599,8 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
       expect.objectContaining({
         matched_run_id: 'run-1'
       })
+   ,
+      'tenant-1'
     );
     expect(
       workflowRuntimeEventUpdateMock.mock.calls.some(([, eventId, patch]) => {
@@ -759,6 +782,162 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
     );
   });
 
+  describe('occurredAt consumer-boundary normalisation (alga-2026-0002379)', () => {
+    const tenant = '91a53464-0b67-4e3f-ae88-922d9c5af6ed';
+    const ticketId = '7fa265ac-3a50-4ad6-9454-4a860d884996';
+    const eventId = 'c9f1f8d4-7c1f-4a0c-9b0e-5a2f1f7f3a11';
+    const envelopeTimestamp = '2026-10-19T14:03:22.000Z';
+    // The exact key set of every payload rejected in production.
+    const productionPayload = {
+      source: 'email',
+      userId: ticketId,
+      board_id: '11111111-1111-4111-8111-111111111111',
+      tenantId: tenant,
+      ticketId,
+      client_id: '22222222-2222-4222-8222-222222222222',
+      priority_id: '33333333-3333-4333-8333-333333333333',
+    };
+
+    const setUpTicketCreatedWorkflow = async () => {
+      catalogSchemaRef = 'payload.TicketCreated.v1';
+      workflowRuntimeEventCreateMock.mockResolvedValue({ event_id: eventId });
+      workflowRunWaitListEventWaitCandidatesMock.mockResolvedValue([]);
+      workflowDefinitionListMock.mockResolvedValue([
+        { workflow_id: 'wf-tc', key: 'tc', status: 'published', trigger: { type: 'event', eventName: 'TICKET_CREATED' } },
+      ]);
+      workflowDefinitionVersionListByWorkflowMock.mockResolvedValue([
+        {
+          version: 3,
+          definition_json: {
+            id: 'wf-tc',
+            version: 3,
+            payloadSchemaRef: 'payload.TicketCreated.v1',
+            trigger: { type: 'event', eventName: 'TICKET_CREATED' },
+            steps: [],
+          },
+        },
+      ]);
+      schemaRegistryHasMock.mockReturnValue(true);
+      schemaRegistryGetMock.mockImplementation((ref: string) => workflowEventPayloadSchemas[ref]);
+      const worker = new WorkflowRuntimeV2EventStreamWorker('worker-1');
+      await worker.start();
+    };
+
+    const deliverEnvelope = (payload: unknown) =>
+      registeredConsumer!({
+        event_id: eventId,
+        event_type: 'TICKET_CREATED',
+        tenant,
+        timestamp: envelopeTimestamp,
+        payload,
+      });
+
+    it('(a) fills occurredAt from the envelope timestamp for the production inbound-email payload and launches', async () => {
+      await setUpTicketCreatedWorkflow();
+      await deliverEnvelope({ ...productionPayload });
+
+      expect(launchPublishedWorkflowRunMock).toHaveBeenCalledTimes(1);
+      expect(launchPublishedWorkflowRunMock.mock.calls[0]![1]).toMatchObject({
+        workflowId: 'wf-tc',
+        payload: expect.objectContaining({ ticketId, occurredAt: envelopeTimestamp }),
+      });
+      expect(skipInsertManyMock.mock.calls.flatMap((call: any[]) => call[2] as unknown[])).toHaveLength(0);
+      expect(workflowRuntimeEventCreateMock.mock.calls[0]![1]).toMatchObject({
+        payload: expect.objectContaining({ occurredAt: envelopeTimestamp }),
+      });
+      expect(loggerWarnMock).toHaveBeenCalledWith(
+        expect.stringContaining('defaulted from envelope timestamp'),
+        expect.objectContaining({
+          eventId,
+          eventType: 'TICKET_CREATED',
+          tenant,
+          payloadKeys: Object.keys(productionPayload).sort(),
+        })
+      );
+    });
+
+    it('(b) preserves an occurredAt the producer already stamped and does not warn', async () => {
+      await setUpTicketCreatedWorkflow();
+      const stamped = '2026-10-19T14:03:20.500Z';
+      await deliverEnvelope({ ...productionPayload, occurredAt: stamped });
+
+      expect(launchPublishedWorkflowRunMock.mock.calls[0]![1]).toMatchObject({
+        payload: expect.objectContaining({ occurredAt: stamped }),
+      });
+      expect(loggerWarnMock).not.toHaveBeenCalledWith(
+        expect.stringContaining('defaulted from envelope timestamp'),
+        expect.anything()
+      );
+    });
+
+    it('(c) a JSON-string payload_json on the wire is parsed by the real envelope parser, then normalised and launched', async () => {
+      await setUpTicketCreatedWorkflow();
+      // How the payload really travels: payload_json is a JSON string in the Redis stream message.
+      const parsed = parseStreamEvent({
+        id: '1-0',
+        message: {
+          event_id: eventId,
+          execution_id: '',
+          event_name: 'TICKET_CREATED',
+          event_type: 'TICKET_CREATED',
+          tenant,
+          timestamp: envelopeTimestamp,
+          user_id: '',
+          from_state: '',
+          to_state: '',
+          payload_json: JSON.stringify(productionPayload),
+        },
+      } as any);
+      await registeredConsumer!(parsed);
+
+      expect(launchPublishedWorkflowRunMock.mock.calls[0]![1]).toMatchObject({
+        payload: expect.objectContaining({ occurredAt: envelopeTimestamp }),
+      });
+    });
+
+    it('(c) a double-encoded string payload never reaches the worker: the stream envelope parser rejects it loudly', () => {
+      expect(() =>
+        parseStreamEvent({
+          id: '1-0',
+          message: {
+            event_id: eventId,
+            event_name: 'TICKET_CREATED',
+            event_type: 'TICKET_CREATED',
+            tenant,
+            timestamp: envelopeTimestamp,
+            payload_json: JSON.stringify(JSON.stringify(productionPayload)),
+          },
+        } as any)
+      ).toThrow(/Failed to parse workflow event/);
+    });
+
+    it('leaves the payload alone (validation still fails loudly) when the envelope has no timestamp, and never uses the clock', async () => {
+      await setUpTicketCreatedWorkflow();
+      await registeredConsumer!({ event_id: eventId, event_type: 'TICKET_CREATED', tenant, payload: { ...productionPayload } });
+
+      expect(launchPublishedWorkflowRunMock).not.toHaveBeenCalled();
+      expect(workflowRuntimeEventCreateMock.mock.calls[0]![1].payload).not.toHaveProperty('occurredAt');
+      const rows = skipInsertManyMock.mock.calls[0]![2] as any[];
+      expect(rows[0]).toMatchObject({ reason: 'payload_validation_failed' });
+    });
+
+    it('payload_validation_failed skip details carry eventId and sorted payloadKeys', async () => {
+      await setUpTicketCreatedWorkflow();
+      const { ticketId: _omitted, ...withoutTicketId } = productionPayload;
+      await deliverEnvelope(withoutTicketId);
+
+      expect(launchPublishedWorkflowRunMock).not.toHaveBeenCalled();
+      const rows = skipInsertManyMock.mock.calls[0]![2] as any[];
+      expect(rows[0].reason).toBe('payload_validation_failed');
+      expect(rows[0].details).toMatchObject({
+        eventId,
+        payloadKeys: [...Object.keys(withoutTicketId), 'occurredAt'].sort(),
+        workflowPayloadSchemaRef: 'payload.TicketCreated.v1',
+        issues: [expect.objectContaining({ path: 'ticketId' })],
+      });
+    });
+  });
+
   it('does not stamp a validation error when the event still launches another workflow', async () => {
     workflowRuntimeEventCreateMock.mockResolvedValue({ event_id: 'event-fanout' });
     workflowRunWaitListEventWaitCandidatesMock.mockResolvedValue([]);
@@ -851,7 +1030,8 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
       'event-5',
       expect.objectContaining({
         error_message: expect.stringContaining('temporal signal failed')
-      })
+      }),
+      'tenant-1'
     );
   });
 
@@ -914,7 +1094,8 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
       expect(workflowRuntimeEventUpdateMock).toHaveBeenCalledWith(
         knexMock,
         'event-fan',
-        expect.objectContaining({ matched_run_id: 'run-after' })
+        expect.objectContaining({ matched_run_id: 'run-after' }),
+        'tenant-1'
       );
       for (const call of workflowRuntimeEventUpdateMock.mock.calls) {
         expect(call[2]).not.toHaveProperty('error_message');
@@ -939,12 +1120,128 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
       expect(workflowRuntimeEventUpdateMock).toHaveBeenCalledWith(
         knexMock,
         'event-fan',
-        expect.objectContaining({ matched_run_id: 'run-after' })
+        expect.objectContaining({ matched_run_id: 'run-after' }),
+        'tenant-1'
       );
       const errorUpdate = workflowRuntimeEventUpdateMock.mock.calls.find((call) => 'error_message' in (call[2] as object));
       expect(errorUpdate?.[2]).toEqual(expect.objectContaining({
         error_message: expect.stringMatching(/workflow-limited: Workflow concurrency limit reached[\s\S]*workflow-down: Failed to connect/)
       }));
+    });
+
+    describe('mixed outcomes (alga-2026-0002379)', () => {
+      const deliverFrom = async (executionId: string, candidates: unknown[] = []) => {
+        workflowRunWaitListEventWaitCandidatesMock.mockResolvedValue(candidates);
+        const worker = new WorkflowRuntimeV2EventStreamWorker('worker-1');
+        await worker.start();
+        await registeredConsumer?.({
+          event_id: 'event-fan',
+          event_type: 'PING',
+          workflow_correlation_key: 'corr-fan',
+          tenant: 'tenant-1',
+          execution_id: executionId,
+          payload: { foo: 'bar' }
+        });
+      };
+      const originatedBy = (workflowId: string) =>
+        workflowRunGetByIdMock.mockResolvedValue({ run_id: 'run-origin', workflow_id: workflowId, trigger_metadata_json: null });
+      const finalUpdates = () => workflowRuntimeEventUpdateMock.mock.calls.filter((c) => c[1] === 'event-fan');
+
+      const persistedSkips = () => skipInsertManyMock.mock.calls.flatMap((call: any[]) => call[2] as Array<Record<string, unknown>>);
+
+      it('persists the self-trigger skip alongside a started run without marking the event as an error', async () => {
+        workflowDefinitionListMock.mockResolvedValue([pingWorkflow('workflow-a', { key: 'a' }), pingWorkflow('workflow-b')]);
+        originatedBy('workflow-a');
+        launchPublishedWorkflowRunMock.mockResolvedValue({ runId: 'run-b', workflowVersion: 7 });
+
+        await deliverFrom('run-origin');
+
+        expect(launchPublishedWorkflowRunMock).toHaveBeenCalledTimes(1);
+        expect(persistedSkips()).toEqual([
+          expect.objectContaining({ workflow_id: 'workflow-a', reason: 'self_trigger_guard' }),
+        ]);
+        expect(finalUpdates()).toHaveLength(1);
+        expect(finalUpdates()[0][2]).toEqual(expect.objectContaining({
+          matched_run_id: 'run-b',
+          processed_at: expect.any(String),
+        }));
+        expect(finalUpdates()[0][2]).not.toHaveProperty('error_message');
+        expect(finalUpdates()[0][3]).toBe('tenant-1');
+      });
+
+      it('stamps the self-trigger skip on the event when nothing launched', async () => {
+        workflowDefinitionListMock.mockResolvedValue([pingWorkflow('workflow-a', { key: 'a' })]);
+        originatedBy('workflow-a');
+
+        await deliverFrom('run-origin');
+
+        expect(launchPublishedWorkflowRunMock).not.toHaveBeenCalled();
+        expect(finalUpdates()).toHaveLength(1);
+        expect(finalUpdates()[0][2]).toEqual(expect.objectContaining({
+          processed_at: expect.any(String),
+          error_message: 'Skipped workflow a (workflow-a): event was published by a run of this same workflow (trigger loop guard)',
+        }));
+        expect(finalUpdates()[0][2]).not.toHaveProperty('matched_run_id');
+      });
+
+      it('persists a lineage skip alongside a signaled wait and matches the signaled run without an error', async () => {
+        workflowDefinitionListMock.mockResolvedValue([pingWorkflow('workflow-a')]);
+        originatedBy('other-workflow');
+
+        await deliverFrom('run-origin', [{ wait_id: 'wait-1', run_id: 'run-wait-1', wait_type: 'event', payload: null }]);
+        workflowRuntimeEventUpdateMock.mockClear();
+        launchPublishedWorkflowRunMock.mockClear();
+
+        // Same event, but the matching workflow is in the lineage and a wait is signaled.
+        workflowRunWaitListEventWaitCandidatesMock.mockResolvedValue([
+          { wait_id: 'wait-1', run_id: 'run-wait-1', wait_type: 'event', payload: null },
+        ]);
+        const worker = new WorkflowRuntimeV2EventStreamWorker('worker-1');
+        await worker.start();
+        await registeredConsumer?.({
+          event_id: 'event-fan',
+          event_type: 'PING',
+          workflow_correlation_key: 'corr-fan',
+          tenant: 'tenant-1',
+          payload: { foo: 'bar', workflowLineage: ['workflow-a'] }
+        });
+
+        expect(launchPublishedWorkflowRunMock).not.toHaveBeenCalled();
+        expect(persistedSkips()).toContainEqual(
+          expect.objectContaining({ workflow_id: 'workflow-a', reason: 'lineage_loop_guard' })
+        );
+        expect(finalUpdates()).toHaveLength(1);
+        expect(finalUpdates()[0][2]).toEqual(expect.objectContaining({
+          matched_run_id: 'run-wait-1',
+          processed_at: expect.any(String),
+        }));
+        expect(finalUpdates()[0][2]).not.toHaveProperty('error_message');
+      });
+
+      it('combines delivery errors with skip diagnostics, delivery first', async () => {
+        workflowDefinitionListMock.mockResolvedValue([pingWorkflow('workflow-a'), pingWorkflow('workflow-down')]);
+        originatedBy('workflow-a');
+        launchPublishedWorkflowRunMock.mockRejectedValue(new Error('Failed to connect before the deadline'));
+
+        await deliverFrom('run-origin');
+
+        expect(finalUpdates()).toHaveLength(1);
+        const message = (finalUpdates()[0][2] as { error_message: string }).error_message;
+        expect(message).toMatch(/Failed to connect before the deadline[\s\S]*published by a run of this same workflow/);
+        expect(finalUpdates()[0][2]).not.toHaveProperty('matched_run_id');
+        expect(finalUpdates()[0][3]).toBe('tenant-1');
+      });
+
+      it('keeps a paused workflow silent next to a started run', async () => {
+        workflowDefinitionListMock.mockResolvedValue([pingWorkflow('workflow-paused', { is_paused: true }), pingWorkflow('workflow-b')]);
+        launchPublishedWorkflowRunMock.mockResolvedValue({ runId: 'run-b', workflowVersion: 7 });
+
+        await deliverFrom('');
+
+        expect(finalUpdates()).toHaveLength(1);
+        expect(finalUpdates()[0][2]).toEqual(expect.objectContaining({ matched_run_id: 'run-b' }));
+        expect(finalUpdates()[0][2]).not.toHaveProperty('error_message');
+      });
     });
   });
 

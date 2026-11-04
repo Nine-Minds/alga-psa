@@ -1,155 +1,52 @@
 'use client';
 
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { ActivityFilters, ScheduleActivity, ActivityType } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { ScheduleCard } from './ActivityCard';
-import { fetchScheduleActivities, createAdHocActivity } from '@alga-psa/user-activities/actions';
-import { ScheduleSectionFiltersDialog } from './filters/ScheduleSectionFiltersDialog';
-import { FilterIcon, XCircle, Plus } from 'lucide-react';
+import { createAdHocActivity } from '@alga-psa/user-activities/actions';
+import { Plus } from 'lucide-react';
 import { useActivityDrawer } from './ActivityDrawerProvider';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useActivitySectionFeed } from '../hooks/useActivitySectionFeed';
 
 interface ScheduleSectionProps {
   limit?: number;
   onViewAll?: () => void;
   noCard?: boolean;
+  /** The shared filter model (the same one the table uses). */
+  filters: ActivityFilters;
+  targetUserId?: string;
+  /** Viewing another user: no quick-add, no action menus. */
+  readOnly?: boolean;
 }
 
-export function ScheduleSection({ limit = 5, onViewAll, noCard = false }: ScheduleSectionProps) {
+export function ScheduleSection({ limit = 5, onViewAll, noCard = false, filters, targetUserId = '', readOnly = false }: ScheduleSectionProps) {
   const { t } = useTranslation('msp/user-activities');
-  const [activities, setActivities] = useState<ScheduleActivity[]>([]);
-  const [loading, setLoading] = useState(true);
   const { openActivityDrawer } = useActivityDrawer();
-  const [error, setError] = useState<string | null>(null);
   const [adHocTitle, setAdHocTitle] = useState('');
   const [isAddingAdHoc, setIsAddingAdHoc] = useState(false);
-  const [scheduleFilters, setScheduleFilters] = useState<Partial<ActivityFilters>>({ 
-    isClosed: false,
-    dateRangeStart: new Date().toISOString(),
-    dateRangeEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-  });
-  const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+  // Recurring series collapse server-side, before pagination, so a 5-row preview shows 5 series.
+  const feed = useActivitySectionFeed<ScheduleActivity>(
+    ActivityType.SCHEDULE,
+    filters,
+    targetUserId,
+    limit,
+    { collapseRecurringSeries: true }
+  );
+  const { activities, loading } = feed;
+  const error = addError
+    ?? (feed.error
+      ? t('sections.schedule.errors.loadFailed', { defaultValue: 'Failed to load schedule activities. Please try again later.' })
+      : null);
 
-  useEffect(() => {
-    loadActivities();
-  }, [limit, scheduleFilters]);
-
-  const isFiltersActive = (): boolean => {
-    // Check if any filter is active (different from default)
-    if (scheduleFilters.isClosed !== false) return true;
-    if (scheduleFilters.search) return true;
-    if (scheduleFilters.isRecurring) return true;
-    if (scheduleFilters.workItemType) return true;
-    
-    // For date range, check if it's different from the default 30-day range
-    const defaultStart = new Date().toISOString().split('T')[0];
-    const defaultEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    
-    const currentStart = scheduleFilters.dateRangeStart?.split('T')[0];
-    const currentEnd = scheduleFilters.dateRangeEnd?.split('T')[0];
-    
-    if (currentStart !== defaultStart || currentEnd !== defaultEnd) return true;
-    
-    return false;
-  };
-
-  const handleResetFilters = () => {
-    setScheduleFilters({
-      isClosed: false,
-      dateRangeStart: new Date().toISOString(),
-      dateRangeEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-    });
-  };
-
-  async function loadActivities() {
-    try {
-      setLoading(true);
-      // Fetch schedule activities with current filters
-      const result = await fetchScheduleActivities(scheduleFilters);
-      
-      // Sort by start date (ascending)
-      const sortedActivities = result.sort((a, b) => {
-        if (a.startDate && b.startDate) {
-          return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
-        }
-        return 0;
-      });
-
-      const uniqueUpcomingActivities: ScheduleActivity[] = [];
-      const addedRecurringSeries = new Set<string>();
-
-      for (const activity of sortedActivities) {
-        if (activity.type === ActivityType.SCHEDULE) {
-          const scheduleActivity = activity as ScheduleActivity;
-          if (scheduleActivity.isRecurring) {
-            const seriesIdentifier = `${scheduleActivity.title}-${scheduleActivity.workItemId || 'no-item'}-${scheduleActivity.workItemType || 'no-type'}`;
-            if (!addedRecurringSeries.has(seriesIdentifier)) {
-              uniqueUpcomingActivities.push(scheduleActivity);
-              addedRecurringSeries.add(seriesIdentifier);
-            }
-          } else {
-            uniqueUpcomingActivities.push(scheduleActivity);
-          }
-        }
-      }
-      
-      setActivities(uniqueUpcomingActivities.slice(0, limit));
-      setError(null);
-    } catch (err) {
-      console.error('Error loading schedule activities:', err);
-      setError(t('sections.schedule.errors.loadFailed', { defaultValue: 'Failed to load schedule activities. Please try again later.' }));
-    } finally {
-      setLoading(false);
-    }
-  }
-  
-
-  const handleRefresh = async () => {
-    try {
-      setLoading(true);
-      const result = await fetchScheduleActivities(scheduleFilters);
-      
-      const sortedActivities = result.sort((a, b) => {
-        if (a.startDate && b.startDate) {
-          return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
-        }
-        return 0;
-      });
-
-      const uniqueUpcomingActivities: ScheduleActivity[] = [];
-      const addedRecurringSeries = new Set<string>();
-
-      for (const activity of sortedActivities) {
-        if (activity.type === ActivityType.SCHEDULE) {
-          const scheduleActivity = activity as ScheduleActivity;
-          if (scheduleActivity.isRecurring) {
-            const seriesIdentifier = `${scheduleActivity.title}-${scheduleActivity.workItemId || 'no-item'}-${scheduleActivity.workItemType || 'no-type'}`;
-            if (!addedRecurringSeries.has(seriesIdentifier)) {
-              uniqueUpcomingActivities.push(scheduleActivity);
-              addedRecurringSeries.add(seriesIdentifier);
-            }
-          } else {
-            uniqueUpcomingActivities.push(scheduleActivity);
-          }
-        }
-      }
-      
-      setActivities(uniqueUpcomingActivities.slice(0, limit));
-      setError(null);
-    } catch (err) {
-      console.error('Error refreshing schedule activities:', err);
-      setError(t('sections.schedule.errors.refreshFailed', { defaultValue: 'Failed to refresh schedule activities. Please try again later.' }));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleApplyFilters = (filters: Partial<ActivityFilters>) => {
-    setScheduleFilters(filters);
+  const handleRefresh = () => {
+    setAddError(null);
+    feed.refresh();
   };
 
   const handleAddAdHoc = async () => {
@@ -159,16 +56,17 @@ export function ScheduleSection({ limit = 5, onViewAll, noCard = false }: Schedu
     try {
       await createAdHocActivity({ title });
       setAdHocTitle('');
-      await loadActivities();
+      setAddError(null);
+      feed.refresh();
     } catch (err) {
       console.error('Error creating ad-hoc item:', err);
-      setError(t('sections.schedule.errors.addAdHocFailed', { defaultValue: 'Failed to add activity. Please try again.' }));
+      setAddError(t('sections.schedule.errors.addAdHocFailed', { defaultValue: 'Failed to add activity. Please try again.' }));
     } finally {
       setIsAddingAdHoc(false);
     }
   };
 
-  const quickAddRow = (
+  const quickAddRow = readOnly ? null : (
     <div className="mb-4 flex items-center gap-2">
       <Input
         id="schedule-add-adhoc-input"
@@ -210,29 +108,6 @@ export function ScheduleSection({ limit = 5, onViewAll, noCard = false }: Schedu
         >
           {t('sections.schedule.actions.refresh', { defaultValue: 'Refresh' })}
         </Button>
-        {isFiltersActive() ? (
-          <Button
-            id="reset-schedule-filters-button"
-            variant="outline"
-            size="sm"
-            onClick={handleResetFilters}
-            className="gap-1"
-          >
-            <XCircle className="h-4 w-4" />
-            {t('sections.schedule.actions.reset', { defaultValue: 'Reset' })}
-          </Button>
-        ) : (
-          <Button
-            id="filter-schedule-button"
-            variant="outline"
-            size="sm"
-            onClick={() => setIsFilterDialogOpen(true)}
-            className="gap-1"
-          >
-            <FilterIcon className="h-4 w-4" />
-            {t('sections.schedule.actions.filter', { defaultValue: 'Filter' })}
-          </Button>
-        )}
         <Button
           id="view-all-schedule-button"
           variant="outline"
@@ -267,17 +142,11 @@ export function ScheduleSection({ limit = 5, onViewAll, noCard = false }: Schedu
               key={activity.id}
               activity={activity}
               onViewDetails={() => openActivityDrawer(activity)}
+              readOnly={readOnly}
             />
           ))}
         </div>
       )}
-      {/* Schedule Filters Dialog */}
-      <ScheduleSectionFiltersDialog
-        isOpen={isFilterDialogOpen}
-        onOpenChange={setIsFilterDialogOpen}
-        initialFilters={scheduleFilters}
-        onApplyFilters={handleApplyFilters}
-      />
     </div>
   );
 
@@ -304,29 +173,6 @@ export function ScheduleSection({ limit = 5, onViewAll, noCard = false }: Schedu
           >
             {t('sections.schedule.actions.refresh', { defaultValue: 'Refresh' })}
           </Button>
-          {isFiltersActive() ? (
-            <Button
-              id="reset-schedule-filters-button"
-              variant="outline"
-              size="sm"
-              onClick={handleResetFilters}
-              className="gap-1"
-            >
-              <XCircle className="h-4 w-4" />
-              {t('sections.schedule.actions.reset', { defaultValue: 'Reset' })}
-            </Button>
-          ) : (
-            <Button
-              id="filter-schedule-button"
-              variant="outline"
-              size="sm"
-              onClick={() => setIsFilterDialogOpen(true)}
-              className="gap-1"
-            >
-              <FilterIcon className="h-4 w-4" />
-              {t('sections.schedule.actions.filter', { defaultValue: 'Filter' })}
-            </Button>
-          )}
           <Button
             id="view-all-schedule-button"
             variant="outline"
@@ -358,20 +204,12 @@ export function ScheduleSection({ limit = 5, onViewAll, noCard = false }: Schedu
                 key={activity.id}
                 activity={activity}
                 onViewDetails={() => openActivityDrawer(activity)}
+              readOnly={readOnly}
               />
             ))}
           </div>
         )}
       </CardContent>
-
-
-      {/* Schedule Filters Dialog */}
-      <ScheduleSectionFiltersDialog
-        isOpen={isFilterDialogOpen}
-        onOpenChange={setIsFilterDialogOpen}
-        initialFilters={scheduleFilters}
-        onApplyFilters={handleApplyFilters}
-      />
     </Card>
   );
 }

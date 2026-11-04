@@ -48,7 +48,7 @@ function validationFailure(error: z.ZodError): ActionFailure {
 }
 
 const ruleInputSchema = z.object({
-  integrationId: z.string().uuid(),
+  integrationId: z.string().guid(),
   name: z.string().min(1).max(255),
   description: z.string().max(2000).optional(),
   isActive: z.boolean().default(true),
@@ -59,9 +59,9 @@ const ruleInputSchema = z.object({
 const windowInputSchema = z
   .object({
     name: z.string().min(1).max(255),
-    integrationId: z.string().uuid().nullable().optional(),
-    clientId: z.string().uuid().nullable().optional(),
-    assetId: z.string().uuid().nullable().optional(),
+    integrationId: z.string().guid().nullable().optional(),
+    clientId: z.string().guid().nullable().optional(),
+    assetId: z.string().guid().nullable().optional(),
     isActive: z.boolean().default(true),
     startsAt: z.string().datetime().nullable().optional(),
     endsAt: z.string().datetime().nullable().optional(),

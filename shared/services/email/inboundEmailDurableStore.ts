@@ -1546,6 +1546,9 @@ export async function failInboundOutboxEventDelivery(db: DurableDb, params: {
   const backoffMs = boundedBackoffMsForDelivery(
     await getDeliveryAttemptCount(db, params.tenant, params.outbox_id, params.consumer)
   );
+  // Timestamps are bound as parameters: Citus rejects now() inside CASE in UPDATEs on distributed tables.
+  const nowIso = new Date().toISOString();
+  const nextAttemptAt = new Date(Date.now() + backoffMs).toISOString();
   const updated = await tenantDb(db, params.tenant).table('inbound_email_event_deliveries')
     .where({
       tenant: params.tenant,
@@ -1562,9 +1565,9 @@ export async function failInboundOutboxEventDelivery(db: DurableDb, params: {
       lease_owner: null,
       lease_token: null,
       lease_expires_at: null,
-      next_attempt_at: db.raw('CASE WHEN attempt_count + 1 >= ? THEN NULL ELSE now() + (? || \' milliseconds\')::interval END', [maxAttempts, backoffMs]),
+      next_attempt_at: db.raw('CASE WHEN attempt_count + 1 >= ? THEN NULL ELSE ?::timestamptz END', [maxAttempts, nextAttemptAt]),
       last_error: params.error,
-      completed_at: db.raw('CASE WHEN attempt_count + 1 >= ? THEN now() ELSE NULL END', [maxAttempts]),
+      completed_at: db.raw('CASE WHEN attempt_count + 1 >= ? THEN ?::timestamptz ELSE NULL END', [maxAttempts, nowIso]),
       updated_at: db.fn.now(),
     });
   if (updated === 0) return 'noop';
@@ -1603,6 +1606,8 @@ export async function recordInboundOutboxEventDeliveryFailure(db: DurableDb, par
   const maxAttempts = getDurableMaxAttempts();
   const backoffMs = boundedBackoffMsForDelivery(1);
   const now = db.fn.now();
+  const nowIso = new Date().toISOString();
+  const nextAttemptAt = new Date(Date.now() + backoffMs).toISOString();
 
   const inserted = await tenantDb(db, params.tenant).table('inbound_email_event_deliveries')
     .insert({
@@ -1637,9 +1642,9 @@ export async function recordInboundOutboxEventDeliveryFailure(db: DurableDb, par
       lease_owner: null,
       lease_token: null,
       lease_expires_at: null,
-      next_attempt_at: db.raw('CASE WHEN attempt_count + 1 >= ? THEN NULL ELSE now() + (? || \' milliseconds\')::interval END', [maxAttempts, backoffMs]),
+      next_attempt_at: db.raw('CASE WHEN attempt_count + 1 >= ? THEN NULL ELSE ?::timestamptz END', [maxAttempts, nextAttemptAt]),
       last_error: params.error,
-      completed_at: db.raw('CASE WHEN attempt_count + 1 >= ? THEN now() ELSE NULL END', [maxAttempts]),
+      completed_at: db.raw('CASE WHEN attempt_count + 1 >= ? THEN ?::timestamptz ELSE NULL END', [maxAttempts, nowIso]),
       updated_at: now,
     });
   if (updated === 0) return 'noop';

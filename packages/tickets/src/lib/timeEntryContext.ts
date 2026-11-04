@@ -3,6 +3,7 @@ import type {
   StopwatchEntrySpanView,
   StopwatchSessionView,
   TimeEntryWorkItemContext,
+  WorkItemType,
 } from '@alga-psa/types';
 import { formatStopwatchDuration } from '@alga-psa/ui/context';
 
@@ -14,6 +15,8 @@ interface BuildTicketTimeEntryContextParams {
   /** Resolved/explicit default service for the time entry; null = none. */
   serviceId?: string | null;
   serviceName?: string | null;
+  /** The work item the entry is booked against; defaults to the ticket itself. */
+  workItem?: { workItemType: WorkItemType; workItemId: string };
 }
 
 export function buildTicketTimeEntryContext({
@@ -23,10 +26,11 @@ export function buildTicketTimeEntryContext({
   masterTicketNumber,
   serviceId,
   serviceName,
+  workItem,
 }: BuildTicketTimeEntryContextParams): TimeEntryWorkItemContext {
   return {
-    workItemId: ticket.ticket_id ?? '',
-    workItemType: 'ticket',
+    workItemId: workItem?.workItemId ?? ticket.ticket_id ?? '',
+    workItemType: workItem?.workItemType ?? 'ticket',
     workItemName: ticket.title || `Ticket ${ticket.ticket_number}`,
     ticketNumber: ticket.ticket_number,
     masterTicketId: ticket.master_ticket_id ?? null,

@@ -17,8 +17,19 @@ export async function installApiTestDependencies({ run = runNpm, wait = delay, s
       && /^npm (?:error|ERR!) Error: Failed to download ffmpeg [^\r\n]+\.$/m.test(result.stderr)
       && /^npm (?:error|ERR!) +url: 'https:\/\/github\.com\/eugeneware\/ffmpeg-static\/releases\/download\/[^'\s]+',\s*$/m.test(result.stderr)
       && /^npm (?:error|ERR!) +statusCode: (?:500|502|503|504)\s*$/m.test(result.stderr);
+    // @mongodb-js/zstd (a dependency of the sdk sample workspaces) downloads a
+    // prebuilt binary, and its published fallback build is broken: the tarball
+    // ships no etc/install-zstd.sh, so a timed-out download exits 127 instead
+    // of compiling. The diagnostic names the timeout, which no local change can
+    // produce, so this one needs no opt-in. Anything else prebuild-install
+    // reports (a missing release, a 404) stays terminal.
+    const zstdPrebuildDownload = result.code === 127
+      && npmCodes.length === 1 && npmCodes[0] === '127'
+      && /^npm (?:error|ERR!) path [^\r\n]*\/node_modules\/@mongodb-js\/zstd\s*$/m.test(result.stderr)
+      && /^npm (?:error|ERR!) command sh -c prebuild-install --runtime napi \|\| npm run clean-install\s*$/m.test(result.stderr)
+      && /^npm (?:error|ERR!) prebuild-install warn install Request timed out\s*$/m.test(result.stderr);
     if (result.signal || result.code === 0 || attempt === 2 || signal?.aborted
-      || (!reset && !ffmpegDownload)) return result;
+      || (!reset && !ffmpegDownload && !zstdPrebuildDownload)) return result;
     await wait(2000, undefined, { signal });
   }
 }

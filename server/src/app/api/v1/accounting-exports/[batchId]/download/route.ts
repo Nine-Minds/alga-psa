@@ -16,6 +16,7 @@ import {
   TaxDelegationMode
 } from '@alga-psa/types';
 import { getXeroCsvSettings } from '@alga-psa/integrations/actions/integrations/xeroCsvActions';
+import { getQuickBooksDesktopSettingsForTenant } from '@alga-psa/integrations/runtime';
 import logger from '@alga-psa/core/logger';
 
 export async function GET(
@@ -85,6 +86,8 @@ export async function GET(
           error: (error as Error).message
         });
       }
+    } else if (batch.adapter_type === 'quickbooks_desktop' && batch.tenant) {
+      adapterSettings = { ...(await getQuickBooksDesktopSettingsForTenant(batch.tenant)) };
     }
 
     // Regenerate the file content by running transform

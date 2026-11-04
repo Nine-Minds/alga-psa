@@ -117,7 +117,7 @@ DEPLOYMENT_PROFILE=hosted  # Optional: 'hosted' (default) or 'appliance'
 ```
 
 Community Edition never needs this setting. It exists for the Enterprise Edition
-on-premise appliance, whose chart sets `appliance`. That profile bundles three
+on-premise appliance, whose chart sets `appliance`. That profile bundles two
 behaviors:
 
 - Custom client-portal domains provision directly instead of through the hosted
@@ -125,8 +125,10 @@ behaviors:
   activates immediately and your proxy owns DNS, TLS, and routing. Community
   Edition always provisions this way.
 - `X-Forwarded-Host` is trusted, exactly as with `TRUST_FORWARDED_HOST=true`.
-- Microsoft 365 mailbox OAuth uses the customer-owned app registration's tenant
-  authority instead of the shared multi-tenant app.
+
+The profile does not change the Microsoft 365 mailbox authority. That follows the
+Microsoft profile's Tenant ID, as described in the
+[Microsoft 365 setup guide](../inbound-email/setup/microsoft.md).
 
 #### Crypto Settings (CRYPTO_*)
 ```

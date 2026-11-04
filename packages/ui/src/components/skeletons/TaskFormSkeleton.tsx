@@ -1,5 +1,8 @@
+'use client';
+
 import React from 'react';
 import { User, Calendar, Tag, Link, ListChecks, Paperclip } from 'lucide-react';
+import { useTranslation } from '../../lib/i18n/client';
 
 interface TaskFormSkeletonProps {
   isEdit?: boolean;
@@ -8,6 +11,7 @@ interface TaskFormSkeletonProps {
 const TaskFormSkeleton = ({ 
   isEdit = false
 }: TaskFormSkeletonProps) => {
+  const { t } = useTranslation('common');
   return (
     <div className="animate-pulse max-h-[90vh] overflow-y-auto">
       <div className="space-y-4">
@@ -161,7 +165,7 @@ const TaskFormSkeleton = ({
         <div className="flex items-center justify-center py-4">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-[rgb(var(--color-primary-600))] mb-2"></div>
-            <p className="text-gray-500 text-sm">Loading task form...</p>
+            <p className="text-gray-500 text-sm">{t('skeletons.taskForm.loading')}</p>
           </div>
         </div>
       </div>

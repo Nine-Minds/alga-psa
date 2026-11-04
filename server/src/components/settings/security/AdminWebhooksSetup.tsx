@@ -43,6 +43,7 @@ import {
   listWebhookDeliveries,
   listWebhookEvents,
   listWebhooks,
+  retryFailedWebhookDeliveries,
   retryWebhookDelivery,
   rotateWebhookSecret,
   sendWebhookTest,
@@ -2111,6 +2112,7 @@ function OutboundWebhooksSetup() {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [rotating, setRotating] = useState(false);
+  const [retryingFailed, setRetryingFailed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [revealedSecret, setRevealedSecret] = useState<string | null>(null);
@@ -2282,7 +2284,8 @@ function OutboundWebhooksSetup() {
         webhookId: formState.webhookId,
         name: formState.name.trim(),
         url: formState.url.trim(),
-        eventTypes: formState.eventTypes as Parameters<typeof upsertWebhook>[0]['eventTypes'],
+        // Stored legacy (retired) names ride along unchanged; the server accepts them only if already on the row.
+        eventTypes: formState.eventTypes,
         customHeaders: parseCustomHeaders(
           formState.customHeadersText,
           (line) => t('security.webhooks.messages.invalidHeaderLine', { line }),
@@ -2442,6 +2445,34 @@ function OutboundWebhooksSetup() {
     }
   }, [selectedWebhook, t]);
 
+  const handleRetryFailedDeliveries = useCallback(async () => {
+    if (!selectedWebhook) {
+      return;
+    }
+
+    try {
+      setRetryingFailed(true);
+      const result = await retryFailedWebhookDeliveries(selectedWebhook.webhookId);
+      if (isServerActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
+      setStatusMessage(t('security.webhooks.messages.retryFailedQueued', {
+        queued: result.queued,
+        skipped: result.skipped,
+      }));
+      await loadDeliveries(selectedWebhook.webhookId, deliveryPage);
+      setError(null);
+    } catch (retryError) {
+      console.error('Failed to retry failed deliveries:', retryError);
+      setError(retryError instanceof Error
+        ? retryError.message
+        : t('security.webhooks.messages.retryFailedFailed'));
+    } finally {
+      setRetryingFailed(false);
+    }
+  }, [deliveryPage, loadDeliveries, selectedWebhook, t]);
+
   const totalDeliveryPages = deliveries ? Math.max(1, Math.ceil(deliveries.total / deliveries.limit)) : 1;
 
   const webhookColumns = useMemo<ColumnDefinition<WebhookSettingsView>[]>(() => [
@@ -2452,7 +2483,11 @@ function OutboundWebhooksSetup() {
         <div>
           <div className="font-medium text-gray-900">{webhook.name}</div>
           <div className="mt-1 break-all text-xs text-gray-500">{webhook.url}</div>
-          <div className="mt-1 text-xs text-gray-500">{webhook.eventTypes.join(', ')}</div>
+          <div className="mt-1 text-xs text-gray-500">
+            {webhook.eventTypes.map((eventType) => (eventOptions.includes(eventType)
+              ? eventType
+              : `${eventType} (${t('security.webhooks.form.legacyEventLabel', { defaultValue: 'unsupported' })})`)).join(', ')}
+          </div>
         </div>
       ),
     },
@@ -2513,7 +2548,7 @@ function OutboundWebhooksSetup() {
         </DropdownMenu>
       ),
     },
-  ], [handleDeleteFromRow, handleEditClick, handleToggleActiveFor, handleViewClick, locale, neverLabel, t]);
+  ], [handleDeleteFromRow, handleEditClick, handleToggleActiveFor, eventOptions, handleViewClick, locale, neverLabel, t]);
 
   const handleTablePageSizeChange = useCallback((newPageSize: number) => {
     setTablePageSize(newPageSize);
@@ -2704,12 +2739,14 @@ function OutboundWebhooksSetup() {
             testing={testing}
             rotating={rotating}
             saving={saving}
+            retryingFailed={retryingFailed}
             neverLabel={neverLabel}
             noResponseCodeLabel={noResponseCodeLabel}
             onSendTest={handleSendTest}
             onRotateSecret={handleRotateSecret}
             onToggleActive={handleToggleActive}
             onRetry={handleRetryDelivery}
+            onRetryFailed={handleRetryFailedDeliveries}
             onLoadDeliveries={(webhookId, page) => {
               void loadDeliveries(webhookId, page);
             }}
@@ -2771,7 +2808,7 @@ function OutboundWebhooksSetup() {
  * from delivery. The parent component decides on save whether the resulting
  * selection collapses to "full payload" (sentinel `null`) or an explicit map.
  */
-function PayloadFieldSelector(props: {
+export function PayloadFieldSelector(props: {
   selectedEventTypes: string[];
   selection: Record<string, string[]>;
   onChange: (next: Record<string, string[]>) => void;
@@ -2828,10 +2865,11 @@ function PayloadFieldSelector(props: {
           <div key={entity} className="mb-4 last:mb-0">
             <div className="mb-2 flex items-center justify-between">
               <div className="text-xs font-semibold uppercase tracking-wide text-gray-600">
-                {entity}
+                {entity === 'quote' ? t('security.webhooks.quotePayload.entity', { defaultValue: 'Quote' }) : entity}
               </div>
               <div className="flex gap-3 text-xs">
                 <button
+                  id={`webhook-fields-${entity}-select-all`}
                   type="button"
                   className="text-primary-600 hover:underline"
                   onClick={() => setEntitySelection(entity, [...all])}
@@ -2840,6 +2878,7 @@ function PayloadFieldSelector(props: {
                   {t('security.webhooks.form.payloadFieldsSelectAll', { defaultValue: 'Select all' })}
                 </button>
                 <button
+                  id={`webhook-fields-${entity}-clear`}
                   type="button"
                   className="text-gray-600 hover:underline"
                   onClick={() => setEntitySelection(entity, [])}
@@ -2854,7 +2893,7 @@ function PayloadFieldSelector(props: {
                 <Checkbox
                   key={`${entity}-${field}`}
                   id={`webhook-field-${entity}-${field}`}
-                  label={field}
+                  label={entity === 'quote' ? t(`security.webhooks.quotePayload.fields.${field}`, { defaultValue: field }) : field}
                   checked={selected.has(field)}
                   onChange={(event) => toggleField(entity, field, event.target.checked)}
                 />
@@ -2877,6 +2916,11 @@ function ConfigurationTabBody(props: {
   t: TFunc;
 }) {
   const { formState, eventOptions, handleFieldChange, handleEventToggle, t } = props;
+  // Stored names that are not advertised any more (kept inert, never dropped silently).
+  const legacyEventTypes = useMemo(
+    () => formState.eventTypes.filter((eventType) => !eventOptions.includes(eventType)),
+    [formState.eventTypes, eventOptions],
+  );
   return (
     <>
       <p className="text-sm text-gray-600 mb-4">
@@ -2921,6 +2965,27 @@ function ConfigurationTabBody(props: {
               />
             ))}
           </div>
+          {legacyEventTypes.length > 0 && (
+            <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3" data-testid="webhook-legacy-events">
+              <div className="text-xs text-amber-800">
+                {t('security.webhooks.form.legacyEventsHelp', {
+                  defaultValue:
+                    'These event types are no longer supported. They are kept on this webhook but never deliver. Uncheck one to remove it.',
+                })}
+              </div>
+              <div className="mt-2 grid gap-1 md:grid-cols-2">
+                {legacyEventTypes.map((eventType) => (
+                  <Checkbox
+                    key={eventType}
+                    id={`webhook-event-legacy-${eventType}`}
+                    label={`${eventType} (${t('security.webhooks.form.legacyEventLabel', { defaultValue: 'unsupported' })})`}
+                    checked={formState.eventTypes.includes(eventType)}
+                    onChange={(event) => handleEventToggle(eventType, event.target.checked)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div>
@@ -2996,21 +3061,27 @@ function DeliveriesTabBody(props: {
   testing: boolean;
   rotating: boolean;
   saving: boolean;
+  retryingFailed: boolean;
   neverLabel: string;
   noResponseCodeLabel: string;
   onSendTest: () => void | Promise<void>;
   onRotateSecret: () => void | Promise<void>;
   onToggleActive: () => void | Promise<void>;
   onRetry: (delivery: WebhookDeliveryView) => void | Promise<void>;
+  onRetryFailed: () => void | Promise<void>;
   onLoadDeliveries: (webhookId: string, page?: number) => void | Promise<void>;
   t: TFunc;
 }) {
   const {
     selectedWebhook, deliveries, deliveryPage, totalDeliveryPages,
-    testing, rotating, saving, neverLabel, noResponseCodeLabel,
-    onSendTest, onRotateSecret, onToggleActive, onRetry, onLoadDeliveries, t,
+    testing, rotating, saving, retryingFailed, neverLabel, noResponseCodeLabel,
+    onSendTest, onRotateSecret, onToggleActive, onRetry, onRetryFailed, onLoadDeliveries, t,
   } = props;
   const { locale } = useFormatters();
+
+  const hasRetryableDeliveries = (deliveries?.data ?? []).some(
+    (delivery) => !delivery.isTest && (delivery.status === 'failed' || delivery.status === 'abandoned'),
+  );
 
   if (!selectedWebhook) return null;
 
@@ -3039,6 +3110,17 @@ function DeliveriesTabBody(props: {
             {testing
               ? t('security.webhooks.detail.sending')
               : t('security.webhooks.detail.sendTest')}
+          </Button>
+          <Button
+            id="webhook-retry-failed"
+            size="sm"
+            variant="ghost"
+            onClick={() => void onRetryFailed()}
+            disabled={retryingFailed || !hasRetryableDeliveries}
+          >
+            {retryingFailed
+              ? t('security.webhooks.detail.retryingFailed')
+              : t('security.webhooks.detail.retryFailed')}
           </Button>
           <Button
             id="webhook-rotate-secret"

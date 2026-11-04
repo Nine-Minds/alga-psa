@@ -11,7 +11,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const controller = new ApiTimeSheetController();
     const req = request as any;
     req.params = params;
-    return await controller.update()(req);
+    return await controller.reopenTimePeriod()(req);
   } catch (error) {
     return handleApiError(error);
   }

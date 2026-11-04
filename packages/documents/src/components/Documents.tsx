@@ -119,6 +119,8 @@ interface DocumentsProps {
   allowLinkExistingDocuments?: boolean;
   /** Allow creating rich-text/block documents from this surface. */
   allowBlockDocuments?: boolean;
+  /** List and open documents only: no add, upload, link, delete or detach (for example an ended co-managed workspace). */
+  readOnly?: boolean;
 }
 
 const Documents = ({
@@ -143,6 +145,7 @@ const Documents = ({
   allowDocumentSharing = true,
   allowLinkExistingDocuments = true,
   allowBlockDocuments = true,
+  readOnly = false,
 }: DocumentsProps): React.JSX.Element => {
   const { t } = useTranslation(namespace);
   const documentKeyPrefix = namespace === 'common' ? 'documents.' : '';
@@ -504,6 +507,24 @@ const Documents = ({
     }
   }, [inFolderMode, entityId, entityType, filters, currentFolder, currentPage, pageSize, onDocumentCreated, tDoc]);
 
+  // Shared post-save step for every drawer change (collab save, fallback save,
+  // edit/rename, orphan delete on cancel). The change itself already succeeded,
+  // so a failed refetch must never block closing the drawer.
+  const finalizeDrawerSave = useCallback(async (): Promise<void> => {
+    try {
+      const refreshed = await refreshDocuments();
+      if (!refreshed) {
+        toast.error(tDoc('messages.fetchFailed', 'Failed to fetch documents.'));
+      }
+    } catch (err) {
+      console.error('Error refreshing documents after drawer change:', err);
+      toast.error(tDoc('messages.fetchFailed', 'Failed to fetch documents.'));
+    }
+    if (inFolderMode) {
+      setFolderTreeKey(prev => prev + 1);
+    }
+  }, [refreshDocuments, inFolderMode, tDoc]);
+
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
   };
@@ -773,9 +794,12 @@ const Documents = ({
     if (preCreatedDocIdRef.current) {
       const orphanedId = preCreatedDocIdRef.current;
       preCreatedDocIdRef.current = null;
-      void deleteDocument(orphanedId, userId).catch((deleteError) => {
-        console.error('[Documents] Failed to clean up pre-created document:', deleteError);
-      });
+      // Refetch only after the delete settles, otherwise the refetch can return the row being deleted
+      void deleteDocument(orphanedId, userId)
+        .catch((deleteError) => {
+          console.error('[Documents] Failed to clean up pre-created document:', deleteError);
+        })
+        .then(() => finalizeDrawerSave());
     }
 
     setShowUnsavedChangesDialog(false);
@@ -795,7 +819,7 @@ const Documents = ({
       setIsEditModeInDrawer(false);
     }
     setSelectedDocument(null);
-  }, [isCreatingNew, selectedDocument, userId]);
+  }, [isCreatingNew, selectedDocument, userId, finalizeDrawerSave]);
 
   // Handle drawer close with unsaved changes check
   const handleDrawerClose = useCallback(() => {
@@ -904,70 +928,6 @@ const Documents = ({
     }
   };
 
-  const handleSaveNewDocument = async () => {
-    try {
-      const finalName = newDocumentName.trim() || tDoc('untitledDocument', 'Untitled Document');
-
-      setIsSaving(true);
-      setDrawerError(null);
-
-      if (preCreatedDocIdRef.current) {
-        // Update the pre-created document with final name and content
-        const docId = preCreatedDocIdRef.current;
-        const updateResult = await updateDocument(docId, {
-          document_name: finalName,
-          edited_by: userId
-        });
-        if (isDocumentActionError(updateResult)) {
-          setDrawerError(getErrorMessage(updateResult));
-          return;
-        }
-        const contentResult = await updateBlockContent(docId, {
-          block_data: JSON.stringify(currentContent),
-          user_id: userId
-        });
-        if (isDocumentActionError(contentResult)) {
-          setDrawerError(getErrorMessage(contentResult));
-          return;
-        }
-        preCreatedDocIdRef.current = null;
-      } else {
-        // Fallback: create new if pre-creation didn't happen
-        const createResult = await createBlockDocument({
-          document_name: finalName,
-          user_id: userId,
-          block_data: JSON.stringify(currentContent),
-          entityId,
-          entityType,
-          folder_path: documentFolderPath
-        });
-        if (isDocumentActionError(createResult)) {
-          setDrawerError(getErrorMessage(createResult));
-          return;
-        }
-      }
-
-      // Refresh the document list (triggers router.refresh() in entity mode)
-      await refreshDocuments();
-      if (inFolderMode) {
-        setFolderTreeKey(prev => prev + 1);
-      }
-
-      // Reset folder selection for next document
-      setDocumentFolderPath(null);
-
-      setIsCreatingNew(false);
-      setIsDrawerOpen(false);
-    } catch (error) {
-      console.error('Error creating document:', error);
-      setDrawerError(
-        tDoc('messages.createFailed', 'Failed to create document')
-      );
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const handleSaveChanges = async () => {
     try {
       if (!selectedDocument) return;
@@ -996,12 +956,12 @@ const Documents = ({
         }
       }
 
-      // Trigger preview refresh for only the edited document
+      // Trigger preview refresh for the edited document
       setEditedDocumentId(selectedDocument.document_id);
       setRefreshTimestamp(Date.now());
 
-      // Don't call onDocumentCreated (which refetches all documents)
-      // We only need to refresh the preview, not reload all documents
+      // Refetch so renamed documents update their card title
+      await finalizeDrawerSave();
 
       setHasContentChanged(false);
       setIsDrawerOpen(false);
@@ -1020,8 +980,11 @@ const Documents = ({
       if (!selectedDocument) return;
       setIsSaving(true);
 
+      // Capture before any state reset below
+      const wasCreatingNew = isCreatingNew;
+
       // For new documents or when the name changed, update the document name
-      const finalName = isCreatingNew
+      const finalName = wasCreatingNew
         ? (newDocumentName.trim() || tDoc('untitledDocument', 'Untitled Document'))
         : documentName;
 
@@ -1058,6 +1021,7 @@ const Documents = ({
       preCreatedDocIdRef.current = null;
       setEditedDocumentId(selectedDocument.document_id);
       setRefreshTimestamp(Date.now());
+      await finalizeDrawerSave();
 
       setIsDrawerOpen(false);
       setDrawerError(null);
@@ -1083,7 +1047,10 @@ const Documents = ({
       if (!selectedDocument) return;
       setIsSaving(true);
 
-      const finalName = isCreatingNew
+      // Capture before any state reset below
+      const wasCreatingNew = isCreatingNew;
+
+      const finalName = wasCreatingNew
         ? (newDocumentName.trim() || tDoc('untitledDocument', 'Untitled Document'))
         : documentName;
 
@@ -1114,6 +1081,7 @@ const Documents = ({
       preCreatedDocIdRef.current = null;
       setEditedDocumentId(selectedDocument.document_id);
       setRefreshTimestamp(Date.now());
+      await finalizeDrawerSave();
 
       setIsDrawerOpen(false);
       setDrawerError(null);
@@ -1187,6 +1155,7 @@ const Documents = ({
   const handleDocumentClick = async (document: IDocument) => {
     // For in-app documents (no file_id), open in drawer/editor
     if (!document.file_id) {
+      setShowPreviewModal(false);
       setSelectedDocument(document);
       setDocumentName(document.document_name);
       setIsCreatingNew(false);
@@ -1201,6 +1170,7 @@ const Documents = ({
     if (document.mime_type?.startsWith('image/') ||
         document.mime_type?.startsWith('video/') ||
         document.mime_type === 'application/pdf') {
+      setIsDrawerOpen(false);
       setPreviewDocument(document);
       setShowPreviewModal(true);
       return;
@@ -1233,11 +1203,12 @@ const Documents = ({
   useEffect(() => {
     if (documentToOpen) void handleDocumentClickRef.current(documentToOpen);
   }, [documentToOpen]);
-  const wasDrawerOpen = useRef(false);
+  const wasViewerOpen = useRef(false);
+  const isViewerOpen = isDrawerOpen || showPreviewModal;
   useEffect(() => {
-    if (wasDrawerOpen.current && !isDrawerOpen) onDocumentClosed?.();
-    wasDrawerOpen.current = isDrawerOpen;
-  }, [isDrawerOpen, onDocumentClosed]);
+    if (wasViewerOpen.current && !isViewerOpen) onDocumentClosed?.();
+    wasViewerOpen.current = isViewerOpen;
+  }, [isViewerOpen, onDocumentClosed]);
   useEffect(() => {
     if (!inFolderMode) return;
     const docId = searchParams?.get('doc') ?? null;
@@ -1377,15 +1348,15 @@ const Documents = ({
           <DocumentStorageCard
             id={`${id}-document-${document.document_id}`}
             document={document}
-            onDelete={getOrCreateDeleteHandler(document)}
+            onDelete={readOnly ? undefined : getOrCreateDeleteHandler(document)}
             onDisassociate={getOrCreateDisassociateHandler(document)}
             onMove={getOrCreateMoveHandler(document)}
-            showDisassociate={Boolean(entityId && entityType)}
+            showDisassociate={Boolean(entityId && entityType) && !readOnly}
             showMove={inFolderMode}
-            showVisibilityControls={showVisibilityControls}
+            showVisibilityControls={showVisibilityControls && !readOnly}
             onToggleVisibility={handleToggleDocumentVisibility}
             isVisibilityUpdating={visibilityUpdatingIds.has(document.document_id)}
-            onShare={allowDocumentSharing ? handleShareDocument : undefined}
+            onShare={allowDocumentSharing && !readOnly ? handleShareDocument : undefined}
             forceRefresh={editedDocumentId === document.document_id ? refreshTimestamp : undefined}
             onClick={getOrCreateClickHandler(document)}
             isContentDocument={!document.file_id}
@@ -1396,13 +1367,9 @@ const Documents = ({
   };
 
   const getSaveHandler = () => {
-    if (isCreatingNew) {
-      return selectedDocument
-        ? isFallbackMode ? handleSaveFallback : handleSaveCollabSnapshot
-        : handleSaveNewDocument;
-    }
+    // New documents are always pre-created, so they take the same paths as edits.
     if (isFallbackMode) return handleSaveFallback;
-    if (isCollaborativeEdit) return handleSaveCollabSnapshot;
+    if (isCreatingNew || isCollaborativeEdit) return handleSaveCollabSnapshot;
     return handleSaveChanges;
   };
 
@@ -1630,9 +1597,51 @@ const Documents = ({
     </div>
   );
 
+  const previewModal = (
+    showPreviewModal && previewDocument && previewDocument.file_id && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75" onClick={() => setShowPreviewModal(false)}>
+        <div className="relative max-w-7xl max-h-[90vh] w-full mx-4" onClick={(e) => e.stopPropagation()}>
+          <button
+            id={`${id}-preview-close`}
+            aria-label="Close preview"
+            className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
+            onClick={() => setShowPreviewModal(false)}
+          >
+            <X className="w-8 h-8" />
+          </button>
+          {previewDocument.mime_type?.startsWith('image/') && (
+            <img
+              src={previewDocument.preview_file_id ? `/api/documents/${previewDocument.document_id}/preview` : `/api/documents/view/${previewDocument.document_id}`}
+              alt={previewDocument.document_name}
+              className="max-w-full max-h-[90vh] object-contain mx-auto"
+            />
+          )}
+          {previewDocument.mime_type?.startsWith('video/') && (
+            <video
+              src={`/api/documents/view/${previewDocument.document_id}`}
+              controls
+              className="max-w-full max-h-[90vh] mx-auto"
+            />
+          )}
+          {previewDocument.mime_type === 'application/pdf' && (
+            <iframe
+              src={`/api/documents/view/${previewDocument.document_id}`}
+              className="w-full h-[90vh] bg-white"
+              title={previewDocument.document_name}
+            />
+          )}
+          <div className="mt-2 text-center text-white">
+            <p className="text-lg font-medium">{previewDocument.document_name}</p>
+          </div>
+        </div>
+      </div>
+    )
+  );
+
   if (drawerOnly) {
     return (
       <>
+        {previewModal}
         <Drawer
           id={`${id}-document-drawer`}
           isOpen={isDrawerOpen}
@@ -1924,43 +1933,7 @@ const Documents = ({
             getFoldersFn={getFoldersFn}
           />
 
-          {/* Preview Modal for Images/Videos/PDFs */}
-          {showPreviewModal && previewDocument && previewDocument.file_id && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75" onClick={() => setShowPreviewModal(false)}>
-              <div className="relative max-w-7xl max-h-[90vh] w-full mx-4" onClick={(e) => e.stopPropagation()}>
-                <button
-                  className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
-                  onClick={() => setShowPreviewModal(false)}
-                >
-                  <X className="w-8 h-8" />
-                </button>
-                {previewDocument.mime_type?.startsWith('image/') && (
-                  <img
-                    src={previewDocument.preview_file_id ? `/api/documents/${previewDocument.document_id}/preview` : `/api/documents/view/${previewDocument.document_id}`}
-                    alt={previewDocument.document_name}
-                    className="max-w-full max-h-[90vh] object-contain mx-auto"
-                  />
-                )}
-                {previewDocument.mime_type?.startsWith('video/') && (
-                  <video
-                    src={`/api/documents/view/${previewDocument.document_id}`}
-                    controls
-                    className="max-w-full max-h-[90vh] mx-auto"
-                  />
-                )}
-                {previewDocument.mime_type === 'application/pdf' && (
-                  <iframe
-                    src={`/api/documents/view/${previewDocument.document_id}`}
-                    className="w-full h-[90vh] bg-white"
-                    title={previewDocument.document_name}
-                  />
-                )}
-                <div className="mt-2 text-center text-white">
-                  <p className="text-lg font-medium">{previewDocument.document_name}</p>
-                </div>
-              </div>
-            </div>
-          )}
+          {previewModal}
         </div>
 
         {/* Document Drawer (keep existing drawer functionality) */}
@@ -2006,7 +1979,7 @@ const Documents = ({
   return (
     <ReflectionContainer id={id} label="Documents">
       <div className="w-full space-y-4">
-        <div className="flex justify-between items-center mb-4">
+        {!readOnly && <div className="flex justify-between items-center mb-4">
           <div className="flex space-x-2">
             {allowBlockDocuments && (
             <Button
@@ -2044,7 +2017,7 @@ const Documents = ({
               </Button>
             )}
           </div>
-        </div>
+        </div>}
 
         <div className="space-y-4">
             {showUpload && (
@@ -2127,43 +2100,7 @@ const Documents = ({
           />
         ) : null}
 
-        {/* Preview Modal for Images/Videos/PDFs */}
-        {showPreviewModal && previewDocument && previewDocument.file_id && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75" onClick={() => setShowPreviewModal(false)}>
-            <div className="relative max-w-7xl max-h-[90vh] w-full mx-4" onClick={(e) => e.stopPropagation()}>
-              <button
-                className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
-                onClick={() => setShowPreviewModal(false)}
-              >
-                <X className="w-8 h-8" />
-              </button>
-              {previewDocument.mime_type?.startsWith('image/') && (
-                <img
-                  src={previewDocument.preview_file_id ? `/api/documents/${previewDocument.document_id}/preview` : `/api/documents/view/${previewDocument.document_id}`}
-                  alt={previewDocument.document_name}
-                  className="max-w-full max-h-[90vh] object-contain mx-auto"
-                />
-              )}
-              {previewDocument.mime_type?.startsWith('video/') && (
-                <video
-                  src={`/api/documents/view/${previewDocument.document_id}`}
-                  controls
-                  className="max-w-full max-h-[90vh] mx-auto"
-                />
-              )}
-              {previewDocument.mime_type === 'application/pdf' && (
-                <iframe
-                  src={`/api/documents/view/${previewDocument.document_id}`}
-                  className="w-full h-[90vh] bg-white"
-                  title={previewDocument.document_name}
-                />
-              )}
-              <div className="mt-2 text-center text-white">
-                <p className="text-lg font-medium">{previewDocument.document_name}</p>
-              </div>
-            </div>
-          </div>
-        )}
+        {previewModal}
 
         <div className="document-drawer">
           <Drawer

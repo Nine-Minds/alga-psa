@@ -75,6 +75,8 @@ export interface CreateTestDbConnectionOptions {
    * When false, skip the destructive bootstrap (drop/recreate + migrate + seed)
    * and just connect to the already-bootstrapped test database. Helpers that
    * run after a TestContext bootstrap must use this or they wipe its data.
+   * If nothing has bootstrapped it yet — the file is the first to run in a
+   * fresh shard — the bootstrap runs anyway, as there is no data to keep.
    * @default true
    */
   recreate?: boolean;
@@ -129,7 +131,8 @@ export async function createTestDbConnection(
   const adminPassword = await resolveDbSecret('postgres_password', 'DB_PASSWORD_ADMIN', 'postpass123');
   const appUser = process.env.DB_USER_SERVER || 'app_user';
   const appPassword = await resolveDbSecret('db_password_server', 'DB_PASSWORD_SERVER', 'postpass123');
-  const recreate = options.recreate ?? true;
+  const recreate = (options.recreate ?? true)
+    || !(await isBootstrapped(databaseName, dbHost, dbPort, adminUser, adminPassword, appUser));
 
   if (!recreate) {
     return knex({
@@ -140,6 +143,12 @@ export async function createTestDbConnection(
         user: appUser,
         password: appPassword,
         database: databaseName,
+      },
+      migrations: {
+        directory: migrationsDir,
+      },
+      seeds: {
+        directory: seedsDir,
       },
       asyncStackTraces: true,
       pool: {
@@ -188,6 +197,20 @@ export async function createTestDbConnection(
       user: appUser,
       password: appPassword,
       database: databaseName,
+    },
+    // Suites commonly follow this call with `db.migrate.latest()` as a
+    // belt-and-braces "make sure the schema is current". Without a directory
+    // knex defaults to `./migrations` relative to the process cwd (server/),
+    // which is only the CE set — so against a database bootstrapped from the
+    // CE+EE overlay every one of those calls throws "The migration directory
+    // is corrupt, the following files are missing: ..." listing the EE
+    // migrations. Carry the directory this database was actually built from so
+    // the follow-up call is the no-op it was written to be.
+    migrations: {
+      directory: migrationsDir,
+    },
+    seeds: {
+      directory: seedsDir,
     },
     asyncStackTraces: true,
     pool: {
@@ -242,6 +265,43 @@ function adminConnection(
       directory: seedsDir,
     },
   });
+}
+
+/**
+ * Whether an earlier bootstrap left the database, the app role and a migrated
+ * schema in place. Read-only: reusing callers must never pay for a rebuild.
+ */
+async function isBootstrapped(
+  databaseName: string,
+  dbHost: string,
+  dbPort: number,
+  adminUser: string,
+  adminPassword: string,
+  appUser: string,
+): Promise<boolean> {
+  const connect = (database: string) => knex({
+    client: 'pg',
+    connection: { host: dbHost, port: dbPort, user: adminUser, password: adminPassword, database },
+    pool: { min: 0, max: 1 },
+  });
+  const cluster = connect('postgres');
+  try {
+    const { rows } = await cluster.raw(
+      `SELECT EXISTS (SELECT 1 FROM pg_database WHERE datname = ?) AS has_database,
+              EXISTS (SELECT 1 FROM pg_roles WHERE rolname = ? AND rolcanlogin) AS has_role`,
+      [databaseName, appUser]
+    );
+    if (!rows[0]?.has_database || !rows[0]?.has_role) return false;
+  } finally {
+    await cluster.destroy().catch(() => undefined);
+  }
+  const database = connect(databaseName);
+  try {
+    const { rows } = await database.raw(`SELECT to_regclass('public.knex_migrations') IS NOT NULL AS migrated`);
+    return Boolean(rows[0]?.migrated);
+  } finally {
+    await database.destroy().catch(() => undefined);
+  }
 }
 
 /** Migrate (and seed) an empty database. Runs once per template, or per file without one. */

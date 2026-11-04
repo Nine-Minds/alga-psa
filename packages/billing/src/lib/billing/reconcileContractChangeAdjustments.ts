@@ -3,6 +3,8 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients/clientTax';
 import { resolveContractLineChargeProfile } from './billingProfileLookup';
+import { inspectInvoiceEditable } from '../../services/invoiceAdjustmentEditability';
+import { describeContractChange } from './contractChangeDescription';
 
 /**
  * Transactional reconciliation of mid-period recurring-unit true-ups onto an
@@ -100,30 +102,8 @@ async function loadEditableInvoice(
   tenant: string,
   invoiceId: string,
 ): Promise<EditableInvoice | null> {
-  const invoice = (await table(trx, tenant, 'invoices')
-    .where({ tenant, invoice_id: invoiceId })
-    .forUpdate()
-    .first(
-      'invoice_id',
-      'client_id',
-      'client_contract_id',
-      'currency_code',
-      'billing_period_start',
-      'billing_period_end',
-      'invoice_date',
-      'created_at',
-      'status',
-      'finalized_at',
-    )) as
-    | (EditableInvoice & {
-        billing_period_start: unknown;
-        billing_period_end: unknown;
-        status: string | null;
-        finalized_at: string | Date | null;
-      })
-    | undefined;
-  if (!invoice) return null;
-  if (invoice.finalized_at || invoice.status !== 'draft') return null;
+  const { invoice, capability } = await inspectInvoiceEditable(trx, tenant, invoiceId, { forUpdate: true });
+  if (!invoice || !capability.editable) return null;
   return {
     invoice_id: invoice.invoice_id,
     client_id: invoice.client_id,
@@ -251,6 +231,16 @@ export async function resolveContractChangeAdjustmentTargets(params: {
     invoice_date: dateOnly(row.invoice_date),
     created_at: timestamp(row.created_at),
   }));
+  // Keep target selection in lockstep with the writer's editability contract:
+  // draft status alone is insufficient while an export is validating or after
+  // a provider mapping/delivered export has locked the invoice.
+  const editableDrafts: DraftWindow[] = [];
+  for (const draft of drafts) {
+    if (!draft.invoice_id) continue;
+    const { capability } = await inspectInvoiceEditable(conn, tenant, draft.invoice_id);
+    if (capability.editable) editableDrafts.push(draft);
+  }
+  drafts.splice(0, drafts.length, ...editableDrafts);
   const includedLines = await loadIncludedLinesByInvoice(
     conn,
     tenant,
@@ -428,7 +418,7 @@ function buildChargeValues(
   return {
     service_id: adjustment.service_id,
     client_contract_id: adjustment.client_contract_id ?? null,
-    description: `Mid-period quantity change: ${serviceName}`,
+    description: describeContractChange(serviceName, adjustment, adjustment.currency_code),
     quantity: Math.abs(delta),
     unit_price: Math.round(Number(adjustment.unit_rate_cents) || 0),
     net_amount: netAmount,

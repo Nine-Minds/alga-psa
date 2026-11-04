@@ -4,7 +4,7 @@ import React from 'react';
 import { toast } from 'react-hot-toast';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
-import { useFormatters, translate } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation, translate } from '@alga-psa/ui/lib/i18n/client';
 import { getTimeEntryUserTimeZone } from '../actions/timePeriodsActions';
 import { fetchTimePeriods, getTimeEntryById } from '../actions/timeEntryActions';
 import { fetchTimeSheet } from '../actions/timeSheetActions';
@@ -92,13 +92,17 @@ function AnchoredTimeEntryDialog({
   onComplete,
   workTimeZone,
 }: AnchoredTimeEntryDialogProps): React.JSX.Element {
+  const { t } = useTranslation('msp/time-entry');
   const { formatDate } = useFormatters();
   const timePeriod = savedSheet.time_period!;
-  const periodContextLabel = `${formatDate(dateOnlyToLocalDate(timePeriod.start_date), {
-    dateStyle: 'medium',
-  })} – ${formatDate(dateOnlyToLocalDate(periodLastInclusiveDay(timePeriod.end_date)), {
-    dateStyle: 'medium',
-  })}`;
+  const periodContextLabel = t('launch.periodRange', {
+    start: formatDate(dateOnlyToLocalDate(timePeriod.start_date), {
+      dateStyle: 'medium',
+    }),
+    end: formatDate(dateOnlyToLocalDate(periodLastInclusiveDay(timePeriod.end_date)), {
+      dateStyle: 'medium',
+    }),
+  });
 
   return (
     <TimeEntryDialog

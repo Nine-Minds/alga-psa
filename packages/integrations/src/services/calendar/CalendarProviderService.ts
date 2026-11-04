@@ -7,7 +7,7 @@
 
 import crypto from 'crypto';
 import type { Knex } from 'knex';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { CalendarProviderConfig } from '@alga-psa/types';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 
@@ -50,6 +50,7 @@ export interface CalendarProviderStatus {
   lastSyncAt?: string;
 }
 
+// LEVERAGE: pattern calendar-provider-service-triplicate — same service in ee/packages/calendar, server/src/services/calendar and packages/integrations; collapse into one layer
 export class CalendarProviderService {
   private static readonly GOOGLE_VENDOR_KEY_MAP: Record<string, string> = {
     clientId: 'client_id',
@@ -143,6 +144,7 @@ export class CalendarProviderService {
     return `${baseUrl}${path}`;
   }
 
+  // LEVERAGE: pattern calendar-provider-service-triplicate — same service is copied in server/src, packages/integrations and ee/packages/calendar; fixes must be applied 3x
   /**
    * Get calendar providers based on filters
    */
@@ -170,18 +172,10 @@ export class CalendarProviderService {
 
       const providers = await query;
 
-      // Load vendor configs for each provider
-      const providersWithConfig = await Promise.all(providers.map(async (provider) => {
-        const vendorConfig = await this.getVendorConfig(
-          db,
-          provider.provider_type,
-          provider.id,
-          filters.tenant,
-        );
-        return this.buildProviderConfig(provider, vendorConfig, { includeSecrets: false });
-      }));
-
-      return providersWithConfig;
+      // Vendor config (tokens, webhook state) is deliberately not loaded here: list callers receive
+      // provider_config: undefined and must call getProvider(id, tenant, { includeSecrets: true })
+      // for the full config.
+      return providers.map((provider) => this.toProviderSummary(provider));
     } catch (error: any) {
       console.error('Error fetching calendar providers:', error);
       throw new Error(`Failed to fetch calendar providers: ${error.message}`);
@@ -230,25 +224,7 @@ export class CalendarProviderService {
    */
   async createProvider(data: CreateCalendarProviderData): Promise<CalendarProviderConfig> {
     try {
-      const db = await this.getDb(data.tenant);
-      
-      // Create main provider record
-      const [provider] = await tenantDb(db, data.tenant).table('calendar_providers')
-        .insert({
-          id: db.raw('gen_random_uuid()'),
-          tenant: data.tenant,
-          user_id: data.userId,
-          provider_type: data.providerType,
-          provider_name: data.providerName,
-          calendar_id: data.calendarId,
-          is_active: data.isActive,
-          sync_direction: data.syncDirection,
-          status: 'configuring',
-          created_at: db.fn.now(),
-          updated_at: db.fn.now()
-        })
-        .returning('*');
-
+      // Encrypt/prepare vendor config before any write so a failure leaves no rows behind.
       const { encrypted: vendorInsert, normalized: normalizedVendorConfig } =
         await this.prepareVendorConfigForStorage(data.providerType, data.vendorConfig);
 
@@ -258,32 +234,58 @@ export class CalendarProviderService {
         normalizedVendorConfig
       );
 
-      if (hasVendorData && !vendorHasRequiredFields) {
-        console.warn(
-          `[CalendarProviderService] Skipping vendor config insert for ${data.providerType} provider ${provider.id} because required credentials are missing`
-        );
-      }
+      const knex = await this.getDb(data.tenant);
 
-      if (vendorHasRequiredFields) {
-        const vendorRecord = {
-          calendar_provider_id: provider.id,
-          tenant: data.tenant,
-          ...vendorInsert,
-          created_at: db.fn.now(),
-          updated_at: db.fn.now()
-        };
+      // Provider row and vendor config row are written atomically.
+      const providerId = await withTransaction(knex, async (trx) => {
+        const db = tenantDb(trx, data.tenant);
 
-        if (data.providerType === 'google') {
-          await tenantDb(db, data.tenant).table('google_calendar_provider_config').insert(vendorRecord);
-        } else if (data.providerType === 'microsoft') {
-          await tenantDb(db, data.tenant).table('microsoft_calendar_provider_config').insert(vendorRecord);
+        // Create main provider record
+        const [provider] = await db.table('calendar_providers')
+          .insert({
+            id: trx.raw('gen_random_uuid()'),
+            tenant: data.tenant,
+            user_id: data.userId,
+            provider_type: data.providerType,
+            provider_name: data.providerName,
+            calendar_id: data.calendarId,
+            is_active: data.isActive,
+            sync_direction: data.syncDirection,
+            status: 'configuring',
+            created_at: trx.fn.now(),
+            updated_at: trx.fn.now()
+          })
+          .returning('*');
+
+        if (hasVendorData && !vendorHasRequiredFields) {
+          console.warn(
+            `[CalendarProviderService] Skipping vendor config insert for ${data.providerType} provider ${provider.id} because required credentials are missing`
+          );
         }
-      }
 
-      console.log(`✅ Created calendar provider: ${provider.provider_name} (${provider.id})`);
+        if (vendorHasRequiredFields) {
+          const vendorRecord = {
+            calendar_provider_id: provider.id,
+            tenant: data.tenant,
+            ...vendorInsert,
+            created_at: trx.fn.now(),
+            updated_at: trx.fn.now()
+          };
+
+          if (data.providerType === 'google') {
+            await db.table('google_calendar_provider_config').insert(vendorRecord);
+          } else if (data.providerType === 'microsoft') {
+            await db.table('microsoft_calendar_provider_config').insert(vendorRecord);
+          }
+        }
+
+        return provider.id as string;
+      });
+
+      console.log(`✅ Created calendar provider: ${data.providerName} (${providerId})`);
       
       // Fetch the complete provider with vendor config
-      const createdProvider = await this.getProvider(provider.id, data.tenant, { includeSecrets: false });
+      const createdProvider = await this.getProvider(providerId, data.tenant, { includeSecrets: false });
       if (!createdProvider) {
         throw new Error('Failed to fetch created provider');
       }
@@ -304,7 +306,7 @@ export class CalendarProviderService {
     data: UpdateCalendarProviderData
   ): Promise<CalendarProviderConfig> {
     try {
-      const db = await this.getDb(tenant);
+      const knex = await this.getDb(tenant);
       
       // Get existing provider to determine type and current config
       const existingProvider = await this.getProvider(providerId, tenant);
@@ -316,10 +318,8 @@ export class CalendarProviderService {
         throw new Error('Provider not found');
       }
 
-      // Update main provider table
-      const mainUpdateData: any = {
-        updated_at: db.fn.now()
-      };
+      // Build main provider update (updated_at is added inside the transaction)
+      const mainUpdateData: any = {};
 
       if (data.providerName !== undefined) {
         mainUpdateData.provider_name = data.providerName;
@@ -337,52 +337,62 @@ export class CalendarProviderService {
         mainUpdateData.sync_direction = data.syncDirection;
       }
 
-      // Update main provider record
-      await tenantDb(db, tenant).table('calendar_providers')
-        .where('id', providerId)
-        .update(mainUpdateData);
-
-      // Update vendor-specific configuration if provided
+      // Encrypt/prepare vendor config before any write so a failure leaves nothing half-applied.
+      let vendorUpdate: Record<string, any> | undefined;
+      let normalizedVendorConfig: Record<string, any> | undefined;
+      let vendorTable: 'google_calendar_provider_config' | 'microsoft_calendar_provider_config' | undefined;
       if (data.vendorConfig !== undefined) {
-        const { encrypted: vendorUpdate, normalized: normalizedVendorConfig } =
-          await this.prepareVendorConfigForStorage(
-            existingProvider.provider_type,
-            data.vendorConfig
-          );
-
-        const vendorTable =
+        const prepared = await this.prepareVendorConfigForStorage(
+          existingProvider.provider_type,
+          data.vendorConfig
+        );
+        vendorUpdate = prepared.encrypted;
+        normalizedVendorConfig = prepared.normalized;
+        vendorTable =
           existingProvider.provider_type === 'google'
             ? 'google_calendar_provider_config'
             : 'microsoft_calendar_provider_config';
-        const vendorDb = tenantDb(db, tenant);
-
-        const existingVendorRecord = await vendorDb.table(vendorTable)
-          .where('calendar_provider_id', providerId)
-          .first();
-
-        if (existingVendorRecord) {
-          const updatePayload =
-            Object.keys(vendorUpdate).length > 0
-              ? { ...vendorUpdate, updated_at: db.fn.now() }
-              : { updated_at: db.fn.now() };
-
-          await vendorDb.table(vendorTable)
-            .where('calendar_provider_id', providerId)
-            .update(updatePayload);
-        } else if (this.hasRequiredVendorFields(existingProvider.provider_type, normalizedVendorConfig)) {
-          await vendorDb.table(vendorTable).insert({
-            calendar_provider_id: providerId,
-            tenant,
-            ...vendorUpdate,
-            created_at: db.fn.now(),
-            updated_at: db.fn.now()
-          });
-        } else if (Object.keys(normalizedVendorConfig).length > 0) {
-          throw new Error(
-            `${existingProvider.provider_type} vendor configuration is missing required credentials`
-          );
-        }
       }
+
+      // Main and vendor updates are applied atomically.
+      await withTransaction(knex, async (trx) => {
+        const db = tenantDb(trx, tenant);
+
+        // Update main provider record
+        await db.table('calendar_providers')
+          .where('id', providerId)
+          .update({ ...mainUpdateData, updated_at: trx.fn.now() });
+
+        // Update vendor-specific configuration if provided
+        if (vendorTable && vendorUpdate && normalizedVendorConfig) {
+          const existingVendorRecord = await db.table(vendorTable)
+            .where('calendar_provider_id', providerId)
+            .first();
+
+          if (existingVendorRecord) {
+            const updatePayload =
+              Object.keys(vendorUpdate).length > 0
+                ? { ...vendorUpdate, updated_at: trx.fn.now() }
+                : { updated_at: trx.fn.now() };
+
+            await db.table(vendorTable)
+              .where('calendar_provider_id', providerId)
+              .update(updatePayload);
+          } else if (this.hasRequiredVendorFields(existingProvider.provider_type, normalizedVendorConfig)) {
+            await db.table(vendorTable).insert({
+              calendar_provider_id: providerId,
+              tenant,
+              ...vendorUpdate,
+              created_at: trx.fn.now(),
+              updated_at: trx.fn.now()
+            });
+          } else if (Object.keys(normalizedVendorConfig).length > 0) {
+            throw new Error(
+              `${existingProvider.provider_type} vendor configuration is missing required credentials`
+            );
+          }
+        }
+      });
 
       // Fetch updated provider with vendor config
       const updatedProvider = await this.getProvider(providerId, tenant, { includeSecrets: false });
@@ -434,41 +444,46 @@ export class CalendarProviderService {
    */
   async deleteProvider(providerId: string, tenant: string): Promise<void> {
     try {
-      const db = await this.getDb(tenant);
-      
-      // Get provider info to determine type for cleanup
-      const provider = await tenantDb(db, tenant).table('calendar_providers')
-        .where('id', providerId)
-        .first();
+      const knex = await this.getDb(tenant);
 
-      if (!provider) {
-        throw new Error('Provider not found');
-      }
+      // Vendor config, event mappings and provider row are removed atomically.
+      await withTransaction(knex, async (trx) => {
+        const db = tenantDb(trx, tenant);
 
-      // Delete vendor-specific configuration first
-      if (provider.provider_type === 'google') {
-        await tenantDb(db, provider.tenant).table('google_calendar_provider_config')
+        // Get provider info to determine type for cleanup
+        const provider = await db.table('calendar_providers')
+          .where('id', providerId)
+          .first();
+
+        if (!provider) {
+          throw new Error('Provider not found');
+        }
+
+        // Delete vendor-specific configuration first
+        if (provider.provider_type === 'google') {
+          await db.table('google_calendar_provider_config')
+            .where('calendar_provider_id', providerId)
+            .del();
+        } else if (provider.provider_type === 'microsoft') {
+          await db.table('microsoft_calendar_provider_config')
+            .where('calendar_provider_id', providerId)
+            .del();
+        }
+
+        // Delete calendar event mappings
+        await db.table('calendar_event_mappings')
           .where('calendar_provider_id', providerId)
           .del();
-      } else if (provider.provider_type === 'microsoft') {
-        await tenantDb(db, provider.tenant).table('microsoft_calendar_provider_config')
-          .where('calendar_provider_id', providerId)
+
+        // Delete main provider record
+        const deleted = await db.table('calendar_providers')
+          .where('id', providerId)
           .del();
-      }
 
-      // Delete calendar event mappings
-      await tenantDb(db, provider.tenant).table('calendar_event_mappings')
-        .where('calendar_provider_id', providerId)
-        .del();
-
-      // Delete main provider record
-      const deleted = await tenantDb(db, tenant).table('calendar_providers')
-        .where('id', providerId)
-        .del();
-
-      if (deleted === 0) {
-        throw new Error('Provider not found');
-      }
+        if (deleted === 0) {
+          throw new Error('Provider not found');
+        }
+      });
 
       console.log(`✅ Deleted calendar provider: ${providerId}`);
     } catch (error: any) {
@@ -486,6 +501,10 @@ export class CalendarProviderService {
       ? await this.toVendorConfig(row.provider_type, row.tenant, vendorConfig)
       : undefined;
 
+    return { ...this.toProviderSummary(row), provider_config: providerConfig };
+  }
+
+  private toProviderSummary(row: any): CalendarProviderConfig {
     return {
       id: row.id,
       tenant: row.tenant,
@@ -498,7 +517,7 @@ export class CalendarProviderService {
       connection_status: row.status || 'configuring',
       last_sync_at: row.last_sync_at || undefined,
       error_message: row.error_message || undefined,
-      provider_config: providerConfig,
+      provider_config: undefined,
       created_at: row.created_at,
       updated_at: row.updated_at
     };

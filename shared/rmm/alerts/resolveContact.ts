@@ -1,9 +1,12 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { resolveAssetTicketContactOptions } from '../../models/assetTicketContactModel';
 
 interface ResolveRmmTicketContactArgs {
   clientId?: string | null;
   mappingDefaultContactId?: string | null;
+  /** FR-E8: the alert's device, so a shared workspace can supply its user. */
+  assetId?: string | null;
 }
 
 function nonEmptyString(value: unknown): value is string {
@@ -64,6 +67,16 @@ export async function resolveRmmTicketContactId(
     const mappingContactId = await findValidContactId(trx, tenant, clientId, mappingDefaultContactId);
     if (mappingContactId) {
       return mappingContactId;
+    }
+  }
+
+  // FR-E8: a shared workspace with exactly one user tells us who to file for;
+  // several users is ambiguous, so we fall through to the client's primary.
+  if (nonEmptyString(args.assetId)) {
+    const options = await resolveAssetTicketContactOptions(trx, tenant, args.assetId);
+    if (options.length === 1) {
+      const workspaceContactId = await findValidContactId(trx, tenant, clientId, options[0].contact_name_id);
+      if (workspaceContactId) return workspaceContactId;
     }
   }
 

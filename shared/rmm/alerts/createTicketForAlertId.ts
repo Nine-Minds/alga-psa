@@ -57,6 +57,7 @@ export async function createTicketForAlertId(
   let clientId: string | null = null;
   let organizationName: string | null = null;
   let mappingDefaultContactId: string | null = null;
+  let mappingBillingProfileId: string | null = null;
   if (alert.asset_id) {
     const asset = await db.table('assets')
       .where({ asset_id: alert.asset_id })
@@ -66,19 +67,29 @@ export async function createTicketForAlertId(
   }
 
   const rawMetadata = typeof alert.metadata === 'string' ? safeParse(alert.metadata) : alert.metadata;
+  const metadataRecord =
+    rawMetadata && typeof rawMetadata === 'object' ? (rawMetadata as Record<string, unknown>) : null;
+  // Datto stores the raw alert, which names its site under alertSourceInfo
+  // rather than a top-level organizationId.
+  const datto = metadataRecord?.alertSourceInfo;
+  const dattoSiteUid =
+    datto && typeof datto === 'object' ? (datto as Record<string, unknown>).siteUid : null;
   const externalOrgId =
-    rawMetadata && typeof rawMetadata === 'object' && 'organizationId' in rawMetadata
-      ? String((rawMetadata as Record<string, unknown>).organizationId)
-      : null;
+    metadataRecord && 'organizationId' in metadataRecord
+      ? String(metadataRecord.organizationId)
+      : dattoSiteUid != null && String(dattoSiteUid).trim()
+        ? String(dattoSiteUid).trim()
+        : null;
   if (externalOrgId) {
     const orgMapping = await db.table('rmm_organization_mappings')
       .where({
         integration_id: alert.integration_id,
         external_organization_id: externalOrgId,
       })
-      .first('client_id', 'external_organization_name', 'default_contact_id');
+      .first('client_id', 'external_organization_name', 'default_contact_id', 'billing_profile_id');
     organizationName = orgMapping?.external_organization_name ?? null;
     mappingDefaultContactId = orgMapping?.default_contact_id ?? null;
+    mappingBillingProfileId = orgMapping?.billing_profile_id ?? null;
     if (!clientId) clientId = orgMapping?.client_id ?? null;
   }
   if (!clientId) {
@@ -113,6 +124,7 @@ export async function createTicketForAlertId(
       assetId: alert.asset_id,
       organizationName,
       mappingDefaultContactId,
+      mappingBillingProfileId,
     });
     await trxDb.table('rmm_alerts')
       .where({ alert_id: alertId })

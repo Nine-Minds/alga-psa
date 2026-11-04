@@ -6,6 +6,7 @@ import { Card } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
+import { ListDetailLayout } from '@alga-psa/ui/components/ListDetailLayout';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { toast } from 'react-hot-toast';
 import { mapWorkflowServerError } from './workflowServerErrors';
@@ -100,8 +101,12 @@ const WorkflowDeadLetterQueue: React.FC<WorkflowDeadLetterQueueProps> = ({ isAct
   const selectedRun = runs.find((run) => run.run_id === selectedRunId) ?? null;
 
   return (
-    <div className="flex h-full gap-4">
-      <div className="flex-1 space-y-3 overflow-hidden">
+    <ListDetailLayout
+      id="workflow-dead-letter-layout"
+      onBack={handleRunDetailsClose}
+      backLabel={t('deadLetter.actions.backToList', { defaultValue: 'Back to dead letter' })}
+      list={
+      <div className="flex-1 min-w-0 space-y-3 overflow-hidden">
         <Card className="p-4 space-y-3">
           <div className="flex flex-wrap items-end gap-3">
             <div className="flex-1 min-w-[220px]">
@@ -184,18 +189,16 @@ const WorkflowDeadLetterQueue: React.FC<WorkflowDeadLetterQueueProps> = ({ isAct
           )}
         </Card>
       </div>
-
-      {selectedRun && (
-        <div className="w-[480px] shrink-0 overflow-auto">
-          <WorkflowRunDetailsPanel
-            runId={selectedRun.run_id}
-            workflowName={selectedRun.workflow_name ?? undefined}
-            canAdmin={canAdmin}
-            onClose={handleRunDetailsClose}
-          />
-        </div>
-      )}
-    </div>
+      }
+      detail={selectedRun ? (
+        <WorkflowRunDetailsPanel
+          runId={selectedRun.run_id}
+          workflowName={selectedRun.workflow_name ?? undefined}
+          canAdmin={canAdmin}
+          onClose={handleRunDetailsClose}
+        />
+      ) : null}
+    />
   );
 };
 

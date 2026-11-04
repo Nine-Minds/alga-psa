@@ -12,6 +12,7 @@ const hoisted = vi.hoisted(() => ({
     tenants: [] as Array<{ entraTenantId: string; displayName: string | null }>,
   } as any,
   mappingsError: null as any,
+  creds: { baseUrl: 'https://cipp.test', apiToken: 'k' } as any,
 }));
 
 vi.mock('@ee/lib/integrations/entra/connectionRepository', () => ({
@@ -28,7 +29,7 @@ vi.mock('@ee/lib/integrations/entra/connectionRepository', () => ({
 }));
 
 vi.mock('@ee/lib/integrations/entra/providers/cipp/cippSecretStore', () => ({
-  getEntraCippCredentials: vi.fn(async () => ({ baseUrl: 'https://cipp.test', apiToken: 'k' })),
+  getEntraCippCredentials: vi.fn(async () => hoisted.creds),
 }));
 
 vi.mock('@ee/lib/integrations/entra/providers/cipp/cippProviderAdapter', () => ({
@@ -122,6 +123,12 @@ vi.mock('axios', () => ({
 }));
 
 import { runEntraConnectionDiagnostics } from '@ee/lib/integrations/entra/diagnostics/connectionDiagnostics';
+import {
+  CippTokenService,
+  setCippTokenServiceForTests,
+  type CippFetch,
+} from '@ee/lib/integrations/entra/providers/cipp/cippTokenService';
+import { applyReportRedaction } from '@ee/lib/integrations/entra/diagnostics/redaction';
 
 function stepsById(report: any): Record<string, any> {
   return Object.fromEntries(report.steps.map((s: any) => [s.id, s]));
@@ -139,6 +146,7 @@ describe('CIPP connection diagnostics outcomes', () => {
       tenants: [],
     };
     hoisted.mappingsError = null;
+    hoisted.creds = { baseUrl: 'https://cipp.test', apiToken: 'k' };
   });
 
   it('passes reachability and warns on an empty tenant list', async () => {
@@ -179,6 +187,41 @@ describe('CIPP connection diagnostics outcomes', () => {
     expect(report.recommendations.some((r) => r.code === 'cipp_invalid_payload')).toBe(true);
   });
 
+  it('emits the API-client IP-block text without the legacy messageKey', async () => {
+    const text = 'CIPP refused the tenant list (listtenants) with HTTP 403. This usually means our egress IP is not in the API client\'s allowlist.';
+    hoisted.probe = { ...hoisted.probe, outcome: 'auth_rejected', authRejected: true, status: 403, error: text, tenants: [] };
+    const report = await runEntraConnectionDiagnostics('tenant-1', { includeIdentifiers: true });
+    const rec = report.recommendations.find((r) => r.code === 'cipp_auth_rejected');
+    expect(rec?.text).toBe(text);
+    expect(rec?.messageKey).toBeUndefined();
+  });
+
+  it('keeps the legacy cippAuthRejected key and text when the probe carries no error', async () => {
+    hoisted.probe = { ...hoisted.probe, outcome: 'auth_rejected', authRejected: true, status: 401, tenants: [] };
+    const report = await runEntraConnectionDiagnostics('tenant-1', { includeIdentifiers: true });
+    const rec = report.recommendations.find((r) => r.code === 'cipp_auth_rejected');
+    expect(rec?.messageKey).toBe('cippAuthRejected');
+    expect(rec?.text).toMatch(/rejected the legacy API key.*CIPP API client/);
+  });
+
+  it('reports an HTML response under cipp_html_response, not cipp_invalid_payload', async () => {
+    hoisted.probe = {
+      ...hoisted.probe,
+      outcome: 'html_response',
+      status: 200,
+      error: 'CIPP answered with a web page instead of API data: the API URL is missing /api or points at the wrong host.',
+      tenants: [],
+    };
+    const report = await runEntraConnectionDiagnostics('tenant-1', { includeIdentifiers: true });
+    const steps = stepsById(report);
+    expect(steps.cipp_reachable.status).toBe('fail');
+    expect(steps.cipp_tenant_list.status).toBe('skip');
+    const rec = report.recommendations.find((r) => r.code === 'cipp_html_response');
+    expect(rec?.text).toMatch(/missing \/api or points at the wrong host/);
+    expect(rec?.messageKey).toBeUndefined();
+    expect(report.recommendations.some((r) => r.code === 'cipp_invalid_payload')).toBe(false);
+  });
+
   it('fails reachability on timeout/DNS', async () => {
     hoisted.probe = { ...hoisted.probe, outcome: 'unreachable', reachable: false, networkCode: 'ETIMEDOUT', tenants: [] };
     const report = await runEntraConnectionDiagnostics('tenant-1', { includeIdentifiers: true });
@@ -198,5 +241,97 @@ describe('CIPP connection diagnostics outcomes', () => {
     // Independent CIPP checks still ran.
     expect(steps.cipp_reachable.status).toBe('pass');
     expect(steps.cipp_tenant_list.status).toBe('warn');
+  });
+});
+
+describe('CIPP API-client token mint diagnostic', () => {
+  const SECRET = 'client-secret-VALUE-4471';
+  const API_CLIENT = {
+    authType: 'api_client',
+    baseUrl: 'https://cipp.test',
+    clientId: 'client-1',
+    clientSecret: SECRET,
+    directoryId: 'dir-1',
+  };
+
+  function mintWith(response: { ok: boolean; status: number; body: unknown }) {
+    const fetch = vi.fn(async () => ({
+      ok: response.ok,
+      status: response.status,
+      text: async () => JSON.stringify(response.body),
+    }));
+    setCippTokenServiceForTests(new CippTokenService({ fetch: fetch as unknown as CippFetch }));
+    return fetch;
+  }
+
+  beforeEach(() => {
+    hoisted.creds = API_CLIENT;
+    hoisted.probe = {
+      outcome: 'ok', reachable: true, authRejected: false, status: 200,
+      endpoint: 'https://cipp.test/api/listtenants', attempted: ['https://cipp.test/api/listtenants'], tenants: [],
+    };
+    hoisted.mappingsError = null;
+  });
+
+  it('runs a token mint check ahead of reachability and passes for a working client', async () => {
+    mintWith({ ok: true, status: 200, body: { access_token: 'minted-abc', expires_in: 3600 } });
+    const report = await runEntraConnectionDiagnostics('tenant-1', { includeIdentifiers: true });
+    const ids = report.steps.map((s: any) => s.id);
+    const steps = stepsById(report);
+
+    expect(ids.indexOf('cipp_token_mint')).toBeGreaterThan(ids.indexOf('cipp_credentials_present'));
+    expect(ids.indexOf('cipp_token_mint')).toBeLessThan(ids.indexOf('cipp_reachable'));
+    expect(steps.cipp_token_mint.status).toBe('pass');
+    expect(steps.cipp_reachable.status).toBe('pass');
+    expect(JSON.stringify(report)).not.toContain('minted-abc');
+    expect(JSON.stringify(report)).not.toContain(SECRET);
+  });
+
+  it('fails the mint with an actionable recommendation and blocks the CIPP checks that need a token', async () => {
+    mintWith({
+      ok: false,
+      status: 401,
+      body: { error: 'invalid_client', error_description: 'AADSTS7000215: Invalid client secret', error_codes: [7000215] },
+    });
+    const report = await runEntraConnectionDiagnostics('tenant-1', { includeIdentifiers: true });
+    const steps = stepsById(report);
+
+    expect(steps.cipp_token_mint.status).toBe('fail');
+    expect(steps.cipp_reachable.status).toBe('skip');
+    expect(steps.cipp_auth.status).toBe('skip');
+    expect(steps.cipp_tenant_list.status).toBe('skip');
+    const rec = report.recommendations.find((r) => r.code === 'cipp_token_mint_failed');
+    expect(rec?.text).toMatch(/secret ID instead of its Value/);
+  });
+
+  it('reports a rejected identifier URI as its own recommendation', async () => {
+    mintWith({
+      ok: false,
+      status: 400,
+      body: { error: 'invalid_resource', error_description: 'AADSTS500011: resource not found', error_codes: [500011] },
+    });
+    const report = await runEntraConnectionDiagnostics('tenant-1', { includeIdentifiers: true });
+    const rec = report.recommendations.find((r) => r.code === 'cipp_token_scope_rejected');
+    expect(rec?.text).toMatch(/Repair Identifier URI/);
+  });
+
+  it('is not applicable to a legacy connection, and does not block the CIPP checks', async () => {
+    hoisted.creds = { baseUrl: 'https://cipp.test', apiToken: 'k' };
+    const fetch = mintWith({ ok: true, status: 200, body: {} });
+    const report = await runEntraConnectionDiagnostics('tenant-1', { includeIdentifiers: true });
+    const steps = stepsById(report);
+
+    expect(steps.cipp_token_mint.status).toBe('skip');
+    expect((steps.cipp_token_mint.data as any).reason).toMatch(/Not applicable/);
+    expect(steps.cipp_reachable.status).toBe('pass');
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('keeps the client secret out of the redacted export', async () => {
+    mintWith({ ok: true, status: 200, body: { access_token: 'eyJhbGciOiJSUzI1NiJ9.eyJhdWQiOiJ4In0.c2lnbmF0dXJl', expires_in: 3600 } });
+    const report = await runEntraConnectionDiagnostics('tenant-1', { includeIdentifiers: false });
+    const redacted = JSON.stringify(applyReportRedaction(report, false));
+    expect(redacted).not.toContain(SECRET);
+    expect(redacted).not.toContain('c2lnbmF0dXJl');
   });
 });

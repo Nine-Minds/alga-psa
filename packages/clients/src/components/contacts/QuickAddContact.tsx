@@ -10,6 +10,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { addContact, listContactPhoneTypeSuggestions } from '@alga-psa/clients/actions/contact-actions/contactActions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { searchClientsForPicker } from '@alga-psa/clients/actions/clientPickerActions';
 import type { ContactPhoneNumberInput, CreateContactInput, IClient } from '@alga-psa/types';
 import QuickAddClient from '../clients/QuickAddClient';
 import { IContact } from '@alga-psa/types';
@@ -50,7 +51,8 @@ interface QuickAddContactProps {
   isOpen: boolean;
   onClose: () => void;
   onContactAdded: (newContact: IContact) => void;
-  clients: IClient[];
+  /** @deprecated No longer used: the client picker searches on the server. Callers may drop this prop. */
+  clients?: IClient[];
   selectedClientId?: string | null;
   /** Seeds the first phone row (e.g. the caller ID of an unmatched incoming call). */
   initialPhoneNumber?: string | null;
@@ -87,7 +89,6 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
   isOpen,
   onClose,
   onContactAdded,
-  clients,
   selectedClientId = null,
   initialPhoneNumber = null,
 }) => {
@@ -123,7 +124,6 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
   const [tenantDefaultCountry, setTenantDefaultCountry] = useState<ICountry | null>(null);
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
   const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
-  const [localClients, setLocalClients] = useState<IClient[]>([]);
 
   useEffect(() => {
     if (selectedClientId) {
@@ -186,11 +186,6 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       setPendingTags([]);
     }
   }, [isOpen, selectedClientId, initialPhoneNumber]);
-
-  const mergedClients = React.useMemo(() => {
-    const clientIds = new Set(clients.map(c => c.client_id));
-    return [...clients, ...localClients.filter(c => !clientIds.has(c.client_id))];
-  }, [clients, localClients]);
 
   const handleClientSelect = (nextClientId: string | null) => {
     if (typeof nextClientId === 'string' || nextClientId === null) {
@@ -625,7 +620,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
               </Label>
               <ClientPicker
                 id="quick-add-contact-client"
-                clients={mergedClients}
+                searchClients={searchClientsForPicker}
                 onSelect={handleClientSelect}
                 selectedClientId={clientId}
                 filterState={filterState}
@@ -717,7 +712,6 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
         open={isQuickAddClientOpen}
         onOpenChange={setIsQuickAddClientOpen}
         onClientAdded={(newClient) => {
-          setLocalClients(prev => [...prev, newClient]);
           setClientId(newClient.client_id);
         }}
         skipSuccessDialog

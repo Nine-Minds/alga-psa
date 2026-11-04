@@ -14,6 +14,7 @@ import { Button } from "@alga-psa/ui/components/Button";
 import { Alert, AlertDescription } from "@alga-psa/ui/components/Alert";
 import { Badge } from "@alga-psa/ui/components/Badge";
 import { SSO_PROFILE_TAB_URL } from "@alga-psa/auth/lib/sso/linkStateCookie";
+import { PROVIDER_SETUP_ENTRY_PATH } from "@alga-psa/types";
 import clsx from "clsx";
 import { Loader2, ShieldCheck, KeyRound, LogIn } from "lucide-react";
 import { SiKeycloak } from "react-icons/si";
@@ -100,6 +101,8 @@ interface ConnectSsoClientProps {
   twoFactorEnabled: boolean;
   linkedAccounts: LinkedAccount[];
   providerOptions: ProviderOption[];
+  /** The viewer may configure the tenant's provider application. */
+  canConfigureProviders?: boolean;
   linkStatus?: "linked" | "error";
   linkErrorCode?: string;
   linkErrorProviderEmail?: string;
@@ -124,6 +127,7 @@ export default function ConnectSsoClient({
   twoFactorEnabled,
   linkedAccounts,
   providerOptions,
+  canConfigureProviders = false,
   linkStatus,
   linkErrorCode,
   linkErrorProviderEmail,
@@ -386,7 +390,20 @@ export default function ConnectSsoClient({
           {!hasConfiguredProvider && (
             <Alert variant="destructive">
               <AlertDescription>
-                {t("connectSso.providers.noneConfigured")}
+                {canConfigureProviders
+                  ? t("connectSso.providers.noneConfiguredAdmin", {
+                      defaultValue: "No SSO providers are configured yet. Set up your organization's Google or Microsoft application first.",
+                    })
+                  : t("connectSso.providers.noneConfigured")}
+                {canConfigureProviders && (
+                  <div className="mt-2">
+                    {/* Product-neutral: the page that holds provider credentials differs by product. */}
+                    <Button id="connect-sso-open-provider-setup" type="button" variant="link" className="h-auto p-0"
+                      onClick={() => window.location.assign(PROVIDER_SETUP_ENTRY_PATH)}>
+                      {t("connectSso.providers.openProviderSetup", { defaultValue: "Set up an SSO provider" })}
+                    </Button>
+                  </div>
+                )}
               </AlertDescription>
             </Alert>
           )}

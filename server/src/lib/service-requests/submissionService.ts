@@ -1,10 +1,16 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import { getVisiblePublishedServiceRequestDefinitionDetail } from './portalDetail';
 import {
-  getServiceRequestExecutionProvider,
-  getServiceRequestFormBehaviorProvider,
-} from './providers/registry';
+  getVisiblePublishedServiceRequestDefinitionDetail,
+  type ServiceRequestPortalDefinitionDetail,
+} from './portalDetail';
+import { getServiceRequestExecutionProvider } from './providers/registry';
+import {
+  computeVisibleFieldKeys,
+  parseVisibilityRules,
+  type VisibilityContext,
+  isMissingRequiredValue,
+} from './formVisibility';
 import type { ServiceRequestExecutionResult } from './providers/contracts';
 import { publishServiceRequestSubmissionSearchEvent } from './searchEvents';
 import { recordServiceRequestSubmissionAudit } from './submissionAudit';
@@ -176,14 +182,31 @@ export function isClientSubmissionKeyConflict(error: unknown): boolean {
   return isUniqueViolationOnIndex(error, CLIENT_SUBMISSION_KEY_UNIQUE_INDEX);
 }
 
-function isMissingRequiredValue(value: unknown): boolean {
-  if (value === null || value === undefined) {
-    return true;
+/**
+ * Recomputes which fields are visible for a submission, using the same shared
+ * evaluator as the browser. Seeds from the definition's initial values overlaid with
+ * the submitted payload. Never reads a client-supplied visible-key list.
+ */
+export function resolveSubmissionVisibility(
+  detail: Pick<
+    ServiceRequestPortalDefinitionDetail,
+    'formSchema' | 'formBehaviorProvider' | 'formBehaviorConfig' | 'initialValues' | 'visibleFieldKeys'
+  >,
+  payload: Record<string, unknown>,
+  context: VisibilityContext
+): string[] {
+  if (detail.formBehaviorProvider !== 'advanced') {
+    return detail.visibleFieldKeys;
   }
-  if (typeof value === 'string') {
-    return value.trim().length === 0;
-  }
-  return false;
+  const fields = Array.isArray((detail.formSchema as any)?.fields)
+    ? ((detail.formSchema as any).fields as any[])
+    : [];
+  return computeVisibleFieldKeys(
+    fields,
+    parseVisibilityRules(detail.formBehaviorConfig) ?? [],
+    { ...detail.initialValues, ...payload },
+    context
+  );
 }
 
 export function validateSubmissionAgainstPublishedSchema(input: {
@@ -208,17 +231,20 @@ export function validateSubmissionAgainstPublishedSchema(input: {
     if (visibleFieldKeySet && !visibleFieldKeySet.has(field.key)) {
       continue;
     }
+    // Messages reach the requester, so name the field by its label, not its internal key.
+    const fieldLabel =
+      typeof field.label === 'string' && field.label.trim().length > 0 ? field.label.trim() : field.key;
 
     if (field.type === 'file-upload') {
       const hasFile = attachmentList.some((attachment) => attachment.fieldKey === field.key);
       if (!hasFile) {
-        errors.push(`Required file upload missing for "${field.key}"`);
+        errors.push(`Required file upload missing for "${fieldLabel}"`);
       }
       continue;
     }
 
     if (isMissingRequiredValue(input.payload[field.key])) {
-      errors.push(`Required field missing: "${field.key}"`);
+      errors.push(`Required field missing: "${fieldLabel}"`);
     }
   }
 
@@ -273,41 +299,36 @@ export async function submitPortalServiceRequest(
     throw new Error('Service request is not visible or not published');
   }
 
+  // Visibility is recomputed from the payload being submitted; nothing the client
+  // claims about visibility is read. Hidden answers are dropped here, before the
+  // insert, so persisted data, replays, and the execution provider only ever see
+  // visible answers.
+  const visibleFieldKeys = resolveSubmissionVisibility(definitionDetail, payload, {
+    requesterUserId,
+    clientId,
+    contactId,
+  });
+  const visibleFieldKeySet = new Set(visibleFieldKeys);
+  const visiblePayload = Object.fromEntries(
+    Object.entries(payload).filter(([key]) => visibleFieldKeySet.has(key))
+  );
+  const visibleAttachments = attachments.filter((attachment) =>
+    visibleFieldKeySet.has(attachment.fieldKey)
+  );
+
   const validationErrors = validateSubmissionAgainstPublishedSchema({
     formSchema: definitionDetail.formSchema,
-    payload,
-    attachments,
-    visibleFieldKeys: await (async () => {
-      const formBehaviorProvider = getServiceRequestFormBehaviorProvider(
-        definitionDetail.formBehaviorProvider
-      );
-      if (!formBehaviorProvider?.resolveVisibleFieldKeys) {
-        return definitionDetail.visibleFieldKeys;
-      }
-      const mergedValues: Record<string, unknown> = {
-        ...definitionDetail.initialValues,
-        ...payload,
-      };
-      return formBehaviorProvider.resolveVisibleFieldKeys(
-        {
-          tenant,
-          requesterUserId,
-          clientId,
-          contactId,
-        },
-        definitionDetail.formSchema,
-        mergedValues,
-        definitionDetail.formBehaviorConfig
-      );
-    })(),
+    payload: visiblePayload,
+    attachments: visibleAttachments,
+    visibleFieldKeys,
   });
   if (validationErrors.length > 0) {
     throw new Error(`Submission validation failed: ${validationErrors.join('; ')}`);
   }
 
-  if (attachments.length > 0) {
+  if (visibleAttachments.length > 0) {
     const db = tenantDb(knex, tenant);
-    const attachmentFileIds = [...new Set(attachments.map((attachment) => attachment.fileId))];
+    const attachmentFileIds = [...new Set(visibleAttachments.map((attachment) => attachment.fileId))];
     const existingFileRows = await db.table('external_files')
       .where({ is_deleted: false })
       .whereIn('file_id', attachmentFileIds)
@@ -332,7 +353,7 @@ export async function submitPortalServiceRequest(
           client_id: clientId,
           contact_id: contactId,
           request_name: definitionDetail.title,
-          submitted_payload: payload,
+          submitted_payload: visiblePayload,
           execution_status: 'pending',
           client_submission_key: clientSubmissionKey,
         })
@@ -340,9 +361,9 @@ export async function submitPortalServiceRequest(
 
       const submissionId: string = submissionRow.submission_id;
 
-      if (attachments.length > 0) {
+      if (visibleAttachments.length > 0) {
         await db.table('service_request_submission_attachments').insert(
-          attachments.map((attachment) => ({
+          visibleAttachments.map((attachment) => ({
             tenant,
             submission_id: submissionId,
             field_key: attachment.fieldKey,
@@ -448,7 +469,7 @@ export async function submitPortalServiceRequest(
       requesterUserId,
       clientId,
       contactId,
-      payload,
+      payload: visiblePayload,
       config: definitionDetail.executionConfig,
     });
   } catch (error) {

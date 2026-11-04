@@ -1,0 +1,653 @@
+// server/src/lib/actions/discountActions.ts
+'use server';
+
+import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import type { Knex } from 'knex';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import {
+  toDateOnly,
+  toDisplayDiscountValue,
+  toStoredDiscountValue,
+  validateDiscountInput,
+  type DiscountAuthoringInput,
+  type DiscountAuthoringScope,
+} from '../lib/billing/discountAuthoring';
+
+/**
+ * Authoring actions for configured automatic discounts on a client contract.
+ *
+ * These write the existing `discounts` + `contract_line_discounts` model that
+ * the invoice adjustment evaluator already consumes; they are not a second
+ * discount engine. Every read and write is tenant-scoped through `tenantDb`,
+ * permission-checked, and validated against the contract's own lines/services
+ * so a discount can never reference another contract's line.
+ *
+ * `discounts.value` is `decimal(10,2)`. The API boundary takes percentages in
+ * percent units (`10` = 10%) and fixed discounts in decimal currency (`50` =
+ * $50.00); the action stores percentages as the legacy fraction (`0.10`) and
+ * fixed amounts as the decimal currency value the evaluator converts to minor
+ * units at its single adapter boundary.
+ */
+
+export type ContractDiscountScope = DiscountAuthoringScope;
+export type ContractDiscountInput = DiscountAuthoringInput;
+
+export type ContractDiscountActionError = ActionMessageError | ActionPermissionError;
+
+export interface ContractDiscountRecord {
+  discount_id: string;
+  discount_name: string;
+  discount_type: 'percentage' | 'fixed';
+  /** Percentage in percent units, or fixed decimal currency amount. */
+  value: number;
+  /** Stored value exactly as persisted (fraction for percentage). */
+  stored_value: number;
+  start_date: string | null;
+  end_date: string | null;
+  contract_line_id: string | null;
+  contract_line_name: string | null;
+  scope: ContractDiscountScope;
+  scope_service_id: string | null;
+  scope_service_name: string | null;
+  applies_to_item_id: string | null;
+  priority: number | null;
+  is_active: boolean;
+  assignment_id?: string | null;
+  attachment_kind?: 'contract' | 'line';
+}
+
+async function assertDiscountAuthorable(
+  trx: Knex.Transaction,
+  tenant: string,
+  contractId: string,
+  input: ContractDiscountInput,
+): Promise<void> {
+  const db = tenantDb(trx, tenant);
+
+  const contract = await db
+    .table('contracts')
+    .where({ contract_id: contractId })
+    .first('contract_id', 'is_system_managed_default');
+  if (!contract) {
+    throw new Error('The selected contract is no longer available.');
+  }
+  if (contract.is_system_managed_default === true) {
+    throw new Error('System-managed default contracts are attribution-only; discount authoring is disabled.');
+  }
+
+  // The link line must belong to this contract; a foreign line would silently
+  // make the discount ineligible or, worse, leak another contract's scoping.
+  if (!input.contract_line_id) {
+    if (input.scope === 'service' && input.scope_service_id) {
+      const serviceQuery = db.table('contract_line_services as cls');
+      db.tenantJoin(serviceQuery, 'contract_lines as cl', 'cl.contract_line_id', 'cls.contract_line_id');
+      const service = await serviceQuery.where({ 'cl.contract_id': contractId, 'cls.service_id': input.scope_service_id }).first('cls.service_id');
+      if (!service) throw new Error('The selected service is not part of this contract.');
+    }
+    return;
+  }
+  const line = await db
+    .table('contract_lines')
+    .where({ contract_line_id: input.contract_line_id, contract_id: contractId })
+    .first('contract_line_id');
+  if (!line) {
+    throw new Error('The selected contract line does not belong to this contract.');
+  }
+
+  if (input.scope === 'service' && input.scope_service_id) {
+    const service = await db
+      .table('contract_line_services')
+      .where({ contract_line_id: input.contract_line_id, service_id: input.scope_service_id })
+      .first('service_id');
+    if (!service) {
+      throw new Error('The selected service is not part of this contract line.');
+    }
+  }
+}
+
+function discountActionErrorFrom(error: unknown): ContractDiscountActionError | null {
+  if (typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === '23505') {
+    return actionError('This discount is already attached to this contract.');
+  }
+  if (error instanceof Error && error.message.startsWith('Permission denied:')) {
+    return permissionError(error.message);
+  }
+  if (error instanceof Error) {
+    const message = error.message;
+    if (
+      message.includes('required') ||
+      message.includes('must be') ||
+      message.includes('not part of this contract line') ||
+      message.includes('does not belong to this contract') ||
+      message.includes('no longer available') ||
+      message.includes('already attached') ||
+      message.includes('attribution-only') ||
+      message.includes('independently owned') ||
+      message.includes('supported discount scope')
+    ) {
+      return actionError(message);
+    }
+  }
+  return null;
+}
+
+async function resolveClientContractId(
+  db: ReturnType<typeof tenantDb>,
+  contractId: string,
+  requestedClientContractId?: string | null,
+): Promise<string> {
+  const query = db.table('client_contracts').where({ contract_id: contractId });
+  if (requestedClientContractId) query.andWhere({ client_contract_id: requestedClientContractId });
+  const rows = await query.select('client_contract_id');
+  if (rows.length !== 1) {
+    throw new Error(rows.length > 1
+      ? 'Select a specific client contract assignment before managing its discounts.'
+      : 'The selected client contract assignment is no longer available.');
+  }
+  return String(rows[0].client_contract_id);
+}
+
+async function assertOwnedContractDiscountDefinition(
+  db: ReturnType<typeof tenantDb>, tenant: string, discountId: string, clientContractId: string,
+): Promise<void> {
+  const assignments = await db.table('contract_discount_assignments')
+    .where({ tenant, discount_id: discountId }).select('client_contract_id');
+  if (assignments.length !== 1 || String(assignments[0].client_contract_id) !== clientContractId) {
+    throw new Error('This discount definition is not independently owned by the selected client contract. Refresh the contract discounts before editing.');
+  }
+}
+
+/**
+ * Lists the services attached to each line of a contract, for the discount
+ * dialog's service-scope selector.
+ */
+export interface ContractLineServiceOption {
+  contract_line_id: string;
+  contract_line_name: string | null;
+  service_id: string;
+  service_name: string | null;
+}
+
+export const getContractLineServiceOptions = withAuth(async (
+  user,
+  { tenant },
+  contractId: string,
+): Promise<ContractLineServiceOption[] | ContractDiscountActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('tenant context not found');
+    }
+
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(user, 'billing', 'read', trx)) {
+        throw new Error('Permission denied: Cannot read contract discounts');
+      }
+
+      const db = tenantDb(trx, tenant);
+      const query = db.table('contract_line_services as cls');
+      db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_line_id', 'cls.contract_line_id');
+      db.tenantJoin(query, 'service_catalog as svc', 'svc.service_id', 'cls.service_id', { type: 'left' });
+
+      const rows = await query
+        .where('cl.contract_id', contractId)
+        .orderBy('cl.display_order', 'asc')
+        .orderBy('svc.service_name', 'asc')
+        .select(
+          'cls.contract_line_id',
+          'cl.contract_line_name',
+          'cls.service_id',
+          'svc.service_name',
+        );
+
+      return (rows as Array<Record<string, unknown>>).map((row): ContractLineServiceOption => ({
+        contract_line_id: String(row.contract_line_id),
+        contract_line_name: row.contract_line_name ? String(row.contract_line_name) : null,
+        service_id: String(row.service_id),
+        service_name: row.service_name ? String(row.service_name) : null,
+      }));
+    });
+  } catch (error) {
+    console.error('Error fetching contract line service options:', error);
+    const expected = discountActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+});
+
+/**
+ * Lists the configured discounts linked to a contract's lines. Percentages are
+ * returned in percent units for the editor; `stored_value` preserves the raw
+ * persisted number.
+ */
+export const getContractDiscounts = withAuth(async (
+  user,
+  { tenant },
+  contractId: string,
+  clientContractId?: string | null,
+): Promise<ContractDiscountRecord[] | ContractDiscountActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('tenant context not found');
+    }
+
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(user, 'billing', 'read', trx)) {
+        throw new Error('Permission denied: Cannot read contract discounts');
+      }
+
+      const db = tenantDb(trx, tenant);
+      const resolvedClientContractId = await resolveClientContractId(db, contractId, clientContractId);
+      const query = db.table('discounts as d');
+      db.tenantJoin(query, 'contract_line_discounts as cld', 'd.discount_id', 'cld.discount_id');
+      db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_line_id', 'cld.contract_line_id', { type: 'left' });
+      db.tenantJoin(query, 'service_catalog as svc', 'svc.service_id', 'd.scope_service_id', { type: 'left' });
+
+      const rows = await query
+        .where('cl.contract_id', contractId)
+        .where('cld.client_contract_id', resolvedClientContractId)
+        .orderBy('d.discount_name', 'asc')
+        .select(
+          'd.discount_id',
+          'd.discount_name',
+          'd.discount_type',
+          'd.value',
+          'd.start_date',
+          'd.end_date',
+          'd.scope',
+          'd.scope_service_id',
+          'd.applies_to_item_id',
+          'd.priority',
+          'd.is_active',
+          'cld.contract_line_id',
+          'cl.contract_line_name',
+          'svc.service_name as scope_service_name',
+        );
+
+      const contractAssignments = db.table('contract_discount_assignments as a');
+      db.tenantJoin(contractAssignments, 'discounts as d', 'd.discount_id', 'a.discount_id');
+      db.tenantJoin(contractAssignments, 'service_catalog as svc', 'svc.service_id', 'd.scope_service_id', { type: 'left' });
+      const attachedRows = await contractAssignments.where('a.client_contract_id', resolvedClientContractId).orderBy('d.discount_name', 'asc').select(
+        'd.discount_id', 'd.discount_name', 'd.discount_type', 'd.value', 'd.start_date', 'd.end_date',
+        'd.scope', 'd.scope_service_id', 'd.applies_to_item_id', 'd.priority', 'd.is_active',
+        'svc.service_name as scope_service_name', 'a.assignment_id',
+      );
+
+      const mergedRows: Array<Record<string, unknown>> = [
+        ...(rows as Array<Record<string, unknown>>).map((row) => ({ ...row, attachment_kind: 'line' as const })),
+        ...(attachedRows as Array<Record<string, unknown>>).map((row) => ({
+          ...row, contract_line_id: null, contract_line_name: null,
+          assignment_id: row.assignment_id, attachment_kind: 'contract' as const,
+        })),
+      ];
+      return mergedRows.map((row): ContractDiscountRecord => {
+        const discountType = row.discount_type === 'fixed' ? 'fixed' : 'percentage';
+        const storedValue = Number(row.value) || 0;
+        const scope = (row.scope as ContractDiscountScope | null) ?? 'invoice';
+        return {
+          discount_id: String(row.discount_id),
+          discount_name: String(row.discount_name),
+          discount_type: discountType,
+          value: toDisplayDiscountValue(discountType, storedValue),
+          stored_value: storedValue,
+          start_date: toDateOnly(row.start_date),
+          end_date: toDateOnly(row.end_date),
+          contract_line_id: row.contract_line_id ? String(row.contract_line_id) : null,
+          contract_line_name: row.contract_line_name ? String(row.contract_line_name) : null,
+          scope,
+          scope_service_id: row.scope_service_id ? String(row.scope_service_id) : null,
+          scope_service_name: row.scope_service_name ? String(row.scope_service_name) : null,
+          applies_to_item_id: row.applies_to_item_id ? String(row.applies_to_item_id) : null,
+          priority: row.priority == null ? null : Number(row.priority),
+          is_active: Boolean(row.is_active),
+          assignment_id: row.assignment_id ? String(row.assignment_id) : null,
+          attachment_kind: row.attachment_kind as 'contract' | 'line' | undefined,
+        };
+      });
+    });
+  } catch (error) {
+    console.error('Error fetching contract discounts:', error);
+    const expected = discountActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+});
+
+export const detachContractDiscount = withAuth(async (user, { tenant }, contractId: string, assignmentId: string, clientContractId?: string | null) => {
+  const { knex } = await createTenantKnex();
+  if (!tenant) throw new Error('tenant context not found');
+  try {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(user, 'billing', 'update', trx)) throw new Error('Permission denied: Cannot detach contract discounts');
+      const db = tenantDb(trx, tenant);
+      const resolvedClientContractId = await resolveClientContractId(db, contractId, clientContractId);
+      const contract = await db.table('contracts').where({ contract_id: contractId }).first('contract_id', 'is_system_managed_default');
+      if (!contract) throw new Error('The selected contract is no longer available.');
+      if (contract.is_system_managed_default === true) throw new Error('System-managed default contracts are attribution-only; discount authoring is disabled.');
+      const removed = await db.table('contract_discount_assignments')
+        .where({ client_contract_id: resolvedClientContractId, assignment_id: assignmentId }).delete();
+      if (!removed) throw new Error('The discount assignment no longer exists on this contract.');
+      return { success: true as const };
+    });
+  } catch (error) {
+    const expected = discountActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+});
+
+export const createContractDiscount = withAuth(async (
+  user,
+  { tenant },
+  contractId: string,
+  input: ContractDiscountInput,
+  clientContractId?: string | null,
+): Promise<ContractDiscountRecord | ContractDiscountActionError> => {
+  try {
+    const validationError = validateDiscountInput(input);
+    if (validationError) {
+      return actionError(validationError);
+    }
+
+    const { knex } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('tenant context not found');
+    }
+
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(user, 'billing', 'create', trx)) {
+        throw new Error('Permission denied: Cannot create contract discounts');
+      }
+
+      await assertDiscountAuthorable(trx, tenant, contractId, input);
+
+      const db = tenantDb(trx, tenant);
+      const resolvedClientContractId = await resolveClientContractId(db, contractId, clientContractId);
+      const discountId = trx.raw('gen_random_uuid()');
+      const now = trx.fn.now();
+
+      const inserted = await db.table('discounts').insert({
+        discount_id: discountId,
+        tenant,
+        discount_name: input.discount_name.trim(),
+        discount_type: input.discount_type,
+        value: toStoredDiscountValue(input),
+        start_date: `${input.start_date}T00:00:00.000Z`,
+        end_date: input.end_date ? `${input.end_date}T00:00:00.000Z` : null,
+        is_active: input.is_active ?? true,
+        scope: input.scope,
+        scope_service_id: input.scope === 'service' ? input.scope_service_id ?? null : null,
+        applies_to_item_id: input.scope === 'item' ? input.applies_to_item_id ?? null : null,
+        priority: input.priority ?? null,
+        created_at: now,
+        updated_at: now,
+      }).returning('discount_id');
+
+      const newId = String((inserted[0] as { discount_id: string }).discount_id);
+      if (input.contract_line_id) {
+        await db.table('contract_line_discounts').insert({
+          discount_id: newId,
+          tenant,
+          contract_line_id: input.contract_line_id,
+          client_contract_id: resolvedClientContractId,
+        });
+      } else {
+        const contract = await db.table('contracts').where({ contract_id: contractId }).first('contract_id');
+        if (!contract) throw new Error('The selected contract is no longer available.');
+        await db.table('contract_discount_assignments').insert({
+          tenant,
+          assignment_id: trx.raw('gen_random_uuid()'),
+          client_contract_id: resolvedClientContractId,
+          discount_id: newId,
+          created_at: now,
+        });
+      }
+
+      const record = await getContractDiscountById(trx, tenant, contractId, newId, resolvedClientContractId);
+      if (!record) {
+        throw new Error('The discount was created but could not be read back.');
+      }
+      return record;
+    });
+  } catch (error) {
+    console.error('Error creating contract discount:', error);
+    const expected = discountActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+});
+
+export const updateContractDiscount = withAuth(async (
+  user,
+  { tenant },
+  contractId: string,
+  discountId: string,
+  input: ContractDiscountInput,
+  clientContractId?: string | null,
+): Promise<ContractDiscountRecord | ContractDiscountActionError> => {
+  try {
+    const validationError = validateDiscountInput(input);
+    if (validationError) {
+      return actionError(validationError);
+    }
+
+    const { knex } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('tenant context not found');
+    }
+
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(user, 'billing', 'update', trx)) {
+        throw new Error('Permission denied: Cannot update contract discounts');
+      }
+
+      await assertDiscountAuthorable(trx, tenant, contractId, input);
+
+      const db = tenantDb(trx, tenant);
+      const resolvedClientContractId = await resolveClientContractId(db, contractId, clientContractId);
+      const existing = await db
+        .table('contract_discount_assignments')
+        .where({ discount_id: discountId, client_contract_id: resolvedClientContractId })
+        .first('assignment_id');
+      if (existing) await assertOwnedContractDiscountDefinition(db, tenant, discountId, resolvedClientContractId);
+      const existingLine = existing ? null : await db
+        .table('discounts as d')
+        .join('contract_line_discounts as cld', function () {
+          this.on('cld.discount_id', '=', 'd.discount_id').andOn('cld.tenant', '=', 'd.tenant');
+        })
+        .join('contract_lines as cl', function () {
+          this.on('cl.contract_line_id', '=', 'cld.contract_line_id').andOn('cl.tenant', '=', 'cld.tenant');
+        })
+        .where({ 'd.discount_id': discountId, 'cl.contract_id': contractId })
+        .andWhere('cld.client_contract_id', resolvedClientContractId)
+        .first('d.discount_id');
+      if (!existing && !existingLine) {
+        throw new Error('The discount no longer exists for this contract.');
+      }
+      if (existing && input.contract_line_id) {
+        throw new Error('A client-contract discount cannot be changed to line scope in place. Detach it and create a line-scoped discount.');
+      }
+
+      await db.table('discounts').where({ discount_id: discountId }).update({
+        discount_name: input.discount_name.trim(),
+        discount_type: input.discount_type,
+        value: toStoredDiscountValue(input),
+        start_date: `${input.start_date}T00:00:00.000Z`,
+        end_date: input.end_date ? `${input.end_date}T00:00:00.000Z` : null,
+        is_active: input.is_active ?? true,
+        scope: input.scope,
+        scope_service_id: input.scope === 'service' ? input.scope_service_id ?? null : null,
+        applies_to_item_id: input.scope === 'item' ? input.applies_to_item_id ?? null : null,
+        priority: input.priority ?? null,
+        updated_at: trx.fn.now(),
+      });
+
+      if (!existing) {
+        // Preserve legacy line-scoped authoring. Client-contract definitions
+        // have already been isolated and cannot be attached to another client.
+        await db.table('contract_line_discounts').where({ discount_id: discountId, client_contract_id: resolvedClientContractId }).delete();
+        if (input.contract_line_id) await db.table('contract_line_discounts').insert({
+          discount_id: discountId, tenant, contract_line_id: input.contract_line_id, client_contract_id: resolvedClientContractId,
+        });
+      }
+
+      const record = await getContractDiscountById(trx, tenant, contractId, discountId, resolvedClientContractId);
+      if (!record) {
+        throw new Error('The discount was updated but could not be read back.');
+      }
+      return record;
+    });
+  } catch (error) {
+    console.error('Error updating contract discount:', error);
+    const expected = discountActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+});
+
+export const setContractDiscountActive = withAuth(async (
+  user,
+  { tenant },
+  contractId: string,
+  discountId: string,
+  isActive: boolean,
+  clientContractId?: string | null,
+): Promise<ContractDiscountRecord | ContractDiscountActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('tenant context not found');
+    }
+
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(user, 'billing', 'update', trx)) {
+        throw new Error('Permission denied: Cannot update contract discounts');
+      }
+
+      const db = tenantDb(trx, tenant);
+      const resolvedClientContractId = await resolveClientContractId(db, contractId, clientContractId);
+      const existingAssignment = await db.table('contract_discount_assignments')
+        .where({ client_contract_id: resolvedClientContractId, discount_id: discountId }).first('assignment_id');
+      if (existingAssignment) await assertOwnedContractDiscountDefinition(db, tenant, discountId, resolvedClientContractId);
+      const existingLine = await db
+        .table('discounts as d')
+        .join('contract_line_discounts as cld', function () {
+          this.on('cld.discount_id', '=', 'd.discount_id').andOn('cld.tenant', '=', 'd.tenant');
+        })
+        .join('contract_lines as cl', function () {
+          this.on('cl.contract_line_id', '=', 'cld.contract_line_id').andOn('cl.tenant', '=', 'cld.tenant');
+        })
+        .where({ 'd.discount_id': discountId, 'cl.contract_id': contractId })
+        .andWhere('cld.client_contract_id', resolvedClientContractId)
+        .first('d.discount_id');
+      if (!existingAssignment && !existingLine) {
+        throw new Error('The discount no longer exists for this contract.');
+      }
+
+      await db.table('discounts').where({ discount_id: discountId }).update({
+        is_active: isActive,
+        updated_at: trx.fn.now(),
+      });
+
+      const record = await getContractDiscountById(trx, tenant, contractId, discountId, resolvedClientContractId);
+      if (!record) {
+        throw new Error('The discount was updated but could not be read back.');
+      }
+      return record;
+    });
+  } catch (error) {
+    console.error('Error updating contract discount activation:', error);
+    const expected = discountActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+});
+
+async function getContractDiscountById(
+  trx: Knex.Transaction,
+  tenant: string,
+  contractId: string,
+  discountId: string,
+  clientContractId?: string,
+): Promise<ContractDiscountRecord | null> {
+  const db = tenantDb(trx, tenant);
+  const attached = await db.table('contract_discount_assignments as a')
+    .join('discounts as d', function () {
+      this.on('d.discount_id', '=', 'a.discount_id').andOn('d.tenant', '=', 'a.tenant');
+    })
+    .leftJoin('service_catalog as svc', function () {
+      this.on('svc.service_id', '=', 'd.scope_service_id').andOn('svc.tenant', '=', 'd.tenant');
+    })
+    .where({ ...(clientContractId ? { 'a.client_contract_id': clientContractId } : {}), 'a.discount_id': discountId })
+    .first('d.*', 'svc.service_name as scope_service_name', 'a.assignment_id');
+  if (attached) {
+    const row = attached as Record<string, unknown>;
+    const type = row.discount_type === 'fixed' ? 'fixed' : 'percentage';
+    const stored = Number(row.value) || 0;
+    return {
+      discount_id: String(row.discount_id), discount_name: String(row.discount_name), discount_type: type,
+      value: toDisplayDiscountValue(type, stored), stored_value: stored,
+      start_date: toDateOnly(row.start_date), end_date: toDateOnly(row.end_date),
+      contract_line_id: null, contract_line_name: null,
+      scope: (row.scope as ContractDiscountScope | null) ?? 'invoice',
+      scope_service_id: row.scope_service_id ? String(row.scope_service_id) : null,
+      scope_service_name: row.scope_service_name ? String(row.scope_service_name) : null,
+      applies_to_item_id: row.applies_to_item_id ? String(row.applies_to_item_id) : null,
+      priority: row.priority == null ? null : Number(row.priority), is_active: Boolean(row.is_active),
+      assignment_id: String(row.assignment_id), attachment_kind: 'contract',
+    };
+  }
+  const query = db.table('discounts as d');
+  db.tenantJoin(query, 'contract_line_discounts as cld', 'd.discount_id', 'cld.discount_id');
+  db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_line_id', 'cld.contract_line_id', { type: 'left' });
+  db.tenantJoin(query, 'service_catalog as svc', 'svc.service_id', 'd.scope_service_id', { type: 'left' });
+
+  const row = await query
+    .where({ 'd.discount_id': discountId, 'cl.contract_id': contractId, ...(clientContractId ? { 'cld.client_contract_id': clientContractId } : {}) })
+    .first(
+      'd.discount_id',
+      'd.discount_name',
+      'd.discount_type',
+      'd.value',
+      'd.start_date',
+      'd.end_date',
+      'd.scope',
+      'd.scope_service_id',
+      'd.applies_to_item_id',
+      'd.priority',
+      'd.is_active',
+      'cld.contract_line_id',
+      'cl.contract_line_name',
+      'svc.service_name as scope_service_name',
+    );
+  if (!row) return null;
+
+  const record = row as Record<string, unknown>;
+  const discountType = record.discount_type === 'fixed' ? 'fixed' : 'percentage';
+  const storedValue = Number(record.value) || 0;
+  return {
+    discount_id: String(record.discount_id),
+    discount_name: String(record.discount_name),
+    discount_type: discountType,
+    value: toDisplayDiscountValue(discountType, storedValue),
+    stored_value: storedValue,
+    start_date: toDateOnly(record.start_date),
+    end_date: toDateOnly(record.end_date),
+    contract_line_id: record.contract_line_id ? String(record.contract_line_id) : null,
+    contract_line_name: record.contract_line_name ? String(record.contract_line_name) : null,
+    scope: (record.scope as ContractDiscountScope | null) ?? 'invoice',
+    scope_service_id: record.scope_service_id ? String(record.scope_service_id) : null,
+    scope_service_name: record.scope_service_name ? String(record.scope_service_name) : null,
+    applies_to_item_id: record.applies_to_item_id ? String(record.applies_to_item_id) : null,
+    priority: record.priority == null ? null : Number(record.priority),
+    is_active: Boolean(record.is_active),
+  };
+}

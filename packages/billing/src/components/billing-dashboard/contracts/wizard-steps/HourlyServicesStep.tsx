@@ -1,5 +1,6 @@
 'use client';
 
+import { BillingTimingField } from '../BillingTimingField';
 import React, { useState, useEffect } from 'react';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -15,6 +16,7 @@ import { useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnu
 import { listBucketBusinessHoursSchedules } from '@alga-psa/billing/actions/bucketPoolActions';
 import { BucketPoolDraftEditor } from './BucketPoolDraftEditor';
 import { resolveContractAuthoringRate } from '../../../../lib/contractAuthoringRate';
+import { PrepaidBlockLinesEditor } from '../PrepaidBlockLinesEditor';
 
 interface HourlyServicesStepProps {
   data: ContractWizardData;
@@ -139,6 +141,13 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
             defaultValue: 'Configure services that are billed based on time tracked. Perfect for T&M (Time & Materials) work.',
           })}
         </p>
+      </div>
+
+      <div className="mb-6 space-y-1">
+        <Label className="text-sm font-medium">
+          {t('wizardHourly.billingTimingLabel', { defaultValue: 'Billing Timing' })}
+        </Label>
+        <BillingTimingField id="hourly-billing-timing" lineType="Hourly" value="arrears" onChange={() => undefined} />
       </div>
 
       <div className="p-4 bg-[rgb(var(--color-accent-50))] border border-[rgb(var(--color-accent-200))] rounded-md mb-6">
@@ -356,7 +365,16 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
         />
       </div>
 
-      {data.hourly_services.length > 0 && (
+      <div className="rounded-lg border border-[rgb(var(--color-border-200))] p-4">
+        <PrepaidBlockLinesEditor
+          idPrefix="wizard-prepaid-block"
+          lines={data.prepaid_block_drafts ?? []}
+          onChange={(lines) => updateData({ prepaid_block_drafts: lines })}
+          currencyCode={data.currency_code || 'USD'}
+        />
+      </div>
+
+      {(data.hourly_services.length > 0 || (data.prepaid_block_drafts ?? []).length > 0) && (
         <BillingFrequencyOverrideSelect
           contractBillingFrequency={data.billing_frequency}
           value={data.hourly_billing_frequency}

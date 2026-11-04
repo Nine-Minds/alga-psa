@@ -18,43 +18,14 @@ import {
   type MicrosoftEmailSetupOptionsResult,
   configureMicrosoftEmailPlatformApplication,
 } from '../../../actions/integrations/microsoftEmailSetupActions';
+import {
+  formatMicrosoftEmailSetupFailure,
+  useMicrosoftEmailSetupCallback,
+  type MicrosoftEmailSetupCallbackResult,
+} from './useMicrosoftEmailSetupCallback';
 import { Copy, ExternalLink, KeyRound, Settings2, WandSparkles } from 'lucide-react';
 
 type SetupStep = 'choose' | 'platform' | 'automated' | 'manual' | 'complete';
-
-// The setup callback route reports failures as stable codes (never prose), so
-// the popup's English payload never reaches the user. Keys live in
-// msp/integrations alongside the rest of the Microsoft mailbox setup copy.
-const CALLBACK_ERROR_TEXT: Record<string, { key: string; defaultValue: string }> = {
-  invalid_state: {
-    key: 'integrations.microsoft.emailSetup.errors.invalidState',
-    defaultValue: 'This Microsoft setup request is invalid or expired. Start again from Providers settings.',
-  },
-  session_mismatch: {
-    key: 'integrations.microsoft.emailSetup.errors.sessionMismatch',
-    defaultValue: 'Your AlgaPSA session does not match the administrator who started this setup. Sign in and try again.',
-  },
-  consent_denied: {
-    key: 'integrations.microsoft.emailSetup.errors.consentDenied',
-    defaultValue: 'Microsoft sign-in or administrator consent was denied. Choose another setup option or try again.',
-  },
-  microsoft_error: {
-    key: 'integrations.microsoft.emailSetup.errors.microsoftError',
-    defaultValue: 'Microsoft could not complete the setup request. Try again or use manual setup.',
-  },
-  consent_not_granted: {
-    key: 'integrations.microsoft.emailSetup.errors.consentNotGranted',
-    defaultValue: 'Microsoft did not confirm tenant administrator consent.',
-  },
-  consent_persist_failed: {
-    key: 'integrations.microsoft.emailSetup.errors.consentPersistFailed',
-    defaultValue: 'Failed to record Microsoft administrator consent.',
-  },
-  missing_code: {
-    key: 'integrations.microsoft.emailSetup.errors.missingCode',
-    defaultValue: 'Microsoft did not return an authorization code. Start setup again.',
-  },
-};
 
 interface MicrosoftEmailSetupDialogProps {
   isOpen: boolean;
@@ -117,44 +88,31 @@ export function MicrosoftEmailSetupDialog({
       .finally(() => setLoading(false));
   }, [isOpen]);
 
-  React.useEffect(() => {
-    if (!isOpen) return;
-    const handleMessage = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin || event.data?.type !== 'microsoft-email-setup-callback') {
-        return;
-      }
-      popupCompletedRef.current = true;
-      clearPopupMonitor();
-      setWorking(false);
-      if (!event.data.success) {
-        const mapped = CALLBACK_ERROR_TEXT[event.data.errorCode as string];
-        setError(
-          mapped
-            ? t(mapped.key, { defaultValue: mapped.defaultValue })
-            // Provisioning failures still arrive as a server-composed message.
-            : event.data.error || t('integrations.microsoft.emailSetup.errors.generic', { defaultValue: 'Microsoft Email setup did not complete.' }),
-        );
-        return;
-      }
-      if (event.data.stage === 'admin_consent') {
-        setAdminConsentGranted(true);
-        toast({
-          title: t('integrations.microsoft.emailSetup.consent.confirmedTitle', { defaultValue: 'Administrator consent confirmed' }),
-          description: t('integrations.microsoft.emailSetup.consent.confirmedDescription', { defaultValue: 'The Microsoft app is ready for mailbox authorization.' }),
-        });
-        void onCompleted();
-        return;
-      }
-
-      const result = event.data as MicrosoftEmailSetupCompletionResult;
-      setCompletion(result);
-      setTenantId(result.tenantId || '');
-      setStep('complete');
+  const handleSetupCallback = React.useCallback((data: MicrosoftEmailSetupCallbackResult) => {
+    popupCompletedRef.current = true;
+    clearPopupMonitor();
+    setWorking(false);
+    if (!data.success) {
+      setError(formatMicrosoftEmailSetupFailure(t, data));
+      return;
+    }
+    if (data.stage === 'admin_consent') {
+      setAdminConsentGranted(true);
+      toast({
+        title: t('integrations.microsoft.emailSetup.consent.confirmedTitle', { defaultValue: 'Administrator consent confirmed' }),
+        description: t('integrations.microsoft.emailSetup.consent.confirmedDescription', { defaultValue: 'The Microsoft app is ready for mailbox authorization.' }),
+      });
       void onCompleted();
-    };
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [clearPopupMonitor, isOpen, onCompleted, t, toast]);
+      return;
+    }
+
+    const result = data as unknown as MicrosoftEmailSetupCompletionResult;
+    setCompletion(result);
+    setTenantId(result.tenantId || '');
+    setStep('complete');
+    void onCompleted();
+  }, [clearPopupMonitor, onCompleted, t, toast]);
+  useMicrosoftEmailSetupCallback(handleSetupCallback, isOpen);
 
   React.useEffect(() => () => clearPopupMonitor(), [clearPopupMonitor]);
 

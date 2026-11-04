@@ -65,6 +65,7 @@ type ValidationIssue = {
   message?: string;
   expected?: string;
   received?: string;
+  input?: unknown;
   minimum?: number | bigint;
   maximum?: number | bigint;
 };
@@ -96,7 +97,10 @@ export const humanizeWorkflowFieldPath = (path: Array<string | number> | undefin
 
 const describeValidationIssue = (t: TFunction, issue: ValidationIssue): string => {
   const field = humanizeWorkflowFieldPath(issue.path) || t('serverErrors.fieldValue', { defaultValue: 'A value' });
-  if (issue.code === 'invalid_type' && (issue.received === 'undefined' || issue.received === 'null')) {
+  const missing = 'input' in issue
+    ? issue.input === undefined || issue.input === null
+    : issue.received === 'undefined' || issue.received === 'null' || /received (undefined|null)$/.test(issue.message ?? '');
+  if (issue.code === 'invalid_type' && missing) {
     return t('serverErrors.issue.required', { defaultValue: '{{field}} is required', field });
   }
   if (issue.code === 'invalid_type' && issue.expected === 'number') {

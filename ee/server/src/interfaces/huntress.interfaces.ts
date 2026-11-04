@@ -91,3 +91,53 @@ export interface HuntressOrganizationsPage {
   organizations: HuntressOrganization[];
   pagination?: HuntressPagination;
 }
+
+/**
+ * Escalations: SOC requests for partner attention (false-positive allow-list
+ * approval, unexpected country/VPN logins, missing remediation details). Not
+ * incident reports, but they carry the same severities.
+ */
+export type HuntressEscalationStatus = 'open' | 'overdue' | 'resolved';
+
+export interface HuntressEscalationOrganization {
+  id: number;
+  name?: string | null;
+}
+
+export interface HuntressEscalationEntity {
+  id: number;
+  /** e.g. "Agent", "Identity". */
+  type: string;
+  details?: Record<string, unknown> | null;
+}
+
+export interface HuntressEscalation {
+  id: number;
+  account?: { id: number; name?: string | null } | null;
+  organizations: HuntressEscalationOrganization[];
+  severity: HuntressSeverity;
+  status: HuntressEscalationStatus;
+  subject: string | null;
+  /** Display string, e.g. "Environmental Issue". */
+  type: string | null;
+  /** Stable machine key, e.g. "unexpected_country_access". */
+  type_code: string | null;
+  /** Type-dependent classifier, e.g. an ISO country code. */
+  subtype: string | null;
+  /** Tickets Huntress's own PSA integrations opened for this escalation. */
+  psa_ticket_eids?: string[];
+  created_at: string | null;
+  resolved_at: string | null;
+  updated_at: string;
+  /** Only returned by GET /v1/escalations/{id}. */
+  entities?: {
+    total_count: number;
+    has_more: boolean;
+    items: HuntressEscalationEntity[];
+  };
+}
+
+export interface HuntressEscalationsPage {
+  escalations: HuntressEscalation[];
+  pagination?: HuntressPagination;
+}

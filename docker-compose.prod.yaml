@@ -12,10 +12,12 @@ services:
       IMAP_WEBHOOK_SECRET: ${IMAP_WEBHOOK_SECRET:-}
     build:
       context: .
-      dockerfile: Dockerfile.build
-      args:
-        NEXT_BUILD_MAX_OLD_SPACE_SIZE: ${NEXT_BUILD_MAX_OLD_SPACE_SIZE:-12288}
-    # Production server image runs as uid 1000 (Dockerfile.build), so it needs no capabilities.
+      # The one runtime image definition. It packages prebuilt artifacts, so run
+      # scripts/build-production-server.sh community (host Node toolchain) or
+      # scripts/export-production-artifacts.sh community (Docker only) first.
+      dockerfile: Dockerfile
+
+    # Production server image runs as uid 1000, so it needs no capabilities.
     # The dev-image `setup` service below runs as root and keeps its defaults, because a
     # root process without DAC_OVERRIDE cannot read the uid-1000-owned secret files.
     cap_drop:
@@ -28,9 +30,18 @@ services:
   runtime-permissions:
     build:
       context: .
-      dockerfile: Dockerfile.build
-      args:
-        NEXT_BUILD_MAX_OLD_SPACE_SIZE: ${NEXT_BUILD_MAX_OLD_SPACE_SIZE:-12288}
+      dockerfile: Dockerfile
+    restart: "no"
+    user: "0:0"
+    entrypoint: ["/usr/local/bin/alga-runtime-permissions"]
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - FOWNER
+      - DAC_OVERRIDE
+      - SETUID
+      - SETGID
 
   setup:
     environment:

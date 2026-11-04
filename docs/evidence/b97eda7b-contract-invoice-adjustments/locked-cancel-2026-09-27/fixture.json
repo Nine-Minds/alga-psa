@@ -1,0 +1,25 @@
+{
+  "fixture": "dedicated synthetic locked-after-cancellation case",
+  "invoice_number": "LOCKED-CANCEL-20260927",
+  "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+  "client": "Mountain Dental",
+  "service_period": [
+    "2026-06-01",
+    "2026-07-01"
+  ],
+  "ids": {
+    "contract": "64a49f54-a236-487a-8e77-53837d9c9685",
+    "assignment": "a9c7f91d-0e29-48ea-8d70-42d52dabadbb",
+    "line": "837c9690-44bd-4b53-bcd7-4c8002fcb9cd",
+    "config": "a2ddbd73-a981-4f4f-bb05-704feae58efe",
+    "invoice": "300bbdda-a137-4158-ba18-89283d4a3ed6",
+    "item": "18c6fcbc-e77b-4bf6-a239-3c9b52407c98",
+    "detail": "ee63ac26-fd60-495b-a010-d5c60dadd227",
+    "claim": "dba26eda-28b3-4b72-aacf-09636b7a073f"
+  },
+  "original_line": {
+    "invoice_line_description": "Original locked claim text",
+    "start_date": null,
+    "end_date": null
+  }
+}

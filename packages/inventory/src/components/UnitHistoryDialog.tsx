@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
+import { useLabelPrint } from '@alga-psa/ui/components/labels';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IStockLocation, IStockMovement, IStockUnit } from '@alga-psa/types';
+import { RecordUnavailable } from './RecordUnavailable';
 
 export type UnitDetail = { unit: IStockUnit; movements: IStockMovement[] };
 
@@ -50,14 +52,46 @@ export function UnitHistoryDialog({
   detail,
   onClose,
   locations,
+  unavailable = false,
 }: {
   detail: UnitDetail | null;
   onClose: () => void;
   locations: IStockLocation[];
+  /** Missing, cross-tenant or denied unit: render only the unavailable state, no unit fields. */
+  unavailable?: boolean;
 }) {
   const { t } = useTranslation('features/inventory');
   const router = useRouter();
   const { money } = useCurrencyFormat();
+  const { print, isPrinting: printing } = useLabelPrint();
+  const [printError, setPrintError] = useState<{ message: string; suggestedTemplateCode?: string } | null>(null);
+
+  const printLabel = useCallback(
+    async (templateCode?: string) => {
+      if (!detail) return;
+      setPrintError(null);
+      const outcome = await print({
+        labelClass: 'stock-unit-identity',
+        labels: [{ recordId: detail.unit.unit_id }],
+        ...(templateCode ? { templateId: templateCode } : {}),
+      });
+      if (outcome.status === 'printed') {
+        if (outcome.popupBlocked) {
+          setPrintError({ message: t('stockUnits.printPopupBlocked', 'Allow pop-ups to open the label.') });
+        } else {
+          setTimeout(() => URL.revokeObjectURL(outcome.blobUrl), 60_000);
+        }
+        return;
+      }
+      const suggested = outcome.failures.find((f) => f.suggestedTemplateCode)?.suggestedTemplateCode;
+      setPrintError({
+        message: outcome.message || t('stockUnits.printFailed', 'Could not print this label.'),
+        // Offer the server's suggested template once; a second 422 shows the message only.
+        ...(outcome.httpStatus === 422 && !templateCode && suggested ? { suggestedTemplateCode: suggested } : {}),
+      });
+    },
+    [detail, print, t],
+  );
 
   const locationMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -84,18 +118,42 @@ export function UnitHistoryDialog({
 
   return (
     <Dialog
-      isOpen={detail !== null}
+      isOpen={detail !== null || unavailable}
       onClose={onClose}
       title={
-        detail
+        unavailable
+          ? t('stockUnits.unitHistoryTitle', 'Unit history')
+          : detail
           ? t('stockUnits.unitTitle', 'Unit {{id}}', { id: detail.unit.serial_number || detail.unit.unit_id })
           : t('stockUnits.unitHistoryTitle', 'Unit history')
       }
       id="unit-history-dialog"
       className="max-w-3xl"
     >
-      {detail && (
+      {unavailable && <RecordUnavailable id="unit-dialog-unavailable" />}
+      {!unavailable && detail && (
         <div className="space-y-4 p-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button id="unit-detail-print-label" variant="outline" size="sm" onClick={() => printLabel()} disabled={printing}>
+              {printing ? t('common.loading', 'Loading…') : t('stockUnits.printLabel', 'Print label')}
+            </Button>
+            {printError && (
+              <span id="unit-detail-print-error" role="alert" className="text-sm text-red-600">
+                {printError.message}
+                {printError.suggestedTemplateCode && (
+                  <Button
+                    id="unit-detail-print-suggested"
+                    variant="link"
+                    size="sm"
+                    className="ml-2 h-auto p-0"
+                    onClick={() => printLabel(printError.suggestedTemplateCode)}
+                  >
+                    {t('stockUnits.printWithTemplate', 'Print with {{code}}', { code: printError.suggestedTemplateCode })}
+                  </Button>
+                )}
+              </span>
+            )}
+          </div>
           <div className="rounded border bg-gray-50 p-3">
             <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
               <div>

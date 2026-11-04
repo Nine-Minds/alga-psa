@@ -1,0 +1,42 @@
+[
+  {
+    "id": "T001",
+    "description": "Database-backed receive with two photos and transaction rollback including upload cleanup",
+    "implemented": true
+  },
+  {
+    "id": "T002",
+    "description": "Asset and document authorization, tenant isolation and client visibility",
+    "implemented": true
+  },
+  {
+    "id": "T003",
+    "description": "Custody history photo mapping and rendering, including denied reads",
+    "implemented": true
+  },
+  {
+    "id": "T004",
+    "description": "Backfill justified associations twice and verify idempotence",
+    "implemented": true
+  },
+  {
+    "id": "T005",
+    "description": "Other custody actions upload, persist, display and clean up photos on failure",
+    "implemented": true
+  },
+  {
+    "id": "T006",
+    "description": "Picker and server enforce 20 photos and a 10 MiB aggregate limit, leaving multipart headroom under the default 20 MB request limit",
+    "implemented": true
+  },
+  {
+    "id": "T007",
+    "description": "Deploy mitigation: exercise authenticated thumbnail and preview handlers, original view identifiers, real document and asset RBAC, asset bundle narrowing, public logos, metadata and binary refusal",
+    "implemented": true
+  },
+  {
+    "id": "T008",
+    "description": "Received and Moved custody thumbnail opens, closes and reopens the shared media viewer without a grid; refused reads expose no photo",
+    "implemented": true
+  }
+]

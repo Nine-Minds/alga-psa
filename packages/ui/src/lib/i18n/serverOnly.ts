@@ -24,11 +24,13 @@ import type { CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
  * Resolve the absolute path to the locales directory.
  *
  * Server components can run with `process.cwd()` pointing at different roots
- * depending on whether the dev server starts from `server/`, `ee/server/`, or
- * the monorepo root. We avoid HTTP fetch loaders so SSR doesn't depend on the
- * dev port — historically `i18next-http-backend` defaulted to `localhost:3000`,
- * which silently failed when the dev server ran on a different port and
- * surfaced as raw translation keys in the UI.
+ * depending on whether the dev server starts from `server/`, `ee/server/`,
+ * the monorepo root, or — once `getServerTranslation` started getting called
+ * from workspace packages' own unit tests (contact-actions and friends) —
+ * `packages/<name>/` or `ee/packages/<name>/`. We avoid HTTP fetch loaders so
+ * SSR doesn't depend on the dev port — historically `i18next-http-backend`
+ * defaulted to `localhost:3000`, which silently failed when the dev server
+ * ran on a different port and surfaced as raw translation keys in the UI.
  *
  * Env overrides (in priority order): `I18N_LOCALES_DIR`, `ALGA_LOCALES_DIR`.
  */
@@ -48,6 +50,21 @@ function getLocalesDir(): string {
     } catch {
       // ignore and try next candidate
     }
+  }
+
+  // None of the fixed candidates matched — walk up from cwd looking for a
+  // `server/public/locales` (or a `public/locales` sibling, for a cwd that
+  // already sits inside the server app) ancestor. Bounded so a misconfigured
+  // environment fails back to the original default rather than looping.
+  let dir = process.cwd();
+  for (let depth = 0; depth < 8; depth++) {
+    const direct = path.join(dir, 'public/locales');
+    if (existsSync(direct)) return direct;
+    const nested = path.join(dir, 'server/public/locales');
+    if (existsSync(nested)) return nested;
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
   }
 
   return path.resolve(process.cwd(), 'public/locales');

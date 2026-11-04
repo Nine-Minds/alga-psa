@@ -22,7 +22,7 @@ afterAll(() => {
 });
 
 describe('CategoryPicker search', () => {
-  it('bolds the parent in the selected single-category trigger label', () => {
+  it('shows the selected subcategory as a plain "Parent › Child" trigger label', () => {
     render(
       <CategoryPicker
         id="ticket-category-picker"
@@ -36,8 +36,8 @@ describe('CategoryPicker search', () => {
     );
 
     const trigger = screen.getByRole('combobox');
-    expect(trigger.querySelector('strong')).toHaveTextContent('Hardware');
-    expect(trigger).toHaveTextContent('Hardware → Laptops');
+    expect(trigger.querySelector('strong')).toBeNull();
+    expect(trigger).toHaveTextContent('Hardware › Laptops');
   });
 
   it('filters the category tree by a matching subcategory and keeps it selectable', async () => {

@@ -17,7 +17,7 @@ export interface RmmProviderMetadata {
   id: RmmProvider;
   title: string;
   description: string;
-  icon: 'tacticalrmm' | 'ninjaone' | 'tanium' | 'levelio' | 'huntress';
+  icon: 'tacticalrmm' | 'datto' | 'ninjaone' | 'tanium' | 'levelio' | 'huntress';
   badge?: RmmProviderBadge;
   capabilities: RmmProviderCapabilityFlags;
   requiresEnterprise: boolean;
@@ -41,6 +41,21 @@ const RMM_PROVIDER_REGISTRY: RmmProviderMetadata[] = [
       remoteActions: true
     },
     requiresEnterprise: false
+  },
+  {
+    id: 'datto',
+    title: 'Datto RMM',
+    description: 'Sync sites and devices, ingest alerts (polling + webhooks), and open Web Remote from Datto RMM.',
+    icon: 'datto',
+    badge: { label: 'Enterprise', variant: 'secondary' },
+    capabilities: {
+      connection: true,
+      scopeSync: true,
+      deviceSync: true,
+      events: true,
+      remoteActions: true
+    },
+    requiresEnterprise: true
   },
   {
     id: 'ninjaone',

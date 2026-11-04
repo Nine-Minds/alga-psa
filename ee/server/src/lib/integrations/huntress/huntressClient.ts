@@ -15,6 +15,8 @@ import { createTenantKnex } from '@/lib/db';
 import type {
   HuntressAccount,
   HuntressAgent,
+  HuntressEscalation,
+  HuntressEscalationsPage,
   HuntressIncidentReportsPage,
   HuntressOrganization,
   HuntressOrganizationsPage,
@@ -46,6 +48,8 @@ export interface ListIncidentReportsPageParams {
   page_token?: string;
   limit?: number;
 }
+
+export type ListEscalationsPageParams = ListIncidentReportsPageParams;
 
 export class HuntressClient {
   private http: AxiosInstance;
@@ -143,6 +147,23 @@ export class HuntressClient {
     });
   }
 
+  async listEscalationsPage(
+    params: ListEscalationsPageParams = {}
+  ): Promise<HuntressEscalationsPage> {
+    return this.get<HuntressEscalationsPage>('/v1/escalations', {
+      limit: params.limit ?? 500,
+      sort_field: 'updated_at',
+      sort_direction: 'desc',
+      ...(params.page_token ? { page_token: params.page_token } : {}),
+    });
+  }
+
+  /** Detail view — the only place escalation `entities` (affected hosts, identities) appear. */
+  async getEscalation(id: number): Promise<HuntressEscalation | null> {
+    const data = await this.getOrNull<{ escalation: HuntressEscalation }>(`/v1/escalations/${id}`);
+    return data?.escalation ?? null;
+  }
+
   async getAgent(id: number): Promise<HuntressAgent | null> {
     const data = await this.getOrNull<{ agent: HuntressAgent }>(`/v1/agents/${id}`);
     return data?.agent ?? null;
@@ -169,6 +190,9 @@ export async function createHuntressClient(tenantId: string): Promise<HuntressCl
   return new HuntressClient({
     apiKey,
     apiSecret,
-    baseUrl: row?.instance_url || undefined,
+    // The tenant's stored Base URL wins; HUNTRESS_API_BASE_URL is the
+    // suite-wide default (the algasim Huntress emulator), as
+    // LEVELIO_API_BASE_URL is for Level.
+    baseUrl: row?.instance_url || process.env.HUNTRESS_API_BASE_URL || undefined,
   });
 }

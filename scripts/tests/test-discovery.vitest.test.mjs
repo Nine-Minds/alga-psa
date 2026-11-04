@@ -9,7 +9,7 @@ import { reconcileDiscovery, repositoryTestFiles } from '../lib/test-discovery.m
 import { normalizeTestFile, reconcileExecution } from '../lib/test-execution-evidence.mjs';
 import { testRevision } from '../lib/test-revision.mjs';
 
-const vitest = fileURLToPath(new URL('../../server/node_modules/vitest/vitest.mjs', import.meta.url));
+const vitest = fileURLToPath(new URL('../../node_modules/vitest/vitest.mjs', import.meta.url));
 const inventoryCli = fileURLToPath(new URL('../verify-test-inventory.mjs', import.meta.url));
 
 test('actual Vitest collection detects additions/moves, and repaired collection executes every identity', (t) => {

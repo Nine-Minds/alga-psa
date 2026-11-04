@@ -10,15 +10,18 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
 import { BillingEngine, UnresolvedCatalogPricingError } from '../lib/billing/billingEngine';
 import { reconcileWindowAttribution } from '../lib/billing/contractLineAttributionWriter';
-import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
 import { listUnmaterializedClientCadenceWindowLineIds } from '../lib/billing/clientCadenceWindowMaterialization';
 import {
+  chargeBelongsToScope,
   getCycleBillingProfileId,
+  type InvoiceProfileScope,
+  resolveInvoiceProfileForAttribution,
   resolveInvoiceProfileScope,
   scopeChargesToProfile,
 } from '../lib/billing/billingProfileInvoiceScope';
 import { resolveEffectiveBillingIdentity } from '@alga-psa/shared/billingClients/billingProfileSettings';
 import { paymentMethodDisplayLabel } from '@alga-psa/shared/billingClients/paymentPreferences';
+import { prepaidBlockFeeDescription } from '../lib/billing/compute/prepaidBlockDescriptions';
 import { dueDateForPaymentTerms } from '../lib/billing/invoiceDueDate';
 import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
 import ProjectBillingConfig from '../models/projectBillingConfig';
@@ -36,12 +39,13 @@ import {
   IInvoice,
   IRecurringDueSelectionInput,
   PreviewInvoiceResponse,
+  InvoiceBillingEmailWarning,
   RecurringInvoiceFailureCode,
   InvoiceViewModel,
   DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES,
 } from '@alga-psa/types';
 import { WasmInvoiceViewModel } from '@alga-psa/types';
-import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, IProductCharge, ILicenseCharge, IUsageServicePeriodStatus, IFixedLineBlocker, BillingCycleType } from '@alga-psa/types';
+import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, IProductCharge, ILicenseCharge, IPrepaidBlockCharge, IUsageServicePeriodStatus, IFixedLineBlocker, BillingCycleType } from '@alga-psa/types';
 import { IClient, IClientWithLocation } from '@alga-psa/types';
 import Invoice from '@alga-psa/billing/models/invoice';
 import { attachInvoiceTimeCollections } from '../lib/adapters/invoiceAdapters';
@@ -57,8 +61,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import { auditLog } from '@alga-psa/db';
 import { getClientDocumentLogoUrl } from '@alga-psa/formatting/avatarUtils';
-import { calculateAndDistributeTax, claimRecurringServicePeriodsForSelectionInputs, getClientDetails, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction, validateClientBillingEmail } from '../services/invoiceService';
-import { reconcileAutomaticInvoiceAdjustments } from '../lib/billing/reconcileAutomaticInvoiceDiscounts';
+import { calculateAndDistributeTax, claimRecurringServicePeriodsForSelectionInputs, describeTimeCharge, getClientDetails, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction, validateClientBillingEmail } from '../services/invoiceService';
+import { previewAutomaticInvoiceDiscounts, reconcileAutomaticInvoiceAdjustments } from '../services/invoiceAutomaticAdjustments';
+import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
 import {
   reconcileContractChangeAdjustmentsForInvoice,
   releaseOrphanedContractAdjustments,
@@ -193,6 +198,10 @@ function isHourBlockCharge(charge: IBillingCharge): charge is IHourBlockCharge {
   return charge.type === 'hour_block';
 }
 
+function isPrepaidBlockCharge(charge: IBillingCharge): charge is IPrepaidBlockCharge {
+  return charge.type === 'prepaid_block';
+}
+
 function isProductCharge(charge: IBillingCharge): charge is IProductCharge {
   return charge.type === 'product';
 }
@@ -249,6 +258,7 @@ function getSingleClientContractIdFromCharges(charges: IBillingCharge[]): string
 function getChargeQuantity(charge: IBillingCharge): number {
   if (isBucketCharge(charge)) return charge.isUsageBucket ? charge.overageUnits ?? charge.quantity ?? 0 : charge.overageHours;
   if (isHourBlockCharge(charge)) return charge.hoursUsed;
+  if (isPrepaidBlockCharge(charge)) return charge.quantity;
   if (isFixedPriceCharge(charge) || isUsageBasedCharge(charge)) return charge.quantity;
   if (isTimeBasedCharge(charge)) return charge.duration;
   if (isProductCharge(charge) || isLicenseCharge(charge)) return charge.quantity;
@@ -260,6 +270,7 @@ function getChargeQuantity(charge: IBillingCharge): number {
 function getChargeUnitPrice(charge: IBillingCharge): number {
   if (isBucketCharge(charge)) return charge.overageRate;
   if (isHourBlockCharge(charge)) return 0;
+  if (isPrepaidBlockCharge(charge)) return charge.rate;
   return charge.rate;
 }
 
@@ -267,16 +278,18 @@ function getChargeUnitPrice(charge: IBillingCharge): number {
  * Bucket-style description for a prepaid-hour-block informational line:
  * "Prepaid hour block (Svc) — 4.0 hrs consumed, 12.5 hrs remaining".
  */
-/** Overtime entries bill as two lines; the overtime segment says so. */
+/** Overtime segments and late (closed-period) time say so; see describeTimeCharge. */
 function timeChargeDescription(charge: IBillingCharge): string {
-  return isTimeBasedCharge(charge) && charge.timeSegment === 'overtime'
-    ? `${charge.serviceName} (overtime)`
-    : charge.serviceName;
+  return isTimeBasedCharge(charge) ? describeTimeCharge(charge) : charge.serviceName;
 }
 
 function formatHourBlockChargeDescription(charge: IHourBlockCharge): string {
   const hourShortLabel = resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel;
   return `Prepaid hour block (${charge.serviceName}) — ${charge.hoursUsed.toFixed(1)} ${hourShortLabel} consumed, ${charge.hoursRemaining.toFixed(1)} ${hourShortLabel} remaining`;
+}
+
+function formatPrepaidBlockChargeDescription(charge: IPrepaidBlockCharge): string {
+  return prepaidBlockFeeDescription({ name: charge.serviceName, hours: charge.quantity });
 }
 
 function normalizePreviewRecurringDetailPeriods(
@@ -1193,17 +1206,38 @@ async function findExistingRecurringInvoiceForSelectionInput(params: {
     executionWindow.kind === 'contract_cadence_window'
     && executionWindow.contractLineId
   ) {
-    const linkedRow = await withTransaction(params.knex, async (trx: Knex.Transaction) => {
-      return tenantDb(trx, params.tenant).table('recurring_service_periods')
+    const { linkedRow, hasPendingRow } = await withTransaction(params.knex, async (trx: Knex.Transaction) => {
+      const periods = () => tenantDb(trx, params.tenant).table('recurring_service_periods')
         .where({
           cadence_owner: 'contract',
           obligation_id: executionWindow.contractLineId,
           invoice_window_start: params.selectorInput.windowStart,
           invoice_window_end: params.selectorInput.windowEnd,
-        })
-        .whereNotNull('invoice_id')
-        .first('invoice_id');
+        });
+      const rows = (await periods().select(
+        'invoice_id', 'lifecycle_state', 'provenance_kind', 'reason_code',
+      )) as Array<{
+        invoice_id: string | null;
+        lifecycle_state?: string | null;
+        provenance_kind?: string | null;
+        reason_code?: string | null;
+      }>;
+      return {
+        linkedRow: rows.find((row) => row.invoice_id) ?? null,
+        // A period of the same line and window that is still waiting to be invoiced. This
+        // happens when a repair adds an arrears catch-up row beside an advance period
+        // that was already invoiced for the same window (arrears-only line repair).
+        hasPendingRow: rows.some((row) => !row.invoice_id
+          && row.provenance_kind === 'repair'
+          && row.reason_code === 'stranded_advance_catch_up'
+          && ['generated', 'edited', 'locked'].includes(String(row.lifecycle_state))),
+      };
     });
+
+    if (hasPendingRow) {
+      // A repair catch-up sibling still has to be billed; the window is not a duplicate.
+      return null;
+    }
 
     return linkedRow?.invoice_id
       ? { invoiceId: linkedRow.invoice_id }
@@ -1390,7 +1424,7 @@ async function normalizeRecurringSelectorInput(params: {
     params.selectorInput.windowEnd,
   );
 
-  if (isUnresolvedSelectorInput(params.selectorInput)) {
+  if (isNonPeriodSelectorInput(params.selectorInput)) {
     return buildClientCadenceDueSelectionInput({
       clientId: params.selectorInput.clientId,
       scheduleKey: params.selectorInput.executionWindow.scheduleKey ?? '',
@@ -1501,6 +1535,7 @@ async function normalizeRecurringSelectorInput(params: {
         ?? recurringServicePeriod.obligation_id,
       windowStart: normalizedWindowStart,
       windowEnd: normalizedWindowEnd,
+      chargeStream: params.selectorInput.executionWindow.chargeStream ?? null,
     });
   }
 
@@ -1554,6 +1589,36 @@ function parseUnresolvedSelectionFromScheduleKey(scheduleKey: string | null | un
   };
 }
 
+/**
+ * `schedule:{tenant}:prepaid_block:{issuanceId}` identifies a scheduled Prepaid
+ * Block issuance (contract_line_block_issuances), not a recurring obligation.
+ * Like unresolved time/usage keys it rides in a client-cadence selector and has
+ * no recurring_service_periods rows.
+ */
+function parsePrepaidBlockSelectionFromScheduleKey(
+  scheduleKey: string | null | undefined,
+): { issuanceId: string } | null {
+  if (!scheduleKey) {
+    return null;
+  }
+  const match = scheduleKey.match(/^schedule:[^:]+:prepaid_block:([^:]+)$/);
+  return match?.[1] ? { issuanceId: match[1] } : null;
+}
+
+function isPrepaidBlockSelectorInput(selectorInput: IRecurringDueSelectionInput): boolean {
+  return (
+    selectorInput.executionWindow.kind === 'client_cadence_window'
+    && Boolean(
+      parsePrepaidBlockSelectionFromScheduleKey(selectorInput.executionWindow.scheduleKey ?? null),
+    )
+  );
+}
+
+/** Selectors that identify source records rather than persisted recurring obligations. */
+function isNonPeriodSelectorInput(selectorInput: IRecurringDueSelectionInput): boolean {
+  return isUnresolvedSelectorInput(selectorInput) || isPrepaidBlockSelectorInput(selectorInput);
+}
+
 function isUnresolvedSelectorInput(selectorInput: IRecurringDueSelectionInput): boolean {
   if (selectorInput.executionWindow.kind !== 'client_cadence_window') {
     return false;
@@ -1572,6 +1637,12 @@ function getSelectedRecurringObligationIdFromSelectorInput(
     const nonContractSelection = parseUnresolvedSelectionFromScheduleKey(
       executionWindow.scheduleKey,
     );
+    const prepaidBlockSelection = parsePrepaidBlockSelectionFromScheduleKey(
+      executionWindow.scheduleKey,
+    );
+    if (prepaidBlockSelection) {
+      return `__prepaid_block__:${prepaidBlockSelection.issuanceId}`;
+    }
     if (nonContractSelection) {
       return `__unresolved__:${nonContractSelection.chargeType}:${nonContractSelection.recordId}`;
     }
@@ -1600,6 +1671,11 @@ function getSelectedRecurringObligationIdFromSelectorInput(
   throw new Error('Recurring selector input execution window kind is not supported.');
 }
 
+/**
+ * Scopes the engine's selections to the selected obligations. Selections are
+ * keyed by line, then stream, so scoping by line keeps every stream of a
+ * selected line (a line is due when any of its streams is).
+ */
 function scopeRecurringTimingSelectionsForSelectorInputs(
   recurringTimingSelections: Record<string, unknown>,
   selectorInputs: IRecurringDueSelectionInput[],
@@ -1616,7 +1692,8 @@ function scopeRecurringTimingSelectionsForSelectorInputs(
     new Set(selectorInputs.map(getSelectedRecurringObligationIdFromSelectorInput)),
   );
   const selectedContractObligationIds = selectedObligationIds.filter(
-    (obligationId) => !obligationId.startsWith('__unresolved__:'),
+    (obligationId) =>
+      !obligationId.startsWith('__unresolved__:') && !obligationId.startsWith('__prepaid_block__:'),
   );
   const selectionEntries = Object.entries(recurringTimingSelections ?? {});
   if (selectionEntries.length === 0) {
@@ -1685,7 +1762,15 @@ async function resolveApprovalBlockerRowsForSelectorInputs(params: {
     scheduleKey?: string | null;
   }> = [];
 
-  const persistedWindowRows = await withTransaction(params.knex, async (trx: Knex.Transaction) => {
+  // A mixed-charge window is blocked in full by its unapproved time (T003/T008):
+  // any selection that touches a persisted period, or carries unresolved time,
+  // checks the whole window. Only a selection made solely of source-record rows
+  // that owe no time (prepaid_block issuances, usage) skips the lookup: a block
+  // charge does not depend on time, so block rows alone must not inherit the
+  // window's other lines' unapproved entries.
+  const selectsPersistedPeriod = params.selectorInputs.some((selectorInput) => !isNonPeriodSelectorInput(selectorInput));
+  const checksWholeWindow = selectsPersistedPeriod || params.selectorInputs.some(isUnresolvedSelectorInput);
+  const persistedWindowRows = !checksWholeWindow ? [] : await withTransaction(params.knex, async (trx: Knex.Transaction) => {
     const db = tenantDb(trx, params.tenant);
     const query = db.table('recurring_service_periods as rsp');
     db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_line_id', 'rsp.obligation_id');
@@ -1755,12 +1840,34 @@ export async function calculateBillingForSelectionInputs(input: {
     .filter((selection) => selection.chargeType === 'usage')
     .map((selection) => selection.recordId);
 
-  const recurringTimingSelections =
-    await input.billingEngine.selectDueRecurringServicePeriodsForBillingWindow(
+  const prepaidBlockIssuanceIds = Array.from(
+    new Set(
+      input.selectorInputs
+        .map((selectorInput) =>
+          parsePrepaidBlockSelectionFromScheduleKey(
+            selectorInput.executionWindow.kind === 'client_cadence_window'
+              ? selectorInput.executionWindow.scheduleKey ?? null
+              : null,
+          ),
+        )
+        .filter((selection): selection is { issuanceId: string } => Boolean(selection))
+        .map((selection) => selection.issuanceId),
+    ),
+  );
+
+  // A selection made only of source-record rows (unresolved time/usage, prepaid
+  // block issuances) selects no persisted periods, and scoping below would
+  // discard them anyway. Skipping the lookup also lets a client whose only live
+  // line is an Hourly / Prepaid Block line (which has no materialized periods)
+  // generate instead of failing the "not materialized" guard.
+  const selectsPersistedPeriods = input.selectorInputs.some((selectorInput) => !isNonPeriodSelectorInput(selectorInput));
+  const recurringTimingSelections = selectsPersistedPeriods
+    ? await input.billingEngine.selectDueRecurringServicePeriodsForBillingWindow(
       canonicalSelection.clientId,
       canonicalSelection.windowStart,
       canonicalSelection.windowEnd,
-    );
+    )
+    : {};
   const scopedRecurringTimingSelections = scopeRecurringTimingSelectionsForSelectorInputs(
     recurringTimingSelections,
     input.selectorInputs,
@@ -1773,6 +1880,9 @@ export async function calculateBillingForSelectionInputs(input: {
     {
       recurringTimingSelections: scopedRecurringTimingSelections,
       recurringTimingSelectionSource: 'persisted',
+      ...(prepaidBlockIssuanceIds.length > 0
+        ? { prepaidBlockSelection: { issuanceIds: prepaidBlockIssuanceIds } }
+        : {}),
       nonContractSelection: {
         include: selectedNonContractSelections.length > 0,
         timeEntryIds: nonContractTimeEntryIds,
@@ -1803,14 +1913,36 @@ async function calculateBillingWithReconciledAttribution(params: {
 }): Promise<IBillingResult> {
   const canonicalSelection = assertSameRecurringSelectionWindow(params.selectorInputs);
 
+  // Arrears periods are billed in a window AFTER the service period they cover,
+  // and the loaders read activity by service period. Reconcile the union of the
+  // invoice window and the service periods being billed, otherwise activity in
+  // an arrears period (every Hourly/Usage period) is never attributed.
+  const servicePeriodRows = await resolveApprovalBlockerRowsForSelectorInputs({
+    knex: params.knex,
+    tenant: params.tenant,
+    selectorInputs: params.selectorInputs,
+  });
+  const toDateOnlyString = (value: unknown): string =>
+    value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10);
+  const reconcileStarts = [
+    canonicalSelection.windowStart,
+    ...servicePeriodRows.map((row) => toDateOnlyString(row.servicePeriodStart)),
+  ].sort();
+  const reconcileEnds = [
+    canonicalSelection.windowEnd,
+    ...servicePeriodRows.map((row) => toDateOnlyString(row.servicePeriodEnd)),
+  ].sort();
+  const reconcileWindowStart = reconcileStarts[0];
+  const reconcileWindowEnd = reconcileEnds[reconcileEnds.length - 1];
+
   try {
     return await withTransaction(params.knex, async (trx: Knex.Transaction) => {
       await reconcileWindowAttribution({
         trx,
         tenant: params.tenant,
         clientId: canonicalSelection.clientId,
-        windowStart: canonicalSelection.windowStart,
-        windowEnd: canonicalSelection.windowEnd,
+        windowStart: reconcileWindowStart,
+        windowEnd: reconcileWindowEnd,
       });
 
       await lockTenantBilling(trx, params.tenant);
@@ -2038,20 +2170,6 @@ async function calculateChargeDetails(
   return { netAmount, taxCalculationResult };
 }
 
-// TODO: Move to billingAndTax.ts
-function getPaymentTermDays(paymentTerms: string): number {
-  switch (paymentTerms) {
-    case 'net_30':
-      return 30;
-    case 'net_15':
-      return 15;
-    case 'due_on_receipt':
-      return 0;
-    default:
-      return 30; // Default to 30 days if unknown payment term
-  }
-}
-
 // Adapter function to convert data to WasmInvoiceViewModel
 async function adaptToWasmViewModel(
   billingResult: IBillingResult,
@@ -2258,6 +2376,8 @@ interface BuiltPreviewInvoice {
    * scheduled sources, which generation treats as a reviewed (empty) set.
    */
   expectedRecurringPricingSources: IExpectedRecurringPricingSource[];
+  /** Set when the billed client/profile has no address to email the invoice to. */
+  billingEmailWarning?: InvoiceBillingEmailWarning;
 }
 
 async function buildPreviewInvoiceForSelectionInputs(params: {
@@ -2290,22 +2410,22 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
     .select('client_name')
     .first();
 
+  // Advisory: the preview still renders without an address, the dialog just
+  // warns that the invoice cannot be emailed or paid online until one is set.
+  let billingEmailWarning: InvoiceBillingEmailWarning | undefined;
   if (clientForValidation) {
     const emailValidation = await validateClientBillingEmail(
       knex,
       tenant,
       client_id,
       clientForValidation.client_name,
+      selectedProfileId,
     );
     if (!emailValidation.valid) {
-      throw withRecurringWindowErrorContext(
-        new ManualInvoiceError(
-          emailValidation.code ?? 'NO_BILLING_EMAIL',
-          emailValidation.error ?? 'Client billing email is required',
-          emailValidation.params ?? { clientName: clientForValidation.client_name },
-        ),
-        canonicalSelection,
-      );
+      billingEmailWarning = {
+        code: 'NO_BILLING_EMAIL',
+        params: { clientName: clientForValidation.client_name },
+      };
     }
   }
 
@@ -2374,6 +2494,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
     client_id,
     selectedProfileId,
   );
+  assertSelectionChargesFitProfileScope(billingResult.charges, previewProfileScope);
   const previewCharges = scopeChargesToProfile(billingResult.charges, previewProfileScope);
   if (billingResult.charges.length > 0 && previewCharges.length === 0) {
     throw withRecurringWindowErrorContext(
@@ -2413,7 +2534,9 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
       service_id: charge.serviceId,
       description: isHourBlockCharge(charge)
         ? formatHourBlockChargeDescription(charge)
-        : (timeChargeDescription(charge) || 'Charge'),
+        : isPrepaidBlockCharge(charge)
+          ? formatPrepaidBlockChargeDescription(charge)
+          : (timeChargeDescription(charge) || 'Charge'),
       quantity: getChargeQuantity(charge),
       unit_price: getChargeUnitPrice(charge),
       total_price: charge.total,
@@ -2569,14 +2692,30 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
   }
 
   const previewTax = await calculatePreviewTax(
-    billingResult.charges,
+    previewCharges,
     client_id,
     cycleEnd,
     client?.tax_region || '',
   );
 
+  const adjustments = await previewAutomaticInvoiceDiscounts(
+    knex, tenant, client_id, previewCharges, previewInvoiceDate,
+  );
+
   const viewModel = await adaptToWasmViewModel(
-    billingResult,
+    {
+      ...billingResult,
+      charges: previewCharges,
+      totalAmount: previewCharges.reduce((sum, charge) => sum + charge.total, 0),
+      discounts: adjustments.discounts.map((discount) => ({
+        tenant,
+        discount_id: discount.discount_id,
+        discount_name: discount.discount_name,
+        discount_type: discount.discount_type,
+        value: discount.value,
+        amount: discount.amount,
+      })),
+    },
     client,
     invoiceItems,
     due_date,
@@ -2598,6 +2737,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
       : {}),
     ...(expectedUsagePeriodTotals.length > 0 ? { expectedUsagePeriodTotals } : {}),
     expectedRecurringPricingSources,
+    ...(billingEmailWarning ? { billingEmailWarning } : {}),
   };
 }
 
@@ -2610,7 +2750,7 @@ async function resolveRecurringSelectionBillingProfileId(
   knex: Knex | Knex.Transaction,
   tenant: string,
   selectorInputs: IRecurringDueSelectionInput[],
-  options: { fallbackBillingProfileId?: string | null; userId?: string } = {},
+  options: { fallbackBillingProfileId?: string | null } = {},
 ): Promise<string | null> {
   const clientId = assertSameRecurringSelectionWindow(selectorInputs).clientId;
   const defaultProfileId = await getClientDefaultBillingProfileId(knex, tenant, clientId);
@@ -2628,7 +2768,7 @@ async function resolveRecurringSelectionBillingProfileId(
       // Non-contract time/usage keys identify source records, not persisted
       // recurring obligations. Their eligibility and charge attribution are
       // resolved by the billing engine; they supply no contract profile here.
-      if (isUnresolvedSelectorInput(selector)) {
+      if (isNonPeriodSelectorInput(selector)) {
         continue;
       }
       const db = tenantDb(knex, tenant);
@@ -2707,20 +2847,31 @@ async function resolveRecurringSelectionBillingProfileId(
     tenant,
     clientId,
     null,
-    { userId: options.userId },
   );
   if (!defaultScope.isScoped) {
     return options.fallbackBillingProfileId ?? defaultScope.billingProfileId;
   }
 
-  const separatelyBilledSelections = [...resolvedProfileIds].filter((billingProfileId) =>
-    defaultScope.separatelyBillingProfileIds.has(billingProfileId),
+  // The shared landing rule (also read by the contract billing trace): an
+  // attribution that does not land on the default profile's invoice keeps its own.
+  // A selection must land on exactly one invoice profile. Scoping the charges to
+  // one profile would silently drop every other profile's charges, so a mixed
+  // selection is an error, never "pick one" (the Generate UI splits such groups
+  // into one selection per landing profile before it ever gets here).
+  const landingProfileIds = new Set(
+    [...resolvedProfileIds].map((billingProfileId) =>
+      resolveInvoiceProfileForAttribution(billingProfileId, defaultScope),
+    ),
   );
-  if (separatelyBilledSelections.length > 1) {
-    throw new Error('A recurring invoice selection cannot combine multiple separately billed profiles.');
+  if (landingProfileIds.size > 1) {
+    throw new Error(
+      'A recurring invoice selection cannot combine lines that land on different invoice profiles '
+      + `(${[...landingProfileIds].join(', ')}). Select each invoice profile's lines separately.`,
+    );
   }
-  if (separatelyBilledSelections.length === 1) {
-    return separatelyBilledSelections[0];
+  const [landingProfileId] = [...landingProfileIds];
+  if (landingProfileId && landingProfileId !== defaultScope.billingProfileId) {
+    return landingProfileId;
   }
   if (
     options.fallbackBillingProfileId
@@ -2731,6 +2882,28 @@ async function resolveRecurringSelectionBillingProfileId(
 
   // Attributed profiles without separate invoicing remain reporting dimensions.
   return defaultScope.billingProfileId;
+}
+
+/**
+ * Charge-level backstop for recurring SELECTION paths. The engine only returns
+ * charges for the selected periods / source records, so any of them the invoice
+ * profile scope would filter out is a selected charge that would silently go
+ * unbilled (e.g. a time entry whose work item lands on another profile than the
+ * selected contract line). Refuse instead. Not for the billing-cycle path, where
+ * per-scope filtering of the whole client window is intended.
+ */
+function assertSelectionChargesFitProfileScope(
+  charges: IBillingCharge[],
+  scope: InvoiceProfileScope,
+): void {
+  const dropped = charges.filter((charge) => !chargeBelongsToScope(charge, scope));
+  if (dropped.length === 0) return;
+  const droppedProfiles = Array.from(new Set(dropped.map((charge) => charge.billing_profile_id ?? 'unattributed')));
+  throw new Error(
+    `The selection contains ${dropped.length} charge(s) attributed to invoice profile(s) ${droppedProfiles.join(', ')} `
+    + `that do not belong on the ${scope.billingProfileId} invoice and would be left out. `
+    + 'Select each invoice profile\'s lines separately.',
+  );
 }
 
 async function buildPreviewInvoiceForSelectionInput(params: {
@@ -2770,6 +2943,8 @@ export type RecurringGroupedPreviewResponse = {
      * pass back through generation as expectedUsagePeriodTotals.
      */
     expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
+    /** Set when the billed client/profile has no address to email the invoice to. */
+    billingEmailWarning?: InvoiceBillingEmailWarning;
     /**
      * Reviewed recurring revision/catalog sources for scheduled charges, to
      * pass back through generation as expectedRecurringPricingSources. Always
@@ -2841,6 +3016,7 @@ export const previewGroupedInvoicesForSelectionInputs = withAuth(async (
             ? { expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals }
             : {}),
           expectedRecurringPricingSources: preview.expectedRecurringPricingSources,
+          ...(preview.billingEmailWarning ? { billingEmailWarning: preview.billingEmailWarning } : {}),
         };
       }),
     );
@@ -2917,6 +3093,7 @@ export const previewInvoiceForSelectionInput = withAuth(async (
         ? { expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals }
         : {}),
       expectedRecurringPricingSources: preview.expectedRecurringPricingSources,
+      ...(preview.billingEmailWarning ? { billingEmailWarning: preview.billingEmailWarning } : {}),
     };
   } catch (error) {
     logPreviewInvoiceFailure(
@@ -3007,6 +3184,7 @@ export const previewInvoice = withAuth(async (
         ? { expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals }
         : {}),
       expectedRecurringPricingSources: preview.expectedRecurringPricingSources,
+      ...(preview.billingEmailWarning ? { billingEmailWarning: preview.billingEmailWarning } : {}),
     };
   } catch (error) {
     logPreviewInvoiceFailure(
@@ -3395,23 +3573,6 @@ async function generateInvoiceForLockedSelectionInputs(params: Parameters<typeof
   const cycleStart = normalizedSelectorInput.windowStart;
   const cycleEnd = normalizedSelectorInput.windowEnd;
 
-  const clientForValidation = await tenantDb(knex, tenant).table('clients')
-    .where({ client_id })
-    .select('client_name')
-    .first();
-  if (clientForValidation) {
-    const emailValidation = await validateClientBillingEmail(knex, tenant, client_id, clientForValidation.client_name);
-    if (!emailValidation.valid) {
-      throw withRecurringWindowErrorContext(
-        new ManualInvoiceError(
-          emailValidation.code ?? 'NO_BILLING_EMAIL',
-          emailValidation.error ?? 'Client billing email is required',
-          emailValidation.params ?? { clientName: clientForValidation.client_name },
-        ),
-        normalizedSelectorInput,
-      );
-    }
-  }
 
   for (const selectorInput of params.normalizedSelectorInputs) {
     const existingInvoice = await findExistingRecurringInvoiceForSelectionInput({
@@ -3467,7 +3628,7 @@ async function generateInvoiceForLockedSelectionInputs(params: Parameters<typeof
     knex,
     tenant,
     params.normalizedSelectorInputs,
-    { fallbackBillingProfileId: cycleBillingProfileId, userId: user.user_id },
+    { fallbackBillingProfileId: cycleBillingProfileId },
   );
   if (intendedBillingProfileId) {
     const intendedScope = await resolveInvoiceProfileScope(
@@ -3475,8 +3636,8 @@ async function generateInvoiceForLockedSelectionInputs(params: Parameters<typeof
       tenant,
       client_id,
       intendedBillingProfileId,
-      { userId: user.user_id },
     );
+    assertSelectionChargesFitProfileScope(billingResult.charges, intendedScope);
     const scopedCharges = scopeChargesToProfile(billingResult.charges, intendedScope);
     if (billingResult.charges.length > 0 && scopedCharges.length === 0) {
       throw withRecurringWindowErrorContext(
@@ -3911,7 +4072,6 @@ export async function createInvoiceFromBillingResultImpl(
     tenant,
     clientId,
     options.billingProfileId ?? cycleBillingProfileId,
-    { userId },
   );
   // F095 — bill-to, PO, delivery, and tax identity come from the profile,
   // falling back to the client field by field.
@@ -4088,7 +4248,7 @@ export async function createInvoiceFromBillingResultImpl(
         invoiceId: newInvoice!.invoice_id,
         // Unresolved time/usage selections identify source records, not
         // recurring obligations. Their invoice linkage is handled by charges.
-        selectorInputs: options.recurringSelectorInputs.filter((selector) => !isUnresolvedSelectorInput(selector)),
+        selectorInputs: options.recurringSelectorInputs.filter((selector) => !isNonPeriodSelectorInput(selector)),
         linkedAt: Temporal.Now.instant().toString(),
         omittedUsagePeriods: selectUnreportedUsageStatuses(billingResult.usageServicePeriodStatuses ?? []),
         excludedServicePeriodRecordIds,
@@ -4148,17 +4308,16 @@ export async function createInvoiceFromBillingResultImpl(
       }
     }
 
-    // Reconcile automatic discounts against the actual persisted (and
-    // reconciled) charge rows through the shared evaluator, with provenance, so
-    // a cancelled/edited true-up cannot leave a stale discount amount behind.
-    const discountMagnitude = await reconcileAutomaticInvoiceAdjustments({
-      trx,
-      tenant,
-      invoiceId: newInvoice!.invoice_id,
-    });
+    // One shared evaluator owns configured automatic discounts. It reads the
+    // persisted rows, so generation, preview and draft refresh all apply the
+    // same scopes, invoice-period eligibility and rounding. Discounts return a
+    // positive magnitude.
+    const { automaticDiscountAmount } =
+      await reconcileAutomaticInvoiceAdjustments(trx, tenant, newInvoice!.invoice_id);
 
-    // Use the subtotal from persisted charges minus the reconciled discounts.
-    const subtotal = calculatedSubtotal - discountMagnitude;
+    // Use the subtotal returned by persistInvoiceCharges minus the shared
+    // automatic discount settlement.
+    const subtotal = calculatedSubtotal - automaticDiscountAmount;
 
     // Leverage the shared tax helper so automated invoices mirror manual invoices
     const calculatedTax = await calculateAndDistributeTax(

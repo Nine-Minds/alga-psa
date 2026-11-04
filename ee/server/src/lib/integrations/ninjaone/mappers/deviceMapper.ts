@@ -329,8 +329,14 @@ export function mapDeviceToAssetBase(
     name: device.displayName || device.systemName || `Device-${device.id}`,
     asset_tag: generateAssetTag(device),
     serial_number: device.system?.serialNumber || device.system?.biosSerialNumber,
-    status: device.approvalStatus === 'APPROVED' ? 'active' : 'pending',
+    // FR-B6: only two slugs on create — `active`, or `inactive` for a device
+    // that is offline (or not yet approved) at first sight. Everything after
+    // creation is the MSP's to set; sync never writes `status` again.
+    status: device.offline || device.approvalStatus !== 'APPROVED' ? 'inactive' : 'active',
     location: device.references?.location?.name,
+    // Hardware identity columns (FR-A3)
+    manufacturer: device.system?.manufacturer || null,
+    model: device.system?.model || null,
     // RMM fields
     rmm_provider: 'ninjaone' as RmmProvider,
     rmm_device_id: String(device.id),

@@ -54,9 +54,9 @@ type ServicePriceAvailabilityRow = {
 
 // Schema for service prices
 const servicePriceSchema = z.object({
-  price_id: z.string().uuid(),
+  price_id: z.string().guid(),
   tenant: z.string().min(1, 'Tenant is required'),
-  service_id: z.string().uuid(),
+  service_id: z.string().guid(),
   currency_code: z.string().length(3),
   rate: z.union([z.string(), z.number()]).transform(val =>
     typeof val === 'string' ? parseFloat(val) || 0 : val
@@ -75,17 +75,17 @@ const servicePriceSchema = z.object({
 
 // Base schema definition - aligns closely with DB nullability where appropriate
 const baseServiceSchema = z.object({
-  service_id: z.string().uuid(),
+  service_id: z.string().guid(),
   tenant: z.string().min(1, 'Tenant is required'),
   service_name: z.string(),
-  custom_service_type_id: z.string().uuid(),   // Now required, not nullable
+  custom_service_type_id: z.string().guid(),   // Now required, not nullable
   billing_method: z.enum(['fixed', 'hourly', 'usage']),
   default_rate: z.union([z.string(), z.number()]).transform(val =>
     typeof val === 'string' ? parseFloat(val) || 0 : val
   ),
   unit_of_measure: z.string(),
   unit_code: z.string().nullable().optional(),
-  category_id: z.string().uuid().nullable(), // Matches DB FK (nullable) - IService allows string | null
+  category_id: z.string().guid().nullable(), // Matches DB FK (nullable) - IService allows string | null
   item_kind: z.enum(['service', 'product']).default('service'),
   is_active: z.union([z.boolean(), z.number()]).transform((val) => Boolean(val)).default(true),
   sku: z.string().nullable().optional(),
@@ -108,7 +108,7 @@ const baseServiceSchema = z.object({
   is_license: z.union([z.boolean(), z.number()]).transform((val) => Boolean(val)).default(false),
   license_term: z.string().nullable().optional(),
   license_billing_cadence: z.string().nullable().optional(),
-  tax_rate_id: z.union([z.string().uuid(), z.null()]).optional(), // Accept string, null, or undefined
+  tax_rate_id: z.union([z.string().guid(), z.null()]).optional(), // Accept string, null, or undefined
   description: z.string().nullable(), // Added: Description field from the database
   service_type_name: z.string().optional(), // Add service_type_name to the schema
   prices: z.array(servicePriceSchema).optional(), // Current multi-currency prices

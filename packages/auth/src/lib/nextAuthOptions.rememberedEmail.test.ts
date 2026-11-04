@@ -93,6 +93,8 @@ vi.mock('@alga-psa/db/models/UserSession', () => ({
   UserSession: {},
 }));
 
+// signIn re-reads the user's stored type; these tests exercise cookie/redirect behaviour only.
+vi.mock('./assertInteractiveUser', () => ({ assertInteractiveUser: vi.fn(async () => true) }));
 vi.mock('./ipAddress', () => ({
   getClientIp: vi.fn(),
 }));

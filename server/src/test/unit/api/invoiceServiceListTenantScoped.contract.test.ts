@@ -22,15 +22,22 @@ describe('invoice service list tenant-scoped query contract', () => {
 
     expect(baseQuerySection).toContain('tenantDb(');
     expect(baseQuerySection).toContain(".table('invoices')");
+    expect(baseQuerySection).not.toContain('recurring_service_periods');
+    expect(baseQuerySection).not.toContain('recurring_invoice_summary');
     expect(baseQuerySection).not.toMatch(/return trx\('invoices'\)\s*\./);
     expect(baseQuerySection).not.toMatch(/\.where\('invoices\.tenant', context\.tenant\)/);
 
+    const billingAddressSection = sectionBetween('protected joinClientBillingAddress', 'protected buildBaseQuery');
+
     expect(listSection).toContain('tenantDb(');
-    expect(listSection).toContain(".table('client_locations as cl')");
-    expect(listSection).toContain("db.tenantJoin(query, 'clients', 'invoices.client_id', 'clients.client_id', { type: 'left' })");
+    expect(listSection).toContain('this.joinClientBillingAddress(trx, context, query)');
+    expect(billingAddressSection).toContain(".table('client_locations as cl')");
+    expect(billingAddressSection).toContain("db.tenantJoin(query, 'clients', 'invoices.client_id', 'clients.client_id', { type: 'left' })");
+    // The billing-address derived table joins on tenant via the facade, not a hand-rolled predicate.
+    expect(billingAddressSection).toContain("db.tenantJoinSubquery(query, billingAddressSubquery, 'clients.client_id', 'billing_loc.client_id'");
     expect(listSection).toMatch(/db\.tenantJoin\(\s*query,\s*'client_billing_cycles',\s*'invoices\.billing_cycle_id',\s*'client_billing_cycles\.billing_cycle_id',\s*\{\s*type: 'left'\s*\}\s*\)/);
     expect(listSection).toMatch(/db\.tenantJoin\(\s*query,\s*'tax_rates',\s*'invoices\.tax_rate_id',\s*'tax_rates\.tax_rate_id',\s*\{\s*type: 'left'\s*\}\s*\)/);
-    expect(listSection).toContain(".leftJoin(billingAddressSubquery, 'clients.client_id', 'billing_loc.client_id')");
+    expect(billingAddressSection).not.toContain(".leftJoin(billingAddressSubquery");
 
     expect(listSection).not.toMatch(/trx\('client_locations as cl'\)\s*\./);
     expect(listSection).not.toMatch(/\.andOn\([^)]*tenant/);

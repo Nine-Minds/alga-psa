@@ -9,6 +9,7 @@ export const SERVER_MAINTENANCE_JOBS = {
   projectDateReadiness: 'project-date-readiness',
   accountingSyncCycle: 'accounting-sync-cycle',
   huduAutoSync: 'hudu-auto-sync',
+  recoverFileUploads: 'recover-file-uploads',
   recoverCommentPublications: 'recover-comment-publications',
   createNextTimePeriods: 'create-next-time-periods',
   createClientContractLineCycles: 'create-client-contract-line-cycles',

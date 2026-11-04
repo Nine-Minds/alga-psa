@@ -148,7 +148,6 @@ services:
     environment:
       <<: *shared-environment
     secrets:
-      - postgres_password
       - db_password_server
     networks:
       - app-network

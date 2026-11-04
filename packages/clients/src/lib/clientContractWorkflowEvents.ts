@@ -17,8 +17,12 @@ export function deriveClientContractWorkflowStatus(params: {
   isActive: boolean;
   startDate: string | Date;
   endDate: string | Date | null;
-  now?: Temporal.PlainDate;
-}): 'draft' | 'active' | 'terminated' | 'expired' {
+  /** Tenant-local today; callers should pass it (falls back to the server-local date). */
+  now?: Temporal.PlainDate | string;
+}): 'draft' | 'active' | 'terminated' | 'expired' | 'scheduled' {
+  // Events carry the derived status as-is: a future-start active assignment is reported as
+  // 'scheduled' rather than 'draft' (event status is a free-form string). Event emission itself
+  // (which transitions publish) is unchanged.
   return deriveClientContractStatus({
     isActive: params.isActive,
     startDate: getDateOnly(params.startDate) ?? String(params.startDate),

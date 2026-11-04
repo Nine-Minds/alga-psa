@@ -1,0 +1,19 @@
+Captured after the smoke attempt from the compose PostgreSQL container corresponding to host port 5472, database `server`:
+
+```sql
+select i.invoice_id, i.invoice_number, i.status, i.subtotal, i.tax,
+       i.total_amount, i.draft_adjustment_revision, count(c.item_id)
+from invoices i
+join invoice_charges c using (tenant, invoice_id)
+where i.invoice_id = '5a1e0000-0000-4000-8000-0000000000a1'
+group by i.invoice_id, i.invoice_number, i.status, i.subtotal, i.tax,
+         i.total_amount, i.draft_adjustment_revision;
+```
+
+Result:
+
+```text
+5a1e0000-0000-4000-8000-0000000000a1|SMOKE-ADJ-1|draft|370500|900|371400|63|5
+```
+
+The result matches the pre-smoke snapshot. No smoke edits or cleanup were performed.

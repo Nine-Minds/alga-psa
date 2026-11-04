@@ -42,6 +42,9 @@ export default defineConfig({
       { find: /^@alga-psa\/event-schemas\/(.*)$/, replacement: path.resolve(__dirname, '../event-schemas/src/$1') },
       { find: /^@alga-psa\/db$/, replacement: path.resolve(__dirname, '../db/src/index.ts') },
       { find: /^@alga-psa\/db\/admin$/, replacement: path.resolve(__dirname, '../db/src/lib/admin.ts') },
+      // tenantDb (like admin above) lives under src/lib, not src directly, so
+      // it needs its own rule ahead of the generic one below.
+      { find: /^@alga-psa\/db\/tenantDb$/, replacement: path.resolve(__dirname, '../db/src/lib/tenantDb.ts') },
       { find: /^@alga-psa\/db\/(.*)$/, replacement: path.resolve(__dirname, '../db/src/$1') },
       { find: /^@alga-psa\/formatting$/, replacement: path.resolve(__dirname, '../formatting/src/index.ts') },
       { find: /^@alga-psa\/formatting\/(.*)$/, replacement: path.resolve(__dirname, '../formatting/src/$1') },
@@ -73,6 +76,10 @@ export default defineConfig({
       { find: /^@alga-psa\/integrations\/components$/, replacement: path.resolve(__dirname, './src/components/index.ts') },
       { find: /^@alga-psa\/integrations\/email$/, replacement: path.resolve(__dirname, './src/email/index.ts') },
       { find: /^@alga-psa\/integrations\/(.*)$/, replacement: path.resolve(__dirname, './src/$1') },
+      // The generic @alga-psa/* catch-all below would send ee-* specifiers to
+      // packages/<name>, so every EE package needs its own alias.
+      { find: /^@alga-psa\/ee-calendar$/, replacement: path.resolve(__dirname, '../../ee/packages/calendar/src/index.ts') },
+      { find: /^@alga-psa\/ee-calendar\/(.*)$/, replacement: path.resolve(__dirname, '../../ee/packages/calendar/src/$1') },
       { find: /^@alga-psa\/ee-microsoft-teams$/, replacement: path.resolve(__dirname, '../../ee/packages/microsoft-teams/src/index.ts') },
       { find: /^@alga-psa\/ee-microsoft-teams\/(.*)$/, replacement: path.resolve(__dirname, '../../ee/packages/microsoft-teams/src/$1') },
       { find: /^@alga-psa\/ee-threecx$/, replacement: path.resolve(__dirname, '../../ee/packages/threecx/src/index.ts') },

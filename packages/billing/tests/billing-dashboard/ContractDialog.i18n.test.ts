@@ -23,9 +23,21 @@ function getLeaf(record: Record<string, unknown>, dottedPath: string): unknown {
   }, record);
 }
 
+// The preset section now lives in the shared picker/hook, so the dialog's
+// translated strings span all three files.
+const dialogSources = [
+  '../../src/components/billing-dashboard/contracts/ContractDialog.tsx',
+  '../../src/components/billing-dashboard/contracts/ContractLinePresetPicker.tsx',
+  '../../src/components/billing-dashboard/contracts/useContractLinePresetSelection.ts',
+];
+
+function readAll(relativePaths: string[]): string {
+  return relativePaths.map(read).join('\n');
+}
+
 describe('ContractDialog i18n wiring contract', () => {
   it('T010: title, primary form labels, and validation errors use msp/contracts translation keys', () => {
-    const source = read('../../src/components/billing-dashboard/contracts/ContractDialog.tsx');
+    const source = readAll(dialogSources);
     const en = readJson<Record<string, unknown>>(
       '../../../../server/public/locales/en/msp/contracts.json'
     );
@@ -72,7 +84,7 @@ describe('ContractDialog i18n wiring contract', () => {
   });
 
   it('T011: PO fields and preset-picker sections use msp/contracts translation keys', () => {
-    const source = read('../../src/components/billing-dashboard/contracts/ContractDialog.tsx');
+    const source = readAll(dialogSources);
     const en = readJson<Record<string, unknown>>(
       '../../../../server/public/locales/en/msp/contracts.json'
     );
@@ -91,18 +103,20 @@ describe('ContractDialog i18n wiring contract', () => {
       'contractDialog.presets.loading',
       'contractDialog.presets.empty',
       'contractDialog.presets.searchPlaceholder',
-      'contractDialog.presets.allTypes',
-      'contractDialog.presets.typePlaceholder',
-      'contractDialog.presets.resetFilters',
       'contractDialog.presets.noMatches',
       'contractDialog.presets.selectedSingle',
       'contractDialog.presets.selectedPlural',
-      'contractDialog.presets.serviceCountSingle',
-      'contractDialog.presets.serviceCountPlural',
-      'contractDialog.presetDetails.fixedRateConfiguration',
-      'contractDialog.presetDetails.servicesConfiguration',
-      'contractDialog.presetDetails.servicesIncludedReference',
-      'contractDialog.presetDetails.noServicesConfigured',
+      // Filter chrome and service counts come from the shared picker, whose
+      // addLines.* copy is identical in every locale.
+      'addLines.filters.allTypes',
+      'addLines.filters.typePlaceholder',
+      'addLines.filters.reset',
+      'addLines.serviceCountSingle',
+      'addLines.serviceCountPlural',
+      'addLines.fixedConfig.title',
+      'addLines.services.configuration',
+      'addLines.services.includedReference',
+      'addLines.services.empty',
     ];
 
     for (const key of keyChecks) {
@@ -112,7 +126,7 @@ describe('ContractDialog i18n wiring contract', () => {
   });
 
   it('T012: ContractDialog translation keys resolve to pseudo-locale values in xx', () => {
-    const source = read('../../src/components/billing-dashboard/contracts/ContractDialog.tsx');
+    const source = readAll(dialogSources);
     const xx = readJson<Record<string, unknown>>(
       '../../../../server/public/locales/xx/msp/contracts.json'
     );
