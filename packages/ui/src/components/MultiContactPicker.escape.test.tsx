@@ -1,35 +1,13 @@
 /** @vitest-environment jsdom */
 
-import React from 'react';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import i18next from 'i18next';
-import { initReactI18next } from 'react-i18next';
 import { Dialog } from './Dialog';
 import MultiContactPicker from './MultiContactPicker';
 
-const common = {
-  multiContactPicker: {
-    fields: { contacts: { placeholder: 'Select contacts...' }, search: { placeholder: 'Search contacts...' } },
-    noResults: 'No results found',
-    noContacts: 'No contacts available',
-    noEmail: 'no email',
-    actions: { clearAll: 'Clear all' },
-  },
-};
-
-beforeAll(async () => {
-  if (!i18next.isInitialized) {
-    await i18next.use(initReactI18next).init({
-      lng: 'en',
-      fallbackLng: 'en',
-      resources: { en: { common } },
-      interpolation: { escapeValue: false },
-    });
-  }
-  i18next.addResourceBundle('en', 'common', common, true, true);
-  await i18next.changeLanguage('en');
-});
+vi.mock('../lib/i18n/client', () => ({
+  useTranslation: () => ({ t: (key: string) => translations[key] ?? key }),
+}));
 
 afterEach(() => cleanup());
 
@@ -37,6 +15,16 @@ const contacts = [
   { contact_name_id: 'c1', full_name: 'Ada Lovelace', email: 'ada@example.com', client_id: 'cl1' },
   { contact_name_id: 'c2', full_name: 'Grace Hopper', email: 'grace@example.com', client_id: 'cl1' },
 ] as any;
+
+const translations: Record<string, string> = {
+  'multiContactPicker.fields.contacts.placeholder': 'Select contacts...',
+  'multiContactPicker.fields.search.placeholder': 'Search contacts...',
+  'multiContactPicker.noResults': 'No results found',
+  'multiContactPicker.noContacts': 'No contacts available',
+  'multiContactPicker.noEmail': 'no email',
+  'multiContactPicker.actions.clearAll': 'Clear all',
+  'unsavedChangesGuard.title': 'Discard unsaved changes?',
+};
 
 describe('MultiContactPicker Escape inside a dialog', () => {
   it('first Escape closes only the list; the next one asks to discard', async () => {
