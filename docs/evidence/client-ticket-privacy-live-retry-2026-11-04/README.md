@@ -37,7 +37,7 @@ Inspect the comment deletion/token-detachment change and its behavioral regressi
 
 ## Current-checkout verification at 08:05 UTC
 
-The checkout was at `dd90969d4023c28d9b79f771610e04dae28dde31`. Its only commits after application revision `75acf2e3556473abedcc1d024ccb657a9dad1d6a` are documentation commits; the current uncommitted changes are the pre-existing `package-lock.json` edit and a response-source test fixture update. No application source was changed since the live run. The existing live evidence therefore applies to the same application code, while the following commands were rerun on this checkout:
+The checkout was at `dd90969d4023c28d9b79f771610e04dae28dde31`. Its only commits after application revision `75acf2e3556473abedcc1d024ccb657a9dad1d6a` were documentation commits; no application source changed since the live run. At that time, `package-lock.json` and a response-source test fixture update were uncommitted. The following commands passed on that checkout, but the response-source test run depended on the uncommitted fixture update; see the committed rerun below.
 
 - Client portal visibility and deletion UI: 39 tests passed.
 - Ticket ownership, author resolution, and comment visibility: 30 tests passed.
@@ -46,4 +46,9 @@ The checkout was at `dd90969d4023c28d9b79f771610e04dae28dde31`. Its only commits
 - Client portal and tickets Nx builds passed; Nx reused cached outputs for all 51 and 29 tasks respectively.
 - `workflow-ensure-service` confirmed registered `dev-server:3` live and healthy. Port 3456 is owned by PID 1417595; `/proc/1417595/cwd` resolves to this checkout's `server/`. Direct unauthenticated `/auth/signin` returned HTTP 307.
 
+
 No new implementation defect was found. The live ordinary-permission deletion, token detachment, refreshed conversation, payload privacy, document visibility, non-owner denial, and shared-workspace read-only results remain those recorded above at application revision `75acf2e3`; temporary credentials and fixtures were restored. No other workload or reservation was changed.
+
+## Committed response-source fixture rerun
+
+The response-source mock now implements the `whereNull` ownership-query chain used by `addClientTicketComment`. This fixture correction is committed as `d4c9498cd70487e9e449548d0836ab0e45218ff5`. After committing it, the combined response-source, visibility, and deletion UI suites passed on that exact revision: 3 test files, 42 tests. The only remaining working-tree modification is the unrelated, pre-existing `package-lock.json` edit.
