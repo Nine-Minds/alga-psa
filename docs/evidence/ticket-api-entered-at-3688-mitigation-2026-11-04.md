@@ -2,7 +2,8 @@
 
 ## Revision and service
 
-- Checkout and PR #3688 head: `4b2fcb016dcbd4ac5536aa7c3028693ce117ed6d`, including main `4010ca1dd0`.
+- Application source revision served and tested: `4b2fcb016dcbd4ac5536aa7c3028693ce117ed6d`, including main `4010ca1dd0`.
+- The pushed verification note is documentation-only and does not change the application source revision.
 - Branch: `feature/ticket-api-allow-setting-entered-at-and-comment`.
 - Recovered the canonical service command and cwd from the concluded board record, then restored registration `dev-server` through `alga-dev workflow-ensure-service`:
   - Project: `51b01525-aa02-428d-bd04-12bb10e9a791`
