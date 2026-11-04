@@ -133,9 +133,14 @@ const DEFINITIONS: Record<'project' | 'ticket' | 'quote' | 'asset' | 'phase' | '
 };
 
 function sourceAliases(definition: ResourceDefinition, sources: readonly string[]): string[] {
-  return sources.flatMap((alias) => alias.includes('.')
-    ? [alias]
-    : [alias, `values.${alias}`, `${definition.aliases[1]}.${alias}`]);
+  return [...new Set(sources.flatMap((source) => {
+    const field = source.slice(source.lastIndexOf('.') + 1);
+    return [
+      source,
+      `values.${field}`,
+      ...definition.aliases.map((resourceAlias) => `${resourceAlias}.${field}`),
+    ];
+  }))];
 }
 
 function fieldAliases(resource: keyof typeof DEFINITIONS, field: string): readonly string[] {

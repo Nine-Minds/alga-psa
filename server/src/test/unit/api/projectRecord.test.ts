@@ -100,6 +100,16 @@ describe('projectRecord REST projection', () => {
     expect(projectRecord(project, ['fields.project_id'])).toBeNull();
   });
 
+  it('expands direct and derived source aliases across task and phase resources', () => {
+    const task = { task_id: 't1', estimated_hours: 80, project_name: 'Migration' };
+    const phase = { phase_id: 'p1', start_date: '2026-01-01' };
+    expect(projectApiRecord('task', task, [])).toEqual(task);
+    expect(projectApiRecord('task', task, ['project_tasks.estimated_hours'])).not.toHaveProperty('estimated_hours');
+    expect(projectApiRecord('task', task, ['project_tasks.project_name'])).not.toHaveProperty('project_name');
+    expect(projectApiRecord('phase', phase, [])).toEqual(phase);
+    expect(projectApiRecord('phase', phase, ['project_phases.start_date'])).not.toHaveProperty('start_date');
+  });
+
   it('paginates and serializes only allowed projected rows', async () => {
     const page = await buildAuthorizationAwarePage<Record<string, any>>({
       page: 1,

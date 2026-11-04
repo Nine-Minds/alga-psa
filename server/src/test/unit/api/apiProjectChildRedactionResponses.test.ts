@@ -35,8 +35,8 @@ vi.mock('@/lib/api/services/ProjectService', () => ({ ProjectService: class {} }
 import { ApiProjectController } from '@/lib/api/controllers/ApiProjectController';
 
 const project = { project_id: PROJECT, project_name: 'Migration' };
-const task = { task_id: TASK, phase_id: PHASE, task_name: 'Prepare migration', phase_name: 'Planning', project_id: PROJECT, project_name: 'Migration', description: 'Task details' };
-const phase = { phase_id: PHASE, project_id: PROJECT, phase_name: 'Planning', project_name: 'Migration', description: 'Phase details' };
+const task = { task_id: TASK, phase_id: PHASE, task_name: 'Prepare migration', phase_name: 'Planning', project_id: PROJECT, project_name: 'Migration', estimated_hours: 80, description: 'Task details' };
+const phase = { phase_id: PHASE, project_id: PROJECT, phase_name: 'Planning', project_name: 'Migration', start_date: '2026-01-01', description: 'Phase details' };
 
 const req = (path: string) => new NextRequest(`http://localhost${path}`, { headers: { 'x-api-key': 'key' } });
 
@@ -65,7 +65,7 @@ describe('project child read response projections', () => {
   it('projects getTask with its parent project policy and preserves unrestricted fields', async () => {
     const controller = makeController();
     const unrestricted = await body(await controller.getTask()(req(`/api/v1/projects/tasks/${TASK}`)));
-    expect(unrestricted.data).toMatchObject({ task_id: TASK, task_name: task.task_name, project_name: 'Migration' });
+    expect(unrestricted.data).toMatchObject({ task_id: TASK, task_name: task.task_name, project_name: 'Migration', estimated_hours: 80 });
 
     state.redactedFields = ['projects.project_name'];
     const redacted = await body(await controller.getTask()(req(`/api/v1/projects/tasks/${TASK}`)));
@@ -75,6 +75,10 @@ describe('project child read response projections', () => {
     state.redactedFields = ['project_phases.phase_name'];
     const hiddenPhaseName = await body(await controller.getTask()(req(`/api/v1/projects/tasks/${TASK}`)));
     expect(hiddenPhaseName.data).not.toHaveProperty('phase_name');
+
+    state.redactedFields = ['project_tasks.estimated_hours'];
+    const hiddenTaskHours = await body(await controller.getTask()(req(`/api/v1/projects/tasks/${TASK}`)));
+    expect(hiddenTaskHours.data).not.toHaveProperty('estimated_hours');
   });
 
   it('projects task and phase collections and suppresses hidden identifiers or resources', async () => {
@@ -89,6 +93,8 @@ describe('project child read response projections', () => {
       expect(result.data).toHaveLength(1);
       expect(result.data[0]).not.toHaveProperty('project_name');
     }
+    const unrestrictedPhase = await body(await controller.listPhases()(req(`/api/v1/projects/${PROJECT}/phases`)));
+    expect(unrestrictedPhase.data[0].start_date).toBe('2026-01-01');
 
     state.redactedFields = ['tasks.task_id'];
     const hiddenTaskResponse = await controller.getTask()(req(`/api/v1/projects/tasks/${TASK}`));
@@ -100,6 +106,10 @@ describe('project child read response projections', () => {
 
     state.redactedFields = ['project_phases.phase_id'];
     expect((await body(await controller.listPhases()(req(`/api/v1/projects/${PROJECT}/phases`)))).data).toEqual([]);
+
+    state.redactedFields = ['project_phases.start_date'];
+    const hiddenPhaseDates = await body(await controller.listPhases()(req(`/api/v1/projects/${PROJECT}/phases`)));
+    expect(hiddenPhaseDates.data[0]).not.toHaveProperty('start_date');
 
     state.redactedFields = ['project_tasks'];
     expect((await body(await controller.listPhaseTasks()(req(`/api/v1/projects/phases/${PHASE}/tasks`)))).data).toEqual([]);
