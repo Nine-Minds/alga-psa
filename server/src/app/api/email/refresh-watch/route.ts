@@ -3,6 +3,14 @@ import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { configureGmailProvider } from '@alga-psa/integrations/actions/email-actions/configureGmailProvider';
+import { requireOutboundEmailAdmin } from '@alga-psa/integrations/actions/email-actions/mspOutboundEmailAccess';
+import { RateLimiterMemory } from 'rate-limiter-flexible';
+
+const refreshWatchRateLimiter = new RateLimiterMemory({
+  points: 1,
+  duration: 60,
+  blockDuration: 60,
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,6 +42,11 @@ export async function POST(request: NextRequest) {
     
     // Get database connection
     const knex = await getAdminConnection();
+    const access = await requireOutboundEmailAdmin(user, knex);
+    if (!access.allowed) {
+      return NextResponse.json({ error: access.message }, { status: 403 });
+    }
+
     const db = tenantDb(knex, user.tenant);
     
     // Get the email provider and its Google config
@@ -59,6 +72,12 @@ export async function POST(request: NextRequest) {
     
     if (!googleConfig.project_id) {
       return NextResponse.json({ error: 'Gmail provider missing project_id configuration' }, { status: 400 });
+    }
+
+    try {
+      await refreshWatchRateLimiter.consume(`${user.tenant}:${providerId}`);
+    } catch {
+      return NextResponse.json({ error: 'Gmail provider refresh rate limit exceeded' }, { status: 429 });
     }
     
     // Use the new configureGmailProvider orchestrator with force=true
