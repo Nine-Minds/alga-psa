@@ -9,9 +9,13 @@ import UserPreferences from '@alga-psa/db/models/userPreferences';
 import { getUserAvatarUrl } from '../lib/avatarUtils';
 import { hasPermission } from '../lib/permissions';
 import logger from '@alga-psa/core/logger';
-import { getCurrentUser, withAuth, withOptionalAuth } from '@alga-psa/auth';
+import { getCurrentUser as resolveCurrentUser, withAuth, withOptionalAuth } from '@alga-psa/auth';
 
-export { getCurrentUser };
+/** Return only the shared safe user response shape to browser-facing callers. */
+export async function getCurrentUser(): Promise<IUserWithRoles | null> {
+  const user = await resolveCurrentUser();
+  return user ? sanitizeUserForResponse(user) as IUserWithRoles : null;
+}
 
 function isPermissionDeniedError(error: unknown): boolean {
   return error instanceof Error && error.message.includes('Permission denied:');

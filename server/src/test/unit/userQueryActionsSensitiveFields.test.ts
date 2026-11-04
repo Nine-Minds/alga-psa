@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => {
     user_type: 'internal',
     is_inactive: false,
     two_factor_enabled: true,
+    password: 'PASSWORD_SENTINEL',
     hashed_password: 'HASH_SENTINEL',
     two_factor_secret: 'MFA_SENTINEL',
     roles: [{ role_id: 'role-1', role_name: 'Administrator' }],
@@ -21,7 +22,8 @@ const mocks = vi.hoisted(() => {
   const reportsRows = [plainRow];
   const reportIds = ['user-1'];
   const permission = vi.fn(async () => true);
-  return { row, plainRow, rows, reportsRows, reportIds, permission };
+  const currentUserResolver = vi.fn(async () => row);
+  return { row, plainRow, rows, reportsRows, reportIds, permission, currentUserResolver };
 });
 
 let currentUser: any = {
@@ -30,7 +32,7 @@ let currentUser: any = {
 
 vi.mock('@alga-psa/auth', () => {
   const wrap = (action: any) => (...args: any[]) => action(currentUser, { tenant: 'tenant-1' }, ...args);
-  return { withAuth: wrap, withOptionalAuth: wrap, getCurrentUser: vi.fn() };
+  return { withAuth: wrap, withOptionalAuth: wrap, getCurrentUser: mocks.currentUserResolver };
 });
 
 vi.mock('@alga-psa/user-composition/lib/permissions', () => ({ hasPermission: mocks.permission }));
@@ -91,6 +93,7 @@ function expectSafeUserResponse(value: unknown, rolesExpected: boolean): void {
     expect(serialized).not.toContain(field);
   }
   expect(serialized).not.toContain('HASH_SENTINEL');
+  expect(serialized).not.toContain('PASSWORD_SENTINEL');
   expect(serialized).not.toContain('MFA_SENTINEL');
   expect(serialized).toContain('ada@example.test');
   expect(serialized).toContain('Ada');
@@ -135,6 +138,21 @@ describe('browser-facing user query response sanitization', () => {
     const clientUsers = await actions.getClientUsersForClient('client-1');
     expect(clientUsers).toHaveLength(1);
     expectSafeUserResponse(clientUsers, false);
+  });
+
+  it('sanitizes the exported current user response and preserves null sessions', async () => {
+    const actions = await import('@alga-psa/user-composition/actions/userQueryActions');
+
+    const user = await actions.getCurrentUser();
+    expect(user).toMatchObject({
+      user_id: 'user-1', username: 'ada', first_name: 'Ada', last_name: 'Lovelace',
+      email: 'ada@example.test', tenant: 'tenant-1', user_type: 'internal',
+      roles: [{ role_id: 'role-1', role_name: 'Administrator' }],
+    });
+    expectSafeUserResponse(user, true);
+
+    mocks.currentUserResolver.mockResolvedValueOnce(null as any);
+    expect(await actions.getCurrentUser()).toBeNull();
   });
 
   it('preserves null and empty results from the user query actions', async () => {
