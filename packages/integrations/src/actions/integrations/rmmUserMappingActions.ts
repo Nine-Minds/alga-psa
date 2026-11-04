@@ -84,6 +84,12 @@ export const mapRmmSignedInUserToContact = withAuth(async (
   if (!await hasPermission(user as any, 'system_settings', 'update')) {
     return { success: false, error: 'Forbidden' };
   }
+  if (!await hasPermission(user as any, 'asset', 'read')) {
+    return { success: false, error: 'Permission denied: Cannot read assets' };
+  }
+  if (!await hasPermission(user as any, 'asset', 'update')) {
+    return { success: false, error: 'Permission denied: Cannot update assets' };
+  }
 
   try {
     const { knex } = await createTenantKnex();

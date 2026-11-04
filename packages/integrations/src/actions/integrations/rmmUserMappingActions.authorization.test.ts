@@ -7,12 +7,13 @@ const h = vi.hoisted(() => {
     deniedAssets: new Set<string>(),
     deniedContacts: new Set<string>(),
     deniedIntegrations: new Set<string>(),
+    deniedCoarsePermissions: new Set<string>(),
     mappings: new Map<string, string>(),
     assignments: new Map<string, string>(),
     rows: {
       rmm_organization_mappings: [{ integration_id: 'integration-1', mapping_id: 'mapping-1', external_organization_id: 'org-1', client_id: 'client-1', contact_assignment_mode: 'suggest' }],
       rmm_integrations: [{ integration_id: 'integration-1', provider: 'ninjaone' }],
-      assets: [{ asset_id: 'asset-excluded', client_id: 'client-2' }, { asset_id: 'asset-allowed', client_id: 'client-1' }],
+      assets: [{ asset_id: 'asset-excluded', client_id: 'client-2' }, { asset_id: 'asset-allowed', client_id: 'client-1' }, { asset_id: 'asset-auto-candidate', client_id: 'client-1' }],
       contacts: [{ contact_name_id: 'contact-1', client_id: 'client-1', contact_kind: 'person' }],
     } as Record<string, Row[]>,
   };
@@ -35,7 +36,11 @@ const h = vi.hoisted(() => {
     await args.authorize({ assetIds: args.assignAssetId ? [args.assignAssetId] : [], contactId: args.contactId, integrationId: args.integrationId });
     state.mappings.set(args.rawUser, args.contactId);
     if (args.assignAssetId) state.assignments.set(args.assignAssetId, args.contactId);
-    return { key: 'jdoe', assignedAssetIds: args.assignAssetId ? [args.assignAssetId] : [] };
+    else {
+      await args.authorize({ assetIds: ['asset-auto-candidate'], contactId: args.contactId, integrationId: args.integrationId });
+      state.assignments.set('asset-auto-candidate', args.contactId);
+    }
+    return { key: 'jdoe', assignedAssetIds: args.assignAssetId ? [args.assignAssetId] : ['asset-auto-candidate'] };
   });
   return { state, knex, mapCore };
 });
@@ -44,7 +49,10 @@ vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: any[]) => fn({ user_id: 'user-1', user_type: 'internal', roles: [] }, { tenant: 'tenant-1' }, ...args),
   hasPermission: vi.fn(async () => true),
 }));
-vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: vi.fn(async () => true) }));
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn(async (_user: unknown, resource: string, action: string) =>
+    !h.state.deniedCoarsePermissions.has(`${resource}:${action}`)),
+}));
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: h.knex })),
   tenantDb: (conn: any) => ({ table: (name: string) => conn(name) }),
@@ -78,12 +86,31 @@ beforeEach(() => {
   h.state.deniedAssets.clear();
   h.state.deniedContacts.clear();
   h.state.deniedIntegrations.clear();
+  h.state.deniedCoarsePermissions.clear();
   h.state.mappings.clear();
   h.state.assignments.clear();
   h.mapCore.mockClear();
 });
 
 describe('settings RMM mapping authorization', () => {
+  it.each([
+    ['asset:read', 'asset-allowed'],
+    ['asset:update', 'asset-allowed'],
+    ['asset:read', undefined],
+    ['asset:update', undefined],
+  ] as const)('rejects explicit and automatic assignment paths when coarse %s is denied', async (permission, assignAssetId) => {
+    h.state.deniedCoarsePermissions.add(permission);
+
+    const result = await mapRmmSignedInUserToContact({
+      mappingId: 'mapping-1', rawUser: 'CORP\\jdoe', contactId: 'contact-1', assignAssetId,
+    });
+
+    expect(result).toMatchObject({ success: false, error: expect.stringContaining('Permission denied') });
+    expect(h.state.mappings.size).toBe(0);
+    expect(h.state.assignments.size).toBe(0);
+    expect(h.mapCore).not.toHaveBeenCalled();
+  });
+
   it('rejects the settings action explicit excluded target without changing persistent state', async () => {
     h.state.deniedAssets.add('asset-excluded');
 

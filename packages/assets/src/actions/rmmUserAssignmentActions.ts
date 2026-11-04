@@ -145,6 +145,9 @@ export const mapRmmUserToContact = withAuth(async (
     assignAssetId?: string | null;
   }
 ): Promise<{ key: string; assignedAssetIds: string[] } | AssetActionError> => {
+  if (!await hasPermission(user, 'asset', 'read')) {
+    return permissionError('Permission denied: Cannot read assets', 'msp/assets:errors.permissions.readAssets');
+  }
   if (!await hasPermission(user, 'asset', 'update')) {
     return permissionError('Permission denied: Cannot update assets', 'msp/assets:errors.permissions.updateAssets');
   }

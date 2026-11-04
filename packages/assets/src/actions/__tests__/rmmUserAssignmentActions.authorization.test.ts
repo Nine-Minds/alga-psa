@@ -10,6 +10,7 @@ const h = vi.hoisted(() => {
     mappingWrites: 0,
     assignments: [] as string[],
     scopedResources: [] as string[],
+    deniedCoarsePermissions: [] as string[],
   };
 
   const reset = () => {
@@ -41,6 +42,7 @@ const h = vi.hoisted(() => {
     state.mappingWrites = 0;
     state.assignments = [];
     state.scopedResources = [];
+    state.deniedCoarsePermissions = [];
   };
 
   const query = (tableName: string) => {
@@ -131,7 +133,8 @@ vi.mock('@alga-psa/auth', () => ({
     { tenant: 'tenant-1' },
     ...args,
   ),
-  hasPermission: vi.fn(async () => true),
+  hasPermission: vi.fn(async (_user: unknown, resource: string, action: string) =>
+    !h.state.deniedCoarsePermissions.includes(`${resource}:${action}`)),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -165,6 +168,20 @@ beforeEach(() => {
 });
 
 describe('RMM user mapping record authorization', () => {
+  it.each(['asset:read', 'asset:update'])('rejects mapping when coarse %s is denied before any write', async (permission) => {
+    h.state.deniedCoarsePermissions = [permission];
+
+    const result = await mapRmmUserToContact({
+      integrationId: 'integration-1', provider: 'ninjaone', rawUser: 'CORP\\jdoe',
+      contactId: 'contact-in-scope', assignAssetId: 'asset-update-authorized',
+    });
+
+    expect(result).toMatchObject({ permissionError: expect.any(String) });
+    expect(h.state.mappingWrites).toBe(0);
+    expect(h.state.assignments).toEqual([]);
+    expect(h.shared.mapSignedInUserToContact).not.toHaveBeenCalled();
+  });
+
   it('does not return the signed-in identity for an asset outside caller scope', async () => {
     const result = await suggestAssigneeFromRmmUser('asset-out-of-scope');
 
