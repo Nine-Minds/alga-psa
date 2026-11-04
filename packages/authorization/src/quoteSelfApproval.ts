@@ -5,8 +5,6 @@ import { hasPermission } from './rbac';
 
 export const QUOTE_APPROVE_PERMISSION = { resource: 'quotes', action: 'approve' } as const;
 
-export type ApprovalPermission = { resource: string; action: string };
-
 /** Audit metadata written on the `approved` quote activity when a sole approver approves their own quote. */
 export const SELF_APPROVAL_AUDIT_METADATA = {
   self_approved: true,
@@ -14,22 +12,21 @@ export const SELF_APPROVAL_AUDIT_METADATA = {
 } as const;
 
 /**
- * Whether `subjectUserId` may approve a record they own: true only when NO OTHER
- * active internal (MSP) user in the tenant holds the approval `permission`.
+ * Whether `subjectUserId` may approve a quote they authored: true only when NO OTHER
+ * active internal (MSP) user in the tenant holds `quotes:approve`.
  *
  * Who "holds" the permission is decided by the existing RBAC resolution
  * (`hasPermission` -> `User.getUserRolesWithPermissions`), the same path the kernel's
  * default RBAC evaluator uses -- there is no second RBAC query here. Client-portal
  * users (`user_type != 'internal'`) and inactive users are excluded.
  *
- * This does not check that the subject themselves holds the permission; callers
+ * This does not check that the subject themselves holds `quotes:approve`; callers
  * gate on that separately.
  */
-export async function allowSelfApprovalFor(
+export async function allowSelfQuoteApproval(
   knex: Knex | Knex.Transaction,
   tenant: string,
-  subjectUserId: string,
-  permission: ApprovalPermission
+  subjectUserId: string
 ): Promise<boolean> {
   const candidates = await tenantDb(knex, tenant)
     .table('users')
@@ -43,8 +40,8 @@ export async function allowSelfApprovalFor(
   for (const candidate of candidates) {
     const holdsApprove = await hasPermission(
       { user_id: candidate.user_id, user_type: 'internal', tenant },
-      permission.resource,
-      permission.action,
+      QUOTE_APPROVE_PERMISSION.resource,
+      QUOTE_APPROVE_PERMISSION.action,
       knex
     );
     if (holdsApprove) {
@@ -55,41 +52,21 @@ export async function allowSelfApprovalFor(
   return true;
 }
 
-/** Whether `subjectUserId` may approve a quote they authored (see `allowSelfApprovalFor`). */
-export async function allowSelfQuoteApproval(
-  knex: Knex | Knex.Transaction,
-  tenant: string,
-  subjectUserId: string
-): Promise<boolean> {
-  return allowSelfApprovalFor(knex, tenant, subjectUserId, QUOTE_APPROVE_PERMISSION);
-}
-
 /**
  * Call-site helper: the `allowSelfApproval` flag to put on an `approve` mutation.
  * Only consults the tenant's approvers when the subject actually owns the record
  * (the only case the not-self-approver rules could deny), so ordinary approvals by
  * someone else cost no extra queries.
  */
-export async function resolveAllowSelfApprovalFlagFor(
-  knex: Knex | Knex.Transaction,
-  tenant: string,
-  subjectUserId: string,
-  ownerUserId: string | null | undefined,
-  permission: ApprovalPermission
-): Promise<boolean> {
-  if (typeof ownerUserId !== 'string' || ownerUserId !== subjectUserId) {
-    return false;
-  }
-
-  return allowSelfApprovalFor(knex, tenant, subjectUserId, permission);
-}
-
-/** Quote-specific wrapper for `resolveAllowSelfApprovalFlagFor`. */
 export async function resolveAllowSelfApprovalFlag(
   knex: Knex | Knex.Transaction,
   tenant: string,
   subjectUserId: string,
   ownerUserId: string | null | undefined
 ): Promise<boolean> {
-  return resolveAllowSelfApprovalFlagFor(knex, tenant, subjectUserId, ownerUserId, QUOTE_APPROVE_PERMISSION);
+  if (typeof ownerUserId !== 'string' || ownerUserId !== subjectUserId) {
+    return false;
+  }
+
+  return allowSelfQuoteApproval(knex, tenant, subjectUserId);
 }
