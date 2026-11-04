@@ -107,94 +107,145 @@ describe('invoice recurring list contract', () => {
     expect(singleParsed.success).toBe(true);
   });
 
-  it('T092: invoice list and detail readers still select recurring service-period summary fields after the service-driven cutover', () => {
+  it('T092: invoice list and detail readers still project recurring service-period summary fields after the service-driven cutover (separate tenant query, merged in JS)', async () => {
+    const summaryRows = [
+      {
+        tenant: 'tenant-1',
+        invoice_id: 'inv-contract',
+        recurring_service_period_start: '2025-02-08',
+        recurring_service_period_end: '2025-03-08',
+        recurring_invoice_window_start: '2025-02-08',
+        recurring_invoice_window_end: '2025-03-08',
+        recurring_cadence_owner: 'contract',
+      },
+      {
+        tenant: 'tenant-1',
+        invoice_id: 'inv-client',
+        recurring_service_period_start: '2025-03-01',
+        recurring_service_period_end: '2025-04-01',
+        recurring_invoice_window_start: '2025-03-01',
+        recurring_invoice_window_end: '2025-04-01',
+        recurring_cadence_owner: 'client',
+      },
+      {
+        tenant: 'tenant-1',
+        invoice_id: 'inv-other',
+        recurring_service_period_start: '2025-05-01',
+        recurring_service_period_end: '2025-06-01',
+        recurring_invoice_window_start: '2025-05-01',
+        recurring_invoice_window_end: '2025-06-01',
+        recurring_cadence_owner: 'something-else',
+      },
+    ];
+    const whereInArgs: unknown[][] = [];
     const summaryBuilder: any = {
       where: () => summaryBuilder,
       whereNotNull: () => summaryBuilder,
+      whereIn: (...args: unknown[]) => { whereInArgs.push(args); return summaryBuilder; },
       select: () => summaryBuilder,
       min: () => summaryBuilder,
       max: () => summaryBuilder,
       groupBy: () => summaryBuilder,
-      as: () => 'recurring_invoice_summary',
+      then: (resolve: (rows: unknown[]) => unknown) => resolve(summaryRows),
     };
-
-    const operations: Array<{ type: string; args: unknown[] }> = [];
-    const invoiceBuilder: any = {
-      where: (...args: unknown[]) => {
-        operations.push({ type: 'where', args });
-        return invoiceBuilder;
-      },
-      leftJoin: (...args: unknown[]) => {
-        operations.push({ type: 'leftJoin', args });
-        return invoiceBuilder;
-      },
-      select: (...args: unknown[]) => {
-        operations.push({ type: 'select', args });
-        return invoiceBuilder;
-      },
+    const tables: string[] = [];
+    const trx: any = (tableName: string) => {
+      tables.push(tableName);
+      return summaryBuilder;
     };
-
-    const trx: any = ((tableName: string) => {
-      if (tableName === 'recurring_service_periods as rsp') {
-        return summaryBuilder;
-      }
-      if (tableName === 'invoices') {
-        return invoiceBuilder;
-      }
-      throw new Error(`Unexpected table ${tableName}`);
-    }) as any;
-    trx.raw = (sql: string) => sql;
 
     const service = new InvoiceService();
-    (service as any).buildBaseQuery(trx, { tenant: 'tenant-1', userId: 'user-1' });
+    const merged = await (service as any).mergeRecurringSummary(trx, { tenant: 'tenant-1', userId: 'user-1' }, [
+      { invoice_id: 'inv-contract', total_amount: 1 },
+      { invoice_id: 'inv-client', total_amount: 2 },
+      { invoice_id: 'inv-other', total_amount: 3 },
+      { invoice_id: 'inv-none', total_amount: 4 },
+    ]);
 
-    expect(operations).toEqual(
-      expect.arrayContaining([
-        {
-          type: 'leftJoin',
-          args: ['recurring_invoice_summary', 'recurring_invoice_summary.invoice_id', 'invoices.invoice_id'],
-        },
-      ]),
-    );
+    expect(tables).toEqual(['recurring_service_periods as rsp']);
+    expect(whereInArgs[0]?.[0]).toBe('rsp.invoice_id');
+    expect(whereInArgs[0]?.[1]).toEqual(['inv-contract', 'inv-client', 'inv-other', 'inv-none']);
 
-    const selectOperation = operations.find((operation) => operation.type === 'select');
-    expect(selectOperation?.args).toEqual(
-      expect.arrayContaining([
-        'recurring_invoice_summary.recurring_service_period_start',
-        'recurring_invoice_summary.recurring_service_period_end',
-        'recurring_invoice_summary.recurring_invoice_window_start',
-        'recurring_invoice_summary.recurring_invoice_window_end',
-      ]),
-    );
-    const rawSelectSql = (selectOperation?.args ?? [])
-      .filter((arg): arg is string => typeof arg === 'string')
-      .join('\n');
-    expect(rawSelectSql).toContain("WHEN recurring_invoice_summary.recurring_cadence_owner = 'client' THEN 'client_cadence_window'");
-    expect(rawSelectSql).not.toContain('invoices.billing_cycle_id IS NOT NULL');
+    expect(merged[0]).toMatchObject({
+      total_amount: 1,
+      recurring_service_period_start: '2025-02-08',
+      recurring_service_period_end: '2025-03-08',
+      recurring_invoice_window_start: '2025-02-08',
+      recurring_invoice_window_end: '2025-03-08',
+      recurring_execution_window_kind: 'contract_cadence_window',
+      recurring_cadence_source: 'contract_anniversary',
+    });
+    expect(merged[1]).toMatchObject({
+      recurring_execution_window_kind: 'client_cadence_window',
+      recurring_cadence_source: 'client_schedule',
+    });
+    // Unknown owner: dates kept, kind/source null (old CASE ... ELSE NULL).
+    expect(merged[2]).toMatchObject({
+      recurring_service_period_start: '2025-05-01',
+      recurring_execution_window_kind: null,
+      recurring_cadence_source: null,
+    });
+    // No rsp rows: all six fields null (old LEFT JOIN behaviour).
+    expect(merged[3]).toEqual({
+      invoice_id: 'inv-none',
+      total_amount: 4,
+      recurring_service_period_start: null,
+      recurring_service_period_end: null,
+      recurring_invoice_window_start: null,
+      recurring_invoice_window_end: null,
+      recurring_execution_window_kind: null,
+      recurring_cadence_source: null,
+    });
   });
 
-  it('T067: invoice list filter can query recurring invoices by execution-window kind or cadence source when provided', () => {
+  it('T092b: mergeRecurringSummary skips the rsp query when there are no invoice ids', async () => {
+    const trx: any = () => { throw new Error('rsp must not be queried for an empty page'); };
+    const service = new InvoiceService();
+    await expect((service as any).mergeRecurringSummary(trx, { tenant: 'tenant-1' }, [])).resolves.toEqual([]);
+  });
+
+  it('T067: invoice list filter can query recurring invoices by execution-window kind or cadence source when provided (pre-resolved ids, no rsp reference in the invoice filters)', async () => {
     const parsedFilter = invoiceFilterSchema.parse({
       execution_window_kind: 'client_cadence_window',
       cadence_source: 'client_schedule',
     });
     const service = new InvoiceService();
+
+    // Resolution: both filters agree on 'client' -> one standalone rsp query on max(cadence_owner).
+    const having: unknown[][] = [];
+    const rspBuilder: any = {
+      where: () => rspBuilder,
+      whereNotNull: () => rspBuilder,
+      select: () => rspBuilder,
+      groupBy: () => rspBuilder,
+      havingRaw: (...args: unknown[]) => { having.push(args); return rspBuilder; },
+      then: (resolve: (rows: unknown[]) => unknown) => resolve([{ invoice_id: 'a' }, { invoice_id: 'b' }]),
+    };
+    const trx: any = (tableName: string) => {
+      expect(tableName).toBe('recurring_service_periods as rsp');
+      return rspBuilder;
+    };
+    const ids = await (service as any).resolveCadenceFilterInvoiceIds(trx, { tenant: 'tenant-1' }, parsedFilter);
+    expect(ids).toEqual(['a', 'b']);
+    expect(having).toEqual([['max(rsp.cadence_owner) = ?', ['client']]]);
+
+    // Conflicting owners can never match; unrecognised values are no-ops.
+    await expect((service as any).resolveCadenceFilterInvoiceIds(
+      trx, { tenant: 'tenant-1' },
+      { execution_window_kind: 'contract_cadence_window', cadence_source: 'client_schedule' },
+    )).resolves.toEqual([]);
+    await expect((service as any).resolveCadenceFilterInvoiceIds(
+      trx, { tenant: 'tenant-1' }, { execution_window_kind: 'bogus', cadence_source: 'nope' },
+    )).resolves.toBeNull();
+
+    // Application: ids are applied as whereIn on invoices.invoice_id; null is a no-op.
     const { builder, operations } = createFilterRecorder();
+    (service as any).applyInvoiceFilters(builder, parsedFilter, ['a', 'b']);
+    expect(operations).toEqual([{ type: 'whereIn', args: ['invoices.invoice_id', ['a', 'b']] }]);
 
-    (service as any).applyInvoiceFilters(builder, parsedFilter);
-
-    expect(operations).toEqual(
-      expect.arrayContaining([
-        {
-          type: 'where',
-          args: ['recurring_invoice_summary.recurring_cadence_owner', 'client', undefined],
-        },
-        {
-          type: 'where',
-          args: ['recurring_invoice_summary.recurring_cadence_owner', 'client', undefined],
-        },
-      ]),
-    );
+    const noop = createFilterRecorder();
+    (service as any).applyInvoiceFilters(noop.builder, parsedFilter, null);
+    expect(noop.operations).toEqual([]);
     expect(operations.some((operation) => operation.type === 'whereGroup')).toBe(false);
   });
 });

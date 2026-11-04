@@ -9,6 +9,7 @@ import {
   DropdownMenuItem,
 } from './DropdownMenu';
 import { MoreHorizontal, X } from 'lucide-react';
+import { useTranslation } from '../lib/i18n/client';
 
 export interface BulkActionBarAction {
   id: string;
@@ -37,12 +38,13 @@ export function BulkActionBar({
   selectedLabel,
   actions = [],
   overflowActions = [],
-  overflowLabel = 'More',
+  overflowLabel,
   onClear,
-  clearLabel = 'Clear',
+  clearLabel,
   idPrefix = 'bulk-action-bar',
   className,
 }: BulkActionBarProps) {
+  const { t } = useTranslation('common');
   if (count === 0) return null;
 
   const wrapperClass = [
@@ -88,7 +90,7 @@ export function BulkActionBar({
               className="whitespace-nowrap"
             >
               <MoreHorizontal className="h-4 w-4 mr-1.5" />
-              {overflowLabel}
+              {overflowLabel ?? t('actions.more')}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-[10rem]">
@@ -122,7 +124,7 @@ export function BulkActionBar({
             className="whitespace-nowrap"
           >
             <X className="h-4 w-4 mr-1.5" />
-            {clearLabel}
+            {clearLabel ?? t('actions.clear')}
           </Button>
         </>
       )}

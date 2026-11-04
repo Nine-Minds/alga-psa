@@ -85,7 +85,9 @@
     "noService": "Nessun servizio",
     "servicePlaceholder": "Seleziona servizio predefinito",
     "serviceHelp": "Usato per le registrazioni ore sulle attività di questa fase quando l’attività stessa non imposta un servizio.",
-    "serviceDisplayLabel": "Servizio"
+    "serviceDisplayLabel": "Servizio",
+    "taskCount_few": "{{count}} attività",
+    "taskCount_many": "{{count}} attività"
   },
   "projectList": {
     "addProject": "Aggiungi progetto",
@@ -314,7 +316,9 @@
     "bulkTagsFailure": "Impossibile aggiungere i tag alle attività selezionate",
     "taskTypeFallback": "Attività",
     "timeline": "Cronologia",
-    "loadingTimeline": "Caricamento cronologia..."
+    "loadingTimeline": "Caricamento cronologia...",
+    "bulkTagsSuccess_few": "Tag aggiunti a {{count}} attività",
+    "bulkTagsSuccess_many": "Tag aggiunti a {{count}} attività"
   },
   "taskForm": {
     "addTitle": "Aggiungi attività",
@@ -433,7 +437,15 @@
     "serviceInheritedFromProject": "Eredita {{service}} dal progetto.",
     "startDateLabel": "Data di inizio",
     "taskStartDateLabel": "Data di inizio dell'attività",
-    "startDatePlaceholder": "Seleziona data di inizio"
+    "startDatePlaceholder": "Seleziona data di inizio",
+    "createdTicketsIntro_few": "Hai creato {{count}} ticket durante questa sessione:",
+    "createdTicketsIntro_many": "Hai creato {{count}} ticket durante questa sessione:",
+    "documentCleanupFailure_few": "Impossibile eliminare {{count}} documenti: rimarranno in Documenti",
+    "documentCleanupFailure_many": "Impossibile eliminare {{count}} documenti: rimarranno in Documenti",
+    "documentsCleanupIntro_few": "Hai {{count}} documenti che sono stati {{cleanupType}}:",
+    "documentsCleanupIntro_many": "Hai {{count}} documenti che sono stati {{cleanupType}}:",
+    "ticketCleanupFailure_few": "Impossibile eliminare {{count}} ticket",
+    "ticketCleanupFailure_many": "Impossibile eliminare {{count}} ticket"
   },
   "taskDependencies": {
     "title": "Dipendenze",
@@ -605,7 +617,16 @@
     "invoiceLinksHelp": "Le fatture in bozza sono state create. Apri ogni gruppo di valute per esaminarlo.",
     "currencyDraftLink": "Fattura in bozza in {{currency}}",
     "productCount": "{{count}} prodotti",
-    "productsMovedToHoldOnClose": "{{count}} prodotti collegati sono stati spostati in In sospeso perché il relativo evento di fatturazione è stato annullato."
+    "productsMovedToHoldOnClose": "{{count}} prodotti collegati sono stati spostati in In sospeso perché il relativo evento di fatturazione è stato annullato.",
+    "availableBadge": "Disponibile: {{available}}",
+    "availableByLocation": "Scorte libere per ubicazione",
+    "freeOfOnHand": "{{free}} libere su {{onHand}}",
+    "stockHeld": "Solo {{free}} disponibili. {{held}} in giacenza sono bloccate in modo definitivo per ordini di vendita o progetti e non possono essere usate qui.",
+    "stockInsufficient": "Solo {{onHand}} in giacenza, {{requested}} richiesti.",
+    "reservedStockTitle": "Le scorte sono riservate a un ordine di vendita o a un progetto",
+    "reservedStockMessage": "Solo {{free}} di questo prodotto sono libere. {{reserved}} in giacenza sono riservate a ordini di vendita o progetti e ne hai richiesti {{requested}}. Aggiungerlo comunque sottrae scorte su cui conta un ordine di vendita o un progetto e può lasciarlo incompleto.",
+    "reservedStockConfirm": "Aggiungi comunque",
+    "fromStaging": "Dall'allestimento"
   },
   "export": {
     "title": "Esporta attività progetto",
@@ -644,7 +665,13 @@
     },
     "exportSelected": "Esporta {{count}} selezionata/e",
     "selectedTasksNotice_one": "Esportazione di {{count}} attività selezionata.",
-    "selectedTasksNotice_other": "Esportazione di {{count}} attività selezionate."
+    "selectedTasksNotice_other": "Esportazione di {{count}} attività selezionate.",
+    "phasesSelected_few": "{{selected}} di {{total}} fasi selezionate",
+    "phasesSelected_many": "{{selected}} di {{total}} fasi selezionate",
+    "selectedTasksNotice_few": "Esportazione di {{count}} attività selezionate.",
+    "selectedTasksNotice_many": "Esportazione di {{count}} attività selezionate.",
+    "success_few": "{{count}} attività esportate con successo in CSV.",
+    "success_many": "{{count}} attività esportate con successo in CSV."
   },
   "import": {
     "title": "Importa fasi e attività",
@@ -765,7 +792,9 @@
     "statusUnmatchedTooltip": "Lo stato non corrisponde a nessuno stato esistente per questa fase. Risolvi nei passaggi di mappatura prima dell'importazione.",
     "statusFallbackSuffix": "Predefinito",
     "statusFallbackTooltip": "Utilizzo dello stato di ripiego predefinito per questa fase.",
-    "inPhaseBadge": "nella fase {{phase}}"
+    "inPhaseBadge": "nella fase {{phase}}",
+    "taskCountLabel_few": "({{count}} attività)",
+    "taskCountLabel_many": "({{count}} attività)"
   },
   "dialogs": {
     "moveTask": {
@@ -839,7 +868,9 @@
       "badgeCount_other": "{{count}} Attività",
       "badgeCount_one": "{{count}} Attività",
       "billsToProject": "Le ore sono fatturate come ore di progetto",
-      "billsToClient": "Le ore sono fatturate a livello cliente"
+      "billsToClient": "Le ore sono fatturate a livello cliente",
+      "badgeCount_few": "{{count}} Attività",
+      "badgeCount_many": "{{count}} Attività"
     },
     "bulkMoveTask": {
       "title": "Sposta attività",
@@ -943,7 +974,7 @@
       "choose_status": "Scegli uno stato",
       "no_statuses_available": "Nessuno stato disponibile",
       "no_statuses_available_hint": "Crea prima gli stati in Impostazioni → Progetti → Stati.",
-      "task_status_library_title": "Libreria stati attività progetto",
+      "task_status_library_title": "Libreria stati attività",
       "task_status_library_description": "Gestisci gli stati delle attività di progetto della tua organizzazione. Questi stati possono essere utilizzati in tutti i progetti.",
       "task_status_library_empty": "Nessuno stato attività progetto trovato",
       "task_status_library_empty_hint": "Crea il tuo primo stato per iniziare",
@@ -983,12 +1014,33 @@
       "last_closed_error": "Almeno uno stato deve rimanere contrassegnato come chiuso",
       "last_closed_delete_error": "Impossibile eliminare l’ultimo stato chiuso per questo tipo.",
       "addStatus": "Aggiungi nuovo stato",
-      "add_from_library": "Aggiungi stato"
+      "add_from_library": "Aggiungi stato",
+      "closed_badge": "(Chiuso)",
+      "drag_to_reorder": "Trascina per riordinare",
+      "refresh_library": "Aggiorna la libreria degli stati",
+      "all_library_statuses_used": "Ogni stato della libreria è già una colonna qui. Usa «Crea nuovo» per aggiungerne un altro.",
+      "delete_no_move_target": "Non esiste un'altra colonna di stato in cui spostare queste attività. Aggiungi prima un'altra colonna.",
+      "delete_scope_help": "Questo rimuove la colonna solo in questo ambito. Lo stato resta nella Libreria stati attività.",
+      "fork_title": "Usare colonne di stato personalizzate per questa fase?",
+      "fork_message": "Questa fase smetterà di ereditare le colonne predefinite del progetto. Le colonne di stato che aggiungerai in seguito ai predefiniti del progetto non compariranno qui finché non riporti la fase ai predefiniti.",
+      "fork_confirm": "Usa stati personalizzati",
+      "phase_uses_custom": "Questa fase ha colonne di stato proprie e non eredita più i predefiniti del progetto.",
+      "pending_title": "Modifiche non salvate alle colonne di stato",
+      "pending_apply_hint": "Non cambia nulla finché non salvi.",
+      "pending_fork": "{{phase}} passerà a colonne di stato proprie.",
+      "pending_revert": "{{phase}} tornerà alle colonne predefinite del progetto.",
+      "pending_order": "Nuovo ordine delle colonne per {{scope}}.",
+      "pending_preview_hint": "Le colonne predefinite del progetto sono mostrate come anteprima. Salva per applicare il passaggio, poi potrai aggiungere o rimuovere colonne qui.",
+      "rename_impact_title": "Dove si applica questa rinomina",
+      "rename_impact_following": "Recepisce subito questa rinomina: {{columns}} colonna/e in {{projects}}.",
+      "rename_impact_keeping": "Mantiene il nome «{{name}}»: {{columns}} colonna/e in {{projects}}. Queste colonne non sono collegate a questo stato della Libreria stati attività, quindi quei progetti continueranno a riportare il nome precedente finché non rinomini la colonna lì.",
+      "rename_impact_more": "e altre {{remaining}}",
+      "rename_impact_none": "Questo stato non è ancora usato come colonna in nessun progetto."
     }
   },
   "templates": {
     "statuses": {
-      "manage_title": "Gestisci colonne di stato",
+      "manage_title": "Colonne di stato attività",
       "manage_description": "Definisci le colonne di stato per le attività in questo modello. Trascina per riordinare.",
       "template_defaults": "Predefiniti del modello",
       "added": "Colonna di stato aggiunta",
@@ -1014,7 +1066,8 @@
       "replaced": "Colonna di stato sostituita",
       "replace_failed": "Impossibile sostituire la colonna di stato",
       "repair_status_columns": "Ripara colonne di stato",
-      "unresolved_apply_guard": "Le colonne di stato devono essere riparate ({{count}})"
+      "unresolved_apply_guard": "Le colonne di stato devono essere riparate ({{count}})",
+      "pending_row_hint": "Completa la colonna di stato vuota prima di aggiungerne un’altra."
     },
     "list": {
       "title": "Modelli di progetto",
@@ -1193,7 +1246,9 @@
       "taskCount_other": "{{count}} attività",
       "unknownUser": "Sconosciuto",
       "unknownTask": "Attività sconosciuta",
-      "checklistCountTitle": "{{count}} elemento checklist"
+      "checklistCountTitle": "{{count}} elemento checklist",
+      "taskCount_few": "{{count}} attività",
+      "taskCount_many": "{{count}} attività"
     },
     "taskForm": {
       "addTitle": "Aggiungi attività",
@@ -1442,7 +1497,8 @@
     "notAvailable": "N/D",
     "saveAsTemplate": "Salva come modello",
     "materials": "Materiali",
-    "shareTooltip": "Stampa, importa ed esporta"
+    "shareTooltip": "Stampa, importa ed esporta",
+    "staging": "Allestimento"
   },
   "projectPhases": {
     "addTask": "Aggiungi attività",
@@ -1457,18 +1513,6 @@
     "addError": "Impossibile aggiungere la fase. Riprova.",
     "title": "Fasi del progetto",
     "import": "Importa"
-  },
-  "addStatusDialog": {
-    "phaseTitle": "Aggiungi stato fase dalla libreria",
-    "projectTitle": "Aggiungi stato dalla libreria",
-    "selectLabel": "Seleziona dalla libreria degli stati",
-    "placeholder": "Scegli uno stato",
-    "helpText": "Seleziona uno stato dalla libreria degli stati del tuo tenant da aggiungere a questo progetto.",
-    "noStatusesTitle": "Nessuno stato disponibile",
-    "noStatusesDescription": "Crea gli stati in Impostazioni → Progetti → Stati.",
-    "adding": "Aggiunta...",
-    "addStatus": "Aggiungi stato",
-    "addFailed": "Impossibile aggiungere lo stato. Riprova."
   },
   "taskStatusSelect": {
     "ariaLabel": "Stato dell'attività",
@@ -1492,7 +1536,9 @@
     "addFailed": "Impossibile aggiungere il commento",
     "submitting": "Invio...",
     "loading": "Caricamento...",
-    "empty": "Nessun commento ancora. Sii il primo a commentare!"
+    "empty": "Nessun commento ancora. Sii il primo a commentare!",
+    "loadError": "Impossibile caricare i commenti.",
+    "retry": "Riprova"
   },
   "clientPortal": {
     "clientsWillSee": "I clienti vedranno:",
@@ -1554,7 +1600,7 @@
     "statusColor": "Colore dello stato",
     "changeColor": "Cambia colore",
     "markClosed": "Segna come stato chiuso",
-    "markClosedDescription": "Le attività negli stati chiusi sono considerate completate",
+    "markClosedDescription": "Le attività con questo stato verranno considerate completate",
     "creating": "Creazione...",
     "createButton": "Crea stato",
     "nameRequired": "Il nome dello stato è obbligatorio",
@@ -1615,7 +1661,9 @@
       "submitting": "Aggiunta dei tag...",
       "confirm_one": "Aggiungi tag a {{count}} attività",
       "confirm_other": "Aggiungi tag a {{count}} attività",
-      "failedHeading": "Impossibile aggiungere i tag alle seguenti attività:"
+      "failedHeading": "Impossibile aggiungere i tag alle seguenti attività:",
+      "confirm_few": "Aggiungi tag a {{count}} attività",
+      "confirm_many": "Aggiungi tag a {{count}} attività"
     }
   },
   "common:actions": {
@@ -1678,7 +1726,9 @@
       "lockedSummary_other": "{{count}} voci per un totale di {{amount}} sono bloccate e non cambieranno.",
       "edit": "Modifica condizioni",
       "saved": "Condizioni di fatturazione aggiornate",
-      "dialogTitle": "Modifica condizioni di fatturazione"
+      "dialogTitle": "Modifica condizioni di fatturazione",
+      "lockedSummary_few": "{{count}} voci per un totale di {{amount}} sono bloccate e non cambieranno.",
+      "lockedSummary_many": "{{count}} voci per un totale di {{amount}} sono bloccate e non cambieranno."
     },
     "setup": {
       "title": "Fattura questo progetto",
@@ -2027,5 +2077,202 @@
     "question": "Le dipendenze non sono vincolanti, quindi puoi continuare. Vuoi farlo?",
     "proceed": "Continua comunque",
     "cancel": "Annulla"
+  },
+  "kanbanZoom": {
+    "compact": {
+      "label": "Compatto"
+    },
+    "spacious": {
+      "label": "Spazioso"
+    },
+    "decrease": {
+      "title": "Riduci la larghezza delle colonne"
+    },
+    "increase": {
+      "title": "Aumenta la larghezza delle colonne"
+    },
+    "reset": {
+      "title": "Ripristina il valore predefinito"
+    }
+  },
+  "staging": {
+    "status": {
+      "reserved": "Riservato",
+      "staged": "Allestito",
+      "installed": "Installato",
+      "released": "Rilasciato",
+      "received": "Ricevuto"
+    },
+    "kind": {
+      "stock": "Magazzino",
+      "untracked": "Non gestito a magazzino",
+      "client": "Fornito dal cliente"
+    },
+    "actionFailed": "Non ha funzionato. Riprova.",
+    "installed": "{{count}} articolo/i installato/i. Ora sono materiali di progetto.",
+    "installFailed": "Installazione non riuscita.",
+    "backToProject": "← Torna al progetto",
+    "title": "Allestimento",
+    "heading": "Allestimento",
+    "intro": "Riserva e allestisci l'attrezzatura prima dell'installazione, imballala in scatole etichettate, quindi installala. Lo stock viene utilizzato, e diventa fatturabile, solo quando un articolo viene installato.",
+    "reserveStock": "Riserva stock",
+    "addClientItem": "Aggiungi articolo del cliente",
+    "newBox": "Nuova scatola",
+    "printLabels": "Stampa etichette",
+    "summary": {
+      "reserved": "{{count}} riservato/i",
+      "staged": "{{count}} allestito/i",
+      "client": "{{count}} fornito/i dal cliente",
+      "installed": "{{count}} installato/i",
+      "boxes": "{{count}} scatola/e"
+    },
+    "loading": "Caricamento allestimento...",
+    "linesHeading": "Articoli",
+    "showReleased": "Mostra rilasciati",
+    "selected": "{{count}} selezionato/i",
+    "stagedToast": "Allestito. Lo stock è ora trattenuto per questo progetto.",
+    "stage": "Allestisci",
+    "install": "Installa",
+    "release": "Rilascia",
+    "packInto": "Imballa in {{identifier}}",
+    "packIntoPlaceholder": "Imballa nella scatola...",
+    "empty": "Non c'è ancora nulla in allestimento per questo progetto. Riserva stock o aggiungi un articolo fornito dal cliente per iniziare.",
+    "col": {
+      "item": "Articolo",
+      "qty": "Qtà",
+      "packed": "Imballato",
+      "where": "Da / attività",
+      "status": "Stato"
+    },
+    "selectLine": "Seleziona {{item}}",
+    "shortfall": "{{count}} in carenza: le richieste per questa sede superano la disponibilità (lo stock è stato prelevato con una forzatura).",
+    "changeQuantity": "Modifica quantità",
+    "undoneToast": "Installazione annullata. L'articolo è di nuovo in allestimento.",
+    "undoInstall": "Annulla installazione",
+    "boxesHeading": "Scatole",
+    "noBoxes": "Ancora nessuna scatola. Crea una scatola, imballaci gli articoli, poi stampa la sua etichetta e la sua distinta.",
+    "boxPosition": "Scatola {{n}} di {{total}}",
+    "boxSealed": "Sigillata",
+    "boxOpen": "Aperta",
+    "boxEmpty": "Vuota",
+    "unpack": "Disimballa",
+    "boxLabel": "Etichetta",
+    "boxAllLabels": "Tutte le etichette",
+    "manifest": "Distinta",
+    "reopen": "Riapri",
+    "seal": "Sigilla",
+    "editBox": "Modifica scatola",
+    "boxDeleted": "Scatola eliminata.",
+    "deleteBox": "Elimina scatola",
+    "reprintHint": "«Scatola n di m» su un'etichetta stampata viene fissato al momento della stampa. Ristampa le etichette dopo aver aggiunto o eliminato scatole.",
+    "reservedToast": "Riservato. Lo stock è trattenuto per questo progetto; non è ancora stato usato nulla.",
+    "releasedToast": "Rilasciato. Lo stock è di nuovo libero.",
+    "releaseTitle": "Rilasciare gli articoli?",
+    "releaseMessage": "Gli articoli rilasciati restituiscono il loro stock e lasciano le loro scatole. Questa azione non può essere annullata; riservali di nuovo se ti servono ancora.",
+    "overrideTitle": "Usare stock riservato per altri?",
+    "overrideMessage": "{{message}} Installare comunque usa stock riservato in modo flessibile per un ordine di vendita o un altro progetto.",
+    "installAnyway": "Installa comunque",
+    "changeQuantityHint": "Riservarne di più aggiunge stock (se disponibile); riservarne meno restituisce la differenza. Non può scendere sotto quanto già imballato.",
+    "reserve": {
+      "anyLocation": "Qualsiasi sede (prima le unità più vecchie)",
+      "locationOption": "{{name}}: {{free}} libero/i",
+      "selectProduct": "Scegli un prodotto.",
+      "quantityMin": "La quantità deve essere almeno 1.",
+      "failed": "Impossibile riservare lo stock.",
+      "conflictOnHand": "Disponibili solo {{onHand}}, richiesti {{requested}}. Non è stato riservato nulla.",
+      "conflictFree": "Libero solo {{free}}: {{reserved}} riservato e {{held}} in blocco rigido per ordini di vendita o progetti. Hai richiesto {{requested}}. Non è stato riservato nulla.",
+      "title": "Riserva stock",
+      "intro": "Riservare trattiene stock per questo progetto senza consumarlo. Lo stock viene utilizzato, e fatturato, solo quando lo installi.",
+      "product": "Prodotto",
+      "productPlaceholder": "Seleziona un prodotto...",
+      "productSearch": "Cerca prodotti...",
+      "noProducts": "Nessun prodotto trovato",
+      "untracked": "Questo prodotto non è gestito a magazzino. Viene aggiunto come riga di pianificazione e non richiede stock.",
+      "location": "Riserva da",
+      "locationPlaceholder": "Scegli una sede",
+      "locationDetail": "{{onHand}} disponibili, {{reserved}} riservati, {{held}} in blocco rigido.",
+      "units": "Unità (opzionale: lascia vuoto per prendere le più vecchie)",
+      "noUnitPicker": "Non puoi vedere le unità di stock, quindi vengono prese le più vecchie.",
+      "quantity": "Quantità",
+      "task": "Attività",
+      "noTask": "Nessuna attività",
+      "currency": "Valuta",
+      "currencyPlaceholder": "Predefinita del tenant",
+      "rate": "Tariffa prevista (per unità)",
+      "submit": "Riserva"
+    },
+    "clientItems": {
+      "chooseAsset": "Scegli un asset.",
+      "describeItem": "Descrivi l'articolo.",
+      "failed": "Impossibile aggiungere l'articolo.",
+      "title": "Aggiungi articolo fornito dal cliente",
+      "intro": "Tieni traccia dell'attrezzatura fornita dal cliente tramite l'allestimento e le scatole. Non diventa mai stock e non viene mai fatturata.",
+      "kind": "Che cos'è?",
+      "kindAsset": "Uno degli asset del cliente",
+      "kindItem": "Un altro articolo (descrivilo)",
+      "asset": "Asset",
+      "assetPlaceholder": "Seleziona un asset...",
+      "assetSearch": "Cerca per nome, tag o numero di serie...",
+      "noAssets": "Nessun asset di questo cliente disponibile",
+      "description": "Descrizione",
+      "quantity": "Quantità",
+      "task": "Attività",
+      "noTask": "Nessuna attività",
+      "submit": "Aggiungi"
+    },
+    "boxForm": {
+      "failed": "Impossibile salvare la scatola.",
+      "editTitle": "Modifica scatola {{identifier}}",
+      "createTitle": "Nuova scatola",
+      "numbering": "Le scatole sono numerate in ordine su questo progetto; un numero non viene mai riutilizzato.",
+      "name": "Nome (opzionale)",
+      "task": "Attività",
+      "noTask": "Nessuna attività",
+      "location": "Dove si trova la scatola",
+      "noLocation": "Non impostata",
+      "locationNote": "Scaffale / baia",
+      "notes": "Note (stampate sulla distinta)",
+      "create": "Crea scatola"
+    },
+    "pack": {
+      "nothingChosen": "Scegli qualcosa da imballare.",
+      "failed": "Impossibile imballare la scatola.",
+      "title": "Imballa scatola {{identifier}}",
+      "intro": "Gli articoli riservati che imballi passano in allestimento: il loro stock è trattenuto per questo progetto e non può più essere prelevato per altro.",
+      "nothingToPack": "Tutto ciò che è in allestimento è già imballato o installato.",
+      "quantityFor": "Quantità di {{item}}",
+      "submit": "Imballa"
+    },
+    "print": {
+      "failed": "Non è stato possibile stampare le etichette.",
+      "skipped": "{{count}} etichetta/e che non puoi visualizzare sono state escluse.",
+      "popupBlocked": "Il browser ha bloccato la finestra del PDF; consenti i popup e riprova.",
+      "title": "Stampa etichette di allestimento",
+      "boxes": "Scatole",
+      "noBoxes": "Ancora nessuna scatola.",
+      "boxOption": "{{identifier}} (scatola {{n}} di {{total}}){{name}}",
+      "includeUnboxed": "Stampa anche gli articoli in allestimento che non sono in una scatola",
+      "layout": "Disposizione",
+      "count": "{{count}} etichetta/e in un unico PDF.",
+      "noInventory": "{{count}} etichetta/e di unità di stock non sono incluse perché non puoi visualizzare l'inventario.",
+      "overCap": "Una stampa contiene al massimo {{max}} etichette. Scegli meno scatole e stampa il resto separatamente.",
+      "submit": "Stampa"
+    },
+    "closeWarning": "{{count}} articolo/i riservato/i o in allestimento trattengono ancora stock per questo progetto.",
+    "releasedAll": "Rilasciato/i {{count}} articolo/i. Lo stock è di nuovo libero.",
+    "releaseAll": "Rilascia tutti i riservati e gli allestiti",
+    "keepClaims": "Mantienili",
+    "packAction": "Imballa",
+    "errors": {
+      "notFound": "Progetto non trovato",
+      "permission": {
+        "read": "Non hai il permesso di visualizzare i progetti.",
+        "update": "Non hai il permesso di modificare i progetti.",
+        "inventory": "Hai bisogno dell'accesso all'inventario per scegliere le unità di stock.",
+        "billing": "Hai bisogno dell'accesso alla fatturazione per installare articoli in un progetto.",
+        "asset": "Hai bisogno dell'accesso agli asset per collegare gli asset del cliente.",
+        "inventoryStock": "Hai bisogno dell'accesso all'inventario per vedere i livelli di stock."
+      }
+    }
   }
 }

@@ -1,4 +1,5 @@
 import {
+  AMP_ASSUMED_CURRENCY_EXTENSION_KEY,
   AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY,
   AMP_ENTITY_REFERENCES,
   AMP_LIMITS,
@@ -7,7 +8,15 @@ import {
   type AmpRecord,
   type AmpCustomFieldValueRecord,
 } from '@alga-psa/migration-spec';
-import { normalizeBooleanFlag, normalizeDateOnly, normalizeTimestamp } from './values';
+import {
+  normalizeBooleanFlag,
+  normalizeCurrencyCode,
+  normalizeDateOnly,
+  normalizeTimestamp,
+  normalizeWholeNumber,
+  parseMoneyToMinorUnits,
+  type MoneyParseFailure,
+} from './values';
 
 /**
  * A conversion diagnostic. `sourceRow` is the 1-based data row (the first
@@ -43,6 +52,14 @@ export interface EntityRowsInput {
   /** Source column header -> canonical AMP column. */
   mapping: Record<string, string>;
   transformValue?: CsvValueTransform;
+  /**
+   * ISO 4217 code whose minor-unit exponent is used for a money cell whose
+   * currency cell is blank (the tenant's currency, resolved by the caller).
+   * The record's currency column stays null so the applier resolves the
+   * tenant currency at apply time; the assumption is recorded in
+   * `extension_json` so the applier can refuse a mismatched tenant currency.
+   */
+  defaultCurrency?: string;
 }
 
 export interface BuiltEntityRows {
@@ -63,6 +80,30 @@ export const FULL_NAME_COLUMN = 'full_name';
 export const CLIENT_NAME_COLUMN = 'client_name';
 const SPECIAL_MAPPING_TARGETS: ReadonlySet<string> = new Set([FULL_NAME_COLUMN, CLIENT_NAME_COLUMN]);
 
+/** Money column -> the currency column that supplies its minor-unit exponent. */
+export const MONEY_COLUMN_CURRENCY: Readonly<Record<string, string>> = {
+  price_minor: 'price_currency',
+  cost_minor: 'cost_currency',
+  unit_cost_minor: 'cost_currency',
+};
+/**
+ * A sheet with one generic `Currency` column maps it to `price_currency`; cost
+ * falls back to it when the row has no cost currency of its own, so a cost is
+ * never read or stored under the tenant currency when the sheet declared one.
+ */
+const CURRENCY_FALLBACK: Readonly<Record<string, string>> = { cost_currency: 'price_currency' };
+const CURRENCY_COLUMNS: ReadonlySet<string> = new Set(['price_currency', 'cost_currency']);
+const FLAG_COLUMNS: ReadonlySet<string> = new Set(['is_internal', 'is_active', 'is_preferred']);
+const MAX_LEAD_TIME_DAYS = 3650;
+
+const MONEY_FAILURE_MESSAGES: Record<MoneyParseFailure, string> = {
+  currency: 'its currency is not a supported ISO 4217 code',
+  negative: 'negative amounts are not allowed',
+  precision: 'it has more decimal places than the currency allows',
+  invalid: 'it is not a plain decimal amount (digits with an optional decimal point)',
+  overflow: 'it is too large',
+};
+
 const TIMESTAMP_COLUMNS = ['created_at', 'updated_at', 'closed_at'];
 
 /**
@@ -79,11 +120,16 @@ const REQUIRED_TEXT_COLUMNS: Record<AmpEntityType, readonly string[]> = {
   tickets: ['title'],
   ticket_comments: ['body'],
   assets: ['name'],
+  products: ['name'],
+  vendor_products: ['vendor_name'],
 };
 
 /** When declared, at least one of these columns must be non-empty. */
 const REQUIRED_ANY_OF_COLUMNS: Partial<Record<AmpEntityType, readonly string[]>> = {
   contacts: ['first_name', 'last_name'],
+  // A price-list row must say which product it prices: either a product
+  // record from the same package or a SKU matched against the tenant catalog.
+  vendor_products: ['product_package_record_id', 'product_sku'],
 };
 
 interface BuiltRecord {
@@ -204,6 +250,8 @@ export function buildEntityRows(
       }
 
       const record: Record<string, unknown> = {};
+      const pendingMoney = new Map<string, { header: string; value: string }>();
+      const invalidCurrencyColumns = new Set<string>();
       const leftover = new Map<string, string>();
       let carriedClientName: string | undefined;
       for (const [header, value] of values) {
@@ -259,7 +307,31 @@ export function buildEntityRows(
             continue;
           }
           record[target] = normalized;
-        } else if (target === 'is_internal') {
+        } else if (target in MONEY_COLUMN_CURRENCY) {
+          // Parsed after the loop, once the row's currency cell is known.
+          pendingMoney.set(target, { header, value: transformed });
+        } else if (CURRENCY_COLUMNS.has(target)) {
+          const code = normalizeCurrencyCode(transformed);
+          if (code === undefined) {
+            warn(
+              'CSV_INVALID_CURRENCY',
+              `"${transformed}" in column "${header}" is not a supported ISO 4217 currency code; amounts that depend on it were dropped.`
+            );
+            invalidCurrencyColumns.add(target);
+            continue;
+          }
+          record[target] = code;
+        } else if (target === 'lead_time_days') {
+          const normalized = normalizeWholeNumber(transformed, MAX_LEAD_TIME_DAYS);
+          if (normalized === undefined) {
+            warn(
+              'CSV_INVALID_NUMBER',
+              `"${transformed}" in column "${header}" is not a whole number of days between 0 and ${MAX_LEAD_TIME_DAYS}; the value was dropped.`
+            );
+            continue;
+          }
+          record[target] = normalized;
+        } else if (FLAG_COLUMNS.has(target)) {
           const normalized = normalizeBooleanFlag(transformed);
           if (normalized === undefined) {
             warn(
@@ -271,6 +343,43 @@ export function buildEntityRows(
           record[target] = normalized;
         } else {
           record[target] = transformed;
+        }
+      }
+
+      for (const [column, fallback] of Object.entries(CURRENCY_FALLBACK)) {
+        if (!(column in record) && !invalidCurrencyColumns.has(column)) {
+          if (typeof record[fallback] === 'string') record[column] = record[fallback];
+          else if (invalidCurrencyColumns.has(fallback)) invalidCurrencyColumns.add(column);
+        }
+      }
+
+      let assumedCurrency: string | undefined;
+      for (const [target, { header, value }] of pendingMoney) {
+        const currencyColumn = MONEY_COLUMN_CURRENCY[target];
+        if (invalidCurrencyColumns.has(currencyColumn)) {
+          warn('CSV_MONEY_DROPPED', `"${value}" in column "${header}" was dropped because its currency cell is invalid.`);
+          continue;
+        }
+        const rowCurrency = typeof record[currencyColumn] === 'string' ? (record[currencyColumn] as string) : undefined;
+        const currency = rowCurrency ?? input.defaultCurrency;
+        if (currency === undefined) {
+          warn(
+            'CSV_MISSING_CURRENCY',
+            `"${value}" in column "${header}" has no currency and no default currency is available to read its decimals; the value was dropped.`
+          );
+          continue;
+        }
+        const parsed = parseMoneyToMinorUnits(value, currency);
+        if (parsed.ok === false) {
+          warn(
+            'CSV_INVALID_MONEY',
+            `"${value}" in column "${header}" is not a valid ${currency} amount: ${MONEY_FAILURE_MESSAGES[parsed.reason]}; the value was dropped.`
+          );
+          continue;
+        }
+        record[target] = parsed.minor;
+        if (rowCurrency === undefined) {
+          assumedCurrency = currency;
         }
       }
 
@@ -325,6 +434,9 @@ export function buildEntityRows(
         });
       }
       const extensionValues = new Map([...leftover].filter(([key]) => key === AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY));
+      if (assumedCurrency !== undefined) {
+        extensionValues.set(AMP_ASSUMED_CURRENCY_EXTENSION_KEY, assumedCurrency);
+      }
       if (extensionValues.size > 0) {
         const json = JSON.stringify(Object.fromEntries(extensionValues));
         const bytes = Buffer.byteLength(json, 'utf8');

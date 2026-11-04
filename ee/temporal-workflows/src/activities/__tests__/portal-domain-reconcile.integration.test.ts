@@ -9,8 +9,8 @@ const virtualServices: any[] = [];
 const certificates: any[] = [];
 const deletedVirtualServices: Array<{ namespace: string; name: string }> = [];
 
-vi.mock('@alga-psa/db/admin.js', () => {
-  const rows = [
+const db = vi.hoisted(() => {
+  const seedRows = () => [
     {
       id: 'domain-success',
       tenant: 'tenant-success',
@@ -19,75 +19,65 @@ vi.mock('@alga-psa/db/admin.js', () => {
       status: 'pending_certificate',
       status_message: 'DNS verified. Awaiting certificate issuance.',
       verification_details: {},
-      certificate_secret_name: null,
-      last_synced_resource_version: null,
+      certificate_secret_name: null as string | null,
+      last_synced_resource_version: null as string | null,
+      surface: 'client_portal',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },
   ];
+  return { seedRows, rows: [] as Array<Record<string, any>> };
+});
 
-  function matches(where: Record<string, any>, row: Record<string, any>): boolean {
-    return Object.entries(where).every(([key, value]) => row[key] === value);
+vi.mock('@alga-psa/db/admin.js', () => {
+  type Predicate = (row: Record<string, any>) => boolean;
+
+  function normalizeUpdates(updates: Record<string, any>): Record<string, any> {
+    const result: Record<string, any> = {};
+    for (const [key, value] of Object.entries(updates)) {
+      result[key] = typeof value === 'function' ? value() : value;
+    }
+    return result;
   }
 
-  const knexFnNow = () => new Date().toISOString();
+  // Chainable like a real knex builder: every where/whereIn narrows the row set,
+  // so tenant scoping added by tenantDb composes with the caller's row filter.
+  function builder(predicates: Predicate[]): any {
+    const matching = () => db.rows.filter((row) => predicates.every((predicate) => predicate(row)));
+    return {
+      where(columnOrClause: string | Record<string, any>, value?: unknown) {
+        const predicate: Predicate =
+          typeof columnOrClause === 'string'
+            ? (row) => row[columnOrClause.split('.').pop() as string] === value
+            : (row) => Object.entries(columnOrClause).every(([key, expected]) => row[key] === expected);
+        return builder([...predicates, predicate]);
+      },
+      whereIn(field: string, values: unknown[]) {
+        return builder([...predicates, (row) => values.includes(row[field])]);
+      },
+      async select() {
+        return matching().map((row) => ({ ...row }));
+      },
+      async first() {
+        const [row] = matching();
+        return row ? { ...row } : undefined;
+      },
+      async update(updates: Record<string, any>) {
+        const targets = matching();
+        targets.forEach((row) => Object.assign(row, normalizeUpdates(updates)));
+        return targets.length;
+      },
+    };
+  }
 
   const knex: any = (tableName: string) => {
     if (tableName !== 'portal_domains') {
       throw new Error(`Unexpected table name: ${tableName}`);
     }
-
-    return {
-      async select() {
-        return rows.map((row) => ({ ...row }));
-      },
-      where(whereClause: Record<string, any>) {
-        return {
-          async first() {
-            return rows.find((row) => matches(whereClause, row)) ?? null;
-          },
-          async update(updates: Record<string, any>) {
-            rows.forEach((row) => {
-              if (matches(whereClause, row)) {
-                Object.assign(row, normalizeUpdates(updates));
-              }
-            });
-            return 1;
-          },
-        };
-      },
-      async update(updates: Record<string, any>) {
-        rows.forEach((row) => Object.assign(row, normalizeUpdates(updates)));
-        return rows.length;
-      },
-      whereIn(field: string, values: string[]) {
-        return {
-          async update(updates: Record<string, any>) {
-            rows.forEach((row) => {
-              if (values.includes(row[field])) {
-                Object.assign(row, normalizeUpdates(updates));
-              }
-            });
-            return values.length;
-          },
-        };
-      },
-    };
+    return builder([]);
   };
 
-  knex.fn = { now: knexFnNow };
-
-  function normalizeUpdates(updates: Record<string, any>): Record<string, any> {
-    const result: Record<string, any> = {};
-    for (const [key, value] of Object.entries(updates)) {
-      if (typeof value === 'function') {
-        result[key] = value();
-      } else {
-        result[key] = value;
-      }
-    }
-    return result;
-  }
+  knex.fn = { now: () => new Date().toISOString() };
 
   return {
     getAdminConnection: vi.fn(async () => knex),
@@ -99,6 +89,7 @@ let workspace: string;
 
 describe('applyPortalDomainResources', () => {
   beforeEach(async () => {
+    db.rows.splice(0, db.rows.length, ...db.seedRows());
     workspace = await mkdtemp(path.join(os.tmpdir(), 'portal-reconcile-'));
     vi.stubEnv('PORTAL_DOMAIN_SERVICE_HOST', 'sebastian.msp.svc.cluster.local');
     vi.stubEnv('PORTAL_DOMAIN_GIT_REPO', 'https://example.invalid/fixtures.git');
@@ -169,5 +160,50 @@ describe('applyPortalDomainResources', () => {
     expect(newVirtualService.spec?.http?.[0]?.route?.[0]?.destination?.host).toBe('sebastian.msp.svc.cluster.local');
 
     expect(deletedVirtualServices).toContainEqual({ namespace: 'msp', name: 'portal-domain-vs-old' });
+  });
+
+  it('writes reconcile metadata only to the addressed (tenant, id) rows and never touches surface', async () => {
+    db.rows.push(
+      {
+        ...db.seedRows()[0],
+        id: 'domain-msp-disabled',
+        tenant: 'tenant-other',
+        domain: 'msp.other.example.com',
+        status: 'disabled',
+        certificate_secret_name: 'stale-secret',
+        last_synced_resource_version: '42',
+        surface: 'msp',
+      },
+      {
+        ...db.seedRows()[0],
+        id: 'domain-success',
+        tenant: 'tenant-other',
+        domain: 'collision.other.example.com',
+        status: 'disabled',
+        certificate_secret_name: null,
+        last_synced_resource_version: null,
+        surface: 'msp',
+      },
+    );
+    const { applyPortalDomainResources } = await import('../portal-domain-activities.js');
+
+    const result = await applyPortalDomainResources({ tenantId: 'tenant-success', portalDomainId: 'domain-success' });
+
+    expect(result.success, JSON.stringify(result.errors)).toBe(true);
+    const byKey = (tenant: string, id: string) => db.rows.find((row) => row.tenant === tenant && row.id === id);
+
+    const managed = byKey('tenant-success', 'domain-success');
+    expect(managed?.certificate_secret_name).toEqual(expect.any(String));
+    expect(managed?.surface).toBe('client_portal');
+
+    const cleared = byKey('tenant-other', 'domain-msp-disabled');
+    expect(cleared?.certificate_secret_name).toBeNull();
+    expect(cleared?.last_synced_resource_version).toBeNull();
+    expect(cleared?.surface).toBe('msp');
+
+    // Same id, different tenant: the secret sync for tenant-success must not leak onto it.
+    const sameIdOtherTenant = byKey('tenant-other', 'domain-success');
+    expect(sameIdOtherTenant?.certificate_secret_name).toBeNull();
+    expect(sameIdOtherTenant?.surface).toBe('msp');
   });
 });

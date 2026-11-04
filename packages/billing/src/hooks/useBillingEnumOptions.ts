@@ -1,8 +1,10 @@
 'use client';
 
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { canonicalRecurringFrequency } from '@alga-psa/shared/billingClients/recurringMemberRate';
 import {
   BILLING_FREQUENCY_LABEL_DEFAULTS,
+  BILLING_PERIOD_LABEL_DEFAULTS,
   BILLING_FREQUENCY_VALUES,
   CONTRACT_LINE_TYPE_LABEL_DEFAULTS,
   CONTRACT_LINE_TYPE_VALUES,
@@ -36,6 +38,19 @@ export function useFormatBillingFrequency(): (value: string) => string {
   };
 }
 
+/**
+ * A cadence as the period an amount covers ("per year", "per month"), for
+ * printing after a per-period amount. Accepts any stored spelling; null and
+ * unknown cadences read as monthly, the same rule the monthly normalization uses.
+ */
+export function useFormatBillingPeriod(): (value: string | null | undefined) => string {
+  const { t } = useTranslation(BILLING_NAMESPACE);
+  return (value) => {
+    const frequency = canonicalRecurringFrequency(value);
+    return t(`enums.billingPeriod.${frequency}`, { defaultValue: BILLING_PERIOD_LABEL_DEFAULTS[frequency] });
+  };
+}
+
 export function useContractLineTypeOptions(): LocalizedOption<ContractLineType>[] {
   const { t } = useTranslation(BILLING_NAMESPACE);
   return CONTRACT_LINE_TYPE_VALUES.map((value) => ({
@@ -46,11 +61,22 @@ export function useContractLineTypeOptions(): LocalizedOption<ContractLineType>[
   }));
 }
 
+/**
+ * Derived display kinds that are not stored contract_line_type values. A Prepaid
+ * Block line is stored as 'Hourly'; getDetailedContractLines reports 'PrepaidBlock'
+ * as its display_kind so labels can distinguish it without a new enum value.
+ */
+const DERIVED_CONTRACT_LINE_KIND_LABEL_DEFAULTS: Record<string, string> = {
+  PrepaidBlock: 'Prepaid Block',
+};
+
 export function useFormatContractLineType(): (value: string) => string {
   const { t } = useTranslation(BILLING_NAMESPACE);
   return (value: string) => {
     const fallback =
-      CONTRACT_LINE_TYPE_LABEL_DEFAULTS[value as ContractLineType] ?? value;
+      CONTRACT_LINE_TYPE_LABEL_DEFAULTS[value as ContractLineType]
+      ?? DERIVED_CONTRACT_LINE_KIND_LABEL_DEFAULTS[value]
+      ?? value;
     return t(`enums.contractLineType.${value}`, { defaultValue: fallback });
   };
 }

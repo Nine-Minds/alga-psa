@@ -4,6 +4,12 @@
  * lookup with tenant/system + locale fallback.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const { warnMock } = vi.hoisted(() => ({ warnMock: vi.fn() }));
+vi.mock('@alga-psa/core/logger', () => ({
+  __esModule: true,
+  default: { debug: vi.fn(), info: vi.fn(), warn: warnMock, error: vi.fn() },
+}));
 import {
   StaticTemplateProcessor,
   CustomTemplateProcessor,
@@ -11,6 +17,67 @@ import {
 } from '../templateProcessors';
 
 describe('StaticTemplateProcessor', () => {
+  beforeEach(() => warnMock.mockClear());
+
+  it('HTML-escapes <script>, & and quotes in the html body only', async () => {
+    const processor = new StaticTemplateProcessor('Re: {{name}}', '<p>{{name}}</p>', '{{name}}');
+    const name = `<script>alert("x")</script> Tom & 'Jerry'`;
+    const result = await processor.process({ templateData: { name } });
+
+    expect(result.html).toBe('<p>&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt; Tom &amp; &#x27;Jerry&#x27;</p>');
+    expect(result.html).not.toContain('<script>');
+    // A subject line / plain text must never gain &amp; or &lt;
+    expect(result.subject).toBe(`Re: ${name}`);
+    expect(result.text).toBe(name);
+  });
+
+  it('falls back to the legacy replace and logs when a template is malformed, for that piece only', async () => {
+    const processor = new StaticTemplateProcessor(
+      'Hi {{name}}',
+      '{{#if name}}<p>{{name}}</p>', // unclosed block: Handlebars cannot compile it
+      'Hi {{name}}'
+    );
+
+    const result = await processor.process({
+      tenantId: 'tenant-1',
+      templateData: { name: 'A & B' },
+    });
+
+    // html degraded to the legacy (unescaped) regex replace, never threw
+    expect(result.html).toBe('{{#if name}}<p>A & B</p>');
+    // subject/text still render through Handlebars
+    expect(result.subject).toBe('Hi A & B');
+    expect(warnMock).toHaveBeenCalledTimes(1);
+    expect(warnMock).toHaveBeenCalledWith(
+      expect.stringContaining('fall'),
+      expect.objectContaining({ field: 'html', tenantId: 'tenant-1', templateId: 'static' })
+    );
+  });
+
+  it('renders the escaped email fixture (acceptance snapshot)', async () => {
+    const processor = new StaticTemplateProcessor(
+      'Welcome to {{workspace}}',
+      [
+        '<!doctype html>',
+        '<html><body>',
+        '<h1>Welcome to {{workspace}}</h1>',
+        '<p>Hi {{user.name}}, <a href="{{link}}">open your portal</a>.</p>',
+        '<div>{{{buttons}}}</div>',
+        '</body></html>',
+        '',
+      ].join('\n'),
+    );
+    const { html } = await processor.process({
+      templateData: {
+        workspace: '<img src=x onerror=alert(1)> & "Co"',
+        user: { name: "O'Brien <admin>" },
+        link: 'https://example.com/?a=1&b=2',
+        buttons: '<b>prepared</b>',
+      },
+    });
+    await expect(html).toMatchFileSnapshot('./__snapshots__/escapedEmail.html');
+  });
+
   it('substitutes {{variable}} placeholders in subject, html and text', async () => {
     const processor = new StaticTemplateProcessor(
       'Hello {{name}}',
@@ -58,10 +125,10 @@ describe('StaticTemplateProcessor', () => {
     expect(result.html).toBe('<p></p>');
   });
 
-  it('leaves placeholders intact when no data key matches', async () => {
+  it('renders a missing value as empty instead of sending the placeholder (Handlebars semantics)', async () => {
     const processor = new StaticTemplateProcessor('Hi {{name}}', '<p>{{name}}</p>');
     const result = await processor.process({ templateData: { other: 'value' } });
-    expect(result.subject).toBe('Hi {{name}}');
+    expect(result).toMatchObject({ subject: 'Hi ', html: '<p></p>' });
   });
 
   it('does not flatten arrays or Date values', async () => {

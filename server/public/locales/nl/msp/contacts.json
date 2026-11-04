@@ -69,7 +69,9 @@
       "message_one": "Het volgende aangepaste telefoontype wordt niet langer door een contact gebruikt: {{labels}}. Wilt u de typedefinitie verwijderen of bewaren voor toekomstig gebruik?",
       "message_other": "De volgende aangepaste telefoontypen worden niet langer door een contact gebruikt: {{labels}}. Wilt u de typedefinities verwijderen of bewaren voor toekomstig gebruik?",
       "deleteType": "Soort verwijderen",
-      "keepType": "Soort behouden"
+      "keepType": "Soort behouden",
+      "message_few": "De volgende aangepaste telefoontypen worden niet langer door een contact gebruikt: {{labels}}. Wilt u de typedefinities verwijderen of bewaren voor toekomstig gebruik?",
+      "message_many": "De volgende aangepaste telefoontypen worden niet langer door een contact gebruikt: {{labels}}. Wilt u de typedefinities verwijderen of bewaren voor toekomstig gebruik?"
     },
     "print": {
       "title": "Contacten",
@@ -455,7 +457,9 @@
         "invitationNotFound": "Uitnodiging niet gevonden of al gebruikt."
       },
       "userNotFound": "Klantgebruiker niet gevonden"
-    }
+    },
+    "boardCount_few": "{{count}} borden",
+    "boardCount_many": "{{count}} borden"
   },
   "quickAddContact": {
     "title": "Nieuwe contactpersoon toevoegen",
@@ -734,7 +738,67 @@
       "visibilityDuplicate": "Er bestaat al een zichtbaarheidsgroep met deze gegevens voor deze klant.",
       "visibilityInvalidData": "Ongeldige gegevens voor de zichtbaarheidsgroep opgegeven. Controleer de groepsgegevens en de geselecteerde borden.",
       "groupNameRequired": "Groepsnaam is verplicht",
-      "readPermission": "Toestemming geweigerd: contacten kunnen niet worden gelezen"
+      "readPermission": "Toestemming geweigerd: contacten kunnen niet worden gelezen",
+      "idRequired": "Contact-ID is verplicht",
+      "schemaError": "Fout in databaseschema – neem contact op met ondersteuning",
+      "readFailed": "Er is een onverwachte fout opgetreden bij het ophalen van contactgegevens",
+      "deleteRecordFailed": "Contactrecord niet gevonden of kon niet worden verwijderd",
+      "updateIdRequired": "Contact-ID is verplicht voor updates",
+      "clientMissing": "De geselecteerde klant bestaat niet meer",
+      "destinationMissing": "De geselecteerde bestemming voor inkomende tickets bestaat niet meer",
+      "updateMissing": "Het contact dat u probeert bij te werken bestaat niet meer",
+      "updateRecordMissing": "De contactupdate is voltooid zonder het bijgewerkte contactrecord terug te geven",
+      "clientIdRequired": "Klant-ID is verplicht",
+      "specifiedClientMissing": "De opgegeven klant bestaat niet",
+      "updateDataRequired": "Geen updategegevens opgegeven",
+      "emailInvalid": "Voer een geldig e-mailadres in",
+      "bulkUpdateFailed": "De update van klantcontacten is voltooid zonder contactrecords te wijzigen",
+      "updateFailed": "Er is een onverwachte fout opgetreden bij het bijwerken van klantcontacten",
+      "importMultipleMatches": "Geïmporteerde e-mailadressen komen overeen met meerdere bestaande contacten",
+      "updatePermission": "Contacten kunnen niet worden bijgewerkt",
+      "importDataRequired": "Geen contactgegevens opgegeven",
+      "fullNameRequired": "Volledige naam is verplicht",
+      "importFailed": "Er is een onverwachte fout opgetreden bij het importeren van contacten",
+      "emailsRequired": "Geen e-mailadressen opgegeven",
+      "validEmailsRequired": "Geen geldige e-mailadressen opgegeven",
+      "checkEmailsFailed": "Er is een onverwachte fout opgetreden bij het controleren van bestaande e-mailadressen",
+      "portalAdminRequired": "Beheerderstoegang tot het klantportaal is vereist",
+      "assignedGroupInvalid": "De toegewezen zichtbaarheidsgroep is ongeldig voor dit contact",
+      "groupNotFound": "Zichtbaarheidsgroep niet gevonden",
+      "boardsInvalid": "Een of meer borden zijn ongeldig voor deze tenant",
+      "groupCreateFailed": "De zichtbaarheidsgroep is aangemaakt zonder een groeps-ID terug te geven",
+      "groupInUse": "De zichtbaarheidsgroep kan niet worden verwijderd zolang deze aan contacten is toegewezen",
+      "importEmailInvalid": "Ongeldig e-mailformaat voor contact: {{name}}",
+      "importClientMissing": "Klant niet gevonden voor contact: {{name}}",
+      "invalidEmailValue": "Ongeldig e-mailformaat: {{email}}",
+      "invalidData": "Ongeldige contactgegevens",
+      "phoneExtensionInvalid": "Telefoon {{index}}: voer een geldig toestelnummer in",
+      "phoneNumberInvalid": "Telefoon {{index}}: voer een geldig telefoonnummer in",
+      "phoneCountryRequired": "Telefoon {{index}}: voeg de landcode toe, beginnend met +",
+      "tenantEmailExists": "Er bestaat al een e-mailadres van een contact in deze tenant",
+      "importRowFailed": "Dit contact kon niet worden geïmporteerd. Controleer de verplichte velden en klantverwijzingen.",
+      "deleteMissing": "Het contact dat u probeert te verwijderen bestaat niet meer.",
+      "deleteFailed": "Het contact kon niet worden verwijderd. Probeer het opnieuw.",
+      "deleteDependencies": "Het contact kan niet worden verwijderd omdat er gekoppelde records zijn",
+      "connectionFailed": "Probleem met de databaseverbinding. Probeer het opnieuw.",
+      "deleteUnexpected": "Er is een onverwachte fout opgetreden bij het verwijderen van het contact",
+      "importFileFailed": "Contacten konden niet worden geïmporteerd. Controleer het bestand en probeer het opnieuw.",
+      "portalAdminUpdateFailed": "De portaalbeheerdersstatus kon niet worden bijgewerkt. Vernieuw de pagina en probeer het opnieuw.",
+      "userLoadFailed": "Gebruiker kon niet worden opgehaald",
+      "sharedMailboxAdmin": "Contacten van gedeelde postvakken kunnen geen klantbeheerders zijn.",
+      "createFailed": "Er is een onverwachte fout opgetreden bij het aanmaken van het contact",
+      "importDuplicateEmail": "Er bestaat al een contact met dit e-mailadres: {{value}}",
+      "importDuplicateName": "Er bestaat al een contact met deze naam: {{value}}",
+      "permissions": {
+        "readContacts": "Contacten kunnen niet worden gelezen",
+        "deleteContacts": "Contacten kunnen niet worden verwijderd",
+        "createContacts": "Contacten kunnen niet worden aangemaakt",
+        "updateContacts": "Contacten kunnen niet worden bijgewerkt",
+        "managePhoneTypes": "Telefoontypen kunnen niet worden beheerd",
+        "updateClientUsers": "U heeft geen toestemming om klantgebruikers bij te werken",
+        "viewClientUsers": "U heeft geen toestemming om klantgebruikers te bekijken"
+      },
+      "field": "veld"
     }
   },
   "portal": {
@@ -759,7 +823,31 @@
       "scopeSummaryAll": "Alle",
       "scopeSummaryOwn": "Eigen",
       "managerScopeNote_one": "Hun weergave bevat ook gegevens van {{count}} persoon die aan hen rapporteert.",
-      "managerScopeNote_other": "Hun weergave bevat ook gegevens van {{count}} personen die aan hen rapporteren."
+      "managerScopeNote_other": "Hun weergave bevat ook gegevens van {{count}} personen die aan hen rapporteren.",
+      "managerScopeNote_few": "Hun weergave bevat ook gegevens van {{count}} personen die aan hen rapporteren.",
+      "managerScopeNote_many": "Hun weergave bevat ook gegevens van {{count}} personen die aan hen rapporteren."
     }
+  },
+  "messages": {
+    "success": {
+      "updated": "Contact succesvol bijgewerkt",
+      "created": "Contact aangemaakt"
+    }
+  },
+  "csvTemplate": {
+    "explorerRole": "Hoofdontdekker",
+    "explorerNotes": "Viel in een konijnenhol en ontdekte een geheel nieuwe wereld",
+    "explorerTags": "Nieuwsgierig, Avontuurlijk, Dapper",
+    "teaRole": "Hoofdexpert theeceremonie",
+    "teaNotes": "Weet waarom een raaf op een schrijftafel lijkt",
+    "teaTags": "Creatief, Excentriek, Thee-expert"
+  },
+  "entraContactBadge": {
+    "lastSyncedTitle": "Microsoft Entra · laatst gesynchroniseerd op {{date}}",
+    "description": "Dit contact wordt gesynchroniseerd met een directoryaccount.",
+    "signInName": "Aanmeldnaam: {{name}}",
+    "lastSynced": "Laatst gesynchroniseerd op {{date}}",
+    "deleted": "Inactief — het Microsoft-account is verwijderd.",
+    "disabled": "Inactief — het Microsoft-account is uitgeschakeld."
   }
 }

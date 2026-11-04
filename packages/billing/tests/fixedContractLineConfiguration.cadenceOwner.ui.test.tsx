@@ -52,7 +52,7 @@ describe('FixedContractLineConfiguration cadence owner UI', () => {
   it('T111 and T145: recurring contract line configuration uses business-language cadence owner labels and leaves contract cadence selectable', async () => {
     const { FixedPlanConfiguration } = await import('../src/components/billing-dashboard/contract-lines/FixedContractLineConfiguration');
 
-    render(<FixedPlanConfiguration contractLineId="line-1" />);
+    render(<FixedPlanConfiguration contractLineId="line-1" currencyCode="USD" />);
 
     expect(await screen.findByText('Invoice on client billing schedule')).toBeTruthy();
     const clientOption = screen.getByLabelText('Invoice on client billing schedule') as HTMLInputElement;

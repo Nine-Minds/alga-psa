@@ -134,6 +134,10 @@ function PageScope({ children }: { children?: React.ReactNode }) {
 
 const TILE_ID = 'ticket-timeline';
 
+// The top composer entry exists only for newest-first; oldest-first docks it
+// at the bottom (the newest end). Each placement suite sets the order it needs.
+let timelineOrder: 'asc' | 'desc' = 'asc';
+
 function FullPage({ editorKey = 0, onAddNewComment = vi.fn(async () => true) }: {
   editorKey?: number;
   onAddNewComment?: (...args: any[]) => Promise<boolean>;
@@ -151,6 +155,7 @@ function FullPage({ editorKey = 0, onAddNewComment = vi.fn(async () => true) }: 
             userMap={{}}
             contactMap={{}}
             contactFirstName="Andrew"
+            initialOrder={timelineOrder}
             editorKey={editorKey}
             onNewCommentContentChange={vi.fn()}
             onAddNewComment={onAddNewComment as any}
@@ -256,6 +261,7 @@ describe.each<Placement>(['top', 'bottom'])(
   'full-page bento ticket view with a typed comment in the %s composer',
   (placement) => {
     beforeEach(() => {
+      timelineOrder = placement === 'top' ? 'desc' : 'asc';
       if (placement === 'bottom') scrollHeaderOffscreen();
     });
 
@@ -409,6 +415,10 @@ describe.each<Placement>(['top', 'bottom'])(
 );
 
 describe('full-page bento ticket view with nothing typed', () => {
+  beforeEach(() => {
+    timelineOrder = 'asc';
+  });
+
   it('history chords and reload are left alone, and the record shortcuts navigate', async () => {
     await renderPage();
 

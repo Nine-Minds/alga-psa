@@ -21,7 +21,8 @@ vi.mock('@alga-psa/billing/actions/billingClientsActions', () => ({
 vi.mock('@alga-psa/billing/actions/billingProfileActions', () => ({
   getClientBillingProfilesForBilling: mocks.loadProfiles,
 }));
-vi.mock('@alga-psa/billing/hooks/useBillingEnumOptions', () => ({
+vi.mock('@alga-psa/billing/hooks/useBillingEnumOptions', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/billing/hooks/useBillingEnumOptions')>()),
   useBillingFrequencyOptions: () => [{ value: 'monthly', label: 'Monthly' }],
   useFormatBillingFrequency: () => (value: string) => value,
 }));

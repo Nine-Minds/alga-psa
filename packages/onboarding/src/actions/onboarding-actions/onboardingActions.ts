@@ -1,5 +1,6 @@
 'use server';
 
+import { trackContactUpdates } from '@alga-psa/shared/lib/contacts/contactEvents';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { revalidatePath } from 'next/cache';
 import { withTransaction } from '@alga-psa/db';
@@ -8,12 +9,15 @@ import { hashPassword } from '@alga-psa/core/encryption';
 import { randomUUID } from 'crypto';
 import { isValidEmail } from '@alga-psa/core';
 import { createClient as createClientInternal } from '@alga-psa/clients/actions/clientActions';
+import { queueClientLocationCreated, queueClientLocationUpdated } from '@alga-psa/clients/lib/clientLocationEvents';
 import { createClientContact } from '@alga-psa/clients/actions/contact-actions/contactActions';
 import { updateTenantOnboardingStatus, saveTenantOnboardingProgress } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
 import { persistTenantOnboardingProgress } from '@alga-psa/tenancy/server';
 import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
-import type { IUserWithRoles } from '@alga-psa/types';
+import { isLicensedUserType, type IUserWithRoles, type WizardData } from '@alga-psa/types';
 import { getLicenseUsage } from '../../../../licensing/src/lib/get-license-usage';
+import { countPendingInvitationSeats } from '../../../../users/src/lib/internalUserLicenseGuard';
+import { teamMemberEmailKey, uniqueTeamMemberEmails } from '../../lib/teamMemberEmails';
 
 export interface OnboardingActionResult {
   success: boolean;
@@ -110,15 +114,69 @@ function onboardingActionErrorMessage(error: unknown, fallback: string): string 
   return fallback;
 }
 
+/**
+ * Workspace setup writes tenant-wide settings, users, billing and ticketing
+ * defaults, so only an internal (MSP staff) administrator may run it (or be
+ * sent to it). Each action checks this itself: the wizard is not the only
+ * caller of a server action.
+ *
+ * The user-type check comes first because settings:update is not MSP-only:
+ * client Admin holds it too, and hasPermission matches resource+action within
+ * the caller's own portal. Without it a client-portal admin could run every
+ * setup action, including creating internal users. It is isLicensedUserType
+ * ('internal'), the same test msp/layout.tsx applies to a session: a 'service'
+ * principal never holds a UI session and setup is a human, seat-creating flow.
+ */
+// LEVERAGE: pattern action-permission-prologue — three of the nine onboarding actions will repeat the same hasPermission prologue; a single withSetupAccess wrapper would own it
+async function canRunWorkspaceSetup(user: IUserWithRoles): Promise<boolean> {
+  if (!isLicensedUserType(user.user_type)) return false;
+  return hasPermission(user, 'settings', 'update');
+}
+const SETUP_DENIED = { success: false, error: 'Only an administrator can complete workspace setup.' } as const;
+
+export const getWorkspaceSetupAccess = withAuth(async (
+  user: IUserWithRoles,
+  _ctx: AuthContext
+): Promise<{ canRun: boolean }> => ({ canRun: await canRunWorkspaceSetup(user) }));
+
 export const saveClientInfo = withAuth(async (
   currentUser: IUserWithRoles,
   { tenant }: AuthContext,
   data: ClientInfoData
 ): Promise<OnboardingActionResult> => {
+  if (!await canRunWorkspaceSetup(currentUser)) return SETUP_DENIED;
   try {
     const { knex } = await createTenantKnex();
+    let emailRejection = null as string | null;
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // The email here is the administrator's sign-in identity. Internal users
+      // sign in with an email and no tenant, so a change must be well formed and
+      // unique across every tenant (addUser enforces the same), or sign-in
+      // resolves to either account. Checked before anything is written, and the
+      // string checked is the string stored: sign-in lower-cases but does not
+      // trim, so a padded address stored as typed would be unreachable.
+      //
+      // The uniqueness read runs on the admin connection (it must see every
+      // tenant), not in this transaction. There is no unique constraint on
+      // internal emails, so two concurrent claims of the same new address can
+      // both pass between this read and the commit; addUser and updateUser
+      // share that window.
+      const newEmail = data.email?.trim().toLowerCase();
+      if (newEmail && newEmail !== (currentUser.email ?? '').trim().toLowerCase()) {
+        if (!isValidEmail(newEmail)) {
+          emailRejection = 'Enter a valid email address.';
+          return;
+        }
+        const { default: User } = await import('@alga-psa/db/models/user');
+        // LEVERAGE: friction global-email-uniqueness — a global check with no constraint, implemented separately in addUser, updateUser and now onboarding setup
+        const claimed = await User.findUsersByEmailAndType(newEmail, 'internal');
+        if (claimed.some(found => found.user_id !== currentUser.user_id)) {
+          emailRejection = 'This email address is already used by another account. Use a different email address.';
+          return;
+        }
+      }
+
       // Only update user info if data is provided (for first-time users)
       // For returning users, these fields won't be in the data
       if (data.firstName || data.lastName || data.email) {
@@ -128,7 +186,7 @@ export const saveClientInfo = withAuth(async (
 
         if (data.firstName) updateData.first_name = data.firstName;
         if (data.lastName) updateData.last_name = data.lastName;
-        if (data.email) updateData.email = data.email.toLowerCase();
+        if (newEmail) updateData.email = newEmail;
 
         // If new password is provided, hash and update it
         if (data.newPassword) {
@@ -196,14 +254,16 @@ export const saveClientInfo = withAuth(async (
 
           const defaultLocation = await tenantDb(trx, tenant).table('client_locations')
             .where({ client_id: mspClient.client_id, is_default: true })
-            .first('location_id');
+            .first();
 
           if (defaultLocation) {
-            await tenantDb(trx, tenant).table('client_locations')
+            const [updatedLocation] = await tenantDb(trx, tenant).table('client_locations')
               .where({ location_id: defaultLocation.location_id })
-              .update(locationFields);
+              .update(locationFields)
+              .returning('*');
+            queueClientLocationUpdated(trx, tenant, defaultLocation, updatedLocation, { actorUserId: currentUser.user_id });
           } else {
-            await tenantDb(trx, tenant).table('client_locations').insert({
+            const [insertedLocation] = await tenantDb(trx, tenant).table('client_locations').insert({
               location_id: randomUUID(),
               client_id: mspClient.client_id,
               tenant,
@@ -214,7 +274,8 @@ export const saveClientInfo = withAuth(async (
               is_default: true,
               is_active: true,
               created_at: new Date()
-            });
+            }).returning('*');
+            queueClientLocationCreated(trx, tenant, insertedLocation, { actorUserId: currentUser.user_id });
           }
         }
       }
@@ -230,6 +291,8 @@ export const saveClientInfo = withAuth(async (
       await persistTenantOnboardingProgress(trx, tenant, progressData);
     });
 
+    if (emailRejection) return { success: false, error: emailRejection };
+
     revalidatePath('/msp/onboarding');
     return { success: true };
   } catch (error) {
@@ -238,293 +301,241 @@ export const saveClientInfo = withAuth(async (
   }
 });
 
-export const addSingleTeamMember = withAuth(async (
-  _user: IUserWithRoles,
-  { tenant }: AuthContext,
-  member: TeamMember
-): Promise<OnboardingActionResult> => {
-  try {
-    // Check license limits for MSP (internal) users
-    const usage = await getLicenseUsage(tenant);
+/**
+ * The wizard creates team members through addUser, the same path as Settings →
+ * Users: it checks the user:create permission, keeps internal emails unique
+ * across tenants, admits the account against the seat limit under a lock,
+ * and assigns the chosen role by id. The wizard's own copy of that logic
+ * skipped all of it, defaulted a missing password to a fixed one, and fell
+ * back to the alphabetically first role (Admin) when its case-folded role
+ * lookup missed.
+ */
+type TeamMemberOutcome =
+  | { status: 'created' }
+  | { status: 'exists' | 'limit' | 'failed'; error: string };
 
-    if (usage.limit !== null && usage.used >= usage.limit) {
-      return {
-        success: false,
-        error: `You've reached your internal user license limit of ${usage.limit}. Please remove or deactivate existing users to add new ones.`
-      };
+async function createTeamMember(member: TeamMember, roleIds: Map<string, string>): Promise<TeamMemberOutcome> {
+  if (!member.password) {
+    return { status: 'failed', error: `Set a temporary password for ${member.email}, or send them an email invite instead.` };
+  }
+  const roleId = roleIds.get(member.role);
+  if (!roleId) return { status: 'failed', error: `Select a role for ${member.email}.` };
+  const { addUser } = await import('@alga-psa/users/actions/user-actions/userActions');
+  const result = await addUser({ firstName: member.firstName, lastName: member.lastName, email: member.email,
+    password: member.password, roleId, userType: 'internal' });
+  if (result.success) return { status: 'created' };
+  if (result.code === 'EMAIL_ALREADY_EXISTS') return { status: 'exists', error: result.error };
+  const limitCodes = ['LICENSE_LIMIT_REACHED', 'SOLO_PLAN_LIMIT'];
+  return { status: limitCodes.includes(result.code ?? '') ? 'limit' : 'failed', error: result.error };
+}
+
+async function mspRoleIds(tenant: string): Promise<Map<string, string>> {
+  const { knex } = await createTenantKnex();
+  const roles = await tenantDb(knex, tenant).table('roles').where({ msp: true }).select('role_id', 'role_name');
+  return new Map(roles.map((role: { role_id: string; role_name: string }) => [role.role_name, role.role_id]));
+}
+
+/**
+ * Seats as the wizard reports them: active internal users plus pending
+ * invitations (plan §6.2) — the same reservation sendUserInvitation applies.
+ * An invitee who accepts leaves "pending" (used_at) as they become an active
+ * user, so no one is counted twice.
+ */
+async function onboardingSeatUsage(tenant: string): Promise<{ limit: number | null; used: number }> {
+  const usage = await getLicenseUsage(tenant);
+  const { knex } = await createTenantKnex();
+  return { limit: usage.limit, used: usage.used + await countPendingInvitationSeats(knex, tenant) };
+}
+
+type SavedTeamMember = Pick<TeamMember, 'firstName' | 'lastName' | 'email' | 'role'>;
+
+/**
+ * Records members the wizard just created in the saved onboarding progress,
+ * on top of those recorded by earlier saves. persistTenantOnboardingProgress
+ * merges top-level keys only, so writing this call's members alone replaced
+ * teamMembers: after a partial batch was fixed and retried, round one's members
+ * vanished from saved progress, a resumed wizard no longer knew they existed,
+ * and re-adding them hit EMAIL_ALREADY_EXISTS. Passwords are never stored,
+ * and any a legacy save left behind are dropped here. Emails are keyed by
+ * teamMemberEmailKey in both lists, the rule every reader compares with.
+ *
+ * What the lock guarantees: once this tenant's tenant_settings row exists,
+ * FOR UPDATE serialises concurrent saves, so neither drops the other's
+ * members. It locks nothing while the row is absent: two saves that are both
+ * the tenant's first can each read {} and the second write replaces the
+ * first's teamMembers. Those users still exist; the wizard that created them
+ * holds them in createdTeamMemberEmails, and a resumed wizard would report
+ * them as EMAIL_ALREADY_EXISTS. Closing that would need the row to exist
+ * before the first save (or an advisory lock); this card does neither.
+ */
+async function recordCreatedTeamMembers(tenant: string, createdNow: TeamMember[]): Promise<void> {
+  const { knex } = await createTenantKnex();
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const row = await tenantDb(trx, tenant).table('tenant_settings').forUpdate().first('onboarding_data');
+    const raw = row?.onboarding_data;
+    const saved: Partial<WizardData> = (typeof raw === 'string' ? JSON.parse(raw) : raw) ?? {};
+
+    const strip = ({ firstName, lastName, email, role }: SavedTeamMember): SavedTeamMember =>
+      ({ firstName, lastName, email, role });
+    const byEmail = new Map<string, SavedTeamMember>();
+    for (const member of [...(saved.teamMembers ?? []), ...createdNow]) {
+      if (member?.email) byEmail.set(teamMemberEmailKey(member.email), strip(member));
     }
+    const createdEmails = uniqueTeamMemberEmails([
+      ...(saved.createdTeamMemberEmails ?? []), ...createdNow.map(m => m.email),
+    ]);
 
-    const { knex } = await createTenantKnex();
-    let created: string | null = null;
-    let alreadyExists = false;
-    let error: string | null = null;
-
-    await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
-
-      try {
-        // Check if user already exists
-        const existingUser = await tenantScopedTable('users')
-          .where({ email: member.email.toLowerCase() })
-          .first();
-
-        if (existingUser) {
-          alreadyExists = true;
-          error = `User with email ${member.email} already exists`;
-          return;
-        }
-
-        // Create new user (same logic as addTeamMembers)
-        const userId = require('crypto').randomUUID();
-        // Use provided password or generate a default one
-        const tempPassword = await hashPassword(member.password || 'TempPassword123!');
-
-        await tenantScopedTable('users').insert({
-          user_id: userId,
-          tenant,
-          username: member.email.toLowerCase(),  // Use email as username
-          first_name: member.firstName,
-          last_name: member.lastName,
-          email: member.email.toLowerCase(),
-          hashed_password: tempPassword,
-          is_inactive: false,
-          user_type: 'internal',  // Internal user type for team members
-          created_at: new Date(),
-          updated_at: new Date()
-        });
-
-        // Get role from roles table by role_name
-        const role = await tenantScopedTable('roles')
-          .where({ 
-            role_name: member.role.toLowerCase(), // Convert to lowercase to match DB convention
-          })
-          .first();
-
-        if (role) {
-          await tenantScopedTable('user_roles').insert({
-            user_id: userId,
-            role_id: role.role_id,
-            tenant
-          });
-        } else {
-          console.warn(`Role not found: ${member.role.toLowerCase()} for tenant ${tenant}`);
-          // Try to assign a default role
-          const defaultRole = await tenantScopedTable('roles')
-            .where({ msp: true })
-            .orderBy('role_name')
-            .first();
-          
-          if (defaultRole) {
-            await tenantScopedTable('user_roles').insert({
-              user_id: userId,
-              role_id: defaultRole.role_id,
-              tenant
-            });
-          }
-        }
-
-        // Mark that the user hasn't reset their initial password
-        const UserPreferences = await import('@alga-psa/db/models/userPreferences').then(m => m.default);
-        await UserPreferences.upsert(trx, {
-          user_id: userId,
-          setting_name: 'has_reset_password',
-          setting_value: false,
-          updated_at: new Date()
-        });
-
-        created = member.email;
-      } catch (memberError) {
-        error = onboardingActionErrorMessage(memberError, 'Failed to create team member');
-      }
+    await persistTenantOnboardingProgress(trx, tenant, {
+      teamMembers: [...byEmail.values()],
+      createdTeamMemberEmails: createdEmails,
     });
+  });
+}
 
+/**
+ * Everything after a user exists is bookkeeping, and must never make the
+ * caller think the user was not created: the wizard would offer the address
+ * again and addUser would refuse it as EMAIL_ALREADY_EXISTS. So a failed
+ * progress write is reported as its own non-blocking error next to `created`,
+ * and a failed seat count just omits licenseStatus.
+ */
+const PROGRESS_NOT_SAVED =
+  'The team members were created, but setup progress could not be saved. They may not be shown as added if you leave setup and come back.';
+
+async function tryRecordCreatedTeamMembers(tenant: string, members: TeamMember[]): Promise<string | undefined> {
+  try {
+    await recordCreatedTeamMembers(tenant, members);
+    return undefined;
+  } catch (error) {
+    console.error('Team members were created but onboarding progress was not saved:', error);
+    return PROGRESS_NOT_SAVED;
+  }
+}
+
+function tryRevalidateOnboarding(): void {
+  try {
     revalidatePath('/msp/onboarding');
-    
-    if (created) {
-      return { 
-        success: true, 
-        data: { 
-          created: created,
-          licenseStatus: { current: usage.used + 1, limit: usage.limit }
-        }
-      };
-    } else if (alreadyExists) {
-      return { 
-        success: false, 
-        error: error || `User with email ${member.email} already exists`
-      };
-    } else {
-      return { 
-        success: false, 
-        error: error || 'Failed to create team member'
-      };
-    }
+  } catch (error) {
+    console.error('Error revalidating the onboarding page after creating team members:', error);
+  }
+}
+
+/**
+ * The team actions' own copy of the member with its email trimmed and
+ * lower-cased (teamMemberEmailKey). addUser lower-cases but does not trim, and
+ * changing that is out of this card's scope; normalizing here means the wizard
+ * never creates an account whose address has surrounding spaces, and the
+ * address recorded in progress is exactly the one stored on the user.
+ */
+function withNormalizedEmail(member: TeamMember): TeamMember {
+  return { ...member, email: teamMemberEmailKey(member.email ?? '') };
+}
+
+async function tryLicenseStatus(tenant: string): Promise<{ current: number; limit: number | null } | undefined> {
+  try {
+    const usage = await onboardingSeatUsage(tenant);
+    return { current: usage.used, limit: usage.limit };
+  } catch (error) {
+    console.error('Error reading onboarding seat usage after creating team members:', error);
+    return undefined;
+  }
+}
+
+export const addSingleTeamMember = withAuth(async (
+  user: IUserWithRoles,
+  { tenant }: AuthContext,
+  submitted: TeamMember
+): Promise<OnboardingActionResult> => {
+  if (!await canRunWorkspaceSetup(user)) return SETUP_DENIED;
+  const member = withNormalizedEmail(submitted);
+  let outcome: TeamMemberOutcome;
+  try {
+    outcome = await createTeamMember(member, await mspRoleIds(tenant));
   } catch (error) {
     console.error('Error adding single team member:', error);
     return { success: false, error: onboardingActionErrorMessage(error, 'Failed to create team member') };
   }
+  if (outcome.status !== 'created') return { success: false, error: outcome.error };
+  // The user exists from here on. Everything below is non-fatal by
+  // construction, outside any catch that could report the create as failed.
+  const progressError = await tryRecordCreatedTeamMembers(tenant, [member]);
+  const licenseStatus = await tryLicenseStatus(tenant);
+  tryRevalidateOnboarding();
+  return { success: true, data: { created: member.email, licenseStatus, progressError } };
 });
 
+/** A member the batch did not create, and why. Never carries the password. */
+export interface TeamMemberNotCreated {
+  email: string;
+  reason: 'exists' | 'limit' | 'failed';
+  error: string;
+}
+
+/**
+ * Creates every member it can and reports each one it could not. The result
+ * is a success only when all of them were created: a partial batch returns
+ * success false with the created emails and the per-member reasons in data,
+ * so no caller can mistake it for a finished step.
+ */
 export const addTeamMembers = withAuth(async (
-  _user: IUserWithRoles,
+  user: IUserWithRoles,
   { tenant }: AuthContext,
-  members: TeamMember[]
+  submitted: TeamMember[]
 ): Promise<OnboardingActionResult> => {
+  if (!await canRunWorkspaceSetup(user)) return SETUP_DENIED;
+  const members = submitted.map(withNormalizedEmail);
+  // The only step that can fail the whole batch runs before any user exists.
+  let roleIds: Map<string, string>;
   try {
-    // Check license limits for  MSP (internal) users
-    const { knex } = await createTenantKnex();
-    const usage = await getLicenseUsage(tenant);
-    
-    // Determine how many users we can actually add
-    let membersToProcess = [...members];
-    let skippedDueToLimit: string[] = [];
-    
-    if (usage.limit !== null) {
-      const canAdd = Math.max(0, usage.limit - usage.used);
-      
-      if (canAdd === 0) {
-        return { 
-          success: false, 
-          error: `You've reached your internal user license limit of ${usage.limit}. Please remove or deactivate existing users to add new ones.`
-        };
-      }
-      
-      if (members.length > canAdd) {
-        // Only process users up to the limit
-        membersToProcess = members.slice(0, canAdd);
-        const skippedMembers = members.slice(canAdd);
-        skippedDueToLimit = skippedMembers.map(m => m.email);
-        
-        console.warn(`License limit allows only ${canAdd} more users. Skipping ${skippedMembers.length} users: ${skippedDueToLimit.join(', ')}`);
-      }
-    }
-
-    const created: string[] = [];
-    const alreadyExists: string[] = [];
-    const failed: Array<{ member: TeamMember; error: string }> = [];
-
-    await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
-
-      for (const member of membersToProcess) {
-        try {
-          // Check if user already exists
-          const existingUser = await tenantScopedTable('users')
-            .where({ email: member.email.toLowerCase() })
-            .first();
-
-          if (existingUser) {
-            alreadyExists.push(member.email);
-            continue;
-          }
-
-          // Create new user
-          const userId = require('crypto').randomUUID();
-          // Use provided password or generate a default one
-          const tempPassword = await hashPassword(member.password || 'TempPassword123!');
-
-          await tenantScopedTable('users').insert({
-            user_id: userId,
-            tenant,
-            username: member.email.toLowerCase(),  // Use email as username
-            first_name: member.firstName,
-            last_name: member.lastName,
-            email: member.email.toLowerCase(),
-            hashed_password: tempPassword,  // Changed from password_hash
-            is_inactive: false,
-            user_type: 'internal',  // Added to ensure internal user type
-            created_at: new Date(),
-            updated_at: new Date()
-          });
-
-          // Get role from roles table by role_name
-          const role = await tenantScopedTable('roles')
-            .where({ 
-              role_name: member.role.toLowerCase(), // Convert to lowercase to match DB convention
-            })
-            .first();
-
-          if (role) {
-            await tenantScopedTable('user_roles').insert({
-              user_id: userId,
-              role_id: role.role_id,
-              tenant
-            });
-          } else {
-            console.warn(`Role not found: ${member.role.toLowerCase()} for tenant ${tenant}`);
-            // Try to assign a default role
-            const defaultRole = await tenantScopedTable('roles')
-              .where({ msp: true })
-              .orderBy('role_name')
-              .first();
-            
-            if (defaultRole) {
-              await tenantScopedTable('user_roles').insert({
-                user_id: userId,
-                role_id: defaultRole.role_id,
-                tenant
-              });
-            }
-          }
-
-          // Mark that the user hasn't reset their initial password
-          const UserPreferences = await import('@alga-psa/db/models/userPreferences').then(m => m.default);
-          await UserPreferences.upsert(trx, {
-            user_id: userId,
-            setting_name: 'has_reset_password',
-            setting_value: false,
-            updated_at: new Date()
-          });
-
-          created.push(member.email);
-        } catch (memberError) {
-          failed.push({ 
-            member, 
-            error: onboardingActionErrorMessage(memberError, 'Failed to create team member')
-          });
-        }
-      }
-
-      // Save progress - store successful team members
-      const successfulMembers = membersToProcess.filter(m => 
-        created.includes(m.email)
-      );
-      await persistTenantOnboardingProgress(trx, tenant, {
-        teamMembers: successfulMembers
-      });
-    });
-
-
-    revalidatePath('/msp/onboarding');
-    
-    // Include warning message if some users were skipped
-    let message: string | undefined = undefined;
-    if (skippedDueToLimit.length > 0) {
-      message = `License limit reached. ${created.length} user(s) created, ${skippedDueToLimit.length} skipped: ${skippedDueToLimit.join(', ')}`;
-    }
-    
-    return { 
-      success: true, 
-      data: { 
-        created, 
-        alreadyExists,
-        failed, 
-        skippedDueToLimit,
-        licenseStatus: { current: usage.used + created.length, limit: usage.limit },
-        message
-      }
-    };
+    roleIds = await mspRoleIds(tenant);
   } catch (error) {
     console.error('Error adding team members:', error);
     return { success: false, error: onboardingActionErrorMessage(error, 'Failed to add team members') };
   }
+
+  const created: string[] = [];
+  const notCreated: TeamMemberNotCreated[] = [];
+
+  // Every member is attempted on its own: a seat-limit refusal for one says
+  // nothing about the next (it may already exist, or lack a password), and
+  // addUser re-checks the limit for each. A throw for one member is that
+  // member's failure: it must not discard the members created before it.
+  for (const member of members) {
+    try {
+      const outcome = await createTeamMember(member, roleIds);
+      if (outcome.status === 'created') created.push(member.email);
+      else notCreated.push({ email: member.email, reason: outcome.status, error: outcome.error });
+    } catch (error) {
+      console.error(`Error creating team member ${member.email}:`, error);
+      notCreated.push({ email: member.email, reason: 'failed', error: onboardingActionErrorMessage(error, 'Failed to create team member') });
+    }
+  }
+
+  // Users may exist from here on. Everything below is non-fatal by
+  // construction, outside any catch that could report them as not created.
+  // A batch where nothing was created leaves the stored progress alone.
+  const progressError = created.length || !notCreated.length
+    ? await tryRecordCreatedTeamMembers(tenant, members.filter(m => created.includes(m.email)))
+    : undefined;
+  const licenseStatus = await tryLicenseStatus(tenant);
+  tryRevalidateOnboarding();
+
+  const data = { created, notCreated, licenseStatus, progressError };
+  if (!notCreated.length) return { success: true, data };
+  return {
+    success: false,
+    error: `${notCreated.length} team member(s) were not created: `
+      + notCreated.map(entry => `${entry.email} (${entry.error})`).join('; '),
+    data,
+  };
 });
 
 export const createClient = withAuth(async (
-  _user: IUserWithRoles,
+  currentUser: IUserWithRoles,
   { tenant }: AuthContext,
   data: ClientData
 ): Promise<OnboardingActionResult> => {
+  if (!await canRunWorkspaceSetup(currentUser)) return SETUP_DENIED;
   try {
     const { knex } = await createTenantKnex();
 
@@ -550,13 +561,15 @@ export const createClient = withAuth(async (
           .first();
 
         if (defaultLocation && (data.clientEmail || data.clientPhone)) {
-          await tenantScopedTable('client_locations')
+          const [updatedLocation] = await tenantScopedTable('client_locations')
             .where({ location_id: defaultLocation.location_id })
             .update({
               email: data.clientEmail || defaultLocation.email || '',
               phone: data.clientPhone || defaultLocation.phone || '',
               updated_at: new Date()
-            });
+            })
+            .returning('*');
+          queueClientLocationUpdated(trx, tenant, defaultLocation, updatedLocation, { actorUserId: currentUser.user_id });
         }
       });
 
@@ -601,7 +614,7 @@ export const createClient = withAuth(async (
 
       // Create default location with email and phone if provided
       if (data.clientEmail || data.clientPhone) {
-        await tenantScopedTable('client_locations').insert({
+        const [insertedLocation] = await tenantScopedTable('client_locations').insert({
           location_id: require('crypto').randomUUID(),
           client_id: clientId,
           tenant,
@@ -618,7 +631,8 @@ export const createClient = withAuth(async (
           is_active: true,
           created_at: new Date(),
           updated_at: new Date()
-        });
+        }).returning('*');
+        queueClientLocationCreated(trx, tenant, insertedLocation, { actorUserId: currentUser.user_id });
       }
     });
 
@@ -646,10 +660,11 @@ export const createClient = withAuth(async (
 });
 
 export const addClientContact = withAuth(async (
-  _user: IUserWithRoles,
+  user: IUserWithRoles,
   { tenant }: AuthContext,
   data: ClientContactData
 ): Promise<OnboardingActionResult> => {
+  if (!await canRunWorkspaceSetup(user)) return SETUP_DENIED;
   try {
     const { knex } = await createTenantKnex();
 
@@ -671,15 +686,17 @@ export const addClientContact = withAuth(async (
 
       if (needsUpdate) {
         await withTransaction(knex, async (trx: Knex.Transaction) => {
-          await tenantDb(trx, tenant).table('contacts')
-            .where({ 
-              contact_name_id: existingContact.contact_name_id,
-            })
-            .update({
-              full_name: data.contactName,
-              role: data.contactRole,
-              updated_at: new Date()
-            });
+          await trackContactUpdates(trx, tenant, [existingContact.contact_name_id], ['full_name', 'role'], () =>
+            tenantDb(trx, tenant).table('contacts')
+              .where({ 
+                contact_name_id: existingContact.contact_name_id,
+              })
+              .update({
+                full_name: data.contactName,
+                role: data.contactRole,
+                updated_at: new Date()
+              }),
+            { actorUserId: user.user_id });
         });
       }
 
@@ -726,10 +743,11 @@ export const addClientContact = withAuth(async (
 });
 
 export const setupBilling = withAuth(async (
-  _user: IUserWithRoles,
+  user: IUserWithRoles,
   { tenant }: AuthContext,
   data: BillingData
 ): Promise<OnboardingActionResult> => {
+  if (!await canRunWorkspaceSetup(user)) return SETUP_DENIED;
   try {
     const { knex } = await createTenantKnex();
 
@@ -825,6 +843,7 @@ export const configureTicketing = withAuth(async (
   { tenant }: AuthContext,
   data: TicketingData
 ): Promise<OnboardingActionResult> => {
+  if (!await canRunWorkspaceSetup(currentUser)) return SETUP_DENIED;
   try {
     const { knex } = await createTenantKnex();
 
@@ -839,19 +858,29 @@ export const configureTicketing = withAuth(async (
 
       // Configure ticket numbering - check if any numbering field is explicitly set
       if (data.ticketPrefix !== undefined || data.ticketStartNumber !== undefined || data.ticketPaddingLength !== undefined) {
+        // Serialise with the allocator: generate_next_number takes this same
+        // lock, so a ticket cannot be numbered between the existence probe
+        // below and the counter update.
+        await trx.raw('SELECT pg_advisory_xact_lock(hashtext(?))', [`${tenant}TICKET`]);
+
         const existingNumbering = await tenantScopedTable('next_number')
           .where({ entity_type: 'TICKET' })
           .first();
 
         if (existingNumbering) {
+          // generate_next_number issues GREATEST(last_number + 1, initial_value),
+          // so a higher start number applies without a reset. Rewinding
+          // last_number is only safe while no ticket holds an issued number:
+          // a reset would hand out numbers that were already issued again.
+          const ticketsExist = Boolean(await tenantScopedTable('tickets').first('ticket_id'));
           await tenantScopedTable('next_number')
             .where({ entity_type: 'TICKET' })
             .update({
               prefix: data.ticketPrefix ?? '',
               padding_length: data.ticketPaddingLength ?? 6,
-              ...(data.ticketStartNumber && { 
-                last_number: 0,
-                initial_value: data.ticketStartNumber 
+              ...(data.ticketStartNumber && {
+                initial_value: data.ticketStartNumber,
+                ...(!ticketsExist && { last_number: 0 }),
               })
             });
         } else {
@@ -1174,10 +1203,11 @@ export const validateOnboardingDefaults = withAuth(async (
 });
 
 export const saveOnboardingStepPosition = withAuth(async (
-  _user: IUserWithRoles,
+  user: IUserWithRoles,
   _ctx: AuthContext,
   step: number
 ): Promise<OnboardingActionResult> => {
+  if (!await canRunWorkspaceSetup(user)) return SETUP_DENIED;
   try {
     if (!Number.isInteger(step) || step < 0) {
       return { success: false, error: 'Invalid step position' };
@@ -1192,9 +1222,10 @@ export const saveOnboardingStepPosition = withAuth(async (
 });
 
 export const completeOnboarding = withAuth(async (
-  _user: IUserWithRoles,
+  user: IUserWithRoles,
   _ctx: AuthContext
 ): Promise<OnboardingActionResult> => {
+  if (!await canRunWorkspaceSetup(user)) return SETUP_DENIED;
   try {
     // Mark onboarding as completed and clear wizard data
     await updateTenantOnboardingStatus(true);
@@ -1257,13 +1288,21 @@ export const getAvailableRoles = withAuth(async (
  * session tenant directly instead of getLicenseUsageAction's header/async
  * -context lookup, which is unreliable this early in onboarding and left the
  * step's "Users: N" counter stuck at 0.
+ *
+ * A seat here is an active internal user plus a pending invitation
+ * (`used_at IS NULL AND expires_at > now()`, tenant-scoped) — plan §6.2 and
+ * exactly what sendUserInvitation reserves. The counter and the licenseStatus
+ * returned after a save read the same number. Consequence, by design: with
+ * seats left only because of pending invitations the step reports the limit
+ * reached and blocks a direct-create save that addUser (which counts active
+ * users only) would admit — those seats are reserved for the invitees.
  */
 export const getOnboardingLicenseUsage = withAuth(async (
   _user: IUserWithRoles,
   { tenant }: AuthContext
 ): Promise<OnboardingActionResult> => {
   try {
-    const usage = await getLicenseUsage(tenant);
+    const usage = await onboardingSeatUsage(tenant);
     return { success: true, data: { limit: usage.limit, used: usage.used } };
   } catch (error) {
     console.error('Error fetching onboarding license usage:', error);

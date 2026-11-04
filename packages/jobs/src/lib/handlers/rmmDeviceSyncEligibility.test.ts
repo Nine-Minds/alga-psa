@@ -62,8 +62,8 @@ vi.mock('@alga-psa/integrations/lib/rmm/tacticalrmm/alertFetcher', () => ({ tact
  * provider that prompted this work — never reached its device sync at all.
  */
 
-const DEVICE_SYNC_PROVIDERS = ['ninjaone', 'levelio', 'tacticalrmm', 'tanium'];
-const ALERT_POLLING_PROVIDERS = ['ninjaone', 'tacticalrmm'];
+const DEVICE_SYNC_PROVIDERS = ['ninjaone', 'levelio', 'tacticalrmm', 'datto', 'tanium'];
+const ALERT_POLLING_PROVIDERS = ['ninjaone', 'tacticalrmm', 'datto'];
 
 function deviceSyncEligible(row: {
   is_active: boolean;
@@ -103,6 +103,11 @@ describe('device sync eligibility', () => {
     // schedule, so enabling device sync must not depend on the alert poll.
     expect(ALERT_POLLING_PROVIDERS).toContain('tacticalrmm');
     expect(deviceSyncEligible({ is_active: true, settings: enabled, provider: 'tacticalrmm' })).toBe(true);
+  });
+
+  it('is eligible for Datto RMM, which polls alerts as well', () => {
+    expect(ALERT_POLLING_PROVIDERS).toContain('datto');
+    expect(deviceSyncEligible({ is_active: true, settings: enabled, provider: 'datto' })).toBe(true);
   });
 
   it('is not eligible when the integration is inactive', () => {
@@ -154,7 +159,7 @@ describe('device sync eligibility', () => {
  */
 describe('providers deliberately excluded from device sync', () => {
   it('lists only the providers with a job-callable device sync', () => {
-    expect([...DEVICE_SYNC_PROVIDERS].sort()).toEqual(['levelio', 'ninjaone', 'tacticalrmm', 'tanium']);
+    expect([...DEVICE_SYNC_PROVIDERS].sort()).toEqual(['datto', 'levelio', 'ninjaone', 'tacticalrmm', 'tanium']);
   });
 });
 

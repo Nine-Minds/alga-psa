@@ -13,11 +13,24 @@ export const PORTAL_DOMAIN_STATUSES = [
   'certificate_issuing',
   'certificate_failed',
   'deploying',
+  'pending_redirect_uri',
   'active',
   'disabled',
 ] as const;
 
 export type PortalDomainStatus = (typeof PORTAL_DOMAIN_STATUSES)[number];
+
+// LEVERAGE: pattern portal-domain-model-copies — PortalDomainModel is duplicated in server, tenancy, client-portal and auth; the surface type/consts below are copied into each.
+export const PORTAL_DOMAIN_SURFACES = ['client_portal', 'msp', 'both'] as const;
+
+/** Which app(s) a custom domain serves: the client portal, the MSP app, or both (split by path prefix). */
+export type PortalDomainSurface = (typeof PORTAL_DOMAIN_SURFACES)[number];
+
+export const DEFAULT_PORTAL_DOMAIN_SURFACE: PortalDomainSurface = 'client_portal';
+
+export function isPortalDomainSurface(value: unknown): value is PortalDomainSurface {
+  return typeof value === 'string' && (PORTAL_DOMAIN_SURFACES as readonly string[]).includes(value);
+}
 
 export type PortalDomainVerificationMethod = 'cname';
 
@@ -26,6 +39,7 @@ export interface PortalDomainRecord {
   tenant: string;
   domain: string;
   canonical_host: string;
+  surface: PortalDomainSurface;
   status: PortalDomainStatus;
   status_message: string | null;
   last_checked_at: Date | null;
@@ -42,6 +56,7 @@ export interface PortalDomain {
   tenant: string;
   domain: string;
   canonicalHost: string;
+  surface: PortalDomainSurface;
   status: PortalDomainStatus;
   statusMessage: string | null;
   lastCheckedAt: Date | null;
@@ -63,6 +78,7 @@ function mapRow(row: PortalDomainRecord): PortalDomain {
     tenant: row.tenant,
     domain: row.domain,
     canonicalHost: row.canonical_host,
+    surface: isPortalDomainSurface(row.surface) ? row.surface : DEFAULT_PORTAL_DOMAIN_SURFACE,
     status: row.status,
     statusMessage: row.status_message,
     lastCheckedAt: row.last_checked_at,

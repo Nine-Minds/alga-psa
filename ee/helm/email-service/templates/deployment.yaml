@@ -9,6 +9,9 @@ metadata:
     app.kubernetes.io/component: email-service
 spec:
   replicas: {{ .Values.replicaCount }}
+  {{- if .Values.progressDeadlineSeconds }}
+  progressDeadlineSeconds: {{ .Values.progressDeadlineSeconds }}
+  {{- end }}
   strategy:
     type: RollingUpdate
     rollingUpdate:

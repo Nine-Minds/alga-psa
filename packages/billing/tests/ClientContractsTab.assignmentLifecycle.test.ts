@@ -52,6 +52,24 @@ describe('Set to Active activation wiring', () => {
     }
   });
 
+  it('refetches the rows after an activation error so a stale Draft row is not left on screen', () => {
+    for (const [uiSource, refetch] of [
+      [source, 'await fetchClientContracts();\n        onRefreshNeeded?.();\n        return;'],
+      [contractsListSource, 'await fetchContracts();\n        return;'],
+    ] as const) {
+      const handler = uiSource.slice(uiSource.indexOf('const handleSetToActive'));
+      const errorBranch = handler.slice(0, handler.indexOf("toast.success("));
+      expect(errorBranch).toContain('toast.error(getErrorMessage(result));');
+      expect(errorBranch).toContain(refetch);
+    }
+  });
+
+  it('maps the already-active scheduled error to a localized expected action error by type', () => {
+    expect(billingClientsActionsSource).toContain('error instanceof ContractAlreadyActiveScheduledError');
+    expect(billingClientsActionsSource).toContain("'msp/billing:errors.clientContract.alreadyActiveScheduled'");
+    expect(billingClientsActionsSource).not.toContain('nothing to activate');
+  });
+
   it('keeps the activation action behind the authorable guard and resyncs service periods', () => {
     expect(billingClientsActionsSource).toContain('export const activateClientContractForBilling');
     // System-managed default contracts are attribution-only; activation must not bypass that.

@@ -8,26 +8,32 @@
  * the snake_case resource the REST API returns.
  */
 
+import type { Knex } from 'knex';
 import { BaseService, type ServiceContext } from '@alga-psa/db';
-import type { IProjectTaskCommentWithUser } from '@alga-psa/types';
+import type { IProjectTaskCommentWithUser, IUserWithRoles } from '@alga-psa/types';
 import {
   createTaskCommentWithDb,
   deleteTaskCommentWithDb,
   getTaskCommentById,
   getTaskCommentsReactionsBatchWithDb,
   listTaskCommentsWithDb,
-  taskExists,
   toggleTaskCommentReactionWithDb,
   updateTaskCommentWithDb,
   type TaskCommentActor,
 } from '@alga-psa/projects/lib/taskComments/taskCommentService';
+import {
+  withTaskCommentAccess,
+  type TaskCommentAction,
+  type TaskCommentTarget,
+} from '@alga-psa/projects/lib/taskComments/taskCommentAuthorization';
 import { ForbiddenError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 import type { ProjectTaskCommentReactionResponse, ProjectTaskCommentResponse } from '../schemas/projectTaskComment';
 
 function actorFrom(context: ServiceContext): TaskCommentActor {
-  const user = context.user as { user_id?: string; user_type?: 'internal' | 'client' } | undefined;
+  const user = context.user as { user_id?: string; user_type?: 'internal' | 'client' | 'service' } | undefined;
   return {
     user_id: user?.user_id ?? context.userId,
+    // Only a missing (legacy) type defaults to internal; 'service' is preserved.
     user_type: user?.user_type ?? 'internal',
   };
 }
@@ -38,6 +44,9 @@ function throwTaskCommentApiError(error: unknown): never {
     const message = error.message;
     if (message === 'Task not found' || message === 'Comment not found' || message === 'Parent task comment not found') {
       throw new NotFoundError(message);
+    }
+    if (message.startsWith('Permission denied')) {
+      throw new ForbiddenError(message);
     }
     if (message === 'Only internal users can comment on tasks' || message.startsWith('You can only ')) {
       throw new ForbiddenError(message);
@@ -58,19 +67,32 @@ export class ProjectTaskCommentService extends BaseService<never> {
     super({ tableName: 'project_task_comments', primaryKey: 'task_comment_id', tenantColumn: 'tenant' });
   }
 
-  async assertTaskExists(taskId: string, context: ServiceContext): Promise<void> {
+  /**
+   * The single authorization boundary for every REST comment operation: coarse project_task permission,
+   * parent-project record authorization and ownership are decided in one transaction before `work` runs.
+   * A missing and a forbidden task/comment both surface as the same 404.
+   */
+  private async withAccess<T>(
+    context: ServiceContext,
+    target: TaskCommentTarget,
+    action: TaskCommentAction,
+    work: (trx: Knex.Transaction, access: { taskId: string }) => Promise<T>,
+  ): Promise<T> {
     const knex = await this.getDbForContext(context);
-    if (!(await taskExists(knex, context.tenant, taskId))) {
-      throw new NotFoundError('Task not found');
+    try {
+      return await withTaskCommentAccess(knex, context.tenant, context.user as IUserWithRoles, target, action, ({ trx, taskId }) =>
+        work(trx, { taskId }),
+      );
+    } catch (error) {
+      throwTaskCommentApiError(error);
     }
   }
 
   /** 404 unless the comment exists and sits on this task. */
-  private async requireCommentOnTask(taskId: string, commentId: string, context: ServiceContext): Promise<void> {
-    const knex = await this.getDbForContext(context);
-    const comment = await getTaskCommentById(knex, context.tenant, commentId);
+  private async requireCommentOnTask(trx: Knex.Transaction, taskId: string, commentId: string, context: ServiceContext): Promise<void> {
+    const comment = await getTaskCommentById(trx, context.tenant, commentId);
     if (!comment || comment.task_id !== taskId) {
-      throw new NotFoundError('Comment not found');
+      throw new Error('Comment not found');
     }
   }
 
@@ -106,11 +128,10 @@ export class ProjectTaskCommentService extends BaseService<never> {
     };
   }
 
-  async listComments(taskId: string, context: ServiceContext): Promise<ProjectTaskCommentResponse[]> {
-    const knex = await this.getDbForContext(context);
-    const comments = await listTaskCommentsWithDb(knex, context.tenant, taskId);
+  private async listWithDb(db: Knex, taskId: string, context: ServiceContext): Promise<ProjectTaskCommentResponse[]> {
+    const comments = await listTaskCommentsWithDb(db, context.tenant, taskId);
     const batch = await getTaskCommentsReactionsBatchWithDb(
-      knex,
+      db,
       context.tenant,
       context.userId,
       comments.map((comment) => comment.taskCommentId),
@@ -118,10 +139,14 @@ export class ProjectTaskCommentService extends BaseService<never> {
     return comments.map((comment) => this.shape(comment, batch.reactions, batch.userNames));
   }
 
-  async getOne(taskId: string, commentId: string, context: ServiceContext): Promise<ProjectTaskCommentResponse> {
-    const [match] = (await this.listComments(taskId, context)).filter((comment) => comment.task_comment_id === commentId);
+  async listComments(taskId: string, context: ServiceContext): Promise<ProjectTaskCommentResponse[]> {
+    return this.withAccess(context, { taskId }, 'read', (trx) => this.listWithDb(trx, taskId, context));
+  }
+
+  private async getOneWithDb(db: Knex, taskId: string, commentId: string, context: ServiceContext): Promise<ProjectTaskCommentResponse> {
+    const match = (await this.listWithDb(db, taskId, context)).find((comment) => comment.task_comment_id === commentId);
     if (!match) {
-      throw new NotFoundError('Comment not found');
+      throw new Error('Comment not found');
     }
     return match;
   }
@@ -131,21 +156,17 @@ export class ProjectTaskCommentService extends BaseService<never> {
     data: { note: string; parent_comment_id?: string | null },
     context: ServiceContext,
   ): Promise<ProjectTaskCommentResponse> {
-    const knex = await this.getDbForContext(context);
-    if (data.parent_comment_id) {
-      await this.requireCommentOnTask(taskId, data.parent_comment_id, context);
-    }
-    let commentId: string;
-    try {
-      commentId = await createTaskCommentWithDb(knex, context.tenant, actorFrom(context), {
+    return this.withAccess(context, { taskId }, 'create', async (trx) => {
+      if (data.parent_comment_id) {
+        await this.requireCommentOnTask(trx, taskId, data.parent_comment_id, context);
+      }
+      const commentId = await createTaskCommentWithDb(trx, context.tenant, actorFrom(context), {
         taskId,
         note: data.note,
         parentCommentId: data.parent_comment_id ?? null,
       });
-    } catch (error) {
-      throwTaskCommentApiError(error);
-    }
-    return this.getOne(taskId, commentId, context);
+      return this.getOneWithDb(trx, taskId, commentId, context);
+    });
   }
 
   async updateComment(
@@ -154,24 +175,18 @@ export class ProjectTaskCommentService extends BaseService<never> {
     data: { note: string },
     context: ServiceContext,
   ): Promise<ProjectTaskCommentResponse> {
-    await this.requireCommentOnTask(taskId, commentId, context);
-    const knex = await this.getDbForContext(context);
-    try {
-      await updateTaskCommentWithDb(knex, context.tenant, actorFrom(context), commentId, { note: data.note });
-    } catch (error) {
-      throwTaskCommentApiError(error);
-    }
-    return this.getOne(taskId, commentId, context);
+    return this.withAccess(context, { taskCommentId: commentId }, 'update', async (trx) => {
+      await this.requireCommentOnTask(trx, taskId, commentId, context);
+      await updateTaskCommentWithDb(trx, context.tenant, actorFrom(context), commentId, { note: data.note });
+      return this.getOneWithDb(trx, taskId, commentId, context);
+    });
   }
 
   async deleteComment(taskId: string, commentId: string, context: ServiceContext): Promise<void> {
-    await this.requireCommentOnTask(taskId, commentId, context);
-    const knex = await this.getDbForContext(context);
-    try {
-      await deleteTaskCommentWithDb(knex, context.tenant, actorFrom(context), commentId);
-    } catch (error) {
-      throwTaskCommentApiError(error);
-    }
+    await this.withAccess(context, { taskCommentId: commentId }, 'delete', async (trx) => {
+      await this.requireCommentOnTask(trx, taskId, commentId, context);
+      await deleteTaskCommentWithDb(trx, context.tenant, actorFrom(context), commentId);
+    });
   }
 
   async toggleReaction(
@@ -180,15 +195,11 @@ export class ProjectTaskCommentService extends BaseService<never> {
     emoji: string,
     context: ServiceContext,
   ): Promise<ProjectTaskCommentReactionResponse> {
-    await this.requireCommentOnTask(taskId, commentId, context);
-    const knex = await this.getDbForContext(context);
-    let added: boolean;
-    try {
-      ({ added } = await toggleTaskCommentReactionWithDb(knex, context.tenant, context.userId, commentId, emoji));
-    } catch (error) {
-      throwTaskCommentApiError(error);
-    }
-    const batch = await getTaskCommentsReactionsBatchWithDb(knex, context.tenant, context.userId, [commentId]);
-    return { added, reactions: batch.reactions[commentId] ?? [], reaction_user_names: batch.userNames };
+    return this.withAccess(context, { taskCommentId: commentId }, 'react', async (trx) => {
+      await this.requireCommentOnTask(trx, taskId, commentId, context);
+      const { added } = await toggleTaskCommentReactionWithDb(trx, context.tenant, context.userId, commentId, emoji);
+      const batch = await getTaskCommentsReactionsBatchWithDb(trx, context.tenant, context.userId, [commentId]);
+      return { added, reactions: batch.reactions[commentId] ?? [], reaction_user_names: batch.userNames };
+    });
   }
 }

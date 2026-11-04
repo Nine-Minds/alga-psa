@@ -18,6 +18,7 @@ const KNOWN_UNLINKED_ROUTES: Record<string, string> = {
   '/msp/assets/imports': 'FeaturePlaceholder stub; link it when the feature ships',
   '/msp/assets/integrations': 'FeaturePlaceholder stub; link it when the feature ships',
   '/msp/assets/policies': 'FeaturePlaceholder stub; link it when the feature ships',
+  '/msp/co-management/customer-tickets': 'capability-gated (co-managed serves) queue of tickets customers shared with the sponsor; its rows link to the shared-ticket screen, and the nav entry arrives when the L1b Oversight shell absorbs this route',
   '/msp/chat': 'chat ships as the right-sidebar overlay, not as a route',
   // TODO: real gap — the KB review queue (KnowledgeBasePage activeTab="review")
   // has no entry point anywhere in the app. Add one, then drop this entry.

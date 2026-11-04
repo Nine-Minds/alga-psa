@@ -378,6 +378,14 @@
       "customLayout": "Custom",
       "tenantDefault": "Tenant default",
       "changeLayout": "Change"
+    },
+    "sectionTitles": {
+      "title": "Grouped quote section titles",
+      "description": "Optional headings used by the Standard Quote Grouped layout.",
+      "monthlyLabel": "Monthly section title",
+      "oneTimeLabel": "One-time section title",
+      "monthlyPlaceholder": "Monthly",
+      "oneTimePlaceholder": "One-time"
     }
   },
   "quoteDetail": {
@@ -622,6 +630,7 @@
       }
     },
     "sections": {
+      "carriedDiscounts": "Discounts carried onto contract lines",
       "contractItems": "Contract Items",
       "conversionMode": "Conversion Mode",
       "excludedFromConversion": "Excluded from Conversion",
@@ -647,6 +656,7 @@
       "converted": "Converted",
       "discount": "Discount",
       "fixed": "fixed",
+      "monthlyTotal": "Monthly total after discounts",
       "notConverted": "Not converted"
     },
     "partial": {

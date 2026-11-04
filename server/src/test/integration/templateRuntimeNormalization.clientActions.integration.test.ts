@@ -118,6 +118,7 @@ async function insertTemplateArtifacts(templateContractId: string, templateLineI
     tenant: tenantId,
     template_id: templateContractId,
     template_name: `Template ${templateContractId.slice(0, 8)}`,
+    currency_code: 'USD',
     template_description: 'Normalization template source',
     default_billing_frequency: 'monthly',
     template_status: 'active',

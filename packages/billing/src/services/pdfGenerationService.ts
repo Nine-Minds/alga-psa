@@ -23,6 +23,7 @@ import {
   resolveEmailLocale,
 } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 
+import { enrichContractChangeDescriptions } from '../lib/billing/contractChangeInvoiceProjection.server';
 import { mapDbInvoiceToWasmViewModel } from '../lib/adapters/invoiceAdapters';
 import { enrichInvoiceViewModelWithLocations } from '../lib/adapters/invoiceAdapters.server';
 import { OPTIONAL_INCLUDED_LABEL, OPTIONAL_PENDING_LABEL, mapDbQuoteToViewModel } from '../lib/adapters/quoteAdapters';
@@ -72,7 +73,27 @@ async function localizeQuoteCadenceGroups(
     const { getServerTranslation } = await import('@alga-psa/ui/lib/i18n/serverOnly');
     const { t } = await getServerTranslation(locale as never, DOCUMENT_LABEL_NAMESPACE);
     const cache = new Map<string, string>();
+    // The "{{cadence}} Total" template is cached per band label so a quote with
+    // monthly + annual bands interpolates each band's own name once.
+    const localizeTotal = (group: QuoteViewModelCadenceGroup, label: string): void => {
+      const totalKey = `total::${label}`;
+      let totalLabel = cache.get(totalKey);
+      if (totalLabel === undefined) {
+        totalLabel = String(
+          t('labels.cadenceTotal', { cadence: label, defaultValue: `${label} Total` }),
+        );
+        cache.set(totalKey, totalLabel);
+      }
+      group.total_label = totalLabel;
+    };
+
     const localize = (group: QuoteViewModelCadenceGroup): void => {
+      // A quote's own section title replaces the cadence vocabulary outright:
+      // the author wrote that heading, so only its footer template is localized.
+      if (group.name_is_custom) {
+        localizeTotal(group, group.name ?? '');
+        return;
+      }
       const key = cadenceI18nKey(group.cadence_key);
       if (!key) {
         group.total_label = group.total_label ?? `${group.name ?? ''} Total`;
@@ -84,18 +105,7 @@ async function localizeQuoteCadenceGroups(
         cache.set(key, label);
       }
       group.name = label;
-
-      // The "{{cadence}} Total" template is cached per cadence so a quote with
-      // monthly + annual bands interpolates each band's own localized name.
-      const totalKey = `total::${group.cadence_key}`;
-      let totalLabel = cache.get(totalKey);
-      if (totalLabel === undefined) {
-        totalLabel = String(
-          t('labels.cadenceTotal', { cadence: label, defaultValue: `${label} Total` }),
-        );
-        cache.set(totalKey, totalLabel);
-      }
-      group.total_label = totalLabel;
+      localizeTotal(group, label);
     };
     groups.forEach(localize);
     optionalGroups.forEach(localize);
@@ -1058,7 +1068,8 @@ export class PDFGenerationService {
   }
 
   private async getInvoiceForRendering(knex: Knex | Knex.Transaction, invoiceId: string): Promise<any> {
-    return Invoice.getFullInvoiceById(knex, this.tenant, invoiceId);
+    const invoice = await Invoice.getFullInvoiceById(knex, this.tenant, invoiceId);
+    return invoice ? enrichContractChangeDescriptions(knex, this.tenant, invoiceId, invoice) : invoice;
   }
 
   private async getInvoiceTemplates(knex: Knex | Knex.Transaction): Promise<any[]> {

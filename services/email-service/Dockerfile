@@ -22,6 +22,8 @@ COPY packages/db/package.json ./packages/db/
 COPY packages/ee/package.json ./packages/ee/
 COPY packages/event-bus/package.json ./packages/event-bus/
 COPY packages/event-schemas/package.json ./packages/event-schemas/
+COPY packages/formatting/package.json ./packages/formatting/
+COPY packages/predicates/package.json ./packages/predicates/
 COPY packages/storage/package.json ./packages/storage/
 COPY packages/types/package.json ./packages/types/
 
@@ -34,12 +36,18 @@ RUN npm config set legacy-peer-deps true && npm install --include-workspace-root
   --workspace=@alga-psa/ee-stubs \
   --workspace=@alga-psa/event-bus \
   --workspace=@alga-psa/event-schemas \
+  --workspace=@alga-psa/formatting \
+  --workspace=@alga-psa/predicates \
   --workspace=@alga-psa/storage \
   --workspace=@alga-psa/types
 
 COPY shared/ ./shared/
 COPY server/ ./server/
 COPY packages/ ./packages/
+
+# Predicates must build first: types and shared import it via dist/.
+WORKDIR /app/packages/predicates
+RUN npm run build
 
 WORKDIR /app/packages/core
 RUN npm run build && tsc-alias -p tsconfig.json -f --resolve-full-paths
@@ -51,6 +59,9 @@ WORKDIR /app/packages/event-schemas
 RUN npm run build
 
 WORKDIR /app/packages/event-bus
+RUN npm run build
+
+WORKDIR /app/packages/formatting
 RUN npm run build
 
 WORKDIR /app/shared

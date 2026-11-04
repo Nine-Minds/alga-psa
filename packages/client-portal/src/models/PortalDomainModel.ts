@@ -16,11 +16,24 @@ export const PORTAL_DOMAIN_STATUSES = [
   'certificate_issuing',
   'certificate_failed',
   'deploying',
+  'pending_redirect_uri',
   'active',
   'disabled',
 ] as const;
 
 export type PortalDomainStatus = (typeof PORTAL_DOMAIN_STATUSES)[number];
+
+// LEVERAGE: pattern portal-domain-model-copies — PortalDomainModel is duplicated in server, tenancy, client-portal and auth; the surface type/consts below are copied into each.
+export const PORTAL_DOMAIN_SURFACES = ['client_portal', 'msp', 'both'] as const;
+
+/** Which app(s) a custom domain serves: the client portal, the MSP app, or both (split by path prefix). */
+export type PortalDomainSurface = (typeof PORTAL_DOMAIN_SURFACES)[number];
+
+export const DEFAULT_PORTAL_DOMAIN_SURFACE: PortalDomainSurface = 'client_portal';
+
+export function isPortalDomainSurface(value: unknown): value is PortalDomainSurface {
+  return typeof value === 'string' && (PORTAL_DOMAIN_SURFACES as readonly string[]).includes(value);
+}
 
 export type PortalDomainVerificationMethod = 'cname';
 
@@ -29,6 +42,7 @@ export interface PortalDomainRecord {
   tenant: string;
   domain: string;
   canonical_host: string;
+  surface: PortalDomainSurface;
   status: PortalDomainStatus;
   status_message: string | null;
   last_checked_at: Date | null;
@@ -45,6 +59,7 @@ export interface PortalDomain {
   tenant: string;
   domain: string;
   canonicalHost: string;
+  surface: PortalDomainSurface;
   status: PortalDomainStatus;
   statusMessage: string | null;
   lastCheckedAt: Date | null;
@@ -58,6 +73,14 @@ export interface PortalDomain {
 
 export interface UpsertPortalDomainInput {
   domain: string;
+  surface?: PortalDomainSurface;
+  /**
+   * The surface of the row being replaced. A tenant's domain keeps one row per
+   * (tenant, surface); changing the surface of an existing domain must update that
+   * row in place (domain uniqueness is global, so inserting a second row would collide).
+   * Defaults to `surface`.
+   */
+  matchSurface?: PortalDomainSurface;
   status?: PortalDomainStatus;
   statusMessage?: string | null;
   verificationMethod?: PortalDomainVerificationMethod;
@@ -119,6 +142,7 @@ function mapRow(row: PortalDomainRecord): PortalDomain {
     tenant: row.tenant,
     domain: row.domain,
     canonicalHost: row.canonical_host,
+    surface: isPortalDomainSurface(row.surface) ? row.surface : DEFAULT_PORTAL_DOMAIN_SURFACE,
     status: row.status,
     statusMessage: row.status_message,
     lastCheckedAt: row.last_checked_at,
@@ -148,8 +172,36 @@ async function getTenantAndKnex(): Promise<{ knex: Knex; tenant: string }> {
   return { knex, tenant };
 }
 
-export async function getPortalDomain(knex: Knex, tenant: string): Promise<PortalDomain | null> {
-  const record = await portalDomainsQuery(knex, tenant).first() as PortalDomainRecord | undefined;
+/**
+ * Names exactly one portal_domains row of a tenant. A tenant may own one row per
+ * (tenant, surface), so every write must say which row it means: by `id`, or by
+ * `surface`. Writes are always tenant-scoped (portalDomainsQuery) AND row-scoped.
+ */
+export type PortalDomainRowTarget = { id: string } | { surface: PortalDomainSurface };
+
+function rowWhere(target: PortalDomainRowTarget): Record<string, string> {
+  if (target && 'id' in target && typeof target.id === 'string' && target.id.length > 0) {
+    return { id: target.id };
+  }
+  if (target && 'surface' in target && isPortalDomainSurface(target.surface)) {
+    return { surface: target.surface };
+  }
+  throw new Error('Portal domain writes must target a single row (id or surface)');
+}
+
+/**
+ * The tenant's domain row (oldest first, so the answer is deterministic if a tenant
+ * owns more than one row). Pass `surface` to read that surface's row.
+ */
+export async function getPortalDomain(
+  knex: Knex,
+  tenant: string,
+  surface?: PortalDomainSurface
+): Promise<PortalDomain | null> {
+  const query = surface
+    ? portalDomainsQuery(knex, tenant).where({ surface })
+    : portalDomainsQuery(knex, tenant).orderBy('created_at', 'asc').orderBy('id', 'asc');
+  const record = await query.first() as PortalDomainRecord | undefined;
 
   if (!record) {
     return null;
@@ -183,6 +235,7 @@ export async function upsertPortalDomain(knex: Knex, tenant: string, input: Upse
     tenant,
     domain: normalizedDomain,
     canonical_host: canonicalHost,
+    surface: input.matchSurface ?? input.surface ?? DEFAULT_PORTAL_DOMAIN_SURFACE,
     status: input.status ?? 'pending_dns',
     status_message: input.statusMessage ?? null,
     last_checked_at: lastCheckedAt,
@@ -196,10 +249,11 @@ export async function upsertPortalDomain(knex: Knex, tenant: string, input: Upse
 
   const [record] = await portalDomainsQuery(knex, tenant)
     .insert(payload)
-    .onConflict('tenant')
+    .onConflict(['tenant', 'surface'])
     .merge({
       domain: payload.domain,
       canonical_host: payload.canonical_host,
+      surface: input.surface ?? payload.surface,
       status: payload.status,
       status_message: payload.status_message,
       last_checked_at: payload.last_checked_at,
@@ -219,13 +273,23 @@ export async function upsertCurrentTenantPortalDomain(input: UpsertPortalDomainI
   return upsertPortalDomain(knex, tenant, input);
 }
 
-export async function updatePortalDomain(knex: Knex, tenant: string, patch: UpdatePortalDomainInput): Promise<PortalDomain | null> {
+export async function updatePortalDomain(
+  knex: Knex,
+  tenant: string,
+  target: PortalDomainRowTarget,
+  patch: UpdatePortalDomainInput
+): Promise<PortalDomain | null> {
+  const where = rowWhere(target);
   const updates: Record<string, unknown> = {
     updated_at: knex.fn.now(),
   };
 
   if (patch.domain) {
     updates.domain = normalizeHostname(patch.domain);
+  }
+
+  if (patch.surface) {
+    updates.surface = patch.surface;
   }
 
   if (patch.status) {
@@ -257,26 +321,30 @@ export async function updatePortalDomain(knex: Knex, tenant: string, patch: Upda
   }
 
   if (Object.keys(updates).length === 1) {
-    return getPortalDomain(knex, tenant);
+    const current = await portalDomainsQuery(knex, tenant).where(where).first() as PortalDomainRecord | undefined;
+    return current ? mapRow(current) : null;
   }
 
-  const [record] = await portalDomainsQuery(knex, tenant).update(updates).returning('*') as PortalDomainRecord[];
+  const [record] = await portalDomainsQuery(knex, tenant).where(where).update(updates).returning('*') as PortalDomainRecord[];
 
   return record ? mapRow(record) : null;
 }
 
-export async function updateCurrentTenantPortalDomain(patch: UpdatePortalDomainInput): Promise<PortalDomain | null> {
+export async function updateCurrentTenantPortalDomain(
+  target: PortalDomainRowTarget,
+  patch: UpdatePortalDomainInput
+): Promise<PortalDomain | null> {
   const { knex, tenant } = await getTenantAndKnex();
-  return updatePortalDomain(knex, tenant, patch);
+  return updatePortalDomain(knex, tenant, target, patch);
 }
 
-export async function deletePortalDomain(knex: Knex, tenant: string): Promise<void> {
-  await portalDomainsQuery(knex, tenant).delete();
+export async function deletePortalDomain(knex: Knex, tenant: string, target: PortalDomainRowTarget): Promise<void> {
+  await portalDomainsQuery(knex, tenant).where(rowWhere(target)).delete();
 }
 
-export async function deleteCurrentTenantPortalDomain(): Promise<void> {
+export async function deleteCurrentTenantPortalDomain(target: PortalDomainRowTarget): Promise<void> {
   const { knex, tenant } = await getTenantAndKnex();
-  await deletePortalDomain(knex, tenant);
+  await deletePortalDomain(knex, tenant, target);
 }
 
 export function isTerminalStatus(status: PortalDomainStatus): boolean {

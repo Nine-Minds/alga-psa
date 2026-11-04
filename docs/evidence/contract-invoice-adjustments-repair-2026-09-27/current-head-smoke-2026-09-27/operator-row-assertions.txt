@@ -1,0 +1,37 @@
+Database: server, PostgreSQL host port 5472, tenant 6d178771-ad9a-4d43-8809-83992745f8f9
+
+Interactive checkpoints queried directly from invoice_charges/invoices before
+the uniquely owned draft fixtures were cleaned up.
+
+SMOKE-ADJ-CURRENT-20260927, after increase/decrease saved and credit removed:
+  subtotal 390000; tax 0; total_amount 390000; draft_adjustment_revision 4
+  charge_count 5; manual_count 2; canonical_detail_count 3; transaction_count 0
+  Smoke mid-period unit increase: quantity 1; unit_price 10323; net_amount 10323;
+    manual=true; adjustment_source_kind=manual_adjustment;
+    adjustment_period_start=2026-08-16; adjustment_period_end=2026-09-01;
+    adjustment_reason=Operator acceptance test
+  Smoke mid-period unit decrease: quantity 1; unit_price -10323; net_amount -10323;
+    manual=true; adjustment_source_kind=manual_adjustment;
+    adjustment_period_start=2026-08-16; adjustment_period_end=2026-09-01;
+    adjustment_reason=Operator acceptance test
+
+Same draft, immediately after the credit save and before its UI removal:
+  subtotal 387000; tax 0; total_amount 387000; draft_adjustment_revision 3
+  Smoke manual credit: quantity 3; unit_price -1000; net_amount -3000;
+    is_manual=true; is_manual_credit=true; is_discount=true; is_taxable=false
+  UI preview displayed the line as a $30.00 Credit and reduced the total by $30.
+  The generated PDF printed quantity 3, rate -$10.00, amount -$30.00.
+
+SMOKE-ADJ-TAX-20260927, after taxable line save and repeat save:
+  subtotal 6100; tax 360; total_amount 6460; draft_adjustment_revision 2
+  charge_count 2; manual_count 1; canonical_detail_count 1; transaction_count 0
+  Smoke tax override 6 percent: quantity 2; unit_price 3000; net_amount 6000;
+    tax_amount 360; is_manual=true; is_taxable=true; tax_region=US-FL
+
+Generated output:
+  SMOKE-ADJ-CURRENT-20260927.pdf: one page; subtotal $3,900.00; tax $0.00;
+    total $3,900.00; includes +$103.23 increase and -$103.23 decrease.
+  SMOKE-ADJ-CURRENT-20260927-credit.pdf: one page; subtotal $3,870.00;
+    tax $0.00; total $3,870.00; credit amount -$30.00.
+  SMOKE-ADJ-TAX-20260927.pdf: one page; subtotal $61.00; tax $3.60;
+    total $64.60.

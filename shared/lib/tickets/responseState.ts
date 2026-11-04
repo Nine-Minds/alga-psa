@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { registerAfterCommit, tenantDb } from '@alga-psa/db';
-import type { TicketResponseState } from '@alga-psa/types';
+import { isClientUserType, isMspPrincipalUserType, type TicketResponseState } from '@alga-psa/types';
 import { buildTicketResponseStateChangedPayload } from './ticketWorkflowEventPayloads';
 
 /**
@@ -67,10 +67,14 @@ export async function resolveCommentAuthor(
   if (!user) {
     return { authorType: 'unknown', contactId: null };
   }
-  if (user.user_type === 'internal') {
+  // internal and service principals are MSP-side authors (a service user is never a client author).
+  if (isMspPrincipalUserType(user.user_type)) {
     return { authorType: 'internal', contactId: null };
   }
-  return { authorType: 'client', contactId: user.contact_id ?? null };
+  if (isClientUserType(user.user_type)) {
+    return { authorType: 'client', contactId: user.contact_id ?? null };
+  }
+  return { authorType: 'unknown', contactId: null };
 }
 
 /** Pure rule table: the state a comment moves the ticket to. */

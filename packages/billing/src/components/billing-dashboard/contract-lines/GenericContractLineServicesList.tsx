@@ -54,6 +54,8 @@ interface GenericPlanServicesListProps {
   contractLineId: string;
   onServicesChanged?: () => void; // Optional callback when services are added/removed
   disableEditing?: boolean; // New prop to disable edit actions
+  /** Currency to price in. Contract templates pass their own currency; when omitted it is read from the owning contract. */
+  currencyCode?: string;
 }
 
 
@@ -69,7 +71,7 @@ interface EnhancedPlanService extends IContractLineService {
   default_rate?: number;
 }
 
-const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contractLineId, onServicesChanged, disableEditing = false }) => {
+const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contractLineId, onServicesChanged, disableEditing = false, currencyCode }) => {
   const { t } = useTranslation('msp/contract-lines');
   const { money } = useCurrencyFormat();
   const [planServices, setPlanServices] = useState<EnhancedPlanService[]>([]);
@@ -81,7 +83,8 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
   const [editingService, setEditingService] = useState<EnhancedPlanService | null>(null);
   const [planType, setPlanType] = useState<IContractLine['contract_line_type'] | null>(null); // State for plan type
   const [contractLineBillingFrequency, setContractLineBillingFrequency] = useState<string | null>(null);
-  const [contractCurrency, setContractCurrency] = useState<string>('USD'); // Contract currency code
+  const [fetchedContractCurrency, setContractCurrency] = useState<string | null>(null); // Currency read from the owning contract
+  const contractCurrency = currencyCode ?? fetchedContractCurrency ?? 'USD'; // an explicit currency (templates) always wins
   const [customRates, setCustomRates] = useState<Record<string, string>>({}); // Custom rates for services without matching currency
   // Removed tenant state
 
@@ -131,7 +134,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
       setContractLineBillingFrequency(planDetails.billing_frequency); // Store the billing frequency
 
       // Fetch contract to get currency
-      if (planDetails.contract_id) {
+      if (planDetails.contract_id && !currencyCode) {
         const contract = await getContractById(planDetails.contract_id);
         if (isReturnedActionError(contract)) {
           setError(getErrorMessage(contract));
@@ -177,7 +180,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
     } finally {
       setIsLoading(false);
     }
-  }, [contractLineId, t]);
+  }, [contractLineId, currencyCode, t]);
 
   useEffect(() => {
     fetchData();
@@ -348,7 +351,9 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
       title: t('services.generic.columns.customRate', { defaultValue: 'Custom Rate' }),
       dataIndex: 'custom_rate',
       render: (value, record) => {
-        const rate = value !== undefined ? value : record.default_rate;
+        // A row with no custom rate stores SQL NULL, not undefined, so the
+        // catalog fallback has to be nullish — otherwise Standard rows read N/A.
+        const rate = value ?? record.default_rate;
         const hasCustomRate = value !== undefined && value !== null;
         // The member-level rate_provenance governs the same way the line-level
         // one does: `inherited` follows the catalog, `custom`/`unreviewed` take
@@ -369,12 +374,12 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
           : isCustom
             ? t('services.generic.badges.custom', { defaultValue: 'Custom' })
             : t('services.generic.badges.standard', { defaultValue: 'Standard' });
-        // Display rate directly as decimal
+        // custom_rate and the default_rate fallback are both stored in minor units
         return (
           <span className="inline-flex items-center gap-2">
             <Badge variant={badgeVariant}>{badgeLabel}</Badge>
             {rate !== undefined && rate !== null
-              ? money(Math.round(Number(rate) * 100))
+              ? money(Math.round(Number(rate)), contractCurrency)
               : t('common.notAvailable', { defaultValue: 'N/A' })}
           </span>
         );

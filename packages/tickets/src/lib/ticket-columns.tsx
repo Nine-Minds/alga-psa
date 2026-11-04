@@ -6,8 +6,7 @@ import type { TagSize } from '@alga-psa/ui/components/tags';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
-import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
-import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
+import EntityChip from '@alga-psa/ui/components/EntityChip';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { getUserTimeZone } from '@alga-psa/core';
 import type { CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
@@ -148,6 +147,8 @@ interface CreateTicketColumnsOptions {
   onTagsChange?: (ticketId: string, tags: ITag[]) => void;
   tagSize?: TagSize;
   showTags?: boolean;
+  /** Show the inline tags without add, remove or edit (the viewer cannot update tickets). */
+  tagsReadOnly?: boolean;
   showClient?: boolean;
   onClientClick?: (clientId: string) => void;
   onContactClick?: (contactNameId: string) => void;
@@ -187,6 +188,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     onTagsChange,
     tagSize = 'md',
     showTags = true,
+    tagsReadOnly = false,
     showClient = true,
     onClientClick,
     onContactClick,
@@ -329,6 +331,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
                     entityType="ticket"
                     initialTags={ticketTagsRef.current[record.ticket_id] || []}
                     onTagsChange={(tags) => onTagsChange(record.ticket_id!, tags)}
+                    readOnly={tagsReadOnly}
                     size={tagSize}
                   />
                 </div>
@@ -444,50 +447,29 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
       col: {
         title: t('fields.client', 'Client'),
         dataIndex: 'client_name',
-        width: '9%',
+        // Fixed px floor for the avatar + 6ch name + two tag badges (see the Contact column note).
+        width: '200px',
         render: (value: string, record: ITicketListItem) => {
-          const hasClient = !!value;
           const multiClient = !record.master_ticket_id && (record.bundle_child_count ?? 0) > 0 && (record.bundle_distinct_client_count ?? 0) > 1;
-          const body = (
-            <span className="flex items-center gap-2 overflow-hidden">
-              {hasClient ? (
-                <ClientAvatar
-                  clientId={record.client_id || value}
-                  clientName={value}
-                  logoUrl={record.client_logo_url ?? null}
-                  size="xs"
-                />
-              ) : (
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[10px] font-bold text-white bg-[#cbd5e1]">
-                  —
-                </span>
-              )}
-              <span className="flex flex-col gap-0.5 overflow-hidden">
-                <span className="truncate">{value || 'No Client'}</span>
-                {multiClient ? (
-                  <span
-                    className="w-fit rounded px-2 py-0.5 text-[11px] font-medium"
-                    style={{ color: 'rgb(var(--color-accent-700))', backgroundColor: 'rgb(var(--color-accent-100))' }}
-                  >
-                    Multiple clients
-                  </span>
-                ) : null}
-              </span>
-            </span>
-          );
-          if (!onClientClick) {
-            return <span className="text-[rgb(var(--color-text-700))]">{body}</span>;
-          }
           return (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                if (record.client_id) onClientClick(record.client_id);
-              }}
-              className="bg-transparent border-none p-0 text-left text-[rgb(var(--color-text-700))] hover:[&_.truncate]:text-[rgb(var(--color-primary-700))]"
-            >
-              {body}
-            </button>
+            <EntityChip
+              kind="client"
+              id={record.client_id || value}
+              name={value}
+              imageUrl={record.client_logo_url ?? null}
+              tags={record.client_tags}
+              maxBadges={2}
+              emptyLabel="No Client"
+              onClick={onClientClick && record.client_id ? () => onClientClick(record.client_id!) : undefined}
+              extra={multiClient ? (
+                <span
+                  className="w-fit shrink-0 rounded px-2 py-0.5 text-[11px] font-medium"
+                  style={{ color: 'rgb(var(--color-accent-700))', backgroundColor: 'rgb(var(--color-accent-100))' }}
+                >
+                  Multiple clients
+                </span>
+              ) : null}
+            />
           );
         },
       }
@@ -501,40 +483,21 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
       col: {
         title: t('fields.contact', 'Contact'),
         dataIndex: 'contact_name',
-        width: '8%',
-        render: (value: string | null, record: ITicketListItem) => {
-          const body = (
-            <span className="flex items-center gap-2 overflow-hidden">
-              {value ? (
-                <ContactAvatar
-                  contactId={record.contact_name_id || value}
-                  contactName={value}
-                  avatarUrl={record.contact_avatar_url ?? null}
-                  size="xs"
-                />
-              ) : (
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[10px] font-bold text-white bg-[#cbd5e1]">
-                  —
-                </span>
-              )}
-              <span className="truncate">{value || <span className="text-[rgb(var(--color-text-400))]">—</span>}</span>
-            </span>
-          );
-          if (!onContactClick || !record.contact_name_id) {
-            return <span className="flex text-[rgb(var(--color-text-700))]">{body}</span>;
-          }
-          return (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onContactClick(record.contact_name_id!);
-              }}
-              className="bg-transparent border-none p-0 text-left text-[rgb(var(--color-text-700))] hover:[&_.truncate]:text-[rgb(var(--color-primary-700))]"
-            >
-              {body}
-            </button>
-          );
-        },
+        // LEVERAGE: friction datatable-min-width — `minWidth` is only a shrink floor (percent widths
+        // are already raised to the ~161px "natural" size), so it cannot reserve room for the
+        // avatar + 6ch name + two tag badges. A fixed px width is the only way to set a floor.
+        width: '200px',
+        render: (value: string | null, record: ITicketListItem) => (
+          <EntityChip
+            kind="contact"
+            id={record.contact_name_id || value}
+            name={value}
+            imageUrl={record.contact_avatar_url ?? null}
+            tags={record.contact_tags}
+            maxBadges={2}
+            onClick={onContactClick && record.contact_name_id ? () => onContactClick(record.contact_name_id!) : undefined}
+          />
+        ),
       }
     });
   }

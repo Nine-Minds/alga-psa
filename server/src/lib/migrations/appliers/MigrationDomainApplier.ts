@@ -138,12 +138,13 @@ export class MigrationDomainApplier {
               migrationJobId,
               migrationStagedRecordId: staged.migration_staged_record_id,
               attempt: context.attempt,
-              action: 'created',
+              action: applied.matchedExisting ? 'skipped' : 'created',
               targetEntityType: applied.targetEntityType,
               targetEntityId: applied.targetEntityId,
               warnings: applied.warnings,
             });
-            counters.created += 1;
+            if (applied.matchedExisting) counters.skipped += 1;
+            else counters.created += 1;
           } catch (error) {
             await context.ledger.recordOutcome(trx, {
               migrationJobId,

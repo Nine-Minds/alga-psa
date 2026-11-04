@@ -24,7 +24,7 @@ import { getTicketAutoCloseState } from '@alga-psa/tickets/actions/close-rules/c
 import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import { listTicketMaterials } from '@alga-psa/tickets/actions/materialCatalogActions';
 import { hasAdminSettingsViewAccess } from '@alga-psa/tickets/components/ticket/commentMetadataDebug';
-import type { TicketScreenBootstrap } from '@alga-psa/tickets/lib/ticketScreenBootstrap';
+import { hasWorkflowManageAccess, type TicketScreenBootstrap } from '@alga-psa/tickets/lib/ticketScreenBootstrap';
 import { getAdjacentTicketIds } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { parseReturnFilters, DEFAULT_TICKET_LIST_FILTERS } from '@alga-psa/tickets/lib/ticketFilterUtils';
 import { listEntityAssets } from '@alga-psa/assets/actions/assetActions';
@@ -36,6 +36,8 @@ import { fetchTimeEntriesForTicket } from '@alga-psa/scheduling/actions/timeEntr
 import { AIChatContextBoundary } from '@product/chat/context';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
+import { createTenantKnex, isCoManagedWorkspace } from '@alga-psa/db';
+import { CoManagedLocalTicketDataSourceProvider } from '@/components/co-managed/CoManagedLocalTicketDataSourceProvider';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 
@@ -175,6 +177,7 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
       externalLinks: isReturnedActionError(externalLinks) ? null : externalLinks,
       autoCloseState,
       canViewCommentMetadataDebug: permissions ? hasAdminSettingsViewAccess(permissions) : null,
+      canManageWorkflows: permissions ? hasWorkflowManageAccess(permissions) : null,
       teams: safeTeams,
       displaySettings,
       tags: safeTags,
@@ -230,17 +233,26 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
         </Suspense>
       ) : null;
     
+    // A co_managed workspace's own tickets get the audience-aware conversation; the check is
+    // one cheap lookup that is false for every other tenant, which renders exactly as before.
+    const { knex: workspaceKnex } = await createTenantKnex(user.tenant);
+    const coManaged = await isCoManagedWorkspace(workspaceKnex, user.tenant);
+    const detailsClient = (
+      <MspTicketDetailsContainerClient
+        ticketData={ticketData as any}
+        surveySummary={surveySummary ?? null}
+        associatedAssets={associatedAssets}
+        isAlgaDeskMode={isAlgaDesk}
+        bootstrap={bootstrap}
+        linkedTasksStream={linkedTasksStream}
+      />
+    );
     const detailsContent = (
       <div id="ticket-details-container" className="bg-[rgb(var(--color-app-ground))]">
         <Suspense fallback={<TicketDetailsSkeleton />}>
-          <MspTicketDetailsContainerClient
-            ticketData={ticketData as any}
-            surveySummary={surveySummary ?? null}
-            associatedAssets={associatedAssets}
-            isAlgaDeskMode={isAlgaDesk}
-            bootstrap={bootstrap}
-            linkedTasksStream={linkedTasksStream}
-          />
+          {coManaged
+            ? <CoManagedLocalTicketDataSourceProvider ticketId={id}>{detailsClient}</CoManagedLocalTicketDataSourceProvider>
+            : detailsClient}
         </Suspense>
       </div>
     );

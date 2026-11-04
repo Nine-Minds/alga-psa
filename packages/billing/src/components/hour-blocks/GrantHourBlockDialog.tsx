@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dia
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
-import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
@@ -14,8 +14,9 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import { toCalendarDateString } from '@alga-psa/core';
-import type { IService } from '@alga-psa/types';
-import { grantHourBlock } from '@alga-psa/billing/actions/hourBlockActions';
+import type { IService, ServiceContractLineCoverage } from '@alga-psa/types';
+import { grantHourBlock, getHourBlockContractCoverage } from '@alga-psa/billing/actions/hourBlockActions';
+import HourBlockCoverageNotice from './HourBlockCoverageNotice';
 import { getServices } from '@alga-psa/billing/actions/serviceActions';
 
 interface GrantHourBlockDialogProps {
@@ -39,13 +40,15 @@ export default function GrantHourBlockDialog({ clientId, currencyCode, isOpen, o
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [coverage, setCoverage] = useState<ServiceContractLineCoverage[]>([]);
+  const [coverageUnscoped, setCoverageUnscoped] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;
     setServicesLoading(true);
     setError(null);
-    getServices(1, 999, { is_active: true, item_kind: 'service' })
+    getServices(1, 999, { is_active: true, item_kind: 'service', billing_method: 'hourly' })
       .then((result) => {
         if (cancelled) return;
         if (isActionMessageError(result) || isActionPermissionError(result) || 'error' in result) {
@@ -64,6 +67,42 @@ export default function GrantHourBlockDialog({ clientId, currencyCode, isOpen, o
       cancelled = true;
     };
   }, [isOpen]);
+
+  // Advisory contract-overlap lookup: debounced, cancellable, and silent on any
+  // failure — it must never block selling/granting.
+  const scopeKey = useMemo(() => Array.from(scopeServiceIds).sort().join(','), [scopeServiceIds]);
+  const expirationKey = expirationDate ? toCalendarDateString(expirationDate) : null;
+  useEffect(() => {
+    if (!isOpen || !selectedServiceId) {
+      setCoverage([]);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      getHourBlockContractCoverage({
+        clientId,
+        serviceId: selectedServiceId,
+        scopeServiceIds: scopeKey ? scopeKey.split(',') : [],
+        expirationDate: expirationKey,
+      })
+        .then((result) => {
+          if (cancelled) return;
+          if (!result || isActionMessageError(result) || isActionPermissionError(result)) {
+            setCoverage([]);
+            return;
+          }
+          setCoverage(result.services);
+          setCoverageUnscoped(result.unscoped);
+        })
+        .catch(() => {
+          if (!cancelled) setCoverage([]);
+        });
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [isOpen, clientId, selectedServiceId, scopeKey, expirationKey]);
 
   const serviceOptions = useMemo(
     () => services.map((service) => ({ value: service.service_id, label: service.service_name })),
@@ -101,6 +140,8 @@ export default function GrantHourBlockDialog({ clientId, currencyCode, isOpen, o
     setScopeServiceIds(new Set());
     setReason('');
     setError(null);
+    setCoverage([]);
+    setCoverageUnscoped(false);
   };
 
   const handleClose = () => {
@@ -162,12 +203,15 @@ export default function GrantHourBlockDialog({ clientId, currencyCode, isOpen, o
           ) : (
             <div className="space-y-1.5">
               <Label htmlFor="hb-grant-service">{t('sell.serviceLabel', { defaultValue: 'Service' })}</Label>
-              <CustomSelect
+              <SearchableSelect
                 id="hb-grant-service"
                 options={serviceOptions}
-                value={selectedServiceId || null}
-                onValueChange={setSelectedServiceId}
+                value={selectedServiceId}
+                onChange={setSelectedServiceId}
                 placeholder={t('sell.servicePlaceholder', { defaultValue: 'Select a service' })}
+                searchPlaceholder={t('sell.serviceSearchPlaceholder', { defaultValue: 'Search services...' })}
+                emptyMessage={t('sell.serviceNoResults', { defaultValue: 'No services found' })}
+                dropdownMode="overlay"
               />
             </div>
           )}
@@ -235,6 +279,10 @@ export default function GrantHourBlockDialog({ clientId, currencyCode, isOpen, o
             <Label htmlFor="hb-grant-reason">{t('grant.reasonLabel', { defaultValue: 'Reason' })}</Label>
             <TextArea id="hb-grant-reason" value={reason} onChange={(e) => setReason(e.target.value)} rows={2} placeholder={t('grant.reasonPlaceholder', { defaultValue: 'Why are these hours being granted?' })} />
           </div>
+
+          {coverage.length > 0 && (
+            <HourBlockCoverageNotice coverage={coverage} unscoped={coverageUnscoped} variant="alert" openLinksInNewTab />
+          )}
 
           {error && (
             <Alert variant="destructive">

@@ -5,9 +5,19 @@ export const THREECX_PROVIDER = '3cx';
 
 export type ThreecxPbxStatus = 'not_configured' | 'connected' | 'error';
 
+/** Result of one read-only capability probe. `status` 0 means the PBX was unreachable. */
+export interface ThreecxCapabilityProbe {
+  ok: boolean;
+  status: number;
+  reason: string | null;
+}
+
 export interface ThreecxPbxCapabilities {
   xapi: boolean;
   callControl: boolean;
+  /** Absent on state saved before role probing existed: treat as unknown (enabled). */
+  users?: ThreecxCapabilityProbe;
+  contacts?: ThreecxCapabilityProbe;
 }
 
 /** PBX API connection (3CX Enterprise/AI). The secret lives in the tenant secret provider. */
@@ -146,9 +156,24 @@ function obj(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 }
 
+function parseProbe(raw: unknown): ThreecxCapabilityProbe | undefined {
+  const value = obj(raw);
+  if (typeof value.ok !== 'boolean') return undefined;
+  return { ok: value.ok, status: num(value.status, 0), reason: str(value.reason) };
+}
+
+function parseCapabilities(raw: unknown): ThreecxPbxCapabilities {
+  const caps = obj(raw);
+  const result: ThreecxPbxCapabilities = { xapi: bool(caps.xapi), callControl: bool(caps.callControl) };
+  const users = parseProbe(caps.users);
+  const contacts = parseProbe(caps.contacts);
+  if (users) result.users = users;
+  if (contacts) result.contacts = contacts;
+  return result;
+}
+
 function parsePbx(raw: unknown): ThreecxPbxConfig {
   const value = obj(raw);
-  const caps = obj(value.capabilities);
   const status = value.status;
   return {
     baseUrl: str(value.baseUrl),
@@ -157,7 +182,7 @@ function parsePbx(raw: unknown): ThreecxPbxConfig {
     status: status === 'connected' || status === 'error' ? status : 'not_configured',
     lastCheckedAt: str(value.lastCheckedAt),
     lastError: str(value.lastError),
-    capabilities: { xapi: bool(caps.xapi), callControl: bool(caps.callControl) },
+    capabilities: parseCapabilities(value.capabilities),
   };
 }
 

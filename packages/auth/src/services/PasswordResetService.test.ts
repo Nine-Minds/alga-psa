@@ -95,7 +95,7 @@ describe('token primitives', () => {
 });
 
 describe('createResetTokenWithTransaction', () => {
-  const user = { user_id: 'u1', email: 'ada@example.com' };
+  const user = { user_id: 'u1', email: 'ada@example.com', user_type: 'internal' };
 
   it('refuses when the rate limit is exhausted and touches nothing', async () => {
     checkPasswordResetLimitMock.mockResolvedValue({ success: false, msBeforeNext: 60_000 });

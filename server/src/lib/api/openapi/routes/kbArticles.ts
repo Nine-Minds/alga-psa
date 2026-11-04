@@ -19,19 +19,19 @@ export function registerKbArticleRoutes(
     'KbArticle',
     zOpenApi
       .object({
-        article_id: zOpenApi.string().uuid(),
-        tenant: zOpenApi.string().uuid(),
-        document_id: zOpenApi.string().uuid().describe('Underlying document backing the article.'),
+        article_id: zOpenApi.string().guid(),
+        tenant: zOpenApi.string().guid(),
+        document_id: zOpenApi.string().guid().describe('Underlying document backing the article.'),
         title: zOpenApi.string(),
         slug: zOpenApi.string(),
         article_type: articleType,
         audience,
         status,
-        category_id: zOpenApi.string().uuid().nullable().optional(),
+        category_id: zOpenApi.string().guid().nullable().optional(),
         review_cycle_days: zOpenApi.number().int().nullable().optional(),
         next_review_date: zOpenApi.string().nullable().optional(),
         published_at: zOpenApi.string().nullable().optional(),
-        published_by: zOpenApi.string().uuid().nullable().optional(),
+        published_by: zOpenApi.string().guid().nullable().optional(),
         document_name: zOpenApi.string().nullable().optional().describe('Joined from the documents table.'),
         created_at: zOpenApi.string().optional(),
         updated_at: zOpenApi.string().optional(),
@@ -41,12 +41,12 @@ export function registerKbArticleRoutes(
 
   const KbArticleIdParam = registry.registerSchema(
     'KbArticleIdParam',
-    zOpenApi.object({ id: zOpenApi.string().uuid().describe('KB article UUID.') }),
+    zOpenApi.object({ id: zOpenApi.string().guid().describe('KB article UUID.') }),
   );
 
   const KbArticleFromTicketParam = registry.registerSchema(
     'KbArticleFromTicketParam',
-    zOpenApi.object({ ticketId: zOpenApi.string().uuid().describe('Source ticket UUID.') }),
+    zOpenApi.object({ ticketId: zOpenApi.string().guid().describe('Source ticket UUID.') }),
   );
 
   const KbArticleCreateRequest = registry.registerSchema(
@@ -56,7 +56,7 @@ export function registerKbArticleRoutes(
       slug: zOpenApi.string().optional().describe('Optional; generated from the title when omitted.'),
       article_type: articleType.optional().describe('Defaults to how_to.'),
       audience: audience.optional().describe('Defaults to internal.'),
-      category_id: zOpenApi.string().uuid().optional(),
+      category_id: zOpenApi.string().guid().optional(),
       review_cycle_days: zOpenApi.number().int().optional(),
       content: zOpenApi.string().optional().describe('Initial body content.'),
       content_format: zOpenApi.enum(['markdown', 'blocknote']).optional().describe('Defaults to markdown.'),
@@ -70,7 +70,7 @@ export function registerKbArticleRoutes(
       slug: zOpenApi.string().optional(),
       article_type: articleType.optional(),
       audience: audience.optional(),
-      category_id: zOpenApi.string().uuid().optional(),
+      category_id: zOpenApi.string().guid().optional(),
       review_cycle_days: zOpenApi.number().int().optional(),
       status: status.optional(),
     }),
@@ -92,14 +92,14 @@ export function registerKbArticleRoutes(
       status: status.optional(),
       audience: audience.optional(),
       article_type: articleType.optional(),
-      category_id: zOpenApi.string().uuid().optional(),
+      category_id: zOpenApi.string().guid().optional(),
       search: zOpenApi.string().optional(),
     }),
   );
 
   const KbArticleResponse = registry.registerSchema(
     'KbArticleResponse',
-    zOpenApi.object({ data: KbArticle, meta: zOpenApi.record(zOpenApi.unknown()).optional() }),
+    zOpenApi.object({ data: KbArticle, meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional() }),
   );
 
   const PaginatedKbArticleResponse = registry.registerSchema(
@@ -114,7 +114,7 @@ export function registerKbArticleRoutes(
         hasNext: zOpenApi.boolean(),
         hasPrev: zOpenApi.boolean(),
       }),
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 
@@ -122,7 +122,7 @@ export function registerKbArticleRoutes(
     'KbCategoryListResponse',
     zOpenApi.object({
       data: zOpenApi.array(zOpenApi.object({
-        category_id: zOpenApi.string().uuid(),
+        category_id: zOpenApi.string().guid(),
         category_name: zOpenApi.string(),
         display_order: zOpenApi.number().int().optional(),
       })),
@@ -133,7 +133,7 @@ export function registerKbArticleRoutes(
     'KbTemplateListResponse',
     zOpenApi.object({
       data: zOpenApi.array(zOpenApi.object({
-        template_id: zOpenApi.string().uuid(),
+        template_id: zOpenApi.string().guid(),
         name: zOpenApi.string(),
         article_type: articleType.optional(),
       })),
@@ -144,7 +144,7 @@ export function registerKbArticleRoutes(
     'KbArticleContentResponse',
     zOpenApi.object({
       data: zOpenApi.object({
-        article_id: zOpenApi.string().uuid().optional(),
+        article_id: zOpenApi.string().guid().optional(),
         content: zOpenApi.string().describe('Article body rendered as readable text.'),
       }),
     }),

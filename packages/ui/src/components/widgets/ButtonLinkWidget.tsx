@@ -1,6 +1,9 @@
+'use client';
+
 import React from 'react';
 import { WidgetProps } from '@rjsf/utils';
 import { Button } from '../Button';
+import { useTranslation } from '../../lib/i18n/client';
 
 interface ButtonLinkWidgetOptions {
   buttonText?: string;
@@ -20,6 +23,7 @@ const ButtonLinkWidget = ({
   readonly,
   formContext, // Access formContext for potential dynamic URL resolution
 }: CustomButtonLinkWidgetProps) => {
+  const { t } = useTranslation('common');
   // Ensure value is a string before attempting to process it
   let url = typeof value === 'string' ? value : '';
 
@@ -27,12 +31,12 @@ const ButtonLinkWidget = ({
     // If there's no URL after potential resolution, render nothing or a disabled button
     return (
       <Button id={id} variant="outline" disabled>
-        {options?.buttonText || 'Link Not Available'}
+        {options?.buttonText || t('widgets.buttonLink.unavailable')}
       </Button>
     );
   }
 
-  const buttonText = options?.buttonText || 'Open Link';
+  const buttonText = options?.buttonText || t('widgets.buttonLink.actions.openLink');
   const target = options?.target;
 
   if (disabled || readonly) {

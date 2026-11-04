@@ -1,3 +1,4 @@
+import { toSafeMicrosoftOAuthFailure } from '@alga-psa/shared/services/email/microsoftOAuthErrors';
 import { CalendarProviderConfig, ExternalCalendarEvent } from '@/interfaces/calendar.interfaces';
 import { IScheduleEntry } from '@/interfaces/schedule.interfaces';
 
@@ -89,7 +90,9 @@ export abstract class BaseCalendarAdapter {
     }
 
     const errorMessage = `Error in ${context}: ${error.message || error}${details}`;
-    this.log('error', errorMessage, error);
+    // Never pass a raw axios error to the logger: `config.data` is the
+    // urlencoded token request body and contains client_secret on refresh.
+    this.log('error', errorMessage, toSafeMicrosoftOAuthFailure(error));
     const wrapped = new Error(errorMessage);
     // Propagate metadata for outer catch blocks
     try {

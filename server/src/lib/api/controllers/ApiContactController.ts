@@ -24,7 +24,7 @@ import {
   hasPermission 
 } from '../../auth/rbac';
 import {
-  assertInternalApiUser,
+  assertApiPrincipal,
   ApiRequest,
   UnauthorizedError,
   ForbiddenError,
@@ -133,7 +133,7 @@ export class ApiContactController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -162,7 +162,7 @@ export class ApiContactController extends ApiBaseController {
             validatedQuery = contactSearchSchema.parse(query);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Query validation failed', error.errors);
+              throw new ValidationError('Query validation failed', error.issues);
             }
             throw error;
           }
@@ -213,7 +213,7 @@ export class ApiContactController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -242,7 +242,7 @@ export class ApiContactController extends ApiBaseController {
             validatedQuery = contactExportQuerySchema.parse(query);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Query validation failed', error.errors);
+              throw new ValidationError('Query validation failed', error.issues);
             }
             throw error;
           }
@@ -310,7 +310,7 @@ export class ApiContactController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;

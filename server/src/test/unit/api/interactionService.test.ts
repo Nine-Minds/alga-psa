@@ -23,6 +23,11 @@ vi.mock('@alga-psa/clients/actions/interactionCreateHelper', () => ({
   resolveScheduleAssignees: (creator: string, requested?: string[]) => requested?.length ? [...new Set(requested)] : [creator],
 }));
 
+vi.mock('@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee', () => ({
+  assertHumanWorkAssignee: vi.fn(async () => undefined),
+  assertHumanWorkOwner: vi.fn(async () => undefined),
+}));
+
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: mocks.hasPermission }));
 
 import { InteractionService } from '../../../lib/api/services/InteractionService';

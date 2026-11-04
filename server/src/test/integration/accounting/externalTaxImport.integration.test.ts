@@ -164,7 +164,8 @@ describe('External Tax Import', () => {
     adapterType: 'quickbooks_online' | 'xero',
     externalRef: string,
     taxAmounts: number[],
-    totalTax: number
+    totalTax: number,
+    lineIds?: string[]
   ): void {
     const mockResult: ExternalInvoiceFetchResult = {
       success: true,
@@ -176,7 +177,7 @@ describe('External Tax Import', () => {
         totalAmount: taxAmounts.reduce((sum, amt) => sum + amt, 0) + totalTax,
         currency: 'USD',
         charges: taxAmounts.map((_, i) => ({
-          lineId: `line-${i}`,
+          lineId: lineIds?.[i] ?? `line-${i}`,
           externalLineId: `ext-line-${i}`,
           taxAmount: taxAmounts[i],
           taxCode: 'TAX',
@@ -420,6 +421,65 @@ describe('External Tax Import', () => {
       const taxRatio = charge1Tax / charge2Tax;
       // Allow 20% tolerance for rounding effects
       expect(Math.abs(amountRatio - taxRatio)).toBeLessThan(amountRatio * 0.2);
+    });
+
+    it('should preserve positional matching without querying positional IDs as UUID details', async () => {
+      const { invoiceId } = await createInvoiceWithPendingExternalTax([10000, 5000]);
+      const externalRef = 'QB-POSITIONAL-UUID-GUARD';
+      await createExternalMapping(invoiceId, externalRef, 'quickbooks_online');
+      mockAdapterFetchInvoice('quickbooks_online', externalRef, [1000, 500], 1500, ['line-0', 'line-1']);
+
+      const result = await service.importTaxForInvoice(invoiceId);
+      expect(result.success).toBe(true);
+      const rows = await ctx.db('invoice_charges').where({ invoice_id: invoiceId, tenant: ctx.tenantId })
+        .orderBy('created_at').orderBy('item_id');
+      expect(rows.map((row: any) => Number(row.external_tax_amount)).sort((a: number, b: number) => a - b)).toEqual([500, 1000]);
+    });
+
+    it('should retain proportional fallback for unmatched provider line IDs', async () => {
+      const { invoiceId } = await createInvoiceWithPendingExternalTax([10000, 5000]);
+      const externalRef = 'QB-ARBITRARY-PROVIDER-ID';
+      await createExternalMapping(invoiceId, externalRef, 'quickbooks_online');
+      mockAdapterFetchInvoice('quickbooks_online', externalRef, [1000, 500], 1500,
+        ['vendor-line-alpha', 'provider-line-beta']);
+
+      const result = await service.importTaxForInvoice(invoiceId);
+      expect(result.success).toBe(true);
+      const rows = await ctx.db('invoice_charges').where({ invoice_id: invoiceId, tenant: ctx.tenantId })
+        .orderBy('created_at').orderBy('item_id');
+      expect(rows.map((row: any) => [Number(row.net_amount), Number(row.external_tax_amount)])
+        .sort((a: number[], b: number[]) => b[0] - a[0])).toEqual([[10000, 1000], [5000, 500]]);
+    });
+
+    it('should keep matched tax and proportionally allocate multiple unresolved charges', async () => {
+      const { invoiceId, chargeIds } = await createInvoiceWithPendingExternalTax([10000, 4000, 2000]);
+      await createExternalMapping(invoiceId, 'QB-MIXED-LINE-IDENTITIES', 'quickbooks_online');
+      mockAdapterFetchInvoice('quickbooks_online', 'QB-MIXED-LINE-IDENTITIES', [1000, 400, 200], 1600,
+        [chargeIds[0], 'provider-line-unmapped-a', 'provider-line-unmapped-b']);
+
+      const result = await service.importTaxForInvoice(invoiceId);
+      expect(result.success).toBe(true);
+      const rows = await ctx.db('invoice_charges').where({ invoice_id: invoiceId, tenant: ctx.tenantId });
+      const taxes = new Map(rows.map((row: any) => [row.item_id, Number(row.external_tax_amount)]));
+      expect(chargeIds.map(id => taxes.get(id))).toEqual([1000, 400, 200]);
+      const invoice = await ctx.db('invoices').where({ invoice_id: invoiceId, tenant: ctx.tenantId }).first();
+      expect(Number(invoice.tax)).toBe(1600);
+      expect(Number(invoice.total_amount)).toBe(17600);
+    });
+
+    it('should preserve a signed tax remainder on an unmatched credit', async () => {
+      const { invoiceId, chargeIds } = await createInvoiceWithPendingExternalTax([10000, -1000]);
+      await ctx.db('invoice_charges').where({ tenant: ctx.tenantId, item_id: chargeIds[1] })
+        .update({ is_discount: true, is_manual_credit: true });
+      await createExternalMapping(invoiceId, 'QB-SIGNED-REMAINDER', 'quickbooks_online');
+      mockAdapterFetchInvoice('quickbooks_online', 'QB-SIGNED-REMAINDER', [1000, -100], 900,
+        [chargeIds[0], 'provider-credit-unmapped']);
+      expect((await service.importTaxForInvoice(invoiceId)).success).toBe(true);
+      const credit = await ctx.db('invoice_charges').where({ tenant: ctx.tenantId, item_id: chargeIds[1] }).first();
+      const invoice = await ctx.db('invoices').where({ tenant: ctx.tenantId, invoice_id: invoiceId }).first();
+      expect(Number(credit.external_tax_amount)).toBe(-100);
+      expect(Number(invoice.tax)).toBe(900);
+      expect(Number(invoice.total_amount)).toBe(9900);
     });
 
     it('should match by charge ID even when external lines are returned out of order', async () => {

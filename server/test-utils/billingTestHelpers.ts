@@ -844,10 +844,11 @@ export async function createFixedPlanAssignment(
     .insert({
       config_id: configId,
       tenant: context.tenantId,
-      base_rate: baseRateCents
+      base_rate: baseRateCents,
+      base_rate_basis: baseRateCents == null ? null : 'share'
     })
     .onConflict(['tenant', 'config_id'])
-    .merge({ base_rate: baseRateCents });
+    .merge({ base_rate: baseRateCents, base_rate_basis: baseRateCents == null ? null : 'share' });
 
   await tenantTable(context, 'contract_line_services')
     .insert({
@@ -1639,7 +1640,8 @@ export async function addServiceToFixedPlan(
     .insert({
       config_id: configId,
       tenant: context.tenantId,
-      base_rate: detailBaseRateCents
+      base_rate: detailBaseRateCents,
+      base_rate_basis: 'share'
     });
 
   await tenantTable(context, 'contract_line_services')

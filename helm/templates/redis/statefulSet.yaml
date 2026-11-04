@@ -1,4 +1,8 @@
 {{- if .Values.redis.enabled }}
+{{- $aofEnabled := and .Values.redis.persistence.aof .Values.redis.persistence.aof.enabled -}}
+{{- if and $aofEnabled (not .Values.redis.persistence.enabled) -}}
+{{- fail "redis.persistence.aof.enabled requires redis.persistence.enabled=true; AOF would otherwise be written to the container filesystem" -}}
+{{- end -}}
 {{- $ns := include "sebastian.namespace" . -}}
 {{- $existing := (lookup "apps/v1" "StatefulSet" $ns "redis") -}}
 {{- $annotations := dict -}}
@@ -35,7 +39,7 @@ spec:
       containers:
       - name: redis
         image: "{{ .Values.redis.image.repository }}:{{ .Values.redis.image.tag }}"
-        command: ["sh", "-c", "mkdir -p /etc/redis && printf \"requirepass ${REDIS_PASSWORD}\nsave ''\n\" > /etc/redis/redis.conf && redis-server /etc/redis/redis.conf"]
+        command: ["sh", "-c", "mkdir -p /etc/redis && printf \"requirepass ${REDIS_PASSWORD}\nsave ''\n{{ if $aofEnabled }}dir /data\nappendonly yes\nappendfsync everysec\nmaxmemory-policy noeviction\n{{ end }}\" > /etc/redis/redis.conf && redis-server /etc/redis/redis.conf"]
         imagePullPolicy: Always
         ports:
         - containerPort: {{ .Values.redis.service.port }}

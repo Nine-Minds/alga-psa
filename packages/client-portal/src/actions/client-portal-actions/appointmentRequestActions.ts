@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { normalizeLocale } from '@alga-psa/core/i18n/config';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { isClientUserType } from '@alga-psa/types';
 import {
   createAppointmentRequestSchema,
   updateAppointmentRequestSchema,
@@ -39,6 +40,7 @@ import { isEnterprise } from '@alga-psa/core/features';
 import { format, type Locale } from 'date-fns';
 import { de, es, fr, it, nl, enUS } from 'date-fns/locale';
 import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
+import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { getClientPortalFeatureSettingsForTenant } from '../../lib/clientPortalFeatureSettingsDb';
 
 export interface IAppointmentRequest {
@@ -327,7 +329,7 @@ export const createAppointmentRequest = withAuth(async (
   data: CreateAppointmentRequestInput
 ): Promise<AppointmentRequestResult<IAppointmentRequest>> => {
   try {
-    if (currentUser.user_type !== 'client') {
+    if (!isClientUserType(currentUser.user_type)) {
       return { success: false, error: 'Only client users can create appointment requests' };
     }
 
@@ -481,6 +483,8 @@ export const createAppointmentRequest = withAuth(async (
         updated_at: now
       };
 
+      // Human-work guard (R5.3): a technician assigned to an appointment must be an active internal user.
+      await assertHumanWorkAssignee(trx, tenant, [validatedData.preferred_assigned_user_id]);
       await tenantDb(trx, tenant).table('appointment_requests').insert(newRequest);
 
       return await tenantDb(trx, tenant).table('appointment_requests')
@@ -804,7 +808,7 @@ export const updateAppointmentRequest = withAuth(async (
   data: UpdateAppointmentRequestInput
 ): Promise<AppointmentRequestResult<IAppointmentRequest>> => {
   try {
-    if (currentUser.user_type !== 'client') {
+    if (!isClientUserType(currentUser.user_type)) {
       return { success: false, error: 'Only client users can update appointment requests' };
     }
 
@@ -884,6 +888,10 @@ export const updateAppointmentRequest = withAuth(async (
 
     // Update the appointment request
     await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Human-work guard (R5.3): a technician assigned to an appointment must be an active internal user.
+      if (validatedData.preferred_assigned_user_id !== existingRequest.preferred_assigned_user_id) {
+        await assertHumanWorkAssignee(trx, tenant, [validatedData.preferred_assigned_user_id]);
+      }
       await tenantDb(trx, tenant).table('appointment_requests')
         .where({
           appointment_request_id: validatedData.appointment_request_id
@@ -1077,7 +1085,7 @@ export const getMyAppointmentRequests = withAuth(async (
   filters?: Partial<AppointmentRequestFilters>
 ): Promise<AppointmentRequestResult<IAppointmentRequest[]>> => {
   try {
-    if (currentUser.user_type !== 'client') {
+    if (!isClientUserType(currentUser.user_type)) {
       return { success: false, error: 'Only client users can access this endpoint' };
     }
 
@@ -1193,7 +1201,7 @@ export const getAppointmentRequestDetails = withAuth(async (
   requestId: string
 ): Promise<AppointmentRequestResult<IAppointmentRequest>> => {
   try {
-    if (currentUser.user_type !== 'client') {
+    if (!isClientUserType(currentUser.user_type)) {
       return { success: false, error: 'Only client users can access this endpoint' };
     }
 
@@ -1281,7 +1289,7 @@ export const cancelAppointmentRequest = withAuth(async (
   data: CancelAppointmentRequestInput
 ): Promise<AppointmentRequestResult<void>> => {
   try {
-    if (currentUser.user_type !== 'client') {
+    if (!isClientUserType(currentUser.user_type)) {
       return { success: false, error: 'Only client users can cancel appointment requests' };
     }
 
@@ -1548,7 +1556,7 @@ export const getAvailableServicesAndTickets = withAuth(async (
   }>;
 }>> => {
   try {
-    if (currentUser.user_type !== 'client') {
+    if (!isClientUserType(currentUser.user_type)) {
       return { success: false, error: 'Only client users can access this endpoint' };
     }
 
@@ -1644,7 +1652,7 @@ export const getAvailableDatesForService = withAuth(async (
   userTimezone?: string
 ): Promise<AppointmentRequestResult<string[]>> => {
   try {
-    if (currentUser.user_type !== 'client') {
+    if (!isClientUserType(currentUser.user_type)) {
       return { success: false, error: 'Only client users can access this endpoint' };
     }
 
@@ -1688,7 +1696,7 @@ export const getAppointmentRequestsByTicketId = withAuth(async (
   ticketId: string
 ): Promise<AppointmentRequestResult<IAppointmentRequest[]>> => {
   try {
-    if (currentUser.user_type !== 'client') {
+    if (!isClientUserType(currentUser.user_type)) {
       return { success: false, error: 'Only client users can access this endpoint' };
     }
 
@@ -1784,7 +1792,7 @@ export const getAvailableTimeSlotsForDate = withAuth(async (
   }>;
 }>> => {
   try {
-    if (currentUser.user_type !== 'client') {
+    if (!isClientUserType(currentUser.user_type)) {
       return { success: false, error: 'Only client users can access this endpoint' };
     }
 

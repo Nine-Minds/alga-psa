@@ -32,7 +32,8 @@
     "to": "Naar",
     "today": "Vandaag",
     "total": "Totaal",
-    "unknown": "Onbekend"
+    "unknown": "Onbekend",
+    "recordUnavailable": "Niet gevonden, of u hebt geen toegang"
   },
   "counts": {
     "adjustments": "{{count}} aanpassing(en)",
@@ -588,7 +589,32 @@
       "returnLocationRequired": "Selecteer een locatie voordat u de retour ontvangt.",
       "returnedUnitNotFound": "Geretourneerde voorraadeenheid niet gevonden. Vernieuw de pagina en kies een andere eenheid.",
       "returnedUnitRequired": "Het ID van de geretourneerde eenheid is verplicht.",
-      "vendorRequired": "Selecteer een leverancier voordat u de RMA verstuurt."
+      "vendorRequired": "Selecteer een leverancier voordat u de RMA verstuurt.",
+      "warrantyUnitTracked": "Deze RMA is voor een voorraadeenheid. Gebruik de RMA-acties van de voorraadeenheid.",
+      "warrantyStockTrackedAsset": "Dit apparaat is uit voorraad verkocht. Open in plaats daarvan een RMA vanaf de bijbehorende voorraadeenheid.",
+      "warrantyNotClientOwned": "Garantieclaims zijn voor apparatuur van de klant.",
+      "warrantyNoCustody": "Het apparaat is niet in bewaring. Ontvang eerst de apparatuur.",
+      "warrantyCustodyWrongState": "Het apparaat bevindt zich niet op de juiste plek voor deze stap. Vernieuw de pagina en controleer de bewaring.",
+      "warrantyLocationRequired": "Kies waar het apparaat nu is, zodat het terug ontvangen kan worden.",
+      "warrantyInvalidTransition": "Die stap is niet beschikbaar in de huidige status van de RMA. Vernieuw de pagina en probeer het opnieuw.",
+      "warrantyReviewClose": "Keur de claim goed of wijs hem af voordat u hem sluit.",
+      "duplicateReference": "Die RMA-referentie of dat nummer is al in gebruik.",
+      "checkViolation": "Die waarde is niet toegestaan voor deze RMA.",
+      "ticketNotFound": "Ticket niet gevonden.",
+      "noTicket": "Deze RMA is niet aan een ticket gekoppeld.",
+      "referenceRequired": "Voeg eerst het dossiernummer van de leverancier toe.",
+      "warrantyClaimUnitAction": "Dit is een garantieclaim op apparatuur van de klant. Gebruik de garantieacties van de RMA.",
+      "warrantyReasonRequired": "Beschrijf wat er mis is met het apparaat.",
+      "warrantyDenialReasonRequired": "Geef de reden waarom de claim niet gedekt is.",
+      "warrantyCarrierRequired": "Voer de vervoerder in.",
+      "warrantyTrackingRequired": "Voer het trackingnummer in.",
+      "warrantyReplacementSerialRequired": "Voer het serienummer van het vervangende apparaat in.",
+      "warrantyDateFormat": "Gebruik het formaat JJJJ-MM-DD.",
+      "warrantyDateInvalid": "Dat is geen geldige datum.",
+      "warrantyInputInvalid": "Sommige gegevens zijn ongeldig. Controleer ze en probeer het opnieuw.",
+      "baseUrlMissing": "De applicatie-URL is niet geconfigureerd.",
+      "vendorSystemNotFound": "Dat systeem voor leveranciersdossiers is niet beschikbaar.",
+      "vendorSystemTemplateInvalid": "De linksjabloon van dat systeem kan niet voor een leveranciersdossier worden gebruikt."
     },
     "salesOrders": {
       "clientRequired": "Selecteer een klant voordat u de verkooporder aanmaakt.",
@@ -1255,7 +1281,9 @@
       "type": "Type",
       "vendor": "Leverancier",
       "creditAtStake": "Krediet op het spel",
-      "rmaNumber": "RMA #"
+      "rmaNumber": "RMA #",
+      "ticket": "Ticket",
+      "returnBy": "Retour vóór"
     },
     "deadUnitsOwed": "Openstaande defecte eenheden",
     "fields": {
@@ -1300,11 +1328,128 @@
       "replaced": "Vervangen",
       "credited": "Gecrediteerd",
       "charged": "In rekening gebracht",
-      "closed": "Gesloten"
+      "closed": "Gesloten",
+      "warrantyReview": "Garantiebeoordeling",
+      "repaired": "Gerepareerd"
     },
     "ageAtVendor": "{{days}} d bij leverancier",
     "filters": {
       "statusActive": "RMA-zaken met status {{status}} worden weergegeven."
+    },
+    "detail": {
+      "title": "RMA {{id}}",
+      "reference": "RMA-referentie",
+      "product": "Product",
+      "returnedSerial": "Serienummer geretourneerde eenheid",
+      "opened": "Geopend",
+      "updated": "Bijgewerkt",
+      "age": "Leeftijd (dagen)",
+      "reason": "Reden",
+      "viewUnit": "Eenheid bekijken",
+      "viewAsset": "Asset bekijken"
+    },
+    "tabs": {
+      "all": "Alle",
+      "review": "Garantiebeoordeling",
+      "inProgress": "In behandeling",
+      "closed": "Gesloten"
+    },
+    "warranty": {
+      "openDetail": "Openen",
+      "updated": "RMA bijgewerkt.",
+      "updateFailed": "RMA kon niet worden bijgewerkt.",
+      "printTag": "RMA-label afdrukken",
+      "printTagFailed": "RMA-label kon niet worden afgedrukt.",
+      "popupBlocked": "Sta pop-ups toe om het label te bekijken.",
+      "printSlip": "Retourbon afdrukken",
+      "mirrorToTicket": "Leveranciersdossier naar ticket spiegelen",
+      "mirrored": "Leveranciersdossier toegevoegd aan het ticket.",
+      "mirrorFailed": "Leveranciersdossier kon niet aan het ticket worden toegevoegd.",
+      "mirrorSystem": "Systeem voor leveranciersdossier",
+      "mirrorSystemGeneric": "Algemene link",
+      "assetLink": "Asset: {{name}}",
+      "ticketLink": "Ticket: {{number}}",
+      "timeline": "Geschiedenis",
+      "noEvents": "Nog geen geschiedenis.",
+      "confirmReceived": "Bevestig dat het apparaat op kantoor is. De bewaring moet op kantoor zijn.",
+      "confirmCredit": "Registreer dat de leverancier dit apparaat heeft gecrediteerd. De bewaringsperiode wordt afgesloten als afgevoerd.",
+      "actions": {
+        "approveStandard": "Goedkeuren (standaard)",
+        "approveAdvance": "Goedkeuren (vervroegde vervanging)",
+        "deny": "Claim afwijzen",
+        "cancel": "Claim annuleren",
+        "markDeviceReceived": "Apparaat als ontvangen markeren",
+        "shipToVendor": "Naar leverancier verzenden",
+        "receiveReplacement": "Vervanging ontvangen",
+        "recordRepair": "Reparatie registreren",
+        "recordCredit": "Leverancierscredit registreren",
+        "returnToClient": "Terug naar klant",
+        "close": "RMA sluiten"
+      },
+      "events": {
+        "opened": "Claim geopend",
+        "warrantyApproved": "Garantie goedgekeurd",
+        "warrantyDenied": "Garantie afgewezen",
+        "deviceReceived": "Apparaat ontvangen",
+        "shippedOutbound": "Naar leverancier verzonden",
+        "vendorCaseRecorded": "Leveranciersdossier geregistreerd",
+        "replacementReceived": "Vervanging ontvangen",
+        "repairReceived": "Reparatie ontvangen",
+        "vendorCredited": "Door leverancier gecrediteerd",
+        "returnedToClient": "Teruggestuurd naar klant",
+        "closed": "Gesloten",
+        "note": "Notitie"
+      },
+      "outcome": {
+        "covered": "Gedekt",
+        "notCovered": "Niet gedekt",
+        "unknown": "Onbekend"
+      },
+      "closeReason": {
+        "resolved": "Opgelost",
+        "warrantyDenied": "Garantie afgewezen",
+        "cancelled": "Geannuleerd",
+        "duplicate": "Duplicaat",
+        "vendorCredited": "Door leverancier gecrediteerd"
+      },
+      "fields": {
+        "outcome": "Garantiebeslissing",
+        "decidedAt": "Beslist op",
+        "denialReason": "Reden van afwijzing",
+        "vendorRef": "RMA-referentie leverancier",
+        "returnBy": "Retour vóór",
+        "outbound": "Uitgaande zending",
+        "inbound": "Inkomende zending",
+        "replacementSerial": "Serienummer vervanging",
+        "returnShipTo": "Retouradres",
+        "closedReason": "Reden van sluiting",
+        "cancelReason": "Reden",
+        "carrier": "Vervoerder",
+        "tracking": "Trackingnummer",
+        "model": "Model",
+        "manufacturer": "Fabrikant",
+        "warrantyEnd": "Einddatum garantie",
+        "inboundCarrier": "Inkomende vervoerder",
+        "inboundTracking": "Inkomend trackingnummer",
+        "counterparty": "Teruggestuurd naar",
+        "closeReason": "Reden van sluiting",
+        "note": "Notitie"
+      },
+      "claim": {
+        "title": "Nieuwe garantieclaim",
+        "loadAssetsFailed": "Apparatuur kon niet worden geladen.",
+        "assetRequired": "Kies de apparatuur.",
+        "reasonRequired": "Beschrijf wat er mis is met het apparaat.",
+        "opened": "Garantieclaim geopend.",
+        "openFailed": "Garantieclaim kon niet worden geopend.",
+        "search": "Apparatuur zoeken",
+        "searchPlaceholder": "Naam, tag of serienummer",
+        "asset": "Apparatuur",
+        "assetPlaceholder": "Selecteer apparatuur…",
+        "track": "Volgen",
+        "stockHint": "Apparaten die uit voorraad zijn verkocht kunnen hier niet worden geclaimd. Gebruik in plaats daarvan RMA openen vanaf de voorraadeenheid.",
+        "submit": "Claim openen"
+      }
     }
   },
   "salesOrders": {
@@ -1564,6 +1709,10 @@
       "inProgress": "Opnieuw opbouwen…"
     },
     "receive": {
+      "searchProducts": "Producten of SKU zoeken...",
+      "noProductsFound": "Geen producten gevonden",
+      "searchLocations": "Locaties zoeken...",
+      "noLocationsFound": "Geen locaties gevonden",
       "costNonNegative": "Kostprijs per eenheid kan niet negatief zijn.",
       "failed": "Kon voorraad niet ontvangen.",
       "inProgress": "Ontvangen…",
@@ -1698,7 +1847,15 @@
       "failed": "Kan de retour niet opnieuw op voorraad nemen.",
       "restocking": "Opnieuw op voorraad nemen…",
       "submit": "Opnieuw op voorraad nemen"
-    }
+    },
+    "printLabel": "Label afdrukken",
+    "printWithTemplate": "Afdrukken met {{code}}",
+    "claimant": {
+      "project": "Bij project {{number}}",
+      "salesOrder": "Verkooporder {{number}}"
+    },
+    "printPopupBlocked": "Sta pop-ups toe om het label te openen.",
+    "printFailed": "Dit label kon niet worden afgedrukt."
   },
   "transfers": {
     "addLine": "Regel toevoegen",

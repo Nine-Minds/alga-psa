@@ -3,6 +3,7 @@
  */
 
 export * from './csv';
+export { IntegrationHealthBanner } from './IntegrationHealthBanner';
 export { AccountingMappingManager } from './accounting-mappings';
 export type {
   AccountingMappingContext,
@@ -32,6 +33,6 @@ export {
   ImapProviderForm,
   MicrosoftProviderForm
 } from './email';
-export type { EmailProvider, MicrosoftEmailProviderConfig, GoogleEmailProviderConfig, ImapEmailProviderConfig } from './email/types';
+export type { EmailProvider, MicrosoftEmailProviderConfig, GoogleEmailProviderConfig, ImapEmailProviderConfig, PublicEmailProvider, PublicMicrosoftConfig, PublicGoogleConfig, PublicImapConfig } from './email/types';
 export type { BaseGmailProviderFormData, CEGmailProviderFormData } from './email/providers/gmail/schemas';
 export * from './settings';

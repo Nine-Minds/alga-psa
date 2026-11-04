@@ -376,5 +376,8 @@
     "altVideoThumbnail": "Thumbnail of {{name}}",
     "pageCount_one": "{{count}} page",
     "pageCount_other": "{{count}} pages"
+  },
+  "skeleton": {
+    "cardLabel": "Document Skeleton Card"
   }
 }

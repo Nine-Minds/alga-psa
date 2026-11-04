@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   expireInvoicePaymentLinksForTerminalStatus: vi.fn(),
   loggerError: vi.fn(),
   loggerInfo: vi.fn(),
+  totalPaid: 0,
   invoice: {
     invoice_id: 'invoice-1',
     client_id: 'client-1',
@@ -37,9 +38,12 @@ vi.mock('@alga-psa/db', () => ({
       const query: any = {
         where: () => query,
         select: () => query,
+        sum: () => query,
         first: async () => tableName === 'contacts'
           ? { client_id: 'client-1' }
-          : mocks.invoice,
+          : tableName === 'invoice_payments'
+            ? { total: String(mocks.totalPaid) }
+            : mocks.invoice,
       };
       return query;
     },
@@ -67,6 +71,8 @@ describe('getClientPortalInvoicePaymentLink — offline payment methods', () => 
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.invoice.payment_method = null;
+    mocks.invoice.credit_applied = 0;
+    mocks.totalPaid = 0;
   });
 
   it.each(['check', 'bank_transfer'])(
@@ -98,4 +104,39 @@ describe('getClientPortalInvoicePaymentLink — offline payment methods', () => 
       expect(mocks.getOrCreateInvoicePaymentLinkUrl).toHaveBeenCalledWith('invoice-1');
     },
   );
+});
+
+describe('getClientPortalInvoicePaymentLink — amount due nets payments', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.invoice.payment_method = null;
+    mocks.invoice.credit_applied = 0;
+    mocks.totalPaid = 0;
+  });
+
+  it('reports no_amount_due when payments cover the whole total', async () => {
+    mocks.totalPaid = 10_000;
+
+    const result = await getClientPortalInvoicePaymentLink('invoice-1');
+
+    expect(result).toMatchObject({ success: false, error: { code: 'no_amount_due' } });
+    expect(mocks.getOrCreateInvoicePaymentLinkUrl).not.toHaveBeenCalled();
+  });
+
+  it('reports no_amount_due when credit plus payments cover the total', async () => {
+    mocks.invoice.credit_applied = 4_000;
+    mocks.totalPaid = 6_000;
+
+    const result = await getClientPortalInvoicePaymentLink('invoice-1');
+
+    expect(result).toMatchObject({ success: false, error: { code: 'no_amount_due' } });
+  });
+
+  it('keeps checkout available for a partial payment', async () => {
+    mocks.totalPaid = 1_000;
+
+    const result = await getClientPortalInvoicePaymentLink('invoice-1');
+
+    expect(result).toMatchObject({ success: true });
+  });
 });

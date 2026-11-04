@@ -9,7 +9,10 @@
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 
 export const LEVELIO_API_KEY_SECRET = 'levelio_api_key';
+/** Shared secret for the automation path (`X-Alga-Webhook-Secret` header). */
 export const LEVELIO_WEBHOOK_SECRET_KEY = 'levelio_webhook_secret';
+/** Per-tenant HMAC key for native Settings -> Webhooks (`X-Level-Signature`). */
+export const LEVELIO_WEBHOOK_SIGNING_SECRET_KEY = 'levelio_webhook_signing_secret';
 export const DEFAULT_LEVELIO_BASE_URL = 'https://api.level.io';
 
 export interface LevelIoGroup {
@@ -36,14 +39,16 @@ export interface LevelIoCpu {
   cores?: number;
 }
 
-export interface LevelIoDiskPartition {
-  label?: string;
-  mount_point?: string;
-  encrypted?: boolean;
-  primary?: boolean;
-  size?: number;
-  free_space?: number;
-  file_system?: string;
+/**
+ * Physical disk as documented in Level's v2 device schema (returned when the
+ * request sets `include_disks=true`). Level reports capacity only: there is no
+ * free space and no mount point. `size` is in bytes.
+ */
+export interface LevelIoDisk {
+  disk_type?: string | null;
+  model?: string | null;
+  serial_number?: string | null;
+  size?: number | null;
 }
 
 export interface LevelIoNetworkInterface {
@@ -97,7 +102,7 @@ export interface LevelIoDevice {
   platform?: 'Windows' | 'Mac' | 'Linux' | null;
   operating_system?: LevelIoOperatingSystem;
   cpus?: LevelIoCpu[];
-  disk_partitions?: LevelIoDiskPartition[];
+  disks?: LevelIoDisk[] | null;
   network_interfaces?: LevelIoNetworkInterface[];
   security?: LevelIoSecurity;
 }
