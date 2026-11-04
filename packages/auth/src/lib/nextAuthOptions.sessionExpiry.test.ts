@@ -193,6 +193,25 @@ describe('nextAuth session expiry sliding', () => {
     expect(getRejectionReasonMock).toHaveBeenCalledTimes(2);
   });
 
+  it('removes client-scoped identity from a refreshed internal session while retaining internal identity', async () => {
+    const token = {
+      id: 'internal-1',
+      tenant: 'tenant-1',
+      user_type: 'internal',
+      clientId: 'client-from-legacy-token',
+      contactId: 'linked-contact-1',
+      session_id: 'sess-1',
+      last_plan_check: Date.now(),
+      last_session_extend: Date.now(),
+    };
+
+    const refreshed = await runJwt(token);
+
+    expect(refreshed).toMatchObject({ id: 'internal-1', user_type: 'internal', tenant: 'tenant-1' });
+    expect(refreshed).not.toHaveProperty('clientId');
+    expect(refreshed).not.toHaveProperty('contactId');
+  });
+
   // Returning null here deletes the session cookie, so a pool timeout on this
   // one lookup used to sign a working tenant out. The request is still refused:
   // requireLiveSession repeats the check and returns no session (see

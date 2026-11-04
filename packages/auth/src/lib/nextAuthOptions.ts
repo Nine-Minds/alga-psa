@@ -1859,7 +1859,10 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                         tenant: user.tenant,
                         user_type: user.user_type,
                         clientId: clientId ?? undefined,
-                        contactId: user.contact_id,
+                        // A database contact link on an internal user is not
+                        // client-portal identity. Only client users may carry
+                        // client-scoped claims into a fresh session.
+                        contactId: user.user_type === 'client' ? user.contact_id : undefined,
                         tenantSlug: tenantSlugForUser,
                     };
 
@@ -2300,6 +2303,14 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
             }
             if (trackedSession === 'unverified') {
                 return token;
+            }
+
+            // Keep long-lived/refreshed tokens on the same identity contract
+            // as fresh credentials sessions. Internal users may have a legacy
+            // database contact link, but it never grants portal identity.
+            if (token.user_type === 'internal') {
+                delete token.clientId;
+                delete token.contactId;
             }
 
             // Slide the DB session expiry to track the rolling JWT so an active session
