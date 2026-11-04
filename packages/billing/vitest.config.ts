@@ -105,6 +105,10 @@ export default defineConfig({
       'src/lib/invoice-template-ast/fieldFormatting.country.test.ts',
       'src/lib/invoice-template-ast/react-renderer.country.test.tsx',
       'src/services/pdfGenerationService.renderCountry.test.ts',
+      // PDF document rendering must exercise the isolated Chromium policy, and
+      // its existing print-settings tests must remain part of the package lane.
+      'src/services/pdfGenerationService.ssrf.test.ts',
+      'src/services/pdfGenerationService.printSettings.test.ts',
       // Per-seat unit-rate rendering on the template detail page and the
       // currency-neutral template review step — listed for the same reason as above.
       'src/components/billing-dashboard/contracts/ContractTemplateDetail.unitRate.test.tsx',
@@ -191,6 +195,10 @@ export default defineConfig({
       {
         find: /^@alga-psa\/core\/fileNames$/,
         replacement: `${path.resolve(__dirname, '../core/src/lib/fileNames.ts')}`,
+      },
+      {
+        find: /^@alga-psa\/core\/net\/(.*)$/,
+        replacement: `${path.resolve(__dirname, '../core/src/lib/net')}/$1.ts`,
       },
       {
         find: /^@alga-psa\/core\/logger$/,

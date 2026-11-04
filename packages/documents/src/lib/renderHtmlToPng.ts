@@ -1,5 +1,18 @@
 import puppeteer from 'puppeteer';
+import type { Page } from 'puppeteer';
 import { fetchPublicBytes } from '@alga-psa/core/net/safeFetch';
+
+/** These flags close Chromium's speculative connection path as well as page requests. */
+export const ISOLATED_RENDERER_BROWSER_ARGS = [
+  '--no-sandbox',
+  '--disable-setuid-sandbox',
+  '--disable-dev-shm-usage',
+  '--disable-gpu',
+  '--disable-features=IsolateOrigins',
+  '--disable-site-isolation-trials',
+  '--proxy-server=socks5://127.0.0.1:1',
+  '--proxy-bypass-list=<-loopback>',
+];
 
 export interface RenderHtmlToPngOptions {
   width?: number;
@@ -111,6 +124,31 @@ export async function resolveRemoteAssets(
 }
 
 /**
+ * Prepare HTML for isolated rendering by fetching remote image assets through
+ * safeFetch and embedding only validated image bytes before Chromium sees it.
+ */
+export async function prepareHtmlForIsolatedRendering(
+  html: string,
+  opts: Pick<RenderHtmlToPngOptions, 'remoteAssets' | 'fetchAsset'> = {}
+): Promise<string> {
+  return resolveRemoteAssets(html, opts);
+}
+
+/** Apply the shared browser request boundary before setting page content. */
+export async function configureIsolatedPage(page: Page): Promise<void> {
+  await page.setJavaScriptEnabled(false);
+  await page.setRequestInterception(true);
+  page.on('request', (request) => {
+    const url = request.url();
+    if (url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('about:')) {
+      void request.continue();
+      return;
+    }
+    void request.abort('blockedbyclient');
+  });
+}
+
+/**
  * Renders HTML to a PNG using headless Chromium with the network closed:
  * JavaScript is disabled and every request except data:/blob:/about: is aborted, so
  * caller-controlled HTML cannot make the server issue requests (SSRF) or read responses back.
@@ -119,7 +157,7 @@ export async function resolveRemoteAssets(
 export async function renderHtmlToPng(html: string, opts: RenderHtmlToPngOptions = {}): Promise<Buffer> {
   const width = opts.width ?? 400;
   const height = opts.height ?? 300;
-  const safeHtml = await resolveRemoteAssets(html, opts);
+  const safeHtml = await prepareHtmlForIsolatedRendering(html, opts);
 
   let browser;
   try {
@@ -127,19 +165,7 @@ export async function renderHtmlToPng(html: string, opts: RenderHtmlToPngOptions
       headless: true,
       // --no-sandbox etc. are kept for the container runtime; they are unrelated to the SSRF
       // fix and intentionally out of scope for it.
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--disable-features=IsolateOrigins',
-        '--disable-site-isolation-trials',
-        // Defense in depth below request interception: route everything through a dead proxy
-        // (and do not bypass it for loopback) so no socket can be opened even by Chromium's own
-        // pre-connect logic for <iframe>/<object> navigations.
-        '--proxy-server=socks5://127.0.0.1:1',
-        '--proxy-bypass-list=<-loopback>',
-      ],
+      args: ISOLATED_RENDERER_BROWSER_ARGS,
     };
 
     // Use system chromium if available (Docker environment)
@@ -151,16 +177,7 @@ export async function renderHtmlToPng(html: string, opts: RenderHtmlToPngOptions
     const page = await browser.newPage();
     await page.setViewport({ width, height });
 
-    // Deny network by default.
-    await page.setJavaScriptEnabled(false);
-    await page.setRequestInterception(true);
-    page.on('request', (req) => {
-      const url = req.url();
-      if (url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('about:')) {
-        return void req.continue();
-      }
-      return void req.abort('blockedbyclient');
-    });
+    await configureIsolatedPage(page);
 
     const styledHtml = `
         <style>
