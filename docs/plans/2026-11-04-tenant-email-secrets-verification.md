@@ -223,6 +223,10 @@ code changed in this verification round.
 
 PR #3695 is already merged at head
 `62a2531483302ffab2af955ded503fb2df917f57` and does not include the subsequent
-migration repairs. Those existing migration changes are being published through
-a fresh PR; the PR URL and final documentation revision will be recorded after it
-is opened.
+migration repairs. The repairs are published separately in [PR #4198](https://github.com/Nine-Minds/alga-psa/pull/4198).
+The fresh authenticated browser pass and focused migration-history integration
+suite both ran against application code revision
+`90ce9ab9a4d577fc3d4e4b4217202c7f380892b1`; the only later change before the PR
+was opened was this verification record. PR #4198 was opened with head
+`a4df3fb0e3287d4565b30fb161eb91ceb932e204`. Its GitHub checks were still pending
+when this record was updated.
