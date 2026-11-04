@@ -23,6 +23,7 @@ import {
 import { resolveAssetTicketContactOptions } from '@alga-psa/shared/models/assetTicketContactModel';
 import { publishAssetChanged } from '../lib/assetChangeEvents';
 import { tenantDb } from '@alga-psa/db';
+import { isAssetGroupOperationAllowed } from '../lib/assetGroupAuthorization';
 import {
   actionError,
   permissionError,
@@ -64,6 +65,16 @@ async function withGroupErrors<T>(work: () => Promise<T>): Promise<T | AssetGrou
 function revalidateAssetPaths(): void {
   revalidatePath('/msp/assets');
   revalidatePath('/msp/clients');
+}
+
+const SCOPE_DENIED = { assetGroupScopeDenied: true } as const;
+function isScopeDenied(value: unknown): value is typeof SCOPE_DENIED {
+  return Boolean(value && typeof value === 'object' && 'assetGroupScopeDenied' in value);
+}
+function assetScopePermissionError(action: 'read' | 'update'): ActionPermissionError {
+  return action === 'read'
+    ? permissionError('Permission denied: Cannot read assets', 'msp/assets:errors.permissions.readAssets')
+    : permissionError('Permission denied: Cannot update assets', 'msp/assets:errors.permissions.updateAssets');
 }
 
 /**
@@ -126,6 +137,7 @@ async function withMemberEvents<T>(
   const before = await snapshotAssets(knex, tenant, watched);
 
   const result = await work();
+  if (isScopeDenied(result)) return result;
 
   const idsAfter = await listGroupMemberIds(knex, tenant, groupId).catch(() => [] as string[]);
   const all = Array.from(new Set([...watched, ...idsAfter]));
@@ -152,7 +164,11 @@ export const listAssetGroups = withAuth(async (
     return permissionError('Permission denied: Cannot read assets', 'msp/assets:errors.permissions.readAssets');
   }
   const { knex } = await createTenantKnex();
-  return listGroupsForClient(knex, tenant, clientId);
+  const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    if (!await isAssetGroupOperationAllowed(trx, tenant, user as any, { action: 'read', clientId })) return SCOPE_DENIED;
+    return listGroupsForClient(trx, tenant, clientId);
+  });
+  return isScopeDenied(result) ? assetScopePermissionError('read') : result;
 });
 
 export const getAssetGroup = withAuth(async (
@@ -164,7 +180,13 @@ export const getAssetGroup = withAuth(async (
     return permissionError('Permission denied: Cannot read assets', 'msp/assets:errors.permissions.readAssets');
   }
   const { knex } = await createTenantKnex();
-  return withGroupErrors(() => getGroupWithDetails(knex, tenant, groupId));
+  return withGroupErrors(async () => {
+    const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!await isAssetGroupOperationAllowed(trx, tenant, user as any, { action: 'read', groupId })) return SCOPE_DENIED;
+      return getGroupWithDetails(trx, tenant, groupId);
+    });
+    return isScopeDenied(result) ? assetScopePermissionError('read') : result;
+  });
 });
 
 export const getContactSharedWorkspaces = withAuth(async (
@@ -176,7 +198,16 @@ export const getContactSharedWorkspaces = withAuth(async (
     return permissionError('Permission denied: Cannot read assets', 'msp/assets:errors.permissions.readAssets');
   }
   const { knex } = await createTenantKnex();
-  return listContactSharedWorkspaces(knex, tenant, contactId);
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    const groups = await listContactSharedWorkspaces(trx, tenant, contactId);
+    const accessible: AssetGroup[] = [];
+    for (const group of groups) {
+      if (await isAssetGroupOperationAllowed(trx, tenant, user as any, { action: 'read', groupId: group.group_id })) {
+        accessible.push(group);
+      }
+    }
+    return accessible;
+  });
 });
 
 export const createAssetGroup = withAuth(async (
@@ -198,14 +229,17 @@ export const createAssetGroup = withAuth(async (
   const { knex } = await createTenantKnex();
   return withGroupErrors(async () => {
     const assetIds = input.assetIds ?? [];
-    const before = await snapshotAssets(knex, tenant, assetIds);
+    const before: AssetSnapshot = {};
     const group = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!await isAssetGroupOperationAllowed(trx, tenant, user as any, { action: 'update', clientId: input.clientId, assetIds })) return SCOPE_DENIED;
+      Object.assign(before, await snapshotAssets(trx, tenant, assetIds));
       const created = await createGroup(trx, tenant, { ...input, actorUserId: user.user_id });
       if (assetIds.length) {
         await addAssetsToGroupRows(trx, tenant, created.group_id, assetIds, { actorUserId: user.user_id });
       }
       return getGroupWithDetails(trx, tenant, created.group_id);
     });
+    if (isScopeDenied(group)) return assetScopePermissionError('update');
     const after = await snapshotAssets(knex, tenant, assetIds);
     for (const assetId of assetIds) {
       await publishAssetChanged(tenant, [assetId], {
@@ -233,9 +267,11 @@ export const updateAssetGroup = withAuth(async (
   const { knex } = await createTenantKnex();
   return withGroupErrors(async () => {
     const group = await withMemberEvents(knex, tenant, user.user_id, groupId, [], () => withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!await isAssetGroupOperationAllowed(trx, tenant, user as any, { action: 'update', groupId })) return SCOPE_DENIED;
       await updateGroupRow(trx, tenant, groupId, { ...input, actorUserId: user.user_id });
       return getGroupWithDetails(trx, tenant, groupId);
     }));
+    if (isScopeDenied(group)) return assetScopePermissionError('update');
     revalidateAssetPaths();
     return group;
   });
@@ -252,11 +288,14 @@ export const deleteAssetGroup = withAuth(async (
 
   const { knex } = await createTenantKnex();
   return withGroupErrors(async () => {
-    await withMemberEvents(knex, tenant, user.user_id, groupId, [], () =>
+    const result = await withMemberEvents(knex, tenant, user.user_id, groupId, [], () =>
       withTransaction(knex, async (trx: Knex.Transaction) =>
-        deleteGroupRow(trx, tenant, groupId, { actorUserId: user.user_id })
+        await isAssetGroupOperationAllowed(trx, tenant, user as any, { action: 'update', groupId })
+          ? deleteGroupRow(trx, tenant, groupId, { actorUserId: user.user_id })
+          : SCOPE_DENIED
       )
     );
+    if (isScopeDenied(result)) return assetScopePermissionError('update');
     revalidateAssetPaths();
     return { success: true as const };
   });
@@ -275,9 +314,11 @@ export const addAssetsToGroup = withAuth(async (
   const { knex } = await createTenantKnex();
   return withGroupErrors(async () => {
     const group = await withMemberEvents(knex, tenant, user.user_id, groupId, assetIds, () => withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!await isAssetGroupOperationAllowed(trx, tenant, user as any, { action: 'update', groupId, assetIds })) return SCOPE_DENIED;
       await addAssetsToGroupRows(trx, tenant, groupId, assetIds, { actorUserId: user.user_id });
       return getGroupWithDetails(trx, tenant, groupId);
     }));
+    if (isScopeDenied(group)) return assetScopePermissionError('update');
     revalidateAssetPaths();
     return group;
   });
@@ -296,9 +337,11 @@ export const removeAssetFromGroup = withAuth(async (
   const { knex } = await createTenantKnex();
   return withGroupErrors(async () => {
     const group = await withMemberEvents(knex, tenant, user.user_id, groupId, [assetId], () => withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!await isAssetGroupOperationAllowed(trx, tenant, user as any, { action: 'update', groupId, assetIds: [assetId] })) return SCOPE_DENIED;
       await removeAssetFromGroupRow(trx, tenant, groupId, assetId, { actorUserId: user.user_id });
       return getGroupWithDetails(trx, tenant, groupId);
     }));
+    if (isScopeDenied(group)) return assetScopePermissionError('update');
     revalidateAssetPaths();
     return group;
   });
@@ -317,9 +360,11 @@ export const setAssetGroupOwner = withAuth(async (
   const { knex } = await createTenantKnex();
   return withGroupErrors(async () => {
     const group = await withMemberEvents(knex, tenant, user.user_id, groupId, [], () => withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!await isAssetGroupOperationAllowed(trx, tenant, user as any, { action: 'update', groupId })) return SCOPE_DENIED;
       await setGroupOwner(trx, tenant, groupId, contactId, { actorUserId: user.user_id });
       return getGroupWithDetails(trx, tenant, groupId);
     }));
+    if (isScopeDenied(group)) return assetScopePermissionError('update');
     revalidateAssetPaths();
     return group;
   });
@@ -338,9 +383,11 @@ export const addAssetGroupUser = withAuth(async (
   const { knex } = await createTenantKnex();
   return withGroupErrors(async () => {
     const group = await withMemberEvents(knex, tenant, user.user_id, groupId, [], () => withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!await isAssetGroupOperationAllowed(trx, tenant, user as any, { action: 'update', groupId })) return SCOPE_DENIED;
       await addGroupUser(trx, tenant, groupId, contactId);
       return getGroupWithDetails(trx, tenant, groupId);
     }));
+    if (isScopeDenied(group)) return assetScopePermissionError('update');
     revalidateAssetPaths();
     return group;
   });
@@ -359,9 +406,11 @@ export const removeAssetGroupUser = withAuth(async (
   const { knex } = await createTenantKnex();
   return withGroupErrors(async () => {
     const group = await withMemberEvents(knex, tenant, user.user_id, groupId, [], () => withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!await isAssetGroupOperationAllowed(trx, tenant, user as any, { action: 'update', groupId })) return SCOPE_DENIED;
       await removeGroupUser(trx, tenant, groupId, contactId);
       return getGroupWithDetails(trx, tenant, groupId);
     }));
+    if (isScopeDenied(group)) return assetScopePermissionError('update');
     revalidateAssetPaths();
     return group;
   });
