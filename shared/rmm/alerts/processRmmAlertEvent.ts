@@ -21,6 +21,7 @@ import {
   publishTicketTransitionsAfterCommit,
 } from '../../lib/tickets/ticketLifecycleEvents';
 import { ticketUpdateStamp } from '../../lib/tickets/ticketUpdateStamp';
+import { conditionTriggerDisposition } from './conditionLifecycle';
 
 /**
  * Single entry point for normalized RMM alert events (webhooks and the
@@ -107,7 +108,7 @@ async function processTriggered(
 ): Promise<RmmAlertProcessingResult> {
   const { knex, deps } = ctx;
   const warnings: string[] = [];
-  const context = await resolveAlertContext(knex, event);
+  let resolvedAssetId: string | null = null;
   const dedupKey = computeDedupKey(event);
 
   const result = await withTransaction(knex, async (trx): Promise<RmmAlertProcessingResult> => {
@@ -122,11 +123,14 @@ async function processTriggered(
         scope_key: String(event.raw.scopeKey ?? ''),
         subject_key: String(event.raw.subjectKey ?? ''),
         condition_key: String(event.raw.conditionKey ?? ''),
-        current_outage_id: String(event.raw.outageId ?? ''),
-      }).where({ state: 'firing' }).forUpdate().first('state');
-      if (!current) return { outcome: 'skipped', ticketId: null, warnings };
+      }).forUpdate().first('state', 'current_outage_id');
+      const disposition = conditionTriggerDisposition(event, current);
+      if (disposition === 'defer') return { outcome: 'deferred', ticketId: null, warnings };
+      if (disposition === 'obsolete') return { outcome: 'skipped', ticketId: null, warnings };
     }
 
+    const context = await resolveAlertContext(trx, event);
+    resolvedAssetId = context.assetId;
     const existing = await db.table('rmm_alerts')
       .where({
         integration_id: event.integrationId,
@@ -302,8 +306,8 @@ async function processTriggered(
     };
   });
 
-  if (result.outcome !== 'suppressed' && result.outcome !== 'skipped') {
-    await publishSafely(ctx, 'RMM_ALERT_TRIGGERED', event, result, context.assetId);
+  if (result.outcome !== 'suppressed' && result.outcome !== 'skipped' && result.outcome !== 'deferred') {
+    await publishSafely(ctx, 'RMM_ALERT_TRIGGERED', event, result, resolvedAssetId);
     if (result.outcome === 'ticket_created' && result.ticketId) {
       await publishRmmTicketCreated({
         tenantId: event.tenantId,
@@ -312,7 +316,7 @@ async function processTriggered(
       });
     }
     if (result.outcome === 'ticket_created' && result.matchedRuleId) {
-      await notifySafely(ctx, event, result, context.assetId);
+      await notifySafely(ctx, event, result, resolvedAssetId);
     }
   }
 

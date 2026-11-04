@@ -979,7 +979,7 @@ describe('observation lifecycle through the RMM ticket pipeline (DB integration)
     });
     const deliver = async (transition: NormalizedRmmAlertEvent) => {
       const processed = await processRmmAlertEvent(context, transition, { reprocessSuppressed: true });
-      if (transition.raw.transitionId) {
+      if (transition.raw.transitionId && processed.outcome !== 'deferred') {
         await acknowledgeConditionTransition(context, {
           tenantId, integrationId: lifecycleIntegrationId, transitionId: String(transition.raw.transitionId),
         });
@@ -1354,8 +1354,8 @@ describe('observation lifecycle through the RMM ticket pipeline (DB integration)
     expect(capturedRecheck.events[0].raw.__alga_condition_recheck).toBe(true);
     const captured = capturedRecheck.events[0];
 
-    // This is the successful outer precheck immediately before a concurrent
-    // unmapping wins the condition lock.
+    // The event was fetched while firing, before a concurrent unmapping wins
+    // the condition lock.
     expect(await tenantTable('rmm_condition_states').where({ tenant: tenantId,
       integration_id: integration, scope_key: scope, subject_key: subject,
       condition_key: 'device_offline', current_outage_id: outageId, state: 'firing' }).first('state')).toBeTruthy();
@@ -1365,10 +1365,10 @@ describe('observation lifecycle through the RMM ticket pipeline (DB integration)
       successfulScopes: [], unmanagedScopes: [scope], unmanagedObservedAt: '2026-11-03T00:03:00.000Z',
       graceMs: 0, maxEvidenceGapMs: 300_000, now: new Date('2026-11-03T00:03:00.000Z') });
 
-    // Simulate the event that already passed reconciliation's outer check;
-    // the transactional condition lock must reject it after unmapping.
+    // Delivery of that previously fetched event must defer under the pipeline's
+    // condition lock after unmapping, preserving the pending recheck.
     const stalePipelineResult = await processRmmAlertEvent({ knex: db }, captured, { reprocessSuppressed: true });
-    expect(stalePipelineResult.outcome).toBe('skipped');
+    expect(stalePipelineResult.outcome).toBe('deferred');
     await deliver([captured]);
     const stillSuppressed = await tenantTable('rmm_alerts').where({ tenant: tenantId,
       integration_id: integration, external_alert_id: alertId }).first();
@@ -1389,4 +1389,119 @@ describe('observation lifecycle through the RMM ticket pipeline (DB integration)
     expect(ticketed.status).toBe('active');
     expect(ticketed.ticket_id).toBeTruthy();
   });
+
+  it.each(['OFFLINE', 'ONLINE'] as const)(
+    'retains an undelivered trigger while unmanaged and resumes with %s evidence',
+    async (resumedState) => {
+      const integration = uuidv4();
+      const scope = `local:pending-${uuidv4()}`;
+      const subject = `pending-device-${uuidv4()}`;
+      await tenantTable('rmm_integrations').insert({
+        tenant: tenantId, integration_id: integration, provider: `pending-${integration}`,
+        is_active: true, settings: JSON.stringify({ offlineGraceMinutes: 0 }),
+      });
+      const mapSite = () => tenantTable('rmm_organization_mappings').insert({
+        tenant: tenantId, mapping_id: uuidv4(), integration_id: integration,
+        external_organization_id: scope, client_id: orgOnlyClientId,
+        auto_sync_assets: false, auto_create_tickets: false,
+      });
+      await mapSite();
+      await tenantTable('rmm_alert_rules').insert({
+        tenant: tenantId, rule_id: uuidv4(), integration_id: integration,
+        name: 'Pending delivery after remap', is_active: true, priority_order: 0,
+        conditions: JSON.stringify({ activityTypes: ['DEVICE_OFFLINE'] }),
+        actions: JSON.stringify({ createTicket: true, boardId, priorityOverride: priorityHighId, autoResolveTicket: true }),
+      });
+
+      let clock = Date.parse('2026-11-03T15:00:00.000Z');
+      let deviceState: string = 'OFFLINE';
+      const adapter = createUniFiAlertFetcher({
+        getKnex: async () => db,
+        now: () => { const now = new Date(clock); clock += 1_000; return now; },
+        createClient: async () => ({ listDevices: async () => [{
+          id: subject, macAddress: null, ipAddress: null, name: subject, model: 'USW-Pro-24',
+          serialNumber: null, state: deviceState, firmwareVersion: null, firmwareUpdatable: null,
+          features: ['switching'], uplinkDeviceId: null, stateChangedAt: null, raw: {},
+        }] }),
+      });
+      const args = { tenantId, integrationId: integration };
+      const snapshot = () => adapter.fetchActiveAlertSnapshot!(args);
+      const published: string[] = [];
+      const context = { knex: db, deps: {
+        publishRmmAlertEvent: async ({ eventType }: { eventType: string }) => { published.push(eventType); },
+      } };
+      const deliver = (events: NormalizedRmmAlertEvent[]) => {
+        registerRmmAlertFetcher('unifi', {
+          fetchActiveAlerts: async () => events,
+          fetchActiveAlertSnapshot: async () => ({ events, heldExternalAlertIds: [] }),
+        });
+        return runRmmAlertReconciliation(context, { ...args, provider: 'unifi' });
+      };
+      const states = () => tenantTable('rmm_condition_states').where({
+        integration_id: integration, scope_key: scope, subject_key: subject, condition_key: 'device_offline',
+      });
+      const alerts = () => tenantTable('rmm_alerts').where({ integration_id: integration });
+      const transitions = () => tenantTable('rmm_condition_transitions').where({ integration_id: integration });
+
+      // Simulate a worker interruption after the trigger commits, before any
+      // pipeline delivery. Management removal must defer, rather than lose, it.
+      const captured = (await snapshot()).events[0];
+      expect(captured.kind).toBe('triggered');
+      const transitionId = String(captured.raw.transitionId);
+      await tenantTable('rmm_organization_mappings').where({ integration_id: integration }).delete();
+      expect((await snapshot()).events).toEqual([]);
+      expect((await states().first()).state).toBe('unmanaged');
+      expect((await transitions().where({ transition_id: transitionId }).first()).status).toBe('pending');
+
+      // An event already fetched by another poll must also defer inside the
+      // pipeline transaction, without publication or outbox acknowledgement.
+      expect((await processRmmAlertEvent(context, captured)).outcome).toBe('deferred');
+      expect((await deliver([captured])).ingested).toBe(0);
+      expect(await alerts()).toHaveLength(0);
+      expect(published).toEqual([]);
+      expect((await transitions().where({ transition_id: transitionId }).first()).status).toBe('pending');
+
+      await mapSite();
+      deviceState = 'UPDATING';
+      expect((await snapshot()).events).toEqual([]);
+      expect((await deliver([captured])).ingested).toBe(0);
+      expect(await alerts()).toHaveLength(0);
+      expect((await states().first()).current_external_alert_id).toBe(captured.externalAlertId);
+      expect((await transitions().where({ transition_id: transitionId }).first()).status).toBe('pending');
+
+      deviceState = resumedState;
+      const resumed = await snapshot();
+      if (resumedState === 'OFFLINE') {
+        expect(resumed.events).toHaveLength(1);
+        expect(resumed.events[0].raw.transitionId).toBe(transitionId);
+        expect(resumed.events[0].externalAlertId).toBe(captured.externalAlertId);
+        const results = await Promise.all([deliver(resumed.events), deliver(resumed.events)]);
+        expect(results.map((result) => result.ingested).sort()).toEqual([0, 1]);
+        const ticketed = await alerts().first();
+        expect(await alerts()).toHaveLength(1);
+        expect(ticketed.ticket_id).toBeTruthy();
+        expect((await states().first()).current_outage_id).toBe(captured.raw.outageId);
+        expect((await snapshot()).events).toEqual([]);
+        expect(await transitions()).toHaveLength(1);
+
+        deviceState = 'ONLINE';
+        await deliver((await snapshot()).events);
+        const recovered = await alerts().first();
+        expect(recovered.status).toBe('auto_resolved');
+        expect(recovered.ticket_id).toBe(ticketed.ticket_id);
+        expect((await processRmmAlertEvent(context, captured)).outcome).toBe('skipped');
+        expect((await alerts().first()).status).toBe('auto_resolved');
+      } else {
+        // Confirmed recovery supersedes the deferred trigger. Its recovery is
+        // drained without ever creating a ticket for an obsolete outage.
+        expect(resumed.events.map((event) => event.kind)).toEqual(['reset']);
+        await deliver(resumed.events);
+        expect(await alerts()).toHaveLength(0);
+        expect(published).toEqual([]);
+        expect((await processRmmAlertEvent(context, captured)).outcome).toBe('skipped');
+      }
+      expect((await states().first()).state).toBe('healthy');
+      expect((await transitions()).every((row: { status: string }) => row.status === 'delivered')).toBe(true);
+    },
+  );
 });

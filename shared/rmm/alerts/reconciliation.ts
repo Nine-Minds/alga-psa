@@ -89,31 +89,14 @@ export async function runRmmAlertReconciliation(
     };
     // One bad alert must not abort the cycle for every alert behind it.
     try {
-      if (stamped.raw.__alga_condition_lifecycle === true && stamped.kind === 'triggered') {
-        const current = await tenantDb(ctx.knex, args.tenantId).table('rmm_condition_states').where({
-          integration_id: args.integrationId,
-          scope_key: String(stamped.raw.scopeKey ?? ''),
-          subject_key: String(stamped.raw.subjectKey ?? ''),
-          condition_key: String(stamped.raw.conditionKey ?? ''),
-          current_outage_id: String(stamped.raw.outageId ?? ''),
-        }).where({ state: 'firing' }).first('state');
-        if (!current) {
-          if (stamped.raw.transitionId) {
-            await acknowledgeConditionTransition(ctx, {
-              tenantId: args.tenantId, integrationId: args.integrationId, transitionId: String(stamped.raw.transitionId),
-            });
-          }
-          continue;
-        }
-      }
       const result = await processRmmAlertEvent(ctx, stamped, { reprocessSuppressed: true });
-      if (stamped.raw.__alga_condition_lifecycle === true && stamped.raw.transitionId) {
+      if (stamped.raw.__alga_condition_lifecycle === true && stamped.raw.transitionId && result.outcome !== 'deferred') {
         await acknowledgeConditionTransition(ctx, {
           tenantId: args.tenantId, integrationId: args.integrationId, transitionId: String(stamped.raw.transitionId),
         });
       }
       warnings.push(...result.warnings);
-      if (result.outcome !== 'skipped') ingested += 1;
+      if (result.outcome !== 'skipped' && result.outcome !== 'deferred') ingested += 1;
     } catch (error) {
       warnings.push(`Failed to ingest alert ${event.externalAlertId}: ${errorMessage(error)}`);
     }

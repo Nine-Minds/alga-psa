@@ -36,6 +36,16 @@ type ConditionRow = {
   event_payload: Record<string, unknown> | string | null;
 };
 
+/** Management removal pauses delivery; only recovery or a different outage supersedes it. */
+export function conditionTriggerDisposition(
+  event: NormalizedRmmAlertEvent,
+  current: Pick<ConditionRow, 'state' | 'current_outage_id'> | undefined,
+): 'deliver' | 'defer' | 'obsolete' {
+  if (!current || current.current_outage_id !== event.raw.outageId) return 'obsolete';
+  if (current.state === 'unmanaged') return 'defer';
+  return current.state === 'firing' ? 'deliver' : 'obsolete';
+}
+
 /**
  * Persist observed conditions and atomically append alert transitions. Network
  * fetches belong in adapters and must finish before calling this function.
@@ -418,11 +428,16 @@ export async function reconcileConditionObservations(args: {
           scope_key: row.scope_key,
           subject_key: row.subject_key,
           condition_key: row.condition_key,
-          current_outage_id: row.outage_id,
-          state: 'firing',
         })
-        .first('state');
-      if (!current) {
+        .first('state', 'current_outage_id');
+      const disposition = conditionTriggerDisposition(event, current);
+      if (disposition === 'defer') {
+        // This head transition still belongs to the outage. Keep it pending
+        // and block later delivery until management and failing evidence resume.
+        firstPendingByCondition.add(identity);
+        continue;
+      }
+      if (disposition === 'obsolete') {
         await db
           .table('rmm_condition_transitions')
           .where({ transition_id: row.transition_id })
