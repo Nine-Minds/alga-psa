@@ -794,6 +794,44 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
       ]);
   });
 
+  it('server action records the first reversal audit with the entry timestamp and history actor', async () => {
+    const f = await seed();
+    const sheetId = uuidv4();
+    const entryId = uuidv4();
+    await tenantTable(f.tenantId, 'users').where({ user_id: f.subject }).update({ reports_to: f.actor });
+    await tenantTable(f.tenantId, 'time_sheets').insert({
+      tenant: f.tenantId, id: sheetId, user_id: f.subject, period_id: f.periodId,
+      approval_status: 'APPROVED', approved_by: f.actor, approved_at: new Date(),
+      reversal_reason: null, reversed_at: null, reversed_by: null,
+    });
+    await tenantTable(f.tenantId, 'time_entries').insert({
+      tenant: f.tenantId, entry_id: entryId, user_id: f.subject, time_sheet_id: sheetId,
+      start_time: new Date().toISOString(), end_time: new Date().toISOString(), work_date: '2026-01-06',
+      work_timezone: 'UTC', approval_status: 'APPROVED', invoiced: false,
+      created_at: db.fn.now(), updated_at: new Date('2025-01-01T00:00:00Z'),
+    });
+    grants.byUser.set(f.actor, new Set(['time_sheet:reverse', 'time_sheet:approve']));
+    vi.spyOn(algaDb, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: f.tenantId } as any);
+    const actionUser = { user_id: f.actor, tenant: f.tenantId, user_type: 'internal' } as any;
+    const startedAt = Date.now();
+    await expect(runWithApiKeyUser(actionUser, () => reverseTimeSheetApproval(sheetId, f.actor, 'Correct the hours')))
+      .resolves.toBeUndefined();
+    const finishedAt = Date.now();
+
+    const sheet = await tenantTable(f.tenantId, 'time_sheets').where({ id: sheetId }).first();
+    expect(sheet).toMatchObject({
+      approval_status: 'CHANGES_REQUESTED', approved_at: null, approved_by: null,
+      reversal_reason: 'Correct the hours', reversed_by: f.actor,
+    });
+    expect(sheet.reversed_at).toBeInstanceOf(Date);
+    expect(sheet.reversed_at.getTime()).toBeGreaterThanOrEqual(startedAt);
+    expect(sheet.reversed_at.getTime()).toBeLessThanOrEqual(finishedAt);
+    expect(await tenantTable(f.tenantId, 'time_entries').where({ entry_id: entryId }).first())
+      .toMatchObject({ approval_status: 'CHANGES_REQUESTED', updated_at: sheet.reversed_at });
+    expect(await tenantTable(f.tenantId, 'time_sheet_comments').where({ time_sheet_id: sheetId }).select('user_id', 'comment', 'is_approver'))
+      .toEqual([{ user_id: f.actor, comment: 'Approval reversed: Correct the hours', is_approver: true }]);
+  });
+
   it('bulk route performs approvals and persists approval metadata, entry state, and comment', async () => {
     const f = await seed();
     const sheetId = uuidv4();
