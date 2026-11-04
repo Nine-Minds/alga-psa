@@ -466,7 +466,9 @@
         "operationConflict": "This comment conflicts with an earlier attempt. Reload and try again.",
         "audienceUnresolved": "Choose who can see this comment before posting it.",
         "unknownOutcome": "We could not confirm the comment was posted. Check the conversation before sending it again."
-      }
+      },
+      "unavailable": "This ticket is not available.",
+      "back": "Back to Customer Tickets"
     }
   },
   "responseState": {

@@ -285,6 +285,8 @@ export interface TicketScreenBehavior {
    * default: writable (absent / false).
    */
   readOnly?: boolean;
+  /** Conversation authors are refreshed with the conversation after writes. */
+  liveConversationAuthors?: boolean;
   /**
    * Fields this data source cannot write even for a writer (for example
    * `board_id`). Frozen fields render disabled. Names are the ticket field

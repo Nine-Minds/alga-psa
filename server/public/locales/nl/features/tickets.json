@@ -458,7 +458,9 @@
         "operationConflict": "Deze opmerking botst met een eerdere poging. Laad opnieuw en probeer het nog eens.",
         "audienceUnresolved": "Kies wie deze opmerking kan zien voordat u hem plaatst.",
         "unknownOutcome": "We konden niet bevestigen dat de opmerking is geplaatst. Controleer de conversatie voordat u hem opnieuw verstuurt."
-      }
+      },
+      "unavailable": "This ticket is not available.",
+      "back": "Back to Customer Tickets"
     }
   },
   "responseState": {

@@ -458,7 +458,9 @@
         "operationConflict": "Dieser Kommentar steht im Konflikt mit einem früheren Versuch. Neu laden und erneut versuchen.",
         "audienceUnresolved": "Wählen Sie, wer diesen Kommentar sehen kann, bevor Sie ihn veröffentlichen.",
         "unknownOutcome": "Wir konnten nicht bestätigen, dass der Kommentar veröffentlicht wurde. Prüfen Sie die Unterhaltung, bevor Sie ihn erneut senden."
-      }
+      },
+      "unavailable": "This ticket is not available.",
+      "back": "Back to Customer Tickets"
     }
   },
   "responseState": {
