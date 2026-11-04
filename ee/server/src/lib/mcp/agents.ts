@@ -119,11 +119,19 @@ export async function createAgent(input: CreateAgentInput): Promise<AgentRecord>
         throw error;
       }
       if (admission.coManaged) {
-        const coManagedAdmission = await assertCoManagedSeatAdmission(trx, tenant, {
-          email: `mcp-agent-${agentId}@agents.alga.local`,
-          kind: 'user',
-        });
-        if (!coManagedAdmission.managed) throw new Error('Co-managed seat admission was not applied.');
+        try {
+          const coManagedAdmission = await assertCoManagedSeatAdmission(trx, tenant, {
+            email: `mcp-agent-${agentId}@agents.alga.local`,
+            kind: 'user',
+          });
+          if (!coManagedAdmission.managed) throw new Error('Co-managed seat admission was not applied.');
+        } catch (cause) {
+          if (cause instanceof Error && cause.name === 'CoManagedAdmissionError') {
+            const error = cause as Error & { code: string; statusCode: number };
+            error.statusCode = 403;
+          }
+          throw cause;
+        }
       }
 
       await db.table('users').insert({
