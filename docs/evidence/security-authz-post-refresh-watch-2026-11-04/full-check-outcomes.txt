@@ -1,0 +1,16 @@
+Full checks at current application/build tree a6d28a6ce24f681f2b3f0498e3d4fadbb7f43d92 (the later mitigation changes are documentation/evidence only; package-lock.json was already present and remains unstaged):
+
+1) cd server && npm run typecheck
+   Failed: Node heap exhausted at the default ~4 GiB limit; no source diagnostics preceded the resource failure.
+2) cd server && NODE_OPTIONS=--max-old-space-size=8192 npm run typecheck
+   Failed: Node heap exhausted near 8 GiB after about 104 seconds; no source diagnostics preceded the resource failure.
+3) npm run build
+   Nx dependency build completed, then Next/Turbopack failed to resolve @product/service-principals/entry from:
+   - packages/auth/src/services/apiKeyService.ts
+   - server/src/lib/api/middleware/apiMiddleware.ts
+   - server/src/lib/services/apiKeyServiceForApi.ts
+   These files and resolver configuration differ from main. This is not evidence that the failure is unrelated to this branch; no comparable baseline or owner disposition is available yet.
+
+The application source tree is unchanged from a6d28a6ce24f681f2b3f0498e3d4fadbb7f43d92, the revision on which these commands were run. Re-running resource-heavy checks during post-recovery verification was avoided because host memory telemetry showed near-zero free swap, ~11 GiB available memory, high full memory pressure, and seven scheduler-queued starts; the managed runtime had just recovered. The exact commands above are reproducible. The root Security Review owner was asked to provide a comparable baseline or explicit disposition in workflow annotation b5cd13c6-618a-4f00-b7e7-fc819f98fff3. No passing full check is claimed.
+
+Focused behavioral tests at the same source tree: cd server && npx vitest run src/app/api/email/refresh-watch/route.test.ts src/test/unit/middleware.apiKeyAuth.test.ts --coverage.enabled=false — 39/39 passed. Focused route TypeScript check: npx tsc --noEmit --pretty false -p /tmp/alga-smoke-evidence/security-authz-refresh-watch-20261104T1201Z/refresh-watch.typecheck.tsconfig.json — exit 0, no diagnostics.
