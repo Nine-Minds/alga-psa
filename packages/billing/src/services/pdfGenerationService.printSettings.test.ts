@@ -67,6 +67,45 @@ describe('billing PDFGenerationService print settings', () => {
     expect(escapeHtmlText(`name & <script>\"x\" 'y'`)).toBe('name &amp; &lt;script&gt;&quot;x&quot; &#39;y&#39;');
   });
 
+  it.each([
+    'http://169.254.169.254/latest/meta-data/',
+    'http://127.0.0.1/secret',
+    'http://192.168.1.1/secret',
+  ])('blocks Chromium requests to %s before producing a PDF', async (url) => {
+    const abort = vi.fn();
+    const proceed = vi.fn();
+    let requestHandler: ((request: any) => void) | undefined;
+    const page = {
+      setJavaScriptEnabled: vi.fn().mockResolvedValue(undefined),
+      setRequestInterception: vi.fn().mockResolvedValue(undefined),
+      on: vi.fn((event: string, handler: (request: any) => void) => {
+        if (event === 'request') requestHandler = handler;
+      }),
+      setContent: vi.fn(async () => {
+        expect(page.setJavaScriptEnabled).toHaveBeenCalledWith(false);
+        expect(page.setRequestInterception).toHaveBeenCalledWith(true);
+        expect(requestHandler).toBeTypeOf('function');
+        requestHandler!({ url: () => url, abort, continue: proceed });
+      }),
+      pdf: vi.fn(async () => {
+        expect(abort).toHaveBeenCalledWith('blockedbyclient');
+        expect(proceed).not.toHaveBeenCalled();
+        return Buffer.from('safe-pdf');
+      }),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+    const browser = { newPage: vi.fn().mockResolvedValue(page) };
+    getBrowserMock.mockResolvedValue(browser);
+    releaseBrowserMock.mockResolvedValue(undefined);
+
+    const service = new PDFGenerationService('tenant-1');
+    const result = await (service as any).generatePDFBuffer(`<iframe src="${url}"></iframe>`);
+
+    expect(result).toEqual(Buffer.from('safe-pdf'));
+    expect(page.close).toHaveBeenCalledOnce();
+    expect(releaseBrowserMock).toHaveBeenCalledWith(browser);
+  });
+
   it('passes resolved format and margin options to page.pdf(...)', async () => {
     const page = {
       setJavaScriptEnabled: vi.fn().mockResolvedValue(undefined),
