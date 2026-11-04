@@ -57,6 +57,9 @@ describe('projectCoManagedChanges', () => {
     expect(projectCoManagedActorAttribution(['users'], details)).toEqual({ authorName: '', organizationName: 'Partner Co' });
     expect(projectCoManagedActorAttribution(['tenants'], details)).toEqual({ authorName: 'Sam Tech', organizationName: '' });
     expect(projectCoManagedActorAttribution(['users', 'tenants'], details)).toEqual({ authorName: '', organizationName: '' });
+    expect(projectCoManagedActorAttribution(['values.actor_display_name'], details).authorName).toBe('');
+    expect(projectCoManagedActorAttribution(['values.organization_name'], details).organizationName).toBe('');
+    expect(projectCoManagedActorAttribution(['values.organizationName'], details).organizationName).toBe('');
   });
 });
 
@@ -85,6 +88,18 @@ describe('listCoManagedProjectTaskHistory', () => {
     const [redacted] = await listCoManagedProjectTaskHistory({} as any, actor, resource);
     expect(redacted).toMatchObject({ auditId: U(7), authorName: '', organizationName: '', changes: {} });
     expect(JSON.stringify(redacted)).not.toMatch(/Alex MSP|Sam|MSP Co/);
+  });
+  it.each(['values.actor_display_name', 'values.organization_name'])('projects history attribution for %s from the reader policy', async redaction => {
+    const storedDetails = structuredClone(state.rows[0].details);
+    const [visible] = await listCoManagedProjectTaskHistory({} as any, actor, resource);
+    expect(visible.authorName).toBe('Sam');
+    expect(visible.organizationName).toBe('MSP Co');
+
+    state.redactedFields = [redaction];
+    const [projected] = await listCoManagedProjectTaskHistory({} as any, actor, resource);
+    expect(projected.authorName).toBe(redaction === 'values.actor_display_name' ? '' : 'Sam');
+    expect(projected.organizationName).toBe(redaction === 'values.organization_name' ? '' : 'MSP Co');
+    expect(state.rows[0].details).toEqual(storedDetails);
   });
   it.each([['*'], ['tasks'], ['project_tasks']])('denies the whole history when the task resource is redacted (%s)', async redaction => {
     state.redactedFields = [redaction];

@@ -16,7 +16,7 @@ import { editCoManagedProjectTask, getCoManagedProjectTaskSnapshot, CoManagedTas
 import { listCoManagedProjectTaskHistory } from '@alga-psa/co-managed/projectTaskAudit';
 import { listCoManagedProjectTaskStatusOptions } from '@alga-psa/co-managed/projectTaskEditing';
 import { assignCoManagedProjectTask } from '@alga-psa/co-managed/projectTaskAssignments';
-import { listCoManagedAssignedTasks, listCoManagedSharedProjectTasks } from '@alga-psa/co-managed/projectTaskQueue';
+import { listCoManagedAssignedTasks, listCoManagedSharedProjectTasks, listCoManagedSharedProjects } from '@alga-psa/co-managed/projectTaskQueue';
 import { isCoManagedSharedWorkError } from '@alga-psa/co-managed/sharedWorkIdentity';
 import { writeCoManagedSharedTask } from '../../lib/co-managed/editProjectTask';
 
@@ -58,7 +58,7 @@ describe('CM L3c task editing and assignment', () => {
     configureL3cDbEnv();
     db = await connectL3cDb();
     world = await seedL3cWorld(db);
-    collab = await seedL3cProject(db, world, 'Collab project', ['ok', 'stale', 'drift', 'viewer-edit', 'assign-sep', 'redact-tasks', 'redact-project-tasks', 'redact-assignee', 'control', 'redact-field-name', 'redact-field-desc']);
+    collab = await seedL3cProject(db, world, 'Collab project', ['ok', 'stale', 'drift', 'viewer-edit', 'assign-sep', 'redact-tasks', 'redact-project-tasks', 'redact-assignee', 'control', 'redact-field-name', 'redact-field-desc', 'redact-attribution-org']);
     readOnly = await seedL3cProject(db, world, 'Read-only project', ['ro']);
     unshared = await seedL3cProject(db, world, 'Unshared project', ['hidden']);
     await shareProject(db, world, collab.projectId, true);
@@ -234,6 +234,61 @@ describe('CM L3c task editing and assignment', () => {
       expect(list.rows.find(row => row.taskId === id)?.reference).toMatchObject({ assigneeName: null, assignedToMe: null });
       expect((await referenceRow(id)).assignee_name).toBe(storedName);
     } finally { await setRedactions([]); }
+  });
+
+  it('masks history attribution and shared organization snapshots under tightened relationship aliases', async () => {
+    const id = collab.taskIds[11];
+    await openTask(id);
+    const storedReference = await referenceRow(id);
+    const storedAudit = await db('audit_logs').where({ tenant: world.customer, table_name: 'project_tasks', record_id: id }).first('details');
+    const visibleHistory = await listCoManagedProjectTaskHistory(db, actor(), resource(id));
+    expect(visibleHistory[0].authorName).toBeTruthy();
+    expect(visibleHistory[0].organizationName).toBeTruthy();
+    await expectQueueShowsCustomerOrganization(id);
+
+    const bundleId = uuidv4(), revisionId = uuidv4();
+    try {
+      await db('authorization_bundles').insert({ tenant: world.sponsor, bundle_id: bundleId, bundle_key: `task-redact-${bundleId.slice(0, 8)}`, name: 'Task attribution redaction regression', is_system: false, status: 'active' });
+      await db('authorization_bundle_revisions').insert({ tenant: world.sponsor, revision_id: revisionId, bundle_id: bundleId, revision_number: 1, lifecycle_state: 'published' });
+      await db('authorization_bundles').where({ tenant: world.sponsor, bundle_id: bundleId }).update({ published_revision_id: revisionId });
+      await db('authorization_bundle_rules').insert({ tenant: world.sponsor, bundle_id: bundleId, revision_id: revisionId, resource_type: 'project', action: 'read',
+        template_key: 'selected_clients', constraint_key: 'hide_sensitive_fields', effect: 'narrow',
+        config: JSON.stringify({ selectedClientIds: [world.sponsorClientId], redactedFields: ['values.actor_display_name', 'values.organization_name', 'values.organizationName'] }), position: 0 });
+      await db('authorization_bundle_assignments').insert({ tenant: world.sponsor, bundle_id: bundleId, target_type: 'user', target_id: world.technician.userId, status: 'active' });
+
+      const bundleHistory = await listCoManagedProjectTaskHistory(db, actor(), resource(id));
+      expect(bundleHistory[0]).toMatchObject({ authorName: '', organizationName: '' });
+      expect((await listCoManagedAssignedTasks(db, actor(), { assigned: 'any', limit: 100 })).rows.find(row => row.taskId === id)?.organizationName).toBeNull();
+      expect((await listCoManagedSharedProjects(db, actor(), { relationshipId: world.relationshipId })).rows.find(row => row.projectId === collab.projectId)?.organizationName).toBe('');
+      expect(await referenceRow(id)).toEqual(storedReference);
+      expect((await db('audit_logs').where({ tenant: world.customer, table_name: 'project_tasks', record_id: id }).first('details')).details).toEqual(storedAudit.details);
+
+      await db('authorization_bundle_assignments').where({ tenant: world.sponsor, bundle_id: bundleId }).delete();
+      await db('authorization_bundle_rules').where({ tenant: world.sponsor, bundle_id: bundleId }).delete();
+      await db('authorization_bundles').where({ tenant: world.sponsor, bundle_id: bundleId }).update({ published_revision_id: null });
+      await db('authorization_bundle_revisions').where({ tenant: world.sponsor, bundle_id: bundleId }).delete();
+      await db('authorization_bundles').where({ tenant: world.sponsor, bundle_id: bundleId }).delete();
+
+      await setRedactions(['values.actor_display_name', 'values.organization_name', 'values.organizationName']);
+      const history = await listCoManagedProjectTaskHistory(db, actor(), resource(id));
+      expect(history[0]).toMatchObject({ authorName: '', organizationName: '' });
+      const assigned = await listCoManagedAssignedTasks(db, actor(), { assigned: 'any', limit: 100 });
+      expect(assigned.rows.find(row => row.taskId === id)?.organizationName).toBeNull();
+      const sharedTasks = await listCoManagedSharedProjectTasks(db, actor(), {
+        customerTenant: world.customer, relationshipId: world.relationshipId, projectId: collab.projectId,
+      });
+      expect(sharedTasks.rows.find(row => row.taskId === id)?.reference?.assigneeName).toBe(storedReference.assignee_name);
+      const sharedProjects = await listCoManagedSharedProjects(db, actor(), { relationshipId: world.relationshipId });
+      expect(sharedProjects.rows.find(row => row.projectId === collab.projectId)?.organizationName).toBe('');
+      expect(await referenceRow(id)).toEqual(storedReference);
+    } finally {
+      await db('authorization_bundle_assignments').where({ tenant: world.sponsor, bundle_id: bundleId }).delete();
+      await db('authorization_bundle_rules').where({ tenant: world.sponsor, bundle_id: bundleId }).delete();
+      await db('authorization_bundles').where({ tenant: world.sponsor, bundle_id: bundleId }).update({ published_revision_id: null });
+      await db('authorization_bundle_revisions').where({ tenant: world.sponsor, bundle_id: bundleId }).delete();
+      await db('authorization_bundles').where({ tenant: world.sponsor, bundle_id: bundleId }).delete();
+      await setRedactions([]);
+    }
   });
 
   it('control: with no redactions snapshot, history and status options are served with the exact fixture values', async () => {

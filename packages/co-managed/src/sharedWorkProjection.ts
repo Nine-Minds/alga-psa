@@ -11,7 +11,7 @@ export const isCoManagedTaskResourceHidden = (redactedFields: readonly string[])
 });
 export const CO_MANAGED_TASK_NAME_ALIASES = ['task_name', 'taskName', 'values.task_name', 'values.taskName', 'project_tasks.task_name', ...CO_MANAGED_TASK_RESOURCE_ALIASES] as const;
 export const CO_MANAGED_PROJECT_NAME_ALIASES = ['project_name', 'projectName', 'values.project_name', 'values.projectName', 'projects.project_name', 'project', 'project_id', 'projects'] as const;
-export const CO_MANAGED_ORGANIZATION_NAME_ALIASES = ['client_name', 'organization_name', 'values.organization_name', 'organizationName', 'tenants'] as const;
+export const CO_MANAGED_ORGANIZATION_NAME_ALIASES = ['client_name', 'organization_name', 'values.organization_name', 'organizationName', 'values.organizationName', 'tenants'] as const;
 /** The assignee display name; same aliases the ticket assignment surface uses for the assignee (users/teams are its sources). */
 export const CO_MANAGED_ASSIGNEE_NAME_ALIASES = ['assignee_name', 'assigneeName', 'values.assignee_name', 'values.assigneeName', 'assignee', 'users', 'teams'] as const;
 /** Presence, identity and names derived from a co-managed assignment share one disclosure dependency. */
@@ -21,9 +21,9 @@ export function expandCoManagedPolicyAliases(aliases: readonly string[], namespa
   return [...new Set(aliases.flatMap(alias => [alias, ...namespaces.filter(namespace => !alias.startsWith(`${namespace}.`)).map(namespace => `${namespace}.${alias}`)]))];
 }
 /** Names attached to history entries are derived from the acting staff user, not from the changed task field. */
-export const CO_MANAGED_ACTOR_NAME_ALIASES = ['actor_display_name', 'actorDisplayName', 'author_name', 'authorName', 'user_name', 'users'] as const;
+export const CO_MANAGED_ACTOR_NAME_ALIASES = ['actor_display_name', 'values.actor_display_name', 'actorDisplayName', 'values.actorDisplayName', 'author_name', 'authorName', 'user_name', 'users'] as const;
 /** History organization labels are cached from the acting staff member's organization. */
-export const CO_MANAGED_ACTOR_ORGANIZATION_NAME_ALIASES = ['actor_organization_name', 'actorOrganizationName', 'organization_name', 'organizationName', 'client_name', 'tenants'] as const;
+export const CO_MANAGED_ACTOR_ORGANIZATION_NAME_ALIASES = ['actor_organization_name', 'values.actor_organization_name', 'actorOrganizationName', 'values.actorOrganizationName', 'organization_name', 'values.organization_name', 'organizationName', 'values.organizationName', 'client_name', 'tenants'] as const;
 
 export const CO_MANAGED_PHASE_NAME_ALIASES = ['phase_name', 'values.phase_name', 'project_phases.phase_name', 'phaseName'] as const;
 

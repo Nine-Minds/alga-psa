@@ -40,22 +40,34 @@ describe('readCoManagedProjectTaskReferences', () => {
     expect(JSON.stringify(result)).not.toContain(reference.assigned_to);
   });
 
-  it('applies bundled redactions tightened after the cached snapshot was assigned', async () => {
+  it('applies current redactions to cached snapshots without rewriting them', async () => {
+    const stored = structuredClone(state.rows[0]);
     const initial = (await readCoManagedProjectTaskReferences(context, [taskId])).get(taskId);
     expect(initial?.assigneeName).toBe('QA Tester');
 
-    context.redactedFields = ['assignee', 'fields.projects.project_name', 'organizationName'];
+    context.redactedFields = ['assignee', 'fields.projects.project_name', 'values.organizationName'];
     const tightened = (await readCoManagedProjectTaskReferences(context, [taskId])).get(taskId);
     expect(tightened).toMatchObject({
       taskName: 'Replace core switch', projectName: null, organizationName: null, assigneeName: null,
       hasAssigneeName: null, assigneeKind: null, assignedToMe: null, revision: 4,
     });
     expect(JSON.stringify(tightened)).not.toMatch(/QA Tester|Network refresh|Customer Co/);
+    expect(state.rows[0]).toEqual(stored);
   });
 
   it.each(['assignee_name', 'users', 'teams'])('masks an assignee under alias %s', async redaction => {
     context.redactedFields = [redaction];
     expect((await readCoManagedProjectTaskReferences(context, [taskId])).get(taskId)?.assigneeName).toBeNull();
+  });
+
+  it('masks shared task and project organization display under values.organizationName', async () => {
+    const visible = (await readCoManagedProjectTaskReferences(context, [taskId])).get(taskId);
+    expect(visible?.organizationName).toBe('Customer Co');
+
+    context.redactedFields = ['values.organizationName'];
+    const hidden = (await readCoManagedProjectTaskReferences(context, [taskId])).get(taskId);
+    expect(hidden?.organizationName).toBeNull();
+    expect(state.rows[0].organization_name).toBe('Customer Co');
   });
 
   it('returns an empty map for no candidate tasks without reading cached references', async () => {
