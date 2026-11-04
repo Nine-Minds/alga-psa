@@ -112,6 +112,26 @@ function joinWithDisplaySymbol(parts: Intl.NumberFormatPart[], currency: string)
 }
 
 /**
+ * The seam every money-display formatter should route through: locale currency
+ * text with the product's symbol swapped in for Intl's currency wording, so a
+ * ZAR amount reads "R 12.34" rather than Intl's en-US "ZAR 12.34".
+ *
+ * `locale` may be `undefined` to follow the runtime's own locale, exactly as a
+ * bare `Intl.NumberFormat(undefined, …)` would. An explicit `currencyDisplay`
+ * of 'code' or 'name' is left alone — those callers asked for the ISO wording.
+ */
+export function formatCurrencyWithSymbol(
+  value: number,
+  locale: string | undefined,
+  currency: string,
+  options?: Intl.NumberFormatOptions,
+): string {
+  const parts = new Intl.NumberFormat(locale, { style: 'currency', currency, ...options }).formatToParts(value);
+  const wantsIsoWording = options?.currencyDisplay === 'code' || options?.currencyDisplay === 'name';
+  return wantsIsoWording ? parts.map(part => part.value).join('') : joinWithDisplaySymbol(parts, currency);
+}
+
+/**
  * Format a number as currency
  * @param value The number to format
  * @param locale The locale to use (default: 'en-US')
@@ -119,12 +139,10 @@ function joinWithDisplaySymbol(parts: Intl.NumberFormatPart[], currency: string)
  * @returns Formatted currency string
  */
 export function formatCurrency(value: number, locale: string = 'en-US', currency: string = 'USD'): string {
-  return joinWithDisplaySymbol(new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency,
+  return formatCurrencyWithSymbol(value, locale, currency, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).formatToParts(value), currency);
+  });
 }
 
 /**
@@ -139,12 +157,10 @@ export function formatCurrencyFromMinorUnits(
   const resolved = new Intl.NumberFormat(locale, { style: 'currency', currency }).resolvedOptions();
   const fractionDigits = resolved.maximumFractionDigits ?? 2;
   const value = minorUnits / Math.pow(10, fractionDigits);
-  return joinWithDisplaySymbol(new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency,
+  return formatCurrencyWithSymbol(value, locale, currency, {
     minimumFractionDigits: fractionDigits,
     maximumFractionDigits: fractionDigits,
-  }).formatToParts(value), currency);
+  });
 }
 
 /**

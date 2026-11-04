@@ -4,6 +4,7 @@ import {
   displayCurrencySymbol,
   formatCurrency,
   formatCurrencyFromMinorUnits,
+  formatCurrencyWithSymbol,
   fromMinorUnits,
   minorUnitsToPlainDecimalText,
   toMinorUnits,
@@ -41,6 +42,23 @@ describe('currency minor-unit formatters', () => {
     expect(stripSpaces(formatCurrencyFromMinorUnits(123450, 'de', 'ZAR'))).toBe('1.234,50 R');
     expect(stripSpaces(formatCurrencyFromMinorUnits(123450, 'fr', 'ZAR'))).toBe('1 234,50 R');
     expect(stripSpaces(formatCurrencyFromMinorUnits(123450, 'en', 'ZAR'))).toBe('R 1,234.50');
+  });
+
+  it('formatCurrencyWithSymbol is the seam other formatters share', () => {
+    // The shared seam every money-display surface routes through.
+    expect(stripSpaces(formatCurrencyWithSymbol(12.34, 'en', 'ZAR'))).toBe('R 12.34');
+    expect(formatCurrencyWithSymbol(1234.5, 'en', 'USD')).toBe('$1,234.50');
+    // An omitted locale follows the runtime's own, as a bare Intl call would.
+    expect(formatCurrencyWithSymbol(0, undefined, 'ZAR')).toContain('R');
+    expect(formatCurrencyWithSymbol(0, undefined, 'ZAR')).not.toContain('ZAR');
+    // Pass-through options still apply (whole-unit amounts, fraction digits).
+    expect(stripSpaces(formatCurrencyWithSymbol(1234, 'en', 'ZAR', { maximumFractionDigits: 0 })))
+      .toBe('R 1,234');
+    // Callers that explicitly ask for the ISO wording keep it.
+    expect(stripSpaces(formatCurrencyWithSymbol(12.34, 'en', 'ZAR', { currencyDisplay: 'code' })))
+      .toBe('ZAR 12.34');
+    expect(formatCurrencyWithSymbol(12.34, 'en', 'ZAR', { currencyDisplay: 'name' }))
+      .toContain('South African rand');
   });
 
   it('displayCurrencySymbol falls back to Intl outside the product table', () => {
