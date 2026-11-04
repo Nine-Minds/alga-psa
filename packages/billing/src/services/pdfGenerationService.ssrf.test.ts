@@ -180,6 +180,8 @@ describe('PDFGenerationService stored document rendering isolation', () => {
       <style>
         @import "http://127.0.0.1:${port}/a.css";
         @import url("https://assets.example.test/import.css");
+        @im\\70ort "http://127.0.0.1:${port}/escaped-quoted.css";
+        @im\\70ort url("http://127.0.0.1:${port}/escaped-url.css");
         .file { background-image: url(file:///etc/hostname); }
         .set { background-image: image-set("http://127.0.0.1:${port}/remote.png" 1x); }
         .valid { background-image: url("https://assets.example.test/allowed.png"); }
@@ -198,6 +200,61 @@ describe('PDFGenerationService stored document rendering isolation', () => {
     expect(prepared).not.toContain('127.0.0.1');
     expect(prepared).not.toContain('assets.example.test/import.css');
   });
+
+  it('preserves inline style declarations and removes escaped CSS imports before Chromium loads the page', async () => {
+    const target = `http://127.0.0.1:${port}`;
+    const fetched: string[] = [];
+    const prepared = await prepareHtmlForIsolatedRendering(`
+      <div id="styled-box" style="color: rgb(255, 0, 0); width: 100px; height: 100px; background-color: rgb(0, 0, 255);"></div>
+      <style>
+        @im\\70ort "${target}/escaped-quoted.css";
+        @im\\70ort url("${target}/escaped-url.css");
+      </style>
+    `, {
+      fetchAsset: async (url) => {
+        fetched.push(url);
+        throw new Error(`Unexpected asset fetch: ${url}`);
+      },
+    });
+
+    expect(fetched).toEqual([]);
+    expect(prepared).not.toContain('escaped-quoted.css');
+    expect(prepared).not.toContain('escaped-url.css');
+
+    const browser = await browserPoolService.getBrowser() as Browser;
+    const context = await browser.createBrowserContext();
+    const page = await context.newPage();
+    const attemptedRequests: string[] = [];
+    try {
+      page.on('request', (request) => attemptedRequests.push(request.url()));
+      await configureIsolatedPage(page);
+      await page.setContent(prepared, { waitUntil: 'load' });
+      const computed = await page.evaluate(() => {
+        const box = document.querySelector('#styled-box')!;
+        const style = getComputedStyle(box);
+        return {
+          width: style.width,
+          height: style.height,
+          color: style.color,
+          backgroundColor: style.backgroundColor,
+        };
+      });
+
+      expect(computed).toEqual({
+        width: '100px',
+        height: '100px',
+        color: 'rgb(255, 0, 0)',
+        backgroundColor: 'rgb(0, 0, 255)',
+      });
+    } finally {
+      await page.close();
+      await context.close();
+      await browserPoolService.releaseBrowser(browser);
+    }
+
+    expect(attemptedRequests).toEqual([]);
+    expect(requests).toEqual([]);
+  }, 60000);
 
   it('disables scripts and blocks browser network and file requests during PDF rendering', async () => {
     const browser = await browserPoolService.getBrowser() as Browser;

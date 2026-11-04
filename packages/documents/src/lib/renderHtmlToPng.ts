@@ -144,6 +144,21 @@ function cssResourceIsAllowed(url: string): boolean {
   return decodeCssEscapes(url).trim().toLowerCase().startsWith('data:');
 }
 
+function isCssImportRule(rule: { name: string; params: string }): boolean {
+  // PostCSS currently stops rule.name at a backslash, leaving the escaped tail
+  // of an at-rule identifier at the beginning of params (for example,
+  // `@im\\70ort ...` becomes name=`im`, params=`\\70ort ...`). Reassemble
+  // that identifier before applying the resource policy.
+  const escapedIdentifierTail = rule.params.startsWith('\\')
+    ? rule.params.match(/^(?:\\(?:[\da-f]{1,6}\s?|[^\r\n\f])|[-_a-z\d])+/i)?.[0] ?? ''
+    : '';
+  return decodeCssEscapes(`${rule.name}${escapedIdentifierTail}`).toLowerCase() === 'import';
+}
+
+function serializeInlineDeclarations(nodes: Array<{ toString(): string }> | undefined): string {
+  return nodes?.map((node) => node.toString()).join('; ') ?? '';
+}
+
 function hasUnsupportedCssResource(value: string): boolean {
   // Comments are removed before tokenization because CSS comments may split an identifier.
   const parsed = valueParser(value.replace(/\/\*[\s\S]*?\*\//g, ''));
@@ -173,7 +188,7 @@ function sanitizeStylesheet(css: string): string {
   try {
     const root = postcss.parse(css);
     root.walkAtRules((rule) => {
-      if (rule.name.toLowerCase() === 'import' || hasUnsupportedCssResource(rule.params)) {
+      if (isCssImportRule(rule) || hasUnsupportedCssResource(rule.params)) {
         rule.remove();
       }
     });
@@ -189,8 +204,8 @@ function sanitizeStylesheet(css: string): string {
 function removeCssImports(css: string): string {
   try {
     const root = postcss.parse(css);
-    root.walkAtRules(/^import$/i, (rule) => {
-      rule.remove();
+    root.walkAtRules((rule) => {
+      if (isCssImportRule(rule)) rule.remove();
     });
     return root.toString();
   } catch {
@@ -201,11 +216,11 @@ function removeCssImports(css: string): string {
 function removeInlineCssImports(style: string): string {
   try {
     const root = postcss.parse(`.__render_policy__ { ${style} }`);
-    root.walkAtRules(/^import$/i, (rule) => {
-      rule.remove();
+    root.walkAtRules((rule) => {
+      if (isCssImportRule(rule)) rule.remove();
     });
     const rule = root.first;
-    return rule?.type === 'rule' ? rule.nodes?.map((node) => node.toString()).join(' ') ?? '' : '';
+    return rule?.type === 'rule' ? serializeInlineDeclarations(rule.nodes) : '';
   } catch {
     return '';
   }
@@ -215,7 +230,7 @@ function sanitizeInlineStyle(style: string): string {
   const sanitized = sanitizeStylesheet(`.__render_policy__ { ${style} }`);
   const declarations = postcss.parse(sanitized).first;
   if (!declarations || declarations.type !== 'rule') return '';
-  return declarations.nodes?.map((node) => node.toString()).join(' ') ?? '';
+  return serializeInlineDeclarations(declarations.nodes);
 }
 
 /**
