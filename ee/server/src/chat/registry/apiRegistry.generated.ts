@@ -46534,7 +46534,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets",
     "displayName": "Create Ticket",
     "summary": "Create a new ticket",
-    "description": "Creates a new ticket on a specified board with the desired status and priority. Requires the user to have ticket create permissions. Do not invoke this until you have gathered valid UUIDs for board_id, client_id, status_id, and priority_id from prior lookup calls. IMPORTANT: status_id must belong to the same board as board_id — use GET /api/v1/statuses?type=ticket&board_id=... to discover valid statuses for the chosen board. Set suppressContactNotifications=true to create the ticket silently — no customer-facing ticket-created email (which otherwise falls back to the client's address when the ticket has no contact) and no portal notifications. Add suppressInternalNotifications=true to also skip agent and watcher notifications; internal suppression requires customer suppression. Silent creations still create normal audit, workflow, and webhook records.",
+    "description": "Creates a new ticket on a specified board with the desired status and priority. Requires ticket create permission. IMPORTANT: status_id must belong to board_id. HISTORICAL IMPORT: send entered_at (ISO 8601 with offset, not in the future) to create a silent source=api_import record with no SLA clock, TICKET_CREATED, notifications, webhooks or workflows. For already-closed history, use a closed status and closed_at (entered_at <= closed_at <= now), optionally closed_by; no TICKET_CLOSED fires. Then create comments with created_at after their ticket and parent. Historical dates require an internal (MSP) user with the corresponding ticket create/update permission. Use PUT /tickets/{id} with entered_at to correct an existing open date. Notification suppression fields also apply to live creates; suppressed live creations retain their normal audit, workflow and webhook behavior.",
     "tags": [
       "Work Management v1"
     ],
@@ -46675,13 +46675,28 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           },
           "description": "Optional labels to associate with the ticket. Discover existing tag values via GET /api/v1/tags or GET /api/v1/tags/search before reusing them."
         },
+        "entered_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Historical import. ISO 8601 datetime with offset; not in the future. Stores the ticket with this open date and marks it historical: silent, source=api_import, no SLA clock, TICKET_CREATED, notifications, webhooks or workflows. Requires an internal MSP user with ticket:create permission."
+        },
+        "closed_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Historical import only (requires entered_at). Required for a closed status and rejected for an open status. Must satisfy entered_at <= closed_at <= now. Stored closed without TICKET_CLOSED."
+        },
+        "closed_by": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Historical import only (requires closed_at). Defaults to the API user."
+        },
         "suppressContactNotifications": {
           "type": "boolean",
-          "description": "Suppress the customer-facing ticket-created email and portal notifications for this creation. Use it for machine-generated tickets that should not reach the client."
+          "description": "Suppress customer-facing ticket-created email and portal notifications for this operation."
         },
         "suppressInternalNotifications": {
           "type": "boolean",
-          "description": "Also suppress agent and watcher email, in-app, and push notifications. Requires suppressContactNotifications=true."
+          "description": "Also suppress agent and watcher notifications. Requires suppressContactNotifications=true."
         }
       },
       "required": [
@@ -47173,6 +47188,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "minLength": 1,
           "maxLength": 255
         },
+        "entered_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Correct the ticket open date. ISO 8601 datetime with an offset; requires an internal MSP user with ticket:update permission. Must not be in the future or after closure or the earliest comment. A date-only correction does not publish TICKET_UPDATED or start SLA timers."
+        },
         "url": {
           "type": "string",
           "format": "uri"
@@ -47647,6 +47667,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           },
           "maxItems": 20,
           "description": "One-off Bcc recipients for this comment's email only. Never returned to client-portal callers. Not allowed with is_internal. Max 20 cc + bcc combined."
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Historical import. Requires an internal MSP user with ticket:update permission. ISO 8601 datetime with an offset (date-only is rejected), not in the future, and not before the ticket's entered_at (for a reply, not before the parent comment). The comment is stored with this timestamp and is silent: no TICKET_COMMENT_ADDED, notifications, webhooks, workflows, SLA first response or response-state change. Cannot be combined with scheduled_publish_at, scheduled_publish_tz, cc or bcc."
         }
       },
       "required": [
@@ -47714,11 +47739,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "closed_at": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Honored when this update closes the ticket (open to closed): stored as the close time instead of now. Must not be in the future or before entered_at. TICKET_CLOSED still fires; use suppression flags to silence notifications. Use historical create fields to import an already-closed ticket silently."
         },
         "closed_by": {
           "type": "string",
-          "format": "uuid"
+          "format": "uuid",
+          "description": "Honored with closed_at when this update closes the ticket; defaults to the API user."
         },
         "override_close_rules": {
           "type": "boolean"

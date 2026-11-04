@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ApiBaseController, AuthenticatedApiRequest } from './ApiBaseController';
 import { TicketService, type TicketDocumentVariant } from '../services/TicketService';
 import { 
-  createTicketSchema, updateTicketSchema, ticketListQuerySchema, ticketSearchSchema, ticketStatsResponseSchema, createTicketMaterialSchema, createTicketCommentSchema, updateTicketCommentSchema, updateTicketStatusSchema, updateTicketAssignmentSchema, createTicketFromAssetSchema, linkTicketAssetSchema, addTicketAgentSchema, addTicketWatcherSchema, updateTicketWatcherSchema, removeTicketWatcherQuerySchema, assignTicketTeamSchema, removeTicketTeamSchema, createTicketChecklistItemSchema, updateTicketChecklistCompletionSchema,
+  createTicketRequestSchema, updateTicketSchema, ticketListQuerySchema, ticketSearchSchema, ticketStatsResponseSchema, createTicketMaterialSchema, createTicketCommentSchema, updateTicketCommentSchema, updateTicketStatusSchema, updateTicketAssignmentSchema, createTicketFromAssetSchema, linkTicketAssetSchema, addTicketAgentSchema, addTicketWatcherSchema, updateTicketWatcherSchema, removeTicketWatcherQuerySchema, assignTicketTeamSchema, removeTicketTeamSchema, createTicketChecklistItemSchema, updateTicketChecklistCompletionSchema,
   createExternalLinkSchema, updateExternalLinkSchema, externalLinkLookupQuerySchema,
 } from '../schemas/ticket';
 import { uuidSchema } from '../schemas/common';
@@ -121,7 +121,7 @@ export class ApiTicketController extends ApiBaseController {
     
     super(ticketService, {
       resource: 'ticket',
-      createSchema: createTicketSchema,
+      createSchema: createTicketRequestSchema,
       updateSchema: updateTicketSchema,
       querySchema: ticketListQuerySchema,
       permissions: {
@@ -1923,7 +1923,8 @@ export class ApiTicketController extends ApiBaseController {
           const updated = await this.ticketService.update(
             ticketId,
             validatedData,
-            apiRequest.context!
+            apiRequest.context!,
+            { honorSuppliedClosure: true }
           );
 
           if (!updated) {

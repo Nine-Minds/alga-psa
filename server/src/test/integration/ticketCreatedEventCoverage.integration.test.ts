@@ -7,6 +7,7 @@ import { tenantDb, withTransaction } from '@alga-psa/db';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createClient, createTenant, createUser } from '../../../test-utils/testDataFactory';
+import { TicketService } from '../../lib/api/services/TicketService';
 
 /**
  * Ticket creation sites must publish TICKET_CREATED (one per created ticket, after commit) through a
@@ -60,6 +61,7 @@ describe('TICKET_CREATED coverage across creation sites (integration)', () => {
   let clientId: string;
   let boardId: string;
   let statusId: string;
+  let closedStatusId: string;
   let priorityId: string;
   let actorId: string;
   let runId: string;
@@ -78,6 +80,11 @@ describe('TICKET_CREATED coverage across creation sites (integration)', () => {
     await scoped.table('statuses').insert({
       tenant, status_id: statusId, board_id: boardId, name: 'New', status_type: 'ticket', item_type: 'ticket',
       order_number: 1, is_default: true, is_closed: false,
+    });
+    closedStatusId = uuidv4();
+    await scoped.table('statuses').insert({
+      tenant, status_id: closedStatusId, board_id: boardId, name: 'Closed', status_type: 'ticket', item_type: 'ticket',
+      order_number: 100, is_default: false, is_closed: true,
     });
     await scoped.table('priorities').insert({
       tenant, priority_id: priorityId, priority_name: 'Medium', item_type: 'ticket', order_number: 1, color: '#ccc', created_by: actorId,
@@ -248,10 +255,41 @@ describe('TICKET_CREATED coverage across creation sites (integration)', () => {
   });
 
   describe('silent opt-outs are explicit', () => {
-    it('ticketImportActions creates tickets with silentTicketCreation', () => {
-      const src = readSource('packages/tickets/src/actions/ticketImportActions.ts');
-      expect(src).toMatch(/import \{ silentTicketCreation \} from '@alga-psa\/shared\/lib\/tickets\/ticketLifecycleEvents'/);
-      expect(src).toMatch(/TicketModel\.createTicket\([\s\S]{0,400}silentTicketCreation\('[^']+'\)/);
+    it('REST historical import persists the final closed state without lifecycle events', async () => {
+      const service = new TicketService();
+      vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: testDb, tenant });
+
+      const ticket = await service.create({
+        ...baseInput('REST historical closed ticket'),
+        status_id: closedStatusId,
+        entered_at: '2025-03-14T09:30:00Z',
+        closed_at: '2025-03-20T16:00:00Z',
+      } as any, {
+        tenant,
+        userId: actorId,
+        user: { user_id: actorId, user_type: 'internal' },
+      } as any);
+
+      const persisted = await scoped.table('tickets').where({ ticket_id: ticket.ticket_id }).first();
+      expect(persisted).toMatchObject({ is_closed: true, status_id: closedStatusId });
+      expect(new Date(persisted.entered_at).toISOString()).toBe('2025-03-14T09:30:00.000Z');
+      expect(new Date(persisted.closed_at).toISOString()).toBe('2025-03-20T16:00:00.000Z');
+      expect(created()).toHaveLength(0);
+      expect(busEvents.some((event) => event.eventType === 'TICKET_CLOSED')).toBe(false);
+    });
+
+    it('the model refuses historical creation unless the publisher is the silent marker', async () => {
+      const { TicketModel } = await import('../../../../shared/models/ticketModel');
+      const { ticketCreatedPublishedByCaller } = await import('../../../../shared/lib/tickets/ticketLifecycleEvents');
+      await expect(
+        withTransaction(testDb, async (trx) => {
+          await TicketModel.createTicket(
+            { ...baseInput('Historical, wrong publisher'), historical: { entered_at: '2025-03-14T09:30:00Z' } },
+            tenant, trx, {}, ticketCreatedPublishedByCaller('test'), undefined, actorId
+          );
+        })
+      ).rejects.toThrow(/silentTicketCreation/);
+      expect(created()).toHaveLength(0);
     });
 
     it('migration entityAppliers create tickets with silentTicketCreation', () => {
