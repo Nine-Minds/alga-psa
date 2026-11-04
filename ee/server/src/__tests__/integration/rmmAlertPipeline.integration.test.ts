@@ -7,6 +7,8 @@ import {
   createTicketForAlert,
   createTicketForAlertId,
   processRmmAlertEvent,
+  reconcileConditionObservations,
+  acknowledgeConditionTransition,
   registerRmmAlertFetcher,
   runRmmAlertReconciliation,
   type NormalizedRmmAlertEvent,
@@ -933,5 +935,92 @@ describe('runRmmAlertReconciliation (DB integration)', { shuffle: false }, () =>
     expect(Number(after?.n)).toBe(Number(before?.n));
     const rows = await tenantTable('rmm_alerts').where({ tenant: tenantId, external_alert_id: 'both-paths' });
     expect(rows).toHaveLength(1);
+  });
+});
+
+describe('observation lifecycle through the RMM ticket pipeline (DB integration)', { shuffle: false }, () => {
+  it('creates one outage ticket, recovers it, and creates a distinct second outage without asset sync', async () => {
+    const lifecycleIntegrationId = uuidv4();
+    const lifecycleRuleId = uuidv4();
+    const lifecycleScope = `unifi-site-${uuidv4().slice(0, 8)}`;
+    await tenantTable('rmm_integrations').insert({
+      tenant: tenantId, integration_id: lifecycleIntegrationId, provider: 'unifi', is_active: true, settings: JSON.stringify({}),
+    });
+    await tenantTable('rmm_organization_mappings').insert({
+      tenant: tenantId, mapping_id: uuidv4(), integration_id: lifecycleIntegrationId,
+      external_organization_id: lifecycleScope, external_organization_name: 'UniFi Lifecycle Site',
+      client_id: orgOnlyClientId, auto_sync_assets: false, auto_create_tickets: false,
+    });
+    await tenantTable('rmm_alert_rules').insert({
+      tenant: tenantId, rule_id: lifecycleRuleId, integration_id: lifecycleIntegrationId,
+      name: 'UniFi offline lifecycle', is_active: true, priority_order: 0,
+      conditions: JSON.stringify({ activityTypes: ['DEVICE_OFFLINE'] }),
+      actions: JSON.stringify({ createTicket: true, boardId, priorityOverride: priorityHighId, autoResolveTicket: true }),
+    });
+
+    const subject = `unifi-device-${uuidv4().slice(0, 8)}`;
+    const observation = (evidence: 'failing' | 'healthy', observedAt: string) => ({
+      scopeKey: lifecycleScope, subjectKey: subject, conditionKey: 'device_offline', evidence, observedAt,
+      event: {
+        tenantId, integrationId: lifecycleIntegrationId, provider: 'unifi' as const,
+        externalDeviceId: subject, conditionIdentity: 'device_offline', activityType: 'DEVICE_OFFLINE',
+        alertClass: 'switch', sourceType: 'unifi_device_state', severity: evidence === 'healthy' ? 'none' as const : 'major' as const,
+        message: 'Core switch offline', deviceName: 'Core switch', externalOrganizationId: lifecycleScope,
+        raw: { scopeKey: lifecycleScope, subjectKey: subject, conditionKey: 'device_offline' },
+      },
+    });
+    const context = { knex: db };
+    const graceMs = 60_000;
+    const maxEvidenceGapMs = 300_000;
+    const run = (observations: ReturnType<typeof observation>[], now: string) => reconcileConditionObservations({
+      knex: db, tenantId, integrationId: lifecycleIntegrationId, observations,
+      successfulScopes: [lifecycleScope], graceMs, maxEvidenceGapMs, now: new Date(now),
+    });
+    const deliver = async (transition: NormalizedRmmAlertEvent) => {
+      const processed = await processRmmAlertEvent(context, transition, { reprocessSuppressed: true });
+      await acknowledgeConditionTransition(context, {
+        tenantId, integrationId: lifecycleIntegrationId, transitionId: String(transition.raw.transitionId),
+      });
+      return processed;
+    };
+
+    await expect(run([observation('failing', '2026-11-03T12:00:00.000Z')], '2026-11-03T12:00:00.000Z'))
+      .resolves.toMatchObject({ events: [] });
+    const firstTrigger = await run([observation('failing', '2026-11-03T12:01:01.000Z')], '2026-11-03T12:01:01.000Z');
+    expect(firstTrigger.events).toHaveLength(1);
+    const concurrentDeliveries = await Promise.all([deliver(firstTrigger.events[0]), deliver(firstTrigger.events[0])]);
+    expect(concurrentDeliveries.map((result) => result.outcome).sort()).toEqual(['skipped', 'ticket_created']);
+    const firstAlert = await tenantTable('rmm_alerts').where({ tenant: tenantId, integration_id: lifecycleIntegrationId, external_alert_id: firstTrigger.events[0].externalAlertId }).first();
+    const firstTicketId = firstAlert.ticket_id;
+    expect(firstTicketId).toBeTruthy();
+
+    const repeated = await run([observation('failing', '2026-11-03T12:01:30.000Z')], '2026-11-03T12:01:30.000Z');
+    expect(repeated.events).toHaveLength(0);
+    expect(repeated.heldExternalAlertIds).toContain(firstTrigger.events[0].externalAlertId);
+    expect((await tenantTable('rmm_alerts').where({ tenant: tenantId, integration_id: lifecycleIntegrationId, external_alert_id: firstTrigger.events[0].externalAlertId }).first()).ticket_id).toBe(firstTicketId);
+
+    const recovery = await run([observation('healthy', '2026-11-03T12:02:00.000Z')], '2026-11-03T12:02:00.000Z');
+    expect(recovery.events).toHaveLength(1);
+    expect((await deliver(recovery.events[0])).outcome).toBe('resolved');
+    const resolved = await tenantTable('rmm_alerts').where({ tenant: tenantId, integration_id: lifecycleIntegrationId, external_alert_id: firstTrigger.events[0].externalAlertId }).first();
+    expect(resolved.status).toBe('auto_resolved');
+    expect(resolved.ticket_id).toBe(firstTicketId);
+
+    // A delayed/replayed trigger must be rejected inside the pipeline
+    // transaction after explicit recovery, even if a worker held a stale copy.
+    expect((await deliver(firstTrigger.events[0])).outcome).toBe('skipped');
+    const afterReplay = await tenantTable('rmm_alerts').where({ tenant: tenantId, integration_id: lifecycleIntegrationId, external_alert_id: firstTrigger.events[0].externalAlertId }).first();
+    expect(afterReplay.status).toBe('auto_resolved');
+    expect(afterReplay.ticket_id).toBe(firstTicketId);
+
+    await run([observation('failing', '2026-11-03T12:03:00.000Z')], '2026-11-03T12:03:00.000Z');
+    const secondTrigger = await run([observation('failing', '2026-11-03T12:04:01.000Z')], '2026-11-03T12:04:01.000Z');
+    expect(secondTrigger.events).toHaveLength(1);
+    expect(secondTrigger.events[0].externalAlertId).not.toBe(firstTrigger.events[0].externalAlertId);
+    expect((await deliver(secondTrigger.events[0])).outcome).toBe('ticket_created');
+    const secondAlert = await tenantTable('rmm_alerts').where({ tenant: tenantId, integration_id: lifecycleIntegrationId, external_alert_id: secondTrigger.events[0].externalAlertId }).first();
+    expect(secondAlert.ticket_id).not.toBe(firstTicketId);
+    expect((await tenantTable('rmm_alerts').where({ tenant: tenantId, integration_id: lifecycleIntegrationId })).map((row: any) => row.external_alert_id))
+      .toEqual(expect.arrayContaining([firstTrigger.events[0].externalAlertId, secondTrigger.events[0].externalAlertId]));
   });
 });

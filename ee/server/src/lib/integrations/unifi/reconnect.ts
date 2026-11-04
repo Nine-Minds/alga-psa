@@ -9,8 +9,8 @@ const PROVIDER = 'unifi';
  */
 export async function markUniFiReconnectRequired(tenant: string): Promise<void> {
   const knex = await getAdminConnection();
-  // Single atomic jsonb merge: a read-modify-write of the whole settings blob
-  // would clobber a concurrent unifiOfflineObservations write or a settings save.
+  // Single atomic jsonb merge preserves configuration and any lifecycle migration
+  // metadata written concurrently by the alert poller.
   await knex.raw(
     `UPDATE rmm_integrations
         SET settings = COALESCE(settings, '{}'::jsonb)

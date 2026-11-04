@@ -113,6 +113,20 @@ async function processTriggered(
   const result = await withTransaction(knex, async (trx): Promise<RmmAlertProcessingResult> => {
     const db = tenantDb(trx, event.tenantId);
 
+    if (event.raw.__alga_condition_lifecycle === true) {
+      // Lock the durable condition row in the same transaction as alert/ticket
+      // writes. A recovery transition either wins first (and suppresses this
+      // stale trigger) or waits until this trigger commits, preserving order.
+      const current = await db.table('rmm_condition_states').where({
+        integration_id: event.integrationId,
+        scope_key: String(event.raw.scopeKey ?? ''),
+        subject_key: String(event.raw.subjectKey ?? ''),
+        condition_key: String(event.raw.conditionKey ?? ''),
+        current_outage_id: String(event.raw.outageId ?? ''),
+      }).whereIn('state', ['firing', 'unmanaged']).forUpdate().first('state');
+      if (!current) return { outcome: 'skipped', ticketId: null, warnings };
+    }
+
     const existing = await db.table('rmm_alerts')
       .where({
         integration_id: event.integrationId,

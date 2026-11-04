@@ -7,6 +7,8 @@
 // Auth: X-API-KEY must equal SIM_API_KEY (else 401).
 // Control plane (no auth): GET /__sim/state, POST /__sim/device {siteId,id,state?,lastStateChangeAt?,remove?},
 //   POST /__sim/mode {siteId, mode: normal|empty|forbidden|error500}, GET /__sim/log
+// Device controls also accept arbitrary states (for UPDATING/unknown), removal,
+// and {add:true, device:{...}} to restore a removed device for repeat runs.
 // Usage: SIM_HOST=172.17.0.1 SIM_PORT=18794 SIM_API_KEY=... node unifi-controller-sim.mjs
 import http from 'node:http';
 
@@ -70,7 +72,16 @@ const server = http.createServer(async (req, res) => {
     const body = await readBody(req);
     if (path === '/__sim/device') {
       const site = sites[body.siteId];
-      const dev = site?.devices.find((d) => d.id === body.id);
+      if (!site) return send(res, 404, { error: 'no such site' });
+      if (body.add === true) {
+        const newDevice = body.device;
+        if (!newDevice?.id) return send(res, 400, { error: 'device.id is required when add=true' });
+        const existing = site.devices.find((d) => d.id === newDevice.id);
+        if (existing) return send(res, 409, { error: 'device already exists' });
+        site.devices.push(newDevice);
+        return send(res, 200, newDevice);
+      }
+      const dev = site.devices.find((d) => d.id === body.id);
       if (!dev) return send(res, 404, { error: 'no such device' });
       if (body.remove) {
         site.devices = site.devices.filter((d) => d !== dev);
