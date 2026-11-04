@@ -1,0 +1,7 @@
+Checked: 2026-11-04T19:04Z
+URL: http://127.0.0.1:3594/api/health
+Result: connection refused; no HTTP response.
+Scheduler service: existing card-service:bc0ab06c-5ada-5c35-95a7-37f75d01a131:dev-server:6
+Recovery control: workflow-ensure-service (requested; no replacement process)
+Scheduler state: live registration, lastHealth recovering; recovery queued position 21, host heavy-work admission closed due memory-pressure/stalled-task policy.
+No unrelated workload was stopped; scheduler admission was not bypassed.
