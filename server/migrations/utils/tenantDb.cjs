@@ -116,6 +116,7 @@ const TENANT_TABLE_METADATA = {
   contact_phone_numbers: { scope: 'tenant' },
   contact_phone_type_definitions: { scope: 'tenant' },
   portable_workspace_activations: { scope: 'tenant' },
+  portable_restore_suspensions: { scope: 'tenant' },
   portable_workspace_restore_uploads: { scope: 'tenant' },
   portable_workspace_restores: { scope: 'tenant' },
   contacts: { scope: 'tenant' },
