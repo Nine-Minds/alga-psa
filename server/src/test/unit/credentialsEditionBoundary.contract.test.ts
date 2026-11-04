@@ -56,6 +56,10 @@ const ALLOWED_FILES = new Set<string>([
   // Behavioral test for the EE-only portable vault implementation. Its
   // fixtures intentionally reference EE credential APIs, outside the CE scan.
   'ee/server/src/lib/credentials/__tests__/portableVault.test.ts',
+  // Behavioral test for an EE-only portable restore vault implementation.
+  // The test runs in the shared server unit suite without making the code
+  // reachable from CE runtime source.
+  'server/src/test/unit/product/coManagedPortableWorkspaceRestoreVault.test.ts',
 ]);
 
 // Shared lifecycle/admission catalogs describe the combined CE + EE schema.
