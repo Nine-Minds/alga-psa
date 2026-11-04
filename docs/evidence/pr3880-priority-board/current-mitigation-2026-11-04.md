@@ -1,5 +1,7 @@
 # PR #3880 mitigation verification — current environment (2026-11-04)
 
+**Completed takeover:** see [final verification](final-takeover-2026-11-04.md) for the renewed service hold, live REST/client checks and new generator occurrences. The sections below record the earlier attempt, including its then-current suspension and outstanding checks.
+
 This document separates checks made on 2026-11-04 from the older smoke results in `takeover-2026-11-03.md` and `mitigation-verification-2026-11-03.md`. Historical screenshots, recordings, and test logs are not presented as fresh evidence.
 
 ## Revisions and scope
