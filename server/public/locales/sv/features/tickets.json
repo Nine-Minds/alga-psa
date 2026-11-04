@@ -467,8 +467,8 @@
         "audienceUnresolved": "Välj vem som kan se den här kommentaren innan du publicerar den.",
         "unknownOutcome": "Vi kunde inte bekräfta att kommentaren publicerades. Kontrollera konversationen innan du skickar den igen."
       },
-      "unavailable": "This ticket is not available.",
-      "back": "Back to Customer Tickets"
+      "unavailable": "Det här ärendet är inte tillgängligt.",
+      "back": "Tillbaka till kundärenden"
     }
   },
   "responseState": {

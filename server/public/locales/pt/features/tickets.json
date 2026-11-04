@@ -459,8 +459,8 @@
         "audienceUnresolved": "Escolha quem pode ver este comentário antes de publicá-lo.",
         "unknownOutcome": "Não foi possível confirmar que o comentário foi publicado. Verifique a conversa antes de enviá-lo novamente."
       },
-      "unavailable": "This ticket is not available.",
-      "back": "Back to Customer Tickets"
+      "unavailable": "Este ticket não está disponível.",
+      "back": "Voltar aos tickets dos clientes"
     }
   },
   "responseState": {

@@ -847,7 +847,7 @@
         "priority": "Priorità",
         "responsibility": "Organizzazione responsabile",
         "updated": "Aggiornamento",
-        "title": "Title"
+        "title": "Titolo"
       },
       "organizations": {
         "msp": "MSP",
@@ -866,16 +866,16 @@
         "selected": "Verranno restituiti {{count}} ticket selezionati.",
         "resume": "Un rinvio all'IT del cliente è stato interrotto. Riprendilo per confermare l'esito.",
         "noReloadRecovery": "Il recupero dopo il ricaricamento non è disponibile in questo browser; puoi comunque riprovare in questa sessione.",
-        "done": "Done",
-        "selectAll": "Select all returnable tickets",
-        "selectRow": "Select ticket",
-        "readOnly": "Read-only access"
+        "done": "Completato",
+        "selectAll": "Seleziona tutti i ticket restituibili",
+        "selectRow": "Seleziona ticket",
+        "readOnly": "Accesso in sola lettura"
       },
       "scopeUnavailable": "Apertura dell'elenco dei ticket…",
       "searchPlaceholder": "Cerca per numero o titolo",
       "mspAlsoAssigned": "MSP assegnato anche",
-      "unavailableWorkspace": "Unavailable workspace",
-      "reset": "Reset"
+      "unavailableWorkspace": "Area di lavoro non disponibile",
+      "reset": "Reimposta"
     },
     "projects": {
       "assignment": {

@@ -847,7 +847,7 @@
         "priority": "Prioriteit",
         "responsibility": "Verantwoordelijke organisatie",
         "updated": "Bijgewerkt",
-        "title": "Title"
+        "title": "Titel"
       },
       "organizations": {
         "msp": "MSP",
@@ -866,16 +866,16 @@
         "selected": "{{count}} geselecteerde ticket(s) worden geretourneerd.",
         "resume": "Een terugzetting naar de klant-IT is onderbroken. Hervat om het resultaat te bevestigen.",
         "noReloadRecovery": "Herstel na herladen is niet beschikbaar in deze browser; u kunt het in deze sessie nog steeds opnieuw proberen.",
-        "done": "Done",
-        "selectAll": "Select all returnable tickets",
-        "selectRow": "Select ticket",
-        "readOnly": "Read-only access"
+        "done": "Klaar",
+        "selectAll": "Alle terug te geven tickets selecteren",
+        "selectRow": "Ticket selecteren",
+        "readOnly": "Alleen-lezen toegang"
       },
       "scopeUnavailable": "Ticketlijst wordt geopend…",
       "searchPlaceholder": "Zoeken op nummer of titel",
       "mspAlsoAssigned": "MSP ook toegewezen",
-      "unavailableWorkspace": "Unavailable workspace",
-      "reset": "Reset"
+      "unavailableWorkspace": "Werkruimte niet beschikbaar",
+      "reset": "Resetten"
     },
     "projects": {
       "assignment": {

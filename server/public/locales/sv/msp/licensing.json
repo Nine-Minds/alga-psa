@@ -847,7 +847,7 @@
         "priority": "Prioritet",
         "responsibility": "Ansvarig organisation",
         "updated": "Uppdaterad",
-        "title": "Title"
+        "title": "Rubrik"
       },
       "organizations": {
         "msp": "MSP",
@@ -866,16 +866,16 @@
         "selected": "{{count}} markerade ärenden kommer att återlämnas.",
         "resume": "En återlämning till kundens IT avbröts. Återuppta den för att bekräfta resultatet.",
         "noReloadRecovery": "Återställning vid omladdning är inte tillgänglig i den här webbläsaren; du kan fortfarande försöka igen i den här sessionen.",
-        "done": "Done",
-        "selectAll": "Select all returnable tickets",
-        "selectRow": "Select ticket",
-        "readOnly": "Read-only access"
+        "done": "Klart",
+        "selectAll": "Markera alla ärenden som kan lämnas tillbaka",
+        "selectRow": "Markera ärende",
+        "readOnly": "Skrivskyddad åtkomst"
       },
       "scopeUnavailable": "Öppnar ärendelistan…",
       "searchPlaceholder": "Sök efter nummer eller titel",
       "mspAlsoAssigned": "MSP också tilldelad",
-      "unavailableWorkspace": "Unavailable workspace",
-      "reset": "Reset"
+      "unavailableWorkspace": "Arbetsytan är inte tillgänglig",
+      "reset": "Återställ"
     },
     "projects": {
       "assignment": {

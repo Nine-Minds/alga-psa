@@ -847,7 +847,7 @@
         "priority": "Prioridad",
         "responsibility": "Organización responsable",
         "updated": "Actualización",
-        "title": "Title"
+        "title": "Título"
       },
       "organizations": {
         "msp": "MSP",
@@ -866,16 +866,16 @@
         "selected": "Se devolverán {{count}} ticket(s) seleccionado(s).",
         "resume": "Se interrumpió una devolución al TI del cliente. Reanúdala para confirmar el resultado.",
         "noReloadRecovery": "La recuperación al recargar no está disponible en este navegador; aún puede reintentar en esta sesión.",
-        "done": "Done",
-        "selectAll": "Select all returnable tickets",
-        "selectRow": "Select ticket",
-        "readOnly": "Read-only access"
+        "done": "Hecho",
+        "selectAll": "Seleccionar todos los tickets que se pueden devolver",
+        "selectRow": "Seleccionar ticket",
+        "readOnly": "Acceso de solo lectura"
       },
       "scopeUnavailable": "Abriendo la lista de tickets…",
       "searchPlaceholder": "Buscar por número o título",
       "mspAlsoAssigned": "MSP también asignado",
-      "unavailableWorkspace": "Unavailable workspace",
-      "reset": "Reset"
+      "unavailableWorkspace": "Espacio de trabajo no disponible",
+      "reset": "Restablecer"
     },
     "projects": {
       "assignment": {
