@@ -435,7 +435,7 @@
         "active": "Aktiv"
       },
       "messages": {
-        "reconnectRequired": "OAuth-inställningarna har ändrats. Anslut postlådan igen för att auktorisera den med de nya inställningarna."
+        "reconnectRequired": "Anslutnings- eller autentiseringsinställningarna har ändrats. Ange nya inloggningsuppgifter eller anslut OAuth igen innan du testar anslutningen."
       }
     }
   },
@@ -587,7 +587,7 @@
       "createProvider": "Skapa anslutning"
     },
     "messages": {
-      "reconnectRequired": "OAuth-inställningarna har ändrats. Anslut postlådan igen för att auktorisera den med de nya inställningarna."
+      "reconnectRequired": "Anslutnings- eller autentiseringsinställningarna har ändrats. Ange nya inloggningsuppgifter eller anslut OAuth igen innan du testar anslutningen."
     }
   },
   "microsoftForm": {

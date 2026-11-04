@@ -435,7 +435,7 @@
         "active": "Aktiv"
       },
       "messages": {
-        "reconnectRequired": "OAuth-Einstellungen wurden geändert. Verbinden Sie das Postfach erneut, um es mit den neuen Einstellungen zu autorisieren."
+        "reconnectRequired": "Verbindungs- oder Authentifizierungseinstellungen wurden geändert. Geben Sie Ersatzanmeldedaten ein oder verbinden Sie OAuth erneut, bevor Sie die Verbindung testen."
       }
     }
   },
@@ -587,7 +587,7 @@
       "createProvider": "Anbieter erstellen"
     },
     "messages": {
-      "reconnectRequired": "OAuth-Einstellungen wurden geändert. Verbinden Sie das Postfach erneut, um es mit den neuen Einstellungen zu autorisieren."
+      "reconnectRequired": "Verbindungs- oder Authentifizierungseinstellungen wurden geändert. Geben Sie Ersatzanmeldedaten ein oder verbinden Sie OAuth erneut, bevor Sie die Verbindung testen."
     }
   },
   "microsoftForm": {
