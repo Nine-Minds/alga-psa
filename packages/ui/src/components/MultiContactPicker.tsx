@@ -18,6 +18,10 @@ interface MultiContactPickerProps {
   onValuesChange: (values: string[]) => void;
   contacts: IContact[];
   clientId?: string;
+  /** Controls contact selection for callers whose workflow has different requirements. Defaults to contacts with an email address. */
+  isContactEligible?: (contact: IContact) => boolean;
+  /** Optional caller supplied explanation for contacts rejected by isContactEligible. */
+  getIneligibleReason?: (contact: IContact) => string | undefined;
   placeholder?: string;
   disabled?: boolean;
 }
@@ -29,6 +33,8 @@ const MultiContactPicker = ({
   onValuesChange,
   contacts,
   clientId,
+  isContactEligible,
+  getIneligibleReason,
   placeholder,
   disabled = false,
   'data-automation-id': dataAutomationId,
@@ -192,21 +198,26 @@ const MultiContactPicker = ({
         ) : (
           filteredContacts.map((contact) => {
             const isSelected = values.includes(contact.contact_name_id);
-            const noEmail = !contact.email?.trim();
+            const eligible = isContactEligible
+              ? isContactEligible(contact)
+              : Boolean(contact.email?.trim());
+            const ineligibleReason = eligible
+              ? undefined
+              : getIneligibleReason?.(contact) ?? (!contact.email?.trim() ? t('multiContactPicker.noEmail') : undefined);
             return (
               <div
                 key={contact.contact_name_id}
-                className={`relative flex items-center rounded px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-[rgb(var(--color-border-100))] ${isSelected ? 'bg-gray-50 dark:bg-[rgb(var(--color-border-50))]' : ''} ${noEmail ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+                className={`relative flex items-center rounded px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-[rgb(var(--color-border-100))] ${isSelected ? 'bg-gray-50 dark:bg-[rgb(var(--color-border-50))]' : ''} ${!eligible ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
                 role="option"
                 aria-selected={isSelected}
-                aria-disabled={noEmail}
-                onClick={() => { if (!noEmail) handleToggle(contact.contact_name_id); }}
+                aria-disabled={!eligible}
+                onClick={() => { if (eligible) handleToggle(contact.contact_name_id); }}
               >
                 <div onClick={(e) => e.stopPropagation()}>
                   <Checkbox
                     id={`contact-${contact.contact_name_id}`}
                     checked={isSelected}
-                    disabled={noEmail}
+                    disabled={!eligible}
                     onChange={() => handleToggle(contact.contact_name_id)}
                     className="mr-2"
                   />
@@ -218,7 +229,7 @@ const MultiContactPicker = ({
                   size="sm"
                 />
                 <span className="ml-2 truncate">{contact.full_name}</span>
-                {noEmail && <span className="ml-auto text-xs text-gray-400">{t('multiContactPicker.noEmail')}</span>}
+                {ineligibleReason && <span className="ml-auto text-xs text-gray-400">{ineligibleReason}</span>}
               </div>
             );
           })

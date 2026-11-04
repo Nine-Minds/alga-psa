@@ -484,6 +484,7 @@ export default function BatchDuplicateTicketDialog({
                 onValuesChange={handleContactsChange}
                 contacts={contacts}
                 clientId={source.client.id}
+                isContactEligible={() => true}
                 disabled={!interactive || atCap}
               />
               <div className="mt-2 flex items-center justify-between gap-2">

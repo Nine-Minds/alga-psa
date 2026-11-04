@@ -95,4 +95,23 @@ describe('MultiContactPicker Escape inside a dialog', () => {
       spy.mockRestore();
     }
   });
+
+  it('keeps email-required callers from selecting contacts without an email by default', async () => {
+    const onValuesChange = vi.fn();
+    render(
+      <MultiContactPicker
+        id="meeting-contact-picker"
+        values={[]}
+        onValuesChange={onValuesChange}
+        contacts={[{ contact_name_id: 'c3', full_name: 'No Email', email: null, client_id: 'cl1' } as any]}
+      />,
+    );
+
+    fireEvent.click(document.getElementById('meeting-contact-picker')!);
+    const option = await screen.findByRole('option', { name: /No Email/ });
+    expect(option.getAttribute('aria-disabled')).toBe('true');
+    expect(option.textContent).toContain('no email');
+    fireEvent.click(option);
+    expect(onValuesChange).not.toHaveBeenCalled();
+  });
 });
