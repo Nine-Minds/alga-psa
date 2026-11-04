@@ -142,8 +142,9 @@ describe('POST /api/email/refresh-watch authorization and rate limit', () => {
     }],
   ])('does not consume provider throttle capacity for a denied %s', async (label, denyUser) => {
     denyUser();
+    const providerId = `auth-denial-throttle-check-${label}`;
 
-    const deniedResponse = await POST(buildRawRequest('{'));
+    const deniedResponse = await POST(buildRequest(providerId));
     expect(deniedResponse.status).toBe(403);
     expect(mocks.tenantDb).not.toHaveBeenCalled();
     expect(mocks.configureGmailProvider).not.toHaveBeenCalled();
@@ -154,9 +155,11 @@ describe('POST /api/email/refresh-watch authorization and rate limit', () => {
     });
     mocks.hasPermission.mockResolvedValue(true);
 
-    const authorizedResponse = await POST(buildRequest(`auth-denial-throttle-check-${label}`));
+    const authorizedResponse = await POST(buildRequest(providerId));
+    const repeatedAuthorizedResponse = await POST(buildRequest(providerId));
 
     expect(authorizedResponse.status).toBe(200);
+    expect(repeatedAuthorizedResponse.status).toBe(429);
     expect(mocks.configureGmailProvider).toHaveBeenCalledTimes(1);
   });
 
