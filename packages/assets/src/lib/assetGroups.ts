@@ -38,7 +38,8 @@ export type AssetGroupErrorCode =
   | 'users_on_bundle'
   | 'owner_on_workspace'
   | 'users_present'
-  | 'invalid_location';
+  | 'invalid_location'
+  | 'permission_denied';
 
 export class AssetGroupError extends Error {
   readonly code: AssetGroupErrorCode;

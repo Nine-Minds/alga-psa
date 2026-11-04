@@ -20,12 +20,17 @@ import {
   getGroupOwnerId,
   getGroupWithDetails,
   isAssetGroupError,
+  listGroupMemberIds,
   listGroupsForClient,
   removeAssetFromGroupRow,
   removeGroupUser,
   setGroupOwner,
   updateGroupRow,
 } from '@alga-psa/assets/lib/assetGroups';
+import {
+  assertAssetGroupAssetsUpdatable,
+  assertAssetGroupMemberUpdatableIfPresent,
+} from '@alga-psa/assets/lib/assetGroupAuthorization';
 import { createApiResponse, createErrorResponse } from '../utils/response';
 import { requireRequestContext } from '../utils/requestContext';
 import { ApiContext } from '../middleware/apiMiddleware';
@@ -85,7 +90,7 @@ export class ApiAssetGroupController {
       if (isAssetGroupError(error)) {
         // A group that is not there is a 404 wherever it is asked for, not
         // only on GET.
-        const status = error.code === 'not_found' ? 404 : 400;
+        const status = error.code === 'not_found' ? 404 : error.code === 'permission_denied' ? 403 : 400;
         return createErrorResponse(error.message, status, error.code.toUpperCase());
       }
       if (error instanceof Error && error.name === 'AssetAssigneeError') {
@@ -121,6 +126,7 @@ export class ApiAssetGroupController {
     }
 
     return this.run(context, async (trx) => {
+      await assertAssetGroupAssetsUpdatable(trx, context.tenant, context.user!, parsed.data.asset_ids ?? []);
       const group = await createGroup(trx, context.tenant, {
         clientId: parsed.data.client_id,
         name: parsed.data.name,
@@ -165,6 +171,7 @@ export class ApiAssetGroupController {
     }
 
     return this.run(context, async (trx) => {
+      await assertAssetGroupAssetsUpdatable(trx, context.tenant, context.user!, await listGroupMemberIds(trx, context.tenant, params.id));
       await updateGroupRow(trx, context.tenant, params.id, {
         name: parsed.data.name,
         kind: parsed.data.kind,
@@ -182,6 +189,7 @@ export class ApiAssetGroupController {
     if (context instanceof NextResponse) return context;
 
     return this.run(context, async (trx) => {
+      await assertAssetGroupAssetsUpdatable(trx, context.tenant, context.user!, await listGroupMemberIds(trx, context.tenant, params.id));
       await deleteGroupRow(trx, context.tenant, params.id, { actorUserId: context.userId ?? null });
       return { success: true };
     });
@@ -198,6 +206,7 @@ export class ApiAssetGroupController {
     }
 
     return this.run(context, async (trx) => {
+      await assertAssetGroupAssetsUpdatable(trx, context.tenant, context.user!, parsed.data.asset_ids);
       await addAssetsToGroupRows(trx, context.tenant, params.id, parsed.data.asset_ids, {
         actorUserId: context.userId ?? null,
       });
@@ -216,6 +225,7 @@ export class ApiAssetGroupController {
     }
 
     return this.run(context, async (trx) => {
+      await assertAssetGroupMemberUpdatableIfPresent(trx, context.tenant, context.user!, params.id, assetId.data);
       await removeAssetFromGroupRow(trx, context.tenant, params.id, assetId.data, {
         actorUserId: context.userId ?? null,
       });
@@ -235,6 +245,7 @@ export class ApiAssetGroupController {
 
     return this.run(context, async (trx) => {
       if (parsed.data.role === 'owner') {
+        await assertAssetGroupAssetsUpdatable(trx, context.tenant, context.user!, await listGroupMemberIds(trx, context.tenant, params.id));
         await setGroupOwner(trx, context.tenant, params.id, parsed.data.contact_name_id, {
           actorUserId: context.userId ?? null,
         });
@@ -275,6 +286,7 @@ export class ApiAssetGroupController {
 
     return this.run(context, async (trx) => {
       if (isBundle) {
+        await assertAssetGroupAssetsUpdatable(trx, context.tenant, context.user!, await listGroupMemberIds(trx, context.tenant, params.id));
         await setGroupOwner(trx, context.tenant, params.id, null, { actorUserId: context.userId ?? null });
       } else {
         await removeGroupUser(trx, context.tenant, params.id, contactId.data);

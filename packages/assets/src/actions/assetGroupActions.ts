@@ -20,6 +20,10 @@ import {
   setGroupOwner,
   updateGroupRow,
 } from '../lib/assetGroups';
+import {
+  assertAssetGroupAssetsUpdatable,
+  assertAssetGroupMemberUpdatableIfPresent,
+} from '../lib/assetGroupAuthorization';
 import { resolveAssetTicketContactOptions } from '@alga-psa/shared/models/assetTicketContactModel';
 import { publishAssetChanged } from '../lib/assetChangeEvents';
 import { tenantDb } from '@alga-psa/db';
@@ -43,6 +47,9 @@ export type AssetGroupActionError = ActionMessageError | ActionPermissionError;
 
 function groupActionError(error: unknown): AssetGroupActionError | null {
   if (isAssetGroupError(error)) {
+    if (error.code === 'permission_denied') {
+      return permissionError(error.message, 'msp/assets:errors.permissions.updateAssets');
+    }
     return actionError(error.message, `msp/assets:errors.assetGroup.${error.code}`);
   }
   if (error instanceof Error && error.name === 'AssetAssigneeError') {
@@ -200,6 +207,7 @@ export const createAssetGroup = withAuth(async (
     const assetIds = input.assetIds ?? [];
     const before = await snapshotAssets(knex, tenant, assetIds);
     const group = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertAssetGroupAssetsUpdatable(trx, tenant, user, assetIds);
       const created = await createGroup(trx, tenant, { ...input, actorUserId: user.user_id });
       if (assetIds.length) {
         await addAssetsToGroupRows(trx, tenant, created.group_id, assetIds, { actorUserId: user.user_id });
@@ -233,6 +241,7 @@ export const updateAssetGroup = withAuth(async (
   const { knex } = await createTenantKnex();
   return withGroupErrors(async () => {
     const group = await withMemberEvents(knex, tenant, user.user_id, groupId, [], () => withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertAssetGroupAssetsUpdatable(trx, tenant, user, await listGroupMemberIds(trx, tenant, groupId));
       await updateGroupRow(trx, tenant, groupId, { ...input, actorUserId: user.user_id });
       return getGroupWithDetails(trx, tenant, groupId);
     }));
@@ -253,9 +262,10 @@ export const deleteAssetGroup = withAuth(async (
   const { knex } = await createTenantKnex();
   return withGroupErrors(async () => {
     await withMemberEvents(knex, tenant, user.user_id, groupId, [], () =>
-      withTransaction(knex, async (trx: Knex.Transaction) =>
-        deleteGroupRow(trx, tenant, groupId, { actorUserId: user.user_id })
-      )
+      withTransaction(knex, async (trx: Knex.Transaction) => {
+        await assertAssetGroupAssetsUpdatable(trx, tenant, user, await listGroupMemberIds(trx, tenant, groupId));
+        await deleteGroupRow(trx, tenant, groupId, { actorUserId: user.user_id });
+      })
     );
     revalidateAssetPaths();
     return { success: true as const };
@@ -275,6 +285,7 @@ export const addAssetsToGroup = withAuth(async (
   const { knex } = await createTenantKnex();
   return withGroupErrors(async () => {
     const group = await withMemberEvents(knex, tenant, user.user_id, groupId, assetIds, () => withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertAssetGroupAssetsUpdatable(trx, tenant, user, assetIds);
       await addAssetsToGroupRows(trx, tenant, groupId, assetIds, { actorUserId: user.user_id });
       return getGroupWithDetails(trx, tenant, groupId);
     }));
@@ -296,6 +307,7 @@ export const removeAssetFromGroup = withAuth(async (
   const { knex } = await createTenantKnex();
   return withGroupErrors(async () => {
     const group = await withMemberEvents(knex, tenant, user.user_id, groupId, [assetId], () => withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertAssetGroupMemberUpdatableIfPresent(trx, tenant, user, groupId, assetId);
       await removeAssetFromGroupRow(trx, tenant, groupId, assetId, { actorUserId: user.user_id });
       return getGroupWithDetails(trx, tenant, groupId);
     }));
@@ -317,6 +329,7 @@ export const setAssetGroupOwner = withAuth(async (
   const { knex } = await createTenantKnex();
   return withGroupErrors(async () => {
     const group = await withMemberEvents(knex, tenant, user.user_id, groupId, [], () => withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertAssetGroupAssetsUpdatable(trx, tenant, user, await listGroupMemberIds(trx, tenant, groupId));
       await setGroupOwner(trx, tenant, groupId, contactId, { actorUserId: user.user_id });
       return getGroupWithDetails(trx, tenant, groupId);
     }));

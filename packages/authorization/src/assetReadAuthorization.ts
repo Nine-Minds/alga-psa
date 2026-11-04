@@ -173,6 +173,32 @@ export async function isAssetActionAllowed(
   return decision.allowed;
 }
 
+/**
+ * Batch authorization for one asset action. Records are resolved with one association query, while the
+ * authorization kernel still evaluates each record separately (including bundle and same-team rules).
+ */
+export async function filterAssetsAllowedForAction<T extends AssetAuthorizationInput>(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  context: AssetReadAuthorizationContext,
+  assets: readonly T[],
+  action: AssetAuthorizationAction
+): Promise<T[]> {
+  if (assets.length === 0) return [];
+  const records = await resolveAssetAuthorizationRecords(trx, tenant, [...assets]);
+  const allowed = await Promise.all(assets.map(async (asset) => {
+    const decision = await context.authorizationKernel.authorizeResource({
+      subject: context.subject,
+      resource: { type: 'asset', action, id: asset.asset_id },
+      record: records.get(asset.asset_id),
+      requestCache: context.requestCache,
+      knex: trx as Knex,
+    });
+    return decision.allowed;
+  }));
+  return assets.filter((_, index) => allowed[index]);
+}
+
 /** True when the caller's per-record kernel decision allows reading the asset. */
 export function isAssetReadAllowed(
   trx: Knex | Knex.Transaction,
@@ -194,19 +220,5 @@ export async function filterReadableAssets<T extends AssetAuthorizationInput>(
   context: AssetReadAuthorizationContext,
   assets: readonly T[]
 ): Promise<T[]> {
-  if (assets.length === 0) return [];
-  const records = await resolveAssetAuthorizationRecords(trx, tenant, [...assets]);
-  const allowed = await Promise.all(
-    assets.map(async (asset) => {
-      const decision = await context.authorizationKernel.authorizeResource({
-        subject: context.subject,
-        resource: { type: 'asset', action: 'read', id: asset.asset_id },
-        record: records.get(asset.asset_id),
-        requestCache: context.requestCache,
-        knex: trx as Knex,
-      });
-      return decision.allowed;
-    })
-  );
-  return assets.filter((_, i) => allowed[i]);
+  return filterAssetsAllowedForAction(trx, tenant, context, assets, 'read');
 }
