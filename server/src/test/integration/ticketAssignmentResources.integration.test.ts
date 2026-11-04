@@ -621,5 +621,29 @@ describe('ticket assignment and additional agents', () => {
       expect(result.resource).toMatchObject({ ticket_id: ticketId, additional_user_id: userB });
       expect(await resourcesFor(ticketId)).toHaveLength(1);
     });
+
+    it('persists creation-scoped staffing when later update authorization is denied', async () => {
+      const createdTicketId = await insertTicket(tenantId, clientId, userA);
+      hasPermissionMock.mockResolvedValue(true);
+      authorizeTicketRecordAccessMock.mockRejectedValue(new Error('Permission denied: Cannot access ticket'));
+
+      // This is the same creation-scoped core operation used by addTicket before its
+      // transaction commits. A later standalone resource action remains record-authorized.
+      await withTransaction(db, async (trx) => {
+        await addTicketResourceCore(
+          trx, tenantId, actorId, createdTicketId, userC, 'support', creationAuthorization(createdTicketId),
+        );
+      });
+      const assignmentsBeforeDeniedUpdate = await resourcesFor(createdTicketId);
+      const auditBeforeDeniedUpdate = await scoped('ticket_audit_logs')
+        .where({ ticket_id: createdTicketId, event_type: 'TICKET_ASSIGNED' }).select('*');
+      const laterAttempt = await addTicketResource(createdTicketId, userB, 'support');
+
+      expect(laterAttempt).toMatchObject({ permissionError: expect.stringContaining('Permission denied') });
+      expect((await resourcesFor(createdTicketId)).map((row: any) => row.additional_user_id)).toEqual([userC]);
+      expect(await resourcesFor(createdTicketId)).toEqual(assignmentsBeforeDeniedUpdate);
+      expect(await scoped('ticket_audit_logs').where({ ticket_id: createdTicketId, event_type: 'TICKET_ASSIGNED' }).select('*'))
+        .toEqual(auditBeforeDeniedUpdate);
+    });
   });
 });
