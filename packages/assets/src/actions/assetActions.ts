@@ -1283,6 +1283,8 @@ export interface AssetWriteHooks {
      * Hudu background sync) omit it and write as a full-access system actor.
      */
     authorize?: (trx: Knex.Transaction) => Promise<void>;
+    /** The caller whose visibility must also constrain the returned group summary. */
+    summaryUser?: AssetAuthUser;
 }
 
 /**
@@ -1317,7 +1319,7 @@ export async function updateAssetRecord(
                 ...baseCandidate
             } = validatedData;
 
-            const beforeCompleteAsset = await getAssetWithExtensions(trx, tenant, asset_id);
+            const beforeCompleteAsset = await getAssetWithExtensions(trx, tenant, asset_id, hooks?.summaryUser, !hooks);
             const beforeFormatted = formatAssetForOutput(beforeCompleteAsset) as unknown as Record<string, unknown>;
 
             const extensionPayloads = {
@@ -1519,7 +1521,7 @@ export async function updateAssetRecord(
             });
 
             // Return normalized asset data for client consumption
-            const completeAsset = await getAssetWithExtensions(trx, tenant, asset_id);
+            const completeAsset = await getAssetWithExtensions(trx, tenant, asset_id, hooks?.summaryUser, !hooks);
             const afterFormatted = formatAssetForOutput(completeAsset) as unknown as Record<string, unknown>;
 
             // Output-schema check inside the transaction: a failure rolls the write
@@ -1666,6 +1668,7 @@ export const updateAsset = withAuth(async (
         authorize: async (trx) => {
             await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
         },
+        summaryUser: user as AssetAuthUser,
     });
     } catch (error) {
         // Validation and invalid-type failures are RETURNED, not thrown: Next.js
@@ -1975,7 +1978,13 @@ export const bulkDeleteAssets = withAuth(async (
     }
 });
 
-async function getAssetWithExtensions(knex: Knex, tenant: string, asset_id: string, groupSummaryUser?: AssetAuthUser): Promise<Asset> {
+async function getAssetWithExtensions(
+    knex: Knex,
+    tenant: string,
+    asset_id: string,
+    groupSummaryUser?: AssetAuthUser,
+    trustedGroupSummaryRead = false
+): Promise<Asset> {
     // Get base asset data with client info
     const db = tenantDb(knex, tenant);
     const assetQuery = tenantScopedTable(knex, 'assets', tenant)
@@ -2002,7 +2011,9 @@ async function getAssetWithExtensions(knex: Knex, tenant: string, asset_id: stri
     // the drawer and mobile all render it without a second round trip.
     const group = groupSummaryUser
         ? await getAuthorizedAssetGroupSummary(knex, tenant, groupSummaryUser, asset_id)
-        : await getAssetGroupSummary(knex, tenant, asset_id);
+        : trustedGroupSummaryRead
+            ? await getAssetGroupSummary(knex, tenant, asset_id)
+            : null;
 
     // Get extension table data if applicable
     const extensionData = await getExtensionData(knex, tenant, asset_id, asset.asset_type);

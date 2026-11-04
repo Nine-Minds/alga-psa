@@ -283,7 +283,7 @@ vi.mock('../lib/assetGroups', async (importOriginal) => ({
   getAuthorizedAssetGroupSummariesForAssets: (...args: unknown[]) => h.authorizedGroupSummaries(...args),
 }));
 
-import { bulkUpdateAssets, createAsset, getAsset, getAssetDetailBundle, listAssets, updateAsset } from './assetActions';
+import { bulkUpdateAssets, createAsset, getAsset, getAssetDetailBundle, listAssets, updateAsset, updateAssetRecord } from './assetActions';
 
 function seedAsset(overrides: Row = {}): Row {
   const row: Row = {
@@ -397,6 +397,7 @@ beforeEach(() => {
   h.resetDb();
   h.privateGroupSummary = null;
   vi.clearAllMocks();
+  h.authorizedGroupSummary.mockResolvedValue(null);
 });
 
 describe('getAsset returns the normalised Asset (alga0002283 root cause)', () => {
@@ -457,6 +458,57 @@ describe('getAsset returns the normalised Asset (alga0002283 root cause)', () =>
 });
 
 describe('updateAsset: warranty-only edits (alga0002283)', () => {
+  it('keeps the trusted sessionless update core usable without caller authorization', async () => {
+    seedAsset();
+    seedNetworkDevice();
+    const trustedSummary = {
+      group_id: 'e0000000-0000-4000-8000-00000000000e',
+      name: 'Trusted summary',
+      kind: 'bundle',
+      member_count: 2,
+      user_count: 0,
+    };
+    h.privateGroupSummary = trustedSummary;
+
+    const result = await updateAssetRecord(
+      h.knexMock,
+      TENANT,
+      'system-actor',
+      ASSET_ID,
+      networkDeviceFormPayload(),
+      { suppressRevalidate: true },
+    );
+
+    expect(result.asset_id).toBe(ASSET_ID);
+    expect(result.group).toEqual(trustedSummary);
+    expect(h.authorizedGroupSummary).not.toHaveBeenCalled();
+  });
+
+  it('keeps an asset update successful and omits a denied group summary from the response', async () => {
+    seedAsset();
+    seedNetworkDevice();
+    h.privateGroupSummary = { group_id: 'secret-group', name: 'Forbidden group', member_count: 2 };
+
+    const result = (await updateAsset(ASSET_ID, networkDeviceFormPayload())) as any;
+
+    expect(result.asset_id).toBe(ASSET_ID);
+    expect(result.group).toBeNull();
+    expect(JSON.stringify(result)).not.toContain('secret-group');
+    expect(h.authorizedGroupSummary).toHaveBeenCalledWith(h.knexMock, TENANT, h.mockUser, ASSET_ID);
+  });
+
+  it('preserves an authorized group summary in the update response', async () => {
+    seedAsset();
+    seedNetworkDevice();
+    const allowedSummary = { group_id: 'e0000000-0000-4000-8000-00000000000e', name: 'Allowed group', kind: 'bundle', member_count: 2, user_count: 0 };
+    h.authorizedGroupSummary.mockResolvedValue(allowedSummary as any);
+
+    const result = (await updateAsset(ASSET_ID, networkDeviceFormPayload())) as any;
+
+    expect(result.asset_id).toBe(ASSET_ID);
+    expect(result.group).toEqual(allowedSummary);
+  });
+
   it('succeeds for a network device with blank (null) numerics and keeps them null', async () => {
     seedAsset();
     seedNetworkDevice();

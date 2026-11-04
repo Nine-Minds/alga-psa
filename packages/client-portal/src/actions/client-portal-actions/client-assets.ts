@@ -14,9 +14,10 @@ import {
   listAssetStatusRows,
 } from '@alga-psa/assets/lib/assetStatusRegistry';
 import {
-  getAssetGroupSummariesForAssets,
-  getAssetGroupSummary,
+  getAuthorizedAssetGroupSummariesForAssets,
+  getAuthorizedAssetGroupSummary,
 } from '@alga-psa/assets/lib/assetGroups';
+import type { AssetAuthUser } from '@alga-psa/assets/lib/assetReadAuthorization';
 import { getClientContactVisibilityContext } from './visibilityResolver';
 import { clientPortalActionErrorFrom, type ClientPortalActionError } from './clientPortalActionErrors';
 
@@ -115,6 +116,15 @@ async function resolveAssetVisibility(
   return getClientContactVisibilityContext(trx, tenant, user.contact_id);
 }
 
+function assetGroupAuthUser(user: IUserWithRoles): AssetAuthUser {
+  return {
+    user_id: user.user_id,
+    user_type: user.user_type === 'client' ? 'client' : user.user_type === 'service' ? 'service' : 'internal',
+    clientId: user.clientId ?? (user as IUserWithRoles & { client_id?: string | null }).client_id ?? null,
+    roles: user.roles,
+  };
+}
+
 /** Assets of the user's client, narrowed by their asset scope. The only way this module reads `assets`. */
 function scopedAssets(
   trx: Knex.Transaction,
@@ -181,11 +191,13 @@ function withAssigneeName(
 async function serializeWithGroups(
   trx: Knex.Transaction,
   tenant: string,
+  user: IUserWithRoles,
   rows: Array<Asset & Record<string, unknown>>,
 ): Promise<Asset[]> {
-  const summaries = await getAssetGroupSummariesForAssets(
+  const summaries = await getAuthorizedAssetGroupSummariesForAssets(
     trx,
     tenant,
+    assetGroupAuthUser(user),
     rows.map((row) => row.asset_id),
   );
   return rows.map((row) => ({
@@ -313,7 +325,7 @@ export const listClientAssets = withAuth(async (
       .offset(offset);
 
       return {
-        assets: await serializeWithGroups(trx, tenant, rows),
+        assets: await serializeWithGroups(trx, tenant, user, rows),
         total: Number(filteredCount?.count ?? 0),
         by_status: buildStatusSummary(statusRows, statusCounts),
         by_type: byType,
@@ -341,7 +353,7 @@ export const getClientAssets = withAuth(async (
       const visibility = await resolveAssetVisibility(trx, user, tenant);
       const assets = await withAssigneeName(trx, tenant, scopedAssets(trx, tenant, visibility))
         .orderBy('assets.updated_at', 'desc');
-      return serializeWithGroups(trx, tenant, assets);
+      return serializeWithGroups(trx, tenant, user, assets);
     });
   } catch (error) {
     const expected = clientPortalActionErrorFrom(error);
@@ -373,7 +385,7 @@ export const getClientAssetById = withAuth(async (
       if (!row) return null;
       return {
         ...serializeAsset(row),
-        group: await getAssetGroupSummary(trx, tenant, assetId),
+        group: await getAuthorizedAssetGroupSummary(trx, tenant, assetGroupAuthUser(user), assetId),
       };
     });
   } catch (error) {
