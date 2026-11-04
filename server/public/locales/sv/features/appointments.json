@@ -31,6 +31,8 @@
     "description": "Välj den tjänst du behöver hjälp med",
     "selectService": "Välj en tjänst",
     "serviceLabel": "Tjänst",
+    "preselectedServiceNotice": "Den här tjänsten är redan vald för dig – fortsätt till att välja datum.",
+    "serviceReadOnlyLabel": "Vald tjänst",
     "ticketLabel": "Koppla till befintligt ärende (valfritt)",
     "selectTicket": "Välj ett ärende",
     "noTicket": "Inget ärende",

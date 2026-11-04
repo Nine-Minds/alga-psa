@@ -196,11 +196,17 @@ export function RequestAppointmentModal({
     setIsLoading(true);
     setError(null);
     try {
-      const result = await getAvailableServicesAndTickets();
+      const result = await getAvailableServicesAndTickets(editingAppointment?.service_id);
 
       if (result.success && result.data) {
-        setServices(result.data.services);
-        setTickets(result.data.tickets);
+        const data = result.data;
+        setServices(data.services);
+        setTickets(data.tickets);
+        // The MSP owns this choice: preselect its default (or the only service
+        // on offer) so step 1 needs no interaction. An edit-mode selection,
+        // set before this resolves, always wins.
+        setSelectedServiceId(prev =>
+          prev || data.default_service_id || (data.services.length === 1 ? data.services[0].service_id : ''));
       } else {
         setError(result.error || t('errors.loadServicesFailed'));
       }
@@ -469,30 +475,39 @@ export function RequestAppointmentModal({
                 {t('step1.title')}
               </h3>
               <p className="text-sm text-[rgb(var(--color-text-600))] mb-4">
-                {t('step1.description')}
+                {services.length === 1 ? t('step1.preselectedServiceNotice') : t('step1.description')}
               </p>
 
-              <CustomSelect
-                id="appointment-service-select"
-                value={selectedServiceId || undefined}
-                onValueChange={setSelectedServiceId}
-                options={serviceOptions}
-                placeholder={t('step1.selectService')}
-                label={t('step1.serviceLabel')}
-              />
+              {/* One service means nothing to choose: the picker is dropped and
+                  the service is shown read-only in the info panel below. */}
+              {services.length !== 1 && (
+                <CustomSelect
+                  id="appointment-service-select"
+                  value={selectedServiceId || undefined}
+                  onValueChange={setSelectedServiceId}
+                  options={serviceOptions}
+                  placeholder={t('step1.selectService')}
+                  label={t('step1.serviceLabel')}
+                />
+              )}
 
               {selectedService && (
                 <Alert variant="info" className="mt-4">
                   <AlertTitle>{selectedService.service_name}</AlertTitle>
                   <AlertDescription>
+                    {services.length === 1 && (
+                      <p className="mb-2 font-medium" id="appointment-service-readonly">
+                        {t('step1.serviceReadOnlyLabel')}
+                      </p>
+                    )}
                     {selectedService.description && (
                       <p className="mb-2">{selectedService.description}</p>
                     )}
                     {selectedService.service_type && (
                       <div className="flex items-center gap-2">
                         <Badge variant="primary">{selectedService.service_type}</Badge>
-                        {selectedService.default_rate && (
-                          <span>{money(Number(selectedService.default_rate))}/{selectedService.unit_of_measure || resolveUnitOfMeasure({ fallback: 'HUR' }).label}</span>
+                        {Number(selectedService.default_rate) > 0 && (
+                          <span>{money(Number(selectedService.default_rate))}/{resolveUnitOfMeasure({ catalog: { label: selectedService.unit_of_measure }, fallback: 'HUR' }).label}</span>
                         )}
                       </div>
                     )}

@@ -29,6 +29,7 @@ import {
 import {
   getAvailableServicesForClient,
   getServicesForPublicBooking,
+  getPortalBookingConfig,
   getAvailableTimeSlots as getTimeSlotsFromService,
   getAvailableDates as getDatesFromService
 } from '../../services/availabilityService';
@@ -1540,7 +1541,8 @@ export const cancelAppointmentRequest = withAuth(async (
  */
 export const getAvailableServicesAndTickets = withAuth(async (
   currentUser: IUserWithRoles,
-  { tenant }: AuthContext
+  { tenant }: AuthContext,
+  includeServiceId?: string
 ): Promise<AppointmentRequestResult<{
   services: Array<{
     service_id: string;
@@ -1548,7 +1550,9 @@ export const getAvailableServicesAndTickets = withAuth(async (
     description?: string;
     service_type?: string;
     default_rate?: number;
+    unit_of_measure?: string;
   }>;
+  default_service_id: string | null;
   tickets: Array<{
     ticket_id: string;
     ticket_number: string;
@@ -1582,9 +1586,15 @@ export const getAvailableServicesAndTickets = withAuth(async (
 
     const clientId = contact.client_id;
 
+    // The MSP curates this menu in Availability Settings → General.
+    const bookingConfig = await getPortalBookingConfig(tenant);
+
     // Get available services for the client from two sources:
-    // 1. Services from active contracts
-    const contractServices = await getAvailableServicesForClient(tenant, clientId);
+    // 1. Services from active contracts (skipped when the MSP only wants its
+    //    explicitly configured bookable services on the portal)
+    const contractServices = bookingConfig.hideContractServices
+      ? []
+      : await getAvailableServicesForClient(tenant, clientId);
 
     // 2. Services that allow booking without a contract
     const publicServices = await getServicesForPublicBooking(tenant);
@@ -1604,7 +1614,40 @@ export const getAvailableServicesAndTickets = withAuth(async (
       }
     });
 
+    // Editing an existing request must still render its own service, even when
+    // the curation above no longer lists it.
+    if (includeServiceId && !servicesMap.has(includeServiceId)) {
+      const existingService = await withTransaction(db, async (trx: Knex.Transaction) => {
+        const scopedDb = tenantDb(trx, tenant);
+        const query = scopedDb.table('service_catalog as sc')
+          .where({ 'sc.service_id': includeServiceId })
+          .select(
+            'sc.service_id',
+            'sc.service_name',
+            'sc.description as service_description',
+            'st.name as service_type',
+            'sc.default_rate',
+            'sc.unit_of_measure'
+          );
+        scopedDb.tenantJoin(query, 'service_types as st', 'sc.custom_service_type_id', 'st.id', { type: 'left' });
+        return await query.first();
+      });
+
+      if (existingService) {
+        servicesMap.set(existingService.service_id, existingService);
+      }
+    }
+
     const services = Array.from(servicesMap.values());
+
+    // Preselect a service so clients never have to choose: the MSP default when
+    // it survived the filter, otherwise the only service on offer.
+    const defaultServiceId = bookingConfig.defaultServiceId
+      && servicesMap.has(bookingConfig.defaultServiceId)
+      ? bookingConfig.defaultServiceId
+      : services.length === 1
+        ? services[0].service_id
+        : null;
 
     // Get open tickets for the client
     const tickets = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -1626,8 +1669,12 @@ export const getAvailableServicesAndTickets = withAuth(async (
           service_name: s.service_name,
           description: s.service_description,
           service_type: s.service_type,
-          default_rate: s.default_rate
+          // bigint rates arrive as strings from some drivers; a $0 rate must
+          // stay numeric 0 so the portal can hide it.
+          default_rate: Number(s.default_rate ?? 0),
+          unit_of_measure: s.unit_of_measure
         })),
+        default_service_id: defaultServiceId,
         tickets: tickets.map(t => ({
           ticket_id: t.ticket_id,
           ticket_number: t.ticket_number,

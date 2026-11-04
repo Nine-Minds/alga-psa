@@ -16,6 +16,8 @@
     "description": "Wybierz usługę, z którą potrzebujesz pomocy",
     "selectService": "Wybierz usługę",
     "serviceLabel": "Usługa",
+    "preselectedServiceNotice": "Ta usługa jest już dla Ciebie wybrana — przejdź do wyboru daty.",
+    "serviceReadOnlyLabel": "Wybrana usługa",
     "ticketLabel": "Powiąż z istniejącym zgłoszeniem (opcjonalnie)",
     "selectTicket": "Wybierz zgłoszenie",
     "noTicket": "Brak zgłoszenia",
