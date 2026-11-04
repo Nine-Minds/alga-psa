@@ -991,6 +991,53 @@ jobs:
           exit 1
         shell: bash
 
+      - name: PgBouncer requires password authentication
+        if: steps.install_docker_compose.outcome == 'success'
+        # Runs after setup: app_user is created by setup's create_database.js, so it does
+        # not exist in a fresh Postgres before then. Before any app or worker starts.
+        run: |
+          # Runs psql from a throwaway container on the compose network, using the
+          # image the postgres service already runs. A rejected login must fail
+          # with an authentication error (not, say, a connection error).
+          PSQL_IMAGE="$(docker inspect -f '{{.Config.Image}}' "$(docker-compose -p alga-e2e-test ps -q postgres)")"
+          APP_PASSWORD="$(cat secrets/db_password_server)"
+
+          pooler_psql() {
+            # pooler_psql <user> <password|""> <db>; an empty password sends none.
+            local user="$1" password="$2" db="$3" env_args=(-e PGCONNECT_TIMEOUT=10)
+            [ -n "$password" ] && env_args+=(-e "PGPASSWORD=$password")
+            docker run --rm --network alga-e2e-test_app-network "${env_args[@]}" \
+              --entrypoint psql "$PSQL_IMAGE" -X -w -h pgbouncer -p 6432 -U "$user" -d "$db" -tAc 'select current_user' 2>&1
+          }
+
+          expect_rejected() {
+            local description="$1" output rc
+            shift
+            output="$(pooler_psql "$@")" && rc=0 || rc=$?
+            if [ "$rc" -ne 0 ] && grep -qi 'no password supplied\|authentication failed\|no such user' <<<"$output"; then
+              echo "ok   - rejected: $description"
+            else
+              echo "FAIL - expected an authentication failure for: $description (rc=$rc)"
+              echo "$output"
+              exit 1
+            fi
+          }
+
+          for user in app_user postgres; do
+            expect_rejected "$user without a password" "$user" "" server
+            expect_rejected "$user with a wrong password" "$user" "not-the-password-$$" server
+          done
+          # The superuser is not served through PgBouncer, even with its real secret.
+          expect_rejected "postgres with its real secret" postgres "$(cat secrets/postgres_password)" server
+
+          output="$(pooler_psql app_user "$APP_PASSWORD" server)" || { echo "FAIL - app_user could not log in through PgBouncer"; echo "$output"; exit 1; }
+          if [ "$output" != "app_user" ]; then
+            echo "FAIL - unexpected result for app_user: $output"
+            exit 1
+          fi
+          echo "ok   - app_user authenticates with secrets/db_password_server"
+        shell: bash
+
       - name: Start remaining services after setup completion
         id: services_started
         if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
@@ -1527,7 +1574,7 @@ jobs:
         run: |
           set -euo pipefail
           cat > "$RUNNER_TEMP/citus-upgrade-compose.json" <<'JSON'
-          {"services":{"upgrade-citus":{"image":"citusdata/citus:12.1","command":["postgres","-c","password_encryption=md5"],"environment":{"POSTGRES_USER":"postgres","POSTGRES_PASSWORD":"placeholder-password","POSTGRES_DB":"postgres","POSTGRES_HOST_AUTH_METHOD":"md5"},"networks":["app-network"]},"server":{"environment":{"DB_HOST":"upgrade-citus","DB_PORT":"5432","DB_NAME_SERVER":"upgrade_citus_ci"}}}}
+          {"services":{"upgrade-citus":{"image":"citusdata/citus:12.1","command":["postgres","-c","password_encryption=md5"],"environment":{"POSTGRES_USER":"postgres","POSTGRES_PASSWORD":"placeholder-password","POSTGRES_DB":"postgres","POSTGRES_HOST_AUTH_METHOD":"md5"},"networks":["app-network"]},"server":{"environment":{"DB_HOST":"upgrade-citus","DB_PORT":"5432","DB_NAME_SERVER":"upgrade_citus_ci","DB_HOST_ADMIN":"upgrade-citus","DB_PORT_ADMIN":"5432"}}}}
           JSON
           export COMPOSE_FILE="$COMPOSE_FILE:$RUNNER_TEMP/citus-upgrade-compose.json"
           docker-compose -p alga-e2e-test up --no-build --no-deps -d upgrade-citus

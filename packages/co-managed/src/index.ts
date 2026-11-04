@@ -99,3 +99,6 @@ export type { CoManagedLocalWorkReference, CoManagedWorkSourceKind } from './tim
 export { findCoManagedLocalWorkReference, loadCoManagedLocalWorkReference, recordCoManagedWorkReference } from './timeWorkReference';
 export { retainCoManagedTimeParticipation } from './timeParticipationEvidence';
 export * from './timeBillingProfile';
+
+export * from './portableRestoreUploads';
+export { assertPortableRestoreInstallationAuthority } from './portableRestoreInstallationAuthority';

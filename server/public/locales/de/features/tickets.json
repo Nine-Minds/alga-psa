@@ -2612,12 +2612,15 @@
       "columns": {
         "name": "Name",
         "title": "Tickettitel",
+        "client": "Kunde",
         "board": "Board",
         "checklist": "Checklistenpunkte",
         "status": "Status",
         "schedules": "Zeitpläne"
       },
-      "deleteBlocked": "Wird von {{count}} wiederkehrenden Zeitplan/Zeitplänen verwendet. Weisen Sie ihnen zuerst eine andere Vorlage zu oder archivieren Sie sie."
+      "deleteBlocked": "Wird von {{count}} wiederkehrenden Zeitplan/Zeitplänen verwendet. Weisen Sie ihnen zuerst eine andere Vorlage zu oder archivieren Sie sie.",
+      "allClients": "Alle Kunden",
+      "clientFilter": "Alle Kunden"
     },
     "status": {
       "active": "Aktiv",
@@ -2645,6 +2648,9 @@
       "title": "Tickettitel",
       "description": "Beschreibung",
       "descriptionPlaceholder": "Beschreibung",
+      "client": "Kunde",
+      "clientPlaceholder": "Alle Kunden",
+      "clientHelp": "Leer lassen, um die Vorlage für alle Kunden anzubieten. Wählen Sie einen Kunden, um sie nur für dessen Tickets anzubieten.",
       "offerForManualUse": "In der Auswahl für neue Tickets anbieten",
       "offerForManualUseHelp": "Ausschalten für Vorlagen, die nur wiederkehrende Zeitpläne verwenden.",
       "titleTokens": "Im Titel können Sie {{tokens}} verwenden; sie werden pro Ticket ausgefüllt."

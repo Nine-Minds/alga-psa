@@ -57,6 +57,7 @@ const ALLOWED_FILES = new Set<string>([
   // runs in the shared server unit suite but does not make this code reachable
   // from CE runtime source.
   'server/src/test/unit/product/coManagedPortableVault.test.ts',
+  'server/src/test/unit/product/coManagedPortableWorkspaceRestoreVault.test.ts',
 ]);
 
 // Shared lifecycle/admission catalogs describe the combined CE + EE schema.

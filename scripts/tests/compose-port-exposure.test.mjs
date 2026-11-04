@@ -33,6 +33,7 @@ const DUMMY_ENV = {
 const DATA_PLANE_TARGETS = new Set([5432, 6432, 6379]);
 const DATA_PLANE_SERVICES = ['postgres', 'pgbouncer', 'redis', 'ai-gateway-postgres'];
 
+// LEVERAGE: pattern compose-render-helper — same render() as compose-pgbouncer-auth.test.mjs
 function render(files, extraEnv = {}) {
   const env = { ...process.env, ...DUMMY_ENV, ...extraEnv };
   // Variables that would change which files or addresses Compose uses.
