@@ -23,17 +23,17 @@ vi.mock('@alga-psa/db', async (importOriginal) => ({
 
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn(async () => undefined) }));
-vi.mock('../../../../server/src/lib/api/utils/requestContext', () => ({
+vi.mock('../../../../../server/src/lib/api/utils/requestContext', () => ({
   requireRequestContext: () => ({
     tenant: holder.tenant,
     userId: holder.userId,
     user: { user_id: holder.userId, tenant: holder.tenant, user_type: 'internal' },
   }),
 }));
-vi.mock('../../../../server/src/lib/auth/rbac', () => ({
+vi.mock('../../../../../server/src/lib/auth/rbac', () => ({
   hasPermission: async (_user: unknown, resource: string, action: string) => apiAccess.permissions.has(`${resource}:${action}`),
 }));
-vi.mock('../../../../server/src/lib/db/db', () => ({ getConnection: async () => holder.knex }));
+vi.mock('../../../../../server/src/lib/db/db', () => ({ getConnection: async () => holder.knex }));
 
 import {
   addAssetsToGroup,
@@ -42,19 +42,19 @@ import {
   removeAssetFromGroup,
   setAssetGroupOwner,
   updateAssetGroup,
-} from '../actions/assetGroupActions';
-import { createAssetReadContext, isAssetActionAllowed } from './assetReadAuthorization';
-import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../../../inventory/src/test-utils/inventoryTestDatabase';
-import { wireLocalTestDbEnv } from '../../../../server/test-utils/dbConfig';
+} from '../../../../../packages/assets/src/actions/assetGroupActions';
+import { createAssetReadContext, isAssetActionAllowed } from '../../../../../packages/assets/src/lib/assetReadAuthorization';
+import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../../../../../packages/inventory/src/test-utils/inventoryTestDatabase';
+import { wireLocalTestDbEnv } from '../../../../../server/test-utils/dbConfig';
 import { tenantDb } from '@alga-psa/db';
 import { NextRequest } from 'next/server';
-import { ApiAssetGroupController } from '../../../../server/src/lib/api/controllers/ApiAssetGroupController';
+import { ApiAssetGroupController } from '../../../../../server/src/lib/api/controllers/ApiAssetGroupController';
 import {
   addAssetsToGroupRows,
   createGroup,
   updateGroupRow,
-} from './assetGroups';
-import { lockAndAuthorizeAssetGroupMembers } from './assetGroupAuthorization';
+} from '../../../../../packages/assets/src/lib/assetGroups';
+import { lockAndAuthorizeAssetGroupMembers } from '../../../../../packages/assets/src/lib/assetGroupAuthorization';
 
 const database = (tenant = holder.tenant) => tenantDb(holder.knex, tenant);
 
