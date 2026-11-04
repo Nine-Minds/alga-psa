@@ -30,7 +30,7 @@ async function dropConstraintIfExists(knex, name) {
 
 async function replaceConstraint(knex, name, definition) {
   await dropConstraintIfExists(knex, name);
-  await knex.raw(`ALTER TABLE ${TABLE} ADD CONSTRAINT ${name} CHECK (${definition})`);
+  await knex.raw(`ALTER TABLE ${TABLE} ADD CONSTRAINT ${name} CHECK (${definition}) NOT VALID`);
 }
 
 exports.up = async function (knex) {
@@ -56,7 +56,7 @@ exports.up = async function (knex) {
   );
 
   await knex.raw(`
-    CREATE UNIQUE INDEX IF NOT EXISTS ${EMAIL_INDEX}
+    CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS ${EMAIL_INDEX}
     ON ${TABLE} (tenant, rule_id, email) WHERE email IS NOT NULL
   `);
 };
