@@ -84,6 +84,8 @@
         "server/src/pages/*"
       ],
       "@product/chat/entry": ["packages/product-chat/oss/entry"],
+      "@product/service-principals/entry": ["packages/product-service-principals/oss/entry"],
+      "@product/service-principals/types": ["packages/product-service-principals/types"],
       "@product/extensions/entry": ["packages/product-extensions/oss/entry"],
       "@product/extensions/*": ["packages/product-extensions/*"],
       "@product/ext-proxy/handler": ["packages/product-ext-proxy/ee/handler"],
@@ -161,6 +163,8 @@
       "@alga-psa/users/*": ["packages/users/src/*"],
       "@alga-psa/licensing": ["packages/licensing/src"],
       "@alga-psa/licensing/*": ["packages/licensing/src/*"],
+      "@alga-psa/storage": ["packages/storage/src"],
+      "@alga-psa/storage/*": ["packages/storage/src/*"],
       "@alga-psa/co-managed": ["packages/co-managed/src"],
       "@alga-psa/co-managed/*": ["packages/co-managed/src/*"],
       "@alga-psa/sla": ["packages/sla/src"],

@@ -42,6 +42,7 @@ import TicketWatchListCard from './../TicketWatchListCard';
 import type { CommentEmailRecipientsPayload } from '../CommentEmailRecipientsControl';
 import { useTicketDataSource } from '../TicketDataSourceContext';
 import { resolveTicketFrozenFields } from '../../../lib/ticketDataSource';
+import { contactLocationSuggestion, requesterLocationLine } from '../../../lib/requesterLocation';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { BentoTile, BentoTileAddButton, BentoTileEmpty, BentoTileEmptyScope, BentoTileSkeleton, BentoCollapseEmptyTiles } from '@alga-psa/ui/components/bento/BentoTile';
@@ -196,7 +197,6 @@ export interface TicketBentoLayoutProps {
   onContactClick: () => void;
   onClientClick: () => void;
   /** Clients list, used to scope the quick-add-contact modal. */
-  clients?: IClient[];
   /** Persists a contact change (or clear, when null). Enables inline contact editing on the tile — the picker pool is the existing `contacts` prop. */
   onChangeContact?: (contactId: string | null) => void;
   /** Repoints the ticket to a different client (resets contact + location). Enables the inline ClientPicker on the tile. */
@@ -284,7 +284,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
   // Screen-declared frozen fields only: live-collaboration conflicts reach BentoHero (liveFrozenFields), never these gates.
   const frozenFieldSet = React.useMemo(() => new Set(resolveTicketFrozenFields(dataSource.screen)), [dataSource.screen]);
   const { getUserAvatarUrlsBatchAction, getTeamAvatarUrlsBatchAction } = dataSource.avatars;
-  const { getClientBillingProfiles } = dataSource.people;
+  const { getClientBillingProfiles, searchClientsForPicker } = dataSource.people;
   const loadClientBillingProfiles = (clientId: string) => getClientBillingProfiles(clientId);
   const ticketId = ticket.ticket_id ?? '';
   // Guards against re-entrant add/remove churn on rapid multi-select changes.
@@ -362,18 +362,6 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
   const [selectedNewClientId, setSelectedNewClientId] = React.useState<string | null>(null);
   const [clientFilterState, setClientFilterState] = React.useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = React.useState<'all' | 'company' | 'individual'>('all');
-  // props.clients can contain the same company more than once (joins upstream);
-  // dedupe by client_id so the picker shows each company once.
-  const uniqueClients = React.useMemo(() => {
-    const seen = new Set<string>();
-    return (props.clients ?? []).filter((client) => {
-      if (!client || typeof client.client_id === 'undefined') return false;
-      if (seen.has(client.client_id)) return false;
-      seen.add(client.client_id);
-      return true;
-    });
-  }, [props.clients]);
-
   // Log call/email: the quick-add-interaction flow needs a client, so it is only
   // offered when the ticket resolves to one. A successful add bumps the refresh
   // key so the Calls and emails tile refetches and shows the new row.
@@ -381,6 +369,12 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
   const [isLogInteractionOpen, setIsLogInteractionOpen] = React.useState(false);
   const [interactionRefreshKey, setInteractionRefreshKey] = React.useState(0);
   const logInteractionContactId = props.contactInfo?.contact_name_id ?? ticket.contact_name_id ?? null;
+
+  // Where the requester works, under the tag chips.
+  const requesterLocation = requesterLocationLine(props.contactInfo, t('bento.tiles.remote', 'Remote'));
+  const suggestedContactLocationId = props.onChangeLocation
+    ? contactLocationSuggestion(props.contactInfo, (ticket as { location_id?: string | null }).location_id)
+    : null;
   const handleInteractionClick = React.useCallback((interactionId: string) => {
     void openInteractionDetails(interactionId, () => {
       setInteractionRefreshKey((key) => key + 1);
@@ -694,6 +688,23 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
             {props.contactInfo?.email ? (
               <div className="text-[rgb(var(--color-text-600))] truncate">{props.contactInfo.email}</div>
             ) : null}
+            {requesterLocation ? (
+              <div className="text-[rgb(var(--color-text-600))] truncate" id={`${id}-contact-location`}>
+                {requesterLocation.name}
+              </div>
+            ) : null}
+            {/* The ticket is somewhere the requester does not work. Never re-pointed on its own:
+                the one click is the operator saying the person's site is the right answer. */}
+            {suggestedContactLocationId ? (
+              <button
+                id={`${id}-contact-use-location`}
+                type="button"
+                className="text-xs text-[rgb(var(--color-primary-600))] hover:underline text-left"
+                onClick={() => props.onChangeLocation?.(suggestedContactLocationId)}
+              >
+                {t('bento.tiles.useContactLocation', 'Use contact\'s location')}
+              </button>
+            ) : null}
             {contactPhone ? (
               <div className="text-[rgb(var(--color-text-600))] truncate">
                 <CallLink
@@ -743,7 +754,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
                   <div className="mt-1.5 space-y-2">
                     <ClientPicker
                       id={`${id}-client-picker`}
-                      clients={uniqueClients}
+                      searchClients={searchClientsForPicker}
                       onSelect={setSelectedNewClientId}
                       selectedClientId={selectedNewClientId || props.client?.client_id || ''}
                       filterState={clientFilterState}
@@ -1015,7 +1026,6 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
           setIsQuickAddContactOpen(false);
           setContactEditOpen(true);
         },
-        clients: uniqueClients,
         selectedClientId: effectiveClientId ?? null,
       })}
       {isLogInteractionOpen && effectiveClientId

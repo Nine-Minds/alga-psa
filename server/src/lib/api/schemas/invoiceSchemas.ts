@@ -23,22 +23,14 @@ import {
   booleanTransform,
   numberTransform
 } from './common';
+import { INVOICE_STATUSES } from '../../invoices/invoiceStatusPolicy';
 
 // ============================================================================
 // Base Invoice Schemas
 // ============================================================================
 
 // Invoice status enum
-const invoiceStatusSchema = z.enum([
-  'draft',
-  'sent', 
-  'paid',
-  'overdue',
-  'cancelled',
-  'pending',
-  'prepayment',
-  'partially_applied'
-]);
+const invoiceStatusSchema = z.enum(INVOICE_STATUSES);
 
 const recurringExecutionWindowKindSchema = z.enum([
   'client_cadence_window',
@@ -561,7 +553,8 @@ const updateInvoiceAnnotationSchema = createUpdateSchema(createInvoiceAnnotation
 const bulkInvoiceStatusUpdateSchema = z.object({
   invoice_ids: z.array(uuidSchema).min(1).max(100),
   status: invoiceStatusSchema,
-  finalized_at: invoiceDateSchema.optional()
+  // Workflow-controlled: finalization has its own command.
+  finalized_at: z.never({ message: 'finalized_at cannot be set through bulk status update; use the finalize command' }).optional()
 });
 
 // Bulk invoice send

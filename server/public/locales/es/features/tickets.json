@@ -116,7 +116,9 @@
     "clientTags": "Etiquetas del cliente",
     "tagModeAny": "Cualquiera de",
     "tagModeNone": "Ninguna de",
-    "droppedFromLink": "Algunos filtros de este enlace no son válidos y se ignoraron."
+    "droppedFromLink": "Algunos filtros de este enlace no son válidos y se ignoraron.",
+    "location": "Ubicación",
+    "requesterLocation": "Ubicación del solicitante"
   },
   "create": {
     "title": "Crear ticket de soporte",
@@ -1023,7 +1025,9 @@
       "heading": "Observadores",
       "placeholder": "Añadir observadores..."
     },
-    "attachmentsPartialFailure": "Ticket creado, pero no se pudieron adjuntar estos archivos: {{files}}. Añádalos desde el ticket."
+    "attachmentsPartialFailure": "Ticket creado, pero no se pudieron adjuntar estos archivos: {{files}}. Añádalos desde el ticket.",
+    "contactLocationSuffix": "(ubicación del contacto)",
+    "contactPrimaryLocationSuffix": "(ubicación principal del contacto)"
   },
   "itil": {
     "calculatedPriority": "Prioridad (calculada)",
@@ -2057,7 +2061,9 @@
       "changeLocation": "Cambiar ubicación",
       "addDescriptionPrompt": "Añade una descripción: ¿cuál es el problema y qué necesita el cliente?",
       "projectTasks": "Tareas del proyecto",
-      "timeAndBilling": "Tiempo y facturación"
+      "timeAndBilling": "Tiempo y facturación",
+      "useContactLocation": "Usar la ubicación del contacto",
+      "remote": "Remota"
     },
     "timeline": {
       "subtitle": "Respuestas, tiempo y cambios del sistema en un solo lugar",
@@ -2612,12 +2618,15 @@
       "columns": {
         "name": "Nombre",
         "title": "Título del ticket",
+        "client": "Cliente",
         "board": "Tablero",
         "checklist": "Elementos de la lista",
         "status": "Estado",
         "schedules": "Programaciones"
       },
-      "deleteBlocked": "Usada por {{count}} programación(es) recurrente(s). Asígneles otra plantilla o archívelas primero."
+      "deleteBlocked": "Usada por {{count}} programación(es) recurrente(s). Asígneles otra plantilla o archívelas primero.",
+      "allClients": "Todos los clientes",
+      "clientFilter": "Todos los clientes"
     },
     "status": {
       "active": "Activa",
@@ -2645,6 +2654,9 @@
       "title": "Título del ticket",
       "description": "Descripción",
       "descriptionPlaceholder": "Descripción",
+      "client": "Cliente",
+      "clientPlaceholder": "Todos los clientes",
+      "clientHelp": "Déjelo vacío para ofrecer la plantilla a todos los clientes. Elija uno para ofrecerla solo en los tickets de ese cliente.",
       "offerForManualUse": "Ofrecer en el selector de nuevo ticket",
       "offerForManualUseHelp": "Desactívelo para plantillas que solo usan las programaciones recurrentes.",
       "titleTokens": "Puede usar {{tokens}} en el título; se rellenan en cada ticket."

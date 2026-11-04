@@ -28,7 +28,6 @@ import type {
   ITicketListFilters,
   IAgentSchedule,
   IComment,
-  IClient,
   IContact,
   IBoard,
   ITicketCategory,
@@ -73,6 +72,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { withAuth } from '@alga-psa/auth';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
+import { attachContactLocations } from '@alga-psa/shared/models/contactLocation';
 import { preserveStoredWatchList } from '@alga-psa/shared/lib/tickets/watchList';
 import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import { ticketUpdateStamp } from '@shared/lib/tickets/ticketUpdateStamp';
@@ -545,7 +545,6 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     const [
       comments,
       documentRows,
-      clients,
       resources,
       rawUsers,
       statuses,
@@ -572,21 +571,6 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
           'da.entity_type': 'ticket'
         }),
       
-      tenantLeftJoin(
-        trx,
-        tenant,
-        tenantScopedTable(trx, 'clients as c', tenant)
-        .select(
-          'c.*',
-          'da.document_id'
-        ),
-        'document_associations as da',
-        'c.client_id',
-        'da.entity_id',
-        { on: (join) => join.andOnVal('da.entity_type', '=', 'client') }
-      )
-        .orderBy('c.client_name', 'asc'),
-
       tenantScopedTable(trx, 'ticket_resources', tenant)
         .where({
           ticket_id: ticketId
@@ -678,42 +662,6 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       ? await authorizeAndRedactDocuments(trx, tenant, user, documentRows as IDocument[])
       : [];
 
-    // --- Add Logo URL Processing for the fetched 'clients' list ---
-    const clientsData = clients as (IClient & { document_id?: string })[];
-    const documentIds = clientsData
-      .map((c: any) => c.document_id)
-      .filter((id: any): id is string => !!id);
-
-    let fileIdMap: Record<string, string> = {};
-    if (documentIds.length > 0) {
-      const fileRecords = await tenantScopedTable(trx, 'documents', tenant)
-        .select('document_id', 'file_id')
-        .whereIn('document_id', documentIds);
-
-      fileIdMap = fileRecords.reduce((acc: Record<string, string>, record: { document_id: string; file_id?: string | null }) => {
-        if (record.file_id) {
-          acc[record.document_id] = record.file_id;
-        }
-        return acc;
-      }, {} as Record<string, string>);
-    }
-
-    // Process the full clients list to add logoUrl using batch loading
-    const clientIds = clientsData.map(c => c.client_id);
-    const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
-    
-    const clientsWithLogos = clientsData.map((clientData) => {
-      const logoUrl = logoUrlsMap.get(clientData.client_id) || null;
-      const { document_id, ...clientResult } = clientData;
-      return {
-        ...clientResult,
-        properties: clientData.properties || {},
-        logoUrl,
-      };
-    });
-    // --- End Logo URL Processing for 'clients' list ---
-
-
     // Fetch specific client and contact data if available
     let client: any = null;
     let contacts: IContact[] = [];
@@ -791,6 +739,16 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
           contact_name_id: ticket.contact_name_id
         })
         .first();
+    }
+
+    // Where these people work, in one batched read for the whole page: the requester tile shows
+    // the ticket's contact location (and offers it when the ticket sits elsewhere), and the
+    // contact picker rows carry the same secondary line as everywhere else.
+    if (contacts.length > 0) {
+      contacts = await attachContactLocations(trx, tenant, contacts, (contact) => contact.contact_name_id) as IContact[];
+    }
+    if (contactInfo) {
+      [contactInfo] = await attachContactLocations(trx, tenant, [contactInfo], (contact) => contact.contact_name_id);
     }
 
     const displayTags = {
@@ -1222,7 +1180,6 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         priority: priorityOptions
       },
       categories,
-      clients: clientsWithLogos,
       locations,
       agentSchedules: agentSchedulesList
     };
@@ -1362,6 +1319,7 @@ async function buildTicketListBaseQuery(
     tenantLeftJoin(trx, tenant, baseQuery, 'categories as cat', 't.category_id', 'cat.category_id');
     tenantLeftJoin(trx, tenant, baseQuery, 'clients as comp', 't.client_id', 'comp.client_id');
     tenantLeftJoin(trx, tenant, baseQuery, 'contacts as cn', 't.contact_name_id', 'cn.contact_name_id');
+    tenantLeftJoin(trx, tenant, baseQuery, 'client_locations as tloc', 't.location_id', 'tloc.location_id');
     tenantLeftJoin(trx, tenant, baseQuery, 'users as u', 't.entered_by', 'u.user_id');
     tenantLeftJoin(trx, tenant, baseQuery, 'users as au', 't.assigned_to', 'au.user_id');
     tenantLeftJoin(trx, tenant, baseQuery, 'teams as tm', 't.assigned_team_id', 'tm.team_id');
@@ -1834,6 +1792,7 @@ function buildTicketListItemsQuery(
       'cat.category_name',
       'comp.client_name',
       'cn.full_name as contact_name',
+      'tloc.location_name as ticket_location_name',
       displayTagsForEntityQuery(trx, tenant, audience, 'contact', 't.contact_name_id').as('contact_tags'),
       displayTagsForEntityQuery(trx, tenant, audience, 'client', 't.client_id').as('client_tags'),
       trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
@@ -1863,6 +1822,7 @@ function mapTicketListItems(tickets: any[]): ITicketListItem[] {
       category_name,
       client_name,
       contact_name,
+      ticket_location_name,
       entered_by_name,
       assigned_to_name,
       assigned_team_name,
@@ -1905,6 +1865,7 @@ function mapTicketListItems(tickets: any[]): ITicketListItem[] {
       category_name: category_name || 'Unknown',
       client_name: client_name || 'Unknown',
       contact_name: contact_name || null,
+      ticket_location_name: ticket_location_name || null,
       entered_by_name: entered_by_name || 'Unknown',
       assigned_to_name: assigned_to_name || null,
       assigned_team_name: assigned_team_name || null,
@@ -2452,7 +2413,6 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         priorities,
         boards,
         categories,
-        clients,
         users,
         tags
       ] = await Promise.all([
@@ -2477,10 +2437,6 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         .orderBy('display_order', 'asc')
         .orderBy('category_name', 'asc'),
       
-      tenantScopedTable(trx, 'clients as c', tenant)
-        .select('c.*')
-        .orderBy('c.client_name', 'asc'),
-
       tenantScopedTable(trx, 'users', tenant)
         .orderBy('first_name', 'asc'),
 
@@ -2554,27 +2510,6 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         label: `${user.first_name} ${user.last_name}`
       }));
 
-      // --- Add Logo URL Processing ---
-      const clientsData = clients as IClient[];
-
-      // Process clients to add logoUrl using batch loading
-      const clientIds = clientsData.map((c: IClient) => c.client_id);
-      const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
-    
-      const clientChipTags = await loadDisplayTagsForEntities(trx, tenant, displayAudienceForUser(user), [
-        { taggedType: 'client', ids: clientIds },
-      ]);
-      const clientsWithLogos = clientsData.map((clientData: IClient) => {
-        const logoUrl = logoUrlsMap.get(clientData.client_id) || null;
-        return {
-          ...clientData,
-          properties: clientData.properties || {},
-          logoUrl,
-          displayTags: clientChipTags.get(displayTagKey('client', clientData.client_id)) ?? [],
-        };
-      });
-      // --- End Logo URL Processing ---
-
       // Use tenant categories directly (includes ITIL ones if copied)
 
       return {
@@ -2583,7 +2518,6 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         boardOptions,
         agentOptions,
         categories,
-        clients: clientsWithLogos, // Return clients with logos
         users,
         contactTagDefinitions,
         clientTagDefinitions,

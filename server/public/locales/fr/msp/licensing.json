@@ -716,6 +716,21 @@
       "rejected": "Impossible d'enregistrer cette tâche.",
       "saved": "Enregistré.",
       "save": "Enregistrer"
+    },
+    "portableExport": {
+      "title": "Exporter l'espace de travail",
+      "description": "Téléchargez une archive portable et chiffrée des enregistrements et fichiers de votre espace de travail.",
+      "recovery": "Conservez la phrase secrète de récupération en lieu sûr. Sans elle, l'archive ne peut pas être ouverte.",
+      "connections": "L'archive contient les enregistrements de votre espace de travail et les fichiers qui y sont stockés. Les enregistrements et associations de documents, ainsi que l'historique du temps, du planning, des réunions et des conversations, ne sont pas encore inclus et arriveront dans une version ultérieure. La facturation, les données privées du MSP et les secrets d'intégration ne sont pas inclus.",
+      "passphrase": "Phrase secrète de récupération",
+      "confirmPassphrase": "Confirmer la phrase secrète de récupération",
+      "download": "Préparer et télécharger l'archive",
+      "requested": "Votre demande s’ouvre dans un nouvel onglet. La préparation peut prendre quelques minutes ; votre navigateur téléchargera le fichier lorsqu’il sera prêt.",
+      "loadError": "Vous ne pouvez pas exporter cet espace de travail avec vos accès actuels.",
+      "lengthError": "Utilisez une phrase secrète comprise entre 16 et 1024 octets UTF-8.",
+      "matchError": "Les phrases secrètes de récupération doivent correspondre.",
+      "unavailable": "L'export de l'espace de travail n'est pas disponible dans cette édition.",
+      "loading": "Chargement…"
     }
   },
   "common": {

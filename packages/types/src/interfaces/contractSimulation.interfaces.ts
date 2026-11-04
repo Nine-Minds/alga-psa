@@ -3,6 +3,7 @@ import type { CadenceOwner } from "./recurringTiming.interfaces";
 import type { ChargeExplanation } from "./billingCompute.interfaces";
 import type { BillingCycleType } from "./billing.interfaces";
 import type { FixedPricingBasis } from "./contractLineServiceConfiguration.interfaces";
+import type { ContractBillingTrace } from "./contract.interfaces";
 import type { WasmInvoiceViewModel } from "../lib/invoice-renderer/types";
 
 /**
@@ -340,6 +341,13 @@ export interface ContractScenario {
   contract_id: string | null;
   is_system_managed_default: boolean;
   client_binding: ScenarioClientBinding;
+  /**
+   * Which billing profile(s) and terms the live contract resolved to when the
+   * scenario was snapshotted. Display only: simulated pricing does not read it
+   * (tax still uses the client-level exemption). Absent on scenarios persisted
+   * before this field existed; null for drafts and template-only scenarios.
+   */
+  billing_identity?: ContractBillingTrace | null;
   invoice_schedule: ScenarioBillingSchedule;
   billing_frequency: string;
   contract_start_date: ISO8601String | null;

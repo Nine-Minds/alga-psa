@@ -11054,7 +11054,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/clients/{id}/contacts",
     "displayName": "List contacts for client",
     "summary": "List contacts for client",
-    "description": "Returns paginated contacts filtered by client_id after client existence check.",
+    "description": "Returns paginated contacts filtered by client_id after client existence check. Each row carries work_arrangement and locations[]; accepts the same location_id and work_arrangement filters as /api/v1/contacts (a client_id in the query is ignored — the path wins).",
     "tags": [
       "Clients"
     ],
@@ -11067,6 +11067,183 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "schema": {
           "type": "string",
           "format": "uuid"
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "sort",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "order",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        }
+      },
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "created_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "created_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "updated_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "updated_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "full_name",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "email",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "phone_number",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "role",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "is_inactive",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      {
+        "name": "has_client",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      {
+        "name": "client_name",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "location_id",
+        "in": "query",
+        "required": false,
+        "description": "Contacts linked to this client location in any role, primary or not.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Contacts linked to this client location in any role, primary or not."
+        }
+      },
+      {
+        "name": "work_arrangement",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "on_site",
+            "hybrid",
+            "remote"
+          ]
         }
       }
     ],
@@ -11276,6 +11453,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               },
               "is_active": {
                 "type": "boolean"
+              },
+              "contact_count": {
+                "type": "integer",
+                "minimum": 0
               },
               "created_at": {
                 "type": "string",
@@ -11539,6 +11720,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             "is_active": {
               "type": "boolean"
+            },
+            "contact_count": {
+              "type": "integer",
+              "minimum": 0
             },
             "created_at": {
               "type": "string",
@@ -12266,6 +12451,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "is_active": {
               "type": "boolean"
             },
+            "contact_count": {
+              "type": "integer",
+              "minimum": 0
+            },
             "created_at": {
               "type": "string",
               "format": "date-time"
@@ -12353,7 +12542,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contacts",
     "displayName": "List Contacts",
     "summary": "Fetch contacts",
-    "description": "Paginated list of contacts. Filter by client_id to retrieve contacts for a specific client when preparing a ticket.",
+    "description": "Paginated list of contacts. Filter by client_id to retrieve contacts for a specific client when preparing a ticket, or by location_id / work_arrangement to find who works at a client location. Every row carries work_arrangement and locations[].",
     "tags": [
       "Contacts"
     ],
@@ -12376,6 +12565,30 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "description": "Search text to match against contact names or emails.",
         "schema": {
           "type": "string"
+        }
+      },
+      {
+        "name": "location_id",
+        "in": "query",
+        "required": false,
+        "description": "Contacts who work at this client location, primary or not. Discover location ids from /api/v1/clients/{id}/locations.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "work_arrangement",
+        "in": "query",
+        "required": false,
+        "description": "Where the person works: on_site, hybrid or remote.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "on_site",
+            "hybrid",
+            "remote"
+          ]
         }
       },
       {
@@ -12460,6 +12673,15 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           }
         },
         "notes": "Use the client_id discovered from the clients endpoint to retrieve matching contacts and resolve contact_name_id."
+      },
+      {
+        "name": "Who works at a location",
+        "request": {
+          "query": {
+            "location_id": "33333333-3333-3333-3333-333333333333"
+          }
+        },
+        "notes": "The location ids come from /api/v1/clients/{id}/locations; the same filter works on /api/v1/clients/{id}/contacts."
       }
     ]
   },
@@ -12469,7 +12691,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contacts",
     "displayName": "Create contact",
     "summary": "Create contact",
-    "description": "Inherited ApiBaseController create route for contacts.",
+    "description": "Inherited ApiBaseController create route for contacts. Accepts work_arrangement and locations[{location_id, is_primary}]; every location must belong to the contact's client (a location of another client returns 400 contact_location_client_mismatch) and at most one may be primary. A single link is made primary automatically.",
     "tags": [
       "Contacts"
     ],
@@ -12728,6 +12950,36 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "boolean",
           "default": false
         },
+        "work_arrangement": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "on_site",
+            "hybrid",
+            "remote",
+            null
+          ]
+        },
+        "locations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "location_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "is_primary": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "location_id"
+            ]
+          }
+        },
         "tags": {
           "type": "array",
           "items": {
@@ -12763,7 +13015,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contacts/{id}",
     "displayName": "Get contact",
     "summary": "Get contact",
-    "description": "Inherited ApiBaseController get route for one contact_name_id.",
+    "description": "Inherited ApiBaseController get route for one contact_name_id. Carries work_arrangement and locations[] (location_id, location_name, is_primary, is_active and the address fields); an unlinked contact returns an empty array.",
     "tags": [
       "Contacts"
     ],
@@ -12801,7 +13053,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contacts/{id}",
     "displayName": "Update contact",
     "summary": "Update contact",
-    "description": "Inherited ApiBaseController update route for one contact_name_id.",
+    "description": "Inherited ApiBaseController update route for one contact_name_id. work_arrangement and locations[] behave as on create; locations omitted leaves the links untouched, an empty array removes them all, and changing client_id removes them (a location never crosses clients).",
     "tags": [
       "Contacts"
     ],
@@ -13060,6 +13312,36 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "is_inactive": {
           "type": "boolean"
         },
+        "work_arrangement": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "on_site",
+            "hybrid",
+            "remote",
+            null
+          ]
+        },
+        "locations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "location_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "is_primary": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "location_id"
+            ]
+          }
+        },
         "tags": {
           "type": "array",
           "items": {
@@ -13230,7 +13512,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contacts/search",
     "displayName": "Search contacts",
     "summary": "Search contacts",
-    "description": "Runs advanced contact search with explicit API-key auth and contact:read permission check.",
+    "description": "Runs advanced contact search with explicit API-key auth and contact:read permission check. Rows carry work_arrangement and locations[] like the list response.",
     "tags": [
       "Contacts"
     ],
@@ -13310,7 +13592,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contacts/export",
     "displayName": "Export contacts",
     "summary": "Export contacts",
-    "description": "Exports contacts as CSV or JSON using explicit API-key auth and contact:read permission.",
+    "description": "Exports contacts as CSV or JSON using explicit API-key auth and contact:read permission. CSV gains Work Arrangement, Locations (\"Warehouse; Head office\") and Primary Location columns; JSON rows carry work_arrangement and locations[].",
     "tags": [
       "Contacts"
     ],
@@ -21493,7 +21775,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/invoices/bulk",
     "displayName": "Bulk update invoice status",
     "summary": "Bulk update invoice status",
-    "description": "Bulk status transition route using bulkInvoiceStatusUpdateSchema.",
+    "description": "Bulk status transition route using bulkInvoiceStatusUpdateSchema. Only metadata transitions are applied; paid, cancelled and finalize transitions are reported as per-invoice errors naming the dedicated command. finalized_at is not accepted.",
     "tags": [
       "Invoices"
     ],
@@ -21523,9 +21805,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "prepayment",
             "partially_applied"
           ]
-        },
-        "finalized_at": {
-          "type": "string"
         }
       },
       "required": [
@@ -48385,7 +48664,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "project_task",
             "non_billable_category",
             "ad_hoc",
-            "interaction"
+            "interaction",
+            "co_managed"
           ]
         },
         "start_time": {
@@ -48640,7 +48920,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "project_task",
                   "non_billable_category",
                   "ad_hoc",
-                  "interaction"
+                  "interaction",
+                  "co_managed"
                 ]
               },
               "start_time": {
@@ -48764,7 +49045,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                       "project_task",
                       "non_billable_category",
                       "ad_hoc",
-                      "interaction"
+                      "interaction",
+                      "co_managed"
                     ]
                   },
                   "start_time": {
@@ -49642,7 +49924,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "project_task",
             "non_billable_category",
             "ad_hoc",
-            "interaction"
+            "interaction",
+            "co_managed"
           ]
         },
         "start_time": {
@@ -51051,6 +51334,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                         "non_billable_category",
                         "ad_hoc",
                         "interaction",
+                        "co_managed",
                         null
                       ]
                     },
@@ -51609,6 +51893,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "non_billable_category",
                   "ad_hoc",
                   "interaction",
+                  "co_managed",
                   null
                 ]
               },
@@ -53110,6 +53395,722 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       },
       "required": [
         "completed"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_tickets_templates",
+    "method": "get",
+    "path": "/api/v1/tickets/templates",
+    "displayName": "List ticket templates",
+    "summary": "List ticket templates",
+    "description": "Returns the tenant ticket templates: the ticket fields, tags, custom fields and checklist each one produces, with how many recurring schedules and tickets use it. Filter with client_id to see what one client can use (its own templates plus the tenant-wide ones). Use a template with POST /api/v1/tickets/templates/{templateId}/instantiate instead of creating a ticket and then adding its checklist item by item.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket_template",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "description": "1-based page number. Default 1.",
+        "schema": {
+          "type": "string",
+          "description": "1-based page number. Default 1."
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Page size, 1-100. Default 25.",
+        "schema": {
+          "type": "string",
+          "description": "Page size, 1-100. Default 25."
+        }
+      },
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": false,
+        "description": "Templates this client can use: the ones bound to it plus every tenant-wide template. Resolve the UUID with GET /api/v1/clients first.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Templates this client can use: the ones bound to it plus every tenant-wide template. Resolve the UUID with GET /api/v1/clients first."
+        }
+      },
+      {
+        "name": "is_active",
+        "in": "query",
+        "required": false,
+        "description": "Omitted or 'true': active templates only (the default). 'false': the inactive ones.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ],
+          "description": "Omitted or 'true': active templates only (the default). 'false': the inactive ones."
+        }
+      },
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "description": "Case-insensitive substring of the template name or of the ticket title it produces.",
+        "schema": {
+          "type": "string",
+          "description": "Case-insensitive substring of the template name or of the ticket title it produces."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "pagination": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer"
+            },
+            "limit": {
+              "type": "integer"
+            },
+            "total": {
+              "type": "integer"
+            },
+            "totalPages": {
+              "type": "integer"
+            },
+            "hasNext": {
+              "type": "boolean"
+            },
+            "hasPrev": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "page",
+            "limit",
+            "total",
+            "totalPages",
+            "hasNext",
+            "hasPrev"
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data",
+        "pagination"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_tickets_templates",
+    "method": "post",
+    "path": "/api/v1/tickets/templates",
+    "displayName": "Create a ticket template",
+    "summary": "Create a ticket template",
+    "description": "Creates a reusable ticket template with its whole checklist in one request. Resolve client_id, board_id, category_id and priority_id to UUIDs first (GET /api/v1/clients, /api/v1/boards, /api/v1/categories, /api/v1/tickets/priorities); a reference that does not exist is refused with 400. Leave client_id out for a template every client can use. A second active template with the same name returns 409.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket_template",
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "Template name, unique among active templates in the tenant."
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000,
+          "description": "Note for your team; never copied onto tickets."
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "description": "Title the created ticket gets. May contain {{client}}, {{contact}}, {{due_date}}, {{month}} and {{year}}, which are filled in per ticket; any other {{token}} is rejected."
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Ticket description (plain text or serialized BlockNote JSON)."
+        },
+        "client_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Client the template belongs to. Omit or null to offer it for every client; set it to offer the template only on that client’s tickets. Resolve the UUID with GET /api/v1/clients first."
+        },
+        "board_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Board the created ticket lands on. Resolve with GET /api/v1/boards first."
+        },
+        "category_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Category on that board; a subcategory requires its parent category."
+        },
+        "subcategory_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "priority_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Priority. Resolve with GET /api/v1/tickets/priorities first."
+        },
+        "itil_impact": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 5
+        },
+        "itil_urgency": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 5
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "maxItems": 50,
+          "description": "Tag text applied to the created ticket (tag definitions are created as needed)."
+        },
+        "custom_fields": {
+          "type": "object",
+          "additionalProperties": {},
+          "description": "Custom field values copied onto the ticket."
+        },
+        "offer_for_manual_use": {
+          "type": "boolean",
+          "description": "Whether the template is offered for manual ticket creation. Defaults to true; turn it off for templates only recurring schedules use."
+        },
+        "checklist": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "item_name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500,
+                "description": "Checklist item text."
+              },
+              "description": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "is_required": {
+                "type": "boolean",
+                "description": "Whether the item gates ticket closure."
+              },
+              "checklist_template_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid",
+                "description": "Checklist template the item came from; leave null for a plain item."
+              }
+            },
+            "required": [
+              "item_name",
+              "is_required"
+            ]
+          },
+          "maxItems": 200,
+          "description": "The whole checklist, in order. On update this list replaces the stored items."
+        }
+      },
+      "required": [
+        "name",
+        "title"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_tickets_templates_templateid",
+    "method": "get",
+    "path": "/api/v1/tickets/templates/{templateId}",
+    "displayName": "Get a ticket template",
+    "summary": "Get a ticket template",
+    "description": "Returns one ticket template with its checklist items in order, its client scope, usage counts, and referenceProblems: fields pointing at a board, category or priority that no longer exists (they are left blank when the template is applied).",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket_template",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "templateId",
+        "in": "path",
+        "required": true,
+        "description": "Ticket template UUID from ticket_templates.template_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket template UUID from ticket_templates.template_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_tickets_templates_templateid",
+    "method": "put",
+    "path": "/api/v1/tickets/templates/{templateId}",
+    "displayName": "Update a ticket template",
+    "summary": "Update a ticket template",
+    "description": "Replaces the template wholesale: omitted fields are reset and the checklist you send replaces the stored items, so GET the template first and send it back edited. `is_active` activates or deactivates it (deactivating only hides it from manual use; recurring schedules keep running). Changes apply to every schedule that uses the template, from the next ticket each one creates.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket_template",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "templateId",
+        "in": "path",
+        "required": true,
+        "description": "Ticket template UUID from ticket_templates.template_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket template UUID from ticket_templates.template_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "Template name, unique among active templates in the tenant."
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000,
+          "description": "Note for your team; never copied onto tickets."
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "description": "Title the created ticket gets. May contain {{client}}, {{contact}}, {{due_date}}, {{month}} and {{year}}, which are filled in per ticket; any other {{token}} is rejected."
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Ticket description (plain text or serialized BlockNote JSON)."
+        },
+        "client_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Client the template belongs to. Omit or null to offer it for every client; set it to offer the template only on that client’s tickets. Resolve the UUID with GET /api/v1/clients first."
+        },
+        "board_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Board the created ticket lands on. Resolve with GET /api/v1/boards first."
+        },
+        "category_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Category on that board; a subcategory requires its parent category."
+        },
+        "subcategory_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "priority_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Priority. Resolve with GET /api/v1/tickets/priorities first."
+        },
+        "itil_impact": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 5
+        },
+        "itil_urgency": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 5
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "maxItems": 50,
+          "description": "Tag text applied to the created ticket (tag definitions are created as needed)."
+        },
+        "custom_fields": {
+          "type": "object",
+          "additionalProperties": {},
+          "description": "Custom field values copied onto the ticket."
+        },
+        "offer_for_manual_use": {
+          "type": "boolean",
+          "description": "Whether the template is offered for manual ticket creation. Defaults to true; turn it off for templates only recurring schedules use."
+        },
+        "checklist": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "item_name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500,
+                "description": "Checklist item text."
+              },
+              "description": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "is_required": {
+                "type": "boolean",
+                "description": "Whether the item gates ticket closure."
+              },
+              "checklist_template_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid",
+                "description": "Checklist template the item came from; leave null for a plain item."
+              }
+            },
+            "required": [
+              "item_name",
+              "is_required"
+            ]
+          },
+          "maxItems": 200,
+          "description": "The whole checklist, in order. On update this list replaces the stored items."
+        },
+        "is_active": {
+          "type": "boolean",
+          "description": "Activate or deactivate the template. Deactivating only hides it from manual use; recurring schedules keep running."
+        }
+      },
+      "required": [
+        "name",
+        "title"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_tickets_templates_templateid",
+    "method": "delete",
+    "path": "/api/v1/tickets/templates/{templateId}",
+    "displayName": "Delete a ticket template",
+    "summary": "Delete a ticket template",
+    "description": "Deletes the template and its checklist items. Tickets already created from it are not changed. Refused with 409 while any non-archived recurring schedule still uses it; point those schedules at another template or archive them first, or deactivate the template instead (PUT with is_active=false).",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket_template",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "templateId",
+        "in": "path",
+        "required": true,
+        "description": "Ticket template UUID from ticket_templates.template_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket template UUID from ticket_templates.template_id."
+        }
+      }
+    ]
+  },
+  {
+    "id": "post-_api_v1_tickets_templates_templateid_instantiate",
+    "method": "post",
+    "path": "/api/v1/tickets/templates/{templateId}/instantiate",
+    "displayName": "Create a ticket from a ticket template",
+    "summary": "Create a ticket from a ticket template",
+    "description": "Creates one ticket from the template and returns it, exactly as POST /api/v1/tickets does. The template supplies the title (with its {{client}}/{{contact}}/{{due_date}} tokens filled in), description, board, category, priority, ITIL values, tags, custom fields and every checklist item, and the ticket records created_from_template_id. Prefer this over POST /api/v1/tickets followed by one POST /api/v1/tickets/{id}/checklist per item whenever a template exists. Requires ticket:create as well as ticket_template:read. Resolve client_id (and contact_name_id, location_id, assigned_to) to UUIDs first; a contact, location or asset that does not belong to client_id, a status that is not on the template’s board, or a template bound to a different client are all refused with 400.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket_template",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "templateId",
+        "in": "path",
+        "required": true,
+        "description": "Ticket template UUID from ticket_templates.template_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket template UUID from ticket_templates.template_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "client_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Client the ticket is for. A template bound to another client is refused with 400."
+        },
+        "contact_name_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Requester contact; must belong to client_id. Also fills the {{contact}} title token."
+        },
+        "location_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Client location; must belong to client_id."
+        },
+        "asset_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "maxItems": 50,
+          "description": "Assets to link to the ticket; each must belong to client_id."
+        },
+        "assigned_to": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Primary assignee. Defaults to unassigned."
+        },
+        "status_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Status for the new ticket; must belong to the template's board. Defaults to that board's default status."
+        },
+        "due_date": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Due date, ISO date (YYYY-MM-DD) or date-time. Also fills the {{due_date}}, {{month}} and {{year}} title tokens."
+        },
+        "suppressContactNotifications": {
+          "type": "boolean",
+          "description": "Create the ticket without notifying the customer."
+        },
+        "suppressInternalNotifications": {
+          "type": "boolean",
+          "description": "Also skip internal notifications. Requires suppressContactNotifications=true."
+        }
+      },
+      "required": [
+        "client_id"
       ]
     },
     "responseBodySchema": {

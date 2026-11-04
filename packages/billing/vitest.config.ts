@@ -70,6 +70,9 @@ export default defineConfig({
       'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.tenantBranding.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.existingQuote.test.tsx',
       'src/components/invoice-designer/DesignerVisualWorkspace.test.tsx',
+      // Totals-row presets are selected from the active document binding catalog
+      // and export only render-model paths that catalog publishes.
+      'src/components/invoice-designer/inspector/TotalsRowsEditorWidget.integration.test.tsx',
       'src/components/invoice-designer/preview/tenantBrandingOverlay.test.ts',
       // Tenant logo precedence on generated documents (Settings -> Branding
       // first, own-company client record second) — listed for the same reason
@@ -79,6 +82,11 @@ export default defineConfig({
       // Behavioral coverage for realm-exact QBO mapping resolution — listed
       // explicitly for the same reason as the suites above.
       'src/services/accountingSync/realmScopedOperations.test.ts',
+      // Provider/organisation scoping of sync status and health, and the
+      // resolved target's realm + Intuit environment that the invoice deep
+      // link reads — listed for the same reason as the suites above.
+      'src/actions/accountingSyncActions.org.test.ts',
+      'src/actions/resolveSyncTarget.test.ts',
       // Project billing-currency drift notices and cap re-pinning — listed for
       // the same reason as the suites above.
       'src/components/project-billing/projectBillingCurrency.test.tsx',
@@ -100,6 +108,17 @@ export default defineConfig({
       'src/lib/invoice-template-ast/fieldFormatting.test.ts',
       'src/lib/invoice-template-ast/react-renderer.test.tsx',
       'src/lib/invoice-template-ast/server-render.inlineImages.test.ts',
+      // Invoice discount render model (alga0002295): unformatted-field behaviour,
+      // opt-in layout + back-compat renders, the derivation helper's call sites, and
+      // the designer's catalog / Discount Row / preview-sample coverage.
+      'src/lib/invoice-template-ast/react-renderer.unformattedField.test.tsx',
+      'src/lib/invoice-template-ast/react-renderer.invoiceDiscount.test.tsx',
+      'src/components/invoice-designer/ast/workspaceAst.discountRow.test.ts',
+      'src/components/invoice-designer/fields/documentBindingCatalog.test.ts',
+      'src/components/invoice-designer/preview/previewBindings.test.ts',
+      'src/components/invoice-designer/utils/documentKind.test.ts',
+      // Designer FIELDS-panel locale copy must match the field catalog in every locale.
+      'src/components/invoice-designer/fields/fieldLocaleParity.test.ts',
       // Country-driven date shape: a document is dated the way its recipient
       // writes dates, whatever language it is written in.
       'src/lib/invoice-template-ast/fieldFormatting.country.test.ts',

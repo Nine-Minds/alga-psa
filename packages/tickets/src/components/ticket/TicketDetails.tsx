@@ -174,7 +174,6 @@ interface TicketDetailsProps {
     boardOptions?: { value: string; label: string }[];
     priorityOptions?: { value: string; label: string; color?: string | null; is_from_itil_standard?: boolean }[];
     initialCategories?: ITicketCategory[];
-    initialClients?: IClient[];
     initialLocations?: IClientLocation[];
     initialAgentSchedules?: { userId: string; minutes: number }[];
 
@@ -314,7 +313,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     boardOptions = [],
     priorityOptions = [],
     initialCategories = [],
-    initialClients = [],
     initialLocations = [],
     initialAgentSchedules = [],
     // Current user (for drawer usage)
@@ -363,7 +361,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         findCommentsByTicketId, findCommentById, createComment, updateComment, deleteComment,
         addTicketCommentWithCache, deleteDraftClipboardImages,
     } = dataSource.comments;
-    const { getAllActiveContacts, getContactByContactNameId, getContactsByClient, getClientById, getClientLocations } = dataSource.people;
+    const { getAllActiveContacts, getContactByContactNameId, getContactsByClient, getClientById, getClientLocations, getContactEffectiveLocation } = dataSource.people;
     const { addTicketResource, getTicketResources, removeTicketResource, assignTeamToTicket, removeTeamFromTicket, getTeamById, getTeams } = dataSource.resources;
     const { addTicketWatchers, setTicketWatcherActive, removeTicketWatcher } = dataSource.watchers;
     const { checkTicketClosure, getTicketAutoCloseState } = dataSource.closeRules;
@@ -754,7 +752,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [board, setBoard] = useState<any>(initialBoard);
     const [savedBoardId, setSavedBoardId] = useState<string | null>(initialBoard?.board_id ?? initialTicket.board_id ?? null);
     const isLiveTicketTimerEnabled = useMemo(() => isBoardLiveTicketTimerEnabled(board), [board]);
-    const [clients, setClients] = useState<IClient[]>(initialClients);
     const [contacts, setContacts] = useState<IContact[]>(initialContacts);
     const [locations, setLocations] = useState<IClientLocation[]>(initialLocations);
     const [showWeekday, setShowWeekday] = useState<boolean>(bootstrap?.displaySettings?.showWeekday ?? false);
@@ -1717,8 +1714,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 return;
             }
 
-            const minimalClients =
-                clients.length > 0 ? clients : client ? [client] : [];
+            const minimalClients = client ? [client] : [];
 
             replaceDrawer(
                 renderContactDetails
@@ -2736,6 +2732,18 @@ const handleClose = () => {
             if (newContactId) {
                 const contactData = await getContactByContactNameId(newContactId);
                 setContactInfo(contactData);
+
+                // An empty location is a question nobody answered, so the new requester's own site
+                // answers it — and the write goes through the normal location path, so it lands in
+                // the ticket history like any other change. A location already on the ticket is
+                // never re-pointed here; the tile offers "Use contact's location" for that, which
+                // takes a click.
+                if (!ticket.location_id) {
+                    const effective = await getContactEffectiveLocation(newContactId);
+                    if (effective.locationId) {
+                        await handleLocationChange(effective.locationId);
+                    }
+                }
             } else {
                 setContactInfo(null);
             }
@@ -4587,7 +4595,6 @@ const handleClose = () => {
                     client={client}
                     onContactClick={handleContactClick}
                     onClientClick={handleClientClick}
-                    clients={clients}
                     onChangeContact={handleContactChange}
                     onChangeClient={handleClientChange}
                     onChangeLocation={handleLocationChange}
@@ -4828,7 +4835,6 @@ const handleClose = () => {
                                 userId={userId || ''}
                                 tenant={tenant}
                                 contacts={contacts}
-                                clients={clients}
                                 locations={locations}
                                 clientFilterState={clientFilterState}
                                 clientTypeFilter={clientTypeFilter}
