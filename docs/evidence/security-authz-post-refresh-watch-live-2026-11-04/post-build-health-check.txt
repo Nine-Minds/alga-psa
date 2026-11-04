@@ -11,3 +11,6 @@ Result: port 3594 remains unavailable. Scheduler still has the existing recovery
 
 Recheck: 2026-11-04T19:10Z
 Result: port 3594 remains unavailable. Supported ensure-service recovery remains queued at position 17; scheduler reports 18 GiB free, 2.3 GiB reserved, 8 GiB floor, and 10 starts ahead claiming 20 GiB. No alternate server was launched and admission was not bypassed.
+
+Recheck: 2026-11-04T19:12Z (after alias repair commit 5adf05f8996213aaa96c6ffea011b81130dee8cf)
+Result: port 3594 still refused connections. workflow-ensure-service reports the existing dev-server:6 queued at position 16 for its 6 GiB request. Scheduler reports 18 GiB free, 3.8 GiB reserved, and an 8 GiB floor; 9 earlier launch claims (including this plus eight ahead) account for a 16 GiB admission queue. No alternate server was launched and no admission control was bypassed.
