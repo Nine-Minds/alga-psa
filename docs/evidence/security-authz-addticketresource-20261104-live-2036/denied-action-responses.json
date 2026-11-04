@@ -1,0 +1,41 @@
+{
+  "revision": "1078ea31bc7a32ca98af403ec297bb9ad361f9b4",
+  "session": {
+    "name": "QA Tester",
+    "email": "qa@emeraldcity.oz",
+    "image": "/image/avatar-purple-big.png",
+    "id": "20a52aa7-137c-4a42-ab3e-5b75050d54d7",
+    "username": "qa",
+    "proToken": "",
+    "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+    "tenantSlug": "6d178745f8f9",
+    "user_type": "internal",
+    "contactId": null,
+    "plan": "pro",
+    "product_code": "psa",
+    "addons": [
+      "ai_assistant"
+    ],
+    "trial_end": null,
+    "subscription_status": null,
+    "solo_pro_trial_end": null,
+    "effectiveTier": "essentials"
+  },
+  "results": [
+    {
+      "name": "getTicketResources",
+      "status": 200,
+      "body": "0:{\"a\":\"$@1\",\"q\":\"\",\"i\":true,\"b\":\"development\"}\n1:D\"$2\"\n1:{\"permissionError\":\"Permission denied: Cannot view ticket resources\"}\n"
+    },
+    {
+      "name": "addTicketResource",
+      "status": 200,
+      "body": "0:{\"a\":\"$@1\",\"q\":\"\",\"i\":true,\"b\":\"development\"}\n1:D\"$2\"\n1:{\"permissionError\":\"Permission denied: Cannot add ticket resource\"}\n"
+    },
+    {
+      "name": "removeTicketResource",
+      "status": 200,
+      "body": "0:{\"a\":\"$@1\",\"q\":\"\",\"i\":true,\"b\":\"development\"}\n1:D\"$2\"\n1:{\"permissionError\":\"Permission denied: Cannot remove ticket resource\"}\n"
+    }
+  ]
+}

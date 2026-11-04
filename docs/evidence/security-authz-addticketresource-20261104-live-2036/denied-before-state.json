@@ -1,0 +1,210 @@
+{
+  "ticket": [
+    {
+      "ticket_id": "de938db4-80ad-4309-a351-c96eb805e171",
+      "assigned_to": "6fb0c1d5-c732-45b2-96a1-96bbc6a639f1"
+    }
+  ],
+  "staffing": [
+    {
+      "assignment_id": "8ed1931c-c55d-4faa-b128-ec62d9043985",
+      "assigned_to": "6fb0c1d5-c732-45b2-96a1-96bbc6a639f1",
+      "additional_user_id": "20a52aa7-137c-4a42-ab3e-5b75050d54d7",
+      "role": "support"
+    }
+  ],
+  "activity": [
+    {
+      "audit_id": "08e5adec-e3c1-4541-ae6f-62a679495307",
+      "event_type": "TICKET_CREATED",
+      "actor_user_id": "20a52aa7-137c-4a42-ab3e-5b75050d54d7",
+      "details": {
+        "title": "Authz Live Scoped Quick Add 20261104 2036",
+        "board_id": "6e361682-53db-448a-8dca-f44775f1afd0",
+        "client_id": "b4cc85d7-8898-48af-8191-251bcc657be8",
+        "status_id": "7b677ab8-0bce-4705-a98d-a502a04ea6ed",
+        "assigned_to": "6fb0c1d5-c732-45b2-96a1-96bbc6a639f1",
+        "priority_id": "416d38c1-bd6c-4764-b415-14faa96d01c2",
+        "ticket_origin": "internal"
+      },
+      "created_at": "2026-11-04T20:36:44.019Z"
+    },
+    {
+      "audit_id": "701cdfd1-9a35-48f2-a6c3-1da87ae001c6",
+      "event_type": "TICKET_ASSIGNED",
+      "actor_user_id": "20a52aa7-137c-4a42-ab3e-5b75050d54d7",
+      "details": {
+        "role": "support",
+        "additional_agent_id": "20a52aa7-137c-4a42-ab3e-5b75050d54d7"
+      },
+      "created_at": "2026-11-04T20:36:44.014Z"
+    }
+  ],
+  "workflow": [
+    {
+      "event_id": "1e2512b7-ee1d-4763-9791-691c59f3b3f3",
+      "event_name": "OUTBOUND_EMAIL_SENT",
+      "correlation_key": "de938db4-80ad-4309-a351-c96eb805e171",
+      "payload": {
+        "sentAt": "2026-11-04T20:36:44.305Z",
+        "provider": "smtp",
+        "tenantId": "6d178771-ad9a-4d43-8809-83992745f8f9",
+        "ticketId": "de938db4-80ad-4309-a351-c96eb805e171",
+        "actorType": "SYSTEM",
+        "messageId": "ce604bd4-51b0-4bc0-a3c9-82a6ae111d0c",
+        "occurredAt": "2026-11-04T20:36:44.316Z",
+        "idempotencyKey": "outbound_email:ce604bd4-51b0-4bc0-a3c9-82a6ae111d0c:sent",
+        "providerMessageId": "<7683ff4b-9759-437b-abf7-ad29f1e0b28a@speedoflightmedia.com>"
+      },
+      "created_at": "2026-11-04T20:36:44.569Z"
+    },
+    {
+      "event_id": "3983c066-8462-4768-aa14-80993b330e05",
+      "event_name": "TICKET_ADDITIONAL_AGENT_ASSIGNED",
+      "correlation_key": "de938db4-80ad-4309-a351-c96eb805e171",
+      "payload": {
+        "tenantId": "6d178771-ad9a-4d43-8809-83992745f8f9",
+        "ticketId": "de938db4-80ad-4309-a351-c96eb805e171",
+        "actorType": "USER",
+        "occurredAt": "2026-11-04T20:36:44.039Z",
+        "actorUserId": "20a52aa7-137c-4a42-ab3e-5b75050d54d7",
+        "primaryAgentId": "6fb0c1d5-c732-45b2-96a1-96bbc6a639f1",
+        "assignedByUserId": "20a52aa7-137c-4a42-ab3e-5b75050d54d7",
+        "additionalAgentId": "20a52aa7-137c-4a42-ab3e-5b75050d54d7"
+      },
+      "created_at": "2026-11-04T20:36:44.356Z"
+    },
+    {
+      "event_id": "3be88c5f-619d-4f3e-a5eb-b77cd45501e9",
+      "event_name": "OUTBOUND_EMAIL_QUEUED",
+      "correlation_key": "de938db4-80ad-4309-a351-c96eb805e171",
+      "payload": {
+        "to": [
+          "dorothy@kansas.oz"
+        ],
+        "from": "robert@speedoflightmedia.com",
+        "subject": "[Ticket #TIC001284] Nouveau Ticket • Authz Live Scoped Quick Add 20261104 2036 (Whimsical Wish)",
+        "provider": "smtp",
+        "queuedAt": "2026-11-04T20:36:44.176Z",
+        "tenantId": "6d178771-ad9a-4d43-8809-83992745f8f9",
+        "ticketId": "de938db4-80ad-4309-a351-c96eb805e171",
+        "actorType": "SYSTEM",
+        "messageId": "ce604bd4-51b0-4bc0-a3c9-82a6ae111d0c",
+        "occurredAt": "2026-11-04T20:36:44.176Z",
+        "idempotencyKey": "outbound_email:ce604bd4-51b0-4bc0-a3c9-82a6ae111d0c:queued"
+      },
+      "created_at": "2026-11-04T20:36:44.569Z"
+    },
+    {
+      "event_id": "5cf58e0d-f5bc-46c0-b79e-919fbd1ad6c7",
+      "event_name": "OUTBOUND_EMAIL_SENT",
+      "correlation_key": "de938db4-80ad-4309-a351-c96eb805e171",
+      "payload": {
+        "sentAt": "2026-11-04T20:36:54.487Z",
+        "provider": "smtp",
+        "tenantId": "6d178771-ad9a-4d43-8809-83992745f8f9",
+        "ticketId": "de938db4-80ad-4309-a351-c96eb805e171",
+        "actorType": "SYSTEM",
+        "messageId": "d3c89e0c-ebc3-44c4-8ef9-66bbb40b9407",
+        "occurredAt": "2026-11-04T20:36:54.491Z",
+        "idempotencyKey": "outbound_email:d3c89e0c-ebc3-44c4-8ef9-66bbb40b9407:sent",
+        "providerMessageId": "<1175147a-5eda-4680-8253-795d136f657e@speedoflightmedia.com>"
+      },
+      "created_at": "2026-11-04T20:36:54.551Z"
+    },
+    {
+      "event_id": "62fbc9d9-351b-4a66-b5d4-390b09efddbb",
+      "event_name": "TICKET_ASSIGNED",
+      "correlation_key": "de938db4-80ad-4309-a351-c96eb805e171",
+      "payload": {
+        "userId": "6fb0c1d5-c732-45b2-96a1-96bbc6a639f1",
+        "tenantId": "6d178771-ad9a-4d43-8809-83992745f8f9",
+        "ticketId": "de938db4-80ad-4309-a351-c96eb805e171",
+        "actorType": "USER",
+        "occurredAt": "2026-11-04T20:36:44.046Z",
+        "actorUserId": "20a52aa7-137c-4a42-ab3e-5b75050d54d7",
+        "assignedByUserId": "20a52aa7-137c-4a42-ab3e-5b75050d54d7"
+      },
+      "created_at": "2026-11-04T20:36:44.356Z"
+    },
+    {
+      "event_id": "7100ec72-b57e-4f69-a45e-c646bbd5e95d",
+      "event_name": "TICKET_CREATED",
+      "correlation_key": "de938db4-80ad-4309-a351-c96eb805e171",
+      "payload": {
+        "source": "web_app",
+        "userId": "20a52aa7-137c-4a42-ab3e-5b75050d54d7",
+        "board_id": "6e361682-53db-448a-8dca-f44775f1afd0",
+        "tenantId": "6d178771-ad9a-4d43-8809-83992745f8f9",
+        "ticketId": "de938db4-80ad-4309-a351-c96eb805e171",
+        "actorType": "USER",
+        "client_id": "b4cc85d7-8898-48af-8191-251bcc657be8",
+        "clientName": "Smoke Deferred 1755",
+        "occurredAt": "2026-11-04T20:36:44.021Z",
+        "actorUserId": "20a52aa7-137c-4a42-ab3e-5b75050d54d7",
+        "priority_id": "416d38c1-bd6c-4764-b415-14faa96d01c2",
+        "requesterName": "Smoke Deferred 1755"
+      },
+      "created_at": "2026-11-04T20:36:44.065Z"
+    },
+    {
+      "event_id": "825c68d5-9cf0-4186-87f9-a8d7f631189c",
+      "event_name": "OUTBOUND_EMAIL_QUEUED",
+      "correlation_key": "de938db4-80ad-4309-a351-c96eb805e171",
+      "payload": {
+        "to": [
+          "dorothy@kansas.oz"
+        ],
+        "from": "robert@speedoflightmedia.com",
+        "subject": "[Ticket #TIC001284] Ticket Assigné • Authz Live Scoped Quick Add 20261104 2036 (Whimsical Wish)",
+        "provider": "smtp",
+        "queuedAt": "2026-11-04T20:36:54.336Z",
+        "tenantId": "6d178771-ad9a-4d43-8809-83992745f8f9",
+        "ticketId": "de938db4-80ad-4309-a351-c96eb805e171",
+        "actorType": "SYSTEM",
+        "messageId": "ee6b7728-13b3-43f5-928b-40980954ce73",
+        "occurredAt": "2026-11-04T20:36:54.336Z",
+        "idempotencyKey": "outbound_email:ee6b7728-13b3-43f5-928b-40980954ce73:queued"
+      },
+      "created_at": "2026-11-04T20:36:54.344Z"
+    },
+    {
+      "event_id": "c26e89ab-ced5-488f-b790-567756b45c29",
+      "event_name": "OUTBOUND_EMAIL_SENT",
+      "correlation_key": "de938db4-80ad-4309-a351-c96eb805e171",
+      "payload": {
+        "sentAt": "2026-11-04T20:36:54.404Z",
+        "provider": "smtp",
+        "tenantId": "6d178771-ad9a-4d43-8809-83992745f8f9",
+        "ticketId": "de938db4-80ad-4309-a351-c96eb805e171",
+        "actorType": "SYSTEM",
+        "messageId": "ee6b7728-13b3-43f5-928b-40980954ce73",
+        "occurredAt": "2026-11-04T20:36:54.410Z",
+        "idempotencyKey": "outbound_email:ee6b7728-13b3-43f5-928b-40980954ce73:sent",
+        "providerMessageId": "<d5f0b42c-36ec-455e-b667-a4ec49e21cc1@speedoflightmedia.com>"
+      },
+      "created_at": "2026-11-04T20:36:54.465Z"
+    },
+    {
+      "event_id": "f2f83fd3-23ab-4dc2-abff-51d575d1973c",
+      "event_name": "OUTBOUND_EMAIL_QUEUED",
+      "correlation_key": "de938db4-80ad-4309-a351-c96eb805e171",
+      "payload": {
+        "to": [
+          "qa@emeraldcity.oz"
+        ],
+        "from": "robert@speedoflightmedia.com",
+        "subject": "[Ticket #TIC001284] Ticket Assigned • Authz Live Scoped Quick Add 20261104 2036 (Whimsical Wish)",
+        "provider": "smtp",
+        "queuedAt": "2026-11-04T20:36:54.435Z",
+        "tenantId": "6d178771-ad9a-4d43-8809-83992745f8f9",
+        "ticketId": "de938db4-80ad-4309-a351-c96eb805e171",
+        "actorType": "SYSTEM",
+        "messageId": "d3c89e0c-ebc3-44c4-8ef9-66bbb40b9407",
+        "occurredAt": "2026-11-04T20:36:54.435Z",
+        "idempotencyKey": "outbound_email:d3c89e0c-ebc3-44c4-8ef9-66bbb40b9407:queued"
+      },
+      "created_at": "2026-11-04T20:36:54.465Z"
+    }
+  ]
+}

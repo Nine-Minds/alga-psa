@@ -1,0 +1,20 @@
+{
+  "revision": "1078ea31bc7a32ca98af403ec297bb9ad361f9b4",
+  "ticket": "de938db4-80ad-4309-a351-c96eb805e171",
+  "knownAssignmentId": "8ed1931c-c55d-4faa-b128-ec62d9043985",
+  "results": [
+    {
+      "name": "getTicketResources",
+      "response": "0:{\"a\":\"$@1\",\"q\":\"\",\"i\":true,\"b\":\"development\"}\n1:D\"$2\"\n1:{\"permissionError\":\"Permission denied: Cannot view ticket resources\"}\n"
+    },
+    {
+      "name": "addTicketResource",
+      "response": "0:{\"a\":\"$@1\",\"q\":\"\",\"i\":true,\"b\":\"development\"}\n1:D\"$2\"\n1:{\"permissionError\":\"Permission denied: Cannot add ticket resource\"}\n"
+    },
+    {
+      "name": "removeTicketResource",
+      "response": "0:{\"a\":\"$@1\",\"q\":\"\",\"i\":true,\"b\":\"development\"}\n1:D\"$2\"\n1:{\"permissionError\":\"Permission denied: Cannot remove ticket resource\"}\n"
+    }
+  ],
+  "unchanged": true
+}
