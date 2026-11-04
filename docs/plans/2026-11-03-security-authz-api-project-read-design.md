@@ -53,3 +53,26 @@ Authenticated browser routes reached `/msp/projects`, the project and ticket det
 The workflow command still needs external host activation. Before publication, `alga-dev workflow-open-review --lightweight=true --activate=false --projectId=24e3f7a9-3a3e-5a07-b612-835a7894c319` returned `Unknown workflow command: workflow-open-review`. The supported platform command `npm run deploy:publish` was run from an isolated checkout pinned to `Nine-Minds/alga-dev` revision `120bdcad6ad9a1cbf830ec39189f532bb67f4999`; its test `vitest run tests/workflow/open-review-cli.test.ts` passed (4 tests). It published bundle `202611040814-g120bdca` (SHA-256 `fb764b7094bd169c74f0c38a2bee25cf2d613528cf8d0f6dd498e8fc9b4106d0`) as `deploy/desired-version` revision 32583. The active host release marker and agent process still reported `202611040722-g518a7e9` after publication. Host-status revision 32586 at `2026-11-04T08:17:16.624Z` still reported `running=desired=202611040722-g518a7e9`, `state=up-to-date`, while desired-version revision 32583 named `202611040814-g120bdca`. A fresh `workflow-open-review` call still returned `Unknown workflow command: workflow-open-review`. The Alga Dev host owner must investigate why the supervised agent is not converging on the published desired version (including its NATS watch and supervisor logs), then use the supported host promotion path and rerun the workflow command to confirm its `guideUrl` and `readinessUrl`. No application server restart is part of that handoff.
 
 The focused application suite (42 tests) and server typecheck passed on this application revision before this live-only follow-up; no application source changed during the follow-up. The plan's live-smoke requirement is now verified. The workflow dispatcher activation remains pending as described above.
+
+
+## Task-name preservation and dispatcher activation — 2026-11-04 20:18 UTC
+
+PSA commit `f6260cde0251fe4bc78a2d764af9ab0309e2c63f` separates task-name field dependencies from whole-task resource aliases. Projector and controller response regressions preserve `task_name` under isolated `project_tasks.estimated_hours` and `project_tasks.project_name` restrictions while omitting the restricted field. Identifier and whole-resource suppression remain covered. The five focused suites passed independently (33 tests). Server typecheck and production build passed in the builder run at this commit with a 12 GB heap. The app server was not started or restarted; port 3322 refused connections during takeover, so published-policy HTTP replay of this repair remains unverified.
+
+The dispatcher activation gap recorded above is resolved. The Mac publisher's source was recovered through its registered Alga Dev agent at `100.70.145.1:47800`, using the protocol identify handshake and the exec/file-transfer channels. SSH was unavailable. The isolated repair checkout descends from active release source `4039ef59b4683c0e463451380ac2659121775425` through Mac source commit `65542cc2c4`. It retains the seven required capabilities, including stack migration, execution safeguards, and service registration.
+
+Platform commits `79bf25d` and `ec142e4f4b29d620058f8968ef79062ee04f484c` are published on [Alga Dev's fix/authz-review-readiness branch](https://github.com/Nine-Minds/alga-dev/tree/fix/authz-review-readiness). The repair routes lightweight, non-activating review requests through the headless agent and returns readiness only after the guide's HTTP probe succeeds. Routing accepts both boolean arguments and the string arguments emitted by the installed CLI. Eight tests passed across engine routing, successful and failed guide readiness, compatible release promotion, and the real CLI reply deadline. Platform typecheck and agent/runner builds passed.
+
+The supported publisher promoted `deploy/compatible-release.v1` revision 32924 to `20261104201747-gec142e4`, SHA-256 `d0045cfdde22dd0d1ee05cb81f4a2ce32290313a4d2f99c4400d2c5b74a97dc8`. Linux host-status revision 32932 and Mac host-status revision 32937 reported this version as both running and desired, with state `up-to-date`.
+
+The exact command succeeded after activation:
+
+```sh
+alga-dev workflow-open-review --lightweight=true --activate=false --projectId=24e3f7a9-3a3e-5a07-b612-835a7894c319
+```
+
+```json
+{"lightweight":true,"guideUrl":"http://100.109.101.64:43972/index.html","readinessUrl":"http://100.109.101.64:43972/index.html","activated":false}
+```
+
+A separate curl executed on the captain host `100.82.172.57` through its registered agent returned HTTP 200 for the returned `readinessUrl`. Evidence is retained under `/tmp/authz-takeover/`: `platform-tests.log`, `platform-typecheck.log`, `platform-build.log`, `contract.log`, `publish.log`, `active-release.json`, `linux-activation.json`, `mac-activation.json`, `open-review.json`, and `captain-http.log`. Workflow facts record the recovered source path and verified activation.
