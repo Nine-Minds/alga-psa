@@ -896,5 +896,17 @@
       "templateCannotBeAccepted": "Quote templates cannot be marked as accepted",
       "onlySentCanBeAccepted": "Only sent quotes can be marked as accepted"
     }
+  },
+  "quoteDecision": {
+    "accepted": {
+      "emailLink": "Accepted by {{signer}} via email link, {{date}}",
+      "portal": "Accepted by {{signer}} via the client portal, {{date}}",
+      "mspMarked": "Marked as accepted by MSP on behalf of the client, {{date}}"
+    },
+    "rejected": {
+      "emailLink": "Rejected by {{signer}} via email link, {{date}}",
+      "portal": "Rejected by {{signer}} via the client portal, {{date}}"
+    },
+    "title": "({{title}})"
   }
 }

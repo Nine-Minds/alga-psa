@@ -69,6 +69,11 @@ export async function clearContactLinksBeforeDelete(
   await scoped.table('assets')
     .where({ contact_name_id: contactId })
     .update({ contact_name_id: null });
+  // quote_decisions.contact_id is a NO ACTION composite FK on Citus; the signer name
+  // and email stay on the row, so the acceptance audit trail survives the contact.
+  await scoped.table('quote_decisions')
+    .where({ contact_id: contactId })
+    .update({ contact_id: null });
   // FR-C5: the assignments the contact held are closed, not deleted — "who had
   // this laptop in March" must survive the person leaving.
   await closeOpenAssignmentsForContact(db, tenant, contactId);

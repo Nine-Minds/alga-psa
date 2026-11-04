@@ -896,5 +896,17 @@
       "templateCannotBeAccepted": "I modelli di preventivo non possono essere segnati come accettati",
       "onlySentCanBeAccepted": "Solo i preventivi inviati possono essere segnati come accettati"
     }
+  },
+  "quoteDecision": {
+    "accepted": {
+      "emailLink": "Accettato da {{signer}} tramite link e-mail, {{date}}",
+      "portal": "Accettato da {{signer}} tramite il portale clienti, {{date}}",
+      "mspMarked": "Contrassegnato come accettato dall'MSP per conto del cliente, {{date}}"
+    },
+    "rejected": {
+      "emailLink": "Rifiutato da {{signer}} tramite link e-mail, {{date}}",
+      "portal": "Rifiutato da {{signer}} tramite il portale clienti, {{date}}"
+    },
+    "title": "({{title}})"
   }
 }

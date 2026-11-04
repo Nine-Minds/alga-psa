@@ -2,17 +2,23 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { cleanup, render, screen } from '@testing-library/react';
 import { createInstance } from 'i18next';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import enBilling from '../../../../../server/public/locales/en/features/billing.json';
-import deBilling from '../../../../../server/public/locales/de/features/billing.json';
+const localeRoot = path.resolve(__dirname, '../../../../../server/public/locales');
+const enBilling = JSON.parse(readFileSync(path.join(localeRoot, 'en/features/billing.json'), 'utf8'));
+const deBilling = JSON.parse(readFileSync(path.join(localeRoot, 'de/features/billing.json'), 'utf8'));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', async (importOriginal) => ({
   ...await importOriginal(),
-  useFormatters: () => ({ formatDate: (d: string) => d, formatCalendarDate: (d: string) => d }),
+  useFormatters: () => ({
+    formatDate: (d: string | Date, o?: any) => formatDateValue(d, 'en', o),
+    formatCalendarDate: (d: string | Date, o?: any) => formatDateValue(d, 'en', o),
+  }),
   useOptionalI18n: () => null,
 }));
 vi.mock('@alga-psa/ui/hooks/useQuoteEnumOptions', () => ({
@@ -23,6 +29,7 @@ vi.mock('@alga-psa/ui/editor', () => ({
   hasQuoteTermsContent: () => false,
 }));
 
+import { formatDateValue } from '../../../../ui/src/lib/i18n/formatDateValue';
 import { CurrencyFormatProvider } from '@alga-psa/ui/lib';
 import { QuoteDocumentView } from './QuoteDocumentView';
 
@@ -105,6 +112,27 @@ describe('QuoteDocumentView', () => {
     expect(container.textContent).toContain('¥');
   });
 
+  it('renders date-only fields as the calendar day in UTC-negative browsers', () => {
+    const prev = process.env.TZ;
+    process.env.TZ = 'America/Los_Angeles';
+    try {
+      const { container } = render(
+        <I18nextProvider i18n={testI18n}>
+        <CurrencyFormatProvider currencyCode="EUR" locale="en">
+          <QuoteDocumentView
+            quote={{ ...quote, quote_date: '2026-12-01T00:00:00.000Z', valid_until: '2026-12-31T00:00:00.000Z' }}
+            items={items} locations={[]} totals={totals}
+          />
+        </CurrencyFormatProvider>
+        </I18nextProvider>,
+      );
+      expect(container.textContent).toContain('December 31, 2026');
+      expect(container.textContent).toContain('December 1, 2026');
+      expect(container.textContent).not.toContain('December 30, 2026');
+    } finally {
+      if (prev === undefined) delete process.env.TZ; else process.env.TZ = prev;
+    }
+  });
   it.each([
     ['en', 'Quote'],
     ['de', 'Angebot'],

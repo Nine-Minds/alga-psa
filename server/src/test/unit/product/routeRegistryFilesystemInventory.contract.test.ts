@@ -215,6 +215,7 @@ describe('route registry filesystem inventory', () => {
     auth: 'authentication flows for both portals, pre-product by nature',
     'ext-ui': 'extension iframe host surface',
     'payment-methods': 'public tokened card-setup return page; the billing feature that issues the link is product-gated',
+    quote: 'public tokened quote review; the billing feature that issues the link is product-gated',
     runner: 'extension runner surface',
     share: 'public tokened share-link landing pages',
     static: 'statically served asset routes',

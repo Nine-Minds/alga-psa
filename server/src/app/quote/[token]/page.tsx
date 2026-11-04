@@ -1,5 +1,12 @@
 import { getConnection } from '@alga-psa/db';
-import { loadPublicQuoteView, recordQuoteViewedViaEmailLink } from '@alga-psa/billing/services';
+import {
+  QuoteAccessLinks,
+  fingerprintPublicQuoteView,
+  getCurrentQuoteAgreement,
+  loadPublicQuoteView,
+  recordQuoteViewedViaEmailLink,
+  resolveQuoteRecipientLocale,
+} from '@alga-psa/billing/services';
 import { PublicQuoteReview } from '@alga-psa/client-portal/components';
 import { getTenantBrandingByTenantId } from '@alga-psa/tenancy/actions/tenant-actions/getTenantBrandingByDomain';
 import {
@@ -77,6 +84,9 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
       }}
       pdfHref={`/api/quote/${token}/pdf`}
       decidedNotice={decidedNotice}
+      token={token}
+      quoteFingerprint={fingerprintPublicQuoteView(view)}
+      agreement={getCurrentQuoteAgreement()}
     />
   );
 }

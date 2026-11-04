@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 import { toCalendarDateStringInTimeZone } from './dateTimeUtils';
 
 // Regression tests for the hour-block expiration boundary invariant (29.8.18
@@ -11,9 +11,16 @@ import { toCalendarDateStringInTimeZone } from './dateTimeUtils';
 // test pins the process TZ to a zone that disagrees with the asserted target
 // zone and asserts the exact same result — proving host-TZ independence.
 
+const originalTz = process.env.TZ;
+afterAll(() => {
+  if (originalTz === undefined) delete process.env.TZ;
+  else process.env.TZ = originalTz;
+});
+
 function assertTz(zone: string, expectedOffsetMinutes: number) {
   process.env.TZ = zone;
-  expect(new Date().getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
+  // Check the summer fixture's offset, independent of the date this suite runs.
+  expect(new Date('2026-08-31T12:00:00Z').getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
 }
 
 describe('toCalendarDateStringInTimeZone', () => {

@@ -5,7 +5,11 @@ import { i18nMiddleware, shouldSkipI18n } from './middleware/i18n';
 import { resolveDeploymentCapabilities, type DeploymentCapabilities } from './lib/deployment/deploymentProfile';
 import { resolveRequestHost, detectForwardedHostRewrite } from './lib/deployment/requestHost';
 import { MIGRATED_SETTINGS_TAB_IDS } from './components/settings/settingsTabsRegistry';
-import { PUBLIC_QUOTE_PAGE_PATTERN, PUBLIC_QUOTE_PDF_PATTERN } from './lib/quote/publicQuotePaths';
+import {
+  PUBLIC_QUOTE_DECISION_PATTERN,
+  PUBLIC_QUOTE_PAGE_PATTERN,
+  PUBLIC_QUOTE_PDF_PATTERN,
+} from './lib/quote/publicQuotePaths';
 
 // Minimal, Edge-safe middleware: API key header presence check for select API routes
 // and auth gate for /msp paths, plus i18n locale resolution. Heavy logic stays in route handlers.
@@ -67,8 +71,12 @@ export function isPublicQuotePdfPath(pathname: string): boolean {
   return PUBLIC_QUOTE_PDF_PATTERN.test(pathname);
 }
 
+export function isPublicQuoteDecisionPath(pathname: string): boolean {
+  return PUBLIC_QUOTE_DECISION_PATTERN.test(pathname);
+}
+
 export function isPublicQuoteReviewPath(pathname: string): boolean {
-  return isPublicQuotePagePath(pathname) || isPublicQuotePdfPath(pathname);
+  return isPublicQuotePagePath(pathname) || isPublicQuotePdfPath(pathname) || isPublicQuoteDecisionPath(pathname);
 }
 
 /** The token is a bearer secret in the URL: never leak it via Referer, never index it. */
@@ -246,6 +254,8 @@ export function shouldSkipApiKeyAuth(pathname: string): boolean {
   return pathname === '/api/ticket-comment-attachments/download' ||
     // Public quote PDF: authorized by the path token, resolved in the route handler.
     isPublicQuotePdfPath(pathname) ||
+    // Public quote decision (POST): the token is re-verified inside the decision transaction.
+    isPublicQuoteDecisionPath(pathname) ||
     // Client portal document handlers authenticate the portal session and run
     // the shared tenant/client visibility resolver before serving content.
     /^\/api\/client-portal\/documents\/[^/]+\/(?:file|export)$/.test(pathname) ||

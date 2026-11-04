@@ -122,21 +122,30 @@ describe('TimeSheetService time periods (API)', () => {
   });
 
   describe('update', () => {
-    it('updates dates and ignores is_current (with and without it)', async () => {
-      const period = await create({ start_date: '2026-11-01', end_date: '2026-11-08' });
+    it.each([
+      ['2026-10-01T12:00:00Z', false],
+      ['2026-11-02T12:00:00Z', true],
+      ['2026-12-01T12:00:00Z', false],
+    ] as const)(
+      'updates dates and ignores is_current (with and without it) at %s', async (now, expectedCurrent) => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(new Date(now));
+        const period = await create({ start_date: '2026-11-01', end_date: '2026-11-08' });
 
-      const withFlag = await update(period.period_id, { end_date: '2026-11-09', is_current: true });
-      expect(withFlag.end_date).toBe('2026-11-09');
-      expect(withFlag.is_current).toBe(false);
+        const withFlag = await update(period.period_id, { end_date: '2026-11-09', is_current: !expectedCurrent });
+        expect(withFlag.end_date).toBe('2026-11-09');
+        expect(withFlag.is_current).toBe(expectedCurrent);
 
-      const without = await update(period.period_id, { start_date: '2026-11-02' });
-      expect(without.start_date).toBe('2026-11-02');
-      expect(without.end_date).toBe('2026-11-09');
+        const without = await update(period.period_id, { start_date: '2026-11-02' });
+        expect(without.start_date).toBe('2026-11-02');
+        expect(without.end_date).toBe('2026-11-09');
+        expect(without.is_current).toBe(expectedCurrent);
 
-      const row = await dbRow(period.period_id);
-      expect(row).not.toHaveProperty('is_current');
-      expect(formatDbDate(row.start_date)).toBe('2026-11-02');
-    });
+        const row = await dbRow(period.period_id);
+        expect(row).not.toHaveProperty('is_current');
+        expect(formatDbDate(row.start_date)).toBe('2026-11-02');
+      },
+    );
 
     it('treats a body with only is_current as a no-op returning 200 data', async () => {
       const period = await create({ start_date: '2026-11-01', end_date: '2026-11-08' });

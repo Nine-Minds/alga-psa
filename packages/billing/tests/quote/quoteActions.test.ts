@@ -116,6 +116,11 @@ vi.mock('../../src/services/quoteCalculationService', () => ({
   recalculateQuoteFinancials: (...args: any[]) => recalculateQuoteFinancialsMock(...args),
 }));
 
+const decideQuoteMock = vi.fn();
+vi.mock('../../src/services/quoteDecisionService', () => ({
+  decideQuote: (...args: any[]) => decideQuoteMock(...args),
+}));
+
 vi.mock('../../src/services', () => ({
   buildQuoteConversionPreview: vi.fn(),
   convertQuoteToDraftContract: vi.fn(),
@@ -390,7 +395,7 @@ describe('quoteActions', () => {
   });
 
   it('T044: updateQuote enforces status transition rules', async () => {
-    vi.spyOn(Quote, 'update').mockRejectedValue(new Error('Invalid quote status transition from draft to accepted'));
+    decideQuoteMock.mockResolvedValue({ status: 'not_pending', currentStatus: 'draft' });
 
     const { updateQuote } = await import('../../src/actions/quoteActions');
 

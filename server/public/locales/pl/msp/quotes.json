@@ -896,5 +896,17 @@
       "templateCannotBeAccepted": "Szablonów wycen nie można oznaczyć jako zaakceptowanych",
       "onlySentCanBeAccepted": "Jako zaakceptowane można oznaczyć tylko wysłane wyceny"
     }
+  },
+  "quoteDecision": {
+    "accepted": {
+      "emailLink": "Zaakceptowano przez {{signer}} za pomocą linku w e-mailu, {{date}}",
+      "portal": "Zaakceptowano przez {{signer}} w portalu klienta, {{date}}",
+      "mspMarked": "Oznaczone jako zaakceptowane przez MSP w imieniu klienta, {{date}}"
+    },
+    "rejected": {
+      "emailLink": "Odrzucono przez {{signer}} za pomocą linku w e-mailu, {{date}}",
+      "portal": "Odrzucono przez {{signer}} w portalu klienta, {{date}}"
+    },
+    "title": "({{title}})"
   }
 }

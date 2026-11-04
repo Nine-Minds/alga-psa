@@ -11,7 +11,6 @@ import {
   IBillingResult,
   IBucketUsage,
   IQuote,
-  IQuoteItem,
   IService,
   IQuoteWithClient,
   IUserWithRoles
@@ -27,13 +26,12 @@ import { InvoiceViewModel, IInvoiceTemplate } from '@alga-psa/types';
 import Invoice from '@alga-psa/billing/models/invoice';
 import Quote from '@alga-psa/billing/models/quote';
 import QuoteActivity from '@alga-psa/billing/models/quoteActivity';
-import { recalculateQuoteFinancials, resolveQuoteItemTaxesIfIncluded } from '@alga-psa/billing/services';
+import { authorizePortalUserForQuote, decideQuote, resolveQuoteItemTaxesIfIncluded, type QuoteDecisionResult } from '@alga-psa/billing/services';
 import { withAuth } from '@alga-psa/auth';
 import { scheduleInvoiceEmailAction } from '@alga-psa/billing/actions/invoiceJobActions';
 import { JobStatus } from '@alga-psa/types';
 import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
 import { getAvailableCredit } from '@alga-psa/billing/lib/creditBalance';
-import { onQuoteAccepted } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
 import {
   actionError,
   isActionMessageError,
@@ -134,26 +132,36 @@ async function getAuthorizedClientQuote(
   quoteId: string,
   allowedStatuses?: string[]
 ): Promise<ClientBillingActionResult<IQuote>> {
-  const clientId = await getClientIdFromUser(trx, user, tenant);
-  if (!clientId) {
-    return permissionError('Unauthorized', 'client-portal:errors.access.unauthorized');
+  const access = await authorizePortalUserForQuote(trx, user, tenant, quoteId, allowedStatuses);
+  if (access.ok) {
+    return access.quote;
   }
 
-  const hasAccess = await hasBillingPermission(trx, user, tenant);
-  if (!hasAccess) {
-    return permissionError('Unauthorized to access quote data', 'client-portal:errors.access.quoteData');
+  switch (access.reason) {
+    case 'no_client':
+      return permissionError('Unauthorized', 'client-portal:errors.access.unauthorized');
+    case 'no_billing_permission':
+      return permissionError('Unauthorized to access quote data', 'client-portal:errors.access.quoteData');
+    case 'invalid_state':
+      return actionError('Quote is not in a valid state for this action', 'client-portal:errors.billing.quoteInvalidState');
+    default:
+      return actionError('Quote not found or access denied', 'client-portal:errors.billing.quoteNotFound');
   }
+}
 
-  const quote = await Quote.getById(trx, tenant, quoteId);
-  if (!quote || quote.client_id !== clientId || quote.is_template || quote.status === 'draft') {
-    return actionError('Quote not found or access denied', 'client-portal:errors.billing.quoteNotFound');
+/** Maps a non-`decided` service result back to the portal's existing error shapes. */
+function quoteDecisionErrorFor(result: Exclude<QuoteDecisionResult, { status: 'decided' }>): ClientBillingActionError {
+  switch (result.status) {
+    case 'forbidden':
+      return result.reason === 'no_billing_permission'
+        ? permissionError('Unauthorized to access quote data', 'client-portal:errors.access.quoteData')
+        : permissionError('Unauthorized', 'client-portal:errors.access.unauthorized');
+    case 'not_pending':
+    case 'already_decided':
+      return actionError('Quote is not in a valid state for this action', 'client-portal:errors.billing.quoteInvalidState');
+    default:
+      return actionError('Quote not found or access denied', 'client-portal:errors.billing.quoteNotFound');
   }
-
-  if (allowedStatuses?.length && (!quote.status || !allowedStatuses.includes(quote.status))) {
-    return actionError('Quote is not in a valid state for this action', 'client-portal:errors.billing.quoteInvalidState');
-  }
-
-  return quote;
 }
 
 async function validateClientInvoiceAccess(
@@ -185,37 +193,6 @@ async function validateClientInvoiceAccess(
   }
 
   return null;
-}
-
-async function persistOptionalQuoteSelections(
-  trx: Knex.Transaction,
-  tenant: string,
-  quoteId: string,
-  quoteItems: IQuoteItem[],
-  selectedOptionalQuoteItemIds: string[]
-): Promise<{ selectedIds: string[]; deselectedIds: string[] }> {
-  const optionalItems = quoteItems.filter((item) => item.is_optional);
-  const optionalItemIds = new Set(optionalItems.map((item) => item.quote_item_id));
-  const selectedIds = selectedOptionalQuoteItemIds.filter((itemId) => optionalItemIds.has(itemId));
-  const selectedSet = new Set(selectedIds);
-
-  for (const item of optionalItems) {
-    await tenantDb(trx, tenant).table('quote_items')
-      .where({ quote_item_id: item.quote_item_id })
-      .update({
-        is_selected: selectedSet.has(item.quote_item_id),
-        updated_at: trx.fn.now(),
-      });
-  }
-
-  await recalculateQuoteFinancials(trx, tenant, quoteId);
-
-  return {
-    selectedIds,
-    deselectedIds: optionalItems
-      .map((item) => item.quote_item_id)
-      .filter((itemId) => !selectedSet.has(itemId)),
-  };
 }
 
 export const getClientContractLine = withAuth(async (user, { tenant }): Promise<ClientBillingActionResult<IClientContractLine | null>> => {
@@ -603,46 +580,18 @@ export const acceptClientQuote = withAuth(async (
 
   try {
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const quote = await getAuthorizedClientQuote(trx, user, tenant, quoteId, ['sent']);
-      if (isClientBillingActionError(quote)) {
-        return quote;
-      }
-
-      const { selectedIds, deselectedIds } = await persistOptionalQuoteSelections(
-        trx,
-        tenant,
+      const result = await decideQuote({
+        tenantId: tenant,
         quoteId,
-        quote.quote_items || [],
-        selectedOptionalQuoteItemIds
-      );
-
-      const acceptedAt = new Date().toISOString();
-      await Quote.update(trx, tenant, quoteId, {
-        status: 'accepted',
-        accepted_at: acceptedAt,
-        accepted_by: user.user_id,
-        updated_by: user.user_id,
-      });
-
-      await QuoteActivity.create(trx, tenant, {
-        quote_id: quoteId,
-        activity_type: 'accepted',
-        description: 'Quote accepted by client for MSP review',
-        performed_by: user.user_id,
-        metadata: {
-          selected_optional_quote_item_ids: selectedIds,
-          deselected_optional_quote_item_ids: deselectedIds,
-        },
-      });
-
-      const acceptedQuote = await Quote.getById(trx, tenant, quoteId);
-      if (!acceptedQuote) {
-        return actionError('Quote is no longer available. Refresh the quote before accepting it.', 'client-portal:errors.billing.quoteStaleAccept');
+        action: 'accept',
+        actor: { kind: 'portal_user', userId: user.user_id },
+        selections: { selectedOptionalQuoteItemIds: selectedOptionalQuoteItemIds },
+      }, trx);
+      if (result.status !== 'decided') {
+        return quoteDecisionErrorFor(result);
       }
 
-      await onQuoteAccepted(trx, acceptedQuote);
-
-      return acceptedQuote;
+      return result.quote;
     });
   } catch (error) {
     const expected = billingActionErrorFrom(error);
@@ -669,35 +618,18 @@ export const rejectClientQuote = withAuth(async (
 
   try {
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const quote = await getAuthorizedClientQuote(trx, user, tenant, quoteId, ['sent']);
-      if (isClientBillingActionError(quote)) {
-        return quote;
+      const result = await decideQuote({
+        tenantId: tenant,
+        quoteId,
+        action: 'reject',
+        actor: { kind: 'portal_user', userId: user.user_id },
+        comment: trimmedReason,
+      }, trx);
+      if (result.status !== 'decided') {
+        return quoteDecisionErrorFor(result);
       }
 
-      const rejectedAt = new Date().toISOString();
-      await Quote.update(trx, tenant, quoteId, {
-        status: 'rejected',
-        rejected_at: rejectedAt,
-        rejection_reason: trimmedReason,
-        updated_by: user.user_id,
-      });
-
-      await QuoteActivity.create(trx, tenant, {
-        quote_id: quoteId,
-        activity_type: 'rejected',
-        description: 'Quote rejected by client',
-        performed_by: user.user_id,
-        metadata: {
-          rejection_reason: trimmedReason,
-        },
-      });
-
-      const rejectedQuote = await Quote.getById(trx, tenant, quoteId);
-      if (!rejectedQuote) {
-        return actionError('Quote is no longer available. Refresh the quote before rejecting it.', 'client-portal:errors.billing.quoteStaleReject');
-      }
-
-      return rejectedQuote;
+      return result.quote;
     });
   } catch (error) {
     const expected = billingActionErrorFrom(error);

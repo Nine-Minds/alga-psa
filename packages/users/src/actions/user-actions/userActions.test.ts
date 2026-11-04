@@ -447,7 +447,7 @@ const CE_CLEANUP_TABLES: ReadonlySet<string> = new Set([
   'contract_template_price_sets',
   'escalation_managers', 'external_files', 'external_tax_imports',
   'invoice_template_assignments', 'project_tasks', 'projects',
-  'quote_activities', 'quote_document_template_assignments', 'quote_items',
+  'quote_activities', 'quote_decisions', 'quote_document_template_assignments', 'quote_items',
   'quotes', 'service_categories', 'sla_audit_log', 'statuses', 'tag_mappings',
   'task_resources', 'ticket_resources', 'time_entries', 'time_sheets',
   'authorization_bundles', 'authorization_bundle_revisions',
