@@ -10,8 +10,8 @@
  *     db: null as any, handlers: new Map(), published: [], jobs: [], pending: [],
  *     deferredErrors: [], secrets: new Map(),
  *   }));
- *   vi.mock('@alga-psa/event-bus/publishers', async () =>
- *     (await import('../../../test-utils/webhookSinkHarness')).publishersMockFactory(state));
+ *   vi.mock('@alga-psa/event-bus/publishers', async (importOriginal) =>
+ *     (await import('../../../test-utils/webhookSinkHarness')).publishersMockFactory(state, await importOriginal()));
  *   vi.mock('@/lib/eventBus', async () =>
  *     (await import('../../../test-utils/webhookSinkHarness')).eventBusMockFactory(state));
  *   vi.mock('@alga-psa/core/secrets', async () =>
@@ -40,45 +40,62 @@ export type CapturedRequest = { headers: Record<string, string>; bodyRaw: string
 /** Delay before TICKET_RESPONSE_STATE_CHANGED reaches its consumer (see publishersMockFactory). */
 const STATE_CHANGED_DELIVERY_DELAY_MS = 250;
 
-export function publishersMockFactory(state: WebhookHarnessState) {
+export function publishersMockFactory(
+  state: WebhookHarnessState,
+  actual: typeof import('@alga-psa/event-bus/publishers'),
+) {
+  const publishEvent = vi.fn(async (event: { eventType: string; payload: any }) => {
+    state.published.push({ eventType: event.eventType, payload: event.payload });
+    const handler = state.handlers.get(event.eventType);
+    if (!handler) return;
+
+    const { EventSchemas } = await import('@alga-psa/event-bus/schemas/eventBusSchema');
+    const schema = (EventSchemas as Record<string, { parse: (v: unknown) => unknown } | undefined>)[event.eventType];
+    if (!schema) {
+      throw new Error(`No EventSchemas entry for ${event.eventType}; refusing to skip the consumer parse`);
+    }
+    const parsed = schema.parse({
+      id: uuidv4(),
+      eventType: event.eventType,
+      timestamp: new Date().toISOString(),
+      payload: event.payload,
+    }) as unknown;
+
+    if (event.eventType === 'TICKET_RESPONSE_STATE_CHANGED') {
+      // In production this event is consumed after the comment.added event of
+      // the same transaction (separate stream messages, possibly other pods).
+      // Deliver it late so the comment.added build cannot benefit from this
+      // event's side effects. Tracked in state.pending and flushed by
+      // flushDeferredDeliveries so no delivery crosses a test boundary.
+      state.pending.push(
+        new Promise<void>((resolve) => {
+          setTimeout(() => {
+            handler(parsed)
+              .catch((error) => { state.deferredErrors.push(error); })
+              .finally(resolve);
+          }, STATE_CHANGED_DELIVERY_DELAY_MS);
+        }),
+      );
+    } else {
+      await handler(parsed);
+    }
+  });
   return {
-    publishEvent: vi.fn(async (event: { eventType: string; payload: any }) => {
-      state.published.push({ eventType: event.eventType, payload: event.payload });
-      const handler = state.handlers.get(event.eventType);
-      if (!handler) return;
-
-      const { EventSchemas } = await import('@alga-psa/event-bus/schemas/eventBusSchema');
-      const schema = (EventSchemas as Record<string, { parse: (v: unknown) => unknown } | undefined>)[event.eventType];
-      if (!schema) {
-        throw new Error(`No EventSchemas entry for ${event.eventType}; refusing to skip the consumer parse`);
-      }
-      const parsed = schema.parse({
-        id: uuidv4(),
-        eventType: event.eventType,
-        timestamp: new Date().toISOString(),
-        payload: event.payload,
-      }) as unknown;
-
-      if (event.eventType === 'TICKET_RESPONSE_STATE_CHANGED') {
-        // In production this event is consumed after the comment.added event of
-        // the same transaction (separate stream messages, possibly other pods).
-        // Deliver it late so the comment.added build cannot benefit from this
-        // event's side effects. Tracked in state.pending and flushed by
-        // flushDeferredDeliveries so no delivery crosses a test boundary.
-        state.pending.push(
-          new Promise<void>((resolve) => {
-            setTimeout(() => {
-              handler(parsed)
-                .catch((error) => { state.deferredErrors.push(error); })
-                .finally(resolve);
-            }, STATE_CHANGED_DELIVERY_DELAY_MS);
-          }),
-        );
-      } else {
-        await handler(parsed);
-      }
+    ...actual,
+    publishEvent,
+    publishWorkflowEvent: vi.fn(async (params: { eventType: string; payload: any; ctx: any; idempotencyKey?: string }) => {
+      const { buildWorkflowPayload } = await import('@alga-psa/event-schemas');
+      const ctx = params.idempotencyKey ? { ...params.ctx, idempotencyKey: params.idempotencyKey } : params.ctx;
+      await publishEvent({ eventType: params.eventType, payload: buildWorkflowPayload(params.payload, ctx) });
     }),
-    publishWorkflowEvent: vi.fn(async () => {}),
+    publishStoredWorkflowEvent: vi.fn(async (event: { eventType: string; payload: any }) => {
+      const revived = actual.reviveStoredWorkflowPayload(event.eventType, event.payload);
+      if (!revived) throw new Error(`${event.eventType} is not a catalogued workflow event`);
+      await publishEvent(revived);
+    }),
+    publishBuiltWorkflowPayload: vi.fn(async (event: { eventType: string; payload: any }) => {
+      await publishEvent(event);
+    }),
   };
 }
 

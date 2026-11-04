@@ -60,8 +60,8 @@ vi.mock('@alga-psa/core/logger', () => {
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 vi.mock('server/src/lib/analytics/posthog', () => ({ analytics: { capture: vi.fn() } }));
 
-vi.mock('@alga-psa/event-bus/publishers', async () =>
-  (await import('../../../test-utils/webhookSinkHarness')).publishersMockFactory(state));
+vi.mock('@alga-psa/event-bus/publishers', async (importOriginal) =>
+  (await import('../../../test-utils/webhookSinkHarness')).publishersMockFactory(state, await importOriginal()));
 vi.mock('@/lib/eventBus', async () =>
   (await import('../../../test-utils/webhookSinkHarness')).eventBusMockFactory(state));
 
@@ -581,6 +581,9 @@ describe('portal and email client replies emit ticket.response_state_changed (37
     expect(hit.body.data.ticket_id).toBe(ticketId);
     expect(stateEvents(ticketId)).toHaveLength(1);
     expect(stateEvents(ticketId)[0].payload.userId).toBeNull();
+    expect(stateEvents(ticketId)[0].payload.actorType).toBe('SYSTEM');
+    expect(stateEvents(ticketId)[0].payload).not.toHaveProperty('actorUserId');
+    expect(stateEvents(ticketId)[0].payload.occurredAt).toBe(rows[0].payload.occurredAt);
 
     // Replay of the same inbox message: no second comment, no second outbox row.
     const commentCount = Number((await table('comments').where({ ticket_id: ticketId }).count<{ count: string }[]>('* as count').first())?.count);
@@ -598,6 +601,8 @@ describe('portal and email client replies emit ticket.response_state_changed (37
     const hit = await expectOneSignedDelivery(ticketId, 'awaiting_client', 'awaiting_internal');
     expect(hit.body.data.ticket_id).toBe(ticketId);
     expect(stateEvents(ticketId)[0].payload.userId).toBeNull();
+    expect(stateEvents(ticketId)[0].payload.actorType).toBe('SYSTEM');
+    expect(stateEvents(ticketId)[0].payload).not.toHaveProperty('actorUserId');
 
     // Forced rollback: the model's after-commit hook must never fire.
     const rolledBack = await createTicket('awaiting_client');
@@ -656,11 +661,20 @@ describe('portal and email client replies emit ticket.response_state_changed (37
 
   // ---- 9: parity --------------------------------------------------------------
 
-  it('9. the event payload and webhook body field sets match across portal, email, REST and UI', async () => {
+  it('9. the event payload and webhook body field sets match across portal, legacy email, durable email, REST and UI', async () => {
     const { EventSchemas } = await import('@alga-psa/event-bus/schemas/eventBusSchema');
     const sources: Array<[string, (ticketId: string) => Promise<void>, string | null]> = [
       ['portal', (t) => portalReply(t), 'awaiting_client'],
-      ['email', async (t) => { await legacyEmailComment(t, { author_type: 'contact', contact_id: bareContactId }); }, 'awaiting_client'],
+      // Compare user-authored replies on every surface. Bare-contact SYSTEM
+      // attribution is asserted separately on both email paths above.
+      ['email', async (t) => { await legacyEmailComment(t, { author_type: 'contact', contact_id: contactId, author_id: clientUserId }); }, 'awaiting_client'],
+      ['durable-email', async (t) => {
+        const inboxId = await stageReply(t, `casey.${contactId}@example.com`);
+        expect(await processInbox(inboxId)).toMatchObject({ outcome: 'replied' });
+        const rows = await outboxRows(inboxId, 'response-state-changed');
+        expect(rows).toHaveLength(1);
+        await dispatchOutboxRow(inboxId, String(rows[0].outbox_id));
+      }, 'awaiting_client'],
       ['rest', async (t) => {
         await service.addComment(t, { comment_text: 'rest reply', is_internal: false } as any, { tenant: tenantId, userId: clientUserId } as any);
       }, 'awaiting_client'],
@@ -686,6 +700,11 @@ describe('portal and email client replies emit ticket.response_state_changed (37
         initial === 'awaiting_client' ? 'awaiting_internal' : 'awaiting_client',
       );
       const raw = stateEvents(ticketId)[0].payload;
+      expect(raw).toMatchObject({
+        actorType: 'USER',
+        actorUserId: name === 'ui' ? staffUserId : clientUserId,
+        userId: name === 'ui' ? staffUserId : clientUserId,
+      });
       // The payload must satisfy the consumer schema; key parity is checked on the raw payload.
       (EventSchemas as any).TICKET_RESPONSE_STATE_CHANGED.parse({
         id: uuidv4(), eventType: 'TICKET_RESPONSE_STATE_CHANGED', timestamp: new Date().toISOString(), payload: raw,

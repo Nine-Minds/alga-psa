@@ -399,17 +399,6 @@ function applyTicketReadAuthorizationSql(
   });
 }
 
-async function updateTicketResponseStateFromComment(
-  trx: Knex.Transaction,
-  tenant: string,
-  ticketId: string,
-  authorType: 'internal' | 'client' | 'unknown',
-  isInternal: boolean,
-  userId: string | null
-): Promise<{ previousState: TicketResponseState; newState: TicketResponseState }> {
-  return applyCommentResponseState(trx, { tenant, ticketId, authorType, isInternal, userId });
-}
-
 // Helper function to safely convert dates
 function convertDates<T extends { entered_at?: Date | string | null, updated_at?: Date | string | null, closed_at?: Date | string | null, due_date?: Date | string | null }>(record: T): T {
   return {
@@ -3503,14 +3492,13 @@ export async function addTicketCommentInTransaction(
 
   // Update ticket response state based on comment visibility and author (F005-F008)
   if (!isScheduled) {
-    await updateTicketResponseStateFromComment(
-      trx,
+    await applyCommentResponseState(trx, {
       tenant,
       ticketId,
       authorType,
-      authorType === 'internal' ? isInternal : false,
-      user.user_id ?? null
-    );
+      isInternal: authorType === 'internal' ? isInternal : false,
+      userId: user.user_id ?? null,
+    });
   }
 
   // Bundle child→master reopen: a public reply on a bundled child can

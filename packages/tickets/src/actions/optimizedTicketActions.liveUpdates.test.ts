@@ -19,6 +19,12 @@ const ticketUpdates: Record<string, unknown>[] = [];
 // transaction resolves, matching production's flush-after-commit semantics.
 const afterCommitHooksQueue: Array<() => unknown | Promise<unknown>> = [];
 
+// The human-work guard is covered against a real database in T043; this fake DB has no users table.
+vi.mock('@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee', () => ({
+  assertHumanWorkAssignee: vi.fn(async () => undefined),
+  assertHumanWorkOwner: vi.fn(async () => undefined),
+}));
+
 vi.mock('@alga-psa/shared/lib/tickets/ticketLifecycleEvents', () => ({
   publishTicketTransitionsAfterCommit: vi.fn(async () => []),
   captureTicketTransitionSnapshot: vi.fn(async () => null),
@@ -80,6 +86,12 @@ vi.mock('@alga-psa/formatting/blocknoteUtils', () => ({
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: (...args: any[]) => publishEventMock(...args),
   publishWorkflowEvent: (...args: any[]) => publishWorkflowEventMock(...args),
+  // Comment-publication outbox replay (persisted intent, dispatched after commit).
+  publishStoredWorkflowEvent: (...args: any[]) => publishEventMock(...args),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/event-bus', () => ({
@@ -126,6 +138,14 @@ vi.mock('../lib/workflowTicketCommunicationEvents', () => ({
 
 vi.mock('@alga-psa/shared/services/tickets/ticketSlaStageEvents', () => ({
   buildTicketResolutionSlaStageCompletionEvent: vi.fn(() => null),
+  // The real helper publishes through publishWorkflowEvent with the event's own idempotency key.
+  publishWorkflowTicketSlaStageEvent: (event: any, ctx: any) =>
+    publishWorkflowEventMock({
+      eventType: event.eventType,
+      payload: event.payload,
+      ctx,
+      idempotencyKey: event.idempotencyKey,
+    }),
 }));
 
 vi.mock('../lib/validateTicketClosure', () => ({
@@ -259,7 +279,6 @@ function buildTrx(params: {
   currentTicket?: Record<string, unknown>;
   bundleSettings?: Record<string, unknown> | undefined;
   childTickets?: Array<Record<string, unknown>>;
-  /** Row returned for tenant_settings; undefined means no row (tracking on by default). */
   tenantSettings?: Record<string, unknown>;
 }) {
   const currentTicket = { ...makeTicket(), ...(params.currentTicket ?? {}) };
@@ -353,12 +372,7 @@ function buildTrx(params: {
     }
 
     if (table === 'tenant_settings') {
-      // Read by the shared response-state engine (tracking setting).
-      return {
-        select: vi.fn(() => ({
-          first: vi.fn(async () => params.tenantSettings),
-        })),
-      };
+      return { select: () => ({ first: async () => params.tenantSettings }) };
     }
 
     if (table === 'ticket_bundle_settings') {
@@ -470,6 +484,31 @@ describe('updateTicketWithCache live updates', () => {
       'alga-psa:ticket-updates:tenant-1:ticket-1',
       expect.stringContaining('"updatedFields":["status_id"]')
     );
+  });
+
+  it('status clock: a status change includes the status_changed_at CASE patch in the tickets UPDATE', async () => {
+    let capturedTrx: any;
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => {
+      capturedTrx = buildTrx({ currentTicket: makeTicket({ status_id: 'status-1' }) });
+      return callback(capturedTrx);
+    });
+
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+    await expect(updateTicketWithCache('ticket-1', { status_id: 'status-2' })).resolves.toBe('success');
+
+    expect(ticketUpdates[0]).toHaveProperty('status_changed_at');
+    expect(capturedTrx.raw).toHaveBeenCalledWith(
+      expect.stringContaining('CASE WHEN status_id IS DISTINCT FROM ?::uuid THEN ?::timestamptz ELSE status_changed_at END'),
+      ['status-2', expect.any(String)]
+    );
+  });
+
+  it('status clock: an update that does not write status_id never touches status_changed_at', async () => {
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+    await expect(updateTicketWithCache('ticket-1', { title: 'Renamed' })).resolves.toBe('success');
+
+    expect(ticketUpdates[0]).toMatchObject({ title: 'Renamed' });
+    expect(ticketUpdates[0]).not.toHaveProperty('status_changed_at');
   });
 
   it('T005: permission failure results in zero live-update publishes', async () => {
@@ -843,6 +882,7 @@ describe('updateTicketWithCache live updates', () => {
 
     expect(ticketUpdates[0]).toEqual({
       status_id: 'closed-status-1',
+      status_changed_at: expect.anything(),
       response_state: null,
       updated_at: expect.anything(),
       updated_by: 'user-1',
@@ -851,11 +891,14 @@ describe('updateTicketWithCache live updates', () => {
       'alga-psa:ticket-updates:tenant-1:ticket-1',
       expect.stringContaining('"updatedFields":["status_id","response_state"]')
     );
-    expect(publishEventMock).toHaveBeenCalledWith({
+    expect(publishWorkflowEventMock).toHaveBeenCalledWith({
       eventType: 'TICKET_RESPONSE_STATE_CHANGED',
-      payload: {
+      ctx: expect.objectContaining({
         tenantId: 'tenant-1',
         occurredAt: expect.any(String),
+        actor: { actorType: 'USER', actorUserId: 'user-1' },
+      }),
+      payload: {
         ticketId: 'ticket-1',
         userId: 'user-1',
         previousResponseState: 'awaiting_client',
@@ -866,7 +909,34 @@ describe('updateTicketWithCache live updates', () => {
       },
     });
   });
+  it('keeps the USER actor on TICKET_RESPONSE_STATE_CHANGED for a native systemActor update (auto-close)', async () => {
+    const trx = buildTrx({
+      currentTicket: makeTicket({ status_id: 'status-1', response_state: 'awaiting_client' }),
+    });
 
+    const { updateTicketInTransaction } = await import('./optimizedTicketActions');
+    const systemUser = { ...currentUser, user_id: 'system-user-1' };
+    // Run inside the mocked withTransaction so registerAfterCommit hooks flush.
+    const { withTransaction } = await import('@alga-psa/db');
+    withTransactionMock.mockImplementation(async (_db: any, callback: (t: any) => Promise<any>) => callback(trx));
+    await expect(
+      withTransaction({ any: true } as any, (t: any) =>
+        updateTicketInTransaction(t, systemUser, 'tenant-1', 'ticket-1', { status_id: 'closed-status-1' }, { systemActor: true }),
+      ),
+    ).resolves.toBe('success');
+
+    // Main always published a USER actor here; a SYSTEM actor would be a native regression.
+    expect(publishWorkflowEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'TICKET_RESPONSE_STATE_CHANGED',
+        ctx: expect.objectContaining({
+          tenantId: 'tenant-1',
+          actor: { actorType: 'USER', actorUserId: 'system-user-1' },
+        }),
+        payload: expect.objectContaining({ ticketId: 'ticket-1', newResponseState: null, trigger: 'close' }),
+      }),
+    );
+  });
   describe('comment response state (shared engine)', () => {
     const plainContent = '[{"type":"paragraph","content":"Reply"}]';
 
@@ -878,7 +948,7 @@ describe('updateTicketWithCache live updates', () => {
       await addTicketCommentWithCache('ticket-1', plainContent, false, false);
 
       expect(ticketUpdates).toContainEqual({ response_state: 'awaiting_client' });
-      const changed = publishEventMock.mock.calls.filter(
+      const changed = publishWorkflowEventMock.mock.calls.filter(
         ([event]: any[]) => event?.eventType === 'TICKET_RESPONSE_STATE_CHANGED'
       );
       expect(changed).toHaveLength(1);
@@ -912,7 +982,7 @@ describe('updateTicketWithCache live updates', () => {
 
       expect(ticketUpdates.filter((u) => 'response_state' in u)).toEqual([]);
       expect(
-        publishEventMock.mock.calls.filter(([event]: any[]) => event?.eventType === 'TICKET_RESPONSE_STATE_CHANGED')
+        publishWorkflowEventMock.mock.calls.filter(([event]: any[]) => event?.eventType === 'TICKET_RESPONSE_STATE_CHANGED')
       ).toEqual([]);
     });
   });

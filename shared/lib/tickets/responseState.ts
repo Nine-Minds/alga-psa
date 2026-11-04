@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import { registerAfterCommit, tenantDb } from '@alga-psa/db';
-import type { IEventPublisher, TicketResponseState } from '@alga-psa/types';
+import { isClientUserType, isMspPrincipalUserType, type IEventPublisher, type TicketResponseState } from '@alga-psa/types';
+import type { WorkflowEventPublishContext } from '@alga-psa/event-schemas';
 import { buildTicketResponseStateChangedPayload } from './ticketWorkflowEventPayloads';
 
 /**
@@ -67,10 +68,14 @@ export async function resolveCommentAuthor(
   if (!user) {
     return { authorType: 'unknown', contactId: null };
   }
-  if (user.user_type === 'internal') {
+  // internal and service principals are MSP-side authors (a service user is never a client author).
+  if (isMspPrincipalUserType(user.user_type)) {
     return { authorType: 'internal', contactId: null };
   }
-  return { authorType: 'client', contactId: user.contact_id ?? null };
+  if (isClientUserType(user.user_type)) {
+    return { authorType: 'client', contactId: user.contact_id ?? null };
+  }
+  return { authorType: 'unknown', contactId: null };
 }
 
 /** Pure rule table: the state a comment moves the ticket to. */
@@ -136,27 +141,33 @@ export type ResponseStateAnnouncer = (
   payload: ResponseStateChangedPayload
 ) => void | Promise<void>;
 
+/** Event contract shared by immediate publication and durable outbox replay. */
+export function buildResponseStateChangedEvent(payload: ResponseStateChangedPayload) {
+  const ctx: WorkflowEventPublishContext = {
+    tenantId: payload.tenantId,
+    occurredAt: payload.occurredAt,
+    actor: payload.userId ? { actorType: 'USER', actorUserId: payload.userId } : { actorType: 'SYSTEM' },
+  };
+  return {
+    eventType: 'TICKET_RESPONSE_STATE_CHANGED' as const,
+    payload: buildTicketResponseStateChangedPayload({
+      ticketId: payload.ticketId,
+      userId: payload.userId,
+      previousState: payload.previousState,
+      newState: payload.newState,
+      trigger: payload.trigger,
+    }),
+    ctx,
+  };
+}
+
 /** Default sink: publish after the owning transaction commits. */
 export const announceAfterCommit: ResponseStateAnnouncer = (trx, payload) => {
   registerAfterCommit(
     trx,
     async () => {
       const { publishWorkflowEvent } = await import('@alga-psa/event-bus/publishers');
-      await publishWorkflowEvent({
-        eventType: 'TICKET_RESPONSE_STATE_CHANGED',
-        payload: buildTicketResponseStateChangedPayload({
-          ticketId: payload.ticketId,
-          userId: payload.userId,
-          previousState: payload.previousState,
-          newState: payload.newState,
-          trigger: payload.trigger,
-        }),
-        ctx: {
-          tenantId: payload.tenantId,
-          occurredAt: payload.occurredAt,
-          actor: payload.userId ? { actorType: 'USER', actorUserId: payload.userId } : { actorType: 'SYSTEM' },
-        },
-      });
+      await publishWorkflowEvent(buildResponseStateChangedEvent(payload));
     },
     `TICKET_RESPONSE_STATE_CHANGED ticket=${payload.ticketId}`
   );
