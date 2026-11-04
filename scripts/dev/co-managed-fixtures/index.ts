@@ -76,7 +76,8 @@ export async function run(db: Knex, options: Options, engines: () => Promise<Fix
     }
     if (options.mode === 'verify') {
       let ok = true;
-      for (const report of await target.verify(db)) {
+      const verifyEngines = target.name === 'notification' ? await engines() : undefined;
+      for (const report of await target.verify(db, verifyEngines)) {
         ok &&= report.ok;
         console.log(`${(report.ok ? 'present' : 'MISMATCH').padEnd(8)} ${target.name.padEnd(13)} ${report.detail}`);
       }
@@ -91,8 +92,9 @@ export async function run(db: Knex, options: Options, engines: () => Promise<Fix
   const modules = resolveModules(registry, options.through);
   if (options.mode === 'verify') {
     let ok = true;
+    const verifyEngines = modules.some(module => module.name === 'notification') ? await engines() : undefined;
     for (const module of modules) {
-      for (const report of await module.verify(db)) {
+      for (const report of await module.verify(db, module.name === 'notification' ? verifyEngines : undefined)) {
         ok &&= report.ok;
         console.log(`${(report.ok ? 'present' : 'MISMATCH').padEnd(8)} ${module.name.padEnd(6)} ${report.detail}`);
       }
@@ -122,11 +124,11 @@ async function main(): Promise<void> {
   });
   try {
     const ok = await run(db, options, async () => {
-      const [{ runOnboardingSeeds }, { verifyPassword }] = await Promise.all([
+      const [{ runOnboardingSeeds }, { verifyPassword, hashPassword }] = await Promise.all([
         import(`${REPO_ROOT}/ee/temporal-workflows/src/db/onboarding-seeds-operations.js`),
         import(`${REPO_ROOT}/shared/utils/encryption.js`),
       ]);
-      return { runOnboardingSeeds, verifyPassword, secret: required('NEXTAUTH_SECRET') };
+      return { runOnboardingSeeds, verifyPassword, hashPassword, secret: required('NEXTAUTH_SECRET') };
     });
     if (!ok) process.exitCode = 1;
     if (options.mode !== 'verify') console.log(`Co-managed fixtures ${options.mode === 'apply' ? 'applied' : 'removed'} ${options.only ? `layer ${options.only}` : `through ${options.through}`}.`);
