@@ -60,18 +60,19 @@ const database = (tenant = holder.tenant) => tenantDb(holder.knex, tenant);
 
 describe('asset group mutation authorization', () => {
   let clientId: string;
+  let excludedClientId: string;
   let teamId: string;
   let locationId: string;
   let oldOwnerId: string;
   let newOwnerId: string;
 
-  async function createAsset(name: string): Promise<string> {
+  async function createAsset(name: string, assetClientId = clientId): Promise<string> {
     const assetId = randomUUID();
     await database().table('assets').insert({
       tenant: holder.tenant,
       asset_id: assetId,
       asset_type: 'unknown',
-      client_id: clientId,
+      client_id: assetClientId,
       asset_tag: `AG-${assetId.slice(0, 8)}`,
       name,
       serial_number: `S-${assetId.slice(0, 8)}`,
@@ -163,6 +164,12 @@ describe('asset group mutation authorization', () => {
       last_name: 'Operator',
     });
     clientId = (await database().table('clients').first('client_id')).client_id;
+    excludedClientId = randomUUID();
+    await database().table('clients').insert({
+      tenant: holder.tenant,
+      client_id: excludedClientId,
+      client_name: 'Outside the operator client scope',
+    });
     teamId = randomUUID();
     await database().table('teams').insert({ tenant: holder.tenant, team_id: teamId, team_name: 'Asset team', manager_id: holder.userId });
     await database().table('team_members').insert({ tenant: holder.tenant, team_id: teamId, user_id: holder.userId });
@@ -192,6 +199,98 @@ describe('asset group mutation authorization', () => {
   }, 180_000);
 
   afterAll(async () => { await holder.knex?.destroy(); }, 180_000);
+
+  it('denies empty-member mutations outside the group client scope', async () => {
+    const before = await database().table('asset_groups').count('* as count').first();
+    expect(await createAssetGroup({ clientId: excludedClientId, name: 'Denied empty group', kind: 'bundle', assetIds: [] }))
+      .toHaveProperty('permissionError');
+    expect(await database().table('asset_groups').count('* as count').first()).toEqual(before);
+
+    const group = await holder.knex.transaction((trx) => createGroup(trx, holder.tenant, {
+      clientId: excludedClientId, name: 'Existing excluded empty group', kind: 'shared_workspace',
+    }));
+    expect(await addAssetsToGroup(group.group_id, [])).toHaveProperty('permissionError');
+    expect(await updateAssetGroup(group.group_id, { name: 'Must not change' })).toHaveProperty('permissionError');
+    expect(await removeAssetFromGroup(group.group_id, randomUUID())).toHaveProperty('permissionError');
+    expect(await deleteAssetGroup(group.group_id)).toHaveProperty('permissionError');
+    expect(await database().table('asset_groups').where({ group_id: group.group_id }).first()).toMatchObject({
+      group_id: group.group_id, client_id: excludedClientId, name: group.name, kind: group.kind,
+    });
+    expect(await database().table('asset_group_members').where({ group_id: group.group_id })).toHaveLength(0);
+  });
+
+  it('allows an empty member set as a no-op within the group client scope', async () => {
+    const created = await createAssetGroup({ clientId, name: 'Authorized empty group', kind: 'bundle', assetIds: [] });
+    expect(created).toMatchObject({ name: 'Authorized empty group' });
+    const groupId = (created as { group_id: string }).group_id;
+    const before = await database().table('asset_groups').where({ group_id: groupId }).first();
+    const historyBefore = await database().table('asset_history').count('* as count').first();
+
+    expect(await addAssetsToGroup(groupId, [])).toMatchObject({ group_id: groupId });
+    expect(await database().table('asset_groups').where({ group_id: groupId }).first()).toEqual(before);
+    expect(await database().table('asset_group_members').where({ group_id: groupId })).toHaveLength(0);
+    expect(await database().table('asset_history').count('* as count').first()).toEqual(historyBefore);
+  });
+
+  it('denies an updatable member whose client matches the group but is outside the group client scope', async () => {
+    const assetId = await createAsset('Matching client without scope', excludedClientId);
+    await assignAssetToTeam(assetId);
+    const context = await createAssetReadContext(holder.knex, holder.tenant, { user_id: holder.userId, user_type: 'internal' });
+    const record = { asset_id: assetId, client_id: excludedClientId };
+    expect(await isAssetActionAllowed(holder.knex, holder.tenant, context, record, 'update')).toBe(true);
+    expect(await isAssetActionAllowed(holder.knex, holder.tenant, context, record, 'read')).toBe(false);
+    const group = await holder.knex.transaction((trx) => createGroup(trx, holder.tenant, {
+      clientId: excludedClientId, name: 'Matching excluded client', kind: 'bundle',
+    }));
+    const before = await database().table('assets').where({ asset_id: assetId }).first();
+
+    expect(await createAssetGroup({ clientId: excludedClientId, name: 'Denied matching client', kind: 'bundle', assetIds: [assetId] }))
+      .toHaveProperty('permissionError');
+    expect(await addAssetsToGroup(group.group_id, [assetId])).toHaveProperty('permissionError');
+    expect(await database().table('asset_group_members').where({ asset_id: assetId })).toHaveLength(0);
+    expect(await database().table('assets').where({ asset_id: assetId }).first()).toEqual(before);
+  });
+
+  it('allows membership when both the group client scope and member update rule authorize it', async () => {
+    const assetId = await createAsset('Matching authorized client');
+    await assignAssetToTeam(assetId);
+    const created = await createAssetGroup({ clientId, name: 'Authorized matching client', kind: 'bundle' });
+    expect(created).toMatchObject({ client_id: clientId });
+    const groupId = (created as { group_id: string }).group_id;
+
+    expect(await addAssetsToGroup(groupId, [assetId])).toMatchObject({ group_id: groupId });
+    expect(await database().table('asset_group_members').where({ group_id: groupId, asset_id: assetId })).toHaveLength(1);
+  });
+
+  it('requires update permission and client scope for empty API groups', async () => {
+    const controller = new ApiAssetGroupController();
+    const create = (groupClientId: string) => controller.create(new NextRequest('http://localhost/api/v1/asset-groups', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ client_id: groupClientId, name: 'Empty API group', kind: 'bundle', asset_ids: [] }),
+    }));
+    const before = await database().table('asset_groups').count('* as count').first();
+    try {
+      apiAccess.permissions = new Set(['asset:create']);
+      expect((await create(clientId)).status).toBe(403);
+      apiAccess.permissions = new Set(['asset:create', 'asset:update']);
+      expect((await create(excludedClientId)).status).toBe(403);
+      expect(await database().table('asset_groups').count('* as count').first()).toEqual(before);
+      const allowed = await create(clientId);
+      expect(allowed.status).toBe(200);
+      const { data: group } = await allowed.json();
+      const remove = () => controller.delete(new NextRequest(`http://localhost/api/v1/asset-groups/${group.group_id}`, {
+        method: 'DELETE',
+      }), { id: group.group_id });
+      apiAccess.permissions = new Set(['asset:delete']);
+      expect((await remove()).status).toBe(403);
+      expect(await database().table('asset_groups').where({ group_id: group.group_id })).toHaveLength(1);
+      apiAccess.permissions = new Set(['asset:delete', 'asset:update']);
+      expect((await remove()).status).toBe(200);
+      expect(await database().table('asset_groups').where({ group_id: group.group_id })).toHaveLength(0);
+    } finally {
+      apiAccess.permissions.clear();
+    }
+  });
 
   it('authorizes same-team membership and propagation as one transaction', async () => {
     const inTeam = await createAsset('In-team asset');

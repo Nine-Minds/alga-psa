@@ -15,6 +15,7 @@ import {
   listContactSharedWorkspaces,
   listGroupMemberIds,
   listGroupsForClient,
+  lockAssetGroupForMutation,
   removeAssetFromGroupRow,
   removeGroupUser,
   setGroupOwner,
@@ -23,6 +24,7 @@ import {
 import {
   assertAssetGroupAssetsUpdatable,
   assertAssetGroupMemberUpdatableIfPresent,
+  lockAndAuthorizeAssetGroupClient,
   lockAndAuthorizeAssetGroupMembers,
 } from '../lib/assetGroupAuthorization';
 import { resolveAssetTicketContactOptions } from '@alga-psa/shared/models/assetTicketContactModel';
@@ -208,7 +210,7 @@ export const createAssetGroup = withAuth(async (
     const assetIds = input.assetIds ?? [];
     const before = await snapshotAssets(knex, tenant, assetIds);
     const group = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      await assertAssetGroupAssetsUpdatable(trx, tenant, user, assetIds);
+      await assertAssetGroupAssetsUpdatable(trx, tenant, user, input.clientId, assetIds);
       const created = await createGroup(trx, tenant, { ...input, actorUserId: user.user_id });
       if (assetIds.length) {
         await addAssetsToGroupRows(trx, tenant, created.group_id, assetIds, { actorUserId: user.user_id });
@@ -286,7 +288,8 @@ export const addAssetsToGroup = withAuth(async (
   const { knex } = await createTenantKnex();
   return withGroupErrors(async () => {
     const group = await withMemberEvents(knex, tenant, user.user_id, groupId, assetIds, () => withTransaction(knex, async (trx: Knex.Transaction) => {
-      await assertAssetGroupAssetsUpdatable(trx, tenant, user, assetIds);
+      const existingGroup = await lockAssetGroupForMutation(trx, tenant, groupId);
+      await assertAssetGroupAssetsUpdatable(trx, tenant, user, existingGroup.client_id, assetIds);
       await addAssetsToGroupRows(trx, tenant, groupId, assetIds, { actorUserId: user.user_id });
       return getGroupWithDetails(trx, tenant, groupId);
     }));
@@ -352,6 +355,7 @@ export const addAssetGroupUser = withAuth(async (
   const { knex } = await createTenantKnex();
   return withGroupErrors(async () => {
     const group = await withMemberEvents(knex, tenant, user.user_id, groupId, [], () => withTransaction(knex, async (trx: Knex.Transaction) => {
+      await lockAndAuthorizeAssetGroupClient(trx, tenant, user, groupId);
       await addGroupUser(trx, tenant, groupId, contactId);
       return getGroupWithDetails(trx, tenant, groupId);
     }));
@@ -373,6 +377,7 @@ export const removeAssetGroupUser = withAuth(async (
   const { knex } = await createTenantKnex();
   return withGroupErrors(async () => {
     const group = await withMemberEvents(knex, tenant, user.user_id, groupId, [], () => withTransaction(knex, async (trx: Knex.Transaction) => {
+      await lockAndAuthorizeAssetGroupClient(trx, tenant, user, groupId);
       await removeGroupUser(trx, tenant, groupId, contactId);
       return getGroupWithDetails(trx, tenant, groupId);
     }));

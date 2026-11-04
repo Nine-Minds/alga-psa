@@ -1,8 +1,10 @@
 import type { Knex } from 'knex';
+import type { AssetGroup } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
 import {
   createAssetReadContext,
   filterAssetsAllowedForAction,
+  isAssetClientReadAllowed,
   type AssetAuthUser,
 } from './assetReadAuthorization';
 import {
@@ -11,14 +13,16 @@ import {
   lockAssetGroupForMutation,
 } from './assetGroups';
 
-/** Lock a group before observing its member set for authorization or propagation. */
-export async function lockAndListAssetGroupMembers(
+/** Authorize the group's client even when no member assets will be changed. */
+export async function lockAndAuthorizeAssetGroupClient(
   trx: Knex.Transaction,
   tenant: string,
+  user: AssetAuthUser,
   groupId: string
-): Promise<string[]> {
-  await lockAssetGroupForMutation(trx, tenant, groupId);
-  return listGroupMemberIds(trx, tenant, groupId);
+): Promise<AssetGroup> {
+  const group = await lockAssetGroupForMutation(trx, tenant, groupId);
+  await assertAssetGroupAssetsUpdatable(trx, tenant, user, group.client_id, []);
+  return group;
 }
 
 /** Authorize the stable member set while holding the group's mutation lock. */
@@ -28,18 +32,28 @@ export async function lockAndAuthorizeAssetGroupMembers(
   user: AssetAuthUser,
   groupId: string
 ): Promise<string[]> {
-  const memberIds = await lockAndListAssetGroupMembers(trx, tenant, groupId);
-  await assertAssetGroupAssetsUpdatable(trx, tenant, user, memberIds);
+  const group = await lockAssetGroupForMutation(trx, tenant, groupId);
+  const memberIds = await listGroupMemberIds(trx, tenant, groupId);
+  await assertAssetGroupAssetsUpdatable(trx, tenant, user, group.client_id, memberIds);
   return memberIds;
 }
 
 /** Authorize every asset a group mutation may change before the mutation writes anything. */
 export async function assertAssetGroupAssetsUpdatable(
-  trx: Knex | Knex.Transaction,
+  trx: Knex.Transaction,
   tenant: string,
   user: AssetAuthUser,
+  clientId: string,
   assetIds: readonly string[]
 ): Promise<void> {
+  const context = await createAssetReadContext(trx, tenant, user);
+  if (!await isAssetClientReadAllowed(trx, context, clientId)) {
+    throw new AssetGroupError(
+      'permission_denied',
+      `Permission denied: Cannot update asset group for client ${clientId}`,
+      { clientId }
+    );
+  }
   const ids = [...new Set(assetIds)];
   if (ids.length === 0) return;
 
@@ -53,7 +67,6 @@ export async function assertAssetGroupAssetsUpdatable(
     throw new AssetGroupError('not_found', 'Asset not found', { assetIds: missingIds });
   }
 
-  const context = await createAssetReadContext(trx, tenant, user);
   const allowed = await filterAssetsAllowedForAction(trx, tenant, context, assets, 'update');
   const allowedIds = new Set(allowed.map((asset) => asset.asset_id));
   const deniedIds = ids.filter((assetId) => !allowedIds.has(assetId));
@@ -77,7 +90,7 @@ export async function assertAssetGroupMemberUpdatableIfPresent(
   groupId: string,
   assetId: string
 ): Promise<void> {
-  await lockAssetGroupForMutation(trx, tenant, groupId);
+  const group = await lockAndAuthorizeAssetGroupClient(trx, tenant, user, groupId);
   const db = tenantDb(trx, tenant);
   const membership = await db.table('asset_group_members').where({ group_id: groupId, asset_id: assetId }).first('asset_id');
   if (!membership) return;
@@ -85,5 +98,5 @@ export async function assertAssetGroupMemberUpdatableIfPresent(
   const asset = await db.table('assets').where({ asset_id: assetId }).first('asset_id');
   if (!asset) return;
 
-  await assertAssetGroupAssetsUpdatable(trx, tenant, user, [assetId]);
+  await assertAssetGroupAssetsUpdatable(trx, tenant, user, group.client_id, [assetId]);
 }

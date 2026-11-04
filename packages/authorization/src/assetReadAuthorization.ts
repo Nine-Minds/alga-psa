@@ -151,6 +151,26 @@ export async function createAssetReadContext(
 export type AssetAuthorizationAction = 'read' | 'update' | 'delete';
 
 /**
+ * Evaluate the asset read boundary for a client, including when a group has no assets yet.
+ * Member-specific update rules are evaluated separately against each real asset record.
+ * Callers must still enforce coarse RBAC before using this narrowing check.
+ */
+export async function isAssetClientReadAllowed(
+  trx: Knex | Knex.Transaction,
+  context: AssetReadAuthorizationContext,
+  clientId: string
+): Promise<boolean> {
+  const decision = await context.authorizationKernel.authorizeResource({
+    subject: context.subject,
+    resource: { type: 'asset', action: 'read' },
+    record: { clientId },
+    requestCache: context.requestCache,
+    knex: trx,
+  });
+  return decision.allowed;
+}
+
+/**
  * True when the caller's per-record kernel decision allows `action` on the asset. The action selects which
  * bundle rules narrow the decision (a bundle's `asset:update` rule is not its `asset:read` rule), so mutations
  * must ask for the action they perform. Coarse RBAC is not evaluated here; callers pre-filter with it.
