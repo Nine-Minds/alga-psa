@@ -1,4 +1,0 @@
-{
-  "status": 500,
-  "body": "0:{\"a\":\"$@1\",\"q\":\"\",\"i\":true,\"b\":\"development\"}\n1:D\"$2\"\n1:E{\"digest\":\"3128509679\",\"name\":\"Error\",\"message\":\"Connection closed.\",\"stack\":[],\"env\":\"Server\",\"owner\":null}\n"
-}
