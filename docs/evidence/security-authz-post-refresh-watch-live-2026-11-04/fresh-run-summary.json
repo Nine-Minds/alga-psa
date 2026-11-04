@@ -1,0 +1,41 @@
+{
+  "capturedAt": "2026-11-04T18:41Z",
+  "checkout": "/home/robert/alga-copies/feature-security-authz-in-post-3",
+  "branch": "feature/security-authz-in-post-3",
+  "headDuringVerification": "e26f228aa80c62ec64dc08810bce9726fc029c7f",
+  "runtime": {
+    "service": "dev-server:6",
+    "cwd": "/home/robert/alga-copies/feature-security-authz-in-post-3/server",
+    "command": "PORT=3594 npm run dev",
+    "health": "HTTP 200",
+    "revisionAttestation": "Scheduler exposes no git SHA; this checkout path is registered and the route SHA-256 matches the verified source."
+  },
+  "freshLive": {
+    "internalReadOnlySession": {"sessionVerified": true, "valid": 403, "malformed": 403, "empty": 403},
+    "anonymous": {"valid": 401, "malformed": 401, "empty": 401},
+    "administrator": {
+      "foreignTenantProvider": 404,
+      "afterInternalDenialsSameTenantProvider": [409, 429],
+      "googleConfigurationBoundary": "409 due to HTTP origin requiring public HTTPS; this is not successful Google registration."
+    },
+    "settingsUI": {
+      "path": "/msp/settings/email, Inbound Email tab",
+      "action": "Refresh Pub/Sub & Watch",
+      "statuses": [409, 429, 409],
+      "meaning": "First and post-window calls reached configuration; immediate repeat was throttled."
+    }
+  },
+  "clientSession": {
+    "freshReplay": "not completed",
+    "reason": "Client Portal uses passwordless login links; MSP password login was rejected.",
+    "priorActualSessionEvidence": "live-api-matrix.json",
+    "sameRouteSha256": "be59f3218638cdfedc919f91dca52401686e2b9a85086900691bb4bb9c533e44"
+  },
+  "cleanup": "Fresh cleanup verification reports zero isolated fixture users, roles, providers, Google configuration rows, sessions, and preferences.",
+  "repositoryChecks": {
+    "focusedRouteAndMiddlewareSuites": "39/39 passed",
+    "serverTypecheck": "passed with NODE_OPTIONS=--max-old-space-size=8192",
+    "rootBuild": "interrupted by SIGINT during Next production compile at ~9.5 GiB RSS with swap nearly exhausted to protect the managed service; no build result is claimed.",
+    "securityFindingAcceptance": "not available in repository/installed alga-dev command or workflow template verifications; external security-review owner must supply the canonical check."
+  }
+}
