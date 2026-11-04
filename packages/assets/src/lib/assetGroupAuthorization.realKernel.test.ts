@@ -119,12 +119,25 @@ describe('asset group authorization with the production asset resolver and kerne
   it('composes an additional caller visibility policy across all group members', async () => {
     const hiddenMemberId = '44444444-4444-4444-8444-444444444444';
     h.tables.asset_group_members.push({ tenant: TENANT, group_id: GROUP, asset_id: hiddenMemberId });
+    h.tables.asset_groups[0].kind = 'bundle';
+    h.tables.asset_groups[0].name = 'Portal workspace';
     h.tables.assets[0].contact_name_id = 'contact-a';
     h.tables.assets.push({ tenant: TENANT, asset_id: hiddenMemberId, client_id: CLIENT, contact_name_id: 'contact-b' });
     const visibility = { contactId: 'contact-a', clientId: CLIENT, effectiveAssetScope: 'contact' as const, visibleContactIds: [] as string[] };
     const portalVisibility = async (_trx: unknown, assetId: string) => {
       const asset = h.tables.assets.find((row) => row.asset_id === assetId);
-      return assetMatchesVisibility({ clientId: asset?.client_id, contactId: asset?.contact_name_id }, visibility);
+      const membership = h.tables.asset_group_members.find((row) => row.asset_id === assetId);
+      const group = h.tables.asset_groups.find((row) => row.group_id === membership?.group_id);
+      const sharedWorkspaceContactIds = group?.kind === 'shared_workspace'
+        ? h.tables.asset_group_contacts
+          .filter((row) => row.group_id === group.group_id && row.role === 'user')
+          .map((row) => row.contact_name_id)
+        : [];
+      return assetMatchesVisibility({
+        clientId: asset?.client_id,
+        contactId: asset?.contact_name_id,
+        sharedWorkspaceContactIds,
+      }, visibility);
     };
     const user = { user_id: 'u1', user_type: 'internal', roles: ['r1'] } as any;
 
@@ -132,6 +145,12 @@ describe('asset group authorization with the production asset resolver and kerne
     await expect(getAuthorizedAssetGroupSummariesForAssets({} as any, TENANT, user, [ASSET], portalVisibility)).resolves.toEqual(new Map());
     visibility.visibleContactIds = ['contact-a', 'contact-b'];
     await expect(getAuthorizedAssetGroupSummary({} as any, TENANT, user, ASSET, portalVisibility)).resolves.toMatchObject({ group_id: GROUP });
+    visibility.visibleContactIds = [];
+    h.tables.asset_groups[0].kind = 'shared_workspace';
+    h.tables.asset_group_contacts = [{ tenant: TENANT, group_id: GROUP, contact_name_id: 'contact-a', role: 'user' }];
+    await expect(getAuthorizedAssetGroupSummariesForAssets({} as any, TENANT, user, [ASSET], portalVisibility)).resolves.toMatchObject(
+      new Map([[ASSET, expect.objectContaining({ group_id: GROUP, name: 'Portal workspace' })]]),
+    );
   });
 
   it('retains summaries for fully authorized groups and filters denied groups in a mixed batch', async () => {
