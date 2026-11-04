@@ -443,7 +443,6 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
           'u.user_id',
           'u.first_name',
           'u.last_name',
-          'u.email',
           'u.user_type',
           'd.file_id as avatar_file_id'
         );
@@ -609,11 +608,10 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         first_name: userRecord.first_name,
         last_name: userRecord.last_name,
         user_id: userRecord.user_id,
-        email: userRecord.email,
         user_type: userRecord.user_type,
         avatarUrl: userRecord.avatarUrl
       }
-    }), {} as Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>);
+    }), {} as Record<string, { user_id: string; first_name: string; last_name: string; user_type: string; avatarUrl: string | null }>);
 
     const commentContactIds = Array.from(
       new Set(
@@ -625,7 +623,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
 
     const commentContacts = commentContactIds.length > 0
       ? await tenantDb(db, tenant).table('contacts')
-        .select('contact_name_id', 'full_name', 'email')
+        .select('contact_name_id', 'full_name')
         .whereIn('contact_name_id', commentContactIds)
       : [];
 
@@ -634,10 +632,9 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       [contactRecord.contact_name_id]: {
         contact_id: contactRecord.contact_name_id,
         full_name: contactRecord.full_name || '',
-        email: contactRecord.email || undefined,
         avatarUrl: null as string | null,
       }
-    }), {} as Record<string, { contact_id: string; full_name: string; email?: string; avatarUrl: string | null }>);
+    }), {} as Record<string, { contact_id: string; full_name: string; avatarUrl: string | null }>);
 
     const ticketRow = result.ticket as any;
     const agentsWithAvatars = await Promise.all((ticketRow.additional_agents ?? []).map(async (agent: any) => ({ name: agent.name, role: 'staff' as const, avatar_url: await getUserAvatarUrlAction(agent.user_id, tenant).catch(() => null) })));
