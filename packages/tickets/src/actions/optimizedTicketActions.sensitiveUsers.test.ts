@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SENSITIVE_USER_FIELDS, USER_RESPONSE_FIELD_NAMES } from '@alga-psa/types';
 
+const authorizationMockState = vi.hoisted(() => ({ ticketReadRedactions: null as string[] | null }));
+
 // getConsolidatedTicketData must never return credential columns from `users`, anywhere in the
 // bundle, and is an MSP-only view. The fake `users` table holds rows that CARRY hashed_password and
 // two_factor_secret and, like a real database, honours `.select(...)`: a query with no select list
@@ -102,6 +104,32 @@ vi.mock('@alga-psa/auth', () => ({
 vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: (...args: any[]) => hasPermissionMock(...args),
 }));
+
+vi.mock('@alga-psa/authorization/kernel', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/authorization/kernel')>();
+  return {
+    ...actual,
+    createAuthorizationKernel: (...args: any[]) => {
+      const createAuthorizationKernel = actual.createAuthorizationKernel as (...kernelArgs: any[]) => any;
+      const kernel = createAuthorizationKernel(...args);
+      return {
+        ...kernel,
+        authorizeResource: async (input: any) => {
+          const decision = await kernel.authorizeResource(input);
+          if (
+            decision.allowed &&
+            input.resource.type === 'ticket' &&
+            input.resource.action === 'read' &&
+            authorizationMockState.ticketReadRedactions
+          ) {
+            return { ...decision, redactedFields: authorizationMockState.ticketReadRedactions };
+          }
+          return decision;
+        },
+      };
+    },
+  };
+});
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnexMock(...args),
@@ -211,6 +239,7 @@ function findSensitiveKeyPaths(value: unknown, path = '$', seen = new WeakSet<ob
 describe('getConsolidatedTicketData user credential exposure', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    authorizationMockState.ticketReadRedactions = null;
     usersQueries = [];
     createTenantKnexMock.mockResolvedValue({ knex: {} });
     withTransactionMock.mockImplementation(async (_db: unknown, cb: (t: unknown) => unknown) => cb({ ref: (column: string) => column, raw: (sql: string) => sql }));
@@ -340,5 +369,22 @@ describe('getConsolidatedTicketData user credential exposure', () => {
     // Refused before any data is fetched.
     expect(getAllbyTicketIdMock).not.toHaveBeenCalled();
     expect(usersQueries).toEqual([]);
+  });
+
+  it.each([
+    ['wildcard', ['*']],
+    ['unknown field', ['future_ticket_property']],
+    ['ticket identity', ['ticket_id']],
+  ])('(d) %s redaction refuses the consolidated consumer before related reads', async (_label, redactedFields) => {
+    authorizationMockState.ticketReadRedactions = redactedFields as string[];
+
+    const outcome: any = await getConsolidatedTicketData(TICKET_ID).catch((error: Error) => ({
+      permissionError: error.message,
+    }));
+
+    expect(outcome.permissionError).toMatch(/Permission denied: Cannot view ticket/);
+    expect(outcome).not.toHaveProperty('ticket');
+    expect(getAllbyTicketIdMock).not.toHaveBeenCalled();
+    expect(usersQueries.filter((query) => query.selected && query.selected.length > 1)).toEqual([]);
   });
 });
