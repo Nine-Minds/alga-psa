@@ -120,11 +120,19 @@ describe('20261103130000_add_normalized_email_to_user_invitations', () => {
     await expectRequiredColumn();
 
     const result = await db.transaction((trx) => UserInvitationService.createInvitationWithTransaction(
-      { email: 'Service.User@Example.test', firstName: 'Service', lastName: 'User', roleId: null }, trx,
+      {
+        email: 'Service.User@Example.test', firstName: 'Service', lastName: 'User',
+        roleId: '00000000-0000-4000-8000-000000000001',
+      },
+      trx,
     ));
     expect(result.success).toBe(true);
-    expect((await db('user_invitations').where({ invitation_id: result.invitationId }).first()).email_normalized)
-      .toBe('service.user@example.test');
+    expect(await db('user_invitations').where({ invitation_id: result.invitationId }).first())
+      .toMatchObject({
+        email: 'service.user@example.test',
+        email_normalized: 'service.user@example.test',
+        role_id: '00000000-0000-4000-8000-000000000001',
+      });
   });
 
   it('accepts the already-drifted schema and preserves its normalized key', async () => {
