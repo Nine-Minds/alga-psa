@@ -1,7 +1,7 @@
 'use server';
 
 import User from '@alga-psa/db/models/user';
-import { isInteractiveUserType, IUser, IRole, IUserWithRoles, IRoleWithPermissions, IUserRole } from '@alga-psa/types';
+import { isInteractiveUserType, IUser, IRole, IUserWithRoles, IRoleWithPermissions, IUserRole, sanitizeUserForResponse } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -24,6 +24,13 @@ function isInvalidUserQueryReference(error: unknown): boolean {
 
 function isExpectedUserQueryError(error: unknown): boolean {
   return isPermissionDeniedError(error) || isInvalidUserQueryReference(error);
+}
+
+/** Apply the shared user response allow-list while preserving whether the caller's shape has roles. */
+function sanitizeUserRecord<T extends Record<string, any>>(user: T): T {
+  const sanitized = sanitizeUserForResponse(user) as Record<string, any>;
+  if (!('roles' in user)) delete sanitized.roles;
+  return sanitized as T;
 }
 
 /**
@@ -56,7 +63,7 @@ export const findUserById = withAuth(async (
 
       const user = await User.getUserWithRoles(trx, id);
       // Non-interactive principals are not managed through user management.
-      return user && isInteractiveUserType(user.user_type) ? user : null;
+      return user && isInteractiveUserType(user.user_type) ? sanitizeUserRecord(user) : null;
     });
   } catch (error) {
     logger.error(`Failed to find user with id ${id}:`, error);
@@ -93,7 +100,7 @@ export const getAllUsersBasic = withAuth(async (
       return users.filter(user =>
         user.tenant === tenant &&
         (userType ? user.user_type === userType : true)
-      );
+      ).map(sanitizeUserRecord);
     });
   } catch (error) {
     logger.error('Failed to fetch users:', error);
@@ -132,7 +139,7 @@ export const getAllUsers = withAuth(async (
       const userIds = filteredUsers.map(u => u.user_id);
       const rolesByUser = await User.getUserRolesBulk(trx, userIds);
 
-      return filteredUsers.map((user): IUserWithRoles => ({
+      return filteredUsers.map((user): IUserWithRoles => sanitizeUserRecord({
         ...user,
         roles: rolesByUser.get(user.user_id) || []
       }));
@@ -172,7 +179,7 @@ export const getReportsToSubordinates = withAuth(async (
         .whereIn('user_id', subordinateIds)
         .select('*');
 
-      return rows as IUser[];
+      return (rows as IUser[]).map(sanitizeUserRecord);
     });
   } catch (error) {
     logger.error('Failed to fetch reports_to subordinates:', error);
@@ -357,7 +364,7 @@ export const getUserWithRoles = withAuth(async (
 
       const user = await User.getUserWithRoles(trx, userId);
       // Non-interactive principals are not managed through user management.
-      return user && isInteractiveUserType(user.user_type) ? user : null;
+      return user && isInteractiveUserType(user.user_type) ? sanitizeUserRecord(user) : null;
     });
   } catch (error) {
     logger.error(`Failed to fetch user with roles for id ${userId}:`, error);
@@ -383,7 +390,9 @@ export const getMultipleUsersWithRoles = withAuth(async (
       assertNotClientPortalCaller(currentUser, 'read multiple users with roles');
 
       const users = await Promise.all(userIds.map((id: string): Promise<IUserWithRoles | undefined> => User.getUserWithRoles(trx, id)));
-      return users.filter((user): user is IUserWithRoles => user !== undefined && isInteractiveUserType(user.user_type));
+      return users
+        .filter((user): user is IUserWithRoles => user !== undefined && isInteractiveUserType(user.user_type))
+        .map(sanitizeUserRecord);
     });
   } catch (error) {
     logger.error('Failed to fetch multiple users with roles:', error);
@@ -616,7 +625,7 @@ export const getClientUsersForClient = withAuth(async (
         query = query.select<IUser[]>('users.*');
       }
 
-      return await query;
+      return (await query).map(sanitizeUserRecord);
     });
   } catch (error) {
     logger.error('Error getting client users:', error);
