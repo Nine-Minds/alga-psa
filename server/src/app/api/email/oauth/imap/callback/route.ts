@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { tenantDb } from '@alga-psa/db';
-import { decodeState, validateState } from '@/utils/email/oauthHelpers';
+import {
+  consumeImapOAuthStateNonce,
+  getImapOAuthStateSigningSecret,
+  validateImapOAuthStateToken,
+} from '@/utils/email/imapOAuthState';
 import { createTenantKnex } from '@/lib/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { assertSafeOutboundUrl } from '@alga-psa/shared/services/net/outboundAddressPolicy';
@@ -18,8 +22,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Missing code/state' }, { status: 400 });
     }
 
-    const state = decodeState(stateParam);
-    if (!state || !validateState(state)) {
+    const signingSecret = await getImapOAuthStateSigningSecret();
+    const state = validateImapOAuthStateToken({ token: stateParam, secret: signingSecret });
+    if (!state) {
       return NextResponse.json({ error: 'Invalid OAuth state' }, { status: 400 });
     }
     await assertTenantProductAccess({
@@ -56,6 +61,13 @@ export async function GET(request: NextRequest) {
 
     if ((state.credentialGeneration ?? null) !== (imapConfig.credential_generation ?? null)) {
       return NextResponse.json({ error: 'IMAP credentials changed during OAuth. Start reconnect again.' }, { status: 409 });
+    }
+
+    // Consume the authenticated initiate nonce once the provider and scope
+    // have been checked. Redis DEL is atomic, so concurrent callbacks cannot
+    // exchange or persist the same authorization flow twice.
+    if (!(await consumeImapOAuthStateNonce(state.nonce))) {
+      return NextResponse.json({ error: 'IMAP OAuth state was already used or expired. Start reconnect again.' }, { status: 400 });
     }
 
     if (!imapConfig.oauth_token_url || !imapConfig.oauth_client_id) {
