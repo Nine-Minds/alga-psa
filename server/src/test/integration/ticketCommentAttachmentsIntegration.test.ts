@@ -1037,7 +1037,8 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
     await tenantDb(trx, sponsor).table('authorization_bundle_assignments').insert({ tenant: sponsor, assignment_id: assignmentId, bundle_id: bundleId,
       target_type: 'user', target_id: sponsorUser, status: 'active' });
     await tenantDb(trx, customer).table('co_management_relationships').insert({ tenant: customer, relationship_id: relationship, sponsor_tenant: sponsor,
-      sponsor_client_id: sponsorClient, state: 'active', visibility_mode: 'escalation_only', accepted_by: customerUser, accepted_at: new Date() });
+      sponsor_client_id: sponsorClient, state: 'active', visibility_mode: 'escalation_only', accepted_by: customerUser, accepted_at: new Date(),
+      redacted_fields: ['ticket_number', 'actor_display_name'] });
     await tenantDb(trx, sponsor).table('co_management_staff_assignments').insert({ tenant: sponsor, customer_tenant: customer, relationship_id: relationship,
       principal_type: 'user', principal_id: sponsorUser, relationship_role: 'technician' });
     await tenantDb(trx, customer).table('tickets').insert({ tenant: customer, ticket_id: ticketId, ticket_number: 'RECOVERY-41', title: 'Recovery private title',
@@ -1076,11 +1077,11 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
 
       await tenantDb(trx, sponsor).table('users').where({ user_id: sponsorUser }).update({ email: ` ${currentEmail.toUpperCase()} ` });
       await tenantDb(trx, sponsor).table('authorization_bundle_rules').where({ rule_id: ruleId }).update({
-        config: { selectedClientIds: [sponsorClient], redactedFields: ['tickets.title', 'ticket_number', 'actor_display_name', 'actor_organization_name'] },
+        config: { selectedClientIds: [sponsorClient], redactedFields: ['tickets.title', 'actor_organization_name'] },
       });
       const retried = await deliveryProvider.pendingRouting(customer);
       expect(retried[0]).toMatchObject({ allowed: true, ledgerRecipient: originalEmail, recipient: {
-        email: currentEmail, principalId: sponsorUser, redactedFields: ['tickets.title', 'ticket_number', 'actor_display_name', 'actor_organization_name'],
+        email: currentEmail, principalId: sponsorUser, redactedFields: ['tickets.title', 'actor_organization_name', 'ticket_number', 'actor_display_name'],
       } });
       expect(await (await import('@/lib/notifications/coManagedRoutingDelivery')).deliverRouting(deliveryProvider, customer)).toMatchObject({ sent: 1 });
       expect(messages).toHaveLength(1);
