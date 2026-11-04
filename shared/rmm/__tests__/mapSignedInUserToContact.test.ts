@@ -19,7 +19,7 @@ const h = vi.hoisted(() => {
     for (const key of Object.keys(dbState)) delete dbState[key];
     for (const name of [
       'assets', 'contacts', 'workstation_assets', 'server_assets',
-      'rmm_organization_mappings', 'tenant_external_entity_mappings',
+      'rmm_integrations', 'rmm_organization_mappings', 'tenant_external_entity_mappings',
     ]) {
       dbState[name] = [];
     }
@@ -186,6 +186,7 @@ beforeEach(() => {
     email: 'jdoe@acme.com',
     full_name: 'Jane Doe',
   });
+  h.dbState.rmm_integrations.push({ tenant: TENANT, integration_id: INTEGRATION, provider: 'ninjaone' });
 
   // Two organizations on one integration, both auto, different clients.
   h.dbState.rmm_organization_mappings.push(
@@ -242,6 +243,66 @@ describe('mapSignedInUserToContact', () => {
     });
 
     expect(result.assignedAssetIds).toEqual(['asset-ours-2']);
+    expect(h.dbState.tenant_external_entity_mappings).toHaveLength(1);
+  });
+
+  it('rejects an explicitly assigned asset outside caller scope before writing the mapping', async () => {
+    await expect(mapSignedInUserToContact(h.knexMock, TENANT, {
+      integrationId: INTEGRATION,
+      provider: 'ninjaone',
+      rawUser: 'CORP\\jdoe',
+      contactId: 'c-jane',
+      assignAssetId: 'asset-ours',
+      authorize: async () => false,
+    })).rejects.toThrow('Permission denied');
+
+    expect(h.dbState.tenant_external_entity_mappings).toHaveLength(0);
+    expect(h.setAssetAssignee).not.toHaveBeenCalled();
+  });
+
+  it('does not repoint an existing mapping away from an inaccessible contact', async () => {
+    h.dbState.tenant_external_entity_mappings.push({
+      tenant: TENANT,
+      id: 'mapping-1',
+      integration_type: 'rmm:ninjaone',
+      alga_entity_type: 'contact',
+      alga_entity_id: 'c-hidden',
+      external_realm_id: INTEGRATION,
+      external_entity_id: 'jdoe',
+    });
+
+    await expect(mapSignedInUserToContact(h.knexMock, TENANT, {
+      integrationId: INTEGRATION,
+      provider: 'ninjaone',
+      rawUser: 'CORP\\jdoe',
+      contactId: 'c-jane',
+      authorize: async ({ contactId }) => contactId !== 'c-hidden',
+    })).rejects.toThrow('Permission denied');
+
+    expect(h.dbState.tenant_external_entity_mappings).toEqual([expect.objectContaining({
+      id: 'mapping-1', alga_entity_id: 'c-hidden',
+    })]);
+    expect(h.setAssetAssignee).not.toHaveBeenCalled();
+  });
+
+  it('filters each automatic candidate and still assigns authorized devices', async () => {
+    device('asset-ours-2', OURS, 'org-ours', 'CORP\\jdoe');
+    const checked: string[] = [];
+
+    const result = await mapSignedInUserToContact(h.knexMock, TENANT, {
+      integrationId: INTEGRATION,
+      provider: 'ninjaone',
+      rawUser: 'CORP\\jdoe',
+      contactId: 'c-jane',
+      authorize: async ({ assetIds }) => {
+        checked.push(...assetIds);
+        return !assetIds.includes('asset-ours-2');
+      },
+    });
+
+    expect(checked).toContain('asset-ours');
+    expect(checked).toContain('asset-ours-2');
+    expect(result.assignedAssetIds).toEqual(['asset-ours']);
     expect(h.dbState.tenant_external_entity_mappings).toHaveLength(1);
   });
 
