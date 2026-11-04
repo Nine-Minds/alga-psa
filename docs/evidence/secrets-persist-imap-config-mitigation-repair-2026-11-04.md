@@ -29,7 +29,7 @@ All commands ran against the application revision above:
 - `npm run lint:migrations` — passed; zero violations, annotations, undecided rules, or stale annotations for the PR change set.
 - `npm --prefix server run typecheck` — the default Node heap aborted at 4 GB without diagnostics; the 8 GB retry also aborted at the heap limit without TypeScript diagnostics. This is a resource-limit failure, not a reported type error.
 
-These checks cover the built email-service and its behavioral worker tests. No built service was run against a public recipient because the required recipients and isolated public fixture environment were unavailable. The evidence runner was not run; its preflight requires public fixture inputs and a closed application port, while this card server remains registered and ready for review.
+These checks cover the built email-service and its behavioral worker tests. No built service was run against a public recipient because the required recipients and isolated public fixture environment were unavailable.
 
 ## Public recipient blocker
 
@@ -39,6 +39,29 @@ The exact missing prerequisite is an organization-controlled public VM or manage
 
 Consequently, the following remain unproven in this round: successful password authentication and replacement at the recipient; OAuth reconnect, code exchange, refresh and replacement-token IMAP auth; recipient-side proof that old credentials were not delivered after a public destination change; successful authentication following a harmless rename; and successful UI/service scenarios beyond the local policy rejection. No `security-finding-resolved` result was observed or claimed.
 
+## Evidence-runner follow-up
+
+The follow-up repair replaces the old closed-port/static-export preconditions with a tracked two-phase runner at `scripts/security/run-public-email-service-evidence.sh`. The prepare phase scopes a protected fixture reset to a unique run ID; after the real UI scenario, capture runs the built email-service against the isolated database, waits for `/ready`, adds the run ID to structured state logs, exports recipient JSONL, and validates both sources together. The validator rejects stale or out-of-run recipient events, window-only exports, missing worker/listener evidence, unready service, old credentials observed after scope change, and missing OAuth grant/auth evidence. It creates redacted metadata and hashes for captured evidence. The private wrapper and handoff now point to this runner and no longer require the app to be stopped.
+
+Behavioral validator tests pass (including stale run, out-of-window, window-only, unready/missing worker, fail-closed scope change, OAuth reconnect/refresh, replacement auth, and raw-secret rejection). The focused built-service credential-generation suite passes all 51 tests, and the email-service build passes with run-scoped state logging. The public runner itself remains unexecuted because the exact missing prerequisites above are not present. No UI authentication or recipient-side scenario evidence is claimed by this follow-up.
+
+## Current deployment and validation check
+
+On 2026-11-04, the board registry and live health probe both reported `dev-server` as live with cwd `/home/robert/alga-copies/feature-security-secrets-in-persistimapconfig/server`, command `PORT=3948 npm run dev`, readiness port `3948`, and session `card-service:3276c089-8da6-589b-b32c-dd2045b14002:dev-server:12`. The Node process had that cwd, `PORT=3948`, and listened on `0.0.0.0:3948`. The exact card origin rendered the Email Configuration page in the card browser; an unauthenticated HTTP request to `/msp/settings/email` redirected to sign-in. No application instance was started or replaced during this check.
+
+The published baseline at the start of this follow-up was `059eb3c6a0a0e6203f493b5251ddda6310fb26ea`, matching PR #4187. Source review confirmed that `persistImapConfig` checks both OAuth URLs and the IMAP hostname against the shared outbound policy, binds secrets to `credential_generation`, clears current and prior-generation secret keys on scope change, and conditionally writes refresh tokens only for an unchanged scope. The connection test uses generation-scoped secret reads and fails closed when no replacement credential exists; OAuth refresh writes are conditional on the row's unchanged generation. The built service includes generation in its worker signature and records worker/listener state events.
+
+Commands run for this follow-up (working tree based on the published baseline plus the listed local evidence changes):
+
+- `npm test --workspace=@alga-psa/integrations -- src/actions/email-actions/emailProviderActions.security.test.ts` — passed, 60 tests.
+- `npm test --workspace=email-service -- src/emailService.credentialGeneration.test.ts` — passed, 51 tests across 9 files selected by the workspace runner.
+- `node --test scripts/tests/public-email-service-evidence.test.mjs` — passed, 10 tests.
+- `npm run lint:migrations` — passed, 0 violations, 0 undecided rules, 0 stale annotations.
+- `npm run build --workspace=email-service` — passed.
+- `npm run typecheck --workspace=@alga-psa/integrations` — passed.
+
+These results establish local regression and build status only. They do not establish public endpoint protocol, DNS, TLS, recipient-log, UI credential-change, or public OAuth behavior. The tracked runner was reviewed but not invoked because no controlled fixture endpoints, fixture admin token, public fixture service environment, or `smoke_imap_public_*` database were provisioned. The old local GreenMail service remains private and cannot satisfy the public-recipient requirement. `security-finding-resolved` remains unobserved.
+
 ## Review first
 
-Inspect the dev-server replacement and private-destination UI evidence above, then read the public fixture handoff for the exact provisioning requirements. The reviewer should treat the authenticated UI and focused regressions as current evidence while withholding closure until a controlled public recipient and recipient-side logs are available.
+Inspect the tracked evidence validator, its behavioral tests, and the two-phase runner first. Then read the private fixture handoff for the exact provisioning and API contract. The reviewer should withhold closure until controlled public endpoints and recipient-side logs are available and the required UI/service scenarios are captured. The security finding check remains unobserved.

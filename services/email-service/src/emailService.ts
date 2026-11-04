@@ -234,6 +234,7 @@ function stateLog(event: string, fields: Record<string, unknown> = {}) {
     const payload = {
       ts: new Date().toISOString(),
       event,
+      ...(process.env.EVIDENCE_RUN_ID ? { evidenceRunId: process.env.EVIDENCE_RUN_ID } : {}),
       ...fields,
     };
     // Simple console logging requested; keep a stable prefix for grepping.
@@ -1322,6 +1323,7 @@ class ImapProviderWorker {
       host: this.provider.host,
       port: this.provider.port,
       authType: this.provider.auth_type,
+      credentialGeneration: this.provider.credential_generation,
     });
 
     this.listeners = folders.map(folder => new ImapFolderListener(this.provider, folder));
