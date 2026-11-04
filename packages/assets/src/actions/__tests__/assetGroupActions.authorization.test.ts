@@ -6,6 +6,7 @@ const h = vi.hoisted(() => ({
   user: { user_id: 'u1', user_type: 'internal', roles: ['r1'] },
   context: { subject: { userId: 'u1' } },
   tables: {} as Record<string, Row[]>,
+  groupListing: [] as Row[],
   deniedClients: new Set<string>(),
   deniedReadAssets: new Set<string>(),
   deniedUpdateAssets: new Set<string>(),
@@ -52,7 +53,7 @@ vi.mock('../../lib/assetReadAuthorization', () => ({
 vi.mock('../../lib/assetGroups', () => ({
   isAssetGroupError: (error: Error) => error.name === 'AssetGroupError',
   listGroupMemberIds: vi.fn(async () => ['a1', 'a2']),
-  listGroupsForClient: vi.fn(async () => [{ group_id: 'g1' }]),
+  listGroupsForClient: vi.fn(async () => h.groupListing),
   getGroupWithDetails: vi.fn(async () => ({
     group_id: 'g1',
     members: [{ asset_id: 'a1' }, { asset_id: 'a2' }],
@@ -126,6 +127,7 @@ describe('asset group record authorization at the action boundary', () => {
     h.deniedClients = new Set();
     h.deniedReadAssets = new Set();
     h.deniedUpdateAssets = new Set();
+    h.groupListing = [{ group_id: 'g1' }];
     h.tables = {
       clients: [{ tenant: 't1', client_id: 'c1' }],
       asset_groups: [{ tenant: 't1', group_id: 'g1', client_id: 'c1' }],
@@ -159,6 +161,43 @@ describe('asset group record authorization at the action boundary', () => {
   it('preserves an in-scope client listing', async () => {
     await expect(listAssetGroups('c1')).resolves.toEqual([{ group_id: 'g1' }]);
     expect(groups.listGroupsForClient).toHaveBeenCalledWith(h.trx, 't1', 'c1');
+  });
+
+  it('omits out-of-scope and mixed-member groups with all their listing metadata', async () => {
+    h.tables.asset_groups = [
+      { tenant: 't1', group_id: 'in-team', client_id: 'c1' },
+      { tenant: 't1', group_id: 'out-team', client_id: 'c1' },
+      { tenant: 't1', group_id: 'mixed', client_id: 'c1' },
+    ];
+    h.tables.asset_group_members = [
+      { tenant: 't1', group_id: 'in-team', asset_id: 'in-asset' },
+      { tenant: 't1', group_id: 'out-team', asset_id: 'out-asset' },
+      { tenant: 't1', group_id: 'mixed', asset_id: 'in-asset' },
+      { tenant: 't1', group_id: 'mixed', asset_id: 'out-asset' },
+    ];
+    h.tables.assets = [
+      { tenant: 't1', client_id: 'c1', asset_id: 'in-asset' },
+      { tenant: 't1', client_id: 'c1', asset_id: 'out-asset' },
+    ];
+    h.groupListing = [
+      { group_id: 'in-team', name: 'Visible group', description: 'Visible description', member_count: 1 },
+      { group_id: 'out-team', name: 'Hidden group', description: 'Hidden description', member_count: 1 },
+      { group_id: 'mixed', name: 'Mixed group', description: 'Mixed description', member_count: 2 },
+    ];
+    h.deniedReadAssets.add('out-asset');
+
+    const result = await listAssetGroups('c1');
+
+    expect(result).toEqual([h.groupListing[0]]);
+    const serialized = JSON.stringify(result);
+    for (const privateValue of ['out-team', 'Hidden group', 'Hidden description', 'mixed', 'Mixed group', 'Mixed description']) {
+      expect(serialized).not.toContain(privateValue);
+    }
+  });
+
+  it('propagates unexpected authorization failures while listing groups', async () => {
+    vi.mocked(isAssetReadAllowed).mockRejectedValueOnce(new Error('authorization database unavailable'));
+    await expect(listAssetGroups('c1')).rejects.toThrow('authorization database unavailable');
   });
 
   it.each(['client', 'supplied member'] as const)('denies create for an out-of-scope %s before any writes', async (scope) => {

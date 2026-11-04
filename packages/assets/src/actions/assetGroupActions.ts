@@ -164,11 +164,24 @@ export const listAssetGroups = withAuth(async (
     return permissionError('Permission denied: Cannot read assets', 'msp/assets:errors.permissions.readAssets');
   }
   const { knex } = await createTenantKnex();
-  const result = await withTransaction(knex, (trx: Knex.Transaction) =>
-    withAuthorizedAssetGroup(trx, tenant, user, { action: 'read', clientId }, (authorizedTrx) =>
-      listGroupsForClient(authorizedTrx, tenant, clientId)
-    )
-  );
+  const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const candidates = await withAuthorizedAssetGroup(
+      trx,
+      tenant,
+      user,
+      { action: 'read', clientId },
+      (authorizedTrx) => listGroupsForClient(authorizedTrx, tenant, clientId)
+    );
+    if (isAssetGroupScopeDenied(candidates)) return candidates;
+
+    const authorized: AssetGroup[] = [];
+    for (const group of candidates) {
+      if (await isAssetGroupOperationAllowed(trx, tenant, user, { action: 'read', groupId: group.group_id })) {
+        authorized.push(group);
+      }
+    }
+    return authorized;
+  });
   return isAssetGroupScopeDenied(result) ? assetScopePermissionError('read') : result;
 });
 
