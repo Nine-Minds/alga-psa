@@ -57,6 +57,8 @@ let db: Knex;
 let getAssetDocuments: typeof import('@alga-psa/assets/actions/assetDocumentActions').getAssetDocuments;
 let associateDocumentWithAsset: typeof import('@alga-psa/assets/actions/assetDocumentActions').associateDocumentWithAsset;
 let removeDocumentFromAsset: typeof import('@alga-psa/assets/actions/assetDocumentActions').removeDocumentFromAsset;
+let createDocumentAssociations: typeof import('@alga-psa/documents/actions/documentActions').createDocumentAssociations;
+let removeDocumentAssociations: typeof import('@alga-psa/documents/actions/documentActions').removeDocumentAssociations;
 const columns: Record<string, Record<string, unknown>> = {};
 const cleanupTenants = new Set<string>();
 
@@ -80,6 +82,43 @@ async function cleanupTenant(tenant: string): Promise<void> {
     await del(name);
   }
   await unscoped('tenants').where({ tenant }).del().catch(() => undefined);
+}
+
+async function setAssetScopes(
+  fx: Awaited<ReturnType<typeof seedFixture>>,
+  scopes: Partial<Record<'read' | 'update' | 'delete', string[]>>,
+): Promise<void> {
+  const bundle = await createAuthorizationBundle(db, {
+    tenant: fx.tenantId,
+    name: `Generic asset document scopes ${randomUUID().slice(0, 8)}`,
+    actorUserId: fx.userId,
+  });
+  for (const [action, selectedClientIds] of Object.entries(scopes)) {
+    if (!selectedClientIds) continue;
+    await upsertBundleRule(db, {
+      tenant: fx.tenantId,
+      bundleId: bundle.bundleId,
+      revisionId: bundle.revisionId,
+      resourceType: 'asset',
+      action: action as 'read' | 'update' | 'delete',
+      templateKey: 'selected_clients',
+      config: { selectedClientIds },
+      actorUserId: fx.userId,
+    });
+  }
+  await publishBundleRevision(db, {
+    tenant: fx.tenantId,
+    bundleId: bundle.bundleId,
+    revisionId: bundle.revisionId,
+    actorUserId: fx.userId,
+  });
+  await createBundleAssignment(db, {
+    tenant: fx.tenantId,
+    bundleId: bundle.bundleId,
+    targetType: 'user',
+    targetId: fx.userId,
+    actorUserId: fx.userId,
+  });
 }
 
 async function seedFixture() {
@@ -222,6 +261,7 @@ describe('getAssetDocuments (integration)', () => {
       columns[name] = await tenantDb(db, '__asset_documents_schema__').unscoped(name, 'schema introspection').columnInfo();
     }
     ({ getAssetDocuments, associateDocumentWithAsset, removeDocumentFromAsset } = await import('@alga-psa/assets/actions/assetDocumentActions'));
+    ({ createDocumentAssociations, removeDocumentAssociations } = await import('@alga-psa/documents/actions/documentActions'));
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {
@@ -544,5 +584,117 @@ describe('getAssetDocuments (integration)', () => {
 
     expect(Number((await table(local.tenantId, 'document_associations').count('* as count').first())?.count)).toBe(Number(before?.count));
     expect(await table(foreign.tenantId, 'document_associations').where({ association_id: foreign.associationId }).first()).toBeDefined();
+  });
+
+  it('generic creation requires both asset read and update record scopes', async () => {
+    for (const deniedAction of ['read', 'update'] as const) {
+      const fx = await seedFixture();
+      actionAuth.tenant = fx.tenantId;
+      actionAuth.userId = fx.userId;
+      actionAuth.userType = 'internal';
+      await setAssetScopes(fx, {
+        read: deniedAction === 'read' ? [fx.outsiderClientId] : [fx.clientId],
+        update: deniedAction === 'update' ? [fx.outsiderClientId] : [fx.clientId],
+      });
+      const documentId = await fx.seedDocument(`Generic create denied by ${deniedAction}.md`);
+
+      const result = await createDocumentAssociations(fx.assetId, 'asset', [documentId]);
+
+      expect(result).toHaveProperty('permissionError');
+      expect(await table(fx.tenantId, 'document_associations').where({ entity_id: fx.assetId, document_id: documentId }).first()).toBeUndefined();
+    }
+  });
+
+  it('generic creation checks document permission and visibility before inserting any batch row', async () => {
+    const fx = await seedFixture();
+    actionAuth.tenant = fx.tenantId;
+    actionAuth.userId = fx.outsiderUserId;
+    actionAuth.userType = 'client';
+    actionAuth.clientId = fx.clientId;
+    const ownedDocumentId = await fx.seedDocument('Owned selected document.md', fx.outsiderUserId);
+    const privateDocumentId = await fx.seedDocument('Private selected document.md', fx.userId);
+    actionAuth.permissions = { 'document:read': false, 'document:update': true };
+    const initialAssociationCount = await table(fx.tenantId, 'document_associations').where({ entity_id: fx.assetId }).count('* as count').first();
+
+    const permissionDenied = await createDocumentAssociations(fx.assetId, 'asset', [ownedDocumentId]);
+    actionAuth.permissions = { 'document:read': true, 'document:update': true };
+    const visibilityDenied = await createDocumentAssociations(fx.assetId, 'asset', [ownedDocumentId, privateDocumentId]);
+
+    expect(permissionDenied).toHaveProperty('permissionError');
+    expect(visibilityDenied).toHaveProperty('permissionError');
+    expect(await table(fx.tenantId, 'document_associations').where({ entity_id: fx.assetId }).count('* as count').first()).toEqual(initialAssociationCount);
+    expect(await table(fx.tenantId, 'document_associations').whereIn('document_id', [ownedDocumentId, privateDocumentId]).first()).toBeUndefined();
+  });
+
+  it('generic removal requires both asset read and delete record scopes and preserves rows on denial', async () => {
+    for (const deniedAction of ['read', 'delete'] as const) {
+      const fx = await seedFixture();
+      actionAuth.tenant = fx.tenantId;
+      actionAuth.userId = fx.userId;
+      actionAuth.userType = 'internal';
+      await setAssetScopes(fx, {
+        read: deniedAction === 'read' ? [fx.outsiderClientId] : [fx.clientId],
+        delete: deniedAction === 'delete' ? [fx.outsiderClientId] : [fx.clientId],
+      });
+
+      const result = await removeDocumentAssociations(fx.assetId, 'asset', [fx.documentId]);
+
+      expect(result).toHaveProperty('permissionError');
+      expect(await table(fx.tenantId, 'document_associations').where({ association_id: fx.associationId }).first()).toBeDefined();
+    }
+  });
+
+  it('generic removal checks document permission and visibility atomically across the selected rows', async () => {
+    const fx = await seedFixture();
+    actionAuth.tenant = fx.tenantId;
+    actionAuth.userId = fx.outsiderUserId;
+    actionAuth.userType = 'client';
+    actionAuth.clientId = fx.clientId;
+    const ownDocumentId = await fx.seedDocument('Owned linked document.md', fx.outsiderUserId);
+    const privateDocumentId = await fx.seedDocument('Private linked document.md', fx.userId);
+    const ownAssociationId = await fx.link(ownDocumentId, fx.assetId);
+    const privateAssociationId = await fx.link(privateDocumentId, fx.assetId);
+    actionAuth.permissions = { 'document:read': false, 'document:update': true };
+
+    const permissionDenied = await removeDocumentAssociations(fx.assetId, 'asset', [ownDocumentId]);
+    actionAuth.permissions = { 'document:read': true, 'document:update': true };
+    const visibilityDenied = await removeDocumentAssociations(fx.assetId, 'asset', [ownDocumentId, privateDocumentId]);
+
+    expect(permissionDenied).toHaveProperty('permissionError');
+    expect(visibilityDenied).toHaveProperty('permissionError');
+    expect(await table(fx.tenantId, 'document_associations').whereIn('association_id', [ownAssociationId, privateAssociationId]).orderBy('association_id')).toHaveLength(2);
+  });
+
+  it('generic asset association actions reject invalid and inaccessible identifiers without changing persisted rows', async () => {
+    const local = await seedFixture();
+    const foreign = await seedFixture();
+    actionAuth.tenant = local.tenantId;
+    actionAuth.userId = local.userId;
+    actionAuth.userType = 'internal';
+
+    expect(await createDocumentAssociations(local.assetId, 'invalid' as any, [local.documentId])).toHaveProperty('permissionError');
+    expect(await createDocumentAssociations(randomUUID(), 'asset', [local.documentId])).toHaveProperty('permissionError');
+    expect(await createDocumentAssociations(local.assetId, 'asset', [foreign.documentId])).toHaveProperty('permissionError');
+    expect(await removeDocumentAssociations(local.assetId, 'invalid' as any, [local.documentId])).toHaveProperty('permissionError');
+    expect(await removeDocumentAssociations(foreign.assetId, 'asset', [foreign.documentId])).toMatchObject({ success: true });
+    expect(await removeDocumentAssociations(local.assetId, 'asset', [randomUUID()])).toMatchObject({ success: true });
+
+    expect(await table(local.tenantId, 'document_associations').where({ association_id: local.associationId }).first()).toBeDefined();
+    expect(await table(foreign.tenantId, 'document_associations').where({ association_id: foreign.associationId }).first()).toBeDefined();
+  });
+
+  it('generic creation and removal persist authorized outcomes', async () => {
+    const fx = await seedFixture();
+    actionAuth.tenant = fx.tenantId;
+    actionAuth.userId = fx.userId;
+    actionAuth.userType = 'internal';
+    const documentId = await fx.seedDocument('Generic authorized association.md');
+
+    expect(await createDocumentAssociations(fx.assetId, 'asset', [documentId])).toMatchObject({ success: true });
+    const created = await table(fx.tenantId, 'document_associations').where({ entity_id: fx.assetId, document_id: documentId, entity_type: 'asset' }).first();
+    expect(created).toBeDefined();
+
+    expect(await removeDocumentAssociations(fx.assetId, 'asset', [documentId])).toMatchObject({ success: true });
+    expect(await table(fx.tenantId, 'document_associations').where({ association_id: created.association_id }).first()).toBeUndefined();
   });
 });

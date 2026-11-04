@@ -7,7 +7,7 @@ import type { IDocument, IDocumentAssociation, IDocumentAssociationInput } from 
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import { authorizeAndRedactDocuments } from '@shared/lib/documentAuthorization';
-import { createAssetReadContext, isAssetActionAllowed, isAssetReadAllowed } from '../lib/assetReadAuthorization';
+import { createAssetReadContext, isAssetMutationAllowed, isAssetReadAllowed } from '../lib/assetReadAuthorization';
 import {
     assetActionErrorFrom,
     type AssetActionError,
@@ -42,8 +42,7 @@ export const associateDocumentWithAsset = withAuth(async (
                 .first('asset_id', 'client_id');
             const context = await createAssetReadContext(trx, tenant, user as any);
             if (!asset ||
-                !await isAssetReadAllowed(trx, tenant, context, asset) ||
-                !await isAssetActionAllowed(trx, tenant, context, asset, 'update')) {
+                !await isAssetMutationAllowed(trx, tenant, context, asset, 'update')) {
                 return permissionError('Permission denied: Cannot associate documents with assets', 'msp/assets:errors.permissions.associateDocuments');
             }
 
@@ -112,8 +111,7 @@ export const removeDocumentFromAsset = withAuth(async (
                 .first('asset_id', 'client_id');
             const context = await createAssetReadContext(trx, tenant, user as any);
             if (!asset ||
-                !await isAssetReadAllowed(trx, tenant, context, asset) ||
-                !await isAssetActionAllowed(trx, tenant, context, asset, 'delete')) {
+                !await isAssetMutationAllowed(trx, tenant, context, asset, 'delete')) {
                 return permissionError('Permission denied: Cannot remove documents from assets', 'msp/assets:errors.permissions.removeDocuments');
             }
 
