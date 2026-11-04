@@ -14,7 +14,7 @@ vi.mock('@/lib/actions/coManagedTicketCommentActions', () => ({
 vi.mock('@alga-psa/tickets/components/ticket/TicketDetailsContainer', async () => {
   const React = await import('react');
   const { useTicketDataSource } = await import('@alga-psa/tickets/components/ticket/TicketDataSourceContext');
-  return { default: ({ ticketData }: any) => {
+  return { default: function TicketDetailsContainer({ ticketData }: any) {
     const source = useTicketDataSource();
     const author = (comment: any) => comment.user_id
       ? ticketData.userMap[comment.user_id]?.first_name ?? 'Unknown User'
