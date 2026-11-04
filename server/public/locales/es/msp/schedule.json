@@ -339,6 +339,18 @@
       "minimumNoticeHours": {
         "label": "Aviso Mínimo (Horas)"
       },
+      "portalBooking": {
+        "title": "Reservas en el portal del cliente"
+      },
+      "portalHideContractServices": {
+        "label": "Mostrar en el portal del cliente solo los servicios configurados para reserva",
+        "help": "Oculta los servicios que los clientes heredan de sus contratos: el portal muestra únicamente los servicios configurados en Reglas de servicio con «Permitir reserva sin contrato»."
+      },
+      "portalDefaultService": {
+        "label": "Servicio de reserva predeterminado",
+        "none": "Sin valor predeterminado: el cliente elige",
+        "help": "Se preselecciona para los clientes, de modo que nunca deban elegir un servicio. Solo los servicios configurados en Reglas de servicio pueden ser el predeterminado."
+      },
       "actions": {
         "save": "Guardar configuración general"
       },

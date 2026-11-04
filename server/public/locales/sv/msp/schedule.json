@@ -339,6 +339,18 @@
       "minimumNoticeHours": {
         "label": "Minsta framförhållning (timmar)"
       },
+      "portalBooking": {
+        "title": "Bokning i kundportalen"
+      },
+      "portalHideContractServices": {
+        "label": "Visa endast konfigurerade bokningsbara tjänster i kundportalen",
+        "help": "Döljer de tjänster kunderna får via sina avtal, så att portalen bara listar tjänster som konfigurerats under Tjänsteregler med ”Tillåt bokning utan avtal”."
+      },
+      "portalDefaultService": {
+        "label": "Standardtjänst för bokning",
+        "none": "Ingen standard – kunden väljer",
+        "help": "Förvalt för kunderna så att de aldrig behöver välja en tjänst. Endast tjänster som konfigurerats under Tjänsteregler kan vara standard."
+      },
       "actions": {
         "save": "Spara allmänna inställningar"
       },

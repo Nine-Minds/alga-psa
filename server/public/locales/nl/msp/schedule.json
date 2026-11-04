@@ -339,6 +339,18 @@
       "minimumNoticeHours": {
         "label": "Minimale kennisgeving (uren)"
       },
+      "portalBooking": {
+        "title": "Boeken in het klantportaal"
+      },
+      "portalHideContractServices": {
+        "label": "Toon in het klantportaal alleen geconfigureerde boekbare services",
+        "help": "Verbergt de services die klanten via hun contracten krijgen, zodat het portaal alleen de services toont die onder Serviceregels zijn geconfigureerd met \"Boeking zonder contract toestaan\"."
+      },
+      "portalDefaultService": {
+        "label": "Standaardservice voor boekingen",
+        "none": "Geen standaard — de klant kiest",
+        "help": "Wordt voor klanten voorgeselecteerd, zodat zij nooit een service hoeven te kiezen. Alleen services die onder Serviceregels zijn geconfigureerd kunnen de standaard zijn."
+      },
       "actions": {
         "save": "Bewaar algemene instellingen"
       },

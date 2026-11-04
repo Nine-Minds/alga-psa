@@ -339,6 +339,18 @@
       "minimumNoticeHours": {
         "label": "Mindestbenachrichtigung (Stunden)"
       },
+      "portalBooking": {
+        "title": "Buchung im Kundenportal"
+      },
+      "portalHideContractServices": {
+        "label": "Im Kundenportal nur konfigurierte buchbare Services anzeigen",
+        "help": "Blendet die Services aus, die Kunden über ihre Verträge erhalten. Das Portal zeigt dann nur Services, die unter Serviceregeln mit „Buchung ohne Vertrag zulassen“ konfiguriert sind."
+      },
+      "portalDefaultService": {
+        "label": "Standard-Buchungsservice",
+        "none": "Kein Standard – Kunde wählt aus",
+        "help": "Wird für Kunden vorausgewählt, damit sie keinen Service auswählen müssen. Nur unter Serviceregeln konfigurierte Services können der Standard sein."
+      },
       "actions": {
         "save": "Allgemeine Einstellungen speichern"
       },

@@ -339,6 +339,18 @@
       "minimumNoticeHours": {
         "label": "Minimalne powiadomienie (godziny)"
       },
+      "portalBooking": {
+        "title": "Rezerwacje w portalu klienta"
+      },
+      "portalHideContractServices": {
+        "label": "W portalu klienta pokazuj tylko skonfigurowane usługi dostępne do rezerwacji",
+        "help": "Ukrywa usługi, które klienci otrzymują ze swoich umów, więc portal pokazuje tylko usługi skonfigurowane w Regulaminie serwisu z opcją „Zezwalaj na rezerwację bez umowy”."
+      },
+      "portalDefaultService": {
+        "label": "Domyślna usługa rezerwacji",
+        "none": "Brak domyślnej — wybiera klient",
+        "help": "Jest wybierana z góry dla klientów, aby nigdy nie musieli wybierać usługi. Domyślna może być tylko usługa skonfigurowana w Regulaminie serwisu."
+      },
       "actions": {
         "save": "Zapisz ustawienia ogólne"
       },

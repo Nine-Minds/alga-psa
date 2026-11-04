@@ -339,6 +339,18 @@
       "minimumNoticeHours": {
         "label": "Préavis minimum (heures)"
       },
+      "portalBooking": {
+        "title": "Réservation dans le portail client"
+      },
+      "portalHideContractServices": {
+        "label": "Afficher uniquement les services configurés pour la réservation dans le portail client",
+        "help": "Masque les services que les clients obtiennent via leurs contrats : le portail n’affiche que les services configurés dans Règles de service avec « Autoriser la réservation sans contrat »."
+      },
+      "portalDefaultService": {
+        "label": "Service de réservation par défaut",
+        "none": "Aucun service par défaut — le client choisit",
+        "help": "Présélectionné pour les clients afin qu’ils n’aient jamais à choisir un service. Seuls les services configurés dans Règles de service peuvent être le service par défaut."
+      },
       "actions": {
         "save": "Enregistrer les paramètres généraux"
       },

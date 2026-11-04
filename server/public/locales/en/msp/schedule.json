@@ -339,6 +339,18 @@
       "minimumNoticeHours": {
         "label": "Minimum Notice (Hours)"
       },
+      "portalBooking": {
+        "title": "Client Portal Booking"
+      },
+      "portalHideContractServices": {
+        "label": "Only show configured bookable services in the client portal",
+        "help": "Hides the services clients inherit from their contracts, so the portal lists only the services configured under Service Rules with \"Allow Booking Without Contract\"."
+      },
+      "portalDefaultService": {
+        "label": "Default booking service",
+        "none": "No default — client chooses",
+        "help": "Preselected for clients so they never have to choose a service. Only services configured under Service Rules can be the default."
+      },
       "actions": {
         "save": "Save General Settings"
       },
