@@ -240,6 +240,39 @@ describe('fresh-install CI combination', () => {
   }
 });
 
+describe('hardening survives compose file merges and extends', () => {
+  // These stacks both merge a base file and extend services from it. Compose
+  // must be able to validate that combination before it can start any service.
+  const stacks = [
+    ['prebuilt CE', PREBUILT_CE],
+    ['prebuilt EE', PREBUILT_EE],
+    ['dev CE', DEV_CE],
+    ['dev EE', DEV_EE],
+    ['root + dev CE', ['docker-compose.yaml', ...DEV_CE]],
+    ['root + dev EE', ['docker-compose.yaml', ...DEV_EE]],
+    ['prod CE', PROD_CE],
+    ['prod EE', PROD_EE],
+  ];
+
+  for (const [label, files] of stacks) {
+    for (const setting of ['', 'false']) {
+      test(`${label}: no-new-privileges=${setting || 'default'}`, () => {
+        const config = render(files, { ALGA_NO_NEW_PRIVILEGES: setting });
+        for (const [name, service] of Object.entries(config.services)) {
+          assert.deepEqual(
+            service.security_opt,
+            [`no-new-privileges:${setting || 'true'}`],
+            `${label}: ${name} must receive the security policy exactly once`
+          );
+        }
+        for (const name of ['redis', 'email-service', 'workflow-worker']) {
+          assert.deepEqual(config.services[name].cap_drop, ['ALL'], `${label}: ${name} drops all capabilities`);
+        }
+      });
+    }
+  }
+});
+
 describe('test stacks bind data-plane ports to loopback', () => {
   // Port that each file publishes for its test database, cache or pooler.
   const testStacks = {

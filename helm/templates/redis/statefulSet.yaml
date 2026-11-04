@@ -71,7 +71,7 @@ spec:
       containers:
       - name: redis
         image: "{{ .Values.redis.image.repository }}:{{ .Values.redis.image.tag }}"
-        command: ["sh", "-c", "umask 077 && mkdir -p /etc/redis && printf \"requirepass ${REDIS_PASSWORD}\\nsave \'\'\\n{{ if $aofEnabled }}dir /data\\nappendonly yes\\nappendfsync everysec\\nmaxmemory-policy noeviction\\n{{ end }}\" > /etc/redis/redis.conf && redis-server /etc/redis/redis.conf"]
+        command: ["sh", "-c", "umask 077 && mkdir -p /etc/redis && printf \"requirepass ${REDIS_PASSWORD}\\nsave ''\\n{{ if $aofEnabled }}dir /data\\nappendonly yes\\nappendfsync everysec\\nmaxmemory-policy noeviction\\n{{ end }}\" > /etc/redis/redis.conf && redis-server /etc/redis/redis.conf"]
         imagePullPolicy: Always
         securityContext:
           runAsNonRoot: true

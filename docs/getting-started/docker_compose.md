@@ -80,7 +80,7 @@ docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.c
   -f docker-compose.expose-infra.yaml up -d
 ```
 
-`docker-compose.prod.yaml` clears the ports with `ports: !reset []`, which requires Docker Compose 2.24 or later. Older versions stop with a parse error instead of publishing the ports. The prebuilt files do not use `!reset`, so they keep the v2.20 minimum. See [Network Exposure](setup_guide.md#network-exposure) for remote access and firewall guidance.
+`docker-compose.prod.yaml` clears the ports with `ports: !reset []`, which requires Docker Compose 2.24 or later. Older versions stop with a parse error instead of publishing the ports. Use Docker Compose 2.39.4 or later for source-built and prebuilt stacks. Their hardening policy uses `security_opt: !override` to prevent duplicate options when combining files and resolving `extends`. See [Network Exposure](setup_guide.md#network-exposure) for remote access and firewall guidance.
 
 ## Service Configuration
 

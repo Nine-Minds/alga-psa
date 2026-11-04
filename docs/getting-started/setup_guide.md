@@ -9,7 +9,7 @@ If you want a turnkey on-premise install instead of running Docker Compose yours
 ## Prerequisites
 
 - Docker Engine 24.0.0 or later
-- Docker Compose v2.20.0 or later
+- Docker Compose v2.39.4 or later
 - Git
 - Text editor for configuration files
 
@@ -245,7 +245,7 @@ sudo iptables -I DOCKER-USER -i eth0 -p tcp -m conntrack --ctorigdstport 5432 \
 
 #### Changing published ports in your own override file
 
-Override files and `extends` add to a service's `ports:` list. They never replace it. To remove a published port or replace the list, use `!reset` or `!override`. Both need Docker Compose 2.24 or later:
+Override files and `extends` add to a service's `ports:` list. They never replace it. To remove a published port or replace the list, use `!reset` or `!override`. `!reset` needs Docker Compose 2.24 or later; `!override` needs 2.24.4 or later:
 
 ```yaml
 # docker-compose.local.yaml
@@ -259,7 +259,7 @@ services:
 
 Add your file after the other `-f` files, and keep `docker-compose.expose-infra.yaml` last if you use it.
 
-The source-built production overlay, `docker-compose.prod.yaml`, uses `!reset` to publish no database or cache ports. It requires Compose 2.24 or later. The prebuilt files do not use `!reset`, so the v2.20 minimum above still applies to them.
+The source-built production overlay, `docker-compose.prod.yaml`, uses `!reset` to publish no database or cache ports. Use Compose 2.39.4 or later for all source-built and prebuilt stacks because their hardening policy uses `security_opt: !override` to prevent duplicate inherited options.
 
 #### Maintenance without host ports
 

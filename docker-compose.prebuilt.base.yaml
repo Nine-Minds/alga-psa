@@ -1,8 +1,10 @@
 version: '3.8'
 
 x-hardening: &hardening
-  # LEVERAGE: pattern compose-hardening-anchor — repeated per compose file because YAML anchors do not cross files, and `extends` appends lists so each service must get it exactly once along its extends chain; a shared include layer would remove the copies
-  security_opt:
+  # LEVERAGE: pattern compose-hardening-anchor — YAML anchors are file-local, so this policy is repeated per compose file
+  # Replace the policy when merging files and resolving extends: appending can
+  # duplicate inherited options before Compose validates the service. Requires Compose >= 2.24.4.
+  security_opt: !override
     - no-new-privileges:${ALGA_NO_NEW_PRIVILEGES:-true}
 
 # Non-root long-running services: no capabilities are needed once nothing runs as root.
@@ -125,6 +127,7 @@ services:
   # One-shot reconciliation of an existing bundled data directory with the pinned
   # image; defined once in docker-compose.base.yaml.
   postgres-extension-update:
+    <<: *hardening
     extends:
       file: ./docker-compose.base.yaml
       service: postgres-extension-update

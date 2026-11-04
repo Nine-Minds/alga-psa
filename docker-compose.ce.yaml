@@ -1,6 +1,8 @@
 x-hardening: &hardening
-  # LEVERAGE: pattern compose-hardening-anchor — repeated per compose file because YAML anchors do not cross files, and `extends` appends lists so each service must get it exactly once along its extends chain; a shared include layer would remove the copies
-  security_opt:
+  # LEVERAGE: pattern compose-hardening-anchor — YAML anchors are file-local, so this policy is repeated per compose file
+  # Replace the policy when merging files and resolving extends: appending can
+  # duplicate inherited options before Compose validates the service. Requires Compose >= 2.24.4.
+  security_opt: !override
     - no-new-privileges:${ALGA_NO_NEW_PRIVILEGES:-true}
 
 # Services whose image runs as uid 1000: no capabilities are needed once nothing runs as root.
@@ -362,6 +364,7 @@ services:
         condition: service_started
 
   hocuspocus:
+    <<: *hardening
     extends:
       file: ./hocuspocus/docker-compose.yaml
       service: hocuspocus
@@ -397,6 +400,7 @@ services:
         condition: service_started
 
   postgres:
+    <<: *hardening
     extends:
       file: docker-compose.base.yaml
       service: postgres # Updated from postgres-base
@@ -419,6 +423,7 @@ services:
       - "${EXPOSE_INFRA_BIND_ADDR:-127.0.0.1}:${EXPOSE_DB_PORT:-5432}:5432"
 
   redis:
+    <<: *hardening
     extends:
       file: docker-compose.base.yaml
       service: redis # Updated from redis-base
@@ -429,6 +434,7 @@ services:
       - "${EXPOSE_INFRA_BIND_ADDR:-127.0.0.1}:${EXPOSE_REDIS_PORT:-6379}:6379"
 
   pgbouncer:
+    <<: *hardening
     extends:
       file: docker-compose.base.yaml
       service: pgbouncer
