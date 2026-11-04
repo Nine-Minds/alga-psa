@@ -85,11 +85,12 @@ const DICT: Record<string, string> = {
   'templates.statuses.replace_failed': 'Failed to replace status column',
   'templates.statuses.replace_placeholder': 'Select replacement status...',
   'templates.statuses.repair_status_columns': 'Repair status columns',
-  'templates.statuses.manage_title': 'Manage Status Columns',
+  'templates.statuses.manage_title': 'Task Status Columns',
   'templates.statuses.manage_description': 'Define the status columns for tasks in this template.',
   'templates.statuses.template_defaults': 'Template Defaults',
   'templates.statuses.empty': 'No status columns yet',
   'templates.statuses.add_title': 'Add Status Column',
+  'settings.statuses.add_existing': 'Add Existing',
   'templates.statuses.select_placeholder': 'Select a status...',
   'templates.statuses.all_in_use': 'All available statuses are in use',
   'templates.statuses.create_new': 'Create New',
@@ -154,6 +155,28 @@ describe('TemplateStatusManager unresolved mapping repair', () => {
     expect(screen.getByText('Missing status')).toBeInTheDocument();
     expect(container.querySelector('#replace-status-mapping-1')).not.toBeNull();
     expect(screen.getByText('Replace status')).toBeInTheDocument();
+  });
+
+  it('labels the library add button "Add Existing" so it reads the same as every other status editor', () => {
+    const { container } = render(
+      <TemplateStatusManager
+        open
+        onClose={vi.fn()}
+        templateId="tpl-1"
+        phases={[]}
+        statusMappings={[unresolvedMapping()]}
+        availableStatuses={[{ status_id: 'status-2', name: 'Replacement', color: '#000000', is_closed: false }]}
+        taskCountByMapping={{}}
+        onStatusAdded={vi.fn()}
+        onStatusRemoved={vi.fn()}
+        onStatusReordered={vi.fn()}
+      />
+    );
+
+    const addButton = container.querySelector('#add-existing-status');
+    expect(addButton).not.toBeNull();
+    expect(addButton?.textContent).toContain('Add Existing');
+    expect(addButton?.textContent).not.toContain('Create');
   });
 
   it('renders the ambiguous reason helper for an ambiguous unresolved DTO', () => {

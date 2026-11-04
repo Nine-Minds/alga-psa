@@ -110,7 +110,8 @@ export async function reverseCreditApplicationsForInvoice(
   trx: Knex.Transaction,
   tenant: string,
   invoiceId: string,
-  userId: string,
+  /** Null for system-driven reversals (accounting-sync external void). */
+  userId: string | null,
   reason: string
 ): Promise<CreditReversalResult> {
   const now = new Date().toISOString();

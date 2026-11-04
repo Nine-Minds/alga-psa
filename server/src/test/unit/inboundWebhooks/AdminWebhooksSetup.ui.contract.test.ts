@@ -34,11 +34,28 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
       'rotateWebhookSecret',
       'setWebhookActiveState',
       'retryWebhookDelivery',
+      'retryFailedWebhookDeliveries',
       'listWebhookDeliveries',
       'listWebhookEvents',
       'getWebhookStatsSnapshot',
     ]) {
       expect(adminWebhooksSource).toContain(actionName);
+    }
+  });
+
+  it('offers a bulk retry button on the outbound webhook detail header', () => {
+    expect(adminWebhooksSource).toContain('id="webhook-retry-failed"');
+    expect(adminWebhooksSource).toContain('const handleRetryFailedDeliveries = useCallback');
+    expect(adminWebhooksSource).toContain('retryFailedWebhookDeliveries(selectedWebhook.webhookId)');
+    expect(adminWebhooksSource).toContain("t('security.webhooks.detail.retryFailed')");
+    expect(adminWebhooksSource).toContain("t('security.webhooks.messages.retryFailedQueued'");
+    expect(adminWebhooksSource).toContain('disabled={retryingFailed || !hasRetryableDeliveries}');
+
+    const outboundIds = Array.from(adminWebhooksSource.matchAll(/id="(webhook-[^"{]+)"/g))
+      .map((match) => match[1]!);
+    expect(outboundIds).toContain('webhook-retry-failed');
+    for (const id of outboundIds) {
+      expect(id).toMatch(/^webhook-[a-z0-9]+(?:-[a-z0-9]+)*$/);
     }
   });
 
@@ -330,5 +347,18 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
     expect(adminWebhooksSource).toContain("activeTab === 'inbound'");
     expect(adminWebhooksSource).toContain('<InboundWebhooksListView />');
     expect(adminWebhooksSource).toContain("id: 'webhooks-inbound-view-btn'");
+  });
+});
+
+describe('AdminWebhooksSetup legacy event types', () => {
+  it('shows stored event names that are no longer advertised as unsupported, and lets them be removed', () => {
+    expect(adminWebhooksSource).toContain('legacyEventTypes');
+    expect(adminWebhooksSource).toContain('data-testid="webhook-legacy-events"');
+    expect(adminWebhooksSource).toContain("t('security.webhooks.form.legacyEventLabel'");
+    expect(adminWebhooksSource).toContain("t('security.webhooks.form.legacyEventsHelp'");
+  });
+
+  it('does not cast saved event types to a closed enum', () => {
+    expect(adminWebhooksSource).not.toMatch(/eventTypes:[^,\n]*as (?:typeof|SupportedWebhookEvent|WebhookEvent)/);
   });
 });

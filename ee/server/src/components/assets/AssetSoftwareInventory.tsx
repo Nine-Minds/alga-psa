@@ -3,52 +3,40 @@
 /**
  * Asset Software Inventory Component - EE Component
  *
- * Displays the software inventory for workstations and servers
- * managed by an RMM integration like NinjaOne.
+ * Displays the software inventory for RMM-managed workstations and servers,
+ * read from the normalized asset_software table (every RMM ingestion writes it;
+ * the legacy installed_software JSON is not written by all of them).
  */
 
-import React, { useState, useMemo } from 'react';
-import { Package, Search, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
-import { Button } from '@alga-psa/ui/components/Button';
+import React, { useEffect, useState } from 'react';
+import { Package, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import type { Asset, WorkstationAsset, ServerAsset } from '@/interfaces/asset.interfaces';
+import { isTileActionError } from '@alga-psa/ui/components/bento';
+import { getAssetSoftware } from '@alga-psa/assets/actions/softwareActions';
+import type { AssetSoftwareDisplayItem, AssetSoftwareListResponse } from '@alga-psa/types';
+import type { Asset } from '@/interfaces/asset.interfaces';
 
 interface AssetSoftwareInventoryProps {
   asset: Asset;
   className?: string;
 }
 
-interface SoftwareItem {
-  name: string;
-  version?: string;
-  publisher?: string;
-  installDate?: string;
-}
+/** Rows fetched per query; the list scrolls and reports "showing N of total". */
+export const ASSET_SOFTWARE_DRAWER_LIMIT = 100;
+const SEARCH_DEBOUNCE_MS = 300;
 
-/**
- * Parse software list from asset extension
- */
-function getSoftwareList(asset: Asset): SoftwareItem[] {
-  const extension = asset.workstation || asset.server;
+const isInventoryAsset = (asset: Asset): boolean =>
+  Boolean(asset.rmm_provider && asset.rmm_device_id)
+  && (asset.asset_type === 'workstation' || asset.asset_type === 'server');
 
-  if (!extension) {
-    return [];
-  }
-
-  const installedSoftware = (extension as WorkstationAsset).installed_software ||
-    ((extension as ServerAsset).installed_services as unknown[]) ||
-    [];
-
-  if (!Array.isArray(installedSoftware)) {
-    return [];
-  }
-
-  return installedSoftware.map((item: any) => ({
-    name: item.name || item.displayName || item.productName || 'Unknown',
-    version: item.version || item.displayVersion || undefined,
-    publisher: item.publisher || item.vendor || undefined,
-    installDate: item.installDate || item.installedOn || undefined,
-  })).filter(item => item.name && item.name !== 'Unknown');
+async function loadSoftware(assetId: string, search: string): Promise<AssetSoftwareListResponse | null> {
+  const result = await getAssetSoftware({
+    asset_id: assetId,
+    search: search || undefined,
+    limit: ASSET_SOFTWARE_DRAWER_LIMIT,
+  });
+  // Permission or lookup failures hide the panel like an empty inventory.
+  return isTileActionError(result) ? null : (result as AssetSoftwareListResponse);
 }
 
 /**
@@ -58,35 +46,46 @@ export function AssetSoftwareInventory({ asset, className = '' }: AssetSoftwareI
   const { t } = useTranslation('msp/assets');
   const [isExpanded, setIsExpanded] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [search, setSearch] = useState('');
+  // Unfiltered inventory drives visibility, the count chip and the preview.
+  const [inventory, setInventory] = useState<AssetSoftwareListResponse | null>(null);
+  const [matches, setMatches] = useState<AssetSoftwareListResponse | null>(null);
+  const enabled = isInventoryAsset(asset);
 
-  const allSoftware = React.useMemo(() => getSoftwareList(asset), [asset]);
+  useEffect(() => {
+    if (!enabled) return;
+    let cancelled = false;
+    loadSoftware(asset.asset_id, '')
+      .then((result) => { if (!cancelled) setInventory(result); })
+      .catch((err: unknown) => console.error('Failed to load asset software:', err));
+    return () => { cancelled = true; };
+  }, [asset.asset_id, enabled]);
 
-  const filteredSoftware = useMemo(() => {
-    if (!searchTerm) {
-      return allSoftware;
+  useEffect(() => {
+    const timer = setTimeout(() => setSearch(searchTerm.trim()), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    if (!enabled || !search) {
+      setMatches(null);
+      return;
     }
-    const lowerSearch = searchTerm.toLowerCase();
-    return allSoftware.filter(sw =>
-      sw.name.toLowerCase().includes(lowerSearch) ||
-      sw.publisher?.toLowerCase().includes(lowerSearch)
-    );
-  }, [allSoftware, searchTerm]);
+    let cancelled = false;
+    loadSoftware(asset.asset_id, search)
+      .then((result) => { if (!cancelled) setMatches(result); })
+      .catch((err: unknown) => console.error('Failed to search asset software:', err));
+    return () => { cancelled = true; };
+  }, [asset.asset_id, enabled, search]);
 
-  // Only render for workstations and servers that are RMM-managed
-  if (!asset.rmm_provider || !asset.rmm_device_id) {
+  if (!enabled || !inventory || inventory.total === 0) {
     return null;
   }
 
-  if (asset.asset_type !== 'workstation' && asset.asset_type !== 'server') {
-    return null;
-  }
-
-  // Limit display if not expanded
-  const displaySoftware = isExpanded ? filteredSoftware : filteredSoftware.slice(0, 5);
-
-  if (allSoftware.length === 0) {
-    return null;
-  }
+  const allSoftware: AssetSoftwareDisplayItem[] = inventory.software;
+  // Until the first search result lands, keep showing the last list instead of flashing "no match".
+  const listed = search && matches ? matches : inventory;
+  const displaySoftware = listed.software;
 
   return (
     <div className={`bg-white rounded-lg border border-gray-200 ${className}`}>
@@ -99,7 +98,7 @@ export function AssetSoftwareInventory({ asset, className = '' }: AssetSoftwareI
           <Package className="h-5 w-5 text-[rgb(var(--color-primary-500))]" />
           <span className="font-medium">{t('assetSoftwareInventory.heading')}</span>
           <span className="chip-primary inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full">
-            {t('assetSoftwareInventory.appsCount', { count: allSoftware.length })}
+            {t('assetSoftwareInventory.appsCount', { count: inventory.total })}
           </span>
         </div>
         {isExpanded ? (
@@ -134,8 +133,8 @@ export function AssetSoftwareInventory({ asset, className = '' }: AssetSoftwareI
               </div>
             ) : (
               <div className="divide-y divide-gray-100">
-                {displaySoftware.map((sw, index) => (
-                  <div key={`${sw.name}-${index}`} className="p-3 hover:bg-gray-50">
+                {displaySoftware.map((sw) => (
+                  <div key={sw.software_id} className="p-3 hover:bg-gray-50">
                     <div className="flex items-start justify-between">
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-gray-900 truncate">
@@ -158,10 +157,10 @@ export function AssetSoftwareInventory({ asset, className = '' }: AssetSoftwareI
           </div>
 
           {/* Show More/Less */}
-          {filteredSoftware.length > 5 && (
+          {listed.total > displaySoftware.length && (
             <div className="p-3 border-t border-gray-100 text-center">
               <span className="text-xs text-gray-500">
-                {t('assetSoftwareInventory.showingOfApplications', { shown: displaySoftware.length, total: filteredSoftware.length })}
+                {t('assetSoftwareInventory.showingOfApplications', { shown: displaySoftware.length, total: listed.total })}
               </span>
             </div>
           )}
@@ -169,20 +168,20 @@ export function AssetSoftwareInventory({ asset, className = '' }: AssetSoftwareI
       )}
 
       {/* Collapsed Preview */}
-      {!isExpanded && allSoftware.length > 0 && (
+      {!isExpanded && (
         <div className="border-t border-gray-200 p-3">
           <div className="flex flex-wrap gap-1">
-            {allSoftware.slice(0, 3).map((sw, index) => (
+            {allSoftware.slice(0, 3).map((sw) => (
               <span
-                key={`preview-${sw.name}-${index}`}
+                key={`preview-${sw.software_id}`}
                 className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded bg-gray-100 text-gray-700"
               >
                 {sw.name.length > 20 ? `${sw.name.substring(0, 20)}...` : sw.name}
               </span>
             ))}
-            {allSoftware.length > 3 && (
+            {inventory.total > 3 && (
               <span className="inline-flex items-center px-2 py-0.5 text-xs text-gray-500">
-                {t('assetSoftwareInventory.more', { count: allSoftware.length - 3 })}
+                {t('assetSoftwareInventory.more', { count: inventory.total - 3 })}
               </span>
             )}
           </div>

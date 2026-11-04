@@ -52,13 +52,13 @@ export const projectTaskCommentResponseSchema = z.object({
   deleted_at: z.string().nullable(),
   author: projectTaskCommentAuthorSchema.nullable(),
   reactions: z.array(aggregatedReactionSchema),
-  reaction_user_names: z.record(z.string()),
+  reaction_user_names: z.record(z.string(), z.string()),
 });
 
 export const projectTaskCommentReactionResponseSchema = z.object({
   added: z.boolean(),
   reactions: z.array(aggregatedReactionSchema),
-  reaction_user_names: z.record(z.string()),
+  reaction_user_names: z.record(z.string(), z.string()),
 });
 
 export type CreateProjectTaskCommentData = z.infer<typeof createProjectTaskCommentSchema>;

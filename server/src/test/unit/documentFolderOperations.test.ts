@@ -24,7 +24,9 @@ vi.mock('@alga-psa/db', () => ({
   tenantDb: (conn: any, tenant: string) => ({
     table: (t: string) => {
       tenantScopeSpy(t, tenant);
-      return conn(t);
+      // Folder documents here carry no entity associations; authorization's
+      // association lookups must not receive the documents' own rows.
+      return t === 'document_associations' ? createQueryBuilder() : conn(t);
     },
     unscoped: (t: string) => conn(t),
     tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>

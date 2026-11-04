@@ -14,6 +14,7 @@
       "semiAnnually": "Semestral"
     },
     "cadenceTotal": "Total {{cadence}}",
+    "currency": "Moneda",
     "date": "Fecha",
     "description": "Descripción",
     "discounts": "Descuentos",
@@ -60,6 +61,7 @@
     "rate": "Tarifa",
     "recurring": "Recurrente",
     "service": "Servicio",
+    "servicePeriod": "Período de servicio",
     "shipDate": "Fecha de envío",
     "shipTo": "Enviar a",
     "shipped": "Enviado",
@@ -83,16 +85,47 @@
       "noLineItems": "No hay artículos",
       "noMonthlyItems": "No hay artículos mensuales",
       "noOneTimeItems": "No hay artículos únicos",
-      "noPhasesDefined": "No hay fases definidas"
+      "noPhasesDefined": "No hay fases definidas",
+      "noItemsInBox": "Esta caja está vacía"
     },
     "note": {
       "billedTimePortalDetail": "Contacte con su proveedor para obtener un desglose del tiempo facturado.",
       "pickedBy": "Surtido por: ____________________     Fecha: ____________",
       "preTaxTotals": "Los totales mostrados no incluyen impuestos. El impuesto correspondiente se calcula en su factura.",
-      "thankYouForOrder": "Gracias por su pedido."
+      "thankYouForOrder": "Gracias por su pedido.",
+      "checkedBy": "Verificado por: ____________________     Fecha: ____________",
+      "releasedBy": "Liberado por: ____________________     Firma: ____________________     Fecha: ____________"
     },
     "serialNumbers": "Números de serie",
-    "allocatedSerialsNote": "Números de serie asignados; pueden cambiar durante el cumplimiento."
+    "allocatedSerialsNote": "Números de serie asignados; pueden cambiar durante el cumplimiento.",
+    "stagingManifestTitle": "MANIFIESTO DE EMBALAJE",
+    "boxNumber": "Caja n.º",
+    "project": "Proyecto",
+    "client": "Cliente",
+    "task": "Tarea",
+    "status": "Estado",
+    "sealedOn": "Sellada",
+    "sealedBy": "Sellada por",
+    "location": "Ubicación",
+    "checked": "Verificado",
+    "item": "Artículo",
+    "skuOrTag": "SKU / etiqueta",
+    "serialNumber": "Número de serie",
+    "owner": "Propietario",
+    "ownerMsp": "MSP",
+    "ownerClient": "Cliente",
+    "statusOpen": "Abierta",
+    "statusSealed": "Sellada",
+    "rmaReturnSlipTitle": "ALBARÁN DE DEVOLUCIÓN RMA",
+    "device": "Dispositivo",
+    "vendor": "Proveedor",
+    "vendorReference": "Referencia del proveedor",
+    "asset": "Activo",
+    "assetTag": "Etiqueta del activo",
+    "replacementSerial": "Número de serie del reemplazo",
+    "shipping": "Envío",
+    "returnBy": "Devolver antes de",
+    "returnShipTo": "Enviar devolución a"
   },
   "errors": {
     "permissions": {

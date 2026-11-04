@@ -14,6 +14,7 @@
       "semiAnnually": "Semestriel"
     },
     "cadenceTotal": "Total {{cadence}}",
+    "currency": "Devise",
     "date": "Date",
     "description": "Description",
     "discounts": "Remises",
@@ -60,6 +61,7 @@
     "rate": "Tarif",
     "recurring": "Récurrent",
     "service": "Service",
+    "servicePeriod": "Période de service",
     "shipDate": "Date d'expédition",
     "shipTo": "Livrer à",
     "shipped": "Expédié",
@@ -83,16 +85,47 @@
       "noLineItems": "Aucun article",
       "noMonthlyItems": "Aucun article mensuel",
       "noOneTimeItems": "Aucun article ponctuel",
-      "noPhasesDefined": "Aucune phase définie"
+      "noPhasesDefined": "Aucune phase définie",
+      "noItemsInBox": "Ce carton est vide"
     },
     "note": {
       "billedTimePortalDetail": "Contactez votre prestataire pour obtenir le détail du temps facturé.",
       "pickedBy": "Prélevé par : ____________________     Date : ____________",
       "preTaxTotals": "Les totaux indiqués sont hors taxes. Les taxes applicables sont calculées sur votre facture.",
-      "thankYouForOrder": "Merci pour votre commande."
+      "thankYouForOrder": "Merci pour votre commande.",
+      "checkedBy": "Vérifié par : ____________________     Date : ____________",
+      "releasedBy": "Libéré par : ____________________     Signature : ____________________     Date : ____________"
     },
     "serialNumbers": "Numéros de série",
-    "allocatedSerialsNote": "Numéros de série attribués ; susceptibles de changer lors de l’exécution."
+    "allocatedSerialsNote": "Numéros de série attribués ; susceptibles de changer lors de l’exécution.",
+    "stagingManifestTitle": "MANIFESTE DE COLISAGE",
+    "boxNumber": "Carton n°",
+    "project": "Projet",
+    "client": "Client",
+    "task": "Tâche",
+    "status": "Statut",
+    "sealedOn": "Scellé",
+    "sealedBy": "Scellé par",
+    "location": "Emplacement",
+    "checked": "Vérifié",
+    "item": "Article",
+    "skuOrTag": "SKU / étiquette",
+    "serialNumber": "Numéro de série",
+    "owner": "Propriétaire",
+    "ownerMsp": "MSP",
+    "ownerClient": "Client",
+    "statusOpen": "Ouvert",
+    "statusSealed": "Scellé",
+    "rmaReturnSlipTitle": "BORDEREAU DE RETOUR RMA",
+    "device": "Appareil",
+    "vendor": "Fournisseur",
+    "vendorReference": "Référence fournisseur",
+    "asset": "Actif",
+    "assetTag": "Étiquette de l'actif",
+    "replacementSerial": "Numéro de série du remplacement",
+    "shipping": "Expédition",
+    "returnBy": "Retour avant le",
+    "returnShipTo": "Adresse de retour"
   },
   "errors": {
     "permissions": {

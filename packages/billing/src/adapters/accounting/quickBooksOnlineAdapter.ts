@@ -1,3 +1,4 @@
+import { expandAccountingExportCharges } from '../../services/accountingExportChargeExpansion';
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Accounting export adapter - intentionally bridges billing and QuickBooks integration APIs */
 import logger from '@alga-psa/core/logger';
 import { AppError, fromMinorUnits, toMinorUnits } from '@alga-psa/core';
@@ -52,6 +53,7 @@ import {
 } from '@alga-psa/integrations/lib/qbo/qboCompanyCountry';
 import { getAccountingSyncSettings } from '../../services/accountingSync/accountingSyncSettings';
 import { reconcileExportLineQuantity } from './exportLineQuantity';
+import { resolveClientExportEmail, resolveExportRecipientEmails } from './exportRecipientEmails';
 
 const QBO_MAX_QUANTITY_DECIMALS = 6;
 
@@ -126,6 +128,8 @@ interface InvoiceDocumentPayload {
   clientId: string;
   /** Charge IDs in same order as invoice.Line[] for mapping after delivery */
   chargeIds: string[];
+  /** Original invoice parent and fixed-detail identities parallel to chargeIds. */
+  chargeLineage: Array<{ parentChargeId: string; allocationDetailId?: string }>;
   mapping?: {
     customerId: string;
     source?: string;
@@ -328,7 +332,10 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
     };
 
     const invoicesById = await this.loadInvoices(knex, tenantId, context);
-    const chargesById = await this.loadCharges(knex, tenantId, context);
+    const loadedCharges = await this.loadCharges(knex, tenantId, context);
+    const expanded = await expandAccountingExportCharges(knex, tenantId, loadedCharges, context.lines);
+    const chargesById = expanded.charges;
+    context = { ...context, lines: expanded.lines };
     const clientData = await this.loadClients(knex, tenantId, context, invoicesById);
     const resolver = await AccountingMappingResolver.create({ companySyncService });
 
@@ -416,10 +423,14 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
           parentExternalId = parentMapping.external_entity_id;
         }
 
+        // A sub-customer is a separately-billing profile, so it carries that
+        // profile's own AP address rather than the parent's.
         const companyPayload = buildNormalizedCompanyPayload({
           companyId: exportTarget.algaEntityId,
           name: exportTarget.displayName,
-          primaryEmail: clientRow.billing_email ?? null
+          primaryEmail: exportTarget.isSubCustomer
+            ? clientData.recipientEmails?.get(invoiceId) ?? clientRow.billing_email ?? null
+            : clientRow.billing_email ?? null
         });
         companyPayload.parentExternalId = parentExternalId;
 
@@ -451,6 +462,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
 
       const qboLines: QboInvoiceLine[] = [];
       const chargeIds: string[] = []; // Track charge IDs in same order as qboLines
+      const chargeLineage: InvoiceDocumentPayload['chargeLineage'] = [];
       let invoiceNetCents = 0;
       let invoiceTaxCents = 0;
       // Credit notes store negative amounts in Alga; QBO CreditMemos require positive amounts.
@@ -610,6 +622,10 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
           SalesItemLineDetail: salesDetail
         });
         chargeIds.push(line.document_line_id);
+        chargeLineage.push({
+          parentChargeId: line.payload?.metadata?.allocation_parent_charge_id ?? line.document_line_id,
+          allocationDetailId: line.payload?.metadata?.allocation_detail_id,
+        });
       }
 
       if (qboLines.length === 0) {
@@ -667,8 +683,9 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         qboInvoice.ExchangeRate = basisPointsToRate(invoice.exchange_rate_basis_points);
       }
 
-      if (clientRow?.billing_email) {
-        qboInvoice.BillEmail = { Address: clientRow.billing_email };
+      const billEmail = clientData.recipientEmails?.get(invoiceId) ?? clientRow?.billing_email ?? null;
+      if (billEmail) {
+        qboInvoice.BillEmail = { Address: billEmail };
       }
 
       const clientMetadataRaw = clientMapping.metadata ?? {};
@@ -684,6 +701,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         invoice: qboInvoice,
         clientId,
         chargeIds, // Alga charge IDs in same order as invoice.Line[]
+        chargeLineage,
         mapping: {
           customerId: clientMapping.external_entity_id,
           source: mappingSource ?? 'mapping_table'
@@ -696,7 +714,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
 
       documents.push({
         documentId: invoiceId,
-        lineIds: exportLines.map((line) => line.line_id),
+        lineIds: [...new Set(exportLines.map((line) => line.line_id))],
         payload: payload as unknown as Record<string, unknown>
       });
     }
@@ -900,7 +918,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
 
       documents.push({
         documentId: billId,
-        lineIds: exportLines.map((line) => line.line_id),
+        lineIds: [...new Set(exportLines.map((line) => line.line_id))],
         payload: payload as unknown as Record<string, unknown>
       });
     }
@@ -1260,12 +1278,14 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
     // QBO returns lines in same order as sent, filter to SalesItemLineDetail only
     const qboSalesLines = (response.Line ?? [])
       .filter((line: QboInvoiceLine) => line.DetailType === 'SalesItemLineDetail');
-    const chargeLineMappings: Array<{ chargeId: string; qboLineId: string }> = [];
+    const chargeLineMappings: Array<{ chargeId: string; parentChargeId: string; allocationDetailId?: string; qboLineId: string }> = [];
     for (let i = 0; i < payload.chargeIds.length && i < qboSalesLines.length; i++) {
       const qboLineId = qboSalesLines[i].Id;
       if (qboLineId) {
         chargeLineMappings.push({
           chargeId: payload.chargeIds[i],
+          parentChargeId: payload.chargeLineage[i]?.parentChargeId ?? payload.chargeIds[i],
+          allocationDetailId: payload.chargeLineage[i]?.allocationDetailId,
           qboLineId
         });
       }
@@ -1346,6 +1366,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         'item_id',
         'invoice_id',
         'service_id',
+        'is_manual',
         'description',
         'quantity',
         'unit_price',
@@ -1354,7 +1375,8 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         'tax_amount',
         'is_taxable',
         'is_discount',
-        'tax_region'
+        'tax_region',
+        'adjustment_source_kind'
       )
       .whereIn('item_id', chargeIds);
 
@@ -1366,7 +1388,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
     tenantId: string,
     context: AccountingExportAdapterContext,
     invoices: Map<string, DbInvoice>
-  ): Promise<{ clients: Map<string, DbClient>; mappings: Map<string, MappingRow> }> {
+  ): Promise<{ clients: Map<string, DbClient>; mappings: Map<string, MappingRow>; recipientEmails?: Map<string, string | null> }> {
     const clientIds = new Set<string>();
     // Profiles the invoices in this batch bill for. A sub-customer mapping is
     // keyed on the profile, not the client (F121).
@@ -1395,7 +1417,20 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       .select('client_id', 'client_name', 'billing_email', 'payment_terms')
       .whereIn('client_id', Array.from(clientIds));
 
+    // The customer's email is the address its invoices are emailed to (billing
+    // contact, billing email, billing/default location), not the raw column;
+    // a sub-customer's is resolved per invoice through its billing profile.
+    for (const client of clients) {
+      client.billing_email = await resolveClientExportEmail(knex, tenantId, client.client_id);
+    }
     const clientMap = new Map(clients.map((client) => [client.client_id, client]));
+    const recipientEmails = await resolveExportRecipientEmails(
+      knex,
+      tenantId,
+      Array.from(invoices.values()).filter(
+        (invoice): invoice is DbInvoice & { client_id: string } => Boolean(invoice.client_id),
+      ),
+    );
 
     const mappingRows = await tenantDb(knex, tenantId).table<MappingRowRaw>('tenant_external_entity_mappings')
       .select('*')
@@ -1423,7 +1458,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       mappingMap.set(normalized.alga_entity_id, normalized);
     });
 
-    return { clients: clientMap, mappings: mappingMap };
+    return { clients: clientMap, mappings: mappingMap, recipientEmails };
   }
 
   /**
@@ -1472,13 +1507,23 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         })
         .first();
 
-      const chargeLineMappings: Array<{ chargeId: string; qboLineId: string }> =
+      const chargeLineMappings: Array<{ chargeId: string; parentChargeId?: string; allocationDetailId?: string; qboLineId: string }> =
         (mappingRow?.metadata as any)?.chargeLineMappings ?? [];
 
-      // Build reverse map: QBO line ID -> Alga charge ID
-      const qboLineToChargeId = new Map<string, string>();
+      // Discounts and credits are not part of the positive-charge tax basis
+      // used by the invoice pipeline. QBO's invoice tax total must be allocated
+      // across the eligible charge lines without letting a negative discount
+      // line dilute that basis.
+      const discountChargeIds = mappingRow?.alga_entity_id
+        ? new Set<string>((await tenantDb(knex, tenantId).table('invoice_charges')
+            .where({ invoice_id: mappingRow.alga_entity_id, is_discount: true })
+            .pluck('item_id')) as string[])
+        : new Set<string>();
+
+      // Keep provider split identity and original invoice parent identity together.
+      const qboLineToCharge = new Map<string, { chargeId: string; parentChargeId?: string; allocationDetailId?: string }>();
       for (const mapping of chargeLineMappings) {
-        qboLineToChargeId.set(mapping.qboLineId, mapping.chargeId);
+        qboLineToCharge.set(mapping.qboLineId, mapping);
       }
 
       // Calculate total tax from QBO invoice
@@ -1489,9 +1534,12 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       // Extract line items with their amounts for proportional tax distribution
       const lineItems: Array<{
         lineId: string;
+        parentChargeId?: string;
+        allocationDetailId?: string;
         externalLineId?: string;
         amount: number;
         taxCode?: string;
+        isDiscount: boolean;
       }> = [];
       let lineIndex = 0;
 
@@ -1503,21 +1551,30 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
           const qboLineId = line.Id ?? undefined;
 
           // Use stored charge ID if available, otherwise fall back to positional index
-          const chargeId = qboLineId ? qboLineToChargeId.get(qboLineId) : undefined;
-          const lineId = chargeId ?? `line-${lineIndex}`;
+          const chargeMapping = qboLineId ? qboLineToCharge.get(qboLineId) : undefined;
+          const lineId = chargeMapping?.chargeId ?? `line-${lineIndex}`;
 
           lineItems.push({
             lineId,
+            parentChargeId: chargeMapping?.parentChargeId,
+            allocationDetailId: chargeMapping?.allocationDetailId,
             externalLineId: qboLineId,
             amount: lineAmount,
-            taxCode: detail.TaxCodeRef?.value
+            taxCode: detail.TaxCodeRef?.value,
+            isDiscount: Boolean(
+              (chargeMapping?.parentChargeId && discountChargeIds.has(chargeMapping.parentChargeId)) ||
+              (chargeMapping?.chargeId && discountChargeIds.has(chargeMapping.chargeId))
+            ),
           });
           lineIndex++;
         }
       }
 
-      // Calculate subtotal from line items
-      const subtotal = lineItems.reduce((sum, item) => sum + item.amount, 0);
+      // Discounts and credits keep their provider identity but receive no tax
+      // share. The invoice pipeline taxes its eligible positive-charge base.
+      const taxableLineItems = lineItems.filter(item => !item.isDiscount);
+      const subtotal = taxableLineItems.reduce((sum, item) => sum + item.amount, 0);
+      const lastTaxableLineIndex = lineItems.reduce((last, item, index) => item.isDiscount ? last : index, -1);
 
       // Distribute tax proportionally across lines based on line amounts
       // Using documented rounding algorithm from docs/tax_calculation_allocation.md:
@@ -1526,7 +1583,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       const charges: ExternalInvoiceChargeTax[] = lineItems.map((item, index) => {
         let taxAmount = 0;
 
-        if (subtotal > 0 && totalTax > 0) {
+        if (!item.isDiscount && subtotal > 0 && totalTax > 0) {
           // Proportional distribution: itemTax = floor((itemNetAmount / totalRegionalNet) * totalGroupTax)
           taxAmount = Math.floor((item.amount / subtotal) * totalTax);
         }
@@ -1537,6 +1594,8 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
 
         return {
           lineId: item.lineId,
+          parentChargeId: item.parentChargeId,
+          allocationDetailId: item.allocationDetailId,
           externalLineId: item.externalLineId,
           taxAmount,
           taxCode: item.taxCode,
@@ -1549,8 +1608,9 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         const distributedTax = charges.reduce((sum, c) => sum + c.taxAmount, 0);
         const roundingDiff = totalTax - distributedTax;
         if (roundingDiff !== 0) {
-          // Apply rounding difference to the last item in the group
-          charges[charges.length - 1].taxAmount += roundingDiff;
+          // Apply rounding difference to the last eligible charge, never to a
+          // discount or credit row.
+          if (lastTaxableLineIndex >= 0) charges[lastTaxableLineIndex].taxAmount += roundingDiff;
         }
       }
 
@@ -1578,8 +1638,8 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
               charge.taxComponents = [];
             }
 
-            if (subtotal > 0 && charge.taxAmount > 0) {
-              const isLastCharge = i === charges.length - 1;
+            if (!lineItems[i].isDiscount && subtotal > 0 && charge.taxAmount > 0) {
+              const isLastCharge = i === lastTaxableLineIndex;
               let componentAmount: number;
 
               if (isLastCharge) {

@@ -80,6 +80,9 @@ npm run seed -- --client-id=alga-dev --client-secret=alga-dev-secret
 | `POST /__control/entra/users/disable` | Offboard by `id`, `mail` or `userPrincipalName`; pass `accountEnabled: true` to re-enable |
 | `POST /__control/entra/organization` | Replace the partner's own tenant |
 | `POST /__control/entra/cipp-key` | Pin the CIPP API key (`{apiKey: null}` accepts any) |
+| `POST /__control/entra/cipp-client` | Switch CIPP to API-client mode (`{clientId, clientSecret, directoryId}`; `null` returns to static-key mode). Only Bearer tokens minted at `/{directoryId}/oauth2/v2.0/token` (client-credentials, `scope=api://{clientId}/.default`) are then accepted |
+| `POST /__control/entra/cipp-faults` | Set CIPP fault knobs: `tokenTtlSeconds`, `tenantNotFound` (AADSTS90002), `missingIdentifierUri` (AADSTS500011), `consentRequired` (AADSTS65001), `ipBlocked` (403 on every endpoint), `blockedEndpoints` (403 on named endpoints only, i.e. a role block), `htmlAtApi` (HTML instead of JSON) |
+| `POST /__control/entra/cipp-revoke-tokens` | Invalidate every minted token so the next call 401s and the client must re-mint |
 | `GET /__control/entra/state` | Current directory |
 
 Faults still work on these paths, so a connection that fails at the right moment
@@ -90,3 +93,10 @@ is reachable:
 curl -X POST localhost:4010/__control/faults -H 'content-type: application/json' \
   -d '{"operation":"GET /tenantRelationships/managedTenants/tenants","status":403,"remaining":1}'
 ```
+
+### API-client smoke test
+
+`node --test entra.smoke.test.mjs` starts the emulator on port 14020 and drives
+the real `CippTokenService` (TypeScript, type-stripped by Node) through minting,
+caching, re-minting past expiry and revocation, and each token-endpoint and API
+fault above.

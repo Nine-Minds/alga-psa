@@ -52,6 +52,8 @@ export const TICKET_ACTIVITY_EVENT = {
   DUPLICATED_FROM: 'TICKET_DUPLICATED_FROM',
   /** Written on the source ticket when a duplicate of it is created. */
   DUPLICATED_TO: 'TICKET_DUPLICATED_TO',
+  /** Written on the new ticket created from a ticket template. */
+  CREATED_FROM_TEMPLATE: 'TICKET_CREATED_FROM_TEMPLATE',
 } as const;
 
 export type TicketActivityEvent =
@@ -146,6 +148,8 @@ export type TicketActivityChanges = Partial<
 >;
 
 export interface TicketActivityActorInfo {
+  /** Owner-local attribution reference for a foreign human; never a login user. */
+  actorReferenceId?: string | null;
   actorType: TicketActivityActor;
   userId?: string | null;
   contactId?: string | null;
@@ -176,6 +180,9 @@ export interface TicketActivityRow {
   actor_user_id: string | null;
   actor_contact_id: string | null;
   actor_display_name: string | null;
+  /** Legacy rows omit these fields; reference identity is qualified by row.tenant. */
+  actor_reference_id?: string | null;
+  actor_organization_name?: string | null;
   source: string;
   occurred_at: string;
   changes: TicketActivityChanges;

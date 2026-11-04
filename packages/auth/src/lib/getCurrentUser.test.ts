@@ -10,10 +10,13 @@ vi.mock('@alga-psa/core/logger', () => ({
   },
 }));
 
-// getCurrentUser reads the session via the local ./getSession module.
+// getCurrentUser reads the session via the local ./getSession module, and
+// reports a decoded-but-unresolvable session through the same module's
+// rejection log, so that name has to be mocked too.
 vi.mock('./getSession', () => ({
   getSession: vi.fn(),
   getSessionWithRevocationCheck: vi.fn(),
+  logSessionRejection: vi.fn(),
 }));
 
 // User lookups now go through the @alga-psa/db helpers directly.
@@ -21,14 +24,15 @@ vi.mock('@alga-psa/db', () => ({
   getUserWithRoles: vi.fn(),
   getUserWithRolesByEmail: vi.fn(),
   createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: 'tenant-1' })),
+  noteTenantProductCode: vi.fn(),
 }));
 
 import {
   getCurrentUser,
   getCurrentUserWithRevocationCheck,
 } from './getCurrentUser';
-import { getSession, getSessionWithRevocationCheck } from './getSession';
-import { getUserWithRoles } from '@alga-psa/db';
+import { getSession, getSessionWithRevocationCheck, logSessionRejection } from './getSession';
+import { getUserWithRoles, noteTenantProductCode } from '@alga-psa/db';
 
 const envSnapshot = { ...process.env };
 
@@ -36,6 +40,7 @@ beforeEach(() => {
   vi.mocked(getSession).mockReset();
   vi.mocked(getSessionWithRevocationCheck).mockReset();
   vi.mocked(getUserWithRoles).mockReset();
+  vi.mocked(logSessionRejection).mockReset();
 });
 
 afterEach(() => {
@@ -49,6 +54,17 @@ afterEach(() => {
 });
 
 describe('getCurrentUser', () => {
+  it('hands the session product code to write admission so a PSA request pays no tenants read', async () => {
+    vi.mocked(getSession).mockResolvedValue({
+      user: { id: 'user-1', tenant: 'tenant-1', product_code: 'psa' },
+    } as any);
+    vi.mocked(getUserWithRoles).mockResolvedValue({ user_id: 'user-1', tenant: 'tenant-1', roles: [] } as any);
+
+    await getCurrentUser();
+
+    expect(vi.mocked(noteTenantProductCode)).toHaveBeenCalledWith('tenant-1', 'psa');
+  });
+
   // Note: avatarUrl is intentionally NOT resolved by getCurrentUser anymore —
   // it caused a circular dependency with @alga-psa/documents. Callers needing
   // the avatar use getUserAvatarUrl separately.
@@ -91,6 +107,7 @@ describe('getCurrentUser', () => {
     vi.mocked(getUserWithRoles).mockResolvedValue(null as any);
 
     await expect(getCurrentUser()).resolves.toBeNull();
+    expect(vi.mocked(logSessionRejection)).toHaveBeenCalledWith('user_missing');
   });
 
   it('returns null when the session user has been deactivated', async () => {

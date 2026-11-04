@@ -69,7 +69,9 @@
       "message_one": "Il seguente tipo di telefono personalizzato non è più usato da alcun contatto: {{labels}}. Eliminare la definizione del tipo o mantenerla per un uso futuro?",
       "message_other": "I seguenti tipi di telefono personalizzati non sono più usati da alcun contatto: {{labels}}. Eliminare le definizioni dei tipi o mantenerle per un uso futuro?",
       "deleteType": "Elimina tipo",
-      "keepType": "Mantieni tipo"
+      "keepType": "Mantieni tipo",
+      "message_few": "I seguenti tipi di telefono personalizzati non sono più usati da alcun contatto: {{labels}}. Eliminare le definizioni dei tipi o mantenerle per un uso futuro?",
+      "message_many": "I seguenti tipi di telefono personalizzati non sono più usati da alcun contatto: {{labels}}. Eliminare le definizioni dei tipi o mantenerle per un uso futuro?"
     },
     "print": {
       "title": "Contatti",
@@ -455,7 +457,9 @@
         "invitationNotFound": "Invito non trovato o già utilizzato."
       },
       "userNotFound": "Utente cliente non trovato"
-    }
+    },
+    "boardCount_few": "{{count}} bacheche",
+    "boardCount_many": "{{count}} bacheche"
   },
   "quickAddContact": {
     "title": "Aggiungi nuovo contatto",
@@ -734,7 +738,67 @@
       "visibilityDuplicate": "Esiste già un gruppo di visibilità con questi dati per questo cliente.",
       "visibilityInvalidData": "Dati del gruppo di visibilità non validi. Controllare i dati del gruppo e le bacheche selezionate.",
       "groupNameRequired": "Il nome del gruppo è obbligatorio",
-      "readPermission": "Autorizzazione negata: impossibile leggere i contatti"
+      "readPermission": "Autorizzazione negata: impossibile leggere i contatti",
+      "idRequired": "L’ID del contatto è obbligatorio",
+      "schemaError": "Errore nello schema del database: contatta l’assistenza",
+      "readFailed": "Si è verificato un errore imprevisto durante il recupero delle informazioni del contatto",
+      "deleteRecordFailed": "Record del contatto non trovato o impossibile da eliminare",
+      "updateIdRequired": "L’ID del contatto è obbligatorio per gli aggiornamenti",
+      "clientMissing": "Il cliente selezionato non esiste più",
+      "destinationMissing": "La destinazione selezionata per i ticket in entrata non esiste più",
+      "updateMissing": "Il contatto che stai cercando di aggiornare non esiste più",
+      "updateRecordMissing": "L’aggiornamento del contatto è stato completato senza restituire il record aggiornato",
+      "clientIdRequired": "L’ID del cliente è obbligatorio",
+      "specifiedClientMissing": "Il cliente specificato non esiste",
+      "updateDataRequired": "Nessun dato di aggiornamento fornito",
+      "emailInvalid": "Inserisci un indirizzo email valido",
+      "bulkUpdateFailed": "L’aggiornamento dei contatti del cliente è stato completato senza modificare alcun record",
+      "updateFailed": "Si è verificato un errore imprevisto durante l’aggiornamento dei contatti del cliente",
+      "importMultipleMatches": "Gli indirizzi email importati corrispondono a più contatti esistenti",
+      "updatePermission": "Impossibile aggiornare i contatti",
+      "importDataRequired": "Nessun dato di contatto fornito",
+      "fullNameRequired": "Il nome completo è obbligatorio",
+      "importFailed": "Si è verificato un errore imprevisto durante l’importazione dei contatti",
+      "emailsRequired": "Nessun indirizzo email fornito",
+      "validEmailsRequired": "Nessun indirizzo email valido fornito",
+      "checkEmailsFailed": "Si è verificato un errore imprevisto durante la verifica degli indirizzi email esistenti",
+      "portalAdminRequired": "È necessario l’accesso come amministratore del portale clienti",
+      "assignedGroupInvalid": "Il gruppo di visibilità assegnato non è valido per questo contatto",
+      "groupNotFound": "Gruppo di visibilità non trovato",
+      "boardsInvalid": "Una o più bacheche non sono valide per questo tenant",
+      "groupCreateFailed": "La creazione del gruppo di visibilità è stata completata senza restituire un ID del gruppo",
+      "groupInUse": "Impossibile eliminare il gruppo di visibilità mentre è assegnato a contatti",
+      "importEmailInvalid": "Formato email non valido per il contatto: {{name}}",
+      "importClientMissing": "Cliente non trovato per il contatto: {{name}}",
+      "invalidEmailValue": "Formato email non valido: {{email}}",
+      "invalidData": "Dati del contatto non validi",
+      "phoneExtensionInvalid": "Telefono {{index}}: inserisci un interno valido",
+      "phoneNumberInvalid": "Telefono {{index}}: inserisci un numero di telefono valido",
+      "phoneCountryRequired": "Telefono {{index}}: includi il prefisso internazionale, iniziando con +",
+      "tenantEmailExists": "Un indirizzo email di contatto esiste già in questo tenant",
+      "importRowFailed": "Impossibile importare questo contatto. Controlla i campi obbligatori e i riferimenti ai clienti.",
+      "deleteMissing": "Il contatto che stai cercando di eliminare non esiste più.",
+      "deleteFailed": "Impossibile eliminare il contatto. Riprova.",
+      "deleteDependencies": "Impossibile eliminare il contatto perché ha record associati",
+      "connectionFailed": "Problema di connessione al database. Riprova.",
+      "deleteUnexpected": "Si è verificato un errore imprevisto durante l’eliminazione del contatto",
+      "importFileFailed": "Impossibile importare i contatti. Controlla il file e riprova.",
+      "portalAdminUpdateFailed": "Impossibile aggiornare lo stato di amministratore del portale. Aggiorna la pagina e riprova.",
+      "userLoadFailed": "Impossibile recuperare l’utente",
+      "sharedMailboxAdmin": "I contatti delle caselle di posta condivise non possono essere amministratori dei clienti.",
+      "createFailed": "Si è verificato un errore imprevisto durante la creazione del contatto",
+      "importDuplicateEmail": "Esiste già un contatto con questa email: {{value}}",
+      "importDuplicateName": "Esiste già un contatto con questo nome: {{value}}",
+      "permissions": {
+        "readContacts": "Impossibile leggere i contatti",
+        "deleteContacts": "Impossibile eliminare i contatti",
+        "createContacts": "Impossibile creare i contatti",
+        "updateContacts": "Impossibile aggiornare i contatti",
+        "managePhoneTypes": "Impossibile gestire i tipi di telefono",
+        "updateClientUsers": "Non hai l’autorizzazione per aggiornare gli utenti dei clienti",
+        "viewClientUsers": "Non hai l’autorizzazione per visualizzare gli utenti dei clienti"
+      },
+      "field": "campo"
     }
   },
   "portal": {
@@ -760,7 +824,30 @@
       "scopeSummaryOwn": "Propri",
       "managerScopeNote_one": "La sua vista include anche i dati di {{count}} persona che riporta a lei.",
       "managerScopeNote_many": "La sua vista include anche i dati di {{count}} di persone che riportano a lei.",
-      "managerScopeNote_other": "La sua vista include anche i dati di {{count}} persone che riportano a lei."
+      "managerScopeNote_other": "La sua vista include anche i dati di {{count}} persone che riportano a lei.",
+      "managerScopeNote_few": "La sua vista include anche i dati di {{count}} persone che riportano a lei."
     }
+  },
+  "messages": {
+    "success": {
+      "updated": "Contatto aggiornato con successo",
+      "created": "Contatto creato correttamente"
+    }
+  },
+  "csvTemplate": {
+    "explorerRole": "Esploratrice capo",
+    "explorerNotes": "È caduta in una tana di coniglio e ha scoperto un mondo completamente nuovo",
+    "explorerTags": "Curiosa, Avventurosa, Coraggiosa",
+    "teaRole": "Esperto capo della cerimonia del tè",
+    "teaNotes": "Sa perché un corvo assomiglia a una scrivania",
+    "teaTags": "Creativo, Eccentrico, Esperto di tè"
+  },
+  "entraContactBadge": {
+    "lastSyncedTitle": "Microsoft Entra · ultima sincronizzazione: {{date}}",
+    "description": "Questo contatto viene sincronizzato con un account della directory.",
+    "signInName": "Nome di accesso: {{name}}",
+    "lastSynced": "Ultima sincronizzazione: {{date}}",
+    "deleted": "Inattivo — l’account Microsoft è stato eliminato.",
+    "disabled": "Inattivo — l’account Microsoft è disabilitato."
   }
 }

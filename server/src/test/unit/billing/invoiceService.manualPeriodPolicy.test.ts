@@ -31,13 +31,14 @@ function createMockTx(existingInvoiceCharges: Array<Record<string, any>> = []) {
   const tables: Record<string, Array<Record<string, any>>> = {
     invoice_charges: existingInvoiceCharges.map((row) => ({ ...row })),
     invoice_time_entries: [],
-    service_catalog: [],
+    service_catalog: [{ tenant: 'tenant-1', service_id: 'service-1', service_name: 'Miscellaneous' }],
     tax_rates: [],
   };
 
   const tx: any = (tableName: string) => {
     let filteredRows = tables[tableName] ?? [];
 
+    let aggregateResult: Record<string, number> | null = null;
     const builder: any = {
       where(criteria: Record<string, any> | string, value?: unknown) {
         filteredRows = filteredRows.filter((row) => {
@@ -51,6 +52,15 @@ function createMockTx(existingInvoiceCharges: Array<Record<string, any>> = []) {
         });
         return builder;
       },
+      whereNot(column: string, value: unknown) {
+        filteredRows = filteredRows.filter((row) => row[normalizeColumnName(column)] !== value);
+        return builder;
+      },
+      sum(spec: Record<string, string>) {
+        const [alias, column] = Object.entries(spec)[0];
+        aggregateResult = { [alias]: filteredRows.reduce((total, row) => total + Number(row[column] ?? 0), 0) };
+        return builder;
+      },
       select() {
         return builder;
       },
@@ -58,7 +68,7 @@ function createMockTx(existingInvoiceCharges: Array<Record<string, any>> = []) {
         return builder;
       },
       async first() {
-        return filteredRows[0] ?? null;
+        return aggregateResult ?? filteredRows[0] ?? null;
       },
       async insert(payload: any) {
         inserts[tableName].push(payload);
@@ -112,7 +122,7 @@ describe('manual invoice service-period policy', () => {
     await expect(persistManualInvoiceCharges(
       tx,
       'invoice-1',
-      [{ description: 'Invalid quantity', quantity: 0, rate: 2500 }] as any,
+      [{ description: 'Invalid quantity', service_id: 'service-1', quantity: 0, rate: 2500 }] as any,
       { client_id: 'client-1', region_code: 'US-WA' },
       { user: { id: 'user-1' } } as any,
       'tenant-1',
@@ -151,6 +161,7 @@ describe('manual invoice service-period policy', () => {
       [
         {
           description: 'Manual adjustment',
+          service_id: 'service-1',
           quantity: 1,
           rate: 2500,
           is_discount: false,
@@ -181,6 +192,7 @@ describe('manual invoice service-period policy', () => {
       [
         {
           description: 'Manual adjustment',
+          service_id: 'service-1',
           quantity: 1,
           rate: 2500,
           is_discount: false,
@@ -304,6 +316,7 @@ describe('manual invoice service-period policy', () => {
       [
         {
           description: 'One-time onsite surcharge',
+          service_id: 'service-1',
           quantity: 1,
           rate: 2500,
           is_discount: false,
@@ -339,6 +352,7 @@ describe('manual invoice service-period policy', () => {
     expect(inserts.invoice_charges).toEqual([
       expect.objectContaining({
         description: 'One-time onsite surcharge',
+        service_id: 'service-1',
         is_manual: true,
         is_discount: false,
         net_amount: 2500,

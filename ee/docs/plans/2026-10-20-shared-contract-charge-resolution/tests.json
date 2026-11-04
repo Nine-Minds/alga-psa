@@ -1,0 +1,73 @@
+[
+  {
+    "id": "T001",
+    "description": "Parity: fixed advance/arrears, hourly, usage, products, licenses, pricing schedule, discount fixtures match engine dry run",
+    "featureIds": [
+      "F001"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T002",
+    "description": "Parity: hourly+pool with rollover and overage; weighted/after-hours pool (red at a62fafbcb5)",
+    "featureIds": [
+      "F001",
+      "F006",
+      "F009"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T003",
+    "description": "Acceptance: 10h pool + 14 assumed hours => 4 overage hours, no plain hourly charge",
+    "featureIds": [
+      "F011"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T004",
+    "description": "Template with contract_template_line_buckets simulates pool",
+    "featureIds": [
+      "F012"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T005",
+    "description": "Unit: resolver order, pool coverage, TimingRequest passed per demand, unsupported duePosition rejected",
+    "featureIds": [
+      "F003",
+      "F004",
+      "F005",
+      "F006"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T006",
+    "description": "Existing billing integration tests unchanged and green; before/after invoice-line diff empty",
+    "featureIds": [
+      "F008"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T007",
+    "description": "Existing simulator integration tests green incl. read-only fingerprint test",
+    "featureIds": [
+      "F010"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T008",
+    "description": "Parity: fixed in advance, pricing schedule, percentage discount, allow_rollover across two periods, several pooled entries, absolute-value acceptance (14h/10h pool = 4 overage hours exactly); per-entry rounding documented as known gap",
+    "featureIds": [
+      "F001",
+      "F009",
+      "F011"
+    ],
+    "implemented": true
+  }
+]

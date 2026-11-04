@@ -14,6 +14,7 @@
       "semiAnnually": "Semi-annually"
     },
     "cadenceTotal": "{{cadence}} Total",
+    "currency": "Currency",
     "date": "Date",
     "description": "Description",
     "discounts": "Discounts",
@@ -60,6 +61,7 @@
     "rate": "Rate",
     "recurring": "Recurring",
     "service": "Service",
+    "servicePeriod": "Service Period",
     "shipDate": "Ship Date",
     "shipTo": "Ship To",
     "shipped": "Shipped",
@@ -83,16 +85,47 @@
       "noLineItems": "No line items",
       "noMonthlyItems": "No monthly items",
       "noOneTimeItems": "No one-time items",
-      "noPhasesDefined": "No phases defined"
+      "noPhasesDefined": "No phases defined",
+      "noItemsInBox": "This box is empty"
     },
     "note": {
       "billedTimePortalDetail": "Contact your service provider for a billed-time breakdown.",
       "pickedBy": "Picked by: ____________________     Date: ____________",
       "preTaxTotals": "Totals shown are pre-tax. Applicable tax is calculated on your invoice.",
-      "thankYouForOrder": "Thank you for your order."
+      "thankYouForOrder": "Thank you for your order.",
+      "checkedBy": "Checked by: ____________________     Date: ____________",
+      "releasedBy": "Released by: ____________________     Signature: ____________________     Date: ____________"
     },
     "serialNumbers": "Serial numbers",
-    "allocatedSerialsNote": "Allocated serial numbers; subject to change at fulfillment."
+    "allocatedSerialsNote": "Allocated serial numbers; subject to change at fulfillment.",
+    "stagingManifestTitle": "PACKING MANIFEST",
+    "boxNumber": "Box no.",
+    "project": "Project",
+    "client": "Client",
+    "task": "Task",
+    "status": "Status",
+    "sealedOn": "Sealed",
+    "sealedBy": "Sealed by",
+    "location": "Location",
+    "checked": "Checked",
+    "item": "Item",
+    "skuOrTag": "SKU / tag",
+    "serialNumber": "Serial number",
+    "owner": "Owner",
+    "ownerMsp": "MSP",
+    "ownerClient": "Client",
+    "statusOpen": "Open",
+    "statusSealed": "Sealed",
+    "rmaReturnSlipTitle": "RMA RETURN SLIP",
+    "device": "Device",
+    "vendor": "Vendor",
+    "vendorReference": "Vendor reference",
+    "asset": "Asset",
+    "assetTag": "Asset tag",
+    "replacementSerial": "Replacement serial",
+    "shipping": "Shipping",
+    "returnBy": "Return by",
+    "returnShipTo": "Return ship to"
   },
   "errors": {
     "permissions": {

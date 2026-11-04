@@ -13,6 +13,7 @@
 
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { assertHumanWorkAssignee } from '../lib/humanWork/assertHumanWorkAssignee';
 import type {
   IScheduleEntry,
   IRecurrencePattern,
@@ -20,7 +21,7 @@ import type {
   IHoliday,
   CreateScheduleEntryOptions,
 } from '@alga-psa/types';
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4, validate as isUuid } from 'uuid';
 import { toCalendarDateString } from '@alga-psa/core';
 import { generateOccurrences } from '../utils/recurrenceUtils';
 
@@ -182,14 +183,9 @@ const ScheduleEntry = {
       throw new Error(`Schedule entry ${entry_id} not found in tenant ${tenant}`);
     }
 
-    // Delete existing assignments
-    await tenantScopedTable(knexOrTrx, 'schedule_entry_assignees', tenant)
-      .where('entry_id', entry_id)
-      .del();
-
-    // Insert new assignments
+    // Validate that every assignee exists in the tenant BEFORE the human-work guard, so a
+    // missing user keeps surfacing as "not found" rather than as a guard error.
     if (userIds.length > 0) {
-      // Verify all users exist in the correct tenant
       const validUsers = await tenantScopedTable(knexOrTrx, 'users', tenant)
         .whereIn('user_id', userIds)
         .select('user_id');
@@ -200,7 +196,27 @@ const ScheduleEntry = {
       if (invalidUserIds.length > 0) {
         throw new Error(`Users ${invalidUserIds.join(', ')} not found in tenant ${tenant}`);
       }
+    }
 
+    // Human-work guard (after existence/tenant validation): validate only assignees this
+    // write adds, so legacy assignees (e.g. a former agent user) that are kept never block the edit.
+    const existingAssignees = await tenantScopedTable(knexOrTrx, 'schedule_entry_assignees', tenant)
+      .where('entry_id', entry_id)
+      .select('user_id');
+    const existingAssigneeIds = new Set(existingAssignees.map((row: { user_id: string }) => row.user_id));
+    await assertHumanWorkAssignee(
+      knexOrTrx,
+      tenant,
+      userIds.filter((id) => !existingAssigneeIds.has(id))
+    );
+
+    // Delete existing assignments
+    await tenantScopedTable(knexOrTrx, 'schedule_entry_assignees', tenant)
+      .where('entry_id', entry_id)
+      .del();
+
+    // Insert new assignments
+    if (userIds.length > 0) {
       const assignments = userIds.map(
         (user_id): { tenant: string; entry_id: string; user_id: string } => ({
           tenant,
@@ -497,7 +513,8 @@ const ScheduleEntry = {
     }
 
     validateAllDayInterval(entry);
-    const entry_id = uuidv4();
+    if (options.entryId !== undefined && !isUuid(options.entryId)) throw new Error('Invalid reserved schedule entry ID');
+    const entry_id = options.entryId ?? uuidv4();
 
     // Prepare entry data
     const entryData = {

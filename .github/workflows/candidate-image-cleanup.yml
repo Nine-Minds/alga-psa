@@ -1,0 +1,44 @@
+name: Candidate image cleanup
+
+# The browser lane (e2e-fresh-install-tests.yaml) hands each run's candidate
+# images from build-images to production-browser through
+# ghcr.io/<repository>/e2e-<service>. The registry has no retention of its own,
+# so this removes versions older than the window below. Consumers pull by digest
+# inside their own run; nothing needs an older version.
+on:
+  schedule:
+    - cron: '23 6 * * *'
+  workflow_dispatch:
+    inputs:
+      max_age_hours:
+        description: Delete candidate image versions older than this many hours
+        type: number
+        default: 72
+      dry_run:
+        description: Report what would be deleted without deleting
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: candidate-image-cleanup
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Delete candidate image versions past retention
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CANDIDATE_IMAGE_MAX_AGE_HOURS: ${{ inputs.max_age_hours || 72 }}
+          CANDIDATE_IMAGE_DRY_RUN: ${{ inputs.dry_run == true }}
+        run: node scripts/cleanup-candidate-images.mjs

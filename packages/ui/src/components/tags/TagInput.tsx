@@ -12,6 +12,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ITag } from '@alga-psa/types';
 import { tagInputSizeConfig, type TagSize } from './tagSizeConfig';
+import { useTranslation } from '../../lib/i18n/client';
 
 interface TagInputProps {
   id?: string;
@@ -29,9 +30,10 @@ export const TagInput: React.FC<TagInputProps> = ({
   currentTags = [],
   onAddTag,
   className = '',
-  placeholder = 'New tag',
+  placeholder,
   size = 'md'
 }) => {
+  const { t } = useTranslation('common');
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
@@ -196,7 +198,7 @@ export const TagInput: React.FC<TagInputProps> = ({
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyPress}
                 className={`rounded-l-md focus:ring-offset-0 focus:z-10 border-0 ${sizeConfig.inputClass}`}
-                placeholder={placeholder}
+                placeholder={placeholder ?? t('tags.fields.newTag.placeholder')}
                 autoFocus
                 autoComplete="off"
                 containerClassName="m-0"
@@ -210,7 +212,7 @@ export const TagInput: React.FC<TagInputProps> = ({
                 variant={isSaving || !inputValue.trim() ? "outline" : "default"}
                 size={size === 'sm' ? "xs" : "sm"}
               >
-                {isSaving ? '...' : 'Save'}
+                {isSaving ? t('tags.actions.saving') : t('actions.save')}
               </Button>
             </div>
           </div>,

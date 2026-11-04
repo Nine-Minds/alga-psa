@@ -18,12 +18,34 @@ export interface IContractLineServiceConfiguration extends TenantEntity {
 }
 
 /**
+ * What a stored fixed-member `base_rate` means (same values as
+ * `FixedRateBasis` in `@alga-psa/shared/billingClients/fixedMemberRate`, which
+ * owns the interpretation).
+ *  - 'per_unit': the member contributes base_rate × quantity
+ *  - 'share': the member contributes base_rate (its slice of the line fee)
+ */
+export type FixedBaseRateBasis = 'per_unit' | 'share';
+
+/**
+ * A fixed-member rate write: clearing the rate states no basis; a stored rate
+ * always states its meaning (`base_rate IS NULL` ⇔ `base_rate_basis IS NULL`).
+ */
+export type FixedMemberRateWrite =
+  | { base_rate: null; base_rate_basis?: null }
+  | { base_rate: number; base_rate_basis: FixedBaseRateBasis };
+
+/**
  * Interface for fixed price service configuration
  */
 export interface IContractLineServiceFixedConfig extends TenantEntity {
   effective_period_start?: string;
   config_id: string;
   base_rate?: number | null; // Added base_rate field
+  /**
+   * What `base_rate` means. NULL exactly when `base_rate` is NULL. Interpret it
+   * through `fixedRateBasisOf` / `fixedMemberContributionCents`, never by hand.
+   */
+  base_rate_basis?: FixedBaseRateBasis | null;
   /**
    * Who owns this base_rate. `inherited` (base_rate NULL) follows the catalog;
    * `custom`/`unreviewed` take the stored number. See the rate-provenance plan.

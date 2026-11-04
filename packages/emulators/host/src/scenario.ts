@@ -87,7 +87,10 @@ async function runStep(host: EmulatorHost, step: ScenarioStep): Promise<unknown>
     await host.instance(emulatorId).controls.armFault(name, step.params);
     return null;
   }
-  const { emulatorId, name } = splitTarget(step.disarm);
-  await host.instance(emulatorId).controls.disarmFault(name);
-  return null;
+  if ('disarm' in step) {
+    const { emulatorId, name } = splitTarget(step.disarm);
+    await host.instance(emulatorId).controls.disarmFault(name);
+    return null;
+  }
+  throw new ControlError(400, `Unknown scenario step ${JSON.stringify(step)}`);
 }

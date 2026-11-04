@@ -309,4 +309,26 @@ describe('documents view route ticket authorization contract', () => {
     await expect(response.text()).resolves.toBe('Forbidden');
     expect(createProviderMock).not.toHaveBeenCalled();
   });
+
+  it('keeps denying a client-portal user an arbitrary MSP-owned file (portal preview inlines server-side instead)', async () => {
+    // File exists in the tenant (e.g. the MSP's own company logo / designer image) but the
+    // document authorization guard grants the portal user no relationship to it.
+    getAuthorizedDocumentByFileIdMock.mockResolvedValue(null);
+
+    vi.resetModules();
+    const { GET } = await import('server/src/app/api/documents/view/[fileId]/route');
+    const response = await GET(
+      new NextRequest('http://localhost:3000/api/documents/view/msp-company-file?t=1'),
+      { params: Promise.resolve({ fileId: 'msp-company-file' }) }
+    );
+
+    expect(response.status).toBe(403);
+    expect(getAuthorizedDocumentByFileIdMock).toHaveBeenCalledWith(
+      expect.anything(),
+      'tenant-1',
+      expect.objectContaining({ user_type: 'client' }),
+      'file-1'
+    );
+    expect(createProviderMock).not.toHaveBeenCalled();
+  });
 });

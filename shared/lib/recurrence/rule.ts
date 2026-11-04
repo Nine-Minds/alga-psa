@@ -160,7 +160,6 @@ void schemasMatchTypes;
  */
 export const recurrenceRuleSchema = inferredRecurrenceRuleSchema as unknown as z.ZodType<
   RecurrenceRule,
-  z.ZodTypeDef,
   z.input<typeof inferredRecurrenceRuleSchema>
 >;
 

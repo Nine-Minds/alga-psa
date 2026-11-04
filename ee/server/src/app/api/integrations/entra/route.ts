@@ -4,6 +4,7 @@ import { createTenantKnex, runWithTenant } from '@enterprise/lib/db';
 import { tenantDb } from '@alga-psa/db';
 import { getActiveEntraPartnerConnection } from '@enterprise/lib/integrations/entra/connectionRepository';
 import { getEntraCippCredentials } from '@enterprise/lib/integrations/entra/providers/cipp/cippSecretStore';
+import { buildCippStatusDetails } from '@enterprise/lib/integrations/entra/providers/cipp/cippConnectionDetails';
 import { resolveMicrosoftCredentialsForTenant } from '@enterprise/lib/integrations/entra/auth/microsoftCredentialResolver';
 
 export { dynamic, runtime };
@@ -53,6 +54,9 @@ export async function GET(): Promise<Response> {
 
   let connectionDetails: {
     cippBaseUrl: string | null;
+    cippAuthType: 'api_client' | 'legacy_api_token' | null;
+    cippClientId: string | null;
+    cippDirectoryId: string | null;
     directTenantId: string | null;
     directCredentialSource: 'profile' | null;
     directProfileId: string | null;
@@ -63,7 +67,7 @@ export async function GET(): Promise<Response> {
   if (connection?.connection_type === 'cipp') {
     const credentials = await getEntraCippCredentials(accessGate.tenantId).catch(() => null);
     connectionDetails = {
-      cippBaseUrl: credentials?.baseUrl || null,
+      ...buildCippStatusDetails(credentials),
       directTenantId: null,
       directCredentialSource: null,
       directProfileId: null,
@@ -74,6 +78,9 @@ export async function GET(): Promise<Response> {
     const credentials = await resolveMicrosoftCredentialsForTenant(accessGate.tenantId).catch(() => null);
     connectionDetails = {
       cippBaseUrl: null,
+      cippAuthType: null,
+      cippClientId: null,
+      cippDirectoryId: null,
       directTenantId: credentials?.tenantId || null,
       directCredentialSource: credentials?.source || null,
       directProfileId: credentials?.profileId || null,

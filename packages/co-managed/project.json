@@ -1,0 +1,26 @@
+{
+  "name": "@alga-psa/co-managed",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/co-managed/src",
+  "projectType": "library",
+  "tags": [
+    "scope:co-managed",
+    "type:horizontal"
+  ],
+  "targets": {
+    "build": {
+      "executor": "nx:noop"
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": [
+        "{options.outputFile}"
+      ],
+      "options": {
+        "lintFilePatterns": [
+          "packages/co-managed/**/*.{ts,tsx}"
+        ]
+      }
+    }
+  }
+}

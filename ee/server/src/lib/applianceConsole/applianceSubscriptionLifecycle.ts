@@ -11,7 +11,12 @@
 
 import type Stripe from 'stripe';
 import logger from '@alga-psa/core/logger';
-import { revokeApplianceEntitlement, updateApplianceEntitlementSeats } from './algaLicenseAdminClient';
+import {
+  revokeApplianceEntitlement,
+  syncApplianceSubscriptionState,
+  updateApplianceEntitlementSeats,
+  type ApplianceSubscriptionState,
+} from './algaLicenseAdminClient';
 import { findPerSeatItem } from './stripeBilling';
 
 export const APPLIANCE_DEPLOYMENT_TYPE = 'appliance';
@@ -27,17 +32,22 @@ export interface ApplianceLifecycleOutcome {
   subscriptionId: string | null;
   action: 'revoke' | 'sync-seats' | 'none';
   seats?: number;
+  /** Set for subscription.* events: the state mirrored to C4. */
+  state?: ApplianceSubscriptionState;
 }
 
 export interface ApplianceLifecycleDeps {
   revoke: (stripeSubId: string) => Promise<unknown>;
   syncSeats: (tenantId: string, seats: number) => Promise<unknown>;
+  /** Mirror the subscription snapshot onto the C4 entitlement (display only, never revokes). */
+  syncState: (stripeSubId: string, state: ApplianceSubscriptionState) => Promise<unknown>;
   audit?: (details: Record<string, unknown>) => Promise<void>;
 }
 
 const defaultDeps: ApplianceLifecycleDeps = {
   revoke: revokeApplianceEntitlement,
   syncSeats: updateApplianceEntitlementSeats,
+  syncState: syncApplianceSubscriptionState,
 };
 
 export function isApplianceSubscription(sub: { metadata?: Stripe.Metadata | null } | null | undefined): boolean {
@@ -73,11 +83,51 @@ export async function resolveApplianceSubscription(
   return null;
 }
 
-/** Pure decision: what does this event mean for the C4 entitlement? */
+/**
+ * Snapshot of the subscription for C4's display mirror. A deleted event always
+ * mirrors `canceled` (Stripe's payload already says so, but don't depend on it).
+ * `current_period_end` is per-item in this Stripe API version; fall back to the
+ * legacy subscription-level field for older API versions.
+ */
+export function subscriptionStateSnapshot(event: Stripe.Event, sub: Stripe.Subscription): ApplianceSubscriptionState {
+  const deleted = event.type === 'customer.subscription.deleted';
+  const periodEnd =
+    sub.items?.data?.[0]?.current_period_end ??
+    (sub as unknown as { current_period_end?: number }).current_period_end ??
+    null;
+  return {
+    status: deleted ? 'canceled' : sub.status,
+    cancel_at_period_end: !!sub.cancel_at_period_end,
+    cancel_at: sub.cancel_at ?? null,
+    canceled_at: sub.canceled_at ?? (deleted ? event.created ?? null : null),
+    current_period_end: periodEnd,
+  };
+}
+
+const isSubscriptionEvent = (event: Stripe.Event) => event.type.startsWith('customer.subscription.');
+
+/**
+ * Pure decision: what does this event mean for the C4 entitlement?
+ *
+ * Revoke ONLY when the subscription actually ends (deleted, or updated into a
+ * LAPSED status). A cancel *request* (`cancel_at_period_end` false→true, or
+ * `cancel_at` set) and its undo leave the customer paid-through, so they fall
+ * through to 'none' (or a seat sync) and are only mirrored via `state`.
+ */
 export function decideLifecycleAction(
   event: Stripe.Event,
   sub: Stripe.Subscription,
   env: NodeJS.ProcessEnv = process.env,
+): { action: 'revoke' | 'sync-seats' | 'none'; seats?: number; state?: ApplianceSubscriptionState } {
+  const state = isSubscriptionEvent(event) ? subscriptionStateSnapshot(event, sub) : undefined;
+  const decision = decideAction(event, sub, env);
+  return state ? { ...decision, state } : decision;
+}
+
+function decideAction(
+  event: Stripe.Event,
+  sub: Stripe.Subscription,
+  env: NodeJS.ProcessEnv,
 ): { action: 'revoke' | 'sync-seats' | 'none'; seats?: number } {
   if (event.type === 'customer.subscription.deleted') return { action: 'revoke' };
 
@@ -126,6 +176,7 @@ export async function handleApplianceSubscriptionEvent(
     subscriptionId: sub.id,
     action: decision.action,
     seats: decision.seats,
+    state: decision.state,
   };
 
   logger.info(`[ApplianceLifecycle] ${event.type} sub=${sub.id} tenant=${tenantId ?? 'unknown'} action=${decision.action}`);
@@ -141,6 +192,13 @@ export async function handleApplianceSubscriptionEvent(
     }
   }
 
+  // Mirror on every subscription event (not just transitions) so C4 self-heals.
+  // After revoke/seats: a failure here must not skip those, and Stripe's retry
+  // re-runs all three idempotently.
+  if (decision.state) {
+    await deps.syncState(sub.id, decision.state);
+  }
+
   if (deps.audit) {
     await deps.audit({
       event_id: event.id,
@@ -150,6 +208,7 @@ export async function handleApplianceSubscriptionEvent(
       action: outcome.action,
       seats: outcome.seats ?? null,
       status: sub.status,
+      cancel_at_period_end: decision.state?.cancel_at_period_end ?? null,
     }).catch(() => undefined);
   }
 

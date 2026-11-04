@@ -832,7 +832,8 @@
           "groups_read": "Odczytaj grupy katalogu",
           "entitlement_group_resolves": "Znajdź grupę uprawnień",
           "user_yield_preview": "Podgląd uwzględnionych użytkowników",
-          "per_tenant_users": "Użytkownicy CIPP według organizacji"
+          "per_tenant_users": "Użytkownicy CIPP według organizacji",
+          "cipp_token_mint": "Pobranie tokenu API CIPP"
         },
         "readiness": {
           "authenticated": "Zalogowano",
@@ -913,8 +914,8 @@
           "noManagedTenants": "Nie zwrócono zarządzanych organizacji. Partner musi być wdrożony w Microsoft 365 Lighthouse z aktywnymi relacjami GDAP.",
           "mappedTenantMissing": "Wykrywanie nie zwróciło przypisanej organizacji „{{client}}”. Relacja GDAP mogła wygasnąć lub zostać zakończona.",
           "mappingsLookupFailed": "Nie udało się odczytać potwierdzonych przypisań organizacji. Uruchom diagnostykę ponownie; jeśli problem się utrzymuje, sprawdź przypisania.",
-          "cippCredentialsMissing": "Wymagane są bazowy adres URL CIPP i token API. Skonfiguruj je na karcie Połączenie.",
-          "cippAuthRejected": "CIPP odrzucił poświadczenie API. Odnów klucz API CIPP w sekcji Ustawienia > CIPP > Dostęp do API; nie jest to klucz tajny klienta Azure.",
+          "cippCredentialsMissing": "URL API CIPP i dane uwierzytelniające są wymagane. Skonfiguruj je na karcie Połączenie.",
+          "cippAuthRejected": "CIPP odrzucił starszy klucz API. Połącz ponownie, używając klienta API CIPP, na karcie Połączenie (utwórz go w CIPP > Integrations > CIPP-API).",
           "cippEmptyTenantList": "CIPP nie zwrócił organizacji. Sprawdź widoczność klientów i konfigurację CIPP.",
           "cippUnreachable": "Nie można połączyć się z CIPP. Sprawdź bazowy adres URL, DNS/TLS i łączność wychodzącą.",
           "cippPerTenantFailed": "CIPP nie mógł odczytać katalogu tej organizacji.",

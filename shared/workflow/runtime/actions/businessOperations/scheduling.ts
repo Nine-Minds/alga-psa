@@ -4,6 +4,7 @@ import type { BuiltWorkflowPayload } from '@alga-psa/event-schemas';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import ScheduleEntry from '../../../../models/scheduleEntry';
+import { assertHumanWorkAssignee } from '../../../../lib/humanWork/assertHumanWorkAssignee';
 import { IEditScope } from '@alga-psa/types';
 import { withWorkflowPicker } from '@alga-psa/event-schemas';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
@@ -404,6 +405,9 @@ export function registerSchedulingActions(): void {
       const user = await tenantScopedTable(tx, 'users').where({ user_id: input.user_id }).first();
       if (!user) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'User not found' });
 
+      // Human-work guard (R5.3): schedule assignees must be active internal users.
+      await assertHumanWorkAssignee(tx.trx, tx.tenantId, [input.user_id]);
+
       const db = tenantDb(tx.trx, tx.tenantId);
       const technicianRoleQuery = db.table('user_roles as ur');
       db.tenantJoin(technicianRoleQuery, 'roles as r', 'ur.role_id', 'r.role_id', {
@@ -602,6 +606,9 @@ export function registerSchedulingActions(): void {
           throwActionError(ctx, { category: 'ActionError', code: 'CONFLICT', message: 'Unable to shift schedule entry to a non-conflicting window' });
         }
       }
+
+      // Human-work guard (R5.3): schedule assignees must be active internal users.
+      await assertHumanWorkAssignee(tx.trx, tx.tenantId, assignedUserIds);
 
       const nowIso = new Date().toISOString();
       await tenantScopedTable(tx, 'schedule_entries').insert({

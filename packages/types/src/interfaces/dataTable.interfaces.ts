@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { HTMLAttributes, ReactNode } from 'react';
 
 export interface BaseColumnDefinition<T> {
   title: string | ReactNode;
@@ -9,6 +9,12 @@ export interface BaseColumnDefinition<T> {
    */
   id?: string;
   width?: string;
+  /**
+   * Narrowest width (px or rem) the table may give this column when space is short.
+   * Columns that declare one shrink toward it before any column is hidden.
+   * It also replaces the default 96px floor for that column.
+   */
+  minWidth?: string;
   /** Optional class for header th */
   headerClassName?: string;
   /** Optional class for body td */
@@ -44,6 +50,12 @@ export interface DataTableProps<T> {
   editableConfig?: EditableConfig;
   /** Custom class name for table rows */
   rowClassName?: (record: T) => string;
+  /**
+   * Extra attributes spread onto each row's `<tr>` — drag handlers for a
+   * reorderable table, for instance. The table keeps its own `className` and
+   * row click handler; use `rowClassName` for classes.
+   */
+  rowProps?: (record: T, index: number) => Omit<HTMLAttributes<HTMLTableRowElement>, 'className' | 'onClick'>;
   /** Callback invoked when the set of visible rows (current page) changes */
   onVisibleRowsChange?: (rows: T[]) => void;
   /** Initial sorting configuration */

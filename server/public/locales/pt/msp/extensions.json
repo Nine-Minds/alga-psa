@@ -7,6 +7,10 @@
     "description": "{{feature}} requer Pro. Atualize para acessar esse recurso."
   },
   "settings": {
+    "unavailable": {
+      "title": "Configurações de extensão indisponíveis",
+      "description": "O gerenciamento das configurações de extensão está disponível no AlgaPSA Pro."
+    },
     "title": "Gerenciamento de extensão",
     "description": "Instale, configure e gerencie extensões para estender a funcionalidade do AlgaPSA.",
     "tabs": {
@@ -98,7 +102,12 @@
       "description": "Gerenciar extensões"
     },
     "title": "Extensões",
-    "description": "O gerenciamento de extensões está disponível no Pro."
+    "description": "O gerenciamento de extensões está disponível no Pro.",
+    "unavailable": {
+      "metadataTitle": "Extensões (somente EE)",
+      "title": "Extensões indisponíveis",
+      "description": "Disponível no Pro."
+    }
   },
   "detail": {
     "metadataTitle": "Extensões - Recurso Pro",
@@ -121,7 +130,12 @@
       "description": "Ver detalhes da extensão"
     },
     "title": "Detalhes da extensão",
-    "description": "Os detalhes da extensão estão disponíveis no Pro."
+    "description": "Os detalhes da extensão estão disponíveis no Pro.",
+    "unavailable": {
+      "metadataTitle": "Detalhes da extensão (somente EE)",
+      "title": "Detalhes da extensão indisponíveis",
+      "description": "Esta página está disponível no Pro."
+    }
   },
   "settingsPage": {
     "metadata": {
@@ -129,7 +143,12 @@
       "description": "Definir configurações de extensão"
     },
     "title": "Configurações de extensão",
-    "description": "As configurações de extensão estão disponíveis no Pro."
+    "description": "As configurações de extensão estão disponíveis no Pro.",
+    "unavailable": {
+      "metadataTitle": "Configurações de extensão (somente EE)",
+      "title": "Configurações de extensão indisponíveis",
+      "description": "Esta página está disponível no Pro."
+    }
   },
   "details": {
     "label": "Detalhes da extensão",
@@ -235,6 +254,10 @@
     "cancel": "Cancelar"
   },
   "list": {
+    "unavailable": {
+      "title": "Extensões indisponíveis",
+      "description": "O gerenciamento de extensões está disponível no AlgaPSA Pro."
+    },
     "label": "Gerenciamento de extensões",
     "heading": "Extensões",
     "loading": "Carregando extensões...",
@@ -294,7 +317,20 @@
     "installCompleteError": "Extensão finalizada, mas a instalação não foi concluída",
     "installUnexpected": "Erro inesperado durante a instalação",
     "finalizeRequireManifest": "Cole o JSON do manifesto antes de finalizar.",
-    "finalizeProvidedFailed": "Falha ao finalizar com o manifesto fornecido"
+    "finalizeProvidedFailed": "Falha ao finalizar com o manifesto fornecido",
+    "pro": {
+      "title": "Extensões (Pro)",
+      "description": "A instalação e o gerenciamento de extensões estão disponíveis no AlgaPSA Pro.",
+      "featureTitle": "Recurso Pro",
+      "help": "O instalador de extensões está disponível apenas no AlgaPSA Pro.",
+      "actions": {
+        "learnMore": "Saiba mais sobre o Pro"
+      }
+    },
+    "unavailable": {
+      "title": "Instalação de extensões indisponível",
+      "description": "A instalação de extensões está disponível no AlgaPSA Pro."
+    }
   },
   "installSimple": {
     "title": "Instalar extensão",
@@ -371,5 +407,19 @@
       "medium": "As permissões de modificação permitem que a extensão atualize dados existentes.",
       "high": "As permissões avançadas permitem que a extensão crie, exclua ou execute operações."
     }
+  },
+  "iframe": {
+    "title": "Aplicativo da extensão",
+    "starting": "Iniciando extensão",
+    "loadingUi": "Carregando interface da extensão…",
+    "connecting": "Conectando ao espaço de trabalho de execução…",
+    "loadFailed": "Não foi possível carregar esta extensão.",
+    "configurationHint": "Verifique a configuração da extensão e tente novamente."
+  },
+  "unavailable": {
+    "metadataTitle": "Extensões (somente EE)",
+    "title": "Extensão indisponível",
+    "description": "O sistema de extensões está disponível no Pro e não está incluído nesta versão Community Edition.",
+    "requestedId": "ID solicitado: {{id}}"
   }
 }

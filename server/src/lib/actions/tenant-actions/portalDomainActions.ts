@@ -7,6 +7,10 @@ import { withAuth, hasPermission } from '@alga-psa/auth';
 import {
   computeCanonicalHost,
   getPortalDomain,
+  getPortalDomainByHostname,
+  updatePortalDomain,
+  isPortalDomainSurface,
+  DEFAULT_PORTAL_DOMAIN_SURFACE,
   type PortalDomainStatus,
   normalizeHostname,
   type PortalDomain,
@@ -16,6 +20,13 @@ import type {
   PortalDomainRegistrationRequest,
   PortalDomainRegistrationResult,
 } from '@alga-psa/tenancy/actions/tenant-actions/portalDomain.types';
+import {
+  confirmAllRequired,
+  describeMissingRedirectUris,
+  evaluateSsoRedirectUriGate,
+  readSsoRedirectUriState,
+  withSsoRedirectUriState,
+} from '@/lib/portal-domains/ssoRedirectUris';
 import { isEnterpriseEdition } from '@/lib/features';
 import { resolvePortalDomainProvisioning } from '@/lib/portal-domains/provisioner';
 import { getPortalDomainLastSeen } from '@/lib/portal-domains/portalDomainSeen';
@@ -61,6 +72,26 @@ function buildVerificationDetails(record: PortalDomain | null, canonicalHost: st
   return { expected_cname: canonicalHost };
 }
 
+function buildRedirectUriStatus(
+  record: PortalDomain | null,
+  mode: string
+): Pick<PortalDomainStatusResponse, 'ssoRedirectUris'> {
+  const state = readSsoRedirectUriState(record?.verificationDetails);
+  if (!record || !state) {
+    return {};
+  }
+  return {
+    ssoRedirectUris: {
+      required: state.required,
+      confirmed: state.confirmed,
+      missing: evaluateSsoRedirectUriGate(record.surface, record.verificationDetails).missing,
+      source: state.source ?? null,
+      // Only the appliance owner controls the IdP + proxy; hosted needs platform ops.
+      canSelfConfirm: mode === 'direct',
+    },
+  };
+}
+
 function createStatusResponse(record: PortalDomain | null, canonicalHost: string): PortalDomainStatusResponse {
   const statusMessage = record?.statusMessage ?? 'No custom domain registered yet.';
   const { mode } = resolvePortalDomainProvisioning();
@@ -83,6 +114,8 @@ function createStatusResponse(record: PortalDomain | null, canonicalHost: string
     isEditable: true,
     edition: isEnterpriseEdition() ? 'ee' : 'ce',
     mode,
+    surface: record?.surface ?? DEFAULT_PORTAL_DOMAIN_SURFACE,
+    ...buildRedirectUriStatus(record, mode),
   };
 }
 
@@ -167,7 +200,7 @@ async function computeNeverSeenOnHost(record: PortalDomain | null): Promise<bool
   if (!record || record.status !== 'active' || !record.domain) {
     return false;
   }
-  const activatedAt = record.createdAt ? new Date(record.createdAt).getTime() : Date.now();
+  const activatedAt = new Date(record.lastCheckedAt ?? record.createdAt ?? Date.now()).getTime();
   if (Number.isFinite(activatedAt) && Date.now() - activatedAt < NEVER_SEEN_GRACE_MS) {
     return false;
   }
@@ -217,6 +250,26 @@ export const requestPortalDomainRegistrationAction = withAuth(async (
     return directModeFailure;
   }
 
+  const surface = request.surface === undefined ? (existing?.surface ?? DEFAULT_PORTAL_DOMAIN_SURFACE) : request.surface;
+  if (!isPortalDomainSurface(surface)) {
+    return actionError('Choose where the custom domain is served: client portal, MSP app, or both.', 'msp/settings:errors.clientPortalDomain.invalidSurface');
+  }
+
+  // D7: one host maps to exactly one tenant AND one surface row. The global unique index on
+  // lower(domain) enforces this in the database; these checks turn it into a clear refusal.
+  const claimedBy = await getPortalDomainByHostname(knex, normalizedDomain);
+  if (claimedBy && claimedBy.tenant !== tenant) {
+    return actionError('This domain is already in use. Choose a different domain.', 'msp/settings:errors.clientPortalDomain.alreadyInUse');
+  }
+  if (claimedBy && claimedBy.id !== existing?.id) {
+    // Same tenant, different surface row. Serving both apps from one host is `surface=both`
+    // on a single row (path routing), never a second row for the same host.
+    return actionError(
+      'This domain is already used by another of your custom domains. To serve the client portal and the MSP app from one domain, choose "Both".',
+      'msp/settings:errors.clientPortalDomain.usedByOtherSurface'
+    );
+  }
+
   const domainChanged = existing ? existing.domain !== normalizedDomain : false;
 
   const { enqueued } = await provisioner.register({
@@ -226,12 +279,14 @@ export const requestPortalDomainRegistrationAction = withAuth(async (
     domain: normalizedDomain,
     existing,
     domainChanged,
+    surface,
   });
 
   analytics.capture('portal_domain.registration_enqueued', {
     tenant_id: tenant,
     domain: normalizedDomain,
     workflow_enqueued: enqueued,
+    surface,
     trigger: domainChanged ? 'refresh' : 'register',
     was_update: domainChanged,
   });
@@ -317,5 +372,40 @@ export const disablePortalDomainAction = withAuth(async (user, { tenant }): Prom
     status: status.status,
   });
 
+  return status;
+});
+
+
+/**
+ * Attest that the SSO redirect URIs for the domain are registered with the identity
+ * provider(s). Self-service only where the tenant owns the IdP and proxy (appliance /
+ * direct mode); hosted deployments need platform operators to register the URIs.
+ */
+export const confirmPortalDomainRedirectUrisAction = withAuth(async (user, { tenant }): Promise<PortalDomainStatusActionResult> => {
+  const { knex } = await createTenantKnex();
+  const permissionFailure = await checkPermission(user, UPDATE_ACTION, knex);
+  if (permissionFailure) {
+    return permissionFailure;
+  }
+
+  const { provisioner, mode } = resolvePortalDomainProvisioning();
+  if (mode !== 'direct') {
+    return permissionError('Redirect URIs for hosted domains are registered by platform support.', 'msp/settings:errors.clientPortalDomain.redirectUrisHosted');
+  }
+
+  const current = await getPortalDomain(knex, tenant);
+  const state = readSsoRedirectUriState(current?.verificationDetails);
+  if (!current || current.status !== 'pending_redirect_uri' || !state) {
+    return actionError('No pending SSO redirect URI confirmation for this domain.', 'msp/settings:errors.clientPortalDomain.nothingToConfirm');
+  }
+
+  const updated = await updatePortalDomain(knex, tenant, { id: current.id }, {
+    verificationDetails: withSsoRedirectUriState(current.verificationDetails, confirmAllRequired(state)),
+    statusMessage: describeMissingRedirectUris([]),
+  });
+  await provisioner.refresh({ knex, tenant, existing: updated ?? current });
+
+  const status = await fetchStatus(knex, tenant);
+  analytics.capture('portal_domain.redirect_uris_confirmed', { tenant_id: tenant, status: status.status });
   return status;
 });

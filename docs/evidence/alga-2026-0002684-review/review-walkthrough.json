@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "title": "Prepaid hours on contracts: priced block in advance, overage in arrears (alga-2026-0002684)",
+  "paneId": "a3e420b7-903d-4b2b-afd5-8d0facf8fe41",
+  "startedAt": "2026-10-25T18:03:14.448Z",
+  "finishedAt": "2026-10-25T18:10:49.040Z",
+  "durationMs": 143887,
+  "width": 1920,
+  "height": 755,
+  "bytes": 4413278,
+  "frames": 754,
+  "marks": [
+    {
+      "t": 0,
+      "label": "1. The contract: service desk fee + one Prepaid Block line (Billing > Contracts > EQUIT Prepaid Hours Acceptance R2 > Contract Lines)"
+    },
+    {
+      "t": 6.351,
+      "label": "2. Block hours, price, issue mode and rollover are configured in one place (Prepaid Block > Edit)"
+    },
+    {
+      "t": 10.812,
+      "label": "3. First invoice INV-000163 = $3,000: fixed fee + 10 h block, both billed in advance (Billing > Invoicing > Finalized)"
+    },
+    {
+      "t": 14.499,
+      "label": "4. Next invoice INV-000164 = $3,600: next block in advance + 4 overage hours x $150 in arrears"
+    },
+    {
+      "t": 17.875,
+      "label": "5. Simulator on the saved contract: 14 assumed hours gives $3,000 then $3,600, no manual edits (Client Contracts > R2 > Simulate)"
+    },
+    {
+      "t": 23.349,
+      "label": "6. Compare with past invoices (Sep-Oct 2026): every simulated line matches INV-000163 / INV-000164 at +$0.00"
+    },
+    {
+      "t": 38.564,
+      "label": "7. After a client switches to quarterly billing, Compare with past invoices still replays the billed monthly windows: Sep $1,500 = INV-000168, Oct $2,100 = INV-000170 (Client Contracts > EQUIT Block Hours R5 > Simulate)"
+    },
+    {
+      "t": 55.908,
+      "label": "8. Due Work: the Nov group combines Oct overage (arrears) with the Nov block and fixed fee (advance) (Billing > Invoicing > Generate, Invoice window to 11/30/2026)"
+    },
+    {
+      "t": 68.133,
+      "label": "9. Preview: $1,500 fee + $1,500 Nov block + 3 Oct overage hours x $150 = $3,450"
+    },
+    {
+      "t": 72.732,
+      "label": "10. Generate the invoice from the preview; the group leaves Due Work"
+    },
+    {
+      "t": 75.48,
+      "label": "11. Draft INV-000172 = $3,450: block fee, overage and $0 draw line, each with its own period (Billing > Invoicing > Drafts)"
+    },
+    {
+      "t": 79.213,
+      "label": "12. Remaining hours with dollar value: client Hour Blocks (Clients > EQUIT Acceptance 2684 R2 > Billing Dashboard)"
+    },
+    {
+      "t": 85.83,
+      "label": "13. Contract Reports: used, remaining, remaining value, valid from and expiry per block (Billing > Reports > Bucket Hours)"
+    },
+    {
+      "t": 91.047,
+      "label": "14. Templates carry the same priced block (Billing > Contract Templates > EQUIT Block Hours Template R2)"
+    },
+    {
+      "t": 95.74,
+      "label": "Failure & recovery A: invoice generated too early. Reverse Draft voids the Nov block and releases the overage hours (Drafts > INV-000172 > Reverse Draft)"
+    },
+    {
+      "t": 105.272,
+      "label": "Recovery: the Nov group is back in Due Work, ready to generate again"
+    },
+    {
+      "t": 115.174,
+      "label": "Failure B: a zero-hour block is refused with a clear message; Cancel leaves the saved block unchanged (Contract Lines > Prepaid Block > Edit)"
+    },
+    {
+      "t": 130.612,
+      "label": "15. Client portal: the client sees prepaid hours left with their dollar value (Client Portal > Billing; signed in as tinus.smoke2684@equit.example)"
+    }
+  ],
+  "files": {
+    "video": "review-walkthrough.webm",
+    "chapters": "review-walkthrough.vtt"
+  }
+}

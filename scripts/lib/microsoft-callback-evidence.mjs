@@ -1,3 +1,5 @@
+import { DEVELOPMENT_RUNTIME_IMAGE } from './development-runtime.mjs';
+
 const configuration = {
   edition: 'enterprise', serverLifecycle: 'next-development', provider: 'microsoft',
   authority: 'synthetic-loopback', applicationAuthentication: 'nextauth',
@@ -23,11 +25,14 @@ export function verifyMicrosoftCallbackEvidence({ report, revision, source, runt
   require(report?.status === 'passed' && report.stage === 'completed', 'callback-not-completed');
   const gitSource = report?.sourceRevisionOrigin === 'git' && report.sourceRevision === revision
     && report.sourceRevisionAfter === revision;
+  // The development runtime image compiled the mounted checkout; the candidate
+  // image is not involved, and what the development server wrote into the
+  // checkout is covered by the wrapper's clean-source check above.
   const containerSource = report?.sourceRevisionOrigin === 'environment' && report.sourceRevision === revision
-    && report.sourceRevisionAfter === null && runtimeBinding?.imageRevision === revision
+    && report.sourceRevisionAfter === null && runtimeBinding?.runtimeImage === DEVELOPMENT_RUNTIME_IMAGE
     && /^sha256:[a-f0-9]{64}$/.test(runtimeBinding.imageId ?? '')
     && runtimeBinding.containerImageId === runtimeBinding.imageId
-    && runtimeBinding.mountedSourceRevision === revision && runtimeBinding.mountsReadOnly === true;
+    && runtimeBinding.mountedSourceRevision === revision && runtimeBinding.workspaceMounted === true;
   require(gitSource || containerSource, 'mismatched-callback-source');
   require(exactKeys(report?.configuration, Object.keys(configuration))
     && Object.entries(configuration).every(([key, value]) => report.configuration[key] === value), 'invalid-callback-configuration');

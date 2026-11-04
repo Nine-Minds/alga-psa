@@ -108,6 +108,7 @@ describe('MSP dispatch/reports/admin/time-entry locale batch', () => {
       'common',
       'msp/core',
       'msp/settings',
+      'msp/extensions',
       'msp/keyboard-shortcuts',
       'msp/admin',
       'msp/email-providers',
@@ -118,6 +119,7 @@ describe('MSP dispatch/reports/admin/time-entry locale batch', () => {
       'features/billing',
       'msp/calendar',
       'msp/integrations',
+      'features/documents',
     ]);
 
     expect(ROUTE_NAMESPACES['/msp/service-requests']).toEqual([
@@ -125,8 +127,9 @@ describe('MSP dispatch/reports/admin/time-entry locale batch', () => {
       'msp/core',
       'features/tickets',
       'msp/service-requests',
+      'features/documents',
     ]);
-    expect(ROUTE_NAMESPACES['/msp/time-entry']).toEqual(['common', 'msp/core', 'msp/time-entry']);
+    expect(ROUTE_NAMESPACES['/msp/time-entry']).toEqual(['common', 'msp/core', 'msp/time-entry', 'features/tickets', 'features/documents']);
     expect(ROUTE_NAMESPACES['/msp/time-sheet-approvals']).toEqual([
       'common',
       'msp/core',

@@ -69,7 +69,7 @@ export async function assertInvoiceExportReady(
   if (blockers.length > 0) {
     throw new InvoiceExportReadinessError(
       `This invoice can't be finalized because it would fail QuickBooks export: ${blockers.join('; ')}. ` +
-        'Assign services and QuickBooks item mappings to these lines, or turn off auto-sync, then finalize again.'
+        'Assign services and QuickBooks item mappings to these lines, configure the discount mapping, or turn off auto-sync, then finalize again.'
     );
   }
 }
@@ -123,16 +123,10 @@ async function collectExportBlockers(knex: Knex, tenant: string, invoiceId: stri
   // charge with no children is a user-fixable gap (a manual/discount line
   // someone forgot to classify).
   const chargeIdsForDetailLookup = charges.filter((c) => !c.service_id).map((c) => c.item_id);
-  const consolidatedParents = new Set<string>(
-    chargeIdsForDetailLookup.length > 0
-      ? (
-          await knex('invoice_charge_details')
-            .whereIn('item_id', chargeIdsForDetailLookup)
-            .andWhere({ tenant })
-            .select('item_id')
-        ).map((row: { item_id: string }) => row.item_id)
-      : []
-  );
+  const detailServices: Array<{ item_id: string; service_id: string }> = chargeIdsForDetailLookup.length > 0
+    ? await knex('invoice_charge_details').whereIn('item_id', chargeIdsForDetailLookup)
+      .andWhere({ tenant }).select('item_id', 'service_id') : [];
+  const consolidatedParents = new Set(detailServices.filter(row => row.service_id).map(row => row.item_id));
 
   const blockers: string[] = [];
 
@@ -158,7 +152,12 @@ async function collectExportBlockers(knex: Knex, tenant: string, invoiceId: stri
       );
     }
   }
-  const serviceIds = [...new Set(charges.map((charge) => charge.service_id).filter((id): id is string => Boolean(id)))];
+  const serviceIds = [
+    ...new Set(
+      [...charges.map((charge) => charge.service_id), ...detailServices.map((row) => row.service_id)]
+        .filter((id): id is string => Boolean(id))
+    )
+  ];
   const unmappedServiceIds: string[] = [];
   for (const serviceId of serviceIds) {
     const mapping = await resolver.resolveServiceMapping({

@@ -7,6 +7,10 @@
     "description": "Voor {{feature}} is Pro vereist. Upgrade om toegang te krijgen tot deze functie."
   },
   "settings": {
+    "unavailable": {
+      "title": "Extensie-instellingen niet beschikbaar",
+      "description": "Het beheer van extensie-instellingen is beschikbaar in AlgaPSA Pro."
+    },
     "title": "Extensiebeheer",
     "description": "Installeer, configureer en beheer extensies om de functionaliteit van AlgaPSA uit te breiden.",
     "tabs": {
@@ -98,7 +102,12 @@
       "description": "Extensies beheren"
     },
     "title": "Extensies",
-    "description": "Extensiebeheer is beschikbaar in Pro."
+    "description": "Extensiebeheer is beschikbaar in Pro.",
+    "unavailable": {
+      "metadataTitle": "Extensies (alleen EE)",
+      "title": "Extensies niet beschikbaar",
+      "description": "Beschikbaar in Pro."
+    }
   },
   "detail": {
     "metadataTitle": "Extensies - Pro-functie",
@@ -121,7 +130,12 @@
       "description": "Extensiedetails bekijken"
     },
     "title": "Extensiedetails",
-    "description": "Extensiedetails zijn beschikbaar in Pro."
+    "description": "Extensiedetails zijn beschikbaar in Pro.",
+    "unavailable": {
+      "metadataTitle": "Extensiedetails (alleen EE)",
+      "title": "Extensiedetails niet beschikbaar",
+      "description": "Deze pagina is beschikbaar in Pro."
+    }
   },
   "settingsPage": {
     "metadata": {
@@ -129,7 +143,12 @@
       "description": "Extensie-instellingen configureren"
     },
     "title": "Extensie-instellingen",
-    "description": "Extensie-instellingen zijn beschikbaar in Pro."
+    "description": "Extensie-instellingen zijn beschikbaar in Pro.",
+    "unavailable": {
+      "metadataTitle": "Extensie-instellingen (alleen EE)",
+      "title": "Extensie-instellingen niet beschikbaar",
+      "description": "Deze pagina is beschikbaar in Pro."
+    }
   },
   "details": {
     "label": "Extensiedetails",
@@ -235,6 +254,10 @@
     "cancel": "Annuleren"
   },
   "list": {
+    "unavailable": {
+      "title": "Extensies niet beschikbaar",
+      "description": "Het beheer van extensies is beschikbaar in AlgaPSA Pro."
+    },
     "label": "Extensiebeheer",
     "heading": "Extensies",
     "loading": "Extensies laden...",
@@ -294,7 +317,20 @@
     "installCompleteError": "Extensie afgerond, maar de installatie is niet voltooid",
     "installUnexpected": "Onverwachte fout tijdens installatie",
     "finalizeRequireManifest": "Plak het manifest-JSON voordat u afrondt.",
-    "finalizeProvidedFailed": "Kan niet afronden met het opgegeven manifest"
+    "finalizeProvidedFailed": "Kan niet afronden met het opgegeven manifest",
+    "pro": {
+      "title": "Extensies (Pro)",
+      "description": "De installatie en het beheer van extensies zijn beschikbaar in AlgaPSA Pro.",
+      "featureTitle": "Pro-functie",
+      "help": "Het installatieprogramma voor extensies is alleen beschikbaar in AlgaPSA Pro.",
+      "actions": {
+        "learnMore": "Meer informatie over Pro"
+      }
+    },
+    "unavailable": {
+      "title": "Installatie van extensies niet beschikbaar",
+      "description": "De installatie van extensies is beschikbaar in AlgaPSA Pro."
+    }
   },
   "installSimple": {
     "title": "Extensie installeren",
@@ -371,5 +407,19 @@
       "medium": "Met wijzigingsmachtigingen kan de extensie bestaande gegevens bijwerken.",
       "high": "Met geavanceerde machtigingen kan de extensie bewerkingen maken, verwijderen of uitvoeren."
     }
+  },
+  "iframe": {
+    "title": "Extensie-app",
+    "starting": "Extensie starten",
+    "loadingUi": "Extensie-interface laden…",
+    "connecting": "Verbinding maken met de runtimewerkruimte…",
+    "loadFailed": "Deze extensie kon niet worden geladen.",
+    "configurationHint": "Controleer de configuratie van de extensie en probeer het opnieuw."
+  },
+  "unavailable": {
+    "metadataTitle": "Extensies (alleen EE)",
+    "title": "Extensie niet beschikbaar",
+    "description": "Het extensiesysteem is beschikbaar in Pro en is niet inbegrepen in deze versie van Community Edition.",
+    "requestedId": "Aangevraagde ID: {{id}}"
   }
 }

@@ -40,8 +40,10 @@ import {
 } from '@alga-psa/clients/actions';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
+import ClientChecklistsTab from './ClientChecklistsTab';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
+import type { ClientCoManagedSlots } from '../../context/ClientCrossFeatureContext';
 import { Button } from '@alga-psa/ui/components/Button';
 import { PrintButton } from '@alga-psa/ui/components/PrintButton';
 import { PrintableDetailHeader, type PrintableDetailField } from '@alga-psa/ui/components/PrintableDetailHeader';
@@ -97,6 +99,7 @@ function isClientActionError(value: unknown): value is ActionMessageError | Acti
 }
 import { ClientDetailsTabContent } from './ClientDetailsTabContent';
 import ClientCommandCenter from './command-center/ClientCommandCenter';
+import ClientSoftwareView from './command-center/ClientSoftwareView';
 import HuduClientTab from './HuduClientTab';
 import HuduClientPasswordsTab from './HuduClientPasswordsTab';
 import HuduClientDocumentsSection from './HuduClientDocumentsSection';
@@ -203,7 +206,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const { t } = useTranslation('msp/clients');
   // Field messages live under common:clients.validation.*, not this page's namespace.
   const { t: tValidation } = useTranslation('common');
-  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderHourBlocksSection, renderClientOpportunities, renderClientTickets, renderClientRecurringTickets, getSlaPolicies, openTicketDetails } = useClientCrossFeature();
+  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, getClientSoftwareSummary, renderHourBlocksSection, renderClientOpportunities, renderClientTickets, renderClientRecurringTickets, getSlaPolicies, openTicketDetails, renderClientCoManagedIntegration } = useClientCrossFeature();
   const { renderDocuments } = useDocumentsCrossFeature();
   const [editedClient, setEditedClient] = useState<IClient>(client);
   // `client` is a prop and does not advance after this component saves. Keep
@@ -212,6 +215,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
   const [isAddContactOpen, setIsAddContactOpen] = useState(false);
+  // In-place tab requests from a header summary action (no server navigation).
+  const [coManagedTabRequest, setCoManagedTabRequest] = useState<{ tabId: string; nonce: number } | null>(null);
   // Bumped after quick-adds so the command center refetches the pulse cards.
   const [pulseRefreshNonce, setPulseRefreshNonce] = useState(0);
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
@@ -1431,6 +1436,20 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       label: t('clientDetails.assets', { defaultValue: 'Assets' }),
       content: shouldRenderPsaOnlyClientSurfaces ? renderClientAssets({ clientId: client.client_id }) : null,
     },
+    // Software focus view: aggregate of the client's asset software — PSA-only,
+    // and only when the composition layer provides the (assets-owned) read action.
+    ...((shouldRenderPsaOnlyClientSurfaces && getClientSoftwareSummary) ? [{
+      id: 'software',
+      label: t('clientDetails.software', { defaultValue: 'Software' }),
+      content: (
+        <ClientSoftwareView
+          id={`${id}-software`}
+          clientId={client.client_id}
+          getSummary={getClientSoftwareSummary}
+          t={t}
+        />
+      ),
+    }] : []),
     // F022/F023: inventory Equipment tab — PSA-only, and only when inventory:read.
     ...((shouldRenderPsaOnlyClientSurfaces && clientEquipmentTab.visible) ? [{
       id: 'equipment',
@@ -1446,6 +1465,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           {renderClientOpportunities({ clientId: client.client_id, clientName: client.client_name, clientLifecycleStatus: client.lifecycle_status ?? null })}
         </div>
       ),
+    }] : []),
+    ...(shouldRenderPsaOnlyClientSurfaces ? [{
+      id: 'checklists',
+      label: t('clientDetails.checklistsTab', { defaultValue: 'Checklists' }),
+      content: <ClientChecklistsTab clientId={client.client_id} />,
     }] : []),
     {
       id: 'billing',
@@ -1748,6 +1772,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     handleAddClientNameAlias,
     handleRemoveClientNameAlias,
     renderSurveySummaryCard,
+    getClientSoftwareSummary,
     currentUser,
     documents,
     memoizedRouter,
@@ -1775,7 +1800,12 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     return baseTabContent.filter((tab) => !excludedTabs.has(tab.id));
   }, [baseTabContent, isAlgaDeskMode]);
 
-  return (
+  // The app-owned co-managed integration supplies a header summary and a stable
+  // `co-managed` tab once capability admission and client read authority resolve.
+  // Until then (and when unavailable) the ordinary client renders unchanged.
+  const renderClientBody = (coManagedSlots: ClientCoManagedSlots | null) => {
+    const clientTabs = coManagedSlots?.tab ? [...tabContent, coManagedSlots.tab] : tabContent;
+    return (
     <ReflectionContainer id={id} label={t('clientDetails.title', { defaultValue: 'Client Details' })}>
       <div className="flex items-center space-x-5 mb-4 pt-2">
         {!quickView && (
@@ -1837,6 +1867,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           )}
 
           <div className="flex items-center gap-2 mr-8" data-print-hide>
+            {coManagedSlots?.summary}
             {showEntraSyncAction && (
               <div className="flex flex-col items-end gap-1">
                 <Button
@@ -1930,7 +1961,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         </div>
         {(quickView || isInDrawer) ? (
           <CustomTabs
-            tabs={quickView ? [tabContent[0]] : tabContent}
+            tabs={quickView ? [clientTabs[0]] : clientTabs}
             // In quick view we only render the Details tab. Force default to details
             // to avoid a mismatch with the current page's ?tab= query (e.g. "Tickets").
             defaultTab={quickView ? 'details' : searchParams?.get('tab')?.toLowerCase() || 'details'}
@@ -1942,7 +1973,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           <ClientCommandCenter
             idPrefix={`${id}-cc`}
             clientId={client.client_id}
-            tabs={tabContent}
+            tabs={clientTabs}
+            getSoftwareSummary={shouldRenderPsaOnlyClientSurfaces ? getClientSoftwareSummary ?? null : null}
             initialTabId={searchParams?.get('tab')?.toLowerCase() || null}
             onTabUrlChange={handleFocusTabUrlChange}
             hasUnsavedRecordChanges={hasUnsavedChanges}
@@ -1955,6 +1987,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             onAddContact={() => setIsAddContactOpen(true)}
             onOpenTicketDetails={openTicketDetails ?? null}
             refreshNonce={pulseRefreshNonce}
+            openTabRequest={coManagedTabRequest}
             surveySummary={surveySummary}
             renderSurveySummaryCard={renderSurveySummaryCard}
             isAlgaDeskMode={isAlgaDeskMode}
@@ -2105,7 +2138,20 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         />
       </div>
     </ReflectionContainer>
-  );
+    );
+  };
+
+  if (renderClientCoManagedIntegration) {
+    return renderClientCoManagedIntegration({
+      clientId: client.client_id,
+      clientName: client.client_name,
+      idPrefix: `${id}-co-managed`,
+      relationshipId: searchParams?.get('relationshipId') ?? null,
+      onOpenTab: (tabId: string) => setCoManagedTabRequest({ tabId, nonce: Date.now() }),
+      children: renderClientBody,
+    });
+  }
+  return renderClientBody(null);
 };
 
 const FieldContainer: React.FC<{

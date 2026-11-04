@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { IClient, IProject, IProjectPhase, IUserWithRoles } from '@alga-psa/types';
+import { IProject, IProjectPhase, IUserWithRoles } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import HoursProgressBar from './HoursProgressBar';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
-import { Download, Edit2, Mail, Printer, Save, Settings2 } from 'lucide-react';
+import { Download, Edit2, Mail, Package, Printer, Save, Settings2 } from 'lucide-react';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ShareActionsMenu, type ShareAction } from '@alga-psa/ui/components/ShareActionsMenu';
@@ -39,10 +39,16 @@ interface ProjectInfoProps {
   };
   assignedUser?: IUserWithRoles;
   users: IUserWithRoles[];
-  clients: IClient[];
   onContactChange?: (contactId: string | null) => void;
   onAssignedUserChange?: (userId: string | null) => void;
   onProjectUpdate?: (project: IProject) => void;
+  /**
+   * Fired when the edit drawer closes. Its status-column editor writes
+   * deletions (and the task moves they trigger) straight away, so the board
+   * next to us has to re-read its statuses and tasks or it keeps showing
+   * tasks in a column that no longer exists.
+   */
+  onStatusesChanged?: () => void;
   projectTags?: ITag[];
   allTagTexts?: string[];
   onTagsChange?: (tags: ITag[]) => void;
@@ -54,10 +60,10 @@ export default function ProjectInfo({
   contact,
   assignedUser,
   users,
-  clients,
   onContactChange,
   onAssignedUserChange,
   onProjectUpdate,
+  onStatusesChanged,
   projectTags = [],
   allTagTexts = [],
   onTagsChange
@@ -141,18 +147,27 @@ export default function ProjectInfo({
     openDrawer(
       <ProjectDetailsEdit
         initialProject={currentProject}
-        clients={clients}
         onSave={(updatedProject) => {
           setCurrentProject(updatedProject);
           if (onProjectUpdate) {
             onProjectUpdate(updatedProject);
           }
+          onStatusesChanged?.();
           closeDrawer();
         }}
         onCancel={() => {
+          onStatusesChanged?.();
           closeDrawer();
         }}
-      />
+      />,
+      undefined,
+      // The status-column editor writes its adds and deletes immediately, so
+      // every dismissal has to refresh the board — including Escape and the
+      // header X, which never reach Save or Cancel. Those two go through this
+      // `onClose`; Save and Cancel report for themselves because the
+      // `closeDrawer` they captured is the one from before this drawer opened
+      // (it is memoized on the current history entry) and so skips `onClose`.
+      () => onStatusesChanged?.(),
     );
   };
 
@@ -230,6 +245,17 @@ export default function ProjectInfo({
             onClick={handleMaterialsClick}
           >
             {t('projectInfo.materials', 'Materials')}
+          </Button>
+          <Button
+            id="project-staging-button"
+            variant="outline"
+            size="sm"
+            asChild
+          >
+            <a href={`/msp/projects/${project.project_id}/staging`}>
+              <Package className="h-4 w-4 mr-2" />
+              {t('projectInfo.staging', 'Staging')}
+            </a>
           </Button>
           <Button
             id="edit-project-button"

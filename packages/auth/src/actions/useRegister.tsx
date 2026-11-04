@@ -1,11 +1,12 @@
 "use server";
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { v4 as uuidv4 } from 'uuid';
 
 import User from '@alga-psa/db/models/user';
 import Tenant from '@alga-psa/db/models/tenant';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
-import { IUserRegister, IUserWithRoles, IRoleWithPermissions } from '@alga-psa/types';
+import { IUserRegister, IUserWithRoles, IRoleWithPermissions, isInteractiveUserType } from '@alga-psa/types';
 
 import { getInfoFromToken, createToken } from '../lib/tokenizer';
 import { hashPassword } from '@alga-psa/core/encryption';
@@ -25,8 +26,9 @@ interface VerifyResponse {
 }
 
 export async function verifyRegisterUser(token: string): Promise<VerifyResponse> {
+  const { t } = await getServerTranslation(undefined, 'client-portal');
   logger.system('Verifying user registration');
-  const { errorType, userInfo } = await getInfoFromToken(token);
+  const { messageKey, userInfo } = await getInfoFromToken(token);
   logger.info(`User info got for email: ${userInfo?.email}`);
   if (userInfo) {
     try {
@@ -40,7 +42,7 @@ export async function verifyRegisterUser(token: string): Promise<VerifyResponse>
       const superadminRole: IRoleWithPermissions = {
         role_id: 'superadmin',
         role_name: 'superadmin',
-        description: 'Superadmin role',
+        description: t('auth.registration.superadminRole'),
         permissions: [],
         msp: true,
         client: false
@@ -58,43 +60,42 @@ export async function verifyRegisterUser(token: string): Promise<VerifyResponse>
       await User.insert(db, newUser);
 
       return {
-        message: 'User verified and registered successfully',
+        message: t('auth.registration.messages.verified'),
         wasSuccess: true,
       };
     } catch (error) {
       logger.error('Error verifying and registering user:', error);
       return {
-        message: 'Failed to verify and register user',
+        message: t('auth.registration.errors.verifyFailed'),
         wasSuccess: false,
       };
     }
   }
   return {
-    message: errorType || 'Invalid token',
+    message: t(messageKey || 'auth.registration.errors.invalidToken'),
     wasSuccess: false,
   };
 }
 
 export async function getAccountInfoFromToken(token: string, portal: string) {
   try {
+    const { t } = await getServerTranslation(undefined, 'client-portal');
     const { errorType, userInfo } = await getInfoFromToken(token);
     if (errorType || !userInfo) {
       return null;
     }
     
     // Get the user from database to get full name
-    let dbUser;
-    if (userInfo.user_type) {
-      dbUser = await User.findUserByEmailAndType(userInfo.email, userInfo.user_type as 'internal' | 'client');
-    } else {
-      dbUser = await User.findUserByEmail(userInfo.email);
+    if (!isInteractiveUserType(userInfo.user_type)) {
+      return null;
     }
+    const dbUser = await User.findUserByEmailAndType(userInfo.email, userInfo.user_type);
     
     return {
-      name: dbUser ? `${dbUser.first_name || ''} ${dbUser.last_name || ''}`.trim() || dbUser.username : userInfo.username || 'User',
+      name: dbUser ? `${dbUser.first_name || ''} ${dbUser.last_name || ''}`.trim() || dbUser.username : userInfo.username || t('auth.registration.user'),
       email: userInfo.email || '',
       username: dbUser?.username || userInfo.username || userInfo.email || '',
-      accountType: portal === 'client' ? 'Client Portal User' : 'MSP User'
+      accountType: portal === 'client' ? t('auth.registration.clientPortalUser') : t('auth.registration.mspUser')
     };
   } catch (error) {
     logger.error('Error getting account info from token:', error);
@@ -111,16 +112,14 @@ export async function setNewPassword(password: string, token: string): Promise<b
   if (userInfo && userInfo.email) {
     const hashedPassword = await hashPassword(password);
     
-    // If user_type is in the token, use it to find the correct user
-    let dbUser;
-    if (userInfo.user_type) {
-      dbUser = await User.findUserByEmailAndType(userInfo.email, userInfo.user_type as 'internal' | 'client');
-    } else {
-      // Fallback for old tokens without user_type
-      dbUser = await User.findUserByEmail(userInfo.email);
+    // The token must name an interactive user type; there is no untyped lookup.
+    if (!isInteractiveUserType(userInfo.user_type)) {
+      logger.error(`Refusing password set for [ ${userInfo.email} ]: token has no interactive user_type`);
+      return false;
     }
-    
-    if (!dbUser) {
+    const dbUser = await User.findUserByEmailAndType(userInfo.email, userInfo.user_type);
+
+    if (!dbUser || !isInteractiveUserType(dbUser.user_type)) {
       logger.error(`User [ ${userInfo.email} ] with type [ ${userInfo.user_type || 'any'} ] not found in the database`);
       return false;
     }
@@ -204,12 +203,13 @@ export async function recoverPassword(
       portalDomain
     );
 
+    const { t } = await getServerTranslation(undefined, 'client-portal');
     // Use the proper sendPasswordResetEmail function which respects language hierarchy
     await getAuthEmailRegistry().sendPasswordResetEmail({
       email: normalizedEmail,
       userName: `${userInfo.first_name || ''} ${userInfo.last_name || ''}`.trim() || userInfo.username || normalizedEmail,
       resetLink,
-      expirationTime: '1 hour',
+      expirationTime: t('auth.registration.resetExpiration'),
       tenant: userInfo.tenant,
       supportEmail: 'support@algapsa.com',
       clientName: 'AlgaPSA'
@@ -267,13 +267,14 @@ export async function registerUser({ username, email, password, clientName }: IU
   if (VERIFY_EMAIL_ENABLED && EMAIL_ENABLE) {
     const verificationUrl = `${process.env.HOST}/auth/verify-email?token=${verificationToken}`;
     
+    const { t } = await getServerTranslation(undefined, 'client-portal');
     // Use SystemEmailService for email verification
     const systemEmailService = await getAuthEmailRegistry().getSystemEmailService();
     const emailResult = await systemEmailService.sendEmailVerification({
       email: email,
       verificationUrl: verificationUrl,
       clientName: clientName,
-      expirationTime: '24 hours'
+      expirationTime: t('auth.registration.verificationExpiration')
     });
 
     if (!emailResult.success) {
@@ -284,6 +285,7 @@ export async function registerUser({ username, email, password, clientName }: IU
     return true;
   } else {
     try {
+      const { t } = await getServerTranslation(undefined, 'client-portal');
       const db = await getAdminConnection();
       await Tenant.insert(db, {
         client_name: clientName,
@@ -294,7 +296,7 @@ export async function registerUser({ username, email, password, clientName }: IU
       const superadminRole: IRoleWithPermissions = {
         role_id: 'superadmin',
         role_name: 'superadmin',
-        description: 'Superadmin role',
+        description: t('auth.registration.superadminRole'),
         permissions: [],
         msp: true,
         client: false

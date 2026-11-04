@@ -3,6 +3,11 @@ import { ChatApiRegistryEntry } from './schema';
 const PLACEHOLDER_DESCRIPTION =
   'This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.';
 
+/** True when the text is the auto-generated placeholder description. */
+export function isPlaceholderDescription(text: string | undefined): boolean {
+  return text?.trim() === PLACEHOLDER_DESCRIPTION;
+}
+
 const STOP_WORDS = new Set([
   'a',
   'an',
@@ -128,7 +133,7 @@ function hasPlaceholderMetadata(entry: ChatApiRegistryEntry) {
   return (
     genericLabelPattern.test(entry.displayName.trim()) ||
     genericLabelPattern.test(entry.summary?.trim() ?? '') ||
-    entry.description?.trim() === PLACEHOLDER_DESCRIPTION
+    isPlaceholderDescription(entry.description)
   );
 }
 

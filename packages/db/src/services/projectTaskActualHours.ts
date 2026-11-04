@@ -11,10 +11,24 @@ export async function recalculateProjectTaskActualHours(
   tenant: string,
   taskIds: Iterable<string | null | undefined>,
 ): Promise<void> {
-  const uniqueTaskIds = [...new Set([...taskIds].filter((taskId): taskId is string => Boolean(taskId)))];
+  // Sorted so concurrent recomputes that touch overlapping task sets lock rows in the
+  // same order and cannot deadlock each other.
+  const uniqueTaskIds = [...new Set([...taskIds].filter((taskId): taskId is string => Boolean(taskId)))].sort();
   if (uniqueTaskIds.length === 0) return;
 
   const db = tenantDb(connection, tenant);
+
+  // Serialise per task: lock the task rows (on the caller's transaction) BEFORE reading the
+  // time_entries total. A second writer blocks here until the first commits, then its SUM
+  // (READ COMMITTED) sees the first writer's entry. Without the lock both read the
+  // pre-commit total and the last UPDATE silently loses the other entry.
+  // ORDER BY task_id makes the lock acquisition order deterministic across statements.
+  await db.table('project_tasks')
+    .whereIn('task_id', uniqueTaskIds)
+    .orderBy('task_id', 'asc')
+    .forUpdate()
+    .select('task_id');
+
   const totals = await db.table('time_entries')
     .where({ work_item_type: 'project_task' })
     .whereIn('work_item_id', uniqueTaskIds)

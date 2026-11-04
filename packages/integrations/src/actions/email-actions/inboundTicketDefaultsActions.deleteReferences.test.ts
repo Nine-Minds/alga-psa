@@ -27,12 +27,13 @@ type DeletePlan = {
   hasClientsDestinationColumn?: boolean;
   hasContactsDestinationColumn?: boolean;
   deleteResult?: number;
+  referencingProviders?: Array<{ provider_name: string | null; mailbox: string | null }>;
 };
 
 function createDeleteHarness(plan: DeletePlan) {
   const calls: Array<{
     table: string;
-    op: 'update' | 'delete';
+    op: 'select' | 'update' | 'delete';
     where: Record<string, unknown>;
   }> = [];
 
@@ -42,6 +43,10 @@ function createDeleteHarness(plan: DeletePlan) {
       where: vi.fn((value: Record<string, unknown>) => {
         whereClause = value ?? {};
         return builder;
+      }),
+      select: vi.fn(async () => {
+        calls.push({ table, op: 'select', where: whereClause });
+        return table === 'email_providers' ? plan.referencingProviders ?? [] : [];
       }),
       update: vi.fn(async () => {
         calls.push({ table, op: 'update', where: whereClause });
@@ -79,7 +84,7 @@ describe('deleteInboundTicketDefaults reference clearing', () => {
     vi.clearAllMocks();
   });
 
-  it('clears provider/client/contact references before deleting defaults row', async () => {
+  it('clears client/contact references before deleting an unreferenced defaults row', async () => {
     const { knex, calls } = createDeleteHarness({
       hasClientsDestinationColumn: true,
       hasContactsDestinationColumn: true,
@@ -94,7 +99,7 @@ describe('deleteInboundTicketDefaults reference clearing', () => {
       expect.arrayContaining([
         {
           table: 'email_providers',
-          op: 'update',
+          op: 'select',
           where: { tenant: 'tenant-1', inbound_ticket_defaults_id: 'defaults-1' },
         },
         {
@@ -114,6 +119,28 @@ describe('deleteInboundTicketDefaults reference clearing', () => {
         },
       ])
     );
+  });
+
+  it('refuses to delete defaults that an email provider still routes through', async () => {
+    const { knex, calls } = createDeleteHarness({
+      referencingProviders: [
+        { provider_name: 'Support Mailbox', mailbox: 'support@example.com' },
+        { provider_name: null, mailbox: 'help@example.com' },
+      ],
+    });
+    knexImpl = knex;
+
+    const { deleteInboundTicketDefaults } = await import('./inboundTicketDefaultsActions');
+    await expect(deleteInboundTicketDefaults('defaults-1')).resolves.toEqual({
+      actionError:
+        'This configuration is still used by the following email providers: Support Mailbox, help@example.com. Select different inbound ticket defaults on those providers before deleting it.',
+      messageKey: 'msp/email-providers:errors.inboundDefaults.referencedByProviders',
+      messageParams: { providers: 'Support Mailbox, help@example.com' },
+    });
+
+    // Nothing is cleared or deleted when the delete is refused.
+    expect(calls.filter((call) => call.op !== 'select')).toEqual([]);
+    expect(calls.some((call) => call.table === 'email_providers' && call.op === 'update')).toBe(false);
   });
 
   it('returns an action error when defaults row is not found after reference clearing', async () => {
