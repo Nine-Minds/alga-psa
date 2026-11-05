@@ -351,6 +351,10 @@
         "none": "Sem padrão — o cliente escolhe",
         "help": "Fica pré-selecionado para os clientes, para que nunca precisem escolher um serviço. Apenas serviços configurados em Regras de serviço podem ser o padrão."
       },
+      "portalShowServiceRates": {
+        "label": "Mostrar as tarifas dos serviços aos clientes",
+        "help": "Quando desativado, os clientes nunca veem o preço de um serviço ao agendar."
+      },
       "actions": {
         "save": "Salvar configurações gerais"
       },

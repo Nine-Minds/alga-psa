@@ -351,6 +351,10 @@
         "none": "Ingen standard – kunden väljer",
         "help": "Förvalt för kunderna så att de aldrig behöver välja en tjänst. Endast tjänster som konfigurerats under Tjänsteregler kan vara standard."
       },
+      "portalShowServiceRates": {
+        "label": "Visa tjänstetaxor för kunder",
+        "help": "När detta är av ser kunderna aldrig ett pris för en tjänst vid bokning."
+      },
       "actions": {
         "save": "Spara allmänna inställningar"
       },

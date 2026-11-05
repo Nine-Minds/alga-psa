@@ -351,6 +351,10 @@
         "none": "Kein Standard – Kunde wählt aus",
         "help": "Wird für Kunden vorausgewählt, damit sie keinen Service auswählen müssen. Nur unter Serviceregeln konfigurierte Services können der Standard sein."
       },
+      "portalShowServiceRates": {
+        "label": "Servicesätze für Kunden anzeigen",
+        "help": "Wenn deaktiviert, sehen Kunden bei der Buchung nie einen Preis für einen Service."
+      },
       "actions": {
         "save": "Allgemeine Einstellungen speichern"
       },

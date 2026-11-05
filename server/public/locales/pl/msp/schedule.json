@@ -351,6 +351,10 @@
         "none": "Brak domyślnej — wybiera klient",
         "help": "Jest wybierana z góry dla klientów, aby nigdy nie musieli wybierać usługi. Domyślna może być tylko usługa skonfigurowana w Regulaminie serwisu."
       },
+      "portalShowServiceRates": {
+        "label": "Pokazuj klientom stawki usług",
+        "help": "Gdy ta opcja jest wyłączona, klienci nigdy nie widzą ceny usługi podczas rezerwacji."
+      },
       "actions": {
         "save": "Zapisz ustawienia ogólne"
       },

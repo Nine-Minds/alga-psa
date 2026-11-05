@@ -1553,6 +1553,7 @@ export const getAvailableServicesAndTickets = withAuth(async (
     unit_of_measure?: string;
   }>;
   default_service_id: string | null;
+  show_service_rates: boolean;
   tickets: Array<{
     ticket_id: string;
     ticket_number: string;
@@ -1669,12 +1670,14 @@ export const getAvailableServicesAndTickets = withAuth(async (
           service_name: s.service_name,
           description: s.service_description,
           service_type: s.service_type,
-          // bigint rates arrive as strings from some drivers; a $0 rate must
-          // stay numeric 0 so the portal can hide it.
-          default_rate: Number(s.default_rate ?? 0),
-          unit_of_measure: s.unit_of_measure
+          // Hidden rates are withheld here, not just unrendered, so the price
+          // never reaches the browser. bigint rates arrive as strings from some
+          // drivers; a $0 rate must stay numeric 0 so the portal can hide it.
+          default_rate: bookingConfig.showServiceRates ? Number(s.default_rate ?? 0) : undefined,
+          unit_of_measure: bookingConfig.showServiceRates ? s.unit_of_measure : undefined
         })),
         default_service_id: defaultServiceId,
+        show_service_rates: bookingConfig.showServiceRates,
         tickets: tickets.map(t => ({
           ticket_id: t.ticket_id,
           ticket_number: t.ticket_number,

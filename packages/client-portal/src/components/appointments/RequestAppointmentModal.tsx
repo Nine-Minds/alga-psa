@@ -104,6 +104,8 @@ export function RequestAppointmentModal({
   // Step 1: Service selection
   const [services, setServices] = useState<Service[]>([]);
   const [selectedServiceId, setSelectedServiceId] = useState<string>('');
+  // MSP-owned: when off the action withholds rates, so there is nothing to show.
+  const [showServiceRates, setShowServiceRates] = useState(true);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [linkedTicketId, setLinkedTicketId] = useState<string>('__no_ticket__');
   const [ticketSearchQuery, setTicketSearchQuery] = useState<string>('');
@@ -202,6 +204,7 @@ export function RequestAppointmentModal({
         const data = result.data;
         setServices(data.services);
         setTickets(data.tickets);
+        setShowServiceRates(data.show_service_rates);
         // The MSP owns this choice: preselect its default (or the only service
         // on offer) so step 1 needs no interaction. An edit-mode selection,
         // set before this resolves, always wins.
@@ -506,7 +509,7 @@ export function RequestAppointmentModal({
                     {selectedService.service_type && (
                       <div className="flex items-center gap-2">
                         <Badge variant="primary">{selectedService.service_type}</Badge>
-                        {Number(selectedService.default_rate) > 0 && (
+                        {showServiceRates && Number(selectedService.default_rate) > 0 && (
                           <span>{money(Number(selectedService.default_rate))}/{resolveUnitOfMeasure({ catalog: { label: selectedService.unit_of_measure }, fallback: 'HUR' }).label}</span>
                         )}
                       </div>

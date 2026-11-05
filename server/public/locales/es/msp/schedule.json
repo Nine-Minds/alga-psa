@@ -351,6 +351,10 @@
         "none": "Sin valor predeterminado: el cliente elige",
         "help": "Se preselecciona para los clientes, de modo que nunca deban elegir un servicio. Solo los servicios configurados en Reglas de servicio pueden ser el predeterminado."
       },
+      "portalShowServiceRates": {
+        "label": "Mostrar las tarifas de los servicios a los clientes",
+        "help": "Si se desactiva, los clientes nunca ven el precio de un servicio al reservar."
+      },
       "actions": {
         "save": "Guardar configuración general"
       },

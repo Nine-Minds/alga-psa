@@ -87,6 +87,8 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
   // which service is preselected, so clients never have to pick one.
   const [hideContractServices, setHideContractServices] = useState(false);
   const [defaultPortalServiceId, setDefaultPortalServiceId] = useState('');
+  // Defaults on: existing tenants keep showing rates until the MSP turns it off.
+  const [showServiceRates, setShowServiceRates] = useState(true);
 
   // User hours state
   const [users, setUsers] = useState<Omit<IUser, 'tenant'>[]>([]);
@@ -246,6 +248,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
         }
         setHideContractServices(setting.config_json?.hide_contract_services === true);
         setDefaultPortalServiceId(setting.config_json?.default_portal_service_id ?? '');
+        setShowServiceRates(setting.config_json?.show_service_rates !== false);
         if (setting.config_json?.auto_approval_criteria) {
           const criteria = setting.config_json.auto_approval_criteria;
           if (criteria.require_availability !== undefined) setAutoApprovalRequireAvailability(criteria.require_availability);
@@ -362,6 +365,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
           // must be listed or saving erases it.
           hide_contract_services: hideContractServices,
           default_portal_service_id: defaultPortalServiceId || null,
+          show_service_rates: showServiceRates,
           auto_approval_enabled: autoApprovalEnabled,
           auto_approval_criteria: {
             require_availability: autoApprovalRequireAvailability,
@@ -925,6 +929,22 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                 <p className="text-xs text-gray-600 -mt-2">
                   {t('availabilitySettings.general.portalDefaultService.help', { defaultValue: 'Preselected for clients so they never have to choose a service. Only services configured under Service Rules can be the default.' })}
                 </p>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <Switch
+                  id="portal-show-service-rates"
+                  checked={showServiceRates}
+                  onCheckedChange={setShowServiceRates}
+                />
+                <div className="flex-1">
+                  <Label htmlFor="portal-show-service-rates" className="font-medium">
+                    {t('availabilitySettings.general.portalShowServiceRates.label', { defaultValue: 'Show service rates to clients' })}
+                  </Label>
+                  <p className="text-xs text-gray-600 mt-1">
+                    {t('availabilitySettings.general.portalShowServiceRates.help', { defaultValue: 'When off, clients never see a price for a service while booking.' })}
+                  </p>
+                </div>
               </div>
             </div>
 

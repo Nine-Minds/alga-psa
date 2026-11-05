@@ -351,6 +351,10 @@
         "none": "No default — client chooses",
         "help": "Preselected for clients so they never have to choose a service. Only services configured under Service Rules can be the default."
       },
+      "portalShowServiceRates": {
+        "label": "Show service rates to clients",
+        "help": "When off, clients never see a price for a service while booking."
+      },
       "actions": {
         "save": "Save General Settings"
       },

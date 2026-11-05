@@ -773,6 +773,8 @@ export interface PortalBookingConfig {
   hideContractServices: boolean;
   /** Service preselected for the client so booking needs no service choice. */
   defaultServiceId: string | null;
+  /** Let clients see a service's price while booking. Opt-out, so it stays on by default. */
+  showServiceRates: boolean;
 }
 
 /**
@@ -797,6 +799,7 @@ export async function getPortalBookingConfig(
       defaultServiceId: typeof defaultServiceId === 'string' && defaultServiceId.trim() !== ''
         ? defaultServiceId
         : null,
+      showServiceRates: config.show_service_rates !== false,
     };
   });
 }

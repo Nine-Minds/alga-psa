@@ -14,6 +14,13 @@ describe('RequestAppointmentModal service step contract', () => {
     expect(source).not.toContain('{selectedService.default_rate && (');
   });
 
+  it('also honours the MSP rate-visibility switch, independently of the $0 rule', () => {
+    expect(source).toContain('{showServiceRates && Number(selectedService.default_rate) > 0 && (');
+    expect(source).toContain('setShowServiceRates(data.show_service_rates)');
+    // Defaults to shown so the rate is not blanked while the action is in flight.
+    expect(source).toContain('const [showServiceRates, setShowServiceRates] = useState(true)');
+  });
+
   it('renders the catalog unit rather than always falling back to Hour', () => {
     expect(source).toContain("resolveUnitOfMeasure({ catalog: { label: selectedService.unit_of_measure }, fallback: 'HUR' }).label");
   });

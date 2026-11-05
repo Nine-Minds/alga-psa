@@ -351,6 +351,10 @@
         "none": "Geen standaard — de klant kiest",
         "help": "Wordt voor klanten voorgeselecteerd, zodat zij nooit een service hoeven te kiezen. Alleen services die onder Serviceregels zijn geconfigureerd kunnen de standaard zijn."
       },
+      "portalShowServiceRates": {
+        "label": "Servicetarieven aan klanten tonen",
+        "help": "Als dit uit staat, zien klanten tijdens het boeken nooit een prijs voor een service."
+      },
       "actions": {
         "save": "Bewaar algemene instellingen"
       },

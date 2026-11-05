@@ -351,6 +351,10 @@
         "none": "Aucun service par défaut — le client choisit",
         "help": "Présélectionné pour les clients afin qu’ils n’aient jamais à choisir un service. Seuls les services configurés dans Règles de service peuvent être le service par défaut."
       },
+      "portalShowServiceRates": {
+        "label": "Afficher les tarifs des services aux clients",
+        "help": "Lorsque cette option est désactivée, les clients ne voient jamais le prix d’un service lors de la réservation."
+      },
       "actions": {
         "save": "Enregistrer les paramètres généraux"
       },

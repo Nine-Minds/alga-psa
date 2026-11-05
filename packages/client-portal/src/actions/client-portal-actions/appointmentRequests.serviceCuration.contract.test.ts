@@ -18,6 +18,16 @@ describe('Portal appointment service curation contract', () => {
     expect(serviceSource).toContain("setting_type: 'general_settings'");
     expect(serviceSource).toContain('config.hide_contract_services === true');
     expect(serviceSource).toContain('config.default_portal_service_id');
+    // Opt-out: rates stay visible unless the MSP explicitly turned them off.
+    expect(serviceSource).toContain('showServiceRates: config.show_service_rates !== false');
+    expect(serviceSource).toContain('showServiceRates: boolean');
+  });
+
+  it('withholds rates server-side rather than leaving them to the client to hide', () => {
+    expect(actionsSource).toContain('default_rate: bookingConfig.showServiceRates ? Number(s.default_rate ?? 0) : undefined');
+    expect(actionsSource).toContain('unit_of_measure: bookingConfig.showServiceRates ? s.unit_of_measure : undefined');
+    expect(actionsSource).toContain('show_service_rates: boolean;');
+    expect(actionsSource).toContain('show_service_rates: bookingConfig.showServiceRates');
   });
 
   it('selects the catalog unit for both booking service queries', () => {
@@ -39,8 +49,10 @@ describe('Portal appointment service curation contract', () => {
     expect(actionsSource).toContain('const defaultServiceId = bookingConfig.defaultServiceId');
     expect(actionsSource).toContain('servicesMap.has(bookingConfig.defaultServiceId)');
     expect(actionsSource).toContain('services.length === 1\n        ? services[0].service_id\n        : null');
-    expect(actionsSource).toContain('default_rate: Number(s.default_rate ?? 0)');
-    expect(actionsSource).toContain('unit_of_measure: s.unit_of_measure');
+    // Still numeric so a $0 rate can be hidden; the rate-visibility gate that
+    // now wraps both fields is asserted by the withholding test below.
+    expect(actionsSource).toContain('Number(s.default_rate ?? 0)');
+    expect(actionsSource).toContain('s.unit_of_measure');
     expect(actionsSource).toContain('default_service_id: defaultServiceId');
   });
 });
