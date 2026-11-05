@@ -276,15 +276,18 @@ jobs:
           BUILD_CACHE_REFERENCE: ${{ needs.changes.outputs.registry_namespace }}/build-cache:${{ matrix.edition }}-v2
         run: node scripts/build-cache-snapshot.mjs restore --reference "$BUILD_CACHE_REFERENCE" --path server/node_modules/.cache/webpack --path .nx/cache
 
-      # The same recipe workflows-ee-build-guard.yml compiles the enterprise
-      # app with on this runner size: one build worker and a 14 GB heap. On
-      # 2026-11-05 that guard passed every run while this step, at four
-      # workers and 12 GB, lost the runner to a memory kill mid-compile on main
-      # (18:01Z, 18:17Z, 19:44Z) and on every branch that built after it.
+      # Four build workers at a 12 GB heap lost this runner to a memory kill
+      # mid-compile on 2026-11-05 (main at 18:01Z, 18:17Z, 19:44Z, then every
+      # branch); one worker at 14 GB, the enterprise build guard's recipe,
+      # survived but serialised the minifier too: the community compile went
+      # from 7.2 to 16.0 minutes (run 42104626213) and became the longest job
+      # of the whole regression run. Two workers is the middle the memory
+      # kill leaves room for; scripts/build-production-server.sh keeps the
+      # 14 GB heap.
       - name: Build the production application on the runner
         if: matrix.prebuild
         env:
-          NEXT_BUILD_CPUS: '1'
+          NEXT_BUILD_CPUS: '2'
           NEXT_BUILD_MAX_OLD_SPACE_SIZE: '14336'
           EDITION_NAME: ${{ matrix.edition }}
           # Next folds this key into the webpack cache version and generates a
