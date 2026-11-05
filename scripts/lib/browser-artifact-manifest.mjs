@@ -33,7 +33,11 @@ function recordFields(record, context) {
     revision: record.revision, build: { provider: record.build.provider, runId: record.build.runId, attempt: record.build.attempt },
     service: record.service, image: record.image, dockerfile: record.dockerfile, platform: record.platform,
     configImageId: record.configImageId, buildReportedDigest: record.buildReportedDigest,
-    metadata: { 'containerimage.config.digest': record.configImageId, 'containerimage.digest': record.buildReportedDigest } };
+    metadata: { 'containerimage.config.digest': record.configImageId, 'containerimage.digest': record.buildReportedDigest },
+    // A reused component was built at another revision under identical inputs; the
+    // record names that build and its proof, and the loaded image carries its label.
+    ...(record.reuse ? { reuse: { sourceRevision: record.reuse.sourceRevision, sourceRunId: record.reuse.sourceRunId, sourceAttempt: record.reuse.sourceAttempt,
+      artifactRunId: record.reuse.artifactRunId, inputs: { policy: record.reuse.inputs.policy, sha256: record.reuse.inputs.sha256, files: record.reuse.inputs.files } } } : {}) };
   if (record.kind === 'docker-registry-build') {
     const registry = verifyRegistryRecord(record);
     return { ...common, registry: { reference: registry.reference, tag: registry.tag, manifestDigest: registry.manifestDigest,
@@ -85,7 +89,9 @@ export function buildBrowserArtifactManifest({ components, ...expected }) {
   }
   const kinds = new Set(selected.map(component => component.record.kind));
   if (kinds.size !== 1) throw new Error('Browser candidate components must share one transport');
-  return { schemaVersion: 1, ...transports[[...kinds][0]].manifest, registryPublication: false, ...context, components: selected };
+  const reused = selected.filter(component => component.record.reuse).map(component => component.record.service);
+  return { schemaVersion: 1, ...transports[[...kinds][0]].manifest, registryPublication: false, ...context,
+    ...(reused.length ? { reused } : {}), components: selected };
 }
 export function validateBrowserArtifactManifest(manifest, expected) {
   const current = identity(expected);

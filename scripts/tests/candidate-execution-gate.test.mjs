@@ -89,3 +89,32 @@ test('candidate gate checks actual Node registrations and terminal events', asyn
   input.bundles[0].events = input.bundles[0].events.filter(event => event.type !== 'test:pass');
   assert.equal(evaluateCandidateExecution(input).status, 'failed');
 });
+
+test('a judged browser bundle passes when every deferred case is collected, below threshold and for this revision', () => {
+  const input = fixture();
+  const bundle = input.bundles[1];
+  bundle.collected.suites[0].specs.push({ file: 'browser.spec.ts', title: 'deferred journey', tests: [{ projectId: 'ce', projectName: 'ce',
+    expectedStatus: 'passed', status: 'expected', results: [{ retry: 0, status: 'passed' }] }] });
+  const identity = ['browser.spec.ts', 'ce', 'ce', ['deferred journey']];
+  bundle.filters = ['browser.spec.ts:1'];
+  bundle.jev = { threshold: 0.5, revision: input.revision, deferred: [{ identity, probability: 0.1 }] };
+  const passed = evaluateCandidateExecution(input);
+  assert.equal(passed.status, 'passed', passed.failures.join('\n'));
+  assert.equal(passed.results[1].counts.deferred, 1);
+  for (const [mutate, message] of [
+    [x => { x.bundles[1].jev.deferred[0].probability = 0.5; }, /at or above threshold/],
+    [x => { x.bundles[1].jev.revision = 'b'.repeat(40); }, /different revision/],
+    [x => { x.bundles[1].filters = []; }, /without filters/],
+    [x => { x.bundles[1].jev.deferred = []; }, /count differs/],
+    [x => { x.bundles[0].jev = { threshold: 0.5, revision: x.revision, deferred: [] }; }, /only accepted for browser/],
+  ]) {
+    const copy = fixture();
+    copy.bundles[1].collected.suites[0].specs.push(structuredClone(bundle.collected.suites[0].specs[1]));
+    copy.bundles[1].filters = ['browser.spec.ts:1'];
+    copy.bundles[1].jev = { threshold: 0.5, revision: copy.revision, deferred: [{ identity, probability: 0.1 }] };
+    mutate(copy);
+    const result = evaluateCandidateExecution(copy);
+    assert.equal(result.status, 'failed');
+    assert.match(result.failures.join('\n'), message);
+  }
+});
