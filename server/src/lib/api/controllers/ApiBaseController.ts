@@ -56,6 +56,14 @@ export abstract class ApiBaseController {
     protected options: CrudOptions
   ) {}
 
+  /** Runtime permission metadata used by catalog completeness checks. */
+  getPermissionRequirements(): Array<{ resource: string; action: string }> {
+    const resource = this.options.permissionResource ?? this.options.resource;
+    return Object.values(this.options.permissions ?? {}).flatMap((action) =>
+      action ? [{ resource, action }] : [],
+    );
+  }
+
   /**
    * Authenticate request and set context
    */

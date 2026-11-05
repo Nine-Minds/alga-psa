@@ -74,6 +74,13 @@ export class ApiCategoryController extends ApiBaseController {
     this.categoryService = categoryService;
   }
 
+  /** Category routes authorize through their settings resource by category type. */
+  getPermissionRequirements(): Array<{ resource: string; action: string }> {
+    return ['billing_settings', 'ticket_settings'].flatMap((resource) =>
+      ['create', 'read', 'update', 'delete'].map((action) => ({ resource, action })),
+    );
+  }
+
   private mapCategoryTypeToPermissionResource(categoryType?: CategoryType): 'billing_settings' | 'ticket_settings' {
     return categoryType === 'service' ? 'billing_settings' : 'ticket_settings';
   }
@@ -464,7 +471,7 @@ export class ApiCategoryController extends ApiBaseController {
   /**
    * Get category tree for a board
    */
-  getCategoryTree() {
+  getCategoryTree(boardId: string | null) {
     return async (req: NextRequest): Promise<NextResponse> => {
       try {
         // Authenticate
@@ -475,10 +482,6 @@ export class ApiCategoryController extends ApiBaseController {
           // Check permissions
           await this.ensurePermission(apiRequest, 'ticket_settings', 'read');
 
-          const url = new URL(req.url);
-          const pathParts = url.pathname.split('/');
-          // Support both boardId (legacy) and boardId (new) route parameters
-          const boardId = pathParts[pathParts.length - 1];
           const tree = await this.categoryService.getCategoryTree(boardId, apiRequest.context!);
           
           return createSuccessResponse({

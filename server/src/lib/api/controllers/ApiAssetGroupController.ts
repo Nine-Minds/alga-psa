@@ -34,6 +34,7 @@ import { getConnection } from '../../db/db';
 import { uuidSchema } from '../schemas/common';
 
 const groupKindSchema = z.enum(['bundle', 'shared_workspace']);
+const ASSET_GROUP_PERMISSION_ACTIONS = ['read', 'create', 'update', 'delete'] as const;
 
 export const createAssetGroupSchema = z.object({
   client_id: uuidSchema,
@@ -61,10 +62,17 @@ export const assetGroupContactSchema = z.object({
 });
 
 export class ApiAssetGroupController {
+  getPermissionRequirements(): Array<{ resource: string; action: string }> {
+    return ASSET_GROUP_PERMISSION_ACTIONS.map((action) => ({ resource: 'asset', action }));
+  }
+
   private async requireContext(
     req: NextRequest,
     action: 'read' | 'create' | 'update' | 'delete'
   ): Promise<ApiContext | NextResponse> {
+    if (!(ASSET_GROUP_PERMISSION_ACTIONS as readonly string[]).includes(action)) {
+      throw new Error(`Undeclared asset group permission action: ${action}`);
+    }
     const context = requireRequestContext(req);
     if (!context.user) {
       return createErrorResponse('User context required', 401, 'UNAUTHORIZED');

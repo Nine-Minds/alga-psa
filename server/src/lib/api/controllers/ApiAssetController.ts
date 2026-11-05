@@ -30,11 +30,21 @@ import { hasPermission } from '../../auth/rbac';
 import { getConnection } from '../../db/db';
 import { guardAssetRead } from './assetReadGuard';
 
+const ASSET_PERMISSION_REQUIREMENTS = [
+  { resource: 'asset', action: 'read' },
+  { resource: 'asset', action: 'update' },
+  { resource: 'ticket', action: 'read' },
+] as const;
+
 export class ApiAssetController {
   private assetService: AssetService;
 
   constructor() {
     this.assetService = new AssetService();
+  }
+
+  getPermissionRequirements(): Array<{ resource: string; action: string }> {
+    return [...ASSET_PERMISSION_REQUIREMENTS];
   }
 
   private async requireAllowedContext(req: NextRequest): Promise<ApiContext> {
@@ -211,6 +221,9 @@ export class ApiAssetController {
     }
     const knex = await getConnection(context.tenant);
     for (const resource of resources) {
+      if (!ASSET_PERMISSION_REQUIREMENTS.some((requirement) => requirement.resource === resource && requirement.action === 'read')) {
+        throw new Error(`Undeclared asset-controller permission: ${resource}:read`);
+      }
       const allowed = await hasPermission(context.user, resource, 'read', knex);
       if (!allowed) {
         return createErrorResponse(`Permission denied: Cannot read ${resource}`, 403, 'FORBIDDEN');
@@ -230,6 +243,9 @@ export class ApiAssetController {
     }
     const knex = await getConnection(context.tenant);
     for (const { resource, action } of checks) {
+      if (!ASSET_PERMISSION_REQUIREMENTS.some((requirement) => requirement.resource === resource && requirement.action === action)) {
+        throw new Error(`Undeclared asset-controller permission: ${resource}:${action}`);
+      }
       const allowed = await hasPermission(context.user, resource, action, knex);
       if (!allowed) {
         return createErrorResponse(`Permission denied: Cannot ${action} ${resource}`, 403, 'FORBIDDEN');

@@ -13,6 +13,7 @@ export class ApiBoardController extends ApiBaseController {
 
     super(boardService, {
       resource: 'board',
+      permissionResource: 'ticket',
       createSchema: createBoardSchema,
       updateSchema: updateBoardSchema,
       querySchema: boardListQuerySchema,
@@ -26,23 +27,16 @@ export class ApiBoardController extends ApiBaseController {
     });
   }
 
-  /**
-   * Override permission check to use 'ticket' resource
-   * since boards are ticket reference data
-   */
+  /** Board authorization follows the ticket permission model. */
   protected async checkPermission(req: AuthenticatedApiRequest, action: string): Promise<void> {
     const { hasPermission } = await import('@/lib/auth/rbac');
     const { getConnection } = await import('@/lib/db/db');
-
     if (!req.context?.user) {
       const { UnauthorizedError } = await import('../middleware/apiMiddleware');
       throw new UnauthorizedError('User context required');
     }
-
     const knex = await getConnection(req.context.tenant);
-    const hasAccess = await hasPermission(req.context.user, 'ticket', action, knex);
-
-    if (!hasAccess) {
+    if (!await hasPermission(req.context.user, 'ticket', action, knex)) {
       const { ForbiddenError } = await import('../middleware/apiMiddleware');
       throw new ForbiddenError(`Permission denied: Cannot ${action} board`);
     }

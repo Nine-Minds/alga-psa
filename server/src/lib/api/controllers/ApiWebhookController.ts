@@ -68,6 +68,12 @@ import { getTenantProduct, ProductAccessError } from '@/lib/productAccess';
 import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
 import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
+const WEBHOOK_PERMISSION_ACTIONS = [
+  'read', 'create', 'update', 'delete', 'test', 'retry', 'system_settings',
+  'analytics', 'bulk_update', 'manage_subscriptions', 'verify',
+  'manage_security', 'export', 'trigger',
+] as const;
+
 export class ApiWebhookController {
   private webhookService: WebhookService;
 
@@ -77,6 +83,11 @@ export class ApiWebhookController {
       undefined as any, // EventBusService - would be injected  
       undefined as any  // AuditLogService - would be injected
     );
+  }
+
+  /** Runtime permission contract for this controller's custom authorization path. */
+  getPermissionRequirements(): Array<{ resource: string; action: string }> {
+    return WEBHOOK_PERMISSION_ACTIONS.map((action) => ({ resource: 'webhook', action }));
   }
 
   /**
@@ -134,6 +145,9 @@ export class ApiWebhookController {
    * Check permissions
    */
   private async checkPermission(req: ApiRequest, action: string): Promise<void> {
+    if (!(WEBHOOK_PERMISSION_ACTIONS as readonly string[]).includes(action)) {
+      throw new Error(`Undeclared webhook permission action: ${action}`);
+    }
     if (!req.context?.user) {
       throw new UnauthorizedError('User context required');
     }
