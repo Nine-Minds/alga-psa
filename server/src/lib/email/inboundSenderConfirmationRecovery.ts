@@ -1,9 +1,6 @@
-import { defineJob, type JobDescriptorTenantSelector } from '@alga-psa/jobs/fanout';
-import { getAdminConnection } from '@alga-psa/db';
+import type { TenantSelector } from '@alga-psa/jobs/fanout';
 
-export const INBOUND_SENDER_CONFIRMATION_RECOVERY_JOB = 'inbound-sender-confirmation-recovery';
-
-export const tenantsWithPendingSenderConfirmations: JobDescriptorTenantSelector = async (db) => {
+export const tenantsWithPendingSenderConfirmations: TenantSelector = async (db) => {
   const waiting = await db.unscoped<{ tenant: string }>(
     'co_management_deliveries',
     'sender confirmation recovery enumerates tenants with pending delivery intents',
@@ -14,19 +11,8 @@ export const tenantsWithPendingSenderConfirmations: JobDescriptorTenantSelector 
   return waiting.map((row) => ({ tenant: String(row.tenant) }));
 };
 
-let defined = false;
 /** Mailbox confirmation recovery is native email work and is not gated by co-managed participation. */
-export function defineInboundSenderConfirmationRecoveryJob(): void {
-  if (defined) return;
-  defined = true;
-  defineJob({
-    name: INBOUND_SENDER_CONFIRMATION_RECOVERY_JOB,
-    scope: 'tenant',
-    schedule: { cron: '*/5 * * * *' },
-    tenants: tenantsWithPendingSenderConfirmations,
-    run: async (tenantId) => {
-      const { deliverPendingSenderConfirmations } = await import('@alga-psa/co-managed/inboundSenderConfirmation');
-      return deliverPendingSenderConfirmations(tenantId);
-    },
-  });
+export async function recoverInboundSenderConfirmations(tenantId: string): Promise<{ sent: number; failed: number }> {
+  const { deliverPendingSenderConfirmations } = await import('@alga-psa/co-managed/inboundSenderConfirmation');
+  return deliverPendingSenderConfirmations(tenantId);
 }

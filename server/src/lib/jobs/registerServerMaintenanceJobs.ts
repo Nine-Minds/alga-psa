@@ -14,6 +14,7 @@ import { createClientContractLineCyclesForAllTenants, createNextTimePeriodForTen
 import { generateRecurringTicketsHandler, tenantsWithActiveRecurringTickets } from './handlers/generateRecurringTicketsHandler';
 import { initializeJobRunner } from './initializeJobRunner';
 import { SERVER_MAINTENANCE_JOBS } from './serverMaintenanceJobNames';
+import { recoverInboundSenderConfirmations, tenantsWithPendingSenderConfirmations } from '../email/inboundSenderConfirmationRecovery';
 
 // The Temporal worker's maintenance-fanout:<jobName> schedules name these jobs
 // (packages/types/src/constants/maintenanceFanoutSchedules.ts). They are
@@ -34,6 +35,11 @@ export function registerServerMaintenanceJobs(): void {
     return;
   }
 
+  registerMaintenanceJob(SERVER_MAINTENANCE_JOBS.inboundSenderConfirmationRecovery, {
+    scope: 'tenant',
+    tenants: tenantsWithPendingSenderConfirmations,
+    run: recoverInboundSenderConfirmations,
+  });
   registerMaintenanceJob(SERVER_MAINTENANCE_JOBS.recoverFileUploads, {
     scope: 'tenant',
     run: async tenant => {

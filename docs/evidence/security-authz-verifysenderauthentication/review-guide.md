@@ -2,7 +2,24 @@
 
 Review this guide against the commit SHA linked from the PR after publication. This guide contains repository-local checks for the repaired HEAD; earlier screenshots and smoke recordings are historical and are not evidence for this revision.
 
-## Follow-up repair: native contact confirmation recovery and redemption (current work)
+## Takeover repair: scheduled recovery
+
+Review the native maintenance registration and the CE/EE schedule catalogs first. The previous revision defined the recovery handler after CE schedule convergence and only inside the server process. CE therefore never installed its cron, and the separate EE Temporal scheduler never saw its schedule registration. Directly calling recovery in a test did not establish automatic delivery.
+
+`inbound-sender-confirmation-recovery` now runs every five minutes through the existing native maintenance catalog. CE installs its pg-boss schedule during convergence. The EE worker creates its Temporal schedule from the shared catalog and forwards execution to the registered server handler. Neither scheduling nor tenant selection requires co-managed participation. The selector limits work to active tenants holding pending, failed, or interrupted confirmation deliveries.
+
+The CE converger and EE `setupSchedules` behavioral regressions both failed before this repair. They now assert the actual scheduler calls, including repeat setup. A real-database case creates a separate PSA tenant without co-managed participation, maps unsigned Microsoft MIME through the production mapper, observes a failed confirmation send, runs the registered maintenance fan-out, confirms mailbox possession, and verifies one comment attributed to that contact. Forged organization/authentication headers remain untrusted. The contact concurrency case pauses the first worker after message dedupe but before persistence, advances beyond its lease, starts a replacement, and verifies they still persist one comment.
+
+Current verification:
+
+- Server: **15 files, 240 tests passed**. This is the 12-file focused command below plus `src/test/integration/inboundEmailInApp.webhooks.integration.test.ts`, `src/test/unit/jobs/ceMaintenanceSchedules.unit.test.ts`, and `src/test/unit/maintenanceJobFanout.unit.test.ts`.
+- EE scheduler: `cd ee/temporal-workflows && npx vitest run --config vitest.no-docker.config.ts src/schedules/__tests__/setupSchedules.contract-cadence-replenishment.test.ts` — **3 tests passed**. Temporal schedule operations are stand-ins; this does not create a live Temporal schedule.
+- Shared and co-managed typechecks, types and shared builds, and email-service build passed.
+- Full server TypeScript check again exhausted its 8 GB V8 heap without a source diagnostic. The production build (`NODE_OPTIONS=--max-old-space-size=8192 NEXT_DIST_DIR=.next-review NEXT_BUILD_CPUS=1 NX_DAEMON=false npx nx build server --skip-nx-cache`) also exhausted its 8 GB heap and exited with SIGABRT after about seven minutes; no source diagnostic was emitted. Neither full-project check passed.
+
+The app server was not started. These checks establish scheduler registration and handler behavior through stand-ins and the local database. Live provider, DNS, browser, and deployed scheduler operation remain unverified. Human Review Approval is still required.
+
+## Earlier repair: native contact confirmation recovery and redemption
 
 The unsigned Microsoft requester-contact path no longer depends on the optional `coManagedInboundCommentSeam`; native ingestion queues the contact confirmation directly when that seam is absent. Its five-minute delivery-recovery job is registered independently of the co-managed capability and scans only tenants with pending/failed/sending sender-confirmation intents. Contact lookup excludes inactive contacts; the registered contact is checked again before sending and during redemption, and `TicketModel.createComment` rejects an inactive contact at persistence.
 
@@ -18,7 +35,7 @@ Latest focused rerun after this repair: `cd server && npx vitest run src/test/in
 2. Legitimate Microsoft internal replies use an expiring authenticated confirmation to the matched active user's registered mailbox. A Graph emulator-backed ingestion test fetches forged `Sender`/`From` and success-claim headers, runs MIME mapping and real DB admission, confirms that no comment exists before approval, then verifies Alice authored exactly one persisted comment.
 3. Gmail, Microsoft, and IMAP co-managed internal replies use the same confirmation path. Approval is bound to tenant, intended actor, reply token, provider/message identity, exact content digest, and 15-minute expiry; it re-runs tenant, relationship, audience, grant, and permission admission. Concurrent redemption is atomically claimed. A claim interrupted before or after the idempotent comment write becomes retryable after a 60-second lease, while an active claim remains protected.
 4. Forged MIME `From`, `Sender`, `Authentication-Results`, `AuthSource`, or `AuthAs` never grants internal identity. Independently verified aligned DKIM is evidence for the signing domain and signed content only; it does not establish an exact mailbox.
-4. An unsigned Microsoft requester reply matching an active ticket contact is held without a comment and confirmed through a one-time link sent to that contact's registered email. Redemption re-runs normal native admission and persists as the contact. This works for PSA tenants without co-managed participation, and delivery recovery is registered independently of that capability. Contact inactivity is rechecked before send and redemption and at comment persistence. Delivery failures are retryable; stale `sending` claims recover after 60 seconds with attempt fencing. A provider-accepted send can produce a duplicate email if finalization was interrupted, while comment persistence remains idempotent.
+5. An unsigned Microsoft requester reply matching an active ticket contact is held without a comment and confirmed through a one-time link sent to that contact's registered email. Redemption re-runs normal native admission and persists as the contact. This works for PSA tenants without co-managed participation, and delivery recovery is registered independently of that capability. Contact inactivity is rechecked before send and redemption and at comment persistence. Delivery failures are retryable; stale `sending` claims recover after 60 seconds with attempt fencing. A provider-accepted send can produce a duplicate email if finalization was interrupted, while comment persistence remains idempotent.
 
 ## Evidence matrix
 

@@ -110,4 +110,22 @@ describe('setupSchedules contract-cadence replenishment fan-out', () => {
         .filter((scheduleId: string) => scheduleId.endsWith(CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME)),
     ).toEqual([`maintenance-fanout:${CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME}`]);
   });
+
+  it('schedules sender confirmation recovery without loading the server instrumentation', async () => {
+    const { setupSchedules } = await import('../setupSchedules');
+
+    await setupSchedules();
+    await setupSchedules();
+
+    const scheduleId = 'maintenance-fanout:inbound-sender-confirmation-recovery';
+    expect(scheduleCreateMock).toHaveBeenCalledWith(expect.objectContaining({
+      scheduleId,
+      spec: { cronExpressions: ['*/5 * * * *'] },
+      action: expect.objectContaining({
+        args: [{ jobName: 'inbound-sender-confirmation-recovery' }],
+        taskQueue: 'tenant-workflows',
+      }),
+    }));
+    expect(scheduleUpdateMock).toHaveBeenCalledWith(scheduleId, expect.any(Object));
+  });
 });

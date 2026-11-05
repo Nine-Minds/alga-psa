@@ -53,6 +53,7 @@ export const MAINTENANCE_FANOUT_SCHEDULES: ReadonlyArray<{ jobName: string; cron
   { jobName: 'recover-file-uploads', cron: '*/5 * * * *' },
 
   // Server-registered jobs (registerServerMaintenanceJobs.ts).
+  { jobName: 'inbound-sender-confirmation-recovery', cron: '*/5 * * * *' },
   { jobName: 'create-client-contract-line-cycles', cron: '0 0 * * *' },
   { jobName: 'project-date-readiness', cron: '15 0 * * *' },
   { jobName: 'create-next-time-periods', cron: '30 0 * * *' },

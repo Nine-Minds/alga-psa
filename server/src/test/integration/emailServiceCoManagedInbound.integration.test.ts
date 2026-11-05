@@ -457,10 +457,40 @@ describe('email-service boot registers co-managed inbound', () => {
       await processInbound({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: overlapMessage });
       const overlapUrl = String((sendEmail.mock.calls[3] as any)[0].templateProcessor.text).match(/https:\/\/[^\s]+/)![0];
       const overlapToken = new URL(overlapUrl).searchParams.get('token')!;
-      const overlapResults = await Promise.all([
-        approveInboundContactSenderConfirmation(overlapToken),
-        approveInboundContactSenderConfirmation(overlapToken),
-      ]);
+      const actions = await import('../../../../shared/workflow/actions/emailWorkflowActions');
+      const createComment = actions.createCommentFromEmail;
+      let releaseFirst!: () => void, firstAtWrite!: () => void;
+      const paused = new Promise<void>((resolve) => { firstAtWrite = resolve; });
+      const resume = new Promise<void>((resolve) => { releaseFirst = resolve; });
+      const slowWrite = vi.spyOn(actions, 'createCommentFromEmail').mockImplementationOnce(async (...args) => {
+        // Pause after native message dedupe, before the first comment commits.
+        firstAtWrite();
+        await resume;
+        return createComment(...args);
+      });
+      const firstApproval = approveInboundContactSenderConfirmation(overlapToken);
+      await paused;
+      const realNow = Date.now.bind(Date);
+      const elapsedLease = vi.spyOn(Date, 'now').mockImplementation(() => realNow() + 61_000);
+      let secondFinished = false;
+      const secondApproval = approveInboundContactSenderConfirmation(overlapToken).then((result) => {
+        secondFinished = true;
+        return result;
+      });
+      const { sourceId } = JSON.parse(Buffer.from(overlapToken.split('.')[0], 'base64url').toString());
+      try {
+        // Release the first worker only after its stale replacement has either
+        // finished (the old bug) or is waiting on this confirmation's lock.
+        await vi.waitFor(async () => {
+          const waiting = await db.raw("select 1 from pg_locks where locktype = 'advisory' and not granted and objid = (hashtext(?)::bigint & 4294967295)::oid", [`inbound-contact-confirmation:${ticketTenant}:${sourceId}`]);
+          expect(secondFinished || waiting.rows.length > 0).toBe(true);
+        });
+      } finally {
+        elapsedLease.mockRestore();
+        releaseFirst();
+        slowWrite.mockRestore();
+      }
+      const overlapResults = await Promise.all([firstApproval, secondApproval]);
       expect(overlapResults.filter(Boolean)).toHaveLength(1);
       expect(await sharedComments(overlapText)).toHaveLength(1);
 
@@ -480,6 +510,66 @@ describe('email-service boot registers co-managed inbound', () => {
       }
       expect(sendEmail).toHaveBeenCalledTimes(5);
     } finally { resetWorkflowEmailProvider(); if (priorSecret === undefined) delete process.env.NEXTAUTH_SECRET; else process.env.NEXTAUTH_SECRET = priorSecret; if (priorOrigin === undefined) delete process.env.APP_BASE_URL; else process.env.APP_BASE_URL = priorOrigin; }
+  });
+
+  it('recovers unsigned Microsoft contact replies for a PSA tenant without co-managed participation', async () => {
+    const { simpleParser } = await import('mailparser');
+    const { mapParsedMimeToEmailMessageDetails } = await vi.importActual<typeof import('../../../../shared/services/email/unifiedInboundEmailQueueJobProcessor')>('../../../../shared/services/email/unifiedInboundEmailQueueJobProcessor');
+    const { registerWorkflowEmailProvider, resetWorkflowEmailProvider } = await import('@alga-psa/shared/workflow/runtime/registries/workflowEmailRegistry');
+    const { approveInboundContactSenderConfirmation } = await import('@alga-psa/co-managed/inboundSenderConfirmation');
+    const { registerServerMaintenanceJobs } = await import('../../lib/jobs/registerServerMaintenanceJobs');
+    const { runMaintenanceJob } = await import('@alga-psa/jobs/fanout');
+    const { serves } = await import('@alga-psa/core/capability');
+    const plainTenant = await createTenant(db, 'Native sender confirmation', { productCode: 'psa' });
+    tenants.push(plainTenant);
+    const enteredBy = await createUser(db, plainTenant);
+    const clientId = uuidv4(), boardId = uuidv4(), statusId = uuidv4(), priorityId = uuidv4(), contactId = uuidv4(), nativeTicketId = uuidv4();
+    const contactEmail = `native-${MARK}@example.test`, nativeToken = `native:${uuidv4()}`;
+    await db('clients').insert({ tenant: plainTenant, client_id: clientId, client_name: 'Native Client', billing_cycle: 'monthly', is_tax_exempt: false });
+    await db('contacts').insert({ tenant: plainTenant, contact_name_id: contactId, full_name: 'Native Requester', email: contactEmail, client_id: clientId, is_inactive: false });
+    await db('boards').insert({ tenant: plainTenant, board_id: boardId, board_name: 'Support', is_default: true, is_inactive: false });
+    await db('priorities').insert({ tenant: plainTenant, priority_id: priorityId, priority_name: 'High', item_type: 'ticket', color: '#EF4444', order_number: 10, created_by: enteredBy });
+    await db('statuses').insert({ tenant: plainTenant, status_id: statusId, board_id: boardId, name: 'Open', status_type: 'ticket', is_closed: false, is_default: true, order_number: 10, created_by: enteredBy });
+    await db('tickets').insert({ tenant: plainTenant, ticket_id: nativeTicketId, ticket_number: `N-${MARK}`, title: 'Native reply', client_id: clientId, contact_name_id: contactId, board_id: boardId, status_id: statusId, priority_id: priorityId, entered_by: enteredBy });
+    await db('email_reply_tokens').insert({ tenant: plainTenant, token: nativeToken, ticket_id: nativeTicketId, entity_type: 'ticket', recipient_email: contactEmail });
+    const text = `native-recovery-${MARK}`;
+    const raw = Buffer.from([
+      `From: Native Requester <${contactEmail}>`, 'To: support@example.test', 'Subject: Re: Native reply',
+      `Message-ID: <native-recovery-${MARK}@example.test>`,
+      'X-MS-Exchange-Organization-AuthAs: Internal',
+      'Authentication-Results: outlook.com; dmarc=pass header.from=example.test',
+      '', `${text}\n\n[ALGA-REPLY-TOKEN ${nativeToken} ticketId=${nativeTicketId}]`,
+    ].join('\r\n'));
+    const message = await mapParsedMimeToEmailMessageDetails({ provider: 'microsoft', providerId: PROVIDER_ID, tenant: plainTenant, rawMimeBuffer: raw, parsed: await simpleParser(raw), fallbackMessageId: `native-provider-${MARK}` });
+    expect(message.senderAuthentication?.contact?.authorization).toBe('untrusted');
+    const priorSecret = process.env.NEXTAUTH_SECRET, priorOrigin = process.env.APP_BASE_URL, priorCapability = process.env.FORCE_CAPABILITIES;
+    process.env.NEXTAUTH_SECRET = 'confirmation-test-secret-0123456789-abcdef';
+    process.env.APP_BASE_URL = 'https://psa.example.test';
+    delete process.env.FORCE_CAPABILITIES;
+    const sendEmail = vi.fn().mockResolvedValueOnce({ success: false, error: 'Temporary provider failure' }).mockResolvedValue({ success: true });
+    registerWorkflowEmailProvider({ TenantEmailService: { getInstance: () => ({ sendEmail }) }, StaticTemplateProcessor: class { constructor(public subject: string, public html: string, public text?: string) {} async process() { return { subject: this.subject, html: this.html, text: this.text }; } } } as any);
+    const comments = () => db('comments').where({ tenant: plainTenant, ticket_id: nativeTicketId });
+    try {
+      expect((await serves('co-managed', plainTenant)).served).toBe(false);
+      expect(await processInbound({ tenantId: plainTenant, providerId: PROVIDER_ID, emailData: message })).toMatchObject({ outcome: 'quarantined', ticketId: nativeTicketId });
+      expect(await comments()).toHaveLength(0);
+      expect((await db('co_management_deliveries').where({ tenant: plainTenant, delivery_kind: 'sender_contact_confirmation' }).first('state')).state).toBe('failed');
+      registerServerMaintenanceJobs();
+      expect(await runMaintenanceJob('inbound-sender-confirmation-recovery')).toMatchObject({ failed: 0 });
+      expect(sendEmail).toHaveBeenCalledTimes(2);
+      expect((sendEmail.mock.calls[1] as any)[0].to).toBe(contactEmail);
+      const url = String((sendEmail.mock.calls[1] as any)[0].templateProcessor.text).match(/https:\/\/[^\s]+/)![0];
+      const confirmationToken = new URL(url).searchParams.get('token')!;
+      expect(await approveInboundContactSenderConfirmation(confirmationToken)).toMatchObject({ outcome: 'replied', ticketId: nativeTicketId });
+      expect(await approveInboundContactSenderConfirmation(confirmationToken)).toBeNull();
+      expect(await comments()).toHaveLength(1);
+      expect((await comments())[0]).toMatchObject({ author_type: 'client', contact_id: contactId });
+    } finally {
+      resetWorkflowEmailProvider();
+      if (priorSecret === undefined) delete process.env.NEXTAUTH_SECRET; else process.env.NEXTAUTH_SECRET = priorSecret;
+      if (priorOrigin === undefined) delete process.env.APP_BASE_URL; else process.env.APP_BASE_URL = priorOrigin;
+      if (priorCapability === undefined) delete process.env.FORCE_CAPABILITIES; else process.env.FORCE_CAPABILITIES = priorCapability;
+    }
   });
 
   it('confirmation rejects expiry, content changes and revoked grants, and concurrent redemption writes one comment', async () => {

@@ -32,6 +32,7 @@ export const CE_SHARED_MAINTENANCE_JOBS: ReadonlyArray<string> = [
   'search:reconcile',
   'renew-google-gmail-watch',
   'inbound-email-recovery',
+  'inbound-sender-confirmation-recovery',
   'provider-disconnect-retry',
   'process-renewal-queue',
   'cleanup-temporary-workflow-forms',

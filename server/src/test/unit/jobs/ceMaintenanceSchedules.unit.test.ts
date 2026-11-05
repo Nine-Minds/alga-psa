@@ -150,6 +150,10 @@ describe('convergeCeMaintenanceSchedules', () => {
     expect(runner.scheduleGlobalRecurringJob).toHaveBeenCalledWith('maintenance-fanout', '*/5 * * * *', expect.objectContaining({
       scheduleId: 'maintenance-fanout:sla-timer', timezone: 'UTC', data: { jobName: 'sla-timer' }, queuePolicy: 'stately', expireInSeconds: 3600,
     }));
+    expect(runner.scheduleGlobalRecurringJob).toHaveBeenCalledWith('maintenance-fanout', '*/5 * * * *', expect.objectContaining({
+      scheduleId: 'maintenance-fanout:inbound-sender-confirmation-recovery',
+      data: { jobName: 'inbound-sender-confirmation-recovery' },
+    }));
     expect(runner.unscheduleGlobalRecurringJob).toHaveBeenCalledTimes(1);
     expect(runner.unscheduleGlobalRecurringJob).toHaveBeenCalledWith('maintenance-fanout:obsolete');
     expect(result.removed).toEqual(['maintenance-fanout:obsolete']);

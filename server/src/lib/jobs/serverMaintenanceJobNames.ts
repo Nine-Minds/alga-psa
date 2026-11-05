@@ -11,6 +11,7 @@ export const SERVER_MAINTENANCE_JOBS = {
   huduAutoSync: 'hudu-auto-sync',
   recoverFileUploads: 'recover-file-uploads',
   recoverCommentPublications: 'recover-comment-publications',
+  inboundSenderConfirmationRecovery: 'inbound-sender-confirmation-recovery',
   createNextTimePeriods: 'create-next-time-periods',
   createClientContractLineCycles: 'create-client-contract-line-cycles',
   rmmPollingReconcile: 'rmm-polling-reconcile',
