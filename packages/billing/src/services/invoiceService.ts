@@ -24,6 +24,7 @@ import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileL
 import { resolveChargeProfile } from '../lib/billing/billingProfileResolution';
 import { resolveInvoiceBillingRecipient } from './invoiceBillingRecipientService';
 import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+import { distributeExternalTaxToFixedDetails, zeroFixedDetailTaxForInvoice } from './delegatedFixedDetailTax';
 
 
 // Helper interface for tax calculation
@@ -2252,6 +2253,10 @@ export async function calculateAndDistributeTax(
         });
     }
 
+    // A fixed-plan parent carries its tax through child allocation rows; push the
+    // imported amount down so detail tax still sums to the parent exactly.
+    await distributeExternalTaxToFixedDetails(tx, tenant, invoiceId);
+
     // Return total external tax
     const totalExternalTax = items.reduce((sum, item) => sum + Number(item.external_tax_amount || 0), 0);
     console.log(`[calculateAndDistributeTax] External tax total: ${totalExternalTax}`);
@@ -2275,6 +2280,10 @@ export async function calculateAndDistributeTax(
           total_price: netAmount
         });
     }
+
+    // The engine still computes per-service tax for the preview path, so a
+    // fixed-plan parent's allocation rows would keep it while the parent reads 0.
+    await zeroFixedDetailTaxForInvoice(tx, tenant, invoiceId);
 
     return 0;
   }
