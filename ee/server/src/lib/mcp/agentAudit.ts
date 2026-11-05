@@ -1,4 +1,5 @@
 import { tenantDb } from '@alga-psa/db';
+import { redactToolArguments, redactToolResult } from '@alga-psa/agent-tooling';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
 
 /** One agent tool invocation, recorded for the exportable agent-action audit. */
@@ -13,21 +14,46 @@ export interface AgentAuditEntry {
   resultSummary?: string | null;
 }
 
-const MAX_SUMMARY = 2000;
+/**
+ * The audit boundary owns secrecy: every row's arguments and result summary are redacted here,
+ * so no caller (present or future) can persist an unredacted tool result. If redaction throws we
+ * store a minimal `{ok, status}` summary and no arguments — never the raw text.
+ */
+export function redactAuditEntry(entry: AgentAuditEntry): { arguments: string | null; resultSummary: string | null } {
+  try {
+    const args = entry.arguments;
+    const redactedArgs =
+      args === undefined || args === null
+        ? null
+        : typeof args === 'object' && !Array.isArray(args)
+          ? redactToolArguments(entry.tool, args as Record<string, unknown>)
+          : redactToolArguments(entry.tool, { arguments: args });
+    return {
+      arguments: redactedArgs === null ? null : JSON.stringify(redactedArgs),
+      resultSummary: redactToolResult(entry.tool, entry.resultSummary),
+    };
+  } catch {
+    return {
+      arguments: null,
+      resultSummary: JSON.stringify({ ok: entry.ok, status: entry.statusCode ?? null }),
+    };
+  }
+}
 
 export async function writeAgentAudit(entry: AgentAuditEntry): Promise<void> {
   try {
+    const safe = redactAuditEntry(entry);
     await runWithTenant(entry.tenant, async () => {
       const { knex } = await createTenantKnex(entry.tenant);
       await tenantDb(knex, entry.tenant).table('mcp_agent_audit').insert({
         tenant: entry.tenant,
         agent_id: entry.agentId,
         tool: entry.tool,
-        arguments: entry.arguments === undefined ? null : JSON.stringify(entry.arguments),
+        arguments: safe.arguments,
         ok: entry.ok,
         status_code: entry.statusCode ?? null,
         decision: entry.decision ?? (entry.ok ? 'allow' : 'error'),
-        result_summary: entry.resultSummary ? entry.resultSummary.slice(0, MAX_SUMMARY) : null,
+        result_summary: safe.resultSummary,
       });
     });
   } catch {
