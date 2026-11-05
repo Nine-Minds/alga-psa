@@ -16,6 +16,11 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
+vi.mock('server/src/lib/auth/rbac', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  hasPermission: vi.fn(async () => true),
+}));
+
 // T043 (F056): TimeSheetService.approveTimeSheet end to end against the real schema.
 describe('T043 TimeSheetService.approveTimeSheet (F056)', () => {
   let db: Knex;
@@ -27,10 +32,8 @@ describe('T043 TimeSheetService.approveTimeSheet (F056)', () => {
   function approverService(userId: string) {
     const svc = new TimeSheetService();
     vi.spyOn(svc as any, 'getKnex').mockResolvedValue({ knex: db, tenant });
-    // canApproveTimeSheets is a stub that always returns false in CE ("Simplified for now");
-    // stub it so the update path under test is reachable.
-    vi.spyOn(svc as any, 'canApproveTimeSheets').mockResolvedValue(true);
-    return { svc, context: { tenant, userId } as any };
+    // RBAC itself is not under test: the approver holds time_sheet:approve (see the hasPermission mock above).
+    return { svc, context: { tenant, userId, user: { user_id: userId, tenant, user_type: 'internal' } } as any };
   }
 
   async function submittedSheet(): Promise<{ sheetId: string; entryId: string }> {
