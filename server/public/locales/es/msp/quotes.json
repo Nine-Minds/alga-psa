@@ -594,6 +594,7 @@
       "subtotal": "Subtotal de ubicación",
       "addLocationButton": "+ Añadir ubicación",
       "needMoreLocations": "Este cliente solo tiene una ubicación activa. Añada una segunda ubicación en la configuración del cliente para habilitar cotizaciones multi-sede.",
+      "allLocationsInUse": "Todas las ubicaciones activas de este cliente ya tienen un grupo en esta cotización.",
       "emptyGroup": "Aún no hay elementos para esta ubicación."
     }
   },

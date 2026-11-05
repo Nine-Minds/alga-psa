@@ -594,6 +594,7 @@
       "subtotal": "Location subtotal",
       "addLocationButton": "+ Add location",
       "needMoreLocations": "This client only has one active location. Add a second location in Client settings to enable multi-site quoting.",
+      "allLocationsInUse": "Every active location for this client already has a group on this quote.",
       "emptyGroup": "No items yet for this location."
     }
   },

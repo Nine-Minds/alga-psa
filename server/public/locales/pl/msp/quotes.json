@@ -594,6 +594,7 @@
       "subtotal": "Suma częściowa lokalizacji",
       "addLocationButton": "+ Dodaj lokalizację",
       "needMoreLocations": "Ten klient ma tylko jedną aktywną lokalizację. Dodaj drugą lokalizację w ustawieniach klienta, aby włączyć oferty wielolokalizacyjne.",
+      "allLocationsInUse": "Każda aktywna lokalizacja tego klienta ma już grupę w tej ofercie.",
       "emptyGroup": "Brak pozycji dla tej lokalizacji."
     }
   },

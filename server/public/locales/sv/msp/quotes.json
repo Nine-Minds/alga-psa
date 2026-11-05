@@ -594,6 +594,7 @@
       "subtotal": "Delsumma för platsen",
       "addLocationButton": "+ Lägg till plats",
       "needMoreLocations": "Den här kunden har bara en aktiv plats. Lägg till en andra plats i kundinställningarna för att kunna skapa offerter för flera platser.",
+      "allLocationsInUse": "Varje aktiv plats för den här kunden har redan en grupp i den här offerten.",
       "emptyGroup": "Inga rader för den här platsen ännu."
     }
   },

@@ -225,3 +225,50 @@ describe('QuoteLineItemsEditor row dragging', () => {
     expect(next[0].phase).toBe('Discovery');
   });
 });
+
+describe('QuoteLineItemsEditor add-location affordance (alga-2026-0002902)', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  const siteLocations = [
+    { location_id: 'loc-a', client_id: 'client-1', location_name: 'Site A', is_default: true, is_active: true },
+    { location_id: 'loc-b', client_id: 'client-1', location_name: 'Site B', is_default: false, is_active: true },
+  ] as any;
+
+  const addLocationButton = () =>
+    document.getElementById('quote-line-add-location') as HTMLButtonElement;
+
+  it('stays clickable while one of the client locations is still free', () => {
+    render(
+      <QuoteLineItemsEditor
+        items={[{ ...draftItem('item-1', 'Managed Endpoint', ''), location_id: 'loc-b' }]}
+        currencyCode="USD"
+        onChange={vi.fn()}
+        locations={siteLocations}
+        onAddLocationGroup={vi.fn()}
+      />,
+    );
+
+    expect(addLocationButton().disabled).toBe(false);
+    expect(document.getElementById('quote-line-all-locations-in-use')).toBeNull();
+  });
+
+  it('reports that every location is already grouped instead of swallowing the click', () => {
+    render(
+      <QuoteLineItemsEditor
+        items={[{ ...draftItem('item-1', 'Managed Endpoint', ''), location_id: 'loc-b' }]}
+        currencyCode="USD"
+        onChange={vi.fn()}
+        locations={siteLocations}
+        extraGroupLocationIds={['loc-a']}
+        showLocationGroups
+        onAddLocationGroup={vi.fn()}
+      />,
+    );
+
+    expect(addLocationButton().disabled).toBe(true);
+    expect(document.getElementById('quote-line-all-locations-in-use')?.textContent)
+      .toContain('already has a group');
+  });
+});

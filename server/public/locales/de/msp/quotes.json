@@ -594,6 +594,7 @@
       "subtotal": "Standort-Zwischensumme",
       "addLocationButton": "+ Standort hinzufügen",
       "needMoreLocations": "Dieser Kunde hat nur einen aktiven Standort. Fügen Sie in den Kundeneinstellungen einen zweiten Standort hinzu, um Multi-Site-Angebote zu aktivieren.",
+      "allLocationsInUse": "Jeder aktive Standort dieses Kunden hat auf diesem Angebot bereits eine Gruppe.",
       "emptyGroup": "Noch keine Positionen für diesen Standort."
     }
   },

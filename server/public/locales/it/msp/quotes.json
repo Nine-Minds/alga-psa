@@ -594,6 +594,7 @@
       "subtotal": "Subtotale sede",
       "addLocationButton": "+ Aggiungi sede",
       "needMoreLocations": "Questo cliente ha una sola sede attiva. Aggiungi una seconda sede nelle impostazioni cliente per abilitare i preventivi multi-sede.",
+      "allLocationsInUse": "Ogni sede attiva di questo cliente ha già un gruppo in questo preventivo.",
       "emptyGroup": "Ancora nessuna voce per questa sede."
     }
   },

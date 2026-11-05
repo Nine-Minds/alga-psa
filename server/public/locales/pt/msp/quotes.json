@@ -594,6 +594,7 @@
       "subtotal": "Subtotal de localização",
       "addLocationButton": "+ Adicionar localização",
       "needMoreLocations": "Este cliente possui apenas um local ativo. Adicione um segundo local nas configurações do cliente para ativar a cotação de vários sites.",
+      "allLocationsInUse": "Todos os locais ativos deste cliente já têm um grupo nesta cotação.",
       "emptyGroup": "Ainda não há itens para este local."
     }
   },

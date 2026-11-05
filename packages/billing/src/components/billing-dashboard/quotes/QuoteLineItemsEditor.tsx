@@ -783,6 +783,23 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
     </div>
   );
 
+  /**
+   * Every one of the client's locations already has a group, so "+ Add
+   * location" has nothing left to seed. Reported instead of letting the button
+   * swallow the click silently.
+   */
+  const allLocationsInUse = useMemo(() => {
+    if (locations.length === 0) return false;
+    const used = new Set<string>();
+    for (const item of items) {
+      if (item.location_id) used.add(item.location_id);
+    }
+    for (const extraId of extraGroupLocationIds) {
+      if (extraId) used.add(extraId);
+    }
+    return locations.every((loc) => used.has(loc.location_id));
+  }, [items, locations, extraGroupLocationIds]);
+
   const excludedLocationIds = useMemo(() => {
     // Prevent the same location from being chosen twice across groups.
     const seen = new Set<string>();
@@ -889,7 +906,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
               variant="outline"
               size="sm"
               onClick={() => onAddLocationGroup()}
-              disabled={disabled || locations.length < 2}
+              disabled={disabled || locations.length < 2 || allLocationsInUse}
             >
               {t('quoteLineItems.locations.addLocationButton', { defaultValue: '+ Add location' })}
             </Button>
@@ -899,6 +916,13 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
           <p className="text-xs text-muted-foreground">
             {t('quoteLineItems.locations.needMoreLocations', {
               defaultValue: 'This client only has one active location. Add a second location in Client settings to enable multi-site quoting.',
+            })}
+          </p>
+        ) : null}
+        {onAddLocationGroup && locations.length >= 2 && allLocationsInUse ? (
+          <p id="quote-line-all-locations-in-use" className="text-xs text-muted-foreground">
+            {t('quoteLineItems.locations.allLocationsInUse', {
+              defaultValue: 'Every active location for this client already has a group on this quote.',
             })}
           </p>
         ) : null}
