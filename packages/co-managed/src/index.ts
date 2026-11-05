@@ -91,6 +91,17 @@ export { enqueueCoManagedSlaDeliveries, pendingCoManagedSlaDeliveries, flagStale
 export type { CoManagedSlaDeliveryRow, CoManagedSlaDeliveryPayload } from './slaDeliveries';
 export { observeDueCoManagedTicketSlas } from './ticketSla';
 export { getCoManagedTicketSlaDisplay, type CoManagedTicketSlaDisplay, type CoManagedSlaDisplay, type CoManagedSlaTargetDisplay } from './ticketSlaRead';
+// L4b: attachments, drafts, thread disclosure, archive files.
+export * from './attachmentParent';
+export * from './attachmentStoragePath';
+export * from './conversationAttachments';
+export * from './conversationDrafts';
+export * from './uploadCleanup';
+export * from './archiveFiles';
+export * from './attachmentExport';
+export * from './threadDisclosure';
+export * from './privateThreadDisclosure';
+export * from './privateThreadTransferCleanup';
 // Time, effort and billing modes (L6a2).
 export * from './effortTotals';
 export * from './timeEntryBillingMode';

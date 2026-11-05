@@ -15,6 +15,7 @@ import { generateRecurringTicketsHandler, tenantsWithActiveRecurringTickets } fr
 import { wireJobCapabilityFilter } from './capabilityJobFilter';
 import { defineCoManagedSlaObservationJob } from './handlers/coManagedSlaObservationJob';
 import { initializeJobRunner } from './initializeJobRunner';
+import { registerCoManagedUploadCleanup } from './handlers/coManagedUploadCleanupHandler';
 import { SERVER_MAINTENANCE_JOBS } from './serverMaintenanceJobNames';
 
 // The Temporal worker's maintenance-fanout:<jobName> schedules name these jobs
@@ -108,6 +109,9 @@ export function registerServerMaintenanceJobs(): void {
       return reconcileRmmPollingSchedules(await initializeJobRunner());
     },
   });
+
+  // Co-managed upload cleanup: descriptor + schedule + capability filter (gated on `co-managed`).
+  registerCoManagedUploadCleanup();
 
   registered = true;
 }
