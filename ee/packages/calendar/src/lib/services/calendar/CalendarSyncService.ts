@@ -1358,6 +1358,12 @@ export class CalendarSyncService {
     }
   }
 
+  /**
+   * The bounded fallback for a rule Alga cannot represent. The window is
+   * measured from the moment of each sync, so it re-extends: an occurrence that
+   * was too far out is imported by a later run once it comes into range, and
+   * the series is never materialized unbounded.
+   */
   private isWithinFallbackWindow(event: ExternalCalendarEvent): boolean {
     const raw = event.start?.dateTime || event.start?.date;
     const start = raw ? new Date(raw) : null;
