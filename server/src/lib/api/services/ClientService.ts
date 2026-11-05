@@ -11,6 +11,8 @@ import { getContactCountsByLocation } from '@alga-psa/shared/models/contactLocat
 import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
 import { IClient, IClientLocation } from 'server/src/interfaces/client.interfaces';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
+import { displayTagKey, loadDisplayTagsForEntities } from '@alga-psa/tags/lib/loadDisplayTags';
+import { displayAudienceForUser } from '@alga-psa/tags/lib/tagDisplayRules';
 import { availableCreditSubquerySql } from '@alga-psa/billing/lib/creditBalance';
 import { isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
@@ -315,8 +317,16 @@ export class ClientService extends BaseService<IClient> {
         })
       );
 
+      // Chip tags for picker rows (tag display rules, caller audience): one query for the page.
+      const displayTags = await loadDisplayTagsForEntities(trx, context.tenant, displayAudienceForUser(context.user), [
+        { taggedType: 'client', ids: clientsWithLogos.map((client) => client.client_id) },
+      ]);
+
       return {
-        data: clientsWithLogos,
+        data: clientsWithLogos.map((client) => ({
+          ...client,
+          display_tags: displayTags.get(displayTagKey('client', client.client_id)) ?? [],
+        })),
         total: parseInt(count as string)
       };
     });
@@ -348,12 +358,18 @@ export class ClientService extends BaseService<IClient> {
         return null;
       }
 
-      // Get logo URL
-      const logoUrl = await getClientLogoUrl(id, context.tenant);
+      const [logoUrl, displayTags] = await Promise.all([
+        getClientLogoUrl(id, context.tenant),
+        loadDisplayTagsForEntities(trx, context.tenant, displayAudienceForUser(context.user), [
+          { taggedType: 'client', ids: [id] },
+        ]),
+      ]);
 
       return withClientSinceDateString({
         ...stripLegacyClientTaxId(client),
-        logoUrl
+        logoUrl,
+        // Chip tags (tag display rules for the caller's audience), as the web pickers and ticket header show them.
+        display_tags: displayTags.get(displayTagKey('client', id)) ?? [],
       }) as unknown as IClient;
     });
   }

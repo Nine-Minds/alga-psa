@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "../../../ui/ThemeContext";
 import { Avatar } from "../../../ui/components/Avatar";
+import { DisplayTagBadges } from "../../../ui/components/DisplayTagBadges";
 import { listContacts, type ContactListItem } from "../../../api/referenceData";
 import { contactPrimaryLocationLabel } from "../../../api/contacts";
 import type { ApiClient } from "../../../api/client";
@@ -260,7 +261,10 @@ export function ContactPickerModal({
                 >
                   <Avatar name={contact.full_name} imageUri={avatarUri} size="sm" />
                   <View style={{ marginLeft: spacing.sm, flex: 1 }}>
-                    <Text style={{ ...typography.body, color: colors.text }}>{contact.full_name}</Text>
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.xs }}>
+                      <Text style={{ ...typography.body, color: colors.text }}>{contact.full_name}</Text>
+                      <DisplayTagBadges tags={contact.display_tags} />
+                    </View>
                     {contact.email ? (
                       <Text style={{ ...typography.caption, color: colors.textSecondary }}>{contact.email}</Text>
                     ) : null}
