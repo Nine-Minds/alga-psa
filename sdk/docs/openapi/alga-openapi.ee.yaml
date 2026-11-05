@@ -8194,6 +8194,13 @@ components:
           maxItems: 50
       required:
         - contract_line_ids
+    BulkDeleteContractLinesQuery:
+      type: object
+      properties:
+        contract_line_ids:
+          type: string
+          description: Comma-separated contract line UUIDs. DELETE-only alternative to the
+            request body, for clients that cannot send a body on DELETE.
     BulkAddServicesBody:
       type: object
       properties:
@@ -8225,6 +8232,17 @@ components:
       required:
         - contract_line_id
         - service_ids
+    BulkRemoveServicesQuery:
+      type: object
+      properties:
+        contract_line_id:
+          type: string
+          format: uuid
+          description: Contract line UUID. DELETE-only alternative to the request body.
+        service_ids:
+          type: string
+          description: Comma-separated service UUIDs. DELETE-only alternative to the
+            request body, for clients that cannot send a body on DELETE.
     CreateContractLineTemplateBody:
       type: object
       properties:
@@ -35976,7 +35994,9 @@ paths:
     delete:
       summary: Bulk delete contract lines
       description: Alias route to bulkDeleteContractLines; deletes multiple contract
-        lines by ID list.
+        lines by ID list. The ids may come from the request body or, for clients
+        that cannot send a body on DELETE, from the `contract_line_ids` query
+        parameter.
       tags:
         - Contract Lines
       security:
@@ -35988,8 +36008,18 @@ paths:
         x-request-context-wiring-gap: true
       x-alga-products:
         - psa
+      parameters:
+        - schema:
+            type: string
+            description: Comma-separated contract line UUIDs. DELETE-only alternative to the
+              request body, for clients that cannot send a body on DELETE.
+          required: false
+          description: Comma-separated contract line UUIDs. DELETE-only alternative to the
+            request body, for clients that cannot send a body on DELETE.
+          name: contract_line_ids
+          in: query
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
@@ -36002,7 +36032,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/ContractLineApiSuccess"
         "400":
-          description: Invalid request payload.
+          description: Invalid, unparseable or missing request payload (no body and no
+            `contract_line_ids` query parameter).
           content:
             application/json:
               schema:
@@ -36114,7 +36145,67 @@ paths:
   /api/v1/contract-lines/bulk/delete:
     delete:
       summary: Bulk delete contract lines (explicit route)
-      description: Same controller behavior as DELETE /api/v1/contract-lines/bulk.
+      description: Same controller behavior as DELETE /api/v1/contract-lines/bulk. The
+        ids may come from the request body or from the `contract_line_ids` query
+        parameter.
+      tags:
+        - Contract Lines
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-source: middleware API-key presence + request context requirement in controller
+        x-request-context-required: true
+        x-request-context-wiring-gap: true
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            description: Comma-separated contract line UUIDs. DELETE-only alternative to the
+              request body, for clients that cannot send a body on DELETE.
+          required: false
+          description: Comma-separated contract line UUIDs. DELETE-only alternative to the
+            request body, for clients that cannot send a body on DELETE.
+          name: contract_line_ids
+          in: query
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkDeleteContractLinesBody"
+      responses:
+        "200":
+          description: Bulk delete completed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiSuccess"
+        "400":
+          description: Invalid, unparseable or missing request payload (no body and no
+            `contract_line_ids` query parameter).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "401":
+          description: x-api-key missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "500":
+          description: Request context missing or delete blocked by dependency rules.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+    post:
+      summary: Bulk delete contract lines (POST alias)
+      description: Same controller behavior as DELETE
+        /api/v1/contract-lines/bulk/delete, for clients that cannot send a body
+        on DELETE.
       tags:
         - Contract Lines
       security:
@@ -36140,7 +36231,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ContractLineApiSuccess"
         "400":
-          description: Invalid request payload.
+          description: Invalid, unparseable or missing request payload.
           content:
             application/json:
               schema:
@@ -36209,7 +36300,76 @@ paths:
     delete:
       summary: Bulk remove services from contract line
       description: Removes multiple services from one contract_line_id and returns
-        per-service success/failure results.
+        per-service success/failure results. The ids may come from the request
+        body or, for clients that cannot send a body on DELETE, from the
+        `contract_line_id` + `service_ids` query parameters.
+      tags:
+        - Contract Lines
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-source: middleware API-key presence + request context requirement in controller
+        x-request-context-required: true
+        x-request-context-wiring-gap: true
+        x-partial-failures-in-response: true
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Contract line UUID. DELETE-only alternative to the request body.
+          required: false
+          description: Contract line UUID. DELETE-only alternative to the request body.
+          name: contract_line_id
+          in: query
+        - schema:
+            type: string
+            description: Comma-separated service UUIDs. DELETE-only alternative to the
+              request body, for clients that cannot send a body on DELETE.
+          required: false
+          description: Comma-separated service UUIDs. DELETE-only alternative to the
+            request body, for clients that cannot send a body on DELETE.
+          name: service_ids
+          in: query
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkRemoveServicesBody"
+      responses:
+        "200":
+          description: Bulk service removal completed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiSuccess"
+        "400":
+          description: Invalid, unparseable or missing request payload (no body and no
+            `contract_line_id` + `service_ids` query parameters).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "401":
+          description: x-api-key missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "500":
+          description: Request context missing or unhandled service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+    post:
+      summary: Bulk remove services from contract line (POST alias)
+      description: Same controller behavior as DELETE
+        /api/v1/contract-lines/bulk/remove-services, for clients that cannot
+        send a body on DELETE.
       tags:
         - Contract Lines
       security:
@@ -36236,7 +36396,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ContractLineApiSuccess"
         "400":
-          description: Invalid request payload.
+          description: Invalid, unparseable or missing request payload.
           content:
             application/json:
               schema:
