@@ -25,28 +25,61 @@ function tenantScopedTable(conn: Knex | Knex.Transaction, table: string, tenant:
   return tenantDb(conn, tenant).table(table) as Knex.QueryBuilder<any, any>;
 }
 
-export async function getNotificationSettingsAction(tenant: string): Promise<NotificationSettings> {
-  const notificationService = getEmailNotificationService();
-  return notificationService.getSettings(tenant);
+/**
+ * Templates and notification settings are tenant-owned outbound mail: every
+ * entry point here takes its tenant from the session and is gated on the
+ * settings permission, never on an argument the caller could name.
+ */
+async function requireSettingsRead(user: any, trx: Knex.Transaction): Promise<void> {
+  const { hasPermission } = await import('@alga-psa/auth');
+  if (!(await hasPermission(user, 'settings', 'read', trx))) {
+    throw new Error('Permission denied: Cannot read settings');
+  }
 }
 
-export async function updateNotificationSettingsAction(
-  tenant: string, 
+async function requireSettingsUpdate(user: any, trx: Knex.Transaction): Promise<void> {
+  const { hasPermission } = await import('@alga-psa/auth');
+  if (!(await hasPermission(user, 'settings', 'update', trx))) {
+    throw new Error('Permission denied: Cannot update settings');
+  }
+}
+
+export const getNotificationSettingsAction = withAuth(async (
+  user,
+  { tenant },
+): Promise<NotificationSettings> => {
+  const { knex } = await createTenantKnex();
+  await withTransaction(knex, (trx: Knex.Transaction) => requireSettingsRead(user, trx));
+
+  const notificationService = getEmailNotificationService();
+  return notificationService.getSettings(tenant);
+});
+
+export const updateNotificationSettingsAction = withAuth(async (
+  user,
+  { tenant },
   settings: Partial<NotificationSettings>
-): Promise<NotificationSettings> {
+): Promise<NotificationSettings> => {
+  const { knex } = await createTenantKnex();
+  await withTransaction(knex, (trx: Knex.Transaction) => requireSettingsUpdate(user, trx));
+
   const notificationService = getEmailNotificationService();
   const updated = await notificationService.updateSettings(tenant, settings);
   revalidatePath("/msp/settings/notifications");
   return updated;
-}
+});
 
-export async function getTemplatesAction(tenant: string): Promise<{
+export const getTemplatesAction = withAuth(async (
+  user,
+  { tenant },
+): Promise<{
   systemTemplates: (SystemEmailTemplate & { category: string })[];
   tenantTemplates: TenantEmailTemplate[];
-}> {
-  const { knex } = await (await import("@alga-psa/db")).createTenantKnex();
+}> => {
+  const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await requireSettingsRead(user, trx);
     const db = tenantDb(trx, tenant);
     let systemTemplatesQuery = tenantScopedTable(trx, "system_email_templates as t", tenant)
       .select(
@@ -62,26 +95,33 @@ export async function getTemplatesAction(tenant: string): Promise<{
       
     return { systemTemplates, tenantTemplates };
   });
-}
+});
 
-export async function createTenantTemplateAction(
-  tenant: string,
+export const createTenantTemplateAction = withAuth(async (
+  user,
+  { tenant },
   template: Omit<TenantEmailTemplate, "id" | "created_at" | "updated_at">
-): Promise<TenantEmailTemplate> {
+): Promise<TenantEmailTemplate> => {
+  const { knex } = await createTenantKnex();
+  await withTransaction(knex, (trx: Knex.Transaction) => requireSettingsUpdate(user, trx));
+
   const notificationService = getEmailNotificationService();
   const created = await notificationService.createTenantTemplate(tenant, template);
   revalidatePath("/msp/settings/notifications");
   return created;
-}
+});
 
-export async function cloneSystemTemplateAction(
-  tenant: string,
+export const cloneSystemTemplateAction = withAuth(async (
+  user,
+  { tenant },
   systemTemplateId: number
-): Promise<TenantEmailTemplate | NotificationActionError> {
-  const { knex } = await (await import("@alga-psa/db")).createTenantKnex();
-  
+): Promise<TenantEmailTemplate | NotificationActionError> => {
+  const { knex } = await createTenantKnex();
+
   try {
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await requireSettingsUpdate(user, trx);
+
       // Get the system template
       const systemTemplate = await tenantScopedTable(trx, "system_email_templates", tenant)
         .where({ id: systemTemplateId })
@@ -112,33 +152,39 @@ export async function cloneSystemTemplateAction(
     if (expected) return expected;
     throw error;
   }
-}
+});
 
-export async function updateTenantTemplateAction(
-  tenant: string,
+export const updateTenantTemplateAction = withAuth(async (
+  user,
+  { tenant },
   id: number,
   template: Partial<TenantEmailTemplate>
-): Promise<TenantEmailTemplate> {
+): Promise<TenantEmailTemplate> => {
+  const { knex } = await createTenantKnex();
+  await withTransaction(knex, (trx: Knex.Transaction) => requireSettingsUpdate(user, trx));
+
   const notificationService = getEmailNotificationService();
   const updated = await notificationService.updateTenantTemplate(tenant, id, template);
   revalidatePath("/msp/settings/notifications");
   return updated;
-}
+});
 
-export async function deactivateTenantTemplateAction(
-  tenant: string,
+export const deactivateTenantTemplateAction = withAuth(async (
+  user,
+  { tenant },
   name: string
-): Promise<void> {
-  const { knex } = await (await import("@alga-psa/db")).createTenantKnex();
-  
+): Promise<void> => {
+  const { knex } = await createTenantKnex();
+
   await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await requireSettingsUpdate(user, trx);
     await tenantScopedTable(trx, "tenant_email_templates", tenant)
       .where({ name })
       .del();
   });
-    
+
   revalidatePath("/msp/settings/notifications");
-}
+});
 
 export const getCategoriesAction = withAuth(async (_user, { tenant }): Promise<NotificationCategory[]> => {
   const { knex } = await createTenantKnex();

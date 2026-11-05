@@ -563,6 +563,9 @@ export function BentoTimelineTile({
       onNewCommentContentChange(DEFAULT_BLOCK);
       setHasDraft(false); setComposeHasContent(false); setShowComposer(false); setIsScheduleToggle(false); setScheduledPublishAt(undefined);
       setIsResolutionToggle(false);
+      // onDiscard runs only on a real discard (not on submit, not on "Continue editing"), so the host
+      // can drop staged state (e.g. co-managed attach-picker files) that must not outlive a cancelled draft.
+      dataSource.screen.onComposerCancel?.();
     },
     uploadDocumentAction: uploadTicketAttachmentAction,
     deleteDraftClipboardImagesAction: deleteDraftTicketAttachmentImagesAction,

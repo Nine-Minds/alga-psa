@@ -67,13 +67,13 @@ export const ENTRY_POINT_GLOBS: readonly string[] = ENTRY_POINT_FAMILIES.map((f)
  */
 export const EXPECTED_FAMILY_FILE_COUNTS: Readonly<Record<string, { glob: string; files: number }>> = {
   'rsc-pages': { glob: 'server/src/app/msp/co-manag*/**', files: 13 },
-  'rest-routes': { glob: 'server/src/app/api/**/co-management/**', files: 1 },
-  'server-actions': { glob: 'server/src/lib/actions/coManaged*', files: 18 },
+  'rest-routes': { glob: 'server/src/app/api/**/co-management/**', files: 2 },
+  'server-actions': { glob: 'server/src/lib/actions/coManaged*', files: 22 },
   'package-actions': { glob: 'packages/co-managed/src/**/actions*', files: 0 },
   'user-invitation-actions': { glob: 'packages/users/src/actions/user-actions/userInvitationActions.ts', files: 1 },
   'user-invitation-service': { glob: 'packages/users/src/services/UserInvitationService.ts', files: 1 },
   'user-invitation-gate': { glob: 'packages/users/src/lib/coManagedInvitationCapability.ts', files: 1 },
-  jobs: { glob: 'packages/jobs/**/coManaged*', files: 0 },
+  jobs: { glob: 'packages/jobs/**/coManaged*', files: 1 },
   subscribers: { glob: 'server/src/lib/eventBus/subscribers/coManaged*', files: 1 },
   'temporal-activities': { glob: 'ee/temporal-workflows/src/activities/coManaged*', files: 0 },
   'temporal-workflows': { glob: 'ee/temporal-workflows/src/workflows/coManaged*', files: 0 },
@@ -81,7 +81,7 @@ export const EXPECTED_FAMILY_FILE_COUNTS: Readonly<Record<string, { glob: string
   'temporal-workflows-kebab': { glob: 'ee/temporal-workflows/src/workflows/co-managed*', files: 1 },
   'ee-server-actions': { glob: 'ee/server/src/lib/actions/coManaged*', files: 2 },
   'shared-services': { glob: 'shared/services/**/coManaged*', files: 0 },
-  'server-ui': { glob: 'server/src/components/co-managed/**', files: 54 },
+  'server-ui': { glob: 'server/src/components/co-managed/**', files: 67 },
   'package-ui': { glob: 'packages/co-managed/src/components/**', files: 0 },
 };
 
@@ -822,9 +822,11 @@ describe('negative fixtures: each rule bites, through the real glob and rule fun
 
 const UI_SLOT_MOUNTS: Readonly<Record<string, string>> = {
   'server/src/components/layout/SidebarWithFeatureFlags.tsx': 'msp.navigation.group',
+  'server/src/components/co-managed/CoManagedConversationFiles.tsx': 'ticket.conversation.comment-attachments',
 };
 const UI_SLOT_CONTRIBUTIONS: Readonly<Record<string, string>> = {
   'server/src/config/coManagedMenu.ts': 'msp.navigation.group',
+  'server/src/config/coManagedConversationSlots.ts': 'ticket.conversation.comment-attachments',
 };
 
 describe('UI-slot mounts (A8)', () => {

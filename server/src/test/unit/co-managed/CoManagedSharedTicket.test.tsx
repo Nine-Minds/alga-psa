@@ -8,6 +8,7 @@ const session = vi.hoisted(() => ({
   load: vi.fn(), snapshot: vi.fn(), comments: vi.fn(), writeAudiences: vi.fn(), write: vi.fn(), audienceOf: vi.fn(),
 }));
 
+vi.mock('@/components/co-managed/CoManagedConversationFiles', () => ({ default: () => null }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({ t: (_key: string, fallback?: string) => fallback ?? _key }),
 }));
