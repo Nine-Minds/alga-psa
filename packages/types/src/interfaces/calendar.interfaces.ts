@@ -116,7 +116,24 @@ export interface ExternalCalendarEvent {
     name?: string;
     responseStatus?: 'needsAction' | 'accepted' | 'declined' | 'tentative';
   }>;
-  recurrence?: string[]; // RRULE strings
+  recurrence?: string[]; // RRULE/EXDATE/RDATE lines as returned by the provider
+  /**
+   * Id of the series master this event belongs to (Google `recurringEventId`,
+   * Graph `seriesMasterId`). Set on expanded occurrences and on exceptions only.
+   */
+  recurringEventId?: string;
+  /** The occurrence slot this instance was generated for, before any move. */
+  originalStartTime?: {
+    dateTime?: string;
+    date?: string;
+    timeZone?: string;
+  };
+  /**
+   * How this event relates to a series. `single` is a standalone event,
+   * `master` carries the recurrence rule, `occurrence`/`exception` are expanded
+   * instances (an `exception` was moved or edited away from the series).
+   */
+  instanceType?: 'master' | 'occurrence' | 'exception' | 'single';
   status?: 'confirmed' | 'tentative' | 'cancelled';
   htmlLink?: string; // Link to view event in external calendar
   iCalUID?: string; // iCalendar UID

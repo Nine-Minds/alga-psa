@@ -471,3 +471,154 @@ describe('calendar master occurrence', () => {
     }).map(date => date.getDate())).toEqual([17]);
   });
 });
+
+describe('nth-weekday series', () => {
+  // Anchored in UTC so the dates are independent of the host zone: the
+  // zone-less path builds byweekday identically but its day boundaries follow
+  // the host clock (see the zoned suite for the DST contract).
+  it('expands "first Thursday of each month" instead of the dtstart day-of-month', () => {
+    const entry = makeEntry({
+      is_recurring: true,
+      scheduled_start: new Date('2026-06-04T14:15:00Z'),
+      scheduled_end: new Date('2026-06-04T15:15:00Z'),
+      recurrence_pattern: makePattern({
+        frequency: 'monthly',
+        interval: 1,
+        startDate: new Date('2026-06-04T14:15:00Z'),
+        daysOfWeek: [3],
+        weekOfMonth: 1,
+        timeZone: 'UTC',
+      }),
+    });
+
+    const result = generateOccurrences(entry, new Date('2026-06-01T00:00:00Z'), new Date('2026-09-30T00:00:00Z'), {
+      includeMaster: true,
+    });
+
+    expect(result.map((date) => date.toISOString().slice(0, 10))).toEqual([
+      '2026-06-04',
+      '2026-07-02',
+      '2026-08-06',
+      '2026-09-03',
+    ]);
+  });
+
+  // Anchored in UTC so the assertion is independent of the host zone; the
+  // legacy (zone-less) path is covered by the first-Thursday case above.
+  it('expands "last Friday of each month"', () => {
+    const entry = makeEntry({
+      is_recurring: true,
+      scheduled_start: new Date('2026-01-30T12:00:00Z'),
+      scheduled_end: new Date('2026-01-30T13:00:00Z'),
+      recurrence_pattern: makePattern({
+        frequency: 'monthly',
+        startDate: new Date('2026-01-30T12:00:00Z'),
+        daysOfWeek: [4],
+        weekOfMonth: -1,
+        timeZone: 'UTC',
+      }),
+    });
+
+    const result = generateOccurrences(entry, new Date('2026-01-01T00:00:00Z'), new Date('2026-04-30T00:00:00Z'), {
+      includeMaster: true,
+    });
+
+    expect(result.map((date) => date.toISOString().slice(0, 10))).toEqual([
+      '2026-01-30',
+      '2026-02-27',
+      '2026-03-27',
+      '2026-04-24',
+    ]);
+  });
+
+  it('skips months without a fifth weekday instead of falling back to the fourth', () => {
+    const entry = makeEntry({
+      is_recurring: true,
+      scheduled_start: new Date('2026-01-28T12:00:00Z'),
+      scheduled_end: new Date('2026-01-28T13:00:00Z'),
+      recurrence_pattern: makePattern({
+        frequency: 'monthly',
+        startDate: new Date('2026-01-28T12:00:00Z'),
+        daysOfWeek: [2],
+        // A "5th Wednesday" rule is expressed as BYSETPOS=-1 only when it is the
+        // last one; an explicit 4th-week rule must never slide into week five.
+        weekOfMonth: 4,
+        timeZone: 'UTC',
+      }),
+    });
+
+    const result = generateOccurrences(entry, new Date('2026-01-01T00:00:00Z'), new Date('2026-03-31T00:00:00Z'), {
+      includeMaster: true,
+    });
+
+    expect(result.map((date) => date.toISOString().slice(0, 10))).toEqual([
+      '2026-01-28',
+      '2026-02-25',
+      '2026-03-25',
+    ]);
+  });
+});
+
+describe('time-zone anchored series', () => {
+  const nyEntry = () =>
+    makeEntry({
+      is_recurring: true,
+      // 10:15 America/New_York during EDT.
+      scheduled_start: new Date('2026-10-01T14:15:00Z'),
+      scheduled_end: new Date('2026-10-01T15:15:00Z'),
+      recurrence_pattern: makePattern({
+        frequency: 'monthly',
+        startDate: new Date('2026-10-01T14:15:00Z'),
+        daysOfWeek: [3],
+        weekOfMonth: 1,
+        timeZone: 'America/New_York',
+      }),
+    });
+
+  it('keeps 10:15 local across the DST boundary (14:15Z in EDT, 15:15Z in EST)', () => {
+    const result = generateOccurrences(nyEntry(), new Date('2026-10-01T00:00:00Z'), new Date('2027-01-31T00:00:00Z'), {
+      includeMaster: true,
+    });
+
+    expect(result.map((date) => date.toISOString())).toEqual([
+      '2026-10-01T14:15:00.000Z',
+      '2026-11-05T15:15:00.000Z',
+      '2026-12-03T15:15:00.000Z',
+      '2027-01-07T15:15:00.000Z',
+    ]);
+  });
+
+  it('honours exceptions on a zoned series', () => {
+    const entry = nyEntry();
+    entry.recurrence_pattern!.exceptions = [new Date('2026-12-03T00:00:00Z')];
+
+    const result = generateOccurrences(entry, new Date('2026-10-01T00:00:00Z'), new Date('2027-01-31T00:00:00Z'), {
+      includeMaster: true,
+    });
+
+    expect(result.map((date) => date.toISOString().slice(0, 10))).toEqual([
+      '2026-10-01',
+      '2026-11-05',
+      '2027-01-07',
+    ]);
+  });
+
+  it('clamps an unbounded zoned series to the requested window', () => {
+    const result = generateOccurrences(nyEntry(), new Date('2026-11-01T00:00:00Z'), new Date('2026-11-30T00:00:00Z'), {
+      includeMaster: true,
+    });
+
+    expect(result.map((date) => date.toISOString())).toEqual(['2026-11-05T15:15:00.000Z']);
+  });
+
+  it('falls back to UTC expansion for an unknown zone instead of throwing', () => {
+    const entry = nyEntry();
+    entry.recurrence_pattern!.timeZone = 'Mars/Olympus_Mons';
+
+    const result = generateOccurrences(entry, new Date('2026-10-01T00:00:00Z'), new Date('2026-12-31T00:00:00Z'), {
+      includeMaster: true,
+    });
+
+    expect(result.length).toBeGreaterThan(0);
+  });
+});
