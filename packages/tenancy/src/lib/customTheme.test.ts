@@ -78,6 +78,35 @@ describe('normalizeTenantTheme', () => {
     });
   });
 
+  it('projects custom theme modes and tokens, validates values, and rebuilds cached CSS', () => {
+    const customTheme = clone();
+    const raw = {
+      pairId: 'custom',
+      customTheme: {
+        light: { ...customTheme.light, credential: 'nested-secret' },
+        dark: { ...customTheme.dark, privateKey: 'nested-secret' },
+        computedStyles: '<style>attacker()</style>',
+        privateKey: 'nested-secret',
+      },
+      unexpected: { credential: 'secret' },
+    };
+
+    const projected = normalizeTenantTheme(raw);
+    expect(projected.pairId).toBe('custom');
+    expect(projected).not.toHaveProperty('unexpected');
+    expect(projected.customTheme).toMatchObject({ light: customTheme.light, dark: customTheme.dark });
+    expect(projected.customTheme?.light).not.toHaveProperty('credential');
+    expect(projected.customTheme?.dark).not.toHaveProperty('privateKey');
+    expect(projected.customTheme).not.toHaveProperty('privateKey');
+    expect(projected.customTheme?.computedStyles).not.toContain('attacker');
+    expect(projected.customTheme?.computedStyles).toContain('html.dark[data-theme-pair="custom"]');
+
+    expect(normalizeTenantTheme({
+      pairId: 'custom',
+      customTheme: { light: { ...customTheme.light, primary: 42 }, dark: customTheme.dark },
+    })).toEqual(DEFAULT_TENANT_THEME);
+  });
+
   it('only carries the white-label flag when it is on', () => {
     expect(normalizeTenantTheme({ pairId: 'alga', mspWhiteLabel: false })).toEqual({ pairId: 'alga' });
     expect(normalizeTenantTheme({ pairId: 'alga', mspWhiteLabel: true })).toEqual({

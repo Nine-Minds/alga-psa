@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+vi.mock('server-only', () => ({}));
 import { shouldHideCompletedOnboardingSection } from '../../../../../packages/onboarding/src/components/dashboard/DashboardOnboardingSlot';
 
 describe('shouldHideCompletedOnboardingSection', () => {
