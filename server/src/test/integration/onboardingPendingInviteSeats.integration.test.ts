@@ -24,6 +24,7 @@ vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 
 import { getOnboardingLicenseUsage } from '../../../../packages/onboarding/src/actions/onboarding-actions/onboardingActions';
 import { countPendingInvitationSeats } from '../../../../packages/users/src/lib/internalUserLicenseGuard';
+import { countCoManagedCommittedSeats } from '../../../../packages/licensing/src/lib/co-managed-admission';
 
 let db: Knex;
 const databaseName = `onboarding_pending_seats_test_${randomUUID().replaceAll('-', '')}`;
@@ -54,7 +55,8 @@ const seedUser = (tenant: string, email: string) => db('users').insert({
   user_type: 'internal', hashed_password: 'unused', is_inactive: false,
 });
 const seedInvitation = (tenant: string, email: string, expires: string, used: boolean) => db('user_invitations').insert({
-  tenant, email, first_name: 'I', last_name: 'V', token: randomUUID(),
+  tenant, email, email_normalized: email.trim().toLowerCase(), invited_user_id: null,
+  first_name: 'I', last_name: 'V', token: randomUUID(),
   expires_at: db.raw(`now() + interval '${expires}'`), used_at: used ? db.fn.now() : null,
 });
 
@@ -81,4 +83,66 @@ it('does not count an invitee twice once they accept', async () => {
   await seedUser(tenant, 'new@example.test');
   await db('user_invitations').where({ tenant, email: 'new@example.test' }).update({ used_at: db.fn.now() });
   await expect(getOnboardingLicenseUsage()).resolves.toMatchObject({ data: { used: 1 } });
+});
+
+it('keeps committed usage stable when a member changes email and consumes one linked reservation atomically', async () => {
+  const tenant = context.tenant = await seedTenant();
+  const userId = randomUUID();
+  await db('users').insert({ tenant, user_id: userId, username: 'old@example.test', email: 'old@example.test',
+    first_name: 'T', last_name: 'U', user_type: 'internal', hashed_password: 'unused', is_inactive: false });
+  const invitationId = randomUUID();
+  await db('user_invitations').insert({ tenant, invitation_id: randomUUID(), email: 'a@example.test',
+    email_normalized: 'a@example.test', invited_user_id: null, first_name: 'A', last_name: 'V', token: randomUUID(),
+    expires_at: db.raw("now() + interval '1 day'") });
+  await db('user_invitations').insert({ tenant, invitation_id: invitationId, email: 'invite@example.test',
+    email_normalized: 'invite@example.test', invited_user_id: null, first_name: 'I', last_name: 'V', token: randomUUID(),
+    expires_at: db.raw("now() + interval '1 day'") });
+  await db('user_invitations').insert({ tenant, invitation_id: randomUUID(), email: 'invite@example.test',
+    email_normalized: 'invite@example.test', invited_user_id: null, first_name: 'I', last_name: 'V', token: randomUUID(),
+    expires_at: db.raw("now() + interval '1 day'") });
+
+  const committedBefore = await db.transaction(trx => countCoManagedCommittedSeats(trx, tenant));
+  // This used to make the matching pending reservation disappear from usage.
+  await db('users').where({ tenant, user_id: userId }).update({ email: 'a@example.test' });
+  const committedAfter = await db.transaction(trx => countCoManagedCommittedSeats(trx, tenant));
+  expect(committedBefore).toBe(3);
+  expect(committedAfter).toBe(committedBefore);
+
+  const rolledBackUserId = randomUUID();
+  await expect(db.transaction(async trx => {
+    await trx('users').insert({ tenant, user_id: rolledBackUserId, username: 'rollback@example.test', email: 'rollback@example.test',
+      first_name: 'R', last_name: 'B', user_type: 'internal', hashed_password: 'unused', is_inactive: false });
+    await trx('user_invitations').where({ tenant, email_normalized: 'invite@example.test', used_at: null })
+      .update({ invited_user_id: rolledBackUserId });
+    await trx('user_invitations').where({ tenant, invitation_id: invitationId }).update({ used_at: trx.fn.now() });
+    throw new Error('allocation recount rejected the transition');
+  })).rejects.toThrow('allocation recount rejected the transition');
+  expect(await db('users').where({ tenant, user_id: rolledBackUserId })).toHaveLength(0);
+  expect(await db('user_invitations').where({ tenant, invitation_id: invitationId }).first('used_at')).toMatchObject({ used_at: null });
+
+  // Acceptance consumes the reservation in the same transaction as creating
+  // the membership; the duplicate pending token stays linked to that member.
+  await db.transaction(async trx => {
+    const acceptedUserId = randomUUID();
+    await trx('users').insert({ tenant, user_id: acceptedUserId, username: 'invite@example.test', email: 'invite@example.test',
+      first_name: 'I', last_name: 'V', user_type: 'internal', hashed_password: 'unused', is_inactive: false });
+    await trx('user_invitations').where({ tenant, email_normalized: 'invite@example.test', used_at: null })
+      .update({ invited_user_id: acceptedUserId });
+    await trx('user_invitations').where({ tenant, invitation_id: invitationId }).update({ used_at: trx.fn.now() });
+  });
+  expect(await db.transaction(trx => countCoManagedCommittedSeats(trx, tenant))).toBe(3);
+});
+
+it('does not reserve an extra seat for a pending invitation already tied to an active member', async () => {
+  const tenant = context.tenant = await seedTenant();
+  const userId = randomUUID();
+  await db('users').insert({ tenant, user_id: userId, username: 'member@example.test', email: 'member@example.test',
+    first_name: 'T', last_name: 'U', user_type: 'internal', hashed_password: 'unused', is_inactive: false });
+  await db('user_invitations').insert({ tenant, invitation_id: randomUUID(), email: 'prior@example.test',
+    email_normalized: 'prior@example.test', invited_user_id: userId, first_name: 'T', last_name: 'U', token: randomUUID(),
+    expires_at: db.raw("now() + interval '1 day'") });
+
+  expect(await db.transaction(trx => countCoManagedCommittedSeats(trx, tenant))).toBe(1);
+  await db('users').where({ tenant, user_id: userId }).update({ email: 'changed@example.test' });
+  expect(await db.transaction(trx => countCoManagedCommittedSeats(trx, tenant))).toBe(1);
 });

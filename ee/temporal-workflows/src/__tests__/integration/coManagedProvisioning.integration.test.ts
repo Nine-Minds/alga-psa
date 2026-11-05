@@ -25,6 +25,7 @@ vi.mock('@alga-psa/db', async importOriginal => {
 });
 vi.mock('@alga-psa/auth', async () => ({
   withAuth: (handler: any) => (...args: any[]) => handler(actorState.user, { tenant: actorState.user.tenant }, ...args),
+  withOptionalAuth: (handler: any) => (...args: any[]) => handler(actorState.user, { tenant: actorState.user.tenant }, ...args),
   hasPermission: async (...args: Parameters<typeof import('../../../../../packages/auth/src/lib/rbac').hasPermission>) =>
     (await import('../../../../../packages/auth/src/lib/rbac')).hasPermission(...args),
   checkMultiplePermissions: async (...args: Parameters<typeof import('../../../../../packages/auth/src/lib/rbac').checkMultiplePermissions>) =>
@@ -42,6 +43,10 @@ vi.mock('@temporalio/activity', async importOriginal => ({
 }));
 vi.mock('@alga-psa/email', () => ({ sendTeamInvitationEmail: delivery.send,
   TenantEmailService: { getInstance: () => ({ isConfigured: async () => true }) }, getSystemEmailService: async () => ({ isConfigured: async () => true }) }));
+vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn(), publishEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined) }));
 vi.mock('@alga-psa/db/admin.js', () => ({
   getAdminConnection: async () => db,
   withAdminTransactionRetryReadOnly: (work: (trx: Knex.Transaction) => Promise<unknown>) => db.transaction(work),
