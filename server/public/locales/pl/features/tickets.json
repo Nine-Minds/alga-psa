@@ -116,7 +116,9 @@
     "clientTags": "Tagi klienta",
     "tagModeAny": "Dowolny z",
     "tagModeNone": "Żaden z",
-    "droppedFromLink": "Niektóre filtry w tym łączu są nieprawidłowe i zostały zignorowane."
+    "droppedFromLink": "Niektóre filtry w tym łączu są nieprawidłowe i zostały zignorowane.",
+    "location": "Lokalizacja",
+    "requesterLocation": "Lokalizacja zgłaszającego"
   },
   "create": {
     "title": "Utwórz zgłoszenie wsparcia",
@@ -458,7 +460,9 @@
         "operationConflict": "Ten komentarz koliduje z wcześniejszą próbą. Wczytaj ponownie i spróbuj jeszcze raz.",
         "audienceUnresolved": "Wybierz, kto może zobaczyć ten komentarz, zanim go opublikujesz.",
         "unknownOutcome": "Nie udało się potwierdzić opublikowania komentarza. Sprawdź rozmowę, zanim wyślesz go ponownie."
-      }
+      },
+      "unavailable": "To zgłoszenie jest niedostępne.",
+      "back": "Wróć do zgłoszeń klientów"
     }
   },
   "responseState": {
@@ -1023,7 +1027,9 @@
       "heading": "Obserwatorzy",
       "placeholder": "Dodaj obserwatorów..."
     },
-    "attachmentsPartialFailure": "Zgłoszenie utworzone, ale nie udało się dołączyć tych plików: {{files}}. Dodaj je w zgłoszeniu."
+    "attachmentsPartialFailure": "Zgłoszenie utworzone, ale nie udało się dołączyć tych plików: {{files}}. Dodaj je w zgłoszeniu.",
+    "contactLocationSuffix": "(lokalizacja kontaktu)",
+    "contactPrimaryLocationSuffix": "(główna lokalizacja kontaktu)"
   },
   "itil": {
     "calculatedPriority": "Priorytet (obliczony)",
@@ -1681,7 +1687,14 @@
       "referenceInvalid": "Wybrana tablica, status, priorytet, osoba przypisana, zespół lub zasada SLA nie jest już prawidłowa. Odśwież stronę i spróbuj ponownie.",
       "duplicateName": "Tablica o tej nazwie już istnieje.",
       "duplicate": "Tablica lub status o tych samych ustawieniach już istnieje.",
-      "invalidValue": "Jedna z wartości tablicy lub statusu jest nieprawidłowa. Odśwież stronę i spróbuj ponownie."
+      "invalidValue": "Jedna z wartości tablicy lub statusu jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "notificationEmailInvalid": "Reguła powiadomień {{rule}} zawiera nieprawidłowy adres e-mail (maksymalnie {{max}} znaków)",
+      "notificationEmailLimit": "Reguła powiadomień {{rule}} może zawierać co najwyżej {{max}} adresów e-mail",
+      "notificationRecipientRequired": "Reguła powiadomień {{rule}} musi powiadamiać co najmniej jednego użytkownika, zespół lub adres e-mail",
+      "notificationEmailIsUser": "Reguła powiadomień {{rule}}: {{address}} to adres e-mail użytkownika Alga. Wybierz zamiast tego użytkownika.",
+      "notificationEmailIsContact": "Reguła powiadomień {{rule}}: {{address}} należy do kontaktu lub lokalizacji klienta i nie może być odbiorcą.",
+      "notificationEmailClientDomain": "Reguła powiadomień {{rule}}: {{address}} należy do domeny e-mail klienta i nie może być odbiorcą.",
+      "notificationEmailInboundMailbox": "Reguła powiadomień {{rule}}: {{address}} to połączona skrzynka odbiorcza i nie może być odbiorcą."
     },
     "material": {
       "invalidValue": "Jedna z wybranych wartości materiału jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
@@ -2057,7 +2070,9 @@
       "openScheduleEntry": "Otwórz wpis harmonogramu",
       "addDescriptionPrompt": "Dodaj opis — na czym polega problem i czego potrzebuje klient?",
       "projectTasks": "Zadania projektu",
-      "timeAndBilling": "Czas i rozliczenia"
+      "timeAndBilling": "Czas i rozliczenia",
+      "useContactLocation": "Użyj lokalizacji kontaktu",
+      "remote": "Zdalny"
     },
     "timeline": {
       "subtitle": "Odpowiedzi, czas i zmiany systemowe w jednym miejscu",

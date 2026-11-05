@@ -2395,7 +2395,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
 
         // Logos only for the distinct clients on this page (one batched lookup).
         const pageClientIds = Array.from(new Set(
-            authorizedPage.data.map((asset: any) => asset.client_id).filter(Boolean)
+            pageAssets.map((asset) => asset.client_id).filter(Boolean)
         )) as string[];
         const clientLogoUrls = pageClientIds.length > 0
             ? await getClientLogoUrlsBatch(pageClientIds, tenant)

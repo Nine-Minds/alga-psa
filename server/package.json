@@ -145,6 +145,7 @@
     "archiver": "^7.0.1",
     "autoprefixer": "^10.4.21",
     "axios": "^1.20.0",
+    "bwip-js": "^4.11.4",
     "class-variance-authority": "^0.7.0",
     "clean": "^4.0.2",
     "clsx": "^2.1.1",

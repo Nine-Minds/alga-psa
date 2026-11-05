@@ -75,7 +75,7 @@ function createBatchKnex(rows: unknown[]) {
 }
 
 /** Contacts load in two queries: the contact row, then its 1:N phone rows. */
-function createContactKnex(row: unknown, phoneRows: unknown[]) {
+function createContactKnex(row: unknown, phoneRows: unknown[], locationRows: unknown[] = []) {
   const joinBuilder = {
     on: vi.fn().mockReturnThis(),
     andOn: vi.fn().mockReturnThis(),
@@ -100,12 +100,28 @@ function createContactKnex(row: unknown, phoneRows: unknown[]) {
     orderBy: vi.fn().mockReturnThis(),
     then: vi.fn((resolve, reject) => Promise.resolve(phoneRows).then(resolve, reject)),
   };
-  const knex = vi.fn((tableExpression: string) =>
-    tableExpression.startsWith('contact_phone_numbers') ? phoneBuilder : contactBuilder);
+  // The location join is an inner join (unlike the client left join above), so
+  // this builder needs its own `join`, matching tenantJoinIndexerTable's call.
+  const locationBuilder = {
+    join: vi.fn((_table: string, joinCallback: (this: typeof joinBuilder) => void) => {
+      joinCallback.call(joinBuilder);
+      return locationBuilder;
+    }),
+    select: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    whereIn: vi.fn().mockReturnThis(),
+    orderBy: vi.fn().mockReturnThis(),
+    then: vi.fn((resolve, reject) => Promise.resolve(locationRows).then(resolve, reject)),
+  };
+  const knex = vi.fn((tableExpression: string) => {
+    if (tableExpression.startsWith('contact_phone_numbers')) return phoneBuilder;
+    if (tableExpression.startsWith('contact_locations')) return locationBuilder;
+    return contactBuilder;
+  });
   Object.assign(knex, {
     raw: vi.fn((sql: string) => ({ sql })),
   });
-  return { knex, contactBuilder, phoneBuilder };
+  return { knex, contactBuilder, phoneBuilder, locationBuilder };
 }
 
 describe('search entity indexers', () => {
