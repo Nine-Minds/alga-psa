@@ -966,7 +966,7 @@ export async function processInboundEmailInApp(
   const senderAuthResults = verifySenderAuthentication(authenticationResultsHeader, senderEmail);
   const isVerifiedListRewrite = Boolean(emailData.headers?.['x-resolved-original-sender']);
   // Same-M365-tenant mail has no Authentication-Results; Exchange's internal-auth stamp
-  // stands in for aligned SPF/DKIM for contact (never internal-user) attribution.
+  // stands in for aligned SPF/DKIM for both contact and internal-user attribution.
   const isTrustedIntraOrgSender = isMicrosoftIntraOrgSender(emailData.provider, emailData.headers);
   const contactSenderTrusted = allowsContactSenderAttribution(senderAuthResults) || isVerifiedListRewrite || isTrustedIntraOrgSender;
   const durableExecution = options.durableExecution ?? null;
@@ -1060,9 +1060,10 @@ export async function processInboundEmailInApp(
     if (!matched) return null;
 
     if (matched.user_type === 'internal') {
-      if (allowsInternalSenderAttribution(senderAuthResults)) return matched;
-      // A list rewrite may be trusted for contact matching, but never grants an
-      // internal identity: only authentication aligned to the original From can.
+      if (allowsInternalSenderAttribution(senderAuthResults) || isTrustedIntraOrgSender) return matched;
+      // A list rewrite may be trusted for contact matching, but never grants an internal
+      // identity: only authentication aligned to the original From, or Exchange's
+      // intra-org stamp on a Microsoft provider, can.
       console.warn('SECURITY_EVENT inbound_email_internal_sender_auth_failed', {
         tenantId, providerId, emailId: emailData.id, senderEmail,
         authResults: senderAuthResults,
