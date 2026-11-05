@@ -331,7 +331,9 @@ async function resolveQuoteRowTaxes(
         );
 
         taxAmount = taxResult.taxAmount;
-        taxRate = Math.round(Number(taxResult.taxRate ?? 0));
+        // Store the real percentage: rounding 6.875 to 7 displayed a rate the
+        // line was never charged at.
+        taxRate = Number(taxResult.taxRate ?? 0);
       } else if (taxSource !== 'internal') {
         taxAmount = 0;
         taxRate = 0;
