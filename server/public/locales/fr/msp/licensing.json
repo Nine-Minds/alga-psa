@@ -361,7 +361,8 @@
   },
   "errors": {
     "notSignedIn": "Non autorisé. Connectez-vous pour gérer les licences.",
-    "accountManagementRead": "Autorisation refusée : autorisation de lecture sur la gestion des comptes requise"
+    "accountManagementRead": "Autorisation refusée : autorisation de lecture sur la gestion des comptes requise",
+    "accountManagementUpdate": "Autorisation refusée : autorisation de mise à jour sur la gestion des comptes requise"
   },
   "coManaged": {
     "acceptance": {

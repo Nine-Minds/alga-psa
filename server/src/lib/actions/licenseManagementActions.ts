@@ -41,10 +41,11 @@ export interface LicenseStatus {
 }
 
 type LicenseAdminUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
+type LicensePermissionLevel = 'read' | 'update';
 type LicenseMutationResult = { success: boolean; error?: string; status?: LicenseStatus };
 export type LicenseStatusResult = LicenseStatus | ActionPermissionErrorShape;
 
-async function assertAdminPermission(): Promise<LicenseAdminUser | ActionPermissionErrorShape> {
+async function assertLicensePermission(level: LicensePermissionLevel): Promise<LicenseAdminUser | ActionPermissionErrorShape> {
   // Must use getCurrentUser (returns a full IUserWithRoles with user_id) — the
   // raw NextAuth session.user exposes `id`, not `user_id`, and hasPermission
   // binds user_roles.user_id, so passing session.user yields an undefined-binding
@@ -53,10 +54,24 @@ async function assertAdminPermission(): Promise<LicenseAdminUser | ActionPermiss
   // the payload never passes through the wrapper that would otherwise translate it.
   const user = await getCurrentUser();
   if (!user) return localizeActionError(permissionError('Unauthorized. Sign in to manage licensing.', 'msp/licensing:errors.notSignedIn'));
-  const allowed = await hasPermission(user, 'account_management', 'read');
-  if (!allowed) return localizeActionError(permissionError('Permission denied: account_management read required', 'msp/licensing:errors.accountManagementRead'));
+  const allowed = await hasPermission(user, 'account_management', level);
+  if (!allowed) {
+    const permissionLabel = level === 'read' ? 'read' : 'update';
+    const localizationKey = level === 'read'
+      ? 'msp/licensing:errors.accountManagementRead'
+      : 'msp/licensing:errors.accountManagementUpdate';
+    return localizeActionError(permissionError(`Permission denied: account_management ${permissionLabel} required`, localizationKey));
+  }
   // Returned so callers can bind license checks to this install's tenant.
   return user;
+}
+
+function assertLicenseReadPermission(): Promise<LicenseAdminUser | ActionPermissionErrorShape> {
+  return assertLicensePermission('read');
+}
+
+function assertLicenseMutationPermission(): Promise<LicenseAdminUser | ActionPermissionErrorShape> {
+  return assertLicensePermission('update');
 }
 
 function permissionFailureResult(error: ActionPermissionErrorShape): LicenseMutationResult {
@@ -97,7 +112,7 @@ async function getLicenseStatusForUser(user: LicenseAdminUser): Promise<LicenseS
  * In SaaS mode (no license_state row) returns { selfHostMode: false }.
  */
 export async function getLicenseStatus(): Promise<LicenseStatusResult> {
-  const user = await assertAdminPermission();
+  const user = await assertLicenseReadPermission();
   if (isActionPermissionError(user)) {
     return user;
   }
@@ -109,7 +124,7 @@ export async function getLicenseStatus(): Promise<LicenseStatusResult> {
  * Rejects invalid/expired/wrong-kid tokens.
  */
 export async function submitLicense(token: string): Promise<LicenseMutationResult> {
-  const user = await assertAdminPermission();
+  const user = await assertLicenseMutationPermission();
   if (isActionPermissionError(user)) {
     return permissionFailureResult(user);
   }
@@ -138,7 +153,7 @@ export async function submitLicense(token: string): Promise<LicenseMutationResul
  * Blocked if: trial already used, or a valid license is already active.
  */
 export async function startTrial(): Promise<LicenseMutationResult> {
-  const user = await assertAdminPermission();
+  const user = await assertLicenseMutationPermission();
   if (isActionPermissionError(user)) {
     return permissionFailureResult(user);
   }
@@ -169,7 +184,7 @@ export async function startTrial(): Promise<LicenseMutationResult> {
  * the held token no longer matches the entitlement).
  */
 export async function refreshLicenseNow(): Promise<LicenseMutationResult> {
-  const user = await assertAdminPermission();
+  const user = await assertLicenseMutationPermission();
   if (isActionPermissionError(user)) {
     return permissionFailureResult(user);
   }
@@ -224,7 +239,7 @@ export async function refreshLicenseNow(): Promise<LicenseMutationResult> {
 export async function connectAppliance(
   claimCode: string
 ): Promise<LicenseMutationResult> {
-  const user = await assertAdminPermission();
+  const user = await assertLicenseMutationPermission();
   if (isActionPermissionError(user)) {
     return permissionFailureResult(user);
   }
