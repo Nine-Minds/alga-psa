@@ -460,7 +460,9 @@
         "operationConflict": "Questo commento è in conflitto con un tentativo precedente. Ricarica e riprova.",
         "audienceUnresolved": "Scegli chi può vedere questo commento prima di pubblicarlo.",
         "unknownOutcome": "Non è stato possibile confermare la pubblicazione del commento. Controlla la conversazione prima di inviarlo di nuovo."
-      }
+      },
+      "unavailable": "Questo ticket non è disponibile.",
+      "back": "Torna ai ticket dei clienti"
     }
   },
   "responseState": {

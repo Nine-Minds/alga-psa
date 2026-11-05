@@ -11,6 +11,7 @@ import { getCoManagedLocalTicketResourceAction } from '@/lib/actions/coManagedLo
 import type { CoManagedSharedResource } from '@alga-psa/co-managed';
 import { CoManagedEffortSummary } from './CoManagedEffortSummary';
 import { CoManagedEffortPerspectiveProvider } from './coManagedEffortPerspective';
+import CoManagedTicketSection from './CoManagedTicketSection';
 import { createSharedConversationSession, type SharedConversationSession } from './sharedConversationSession';
 
 /** Audiences a co_managed workspace's own tickets offer before the server has resolved the shared ones. */
@@ -61,8 +62,12 @@ export function CoManagedLocalTicketDataSourceProvider({ ticketId, children }: {
     return composeTicketDataSource(nativeTicketDataSource, {
       // L6a2: the customer's own view of the shared ticket carries the same effort split (customer / MSP / combined).
       // The resource is resolved only for a workspace that serves co-managed with a relationship; otherwise no slot.
-      ...(resource ? { slots: { timeSummary: ({ timeEntriesRefreshKey }: { timeEntriesRefreshKey?: number }) =>
-        <CoManagedEffortSummary target={{ kind: 'shared', resource }} refreshKey={timeEntriesRefreshKey} /> } } : {}),
+      ...(resource || session ? { slots: {
+        appSection: session ? ({ layout, refresh }: { layout: 'entry' | 'grid'; refresh: () => void }) =>
+          <CoManagedTicketSection target={{ kind: 'local', ticketId }} layout={layout} onChanged={refresh} /> : undefined,
+        timeSummary: resource ? ({ timeEntriesRefreshKey }: { timeEntriesRefreshKey?: number }) =>
+          <CoManagedEffortSummary target={{ kind: 'shared', resource }} refreshKey={timeEntriesRefreshKey} /> : undefined,
+      } } : {}),
       conversation: { audiences, editor: { disallowImages: true, disallowFiles: true, disallowMentions: true } },
       comments: {
         findCommentsByTicketId: async (id: string, ...rest: unknown[]) => {
@@ -84,7 +89,7 @@ export function CoManagedLocalTicketDataSourceProvider({ ticketId, children }: {
     } as unknown as TicketDataSourceOverrides);
     // `version` re-derives the audiences once the session has loaded.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, version, resource]);
+  }, [session, version, resource, ticketId]);
 
   // Mounted from the customer's own workspace: the effort split inside labels its sides from the customer's perspective.
   return <CoManagedEffortPerspectiveProvider value="customer"><TicketDataSourceProvider dataSource={dataSource}>{children}</TicketDataSourceProvider></CoManagedEffortPerspectiveProvider>;
