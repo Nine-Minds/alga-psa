@@ -61,6 +61,8 @@
       "@alga-psa/sla": ["../../packages/sla/src"],
       "@alga-psa/sla/*": ["../../packages/sla/src/*"],
       "@alga-psa/notifications/*": ["./src/typings/notifications/*"],
+      "@alga-psa/notifications/notifications/email": ["../../packages/notifications/src/notifications/email.ts"],
+      "@alga-psa/notifications/notifications/emailLocaleResolver": ["../../packages/notifications/src/notifications/emailLocaleResolver.ts"],
       "@alga-psa/search": ["../../packages/search/src/index.ts"],
       "@alga-psa/search/*": ["../../packages/search/src/*"],
       "@alga-psa/tickets": ["../../packages/tickets/src/index.ts"],

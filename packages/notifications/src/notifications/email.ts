@@ -16,13 +16,22 @@ import type {
   NotificationLog,
   NotificationService
 } from '../types/notification';
-import { TenantEmailService, StaticTemplateProcessor } from '@alga-psa/email';
+import { TenantEmailService, TenantEmailOutboundAdapter } from '@alga-psa/email';
+import type { OutboundMailPort } from '@alga-psa/email';
 import type { TenantEmailSettings } from '@alga-psa/types';
 import { resolveEmailPreferenceEnabled } from './emailPreferenceState';
 import { resolveEmailLocale } from './emailLocaleResolver';
 import type { SupportedLocale } from '@alga-psa/core/i18n/config';
 
+export type EmailNotificationResult =
+  | { status: 'sent'; messageId?: string }
+  | { status: 'skipped'; reason: string };
+
 export class EmailNotificationService implements NotificationService {
+  constructor(
+    private readonly outboundMail: OutboundMailPort = new TenantEmailOutboundAdapter(),
+    private readonly resolveLocale: typeof resolveEmailLocale = resolveEmailLocale,
+  ) {}
   private tenantScopedTable(
     knex: Knex,
     table: string,
@@ -353,12 +362,12 @@ export class EmailNotificationService implements NotificationService {
     mailClass: import('@alga-psa/types').OutboundMailClass;
     boardId?: string;
     senderId?: string;
-  }): Promise<void> {
+  }): Promise<EmailNotificationResult> {
     const knex = await this.getTenantKnex();
 
     const settings = await this.getSettings(params.tenant);
     if (!settings.is_enabled) {
-      throw new Error('Notifications are disabled for this tenant');
+      return { status: 'skipped', reason: 'Notifications are disabled for this tenant' };
     }
 
     // Rate limiting is now centralized in TenantEmailService.sendEmail()
@@ -377,7 +386,7 @@ export class EmailNotificationService implements NotificationService {
 
     const isSubtypeEnabled = subtypeSetting?.is_enabled ?? true;
     if (!isSubtypeEnabled) {
-      return;
+      return { status: 'skipped', reason: 'Notification subtype is disabled' };
     }
 
     const categorySetting = await this.tenantScopedTable(knex, 'tenant_notification_category_settings', params.tenant)
@@ -386,7 +395,7 @@ export class EmailNotificationService implements NotificationService {
 
     const isCategoryEnabled = categorySetting?.is_enabled ?? true;
     if (!isCategoryEnabled) {
-      return;
+      return { status: 'skipped', reason: 'Notification category is disabled' };
     }
 
     const preference = await this.tenantScopedTable(knex, 'user_notification_preferences', params.tenant)
@@ -397,11 +406,11 @@ export class EmailNotificationService implements NotificationService {
       .first();
 
     if (!resolveEmailPreferenceEnabled(settings.is_enabled, isCategoryEnabled, isSubtypeEnabled, preference?.is_enabled)) {
-      return;
+      return { status: 'skipped', reason: 'Email notification preference is disabled' };
     }
 
     try {
-      const recipientLocale = await resolveEmailLocale(params.tenant, {
+      const recipientLocale = await this.resolveLocale(params.tenant, {
         email: params.emailAddress,
         userId: params.userId
       });
@@ -410,22 +419,18 @@ export class EmailNotificationService implements NotificationService {
       const compiledSubject = await this.compileTemplate(template.subject, params.data);
       const compiledBody = await this.compileTemplate(template.html_content || '', params.data);
 
-      const service = TenantEmailService.getInstance(params.tenant);
-      const processor = new StaticTemplateProcessor(
-        compiledSubject,
-        compiledBody,
-        compiledBody.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
-      );
-      const result = await service.sendEmail({
+      const result = await this.outboundMail.send({
         to: params.emailAddress,
         tenantId: params.tenant,
         mailClass: params.mailClass,
         boardId: params.boardId,
         senderId: params.senderId,
-        templateProcessor: processor,
-        userId: params.userId
+        userId: params.userId,
+        subject: compiledSubject,
+        html: compiledBody,
+        text: compiledBody.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim(),
       });
-      const success = result.success;
+      const success = result.status === 'sent';
 
       await tenantDb(knex, params.tenant).table('notification_logs').insert({
         tenant: params.tenant,
@@ -434,12 +439,13 @@ export class EmailNotificationService implements NotificationService {
         email_address: params.emailAddress,
         subject: compiledSubject,
         status: success ? 'sent' : 'failed',
-        error_message: success ? null : (result.error || 'Email service failed to send')
+        error_message: success ? null : result.reason
       });
 
-      if (!success) {
-        throw new Error(result.error || 'Failed to send email');
+      if (result.status === 'failed') {
+        throw new Error(result.reason);
       }
+      return result;
 
     } catch (error) {
       await tenantDb(knex, params.tenant).table('notification_logs').insert({
