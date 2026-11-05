@@ -76,8 +76,10 @@ describe('menuConfig i18n metadata', () => {
 
     expect(keyedSubItems.map((item) => item.translationKey)).toEqual([
       'nav.ticketsAll',
+      'nav.ticketsCustomer',
       'nav.ticketsRecurring',
       'nav.ticketsTemplates',
+      'nav.ticketsCannedResponses',
       'nav.projectsAll',
       'nav.projectsTemplates',
       'nav.marketing.calendar',
@@ -91,6 +93,7 @@ describe('menuConfig i18n metadata', () => {
       'nav.knowledgeBase',
       'nav.assetsAll',
       'nav.assetsMaintenance',
+      'nav.assetsCustody',
       'nav.timeEntry',
       'nav.approvals',
       'nav.controlPanel',
@@ -131,6 +134,7 @@ describe('menuConfig i18n metadata', () => {
       'settings.tabs.clientPortal',
       'settings.tabs.license',
       'settings.tabs.ticketing',
+      'settings.tabs.tags',
       'settings.tabs.sla',
       'settings.tabs.projects',
       'settings.tabs.assets',

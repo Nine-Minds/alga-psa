@@ -13,6 +13,7 @@ function tenantsTable(knex: Knex, reason: string) {
   }>('tenants', reason);
 }
 
+// LEVERAGE: resolved pattern gate-without-cache — isTenantSuspended queries per call; write admission (writeAdmission.ts) generalises it into a registry with a permanent cached negative answer. The next gate should copy that shape, not this one.
 /**
  * Whether the tenant is suspended (background activity gated).
  *

@@ -96,7 +96,11 @@ vi.mock('@alga-psa/ui/components/DropdownMenu', () => ({
   DropdownMenu: ({ children }: any) => <div>{children}</div>,
   DropdownMenuTrigger: ({ children }: any) => <>{children}</>,
   DropdownMenuContent: ({ children }: any) => <div>{children}</div>,
-  DropdownMenuItem: ({ children }: any) => <div>{children}</div>,
+  // Print work tag is a More-menu item; render items as clickable buttons.
+  DropdownMenuItem: ({ children, onSelect, id }: any) => (
+    <button type="button" id={id} onClick={() => onSelect?.()}>{children}</button>
+  ),
+  DropdownMenuSeparator: () => <hr />,
 }));
 vi.mock('@alga-psa/ui/components/Dialog', h.autoMock());
 vi.mock('@alga-psa/ui/components/Drawer', h.autoMock());

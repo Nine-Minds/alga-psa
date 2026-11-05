@@ -121,6 +121,9 @@ function createQueryBuilder(rows: Row[]) {
             });
             return nestedBuilder;
           },
+          // client scoping is asserted by the in-process period match, not by this emulation
+          whereIn: () => nestedBuilder,
+          orWhereIn: () => nestedBuilder,
         };
 
         columnOrCriteria.call(nestedBuilder, nestedBuilder);

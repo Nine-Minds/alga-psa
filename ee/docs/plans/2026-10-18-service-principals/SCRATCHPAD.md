@@ -574,3 +574,35 @@ None remain. All were resolved on 2026-10-18; the table at the end of the PRD li
 - `withViaPrincipal` now lives in a dependency-free DB module, re-exported through `BaseService`. Time-entry attribution, ticket activity and generic audit details use the same helper as the other writers. The EE time-entry adapter supplies null defaults so direct human edits still clear update attribution without adding EE columns to CE writes.
 - The archive reference list supports JSON paths as well as columns. Generic audit actors and `details.via_principal_user_id` now retain the principal; database tests verify retained audit rows, revoked keys, freed usage and isolation from references in another tenant.
 - Validation: 44 integration tests across nine files, 31 EE unit tests, 38 CE boundary/helper tests, and the DB package TypeScript check passed. Tier/grandfathering and edition-selection code did not change. These are automated results; the live UI smoke walkthrough remains a separate check.
+
+### Card C main merge — 2026-11-05
+
+- Started from `8a40a50f3dda6fc5b69f8e57123600f0588c1708` with no tracked changes. Preserved all five untracked artifact paths. Fetched and merged `origin/main` at `ffde5f4c6e0b8793dd86056ba5c687fe67285ce2`; no rebase or history rewrite.
+- Resolved 18 conflicted files. A = generated output, B = current main architecture plus card C semantics, C = main for unrelated structure. No runtime behavior was deferred for lack of a product decision.
+
+| File | Policy | Resolution |
+| --- | --- | --- |
+| `ee/server/src/chat/registry/apiRegistry.generated.ts` | A | Took main, then ran the registry generator against the retained EE spec; output matches main. |
+| `sdk/docs/openapi/alga-openapi.ee.json` | A | Retained main. OpenAPI generation fails loading shared billing paymentPreferences; source-mode attempt fails loading billing named exports. |
+| `sdk/docs/openapi/alga-openapi.ee.yaml` | A | Same fallback as the EE JSON spec; no manual generated edits. |
+| `ee/server/src/lib/mcp/jsonRpcServer.ts` | B | Kept main argument redaction and retained actAsUserId in the same audit call. |
+| `packages/db/src/services/BaseService.ts` | B | Kept main operational write admission and retained the dependency-free via helper import/re-export. |
+| `packages/scheduling/src/lib/timeEntryWriteCore.ts` | B | Kept main billing allocation extraction. Retained the edition attribution hook before reconciliation, including clearing update attribution on direct human edits. |
+| `server/src/lib/api/controllers/ApiTicketController.ts` | B | Kept main mutation authorization and record-context structure. Asset RBAC checks use principal/human permission intersection. |
+| `server/src/lib/api/controllers/assetReadGuard.ts` | B | Kept main throw-based core and response wrapper; RBAC uses principal/human intersection. |
+| `server/src/lib/api/middleware/apiMiddleware.ts` | B | Kept main interactive-user guard and retained edition error mapping, delegation-header rejection and principal-aware permission checks. |
+| `server/src/lib/api/schemas/ticket.ts` | B | Kept collaboration_audience. is_internal remains optional without a schema default so the service can distinguish omission from an explicit public request. |
+| `server/src/lib/api/services/ClientService.ts` | B | Kept main checklist/template deactivation imports alongside principal-aware RBAC. |
+| `server/src/lib/api/services/MobileCapabilitiesService.ts` | B | Kept all main asset capability fields and applied principal/human RBAC intersection to those permissions. |
+| `server/src/lib/api/services/ProjectService.ts` | B | Kept inventory staging release and after-commit hooks alongside task via stamping. |
+| `server/src/lib/api/services/TicketService.ts` | B | Kept main shared upload core and audience handling. Passed via attribution into the upload core; bare principals default comments to internal and cannot publish publicly without act-as. |
+| `server/src/lib/api/services/TimeEntryService.ts` | B | Kept main time-source delegation alongside principal-aware RBAC and attribution. |
+| `server/src/lib/api/services/TimeSheetService.ts` | B | Kept main time-source delegation alongside principal-aware RBAC, human-work guards and approval/schedule attribution. |
+| `shared/lib/ticketActivity/writeTicketActivity.ts` | B | Kept main validated foreign-actor snapshot/reference structure; derive service/human actor kind from that actor and stamp via attribution. |
+| `packages/assets/src/lib/assetReadAuthorization.ts` | C | Took main re-export to the authorization package. Its shared AuthorizationSubject already supports service users, so the copied implementation is obsolete. |
+
+- The upload extraction required forwarding `viaPrincipalUserId` through `documents/attachDocument.ts` and `documents/entityAdapters.ts` to ticket activity. The adapter also uses the existing permission-intersection helper. Regression tests exercise delegated upload audit rows, new asset capabilities, MCP redaction plus act-as, comment-schema omission versus explicit visibility, and foreign/local activity attribution.
+- Typecheck exposed two additional semantic overlaps in auto-merged files: `ApiTimeEntryController.ts` timer cancellation and `ApiTimeSheetController.ts` per-sheet reads still called the old user lookup, assertion and product-access helper signature. Both now use `buildAuthenticatedApiContext`, carry via attribution, and check the permission intersection while retaining main's route structure. Their focused route suites pass 22/22.
+- OpenAPI fallback: `cd sdk && npm run openapi:generate -- --edition ee` fails with `ERR_MODULE_NOT_FOUND` for `@alga-psa/shared/dist/billingClients/paymentPreferences`. A source-resolution attempt using server tsconfig fails on the billing `DEFAULT_RATE_CONFLICT_MESSAGE` named export. The EE JSON and YAML files therefore stay exactly at main. Act-as decorators remain in source, but their generated header/error documentation is deferred until the workspace generator dependencies/loaders work. `node ee/scripts/generate-chat-registry.mjs` succeeds; both registries match main.
+- Refreshed local dependencies with `npm ci --ignore-scripts --no-audit --no-fund` to match main's Zod 4 lockfile; no manifest or lockfile changes. Focused unit checks pass: server 101, EE boundary/MCP 15, ticket activity 4, DB services 13, scheduling 2 (135 total). No browser, integration, full-suite or production build was run. Server typecheck passed (`NODE_OPTIONS=--max-old-space-size=14336 npm run typecheck`, exit 0).
+- Local command logs and the final first-parent diff stat are under `/tmp/sp-c4-merge-report-20261105/`. Broad merge whitespace warnings come from main; the card delta passes `git diff --cached --check origin/main`.

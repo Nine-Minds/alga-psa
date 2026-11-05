@@ -175,6 +175,23 @@ describe('PrepaidBlockPanel', () => {
     await waitFor(() => expect(actionMocks.removeContractLinePrepaidBlock).toHaveBeenCalledTimes(2));
   });
 
+  it('cadence block: no Issue next block button, and a note that the block fee bills in advance', async () => {
+    actionMocks.getContractLinePrepaidBlockSummary.mockResolvedValue(summary({
+      config: { ...config, issue_mode: 'cadence', block_minutes: 600, block_price: 150000, expiry_months: null,
+        trigger_on_exhaustion: false, trigger_threshold_percent: null, trigger_on_expiry: false, rollover_periods: 0 },
+    }));
+    await renderPanel();
+    expect(document.getElementById('prepaid-block-line-1-issue-next')).toBeNull();
+    expect(document.getElementById('prepaid-block-line-1-fee-in-advance-note')!.textContent)
+      .toBe('The line bills in arrears; the block fee bills in advance.');
+  });
+
+  it('consumption block: keeps Issue next block and shows no advance note', async () => {
+    await renderPanel();
+    expect(document.getElementById('prepaid-block-line-1-issue-next')).not.toBeNull();
+    expect(document.getElementById('prepaid-block-line-1-fee-in-advance-note')).toBeNull();
+  });
+
   it('is read-only when the contract is read-only', async () => {
     await renderPanel({ isReadOnly: true });
     expect(document.getElementById('prepaid-block-line-1-edit')).toBeNull();

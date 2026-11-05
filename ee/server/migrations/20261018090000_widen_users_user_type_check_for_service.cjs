@@ -20,6 +20,7 @@ const CONSTRAINT = 'users_user_type_check';
 async function replaceConstraint(knex, allowed) {
   const list = allowed.map((v) => `'${v}'`).join(', ');
   await knex.raw(`ALTER TABLE users DROP CONSTRAINT IF EXISTS ${CONSTRAINT}`);
+  // migration-lint: allow 2 - drops then re-adds the widened CHECK with NOT VALID and validates in the same file; users is tenant-scoped and the validate is a single cheap scan, merged before lint existed
   await knex.raw(
     `ALTER TABLE users ADD CONSTRAINT ${CONSTRAINT} CHECK (user_type IN (${list})) NOT VALID`
   );

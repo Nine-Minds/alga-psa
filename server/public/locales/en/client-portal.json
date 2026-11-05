@@ -379,7 +379,8 @@
       "missing_email": "Your identity provider did not return an email address, so no client portal account could be matched. Sign in with your password or contact your service provider.",
       "inactive_user": "The client portal account for {{providerEmail}} is inactive. Contact your service provider to reactivate it.",
       "user_type_mismatch": "{{providerEmail}} is not a client portal account. Contact your service provider.",
-      "tenant_mismatch": "{{providerEmail}} belongs to a different organization's portal. Sign in with your password or contact your service provider."
+      "tenant_mismatch": "{{providerEmail}} belongs to a different organization's portal. Sign in with your password or contact your service provider.",
+      "tenant_required": "{{providerEmail}} is used in more than one organization. Contact your service provider for help signing in."
     },
     "configurationTitle": "Sign-in failed",
     "configurationMessage": "Sign-in failed. Please try again or contact your service provider.",
@@ -777,7 +778,10 @@
       "deleteError": "Failed to delete user",
       "reportsTo": "Reports to",
       "noManager": "No manager",
-      "reportsToHelp": "A manager can see the tickets, devices and projects of the people who report to them, when their visibility group is limited to their own records."
+      "reportsToHelp": "A manager can see the tickets, devices and projects of the people who report to them, when their visibility group is limited to their own records.",
+      "locations": "Locations",
+      "primaryLocation": "Primary",
+      "remote": "Remote"
     },
     "messages": {
       "saveChanges": "Save Changes",

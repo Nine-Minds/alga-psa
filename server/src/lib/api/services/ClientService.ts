@@ -4,11 +4,16 @@
  */
 
 import { hasApiContextPermission } from '../middleware/apiContextPermission';
+import { deactivateClientScopedChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
+import { deactivateClientScopedTicketTemplates } from '@alga-psa/shared/lib/ticketTemplates';
 import { Knex } from 'knex';
 import { locationAddressSql } from './locationAddressSql';
+import { getContactCountsByLocation } from '@alga-psa/shared/models/contactLocation';
 import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
 import { IClient, IClientLocation } from 'server/src/interfaces/client.interfaces';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
+import { displayTagKey, loadDisplayTagsForEntities } from '@alga-psa/tags/lib/loadDisplayTags';
+import { displayAudienceForUser } from '@alga-psa/tags/lib/tagDisplayRules';
 import { availableCreditSubquerySql } from '@alga-psa/billing/lib/creditBalance';
 import { isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
@@ -41,11 +46,9 @@ import {
 } from '@alga-psa/workflow-streams';
 import { buildContactPrimarySetPayload, buildContactArchivedPayload } from '@alga-psa/workflow-streams';
 import {
-  ensureDefaultContractForClientIfBillingConfigured,
-} from '@alga-psa/shared/billingClients/defaultContract';
-import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
-import { initializeClientDefaultTax } from '@alga-psa/shared/billingClients/defaultTaxRate';
-import { resolveProductCode } from '@alga-psa/types';
+  createClientWithDefaults,
+  type CreateClientWithDefaultsData,
+} from '@alga-psa/shared/models/clientCreation';
 import {
   ClientMergeBlockedError,
   executeClientMerge,
@@ -314,8 +317,16 @@ export class ClientService extends BaseService<IClient> {
         })
       );
 
+      // Chip tags for picker rows (tag display rules, caller audience): one query for the page.
+      const displayTags = await loadDisplayTagsForEntities(trx, context.tenant, displayAudienceForUser(context.user), [
+        { taggedType: 'client', ids: clientsWithLogos.map((client) => client.client_id) },
+      ]);
+
       return {
-        data: clientsWithLogos,
+        data: clientsWithLogos.map((client) => ({
+          ...client,
+          display_tags: displayTags.get(displayTagKey('client', client.client_id)) ?? [],
+        })),
         total: parseInt(count as string)
       };
     });
@@ -347,12 +358,18 @@ export class ClientService extends BaseService<IClient> {
         return null;
       }
 
-      // Get logo URL
-      const logoUrl = await getClientLogoUrl(id, context.tenant);
+      const [logoUrl, displayTags] = await Promise.all([
+        getClientLogoUrl(id, context.tenant),
+        loadDisplayTagsForEntities(trx, context.tenant, displayAudienceForUser(context.user), [
+          { taggedType: 'client', ids: [id] },
+        ]),
+      ]);
 
       return withClientSinceDateString({
         ...stripLegacyClientTaxId(client),
-        logoUrl
+        logoUrl,
+        // Chip tags (tag display rules for the caller's audience), as the web pickers and ticket header show them.
+        display_tags: displayTags.get(displayTagKey('client', id)) ?? [],
       }) as unknown as IClient;
     });
   }
@@ -392,36 +409,18 @@ export class ClientService extends BaseService<IClient> {
         is_inactive: data.is_inactive || false,
         lifecycle_status: (data as any).lifecycle_status ?? 'active',
         client_since: data.client_since ?? null,
-        tenant: context.tenant,
-        created_at: knex.raw('now()'),
-        updated_at: knex.raw('now()')
+        tenant: context.tenant
       };
 
-      // Insert into clients table
-      const [client] = await tenantDb(trx, context.tenant).table('clients').insert(clientData).returning('*')
-        .catch((error: unknown) => throwClientWriteApiError(error, data.client_name));
-
-      // Terminal step of charge attribution — every client has exactly one.
-      await ensureClientDefaultBillingProfile(trx, context.tenant, client.client_id, {
-        clientName: client.client_name,
-      });
-
-      await ensureDefaultContractForClientIfBillingConfigured(trx, {
-        tenant: context.tenant,
-        clientId: client.client_id,
-      });
-
-      // Tax initialization shares the client transaction: for PSA tenants an
-      // invalid/missing configuration must roll the client back rather than
-      // commit a client with no usable tax setup. AlgaDesk tenants have no tax
-      // rates (the product intentionally excludes billing) and keep the same
-      // exemption as the UI and shared client-writer paths.
-      const tenantProduct = await tenantDb(trx, context.tenant)
-        .table('tenants')
-        .first('product_code');
-      if (resolveProductCode(tenantProduct?.product_code).productCode !== 'algadesk') {
-        await initializeClientDefaultTax(trx, context.tenant, client.client_id);
-      }
+      // The shared creation seam owns the insert plus every default a client
+      // needs (tenant currency, default billing profile, default contract,
+      // default tax settings) in this transaction. Its failures are mapped to
+      // the same API errors direct inserts used to raise.
+      const client = await createClientWithDefaults(
+        trx,
+        context.tenant,
+        clientData as unknown as CreateClientWithDefaultsData
+      ).catch((error: unknown) => throwClientWriteApiError(error, data.client_name));
 
       // Handle tags if provided
       if ((data as any).tags && (data as any).tags.length > 0) {
@@ -523,6 +522,8 @@ export class ClientService extends BaseService<IClient> {
     clientId: string
   ): Promise<void> {
     await this.cleanupDefaultContractsForDeletedClient(trx, tenant, clientId);
+    await deactivateClientScopedChecklistTemplates(trx, tenant, clientId);
+    await deactivateClientScopedTicketTemplates(trx, tenant, clientId);
     await this.deleteFromTenantTableIfExists(trx, tenant, 'client_billing_settings', { client_id: clientId });
     await this.deleteFromTenantTableIfExists(trx, tenant, 'client_billing_cycles', { client_id: clientId });
     await this.deleteFromTenantTableIfExists(trx, tenant, 'client_tax_settings', { client_id: clientId });
@@ -902,7 +903,18 @@ export class ClientService extends BaseService<IClient> {
         .orderBy('is_default', 'desc')
         .orderBy('location_name', 'asc');
 
-      return locations;
+      // contact_count tells an API caller (and the MCP agent) how many people work at each site,
+      // and therefore why a delete would be refused. One batched read for the whole list.
+      const counts = await getContactCountsByLocation(
+        trx,
+        context.tenant,
+        locations.map((location) => location.location_id),
+      );
+
+      return locations.map((location) => ({
+        ...location,
+        contact_count: counts.get(location.location_id) ?? 0,
+      }));
     });
   }
 

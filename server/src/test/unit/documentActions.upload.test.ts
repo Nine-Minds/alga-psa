@@ -50,6 +50,9 @@ vi.mock('@alga-psa/auth', () => {
   return {
     getCurrentUser,
     hasPermission,
+    checkMultiplePermissions: async (user: unknown, checks: { resource: string; action: string }[]) =>
+      Promise.all(checks.map(async ({ resource, action }) =>
+        ({ resource, action, granted: Boolean(await hasPermission(user, resource, action)) }))),
     withAuth: (action: any) => async (...args: any[]) => {
       const user = await getCurrentUser();
       if (!user) {

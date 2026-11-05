@@ -310,7 +310,9 @@
       "hourlyRate": "Satz / Std.",
       "expirationDate": "Läuft ab",
       "neverExpires": "Nie",
-      "adhocBlock": "Ad hoc"
+      "adhocBlock": "Ad hoc",
+      "remainingValue": "Restwert",
+      "validFrom": "Gültig ab"
     },
     "statusValues": {
       "active": "Aktiv",
@@ -318,7 +320,8 @@
       "yes": "Ja",
       "no": "Nein",
       "expired": "Abgelaufen",
-      "voided": "Storniert"
+      "voided": "Storniert",
+      "all": "Alle Status"
     },
     "profitability": {
       "formats": {

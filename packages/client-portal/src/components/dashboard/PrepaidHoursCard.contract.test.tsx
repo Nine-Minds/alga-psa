@@ -11,6 +11,7 @@ const getClientBucketUsageMock = vi.hoisted(() => vi.fn());
 const getClientHourBlocksMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useFormatters: () => ({ locale: 'en' }),
   useTranslation: () => ({
     t: (key: string, fallback?: string | ({ defaultValue?: string } & Record<string, unknown>)) => {
       if (!fallback) return key;
@@ -136,5 +137,22 @@ describe('PrepaidHoursCard dashboard widget', () => {
     expect(await screen.findByText('Contract: Acme MSP')).toBeInTheDocument();
     expect(document.getElementById('prepaid-hour-block-contract-cb-1')).not.toBeNull();
     expect(document.getElementById('prepaid-hour-block-contract-ab-1')).toBeNull();
+  });
+
+  it('shows the remaining value of a rated block in its currency and omits it for an unrated one', async () => {
+    getClientBucketUsageMock.mockResolvedValue([]);
+    const block = {
+      service_id: 's', service_name: 'Support', total_minutes: 600, remaining_minutes: 300,
+      hours_total: 10, hours_remaining: 5, expiration_date: null, status: 'active', contract_name: null,
+    };
+    getClientHourBlocksMock.mockResolvedValue([
+      { ...block, block_id: 'rated', currency_code: 'EUR', remaining_value: 55000, valid_from: null },
+      { ...block, block_id: 'unrated', currency_code: null, remaining_value: 0, valid_from: null },
+    ]);
+    render(<PrepaidHoursCard />);
+
+    expect(await screen.findByText('5.0h left · €550.00')).toBeInTheDocument();
+    expect(document.getElementById('prepaid-hour-block-remaining-rated')).not.toBeNull();
+    expect(document.getElementById('prepaid-hour-block-remaining-unrated')).toBeNull();
   });
 });

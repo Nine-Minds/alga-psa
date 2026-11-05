@@ -2590,6 +2590,8 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "Offline",
+      "{{field}}: {{from}} → {{to}}",
       "{{from}} → {{to}}",
       "RMA {{id}}",
       "AI",
@@ -2726,7 +2728,9 @@
       "auto | 50% | 120px",
       "Cc",
       "{{size}} GB",
-      "Code 128"
+      "Code 128",
+      "Ticket: {{number}}",
+      "RMA {{number}} · {{status}}"
     ],
     "caseInsensitive": [
       "api",

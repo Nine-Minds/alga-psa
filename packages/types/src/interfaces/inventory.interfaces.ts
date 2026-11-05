@@ -62,7 +62,13 @@ export type StockTransferStatus = 'dispatched' | 'received' | 'cancelled';
 
 export type RmaType = 'standard' | 'advance_replacement';
 
+/**
+ * Mirrors the rma_cases_status_check constraint exactly. `warranty_review` is the pre-authorisation stage of a
+ * client-asset warranty claim (C5); `repaired` is the vendor returning the same unit. `dead_unit_returned` is gone:
+ * the CHECK stopped accepting it in 20260701092000.
+ */
 export type RmaStatus =
+  | 'warranty_review'
   | 'open'
   | 'awaiting_return'
   | 'returned'
@@ -70,11 +76,45 @@ export type RmaStatus =
   | 'replacement_received'
   | 'replacement_deployed'
   | 'dead_unit_owed'
-  | 'dead_unit_returned'
   | 'replaced'
+  | 'repaired'
   | 'credited'
   | 'charged'
   | 'closed';
+
+export const RMA_STATUSES = [
+  'warranty_review',
+  'open',
+  'awaiting_return',
+  'returned',
+  'sent_to_vendor',
+  'replacement_received',
+  'replacement_deployed',
+  'dead_unit_owed',
+  'replaced',
+  'repaired',
+  'credited',
+  'charged',
+  'closed',
+] as const satisfies readonly RmaStatus[];
+
+export type RmaWarrantyOutcome = 'covered' | 'not_covered' | 'unknown';
+export type RmaClosedReason = 'resolved' | 'warranty_denied' | 'cancelled' | 'duplicate' | 'vendor_credited';
+export const RMA_CLOSED_REASONS = ['resolved', 'warranty_denied', 'cancelled', 'duplicate', 'vendor_credited'] as const satisfies readonly RmaClosedReason[];
+
+export type RmaEventType =
+  | 'opened'
+  | 'warranty_approved'
+  | 'warranty_denied'
+  | 'device_received'
+  | 'shipped_outbound'
+  | 'vendor_case_recorded'
+  | 'replacement_received'
+  | 'repair_received'
+  | 'vendor_credited'
+  | 'returned_to_client'
+  | 'closed'
+  | 'note';
 
 export type KitPricingMode = 'sum' | 'fixed';
 
@@ -148,6 +188,8 @@ export interface IStockUnit extends TenantEntity {
   client_id?: string | null;
   asset_id?: string | null;
   allocated_so_line_id?: string | null;
+  /** Serialized project staging claim (C6); never set together with allocated_so_line_id. */
+  allocated_staging_line_id?: string | null;
   warranty_expires_at?: string | Date | null;
   warranty_term?: string | null;
   loan_due_at?: string | Date | null;
@@ -164,6 +206,10 @@ export interface IStockUnit extends TenantEntity {
   location_name?: string | null;
   client_name?: string | null;
   product_name?: string | null;
+  /** The claimant of an `allocated` unit: a sales order's number, or a project staging claim (C6). */
+  allocated_so_number?: string | null;
+  allocated_project_id?: string | null;
+  allocated_project_number?: string | null;
 }
 
 export interface IStockMovement extends TenantEntity {
@@ -413,6 +459,8 @@ export interface IStockTransferLine extends TenantEntity {
 
 export interface IRmaCase extends TenantEntity {
   rma_id: string;
+  /** Human identifier, RMA-00007 (SharedNumberingService entity RMA). Shown instead of the UUID everywhere. */
+  rma_number: string;
   rma_type: RmaType;
   returned_unit_id?: string | null;
   /** Denormalized display fields populated by RMA list/report reads. */
@@ -438,9 +486,50 @@ export interface IRmaCase extends TenantEntity {
   dead_unit_returned_at?: string | Date | null;
   /** Draft invoice created when the client was charged for an unreturned dead unit (F040). */
   charge_invoice_id?: string | null;
+  /** Warranty claim fields (C5). A case is a client-asset claim exactly when `returned_unit_id` is null. */
+  ticket_id?: string | null;
+  custody_id?: string | null;
+  warranty_outcome?: RmaWarrantyOutcome | null;
+  warranty_decided_at?: string | Date | null;
+  warranty_decided_by?: string | null;
+  denial_reason?: string | null;
+  closed_reason?: RmaClosedReason | null;
+  outbound_carrier?: string | null;
+  outbound_tracking_number?: string | null;
+  outbound_shipped_at?: string | Date | null;
+  inbound_carrier?: string | null;
+  inbound_tracking_number?: string | null;
+  inbound_received_at?: string | Date | null;
+  /** Calendar date (YYYY-MM-DD): the vendor's promised return date. */
+  return_by?: string | null;
+  return_ship_to?: string | null;
+  replacement_serial_number?: string | null;
+  replacement_received_at?: string | Date | null;
+  /** Display fields joined by the RMA reads for asset-only claims. */
+  asset_name?: string | null;
+  asset_tag?: string | null;
+  asset_serial_number?: string | null;
+  ticket_number?: string | null;
   opened_at?: string | Date | null;
   closed_at?: string | Date | null;
   created_by?: string | null;
   created_at?: string | Date;
   updated_at?: string | Date;
+}
+
+/** One row of the append-only per-case history (C5). */
+export interface IRmaEvent extends TenantEntity {
+  event_id: string;
+  rma_id: string;
+  event_type: RmaEventType;
+  from_status: RmaStatus | null;
+  to_status: RmaStatus | null;
+  occurred_at: string;
+  recorded_at: string;
+  actor_user_id: string | null;
+  carrier: string | null;
+  tracking_number: string | null;
+  note: string | null;
+  payload: Record<string, unknown>;
+  document_ids: string[];
 }

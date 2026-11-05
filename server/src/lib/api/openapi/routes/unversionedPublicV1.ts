@@ -15,8 +15,8 @@ export function registerUnversionedPublicV1Routes(
   const Success = registry.registerSchema(
     'UnversionedV1Success',
     zOpenApi.object({
-      data: zOpenApi.union([zOpenApi.record(zOpenApi.unknown()), zOpenApi.array(zOpenApi.record(zOpenApi.unknown()))]),
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      data: zOpenApi.union([zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()), zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()))]),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
   const errs = (extra?: Record<number, string>) => ({
@@ -30,7 +30,7 @@ export function registerUnversionedPublicV1Routes(
 
   // ---- Project templates (tag groups under the Projects hub) ----
   const projTag = 'Project Templates';
-  const TemplateIdParam = registry.registerSchema('ProjectTemplateIdParam', zOpenApi.object({ templateId: zOpenApi.string().uuid() }));
+  const TemplateIdParam = registry.registerSchema('ProjectTemplateIdParam', zOpenApi.object({ templateId: zOpenApi.string().guid() }));
   const TemplateCopyOptions = registry.registerSchema('ProjectTemplateCopyOptions', zOpenApi.object({
     copyPhases: zOpenApi.boolean().optional(),
     copyStatuses: zOpenApi.boolean().optional(),
@@ -47,7 +47,7 @@ export function registerUnversionedPublicV1Routes(
     description: 'Creates a project template from an existing project.',
     tags: [projTag], security: [{ ApiKeyAuth: [] }],
     request: { body: { schema: registry.registerSchema('ProjectTemplateCreateBody', zOpenApi.object({
-      project_id: zOpenApi.string().uuid(),
+      project_id: zOpenApi.string().guid(),
       template_name: zOpenApi.string().min(1),
       description: zOpenApi.string().optional(),
       category: zOpenApi.string().optional(),
@@ -75,9 +75,9 @@ export function registerUnversionedPublicV1Routes(
     tags: [projTag], security: [{ ApiKeyAuth: [] }],
     request: { params: TemplateIdParam, body: { schema: registry.registerSchema('ProjectTemplateApplyBody', zOpenApi.object({
       project_name: zOpenApi.string().min(1),
-      client_id: zOpenApi.string().uuid(),
+      client_id: zOpenApi.string().guid(),
       start_date: zOpenApi.string().datetime().optional(),
-      assigned_to: zOpenApi.string().uuid().optional(),
+      assigned_to: zOpenApi.string().guid().optional(),
       options: TemplateCopyOptions.optional(),
     })) } },
     responses: { 201: { description: 'Project created from template.', schema: Success }, ...errs({ 404: 'Template not found.' }) },
@@ -95,13 +95,13 @@ export function registerUnversionedPublicV1Routes(
 
   // ---- Workflow definitions ----
   const wfTag = 'Workflow Definitions';
-  const WorkflowIdParam = registry.registerSchema('WorkflowDefinitionIdParam', zOpenApi.object({ workflowId: zOpenApi.string().uuid() }));
+  const WorkflowIdParam = registry.registerSchema('WorkflowDefinitionIdParam', zOpenApi.object({ workflowId: zOpenApi.string().guid() }));
   const WorkflowVersionParams = registry.registerSchema('WorkflowDefinitionVersionParams', zOpenApi.object({
-    workflowId: zOpenApi.string().uuid(),
+    workflowId: zOpenApi.string().guid(),
     version: zOpenApi.string().describe('Draft version number (coerced to a positive integer).'),
   }));
   // The workflow definition is a large DSL document; modelled as an open object.
-  const WorkflowDefinitionDoc = registry.registerSchema('WorkflowDefinitionDocument', zOpenApi.record(zOpenApi.unknown()).describe('Workflow definition DSL document (nodes, edges, triggers, payload schema, etc.).'));
+  const WorkflowDefinitionDoc = registry.registerSchema('WorkflowDefinitionDocument', zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).describe('Workflow definition DSL document (nodes, edges, triggers, payload schema, etc.).'));
 
   registry.registerRoute({
     method: 'post', path: '/api/workflow-definitions',
@@ -137,12 +137,12 @@ export function registerUnversionedPublicV1Routes(
     tags: [wfTag], security: [{ ApiKeyAuth: [] }],
     request: { body: { schema: registry.registerSchema('WorkflowDefinitionSimulateBody', zOpenApi.object({
       definition: WorkflowDefinitionDoc,
-      payload: zOpenApi.record(zOpenApi.unknown()).optional().describe('Workflow payload used as-is (wins over eventPayload and synthesis).'),
-      eventId: zOpenApi.string().uuid().optional().describe('Replay this stored workflow runtime event (must match the trigger event type). Cannot be combined with payload.'),
+      payload: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional().describe('Workflow payload used as-is (wins over eventPayload and synthesis).'),
+      eventId: zOpenApi.string().guid().optional().describe('Replay this stored workflow runtime event (must match the trigger event type). Cannot be combined with payload.'),
       useLatestEvent: zOpenApi.boolean().optional().describe('Replay the latest stored event of the trigger event type for this tenant. Cannot be combined with payload.'),
-      eventPayload: zOpenApi.record(zOpenApi.unknown()).optional().describe('Source event payload, run through the trigger payloadMapping.'),
+      eventPayload: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional().describe('Source event payload, run through the trigger payloadMapping.'),
       eventType: zOpenApi.string().optional().describe('Event to synthesize a payload for when payload/eventPayload are omitted.'),
-      fixtures: zOpenApi.record(zOpenApi.unknown()).optional().describe('Stub outputs keyed by step id or actionId. { "$error": { message } } makes a stubbed action fail; wait steps resume from their fixture.'),
+      fixtures: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional().describe('Stub outputs keyed by step id or actionId. { "$error": { message } } makes a stubbed action fail; wait steps resume from their fixture.'),
       options: zOpenApi.object({
         maxSteps: zOpenApi.number().int().positive().optional(),
         maxForEachIterations: zOpenApi.number().int().positive().optional(),
@@ -177,7 +177,7 @@ export function registerUnversionedPublicV1Routes(
       autoPauseOnFailure: zOpenApi.boolean().optional(),
       failureRateThreshold: zOpenApi.number().min(0).max(1).optional(),
       failureRateMinRuns: zOpenApi.number().int().min(0).optional(),
-      retentionPolicyOverride: zOpenApi.record(zOpenApi.unknown()).optional(),
+      retentionPolicyOverride: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     })) } },
     responses: { 200: { description: 'Metadata updated.', schema: Success }, ...errs({ 404: 'Workflow not found.' }) },
     extensions: ext('workflow', 'publish'), edition: 'both',
@@ -217,7 +217,7 @@ export function registerUnversionedPublicV1Routes(
     request: { body: { schema: registry.registerSchema('WorkflowRunCreateBody', zOpenApi.object({
       workflowId: zOpenApi.string(),
       workflowVersion: zOpenApi.number().int().positive().optional(),
-      payload: zOpenApi.record(zOpenApi.unknown()).optional(),
+      payload: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
       eventType: zOpenApi.string().optional(),
       sourcePayloadSchemaRef: zOpenApi.string().optional(),
     })) } },
@@ -240,7 +240,7 @@ export function registerUnversionedPublicV1Routes(
     registry.registerSchema('WorkflowRunReplayBody', zOpenApi.object({
       reason: zOpenApi.string().optional(),
       source: zOpenApi.string().optional(),
-      payload: zOpenApi.record(zOpenApi.unknown()).optional(),
+      payload: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     })));
   runAction('requeue', 'Requeue a workflow run', 'Re-initializes the run\'s event wait (for runs stuck awaiting an external event).');
   runAction('resume', 'Resume a workflow run', 'Resolves waiting steps and resumes a paused/waiting run.');
@@ -256,7 +256,7 @@ export function registerUnversionedPublicV1Routes(
       workflowCorrelationKey: zOpenApi.string().optional(),
       correlationKey: zOpenApi.string().optional(),
       payloadSchemaRef: zOpenApi.string().optional(),
-      payload: zOpenApi.record(zOpenApi.unknown()).optional(),
+      payload: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     })) } },
     responses: { 200: { description: 'Event accepted.', schema: Success }, ...errs() },
     extensions: ext('workflow', 'manage'), edition: 'both',
@@ -328,7 +328,7 @@ export function registerUnversionedPublicV1Routes(
   const regTag = 'Workflow Registry';
   const JsonSchemaDoc = registry.registerSchema(
     'WorkflowJsonSchemaDocument',
-    zOpenApi.record(zOpenApi.unknown()).describe('A JSON Schema document.'),
+    zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).describe('A JSON Schema document.'),
   );
   const WorkflowRegistryAction = registry.registerSchema(
     'WorkflowRegistryAction',
@@ -336,22 +336,22 @@ export function registerUnversionedPublicV1Routes(
       id: zOpenApi.string().describe('Stable action identifier (e.g. "ticket.create").'),
       version: zOpenApi.number().int().describe('Action version.'),
       sideEffectful: zOpenApi.boolean().describe('Whether executing the action mutates external state.'),
-      retryHint: zOpenApi.record(zOpenApi.unknown()).nullable().describe('Suggested retry policy, or null.'),
-      idempotency: zOpenApi.record(zOpenApi.unknown()).describe('Idempotency configuration for the action.'),
-      ui: zOpenApi.record(zOpenApi.unknown()).describe('Designer UI metadata (label, group, icon, etc.).'),
+      retryHint: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).nullable().describe('Suggested retry policy, or null.'),
+      idempotency: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).describe('Idempotency configuration for the action.'),
+      ui: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).describe('Designer UI metadata (label, group, icon, etc.).'),
       inputSchema: JsonSchemaDoc.describe('JSON Schema for the action input, annotated with designer presentation metadata.'),
       outputSchema: JsonSchemaDoc.describe('JSON Schema for the action output.'),
-      examples: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())).nullable().describe('Example invocations, or null.'),
+      examples: zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown())).nullable().describe('Example invocations, or null.'),
     }),
   );
   const WorkflowRegistryNode = registry.registerSchema(
     'WorkflowRegistryNode',
     zOpenApi.object({
       id: zOpenApi.string().describe('Node type identifier.'),
-      ui: zOpenApi.record(zOpenApi.unknown()).describe('Designer UI metadata for the node.'),
+      ui: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).describe('Designer UI metadata for the node.'),
       configSchema: JsonSchemaDoc.describe('JSON Schema for the node configuration.'),
-      examples: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())).nullable().describe('Example configurations, or null.'),
-      defaultRetry: zOpenApi.record(zOpenApi.unknown()).nullable().describe('Default retry policy for the node, or null.'),
+      examples: zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown())).nullable().describe('Example configurations, or null.'),
+      defaultRetry: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).nullable().describe('Default retry policy for the node, or null.'),
     }),
   );
 
@@ -376,7 +376,7 @@ export function registerUnversionedPublicV1Routes(
     summary: 'Get the workflow designer action catalog',
     description: 'Returns the action catalog the workflow designer renders: registry actions and integration modules grouped into tiles, filtered to the integrations actually available to the tenant. Returns a bare array of catalog records (no envelope).',
     tags: [regTag], security: [{ ApiKeyAuth: [] }],
-    responses: { 200: { description: 'Designer catalog tiles.', schema: zOpenApi.array(zOpenApi.record(zOpenApi.unknown()).describe('Catalog tile (groupKey, tileKind, actions, UI metadata).')) }, ...errs() },
+    responses: { 200: { description: 'Designer catalog tiles.', schema: zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).describe('Catalog tile (groupKey, tileKind, actions, UI metadata).')) }, ...errs() },
     extensions: ext('workflow', 'read'), edition: 'both',
   });
   registry.registerRoute({
@@ -415,14 +415,14 @@ export function registerUnversionedPublicV1Routes(
     tags: [regTag], security: [{ ApiKeyAuth: [] }],
     responses: {
       200: { description: 'Authoring guide document.', schema: registry.registerSchema('WorkflowAuthoringGuideResponse', zOpenApi.object({
-        overview: zOpenApi.record(zOpenApi.unknown()),
+        overview: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()),
         definitionSchema: JsonSchemaDoc,
-        stepSchemas: zOpenApi.record(JsonSchemaDoc),
-        nodeTypes: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())),
-        controlBlocks: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())),
-        expressionLanguage: zOpenApi.record(zOpenApi.unknown()),
+        stepSchemas: zOpenApi.record(zOpenApi.string(), JsonSchemaDoc),
+        nodeTypes: zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown())),
+        controlBlocks: zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown())),
+        expressionLanguage: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()),
         dataFlow: zOpenApi.array(zOpenApi.string()),
-        workedExample: zOpenApi.record(zOpenApi.unknown()),
+        workedExample: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()),
         commonPitfalls: zOpenApi.array(zOpenApi.string()),
       })) },
       ...errs(),
@@ -454,7 +454,7 @@ export function registerUnversionedPublicV1Routes(
     description: 'Lists all projects for the tenant. Returns a bare array of project records (no envelope); responds 403 with an error message when the caller lacks project read permission.',
     tags: ['Projects'], security: [{ ApiKeyAuth: [] }],
     responses: {
-      200: { description: 'Projects for the tenant.', schema: zOpenApi.array(zOpenApi.record(zOpenApi.unknown()).describe('Project record.')) },
+      200: { description: 'Projects for the tenant.', schema: zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).describe('Project record.')) },
       ...errs(),
     },
     extensions: ext('project', 'read'), edition: 'both',

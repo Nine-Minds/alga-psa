@@ -5,8 +5,8 @@ import { Card } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { Clock } from 'lucide-react';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { formatCalendarDate } from '@alga-psa/core';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { formatCalendarDate, formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import type {
   ClientPortalHourBlock,
   ClientPortalHourBlockBurnEntry,
@@ -29,6 +29,7 @@ function isActionError(value: unknown): boolean {
  */
 export default function HourBlocksCard() {
   const { t } = useTranslation('features/billing');
+  const { locale } = useFormatters();
   const [blocks, setBlocks] = useState<ClientPortalHourBlock[] | null>(null);
   const [burnHistory, setBurnHistory] = useState<ClientPortalHourBlockBurnEntry[]>([]);
 
@@ -112,6 +113,20 @@ export default function HourBlocksCard() {
                         style={{ width: `${fillPercent}%` }}
                       ></div>
                     </div>
+                    {block.remaining_value > 0 && block.currency_code && (
+                      <p id={`hour-block-remaining-${block.block_id}`} className="mt-1 text-xs text-gray-500">
+                        {t('hourBlocks.hoursLeftValue', {
+                          hours: block.hours_remaining.toFixed(1),
+                          value: formatCurrencyFromMinorUnits(block.remaining_value, locale, block.currency_code),
+                          defaultValue: '{{hours}}h left · {{value}}',
+                        })}
+                      </p>
+                    )}
+                    {block.valid_from && (
+                      <p id={`hour-block-valid-from-${block.block_id}`} className="mt-1 text-xs text-gray-500">
+                        {t('hourBlocks.validFrom', { date: formatCalendarDate(block.valid_from) ?? '', defaultValue: 'Valid from {{date}}' })}
+                      </p>
+                    )}
                     {block.expiration_date && (
                       <p className="mt-1 text-xs text-gray-500">
                         {t('hourBlocks.expires', { date: formatCalendarDate(block.expiration_date) ?? '', defaultValue: 'Expires {{date}}' })}

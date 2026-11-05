@@ -1,4 +1,5 @@
 import { Temporal } from '@js-temporal/polyfill';
+import { describeContributedEntry } from '../lib/billing/timeEntryWorkContext';
 import { ManualInvoiceError, type HandledManualInvoiceErrorCode } from '../errors/manualInvoiceErrors';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
@@ -18,6 +19,7 @@ import { DEFAULT_UNIT_CODE, HOUR_UNIT_CODE, resolveUnitOfMeasure } from '@alga-p
 import { computePrepaidBlockExpirationDate } from '../lib/prepaidBlockDates';
 import { createPendingHourBlockForInvoiceCharge } from './pendingHourBlockService';
 import { reconcileLineAllocations } from '@alga-psa/shared/billingClients/hourBlockService';
+import { overPrepaidBlockDescription, prepaidBlockFeeDescription } from '../lib/billing/compute/prepaidBlockDescriptions';
 import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
 import { resolveChargeProfile } from '../lib/billing/billingProfileResolution';
 import { resolveInvoiceBillingRecipient } from './invoiceBillingRecipientService';
@@ -431,6 +433,7 @@ async function linkAndMarkSourceBillingRecord(params: {
   }
 }
 
+// LEVERAGE: pattern line-recurring-streams — maps a charge type back to a recurring family/stream; it should come from the same source as contractLineRecurringStreams once prepaid_block charges are linked
 function getRecurringChargeFamilyForInvoiceLinkage(
   charge: IBillingCharge,
 ): RecurringChargeFamily | null {
@@ -443,12 +446,35 @@ function getRecurringChargeFamilyForInvoiceLinkage(
       return charge.type;
     case 'time':
       return 'hourly';
+    case 'prepaid_block':
+      // Only cadence blocks (no issuance) hold a recurring service period.
+      return (charge as IPrepaidBlockCharge).issuance_id ? null : 'prepaid_block';
     default:
       return null;
   }
 }
 
+/**
+ * Line description for a time charge: overtime segments say so, and late time
+ * names the service period of the invoice that closed its window. Shared by the
+ * preview and persist paths so the preview, PDF and API show the same wording.
+ */
+export function describeTimeCharge(
+  charge: Pick<ITimeBasedCharge, 'serviceName' | 'timeSegment' | 'lateForServicePeriod' | 'overPrepaidBlock'>,
+): string {
+  const base = charge.timeSegment === 'overtime'
+    ? `${charge.serviceName} (overtime)`
+    : charge.overPrepaidBlock
+      ? overPrepaidBlockDescription(charge.serviceName)
+      : charge.serviceName;
+  const late = charge.lateForServicePeriod;
+  return late ? `${base} (late time, service period ${late.servicePeriodStart}–${late.servicePeriodEnd})` : base;
+}
+
 function requiresRecurringServicePeriodLinkage(charge: IBillingCharge): boolean {
+  // Late time belongs to a period an earlier invoice already closed; this
+  // invoice's own period is claimed by its own charges or the chargeless sweep.
+  if (charge.lateForServicePeriod) return false;
   return Boolean(charge.servicePeriodRecordId || charge.client_contract_line_id);
 }
 
@@ -751,6 +777,50 @@ export async function recalculatePercentageDiscountInvoiceCharges(
   return normalizedInvoiceItems;
 }
 
+/** L6a1/T0-2 seam stand-in: manual-invoice time sources owned by a serving work-context contributor. */
+async function validateContributedManualTimeSources(
+  tx: Knex.Transaction,
+  tenant: string,
+  invoice: any,
+  clientId: string,
+  sourceItems: ManualInvoiceItemInput[],
+  reject: () => Error,
+): Promise<Map<ManualInvoiceItemInput, InvoiceTimeEntrySnapshot> | null> {
+  if (invoice.client_id !== clientId || !invoice.is_manual || invoice.is_prepayment) return null;
+  const snapshots = new Map<ManualInvoiceItemInput, InvoiceTimeEntrySnapshot>();
+  const seen = new Set<string>();
+  const ordered = [...sourceItems].sort((a, b) => String((a.source_link as any).entryId).localeCompare(String((b.source_link as any).entryId)));
+  for (const item of ordered) {
+    const entryId = (item.source_link as { entryId: string }).entryId;
+    const described = await describeContributedEntry(tx, tenant, entryId);
+    if (!described) return null;
+    if (seen.has(entryId)) throw reject();
+    seen.add(entryId);
+    const entry = await tenantScopedTable(tx, tenant, 'time_entries').where({ entry_id: entryId }).forUpdate().first();
+    if (!entry || entry.invoiced) {
+      throw new ManualInvoiceError('SOURCE_ALREADY_BILLED', 'The selected time entry is already billed or removed.');
+    }
+    const { context } = described;
+    if (!described.contributor.workItemTypes.includes(entry.work_item_type) || context.clientId !== invoice.client_id ||
+        entry.approval_status !== 'APPROVED' || Number(entry.billable_duration) <= 0 || !entry.service_id) throw reject();
+    const service = await tenantScopedTable(tx, tenant, 'service_catalog').where({ service_id: entry.service_id }).forShare().first();
+    if (!service) throw reject();
+    const minutes = Number(entry.billable_duration);
+    const rate = Math.max(0, Math.round(Number(service.default_rate) || 0));
+    if (item.service_id !== entry.service_id || item.quantity !== minutes / 60 || item.rate !== rate) throw reject();
+    const isTicket = context.sourceKind === 'ticket';
+    snapshots.set(item, {
+      version: 2, rateKind: 'uniform', uniformRate: rate,
+      workItemType: context.sourceKind, workItemId: context.sourceId,
+      ticketNumber: isTicket ? context.ticketNumber : null, title: context.title ?? null,
+      description: null, entryDate: entry.start_time ? new Date(entry.start_time).toISOString() : null,
+      billedMinutes: minutes, rate, netAmount: Math.round(minutes / 60 * rate),
+      serviceId: entry.service_id, serviceName: service.service_name,
+    });
+  }
+  return snapshots;
+}
+
 /** Validate ticket sources under locks held until invoice creation commits. */
 async function validateManualTicketSources(
   tx: Knex.Transaction,
@@ -768,6 +838,13 @@ async function validateManualTicketSources(
   const reject = () => new ManualInvoiceError(
     'SOURCE_NOT_ELIGIBLE', 'The selected source does not match this ticket invoice or is no longer eligible.',
   );
+  // L6a1/T0-2 seam stand-in (timeEntryWorkContext): a ticket-less manual invoice whose sources are all
+  // time entries owned by a serving contributor (shared co-managed work) validates through that contributor.
+  // Native tenants never reach this: no contributor serves them, so the native rejection below is unchanged.
+  if (invoice && !invoice.ticket_id && sourceItems.every(item => item.source_link?.kind === 'time_entry' && !item.is_discount)) {
+    const contributed = await validateContributedManualTimeSources(tx, tenant, invoice, clientId, sourceItems, reject);
+    if (contributed) return contributed;
+  }
   if (!invoice?.ticket_id || invoice.client_id !== clientId || !invoice.is_manual || invoice.is_prepayment) {
     throw reject();
   }
@@ -1685,6 +1762,9 @@ async function persistFixedInvoiceCharges(
         allocated_amount: allocatedAmountCents,
         tax_amount: taxAmountCents,
         tax_rate: detail.tax_rate ?? 0,
+        // Member tax decision from computeFixedCharges; read back by calculateAndDistributeTax.
+        is_taxable: detail.is_taxable === true,
+        tax_region: detail.tax_region ?? null,
         tenant
       });
 
@@ -1815,6 +1895,52 @@ export async function persistPrepaidBlockIssuance(params: {
 }
 
 /**
+ * Creates the pending hour block a cadence Prepaid Block charge bills: dated
+ * and linked to its service period by the charge, with no issuance. The caller
+ * links the period and reconciles the line's time afterwards.
+ */
+async function persistCadencePrepaidBlock(params: {
+  tx: Knex.Transaction;
+  tenant: string;
+  invoiceId: string;
+  invoiceChargeId: string;
+  charge: IPrepaidBlockCharge;
+  clientId: string;
+  createdBy: string | null;
+}): Promise<void> {
+  const { tx, tenant, charge } = params;
+  if (!charge.servicePeriodRecordId || !charge.valid_from || !charge.expiration_date) {
+    throw new Error(
+      `Cadence prepaid block for line ${charge.contract_line_id} is missing its service period or validity dates.`,
+    );
+  }
+  await tenantScopedTable(tx, tenant, 'contract_line_prepaid_blocks')
+    .where({ contract_line_id: charge.contract_line_id })
+    .forUpdate()
+    .select('contract_line_id')
+    .first();
+  await createPendingHourBlockForInvoiceCharge(tx, {
+    tenant,
+    clientId: params.clientId,
+    serviceId: charge.serviceId,
+    minutes: charge.block_minutes,
+    hourlyRate: charge.rate,
+    purchaseAmount: charge.block_price,
+    currencyCode: charge.currency_code,
+    invoiceId: params.invoiceId,
+    invoiceChargeId: params.invoiceChargeId,
+    expirationDate: charge.expiration_date,
+    validFrom: charge.valid_from,
+    scopeServiceIds: charge.scope_service_ids,
+    sourceType: 'contract',
+    contractLineId: charge.contract_line_id,
+    clientContractId: charge.client_contract_id ?? null,
+    servicePeriodRecordId: charge.servicePeriodRecordId,
+    createdBy: params.createdBy,
+  });
+}
+
+/**
  * Persists invoice items generated by the billing engine.
  * Delegates fixed-price items to persistFixedInvoiceCharges.
  * Handles other billing charge types (usage, hourly, etc.).
@@ -1911,13 +2037,13 @@ export async function persistInvoiceCharges(
         : charge.type === 'license'
           ? `License: ${charge.serviceName}`
           : charge.type === 'prepaid_block'
-            ? `Prepaid block (${charge.serviceName}) — ${(charge as IPrepaidBlockCharge).quantity.toFixed(2)} ${resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel}`
+            ? prepaidBlockFeeDescription({ name: charge.serviceName, hours: (charge as IPrepaidBlockCharge).quantity })
           : charge.type === 'hour_block'
             ? `Prepaid hour block (${charge.serviceName}) — ${(charge as IHourBlockCharge).hoursUsed.toFixed(1)} ${resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel} consumed, ${(charge as IHourBlockCharge).hoursRemaining.toFixed(1)} ${resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel} remaining`
-            : charge.type === 'time' && (charge as ITimeBasedCharge).timeSegment === 'overtime'
+            : charge.type === 'time'
               // LEVERAGE: pattern charge-line-description — preview (invoiceGeneration.timeChargeDescription,
               // formatHourBlockChargeDescription) and persist each derive line descriptions from a charge
-              ? `${charge.serviceName} (overtime)`
+              ? describeTimeCharge(charge as ITimeBasedCharge)
               : charge.serviceName;
     const invoiceItem = {
       item_id: uuidv4(),
@@ -1976,7 +2102,21 @@ export async function persistInvoiceCharges(
       && shouldPersistDetail
       && requiresRecurringServicePeriodLinkage(charge);
 
-    if (charge.type === 'prepaid_block') {
+    let cadenceBlockToReconcile: string | null = null;
+    if (charge.type === 'prepaid_block' && !(charge as IPrepaidBlockCharge).issuance_id) {
+      // Cadence block: created pending and linked to its service period (below)
+      // like any recurring charge; no issuance row exists to flip.
+      await persistCadencePrepaidBlock({
+        tx,
+        tenant,
+        invoiceId,
+        invoiceChargeId: invoiceItem.item_id,
+        charge: charge as IPrepaidBlockCharge,
+        clientId: client.client_id,
+        createdBy: session.user.id,
+      });
+      cadenceBlockToReconcile = (charge as IPrepaidBlockCharge).contract_line_id;
+    } else if (charge.type === 'prepaid_block') {
       await persistPrepaidBlockIssuance({
         tx,
         tenant,
@@ -2057,6 +2197,11 @@ export async function persistInvoiceCharges(
           }
         }
       }
+    }
+
+    if (cadenceBlockToReconcile) {
+      // Overflow already logged against the line lands on the new pending block.
+      await reconcileLineAllocations(tx, tenant, cadenceBlockToReconcile);
     }
 
     otherSubtotal += netAmount;
@@ -2179,19 +2324,21 @@ export async function calculateAndDistributeTax(
 
   let fixedDetails: any[] = [];
   if (consolidatedItemIds.length > 0) {
-    // Fetch details. Tax info (is_taxable, tax_region) should now be on the parent invoice_item
-    // derived during item creation based on service's tax_rate_id.
+    // Fetch details. Each member's own tax decision (is_taxable, tax_region) is stored on the
+    // detail row at persist time; NULL means a legacy row that inherits from the parent charge.
     const fixedDetailsQuery = tenantDb(tx, tenant).table('invoice_charge_fixed_details as iifd')
         .whereIn('iid.item_id', consolidatedItemIds) // Filter by the correctly identified parent IDs
         .select(
             'iifd.item_detail_id',
             'iifd.allocated_amount',
+            'iifd.is_taxable as detail_is_taxable',
+            'iifd.tax_region as detail_tax_region',
             'iid.item_id as parent_item_id',
-            'iid.service_id' // Keep service_id if needed for other logic, but not for tax region/taxability here
+            'iid.service_id'
         );
     tenantDb(tx, tenant).tenantJoin(fixedDetailsQuery, 'invoice_charge_details as iid', 'iid.item_detail_id', 'iifd.item_detail_id');
     fixedDetails = await fixedDetailsQuery;
-    console.log(`[calculateAndDistributeTax] Fetched ${fixedDetails.length} fixed details (tax info from parent item):`, JSON.stringify(fixedDetails.map(d => ({ detail_id: d.item_detail_id, parent_id: d.parent_item_id, amount: d.allocated_amount })), null, 2));
+    console.log(`[calculateAndDistributeTax] Fetched ${fixedDetails.length} fixed details (member tax flags with parent fallback):`, JSON.stringify(fixedDetails.map(d => ({ detail_id: d.item_detail_id, parent_id: d.parent_item_id, amount: d.allocated_amount })), null, 2));
   } else {
       console.log(`[calculateAndDistributeTax] No consolidated items found, skipping fixed detail fetch.`);
   }
@@ -2201,24 +2348,37 @@ export async function calculateAndDistributeTax(
   const creditItems = invoiceItems.filter(item => Number(item.net_amount) < 0 && item.is_discount !== true);
 
   // Process fixed details into taxable entities
+  // Client default region is the same for every detail; look it up once.
+  const clientDefaultTaxRegion = fixedDetails.length > 0
+    ? (await getClientDefaultTaxRegionCode(tx, tenant, client.client_id)) || ''
+    : '';
+  const fixedDetailsWithoutTax = new Set<string>();
+  // LEVERAGE: friction fixed-bundle-tax-carrier — fixed bundles are the only charges taxed through a child
+  // table with its own tax rules; preview (computeFixedCharges) and this saved pass duplicate the decision.
+  // A shared "taxable line" layer would remove that.
   for (const detail of fixedDetails) {
     const parentItem = invoiceItems.find(item => item.item_id === detail.parent_item_id);
     if (!parentItem) {
         console.error(`[calculateAndDistributeTax] Could not find parent item ${detail.parent_item_id} for detail ${detail.item_detail_id}`);
         continue; // Skip this detail if parent is missing
     }
-    const isTaxable = parentItem.is_taxable === true; // Get taxability from parent
+    // Member decision wins; NULL (legacy row) inherits from the parent. A parent explicitly
+    // marked non-taxable forces all of its details non-taxable.
+    const isTaxable = parentItem.is_taxable !== false
+      && (detail.detail_is_taxable ?? parentItem.is_taxable) === true;
     const allocatedAmount = Number(detail.allocated_amount || 0);
     if (allocatedAmount > 0 && isTaxable) {
       taxableEntities.push({
         id: detail.item_detail_id,
         type: 'fixed_detail',
         amount: allocatedAmount,
-        // Use service region first, then lookup client default. Provide empty string if null.
-        taxRegion: parentItem.tax_region || await getClientDefaultTaxRegionCode(tx, tenant, client.client_id) || '', // Get region from parent
+        // Member region first, then parent region, then client default.
+        taxRegion: detail.detail_tax_region || parentItem.tax_region || clientDefaultTaxRegion,
         isTaxable: true,
         parentId: detail.parent_item_id,
       });
+    } else {
+      fixedDetailsWithoutTax.add(detail.item_detail_id);
     }
   }
 
@@ -2361,6 +2521,12 @@ export async function calculateAndDistributeTax(
 
   // 6. Update Detail and Item Tables (Tax Amounts)
   const updatePromises: Array<Promise<any>> = [];
+
+  // Reset stale tax on fixed details that are not taxable in this pass, so the step 7 sum
+  // onto the parent only includes tax computed here.
+  for (const itemDetailId of fixedDetailsWithoutTax) {
+    detailUpdates.push({ item_detail_id: itemDetailId, tax_amount: 0, tax_rate: 0 });
+  }
 
   // Update fixed details tax amounts
   if (detailUpdates.length > 0) {

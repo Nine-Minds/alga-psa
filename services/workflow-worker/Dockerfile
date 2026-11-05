@@ -21,6 +21,7 @@ COPY package.json package-lock.json ./
 # Copy all workspace package.json files to set up the dependency tree
 COPY ee/packages/workflows/package.json ./ee/packages/workflows/
 COPY ee/temporal-workflows/package.json ./ee/temporal-workflows/
+COPY ee/server/package.json ./ee/server/
 COPY packages/ee/package.json ./packages/ee/
 COPY shared/package.json ./shared/
 COPY services/workflow-worker/package.json ./services/workflow-worker/
@@ -44,6 +45,7 @@ COPY packages/auth/package.json ./packages/auth/
 COPY packages/billing/package.json ./packages/billing/
 COPY packages/block-content/package.json ./packages/block-content/
 COPY packages/clients/package.json ./packages/clients/
+COPY packages/co-managed/package.json ./packages/co-managed/
 COPY packages/documents/package.json ./packages/documents/
 COPY packages/email/package.json ./packages/email/
 COPY packages/integrations/package.json ./packages/integrations/
@@ -53,6 +55,7 @@ COPY packages/licensing/package.json ./packages/licensing/
 COPY packages/list-views/package.json ./packages/list-views/
 COPY packages/notifications/package.json ./packages/notifications/
 COPY packages/opportunities/package.json ./packages/opportunities/
+COPY packages/predicates/package.json ./packages/predicates/
 COPY packages/projects/package.json ./packages/projects/
 COPY packages/reference-data/package.json ./packages/reference-data/
 COPY packages/scheduling/package.json ./packages/scheduling/
@@ -72,6 +75,7 @@ COPY packages/workflow-streams/package.json ./packages/workflow-streams/
 RUN npm config set legacy-peer-deps true && PUPPETEER_SKIP_DOWNLOAD=true npm install --include-workspace-root \
   --workspace=@alga-psa/workflows \
   --workspace=temporal-workflows \
+  --workspace=sebastian-ee \
   --workspace=@alga-psa/ee-stubs \
   --workspace=@alga-psa/shared \
   --workspace=workflow-worker \
@@ -89,8 +93,8 @@ RUN npm config set legacy-peer-deps true && PUPPETEER_SKIP_DOWNLOAD=true npm ins
   --workspace=@alga-psa/validation \
   --workspace=@alga-psa/email \
   --workspace=@alga-psa/opportunities \
-  --workspace=@alga-psa/ui \
-  && npm install --no-save openai@^4.104.0
+  --workspace=@alga-psa/predicates \
+  --workspace=@alga-psa/ui
 
 # Copy source code for shared + server workspaces
 COPY ee/packages/workflows/ ./ee/packages/workflows/
@@ -101,6 +105,10 @@ COPY server/ ./server/
 COPY packages/ ./packages/
 
 # Build core workspace dependencies that export dist artifacts consumed by runtime packages.
+# Predicates must build first: types and shared/workflow/runtime import it via dist/.
+WORKDIR /app/packages/predicates
+RUN npm run build
+
 WORKDIR /app/packages/core
 RUN npm run build
 
@@ -194,4 +202,14 @@ WORKDIR /app
 COPY --from=builder /app /app
 
 ENV NODE_ENV=production
+
+# Run as the unprivileged node user (uid 1000). The /app tree stays root-owned
+# and read-only to the process. /run/secrets must be owned by the running uid so
+# the filesystem secret provider can write tenant secrets below it, and
+# /data/files is the local file-storage root (mount the files volume here).
+RUN install -d -o 1000 -g 1000 -m 0700 /run/secrets && \
+    install -d -o 1000 -g 1000 -m 0755 /data/files
+
+USER 1000:1000
+
 ENTRYPOINT ["/app/entrypoint.sh"]

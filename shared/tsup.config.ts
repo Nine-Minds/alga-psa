@@ -1,7 +1,13 @@
 import { defineConfig } from 'tsup';
+import { SOURCE_ONLY_ALGA_IMPORTS } from './tsup.sourceOnlyImports';
 
 export default defineConfig({
   entry: {
+    'lib/quotes/quoteStatusTransitions': 'lib/quotes/quoteStatusTransitions.ts',
+    'workflow/streams/domainEventBuilders/quoteEventBuilders': 'workflow/streams/domainEventBuilders/quoteEventBuilders.ts',
+    'lib/quotes/quoteLifecycleEvents': 'lib/quotes/quoteLifecycleEvents.ts',
+    'lib/ticketQuery/ticketQuerySchema': 'lib/ticketQuery/ticketQuerySchema.ts',
+    'lib/ticketQuery/ticketSlaSql': 'lib/ticketQuery/ticketSlaSql.ts',
     'lib/ticketCommentAttachments': 'lib/ticketCommentAttachments.ts',
     'lib/ticketCommentAttachmentToken': 'lib/ticketCommentAttachmentToken.ts',
     'index': 'index.ts',
@@ -10,6 +16,7 @@ export default defineConfig({
     'core/logger': 'core/logger.ts',
     'core/secretProvider': 'core/secretProvider.ts',
     'core/deploymentProfile': 'core/deploymentProfile.ts',
+    'core/portalDomainSurface': 'core/portalDomainSurface.ts',
     'db/index': 'db/index.ts',
     'db/admin': 'db/admin.ts',
     'db/connection': 'db/connection.ts',
@@ -22,6 +29,8 @@ export default defineConfig({
     'services/email/providers/MicrosoftGraphAdapter': 'services/email/providers/MicrosoftGraphAdapter.ts',
     'services/diagnostics/index': 'services/diagnostics/index.ts',
     'services/assets/assetTicketAssociation': 'services/assets/assetTicketAssociation.ts',
+    'services/assets/maintenanceRecurrence': 'services/assets/maintenanceRecurrence.ts',
+    'services/assets/maintenanceLifecycle': 'services/assets/maintenanceLifecycle.ts',
     'services/tickets/createTicketWithSideEffects': 'services/tickets/createTicketWithSideEffects.ts',
     'services/tickets/ticketModelEventPublisher': 'services/tickets/ticketModelEventPublisher.ts',
     'services/tickets/ticketResourceCore': 'services/tickets/ticketResourceCore.ts',
@@ -84,6 +93,7 @@ export default defineConfig({
     'models/assetGroupContactModel': 'models/assetGroupContactModel.ts',
     'models/assetTicketContactModel': 'models/assetTicketContactModel.ts',
     'models/assetBillingProfileModel': 'models/assetBillingProfileModel.ts',
+    'models/clientCreation': 'models/clientCreation.ts',
     'models/clientModel': 'models/clientModel.ts',
     'models/contactModel': 'models/contactModel.ts',
     'models/kbArticleModel': 'models/kbArticleModel.ts',
@@ -100,6 +110,7 @@ export default defineConfig({
     'billingClients/recurringUnitPricing': 'billingClients/recurringUnitPricing.ts',
     'billingClients/recurringUnitMidPeriodAdjustment': 'billingClients/recurringUnitMidPeriodAdjustment.ts',
     'billingClients/coverageProration': 'billingClients/coverageProration.ts',
+    'billingClients/recurringMemberRate': 'billingClients/recurringMemberRate.ts',
     'billingClients/contractMonthlyValue': 'billingClients/contractMonthlyValue.ts',
     'billingClients/quoteDiscountAllocation': 'billingClients/quoteDiscountAllocation.ts',
     'billingClients/quoteConversionDiscounts': 'billingClients/quoteConversionDiscounts.ts',
@@ -124,6 +135,7 @@ export default defineConfig({
     'lib/ticketActivity/writeTicketActivity': 'lib/ticketActivity/writeTicketActivity.ts',
     'lib/ticketActivity/readTicketActivity': 'lib/ticketActivity/readTicketActivity.ts',
     'lib/ticketActivity/curatedTicketDiff': 'lib/ticketActivity/curatedTicketDiff.ts',
+    'lib/ticketChecklists/scope': 'lib/ticketChecklists/scope.ts',
     'lib/businessHours/businessHoursSegmentation': 'lib/businessHours/businessHoursSegmentation.ts',
     'lib/businessHours/businessDayCalendar': 'lib/businessHours/businessDayCalendar.ts',
     'lib/businessHours/loadBusinessDayCalendar': 'lib/businessHours/loadBusinessDayCalendar.ts',
@@ -158,5 +170,8 @@ export default defineConfig({
   ],
   noExternal: [
     /^@shared\//,
+    // Pure and sandbox-safe; bundled so the worker image needs no extra package dist.
+    /^@alga-psa\/predicates/,
+    ...SOURCE_ONLY_ALGA_IMPORTS,
   ],
 });

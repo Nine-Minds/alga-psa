@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { FocusScope } from '@radix-ui/react-focus-scope';
 import UserAvatar from './UserAvatar';
 import type { IUser } from '@alga-psa/types';
 import { ChevronDown, X, Search, UserMinus } from 'lucide-react';
@@ -14,6 +15,7 @@ import { Button } from './Button';
 import type { ITeam } from '@alga-psa/types';
 import TeamAvatar from './TeamAvatar';
 import { useTranslation } from '../lib/i18n/client';
+import { truncateTeamDescription } from '../lib/utils';
 
 export type GetTeamAvatarUrlsBatch = (teamIds: string[], tenant: string) => Promise<Map<string, string | null>>;
 
@@ -195,8 +197,11 @@ const MultiUserAndTeamPicker = ({
   const filteredTeams = teams
     .filter(team => {
       if (!searchQuery) return true;
+      const needle = searchQuery.toLowerCase();
       const leadName = getTeamLeadName(team).toLowerCase();
-      return `${team.team_name || ''}`.toLowerCase().includes(searchQuery.toLowerCase()) || leadName.includes(searchQuery.toLowerCase());
+      return `${team.team_name || ''}`.toLowerCase().includes(needle)
+        || leadName.includes(needle)
+        || (team.description || '').toLowerCase().includes(needle);
     })
     .sort((a, b) => (a.team_name || '').localeCompare(b.team_name || ''));
   const selectedTeams = teams.filter(team => validTeamValues.includes(team.team_id));
@@ -286,6 +291,27 @@ const MultiUserAndTeamPicker = ({
       }, 10);
     }
   }, [isOpen, showSearch]);
+
+  // Escape belongs to the top-most layer: while this dropdown is open it must
+  // dismiss the list only. Radix dismissable layers (Dialog, Drawer) listen for
+  // Escape on `document` in the capture phase, so a React handler on the search
+  // box cannot stop them and the surrounding dialog closed too - taking any
+  // unsaved edits with it. A window-capture listener runs first.
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      setIsOpen(false);
+      setSearchQuery('');
+    };
+
+    window.addEventListener('keydown', handleEscape, true);
+    return () => window.removeEventListener('keydown', handleEscape, true);
+  }, [isOpen]);
 
   // Update dropdown position
   const updateDropdownPosition = useCallback(() => {
@@ -567,6 +593,21 @@ const MultiUserAndTeamPicker = ({
   };
 
   const dropdownContent = (
+    // Portaled to document.body, so inside a modal dialog this sits outside that
+    // dialog's focus scope and its trap would steal every keystroke from the
+    // search box. A nested trapped scope pauses the dialog's, as ClientPicker does.
+    <FocusScope
+      asChild
+      loop
+      trapped
+      onMountAutoFocus={(event) => event.preventDefault()}
+      onUnmountAutoFocus={(event) => {
+        event.preventDefault();
+        if (!document.activeElement || document.activeElement === document.body) {
+          buttonRef.current?.focus();
+        }
+      }}
+    >
     <div
       ref={dropdownRef}
       className="fixed z-50 pointer-events-auto"
@@ -722,9 +763,14 @@ const MultiUserAndTeamPicker = ({
                           avatarUrl={teamAvatarUrls[team.team_id] ?? null}
                           size="sm"
                         />
-                        <div className="ml-2 flex flex-col">
+                        <div className="ml-2 flex flex-col flex-1 min-w-0">
                           <span>{team.team_name || 'Unnamed Team'}</span>
                           <span className="text-xs text-gray-500">{memberCount} members · Lead: {leadName}</span>
+                          {team.description && (
+                            <span className="text-xs text-gray-500 truncate" title={team.description}>
+                              {truncateTeamDescription(team.description)}
+                            </span>
+                          )}
                         </div>
                       </div>
                     );
@@ -750,6 +796,7 @@ const MultiUserAndTeamPicker = ({
         )}
       </div>
     </div>
+    </FocusScope>
   );
 
   return (

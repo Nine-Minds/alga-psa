@@ -20,6 +20,8 @@ export interface SelectOption {
   title?: string;
   /** Leading visual (avatar, logo) rendered before the label. */
   icon?: React.ReactNode;
+  /** Trailing visual after the label (e.g. tag badges). */
+  trailing?: React.ReactNode;
   badge?: {
     text: string;
     variant?: 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'danger';
@@ -59,6 +61,8 @@ interface AsyncSearchableSelectProps {
   triggerId?: string;
   /** Leading visual shown on the trigger next to the selected label. */
   selectedIcon?: React.ReactNode;
+  /** Trailing visual after the selected value (e.g. tag badges). */
+  selectedTrailing?: React.ReactNode;
 }
 
 export function AsyncSearchableSelect({
@@ -84,6 +88,7 @@ export function AsyncSearchableSelect({
   footerContent,
   headerContent,
   selectedIcon,
+  selectedTrailing,
   triggerId,
 }: AsyncSearchableSelectProps & AutomationProps): React.JSX.Element {
   const { t } = useTranslation();
@@ -339,7 +344,6 @@ export function AsyncSearchableSelect({
               {options.map((option) => (
                 <Command.Item
                   key={option.value}
-                  id={id ? `${id}-option-${option.value}` : undefined}
                   value={option.value}
                   title={option.title}
                   disabled={option.disabled}
@@ -357,7 +361,11 @@ export function AsyncSearchableSelect({
                     value === option.value && 'bg-[rgb(var(--color-border-100))]'
                   )}
                 >
-                  <span className="flex-1 flex items-center gap-2 min-w-0">
+                  {/* cmdk overwrites `id` on Command.Item, so the stable option id lives on this child; clicks bubble to the item. */}
+                  <span
+                    id={id ? `${id}-option-${option.value}` : undefined}
+                    className="flex-1 flex items-center gap-2 min-w-0"
+                  >
                     {option.icon}
                     {option.badge && (
                       <span className={cn(
@@ -380,6 +388,7 @@ export function AsyncSearchableSelect({
                         </span>
                       )}
                     </span>
+                    {option.trailing}
                   </span>
                   {value === option.value && <Check className="w-4 h-4 text-primary-600" />}
                 </Command.Item>
@@ -452,6 +461,7 @@ export function AsyncSearchableSelect({
             <span className={cn('truncate', !value && 'text-[rgb(var(--color-text-300))]')}>
               {selectedOption?.label ?? selectedLabel ?? (value ? value : resolvedPlaceholder)}
             </span>
+            {value ? selectedTrailing : null}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>

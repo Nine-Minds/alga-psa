@@ -1,0 +1,670 @@
+[
+  {
+    "id": "F001",
+    "description": "Delete migration 20261022120000_add_vip_and_primary_contact_flags.cjs",
+    "implemented": true,
+    "prdRefs": [
+      "Removal of PR #3858 flags"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Remove is_vip / is_primary_contact from contact and client interfaces, shared contact model, client and contact zod schemas",
+    "implemented": true,
+    "prdRefs": [
+      "Removal of PR #3858 flags"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Remove is_vip / is_primary_contact from REST API contact and client schemas and ContactService / ClientService",
+    "implemented": true,
+    "prdRefs": [
+      "Removal of PR #3858 flags"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Remove VIP / POC toggles from ContactDetailsEdit, QuickAddContact, ClientDetailsTabContent, Contacts and ClientDetails",
+    "implemented": true,
+    "prdRefs": [
+      "Removal of PR #3858 flags"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Remove contact_is_vip / contact_is_primary_contact / client_is_vip from the ticket list select, mapTicketListItems and ITicketListItem",
+    "implemented": true,
+    "prdRefs": [
+      "Removal of PR #3858 flags"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Remove requester_vip / client_vip from ITicketListFilters, ticket schemas, list-view and board schemas, URL parse/write, parseReturnFilters, the dashboard VIP toggle, reset and chip",
+    "implemented": true,
+    "prdRefs": [
+      "Removal of PR #3858 flags"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Remove VipBadge / PocBadge usage from TicketBentoLayout, TicketProperties, ContactPicker and ticket-columns",
+    "implemented": true,
+    "prdRefs": [
+      "Removal of PR #3858 flags"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Remove the VIP-specific tests and locale strings that the tag-based tests and strings replace",
+    "implemented": true,
+    "prdRefs": [
+      "Removal of PR #3858 flags"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Keep the Contact column defaultVisible: true in ticketColumnCatalog",
+    "implemented": true,
+    "prdRefs": [
+      "Removal of PR #3858 flags"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Create packages/predicates (@alga-psa/predicates) as a source-transpiled horizontal leaf package with nx project, package.json and tests",
+    "implemented": true,
+    "prdRefs": [
+      "Shared predicate model"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Wire @alga-psa/predicates aliases in tsconfig.base.json, server/tsconfig.json, ee/server/tsconfig.json, server/next.config.mjs (paths and transpile list) and ee/temporal-workflows/tsconfig.json; add dependency to shared/package.json",
+    "implemented": true,
+    "prdRefs": [
+      "Shared predicate model"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "PredicateClause and nestable PredicateGroup types",
+    "implemented": true,
+    "prdRefs": [
+      "Shared predicate model"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Operator set using workflow condition names, with takesValue / takesList metadata",
+    "implemented": true,
+    "prdRefs": [
+      "Shared predicate model"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Set-valued path semantics: in = has any of, not_in = has none of, is_empty / is_not_empty = no / some elements",
+    "implemented": true,
+    "prdRefs": [
+      "Shared predicate model"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Shared null semantics: missing never satisfies comparisons, satisfies is_empty and not_in",
+    "implemented": true,
+    "prdRefs": [
+      "Shared predicate model"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "zod schema for predicate groups (storage and validation)",
+    "implemented": true,
+    "prdRefs": [
+      "Shared predicate model"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Deterministic in-memory evaluator over JSON values with no Node APIs",
+    "implemented": true,
+    "prdRefs": [
+      "Shared predicate model"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Query schema API: attributes (column or raw expression, type, allowed operators), relations (table, join keys, cardinality one/many)",
+    "implemented": true,
+    "prdRefs": [
+      "Shared predicate model"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Tag relation helper declaring <entity>.tags over tag_mappings / tag_definitions for a tagged_type",
+    "implemented": true,
+    "prdRefs": [
+      "Shared predicate model"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "SQL compiler (@alga-psa/predicates/sql, knex peer) that correlates every hop on tenant",
+    "implemented": true,
+    "prdRefs": [
+      "Shared predicate model"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "SQL compiler emits null-safe not_in (IS NULL OR NOT IN) and NOT EXISTS for set-valued not_in",
+    "implemented": true,
+    "prdRefs": [
+      "Shared predicate model"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Root 'self or any child' modifier applied uniformly to every relation hop",
+    "implemented": true,
+    "prdRefs": [
+      "Shared predicate model"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Computed attributes as named resolvers declared in the query schema; the only place raw SQL is allowed",
+    "implemented": true,
+    "prdRefs": [
+      "Shared predicate model"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Validation rejects unknown paths and disallowed operators against a query schema",
+    "implemented": true,
+    "prdRefs": [
+      "Shared predicate model"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Re-type conditionModel.ts clause, group and operator types as @alga-psa/predicates types; JSONata adapter behavior unchanged",
+    "implemented": true,
+    "prdRefs": [
+      "Workflow conditions on the shared model"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Workflow designer condition builder and Temporal worker build and run against the shared types",
+    "implemented": true,
+    "prdRefs": [
+      "Workflow conditions on the shared model"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "LEVERAGE markers at workflow event-wait filters, reporting FilterDefinition, inbound email rule conditions, automation/webhook condition schemas and REST TicketService.applyTicketFilters pointing at @alga-psa/predicates",
+    "implemented": true,
+    "prdRefs": [
+      "Workflow conditions on the shared model"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Ticket query schema: board (inactive-board state, no-board sentinel), status (id, name, open-only via is_closed), priority",
+    "implemented": true,
+    "prdRefs": [
+      "Ticket list query schema and compiler"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Ticket query schema: category matching category or subcategory, with no-category sentinel",
+    "implemented": true,
+    "prdRefs": [
+      "Ticket list query schema and compiler"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Ticket query schema: client, contact relations",
+    "implemented": true,
+    "prdRefs": [
+      "Ticket list query schema and compiler"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Ticket query schema: assignee / team / unassigned as one OR group; assigned-to-me resolved to the current user id",
+    "implemented": true,
+    "prdRefs": [
+      "Ticket list query schema and compiler"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Ticket query schema: due date presets resolved to absolute ranges in the user's timezone",
+    "implemented": true,
+    "prdRefs": [
+      "Ticket list query schema and compiler"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Ticket query schema: response state and SLA status as computed attributes (SLA reuses ticketSlaBreachedSql)",
+    "implemented": true,
+    "prdRefs": [
+      "Ticket list query schema and compiler"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Ticket query schema: tags, contact.tags, client.tags tag relations",
+    "implemented": true,
+    "prdRefs": [
+      "Ticket list query schema and compiler"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "ticketFiltersToPredicates codec converts every legacy ITicketListFilters key to a predicate group",
+    "implemented": true,
+    "prdRefs": [
+      "Ticket list query schema and compiler"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "ITicketListFilters gains where?: PredicateGroup; ticket filter zod schema validates it against the ticket query schema",
+    "implemented": true,
+    "prdRefs": [
+      "Ticket list query schema and compiler"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "buildTicketListBaseQuery compiles codec output plus filters.where; hand-written where-clauses for legacy keys deleted in the same change, with no fallback path or flag",
+    "implemented": true,
+    "prdRefs": [
+      "Ticket list query schema and compiler"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Bundled view uses the self-or-any-child modifier for every relation hop, including ticket, contact and client tags",
+    "implemented": true,
+    "prdRefs": [
+      "Ticket list query schema and compiler"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Update optimizedTicketActions.tenantScopedAuth source-string contract test to pin tenant correlation in the compiler",
+    "implemented": true,
+    "prdRefs": [
+      "Ticket list query schema and compiler"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Tag filter values are definition ids; legacy tags text converts to ticket tag definition ids by (tag_text, 'ticket')",
+    "implemented": true,
+    "prdRefs": [
+      "Storage and URLs"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "One exported ticket filter schema; named-view and board default-view schemas derive from it",
+    "implemented": true,
+    "prdRefs": [
+      "Storage and URLs"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "Delete the dead filter schema in server/src/lib/schemas/ticket.schema.ts",
+    "implemented": true,
+    "prdRefs": [
+      "Storage and URLs"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "list-views define() accepts schemaVersion and migrate",
+    "implemented": true,
+    "prdRefs": [
+      "Storage and URLs"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "Tickets named-view definition schemaVersion 2 with migrate: v1 tags text to ids, drop requester_vip / client_vip",
+    "implemented": true,
+    "prdRefs": [
+      "Storage and URLs"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "Board default views and tenant default view gain a version field and the same migration on read",
+    "implemented": true,
+    "prdRefs": [
+      "Storage and URLs"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "sanitizeStoredTicketView and validateCapturedFilters keep and validate where instead of dropping non-scalars",
+    "implemented": true,
+    "prdRefs": [
+      "Storage and URLs"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "Sanitize drops predicate clauses referencing deleted tag ids through the dropped-reference collector and toast",
+    "implemented": true,
+    "prdRefs": [
+      "Storage and URLs"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "URL round-trip of where in one versioned readable form (v1:<path>:<op>[:<values>];..., percent-encoded, no base64 fallback) in container parse/write, page.tsx SSR parse, parseReturnFilters and getCurrentFiltersQuery; unknown-version or malformed values dropped through the dropped-reference collector",
+    "implemented": true,
+    "prdRefs": [
+      "Storage and URLs"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "TICKET_VIEW_URL_FILTER_PARAMS includes where so predicate-only URLs outrank the board default",
+    "implemented": true,
+    "prdRefs": [
+      "Storage and URLs"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "exportFilters, select-all, smart-search scope and prev/next carry where",
+    "implemented": true,
+    "prdRefs": [
+      "Storage and URLs"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "Filter descriptor table { key, isActive, label, clear } driving toolbar, activeFilterCount and active-filter chips for predicate dimensions",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "Requester tags toolbar filter: contact-type tag options, any-of / none-of, writes contact.tags predicates",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "Client tags toolbar filter: client-type tag options, any-of / none-of, writes client.tags predicates",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "Ticket form options loader returns contact-type and client-type tag definitions (including referenced definitions with no mappings)",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "Migration: tag_display_rules table with unique (tenant, tagged_type, audience, tag_id), FK to tag_definitions with cascade delete, Citus distribution co-located with tag_definitions",
+    "implemented": true,
+    "prdRefs": [
+      "Display rules"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "Migration seeds internal display rules for existing contact and client definitions with text VIP (case-insensitive)",
+    "implemented": true,
+    "prdRefs": [
+      "Display rules"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "Orphan cleanup (deleteOrphaned, tagCleanup, deleteTag orphan branch) keeps definitions referenced by a display rule",
+    "implemented": true,
+    "prdRefs": [
+      "Display rules"
+    ]
+  },
+  {
+    "id": "F058",
+    "description": "findAllTagsByType includes definitions referenced by a display rule even with no mappings",
+    "implemented": true,
+    "prdRefs": [
+      "Display rules"
+    ]
+  },
+  {
+    "id": "F059",
+    "description": "Display rule actions: list by entity type and audience; replace ordered list (settings:update)",
+    "implemented": true,
+    "prdRefs": [
+      "Display rules"
+    ]
+  },
+  {
+    "id": "F060",
+    "description": "Pure resolver: displayed tags for an audience and entity type, in rule order; no rules means none",
+    "implemented": true,
+    "prdRefs": [
+      "Display rules"
+    ]
+  },
+  {
+    "id": "F061",
+    "description": "Settings \u2192 Tags \u2192 Display on chips screen: per entity type and audience, ordered add/remove/reorder",
+    "implemented": true,
+    "prdRefs": [
+      "Display rules"
+    ]
+  },
+  {
+    "id": "F062",
+    "description": "New-tenant onboarding creates VIP contact and client tag definitions with internal display rules",
+    "implemented": true,
+    "prdRefs": [
+      "Display rules"
+    ]
+  },
+  {
+    "id": "F063",
+    "description": "loadDisplayTagsForEntities(knex, tenant, audience, refs) batch loader in packages/tags; audience from user.user_type",
+    "implemented": true,
+    "prdRefs": [
+      "Chip hydration"
+    ]
+  },
+  {
+    "id": "F064",
+    "description": "enrichTicketListItems adds contact_tags and client_tags on the row; ITicketListItem gains both fields",
+    "implemented": true,
+    "prdRefs": [
+      "Chip hydration"
+    ]
+  },
+  {
+    "id": "F065",
+    "description": "fetchBundleChildrenForMaster joins contacts and runs through enrichTicketListItems",
+    "implemented": true,
+    "prdRefs": [
+      "Chip hydration"
+    ]
+  },
+  {
+    "id": "F066",
+    "description": "getConsolidatedTicketData returns displayed tags for requester and client",
+    "implemented": true,
+    "prdRefs": [
+      "Chip hydration"
+    ]
+  },
+  {
+    "id": "F067",
+    "description": "Contact and client picker option loaders return displayed tags",
+    "implemented": true,
+    "prdRefs": [
+      "Chip hydration"
+    ]
+  },
+  {
+    "id": "F068",
+    "description": "EntityChip in packages/ui: avatar, name, click-through, ordered tag badges with tag colors, maxBadges with +n overflow tooltip",
+    "implemented": true,
+    "prdRefs": [
+      "Surfaces"
+    ]
+  },
+  {
+    "id": "F069",
+    "description": "Ticket list Client and Contact cells render EntityChip (maxBadges 2)",
+    "implemented": true,
+    "prdRefs": [
+      "Surfaces"
+    ]
+  },
+  {
+    "id": "F070",
+    "description": "TicketBentoLayout requester and client rows render EntityChip",
+    "implemented": true,
+    "prdRefs": [
+      "Surfaces"
+    ]
+  },
+  {
+    "id": "F071",
+    "description": "TicketProperties contact and client rows render EntityChip",
+    "implemented": true,
+    "prdRefs": [
+      "Surfaces"
+    ]
+  },
+  {
+    "id": "F072",
+    "description": "ContactPicker and ClientPicker options and selected value show displayed tags",
+    "implemented": true,
+    "prdRefs": [
+      "Surfaces"
+    ]
+  },
+  {
+    "id": "F073",
+    "description": "i18n strings for chips, tag filters and display-rule settings in every locale file",
+    "implemented": true,
+    "prdRefs": [
+      "Surfaces"
+    ]
+  },
+  {
+    "id": "F074",
+    "description": "findTagsByEntityId and findTagsByEntityIds require tag:read",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F075",
+    "description": "Predicate semantics spec: packages/predicates/spec/SEMANTICS.md (operators, set-valued paths, null and missing values, coercion, string case rules, empty lists) and a JSON conformance table of (predicate, record, expected) rows, with rows the JSONata adapter cannot represent flagged",
+    "implemented": true,
+    "prdRefs": [
+      "Shared predicate model",
+      "Design principles"
+    ]
+  },
+  {
+    "id": "F076",
+    "description": "Conformance runners: the in-memory evaluator, the SQL compiler against a migrated test database, and the workflow JSONata path (conditionModel adapter serialize + expressionEngine) each run the full conformance table",
+    "implemented": true,
+    "prdRefs": [
+      "Shared predicate model",
+      "Workflow conditions on the shared model"
+    ]
+  },
+  {
+    "id": "F077",
+    "description": "Conformance completeness check: every operator x path kind (scalar, set-valued, missing) has at least one row",
+    "implemented": true,
+    "prdRefs": [
+      "Shared predicate model"
+    ]
+  },
+  {
+    "id": "F078",
+    "description": "Ticket filter schema restricts where to a single flat and group; nested groups are rejected in storage, URLs and the toolbar",
+    "implemented": true,
+    "prdRefs": [
+      "Ticket list query schema and compiler",
+      "Storage and URLs"
+    ]
+  },
+  {
+    "id": "F079",
+    "description": "Ticket query schema file enumerates its computed attributes (SLA status, response state, due-date presets, assigned-to-me, inactive-board state, no-board, no-category, open-only) as named resolvers; no other raw SQL in the schema",
+    "implemented": true,
+    "prdRefs": [
+      "Ticket list query schema and compiler"
+    ]
+  },
+  {
+    "id": "F080",
+    "description": "Path alias map in the tickets list-view migrate hook (and board / tenant default view migration) so a renamed path in stored where migrates to its new name",
+    "implemented": true,
+    "prdRefs": [
+      "Persisted and external formats",
+      "Storage and URLs"
+    ]
+  },
+  {
+    "id": "F081",
+    "description": "packages/predicates/README.md and the ticket query schema file header document the semantics spec and the add-a-dimension recipe",
+    "implemented": true,
+    "prdRefs": [
+      "Design principles"
+    ]
+  },
+  {
+    "id": "F082",
+    "description": "Release notes entry for the intended behavior changes: bundled tag matching through children, assigned-to-me honoured by the main list, chip tags from display rules",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F083",
+    "description": "tag_references table (tenant, tag_id, referrer_type, referrer_id) plus replaceTagReferences/deleteTagReferences in packages/tags; orphan cleanup, TagDefinition.delete and the tag option loaders consult tag_references only and know no referrer types; display rules are the first referrer, maintained in the rule write transaction (replace, seed, backfill); referrers tolerate a missing tag",
+    "implemented": true,
+    "prdRefs": [
+      "Design principles"
+    ]
+  }
+]

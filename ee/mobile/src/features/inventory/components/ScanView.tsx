@@ -1,5 +1,5 @@
 import React from "react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { Linking, Text, Vibration, View } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -20,11 +20,10 @@ import { RegisterAssetModal } from "./RegisterAssetModal";
 import type { RootStackParamList } from "../../../navigation/types";
 
 import { INVENTORY_BARCODE_TYPES } from "../barcodeTypes";
+import { useScanDebounce } from "../scanDebounce";
 import { classifyScannedCode } from "../scanRouting";
 import { recordUrl } from "../../../urls/recordLinks";
 import { logger } from "../../../logging/logger";
-
-const SCAN_DEBOUNCE_MS = 1500;
 
 export function ScanView() {
   const theme = useTheme();
@@ -43,12 +42,12 @@ export function ScanView() {
   const [result, setResult] = useState<InventoryLookupResult | null>(null);
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  // A recognised Alga label that has no in-app screen (project, RMA) or that
+  // A recognised Alga label that has no in-app screen (RMA, staging box) or that
   // belongs to another server. Carries no record content.
   const [recordNotice, setRecordNotice] = useState<
     { kind: "foreign" } | { kind: "browser"; url: string } | null
   >(null);
-  const lastScanRef = useRef<{ code: string; atMs: number } | null>(null);
+  const scanDebounce = useScanDebounce();
   const { showToast } = useToast();
   const [attachPickerVisible, setAttachPickerVisible] = useState(false);
   const [attachItems, setAttachItems] = useState<EntityPickerItem[]>([]);
@@ -80,8 +79,8 @@ export function ScanView() {
     setResult(null);
     setScannedCode(null);
     setRecordNotice(null);
-    lastScanRef.current = null;
-  }, []);
+    scanDebounce.reset();
+  }, [scanDebounce]);
 
   const resolveCode = useCallback(
     async (code: string) => {
@@ -115,8 +114,12 @@ export function ScanView() {
             clearScanState();
             navigation.navigate("ProjectTaskDetail", { taskId: id });
             return;
+          case "project":
+            clearScanState();
+            navigation.navigate("ProjectDetail", { projectId: id });
+            return;
           default:
-            // project, rma: no mobile screen. Rebuild the URL on the
+            // rma, staging_container: no mobile screen. Rebuild the URL on the
             // connected server; never open the scanned string.
             if (baseUrl) {
               setRecordNotice({ kind: "browser", url: recordUrl(entityType, id, baseUrl, { projectId }) });
@@ -158,14 +161,11 @@ export function ScanView() {
   const onBarcodeScanned = useCallback(
     ({ data }: { data: string }) => {
       if (!data || busy || result || recordNotice) return;
-      const now = Date.now();
-      const last = lastScanRef.current;
-      if (last && last.code === data && now - last.atMs < SCAN_DEBOUNCE_MS) return;
-      lastScanRef.current = { code: data, atMs: now };
+      if (!scanDebounce.accept(data)) return;
       Vibration.vibrate(30);
       void resolveCode(data.trim());
     },
-    [busy, result, recordNotice, resolveCode],
+    [busy, result, recordNotice, resolveCode, scanDebounce],
   );
 
   const dismissResult = clearScanState;

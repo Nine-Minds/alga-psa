@@ -34,7 +34,7 @@ export { default as ContactAvatar } from './ContactAvatar';
 export * from './ContactPicker';
 export * from './ContactPickerDialog';
 export { default as ContactPickerDialog } from './ContactPickerDialog';
-export { ContentCard, ContentCardVariantProvider, useContentCardVariant } from './ContentCard';
+export { ContentCard, ContentCardVariantProvider, useContentCardVariant, ContentCardFooter } from './ContentCard';
 export type { ContentCardVariant } from './ContentCard';
 export { default as ContentCardDefault } from './ContentCard';
 export * from './BillingAttributionInspector';

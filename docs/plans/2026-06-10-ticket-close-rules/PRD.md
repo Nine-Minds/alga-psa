@@ -122,6 +122,39 @@ This feature gives boards three new capabilities:
 - New workflow action `tickets.apply_checklist` registered in
   `registerTicketActions()` (`shared/workflow/runtime/actions/businessOperations/tickets.ts`).
 
+#### 5.2.1 Amendment (2026-10-25): matchers and client-owned templates
+
+Added after launch by two PRs that must be read together.
+
+- **Rule matchers (PR #3857).** `checklist_template_apply_rules` gained
+  `client_ids`, `ticket_origins`, `from_service_request` /
+  `service_request_definition_id`, and `keywords` (with `keyword_mode` and
+  `keyword_target`). Each is optional; empty means "any", and all matchers
+  in a rule combine with AND. Rules answer **which tickets** get a template
+  automatically.
+- **Client ownership (PR #3865).** `checklist_templates.client_id` is
+  nullable: null means tenant-wide, otherwise the template belongs to that
+  client. Ownership answers **whose template it is**. It is a hard
+  boundary: `applyChecklistTemplateToTicket` refuses an owned template on
+  any other client's ticket, whatever the path (manual, auto-apply, ticket
+  creation, workflow, API). The manual picker hides other clients'
+  templates. The client record lists that client's templates, and
+  "Duplicate to client" makes an independent per-client copy. The copy
+  takes the items but not the rules.
+- **How the two combine.** An owned template's rules can only target
+  inside the owner. A rule's client matcher may not name another client
+  (rejected on save). Naming only the owner is stored as "any client".
+  Giving a template an owner is refused while any of its rules names
+  another client. The rule editor shows the client matcher read-only for
+  owned templates.
+- **Groups of clients** are a targeting concern: use a rule with several
+  clients, not ownership. Client-tag and contract/service matchers are the
+  natural next matcher dimensions; they are not built yet.
+- **Ticket templates** are not client-owned. A ticket template that names
+  an owned checklist template only applies it on the owner's tickets (the
+  apply step enforces this). Ticket creation skips it otherwise and never
+  fails.
+
 ### 5.3 Auto-close rules
 
 - `board_auto_close_rules` (multiple per board): `trigger_status_id`,

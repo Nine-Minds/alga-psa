@@ -156,7 +156,7 @@ export class ApiContactController extends ApiBaseController {
             validatedQuery = contactSearchSchema.parse(query);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Query validation failed', error.errors);
+              throw new ValidationError('Query validation failed', error.issues);
             }
             throw error;
           }
@@ -237,7 +237,7 @@ export class ApiContactController extends ApiBaseController {
             validatedQuery = contactExportQuerySchema.parse(query);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Query validation failed', error.errors);
+              throw new ValidationError('Query validation failed', error.issues);
             }
             throw error;
           }

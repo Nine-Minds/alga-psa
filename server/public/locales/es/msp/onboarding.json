@@ -41,6 +41,9 @@
     "errors": {
       "saveClientInfo": "No se pudo guardar la información del cliente",
       "addTeamMembers": "No se pudieron añadir los miembros del equipo",
+      "unsentInvites": "Envíe la invitación a cada miembro del equipo que agregó, o elimínelo, antes de continuar.",
+      "teamMembersNotCreated": "Estos miembros del equipo no se crearon. Corrija o elimine cada uno antes de continuar:",
+      "teamProgressNotSaved": "Estos miembros del equipo se crearon, pero la configuración no pudo guardar su progreso: {{users}}. Si sale de la configuración y vuelve, es posible que no aparezcan como agregados; sus cuentas ya existen, así que no los agregue de nuevo. Seleccione Siguiente para continuar.",
       "saveClient": "No se pudo guardar el cliente",
       "addContact": "No se pudo añadir el contacto",
       "setupBilling": "No se pudo configurar la facturación",
@@ -414,6 +417,7 @@
       "invalidEmail": "Por favor, introduzca una dirección de correo electrónico válida",
       "passwordLength": "La contraseña debe tener al menos 8 caracteres",
       "saveFailed": "No se pudo guardar el miembro del equipo",
+      "progressNotSaved": "Se creó {{email}}, pero la configuración no pudo guardar su progreso. Si sale de la configuración y vuelve, es posible que este miembro no aparezca como agregado; la cuenta ya existe, así que no lo agregue de nuevo.",
       "inviteFailed": "No se pudo enviar la invitación",
       "roleRequired": "Seleccione un rol",
       "generic": "Se produjo un error"

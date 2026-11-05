@@ -9,6 +9,7 @@ import { createTenantKnex, withTransaction } from '../lib/tenant';
 import { tenantDb } from '../lib/tenantDb';
 import { withViaPrincipal } from '../lib/viaPrincipal';
 export { withViaPrincipal } from '../lib/viaPrincipal';
+import { admitOperationalWrite } from '../lib/writeAdmission';
 
 const tableColumnsCache = new Map<string, Promise<Set<string>>>();
 const warnedMissingAuditFields = new Set<string>();
@@ -44,6 +45,8 @@ export interface ListOptions {
 export interface ServiceContext {
   userId: string;
   tenant: string;
+  /** Set by the verified API transport, never from a request body. */
+  apiKeyId?: string;
   user?: any;
   db?: Knex;
   /**
@@ -98,6 +101,10 @@ export interface ServiceOptions {
   searchableFields?: string[];
   defaultSort?: string;
   defaultOrder?: 'asc' | 'desc';
+  /** Domain admission inside each inherited mutation's transaction, before
+   * row access. Custom mutation overrides must retain their own admission.
+   * Keeping this injected avoids a database-to-licensing dependency cycle. */
+  mutationGuard?: (trx: Knex.Transaction, context: ServiceContext) => Promise<void>;
 }
 
 export abstract class BaseService<T = any> {
@@ -115,6 +122,7 @@ export abstract class BaseService<T = any> {
   protected searchableFields: string[];
   protected defaultSort: string;
   protected defaultOrder: 'asc' | 'desc';
+  protected mutationGuard?: ServiceOptions['mutationGuard'];
 
   constructor(options: ServiceOptions) {
     this.tableName = options.tableName;
@@ -135,6 +143,31 @@ export abstract class BaseService<T = any> {
     this.searchableFields = options.searchableFields || [];
     this.defaultSort = options.defaultSort || this.auditFields.createdAt;
     this.defaultOrder = options.defaultOrder || 'desc';
+    // Default admission is the same decision `tenantDb` makes at the write terminals, taken
+    // early so a refused mutation does no row access or audit work first. A caller's guard
+    // COMPOSES with it (admission first), so a subclass cannot opt out by passing its own.
+    const callerGuard = options.mutationGuard;
+    this.mutationGuard = async (trx, context) => {
+      await admitOperationalWrite(trx, context.tenant, this.tableName, `service-mutation:${this.tableName}`);
+      await callerGuard?.(trx, context);
+    };
+  }
+
+  /**
+   * Run a custom mutation in one transaction whose first step is this
+   * service's mutationGuard, so admission and the write share the transaction.
+   * Overrides and service-specific writers use this instead of opening their
+   * own transaction, which would skip the guard.
+   */
+  protected async mutationTransaction<R>(
+    context: ServiceContext,
+    work: (trx: Knex.Transaction, tenant: string) => Promise<R>,
+  ): Promise<R> {
+    const { knex, tenant } = await this.getKnex();
+    return withTransaction(knex, async (trx) => {
+      await this.mutationGuard?.(trx, context);
+      return work(trx, tenant);
+    });
   }
 
   /**
@@ -152,6 +185,8 @@ export abstract class BaseService<T = any> {
   /**
    * Get database connection for a context (backward compatibility)
    */
+  // LEVERAGE: pattern comanaged-trx-threading — the same choose-the-caller's-handle rule
+  // as StorageService.deleteFile and the cleanupExpiredTokens services, spelled a third way.
   protected async getDbForContext(context: ServiceContext): Promise<Knex> {
     if (context.db) {
       return context.db;
@@ -457,6 +492,7 @@ export abstract class BaseService<T = any> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      await this.mutationGuard?.(trx, context);
       const auditedData = await this.addCreateAuditFields(trx, data, context);
       const [result] = await this.buildTenantScopedQuery(trx, context)
         .insert(auditedData)
@@ -472,6 +508,7 @@ export abstract class BaseService<T = any> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      await this.mutationGuard?.(trx, context);
       const auditedData = await this.addUpdateAuditFields(trx, data, context);
 
       const [result] = await this.buildTenantScopedQuery(trx, context)
@@ -494,6 +531,7 @@ export abstract class BaseService<T = any> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      await this.mutationGuard?.(trx, context);
       if (this.softDelete) {
         const auditedData = await this.addUpdateAuditFields(
           trx,
@@ -532,6 +570,7 @@ export abstract class BaseService<T = any> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      await this.mutationGuard?.(trx, context);
       const auditedData = await Promise.all(
         data.map(item => this.addCreateAuditFields(trx, item, context))
       );
@@ -546,6 +585,7 @@ export abstract class BaseService<T = any> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      await this.mutationGuard?.(trx, context);
       const results: any[] = [];
 
       for (const update of updates) {
@@ -569,6 +609,7 @@ export abstract class BaseService<T = any> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      await this.mutationGuard?.(trx, context);
       if (this.softDelete) {
         const auditedData = await this.addUpdateAuditFields(
           trx,

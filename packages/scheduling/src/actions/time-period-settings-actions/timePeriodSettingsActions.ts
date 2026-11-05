@@ -1,4 +1,5 @@
 'use server'
+import { delegateToTimeSource } from '../../lib/timeSource';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { ITimePeriod, ITimePeriodSettings } from '@alga-psa/types';
 import { set, getDaysInMonth } from 'date-fns';
@@ -113,6 +114,9 @@ export const getActiveTimePeriodSettings = withAuth(async (
   user,
   { tenant }
 ): Promise<TimePeriodSettingsActionResult<ITimePeriodSettings[]>> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.periods.readActiveSettings(ctx));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex: db } = await createTenantKnex();
 
@@ -150,6 +154,9 @@ export const updateTimePeriodSettings = withAuth(async (
   { tenant },
   settings: ITimePeriodSettings
 ): Promise<TimePeriodSettingsActionResult<void>> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.periods.updateSettings(ctx, settings));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex: db } = await createTenantKnex();
 
@@ -203,6 +210,9 @@ export const createTimePeriodSettings = withAuth(async (
   { tenant },
   settings: Partial<ITimePeriodSettings>
 ): Promise<TimePeriodSettingsActionResult<ITimePeriodSettings>> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.periods.createSettings(ctx, settings));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex: db } = await createTenantKnex();
 
@@ -297,6 +307,9 @@ export const deleteTimePeriodSettings = withAuth(async (
   { tenant },
   settingId: string
 ): Promise<TimePeriodSettingsActionResult<void>> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.periods.removeSettings(ctx, settingId));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex: db } = await createTenantKnex();
 

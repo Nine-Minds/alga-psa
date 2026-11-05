@@ -6,8 +6,9 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb, writeAccountingAudit } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
 import logger from '@alga-psa/core/logger';
-import { getStoredQboCredentialsMap, QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
+import { getStoredQboCredentialsMap, QboClientService, resolveTenantQboEnvironment } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import { getStoredXeroConnections } from '@alga-psa/integrations/lib/xero/xeroClientService';
+import { isAccountingReconnectRequired } from '@alga-psa/integrations/lib/accountingReconnectHeuristic';
 import { isProviderDisconnectActive, PROVIDER_QBO, PROVIDER_XERO } from '@alga-psa/integrations/lib/providerDisconnect';
 import {
   getAccountingSyncSettings,
@@ -369,10 +370,11 @@ export const getInvoiceSyncStatuses = withAuth(async (
   }
 
   // The Intuit environment only applies to the QBO deep link; Xero has none.
+  // Resolved per realm: the environment stamped on the stored connection, else
+  // the tenant setting, else the deployment default.
   let environment: 'sandbox' | 'production' | undefined;
   if (integrationType === 'quickbooks_online') {
-    const { getQboEnvironment } = await import('@alga-psa/integrations/lib/qbo/qboClientService');
-    environment = getQboEnvironment();
+    environment = target.qboEnvironment ?? (await resolveTenantQboEnvironment(tenant));
   }
 
   const result: Record<string, InvoiceSyncStatus> = {};
@@ -505,19 +507,14 @@ export const getAccountingSyncHealth = withAuth(async (
     adapterType === 'quickbooks_online' ? readAutoApplyCreditsPreference(tenant, realm) : Promise.resolve(null)
   ]);
 
-  const lastCycleError = lastCycle?.error?.toLowerCase() ?? '';
   const currentXeroConnection = adapterType === 'xero' && realm ? xeroConnections[realm] : undefined;
-  const accessTokenExpiresAt = currentXeroConnection?.accessTokenExpiresAt
-    ? Date.parse(currentXeroConnection.accessTokenExpiresAt)
-    : Number.NaN;
-  const hasFreshXeroAccessToken = Number.isFinite(accessTokenExpiresAt) && accessTokenExpiresAt > Date.now();
-  const reconnectRequired =
-    adapterType === 'xero' &&
-    !hasFreshXeroAccessToken &&
-    (lastCycleError.includes('refresh token was rejected') ||
-      lastCycleError.includes('re-authentication is required') ||
-      lastCycleError.includes('reconnect required') ||
-      lastCycleError.includes('token expired'));
+  // Shared with the shell integration-health banner so the two surfaces cannot
+  // disagree about whether this connection needs re-authorisation.
+  const reconnectRequired = isAccountingReconnectRequired({
+    adapterType,
+    accessTokenExpiresAt: currentXeroConnection?.accessTokenExpiresAt ?? null,
+    lastCycleError: lastCycle?.error ?? null
+  });
 
   return {
     connected: true,

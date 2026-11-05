@@ -38,6 +38,10 @@
       "import": "./src/handlers/*.ts",
       "types": "./src/handlers/*.ts"
     },
+    "./lib/documentPermissions": {
+      "import": "./src/lib/documentPermissions.ts",
+      "types": "./src/lib/documentPermissions.ts"
+    },
     "./lib/collabPersistence": {
       "import": "./src/lib/collabPersistence.ts",
       "types": "./src/lib/collabPersistence.ts"
@@ -77,6 +81,10 @@
     "./models/*": {
       "import": "./src/models/*.ts",
       "types": "./src/models/*.ts"
+    },
+    "./lib/withPrivateDocumentUploads": {
+      "import": "./src/lib/withPrivateDocumentUploads.ts",
+      "types": "./src/lib/withPrivateDocumentUploads.ts"
     }
   },
   "scripts": {
@@ -99,7 +107,7 @@
     "@alga-psa/user-composition": "*",
     "@alga-psa/validation": "*",
     "@alga-psa/workflow-streams": "*",
-    "zod": "^3.22.4"
+    "zod": "^4.6.7"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",

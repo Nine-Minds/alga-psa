@@ -2,7 +2,9 @@
 
 import {
   resolveEffectiveBillingTiming,
-  resolveRecurringChargeFamily,
+  contractLineRecurringStreams,
+  contractLineOwnStream,
+  type LineRecurringStream,
 } from '@alga-psa/shared/billingClients/contractLineTimingRule';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import {
@@ -106,7 +108,24 @@ type LiveScheduleContextRow = ObligationContextRow & {
   billing_timing: 'advance' | 'arrears' | null;
   assignment_start_date: unknown;
   assignment_end_date: unknown;
+  /** contract_line_prepaid_blocks.issue_mode (null when the line has no block config). */
+  prepaid_block_issue_mode: string | null;
 };
+
+/**
+ * The line stream a schedule belongs to. Schedule keys carry the due position,
+ * and a line's streams never share one (an arrears-only Hourly line's block fee
+ * is the only advance stream), so the due position selects the stream.
+ */
+function streamForSchedule(
+  context: LiveScheduleContextRow,
+  duePosition: string,
+): LineRecurringStream | null {
+  return contractLineRecurringStreams(
+    context,
+    { issue_mode: context.prepaid_block_issue_mode },
+  ).find((entry) => entry.duePosition === duePosition) ?? null;
+}
 
 export interface RecurringServicePeriodManagementRow {
   record: IRecurringServicePeriodRecord;
@@ -488,6 +507,7 @@ async function loadLiveScheduleContext(input: {
       join.andOn('cc.is_active', '=', trx.raw('?', [true]));
     },
   });
+  db.tenantJoin(query, 'contract_line_prepaid_blocks as pb', 'pb.contract_line_id', 'cl.contract_line_id', { type: 'left' });
 
   const row = await query
     .where('cl.contract_line_id', obligationId)
@@ -505,6 +525,7 @@ async function loadLiveScheduleContext(input: {
       'cl.billing_timing as billing_timing',
       'cc.start_date as assignment_start_date',
       'cc.end_date as assignment_end_date',
+      'pb.issue_mode as prepaid_block_issue_mode',
     ) as LiveScheduleContextRow | undefined;
 
   return {
@@ -523,6 +544,7 @@ async function loadLiveScheduleContext(input: {
       : null,
     assignment_start_date: row?.assignment_start_date ?? null,
     assignment_end_date: row?.assignment_end_date ?? null,
+    prepaid_block_issue_mode: row?.prepaid_block_issue_mode ?? null,
   };
 }
 
@@ -602,7 +624,8 @@ async function repairScheduleMaterialization(input: {
 }): Promise<RepairRecurringServicePeriodMaterializationResult> {
   const { trx, tenant, schedule, context, existingRecords } = input;
   const repairedAt = new Date().toISOString();
-  const chargeFamily = resolveRecurringChargeFamily(context.contract_line_type);
+  const scheduleStream = streamForSchedule(context, schedule.duePosition);
+  const chargeFamily = (scheduleStream ?? contractLineOwnStream(context)).family;
 
   if (!context.contract_line_id) {
     throw new Error(`Recurring obligation ${schedule.obligationId} no longer exists.`);
@@ -614,7 +637,7 @@ async function repairScheduleMaterialization(input: {
       ?? ensureUtcMidnightIsoDate(repairedAt);
     const assignmentEnd = normalizeUtcMidnightDateValue(context.assignment_end_date);
     const billingCycle = normalizeContractCadenceBillingCycle(context.billing_frequency);
-    if (!billingCycle || context.billing_timing !== schedule.duePosition) {
+    if (!billingCycle || !context.billing_timing || !scheduleStream) {
       throw new Error('The live contract line no longer matches the requested recurring schedule.');
     }
 
@@ -703,7 +726,7 @@ async function repairScheduleMaterialization(input: {
     throw new Error('The client cadence source for this schedule could not be resolved.');
   }
 
-  if (context.billing_timing !== schedule.duePosition) {
+  if (!context.billing_timing || !scheduleStream) {
     throw new Error('The live client-cadence obligation no longer matches the requested schedule timing.');
   }
 
@@ -895,7 +918,7 @@ export const getRecurringServicePeriodManagementView = withAuth(async (
         obligationId: parsedScheduleKey.obligationId,
         cadenceOwner: parsedScheduleKey.cadenceOwner,
         duePosition: parsedScheduleKey.duePosition,
-        chargeFamily: resolveRecurringChargeFamily(context.contract_line_type),
+        chargeFamily: (streamForSchedule(context, parsedScheduleKey.duePosition) ?? contractLineOwnStream(context)).family,
         clientId: context.client_id,
         clientName: context.client_name,
         contractId: context.contract_id,

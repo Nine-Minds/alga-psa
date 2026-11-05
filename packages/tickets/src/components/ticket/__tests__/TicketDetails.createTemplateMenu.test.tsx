@@ -458,11 +458,13 @@ describe('TicketDetails "Create template from ticket" menu', () => {
   it.each([
     ['read only (Technician)', { read: true, create: false, update: false, delete: false, loaded: true }],
     ['not yet resolved', { read: false, create: false, update: false, delete: false, loaded: false }],
-  ])('renders no More menu when %s', async (_label, perms) => {
+  ])('leaves Create template out of the More menu when %s', async (_label, perms) => {
     templatePermsRef.current = perms;
     renderDetails();
+    // The More menu always exists: it also holds Print work tag, Duplicate and Delete.
+    await waitFor(() => expect(moreButton()).not.toBeNull());
+    await userEvent.click(moreButton() as HTMLElement);
     await waitFor(() => expect(duplicateOrDelete()).not.toBeNull());
-    expect(moreButton()).toBeNull();
     expect(document.querySelector('[id$="-create-template-menu-item"]')).toBeNull();
   });
 });

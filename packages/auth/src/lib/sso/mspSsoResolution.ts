@@ -81,6 +81,12 @@ export interface MspSsoResolutionPayload {
   provider: MspSsoProviderId;
   source: MspSsoSource;
   tenantId?: string;
+  /**
+   * Tenant the sign-in is scoped to (validated `?tenant=` slug, server-side).
+   * Signed into the cookie so the profile mapper can trust it; independent of
+   * `tenantId`, which only names whose IdP credentials are used.
+   */
+  scopeTenantId?: string;
   userId?: string;
   issuedAt: number;
   expiresAt: number;
@@ -536,6 +542,7 @@ export function createSignedMspSsoResolutionCookie(params: {
   provider: MspSsoProviderId;
   source: MspSsoSource;
   tenantId?: string;
+  scopeTenantId?: string;
   userId?: string;
   secret: string;
   ttlSeconds?: number;
@@ -547,6 +554,7 @@ export function createSignedMspSsoResolutionCookie(params: {
     provider: params.provider,
     source: params.source,
     tenantId: params.tenantId,
+    scopeTenantId: params.scopeTenantId,
     userId: params.userId,
     issuedAt: now,
     expiresAt: now + ttl * 1000,
@@ -618,6 +626,7 @@ export function parseAndVerifyMspSsoResolutionCookie(params: {
   if (payload.source !== 'tenant' && payload.source !== 'app') return null;
   if (typeof payload.issuedAt !== 'number' || typeof payload.expiresAt !== 'number') return null;
   if (typeof payload.nonce !== 'string' || payload.nonce.length < 8) return null;
+  if (payload.scopeTenantId !== undefined && typeof payload.scopeTenantId !== 'string') return null;
 
   const now = params.now ?? Date.now();
   if (payload.expiresAt <= now) return null;

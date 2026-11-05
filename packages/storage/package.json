@@ -10,6 +10,10 @@
       "import": "./dist/index.mjs",
       "types": "./src/index.ts"
     },
+    "./fileUploadTransaction": {
+      "import": "./dist/fileUploadTransaction.mjs",
+      "types": "./src/fileUploadTransaction.ts"
+    },
     "./StorageService": {
       "import": "./dist/StorageService.mjs",
       "types": "./src/StorageService.ts"

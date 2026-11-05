@@ -5,6 +5,7 @@ import { hasPermission } from '@/lib/auth/rbac';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { formatBlockNoteContent } from '@alga-psa/formatting/blocknoteUtils';
+import { claimDelivery, finishDelivery, COMMENT_EMAIL_LEDGER } from '@shared/lib/deliveryLedger';
 import { signAttachmentLink } from '@shared/lib/ticketCommentAttachmentToken';
 import { listPublishedCommentAttachments, canAccessAttachmentTicket, isPublicAttachmentComment } from '@shared/lib/ticketCommentAttachments';
 import type { EmailAttachment } from '../../types/email.types';
@@ -145,15 +146,11 @@ export async function prepareCommentAttachmentEmail(input: {
   return { html, text: formatted.text + (links.length ? `\n${explanation}\n${plainLinks.join('\n')}` : ''), attachments, managed: true, downloadLinks: plainLinks };
 }
 
-/** sending is deliberately not leased: an unknown provider outcome requires operator reconciliation, not duplicate delivery. */
+/** sending is deliberately not leased: an unknown provider outcome requires operator reconciliation, not duplicate delivery.
+ * The protocol lives in shared/lib/deliveryLedger.ts; this keeps base's ledger and its signature. */
 export async function claimCommentEmailDelivery(db: Knex, tenant: string, commentId: string, recipient: string): Promise<boolean> {
-  const table = () => tenantDb(db, tenant).table('ticket_comment_email_deliveries');
-  const key = { tenant, comment_id: commentId, recipient: recipient.trim().toLowerCase() };
-  const inserted = await table().insert({ ...key, state: 'sending' }).onConflict(['tenant', 'comment_id', 'recipient']).ignore().returning('comment_id');
-  if (inserted.length) return true;
-  const retried = await table().where(key).where({ state: 'failed' }).update({ state: 'sending', updated_at: new Date(), attempts: db.raw('attempts + 1'), last_error: null, error_code: null, requires_reconciliation: false });
-  return retried > 0;
+  return claimDelivery(db, COMMENT_EMAIL_LEDGER, tenant, { comment_id: commentId, recipient });
 }
 export async function finishCommentEmailDelivery(db: Knex, tenant: string, commentId: string, recipient: string, state: 'sent' | 'failed' | 'sending', outcome?: { error?: string; errorCode?: string }) {
-  await tenantDb(db, tenant).table('ticket_comment_email_deliveries').where({ comment_id: commentId, recipient: recipient.trim().toLowerCase(), state: 'sending' }).update({ state, updated_at: new Date(), last_error: outcome?.error || null, error_code: outcome?.errorCode || null, requires_reconciliation: state === 'sending' });
+  await finishDelivery(db, COMMENT_EMAIL_LEDGER, tenant, { comment_id: commentId, recipient }, state, outcome);
 }

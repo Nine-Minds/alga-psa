@@ -36,6 +36,9 @@ import {
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import useSWR from 'swr';
 import { getAssetLinkedTickets, getAssetMaintenanceReport } from '../actions/assetActions';
+import { CustodyCard } from './custody/CustodyCard';
+import { WarrantyCard } from './warranty/WarrantyCard';
+import { getAssetSoftwareSummary } from '../actions/softwareActions';
 import { getAssetGroup } from '../actions/assetGroupActions';
 import { unwrapAssetActionResult } from '../actions/assetActionErrors';
 import { useClientDrawer } from '@alga-psa/ui';
@@ -52,7 +55,8 @@ import {
   worstStorage,
 } from '../lib/assetSignals';
 import { formatMinorUnits } from '../lib/money';
-import { resolveAssetStatusLabel, useAssetStatusRegistry } from './shared/useAssetStatusOptions';
+import { useAssetStatusRegistry } from './shared/useAssetStatusOptions';
+import { assetStatusLabel } from '../lib/assetStatus';
 import { calendarDateToLocalDate } from '../lib/calendarDate';
 import { AssetAssigneeRow } from './AssetAssigneeRow';
 import { AssetSignedInUserRow } from './AssetSignedInUserRow';
@@ -142,6 +146,13 @@ export function AssetBentoLayout({
     asset.group?.group_id ? ['asset', asset.asset_id, 'group', asset.group.group_id] : null,
     ([, , , groupId]) => unwrapAssetActionResult(getAssetGroup(groupId as string))
   );
+  // Counts asset_software (is_current), the same source as the Software tab.
+  // undefined while loading or on error, so the tile shows nothing until known.
+  const { data: softwareSummary } = useSWR(
+    asset.asset_id ? ['asset', asset.asset_id, 'software-summary'] : null,
+    ([, aid]) => unwrapAssetActionResult(getAssetSoftwareSummary(aid))
+  );
+  const softwareCount = softwareSummary?.total_installed;
   const groupSiblings = (groupDetail?.members ?? []).filter(
     (member) => member.asset_id !== asset.asset_id
   );
@@ -150,7 +161,6 @@ export function AssetBentoLayout({
     : (groupDetail?.contacts ?? []).filter((contact) => contact.role === 'user');
   // Owned here because the drawer footer holds the edit form's Save button.
   const [editSaving, setEditSaving] = useState(false);
-  const softwareCount = Array.isArray(ext?.installed_software) ? ext.installed_software.length : null;
   const purchaseCostLabel = formatMinorUnits(asset.purchase_cost, asset.purchase_cost_currency);
 
   const pendingPatches =
@@ -284,7 +294,7 @@ export function AssetBentoLayout({
               <div className="space-y-1.5 text-sm">
                 <BentoLabelValue label={t('assetBento.tag', { defaultValue: 'Tag' })} value={asset.asset_tag} mono />
                 <BentoLabelValue label={t('assetBento.serial', { defaultValue: 'Serial' })} value={asset.serial_number} mono />
-                <BentoLabelValue label={t('assetBento.status', { defaultValue: 'Status' })} value={resolveAssetStatusLabel(t, asset.status, assetStatuses)} />
+                <BentoLabelValue label={t('assetBento.status', { defaultValue: 'Status' })} value={assetStatusLabel(t, asset.status, assetStatuses)} />
                 {/* FR-C6: the assignee is always shown, even when empty. */}
                 <AssetAssigneeRow
                   assetId={asset.asset_id}
@@ -386,11 +396,11 @@ export function AssetBentoLayout({
                 <p className="text-sm text-[rgb(var(--color-text-700))]">
                   {t('assetBento.packagesReported', { defaultValue: '{{count}} packages reported', count: softwareCount })}
                 </p>
-              ) : (
+              ) : softwareCount === 0 ? (
                 <BentoTileEmpty id="asset-bento-software-empty">
                   {t('assetBento.noSoftware', { defaultValue: 'No software inventory reported.' })}
                 </BentoTileEmpty>
-              )}
+              ) : null}
             </BentoTile>
 
             {/* F071: the group the asset belongs to, with its siblings and people. */}
@@ -525,6 +535,10 @@ export function AssetBentoLayout({
                 </ul>
               ) : null}
             </BentoTile>
+
+            <CustodyCard id="asset-bento-custody" assetId={asset.asset_id} />
+
+            <WarrantyCard id="asset-bento-warranty" assetId={asset.asset_id} />
 
             <BentoTile
               id="asset-bento-related"

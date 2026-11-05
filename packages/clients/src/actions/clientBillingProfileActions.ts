@@ -11,6 +11,7 @@ import {
   resolveEffectiveBillingIdentity,
   type EffectiveBillingIdentity,
 } from '@alga-psa/shared/billingClients/billingProfileSettings';
+import { resolveTenantDefaultPaymentTerms } from '@alga-psa/shared/billingClients/tenantPaymentTerms';
 import { listPaymentMethods } from '@alga-psa/shared/billingClients/billingProfilePayments';
 import {
   isPaymentTerms,
@@ -607,7 +608,31 @@ const SETTINGS_FIELDS: Array<keyof ClientBillingProfileSettingsInput> = [
 export interface ClientBillingProfileInheritedValues {
   paymentTerms: PaymentTerms | null;
   preferredPaymentMethod: PreferredPaymentMethod | null;
+  /** What an unset client resolves to: the tenant default, else Net 30. */
+  tenantDefaultPaymentTerms: PaymentTerms;
 }
+
+/**
+ * The tenant's default payment terms (Net 30 when none is configured), for the
+ * client Billing tab's "Tenant default (Net X)" option. Gated on client read,
+ * not `billing_settings:read`: a user who can edit a client's billing may not
+ * be able to open tenant billing settings.
+ */
+export const getTenantDefaultPaymentTerms = withAuth(async (
+  user,
+  { tenant },
+): Promise<PaymentTerms | ClientBillingProfileActionError> => {
+  try {
+    await assertCanRead(user);
+    const { knex } = await createTenantKnex();
+    return await withTransaction(knex, async (trx: Knex.Transaction) =>
+      resolveTenantDefaultPaymentTerms(trx, tenant));
+  } catch (error) {
+    const expected = billingProfileActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+});
 
 /** The profile's stored settings alongside the values actually in force. */
 export const getClientBillingProfileSettings = withAuth(async (
@@ -652,6 +677,7 @@ export const getClientBillingProfileSettings = withAuth(async (
         clientValues: {
           paymentTerms: normalizePaymentTerms(client?.payment_terms),
           preferredPaymentMethod: normalizePreferredPaymentMethod(client?.preferred_payment_method),
+          tenantDefaultPaymentTerms: await resolveTenantDefaultPaymentTerms(trx, tenant),
         },
       };
     });

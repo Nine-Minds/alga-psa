@@ -236,9 +236,9 @@ test('CLI reads candidate artifacts, fails on missing JSON, and rejects a dirty 
     teamsDirectory, teamsReport, teamsEvidence, callbackDirectory, callbackReport, callbackRunner } = await cliFixture(t);
   { const result = run(); assert.equal(result.status, 'passed', result.failures.join('\n')); }
   const containerReport = { ...callbackReport, sourceRevisionOrigin: 'environment', sourceRevisionAfter: null };
-  const containerRunner = { ...callbackRunner, runtimeBinding: { imageRevision: revision,
+  const containerRunner = { ...callbackRunner, runtimeBinding: { runtimeImage: 'node:22-bookworm-slim',
     imageId: `sha256:${'1'.repeat(64)}`, containerImageId: `sha256:${'1'.repeat(64)}`,
-    mountedSourceRevision: revision, mountsReadOnly: true } };
+    mountedSourceRevision: revision, workspaceMounted: true } };
   write(`${callbackDirectory}/microsoft-callback-report.json`, containerReport);
   write(`${callbackDirectory}/microsoft-callback-runner.json`, containerRunner);
   assert.equal(run().status, 'passed');
@@ -251,7 +251,7 @@ test('CLI reads candidate artifacts, fails on missing JSON, and rejects a dirty 
     ({ runner }) => { runner.exitCode = 1; },
     ({ runner }) => { delete runner.exitCode; },
     ({ runner }) => { runner.source.after.dirty = true; },
-    ({ runner }) => { runner.runtimeBinding.mountsReadOnly = false; },
+    ({ runner }) => { runner.runtimeBinding.workspaceMounted = false; },
     ({ runner }) => { runner.runtimeBinding.containerImageId = `sha256:${'2'.repeat(64)}`; },
     ({ runner }) => { delete runner.runtimeBinding; },
   ]) {

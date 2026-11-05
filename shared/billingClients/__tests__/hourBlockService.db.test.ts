@@ -162,9 +162,15 @@ async function insertBlock(
 // The burn engine's date normalization is process-timezone-dependent, so the
 // timezone regression tests pin TZ explicitly and guard that Node honored it
 // before asserting on dates.
+//
+// Probe the offset at a fixed summer instant (the scenarios below are Aug/Sep 2026), not "now":
+// Europe/Berlin and America/New_York change offset at DST transitions, so a wall-clock probe
+// fails whenever the suite runs outside summer time.
+const TZ_PROBE_INSTANT = new Date('2026-08-31T12:00:00.000Z');
+
 function assertTz(zone: string, expectedOffsetMinutes: number) {
   process.env.TZ = zone;
-  expect(new Date().getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
+  expect(TZ_PROBE_INSTANT.getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
 }
 
 describe.runIf(enabled)('hourBlockService DB integration', () => {
@@ -1050,6 +1056,7 @@ describe.runIf(enabled)('hourBlockService prepaid block contract lines', () => {
       remaining?: number;
       total?: number;
       expiration?: string | null;
+      validFrom?: string | null;
       serviceId?: string;
       purchasedOffsetMs?: number;
     },
@@ -1063,8 +1070,11 @@ describe.runIf(enabled)('hourBlockService prepaid block contract lines', () => {
       purchase_amount: 135000, currency_code: 'USD', status: opts.status ?? 'active',
       purchased_at: opts.status === 'pending' ? null : new Date(Date.now() + (opts.purchasedOffsetMs ?? 0)).toISOString(),
       expiration_date: opts.expiration ?? null,
+      valid_from: opts.validFrom ?? null,
       source_type: opts.line ? 'contract' : 'purchase',
       contract_line_id: opts.line ?? null,
+      // Contract blocks must name their origin (hour_blocks_contract_source_check).
+      service_period_record_id: opts.line ? uuidv4() : null,
     });
     return blockId;
   }
@@ -1247,6 +1257,28 @@ describe.runIf(enabled)('hourBlockService prepaid block contract lines', () => {
     }
   });
 
+  it('draws eligible historical capacity in FIFO order, excluding voided and out-of-window blocks', async () => {
+    const w = await setup();
+    try {
+      const outside = await block(w, { line: w.lineA, status: 'expired', expiration: '2026-08-09', remaining: 600 });
+      const voided = await block(w, { line: w.lineA, status: 'voided', expiration: '2026-08-11', remaining: 600 });
+      const historical = await block(w, { line: w.lineA, status: 'expired', validFrom: '2026-08-01', expiration: '2026-08-15', remaining: 90 });
+      const active = await block(w, { line: w.lineA, status: 'active', validFrom: '2026-08-01', expiration: '2026-08-31', remaining: 60 });
+      const future = await block(w, { line: w.lineA, status: 'active', validFrom: '2026-09-01', remaining: 600 });
+      const pending = await block(w, { line: w.lineA, status: 'pending', expiration: '2026-08-12', remaining: 40 });
+      const work = await entry(w, w.svcA, 200, w.lineA, '2026-08-10');
+      await w.db.transaction(async (trx: Knex.Transaction) => {
+        expect(await allocateTimeEntry(trx, w.tenant, w.clientId, work)).toEqual([
+          { block_id: historical, minutes: 90 }, { block_id: active, minutes: 60 }, { block_id: pending, minutes: 40 },
+        ]);
+      });
+      expect(await Promise.all([outside, voided, historical, active, future, pending].map((id) => remaining(w, id))))
+        .toEqual([600, 600, 0, 0, 600, 0]);
+    } finally {
+      await teardown(w);
+    }
+  });
+
   it('reconcileLineAllocations keeps entries drawn against an expired contract block', async () => {
     const w = await setup();
     try {
@@ -1346,6 +1378,103 @@ describe.runIf(enabled)('hourBlockService prepaid block contract lines', () => {
       ]);
       // svcA's contract block is excluded; only the unscoped ad-hoc block is attributable.
       expect(Array.from(subjects.values()).reduce((sum, v) => sum + v, 0)).toBe(100);
+    } finally {
+      await teardown(w);
+    }
+  });
+
+  // D5 / R8: hour_blocks.valid_from bounds the burn window from below, so a
+  // cadence block never draws time worked before its service period starts.
+  it('valid_from excludes time before the block starts on allocate, and NULL valid_from is unbounded', async () => {
+    const w = await setup();
+    try {
+      const nov = await block(w, { line: w.lineA, validFrom: '2026-11-01', expiration: '2026-11-30' });
+      const dec = await block(w, { line: w.lineA, validFrom: '2026-12-01', expiration: '2026-12-31' });
+      const open = await block(w, { line: w.lineA, validFrom: null, expiration: null, remaining: 60, total: 60 });
+
+      await w.db.transaction(async (trx: Knex.Transaction) => {
+        // Before every window: only the unbounded block can draw.
+        const early = await entry(w, w.svcA, 30, w.lineA, '2026-10-20');
+        expect(await allocateTimeEntry(trx, w.tenant, w.clientId, early)).toEqual([{ block_id: open, minutes: 30 }]);
+
+        // November time: Nov block (expires first) then the unbounded block; never December.
+        const novEntry = await entry(w, w.svcA, 640, w.lineA, '2026-11-20');
+        expect(await allocateTimeEntry(trx, w.tenant, w.clientId, novEntry)).toEqual([
+          { block_id: nov, minutes: 600 },
+          { block_id: open, minutes: 30 },
+        ]);
+        expect(await remaining(w, dec, trx)).toBe(600);
+
+        // Window boundaries are inclusive on both ends.
+        const first = await entry(w, w.svcA, 10, w.lineA, '2026-12-01');
+        expect(await allocateTimeEntry(trx, w.tenant, w.clientId, first)).toEqual([{ block_id: dec, minutes: 10 }]);
+        const lastNov = await entry(w, w.svcA, 10, w.lineA, '2026-11-30', 1);
+        // Nov is exhausted and the open block is drained: nothing eligible, Dec still not drawn.
+        expect(await allocateTimeEntry(trx, w.tenant, w.clientId, lastNov)).toEqual([]);
+        expect(await remaining(w, dec, trx)).toBe(590);
+      });
+    } finally {
+      await teardown(w);
+    }
+  });
+
+  it('valid_from keeps a late November entry off the December block through line and client reconcile', async () => {
+    const w = await setup();
+    try {
+      const nov = await block(w, { line: w.lineA, validFrom: '2026-11-01', expiration: '2026-11-30' });
+      const dec = await block(w, { line: w.lineA, validFrom: '2026-12-01', expiration: '2026-12-31' });
+      const novFull = await entry(w, w.svcA, 600, w.lineA, '2026-11-10');
+      const decEntry = await entry(w, w.svcA, 120, w.lineA, '2026-12-03');
+      // Entered late (after the December block exists): November time beyond the Nov block is overage.
+      const lateNov = await entry(w, w.svcA, 60, w.lineA, '2026-11-25');
+
+      await w.db.transaction(async (trx: Knex.Transaction) => {
+        await allocateTimeEntry(trx, w.tenant, w.clientId, novFull);
+        await allocateTimeEntry(trx, w.tenant, w.clientId, decEntry);
+        expect(await allocateTimeEntry(trx, w.tenant, w.clientId, lateNov)).toEqual([]);
+      });
+      const expected = async () => {
+        expect(await allocatedFor(w, novFull.entry_id)).toEqual([{ block_id: nov, minutes: 600 }]);
+        expect(await allocatedFor(w, decEntry.entry_id)).toEqual([{ block_id: dec, minutes: 120 }]);
+        expect(await allocatedFor(w, lateNov.entry_id)).toEqual([]);
+        expect(await remaining(w, nov)).toBe(0);
+        expect(await remaining(w, dec)).toBe(480);
+      };
+      await expected();
+
+      await w.db.transaction((trx: Knex.Transaction) => reconcileLineAllocations(trx, w.tenant, w.lineA));
+      await expected();
+      await w.db.transaction((trx: Knex.Transaction) => reconcileClientAllocations(trx, w.tenant, w.clientId));
+      await expected();
+    } finally {
+      await teardown(w);
+    }
+  });
+
+  it('valid_from excludes not-yet-valid blocks from available minutes (line, ad-hoc and subject balances)', async () => {
+    const w = await setup();
+    try {
+      // No tenant timezone configured: "today" is the UTC calendar date.
+      const shift = (days: number) => {
+        const d = new Date(`${toCalendarDateStringInTimeZone(new Date(), 'UTC')}T00:00:00.000Z`);
+        d.setUTCDate(d.getUTCDate() + days);
+        return d.toISOString().slice(0, 10);
+      };
+      await block(w, { line: w.lineA, remaining: 100, validFrom: null });
+      await block(w, { line: w.lineA, remaining: 200, validFrom: shift(-1), expiration: shift(30) });
+      await block(w, { line: w.lineA, remaining: 400, validFrom: shift(0), expiration: shift(30) });
+      await block(w, { line: w.lineA, remaining: 800, validFrom: shift(1), expiration: shift(30) });
+      await block(w, { line: null, serviceId: w.svcFree, remaining: 50, validFrom: null });
+      await block(w, { line: null, serviceId: w.svcFree, remaining: 25, validFrom: shift(5) });
+
+      expect(await getAvailableHourBlockMinutes(w.db, w.tenant, w.clientId, undefined, { contractLineId: w.lineA })).toBe(700);
+      expect(await getAvailableHourBlockMinutes(w.db, w.tenant, w.clientId, undefined, { adhocOnly: true })).toBe(50);
+      expect(await getAvailableHourBlockMinutes(w.db, w.tenant, w.clientId)).toBe(750);
+
+      const subjects = await getAvailableHourBlockMinutesForSubjects(w.db, w.tenant, w.clientId, [
+        { key: 'bucket-1', serviceId: w.svcFree },
+      ]);
+      expect(subjects.get('bucket-1')).toBe(50);
     } finally {
       await teardown(w);
     }

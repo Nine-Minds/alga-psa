@@ -21,7 +21,7 @@ const actionMocks = vi.hoisted(() => ({
   getQuoteDocumentTemplates: vi.fn(),
   getQuoteApprovalSettings: vi.fn(),
   listQuotes: vi.fn(),
-  getAllClientsForBilling: vi.fn(),
+  getClientByIdForBilling: vi.fn(),
   getActiveClientLocationsForBilling: vi.fn(),
   getContactsForPicker: vi.fn(),
   getDefaultBillingSettings: vi.fn(),
@@ -77,7 +77,7 @@ vi.mock('../../../actions/quoteDocumentTemplates', () => ({
   getQuoteDocumentTemplates: (...args: unknown[]) => actionMocks.getQuoteDocumentTemplates(...args),
 }));
 vi.mock('../../../actions/billingClientsActions', () => ({
-  getAllClientsForBilling: (...args: unknown[]) => actionMocks.getAllClientsForBilling(...args),
+  getClientByIdForBilling: (...args: unknown[]) => actionMocks.getClientByIdForBilling(...args),
 }));
 vi.mock('../../../actions/billingClientLocationActions', () => ({
   getActiveClientLocationsForBilling: (...args: unknown[]) => actionMocks.getActiveClientLocationsForBilling(...args),
@@ -189,7 +189,7 @@ describe('QuoteForm terms authoring', () => {
     vi.clearAllMocks();
 
     actionMocks.getDefaultBillingSettings.mockResolvedValue({ default_currency_code: 'USD' });
-    actionMocks.getAllClientsForBilling.mockResolvedValue([]);
+    actionMocks.getClientByIdForBilling.mockResolvedValue(null);
     actionMocks.getContactsForPicker.mockResolvedValue([]);
     actionMocks.getActiveClientLocationsForBilling.mockResolvedValue([]);
     actionMocks.getQuoteDocumentTemplates.mockResolvedValue([]);

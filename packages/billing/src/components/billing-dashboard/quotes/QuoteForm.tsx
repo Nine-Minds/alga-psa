@@ -28,7 +28,8 @@ import type { IClient, IContact, IQuote, IQuoteDocumentTemplate, IQuoteListItem,
 import { isActionMessageError, isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { getDefaultBillingSettings } from '@alga-psa/billing/actions/billingSettingsActions';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
-import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
+import { getClientByIdForBilling } from '../../../actions/billingClientsActions';
+import { useBillingClient } from '../../../hooks/useBillingClient';
 import { getActiveClientLocationsForBilling, type BillingLocationSummary } from '../../../actions/billingClientLocationActions';
 import { addQuoteItem, approveQuote, convertQuoteToContract, convertQuoteToInvoice, convertQuoteToSalesOrder, createQuote, createQuoteFromTemplate, createQuoteRevision, downloadQuotePdf, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuotes, markQuoteAccepted, removeQuoteItem, reorderQuoteItems, requestQuoteApprovalChanges, resendQuote, sendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote, updateQuoteItem } from '../../../actions/quoteActions';
 import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplates';
@@ -215,7 +216,8 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   const [extraGroupLocationIds, setExtraGroupLocationIds] = useState<string[]>([]);
 
   const [isTemplate, setIsTemplate] = useState(initialIsTemplate);
-  const [clients, setClients] = useState<IClient[]>([]);
+  // Latest create-mode currency lookup; an older response for a previously picked client is dropped.
+  const currencyLookupRef = useRef(0);
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [businessTemplates, setBusinessTemplates] = useState<IQuoteListItem[]>([]);
   const [documentTemplates, setDocumentTemplates] = useState<IQuoteDocumentTemplate[]>([]);
@@ -341,8 +343,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
     try {
       setIsLoading(true);
 
-      const [fetchedClients, fetchedContacts, fetchedTemplates, fetchedDocTemplates, approvalSettings, billingSettingsResult] = await Promise.all([
-        getAllClientsForBilling(false),
+      const [fetchedContacts, fetchedTemplates, fetchedDocTemplates, approvalSettings, billingSettingsResult] = await Promise.all([
         getContactsForPicker('active'),
         listQuotes({ is_template: true, pageSize: 200 }),
         getQuoteDocumentTemplates(),
@@ -367,11 +368,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
       if (isActionPermissionError(fetchedContacts) || isActionMessageError(fetchedContacts)) {
         throw new Error(getErrorMessage(fetchedContacts));
       }
-      if (isActionPermissionError(fetchedClients) || isActionMessageError(fetchedClients)) {
-        throw new Error(getErrorMessage(fetchedClients));
-      }
 
-      setClients(fetchedClients);
       setContacts(fetchedContacts);
       setBusinessTemplates(isActionPermissionError(fetchedTemplates) ? [] : fetchedTemplates.data);
       setDocumentTemplates(Array.isArray(fetchedDocTemplates) ? fetchedDocTemplates : []);
@@ -423,9 +420,13 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
         // Seed create-mode currency from the initial client when one is
         // supplied (deep link / opportunity), otherwise from the tenant default.
         const initialClientId = initialContext?.clientId ?? '';
-        const initialClient = initialClientId
-          ? fetchedClients.find((client) => client.client_id === initialClientId)
-          : undefined;
+        let initialClient: IClient | undefined;
+        if (initialClientId) {
+          const lookedUp = await getClientByIdForBilling(initialClientId).catch(() => null);
+          if (lookedUp && !isActionMessageError(lookedUp) && !isActionPermissionError(lookedUp)) {
+            initialClient = lookedUp;
+          }
+        }
         const initialCurrency = initialClient
           ? (initialClient.default_currency_code || tenantCurrency)
           : tenantCurrency;
@@ -496,10 +497,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
     [lineItems],
   );
 
-  const selectedClient = useMemo(
-    () => clients.find((c) => c.client_id === form.client_id) ?? null,
-    [clients, form.client_id],
-  );
+  const { client: selectedClient, prime: primeSelectedClient } = useBillingClient(form.client_id || null);
 
   const selectedDocTemplate = useMemo(
     () => documentTemplates.find((dt) => dt.template_id === documentTemplateId) ?? null,
@@ -548,8 +546,16 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   // Create-mode currency re-resolution: a selected client owns the default, an
   // empty client falls back to the tenant default. Never called in edit mode so
   // a saved quote's currency is not silently relabeled.
-  const applyClientCurrency = (clientId: string) => {
-    const client = clientId ? clients.find((c) => c.client_id === clientId) : undefined;
+  const applyClientCurrency = async (clientId: string) => {
+    const lookupId = ++currencyLookupRef.current;
+    let client: IClient | undefined;
+    if (clientId) {
+      const lookedUp = await getClientByIdForBilling(clientId).catch(() => null);
+      if (lookupId !== currencyLookupRef.current) return;
+      if (lookedUp && !isActionMessageError(lookedUp) && !isActionPermissionError(lookedUp)) {
+        client = lookedUp;
+      }
+    }
     handleChange('currency_code', client ? (client.default_currency_code || defaultCurrency) : defaultCurrency);
     setCurrencySource(client ? 'client' : 'tenant');
   };
@@ -562,7 +568,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
       // Clearing the template re-resolves to the client/tenant default rather
       // than leaving a template label on a currency the template no longer owns.
       if (!isEditMode) {
-        applyClientCurrency(form.client_id);
+        void applyClientCurrency(form.client_id);
       }
       return;
     }
@@ -1609,7 +1615,6 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                     <label htmlFor="quote-client">{t('quoteForm.essentials.client', { defaultValue: 'Client' })}</label>
                     <ClientPicker
                       id="quote-client"
-                      clients={clients}
                       selectedClientId={form.client_id || null}
                       onSelect={(clientId) => {
                         if (isReadOnly) return;
@@ -1623,7 +1628,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                           // precedence: template, then client, then tenant).
                           // Editing keeps the saved currency.
                           if (!isEditMode && !form.source_template_id) {
-                            applyClientCurrency(nextClientId);
+                            void applyClientCurrency(nextClientId);
                           }
                         }
                       }}
@@ -2419,15 +2424,8 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
         open: isQuickAddClientOpen,
         onOpenChange: setIsQuickAddClientOpen,
         onClientAdded: (newClient) => {
-          setClients((currentClients) => {
-            const existingIndex = currentClients.findIndex(
-              (client) => client.client_id === newClient.client_id,
-            );
-            if (existingIndex === -1) return [...currentClients, newClient];
-            const nextClients = [...currentClients];
-            nextClients[existingIndex] = newClient;
-            return nextClients;
-          });
+          primeSelectedClient(newClient);
+          currencyLookupRef.current += 1;
           setForm((current) => ({
             ...current,
             client_id: newClient.client_id,
