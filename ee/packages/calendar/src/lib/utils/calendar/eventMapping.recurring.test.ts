@@ -323,4 +323,35 @@ describe('Microsoft event mapping for recurring series', () => {
     expect(mapped.recurrence).toEqual(['FREQ=WEEKLY;BYDAY=MO']);
     expect(mapped.instanceType).toBe('master');
   });
+
+  it('prefers AlgaRRULE over the placeholder recurrence createEvent posts', async () => {
+    // The real shape of an Alga-exported series in Outlook: createEvent writes a
+    // stand-in native recurrence (daily/noEnd) next to the true rule, and
+    // updateEvent only refreshes the property. Reading the native object here
+    // would turn a weekly entry into a daily one and push that back as AlgaRRULE.
+    const placeholder = {
+      pattern: { type: 'daily', interval: 1 },
+      range: { type: 'noEnd', startDate: '2026-10-05T10:15:00' },
+    };
+    expect(graphRecurrenceToRRULE(placeholder)).toBe('RRULE:FREQ=DAILY');
+
+    const mapped = mapGraphEvent({
+      id: 'graph-alga-weekly-master',
+      subject: 'Standup @alga',
+      body: { content: '' },
+      type: 'seriesMaster',
+      start: { dateTime: '2026-10-05T10:15:00.0000000', timeZone: 'UTC' },
+      end: { dateTime: '2026-10-05T10:45:00.0000000', timeZone: 'UTC' },
+      recurrence: placeholder,
+      singleValueExtendedProperties: [
+        { id: 'String {66f5a359-4659-4830-9070-00047ec6ac6e} Name AlgaRRULE', value: 'RRULE:FREQ=WEEKLY;BYDAY=MO' },
+      ],
+    });
+
+    expect(mapped.recurrence).toEqual(['RRULE:FREQ=WEEKLY;BYDAY=MO']);
+
+    const entry = await mapExternalEventToScheduleEntry(mapped, 'tenant-1', 'microsoft');
+    expect(entry.is_recurring).toBe(true);
+    expect(entry.recurrence_pattern).toMatchObject({ frequency: 'weekly', daysOfWeek: [0] });
+  });
 });

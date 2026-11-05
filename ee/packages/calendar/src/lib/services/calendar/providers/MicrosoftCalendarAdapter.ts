@@ -919,19 +919,20 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
       if (propertyName && property.value !== undefined) privateProperties[propertyName] = String(property.value);
     }
 
-    // Prefer Graph's own recurrence (a native Outlook series has no AlgaRRULE),
-    // falling back to the property Alga writes on events it exported.
+    // AlgaRRULE wins where it exists: createEvent above posts a placeholder native
+    // recurrence (daily/noEnd, "will be parsed from RRULE") next to the real rule,
+    // and updateEvent only ever refreshes the property, so on an event Alga exported
+    // the native object is a stale lie that would read a weekly series back as daily.
+    // Graph's own recurrence is for series authored in Outlook, which carry no property.
     let recurrence: string[] | undefined;
-    const nativeRecurrence = event.recurrence ? graphRecurrenceToRRULE(event.recurrence) : null;
-    if (nativeRecurrence) {
-      recurrence = [nativeRecurrence];
-    } else if (event.singleValueExtendedProperties) {
-      const rruleProp = event.singleValueExtendedProperties.find(
-        (prop: any) => prop.id?.includes('AlgaRRULE')
-      );
-      if (rruleProp?.value) {
-        recurrence = [rruleProp.value];
-      }
+    const algaRRULE = (event.singleValueExtendedProperties || []).find(
+      (prop: any) => prop.id?.includes('AlgaRRULE')
+    )?.value;
+    if (algaRRULE) {
+      recurrence = [algaRRULE];
+    } else {
+      const nativeRecurrence = event.recurrence ? graphRecurrenceToRRULE(event.recurrence) : null;
+      if (nativeRecurrence) recurrence = [nativeRecurrence];
     }
 
     // Graph answers start/end in UTC (no Prefer: outlook.timezone header), so the
