@@ -25,7 +25,7 @@
  *   `{...base, ...overrides}` also works but replaces whole groups.
  */
 import type React from 'react';
-import type { ITicket, TicketTimeEntriesSummary, WorkItemType } from '@alga-psa/types';
+import type { CommentAudience, ITicket, TicketTimeEntriesSummary, WorkItemType } from '@alga-psa/types';
 
 // Types only: `typeof` on a type-only import erases at runtime, so this
 // module never loads an action. The native implementation owns the runtime
@@ -55,6 +55,8 @@ import type {
   getClientById,
   getAllClients,
   getClientBillingProfiles,
+  getContactEffectiveLocation,
+  searchClientsForPicker,
 } from '../actions/clientLookupActions';
 import type {
   addTicketCommentWithCache,
@@ -284,6 +286,8 @@ export interface TicketScreenBehavior {
    * default: writable (absent / false).
    */
   readOnly?: boolean;
+  /** Conversation authors are refreshed with the conversation after writes. */
+  liveConversationAuthors?: boolean;
   /**
    * Fields this data source cannot write even for a writer (for example
    * `board_id`). Frozen fields render disabled. Names are the ticket field
@@ -325,6 +329,15 @@ export interface TicketEditorRestrictions {
 /** Conversation (comment composer) behaviour. Native: `{}`. Extended additively by audience-aware sources. */
 export interface TicketConversationConfig {
   editor?: TicketEditorRestrictions;
+  /**
+   * Write audiences the composer offers. When non-empty the composer replaces the
+   * Internal toggle with a required audience choice (no default). Set ONLY for a
+   * shared ticket and for tickets in a co_managed workspace; every other source
+   * leaves it unset and renders the legacy toggle. `shared_it` is offered only by a
+   * source that routes it through the co-managed comment command; the native
+   * resolution flow never offers it.
+   */
+  audiences?: readonly CommentAudience[];
 }
 
 // ---------------------------------------------------------------------------
@@ -424,6 +437,9 @@ export interface TicketPeopleMethods {
   getAllClients: typeof getAllClients;
   getClientLocations: typeof getClientLocations;
   getClientBillingProfiles: typeof getClientBillingProfiles;
+  getContactEffectiveLocation: typeof getContactEffectiveLocation;
+  /** Paged/searchable client lookup backing the async client picker. */
+  searchClientsForPicker: typeof searchClientsForPicker;
 }
 
 /** Additional agents and team assignment. */

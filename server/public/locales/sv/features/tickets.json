@@ -124,7 +124,9 @@
     "clientTags": "Kundtaggar",
     "tagModeAny": "Någon av",
     "tagModeNone": "Ingen av",
-    "droppedFromLink": "Vissa filter i den här länken är ogiltiga och ignorerades."
+    "droppedFromLink": "Vissa filter i den här länken är ogiltiga och ignorerades.",
+    "location": "Plats",
+    "requesterLocation": "Beställarens plats"
   },
   "create": {
     "title": "Skapa supportärende",
@@ -447,7 +449,29 @@
     "bcc": "Hemlig kopia",
     "ccBccInvalid": "Rätta de markerade adresserna innan du skickar.",
     "ccBccTooMany": "Högst {{max}} mottagare med kopia och hemlig kopia kan kopieras på en kommentar.",
-    "ccBccNotSentOnInternal": "Kopia och hemlig kopia skickas inte med en intern anteckning. Stäng av Intern för att använda dem."
+    "ccBccNotSentOnInternal": "Kopia och hemlig kopia skickas inte med en intern anteckning. Stäng av Intern för att använda dem.",
+    "audience": {
+      "requester": "Beställare",
+      "sharedIt": "Delad IT",
+      "organizationPrivate": "Privat för organisationen",
+      "placeholder": "Vem kan se detta?",
+      "required": "Välj vem som kan se kommentaren innan du publicerar den."
+    },
+    "shared": {
+      "loading": "Läser in den delade konversationen...",
+      "loadError": "Den delade konversationen kunde inte läsas in.",
+      "reload": "Läs in igen",
+      "errors": {
+        "forbidden": "Du har inte behörighet att publicera till den här målgruppen.",
+        "invalid": "Den här kommentaren kan inte publiceras.",
+        "readOnly": "Den här arbetsytan är skrivskyddad just nu.",
+        "operationConflict": "Den här kommentaren krockar med ett tidigare försök. Läs in igen och försök på nytt.",
+        "audienceUnresolved": "Välj vem som kan se den här kommentaren innan du publicerar den.",
+        "unknownOutcome": "Vi kunde inte bekräfta att kommentaren publicerades. Kontrollera konversationen innan du skickar den igen."
+      },
+      "unavailable": "Det här ärendet är inte tillgängligt.",
+      "back": "Tillbaka till kundärenden"
+    }
   },
   "responseState": {
     "awaitingYourResponse": "Väntar på ditt svar",
@@ -1011,7 +1035,9 @@
       "heading": "Bevakare",
       "placeholder": "Lägg till bevakare..."
     },
-    "attachmentsPartialFailure": "Ärendet skapades, men de här filerna kunde inte bifogas: {{files}}. Lägg till dem från ärendet."
+    "attachmentsPartialFailure": "Ärendet skapades, men de här filerna kunde inte bifogas: {{files}}. Lägg till dem från ärendet.",
+    "contactLocationSuffix": "(kontaktens plats)",
+    "contactPrimaryLocationSuffix": "(kontaktens primära plats)"
   },
   "itil": {
     "calculatedPriority": "Prioritet (beräknad)",
@@ -1669,7 +1695,14 @@
       "referenceInvalid": "Den valda tavlan, statusen, prioriteten, den ansvariga, teamet eller SLA-policyn är inte längre giltig. Ladda om sidan och försök igen.",
       "duplicateName": "En tavla med det här namnet finns redan.",
       "duplicate": "En tavla eller status med samma inställningar finns redan.",
-      "invalidValue": "Ett av tavlans eller statusens värden är ogiltigt. Ladda om sidan och försök igen."
+      "invalidValue": "Ett av tavlans eller statusens värden är ogiltigt. Ladda om sidan och försök igen.",
+      "notificationEmailInvalid": "Aviseringsregel {{rule}} har en ogiltig e-postadress (högst {{max}} tecken)",
+      "notificationEmailLimit": "Aviseringsregel {{rule}} får ha högst {{max}} e-postadresser",
+      "notificationRecipientRequired": "Aviseringsregel {{rule}} måste avisera minst en användare, ett team eller en e-postadress",
+      "notificationEmailIsUser": "Aviseringsregel {{rule}}: {{address}} är en Alga-användares e-postadress. Välj användaren i stället.",
+      "notificationEmailIsContact": "Aviseringsregel {{rule}}: {{address}} tillhör en kundkontakt eller plats och kan inte vara mottagare.",
+      "notificationEmailClientDomain": "Aviseringsregel {{rule}}: {{address}} finns på en kunds e-postdomän och kan inte vara mottagare.",
+      "notificationEmailInboundMailbox": "Aviseringsregel {{rule}}: {{address}} är en ansluten inkommande brevlåda och kan inte vara mottagare."
     },
     "material": {
       "invalidValue": "Ett av de valda materialvärdena är ogiltigt. Ladda om sidan och försök igen.",
@@ -1731,6 +1764,9 @@
       "templateRulesTargetOtherClients": "Några av mallens regler för automatisk tillämpning riktar sig mot andra kunder. Ta bort de kunderna från reglerna innan du kopplar mallen till en kund.",
       "predicateClientOutsideScope": "Kunden {{client}} ligger utanför mallens omfattning.",
       "predicateInvalid": "Ogiltig checklistregel: {{detail}}"
+    },
+    "comment": {
+      "audienceRequired": "Välj vem som kan se kommentaren innan du publicerar den."
     }
   },
   "ticketSection": {
@@ -2042,7 +2078,9 @@
       "changeLocation": "Ändra plats",
       "addDescriptionPrompt": "Lägg till en beskrivning – vad är problemet och vad behöver kunden?",
       "projectTasks": "Projektuppgifter",
-      "timeAndBilling": "Tid och fakturering"
+      "timeAndBilling": "Tid och fakturering",
+      "useContactLocation": "Använd kontaktens plats",
+      "remote": "Distans"
     },
     "timeline": {
       "subtitle": "Svar, tid och systemändringar på ett ställe",
@@ -2589,12 +2627,15 @@
       "columns": {
         "name": "Namn",
         "title": "Ärenderubrik",
+        "client": "Kund",
         "board": "Tavla",
         "checklist": "Checklistpunkter",
         "status": "Status",
         "schedules": "Scheman"
       },
-      "deleteBlocked": "Används av {{count}} återkommande schema(n). Peka dem på en annan mall eller arkivera dem först."
+      "deleteBlocked": "Används av {{count}} återkommande schema(n). Peka dem på en annan mall eller arkivera dem först.",
+      "allClients": "Alla kunder",
+      "clientFilter": "Alla kunder"
     },
     "status": {
       "active": "Aktiv",
@@ -2622,6 +2663,9 @@
       "title": "Ärenderubrik",
       "description": "Beskrivning",
       "descriptionPlaceholder": "Beskrivning",
+      "client": "Kund",
+      "clientPlaceholder": "Alla kunder",
+      "clientHelp": "Lämna tomt för att erbjuda mallen för alla kunder. Välj en för att bara erbjuda den på den kundens ärenden.",
       "offerForManualUse": "Erbjud i väljaren för nya ärenden",
       "offerForManualUseHelp": "Stäng av för mallar som bara återkommande scheman använder.",
       "titleTokens": "Du kan använda {{tokens}} i titeln; de fylls i per ärende."

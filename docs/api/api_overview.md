@@ -216,6 +216,27 @@ Each row includes the project, phase, and task the link points to, the task's re
 
 **Permissions:** requires `ticket:read` and `project:read`.
 
+#### Ticket Templates
+
+A ticket template is a reusable starting point for a ticket: its title, description, board, category, priority, ITIL values, tags, custom fields and a whole checklist. Templates were previously a UI-only feature; they are now available over REST (and therefore through the MCP integration), so an automation can keep them in step and apply them without rebuilding a checklist item by item.
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/tickets/templates` | List templates (paginated). Filters: `client_id` (that client's templates plus every tenant-wide one), `is_active` (omitted or `true` = active only, `false` = the inactive ones), `search` (name or ticket title substring) |
+| `POST` | `/tickets/templates` | Create a template, with its whole `checklist` array in the same request |
+| `GET` | `/tickets/templates/{templateId}` | Read one template with its ordered checklist, usage counts, and `referenceProblems` (fields pointing at a board, category or priority that no longer exists) |
+| `PUT` | `/tickets/templates/{templateId}` | Replace the template wholesale — omitted fields are reset and the `checklist` you send replaces the stored items. `is_active` activates or deactivates it |
+| `DELETE` | `/tickets/templates/{templateId}` | Delete the template and its checklist items. `409` while a non-archived recurring schedule still uses it |
+| `POST` | `/tickets/templates/{templateId}/instantiate` | Create one ticket from the template and return it, exactly as `POST /tickets` does |
+
+**Applying a template:** `instantiate` takes `client_id` (required) plus optional `contact_name_id`, `location_id`, `asset_ids`, `assigned_to`, `status_id`, `due_date` and the usual `suppressContactNotifications` / `suppressInternalNotifications` flags. The created ticket carries the template's tags, custom fields and checklist items, and records `created_from_template_id`. Prefer it over `POST /tickets` followed by one `POST /tickets/{id}/checklist` per item. The contact, location and assets must belong to `client_id`, and `status_id` must belong to the template's board — the same validation `POST /tickets` applies.
+
+**Title tokens:** a template title may contain `{{client}}`, `{{contact}}`, `{{due_date}}`, `{{month}}` and `{{year}}`, filled in per ticket from what you pass to `instantiate`; any other `{{token}}` is rejected when the template is saved.
+
+**Client-specific templates:** `client_id` is `null` by default, which offers the template for every client. Set it to bind the template to one client: it then only appears in that client's list and is refused (`400`) when instantiated for anyone else. Deleting the client deactivates and detaches its templates rather than deleting them; merging clients moves them to the surviving client.
+
+**Permissions:** list and read require `ticket_template:read`, create `ticket_template:create`, update and activate `ticket_template:update`, delete `ticket_template:delete`. `instantiate` requires `ticket:create` as well as `ticket_template:read`. The whole surface is internal (MSP) only; it is not exposed in the client portal.
+
 #### Ticket Comment Cc/Bcc
 
 Agents can Cc or Bcc one-off external email addresses when posting a public ticket comment, without adding those addresses to the ticket's ongoing watch list. Pass `cc` and/or `bcc` arrays of email strings in the request body of `POST /api/v1/tickets/{id}/comments`. Both arrays are validated: addresses are trimmed and deduplicated, a single address in both lists is promoted to `cc`, the combined count must not exceed 20 recipients, and one-off recipients are rejected on internal notes. The resolved list is persisted in the comment's `email_recipients` metadata field and returned on comment read responses; client-portal contacts can see `cc` addresses but not `bcc` entries. When the ticket has no requester email or the requester is the comment author, AlgaPSA sends a direct fallback email to the one-off recipients rather than dropping them. A one-off recipient who replies to the thread is recognized on that conversation but is never added to the ticket's permanent watch list.

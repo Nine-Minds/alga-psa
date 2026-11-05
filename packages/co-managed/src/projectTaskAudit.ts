@@ -3,8 +3,10 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
 import { recordCoManagedWorkAudit } from './sharedWorkAudit';
+import { withAuditOwnerTenant } from './auditOwnerTenant';
 import { CoManagedSharedWorkError, snapshotCoManagedSessionActor, isCoManagedUuid, type CoManagedSessionActor } from './sharedWorkIdentity';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
+import { isCoManagedTaskResourceHidden, projectCoManagedChanges } from './sharedWorkProjection';
 import { assertCoManagedProjectWorkServed } from './projectTaskGate';
 
 export const CO_MANAGED_TASK_AUDIT_OPERATIONS = ['co_managed_project_task_update', 'co_managed_project_task_assignment'] as const;
@@ -36,16 +38,9 @@ export async function findCoManagedTaskReplay<Receipt>(context: CoManagedSharedW
 export async function recordCoManagedTaskAudit(context: CoManagedSharedWorkContext, input: {
   operation: CoManagedTaskAuditOperation; operationId: string; requestHash: string; changes: Record<string, unknown>; receipt: unknown;
 }) {
-  // audit_logs has a BEFORE INSERT trigger that files the row under app.current_tenant. The request runs in the sponsor's
-  // tenant context, so pin the GUC to the customer (transaction-local) for the insert, then restore it. Same technique as
-  // delegatedAdministration.ts.
-  await context.trx.raw('select set_config(?, ?, true)', ['app.current_tenant', context.resource.tenant]);
-  try {
-    await recordCoManagedWorkAudit(context, { operation: input.operation, operationId: input.operationId, changes: input.changes,
-      details: { request_hash: input.requestHash, receipt: input.receipt } });
-  } finally {
-    await context.trx.raw('select set_config(?, ?, true)', ['app.current_tenant', context.actor.tenant]);
-  }
+  // audit_logs files rows under app.current_tenant; pin it to the customer for the whole audit write (insert and evidence).
+  await withAuditOwnerTenant(context.trx, context.resource.tenant, () => recordCoManagedWorkAudit(context, { operation: input.operation, operationId: input.operationId,
+    changes: input.changes, details: { request_hash: input.requestHash, receipt: input.receipt } }));
 }
 
 export interface CoManagedTaskHistoryEntry {
@@ -61,14 +56,14 @@ export async function listCoManagedProjectTaskHistory(db: Knex, inputActor: CoMa
   const limit = Number.isInteger(options.limit) && options.limit! > 0 ? Math.min(options.limit!, 100) : 50;
   await assertCoManagedProjectWorkServed(actor.tenant);
   return withCoManagedSharedWork(db, actor, resource, 'read', async context => {
+    if (isCoManagedTaskResourceHidden(context.redactedFields)) throw new CoManagedSharedWorkError();
     const rows = await tenantDb(context.trx, resource.tenant).table('audit_logs')
       .where({ table_name: 'project_tasks', record_id: resource.id }).whereIn('operation', [...CO_MANAGED_TASK_AUDIT_OPERATIONS])
       .whereRaw("details->>'relationship_id' = ?", [resource.relationshipId]).orderBy('timestamp', 'desc').orderBy('audit_id').limit(limit)
       .select('audit_id', 'timestamp', 'operation', 'changed_data', 'details');
     return rows.map((row: any) => {
-      const changes = Object.fromEntries(Object.entries(row.changed_data ?? {}).filter(([field]) =>
-        !isCoManagedReadFieldHidden(context.redactedFields, [field, `values.${field}`, `project_tasks.${field}`])).map(([field, change]) =>
-        // The stored audit row keeps MSP user/team ids; the history shown to the customer carries display names only.
+      const changes = Object.fromEntries(Object.entries(projectCoManagedChanges(context.redactedFields, row.changed_data)).map(([field, change]) =>
+        // The stored audit row keeps MSP user/team ids; the history shown to the customer carries display names only (after redaction).
         field === 'msp_assignee' && change && typeof change === 'object'
           ? [field, { kind: (change as any).kind, name: (change as any).name }] : [field, change]));
       return { auditId: row.audit_id, at: new Date(row.timestamp).toISOString(), operation: row.operation, authorName: row.details?.actor_display_name ?? '',

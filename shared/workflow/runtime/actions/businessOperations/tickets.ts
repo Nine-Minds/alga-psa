@@ -29,6 +29,7 @@ import {
   attachDocumentToTicket,
   type TenantTxContext,
 } from './shared';
+import { retainWorkflowTicketAuthority } from './shared';
 import { getCurrentTicketAdditionalUserIds } from './userRecipients';
 import { assertHumanWorkAssignee } from '../../../../lib/humanWork/assertHumanWorkAssignee';
 import {
@@ -657,6 +658,7 @@ export function registerTicketActions(): void {
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
+      await retainWorkflowTicketAuthority(ctx, tx, input.ticket_id, ['comments']);
 
       const content = input.mentions?.length ? buildBlockNoteWithMentions({ body: input.body, mentions: input.mentions }) : input.body;
 
@@ -791,6 +793,7 @@ export function registerTicketActions(): void {
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
+      await retainWorkflowTicketAuthority(ctx, tx, input.ticket_id, Object.keys(input.patch));
 
       const current = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
       if (!current) {
@@ -1001,6 +1004,7 @@ export function registerTicketActions(): void {
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
+      await retainWorkflowTicketAuthority(ctx, tx, input.ticket_id, ['assignment']);
 
       const ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
       if (!ticket) {
@@ -1164,6 +1168,7 @@ export function registerTicketActions(): void {
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
+      await retainWorkflowTicketAuthority(ctx, tx, input.ticket_id, ['status_id']);
 
       const ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
       if (!ticket) {

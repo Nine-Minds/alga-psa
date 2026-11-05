@@ -5,6 +5,7 @@ import { isMspPrincipalUserType } from '@alga-psa/types';
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { ticketUpdateStamp } from '@shared/lib/tickets/ticketUpdateStamp';
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
+import { type NativeCommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 import { reconcileCommentAttachments } from '@shared/lib/ticketCommentAttachments';
@@ -61,6 +62,10 @@ import {
 import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import { TicketModel, CreateTicketInput } from '@alga-psa/shared/models/ticketModel';
 import { resolveAssetBillingProfileIdForClient } from '@alga-psa/shared/models/assetBillingProfileModel';
+import {
+  assetIdForBillingProfileInheritance,
+  dedupeTicketAssetIds,
+} from '@alga-psa/shared/models/ticketAssetLinkModel';
 import {
   TICKET_ACTIVITY_ACTOR,
   TICKET_ACTIVITY_ENTITY,
@@ -623,9 +628,12 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
           throw new Error('Permission denied: Cannot link assets to tickets');
         }
       }
-      const linkedAssetIds = Array.from(
-        new Set([...(asset_id ? [asset_id as string] : []), ...extras.assetIds])
-      );
+      // The asset the dialog was opened from leads the picked ones, so it is
+      // also the one whose billing profile the ticket inherits below.
+      const linkedAssetIds = dedupeTicketAssetIds([
+        typeof asset_id === 'string' ? asset_id : '',
+        ...extras.assetIds,
+      ]);
 
       // Duplicate-ticket fields. The client only names the source; the hidden
       // carry-over (custom fields, checklist) is copied below from the source
@@ -673,7 +681,14 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         title: data.get('title') as string,
         board_id: data.get('board_id') as string,
         client_id: data.get('client_id') as string,
-        location_id: location_id === '' ? undefined : (location_id as string),
+        // Three states, deliberately: the field absent (or '') means nobody said, so the model
+        // fills it from the contact; the literal 'none' is the operator choosing None and stays
+        // null; anything else is the id they picked.
+        location_id: location_id === null || location_id === ''
+          ? undefined
+          : location_id === 'none'
+            ? null
+            : (location_id as string),
         billing_profile_id: billing_profile_id === '' || billing_profile_id === null
           ? undefined
           : (billing_profile_id as string),
@@ -696,14 +711,15 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       // FR-F3: a ticket raised against an asset inherits the asset's billing
       // profile (or its location's default) when the caller picked none. This
       // is the QuickAddTicket path used by the asset header, the asset list,
-      // service history and maintenance — `createTicketFromAsset` does the
-      // same for its own dialog.
-      if (linkedAssetIds.length > 0 && createTicketInput.client_id && !createTicketInput.billing_profile_id) {
+      // service history and maintenance — `createTicketFromAsset` and the REST
+      // create read the same rule from ticketAssetLinkModel.
+      const billingProfileSourceAssetId = assetIdForBillingProfileInheritance(linkedAssetIds);
+      if (billingProfileSourceAssetId && createTicketInput.client_id && !createTicketInput.billing_profile_id) {
         createTicketInput.billing_profile_id =
           (await resolveAssetBillingProfileIdForClient(
             trx,
             tenant,
-            linkedAssetIds[0],
+            billingProfileSourceAssetId,
             createTicketInput.client_id
           )) ?? undefined;
       }
@@ -737,9 +753,11 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
           throw new Error('Permission denied: Cannot use ticket templates');
         }
         // Manual use needs an active template that is offered for it (R4/R5); schedules ignore both.
+        // A client-bound template is only offered for its own client.
         const offered = UUID_PATTERN.test(ticketTemplateId)
           ? await tenantScopedTable(trx, 'ticket_templates', tenant)
               .where({ template_id: ticketTemplateId, is_active: true, offer_for_manual_use: true })
+              .where((builder) => builder.whereNull('client_id').orWhere('client_id', createTicketInput.client_id ?? null))
               .first('template_id')
           : undefined;
         sourceTemplate = offered ? await loadTemplateForInstantiation(trx, tenant, ticketTemplateId) : null;
@@ -2115,6 +2133,9 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
   }
 });
 
+// LEVERAGE: pattern guarded-comment-write — addTicketComment used to carry its own copy of the comment insert
+// (and lacked record authz / author_type / client guards). All ticket comment writes should go through
+// addTicketCommentInTransaction so the guards live in exactly one place.
 export const addTicketComment = withAuth(async (
   user,
   { tenant },
@@ -2122,6 +2143,7 @@ export const addTicketComment = withAuth(async (
   comment: string,
   isInternal: boolean,
   emailRecipients?: CommentEmailRecipientsInput | null,
+  audienceId?: NativeCommentAudience | null,
 ): Promise<void | TicketActionError> => {
   try {
     const {knex: db} = await createTenantKnex();
@@ -2131,110 +2153,16 @@ export const addTicketComment = withAuth(async (
         throw new Error('Permission denied: Cannot add comment');
       }
 
-      // Verify ticket exists
-      const ticket = await tenantScopedTable(trx, 'tickets', tenant)
-      .where({
-        ticket_id: ticketId
-      })
-      .first();
-
-    if (!ticket) {
-      throw new Error('Ticket not found');
-    }
-
-      // comments.thread_id is NOT NULL, so create the thread row first.
-      const idsResult = await trx.raw(
-        'SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id'
-      );
-      const generatedIds = idsResult.rows?.[0] as
-        | { comment_id: string; thread_id: string }
-        | undefined;
-      if (!generatedIds?.comment_id || !generatedIds?.thread_id) {
-        throw new Error('Database UUID generation did not return comment/thread identifiers.');
-      }
-      const nowIso = new Date().toISOString();
-
-      // One-off Cc/Bcc for this comment only; rejected on internal notes.
-      const resolvedEmailRecipients = await prepareCommentEmailRecipients(trx, tenant, {
-        cc: emailRecipients?.cc,
-        bcc: emailRecipients?.bcc,
+      // Single guarded write path: record-level authz, author_type derived from the user,
+      // client callers cannot create internal comments, plus the shared side effects.
+      await addTicketCommentInTransaction(trx, user as IUserWithRoles, tenant, {
+        ticketId,
+        content: comment,
         isInternal,
+        isResolution: false,
+        emailRecipients,
+        audienceId,
       });
-
-      await tenantScopedTable(trx, 'comment_threads', tenant).insert({
-        tenant,
-        thread_id: generatedIds.thread_id,
-        ticket_id: ticketId,
-        project_task_id: null,
-        root_comment_id: generatedIds.comment_id,
-        is_internal: isInternal,
-        reply_count: 0,
-        last_activity_at: nowIso,
-        created_at: nowIso,
-        created_by: user.user_id || null,
-      });
-
-      const [newComment] = await tenantScopedTable(trx, 'comments', tenant).insert({
-        tenant,
-        comment_id: generatedIds.comment_id,
-        thread_id: generatedIds.thread_id,
-        ticket_id: ticketId,
-        user_id: user.user_id,
-        author_type: 'internal',
-        note: comment,
-        is_internal: isInternal,
-        is_resolution: false,
-        created_at: nowIso,
-        ...(resolvedEmailRecipients ? { metadata: { email_recipients: resolvedEmailRecipients } } : {}),
-      }).returning('*');
-
-      await reconcileCommentAttachments(trx, tenant, newComment.comment_id, user.user_id);
-
-      // Publish comment added event
-      await persistCommentPublication(trx, {
-        eventType: 'TICKET_COMMENT_ADDED',
-        payload: buildTicketCommentAddedPayload({
-          tenantId: tenant,
-          occurredAt: (newComment as any).created_at ?? new Date().toISOString(),
-          ticketId: ticketId,
-          commentId: (newComment as any).comment_id ?? (newComment as any).id,
-          userId: user.user_id,
-          comment: {
-            content: comment,
-            author: `${user.first_name} ${user.last_name}`,
-            isInternal
-          }
-        })
-      }, publishStoredWorkflowEvent);
-
-      // Publish workflow v2 ticket message events (additive).
-      try {
-        const occurredAt = new Date().toISOString();
-        const workflowCtx = {
-          tenantId: tenant,
-          actor: { actorType: 'USER' as const, actorUserId: user.user_id },
-          occurredAt,
-          correlationId: (newComment as any).comment_id ?? (newComment as any).id,
-        };
-
-        const messageId = (newComment as any).comment_id ?? (newComment as any).id;
-        if (!messageId) return;
-        const createdAt = (newComment as any).created_at ?? occurredAt;
-        const events = buildTicketCommunicationWorkflowEvents({
-          ticketId,
-          messageId,
-          visibility: isInternal ? 'internal' : 'public',
-          author: { authorType: 'user', authorId: user.user_id },
-          channel: 'ui',
-          createdAt,
-        });
-
-        for (const ev of events) {
-          await publishTicketCommunicationWorkflowEvent(ev, workflowCtx);
-        }
-      } catch (eventError) {
-        console.error('[addTicketComment] Failed to publish workflow ticket message events:', eventError);
-      }
     });
   } catch (error) {
     const expected = ticketActionErrorFrom(error);

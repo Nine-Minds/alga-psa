@@ -57,6 +57,7 @@ export {
   hasWriteAdmissionResolver,
   invalidateWriteAdmission,
   isTenantWriteGuarded,
+  isCoManagedWorkspace,
   registerWriteAdmissionResolver,
   resetWriteAdmissionResolver,
 } from './lib/writeAdmission';
@@ -85,6 +86,9 @@ export {
   ACCOUNTING_EXPORT_INVOICE_CANCELLED,
   ACCOUNTING_EXPORT_INVOICE_NOT_FOUND,
 } from './lib/invoiceExternalSyncLock';
+
+// QBO item-target advisory lock (shared by integrations mapping CRUD and billing item import)
+export { lockQboItemTarget, lockQboItemTargets, qboItemTargetLockKey } from './lib/qboItemTargetLock';
 
 // Tenant Slug utilities
 export { getTenantIdBySlug, getTenantDisplayNameBySlug, getTenantSlugForTenant, buildTenantPortalSlug, isValidTenantSlug, getSlugParts } from './lib/tenantSlug';

@@ -14,6 +14,7 @@ tags:
   - name: Accounting Exports
   - name: Activities v1
   - name: Admin
+  - name: Asset audits
   - name: Assets
   - name: Auth
   - name: Billing
@@ -1779,8 +1780,9 @@ components:
           description: Sort direction. Defaults to desc.
         search:
           type: string
-          description: General search filter accepted by the shared filter schema. The
-            current AssetService.list implementation does not apply this filter.
+          description: Case-insensitive substring match across asset_tag, name,
+            serial_number, location, manufacturer and model. Applied to both the
+            returned rows and the pagination total.
         created_from:
           type: string
           format: date-time
@@ -4488,6 +4490,412 @@ components:
             - "null"
         open_tickets_count:
           type: number
+    AssetAuditIdParams:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Audit UUID from asset_audits.audit_id.
+      required:
+        - id
+    AssetAuditItemParams:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Audit UUID from asset_audits.audit_id.
+        assetId:
+          type: string
+          format: uuid
+          description: Asset UUID from assets.asset_id.
+      required:
+        - id
+        - assetId
+    AssetAuditListQuery:
+      type: object
+      properties:
+        page:
+          type: string
+          description: Page number. Defaults to 1.
+        limit:
+          type: string
+          description: Page size, 1 through 100. Defaults to 25.
+        client_id:
+          type: string
+          format: uuid
+          description: Only audits of this client.
+    CreateAssetAuditRequest:
+      type: object
+      properties:
+        client_id:
+          type: string
+          format: uuid
+          description: Client whose assets are audited.
+        location_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Client location in scope. null or omitted audits the client assets
+            that have no location.
+        statuses:
+          type: array
+          items:
+            type: string
+          description: Asset status slugs in scope. Omitted means every status.
+        notes:
+          type: string
+          maxLength: 2000
+      required:
+        - client_id
+    MarkAssetAuditItemRequest:
+      type: object
+      properties:
+        asset_id:
+          type: string
+          format: uuid
+          description: Asset being marked.
+        result:
+          type: string
+          enum:
+            - present
+            - unexpected
+          description: Caller intent; an asset outside the snapshot is stored as
+            unexpected regardless. Defaults to present.
+        method:
+          type: string
+          enum:
+            - scan
+            - manual
+            - register
+          description: How the asset was marked. Defaults to manual.
+      required:
+        - asset_id
+    AssetAuditResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            audit_id:
+              type: string
+              format: uuid
+            tenant:
+              type: string
+              format: uuid
+            client_id:
+              type: string
+              format: uuid
+            location_id:
+              type:
+                - string
+                - "null"
+              format: uuid
+            status:
+              type: string
+              enum:
+                - in_progress
+                - completed
+                - cancelled
+            started_by:
+              type: string
+              format: uuid
+            started_at:
+              type: string
+            completed_at:
+              type:
+                - string
+                - "null"
+            expected_count:
+              type: integer
+            present_count:
+              type: integer
+            missing_count:
+              type: integer
+            unexpected_count:
+              type: integer
+            statuses:
+              type:
+                - array
+                - "null"
+              items:
+                type: string
+            notes:
+              type:
+                - string
+                - "null"
+            client_name:
+              type:
+                - string
+                - "null"
+            location_name:
+              type:
+                - string
+                - "null"
+            items:
+              type: array
+              items:
+                type: object
+                properties:
+                  asset_id:
+                    type: string
+                    format: uuid
+                  result:
+                    type: string
+                    enum:
+                      - expected
+                      - present
+                      - missing
+                      - unexpected
+                  method:
+                    type:
+                      - string
+                      - "null"
+                    enum:
+                      - scan
+                      - manual
+                      - register
+                      - null
+                  marked_at:
+                    type:
+                      - string
+                      - "null"
+                  marked_by:
+                    type:
+                      - string
+                      - "null"
+                    format: uuid
+                  asset_name:
+                    type:
+                      - string
+                      - "null"
+                  asset_tag:
+                    type:
+                      - string
+                      - "null"
+                  serial_number:
+                    type:
+                      - string
+                      - "null"
+                  client_id:
+                    type:
+                      - string
+                      - "null"
+                    format: uuid
+                  location_id:
+                    type:
+                      - string
+                      - "null"
+                    format: uuid
+                  location:
+                    type:
+                      - string
+                      - "null"
+                required:
+                  - asset_id
+                  - result
+                  - method
+                  - marked_at
+                  - marked_by
+          required:
+            - audit_id
+            - tenant
+            - client_id
+            - location_id
+            - status
+            - started_by
+            - started_at
+            - completed_at
+            - expected_count
+            - present_count
+            - missing_count
+            - unexpected_count
+      required:
+        - success
+        - data
+    AssetAuditListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              audit_id:
+                type: string
+                format: uuid
+              tenant:
+                type: string
+                format: uuid
+              client_id:
+                type: string
+                format: uuid
+              location_id:
+                type:
+                  - string
+                  - "null"
+                format: uuid
+              status:
+                type: string
+                enum:
+                  - in_progress
+                  - completed
+                  - cancelled
+              started_by:
+                type: string
+                format: uuid
+              started_at:
+                type: string
+              completed_at:
+                type:
+                  - string
+                  - "null"
+              expected_count:
+                type: integer
+              present_count:
+                type: integer
+              missing_count:
+                type: integer
+              unexpected_count:
+                type: integer
+              statuses:
+                type:
+                  - array
+                  - "null"
+                items:
+                  type: string
+              notes:
+                type:
+                  - string
+                  - "null"
+              client_name:
+                type:
+                  - string
+                  - "null"
+              location_name:
+                type:
+                  - string
+                  - "null"
+              items:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    asset_id:
+                      type: string
+                      format: uuid
+                    result:
+                      type: string
+                      enum:
+                        - expected
+                        - present
+                        - missing
+                        - unexpected
+                    method:
+                      type:
+                        - string
+                        - "null"
+                      enum:
+                        - scan
+                        - manual
+                        - register
+                        - null
+                    marked_at:
+                      type:
+                        - string
+                        - "null"
+                    marked_by:
+                      type:
+                        - string
+                        - "null"
+                      format: uuid
+                    asset_name:
+                      type:
+                        - string
+                        - "null"
+                    asset_tag:
+                      type:
+                        - string
+                        - "null"
+                    serial_number:
+                      type:
+                        - string
+                        - "null"
+                    client_id:
+                      type:
+                        - string
+                        - "null"
+                      format: uuid
+                    location_id:
+                      type:
+                        - string
+                        - "null"
+                      format: uuid
+                    location:
+                      type:
+                        - string
+                        - "null"
+                  required:
+                    - asset_id
+                    - result
+                    - method
+                    - marked_at
+                    - marked_by
+            required:
+              - audit_id
+              - tenant
+              - client_id
+              - location_id
+              - status
+              - started_by
+              - started_at
+              - completed_at
+              - expected_count
+              - present_count
+              - missing_count
+              - unexpected_count
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+            limit:
+              type: integer
+            total:
+              type: integer
+            totalPages:
+              type: integer
+          required:
+            - page
+            - limit
+            - total
+            - totalPages
+      required:
+        - success
+        - data
+        - pagination
+    AssetAuditErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details: {}
+          required:
+            - code
+            - message
+      required:
+        - error
     RmmProviderParam:
       type: object
       properties:
@@ -5112,6 +5520,16 @@ components:
             - "false"
         client_name:
           type: string
+        location_id:
+          type: string
+          format: uuid
+          description: Contacts linked to this client location in any role, primary or not.
+        work_arrangement:
+          type: string
+          enum:
+            - on_site
+            - hybrid
+            - remote
     ContactBody:
       type: object
       properties:
@@ -5290,6 +5708,27 @@ components:
         is_inactive:
           type: boolean
           default: false
+        work_arrangement:
+          type:
+            - string
+            - "null"
+          enum:
+            - on_site
+            - hybrid
+            - remote
+            - null
+        locations:
+          type: array
+          items:
+            type: object
+            properties:
+              location_id:
+                type: string
+                format: uuid
+              is_primary:
+                type: boolean
+            required:
+              - location_id
         tags:
           type: array
           items:
@@ -5468,6 +5907,27 @@ components:
           type: string
         is_inactive:
           type: boolean
+        work_arrangement:
+          type:
+            - string
+            - "null"
+          enum:
+            - on_site
+            - hybrid
+            - remote
+            - null
+        locations:
+          type: array
+          items:
+            type: object
+            properties:
+              location_id:
+                type: string
+                format: uuid
+              is_primary:
+                type: boolean
+            required:
+              - location_id
         tags:
           type: array
           items:
@@ -5621,6 +6081,57 @@ components:
             - message
       required:
         - error
+    ContactLocationLink:
+      type: object
+      properties:
+        location_id:
+          type: string
+          format: uuid
+        location_name:
+          type:
+            - string
+            - "null"
+        is_primary:
+          type: boolean
+        is_active:
+          type: boolean
+        address_line1:
+          type:
+            - string
+            - "null"
+        address_line2:
+          type:
+            - string
+            - "null"
+        address_line3:
+          type:
+            - string
+            - "null"
+        city:
+          type:
+            - string
+            - "null"
+        state_province:
+          type:
+            - string
+            - "null"
+        postal_code:
+          type:
+            - string
+            - "null"
+        country_code:
+          type:
+            - string
+            - "null"
+        country_name:
+          type:
+            - string
+            - "null"
+      required:
+        - location_id
+        - location_name
+        - is_primary
+        - is_active
     ContactResource:
       type: object
       properties:
@@ -5750,6 +6261,19 @@ components:
           type:
             - string
             - "null"
+        work_arrangement:
+          type:
+            - string
+            - "null"
+          enum:
+            - on_site
+            - hybrid
+            - remote
+            - null
+        locations:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContactLocationLink"
         avatarUrl:
           type:
             - string
@@ -5877,6 +6401,14 @@ components:
           type:
             - string
             - "null"
+        work_arrangement:
+          type:
+            - string
+            - "null"
+        locations:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContactLocationLink"
       required:
         - contact_name_id
         - full_name
@@ -6518,6 +7050,9 @@ components:
                   - "null"
               is_active:
                 type: boolean
+              contact_count:
+                type: integer
+                minimum: 0
               created_at:
                 type: string
                 format: date-time
@@ -6632,6 +7167,9 @@ components:
                 - "null"
             is_active:
               type: boolean
+            contact_count:
+              type: integer
+              minimum: 0
             created_at:
               type: string
               format: date-time
@@ -9420,46 +9958,81 @@ components:
     InvoiceUpdateBody:
       type: object
       properties:
-        client_id:
-          type: string
+        payment_method:
+          type:
+            - string
+            - "null"
+          enum:
+            - credit_card
+            - bank_transfer
+            - check
+            - null
+        billing_profile_id:
+          type:
+            - string
+            - "null"
           format: uuid
-        invoice_date:
-          type: string
         due_date:
           type: string
-        subtotal:
-          type: integer
-          minimum: 0
-        tax:
-          type: integer
-          minimum: 0
-        total_amount:
-          type: integer
-          minimum: 0
-        status:
+          pattern: ^\d{4}-\d{2}-\d{2}$
+          description: YYYY-MM-DD. Draft invoices only.
+        invoice_date:
           type: string
-          enum:
-            - draft
-            - sent
-            - paid
-            - overdue
-            - cancelled
-            - pending
-            - prepayment
-            - partially_applied
-        credit_applied:
-          type: integer
-          minimum: 0
-        is_manual:
-          type: boolean
-        is_prepayment:
-          type: boolean
+          pattern: ^\d{4}-\d{2}-\d{2}$
+          description: YYYY-MM-DD. Draft invoices only.
         items:
           type: array
           items:
             type: object
-            additionalProperties: {}
-      additionalProperties: {}
+            properties:
+              service_id:
+                type: string
+                format: uuid
+              contract_line_id:
+                type: string
+                format: uuid
+              description:
+                type: string
+                minLength: 1
+                maxLength: 500
+              quantity:
+                type: number
+                minimum: 0
+              unit_price:
+                type: integer
+                minimum: 0
+              total_price:
+                type: integer
+                minimum: 0
+              tax_amount:
+                type: integer
+                minimum: 0
+              net_amount:
+                type: integer
+                minimum: 0
+              rate:
+                type: number
+                minimum: 0
+              is_manual:
+                type: boolean
+              is_taxable:
+                type: boolean
+              is_discount:
+                type: boolean
+            required:
+              - description
+              - quantity
+              - unit_price
+              - tax_amount
+              - rate
+          description: Replaces items on draft, non-recurring invoices only.
+        tax_source:
+          type: string
+          enum:
+            - internal
+            - external
+            - pending_external
+      additionalProperties: false
     InvoiceManualBody:
       type: object
       properties:
@@ -9632,8 +10205,6 @@ components:
             - pending
             - prepayment
             - partially_applied
-        finalized_at:
-          type: string
       required:
         - invoice_ids
         - status
@@ -16353,7 +16924,9 @@ components:
         description:
           type: string
         assigned_to:
-          type: string
+          type:
+            - string
+            - "null"
           format: uuid
         estimated_hours:
           type: number
@@ -16362,10 +16935,14 @@ components:
           type: string
           format: date-time
         due_date:
-          type: string
+          type:
+            - string
+            - "null"
           format: date-time
         priority_id:
-          type: string
+          type:
+            - string
+            - "null"
           format: uuid
         task_type_key:
           type: string
@@ -16980,6 +17557,17 @@ components:
               - external_id
           description: Ticket-level external references written in the same transaction as
             the ticket. A conflicting link rolls back the create.
+        asset_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 50
+          description: Assets the ticket is raised against, linked in the same transaction
+            as the ticket; an unknown asset rejects the whole create. The first
+            asset also makes the ticket inherit that asset's billing profile
+            when billing_profile_id is omitted, as POST /tickets/from-asset and
+            the web create do.
         suppressContactNotifications:
           type: boolean
           description: When true, suppresses customer-facing email and portal
@@ -17018,11 +17606,18 @@ components:
           type: string
           format: uuid
         category_id:
-          type: string
+          type:
+            - string
+            - "null"
           format: uuid
+          description: Parent category, or null to clear the classification.
         subcategory_id:
-          type: string
+          type:
+            - string
+            - "null"
           format: uuid
+          description: Child of category_id, or null when the selected category has no
+            subcategory.
         assigned_to:
           type:
             - string
@@ -17207,6 +17802,7 @@ components:
             - non_billable_category
             - ad_hoc
             - interaction
+            - co_managed
         start_time:
           type: string
           format: date-time
@@ -17266,6 +17862,7 @@ components:
             - non_billable_category
             - ad_hoc
             - interaction
+            - co_managed
         start_time:
           type: string
           format: date-time
@@ -17324,6 +17921,7 @@ components:
                   - non_billable_category
                   - ad_hoc
                   - interaction
+                  - co_managed
               start_time:
                 type: string
                 format: date-time
@@ -17398,6 +17996,7 @@ components:
                       - non_billable_category
                       - ad_hoc
                       - interaction
+                      - co_managed
                   start_time:
                     type: string
                     format: date-time
@@ -17759,6 +18358,7 @@ components:
                   - non_billable_category
                   - ad_hoc
                   - interaction
+                  - co_managed
                   - null
               approval_status:
                 type:
@@ -18052,6 +18652,7 @@ components:
                         - non_billable_category
                         - ad_hoc
                         - interaction
+                        - co_managed
                         - null
                     approval_status:
                       type:
@@ -18547,6 +19148,13 @@ components:
           type: string
           format: uuid
           description: Filter statuses to this board.
+    WorkV1TicketCategoriesQuery:
+      type: object
+      properties:
+        board_id:
+          type: string
+          format: uuid
+          description: Filter categories to this board.
     WorkV1TicketCommentUpdateBody:
       type: object
       properties:
@@ -18791,6 +19399,341 @@ components:
       required:
         - system
         - external_id
+    WorkV1TicketTemplateParams:
+      type: object
+      properties:
+        templateId:
+          type: string
+          format: uuid
+          description: Ticket template UUID from ticket_templates.template_id.
+      required:
+        - templateId
+    WorkV1TicketTemplateListQuery:
+      type: object
+      properties:
+        page:
+          type: string
+          description: 1-based page number. Default 1.
+        limit:
+          type: string
+          description: Page size, 1-100. Default 25.
+        client_id:
+          type: string
+          format: uuid
+          description: "Templates this client can use: the ones bound to it plus every
+            tenant-wide template. Resolve the UUID with GET /api/v1/clients
+            first."
+        is_active:
+          type: string
+          enum:
+            - "true"
+            - "false"
+          description: "Omitted or 'true': active templates only (the default). 'false':
+            the inactive ones."
+        search:
+          type: string
+          description: Case-insensitive substring of the template name or of the ticket
+            title it produces.
+    WorkV1TicketTemplateCreateBody:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Template name, unique among active templates in the tenant.
+        notes:
+          type:
+            - string
+            - "null"
+          maxLength: 2000
+          description: Note for your team; never copied onto tickets.
+        title:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Title the created ticket gets. May contain {{client}}, {{contact}},
+            {{due_date}}, {{month}} and {{year}}, which are filled in per
+            ticket; any other {{token}} is rejected.
+        description:
+          type:
+            - string
+            - "null"
+          description: Ticket description (plain text or serialized BlockNote JSON).
+        client_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Client the template belongs to. Omit or null to offer it for every
+            client; set it to offer the template only on that client’s tickets.
+            Resolve the UUID with GET /api/v1/clients first.
+        board_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Board the created ticket lands on. Resolve with GET /api/v1/boards
+            first.
+        category_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Category on that board; a subcategory requires its parent category.
+        subcategory_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        priority_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Priority. Resolve with GET /api/v1/tickets/priorities first.
+        itil_impact:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+          maximum: 5
+        itil_urgency:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+          maximum: 5
+        tags:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 100
+          maxItems: 50
+          description: Tag text applied to the created ticket (tag definitions are created
+            as needed).
+        custom_fields:
+          type: object
+          additionalProperties: {}
+          description: Custom field values copied onto the ticket.
+        offer_for_manual_use:
+          type: boolean
+          description: Whether the template is offered for manual ticket creation.
+            Defaults to true; turn it off for templates only recurring schedules
+            use.
+        checklist:
+          type: array
+          items:
+            type: object
+            properties:
+              item_name:
+                type: string
+                minLength: 1
+                maxLength: 500
+                description: Checklist item text.
+              description:
+                type:
+                  - string
+                  - "null"
+              is_required:
+                type: boolean
+                description: Whether the item gates ticket closure.
+              checklist_template_id:
+                type:
+                  - string
+                  - "null"
+                format: uuid
+                description: Checklist template the item came from; leave null for a plain item.
+            required:
+              - item_name
+              - is_required
+          maxItems: 200
+          description: The whole checklist, in order. On update this list replaces the
+            stored items.
+      required:
+        - name
+        - title
+    WorkV1TicketTemplateUpdateBody:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Template name, unique among active templates in the tenant.
+        notes:
+          type:
+            - string
+            - "null"
+          maxLength: 2000
+          description: Note for your team; never copied onto tickets.
+        title:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Title the created ticket gets. May contain {{client}}, {{contact}},
+            {{due_date}}, {{month}} and {{year}}, which are filled in per
+            ticket; any other {{token}} is rejected.
+        description:
+          type:
+            - string
+            - "null"
+          description: Ticket description (plain text or serialized BlockNote JSON).
+        client_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Client the template belongs to. Omit or null to offer it for every
+            client; set it to offer the template only on that client’s tickets.
+            Resolve the UUID with GET /api/v1/clients first.
+        board_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Board the created ticket lands on. Resolve with GET /api/v1/boards
+            first.
+        category_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Category on that board; a subcategory requires its parent category.
+        subcategory_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        priority_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Priority. Resolve with GET /api/v1/tickets/priorities first.
+        itil_impact:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+          maximum: 5
+        itil_urgency:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+          maximum: 5
+        tags:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 100
+          maxItems: 50
+          description: Tag text applied to the created ticket (tag definitions are created
+            as needed).
+        custom_fields:
+          type: object
+          additionalProperties: {}
+          description: Custom field values copied onto the ticket.
+        offer_for_manual_use:
+          type: boolean
+          description: Whether the template is offered for manual ticket creation.
+            Defaults to true; turn it off for templates only recurring schedules
+            use.
+        checklist:
+          type: array
+          items:
+            type: object
+            properties:
+              item_name:
+                type: string
+                minLength: 1
+                maxLength: 500
+                description: Checklist item text.
+              description:
+                type:
+                  - string
+                  - "null"
+              is_required:
+                type: boolean
+                description: Whether the item gates ticket closure.
+              checklist_template_id:
+                type:
+                  - string
+                  - "null"
+                format: uuid
+                description: Checklist template the item came from; leave null for a plain item.
+            required:
+              - item_name
+              - is_required
+          maxItems: 200
+          description: The whole checklist, in order. On update this list replaces the
+            stored items.
+        is_active:
+          type: boolean
+          description: Activate or deactivate the template. Deactivating only hides it
+            from manual use; recurring schedules keep running.
+      required:
+        - name
+        - title
+    WorkV1TicketTemplateInstantiateBody:
+      type: object
+      properties:
+        client_id:
+          type: string
+          format: uuid
+          description: Client the ticket is for. A template bound to another client is
+            refused with 400.
+        contact_name_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Requester contact; must belong to client_id. Also fills the
+            {{contact}} title token.
+        location_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Client location; must belong to client_id.
+        asset_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 50
+          description: Assets to link to the ticket; each must belong to client_id.
+        assigned_to:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Primary assignee. Defaults to unassigned.
+        status_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Status for the new ticket; must belong to the template's board.
+            Defaults to that board's default status.
+        due_date:
+          type:
+            - string
+            - "null"
+          description: Due date, ISO date (YYYY-MM-DD) or date-time. Also fills the
+            {{due_date}}, {{month}} and {{year}} title tokens.
+        suppressContactNotifications:
+          type: boolean
+          description: Create the ticket without notifying the customer.
+        suppressInternalNotifications:
+          type: boolean
+          description: Also skip internal notifications. Requires
+            suppressContactNotifications=true.
+      required:
+        - client_id
     WorkV1TicketAgentParams:
       type: object
       properties:
@@ -21062,6 +22005,13 @@ components:
                 projects:
                   type: boolean
                   description: Project tasks on mobile (project:read; PSA product only).
+                assets:
+                  type: boolean
+                  description: Asset browsing on mobile (asset:read; PSA product only).
+                assetAudit:
+                  type: boolean
+                  description: Site audits on mobile (asset:read AND asset:update; PSA product
+                    only).
                 clientsCreate:
                   type: boolean
                 clientsUpdate:
@@ -21075,6 +22025,8 @@ components:
                 - opportunities
                 - opportunitiesCreate
                 - projects
+                - assets
+                - assetAudit
                 - clientsCreate
                 - clientsUpdate
                 - contactsCreate
@@ -27150,7 +28102,6 @@ paths:
         x-unapplied-validated-filters:
           - maintenance_due
           - is_active
-          - search
           - created_from
           - created_to
           - updated_from
@@ -27193,12 +28144,13 @@ paths:
           in: query
         - schema:
             type: string
-            description: General search filter accepted by the shared filter schema. The
-              current AssetService.list implementation does not apply this
-              filter.
+            description: Case-insensitive substring match across asset_tag, name,
+              serial_number, location, manufacturer and model. Applied to both
+              the returned rows and the pagination total.
           required: false
-          description: General search filter accepted by the shared filter schema. The
-            current AssetService.list implementation does not apply this filter.
+          description: Case-insensitive substring match across asset_tag, name,
+            serial_number, location, manufacturer and model. Applied to both the
+            returned rows and the pagination total.
           name: search
           in: query
         - schema:
@@ -31043,6 +31995,497 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
+  /api/v1/asset-audits:
+    post:
+      summary: Start a site audit
+      description: Snapshots the assets expected for the client, location and status
+        slugs in scope as expected items and opens the audit. Needs asset:update
+        because completing the audit writes asset history.
+      tags:
+        - Asset audits
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-rbac-resource: asset
+        x-rbac-action: update
+        x-not-paginated: true
+      x-alga-products:
+        - psa
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAssetAuditRequest"
+      responses:
+        "201":
+          description: Audit started, with its expected items.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditResponse"
+        "400":
+          description: Request body or query failed validation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "401":
+          description: x-api-key is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "403":
+          description: Caller lacks the required asset permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "404":
+          description: Audit or asset not found in this tenant.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+    get:
+      summary: List site audits
+      description: Returns the tenant audits newest first, optionally narrowed to one
+        client.
+      tags:
+        - Asset audits
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-rbac-resource: asset
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            description: Page number. Defaults to 1.
+          required: false
+          description: Page number. Defaults to 1.
+          name: page
+          in: query
+        - schema:
+            type: string
+            description: Page size, 1 through 100. Defaults to 25.
+          required: false
+          description: Page size, 1 through 100. Defaults to 25.
+          name: limit
+          in: query
+        - schema:
+            type: string
+            format: uuid
+            description: Only audits of this client.
+          required: false
+          description: Only audits of this client.
+          name: client_id
+          in: query
+      responses:
+        "200":
+          description: Paginated audit list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditListResponse"
+        "400":
+          description: Request body or query failed validation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "401":
+          description: x-api-key is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "403":
+          description: Caller lacks the required asset permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "404":
+          description: Audit or asset not found in this tenant.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+  /api/v1/asset-audits/{id}:
+    get:
+      summary: Get a site audit
+      description: Returns the audit with its items joined to each asset name, tag,
+        serial and location.
+      tags:
+        - Asset audits
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-rbac-resource: asset
+        x-rbac-action: read
+        x-not-paginated: true
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Audit UUID from asset_audits.audit_id.
+          required: true
+          description: Audit UUID from asset_audits.audit_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Audit returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditResponse"
+        "400":
+          description: Request body or query failed validation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "401":
+          description: x-api-key is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "403":
+          description: Caller lacks the required asset permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "404":
+          description: Audit or asset not found in this tenant.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+  /api/v1/asset-audits/{id}/items:
+    post:
+      summary: Mark an asset in a site audit
+      description: "Marks the asset present, or unexpected when it is not in the audit
+        snapshot. Idempotent per asset: a second mark keeps the first
+        marked_at."
+      tags:
+        - Asset audits
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-rbac-resource: asset
+        x-rbac-action: update
+        x-not-paginated: true
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Audit UUID from asset_audits.audit_id.
+          required: true
+          description: Audit UUID from asset_audits.audit_id.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarkAssetAuditItemRequest"
+      responses:
+        "200":
+          description: Audit with the updated items.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditResponse"
+        "400":
+          description: Request body or query failed validation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "401":
+          description: x-api-key is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "403":
+          description: Caller lacks the required asset permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "404":
+          description: Audit or asset not found in this tenant.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "409":
+          description: The audit is already completed or cancelled.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+  /api/v1/asset-audits/{id}/items/{assetId}:
+    delete:
+      summary: Undo a site audit mark
+      description: Returns an expected asset to the remaining list; an unexpected
+        asset was never in scope, so its item is removed.
+      tags:
+        - Asset audits
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-rbac-resource: asset
+        x-rbac-action: update
+        x-not-paginated: true
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Audit UUID from asset_audits.audit_id.
+          required: true
+          description: Audit UUID from asset_audits.audit_id.
+          name: id
+          in: path
+        - schema:
+            type: string
+            format: uuid
+            description: Asset UUID from assets.asset_id.
+          required: true
+          description: Asset UUID from assets.asset_id.
+          name: assetId
+          in: path
+      responses:
+        "200":
+          description: Audit with the updated items.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditResponse"
+        "400":
+          description: Request body or query failed validation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "401":
+          description: x-api-key is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "403":
+          description: Caller lacks the required asset permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "404":
+          description: Audit or asset not found in this tenant.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "409":
+          description: The audit is already completed or cancelled.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+  /api/v1/asset-audits/{id}/complete:
+    post:
+      summary: Complete a site audit
+      description: Turns every still-expected item into missing, writes the counts,
+        and records one asset_history row (change_type audit) plus
+        assets.last_audited_at and last_audit_result for each present and
+        missing asset, in one transaction.
+      tags:
+        - Asset audits
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-rbac-resource: asset
+        x-rbac-action: update
+        x-not-paginated: true
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Audit UUID from asset_audits.audit_id.
+          required: true
+          description: Audit UUID from asset_audits.audit_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Completed audit with its summary.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditResponse"
+        "400":
+          description: Request body or query failed validation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "401":
+          description: x-api-key is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "403":
+          description: Caller lacks the required asset permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "404":
+          description: Audit or asset not found in this tenant.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "409":
+          description: The audit is already completed or cancelled.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+  /api/v1/asset-audits/{id}/cancel:
+    post:
+      summary: Cancel a site audit
+      description: Abandons an open audit; it writes no asset history.
+      tags:
+        - Asset audits
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-rbac-resource: asset
+        x-rbac-action: update
+        x-not-paginated: true
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Audit UUID from asset_audits.audit_id.
+          required: true
+          description: Audit UUID from asset_audits.audit_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Cancelled audit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditResponse"
+        "400":
+          description: Request body or query failed validation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "401":
+          description: x-api-key is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "403":
+          description: Caller lacks the required asset permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "404":
+          description: Audit or asset not found in this tenant.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "409":
+          description: The audit is already completed or cancelled.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
   /api/v1/integrations/rmm:
     get:
       summary: List RMM integrations
@@ -32055,7 +33498,9 @@ paths:
     get:
       summary: List contacts for client
       description: Returns paginated contacts filtered by client_id after client
-        existence check.
+        existence check. Each row carries work_arrangement and locations[];
+        accepts the same location_id and work_arrangement filters as
+        /api/v1/contacts (a client_id in the query is ignored — the path wins).
       tags:
         - Clients
       security:
@@ -32074,6 +33519,123 @@ paths:
           required: true
           name: id
           in: path
+        - schema:
+            type: string
+          required: false
+          name: page
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: sort
+          in: query
+        - schema:
+            type: string
+            enum:
+              - asc
+              - desc
+          required: false
+          name: order
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: search
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: created_from
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: created_to
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: updated_from
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: updated_to
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: full_name
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: email
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: phone_number
+          in: query
+        - schema:
+            type: string
+            format: uuid
+          required: false
+          name: client_id
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: role
+          in: query
+        - schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          required: false
+          name: is_inactive
+          in: query
+        - schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          required: false
+          name: has_client
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: client_name
+          in: query
+        - schema:
+            type: string
+            format: uuid
+            description: Contacts linked to this client location in any role, primary or
+              not.
+          required: false
+          description: Contacts linked to this client location in any role, primary or not.
+          name: location_id
+          in: query
+        - schema:
+            type: string
+            enum:
+              - on_site
+              - hybrid
+              - remote
+          required: false
+          name: work_arrangement
+          in: query
       responses:
         "200":
           description: Client contacts returned.
@@ -32114,7 +33676,9 @@ paths:
   /api/v1/clients/{id}/locations:
     get:
       summary: List client locations
-      description: Returns locations associated with client_id after client existence check.
+      description: "Returns locations associated with client_id after client existence
+        check. Each row carries contact_count: how many contacts work at that
+        location, which is also why deleting it would be refused."
       tags:
         - Clients
       security:
@@ -32923,7 +34487,11 @@ paths:
   /api/v1/contacts:
     get:
       summary: List contacts
-      description: Inherited ApiBaseController list route for contacts.
+      description: Inherited ApiBaseController list route for contacts. Each row
+        carries work_arrangement (on_site | hybrid | remote) and locations[] —
+        the client locations the person works at, primary first, with the
+        address fields read through from the client. Filterable by location_id
+        (contacts linked to that location in any role) and work_arrangement.
       tags:
         - Contacts
       security:
@@ -33035,6 +34603,24 @@ paths:
           required: false
           name: client_name
           in: query
+        - schema:
+            type: string
+            format: uuid
+            description: Contacts linked to this client location in any role, primary or
+              not.
+          required: false
+          description: Contacts linked to this client location in any role, primary or not.
+          name: location_id
+          in: query
+        - schema:
+            type: string
+            enum:
+              - on_site
+              - hybrid
+              - remote
+          required: false
+          name: work_arrangement
+          in: query
       responses:
         "200":
           description: Paginated contacts returned.
@@ -33068,7 +34654,11 @@ paths:
                 $ref: "#/components/schemas/ClientContactApiError"
     post:
       summary: Create contact
-      description: Inherited ApiBaseController create route for contacts.
+      description: Inherited ApiBaseController create route for contacts. Accepts
+        work_arrangement and locations[{location_id, is_primary}]; every
+        location must belong to the contact's client (a location of another
+        client returns 400 contact_location_client_mismatch) and at most one may
+        be primary. A single link is made primary automatically.
       tags:
         - Contacts
       security:
@@ -33121,6 +34711,9 @@ paths:
     get:
       summary: Get contact
       description: Inherited ApiBaseController get route for one contact_name_id.
+        Carries work_arrangement and locations[] (location_id, location_name,
+        is_primary, is_active and the address fields); an unlinked contact
+        returns an empty array.
       tags:
         - Contacts
       security:
@@ -33179,6 +34772,9 @@ paths:
     put:
       summary: Update contact
       description: Inherited ApiBaseController update route for one contact_name_id.
+        work_arrangement and locations[] behave as on create; locations omitted
+        leaves the links untouched, an empty array removes them all, and
+        changing client_id removes them (a location never crosses clients).
       tags:
         - Contacts
       security:
@@ -33422,7 +35018,8 @@ paths:
     get:
       summary: Search contacts
       description: Runs advanced contact search with explicit API-key auth and
-        contact:read permission check.
+        contact:read permission check. Rows carry work_arrangement and
+        locations[] like the list response.
       tags:
         - Contacts
       security:
@@ -33503,7 +35100,9 @@ paths:
     get:
       summary: Export contacts
       description: Exports contacts as CSV or JSON using explicit API-key auth and
-        contact:read permission.
+        contact:read permission. CSV gains Work Arrangement, Locations
+        ("Warehouse; Head office") and Primary Location columns; JSON rows carry
+        work_arrangement and locations[].
       tags:
         - Contacts
       security:
@@ -39935,6 +41534,9 @@ paths:
     post:
       summary: Bulk update invoice status
       description: Bulk status transition route using bulkInvoiceStatusUpdateSchema.
+        Only metadata transitions are applied; paid, cancelled and finalize
+        transitions are reported as per-invoice errors naming the dedicated
+        command. finalized_at is not accepted.
       tags:
         - Invoices
       security:
@@ -40925,7 +42527,11 @@ paths:
                 $ref: "#/components/schemas/FinancialInvoiceApiError"
     put:
       summary: Update invoice
-      description: Updates an invoice using ApiBaseController.update().
+      description: Updates editable billing terms only (payment_method,
+        billing_profile_id, due_date, invoice_date, items, tax_source). Status,
+        client, totals, credits and other lifecycle fields are rejected with
+        400; use the finalize, send and payment endpoints (or the bulk status
+        operation for void) instead.
       tags:
         - Invoices
       security:
@@ -69114,7 +70720,13 @@ paths:
                 $ref: "#/components/schemas/WorkV1ApiError"
     post:
       summary: Create time sheet
-      description: Creates time sheet via create() path.
+      description: Creates a time sheet. A time sheet is unique per tenant, effective
+        owner (`user_id`, defaulting to the caller) and `period_id`, in every
+        approval status. The first request returns 201 with a DRAFT sheet; a
+        request for a user and period that already has a sheet returns 409
+        CONFLICT ("A time sheet already exists for this user and period") and
+        changes nothing. To recover, GET /api/v1/time-sheets filtered by
+        `user_id` and `period_id`.
       tags:
         - Work Management v1
       security:
@@ -69160,6 +70772,15 @@ paths:
                 $ref: "#/components/schemas/WorkV1ApiError"
         "403":
           description: RBAC denied for time_sheet resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "409":
+          description: 'Conflict: a time sheet already exists for this user and period
+            (any approval status). Body:
+            {"error":{"code":"CONFLICT","message":"A time sheet already exists
+            for this user and period"}}. The existing sheet is unchanged.'
           content:
             application/json:
               schema:
@@ -70949,6 +72570,64 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WorkV1ApiError"
+  /api/v1/tickets/categories:
+    get:
+      summary: List ticket categories
+      description: Returns the tenant ticket categories (parents and children via
+        parent_category), optionally filtered by board_id, sorted by
+        display_order then name. Read surface for classifying a ticket;
+        configuring categories stays on /api/v1/categories/ticket.
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: ticket
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Filter categories to this board.
+          required: false
+          description: Filter categories to this board.
+          name: board_id
+          in: query
+      responses:
+        "200":
+          description: Ticket categories.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiSuccess"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for ticket resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
   /api/v1/tickets/{id}/comments/{commentId}:
     put:
       summary: Update a ticket comment
@@ -71494,6 +73173,460 @@ paths:
                 $ref: "#/components/schemas/WorkV1ApiError"
         "404":
           description: Ticket or sub-resource not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+  /api/v1/tickets/templates:
+    get:
+      summary: List ticket templates
+      description: "Returns the tenant ticket templates: the ticket fields, tags,
+        custom fields and checklist each one produces, with how many recurring
+        schedules and tickets use it. Filter with client_id to see what one
+        client can use (its own templates plus the tenant-wide ones). Use a
+        template with POST /api/v1/tickets/templates/{templateId}/instantiate
+        instead of creating a ticket and then adding its checklist item by
+        item."
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: ticket_template
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            description: 1-based page number. Default 1.
+          required: false
+          description: 1-based page number. Default 1.
+          name: page
+          in: query
+        - schema:
+            type: string
+            description: Page size, 1-100. Default 25.
+          required: false
+          description: Page size, 1-100. Default 25.
+          name: limit
+          in: query
+        - schema:
+            type: string
+            format: uuid
+            description: "Templates this client can use: the ones bound to it plus every
+              tenant-wide template. Resolve the UUID with GET /api/v1/clients
+              first."
+          required: false
+          description: "Templates this client can use: the ones bound to it plus every
+            tenant-wide template. Resolve the UUID with GET /api/v1/clients
+            first."
+          name: client_id
+          in: query
+        - schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+            description: "Omitted or 'true': active templates only (the default). 'false':
+              the inactive ones."
+          required: false
+          description: "Omitted or 'true': active templates only (the default). 'false':
+            the inactive ones."
+          name: is_active
+          in: query
+        - schema:
+            type: string
+            description: Case-insensitive substring of the template name or of the ticket
+              title it produces.
+          required: false
+          description: Case-insensitive substring of the template name or of the ticket
+            title it produces.
+          name: search
+          in: query
+      responses:
+        "200":
+          description: Ticket templates.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiPaginated"
+        "400":
+          description: Query validation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for ticket_template read.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+    post:
+      summary: Create a ticket template
+      description: Creates a reusable ticket template with its whole checklist in one
+        request. Resolve client_id, board_id, category_id and priority_id to
+        UUIDs first (GET /api/v1/clients, /api/v1/boards, /api/v1/categories,
+        /api/v1/tickets/priorities); a reference that does not exist is refused
+        with 400. Leave client_id out for a template every client can use. A
+        second active template with the same name returns 409.
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: ticket_template
+        x-rbac-action: create
+      x-alga-products:
+        - psa
+        - algadesk
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkV1TicketTemplateCreateBody"
+      responses:
+        "201":
+          description: Ticket template created, with its checklist.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiSuccess"
+        "400":
+          description: Validation failure or a field that points at something that does
+            not exist.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for ticket_template create.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "409":
+          description: Another active template already has this name.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+  /api/v1/tickets/templates/{templateId}:
+    get:
+      summary: Get a ticket template
+      description: "Returns one ticket template with its checklist items in order, its
+        client scope, usage counts, and referenceProblems: fields pointing at a
+        board, category or priority that no longer exists (they are left blank
+        when the template is applied)."
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: ticket_template
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Ticket template UUID from ticket_templates.template_id.
+          required: true
+          description: Ticket template UUID from ticket_templates.template_id.
+          name: templateId
+          in: path
+      responses:
+        "200":
+          description: The ticket template.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiSuccess"
+        "400":
+          description: Invalid template id.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for ticket_template read.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Ticket template not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+    put:
+      summary: Update a ticket template
+      description: "Replaces the template wholesale: omitted fields are reset and the
+        checklist you send replaces the stored items, so GET the template first
+        and send it back edited. `is_active` activates or deactivates it
+        (deactivating only hides it from manual use; recurring schedules keep
+        running). Changes apply to every schedule that uses the template, from
+        the next ticket each one creates."
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: ticket_template
+        x-rbac-action: update
+        x-chat-approval-required: true
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Ticket template UUID from ticket_templates.template_id.
+          required: true
+          description: Ticket template UUID from ticket_templates.template_id.
+          name: templateId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkV1TicketTemplateUpdateBody"
+      responses:
+        "200":
+          description: The updated ticket template.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiSuccess"
+        "400":
+          description: Validation failure or a field that points at something that does
+            not exist.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for ticket_template update.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Ticket template not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "409":
+          description: Another active template already has this name.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+    delete:
+      summary: Delete a ticket template
+      description: Deletes the template and its checklist items. Tickets already
+        created from it are not changed. Refused with 409 while any non-archived
+        recurring schedule still uses it; point those schedules at another
+        template or archive them first, or deactivate the template instead (PUT
+        with is_active=false).
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: ticket_template
+        x-rbac-action: delete
+        x-chat-approval-required: true
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Ticket template UUID from ticket_templates.template_id.
+          required: true
+          description: Ticket template UUID from ticket_templates.template_id.
+          name: templateId
+          in: path
+      responses:
+        "204":
+          description: Ticket template deleted; no content.
+        "400":
+          description: Invalid template id.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for ticket_template delete.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Ticket template not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "409":
+          description: Recurring schedules still use the template.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+  /api/v1/tickets/templates/{templateId}/instantiate:
+    post:
+      summary: Create a ticket from a ticket template
+      description: Creates one ticket from the template and returns it, exactly as
+        POST /api/v1/tickets does. The template supplies the title (with its
+        {{client}}/{{contact}}/{{due_date}} tokens filled in), description,
+        board, category, priority, ITIL values, tags, custom fields and every
+        checklist item, and the ticket records created_from_template_id. Prefer
+        this over POST /api/v1/tickets followed by one POST
+        /api/v1/tickets/{id}/checklist per item whenever a template exists.
+        Requires ticket:create as well as ticket_template:read. Resolve
+        client_id (and contact_name_id, location_id, assigned_to) to UUIDs
+        first; a contact, location or asset that does not belong to client_id, a
+        status that is not on the template’s board, or a template bound to a
+        different client are all refused with 400.
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: ticket_template
+        x-rbac-action: read
+        x-rbac-additional-required: ticket:create
+        x-chat-approval-required: true
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Ticket template UUID from ticket_templates.template_id.
+          required: true
+          description: Ticket template UUID from ticket_templates.template_id.
+          name: templateId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkV1TicketTemplateInstantiateBody"
+      responses:
+        "201":
+          description: The created ticket.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiSuccess"
+        "400":
+          description: Validation failure, a reference that does not belong to the client,
+            or a template bound to another client.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for ticket create or ticket_template read.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Ticket template or client not found.
           content:
             application/json:
               schema:
@@ -81354,7 +83487,8 @@ paths:
       extensions:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate()
-        x-rbac-resource: inventory/read and opportunities/read/create
+        x-rbac-resource: inventory/read, opportunities/read/create, project/read and
+          asset/read/update
       x-alga-products:
         - psa
         - algadesk

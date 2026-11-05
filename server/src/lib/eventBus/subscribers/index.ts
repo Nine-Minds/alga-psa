@@ -31,6 +31,7 @@ import {
   registerProjectBillingPaymentStatusSubscriber,
   unregisterProjectBillingPaymentStatusSubscriber,
 } from './projectBillingPaymentStatusSubscriber';
+import { registerCoManagedRoutingSubscriber, unregisterCoManagedRoutingSubscriber } from './coManagedRoutingSubscriber';
 import { ENTITY_WEBHOOK_SUBSCRIBERS } from './entityWebhookSubscribers';
 import { registerThreecxPhonebookSubscriber, unregisterThreecxPhonebookSubscriber } from './threecxPhonebookSubscriber';
 
@@ -62,6 +63,7 @@ const REGISTRATIONS: SubscriberRegistration[] = [
   { name: 'inboundAuthPauseNotification', register: registerInboundAuthPauseNotificationSubscriber },
   { name: 'projectBillingPaymentStatus', register: registerProjectBillingPaymentStatusSubscriber },
   { name: 'threecxPhonebook', register: registerThreecxPhonebookSubscriber },
+  { name: 'coManagedRouting', register: registerCoManagedRoutingSubscriber },
   // client / contact / client_location webhooks: one registry-driven subscriber per entity.
   ...ENTITY_WEBHOOK_SUBSCRIBERS.map((s) => ({ name: `webhook:${s.entity}`, register: () => s.register() })),
 ];
@@ -89,6 +91,7 @@ const UNREGISTRATIONS: SubscriberRegistration[] = [
   { name: 'rmmAlertNotification', register: unregisterRmmAlertNotificationSubscriber },
   { name: 'projectBillingPaymentStatus', register: unregisterProjectBillingPaymentStatusSubscriber },
   { name: 'threecxPhonebook', register: unregisterThreecxPhonebookSubscriber },
+  { name: 'coManagedRouting', register: unregisterCoManagedRoutingSubscriber },
   ...ENTITY_WEBHOOK_SUBSCRIBERS.map((s) => ({ name: `webhook:${s.entity}`, register: () => s.unregister() })),
 ];
 

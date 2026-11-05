@@ -104,6 +104,7 @@ class EditionBuildDiagnosticsPlugin {
       watchedRequests: options.watchedRequests || [
         '@product/chat/entry',
         '@product/mcp/entry',
+        '@product/service-principals/entry',
         '@product/extensions/entry',
         '@product/settings-extensions/entry',
         'ee/server/src/app/msp/chat/page',
@@ -223,6 +224,11 @@ const nextConfig = {
       '@alga-psa/auth/nextAuthOptions': '../packages/auth/src/lib/nextAuthOptions.ts',
       '@alga-psa/auth/actions': '../packages/auth/src/actions/index.ts',
       '@alga-psa/auth/components': '../packages/auth/src/components/index.ts',
+      '@product/service-principals/entry': (() => {
+        const eePath = path.join(__dirname, '../packages/product-service-principals/ee/entry.ts');
+        const ossPath = path.join(__dirname, '../packages/product-service-principals/oss/entry.ts');
+        return isEE ? eePath : ossPath;
+      })(),
       // SSO provider buttons - swap between CE stub and EE implementation
       '@alga-psa/auth/sso/entry': isEE
         ? '../ee/server/src/components/auth/SsoProviderButtons.tsx'
@@ -299,6 +305,7 @@ const nextConfig = {
       '@alga-psa/core/fileNames': '../packages/core/src/lib/fileNames.ts',
       '@alga-psa/core/capability': '../packages/core/src/lib/capability.ts',
       '@alga-psa/core/address': '../packages/core/src/lib/address.ts',
+      '@alga-psa/core/net/safeFetch': '../packages/core/src/lib/net/safeFetch.ts',
       '@alga-psa/core/': '../packages/core/src/',
       '@alga-psa/validation': '../packages/validation/src',
       '@alga-psa/validation/': '../packages/validation/src/',
@@ -435,6 +442,9 @@ const nextConfig = {
       '@product/mcp/entry': isEE
         ? '@product/mcp/ee/entry'
         : '@product/mcp/oss/entry',
+      '@product/service-principals/entry': isEE
+        ? '@product/service-principals/ee/entry'
+        : '@product/service-principals/oss/entry',
       '@product/ext-proxy/handler': isEE
         ? '@product/ext-proxy/ee/handler'
         : '@product/ext-proxy/oss/handler',
@@ -599,6 +609,12 @@ const nextConfig = {
       const byContent = { timestamp: true, hash: true };
       config.snapshot = { ...config.snapshot, module: byContent, resolve: byContent,
         buildDependencies: byContent, resolveBuildDependencies: byContent };
+      // Entries a build no longer uses stay in the pack for webpack's default
+      // 60 days, and the CI snapshot carries the pack from build to build, so
+      // it grew to ~18 GB on disk by early November 2026 and a warm build then
+      // outgrew the 16 GB runner (the VM swapped until GitHub shut it down).
+      // One day keeps the pack at roughly one tree's worth of modules.
+      config.cache.maxAge = 24 * 60 * 60 * 1000;
     }
 
     // Add support for importing from ee/server/src using absolute paths
@@ -650,6 +666,9 @@ const nextConfig = {
       '@alga-psa/core/fileNames': usePrebuilt
         ? path.join(prebuiltDirAbs('core'), 'lib/fileNames.js')
         : path.join(__dirname, '../packages/core/src/lib/fileNames.ts'),
+      '@alga-psa/core/net/safeFetch': usePrebuilt
+        ? path.join(prebuiltDirAbs('core'), 'lib/net/safeFetch.js')
+        : path.join(__dirname, '../packages/core/src/lib/net/safeFetch.ts'),
       '@alga-psa/core/': `${prebuiltDirAbs('core')}/`,
       '@alga-psa/validation': prebuiltDirAbs('validation'),
       '@alga-psa/validation/': `${prebuiltDirAbs('validation')}/`,
@@ -837,6 +856,10 @@ const nextConfig = {
       const pkgMcpEntry = path.join(__dirname, '../packages/product-mcp/entry.ts');
       const pkgMcpEeEntry = path.join(__dirname, '../packages/product-mcp/ee/entry.ts');
       config.resolve.alias[pkgMcpEntry] = pkgMcpEeEntry;
+
+      const pkgServicePrincipalsEntry = path.join(__dirname, '../packages/product-service-principals/entry.ts');
+      const pkgServicePrincipalsEeEntry = path.join(__dirname, '../packages/product-service-principals/ee/entry.ts');
+      config.resolve.alias[pkgServicePrincipalsEntry] = pkgServicePrincipalsEeEntry;
 
       const pkgEmailDomainsEntry = path.join(__dirname, '../packages/integrations/src/email/domains/entry.ts');
       const pkgEmailDomainsEeEntry = path.join(__dirname, '../packages/integrations/src/email/domains/ee/entry.ts');
@@ -1095,6 +1118,13 @@ const nextConfig = {
             path.join(__dirname, '../packages/product-mcp/oss/entry.ts')
           )
         );
+        // Same CE force for the service-principal seam (no EE source in CE).
+        config.plugins.push(
+          new webpack.NormalModuleReplacementPlugin(
+            /^@product[\\\/]service-principals[\\\/]entry$/,
+            path.join(__dirname, '../packages/product-service-principals/oss/entry.ts')
+          )
+        );
       }
     }
 
@@ -1123,6 +1153,12 @@ const nextConfig = {
           new webpack.NormalModuleReplacementPlugin(
             /^@product[\\\/]mcp[\\\/]entry$/,
             path.join(__dirname, '../packages/product-mcp/ee/entry.ts')
+          )
+        );
+        config.plugins.push(
+          new webpack.NormalModuleReplacementPlugin(
+            /^@product[\\\/]service-principals[\\\/]entry$/,
+            path.join(__dirname, '../packages/product-service-principals/ee/entry.ts')
           )
         );
         config.plugins.push(new webpack.NormalModuleReplacementPlugin(/.*/, (resource) => {

@@ -93,6 +93,11 @@ interface TextEditorProps {
   /** Extra controls rendered in the footer row next to "Attach files". */
   footerActions?: React.ReactNode;
   /**
+   * Caps the editing surface (any CSS length, e.g. '45vh') so long content scrolls inside the
+   * editor instead of growing the page. Omit it and the editor keeps filling its container.
+   */
+  maxHeight?: string;
+  /**
    * Reusable-content library (e.g. canned ticket responses). When set the editor gains a "/" slash
    * entry, a toolbar button and the Ctrl/Cmd+J shortcut, all opening a searchable picker. Omit it and
    * the editor is unchanged.
@@ -222,6 +227,7 @@ export default function TextEditor({
   autoFocus = false,
   allowFileAttachments = false,
   footerActions,
+  maxHeight,
   snippets,
 }: TextEditorProps) {
   useShortcutScope('editor');
@@ -644,7 +650,8 @@ export default function TextEditor({
         <div className="mb-2 flex items-center gap-2">{snippetButton}{footerActions}</div>
       )}
       <div
-        className="min-h-[100px] h-full w-full editor-paper border border-[rgb(var(--color-border-200))] rounded-lg p-4 overflow-auto min-w-0"
+        className={`min-h-[100px] ${maxHeight ? '' : 'h-full '}w-full editor-paper border border-[rgb(var(--color-border-200))] rounded-lg p-4 overflow-auto min-w-0`}
+        style={maxHeight ? { maxHeight } : undefined}
         onDragStart={(e) => {
           // Only prevent drag from elements with draggable="true" attribute (the drag handle)
           const target = e.target as HTMLElement;

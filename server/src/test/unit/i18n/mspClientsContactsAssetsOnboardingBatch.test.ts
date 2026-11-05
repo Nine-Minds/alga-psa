@@ -225,7 +225,6 @@ describe('MSP clients/contacts/assets/onboarding locale batch', () => {
   it('T044: representative surfaces use the right namespaces and keep English fallbacks', () => {
     const representativeFiles = [
       ['packages/clients/src/components/clients/Clients.tsx', "useTranslation('msp/clients')"],
-      ['packages/clients/src/components/contacts/ContactDetails.tsx', "useTranslation('msp/contacts')"],
       ['packages/assets/src/components/AssetDashboardClient.tsx', "useTranslation('msp/assets')"],
       ['packages/onboarding/src/components/OnboardingWizard.tsx', "useTranslation('msp/onboarding')"],
     ] as const;

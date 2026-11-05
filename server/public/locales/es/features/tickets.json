@@ -116,7 +116,9 @@
     "clientTags": "Etiquetas del cliente",
     "tagModeAny": "Cualquiera de",
     "tagModeNone": "Ninguna de",
-    "droppedFromLink": "Algunos filtros de este enlace no son válidos y se ignoraron."
+    "droppedFromLink": "Algunos filtros de este enlace no son válidos y se ignoraron.",
+    "location": "Ubicación",
+    "requesterLocation": "Ubicación del solicitante"
   },
   "create": {
     "title": "Crear ticket de soporte",
@@ -439,7 +441,29 @@
     "bcc": "Cco",
     "ccBccInvalid": "Corrige las direcciones resaltadas antes de enviar.",
     "ccBccTooMany": "Como máximo se pueden copiar {{max}} destinatarios Cc y Cco en un comentario.",
-    "ccBccNotSentOnInternal": "Cc y Cco no se envían con una nota interna. Desactiva Interna para usarlos."
+    "ccBccNotSentOnInternal": "Cc y Cco no se envían con una nota interna. Desactiva Interna para usarlos.",
+    "audience": {
+      "requester": "Solicitante",
+      "sharedIt": "TI compartida",
+      "organizationPrivate": "Privado de la organización",
+      "placeholder": "¿Quién puede ver esto?",
+      "required": "Elige quién puede ver este comentario antes de publicarlo."
+    },
+    "shared": {
+      "loading": "Cargando la conversación compartida...",
+      "loadError": "No se pudo cargar la conversación compartida.",
+      "reload": "Recargar",
+      "errors": {
+        "forbidden": "No tiene permiso para publicar para esta audiencia.",
+        "invalid": "Este comentario no se puede publicar.",
+        "readOnly": "Este espacio de trabajo es de solo lectura por ahora.",
+        "operationConflict": "Este comentario entra en conflicto con un intento anterior. Recarga e inténtalo de nuevo.",
+        "audienceUnresolved": "Elige quién puede ver este comentario antes de publicarlo.",
+        "unknownOutcome": "No pudimos confirmar que el comentario se publicó. Revisa la conversación antes de enviarlo de nuevo."
+      },
+      "unavailable": "Este ticket no está disponible.",
+      "back": "Volver a Tickets de clientes"
+    }
   },
   "responseState": {
     "awaitingYourResponse": "Esperando su respuesta",
@@ -1003,7 +1027,9 @@
       "heading": "Observadores",
       "placeholder": "Añadir observadores..."
     },
-    "attachmentsPartialFailure": "Ticket creado, pero no se pudieron adjuntar estos archivos: {{files}}. Añádalos desde el ticket."
+    "attachmentsPartialFailure": "Ticket creado, pero no se pudieron adjuntar estos archivos: {{files}}. Añádalos desde el ticket.",
+    "contactLocationSuffix": "(ubicación del contacto)",
+    "contactPrimaryLocationSuffix": "(ubicación principal del contacto)"
   },
   "itil": {
     "calculatedPriority": "Prioridad (calculada)",
@@ -1661,7 +1687,14 @@
       "referenceInvalid": "El tablero, el estado, la prioridad, el responsable, el equipo o la política de SLA seleccionados ya no son válidos. Actualice la página e inténtelo de nuevo.",
       "duplicateName": "Ya existe un tablero con este nombre.",
       "duplicate": "Ya existe un tablero o estado con la misma configuración.",
-      "invalidValue": "Uno de los valores del tablero o del estado no es válido. Actualice la página e inténtelo de nuevo."
+      "invalidValue": "Uno de los valores del tablero o del estado no es válido. Actualice la página e inténtelo de nuevo.",
+      "notificationEmailInvalid": "La regla de notificación {{rule}} tiene una dirección de correo electrónico no válida (hasta {{max}} caracteres)",
+      "notificationEmailLimit": "La regla de notificación {{rule}} puede tener como máximo {{max}} direcciones de correo electrónico",
+      "notificationRecipientRequired": "La regla de notificación {{rule}} debe notificar al menos a un usuario, equipo o dirección de correo electrónico",
+      "notificationEmailIsUser": "Regla de notificación {{rule}}: {{address}} es la dirección de correo de un usuario de Alga. Elige al usuario en su lugar.",
+      "notificationEmailIsContact": "Regla de notificación {{rule}}: {{address}} pertenece a un contacto o ubicación de un cliente y no puede ser destinatario.",
+      "notificationEmailClientDomain": "Regla de notificación {{rule}}: {{address}} pertenece al dominio de correo de un cliente y no puede ser destinatario.",
+      "notificationEmailInboundMailbox": "Regla de notificación {{rule}}: {{address}} es un buzón de entrada conectado y no puede ser destinatario."
     },
     "material": {
       "invalidValue": "Uno de los valores de material seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
@@ -1723,6 +1756,9 @@
       "templateRulesTargetOtherClients": "Algunas reglas de aplicación automática de esta plantilla se dirigen a otros clientes. Quite esos clientes de las reglas antes de asignar la plantilla a un cliente.",
       "predicateClientOutsideScope": "El cliente {{client}} está fuera del alcance de esta plantilla.",
       "predicateInvalid": "Regla de lista de verificación no válida: {{detail}}"
+    },
+    "comment": {
+      "audienceRequired": "Elige quién puede ver este comentario antes de publicarlo."
     }
   },
   "ticketSection": {
@@ -2034,7 +2070,9 @@
       "changeLocation": "Cambiar ubicación",
       "addDescriptionPrompt": "Añade una descripción: ¿cuál es el problema y qué necesita el cliente?",
       "projectTasks": "Tareas del proyecto",
-      "timeAndBilling": "Tiempo y facturación"
+      "timeAndBilling": "Tiempo y facturación",
+      "useContactLocation": "Usar la ubicación del contacto",
+      "remote": "Remota"
     },
     "timeline": {
       "subtitle": "Respuestas, tiempo y cambios del sistema en un solo lugar",
@@ -2589,12 +2627,15 @@
       "columns": {
         "name": "Nombre",
         "title": "Título del ticket",
+        "client": "Cliente",
         "board": "Tablero",
         "checklist": "Elementos de la lista",
         "status": "Estado",
         "schedules": "Programaciones"
       },
-      "deleteBlocked": "Usada por {{count}} programación(es) recurrente(s). Asígneles otra plantilla o archívelas primero."
+      "deleteBlocked": "Usada por {{count}} programación(es) recurrente(s). Asígneles otra plantilla o archívelas primero.",
+      "allClients": "Todos los clientes",
+      "clientFilter": "Todos los clientes"
     },
     "status": {
       "active": "Activa",
@@ -2622,6 +2663,9 @@
       "title": "Título del ticket",
       "description": "Descripción",
       "descriptionPlaceholder": "Descripción",
+      "client": "Cliente",
+      "clientPlaceholder": "Todos los clientes",
+      "clientHelp": "Déjelo vacío para ofrecer la plantilla a todos los clientes. Elija uno para ofrecerla solo en los tickets de ese cliente.",
       "offerForManualUse": "Ofrecer en el selector de nuevo ticket",
       "offerForManualUseHelp": "Desactívelo para plantillas que solo usan las programaciones recurrentes.",
       "titleTokens": "Puede usar {{tokens}} en el título; se rellenan en cada ticket."

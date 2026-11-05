@@ -58,7 +58,7 @@ export default function CoManagedProjectTaskQueue() {
       () => setError(true));
   };
 
-  const dash = (value: string) => value || '—';
+  const dash = (value: string | null) => value || '—';
   const taskColumns: ColumnDefinition<TaskRow>[] = [
     { title: t('coManaged.sharedTasks.task', { defaultValue: 'Task' }), dataIndex: 'taskName', sortable: false,
       render: (_v, row) => <Link id={`co-managed-task-${row.taskId}`} href={`/msp/co-management/tasks/${part(row.customerTenant)}/${part(row.relationshipId)}/${part(row.taskId)}`}
@@ -66,7 +66,7 @@ export default function CoManagedProjectTaskQueue() {
     { title: t('coManaged.sharedTasks.project', { defaultValue: 'Project' }), dataIndex: 'projectName', sortable: false, render: (_v, row) => dash(row.projectName) },
     { title: t('coManaged.sharedTasks.organization', { defaultValue: 'Organization' }), dataIndex: 'organizationName', sortable: false, render: (_v, row) => dash(row.organizationName) },
     { title: t('coManaged.sharedTasks.assignee', { defaultValue: 'Assigned to' }), dataIndex: 'assigneeName', sortable: false,
-      render: (_v, row) => row.assignedToMe ? t('coManaged.sharedTasks.you', { defaultValue: '{{name}} (you)', name: row.assigneeName }) : dash(row.assigneeName) },
+      render: (_v, row) => row.assignedToMe && row.assigneeName ? t('coManaged.sharedTasks.you', { defaultValue: '{{name}} (you)', name: row.assigneeName }) : dash(row.assigneeName) },
   ];
   const projectColumns: ColumnDefinition<ProjectRow>[] = [
     { title: t('coManaged.sharedTasks.project', { defaultValue: 'Project' }), dataIndex: 'projectName', sortable: false,

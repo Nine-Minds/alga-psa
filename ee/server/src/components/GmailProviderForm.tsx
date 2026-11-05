@@ -11,7 +11,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Button, Alert, AlertDescription, Card, CardContent, CardDescription, CardHeader, CardTitle, CustomSelect } from '@alga-psa/ui/components';
 import { Shield } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import type { EmailProvider } from '@alga-psa/integrations/components/email/types';
+import type { PublicEmailProvider } from '@alga-psa/integrations/components/email/types';
 import {
   createEmailProvider,
   updateEmailProvider,
@@ -34,8 +34,8 @@ type EEGmailProviderFormData = import('@alga-psa/integrations/components').BaseG
 
 interface EEGmailProviderFormProps {
   tenant: string;
-  provider?: EmailProvider;
-  onSuccess: (provider: EmailProvider) => void;
+  provider?: PublicEmailProvider;
+  onSuccess: (provider: PublicEmailProvider) => void;
   onCancel: () => void;
 }
 

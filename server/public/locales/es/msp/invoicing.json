@@ -78,7 +78,8 @@
       "poScopeDiffers": "El alcance de la orden de compra difiere",
       "currencyDiffers": "La moneda difiere",
       "taxTreatmentDiffers": "El tratamiento fiscal difiere",
-      "exportShapeDiffers": "La forma de exportación difiere"
+      "exportShapeDiffers": "La forma de exportación difiere",
+      "billingProfileDiffers": "El perfil de facturación difiere"
     },
     "executionRows": {
       "labels": {
@@ -856,6 +857,7 @@
       "syncNow": "Sincronizar con QuickBooks",
       "viewInQbo": "Ver en QuickBooks",
       "voidInvoice": "Anular factura",
+      "delegateTax": "Usar el impuesto del sistema contable",
       "viewInXero": "Ver en Xero"
     },
     "loading": "Cargando vista previa...",
@@ -877,6 +879,13 @@
     },
     "applyCreditDialog": {
       "title": "Aplicar crédito"
+    },
+    "delegateTaxDialog": {
+      "title": "Usar el impuesto del sistema contable",
+      "description": "El sistema contable calculará el impuesto de esta factura en la próxima exportación y AlgaPSA sustituirá después el impuesto y el total por ese resultado. Los números, las líneas, los precios y los pagos registrados no cambian.",
+      "cancel": "Cancelar",
+      "confirm": "Cambiar al impuesto del sistema contable",
+      "switching": "Cambiando..."
     },
     "voidDialog": {
       "title": "Anular factura",
@@ -1974,15 +1983,19 @@
       },
       "invoice_subtotal": {
         "label": "Subtotal",
-        "description": "Subtotal de factura antes de impuestos y descuentos."
+        "description": "Subtotal de la factura después de descuentos y créditos, antes de impuestos."
+      },
+      "invoice_grossSubtotal": {
+        "label": "Subtotal antes de descuentos",
+        "description": "Subtotal de la factura antes de descuentos y créditos, y antes de impuestos."
+      },
+      "invoice_discountTotal": {
+        "label": "Descuentos",
+        "description": "Total de las líneas de descuento y crédito, mostrado como importe positivo."
       },
       "invoice_tax": {
         "label": "Impuesto",
         "description": "Importe del impuesto de la factura."
-      },
-      "invoice_discount": {
-        "label": "Descuento",
-        "description": "Importe del descuento."
       },
       "invoice_total": {
         "label": "Total",
@@ -2444,7 +2457,8 @@
       "moveDown": "Mover {{row}} hacia abajo",
       "remove": "Quitar {{row}}",
       "label": "Etiqueta",
-      "emphasize": "Destacar (estilo de total general)"
+      "emphasize": "Destacar (estilo de total general)",
+      "hideWhenZero": "Ocultar si es cero"
     }
   },
   "draftInvoiceDetails": {

@@ -58,6 +58,26 @@ function buildHardwareIdentityPatch(
   return patch;
 }
 
+/**
+ * assets.warranty_end_date, when the provider reports one. Providers that know
+ * nothing about warranties (and a Datto device with the field left blank) send
+ * undefined or null and the column is left out of the write entirely, so a
+ * manually entered date always survives the sync — manual data wins over an
+ * absent RMM value.
+ *
+ * No warranty-change signal is emitted from here: assetWarrantyEndSource reads
+ * assets.warranty_end_date directly and the daily date-trigger scan re-walks
+ * the whole 30-day window with per-cycleKey dedupe, so a synced date raises
+ * ASSET_WARRANTY_EXPIRING on the next scan without coupling shared/rmm to the
+ * event bus.
+ */
+function buildWarrantyPatch(
+  snapshot: NormalizedRmmExternalDeviceSnapshot
+): Record<string, Date> {
+  const warrantyEndDate = parseIsoDate(snapshot.warrantyEndDate);
+  return warrantyEndDate ? { warranty_end_date: warrantyEndDate } : {};
+}
+
 function pickExtensionTable(assetType: SupportedAssetType): 'workstation_assets' | 'server_assets' | null {
   if (assetType === 'server') return 'server_assets';
   if (assetType === 'workstation') return 'workstation_assets';
@@ -307,6 +327,7 @@ export async function ingestNormalizedRmmDeviceSnapshot(
         last_seen_at: lastSeenAt,
         last_rmm_sync_at: trx.fn.now(),
         ...buildHardwareIdentityPatch(snapshot),
+        ...buildWarrantyPatch(snapshot),
       };
 
       // FR-G5: sync no longer re-stamps `client_id` on update. A manual client
@@ -397,6 +418,7 @@ export async function ingestNormalizedRmmDeviceSnapshot(
         last_seen_at: lastSeenAt,
         last_rmm_sync_at: now,
         ...buildHardwareIdentityPatch(snapshot),
+        ...buildWarrantyPatch(snapshot),
         created_at: now,
         updated_at: now,
       })
