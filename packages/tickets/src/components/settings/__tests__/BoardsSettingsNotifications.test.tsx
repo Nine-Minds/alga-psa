@@ -128,6 +128,11 @@ vi.mock('@alga-psa/teams/actions/team-actions/teamActionErrors', () => ({
   isTeamActionError: () => false,
 }));
 
+vi.mock('@alga-psa/auth/actions', () => ({
+  checkCurrentUserPermissions: async (checks: Array<{ resource: string; action: string }>) =>
+    checks.map((c) => ({ ...c, granted: true })),
+}));
+
 vi.mock('@alga-psa/ui/hooks', () => ({
   useFeatureFlag: () => useFeatureFlagMock(),
 }));
