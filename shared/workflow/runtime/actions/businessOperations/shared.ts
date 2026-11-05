@@ -5,6 +5,7 @@ import { isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle-error';
 import { v4 as uuidv4 } from 'uuid';
 import type { ActionContext } from '../../registries/actionRegistry';
 import { coManagedWorkflowTicketSeam } from '../../../../lib/coManagedDelivery';
+import { safeFetch, UnsafeUrlError, UrlFetchError } from '../../../../lib/net/safeFetch';
 
 export type TenantTxContext = {
   tenantId: string;
@@ -433,32 +434,25 @@ export async function attachDocumentToTicket(
       });
     }
   } else if (input.source.url) {
-    const url = new URL(input.source.url);
-    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-      throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Only http(s) URLs are allowed for attachment ingest' });
-    }
-
     let buffer: Buffer;
     let contentType: string | null = null;
     try {
-      const response = await (globalThis as any).fetch(input.source.url);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      const arrayBuf = await response.arrayBuffer();
-      buffer = Buffer.from(arrayBuf);
+      const response = await safeFetch(input.source.url, { maxBytes: MAX_ATTACHMENT_BYTES });
+      buffer = response.bytes;
       contentType = response.headers.get('content-type');
     } catch (error) {
+      if (error instanceof UnsafeUrlError) {
+        throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: error.message });
+      }
+      if (error instanceof UrlFetchError && error.reason === 'too_large') {
+        throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Attachment too large' });
+      }
       throwActionError(ctx, {
         category: 'TransientError',
         code: 'TRANSIENT_FAILURE',
         message: 'Failed to download attachment URL',
-        details: { url: input.source.url, error: error instanceof Error ? error.message : String(error) }
+        details: { error: error instanceof Error ? error.message : String(error) }
       });
-    }
-
-    if (buffer.length > MAX_ATTACHMENT_BYTES) {
-      throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Attachment too large' });
     }
     // Same shared policy as manual upload (see the file_id branch above).
     try {

@@ -9,6 +9,7 @@ import {
   isBlockedAddress,
   safeFetch,
   type ResolvedAddress,
+  type SafeFetchInit,
 } from '../safeFetch';
 
 const PUBLIC: ResolvedAddress = { address: '93.184.216.34', family: 4 };
@@ -42,6 +43,13 @@ describe('safeFetch URL policy', () => {
     ['::ffff:127.0.0.1', 'https://[::ffff:127.0.0.1]/a'],
     ['::ffff:7f00:1 (hex form)', 'https://[::ffff:7f00:1]/a'],
     ['fc00::1', 'https://[fc00::1]/a'],
+    ['local-use translation prefix', 'https://[64:ff9b:1::a00:1]/a'],
+    ['site-local unicast', 'https://[fec0::1]/a'],
+    ['discard-only address', 'https://[100::1]/a'],
+    ['dummy IPv6 prefix', 'https://[100:0:0:1::1]/a'],
+    ['deprecated ORCHID', 'https://[2001:10::1]/a'],
+    ['Segment Routing SID', 'https://[5f00::1]/a'],
+    ['reserved non-global IPv6', 'https://[4000::1]/a'],
     ['decimal-encoded loopback', 'https://2130706433/a'],
     ['userinfo', 'https://user:pw@example.com/a'],
     ['non-default port', 'https://example.com:8443/a'],
@@ -65,6 +73,18 @@ describe('safeFetch URL policy', () => {
     );
     expect(fetch).not.toHaveBeenCalled();
   });
+
+  it.each(['64:ff9b:1::a00:1', 'fec0::1', '100::1', '100:0:0:1::1', '2001:10::1', '5f00::1', '4000::1'])(
+    'rejects DNS answer %s before transport',
+    async (address) => {
+      const fetch = okFetch();
+      await expect(safeFetch('https://dns.example.test/file', opts, {
+        lookup: async () => [{ address, family: 6 }],
+        fetch,
+      })).rejects.toBeInstanceOf(UnsafeUrlError);
+      expect(fetch).not.toHaveBeenCalled();
+    },
+  );
 
   it('fails closed when DNS resolution fails', async () => {
     const lookup = async () => {
@@ -94,7 +114,9 @@ describe('isBlockedAddress', () => {
     '0.0.0.0', '10.0.0.1', '100.64.0.1', '127.0.0.1', '169.254.169.254', '172.16.0.1', '172.31.255.255',
     '192.0.0.1', '192.0.2.1', '192.168.1.1', '198.18.0.1', '198.51.100.1', '203.0.113.1', '224.0.0.1',
     '240.0.0.1', '255.255.255.255', '::', '::1', 'fc00::1', 'fd12::1', 'fe80::1', 'ff02::1',
-    '64:ff9b::1', '2001:db8::1', '::ffff:10.0.0.1', '::ffff:a00:1', '::127.0.0.1',
+    '64:ff9b::1', '64:ff9b:1::1', '100::1', '100:0:0:1::1', '2001:10::1', '2001:db8::1',
+    '2001::1', '2002::1', '3fff::1', '5f00::1', 'fec0::1', '4000::1',
+    '::ffff:10.0.0.1', '::ffff:a00:1', '::127.0.0.1',
   ])('blocks %s', (address) => {
     expect(isBlockedAddress(address)).toBe(true);
   });
@@ -105,6 +127,20 @@ describe('isBlockedAddress', () => {
       expect(isBlockedAddress(address)).toBe(false);
     },
   );
+
+  it('allows a public IPv6 DNS answer and pins that address', async () => {
+    const publicAddress: ResolvedAddress = { address: '2606:2800:220:1:248:1893:25c8:1946', family: 6 };
+    const fetch = vi.fn(async (_url: string, _init: SafeFetchInit, pin: ResolvedAddress) => {
+      expect(pin).toEqual(publicAddress);
+      return new Response('ok');
+    });
+    const result = await safeFetch('https://ipv6.example.test/file', opts, {
+      lookup: async () => [publicAddress],
+      fetch,
+    });
+    expect(result.bytes.toString()).toBe('ok');
+    expect(fetch).toHaveBeenCalledOnce();
+  });
 });
 
 describe('safeFetch pinning', () => {
@@ -179,6 +215,17 @@ describe('safeFetch redirects', () => {
     await expect(safeFetch('https://example.com/a', opts, { lookup, fetch })).rejects.toThrow(/private or reserved/);
   });
 
+  it.each(['https://[64:ff9b:1::a00:1]/file', 'https://[fec0::1]/file'])(
+    'rejects redirect to nonpublic IPv6 %s before contacting its destination',
+    async (location) => {
+      const fetch = vi.fn().mockResolvedValueOnce(redirect(location));
+      await expect(safeFetch('https://example.com/a', opts, { lookup: lookupPublic, fetch })).rejects.toBeInstanceOf(
+        UnsafeUrlError,
+      );
+      expect(fetch).toHaveBeenCalledOnce();
+    },
+  );
+
   it('rejects more than 3 redirects', async () => {
     const fetch = vi.fn(async () => redirect('https://example.com/loop'));
     await expect(safeFetch('https://example.com/a', opts, { lookup: lookupPublic, fetch })).rejects.toMatchObject({
@@ -249,12 +296,17 @@ describe('safeFetch limits and status', () => {
   });
 
   it('rejects a body that exceeds the cap despite a lying Content-Length', async () => {
-    const fetch = vi.fn(async () =>
-      bodyResponse([new Uint8Array(700), new Uint8Array(700)], { headers: { 'content-length': '10' } }),
-    );
+    const cancelled = vi.fn();
+    const fetch = vi.fn(async () => new Response(new ReadableStream<Uint8Array>({
+      pull(controller) {
+        controller.enqueue(new Uint8Array(700));
+      },
+      cancel: cancelled,
+    }), { status: 200, headers: { 'content-length': '10' } }));
     await expect(safeFetch('https://example.com/a', opts, { lookup: lookupPublic, fetch })).rejects.toMatchObject({
       reason: 'too_large',
     });
+    expect(cancelled).toHaveBeenCalledOnce();
   });
 
   it('accepts a body exactly at the cap', async () => {
