@@ -5,6 +5,12 @@ import { getConnection } from '@/lib/db/db';
 import { resolveIdpFromPreset, type IdpKind } from './idpPresets';
 import { isUsableAudience, MISSING_AUDIENCE_MESSAGE } from './audience';
 import { listBuiltinIssuers } from './idpBuiltins';
+import {
+  assertInternalUserSeatsWithinLimit,
+  checkInternalUserLicenseLimit,
+  isInternalUserLicenseLimitRejected,
+} from '@alga-psa/users/lib/internalUserLicenseGuard';
+import { assertCoManagedSeatAdmission, assertCoManagedSeatCapacityWithinLimit } from '@alga-psa/licensing';
 
 /**
  * MCP agent identity service (Phase 2). An agent is a first-class principal
@@ -101,6 +107,33 @@ export async function createAgent(input: CreateAgentInput): Promise<AgentRecord>
     return knex.transaction(async (trx) => {
       const db = tenantDb(trx, tenant);
 
+      // MCP backing users are active internal users and therefore occupy a
+      // seat. Use the shared tenant lock and admission policy in this same
+      // transaction as all provisioning writes.
+      const admission = await checkInternalUserLicenseLimit(trx, tenant, { deferCoManaged: true });
+      if (isInternalUserLicenseLimitRejected(admission)) {
+        const error = new Error(admission.error) as Error & { code: string; statusCode: number };
+        error.name = 'LicenseLimitError';
+        error.code = admission.code;
+        error.statusCode = 403;
+        throw error;
+      }
+      if (admission.coManaged) {
+        try {
+          const coManagedAdmission = await assertCoManagedSeatAdmission(trx, tenant, {
+            email: `mcp-agent-${agentId}@agents.alga.local`,
+            kind: 'user',
+          });
+          if (!coManagedAdmission.managed) throw new Error('Co-managed seat admission was not applied.');
+        } catch (cause) {
+          if (cause instanceof Error && cause.name === 'CoManagedAdmissionError') {
+            const error = cause as Error & { code: string; statusCode: number };
+            error.statusCode = 403;
+          }
+          throw cause;
+        }
+      }
+
       await db.table('users').insert({
         user_id: userId,
         tenant,
@@ -109,6 +142,12 @@ export async function createAgent(input: CreateAgentInput): Promise<AgentRecord>
         hashed_password: lockedPassword(),
         user_type: 'internal',
       });
+
+      if (admission.coManaged) {
+        await assertCoManagedSeatCapacityWithinLimit(trx, tenant);
+      } else {
+        await assertInternalUserSeatsWithinLimit(trx, tenant);
+      }
 
       for (const roleId of roleIds) {
         await db.table('user_roles').insert({ tenant, user_id: userId, role_id: roleId });

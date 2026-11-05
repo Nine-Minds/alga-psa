@@ -48,6 +48,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     if (e instanceof Error && e.name === 'AgentBindingConflictError') {
       return NextResponse.json({ error: e.message }, { status: 409 });
     }
+    if (e instanceof Error && ['LicenseLimitError', 'InternalUserSeatOverflowError'].includes(e.name) &&
+        (e as Error & { code?: string }).code &&
+        ['SOLO_PLAN_LIMIT', 'LICENSE_LIMIT_REACHED'].includes((e as Error & { code: string }).code)) {
+      const code = (e as Error & { code: string }).code;
+      return NextResponse.json({ error: e.message, code }, { status: 403 });
+    }
+    if (e instanceof Error && e.name === 'CoManagedAdmissionError' &&
+        typeof (e as Error & { code?: unknown }).code === 'string' &&
+        (e as Error & { code: string }).code.startsWith('CO_MANAGED_')) {
+      const code = (e as Error & { code: string }).code;
+      return NextResponse.json({ error: e.message, code }, { status: 403 });
+    }
     throw e;
   }
 }
