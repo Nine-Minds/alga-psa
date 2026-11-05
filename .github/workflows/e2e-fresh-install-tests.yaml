@@ -276,10 +276,16 @@ jobs:
           BUILD_CACHE_REFERENCE: ${{ needs.changes.outputs.registry_namespace }}/build-cache:${{ matrix.edition }}-v2
         run: node scripts/build-cache-snapshot.mjs restore --reference "$BUILD_CACHE_REFERENCE" --path server/node_modules/.cache/webpack --path .nx/cache
 
+      # The same recipe workflows-ee-build-guard.yml compiles the enterprise
+      # app with on this runner size: one build worker and a 14 GB heap. On
+      # 2026-11-05 that guard passed every run while this step, at four
+      # workers and 12 GB, lost the runner to a memory kill mid-compile on main
+      # (18:01Z, 18:17Z, 19:44Z) and on every branch that built after it.
       - name: Build the production application on the runner
         if: matrix.prebuild
         env:
-          NEXT_BUILD_MAX_OLD_SPACE_SIZE: '12288'
+          NEXT_BUILD_CPUS: '1'
+          NEXT_BUILD_MAX_OLD_SPACE_SIZE: '14336'
           EDITION_NAME: ${{ matrix.edition }}
           # Next folds this key into the webpack cache version and generates a
           # new one per build when it is unset, which would make every restored
