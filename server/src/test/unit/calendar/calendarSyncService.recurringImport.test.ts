@@ -529,6 +529,45 @@ describe('CalendarSyncService recurring import', () => {
       .toBe(true);
   });
 
+  it('re-pulls the master when its mapping still points at a non-recurring entry', async () => {
+    // The user turned a single Alga-exported event into a recurring series on
+    // the provider side: an instance must never overwrite that entry as if it
+    // were standalone.
+    const instances = productionInstances(2);
+    registerEvents([googleMaster(), ...instances]);
+    db.entries.set('exported-entry', {
+      entry_id: 'exported-entry',
+      tenant: 'tenant-1',
+      title: MASTER_TITLE,
+      is_recurring: false,
+      recurrence_pattern: null,
+      assigned_user_ids: ['user-1'],
+      scheduled_start: new Date('2026-10-01T14:15:00.000Z'),
+      scheduled_end: new Date('2026-10-01T14:45:00.000Z'),
+      updated_at: new Date('2026-09-01T00:00:00.000Z'),
+    });
+    db.tables['calendar_event_mappings'].push({
+      id: 'mapping-exported',
+      tenant: 'tenant-1',
+      calendar_provider_id: 'provider-1',
+      schedule_entry_id: 'exported-entry',
+      external_event_id: MASTER_ID,
+      sync_status: 'synced',
+      sync_direction: 'to_external',
+      last_synced_at: '2026-09-20T00:00:00.000Z',
+    });
+    const service = await newSyncService();
+
+    const result = await service.syncExternalEventToSchedule(instances[1].id, 'provider-1');
+
+    expect(result.success).toBe(true);
+    expect(db.entries.size).toBe(1);
+    const entry = db.entries.get('exported-entry');
+    expect(entry.is_recurring).toBe(true);
+    expect(entry.recurrence_pattern).toMatchObject({ weekOfMonth: 1, daysOfWeek: [3] });
+    expect(mappings()).toHaveLength(1);
+  });
+
   it('cleans up an orphaned instance row when the series master is gone', async () => {
     const instance = googleOccurrence('2026-10-01T14:15:00.000Z');
     registerEvents([instance]);

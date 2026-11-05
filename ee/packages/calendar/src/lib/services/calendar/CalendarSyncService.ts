@@ -834,11 +834,27 @@ export class CalendarSyncService {
       }
     }
 
-    const masterEntry = await ScheduleEntry.get(knex, tenant, masterMapping.schedule_entry_id);
+    let masterEntry = await ScheduleEntry.get(knex, tenant, masterMapping.schedule_entry_id);
     if (!masterEntry) {
       // Mapping outlived its entry: drop it so the next notification re-imports.
       await tenantDb(knex, tenant).table('calendar_event_mappings').where('id', masterMapping.id).del();
       return { handled: true, result: { success: true, skipped: true, reason: 'Series master entry no longer exists' } };
+    }
+
+    // The mapped entry is not a series yet (a single Alga event the user turned
+    // into a recurring one on the provider side). Pull the master first, so an
+    // instance can never overwrite it as if it were a standalone event.
+    if (!masterEntry.recurrence_pattern) {
+      const refreshed = await this.syncExternalEventToSchedule(masterMapping.external_event_id, provider.id, force);
+      masterEntry = await ScheduleEntry.get(knex, tenant, masterMapping.schedule_entry_id);
+      if (!masterEntry?.recurrence_pattern) {
+        return {
+          handled: true,
+          result: refreshed.success
+            ? { success: true, skipped: true, reason: 'Series master is not recurring in Alga' }
+            : refreshed,
+        };
+      }
     }
 
     const occurrenceStart = this.occurrenceStartOf(instance);
@@ -1082,10 +1098,14 @@ export class CalendarSyncService {
     const mapping = await this.getMappingByExternalEvent(externalEventId, providerId, tenant);
     if (mapping) {
       const entry = await ScheduleEntry.get(knex, tenant, mapping.schedule_entry_id);
-      if (entry?.is_recurring) {
+      const result = await this.handleInboundProviderDelete(mapping.schedule_entry_id, providerId);
+      // Single-occurrence overrides only go when the series itself did: a
+      // provider user without edit rights keeps the entry (and its overrides).
+      if (result.success && entry?.is_recurring
+        && !(await ScheduleEntry.get(knex, tenant, mapping.schedule_entry_id))) {
         await this.deleteSeriesOverrides(knex, tenant, providerId, externalEventId);
       }
-      return this.handleInboundProviderDelete(mapping.schedule_entry_id, providerId);
+      return result;
     }
 
     // No mapping for this exact id: it is an expanded occurrence of a series
