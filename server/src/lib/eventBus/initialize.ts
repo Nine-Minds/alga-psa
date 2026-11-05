@@ -27,6 +27,7 @@ export async function initializeEventBus(): Promise<void> {
     logger.info('Event bus initialized successfully');
   } catch (error) {
     logger.error('Failed to initialize event bus:', error);
+    throw error;
   }
 }
 

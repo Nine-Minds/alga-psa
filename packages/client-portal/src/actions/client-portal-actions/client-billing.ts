@@ -4,7 +4,7 @@
 
 import { recordQuoteLifecycleTransition } from '@alga-psa/shared/lib/quotes/quoteLifecycleEvents';
 import { getConnection, createTenantKnex, withTransaction, tenantDb, resolveEffectiveTimeZone } from '@alga-psa/db';
-import { toCalendarDateString, toCalendarDateStringInTimeZone } from '@alga-psa/core';
+import { enqueueImmediateJob, toCalendarDateString, toCalendarDateStringInTimeZone } from '@alga-psa/core';
 import { buildDocumentFileName } from '@alga-psa/core/fileNames';
 import { Knex } from 'knex';
 import {
@@ -31,8 +31,8 @@ import Quote from '@alga-psa/billing/models/quote';
 import QuoteActivity from '@alga-psa/billing/models/quoteActivity';
 import { recalculateQuoteFinancials, resolveQuoteItemTaxesIfIncluded } from '@alga-psa/billing/services';
 import { withAuth } from '@alga-psa/auth';
-import { scheduleInvoiceEmailAction } from '@alga-psa/billing/actions/invoiceJobActions';
-import { JobStatus } from '@alga-psa/types';
+import { buildInvoiceEmailJobPayload } from '@alga-psa/billing/lib/invoiceEmailJobPayload';
+import { isClientUserType, JobStatus } from '@alga-psa/types';
 import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
 import { computeRemainingBlockValueMinor } from '@alga-psa/shared/billingClients/hourBlockService';
 import { getAvailableCredit } from '@alga-psa/billing/lib/creditBalance';
@@ -1036,6 +1036,10 @@ export interface SendEmailResult {
  * Send invoice email - schedules job, waits for completion
  */
 export const sendClientInvoiceEmail = withAuth(async (user, { tenant }, invoiceId: string): Promise<ClientBillingActionResult<SendEmailResult>> => {
+  if (!isClientUserType(user.user_type)) {
+    return permissionError('Unauthorized', 'client-portal:errors.access.unauthorized');
+  }
+
   const knex = await getConnection(tenant);
 
   try {
@@ -1048,19 +1052,23 @@ export const sendClientInvoiceEmail = withAuth(async (user, { tenant }, invoiceI
       return accessError;
     }
 
-    // Schedule email sending
-    const result = await scheduleInvoiceEmailAction([invoiceId]);
+    // Portal resend is deliberately narrow: the invoice and recipient are
+    // derived from the authenticated portal identity and server-side records.
+    // No sender or message controls are exposed to the client. The job payload
+    // itself is built by the billing layer so it cannot drift from the MSP path.
+    const jobData = buildInvoiceEmailJobPayload({
+      tenant,
+      userId: user.user_id,
+      invoiceIds: [invoiceId],
+    });
+    const { jobId, scheduledJobId } = await enqueueImmediateJob('invoice_email', jobData);
 
-    if (isClientBillingActionError(result)) {
-      return result;
-    }
-
-    if (!result?.jobId) {
+    if (!scheduledJobId || !jobId) {
       return actionError('Failed to start email sending', 'client-portal:errors.billing.emailSendFailed');
     }
 
     // Poll until job completes
-    const status = await pollJobUntilComplete(result.jobId, tenant);
+    const status = await pollJobUntilComplete(jobId, tenant);
 
     if (status.status === 'completed') {
       return { success: true };

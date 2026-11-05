@@ -19,6 +19,11 @@ import {
   kbArticleImportHandler,
 } from '@alga-psa/jobs/handlers/kbArticleImportHandler';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
+import {
+  beginForwardedJobExecution,
+  recordForwardedJobExecutionOutcome,
+  waitForForwardedJobCompletion,
+} from '@alga-psa/jobs/lib/forwardedJobCompletion';
 
 // rmm/huntress poll + accounting-sync-cycle handlers import src-consumed vertical
 // packages (@alga-psa/integrations, @alga-psa/billing) the plain-Node-ESM worker
@@ -57,6 +62,7 @@ type JobHandler = (
 ) => Promise<void | Record<string, unknown>>;
 
 const jobHandlers = new Map<string, JobHandler>();
+const forwardedJobHandlers = new Set<string>();
 let jobHandlersInitialized = false;
 
 async function runWithTenant<T>(
@@ -129,6 +135,37 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
   // bus and let a subscriber execute the real handler for the tenant.
   const forwardJobToServer = (jobName: string, options?: { strict: boolean }) =>
     async (jobId: string, data: Record<string, unknown>) => {
+      const tenantId = (data?.tenantId as string) ?? SYSTEM_TENANT_ID;
+      const executionId = String(data?.jobExecutionId ?? '');
+      if (!executionId) throw new Error(`Forwarded job '${jobName}' is missing its Temporal execution id`);
+      const adminDb = await getAdminConnection();
+      let executionStatus: string | undefined;
+      let activeExecutionId: string | undefined;
+      await adminDb.transaction(async (trx) => {
+        await trx.raw('SELECT set_config(\'app.current_tenant\', ?, true)', [tenantId]);
+        const job = await tenantDb(trx, tenantId).table('jobs')
+          .where({ job_id: jobId }).forUpdate().first('metadata');
+        if (!job) throw new Error(`Job ${jobId} not found before forwarding '${jobName}'`);
+        const metadata = typeof job.metadata === 'string' ? JSON.parse(job.metadata) : (job.metadata ?? {});
+        const nextMetadata = beginForwardedJobExecution(metadata, executionId);
+        executionStatus = nextMetadata.serverExecution.status;
+        activeExecutionId = nextMetadata.serverExecution.executionId;
+        await tenantDb(trx, tenantId).table('jobs').where({ job_id: jobId }).update({
+          metadata: JSON.stringify(nextMetadata),
+          updated_at: new Date(),
+        });
+      });
+      // Temporal may retry an activity after its first attempt finished but its
+      // acknowledgement was lost. Reuse that durable result instead of sending
+      // another event. Failed outcomes are terminal for this run; an intentional
+      // resend creates a new job/run with a new execution id.
+      if (executionStatus === 'completed') return;
+      if (executionStatus === 'failed') {
+        throw new Error(`Forwarded job '${jobName}' already failed in execution ${executionId}`);
+      }
+      if (activeExecutionId !== executionId) {
+        throw new Error(`Forwarded job '${jobName}' is still processing execution ${activeExecutionId}`);
+      }
       await publishEvent({
         eventType: 'MAINTENANCE_JOB_REQUESTED',
         payload: {
@@ -136,81 +173,99 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
           occurredAt: new Date().toISOString(),
           jobName,
           jobId,
+          executionId,
           data: data ?? {},
         },
       }, options);
+      // Redis publication is only a handoff. The server subscriber writes a
+      // serverExecution outcome after its registered handler has actually
+      // returned, so Temporal must wait for that durable completion signal.
+      try {
+        await waitForForwardedJobCompletion(async () => runWithTenant(
+          tenantId,
+          async (trx) => {
+            const job = await tenantDb(trx, tenantId)
+              .table('jobs')
+              .where({ job_id: jobId })
+              .first<{ status: string; metadata?: Record<string, unknown> | string } | undefined>(
+                'status', 'metadata',
+              );
+            if (!job) return undefined;
+            const metadata = typeof job.metadata === 'string'
+              ? JSON.parse(job.metadata)
+              : job.metadata;
+            return {
+              executionId: metadata?.serverExecution?.executionId ?? '',
+              status: metadata?.serverExecution?.status ?? 'queued',
+              error: typeof metadata?.serverExecution?.error === 'string'
+                ? metadata.serverExecution.error
+                : typeof metadata?.error === 'string' ? metadata.error : undefined,
+            };
+          },
+        ), executionId);
+      } catch (error) {
+        if (error instanceof Error && error.message.startsWith('Timed out waiting for the application server')) {
+          await failForwardedJobOnTimeout(
+            jobId,
+            tenantId,
+            executionId,
+            `${error.message}; delivery outcome is unknown`,
+          );
+        }
+        throw error;
+      }
     };
-  registerJobHandlerForActivities(RMM_ALERT_RECONCILIATION_JOB, forwardJobToServer(RMM_ALERT_RECONCILIATION_JOB));
-  registerJobHandlerForActivities(HUNTRESS_INCIDENT_POLL_JOB, forwardJobToServer(HUNTRESS_INCIDENT_POLL_JOB));
+  const registerForwardedJobHandler = (jobName: string, options?: { strict: boolean }) => {
+    forwardedJobHandlers.add(jobName);
+    registerJobHandlerForActivities(jobName, forwardJobToServer(jobName, options));
+  };
+  registerForwardedJobHandler(RMM_ALERT_RECONCILIATION_JOB);
+  registerForwardedJobHandler(HUNTRESS_INCIDENT_POLL_JOB);
   // Device sync reaches provider clients under ee/server, so it forwards to the
   // server like the other RMM jobs rather than running in the worker.
-  registerJobHandlerForActivities(RMM_DEVICE_SYNC_JOB, forwardJobToServer(RMM_DEVICE_SYNC_JOB));
-  registerJobHandlerForActivities(ACCOUNTING_SYNC_CYCLE_JOB, forwardJobToServer(ACCOUNTING_SYNC_CYCLE_JOB));
-  registerJobHandlerForActivities(HUDU_AUTO_SYNC_JOB, forwardJobToServer(HUDU_AUTO_SYNC_JOB));
+  registerForwardedJobHandler(RMM_DEVICE_SYNC_JOB);
+  registerForwardedJobHandler(ACCOUNTING_SYNC_CYCLE_JOB);
+  registerForwardedJobHandler(HUDU_AUTO_SYNC_JOB);
   // AMP apply uses server-bound migration appliers and the tenant database
   // connection, so Temporal forwards it to the server's registered handler.
-  registerJobHandlerForActivities(MIGRATION_APPLY_JOB, forwardJobToServer(MIGRATION_APPLY_JOB, { strict: true }));
+  registerForwardedJobHandler(MIGRATION_APPLY_JOB, { strict: true });
   // Teams meeting Graph cleanup (cancel/decline): the handler imports
   // src-consumed vertical packages (@alga-psa/clients + EE Teams lib), so the
   // worker forwards it to the server like the polling jobs above. The
   // recurring sweep-teams-online-meetings maintenance job re-attempts any
   // cancel_pending rows if a forwarded run is lost.
-  registerJobHandlerForActivities('teams-meeting-cleanup', forwardJobToServer('teams-meeting-cleanup'));
+  registerForwardedJobHandler('teams-meeting-cleanup');
   // Teams meeting recording/transcript capture, enqueued by the app's
   // /api/teams/webhooks/recordings route when Graph notifies about a new
   // artifact. Same constraint as the cleanup job: the handler imports
   // src-consumed vertical packages (@alga-psa/clients, @alga-psa/scheduling),
   // so it executes server-side via the event bus.
-  registerJobHandlerForActivities(
-    'process-teams-meeting-artifact-notification',
-    forwardJobToServer('process-teams-meeting-artifact-notification'),
-  );
+  registerForwardedJobHandler('process-teams-meeting-artifact-notification');
   // Teams Phone call journaling, enqueued by the app's
   // /api/telephony/webhooks/teams-calls route when Graph notifies about a new
   // call record. The handler reaches the EE Teams lib and the telephony core
   // (both src-consumed), so it executes server-side via the event bus.
-  registerJobHandlerForActivities(
-    'process-telephony-call-notification',
-    forwardJobToServer('process-telephony-call-notification'),
-  );
+  registerForwardedJobHandler('process-telephony-call-notification');
   // 3CX call journaling, enqueued by the app's /api/telephony/3cx/[tenantSlug]/
   // report-call route with an already-canonical record. The handler reaches the
   // telephony core and the EE 3CX/Teams libs (src-consumed), so it executes
   // server-side via the event bus like the Teams call notification above.
-  registerJobHandlerForActivities(
-    'process-telephony-canonical-call',
-    forwardJobToServer('process-telephony-canonical-call'),
-  );
+  registerForwardedJobHandler('process-telephony-canonical-call');
   // 3CX chat journaling (report-chat route), incoming-call events from the
   // Call Control consumer, and single-contact phonebook pushes all run
   // server-side for the same src-consumed-package reason.
-  registerJobHandlerForActivities(
-    'process-threecx-chat',
-    forwardJobToServer('process-threecx-chat'),
-  );
-  registerJobHandlerForActivities(
-    'process-threecx-call-event',
-    forwardJobToServer('process-threecx-call-event'),
-  );
-  registerJobHandlerForActivities(
-    'sync-threecx-phonebook-contact',
-    forwardJobToServer('sync-threecx-phonebook-contact'),
-  );
+  registerForwardedJobHandler('process-threecx-chat');
+  registerForwardedJobHandler('process-threecx-call-event');
+  registerForwardedJobHandler('sync-threecx-phonebook-contact');
   // Invoice bundling/delivery, enqueued from billing UI actions via the shared
   // enqueueImmediateJob seam. The handlers live server-side (StorageService,
   // PDF generation), so the worker forwards them like the jobs above.
-  registerJobHandlerForActivities('invoice_zip', forwardJobToServer('invoice_zip'));
-  registerJobHandlerForActivities('invoice_email', forwardJobToServer('invoice_email'));
+  registerForwardedJobHandler('invoice_zip');
+  registerForwardedJobHandler('invoice_email');
   // Scheduled comment publication reaches server-local ticket settings and job
   // modules, so execute it through the same server-side forwarding boundary.
-  registerJobHandlerForActivities(
-    PUBLISH_SCHEDULED_COMMENT_JOB,
-    forwardJobToServer(PUBLISH_SCHEDULED_COMMENT_JOB),
-  );
-  registerJobHandlerForActivities(
-    RECOVER_COMMENT_PUBLICATIONS_JOB,
-    forwardJobToServer(RECOVER_COMMENT_PUBLICATIONS_JOB, { strict: true }),
-  );
+  registerForwardedJobHandler(PUBLISH_SCHEDULED_COMMENT_JOB);
+  registerForwardedJobHandler(RECOVER_COMMENT_PUBLICATIONS_JOB, { strict: true });
 
   // User-defined workflow schedules: after the pg-boss → Temporal cutover these
   // arrive as Temporal Schedules (TemporalJobRunner.scheduleJobAt /
@@ -236,6 +291,28 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
   logger.info('Initialized job handler registry for Temporal worker', {
     handlerCount: jobHandlers.size,
     handlers: Array.from(jobHandlers.keys()),
+  });
+}
+
+async function failForwardedJobOnTimeout(
+  jobId: string,
+  tenantId: string,
+  executionId: string,
+  error: string,
+): Promise<void> {
+  const adminDb = await getAdminConnection();
+  await adminDb.transaction(async (trx) => {
+    await trx.raw('SELECT set_config(\'app.current_tenant\', ?, true)', [tenantId]);
+    const table = tenantDb(trx, tenantId).table('jobs');
+    const job = await table.where({ job_id: jobId }).forUpdate().first('metadata');
+    if (!job) throw new Error(`Job ${jobId} not found while recording forwarded execution timeout`);
+    const metadata = typeof job.metadata === 'string' ? JSON.parse(job.metadata) : (job.metadata ?? {});
+    const transition = recordForwardedJobExecutionOutcome(metadata, executionId, { status: 'failed', error });
+    if (!transition.recorded) return;
+    await table.where({ job_id: jobId }).update({
+      metadata: JSON.stringify(transition.metadata),
+      updated_at: new Date(),
+    });
   });
 }
 
@@ -312,7 +389,10 @@ export async function executeJobHandler(input: {
   }
 
   try {
-    const result = await runWithTenant(tenantId, async () => {
+    // Forwarded handlers perform their own short transactions while staging
+    // and polling. Holding an outer tenant transaction across publication and
+    // completion waiting can consume every connection in the shared admin pool.
+    const invokeHandler = async () => {
       const maybeResult = await handler(jobId, {
         ...data,
         tenantId,
@@ -322,7 +402,10 @@ export async function executeJobHandler(input: {
         return maybeResult as Record<string, unknown>;
       }
       return undefined;
-    });
+    };
+    const result = forwardedJobHandlers.has(jobName)
+      ? await invokeHandler()
+      : await runWithTenant(tenantId, invokeHandler);
 
     logger.info('Job handler executed successfully', { jobId, jobName });
     return { success: true, ...(result ? { result } : {}) };
@@ -359,6 +442,7 @@ export async function updateJobStatus(input: {
     // Get current metadata
     const currentJob = await db.table('jobs')
       .where({ job_id: jobId })
+      .forUpdate()
       .first('metadata');
 
     const currentMetadata = currentJob?.metadata

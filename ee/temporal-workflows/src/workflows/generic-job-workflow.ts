@@ -258,7 +258,7 @@ export async function genericJobWorkflow(
       jobId,
       jobName,
       tenantId,
-      jobExecutionId: workflowInfo().workflowId,
+      jobExecutionId: workflowInfo().runId,
       data,
     });
 

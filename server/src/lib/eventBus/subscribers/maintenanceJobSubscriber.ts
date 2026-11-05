@@ -19,6 +19,7 @@ import { isKnownMaintenanceJob } from '@alga-psa/jobs/fanout';
 import { executeJobHandler } from '../../jobs/jobHandlerRegistry';
 import { runWithTenant } from '@alga-psa/db';
 import { prepareMaintenanceRegistry, runMaintenanceJobExclusive } from '../../jobs/runMaintenanceJobExclusive';
+import { JobService } from '../../../services/job.service';
 
 let isRegistered = false;
 
@@ -51,7 +52,7 @@ export async function unregisterMaintenanceJobSubscriber(): Promise<void> {
 
 async function handleMaintenanceJobRequested(event: unknown): Promise<void> {
   const validated = EventSchemas.MAINTENANCE_JOB_REQUESTED.parse(event);
-  const { jobName, jobId, data, tenantId } = validated.payload;
+  const { jobName, jobId, data, tenantId, executionId } = validated.payload;
 
   try {
     // Maintenance schedules publish a bare jobName; forwarded jobs always carry
@@ -67,10 +68,43 @@ async function handleMaintenanceJobRequested(event: unknown): Promise<void> {
       // execution because its handler imports src-consumed packages the worker
       // can't load. Run the registered handler directly for the tenant.
       logger.info(`[MaintenanceJobSubscriber] Running forwarded job '${jobName}' for tenant ${tenantId}`);
-      await runWithTenant(tenantId, () =>
-        executeJobHandler(jobName, jobId ?? `evt:${jobName}`, (data ?? {}) as any),
-      );
-      logger.info(`[MaintenanceJobSubscriber] Forwarded job '${jobName}' complete`);
+      await runWithTenant(tenantId, async () => {
+        const jobService = jobId && executionId ? await JobService.create() : undefined;
+        if (jobService) {
+          const claim = await jobService.claimForwardedJobExecution(jobId!, tenantId, executionId!);
+          if (!claim.claimed) {
+            logger.info(`[MaintenanceJobSubscriber] Acknowledging duplicate forwarded execution '${executionId}' for job '${jobId}'`, {
+              status: claim.status ?? 'superseded',
+            });
+            return;
+          }
+        }
+        try {
+          // Carry the execution identity into handler persistence so progress
+          // updates can be merged without taking ownership of workflow status.
+          await executeJobHandler(jobName, jobId ?? `evt:${jobName}`, {
+            ...(data ?? {}),
+            forwardedExecutionId: executionId,
+          } as any);
+          if (jobService) {
+            const recorded = await jobService.recordForwardedJobOutcome(jobId!, tenantId, executionId!, { status: 'completed' });
+            if (!recorded) {
+              logger.warn(`[MaintenanceJobSubscriber] Handler returned after forwarded execution '${executionId}' became terminal`, {
+                jobId,
+                jobName,
+              });
+            }
+          }
+        } catch (error) {
+          if (jobService) {
+            await jobService.recordForwardedJobOutcome(jobId!, tenantId, executionId!, {
+              status: 'failed',
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+          throw error;
+        }
+      });
     }
   } catch (error) {
     logger.error(`[MaintenanceJobSubscriber] Job '${jobName}' failed`, { error });

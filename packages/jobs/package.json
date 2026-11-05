@@ -56,6 +56,11 @@
       "import": "./dist/lib/jobRunnerAccessor.mjs",
       "require": "./dist/lib/jobRunnerAccessor.js"
     },
+    "./lib/forwardedJobCompletion": {
+      "types": "./src/lib/forwardedJobCompletion.ts",
+      "import": "./dist/lib/forwardedJobCompletion.mjs",
+      "require": "./dist/lib/forwardedJobCompletion.js"
+    },
     "./scheduler": {
       "types": "./src/lib/jobSchedulerAccessor.ts",
       "import": "./dist/lib/jobSchedulerAccessor.mjs",

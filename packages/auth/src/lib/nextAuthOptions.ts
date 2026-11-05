@@ -1859,7 +1859,10 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                         tenant: user.tenant,
                         user_type: user.user_type,
                         clientId: clientId ?? undefined,
-                        contactId: user.contact_id,
+                        // A database contact link on an internal user is not
+                        // client-portal identity. Only client users may carry
+                        // client-scoped claims into a fresh session.
+                        contactId: user.user_type === 'client' ? user.contact_id : undefined,
                         tenantSlug: tenantSlugForUser,
                     };
 
@@ -2302,6 +2305,14 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 return token;
             }
 
+            // Keep long-lived/refreshed tokens on the same identity contract
+            // as fresh credentials sessions. Internal users may have a legacy
+            // database contact link, but it never grants portal identity.
+            if (token.user_type === 'internal') {
+                delete token.clientId;
+                delete token.contactId;
+            }
+
             // Slide the DB session expiry to track the rolling JWT so an active session
             // never lapses (throttled to ~one write per half-lifetime to limit DB load).
             if (token.session_id) {
@@ -2422,8 +2433,16 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 user.tenant = token.tenant as string;
                 user.tenantSlug = token.tenantSlug as string | undefined;
                 user.user_type = token.user_type as string;
-                user.clientId = token.clientId as string;
-                user.contactId = token.contactId as string;
+                if (typeof token.clientId === 'string' && token.clientId.length > 0) {
+                    user.clientId = token.clientId;
+                } else {
+                    delete user.clientId;
+                }
+                if (typeof token.contactId === 'string' && token.contactId.length > 0) {
+                    user.contactId = token.contactId;
+                } else {
+                    delete user.contactId;
+                }
                 user.plan = token.plan as string | undefined;
                 user.product_code = (token.product_code as ProductCode | undefined) ?? 'psa';
                 (user as any).addons = (token.addons as string[] | undefined) ?? [];

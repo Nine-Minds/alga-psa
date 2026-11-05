@@ -24,6 +24,8 @@ export default defineConfig({
       'src/components/invoice-designer/fields/documentBindingCatalog.test.ts',
       'src/actions/projectBillingActions.contract.test.ts',
       'src/actions/invoiceEmailBrandLogo.contract.test.ts',
+      // Scheduler and immediate invoice email authorization behavior.
+      'src/actions/invoiceJobActions.sender.test.ts',
       'src/lib/prepaidBalanceAlerts.test.ts',
       'src/lib/contractRecurringShape.test.ts',
       'src/lib/taxRateApplicability.test.ts',
