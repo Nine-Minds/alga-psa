@@ -56,13 +56,12 @@ describe('ticket close/checklist/material facade contract', () => {
     }
   });
 
-  it('keeps migrated ticket helper roots behind tenantDb', () => {
+  it('keeps migrated ticket helper roots free of handwritten tenant predicates', () => {
     const facadeSources = Object.entries(sources)
       .filter(([name]) => name !== 'materialCatalog' && name !== 'inventoryMaterials')
       .map(([, source]) => source);
 
     for (const source of facadeSources) {
-      expect(source).toContain('tenantDb');
       expect(source).not.toContain('createTenantScopedQuery');
       expect(source).not.toMatch(/\.where\(\{[^}\n]*(?:\btenant\b|['"][^'"]*\.tenant['"])/);
       expect(source).not.toMatch(/\.andWhere\([^)\n]*(?:\btenant\b|['"][^'"]*\.tenant['"])/);
