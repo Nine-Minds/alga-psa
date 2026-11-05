@@ -1410,7 +1410,8 @@
     "unnamedUser": "Unbenannter Benutzer",
     "unnamedTeam": "Unbenanntes Team",
     "userPicker": "Benutzerauswahl",
-    "noUsersFound": "Keine Benutzer gefunden"
+    "noUsersFound": "Keine Benutzer gefunden",
+    "contactRemoteLocation": "Im Homeoffice"
   },
   "serviceTypeSelect": {
     "placeholder": "Servicetyp auswählen ...",

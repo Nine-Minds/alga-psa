@@ -116,7 +116,9 @@
     "clientTags": "Klanttags",
     "tagModeAny": "Een van",
     "tagModeNone": "Geen van",
-    "droppedFromLink": "Sommige filters in deze link zijn ongeldig en zijn genegeerd."
+    "droppedFromLink": "Sommige filters in deze link zijn ongeldig en zijn genegeerd.",
+    "location": "Locatie",
+    "requesterLocation": "Locatie van aanvrager"
   },
   "create": {
     "title": "Supportticket aanmaken",
@@ -458,7 +460,9 @@
         "operationConflict": "Deze opmerking botst met een eerdere poging. Laad opnieuw en probeer het nog eens.",
         "audienceUnresolved": "Kies wie deze opmerking kan zien voordat u hem plaatst.",
         "unknownOutcome": "We konden niet bevestigen dat de opmerking is geplaatst. Controleer de conversatie voordat u hem opnieuw verstuurt."
-      }
+      },
+      "unavailable": "Dit ticket is niet beschikbaar.",
+      "back": "Terug naar klanttickets"
     }
   },
   "responseState": {
@@ -1023,7 +1027,9 @@
       "heading": "Volgers",
       "placeholder": "Volgers toevoegen..."
     },
-    "attachmentsPartialFailure": "Ticket aangemaakt, maar deze bestanden konden niet worden bijgevoegd: {{files}}. Voeg ze toe vanuit het ticket."
+    "attachmentsPartialFailure": "Ticket aangemaakt, maar deze bestanden konden niet worden bijgevoegd: {{files}}. Voeg ze toe vanuit het ticket.",
+    "contactLocationSuffix": "(locatie van contactpersoon)",
+    "contactPrimaryLocationSuffix": "(primaire locatie van contactpersoon)"
   },
   "itil": {
     "calculatedPriority": "Prioriteit (berekend)",
@@ -2057,7 +2063,9 @@
       "changeLocation": "Locatie wijzigen",
       "addDescriptionPrompt": "Voeg een beschrijving toe — wat is het probleem en wat heeft de klant nodig?",
       "projectTasks": "Projecttaken",
-      "timeAndBilling": "Tijd en facturatie"
+      "timeAndBilling": "Tijd en facturatie",
+      "useContactLocation": "Locatie van contactpersoon gebruiken",
+      "remote": "Op afstand"
     },
     "timeline": {
       "subtitle": "Reacties, tijd en systeemwijzigingen op één plek",
