@@ -15,6 +15,12 @@ import type { CalendarProviderConfig, ExternalCalendarEvent } from '@alga-psa/ty
  * The schedule-entry store and the provider row are fixtures (the DB-backed
  * suites cover those); the assertions are about how many entries and mappings
  * one series produces.
+ *
+ * The matching Activities-feed assertion — that the imported master surfaces
+ * only for its in-window occurrences rather than 730 times — needs the real
+ * schema, since @alga-psa/db is mocked wholesale here. It lives in
+ * src/test/integration/api/userActivities.test.ts ("lists an imported recurring
+ * series only for its in-window occurrences").
  */
 
 const db = vi.hoisted(() => ({
