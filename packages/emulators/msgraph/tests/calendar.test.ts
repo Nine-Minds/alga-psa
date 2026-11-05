@@ -295,10 +295,24 @@ it('invalidates old delta state on reset and permits a fresh synchronization', a
 it.each([
   '/me/calendarView/delta',
   '/me/calendarView/delta?startDateTime=invalid&endDateTime=2026-09-20T12:00:00Z',
-  `${deltaWindow}&$select=id`,
   `${deltaWindow}&$deltatoken=invalid`,
 ])('rejects an invalid or unsupported delta query: %s', async path => {
   expect((await graph(path)).status).toBe(400);
+});
+
+// A client has to ask for type/seriesMasterId/originalStart: Graph leaves them
+// out of the default projection, and without them an expanded occurrence looks
+// exactly like a standalone event.
+it('projects $select on the delta window and carries it into the delta link', async () => {
+  const created = await createEvent({ subject: 'Selected fields only' });
+  const selected = `${deltaWindow}&$select=id,type,seriesMasterId`;
+  const page = await delta(`${base}/v1.0${selected}`);
+  expect(page.value).toEqual([{ id: created.id, type: 'singleInstance', seriesMasterId: null }]);
+  const link = new URL(page['@odata.deltaLink']);
+  expect(link.searchParams.get('$select')).toBe('id,type,seriesMasterId');
+  expect((await delta(link.toString())).value).toEqual([]);
+  // Unprojected, the same round carries the whole event.
+  expect((await delta()).value).toEqual([expect.objectContaining({ id: created.id, subject: 'Selected fields only' })]);
 });
 
 it.each([
