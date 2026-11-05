@@ -798,7 +798,12 @@
         "capabilityUnavailable": "This isn’t available for your workspace right now.",
         "notAvailable": "This ticket is no longer shared or available to you.",
         "readOnly": "This ticket is read-only right now, so this change can’t be made."
-      }
+      },
+      "cancel": "Cancel",
+      "loading": "Loading…",
+      "reload": "Reload current state",
+      "retry": "Retry",
+      "saving": "Saving…"
     },
     "callout": {
       "title": "Customer tickets need you",
@@ -991,13 +996,6 @@
       "invalid": "This comment could not be saved.",
       "send": "Send",
       "cancel": "Cancel"
-    },
-    "ticket": {
-      "cancel": "Cancel",
-      "loading": "Loading…",
-      "reload": "Reload current state",
-      "retry": "Retry",
-      "saving": "Saving…"
     },
     "editor": {
       "errors": {
