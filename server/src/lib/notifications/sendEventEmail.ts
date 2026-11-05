@@ -16,6 +16,8 @@ import Handlebars from 'handlebars';
 import { EmailAddress, EmailAttachment } from '../../types/email.types';
 import { normalizeTicketSubject } from './ticketSubject';
 import { AUTO_GENERATED_MAIL_HEADERS } from '@shared/lib/email/automatedMessage';
+import { coManagedDeliverySeam } from '@shared/lib/coManagedDelivery';
+import { projectCoManagedNotificationSnapshot } from '@alga-psa/co-managed/sharedWorkProjection';
 import { persistReplyToken } from './replyTokenPersistence';
 
 const REPLY_BANNER_TEXT = '--- Please reply above this line ---';
@@ -101,6 +103,10 @@ export interface SendEmailParams {
    * protocol base uses for comment attachments. Native sends never set it.
    */
   delivery?: { ledger: DeliveryLedger; key: DeliveryKey; extra?: Record<string, unknown>; ledgerTenant?: string };
+  /** Serializable identity used to reauthorize a sponsor recipient on every immediate or delayed send. */
+  coManagedRecipient?: { tenant: string; ticketId: string; commentId: string; relationshipId: string; sponsorTenant: string; principalId: string };
+  /** Routing delivery is retried from its ledger by routing recovery, never as rendered mail. */
+  coManagedRouting?: true;
   from?: EmailAddress;
   /**
    * Optional: explicitly specify recipient's locale
@@ -139,6 +145,38 @@ export interface SendEmailParams {
    */
   cc?: EmailAddress[];
   bcc?: EmailAddress[];
+}
+
+function projectSponsorEmailContext(context: Record<string, unknown>, redactions: readonly string[]): Record<string, unknown> {
+  const ticket = (context.ticket && typeof context.ticket === 'object' ? context.ticket : {}) as Record<string, unknown>;
+  const comment = (context.comment && typeof context.comment === 'object' ? context.comment : {}) as Record<string, unknown>;
+  const projected = projectCoManagedNotificationSnapshot(redactions, {
+    ticketTitle: ticket.title, ticketNumber: ticket.id, requesterName: ticket.requesterName,
+    requesterEmail: ticket.requesterEmail, requesterPhone: ticket.requesterPhone,
+    requesterContact: ticket.requesterContact, requesterDetails: ticket.requesterDetails,
+    assignedToName: ticket.assignedToName, assignedToEmail: ticket.assignedToEmail,
+    assignedDetails: ticket.assignedDetails, clientName: ticket.clientName, locationSummary: ticket.locationSummary,
+    priority: ticket.priority, priorityColor: ticket.priorityColor, status: ticket.status,
+    board: ticket.board, categoryDetails: ticket.categoryDetails, category: ticket.category, subcategory: ticket.subcategory,
+    ticketUrl: ticket.url, description: ticket.description,
+    metaLine: ticket.metaLine, authorName: comment.author, commentContent: comment.content,
+    commentHtml: comment.html, commentPreview: comment.text, commentRawContent: comment.rawContent,
+  });
+  const safeTicket = { title: projected.ticketTitle ?? 'Shared ticket', id: projected.ticketNumber ?? 'Shared ticket',
+    url: projected.ticketUrl,
+    requesterName: projected.requesterName, requesterEmail: projected.requesterEmail, requesterPhone: projected.requesterPhone,
+    requesterContact: projected.requesterContact, requesterDetails: projected.requesterDetails,
+    assignedToName: projected.assignedToName, assignedToEmail: projected.assignedToEmail, assignedDetails: projected.assignedDetails,
+    clientName: projected.clientName, locationSummary: projected.locationSummary, priority: projected.priority,
+    priorityColor: projected.priorityColor, status: projected.status, board: projected.board,
+    categoryDetails: projected.categoryDetails, category: projected.category, subcategory: projected.subcategory,
+    description: projected.description, metaLine: projected.metaLine };
+  const safeComment = projected.conversationSuppressed
+    ? { content: '', html: '', text: '', plainText: '', rawContent: null, author: 'A team member' }
+    : { content: projected.commentContent, html: projected.commentHtml, text: projected.commentPreview,
+      plainText: projected.commentPreview, rawContent: projected.commentRawContent,
+      author: projected.authorName ?? 'A team member', isInternal: comment.isInternal };
+  return { ticket: safeTicket, comment: safeComment };
 }
 
 function applyReplyMarkers(
@@ -239,6 +277,19 @@ export function resolveDeliveryClaim(
 
 export async function sendEventEmail(params: SendEmailParams): Promise<void> {
   try {
+    let sponsorRedactions: readonly string[] | null = null;
+    if (params.coManagedRecipient) {
+      const provider = await coManagedDeliverySeam.resolve(params.coManagedRecipient.tenant);
+      const current = provider?.reauthorizeCommentRecipient
+        ? await provider.reauthorizeCommentRecipient(params.coManagedRecipient)
+        : null;
+      if (!current?.email) return;
+      params = { ...params, to: current.email, recipientUserId: current.principalId };
+      sponsorRedactions = current.redactedFields ?? [];
+      params = { ...params, context: projectSponsorEmailContext(params.context, sponsorRedactions) };
+      const projectedTicket = params.context.ticket as Record<string, unknown> | undefined;
+      if (params.template === 'ticket-comment-added' && projectedTicket?.title) params = { ...params, subject: `New Comment on Ticket: ${projectedTicket.title}` };
+    }
     logger.info('[SendEventEmail] 🚀 NEW EMAIL PROVIDER MANAGER VERSION - Preparing to send email:', {
       to: params.to,
       subject: params.subject,
@@ -493,8 +544,31 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       }
     }
 
+    // Attachment preparation reconstructs persisted content and download links. Reauthorize and
+    // reproject after reconstruction so neither queued content nor those derived links bypass policy.
+    if (params.coManagedRecipient) {
+      const provider = await coManagedDeliverySeam.resolve(params.coManagedRecipient.tenant);
+      const current = provider?.reauthorizeCommentRecipient
+        ? await provider.reauthorizeCommentRecipient(params.coManagedRecipient)
+        : null;
+      if (!current?.email) return;
+      params = { ...params, to: current.email, recipientUserId: current.principalId };
+      sponsorRedactions = current.redactedFields ?? [];
+      params = { ...params, context: projectSponsorEmailContext(params.context, sponsorRedactions) };
+      const projectedTicket = params.context.ticket as Record<string, unknown> | undefined;
+      if (params.template === 'ticket-comment-added' && projectedTicket?.title) params = { ...params, subject: `New Comment on Ticket: ${projectedTicket.title}` };
+      if (projectCoManagedNotificationSnapshot(sponsorRedactions, { commentContent: '', commentPreview: '' }).conversationSuppressed) {
+        params = { ...params, attachments: [], context: { ...params.context, comment: { content: '', html: '', text: '', plainText: '', rawContent: null, author: 'A team member' } } };
+        attachmentDownloadText = '';
+      }
+    }
+
     let html = htmlTemplate(params.context);
     let subject = subjectTemplate(params.context).replace(/[\r\n]+/g, ' ').trim();
+    if (params.coManagedRecipient && params.template === 'ticket-comment-added') {
+      const title = (params.context.ticket as Record<string, unknown> | undefined)?.title;
+      subject = `New Comment on Ticket: ${typeof title === 'string' ? title : 'Shared ticket'}`;
+    }
 
     // For ticket emails, prepend a stable [Ticket #N] token (idempotent) so all
     // event types present consistently and clients have a subject grouping signal.
@@ -570,7 +644,9 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       mailClass: params.mailClass,
       boardId: params.boardId,
       senderId: params.senderId,
-      revalidateCommentOnRetry: managedCommentDelivery,
+      // Sponsor deliveries must return through EventEmailRetryQueue (or routing recovery)
+      // so persisted rendered messages cannot bypass current authorization on rate-limit retry.
+      revalidateCommentOnRetry: managedCommentDelivery || Boolean(params.coManagedRecipient) || Boolean(params.coManagedRouting),
       to: params.to,
       ...(params.cc?.length ? { cc: params.cc } : {}),
       ...(params.bcc?.length ? { bcc: params.bcc } : {}),
