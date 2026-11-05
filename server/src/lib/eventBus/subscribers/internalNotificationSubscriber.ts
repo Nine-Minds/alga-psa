@@ -32,6 +32,7 @@ import { isInboundOutboxEvent } from '@alga-psa/shared/services/email/inboundEma
 import { resolveBoardNotificationRecipients } from '@alga-psa/shared/lib/tickets/boardNotificationRules';
 import { getAllTicketAssignees } from '@alga-psa/shared/lib/tickets/ticketAssignees';
 import { filterRecipientsWhoCanReadTicket } from '../../notifications/boardNotificationAudience';
+import { formatCurrencyWithSymbol } from '@alga-psa/core/formatters';
 
 /** Consumers of the inbound outbox events use this stable ledger consumer id. */
 const INBOUND_OUTBOX_NOTIFICATION_CONSUMER = 'internal-notification';
@@ -2452,8 +2453,7 @@ function formatInternalProjectBillingAmount(
 ): string {
   const currencyCode = currency?.trim() || 'USD';
   try {
-    return new Intl.NumberFormat(locale, { style: 'currency', currency: currencyCode })
-      .format(amountCents / 100);
+    return formatCurrencyWithSymbol(amountCents / 100, locale, currencyCode);
   } catch {
     return `${currencyCode} ${(amountCents / 100).toFixed(2)}`;
   }

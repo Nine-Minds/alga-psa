@@ -5,11 +5,14 @@ import { displayAddressField, displayCountry } from '@alga-psa/core';
 import type { IClientLocation } from '@alga-psa/types';
 import { 
   getClientLocations, 
+  getClientLocationContacts,
   createClientLocation, 
   updateClientLocation, 
   deleteClientLocation,
   setDefaultClientLocation 
 } from '@alga-psa/clients/actions';
+import type { ClientLocationContact } from '../../actions/clientLocationActions';
+import Link from 'next/link';
 import { getActiveTaxRegionsAsync } from '../../lib/billingHelpers';
 import { getAllCountries, getTenantDefaultCountry, ICountry } from '@alga-psa/clients/actions';
 import { ITaxRegion } from '@alga-psa/types';
@@ -56,6 +59,11 @@ function isClientLocationActionError(value: unknown): value is ClientLocationAct
 interface ClientLocationsProps {
   clientId: string;
   isEditing: boolean;
+  /**
+   * Show who works at each location, each name linking to its MSP contact page. MSP-only: the
+   * client portal has no such page and its users are not entitled to the client's contact list.
+   */
+  showContacts?: boolean;
 }
 
 /**
@@ -103,6 +111,8 @@ interface LocationCardProps {
   onSetDefault: (locationId: string) => void;
   formatAddress: (location: IClientLocation) => string;
   showActions?: boolean;
+  /** The people who work here. The card shows a count that expands to their names. */
+  contacts?: ClientLocationContact[];
 }
 
 // Component for individual location detail fields that registers within the proper parent context
@@ -125,8 +135,9 @@ const LocationDetailField: React.FC<{
   return <div {...automationIdProps}>{children}</div>;
 };
 
-const LocationCard: React.FC<LocationCardProps> = ({ location, onEdit, onDelete, onSetDefault, formatAddress, showActions = true }) => {
+const LocationCard: React.FC<LocationCardProps> = ({ location, onEdit, onDelete, onSetDefault, formatAddress, showActions = true, contacts = [] }) => {
   const { t } = useTranslation('msp/clients');
+  const [areContactsExpanded, setAreContactsExpanded] = useState(false);
   const locationLabel = location.location_name || t('clients.locations.card.unnamed', 'Unnamed Location');
   const formattedAddress = formatAddress(location);
 
@@ -226,6 +237,41 @@ const LocationCard: React.FC<LocationCardProps> = ({ location, onEdit, onDelete,
               </LocationDetailField>
             )}
             
+            {contacts.length > 0 && (
+              <div className="mt-2">
+                <button
+                  type="button"
+                  id={`client-location-contact-count-${location.location_id}`}
+                  data-automation-id={`client-location-contact-count-${location.location_id}`}
+                  className="text-xs text-[rgb(var(--color-primary-600))] underline"
+                  onClick={() => setAreContactsExpanded((previous) => !previous)}
+                >
+                  {t('clients.locations.card.contactCount', {
+                    defaultValue_one: '1 contact',
+                    defaultValue_other: '{{count}} contacts',
+                    count: contacts.length,
+                  })}
+                </button>
+                {areContactsExpanded && (
+                  <ul className="mt-1 space-y-0.5">
+                    {contacts.map((contact) => (
+                      <li key={contact.contact_name_id} className="text-xs">
+                        <Link
+                          href={`/msp/contacts/${contact.contact_name_id}`}
+                          className="text-[rgb(var(--color-primary-600))] hover:underline"
+                        >
+                          {contact.full_name}
+                        </Link>
+                        {contact.is_primary
+                          ? ` • ${t('clients.locations.card.contactPrimary', { defaultValue: 'Primary' })}`
+                          : ''}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+
             <div className="flex gap-4 mt-2">
               {location.is_billing_address && (
                 <Badge variant="info" size="sm">
@@ -308,9 +354,10 @@ const initialFormData: LocationFormData = {
 
 const loadClientBillingProfiles = (clientId: string) => getClientBillingProfiles(clientId);
 
-export default function ClientLocations({ clientId, isEditing }: ClientLocationsProps) {
+export default function ClientLocations({ clientId, isEditing, showContacts = true }: ClientLocationsProps) {
   const { t } = useTranslation('msp/clients');
   const [locations, setLocations] = useState<IClientLocation[]>([]);
+  const [contactsByLocation, setContactsByLocation] = useState<Record<string, ClientLocationContact[]>>({});
   const [isLocationsLoading, setIsLocationsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState<IClientLocation | null>(null);
@@ -511,6 +558,14 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
         return;
       }
       setLocations(fetchedLocations);
+
+      // One batched read for the whole tab; a failure leaves the cards without chips rather than
+      // failing the tab, because the chip is informational. Not read at all where the chip is not
+      // shown, so the portal never asks for the client's contact names.
+      if (showContacts) {
+        const fetchedContacts = await getClientLocationContacts(clientId);
+        setContactsByLocation(isClientLocationActionError(fetchedContacts) ? {} : fetchedContacts);
+      }
     } catch (error) {
       console.error('Error loading locations:', error);
       toast({
@@ -803,6 +858,7 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
             onSetDefault={() => {}} // No-op in read-only mode
             formatAddress={formatAddress}
             showActions={false}
+            contacts={showContacts ? contactsByLocation[location.location_id] ?? [] : []}
           />
         ))}
       </div>
@@ -1143,6 +1199,7 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
                 onDelete={handleDeleteLocation}
                 onSetDefault={handleSetDefault}
                 formatAddress={formatAddress}
+                contacts={showContacts ? contactsByLocation[location.location_id] ?? [] : []}
               />
             ))}
 
