@@ -61,7 +61,9 @@ async function seedEntry(input: {
     external_event_id: input.externalEventId,
     sync_status: 'synced',
     sync_direction: 'from_external',
-    occurrence_index: input.occurrenceIndex ? JSON.stringify(input.occurrenceIndex) : null,
+    // Written as a plain object, exactly the shape CalendarSyncService hands to
+    // knex for this jsonb column, so the column accepts the production write.
+    occurrence_index: input.occurrenceIndex ?? null,
     created_at: new Date(),
     updated_at: new Date(),
   });
@@ -159,6 +161,12 @@ describe('cleanup_calendar_recurring_instance_imports against the real schema', 
     const assignees = await db('schedule_entry_assignees').where({ tenant: tenantId }).pluck('entry_id');
     expect(assignees).not.toContain(timed.entryId);
     expect(assignees).toContain(master.entryId);
+
+    // The occurrence index survives as an object, not a JSON string: the
+    // master-delete sweep reads it back to find the children it spawned.
+    const masterMapping = await db('calendar_event_mappings')
+      .where({ tenant: tenantId, external_event_id: MASTER_ID }).first();
+    expect(masterMapping.occurrence_index).toEqual({ [overrideExternalId]: '2026-12-03T15:15:00.000Z' });
 
     // The next webhook must perform a full list so the fixed code re-imports
     // the series as one recurring entry.

@@ -473,9 +473,9 @@ describe('calendar master occurrence', () => {
 });
 
 describe('nth-weekday series', () => {
-  // Anchored in UTC so the dates are independent of the host zone: the
-  // zone-less path builds byweekday identically but its day boundaries follow
-  // the host clock (see the zoned suite for the DST contract).
+  // Anchored in UTC so the dates are independent of the host zone (see the
+  // zoned suite for the DST contract and the legacy cases below for the
+  // zone-less path, whose day boundaries follow the host clock).
   it('expands "first Thursday of each month" instead of the dtstart day-of-month', () => {
     const entry = makeEntry({
       is_recurring: true,
@@ -503,8 +503,7 @@ describe('nth-weekday series', () => {
     ]);
   });
 
-  // Anchored in UTC so the assertion is independent of the host zone; the
-  // legacy (zone-less) path is covered by the first-Thursday case above.
+  // Anchored in UTC so the assertion is independent of the host zone.
   it('expands "last Friday of each month"', () => {
     const entry = makeEntry({
       is_recurring: true,
@@ -555,6 +554,57 @@ describe('nth-weekday series', () => {
       '2026-01-28',
       '2026-02-25',
       '2026-03-25',
+    ]);
+  });
+
+  // The zone-less path is what every pre-existing JSONB pattern still takes, so
+  // weekOfMonth has to work there too. Asserted on local date parts at midday,
+  // because that path's day boundaries follow the host clock.
+  it('expands an nth-weekday rule on the legacy zone-less path', () => {
+    const localStart = new Date(2026, 5, 4, 12, 0, 0); // Thu 4 Jun 2026, host-local noon
+    const entry = makeEntry({
+      is_recurring: true,
+      scheduled_start: localStart,
+      scheduled_end: new Date(2026, 5, 4, 13, 0, 0),
+      recurrence_pattern: makePattern({
+        frequency: 'monthly',
+        interval: 1,
+        startDate: localStart,
+        daysOfWeek: [3],
+        weekOfMonth: 1,
+      }),
+    });
+
+    const result = generateOccurrences(entry, new Date(2026, 5, 1), new Date(2026, 8, 30), {
+      includeMaster: true,
+    });
+
+    expect(result.map((date) => [date.getMonth(), date.getDate()])).toEqual([
+      [5, 4], [6, 2], [7, 6], [8, 3],
+    ]);
+    expect(result.every((date) => date.getHours() === 12)).toBe(true);
+  });
+
+  it('expands a last-weekday rule on the legacy zone-less path', () => {
+    const localStart = new Date(2026, 0, 30, 12, 0, 0); // Fri 30 Jan 2026
+    const entry = makeEntry({
+      is_recurring: true,
+      scheduled_start: localStart,
+      scheduled_end: new Date(2026, 0, 30, 13, 0, 0),
+      recurrence_pattern: makePattern({
+        frequency: 'monthly',
+        startDate: localStart,
+        daysOfWeek: [4],
+        weekOfMonth: -1,
+      }),
+    });
+
+    const result = generateOccurrences(entry, new Date(2026, 0, 1), new Date(2026, 3, 30), {
+      includeMaster: true,
+    });
+
+    expect(result.map((date) => [date.getMonth(), date.getDate()])).toEqual([
+      [0, 30], [1, 27], [2, 27], [3, 24],
     ]);
   });
 });
