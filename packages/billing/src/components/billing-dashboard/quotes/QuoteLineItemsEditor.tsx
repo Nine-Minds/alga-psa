@@ -183,8 +183,13 @@ interface QuoteLineItemsEditorProps {
   extraGroupLocationIds?: string[];
   /** Fires when the user asks to add a new empty location group. */
   onAddLocationGroup?: () => void;
-  /** Fires when a location group is deleted (used to auto-revert to flat). */
-  onRemoveLocationGroup?: (locationId: string | null) => void;
+  /**
+   * Fires when a location group goes away (used to auto-revert to flat).
+   * `source` tells the owner whether the user clicked "Remove location" —
+   * which must account for the group's items — or whether the group merely
+   * emptied out when its last item was removed here.
+   */
+  onRemoveLocationGroup?: (locationId: string | null, source: 'user' | 'empty-group') => void;
 }
 
 interface QuotePhaseSection {
@@ -370,7 +375,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
     if (showLocationGroups && removed?.location_id) {
       const locationStillInUse = next.some((item) => item.location_id === removed.location_id);
       if (!locationStillInUse) {
-        onRemoveLocationGroup?.(removed.location_id);
+        onRemoveLocationGroup?.(removed.location_id, 'empty-group');
       }
     }
   };
@@ -836,7 +841,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => onRemoveLocationGroup(group.location_id)}
+              onClick={() => onRemoveLocationGroup(group.location_id, 'user')}
               disabled={disabled}
             >
               {t('quoteLineItems.locations.removeGroup', { defaultValue: 'Remove location' })}

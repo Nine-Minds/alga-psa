@@ -333,6 +333,15 @@
       "addLocation": "+ Add location",
       "fromTemplate": "+ From template"
     },
+    "locations": {
+      "removeGroup": {
+        "title": "Remove this location?",
+        "message": "This location still has {{count}} line item(s). Choose what happens to them.",
+        "moveOption": "Move these items to {{location}}",
+        "deleteOption": "Delete these items",
+        "confirm": "Remove location"
+      }
+    },
     "clientFacing": {
       "title": "Client-facing text",
       "subtitle": "Appears on the PDF, below the totals.",
@@ -348,7 +357,8 @@
       "opportunityPlaceholder": "Opportunity ID (optional)",
       "pdfLayout": "PDF layout",
       "pdfLayoutPlaceholder": "Use default layout",
-      "pdfLayoutHelp": "Choose which layout the client will see. Leave default to use tenant default."
+      "pdfLayoutHelp": "Choose which layout the client will see. Leave default to use tenant default.",
+      "pdfLayoutByLocationHint": "A quote with items at two or more locations renders grouped by location while the default standard layout applies. Pick a layout above to override that."
     },
     "footer": {
       "savedAgo": "Changes saved · {{ago}}",
@@ -843,6 +853,7 @@
   "templatesPage": {
     "title": "Quote Layouts",
     "description": "Design the layouts used to render quote PDFs and previews.",
+    "byLocationNote": "Quotes with items at two or more locations automatically use the grouped-by-location standard layout while the default standard layout applies. A custom layout is always used exactly as designed.",
     "actions": {
       "openMenu": "Open menu"
     },

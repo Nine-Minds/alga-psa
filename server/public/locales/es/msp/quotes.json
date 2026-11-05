@@ -333,6 +333,15 @@
       "addLocation": "+ Añadir ubicación",
       "fromTemplate": "+ Desde plantilla"
     },
+    "locations": {
+      "removeGroup": {
+        "title": "¿Eliminar esta ubicación?",
+        "message": "Esta ubicación todavía tiene {{count}} línea(s). Elija qué desea hacer con ellas.",
+        "moveOption": "Mover estos elementos a {{location}}",
+        "deleteOption": "Eliminar estos elementos",
+        "confirm": "Eliminar ubicación"
+      }
+    },
     "clientFacing": {
       "title": "Texto visible al cliente",
       "subtitle": "Aparece en el PDF, debajo de los totales.",
@@ -348,7 +357,8 @@
       "opportunityPlaceholder": "ID de oportunidad (opcional)",
       "pdfLayout": "Diseño del PDF",
       "pdfLayoutPlaceholder": "Usar diseño predeterminado",
-      "pdfLayoutHelp": "Elija qué diseño verá el cliente. Déjelo por defecto para usar el predeterminado del tenant."
+      "pdfLayoutHelp": "Elija qué diseño verá el cliente. Déjelo por defecto para usar el predeterminado del tenant.",
+      "pdfLayoutByLocationHint": "Una cotización con elementos en dos o más ubicaciones se representa agrupada por ubicación mientras se aplique el diseño estándar predeterminado. Seleccione un diseño arriba para anularlo."
     },
     "footer": {
       "savedAgo": "Cambios guardados · {{ago}}",
@@ -843,6 +853,7 @@
   "templatesPage": {
     "title": "Diseños de cotización",
     "description": "Diseñe los diseños utilizados para representar los archivos PDF de cotizaciones y las vistas previas.",
+    "byLocationNote": "Las cotizaciones con elementos en dos o más ubicaciones utilizan automáticamente el diseño estándar agrupado por ubicación mientras se aplique el diseño estándar predeterminado. Un diseño personalizado siempre se utiliza tal como se diseñó.",
     "actions": {
       "openMenu": "abrir menú"
     },

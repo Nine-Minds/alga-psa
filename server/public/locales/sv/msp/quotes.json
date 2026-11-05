@@ -333,6 +333,15 @@
       "addLocation": "+ Lägg till plats",
       "fromTemplate": "+ Från mall"
     },
+    "locations": {
+      "removeGroup": {
+        "title": "Ta bort den här platsen?",
+        "message": "Den här platsen har fortfarande {{count}} rad(er). Välj vad som ska hända med dem.",
+        "moveOption": "Flytta dessa rader till {{location}}",
+        "deleteOption": "Ta bort dessa rader",
+        "confirm": "Ta bort plats"
+      }
+    },
     "clientFacing": {
       "title": "Text till kunden",
       "subtitle": "Visas i PDF-filen, under summorna.",
@@ -348,7 +357,8 @@
       "opportunityPlaceholder": "Affärsmöjlighets-ID (valfritt)",
       "pdfLayout": "PDF-layout",
       "pdfLayoutPlaceholder": "Använd standardlayout",
-      "pdfLayoutHelp": "Välj vilken layout kunden ska se. Behåll standardvalet för att använda organisationens standardlayout."
+      "pdfLayoutHelp": "Välj vilken layout kunden ska se. Behåll standardvalet för att använda organisationens standardlayout.",
+      "pdfLayoutByLocationHint": "En offert med rader på två eller fler platser visas grupperad per plats så länge standardlayouten gäller. Välj en layout ovan för att ersätta den."
     },
     "footer": {
       "savedAgo": "Ändringar sparade · {{ago}}",
@@ -843,6 +853,7 @@
   "templatesPage": {
     "title": "Offertlayouter",
     "description": "Utforma layouterna som används för att rendera offerternas PDF-filer och förhandsgranskningar.",
+    "byLocationNote": "Offerter med rader på två eller fler platser använder automatiskt standardlayouten grupperad per plats så länge standardlayouten gäller. En egen layout används alltid exakt som den är utformad.",
     "actions": {
       "openMenu": "Öppna meny"
     },

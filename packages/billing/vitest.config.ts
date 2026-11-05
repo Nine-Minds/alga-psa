@@ -107,6 +107,10 @@ export default defineConfig({
       'src/lib/quoteTermsContent.test.ts',
       'src/components/invoice-designer/ast/workspaceAst.richText.test.ts',
       'src/components/billing-dashboard/quotes/QuoteForm.terms.test.tsx',
+      // Multi-location quote editing (alga-2026-0002902): client-change
+      // clearing, discount lines staying unsited, the remove-location
+      // move/delete choice, and the create-from-template item override.
+      'src/components/billing-dashboard/quotes/QuoteForm.locations.test.tsx',
       // Timezone-safe date-only rendering: the renderer and field formatting
       // share one UTC-pinned formatter — listed for the same reason as above.
       'src/lib/invoice-template-ast/fieldFormatting.test.ts',

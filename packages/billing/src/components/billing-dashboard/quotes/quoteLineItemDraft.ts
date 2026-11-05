@@ -57,7 +57,8 @@ export interface DraftQuoteTotals {
   optional_total: number;
 }
 
-function buildLocalId(): string {
+/** Stable client-side row key for a draft line item. */
+export function buildDraftLocalId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
   }
@@ -107,7 +108,7 @@ export function createDraftQuoteItemFromService(item: CatalogPickerItem, quoteCu
   const needsPrice = Boolean(quoteCurrencyCode) && !hasCurrencyRate && Boolean(item.has_currency_prices);
 
   return {
-    local_id: buildLocalId(),
+    local_id: buildDraftLocalId(),
     service_id: item.service_id,
     service_item_kind: item.item_kind,
     service_name: item.service_name,
@@ -146,7 +147,7 @@ export function createCustomDraftQuoteItem(input: {
   unit_of_measure?: string | null;
 }): DraftQuoteItem {
   return {
-    local_id: buildLocalId(),
+    local_id: buildDraftLocalId(),
     service_id: null,
     service_item_kind: null,
     service_name: null,
@@ -183,7 +184,7 @@ export function createDraftDiscountQuoteItem(input: {
   applies_to_service_id?: string | null;
 }): DraftQuoteItem {
   return {
-    local_id: buildLocalId(),
+    local_id: buildDraftLocalId(),
     service_id: null,
     service_item_kind: null,
     service_name: null,

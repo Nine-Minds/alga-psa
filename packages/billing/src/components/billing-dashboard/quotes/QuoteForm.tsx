@@ -28,6 +28,7 @@ import type { IClient, IContact, IQuote, IQuoteDocumentTemplate, IQuoteListItem,
 import { isActionMessageError, isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { getDefaultBillingSettings } from '@alga-psa/billing/actions/billingSettingsActions';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { getClientByIdForBilling } from '../../../actions/billingClientsActions';
 import { useBillingClient } from '../../../hooks/useBillingClient';
 import { getActiveClientLocationsForBilling, type BillingLocationSummary } from '../../../actions/billingClientLocationActions';
@@ -38,12 +39,13 @@ import QuoteLineItemsEditor from './QuoteLineItemsEditor';
 import {
   pickDefaultLocation,
   collectDistinctLocationIds,
+  formatLocationSummaryLabel,
 } from '../locations/locationGrouping';
 import { QuoteSendRecipientsField, type QuoteRecipient } from './QuoteSendRecipientsField';
 import QuoteMarkAcceptedDialog from './QuoteMarkAcceptedDialog';
 import QuoteSoleApproverNotice from './QuoteSoleApproverNotice';
 import QuoteStatusBadge from './QuoteStatusBadge';
-import { calculateDraftCadenceSummary, calculateDraftMonthlyRecurringNet, calculateDraftQuoteTotals, createDraftQuoteItemFromQuoteItem, formatDraftQuoteMoney, type DraftQuoteItem } from './quoteLineItemDraft';
+import { buildDraftLocalId, calculateDraftCadenceSummary, calculateDraftMonthlyRecurringNet, calculateDraftQuoteTotals, createDraftQuoteItemFromQuoteItem, formatDraftQuoteMoney, type DraftQuoteItem } from './quoteLineItemDraft';
 import { QuoteTermsContent, TextEditor } from '@alga-psa/ui/editor';
 import type { PartialBlock } from '@blocknote/core';
 import { flattenBlockContentToPlainText } from '@alga-psa/formatting/blocknoteUtils';
@@ -171,6 +173,36 @@ const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
 
 /**
+ * Fields every persisted item write shares — the per-item create/update calls
+ * and the create-from-template item override. `appliesToItemId` is resolved by
+ * the caller, which owns the local-id → persisted-id mapping.
+ */
+const buildQuoteItemWritePayload = (item: DraftQuoteItem, appliesToItemId: string | null) => ({
+  description: item.description,
+  quantity: item.quantity,
+  unit_price: item.unit_price,
+  unit_of_measure: item.unit_of_measure ?? null,
+  unit_code: item.unit_code ?? null,
+  phase: item.phase ?? null,
+  is_optional: item.is_optional,
+  is_selected: item.is_selected,
+  is_recurring: item.is_recurring,
+  billing_frequency: item.billing_frequency ?? null,
+  billing_method: item.billing_method ?? null,
+  is_discount: item.is_discount ?? false,
+  discount_type: item.discount_type ?? null,
+  discount_percentage: item.discount_percentage ?? null,
+  applies_to_item_id: appliesToItemId,
+  applies_to_service_id: item.applies_to_service_id ?? null,
+  is_taxable: item.is_taxable ?? true,
+  tax_region: item.tax_region ?? null,
+  tax_rate: item.tax_rate ?? null,
+  location_id: item.location_id ?? null,
+  cost: item.cost ?? null,
+  cost_currency: item.cost_currency ?? null,
+});
+
+/**
  * Where the currently displayed quote currency came from. This is transient
  * presentation state — `quotes.currency_code` remains authoritative — and the
  * union makes each source explicit instead of inferring it from string
@@ -214,6 +246,12 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
    * choose the second location before adding items.
    */
   const [extraGroupLocationIds, setExtraGroupLocationIds] = useState<string[]>([]);
+  /**
+   * Location group the user asked to remove while it still held items. Opens
+   * the move-or-delete confirmation; "Remove location" never silently drops
+   * line items.
+   */
+  const [locationRemovalGroupId, setLocationRemovalGroupId] = useState<string | null>(null);
 
   const [isTemplate, setIsTemplate] = useState(initialIsTemplate);
   // Latest create-mode currency lookup; an older response for a previously picked client is dropped.
@@ -317,16 +355,18 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   }, [distinctLocationIds, extraGroupLocationIds]);
 
   // On first render (or client change), make sure every line item carries a
-  // location_id. Default to the client's primary location.
+  // location_id. Default to the client's primary location. Discount rows are
+  // skipped: they reduce the quote (or a targeted item), they are not sited —
+  // the same rule "+ Add location" applies.
   useEffect(() => {
     if (clientLocations.length === 0) return;
     const primary = pickDefaultLocation(clientLocations);
     if (!primary) return;
 
-    const hasUnassigned = lineItems.some((item) => !item.location_id);
+    const hasUnassigned = lineItems.some((item) => !item.is_discount && !item.location_id);
     if (hasUnassigned) {
       setLineItems((current) => current.map((item) =>
-        item.location_id ? item : { ...item, location_id: primary.location_id }
+        item.is_discount || item.location_id ? item : { ...item, location_id: primary.location_id }
       ));
     }
   }, [clientLocations, lineItems.length]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -608,10 +648,22 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
       setTermsEditorKey((key) => key + 1);
 
       if (template.quote_items?.length) {
+        // Fresh local ids, because these drafts are new rows. An item-targeted
+        // discount must follow its base row onto the new id: the drafts are
+        // submitted as the create-from-template item override, so a target
+        // left pointing at the template's row id would dangle.
+        const localIdByTemplateItemId = new Map<string, string>(
+          template.quote_items.map((item) => [item.quote_item_id, buildDraftLocalId()]),
+        );
         setLineItems(template.quote_items.map((item) => ({
           ...createDraftQuoteItemFromQuoteItem(item),
-          local_id: crypto.randomUUID(),
+          local_id: localIdByTemplateItemId.get(item.quote_item_id) ?? buildDraftLocalId(),
           quote_item_id: undefined,
+          // An unmatched target keeps its original id so the discount stays
+          // item-scoped (resolving to zero) rather than widening to the quote.
+          applies_to_item_id: item.applies_to_item_id
+            ? (localIdByTemplateItemId.get(item.applies_to_item_id) ?? item.applies_to_item_id)
+            : null,
           // Templates may originate from a different client — drop the
           // template's location_id so the primary-location auto-assign
           // effect can pick the correct one for the new client.
@@ -672,7 +724,18 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
       if (isEditMode && quoteId) {
         result = await updateQuote(quoteId, payload as Partial<IQuote>);
       } else if (form.source_template_id) {
-        result = await createQuoteFromTemplate(form.source_template_id, payload as any);
+        // Send the editor's current drafts as the item override so pre-save
+        // edits — above all the per-item location choices — are what gets
+        // created, instead of the template's own rows (whose locations may
+        // belong to an entirely different client).
+        result = await createQuoteFromTemplate(form.source_template_id, {
+          ...payload,
+          items: lineItems.map((item) => ({
+            ...buildQuoteItemWritePayload(item, item.applies_to_item_id ?? null),
+            service_id: item.service_id ?? null,
+            local_id: item.local_id,
+          })),
+        } as any);
       } else {
         result = await createQuote(payload as any);
       }
@@ -701,30 +764,10 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
         );
 
         const persistItem = async (item: DraftQuoteItem) => {
-          const sharedPayload = {
-            description: item.description,
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            unit_of_measure: item.unit_of_measure ?? null,
-            unit_code: item.unit_code ?? null,
-            phase: item.phase ?? null,
-            is_optional: item.is_optional,
-            is_selected: item.is_selected,
-            is_recurring: item.is_recurring,
-            billing_frequency: item.billing_frequency ?? null,
-            billing_method: item.billing_method ?? null,
-            is_discount: item.is_discount ?? false,
-            discount_type: item.discount_type ?? null,
-            discount_percentage: item.discount_percentage ?? null,
-            applies_to_item_id: item.applies_to_item_id ? (quoteItemIdMap.get(item.applies_to_item_id) ?? item.applies_to_item_id) : null,
-            applies_to_service_id: item.applies_to_service_id ?? null,
-            is_taxable: item.is_taxable ?? true,
-            tax_region: item.tax_region ?? null,
-            tax_rate: item.tax_rate ?? null,
-            location_id: item.location_id ?? null,
-            cost: item.cost ?? null,
-            cost_currency: item.cost_currency ?? null,
-          };
+          const sharedPayload = buildQuoteItemWritePayload(
+            item,
+            item.applies_to_item_id ? (quoteItemIdMap.get(item.applies_to_item_id) ?? item.applies_to_item_id) : null,
+          );
 
           if (item.quote_item_id) {
             const updatedItem = await updateQuoteItem(item.quote_item_id, sharedPayload);
@@ -1194,12 +1237,80 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
     }
   };
 
-  const handleRemoveLocationGroup = (removedLocationId: string | null) => {
-    if (removedLocationId) {
-      setLineItems((current) => current.filter((item) => item.location_id !== removedLocationId));
-      setExtraGroupLocationIds((current) => current.filter((id) => id !== removedLocationId));
-    }
+  /**
+   * Where "move items" sends a removed group's items: the client's primary
+   * location, or — when the primary group is the one being removed — the first
+   * other location the quote still uses, else any other client location.
+   */
+  const locationRemovalTarget = useMemo(() => {
+    if (!locationRemovalGroupId) return null;
+    const primary = pickDefaultLocation(clientLocations);
+    if (primary && primary.location_id !== locationRemovalGroupId) return primary;
+    const fallbackId = distinctLocationIds.find((id) => id !== locationRemovalGroupId)
+      ?? extraGroupLocationIds.find((id) => id !== locationRemovalGroupId)
+      ?? null;
+    return clientLocations.find((location) =>
+      location.location_id === (fallbackId ?? '')
+    ) ?? clientLocations.find((location) => location.location_id !== locationRemovalGroupId) ?? null;
+  }, [locationRemovalGroupId, clientLocations, distinctLocationIds, extraGroupLocationIds]);
+
+  const dropLocationGroupPlaceholder = (removedLocationId: string) => {
+    setExtraGroupLocationIds((current) => current.filter((id) => id !== removedLocationId));
   };
+
+  const handleRemoveLocationGroup = (
+    removedLocationId: string | null,
+    source: 'user' | 'empty-group' = 'user',
+  ) => {
+    if (!removedLocationId) return;
+    // The editor's last-item cleanup has nothing to move or delete, so the
+    // placeholder group just goes away — prompting there would ask the user
+    // about items that no longer exist.
+    if (source === 'empty-group') {
+      dropLocationGroupPlaceholder(removedLocationId);
+      return;
+    }
+    if (!lineItems.some((item) => item.location_id === removedLocationId)) {
+      dropLocationGroupPlaceholder(removedLocationId);
+      return;
+    }
+    setLocationRemovalGroupId(removedLocationId);
+  };
+
+  const handleConfirmLocationRemoval = (choice?: string) => {
+    const removedLocationId = locationRemovalGroupId;
+    if (!removedLocationId) return;
+    if (choice === 'delete') {
+      setLineItems((current) => current.filter((item) => item.location_id !== removedLocationId));
+    } else {
+      const targetLocationId = locationRemovalTarget?.location_id ?? null;
+      setLineItems((current) => current.map((item) =>
+        item.location_id === removedLocationId ? { ...item, location_id: targetLocationId } : item
+      ));
+    }
+    dropLocationGroupPlaceholder(removedLocationId);
+    setLocationRemovalGroupId(null);
+  };
+
+  const locationRemovalOptions = useMemo(() => {
+    const options: Array<{ value: string; label: string }> = [];
+    if (locationRemovalTarget) {
+      options.push({
+        value: 'move',
+        label: t('quoteForm.locations.removeGroup.moveOption', {
+          defaultValue: 'Move these items to {{location}}',
+          location: formatLocationSummaryLabel(locationRemovalTarget),
+        }),
+      });
+    }
+    options.push({
+      value: 'delete',
+      label: t('quoteForm.locations.removeGroup.deleteOption', {
+        defaultValue: 'Delete these items',
+      }),
+    });
+    return options;
+  }, [locationRemovalTarget, t]);
 
   // Scroll into view + expand helper wired to the sidebar "Change" link.
   const openMoreDetails = () => {
@@ -1623,6 +1734,16 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                         handleChange('client_id', nextClientId);
                         if (clientChanged) {
                           handleChange('contact_id', '');
+                          // Locations belong to a client, so every id the items
+                          // still carry is foreign to the new one. Clear them
+                          // (and any seeded empty groups) and let the
+                          // auto-assign effect stamp the new client's primary
+                          // location once its locations load; keeping them
+                          // would render groups with no resolvable address.
+                          setLineItems((current) => current.map((item) =>
+                            item.location_id ? { ...item, location_id: null } : item
+                          ));
+                          setExtraGroupLocationIds([]);
                           // A new quote re-defaults from the client, but a
                           // source template still owns the currency (create
                           // precedence: template, then client, then tenant).
@@ -1884,6 +2005,11 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                       <span className="text-xs font-normal text-muted-foreground">
                         {t('quoteForm.moreDetails.pdfLayoutHelp', { defaultValue: 'Choose which layout the client will see. Leave default to use tenant default.' })}
                       </span>
+                      <span id="quote-document-layout-by-location-hint" className="text-xs font-normal text-muted-foreground">
+                        {t('quoteForm.moreDetails.pdfLayoutByLocationHint', {
+                          defaultValue: 'A quote with items at two or more locations renders grouped by location while the default standard layout applies. Pick a layout above to override that.',
+                        })}
+                      </span>
                     </div>
                   </div>
                 )}
@@ -2115,6 +2241,20 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmationDialog
+        id="quote-location-remove-dialog"
+        isOpen={locationRemovalGroupId !== null}
+        onClose={() => setLocationRemovalGroupId(null)}
+        onConfirm={(choice) => handleConfirmLocationRemoval(choice)}
+        title={t('quoteForm.locations.removeGroup.title', { defaultValue: 'Remove this location?' })}
+        message={t('quoteForm.locations.removeGroup.message', {
+          defaultValue: 'This location still has {{count}} line item(s). Choose what happens to them.',
+          count: lineItems.filter((item) => item.location_id === locationRemovalGroupId).length,
+        })}
+        confirmLabel={t('quoteForm.locations.removeGroup.confirm', { defaultValue: 'Remove location' })}
+        options={locationRemovalOptions}
+      />
 
       <QuoteMarkAcceptedDialog
         isOpen={isMarkAcceptedOpen}

@@ -333,6 +333,15 @@
       "addLocation": "+ Ajouter un emplacement",
       "fromTemplate": "+ À partir du modèle"
     },
+    "locations": {
+      "removeGroup": {
+        "title": "Supprimer cet emplacement ?",
+        "message": "Cet emplacement contient encore {{count}} ligne(s). Choisissez ce qu'elles deviennent.",
+        "moveOption": "Déplacer ces éléments vers {{location}}",
+        "deleteOption": "Supprimer ces éléments",
+        "confirm": "Supprimer l'emplacement"
+      }
+    },
     "clientFacing": {
       "title": "Texte visible par le client",
       "subtitle": "Apparaît sur le PDF, sous les totaux.",
@@ -348,7 +357,8 @@
       "opportunityPlaceholder": "ID d'opportunité (facultatif)",
       "pdfLayout": "Mise en page PDF",
       "pdfLayoutPlaceholder": "Utiliser la mise en page par défaut",
-      "pdfLayoutHelp": "Choisissez la mise en page vue par le client. Laissez vide pour utiliser la valeur par défaut du locataire."
+      "pdfLayoutHelp": "Choisissez la mise en page vue par le client. Laissez vide pour utiliser la valeur par défaut du locataire.",
+      "pdfLayoutByLocationHint": "Un devis comportant des éléments sur au moins deux emplacements est rendu groupé par emplacement tant que la mise en page standard par défaut s'applique. Choisissez une mise en page ci-dessus pour la remplacer."
     },
     "footer": {
       "savedAgo": "Modifications enregistrées · {{ago}}",
@@ -843,6 +853,7 @@
   "templatesPage": {
     "title": "Mises en page des devis",
     "description": "Concevez les mises en page utilisées pour afficher les PDF et les aperçus des devis.",
+    "byLocationNote": "Les devis comportant des éléments sur au moins deux emplacements utilisent automatiquement la mise en page standard groupée par emplacement tant que la mise en page standard par défaut s'applique. Une mise en page personnalisée est toujours utilisée telle qu'elle a été conçue.",
     "actions": {
       "openMenu": "Ouvrir le menu"
     },

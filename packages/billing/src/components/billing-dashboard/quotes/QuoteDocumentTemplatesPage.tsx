@@ -288,6 +288,11 @@ const QuoteDocumentTemplatesPage: React.FC = () => {
           <p className="text-sm text-muted-foreground">
             {t('templatesPage.description', { defaultValue: 'Design the layouts used to render quote PDFs and previews.' })}
           </p>
+          <p id="quote-templates-by-location-note" className="text-xs text-muted-foreground">
+            {t('templatesPage.byLocationNote', {
+              defaultValue: 'Quotes with items at two or more locations automatically use the grouped-by-location standard layout while the default standard layout applies. A custom layout is always used exactly as designed.',
+            })}
+          </p>
         </div>
         <Button id="quote-document-templates-new" onClick={() => handleNavigateToEditor('new')}>
           {t('common.actions.newLayout', { defaultValue: 'New Layout' })}
