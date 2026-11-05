@@ -9,6 +9,7 @@ import type {
   CalendarEventMapping,
   CalendarSyncResult,
   ExternalCalendarEvent,
+  IRecurrencePattern,
   IScheduleEntry,
 } from '@alga-psa/types';
 import { IEditScope } from '@alga-psa/types';
@@ -132,6 +133,33 @@ function safeJsonParse(value: string): unknown {
   }
 }
 
+/**
+ * Keep the exception dates Alga holds for a series when its master is re-read.
+ *
+ * A provider's `recurrence[]` does not list the occurrences the user cancelled
+ * one at a time — Google tracks those as cancelled instances and Graph as
+ * `@removed` items, never as EXDATE — so taking the incoming pattern verbatim
+ * would resurrect every occurrence the series had already excepted out.
+ */
+function mergeSeriesExceptions(
+  existing: unknown,
+  incoming: IRecurrencePattern | null | undefined
+): IRecurrencePattern | null | undefined {
+  if (!incoming) return incoming;
+  const previous = ScheduleEntry.parseRecurrencePattern((existing ?? null) as any);
+  if (!previous?.exceptions?.length) return incoming;
+
+  const byDay = new Map<number, Date>();
+  for (const value of [...(incoming.exceptions ?? []), ...previous.exceptions]) {
+    const date = utcMidnight(new Date(value));
+    if (!isNaN(date.getTime())) byDay.set(date.getTime(), date);
+  }
+  return {
+    ...incoming,
+    exceptions: [...byDay.values()].sort((left, right) => left.getTime() - right.getTime()),
+  };
+}
+
 export class CalendarSyncService {
   private providerService: CalendarProviderService;
   /**
@@ -140,6 +168,15 @@ export class CalendarSyncService {
    */
   private masterEventCache = new Map<string, { event: ExternalCalendarEvent | null; fetchedAt: number }>();
   private static readonly MASTER_CACHE_TTL_MS = 2 * 60 * 1000;
+  /**
+   * Newest instance `updated` already used to re-read a series master, per
+   * master. Series-level edits only ever reach Alga as instance changes (see
+   * refreshSeriesMasterIfStale), and this keeps a batch of instances carrying
+   * the same edit from re-reading the master once each.
+   */
+  private seriesMasterRefreshes = new Map<string, { updated: number; at: number }>();
+  /** `calendar_event_mappings.occurrence_index` read once per master per run. */
+  private occurrenceIndexCache = new Map<string, { index: Record<string, string>; at: number }>();
   /** Mirrors the Microsoft delta window; never materialize a series unbounded. */
   private static readonly FALLBACK_WINDOW_PAST_MS = 90 * 24 * 60 * 60 * 1000;
   private static readonly FALLBACK_WINDOW_FUTURE_MS = 365 * 24 * 60 * 60 * 1000;
@@ -453,6 +490,11 @@ export class CalendarSyncService {
           };
         }
       }
+      // Carried onto the mapping on create AND on update, so a re-synced
+      // occurrence of an inexpressible series keeps saying why it is one row.
+      const seriesFallbackMessage = unsupportedSeriesReason
+        ? this.unsupportedSeriesMessage(unsupportedSeriesReason)
+        : null;
 
       // Check for existing mapping
       const existingMapping = await this.getMappingByExternalEvent(externalEventId, calendarProviderId, tenant);
@@ -519,6 +561,12 @@ export class CalendarSyncService {
             ...existingEntry,
             ...entryData,
             entry_id: existingEntry.entry_id, // Preserve entry ID
+            // A re-read master must not resurrect the occurrences the series has
+            // already excepted out (see mergeSeriesExceptions).
+            recurrence_pattern: mergeSeriesExceptions(
+              existingEntry.recurrence_pattern,
+              entryData.recurrence_pattern
+            ) as IScheduleEntry['recurrence_pattern'],
             // Preserve existing assignees if external event doesn't have valid attendees
             assigned_user_ids: shouldPreserveAssignees
               ? existingEntry.assigned_user_ids
@@ -531,7 +579,8 @@ export class CalendarSyncService {
           if (!changesSyncedFields(existingEntry, mergedEntry)) {
             await tenantDb(trx, tenant).table('calendar_event_mappings').where('id', existingMapping.id).update({
               sync_status: 'synced', last_synced_at: new Date().toISOString(),
-              external_last_modified: externalEvent.updated, sync_error_message: null, updated_at: new Date().toISOString()
+              external_last_modified: externalEvent.updated,
+              sync_error_message: seriesFallbackMessage, updated_at: new Date().toISOString()
             });
             if (!canEdit) return { success: true, skipped: true, reason: 'Only Alga calendar metadata changed' };
             return { success: true, skipped: true, reason: 'No synced fields changed' };
@@ -607,7 +656,7 @@ export class CalendarSyncService {
                 ? updatedEntry.updated_at.toISOString() 
                 : new Date(updatedEntry.updated_at).toISOString(),
               external_last_modified: externalEvent.updated,
-              sync_error_message: null,
+              sync_error_message: seriesFallbackMessage,
               updated_at: new Date().toISOString()
             });
 
@@ -736,9 +785,7 @@ export class CalendarSyncService {
               sync_status: 'synced',
               last_synced_at: new Date().toISOString(),
               sync_direction: 'from_external',
-              ...(unsupportedSeriesReason
-                ? { sync_error_message: this.unsupportedSeriesMessage(unsupportedSeriesReason) }
-                : {}),
+              ...(seriesFallbackMessage ? { sync_error_message: seriesFallbackMessage } : {}),
               alga_last_modified: createdEntry.updated_at instanceof Date
                 ? createdEntry.updated_at.toISOString()
                 : new Date(createdEntry.updated_at).toISOString(),
@@ -761,7 +808,9 @@ export class CalendarSyncService {
       if (wroteSync) {
         await this.markProviderConnected(provider.id, adapter);
       }
-      if (unsupportedSeriesReason && wroteSync) {
+      // Also on the no-change path: the series stays inexpressible whether or
+      // not this particular occurrence had anything new in it.
+      if (unsupportedSeriesReason && (result as any)?.success) {
         await this.noteProviderSeriesFallback(provider.id, unsupportedSeriesReason);
       }
       if (rePushEntryId) {
@@ -868,6 +917,10 @@ export class CalendarSyncService {
     if (!masterEntry.recurrence_pattern) {
       const refreshed = await this.syncExternalEventToSchedule(masterMapping.external_event_id, provider.id, force);
       masterEntry = await ScheduleEntry.get(knex, tenant, masterMapping.schedule_entry_id);
+      // Re-read the mapping too: its external_last_modified is what the staleness
+      // check below compares against.
+      masterMapping = (await this.getMappingByExternalEvent(masterMapping.external_event_id, provider.id, tenant))
+        ?? masterMapping;
       if (!masterEntry?.recurrence_pattern) {
         return {
           handled: true,
@@ -876,6 +929,16 @@ export class CalendarSyncService {
             : refreshed,
         };
       }
+    }
+
+    // The series itself may have changed; the master has to be re-read before
+    // this instance is judged against it (see refreshSeriesMasterIfStale).
+    const refreshed = await this.refreshSeriesMasterIfStale({
+      instance, adapter, provider, tenant, knex, force, masterMapping,
+    });
+    if (refreshed) {
+      masterMapping = refreshed.mapping;
+      masterEntry = refreshed.entry;
     }
 
     const occurrenceStart = this.occurrenceStartOf(instance);
@@ -902,7 +965,9 @@ export class CalendarSyncService {
       // No schedule entry for a plain occurrence — but its id is recorded, so a
       // later provider delete of just that occurrence can be applied to this
       // master instead of being dropped as an unknown id.
-      await this.recordOccurrenceForDeleteResolution(knex, tenant, masterMapping, instance, occurrenceStart);
+      if (instance.provider === 'microsoft') {
+        await this.recordSeriesOccurrenceId(knex, tenant, masterMapping, instance.id, occurrenceStart);
+      }
       return {
         handled: true,
         result: {
@@ -918,6 +983,7 @@ export class CalendarSyncService {
       provider,
       tenant,
       knex,
+      masterMapping,
       masterEntry,
       occurrenceStart,
       instanceMapping,
@@ -944,8 +1010,75 @@ export class CalendarSyncService {
       if (!isProviderEventGone(error)) throw error;
       event = null;
     }
+    this.pruneSeriesCaches();
     this.masterEventCache.set(key, { event, fetchedAt: Date.now() });
     return event;
+  }
+
+  /** Drop expired per-run memos so a long-lived service never grows unbounded. */
+  private pruneSeriesCaches(): void {
+    const cutoff = Date.now() - CalendarSyncService.MASTER_CACHE_TTL_MS;
+    for (const [key, entry] of this.masterEventCache) {
+      if (entry.fetchedAt < cutoff) this.masterEventCache.delete(key);
+    }
+    for (const [key, entry] of this.seriesMasterRefreshes) {
+      if (entry.at < cutoff) this.seriesMasterRefreshes.delete(key);
+    }
+    for (const [key, entry] of this.occurrenceIndexCache) {
+      if (entry.at < cutoff) this.occurrenceIndexCache.delete(key);
+    }
+  }
+
+  /**
+   * Re-read a series master when an instance proves it moved on.
+   *
+   * Neither a Google `singleEvents` list nor Graph's `calendarView/delta` ever
+   * returns the master, so retiming or re-ruling a whole series arrives as
+   * instance changes only — and without this the master would keep its old
+   * pattern forever while the tombstones for the old slots were recorded as
+   * exceptions on it, excepting the series away a slot at a time.
+   *
+   * The trigger is the instance's `updated` outrunning the version this
+   * mapping acknowledged. Bounded by the memoised master fetch plus a per-master
+   * high-water mark, so a 730-instance batch carrying one edit re-reads once.
+   */
+  private async refreshSeriesMasterIfStale(params: {
+    instance: ExternalCalendarEvent;
+    adapter: BaseCalendarAdapter;
+    provider: CalendarProviderConfig;
+    tenant: string;
+    knex: any;
+    force: boolean;
+    masterMapping: CalendarEventMapping;
+  }): Promise<{ mapping: CalendarEventMapping; entry: IScheduleEntry } | null> {
+    const { instance, adapter, provider, tenant, knex, force, masterMapping } = params;
+    const masterExternalId = masterMapping.external_event_id;
+
+    const instanceUpdated = instance.updated ? new Date(instance.updated).getTime() : NaN;
+    if (!Number.isFinite(instanceUpdated)) return null;
+    const acknowledged = masterMapping.external_last_modified
+      ? new Date(masterMapping.external_last_modified).getTime()
+      : NaN;
+    if (Number.isFinite(acknowledged) && instanceUpdated <= acknowledged) return null;
+
+    const key = `${provider.id}:${masterExternalId}`;
+    const seen = this.seriesMasterRefreshes.get(key);
+    if (seen && instanceUpdated <= seen.updated) return null;
+    this.seriesMasterRefreshes.set(key, { updated: instanceUpdated, at: Date.now() });
+
+    // The memo holds the version this run already read; the whole point here is
+    // that the provider's copy moved past it.
+    this.masterEventCache.delete(key);
+    const master = await this.fetchSeriesMaster(adapter, provider.id, masterExternalId);
+    // Gone on the provider side: the delete path confirms and removes a series,
+    // never an update path working from a single instance.
+    if (!master) return null;
+
+    await this.syncExternalEventToSchedule(masterExternalId, provider.id, force, master);
+
+    const mapping = await this.getMappingByExternalEvent(masterExternalId, provider.id, tenant);
+    const entry = mapping ? await ScheduleEntry.get(knex, tenant, mapping.schedule_entry_id) : null;
+    return mapping && entry ? { mapping, entry } : null;
   }
 
   /** The occurrence slot an instance was generated for, before any move. */
@@ -970,47 +1103,73 @@ export class CalendarSyncService {
   /**
    * Record `occurrence id -> slot` on the series master's mapping row.
    *
-   * Only Microsoft needs it: Graph reports a cancelled occurrence as an
-   * `@removed` item holding nothing but an opaque id, and a GET on that id
-   * answers 404, so the link to the master has to exist before the occurrence
-   * disappears. Google keeps serving a cancelled instance with its
-   * `recurringEventId`, which is cheaper than an index. The index is kept on the
-   * master's row (not as one row per occurrence, which the
-   * (tenant, schedule_entry_id, calendar_provider_id) unique index forbids) so
-   * deleting the master takes its index with it.
+   * Two jobs, both of which need the link to exist before the occurrence does
+   * not. Microsoft reports a cancelled occurrence as an `@removed` item holding
+   * nothing but an opaque id that then 404s on GET, so a plain occurrence is
+   * indexed as it is seen (Google needs no index for this — events.get still
+   * serves a cancelled instance with its `recurringEventId`). And for either
+   * provider it is how deleting a whole series finds its single-occurrence
+   * override children: Graph's instance ids are opaque and bear no textual
+   * relation to the master's.
+   *
+   * The index lives on the master's row rather than as one row per occurrence,
+   * which the (tenant, schedule_entry_id, calendar_provider_id) unique index
+   * forbids, so deleting the master takes its index with it.
    */
-  private async recordOccurrenceForDeleteResolution(
+  private async recordSeriesOccurrenceId(
     knex: any,
     tenant: string,
     masterMapping: CalendarEventMapping,
-    instance: ExternalCalendarEvent,
+    occurrenceId: string,
     occurrenceStart: Date
   ): Promise<void> {
-    if (instance.provider !== 'microsoft') return;
-    if (!occurrenceStart || isNaN(occurrenceStart.getTime())) return;
+    if (!occurrenceId || !occurrenceStart || isNaN(occurrenceStart.getTime())) return;
 
-    const row = await tenantDb(knex, tenant).table('calendar_event_mappings')
-      .where('id', masterMapping.id)
-      .first();
-    if (!row) return;
+    const index = await this.loadOccurrenceIndex(knex, tenant, masterMapping.id);
+    if (!index) return;
 
-    const index = parseOccurrenceIndex(row.occurrence_index);
     const slot = occurrenceStart.toISOString();
-    if (index[instance.id] === slot) return;
+    if (index[occurrenceId] === slot) return;
 
-    index[instance.id] = slot;
+    index[occurrenceId] = slot;
     // Bounded: Graph's delta window is 90 days back / 365 forward, so the newest
     // slots are the only ones a delete can still arrive for.
     const entries = Object.entries(index)
       .sort(([, left], [, right]) => new Date(right).getTime() - new Date(left).getTime())
       .slice(0, CalendarSyncService.OCCURRENCE_INDEX_LIMIT);
+    const bounded = Object.fromEntries(entries);
+    this.occurrenceIndexCache.set(masterMapping.id, { index: { ...bounded }, at: Date.now() });
 
     await tenantDb(knex, tenant).table('calendar_event_mappings')
       .where('id', masterMapping.id)
       .update({
-        occurrence_index: Object.fromEntries(entries),
+        occurrence_index: bounded,
         updated_at: new Date().toISOString(),
       });
+  }
+
+  /**
+   * The master's occurrence index, read from the row once per run. Null when the
+   * mapping row is gone.
+   */
+  private async loadOccurrenceIndex(
+    knex: any,
+    tenant: string,
+    mappingId: string
+  ): Promise<Record<string, string> | null> {
+    const cached = this.occurrenceIndexCache.get(mappingId);
+    if (cached && Date.now() - cached.at < CalendarSyncService.MASTER_CACHE_TTL_MS) {
+      return cached.index;
+    }
+
+    const row = await tenantDb(knex, tenant).table('calendar_event_mappings')
+      .where('id', mappingId)
+      .first();
+    if (!row) return null;
+
+    const index = parseOccurrenceIndex(row.occurrence_index);
+    this.occurrenceIndexCache.set(mappingId, { index, at: Date.now() });
+    return index;
   }
 
   /** Find the series master that recorded this occurrence id, if any. */
@@ -1180,11 +1339,12 @@ export class CalendarSyncService {
     provider: CalendarProviderConfig;
     tenant: string;
     knex: any;
+    masterMapping: CalendarEventMapping;
     masterEntry: IScheduleEntry;
     occurrenceStart: Date;
     instanceMapping: CalendarEventMapping | null;
   }): Promise<CalendarSyncResult> {
-    const { instance, provider, tenant, knex, masterEntry, occurrenceStart, instanceMapping } = params;
+    const { instance, provider, tenant, knex, masterMapping, masterEntry, occurrenceStart, instanceMapping } = params;
 
     const entryData = await mapExternalEventToScheduleEntry(instance, tenant, provider.provider_type);
     const assignedUserIds = provider.user_id
@@ -1214,6 +1374,7 @@ export class CalendarSyncService {
           sync_error_message: null,
           updated_at: new Date().toISOString(),
         });
+      await this.recordSeriesOccurrenceId(knex, tenant, masterMapping, instance.id, occurrenceStart);
       return { success: true, externalEventId: instance.id };
     }
 
@@ -1244,6 +1405,11 @@ export class CalendarSyncService {
       })
       .returning('*');
 
+    // The override's provider id goes on the master's index: deleting the whole
+    // series has no other way to find this child, since Graph instance ids share
+    // nothing with the master's.
+    await this.recordSeriesOccurrenceId(knex, tenant, masterMapping, instance.id, occurrenceStart);
+
     return {
       success: true,
       mapping: mapping ? this.mapDbRowToMapping(mapping) : undefined,
@@ -1267,13 +1433,20 @@ export class CalendarSyncService {
     const mapping = await this.getMappingByExternalEvent(externalEventId, providerId, tenant);
     if (mapping) {
       const entry = await ScheduleEntry.get(knex, tenant, mapping.schedule_entry_id);
+      // Read the master's occurrence index first: the delete below takes the
+      // mapping row, and with it the only record of which provider ids belong
+      // to this series.
+      const indexedIds = entry?.is_recurring
+        ? Object.keys((await this.loadOccurrenceIndex(knex, tenant, mapping.id)) ?? {})
+        : [];
       const result = await this.handleInboundProviderDelete(mapping.schedule_entry_id, providerId);
       // Single-occurrence overrides only go when the series itself did: a
       // provider user without edit rights keeps the entry (and its overrides).
       if (result.success && entry?.is_recurring
         && !(await ScheduleEntry.get(knex, tenant, mapping.schedule_entry_id))) {
-        await this.deleteSeriesOverrides(knex, tenant, providerId, externalEventId);
+        await this.deleteSeriesOverrides(knex, tenant, providerId, externalEventId, indexedIds);
       }
+      this.occurrenceIndexCache.delete(mapping.id);
       return result;
     }
 
@@ -1337,15 +1510,39 @@ export class CalendarSyncService {
 
   /**
    * Remove the standalone override entries belonging to a provider series.
-   * Matched on the provider's instance-id shape so a split master
-   * (`<base>_R<timestamp>`) is never swept up with its predecessor.
+   *
+   * Primary source is the ids the master's occurrence index recorded, which is
+   * the only thing that works for Microsoft: a Graph occurrence id is opaque
+   * base64 unrelated to its master's. The id-shape sweep stays as a second pass
+   * for Google — it covers overrides recorded before the index existed — and is
+   * narrow enough that a split master (`<base>_R<timestamp>`) is never swept up
+   * with its predecessor.
    */
   private async deleteSeriesOverrides(
     knex: any,
     tenant: string,
     providerId: string,
-    masterExternalId: string
+    masterExternalId: string,
+    indexedOccurrenceIds: string[] = []
   ): Promise<void> {
+    const seen = new Set<string>();
+
+    const removeRow = async (row: { id: string; schedule_entry_id: string }) => {
+      if (seen.has(row.id)) return;
+      seen.add(row.id);
+      await ScheduleEntry.delete(knex, tenant, row.schedule_entry_id);
+      await tenantDb(knex, tenant).table('calendar_event_mappings').where('id', row.id).del();
+    };
+
+    const indexed = indexedOccurrenceIds.filter((id) => id && id !== masterExternalId);
+    if (indexed.length > 0) {
+      const rows = await tenantDb(knex, tenant).table('calendar_event_mappings')
+        .where('calendar_provider_id', providerId)
+        .whereIn('external_event_id', indexed)
+        .select('id', 'schedule_entry_id');
+      for (const row of rows) await removeRow(row);
+    }
+
     const rows = await tenantDb(knex, tenant).table('calendar_event_mappings')
       .where('calendar_provider_id', providerId)
       .andWhere('external_event_id', 'like', `${likePrefix(masterExternalId)}\\_%`)
@@ -1353,8 +1550,7 @@ export class CalendarSyncService {
 
     for (const row of rows) {
       if (instanceIdMasterCandidate(row.external_event_id) !== masterExternalId) continue;
-      await ScheduleEntry.delete(knex, tenant, row.schedule_entry_id);
-      await tenantDb(knex, tenant).table('calendar_event_mappings').where('id', row.id).del();
+      await removeRow(row);
     }
   }
 

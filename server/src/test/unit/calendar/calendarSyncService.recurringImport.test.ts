@@ -588,6 +588,96 @@ describe('CalendarSyncService recurring import', () => {
     expect(adapterState.deleteEventCalls).toEqual([]);
   });
 
+  it('re-reads the master when a series-level edit arrives only as instance changes', async () => {
+    // Neither a Google singleEvents list nor Graph's calendarView/delta ever
+    // returns the master, so re-ruling a whole series shows up purely as
+    // instance changes. Without the re-read the master kept its old pattern
+    // while the old slots' tombstones were recorded as exceptions on it —
+    // excepting the series away one occurrence at a time.
+    const original = productionInstances(2);
+    registerEvents([googleMaster(), ...original]);
+    const service = await newSyncService();
+    await service.syncExternalEventToSchedule(original[0].id, 'provider-1');
+    expect(masterEntry().recurrence_pattern.weekOfMonth).toBe(1);
+
+    // The user moves the series to the second Thursday. Google bumps `updated`
+    // on the master and on every instance it re-emits.
+    const editedAt = '2026-10-05T12:00:00.000Z';
+    adapterState.events.set(
+      MASTER_ID,
+      googleMaster({ recurrence: ['RRULE:FREQ=MONTHLY;BYDAY=2TH'], updated: editedAt })
+    );
+    const reruled = [
+      googleOccurrence('2026-11-12T15:15:00.000Z', { updated: editedAt }),
+      googleOccurrence('2026-12-10T15:15:00.000Z', { updated: editedAt }),
+    ];
+    registerEvents(reruled);
+
+    for (const instance of reruled) {
+      expect((await service.syncExternalEventToSchedule(instance.id, 'provider-1')).success).toBe(true);
+    }
+
+    expect(db.entries.size).toBe(1);
+    expect(mappings()).toHaveLength(1);
+    expect(masterEntry().recurrence_pattern.weekOfMonth).toBe(2);
+    // One read for the initial import, one for the edit — not one per instance.
+    expect(adapterState.getEventCalls.filter((id) => id === MASTER_ID)).toHaveLength(2);
+  });
+
+  it('keeps the exceptions a series accumulated when its master is re-read', async () => {
+    const instances = productionInstances(2);
+    const cancelled = { ...instances[1], status: 'cancelled' };
+    registerEvents([googleMaster(), ...instances]);
+    adapterState.events.set(cancelled.id, cancelled);
+    const service = await newSyncService();
+
+    await service.syncExternalEventToSchedule(instances[0].id, 'provider-1');
+    await service.syncExternalEventToSchedule(cancelled.id, 'provider-1');
+    expect(masterEntry().recurrence_pattern.exceptions).toHaveLength(1);
+
+    // The provider's recurrence[] never lists a cancelled occurrence, so a
+    // re-read would otherwise resurrect it.
+    const editedAt = '2026-10-05T12:00:00.000Z';
+    adapterState.events.set(MASTER_ID, googleMaster({ updated: editedAt }));
+    const later = googleOccurrence('2027-01-07T15:15:00.000Z', { updated: editedAt });
+    registerEvents([later]);
+
+    await service.syncExternalEventToSchedule(later.id, 'provider-1');
+
+    expect(masterEntry().recurrence_pattern.exceptions.map((date: Date) => new Date(date).toISOString()))
+      .toEqual(['2026-11-05T00:00:00.000Z']);
+  });
+
+  it('removes a Microsoft override on master delete, despite its unrelated id', async () => {
+    // A Graph occurrence id is opaque base64 that shares nothing with its
+    // master's, so the id-prefix sweep cannot find this child — the master's
+    // occurrence index is what links them.
+    const occurrence = microsoftOccurrence('2026-10-01T14:15:00.000Z');
+    const moved = microsoftOccurrence('2026-11-05T14:15:00.000Z', {
+      id: 'AAMkAGI2TG93exception-opaque=',
+      title: 'Advisories (moved) @alga',
+      start: { dateTime: '2026-11-06T14:15:00.000Z', timeZone: 'UTC' },
+      end: { dateTime: '2026-11-06T14:45:00.000Z', timeZone: 'UTC' },
+      instanceType: 'exception',
+    });
+    providerState.provider.provider_type = 'microsoft';
+    registerEvents([microsoftMaster(), occurrence, moved]);
+    const service = await newSyncService();
+
+    await service.syncExternalEventToSchedule(occurrence.id, 'provider-1');
+    await service.syncExternalEventToSchedule(moved.id, 'provider-1');
+    expect(db.entries.size).toBe(2);
+    expect(mappings().map((row) => row.external_event_id).sort())
+      .toEqual([MS_MASTER_ID, moved.id].sort());
+
+    const result = await service.handleInboundExternalDelete(MS_MASTER_ID, 'provider-1');
+
+    expect(result.success).toBe(true);
+    expect(db.entries.size).toBe(0);
+    expect(mappings()).toHaveLength(0);
+    expect(adapterState.deleteEventCalls).toEqual([]);
+  });
+
   it('treats a split series (_R master) as its own master', async () => {
     const splitMasterId = `${MASTER_ID}_R20261105T151500Z`;
     const splitMaster = googleMaster({
