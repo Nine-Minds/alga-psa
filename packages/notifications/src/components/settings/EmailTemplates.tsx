@@ -105,7 +105,8 @@ export function EmailTemplates() {
     systemTemplates: (SystemEmailTemplate & { category: string })[];
     tenantTemplates: TenantEmailTemplate[];
   } | null>(null);
-  const [tenant, setTenant] = useState<string | null>(null);
+  // Readiness only: the actions take their tenant from the session server-side.
+  const sessionTenant = (session?.user as any)?.tenant as string | undefined;
   const [error, setError] = useState<string | null>(null);
   const [isCloning, setIsCloning] = useState(false);
   const [viewingTemplate, setViewingTemplate] = useState<SystemEmailTemplate | null>(null);
@@ -170,10 +171,8 @@ export function EmailTemplates() {
   useEffect(() => {
     async function init() {
       try {
-        const currentTenant = (session?.user as any)?.tenant as string | undefined;
-        if (!currentTenant) return;
-        setTenant(currentTenant);
-        const currentTemplates = await getTemplatesAction(currentTenant);
+        if (!sessionTenant) return;
+        const currentTemplates = await getTemplatesAction();
         setTemplates(currentTemplates);
 
         // Land on the tenant's own language instead of every translation of
@@ -213,10 +212,8 @@ export function EmailTemplates() {
     : null;
 
   const refreshTemplates = useCallback(async () => {
-    const currentTenant = tenant ?? ((session?.user as any)?.tenant as string | undefined);
-    if (!currentTenant) return;
-    setTemplates(await getTemplatesAction(currentTenant));
-  }, [tenant, session]);
+    setTemplates(await getTemplatesAction());
+  }, []);
 
   const handleToggleExpand = useCallback((category: string) => {
     setExpandedCategories(prev => {
@@ -231,14 +228,9 @@ export function EmailTemplates() {
   }, []);
 
   const handleCreateCustom = async (template: SystemEmailTemplate) => {
-    if (!tenant) {
-      console.error("No tenant found");
-      return;
-    }
-
     try {
       setIsCloning(true);
-      const result = await cloneSystemTemplateAction(tenant, template.id);
+      const result = await cloneSystemTemplateAction(template.id);
       if (isNotificationActionError(result)) {
         setError(getErrorMessage(result));
         return;
@@ -249,7 +241,7 @@ export function EmailTemplates() {
       if (brandingTarget) {
         const branded = applyEmailPalette(template.html_content, STOCK_EMAIL_PALETTE, brandingTarget);
         if (branded !== template.html_content) {
-          await updateTenantTemplateAction(tenant, result.id, { html_content: branded });
+          await updateTenantTemplateAction(result.id, { html_content: branded });
         }
       }
 
@@ -262,11 +254,10 @@ export function EmailTemplates() {
   };
 
   const handleUseStandard = async (name: string) => {
-    if (!tenant) return;
     try {
-      await deactivateTenantTemplateAction(tenant, name);
+      await deactivateTenantTemplateAction(name);
       // Refresh templates
-      const currentTemplates = await getTemplatesAction(tenant);
+      const currentTemplates = await getTemplatesAction();
       setTemplates(currentTemplates);
     } catch (error) {
       console.error("Failed to switch to standard template:", error);
@@ -277,7 +268,7 @@ export function EmailTemplates() {
     return <div className="text-red-500">{error}</div>;
   }
 
-  if (!templates || !tenant) {
+  if (!templates || !sessionTenant) {
     return (
       <div className="flex items-center justify-center py-8">
         <LoadingIndicator
@@ -611,7 +602,6 @@ export function EmailTemplates() {
         isOpen={!!editingTemplate}
         onClose={() => setEditingTemplate(null)}
         template={editingTemplate}
-        tenant={tenant}
         onTemplatesChange={setTemplates}
         brandingPalette={brandingTarget}
         appliedPalette={brandingStatus?.palette?.appliedPalette ?? null}
@@ -773,7 +763,6 @@ function EditTemplateDialog({
   isOpen,
   onClose,
   template,
-  tenant,
   onTemplatesChange,
   brandingPalette,
   appliedPalette,
@@ -782,7 +771,6 @@ function EditTemplateDialog({
   isOpen: boolean;
   onClose: () => void;
   template: TenantEmailTemplate | null;
-  tenant: string;
   onTemplatesChange: (templates: { systemTemplates: (SystemEmailTemplate & { category: string })[]; tenantTemplates: TenantEmailTemplate[] }) => void;
   /** Token map to rewrite into the editor, null when no palette is saved. */
   brandingPalette: EmailPaletteTokens | null;
@@ -979,9 +967,9 @@ function EditTemplateDialog({
     e.preventDefault();
     setIsSaving(true);
     try {
-      await updateTenantTemplateAction(tenant, template!.id, formData);
+      await updateTenantTemplateAction(template!.id, formData);
       // Refresh templates
-      const currentTemplates = await getTemplatesAction(tenant);
+      const currentTemplates = await getTemplatesAction();
       onTemplatesChange(currentTemplates);
       onClose();
     } catch (error) {

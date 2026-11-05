@@ -116,7 +116,9 @@
     "clientTags": "Étiquettes du client",
     "tagModeAny": "Au moins une parmi",
     "tagModeNone": "Aucune parmi",
-    "droppedFromLink": "Certains filtres de ce lien ne sont pas valides et ont été ignorés."
+    "droppedFromLink": "Certains filtres de ce lien ne sont pas valides et ont été ignorés.",
+    "location": "Site",
+    "requesterLocation": "Site du demandeur"
   },
   "create": {
     "title": "Créer un ticket d'assistance",
@@ -185,7 +187,7 @@
     "additionalAgents": "Agents supplémentaires",
     "createdBy": "Créé par",
     "lastActivity": "Dernière activité",
-    "location": "Emplacement",
+    "location": "Site",
     "contactPhone": "Téléphone du contact",
     "clientPhone": "Téléphone du client",
     "contactEmail": "E-mail du contact",
@@ -458,7 +460,9 @@
         "operationConflict": "Ce commentaire entre en conflit avec une tentative précédente. Rechargez et réessayez.",
         "audienceUnresolved": "Choisissez qui peut voir ce commentaire avant de le publier.",
         "unknownOutcome": "Nous n'avons pas pu confirmer la publication du commentaire. Vérifiez la conversation avant de le renvoyer."
-      }
+      },
+      "unavailable": "Ce ticket n’est pas disponible.",
+      "back": "Retour aux tickets clients"
     }
   },
   "responseState": {
@@ -1023,7 +1027,9 @@
       "heading": "Observateurs",
       "placeholder": "Ajouter des observateurs..."
     },
-    "attachmentsPartialFailure": "Ticket créé, mais ces fichiers n’ont pas pu être joints : {{files}}. Ajoutez-les depuis le ticket."
+    "attachmentsPartialFailure": "Ticket créé, mais ces fichiers n’ont pas pu être joints : {{files}}. Ajoutez-les depuis le ticket.",
+    "contactLocationSuffix": "(site du contact)",
+    "contactPrimaryLocationSuffix": "(site principal du contact)"
   },
   "itil": {
     "calculatedPriority": "Priorité (calculée)",
@@ -1681,7 +1687,14 @@
       "referenceInvalid": "Le tableau, le statut, la priorité, le responsable, l’équipe ou la politique SLA sélectionné n’est plus valide. Veuillez actualiser la page et réessayer.",
       "duplicateName": "Un tableau portant ce nom existe déjà.",
       "duplicate": "Un tableau ou un statut avec les mêmes paramètres existe déjà.",
-      "invalidValue": "L’une des valeurs de tableau ou de statut n’est pas valide. Veuillez actualiser la page et réessayer."
+      "invalidValue": "L’une des valeurs de tableau ou de statut n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "notificationEmailInvalid": "La règle de notification {{rule}} contient une adresse e-mail non valide ({{max}} caractères maximum)",
+      "notificationEmailLimit": "La règle de notification {{rule}} peut contenir au maximum {{max}} adresses e-mail",
+      "notificationRecipientRequired": "La règle de notification {{rule}} doit notifier au moins un utilisateur, une équipe ou une adresse e-mail",
+      "notificationEmailIsUser": "Règle de notification {{rule}} : {{address}} est l'adresse e-mail d'un utilisateur Alga. Choisissez plutôt l'utilisateur.",
+      "notificationEmailIsContact": "Règle de notification {{rule}} : {{address}} appartient à un contact ou à un site d'un client et ne peut pas être destinataire.",
+      "notificationEmailClientDomain": "Règle de notification {{rule}} : {{address}} se trouve sur le domaine e-mail d'un client et ne peut pas être destinataire.",
+      "notificationEmailInboundMailbox": "Règle de notification {{rule}} : {{address}} est une boîte de réception connectée et ne peut pas être destinataire."
     },
     "material": {
       "invalidValue": "L’une des valeurs de matériel sélectionnées n’est pas valide. Veuillez actualiser la page et réessayer.",
@@ -2057,7 +2070,9 @@
       "changeLocation": "Changer d'emplacement",
       "addDescriptionPrompt": "Ajoutez une description — quel est le problème et de quoi le client a-t-il besoin ?",
       "projectTasks": "Tâches de projet",
-      "timeAndBilling": "Temps et facturation"
+      "timeAndBilling": "Temps et facturation",
+      "useContactLocation": "Utiliser le site du contact",
+      "remote": "À distance"
     },
     "timeline": {
       "subtitle": "Réponses, temps et changements système au même endroit",

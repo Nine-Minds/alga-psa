@@ -27,6 +27,7 @@ import type { Knex } from 'knex';
 import { resolveTenantAppBase } from '@alga-psa/tenancy/server';
 import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
+import { formatCurrencyWithSymbol } from '@alga-psa/core/formatters';
 
 /**
  * Get the base URL from NEXTAUTH_URL environment variable
@@ -203,10 +204,7 @@ function formatProjectBillingAmount(
 ): string {
   const currencyCode = currency?.trim() || 'USD';
   try {
-    return new Intl.NumberFormat(locale, {
-      style: 'currency',
-      currency: currencyCode,
-    }).format(amountCents / 100);
+    return formatCurrencyWithSymbol(amountCents / 100, locale, currencyCode);
   } catch {
     return `${currencyCode} ${(amountCents / 100).toFixed(2)}`;
   }

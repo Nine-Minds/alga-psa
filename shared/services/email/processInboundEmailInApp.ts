@@ -42,6 +42,7 @@ import { withTenantAdminTransaction } from './tenantAdminTransaction';
 import { associateAssetWithTicket } from '../assets/assetTicketAssociation';
 import {
   detectOutboundNotificationLoop,
+  detectThreadHeaderSelfAutomatedLoop,
   type NotificationLoopDetectionResult,
 } from './notificationLoopDetection';
 import {
@@ -1312,7 +1313,32 @@ export async function processInboundEmailInApp(
     matchedBy: 'reply_token' | 'thread_headers';
     parentCommentId?: string | null;
     threadId?: string | null;
+    authorizedRequesterContactId?: string;
+    authorizedRequesterClientId?: string;
   }): Promise<ProcessInboundEmailInAppResult | null> => {
+    let matchedSenderContact: Awaited<ReturnType<typeof resolveSenderContact>> | undefined;
+    if (params.authorizedRequesterContactId) {
+      try {
+        matchedSenderContact = await resolveSenderContact({ ticketId: params.ticketId });
+      } catch {
+        throw new InboundRetryLaterError('could not revalidate the admitted requester contact; retrying before any fallback processing');
+      }
+    }
+    if (params.authorizedRequesterContactId && (
+      !matchedSenderContact
+      || matchedSenderContact.contact_id !== params.authorizedRequesterContactId
+      || matchedSenderContact.client_id !== params.authorizedRequesterClientId
+      || matchedSenderContact.user_type === 'internal'
+      || matchedSenderContact.is_inactive !== false
+    )) {
+      if (diagnostics) diagnostics.threading.failureReason = 'quarantined';
+      return withDiagnostics({
+        outcome: 'quarantined',
+        reason: 'co_managed_token_refused',
+        ticketId: params.ticketId,
+        matchedBy: params.matchedBy,
+      }, diagnostics);
+    }
     const existingCommentId = await findExistingEmailComment({
       tenantId,
       ticketId: params.ticketId,
@@ -1341,9 +1367,10 @@ export async function processInboundEmailInApp(
       text: parsedText,
     });
     const serializedBlocks = JSON.stringify(blocks);
-    const matchedSenderContact = await resolveSenderContact({ ticketId: params.ticketId });
-    const matchedSenderIsInternalUser = matchedSenderContact?.user_type === 'internal';
-    const matchedSenderContactId = matchedSenderContact?.contact_id || undefined;
+    if (!matchedSenderContact) matchedSenderContact = await resolveSenderContact({ ticketId: params.ticketId });
+    const senderContact = matchedSenderContact;
+    const matchedSenderIsInternalUser = senderContact?.user_type === 'internal';
+    const matchedSenderContactId = senderContact?.contact_id || undefined;
     const senderKind = matchedSenderIsInternalUser ? 'internal' : 'client';
 
     let policyContext: InboundReplyReopenPolicyContext | null = null;
@@ -1363,11 +1390,36 @@ export async function processInboundEmailInApp(
     }
 
     if (params.matchedBy === 'thread_headers') {
+      // LEVERAGE: pattern principal-address-classification — sender classification (contact / internal user / watcher / ours) is re-derived here, in the board audience resolver and in the save-time guards.
+      // Redelivery of our own automated notification through a DL that expands
+      // into a connected mailbox: skip before the sender check so it is neither
+      // quarantined as an unknown sender nor turned into a comment/watcher.
+      const selfLoop = await detectThreadHeaderSelfAutomatedLoop({
+        tenantId,
+        ticketId: params.ticketId,
+        emailData,
+        senderEmail,
+      });
+      if (selfLoop.isLoop) {
+        console.info('processInboundEmailInApp: skipping thread-header redelivery of our own notification', {
+          tenantId,
+          providerId,
+          emailId: emailData.id,
+          ticketId: params.ticketId,
+          matchedLogId: selfLoop.matchedLogId,
+        });
+        if (diagnostics) {
+          diagnostics.notificationLoop = selfLoop;
+          diagnostics.threading.failureReason = 'notification_loop';
+        }
+        return withDiagnostics({ outcome: 'skipped', reason: 'notification_loop' }, diagnostics);
+      }
+
       const senderIsTicketClientContact = Boolean(
-        matchedSenderContact
+        senderContact
         && !matchedSenderIsInternalUser
         && policyContext?.clientId
-        && matchedSenderContact.client_id === policyContext.clientId
+        && senderContact?.client_id === policyContext.clientId
       );
       const senderIsActiveWatcher = Boolean(
         senderEmail && policyContext && getActiveWatchListEmails(policyContext.attributes).includes(senderEmail)
@@ -1553,7 +1605,7 @@ export async function processInboundEmailInApp(
           tenantId,
           ticketId: params.ticketId,
           statusId: reopenTarget.statusId,
-          updatedByUserId: matchedSenderIsInternalUser ? matchedSenderContact?.user_id : undefined,
+          updatedByUserId: matchedSenderIsInternalUser ? senderContact?.user_id : undefined,
           existingConnection: durableExecution?.trx,
           eventPublisher: durableExecution?.eventPublishers?.comment ?? durableExecution?.eventPublishers?.ticket,
         });
@@ -1611,12 +1663,12 @@ export async function processInboundEmailInApp(
         parent_comment_id: replyParentCommentId ?? undefined,
         source: 'email',
         author_type: matchedSenderIsInternalUser ? 'internal' : 'contact',
-        author_id: matchedSenderContact?.user_id,
+        author_id: senderContact?.user_id,
         contact_id: matchedSenderIsInternalUser ? undefined : matchedSenderContactId,
         metadata: {
           email: buildCommentEmailMetadata({
-            matchedSenderEmail: matchedSenderContact?.matched_email ?? senderEmail ?? null,
-            primaryContactEmail: matchedSenderContact?.email ?? null,
+            matchedSenderEmail: senderContact?.matched_email ?? senderEmail ?? null,
+            primaryContactEmail: senderContact?.email ?? null,
           }),
           parser: {
             confidence: parsedEmail?.confidence,
@@ -1659,9 +1711,9 @@ export async function processInboundEmailInApp(
         scopeLabel: 'reply',
         clientVisibleAttachments: Boolean(
           !matchedSenderIsInternalUser
-          && matchedSenderContact?.client_id
+          && senderContact?.client_id
           && policyContext?.clientId
-          && matchedSenderContact.client_id === policyContext.clientId
+          && senderContact?.client_id === policyContext.clientId
         ),
       });
       await applyEmbeddedImageUrlMappingsToStoredBodies({
@@ -1701,11 +1753,25 @@ export async function processInboundEmailInApp(
   if (token) {
     try {
       const match = await findTicketByReplyToken(String(token), tenantId);
+      const tokenClass = classifyReplyToken(String(token));
+      if (match?.ticketId && match.expiryValid === false && tokenClass === 'cm2') {
+        // A known expired cm2 bearer credential is terminal. Do this
+        // before admission fallbacks, thread-header matching, or ticket creation.
+        if (diagnostics) diagnostics.threading.failureReason = 'quarantined';
+        return withDiagnostics({
+          outcome: 'quarantined',
+          reason: 'co_managed_token_refused',
+          ticketId: match.ticketId,
+          matchedBy: 'reply_token',
+        }, diagnostics);
+      }
       // CM L5 admission hook: the prefix check is a string compare, so a native (psa) token costs
       // 0 extra statements. Only cm1:/cm2: tokens consult the delivery seam, and a refusal happens
       // before any comment write.
       let tokenInert = false;
-      if (match?.ticketId && classifyReplyToken(String(token)) !== 'native') {
+      let authorizedRequesterContactId: string | undefined;
+      let authorizedRequesterClientId: string | undefined;
+      if (match?.ticketId && tokenClass !== 'native') {
         // No provider registered in THIS process (as opposed to a provider that says "not served"):
         // admission cannot be evaluated, so the token must neither be treated as inert (native
         // write by thread headers) nor reach a writer that throws and is then deduped.
@@ -1745,6 +1811,7 @@ export async function processInboundEmailInApp(
           ? await provider.admitReplyToken(tenantId, String(token), match.metadata, {
               email: senderEmail ?? null,
               internalAttributionTrusted: allowsInternalSenderAttribution(senderAuthResults),
+              contactAttributionTrusted: contactSenderTrusted,
             })
           : null;
         // Only "not served" (or no provider) leaves the token inert: thread headers decide. Every other
@@ -1799,6 +1866,16 @@ export async function processInboundEmailInApp(
             commentId: written.commentId,
           }, diagnostics);
         }
+        authorizedRequesterContactId = admission?.admitted === true && admission.audience === 'requester'
+          ? admission.requesterContactId
+          : undefined;
+        authorizedRequesterClientId = admission?.admitted === true && admission.audience === 'requester'
+          ? admission.requesterClientId
+          : undefined;
+        if (admission?.admitted === true && admission.audience === 'requester' && (!authorizedRequesterContactId || !authorizedRequesterClientId)) {
+          if (diagnostics) diagnostics.threading.failureReason = 'quarantined';
+          return withDiagnostics({ outcome: 'quarantined', reason: 'co_managed_token_refused', ticketId: admission.ticketId, matchedBy: 'reply_token' }, diagnostics);
+        }
       }
       if (match?.ticketId && !tokenInert) {
         const replyTarget = match.commentId
@@ -1822,6 +1899,8 @@ export async function processInboundEmailInApp(
           matchedBy: 'reply_token',
           parentCommentId: replyTarget?.parentCommentId ?? null,
           threadId: replyTarget?.threadId ?? null,
+          authorizedRequesterContactId,
+          authorizedRequesterClientId,
         });
         if (handled) {
           return handled;
@@ -2188,6 +2267,32 @@ export async function processInboundEmailInApp(
   }
   if (diagnostics) diagnostics.senderResolution = { autoCreatedContactId: autoCreatedContactId ?? null, autoCreateSkipReason };
 
+  // The matched contact's own explicit location, read before the ticket is built so the precedence
+  // in the createTicketFromEmail call below is a single readable expression. `remote` resolves to
+  // null here and therefore yields to the mailbox defaults. Only an *explicit* link counts: the
+  // client-default fallback is the model's job, and letting it happen there keeps the "different
+  // client than the defaults" case from borrowing the wrong client's default.
+  let contactExplicitLocationId: string | undefined;
+  if (targetContactId) {
+    try {
+      const { withAdminTransaction, tenantDb } = await import('@alga-psa/db');
+      const { getContactLocations } = await import('../../models/contactLocation');
+      contactExplicitLocationId = await withAdminTransaction(async (trx: any) => {
+        const contact = await tenantDb(trx, tenantId).table('contacts')
+          .where({ contact_name_id: targetContactId })
+          .first(['work_arrangement']);
+        if (contact?.work_arrangement === 'remote') return undefined;
+        const links = await getContactLocations(trx, tenantId, targetContactId!);
+        const active = links.filter((link) => link.is_active);
+        const primary = active.find((link) => link.is_primary) ?? (active.length === 1 ? active[0] : undefined);
+        return primary?.location_id;
+      });
+    } catch (error) {
+      // An unreadable link list must not drop the email; the defaults still apply.
+      console.error('Failed to resolve the inbound contact location', { tenantId, emailId: emailData.id, error });
+    }
+  }
+
   const parsedHtml = parsedEmail?.sanitizedHtml ?? emailData.body?.html;
   const parsedText = parsedEmail?.sanitizedText ?? emailData.body?.text;
   const blocks = await blocksFromEmailBody({
@@ -2213,8 +2318,14 @@ export async function processInboundEmailInApp(
       priority_id: defaults.priority_id,
       category_id: defaults.category_id,
       subcategory_id: defaults.subcategory_id,
-      // Avoid cross-client location_id mismatch when we infer a different client than the defaults.
-      location_id: targetClientId === defaults.client_id ? defaults.location_id : null,
+      // Location precedence (OQ1, confirmed): the matched contact's own explicit link wins, because
+      // the person who emailed knows where they are better than the mailbox does; then the
+      // mailbox defaults, but only when the client we inferred is the defaults' client (otherwise
+      // the location would belong to someone else); then `undefined`, which lets
+      // TicketModel.createTicket fall back to the client's default location. A remote contact
+      // resolves to null and so skips straight on to the defaults.
+      location_id: contactExplicitLocationId
+        ?? (targetClientId === defaults.client_id ? (defaults.location_id ?? undefined) : undefined),
       entered_by: defaults.entered_by,
       email_metadata: {
         messageId: normalizeStoredMessageId(emailData.id),

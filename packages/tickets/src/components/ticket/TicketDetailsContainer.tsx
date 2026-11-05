@@ -354,6 +354,8 @@ export default function TicketDetailsContainer({
       initialAvailableAgents={ticketData.availableAgents}
       initialUserMap={ticketData.userMap}
       initialContactMap={ticketData.contactMap || {}}
+      liveUserMap={dataSource.screen.liveConversationAuthors ? ticketData.userMap : undefined}
+      liveContactMap={dataSource.screen.liveConversationAuthors ? ticketData.contactMap || {} : undefined}
       statusOptions={ticketData.options.status}
       agentOptions={ticketData.options.agent}
       boardOptions={ticketData.options.board}

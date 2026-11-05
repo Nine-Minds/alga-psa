@@ -7,6 +7,7 @@ import {
   ExternalLink,
   FileText,
   Mail,
+  MapPin,
   MessageSquarePlus,
   NotebookPen,
   Pencil,
@@ -47,6 +48,7 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import { formatCurrencyWithSymbol } from '@alga-psa/core/formatters';
 
 type PortalPermissions = {
   canInvite: boolean;
@@ -124,10 +126,7 @@ function centsToMoney(value: string | number | null, currencyCode?: string | nul
   if (value == null) return '—';
   const amount = typeof value === 'number' ? value : Number(value);
   if (Number.isNaN(amount)) return '—';
-  return new Intl.NumberFormat(undefined, {
-    style: 'currency',
-    currency: currencyCode || 'USD',
-  }).format(amount / 100);
+  return formatCurrencyWithSymbol(amount / 100, undefined, currencyCode || 'USD');
 }
 
 function statusChipClass(isPositive: boolean) {
@@ -805,6 +804,69 @@ export function ContactBentoLayout({
       </BentoTile>
   );
 
+  const workArrangementLabel = contact.work_arrangement
+    ? t(`contactLocations.arrangement.${contact.work_arrangement}`, {
+        defaultValue: contact.work_arrangement === 'on_site'
+          ? 'On site'
+          : contact.work_arrangement === 'hybrid' ? 'Hybrid' : 'Remote',
+      })
+    : null;
+
+  // Locations are a reference to the client's sites, so the tile reads them through and the edit
+  // drawer is the only way to change the set. Remote with no links still says Remote: that is the
+  // answer to "where do I send someone", not an empty state.
+  const locationsTile = (
+      <BentoTile
+        id={`${id}-locations`}
+        title={t('contactLocations.locations', { defaultValue: 'Locations' })}
+        icon={<MapPin className="h-4 w-4" />}
+        action={
+          <BentoTileAddButton
+            id={`${id}-locations-add`}
+            label={t('contactLocations.addLocation', { defaultValue: 'Add location' })}
+            onClick={openEditDrawer}
+          />
+        }
+      >
+        {workArrangementLabel ? (
+          <div className="mb-2">
+            <Badge id={`${id}-locations-arrangement`} variant="secondary">{workArrangementLabel}</Badge>
+          </div>
+        ) : null}
+        {(contact.locations ?? []).length > 0 ? (
+          <TileRows>
+            {(contact.locations ?? []).map((location) => (
+              <TileRow
+                key={location.location_id}
+                primary={location.location_name || location.address_line1 || '—'}
+                meta={[
+                  [location.address_line1, location.city, location.postal_code].filter(Boolean).join(', ') || null,
+                  location.is_primary ? t('contactLocations.primary', { defaultValue: 'Primary' }) : null,
+                  location.is_active === false
+                    ? t('contactLocations.inactiveMarker', { defaultValue: '(inactive)' })
+                    : null,
+                ].filter(Boolean).join(' · ')}
+                emphasize={location.is_primary}
+              />
+            ))}
+          </TileRows>
+        ) : contact.work_arrangement === 'remote' ? (
+          <BentoTileEmpty id={`${id}-locations-remote`}>
+            {t('contactLocations.arrangement.remote', { defaultValue: 'Remote' })}
+          </BentoTileEmpty>
+        ) : (
+          <>
+            <BentoTileEmpty id={`${id}-locations-empty`}>
+              {t('contactLocations.none', { defaultValue: 'No locations' })}
+            </BentoTileEmpty>
+            <BentoTileEmptyAction id={`${id}-locations-add-first`} onClick={openEditDrawer}>
+              {t('contactLocations.addLocation', { defaultValue: 'Add location' })}
+            </BentoTileEmptyAction>
+          </>
+        )}
+      </BentoTile>
+  );
+
   const notesTile = (
       <BentoTile
         id={`${id}-notes-tile`}
@@ -907,6 +969,7 @@ export function ContactBentoLayout({
           <ContentCardVariantProvider variant="bento">{assetsSlot}</ContentCardVariantProvider>
         ) : null}
         {showRelatedWork ? relatedWorkTile : null}
+        {locationsTile}
         {notesTile}
       </div>
 

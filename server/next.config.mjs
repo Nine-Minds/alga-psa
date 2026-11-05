@@ -609,6 +609,12 @@ const nextConfig = {
       const byContent = { timestamp: true, hash: true };
       config.snapshot = { ...config.snapshot, module: byContent, resolve: byContent,
         buildDependencies: byContent, resolveBuildDependencies: byContent };
+      // Entries a build no longer uses stay in the pack for webpack's default
+      // 60 days, and the CI snapshot carries the pack from build to build, so
+      // it grew to ~18 GB on disk by early November 2026 and a warm build then
+      // outgrew the 16 GB runner (the VM swapped until GitHub shut it down).
+      // One day keeps the pack at roughly one tree's worth of modules.
+      config.cache.maxAge = 24 * 60 * 60 * 1000;
     }
 
     // Add support for importing from ee/server/src using absolute paths
