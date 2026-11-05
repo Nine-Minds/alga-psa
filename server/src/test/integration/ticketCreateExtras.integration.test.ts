@@ -14,6 +14,14 @@ import { TestContext } from '../../../test-utils/testContext';
 import { createUser } from '../../../test-utils/testDataFactory';
 import * as dbModule from '@alga-psa/db';
 import { tenantDb } from '@alga-psa/db';
+import { flushAfterCommitHooks } from '../../../../packages/db/src/lib/afterCommit';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+
+vi.mock('@alga-psa/event-bus/publishers', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/event-bus/publishers')>()),
+  publishWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+}));
 
 vi.mock('@alga-psa/auth', async () => {
   const { createAuthModuleMock } = await import('../../../test-utils/authModuleMock');
@@ -164,6 +172,73 @@ describe('addTicket create extras (integration)', () => {
     const links = await tt('asset_associations').where({ entity_id: result.ticket_id });
     expect(links.map((l: any) => l.asset_id)).toEqual([assetA]);
   });
+
+  it('persists board routing when Quick Add leaves the assignment field omitted', async () => {
+    const defaultAssigneeId = await createUser(context.db, tenantId, {
+      username: 'quick-add-default-assignee', first_name: 'Quinn', last_name: 'Default', email: 'quinn@example.com', user_type: 'internal',
+    });
+    const teamId = uuidv4();
+    await tt('teams').insert({ tenant: tenantId, team_id: teamId, team_name: 'Quick Add defaults', manager_id: defaultAssigneeId });
+    await tt('team_members').insert({ tenant: tenantId, team_id: teamId, user_id: defaultAssigneeId });
+    await tt('boards').where({ board_id: boardId }).update({
+      default_assigned_to: defaultAssigneeId,
+      default_assigned_team_id: teamId,
+    });
+
+    // QuickAddTicket omits untouched empty assignment fields. Sending an empty
+    // value would instead be an explicit request to keep the ticket unassigned.
+    const form = createForm();
+    form.delete('assigned_to');
+    const result: any = await ticketActions.addTicket(form);
+    expect(result?.ticket_id).toBeTruthy();
+
+    const row = await tt('tickets').where({ ticket_id: result.ticket_id }).first();
+    expect(row.assigned_to).toBe(defaultAssigneeId);
+    expect(row.assigned_team_id).toBe(teamId);
+
+    const explicitUnassigned: any = await ticketActions.addTicket(createForm());
+    const unassignedRow = await tt('tickets').where({ ticket_id: explicitUnassigned.ticket_id }).first();
+    expect(unassignedRow.assigned_to).toBeNull();
+    expect(unassignedRow.assigned_team_id).toBeNull();
+
+    await tt('boards').where({ board_id: boardId }).update({ default_assigned_to: null, default_assigned_team_id: null });
+  });
+
+  it.each(['board-user', 'team-lead', 'explicit-user', 'explicit-null'] as const)(
+    'queues one UI assignment event using persisted routing: %s', async (routing) => {
+      const teamId = uuidv4();
+      await tt('teams').insert({ tenant: tenantId, team_id: teamId, team_name: 'Event routing', manager_id: watcherUserId });
+      await tt('boards').where({ board_id: boardId }).update({
+        default_assigned_to: routing === 'team-lead' ? null : creator.user_id,
+        default_assigned_team_id: teamId,
+      });
+      const form = createForm();
+      if (routing === 'board-user' || routing === 'team-lead') form.delete('assigned_to');
+      if (routing === 'explicit-user') form.set('assigned_to', watcherUserId);
+      vi.mocked(publishWorkflowEvent).mockClear();
+
+      const result: any = await ticketActions.addTicket(form);
+      expect(result?.ticket_id).toBeTruthy();
+      const row = await tt('tickets').where({ ticket_id: result.ticket_id }).first();
+      const expectedAssignee = routing === 'explicit-null' ? null
+        : routing === 'board-user' ? creator.user_id : watcherUserId;
+      expect(row.assigned_to).toBe(expectedAssignee);
+      expect(publishWorkflowEvent).not.toHaveBeenCalled();
+
+      // TestContext owns an outer transaction that it rolls back for isolation.
+      // Drain its hooks explicitly to exercise the deferred publication payload.
+      await flushAfterCommitHooks(context.db);
+      const assignedEvents = vi.mocked(publishWorkflowEvent).mock.calls
+        .map(([event]) => event).filter((event) => event.eventType === 'TICKET_ASSIGNED');
+      expect(assignedEvents).toHaveLength(expectedAssignee ? 1 : 0);
+      if (expectedAssignee) {
+        expect(assignedEvents[0].payload).toMatchObject({ ticketId: result.ticket_id, userId: expectedAssignee });
+      }
+      await flushAfterCommitHooks(context.db);
+      expect(vi.mocked(publishWorkflowEvent).mock.calls
+        .filter(([event]) => event.eventType === 'TICKET_ASSIGNED')).toHaveLength(assignedEvents.length);
+    },
+  );
 
   it('rolls the whole create back when an asset belongs to another client', async () => {
     const before = await countTickets();
