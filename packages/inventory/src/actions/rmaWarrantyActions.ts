@@ -8,7 +8,7 @@ import { createAssetReadContext, filterReadableAssets } from '@alga-psa/assets/l
 import { getOpenCustodyForAssets } from '@alga-psa/assets/lib/custody/queries';
 import {
   approveWarrantyClaimCore, approveWarrantyClaimSchema, assetGate, cancelWarrantyClaimCore, cancelWarrantyClaimSchema,
-  closeWarrantyRmaCore, closeWarrantyRmaSchema, denyWarrantyClaimCore, denyWarrantyClaimSchema, markDeviceReceivedCore,
+  closeWarrantyRmaCore, closeWarrantyRmaSchema, confirmVendorReceiptCore, confirmVendorReceiptSchema, shipDeadUnitToVendorCore, shipDeadUnitToVendorSchema, denyWarrantyClaimCore, denyWarrantyClaimSchema, markDeviceReceivedCore,
   markDeviceReceivedSchema, openWarrantyClaimCore, openWarrantyClaimSchema, publishWarrantyClaimOpened, publishRmaUpdated,
   receiveVendorReplacementCore, receiveVendorReplacementSchema, recordVendorCreditCore, recordVendorCreditSchema,
   recordVendorRepairCore, recordVendorRepairSchema, requireWarrantyPerm, returnDeviceToClientCore, returnDeviceToClientSchema,
@@ -70,6 +70,8 @@ export const denyWarrantyClaim = transition(denyWarrantyClaimSchema, denyWarrant
 export const cancelWarrantyClaim = transition(cancelWarrantyClaimSchema, cancelWarrantyClaimCore);
 export const markDeviceReceived = transition(markDeviceReceivedSchema, markDeviceReceivedCore);
 export const shipToVendor = transition(shipToVendorSchema, shipToVendorCore);
+export const shipDeadUnitToVendor = transition(shipDeadUnitToVendorSchema, shipDeadUnitToVendorCore);
+export const confirmVendorReceipt = transition(confirmVendorReceiptSchema, confirmVendorReceiptCore);
 export const receiveVendorReplacement = transition(receiveVendorReplacementSchema, receiveVendorReplacementCore);
 export const recordVendorRepair = transition(recordVendorRepairSchema, recordVendorRepairCore);
 export const recordVendorCredit = transition(recordVendorCreditSchema, recordVendorCreditCore);
