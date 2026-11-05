@@ -88,6 +88,7 @@ function clientRow(over: Partial<DeferredRevenueReportPayload['sections'][number
     total: movement(),
     creditDetails: [] as DeferredRevenueReportPayload['sections'][number]['clients'][number]['creditDetails'],
     bucketDetails: [] as DeferredRevenueReportPayload['sections'][number]['clients'][number]['bucketDetails'],
+    hourBlockDetails: [] as DeferredRevenueReportPayload['sections'][number]['clients'][number]['hourBlockDetails'],
   };
   const merged = { ...base, ...over, clientId: over.clientId, clientName: over.clientName };
   if (over.credits) merged.credits = over.credits;
@@ -95,6 +96,7 @@ function clientRow(over: Partial<DeferredRevenueReportPayload['sections'][number
   if (over.total) merged.total = over.total;
   if (over.creditDetails) merged.creditDetails = over.creditDetails;
   if (over.bucketDetails) merged.bucketDetails = over.bucketDetails;
+  if (over.hourBlockDetails) merged.hourBlockDetails = over.hourBlockDetails;
   return merged;
 }
 

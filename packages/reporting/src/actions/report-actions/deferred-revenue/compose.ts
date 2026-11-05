@@ -9,6 +9,7 @@ import type { Knex } from 'knex';
 
 import { computeCreditRollforward } from './credits';
 import { computeHoursRollforward } from './hours';
+import { computeHourBlocksRollforward } from './blocks';
 import { monthKeyOf, monthRange } from './month';
 import {
   buildBucketPeriodInputs,
@@ -26,6 +27,24 @@ import {
   type DeferredRevenueReport,
   type MovementColumns,
 } from './types';
+
+function hourMovementFrom(rollforward: {
+  opening: number;
+  issued: number;
+  applied: number;
+  adjustments?: number;
+  expired: number;
+  closing: number;
+}): MovementColumns {
+  return {
+    opening: rollforward.opening,
+    issued: rollforward.issued,
+    applied: rollforward.applied,
+    expired: rollforward.expired,
+    adjustments: rollforward.adjustments ?? 0,
+    closing: rollforward.closing,
+  };
+}
 
 export interface ComposableInputs extends BuildDeferredRevenueInput {
   clients: LoadedClient[];
@@ -91,6 +110,7 @@ export function buildDeferredRevenueReportFromData(
 
   const creditRollforward = computeCreditRollforward(month, data.creditTransactions);
   const hoursRollforward = computeHoursRollforward(month, buildBucketPeriodInputs(data));
+  const blockRollforward = computeHourBlocksRollforward(month, data.hourBlocks ?? []);
   const creditDetailRows = buildCreditDetailRows(
     data.creditTracking,
     data.creditTransactions,
@@ -121,9 +141,10 @@ export function buildDeferredRevenueReportFromData(
       total: emptyMovement(),
       creditDetails: [],
       bucketDetails: [],
+      hourBlockDetails: [],
     });
   }
-
+ 
   for (const [key, rollforward] of hoursRollforward) {
     const { clientId, currencyCode } = parseKey(key);
     const existing = clientRows.get(key);
@@ -148,6 +169,30 @@ export function buildDeferredRevenueReportFromData(
         total: emptyMovement(),
         creditDetails: [],
         bucketDetails: rollforward.details,
+        hourBlockDetails: [],
+      });
+    }
+  }
+
+  // Prepaid hour blocks roll forward into the same `hours` movement (they are
+  // prepaid hours, just minute-denominated instead of period-denominated).
+  for (const [key, rollforward] of blockRollforward) {
+    const { clientId, currencyCode } = parseKey(key);
+    const existing = clientRows.get(key);
+    if (existing) {
+      existing.hours = addMovement(existing.hours, hourMovementFrom(rollforward));
+      existing.hourBlockDetails = rollforward.details;
+    } else {
+      clientRows.set(key, {
+        clientId,
+        clientName: clientNameById.get(clientId) ?? 'Unknown client',
+        currencyCode,
+        credits: emptyMovement(),
+        hours: hourMovementFrom(rollforward),
+        total: emptyMovement(),
+        creditDetails: [],
+        bucketDetails: [],
+        hourBlockDetails: rollforward.details,
       });
     }
   }
@@ -171,6 +216,7 @@ export function buildDeferredRevenueReportFromData(
           total: emptyMovement(),
           creditDetails: details,
           bucketDetails: [],
+          hourBlockDetails: [],
         });
       }
     }
@@ -184,6 +230,9 @@ export function buildDeferredRevenueReportFromData(
     if (!row.bucketDetails) {
       row.bucketDetails = [];
     }
+    if (!row.hourBlockDetails) {
+      row.hourBlockDetails = [];
+    }
   }
 
   const byCurrency = new Map<string, ClientRollforward[]>();
@@ -193,7 +242,12 @@ export function buildDeferredRevenueReportFromData(
     // movement) or contributing bucket periods. Detail rows for fully-consumed
     // credits or future-month credits never retain a client on their own.
     const hasOutstandingCreditDetail = row.creditDetails.some(isRetainedCreditDetail);
-    if (!isNonZero(row.total) && row.bucketDetails.length === 0 && !hasOutstandingCreditDetail) {
+    if (
+      !isNonZero(row.total) &&
+      row.bucketDetails.length === 0 &&
+      row.hourBlockDetails.length === 0 &&
+      !hasOutstandingCreditDetail
+    ) {
       continue;
     }
     const currencyRows = byCurrency.get(row.currencyCode) ?? [];
