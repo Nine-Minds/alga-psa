@@ -14,6 +14,7 @@
 #   RUNTIME_PERMISSIONS_TEST_IMAGE  image used for the container run (default
 #                                   node:24-bookworm-slim; needs bash, find,
 #                                   setpriv and python3-free coreutils)
+#   RUNTIME_PERMISSIONS_SCRIPT      installed script to exercise inside an image
 #   ALGA_NO_NEW_PRIVILEGES          true (default) | false. Set false on
 #                                   snap-installed Docker.
 #   TMPDIR                          sandbox parent; Docker must be able to
@@ -38,8 +39,12 @@ if [ "$(id -u)" != "0" ]; then
     "$IMAGE" /scripts/tests/runtime-permissions.test.sh
 fi
 
-SCRIPT="$REPO_ROOT/scripts/runtime-permissions.sh"
-[ -f "$SCRIPT" ] || SCRIPT=/scripts/runtime-permissions.sh
+SCRIPT="${RUNTIME_PERMISSIONS_SCRIPT:-$REPO_ROOT/scripts/runtime-permissions.sh}"
+if [ ! -f "$SCRIPT" ]; then
+  echo "Runtime permission script not found: $SCRIPT" >&2
+  exit 1
+fi
+REAL_CHOWN="$(command -v chown)"
 
 PASSED=0
 FAILED=0
@@ -140,7 +145,7 @@ cat > "$SB/bin/chown" <<EOF
 for a in "\$@"; do
   case "\$a" in *broken_secret*) exit 0 ;; esac
 done
-exec /usr/bin/chown "\$@"
+exec "$REAL_CHOWN" "\$@"
 EOF
 chmod +x "$SB/bin/chown"
 chown 0:0 "$SB/secrets/broken_secret"; chmod 600 "$SB/secrets/broken_secret"

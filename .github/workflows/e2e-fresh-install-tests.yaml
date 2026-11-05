@@ -792,10 +792,10 @@ jobs:
           # Resolve explicit and Compose-generated tags so a configuration change cannot
           # accidentally run an old/pulled image instead of this run's build.
           docker-compose -p alga-e2e-test --profile enterprise config --format json > "$RUNNER_TEMP/fresh-install-compose.json"
-          for service in server setup email-service hocuspocus redis pgbouncer algasim worker-test-state $worker_images; do
+          for service in server runtime-permissions setup email-service hocuspocus redis pgbouncer algasim worker-test-state $worker_images; do
             image=$(jq -r --arg service "$service" '.services[$service].image // (.name + "-" + $service)' "$RUNNER_TEMP/fresh-install-compose.json")
             record_service="$service"
-            if [ "$service" = server ]; then record_service="$SERVER_ARCHIVE"; fi
+            if [ "$service" = server ] || [ "$service" = runtime-permissions ]; then record_service="$SERVER_ARCHIVE"; fi
             if [ "$service" = worker-test-state ]; then record_service=algasim; fi
             inspection="$RUNNER_TEMP/loaded-$service.json"
             docker image inspect "$image" > "$inspection"
@@ -831,6 +831,15 @@ jobs:
           # Only this fresh job's empty named volumes are initialized. All
           # application secret writers use UID1000; production checks stay on.
           docker-compose -p alga-e2e-test run --rm --no-deps worker-test-state
+
+      - name: Test runtime-permissions in the candidate production image
+        if: steps.install_docker_compose.outcome == 'success'
+        run: |
+          docker-compose -p alga-e2e-test run --rm --no-deps \
+            -v "$PWD/scripts/tests:/runtime-permissions-tests:ro" \
+            -e RUNTIME_PERMISSIONS_SCRIPT=/usr/local/bin/alga-runtime-permissions \
+            --entrypoint /bin/bash runtime-permissions \
+            /runtime-permissions-tests/runtime-permissions.test.sh
 
       - name: Run runtime-permissions init
         if: steps.install_docker_compose.outcome == 'success'

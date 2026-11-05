@@ -229,6 +229,11 @@ describe('fresh-install CI combination', () => {
     ['CE', CI_BASE],
     ['EE', [...CI_BASE, 'docker-compose.e2e-ee.yaml']],
   ]) {
+    test(`${label}: permission init uses the selected server image`, () => {
+      const { services } = render(files, { APP_NAME: 'alga-e2e-test' });
+      assert.equal(services['runtime-permissions'].image, services.server.image);
+    });
+
     test(`${label}: only test-ingress publishes data-plane ports, on 127.0.0.1`, () => {
       const bindings = dataPlaneBindings(render(files));
       assert.ok(bindings.length > 0, 'test-ingress should publish the emulated ports');

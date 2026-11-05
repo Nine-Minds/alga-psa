@@ -7,6 +7,8 @@
 FROM node:26.1.0-alpine
 RUN apk add --no-cache \
     bash \
+    findutils \
+    setpriv \
     postgresql-client \
     redis \
     graphicsmagick \
