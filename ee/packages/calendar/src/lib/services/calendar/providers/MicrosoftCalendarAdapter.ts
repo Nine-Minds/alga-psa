@@ -9,6 +9,7 @@ import {
 } from '@alga-psa/shared/services/email/microsoftOAuthErrors';
 import { BaseCalendarAdapter, type CalendarEventChange } from './base/BaseCalendarAdapter';
 import type { CalendarProviderConfig, ExternalCalendarEvent } from '@alga-psa/types';
+import { toIanaTimeZone } from '@alga-psa/core';
 import { resolveMicrosoftConsumerProfileConfig } from '../../../microsoftConsumerProfileResolution';
 import { getAdminConnection, tenantDb } from '@alga-psa/db';
 import { CalendarProviderService } from '../CalendarProviderService';
@@ -933,6 +934,11 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
       }
     }
 
+    // Graph answers start/end in UTC (no Prefer: outlook.timezone header), so the
+    // series' own zone has to come off the recurrence range or an Outlook series
+    // anchored in local time would drift an hour across every DST boundary.
+    const recurrenceTimeZone = toIanaTimeZone(event.recurrence?.range?.recurrenceTimeZone);
+
     const graphType = typeof event.type === 'string' ? event.type.toLowerCase() : undefined;
     const instanceType: ExternalCalendarEvent['instanceType'] =
       graphType === 'seriesmaster' ? 'master'
@@ -961,6 +967,7 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
       recurrence,
       ...(recurringEventId ? { recurringEventId } : {}),
       ...(event.originalStart ? { originalStartTime: { dateTime: event.originalStart } } : {}),
+      ...(recurrenceTimeZone ? { recurrenceTimeZone } : {}),
       instanceType,
       status: event.showAs === 'free' ? 'cancelled' : 'confirmed',
       htmlLink: event.webLink,

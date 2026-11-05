@@ -251,6 +251,29 @@ describe('Microsoft event mapping for recurring series', () => {
     expect(entry.recurrence_pattern).toMatchObject({ weekOfMonth: 1, daysOfWeek: [3], timeZone: 'America/New_York' });
   });
 
+  it('anchors a series in its recurrenceTimeZone, not the UTC start Graph reports', async () => {
+    // Without a Prefer: outlook.timezone header Graph answers start/end in UTC,
+    // so the series zone has to come off the recurrence range — and it arrives
+    // as a Windows name, which must be resolved to IANA before rrule sees it.
+    const mapped = mapGraphEvent({
+      id: 'graph-zoned-master',
+      subject: 'Standup @alga',
+      body: { content: '' },
+      type: 'seriesMaster',
+      start: { dateTime: '2026-10-01T14:15:00.0000000', timeZone: 'UTC' },
+      end: { dateTime: '2026-10-01T14:45:00.0000000', timeZone: 'UTC' },
+      recurrence: {
+        pattern: { type: 'relativeMonthly', interval: 1, daysOfWeek: ['thursday'], index: 'first' },
+        range: { type: 'noEnd', startDate: '2026-10-01', recurrenceTimeZone: 'Eastern Standard Time' },
+      },
+    });
+
+    expect(mapped.recurrenceTimeZone).toBe('America/New_York');
+
+    const entry = await mapExternalEventToScheduleEntry(mapped, 'tenant-1', 'microsoft');
+    expect(entry.recurrence_pattern).toMatchObject({ timeZone: 'America/New_York' });
+  });
+
   it('maps seriesMasterId and type on an expanded occurrence', () => {
     const mapped = mapGraphEvent({
       id: 'graph-occurrence',

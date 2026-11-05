@@ -129,6 +129,14 @@ export interface ExternalCalendarEvent {
     timeZone?: string;
   };
   /**
+   * IANA zone the recurrence rule is anchored in, so occurrences keep their
+   * local wall-clock time across DST. Google carries it on `start.timeZone`;
+   * Graph answers `start` in UTC unless asked otherwise and keeps the series'
+   * own zone on `recurrence.range.recurrenceTimeZone`, which is where this
+   * comes from.
+   */
+  recurrenceTimeZone?: string;
+  /**
    * How this event relates to a series. `single` is a standalone event,
    * `master` carries the recurrence rule, `occurrence`/`exception` are expanded
    * instances (an `exception` was moved or edited away from the series).

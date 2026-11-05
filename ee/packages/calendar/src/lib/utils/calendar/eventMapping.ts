@@ -296,11 +296,12 @@ export async function mapExternalEventToScheduleEntry(
     try {
       // The whole recurrence[] array matters: Google ships EXDATE/RDATE lines
       // alongside the RRULE, and the series' own zone keeps local time stable
-      // across DST.
+      // across DST. recurrenceTimeZone comes first because Graph reports
+      // start.timeZone as UTC while the rule itself is anchored elsewhere.
       const conversion = convertRecurrenceLinesToPattern(
         event.recurrence,
         startDate,
-        event.start.timeZone || event.originalStartTime?.timeZone
+        event.recurrenceTimeZone || event.start.timeZone || event.originalStartTime?.timeZone
       );
       if (conversion && !conversion.unsupported) {
         recurrencePattern = conversion.pattern;
