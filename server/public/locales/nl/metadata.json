@@ -542,6 +542,9 @@
         "taskTitle": "Gedeelde taak",
         "projectTitle": "Gedeeld project"
       },
+      "sla": {
+        "title": "Co-managed SLA-prioriteiten"
+      },
       "export": {
         "title": "Werkruimte exporteren"
       }

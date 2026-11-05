@@ -542,6 +542,9 @@
         "taskTitle": "Udostępnione zadanie",
         "projectTitle": "Udostępniony projekt"
       },
+      "sla": {
+        "title": "Priorytety SLA współzarządzania"
+      },
       "export": {
         "title": "Eksportuj obszar roboczy"
       }

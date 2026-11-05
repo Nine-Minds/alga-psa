@@ -624,6 +624,9 @@
         "taskTitle": "Shared Task",
         "projectTitle": "Shared Project"
       },
+      "sla": {
+        "title": "Co-Managed SLA Priorities"
+      },
       "export": {
         "title": "Export Workspace"
       }

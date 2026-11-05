@@ -146,6 +146,30 @@
       "types": "./src/projectTaskAudit.ts",
       "import": "./src/projectTaskAudit.ts"
     },
+    "./sharedTicketCommentWriter": {
+      "types": "./src/sharedTicketCommentWriter.ts",
+      "import": "./src/sharedTicketCommentWriter.ts"
+    },
+    "./inboundCommentWriter": {
+      "types": "./src/inboundCommentWriter.ts",
+      "import": "./src/inboundCommentWriter.ts"
+    },
+    "./refusalAck": {
+      "types": "./src/refusalAck.ts",
+      "import": "./src/refusalAck.ts"
+    },
+    "./ticketSlaRegistration": {
+      "types": "./src/ticketSlaRegistration.ts",
+      "import": "./src/ticketSlaRegistration.ts"
+    },
+    "./ticketSla": {
+      "types": "./src/ticketSla.ts",
+      "import": "./src/ticketSla.ts"
+    },
+    "./ticketSlaRead": {
+      "types": "./src/ticketSlaRead.ts",
+      "import": "./src/ticketSlaRead.ts"
+    },
     "./portableExport": {
       "types": "./src/portableExport.ts",
       "import": "./src/portableExport.ts"
@@ -185,18 +209,6 @@
     "./portableDownload": {
       "types": "./src/portableDownload.ts",
       "import": "./src/portableDownload.ts"
-    },
-    "./sharedTicketCommentWriter": {
-      "types": "./src/sharedTicketCommentWriter.ts",
-      "import": "./src/sharedTicketCommentWriter.ts"
-    },
-    "./inboundCommentWriter": {
-      "types": "./src/inboundCommentWriter.ts",
-      "import": "./src/inboundCommentWriter.ts"
-    },
-    "./refusalAck": {
-      "types": "./src/refusalAck.ts",
-      "import": "./src/refusalAck.ts"
     },
     "./projectTaskConversation": {
       "types": "./src/projectTaskConversation.ts",
