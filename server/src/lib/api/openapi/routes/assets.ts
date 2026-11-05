@@ -61,7 +61,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
   const AssetDocumentAssociationParams = registry.registerSchema(
     'AssetDocumentAssociationParams',
     zOpenApi.object({
-      associationId: zOpenApi.string().guid().describe('Document association UUID from document_associations.association_id.'),
+      associationId: zOpenApi.string().guid().describe('Asset document association UUID returned by the API; new API associations use document_associations.association_id and may also resolve asset_document_associations IDs.'),
     }),
   );
 
@@ -69,7 +69,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     'AssetDocumentAssociationRequest',
     zOpenApi.object({
       document_id: zOpenApi.string().guid().describe('Document UUID from documents.document_id to associate with the asset.'),
-      notes: zOpenApi.string().optional().describe('Optional notes stored on document_associations.notes.'),
+      notes: zOpenApi.string().optional().describe('Optional notes stored on asset_document_associations.notes.'),
     }),
   );
 
@@ -175,24 +175,32 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
   const AssetDocumentAssociationRow = registry.registerSchema(
     'AssetDocumentAssociationRow',
     zOpenApi.object({
-      association_id: zOpenApi.string().guid().describe('Primary key from document_associations.association_id.'),
-      entity_type: zOpenApi.literal('asset').describe('Entity type stored on document_associations; always asset for these routes.'),
-      entity_id: zOpenApi.string().guid().describe('Asset UUID from document_associations.entity_id.'),
-      document_id: zOpenApi.string().guid().describe('Document UUID from document_associations.document_id.'),
-      notes: zOpenApi.string().nullable().optional().describe('Optional association notes.'),
-      tenant: zOpenApi.string().guid().describe('Tenant UUID from document_associations.tenant.'),
+      association_id: zOpenApi.string().guid().describe('Association UUID from document_associations.association_id.'),
+      entity_type: zOpenApi.literal('asset').describe('Legacy entity type for this asset document association.'),
+      entity_id: zOpenApi.string().guid().describe('Legacy asset UUID field from document_associations.entity_id.'),
+      asset_id: zOpenApi.string().guid().describe('Asset UUID linked by the association.'),
+      document_id: zOpenApi.string().guid().describe('Document UUID linked by the association.'),
+      notes: zOpenApi.string().nullable().describe('Optional association notes stored on asset_document_associations.notes.'),
+      tenant: zOpenApi.string().guid().describe('Tenant UUID for the association.'),
       created_at: zOpenApi.string().datetime().optional().describe('Association creation timestamp.'),
-      original_filename: zOpenApi.string().optional().describe('Original filename from the joined documents table, present on list responses.'),
-      file_size: zOpenApi.number().optional().describe('File size in bytes from the joined documents table, present on list responses.'),
-      mime_type: zOpenApi.string().optional().describe('MIME type from the joined documents table, present on list responses.'),
-      uploaded_at: zOpenApi.string().datetime().optional().describe('Document upload timestamp from the joined documents table, present on list responses.'),
+      original_filename: zOpenApi.string().optional().describe('Legacy document filename field, included on list responses.'),
+      file_size: zOpenApi.number().nullable().optional().describe('Legacy document size field in bytes, included on list responses.'),
+      mime_type: zOpenApi.string().nullable().optional().describe('Legacy document MIME type field, included on list responses.'),
+      uploaded_at: zOpenApi.string().datetime().optional().describe('Legacy document upload timestamp field, included on list responses.'),
+      document: zOpenApi.object({
+        document_id: zOpenApi.string().guid(),
+        original_filename: zOpenApi.string(),
+        file_size: zOpenApi.number().nullable().optional(),
+        mime_type: zOpenApi.string().nullable().optional(),
+        uploaded_at: zOpenApi.string().datetime(),
+      }).optional().describe('Document details joined for list responses.'),
     }),
   );
 
   const AssetDocumentListPayload = registry.registerSchema(
     'AssetDocumentListPayload',
     zOpenApi.object({
-      data: zOpenApi.array(AssetDocumentAssociationRow).describe('Document association rows for the asset. Empty when no associations exist or the asset is not found.'),
+      data: zOpenApi.array(AssetDocumentAssociationRow).describe('Document association rows for the authorized asset.'),
       _links: zOpenApi.object({
         self: HateoasLink.optional(),
         create: HateoasLink.optional(),
@@ -216,7 +224,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
   const AssetDocumentAssociationPayload = registry.registerSchema(
     'AssetDocumentAssociationPayload',
     zOpenApi.object({
-      data: AssetDocumentAssociationRow.describe('Inserted document association row returned from document_associations.returning(*).'),
+      data: AssetDocumentAssociationRow.describe('Asset document association returned by the API with notes from the asset-specific association record.'),
     }),
   );
 
@@ -396,7 +404,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
   const AssetRelationshipParams = registry.registerSchema(
     'AssetRelationshipParams',
     zOpenApi.object({
-      relationshipId: zOpenApi.string().guid().describe('Asset relationship UUID from asset_relationships.relationship_id.'),
+      relationshipId: zOpenApi.string().describe('Composite asset relationship identity: parent_asset_id:child_asset_id.'),
     }),
   );
 
@@ -574,9 +582,11 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
   const AssetRelationshipRow = registry.registerSchema(
     'AssetRelationshipRow',
     zOpenApi.object({
-      relationship_id: zOpenApi.string().guid().describe('Primary key from asset_relationships.relationship_id.'),
-      asset_id: zOpenApi.string().guid().describe('Source asset UUID from asset_relationships.asset_id.'),
-      related_asset_id: zOpenApi.string().guid().describe('Related asset UUID from asset_relationships.related_asset_id.'),
+      relationship_id: zOpenApi.string().describe('Composite route identity: parent_asset_id:child_asset_id.'),
+      asset_id: zOpenApi.string().guid().describe('Compatibility alias for parent_asset_id.'),
+      parent_asset_id: zOpenApi.string().guid().describe('Parent asset UUID from asset_relationships.parent_asset_id.'),
+      child_asset_id: zOpenApi.string().guid().describe('Child asset UUID from asset_relationships.child_asset_id.'),
+      related_asset_id: zOpenApi.string().guid().describe('Other endpoint asset UUID, present in relationship list responses.'),
       relationship_type: zOpenApi.string().describe('Free-form relationship type.'),
       tenant: zOpenApi.string().guid().describe('Tenant UUID from asset_relationships.tenant.'),
       created_at: zOpenApi.string().datetime().optional().describe('Relationship creation timestamp.'),
@@ -1003,7 +1013,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/documents/{associationId}',
     summary: 'Remove asset document association',
     description:
-      'Removes a document association row by document_associations.association_id for the authenticated tenant. The service deletes rows where association_id and tenant match and does not verify entity_type in this method. The controller intends to return an empty success response after deletion, but currently calls createApiResponse(null, 204) inside NextResponse.json, which can throw because JSON responses cannot use status 204 with a body.',
+      'Removes a document association by its API association ID within the authenticated tenant and verifies it belongs to an asset before authorization. The asset is resolved within the tenant before the caller’s update permission and record-level scope are checked; foreign-tenant IDs return 404. The generic document link and any asset-specific notes record are deleted together.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -1443,7 +1453,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/{id}/documents',
     summary: 'List asset document associations',
     description:
-      'Returns document_associations rows for an asset in the authenticated tenant where entity_type is asset and entity_id is the path asset ID. The service joins documents to add original_filename, file_size, mime_type, and uploaded_at. It does not check whether the asset exists first, so nonexistent or cross-tenant asset IDs return 200 with an empty array. Response links currently point at /api/v2/assets paths.',
+      'Returns document associations for the asset in the authenticated tenant. Controller authorization resolves and authorizes the asset first; nonexistent or cross-tenant asset IDs return 404, while in-tenant permission denials return 403. Document details are joined from documents/external_files, legacy filename, size, MIME type, and upload-time fields remain at the response top level, and optional association notes come from asset_document_associations. Response links currently point at /api/v2/assets paths.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -1451,7 +1461,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     },
     responses: {
       200: {
-        description: 'Document associations returned successfully. Empty when no associations exist or the asset is not found.',
+        description: 'Document associations returned successfully for an authorized asset; an asset with no associations returns an empty array.',
         schema: AssetDocumentListResponse,
       },
       401: {
@@ -1471,7 +1481,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
       ...assetRouteExtensions,
       'x-rbac-resource': 'asset',
       'x-rbac-action': 'read',
-      'x-no-asset-existence-check': true,
+      'x-no-asset-existence-check': false,
       'x-response-links-path-version': 'v2',
     },
     edition: 'both',
@@ -1482,7 +1492,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/{id}/documents',
     summary: 'Associate document with asset',
     description:
-      'Creates a document_associations row that links the path asset ID to the supplied document_id. The body is validated with createAssetDocumentSchema; document_id is required and notes is optional. The service inserts entity_type=asset, entity_id from the path, document_id, notes, tenant from context, and created_at, then returns the inserted row. It does not verify that the asset or document belongs to the same tenant before insert, does not set created_by, and publishes no event. Foreign-key or unique constraint errors surface through handleApiError.',
+      'Creates the tenant-scoped document link for the path asset and supplied document_id, while storing optional notes and authenticated created_by in asset_document_associations. The body is validated with createAssetDocumentSchema; document_id is required and notes is optional. Both association records are written transactionally so document workflows and the asset API stay consistent. Tenant-scoped asset and document checks run before insert; database persistence errors are surfaced through handleApiError.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
