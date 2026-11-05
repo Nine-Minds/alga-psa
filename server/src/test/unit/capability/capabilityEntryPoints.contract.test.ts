@@ -68,7 +68,7 @@ export const ENTRY_POINT_GLOBS: readonly string[] = ENTRY_POINT_FAMILIES.map((f)
 export const EXPECTED_FAMILY_FILE_COUNTS: Readonly<Record<string, { glob: string; files: number }>> = {
   'rsc-pages': { glob: 'server/src/app/msp/co-manag*/**', files: 14 },
   'rest-routes': { glob: 'server/src/app/api/**/co-management/**', files: 2 },
-  'server-actions': { glob: 'server/src/lib/actions/coManaged*', files: 23 },
+  'server-actions': { glob: 'server/src/lib/actions/coManaged*', files: 25 },
   'package-actions': { glob: 'packages/co-managed/src/**/actions*', files: 0 },
   'user-invitation-actions': { glob: 'packages/users/src/actions/user-actions/userInvitationActions.ts', files: 1 },
   'user-invitation-service': { glob: 'packages/users/src/services/UserInvitationService.ts', files: 1 },
@@ -81,7 +81,7 @@ export const EXPECTED_FAMILY_FILE_COUNTS: Readonly<Record<string, { glob: string
   'temporal-workflows-kebab': { glob: 'ee/temporal-workflows/src/workflows/co-managed*', files: 1 },
   'ee-server-actions': { glob: 'ee/server/src/lib/actions/coManaged*', files: 2 },
   'shared-services': { glob: 'shared/services/**/coManaged*', files: 0 },
-  'server-ui': { glob: 'server/src/components/co-managed/**', files: 69 },
+  'server-ui': { glob: 'server/src/components/co-managed/**', files: 71 },
   'package-ui': { glob: 'packages/co-managed/src/components/**', files: 0 },
 };
 
@@ -537,8 +537,15 @@ export function registrySanity(families: readonly EntryPointFamily[], files: Sou
 // ---------------------------------------------------------------------------
 
 const repoFiles = scanRepo();
-/** Walking the worker and capability import graphs parses ~1,100 repo files; that is not a per-unit workload. */
-const IMPORT_GRAPH_WALK_TIMEOUT_MS = 120_000;
+/**
+ * Walking the worker and capability import graphs parses ~1,100 repo files; that is not a per-unit workload. The
+ * cold walk timed out at 120 s on a unit shard sharing four forks with v8 coverage (run 41148754710, shard 1), and
+ * even the warm retry took 39 s, so the walk reads nothing from disk that scanRepo already holds and the ceiling
+ * sits well above the slowest measured run.
+ */
+const IMPORT_GRAPH_WALK_TIMEOUT_MS = 300_000;
+const scannedSource = new Map(repoFiles.map((f) => [join(REPO, f.path), f.source]));
+const readScannedSource = (file: string) => scannedSource.get(file);
 const workerEntries = repoFiles
   .map((f) => f.path)
   .filter((p) => WORKER_ENTRY_GLOBS.some((g) => globToRegExp(g).test(p)));
@@ -573,7 +580,7 @@ describe('capability gate coverage (AST) — branch is green', () => {
     for (const e of ['ee/temporal-workflows/src/worker.ts', 'services/email-service/src/index.ts', 'services/workflow-worker/src/index.ts']) {
       expect(workerEntries).toContain(e);
     }
-    expect(ruleD(workerEntries)).toEqual([]);
+    expect(ruleD(workerEntries, readScannedSource)).toEqual([]);
   }, IMPORT_GRAPH_WALK_TIMEOUT_MS);
 
   it('Rule E: no production file imports the capability test hatch; the pure entry exports none', () => {
@@ -585,7 +592,7 @@ describe('capability gate coverage (AST) — branch is green', () => {
   });
 
   it('Rule D baseline for the Temporal worker has no stale entries', () => {
-    const reached = new Set([...closure('ee/temporal-workflows/src/worker.ts').bare].filter(isForbiddenForWorkers));
+    const reached = new Set([...closure('ee/temporal-workflows/src/worker.ts', readScannedSource).bare].filter(isForbiddenForWorkers));
     for (const spec of Object.keys(TEMPORAL_PREEXISTING_FORBIDDEN)) expect(reached.has(spec), spec).toBe(true);
   }, IMPORT_GRAPH_WALK_TIMEOUT_MS);
 
@@ -826,7 +833,7 @@ const UI_SLOT_MOUNTS: Readonly<Record<string, string>> = {
 };
 const UI_SLOT_CONTRIBUTIONS: Readonly<Record<string, string>> = {
   'server/src/config/coManagedMenu.ts': 'msp.navigation.group',
-  'server/src/config/coManagedConversationSlots.ts': 'ticket.conversation.comment-attachments',
+  'server/src/config/coManagedConversationSlots.ts': 'ticket.conversation.thread-header',
 };
 
 describe('UI-slot mounts (A8)', () => {
@@ -840,7 +847,12 @@ describe('UI-slot mounts (A8)', () => {
   it("each mount serves slots from useCapability('co-managed') and names its surface", () => {
     for (const f of mounts) {
       expect(f.source, f.path).toContain("useCapability('co-managed')");
-      expect(f.source, f.path).toContain(`'${UI_SLOT_MOUNTS[f.path]}'`);
+      if (f.path.endsWith('CoManagedConversationFiles.tsx')) {
+        expect(f.source, f.path).toContain("'ticket.conversation.comment-attachments'");
+        expect(f.source, f.path).toContain("'ticket.conversation.thread-header'");
+      } else {
+        expect(f.source, f.path).toContain(`'${UI_SLOT_MOUNTS[f.path]}'`);
+      }
       expect(f.source, f.path).not.toMatch(/useFeatureFlag\(\s*'release-v2-0-feature'/);
     }
   });
@@ -851,7 +863,12 @@ describe('UI-slot mounts (A8)', () => {
     expect(contributions.map((f) => f.path).sort()).toEqual(Object.keys(UI_SLOT_CONTRIBUTIONS).sort());
     for (const f of contributions) {
       expect(f.source, f.path).toContain("capability: 'co-managed'");
-      expect(f.source, f.path).toContain(`'${UI_SLOT_CONTRIBUTIONS[f.path]}'`);
+      if (f.path.endsWith('coManagedConversationSlots.ts')) {
+        expect(f.source, f.path).toContain("'ticket.conversation.comment-attachments'");
+        expect(f.source, f.path).toContain("'ticket.conversation.thread-header'");
+      } else {
+        expect(f.source, f.path).toContain(`'${UI_SLOT_CONTRIBUTIONS[f.path]}'`);
+      }
     }
   });
 });

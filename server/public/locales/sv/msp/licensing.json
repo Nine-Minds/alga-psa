@@ -979,7 +979,28 @@
         "audienceUnavailable": "Filer kan inte bifogas till meddelanden för den här målgruppen. Ta bort filerna eller välj en annan målgrupp.",
         "cancelUnknownOutcome": "Det gick inte att bekräfta avbrytandet. Försök igen för att kontrollera samma avbrytandebegäran.",
         "canceling": "Avbryter…"
-      }
+      },
+      "title": "Konversation",
+      "reload": "Läs in igen",
+      "loadError": "Konversationen kunde inte läsas in.",
+      "readOnly": "Du kan läsa den här konversationen men inte lägga till något.",
+      "new": "Ny kommentar",
+      "empty": "Inga kommentarer ännu.",
+      "restrictedAuthor": "Författare dold",
+      "replyMarker": "Svar",
+      "deleted": "Den här kommentaren har tagits bort.",
+      "reply": "Svara",
+      "edit": "Redigera",
+      "delete": "Ta bort",
+      "newer": "Nyare",
+      "older": "Äldre",
+      "message": "Meddelande",
+      "deleteHelp": "Kommentaren ersätts med en borttagningsmarkering. Svar finns kvar i tråden.",
+      "conflict": "Den här kommentaren har ändrats sedan du öppnade den. Avbryt och läs in igen för att fortsätta.",
+      "unknownOutcome": "Vi kunde inte bekräfta att det sparades. Försök igen; det tillämpas inte två gånger.",
+      "invalid": "Den här kommentaren kunde inte sparas.",
+      "send": "Skicka",
+      "cancel": "Avbryt"
     }
   },
   "common": {

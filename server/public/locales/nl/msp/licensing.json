@@ -979,7 +979,28 @@
         "audienceUnavailable": "Aan berichten voor dit publiek kunnen geen bestanden worden toegevoegd. Verwijder de bestanden of kies een ander publiek.",
         "cancelUnknownOutcome": "We konden de annulering niet bevestigen. Probeer opnieuw om hetzelfde annuleringsverzoek te controleren.",
         "canceling": "Annuleren…"
-      }
+      },
+      "title": "Gesprek",
+      "reload": "Opnieuw laden",
+      "loadError": "Het gesprek kon niet worden geladen.",
+      "readOnly": "U kunt dit gesprek lezen, maar er niets aan toevoegen.",
+      "new": "Nieuwe opmerking",
+      "empty": "Nog geen opmerkingen.",
+      "restrictedAuthor": "Auteur verborgen",
+      "replyMarker": "Antwoord",
+      "deleted": "Deze opmerking is verwijderd.",
+      "reply": "Beantwoorden",
+      "edit": "Bewerken",
+      "delete": "Verwijderen",
+      "newer": "Nieuwer",
+      "older": "Ouder",
+      "message": "Bericht",
+      "deleteHelp": "De opmerking wordt vervangen door een verwijdermarkering. Antwoorden blijven in de draad.",
+      "conflict": "Deze opmerking is gewijzigd sinds u deze opende. Annuleer en laad opnieuw om door te gaan.",
+      "unknownOutcome": "We konden het opslaan niet bevestigen. Probeer het opnieuw; het wordt niet dubbel toegepast.",
+      "invalid": "Deze opmerking kon niet worden opgeslagen.",
+      "send": "Verzenden",
+      "cancel": "Annuleren"
     }
   },
   "common": {

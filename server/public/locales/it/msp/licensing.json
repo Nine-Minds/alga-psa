@@ -979,7 +979,28 @@
         "audienceUnavailable": "Non è possibile allegare file ai messaggi per questo pubblico. Rimuovi i file o scegli un altro pubblico.",
         "cancelUnknownOutcome": "Impossibile confermare l’annullamento. Riprova per verificare la stessa richiesta di annullamento.",
         "canceling": "Annullamento…"
-      }
+      },
+      "title": "Conversazione",
+      "reload": "Ricarica",
+      "loadError": "Impossibile caricare la conversazione.",
+      "readOnly": "Puoi leggere questa conversazione, ma non aggiungere messaggi.",
+      "new": "Nuovo commento",
+      "empty": "Ancora nessun commento.",
+      "restrictedAuthor": "Autore nascosto",
+      "replyMarker": "Risposta",
+      "deleted": "Questo commento è stato eliminato.",
+      "reply": "Rispondi",
+      "edit": "Modifica",
+      "delete": "Elimina",
+      "newer": "Più recenti",
+      "older": "Meno recenti",
+      "message": "Messaggio",
+      "deleteHelp": "Il commento viene sostituito da un indicatore di eliminazione. Le risposte restano nel thread.",
+      "conflict": "Questo commento è cambiato da quando l’hai aperto. Annulla e ricarica per continuare.",
+      "unknownOutcome": "Non è stato possibile confermare il salvataggio. Riprova; non verrà applicato due volte.",
+      "invalid": "Impossibile salvare questo commento.",
+      "send": "Invia",
+      "cancel": "Annulla"
     }
   },
   "common": {
