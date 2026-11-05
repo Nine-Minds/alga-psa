@@ -265,11 +265,15 @@ jobs:
         if: matrix.prebuild
         run: npm install --include=optional
 
+      # The snapshot tag carries a generation. `-v2` started cold on 2026-11-04:
+      # the first-generation packs had grown to ~18 GB on disk (next.config.mjs
+      # now bounds a pack to entries used within a day) and every build that
+      # restored one outgrew the runner, so no build could write a smaller one.
       - name: Restore the build-cache snapshot
         if: matrix.prebuild
         id: build_cache
         env:
-          BUILD_CACHE_REFERENCE: ${{ needs.changes.outputs.registry_namespace }}/build-cache:${{ matrix.edition }}
+          BUILD_CACHE_REFERENCE: ${{ needs.changes.outputs.registry_namespace }}/build-cache:${{ matrix.edition }}-v2
         run: node scripts/build-cache-snapshot.mjs restore --reference "$BUILD_CACHE_REFERENCE" --path server/node_modules/.cache/webpack --path .nx/cache
 
       - name: Build the production application on the runner
@@ -373,7 +377,7 @@ jobs:
         if: matrix.prebuild && github.event_name == 'push' && github.ref == 'refs/heads/main' && env.IMAGE_TRANSPORT == 'registry'
         continue-on-error: true
         env:
-          BUILD_CACHE_REFERENCE: ${{ needs.changes.outputs.registry_namespace }}/build-cache:${{ matrix.edition }}
+          BUILD_CACHE_REFERENCE: ${{ needs.changes.outputs.registry_namespace }}/build-cache:${{ matrix.edition }}-v2
         run: node scripts/build-cache-snapshot.mjs save --reference "$BUILD_CACHE_REFERENCE" --path server/node_modules/.cache/webpack --path .nx/cache
 
       - name: Upload image build record

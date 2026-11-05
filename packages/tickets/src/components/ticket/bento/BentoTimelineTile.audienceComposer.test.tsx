@@ -183,11 +183,16 @@ vi.mock('../../../actions/comment-actions/commentReactionActions', () => ({
   toggleCommentReaction: vi.fn(),
 }));
 
-vi.mock('../CommentItem', () => ({
-  default: ({ conversation, onReply }: any) => (
-    <button type="button" data-testid={`reply-${conversation.comment_id}`} onClick={onReply} />
-  ),
-}));
+vi.mock('../CommentItem', async () => {
+  const React = await import('react');
+  const { resolveCommentAuthor } = await import('../../../lib/commentAuthorResolution');
+  return { default: ({ conversation, userMap, contactMap, onReply }: any) => React.createElement(
+    React.Fragment,
+    null,
+    React.createElement('span', null, resolveCommentAuthor(conversation, { userMap, contactMap }).displayName),
+    React.createElement('button', { type: 'button', 'data-testid': `reply-${conversation.comment_id}`, onClick: onReply }),
+  ) };
+});
 
 vi.mock('../TicketConversation', () => ({
   DEFAULT_BLOCK: [],
@@ -338,5 +343,22 @@ describe('BentoTimelineTile audience composer', () => {
     fireEvent.click(send());
     await waitFor(() => expect(onAddNewComment).toHaveBeenCalledTimes(1));
     expect(onAddNewComment.mock.calls[0][6]).toBe('shared_it');
+  });
+
+  it('updates the Grid timeline author when its live map refreshes', () => {
+    const conversation = { comment_id: 'comment-new', user_id: 'posting-user', author_type: 'internal', note: 'reply', created_at: '2026-11-02T12:00:00.000Z' } as any;
+    const view = render(
+      <BentoTimelineTile {...defaultProps} conversations={[conversation]} userMap={{}} />,
+    );
+    expect(screen.getByText('Unknown User')).toBeInTheDocument();
+
+    view.rerender(
+      <BentoTimelineTile {...defaultProps} conversations={[conversation]} userMap={{
+        'posting-user': { user_id: 'posting-user', first_name: 'Ada', last_name: 'Technician', user_type: 'internal', avatarUrl: null },
+      }} />,
+    );
+
+    expect(screen.getByText('Ada Technician')).toBeInTheDocument();
+    expect(screen.queryByText('Unknown User')).not.toBeInTheDocument();
   });
 });

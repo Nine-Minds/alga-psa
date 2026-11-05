@@ -20,7 +20,7 @@
     },
     {
       "name": "ticket.open",
-      "statements": 32,
+      "statements": 33,
       "locks": 0
     },
     {
@@ -85,7 +85,7 @@
     }
   ],
   "totals": {
-    "statements": 468,
+    "statements": 469,
     "locks": 17
   },
   "denylist": [

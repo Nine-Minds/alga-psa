@@ -1,6 +1,7 @@
 'use server';
 
 import { trackContactUpdates } from '@alga-psa/shared/lib/contacts/contactEvents';
+import { getContactLocations } from '@alga-psa/shared/models/contactLocation';
 import { createTenantKnex, getTenantSlugForTenant, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -18,8 +19,18 @@ import {
 import { assertValidContactManager } from '@shared/models/contactModel';
 import { collectReportContactIds } from '@alga-psa/authorization/portal/visibility.server';
 import { IUser, IRole } from '@shared/interfaces/user.interfaces';
-import type { IUserWithRoles } from '@alga-psa/types';
+import type { ContactWorkArrangement, IContactLocation, IUserWithRoles } from '@alga-psa/types';
 import { isClientUserType } from '@alga-psa/types';
+
+/**
+ * A portal user plus the read-only facts about where their contact works. These live on
+ * `contacts`/`contact_locations`, never on `users`, so they ride alongside `IUser` instead of
+ * widening it; the portal write path rejects both fields.
+ */
+export type ClientUserWithLocations = IUser & {
+  work_arrangement?: ContactWorkArrangement | null;
+  locations?: IContactLocation[];
+};
 
 export type ClientUserActionError =
   | { readonly actionError: string }
@@ -401,6 +412,15 @@ export const updateClientUser = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
 
+    // Locations and work arrangement are MSP-managed facts about where someone works, not portal
+    // self-service profile fields. The field allowlist below would drop them silently; rejecting
+    // outright is the honest answer, and it keeps the portal from looking like it can edit them.
+    for (const field of ['locations', 'work_arrangement'] as const) {
+      if (Object.prototype.hasOwnProperty.call(userData, field)) {
+        return { actionError: 'Locations and work arrangement cannot be changed from the client portal' };
+      }
+    }
+
     const [updatedUser] = await withTransaction(knex, async (trx: Knex.Transaction) => {
       await assertCanManageClientUser(user, tenant, trx, userId);
 
@@ -507,7 +527,7 @@ export const getClientUserById = withAuth(async (
   user: IUserWithRoles,
   { tenant }: AuthContext,
   userId: string
-): Promise<IUser | null> => {
+): Promise<ClientUserWithLocations | null> => {
   try {
     const { knex } = await createTenantKnex();
 
@@ -540,7 +560,26 @@ export const getClientUserById = withAuth(async (
         .first();
     });
 
-    return (clientUser as IUser | undefined) || null;
+    if (!clientUser) return null;
+
+    // Read-only in the portal: the locations line tells the person (and their client admin) where
+    // this account's contact works, but nothing here can change the links — the portal write path
+    // rejects them outright.
+    const contactId = (clientUser as { contact_id?: string | null }).contact_id;
+    if (contactId) {
+      const locations = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const contact = await tenantDb(trx, tenant).table('contacts')
+          .where({ contact_name_id: contactId })
+          .first(['work_arrangement']);
+        return {
+          work_arrangement: (contact as { work_arrangement?: ContactWorkArrangement | null })?.work_arrangement ?? null,
+          locations: await getContactLocations(trx, tenant, contactId),
+        };
+      });
+      return { ...(clientUser as IUser), ...locations };
+    }
+
+    return clientUser as ClientUserWithLocations;
   } catch (error) {
     console.error('Error getting client user:', error);
     throw error;

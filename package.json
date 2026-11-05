@@ -147,6 +147,7 @@
     "assemblyscript": "^0.27.37",
     "axios": "^1.20.0",
     "bcryptjs": "^2.4.3",
+    "bwip-js": "^4.11.4",
     "class-variance-authority": "^0.7.0",
     "clean": "^4.0.2",
     "clsx": "^2.1.1",
