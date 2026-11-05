@@ -86,7 +86,7 @@ At the starting revision `dc3735ab943e16e1bfb78b631c076039a671c61d`, the focused
 - Provider/admission/confirmation/middleware: **12 files, 153 tests passed**.
 - `src/test/integration/inboundEmailInApp.webhooks.integration.test.ts`: **47 tests passed**.
 - `npm run test --workspace=@alga-psa/co-managed`: **19 files, 210 tests passed**.
-- `npm run typecheck --workspace=@alga-psa/co-managed`, `npm run build:shared`, and `npm run build --workspace=@alga-psa/emulator-msgraph`: passed.
+- `npm run typecheck --workspace=@alga-psa/co-managed`, `NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit -p shared/tsconfig.json`, `npm run build:shared`, `npm run build --workspace=@alga-psa/emulator-msgraph`, and `npm run build --workspace=email-service`: passed.
 
 The confirmation flow covers successful Gmail adapter, Microsoft Graph emulator, and IMAP MIME ingestion followed by authenticated confirmation and exactly one persisted comment. The integration tests include intra-organization, unsigned, and forwarded cases; they use generated DKIM signatures with controlled DNS-key fixtures, a Graph emulator, Gmail API stand-ins, and production IMAP MIME mapping. They are not live provider, live DNS, or browser interoperability evidence. Raw provider claims remain diagnostics only, and aligned DKIM supports contact-domain attribution only when the complete body is signed.
 
