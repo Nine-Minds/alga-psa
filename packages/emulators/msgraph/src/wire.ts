@@ -454,7 +454,11 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     await deliverCalendarNotifications(core, event, 'created', env);
     res.status(201).json(publicEvent(event));
   }));
+  // Both shapes serve the same item: the adapter reads a series master through
+  // /me/events/{seriesMasterId}, and its own calendar events through
+  // /me/calendar/events/{id}. Either way the master carries its recurrence.
   graph.get('/me/calendar/events/:eventId', (req, res) => res.json(publicEvent(ownedEvent(String(req.params.eventId)))));
+  graph.get('/me/events/:eventId', (req, res) => res.json(publicEvent(ownedEvent(String(req.params.eventId)))));
   graph.patch('/me/calendar/events/:eventId', route(async (req, res) => {
     ownedEvent(String(req.params.eventId));
     const event = core.updateCalendarEvent(String(req.params.eventId), req.body ?? {});

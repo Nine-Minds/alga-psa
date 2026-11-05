@@ -258,6 +258,7 @@ checks run in the normal msgraph Vitest suite against local HTTP listeners.
 
 | Surface | Contract evidence | Remaining limitation |
 | --- | --- | --- |
+| Recurring series expansion | `calendar.test.ts` expands weekly/relative-monthly/counted/until series through `calendarView/delta`, asserts type/seriesMasterId/originalStart, cancellation as `@removed` and an overridden instance as `type: 'exception'` | UTC-only expansion, synthetic occurrence ids, no Outlook-side series-split (`_R`) behaviour |
 | Calendar create/error responses | `tests/contracts/calendar.ts` and real HTTP checks in `calendar.test.ts`; malformed event/error bodies and wrong create status fail | Consumed fields only; no full event schema or live sandbox comparison |
 | OAuth token responses | `tests/contracts/oauth.ts` applied to code, refresh and client-credential responses in `smoke.test.ts`; wrong expiry type and bearer type fail | Opaque token envelope only; does not establish Entra signatures, consent, PKCE, SSO, or complete scope-dependent token issuance parity |
 | Subscription validation | `calendar.test.ts` verifies request method/content type, accepts only 200/plain-text matching token responses, and verifies rejected callbacks leave no subscription | HTTP loopback transport; real HTTPS trust and tenant registration require application/sandbox coverage |
@@ -310,6 +311,19 @@ mailbox message. Only unexpired mail subscriptions requesting `created` receive
 it. Delivery has a ten-second timeout and does not follow redirects. The existing
 `message` seeder still creates a message and sends its initial notification.
 
+A series master (an event with a Graph `recurrence` object) is expanded by
+`calendarView/delta` into the occurrences overlapping the requested window,
+each carrying `type: 'occurrence'`, its `seriesMasterId`, the `originalStart`
+slot and `recurrence: null`; the master itself is never returned from
+calendarView, and is served with its recurrence intact by
+`GET /me/events/{id}` and `GET /me/calendar/events/{id}`. Daily, weekly,
+absolute/relative monthly and absolute/relative yearly patterns are modelled
+with `noEnd`, `endDate` and `numbered` ranges; anything else answers
+`400 Request_UnsupportedQuery` rather than silently expanding wrongly. Use the
+`calendar-occurrence` control action (`action: 'cancel' | 'override'`) to
+cancel one instance — reported as an `@removed` item for that occurrence id —
+or to move/rename one, which is then expanded as `type: 'exception'`.
+
 Use the `calendar-change` control action to create/update/delete vendor events;
 it returns the event and each matching webhook delivery's HTTP status. Supply
 `changeType`, an `event` object for creation/update, and `eventId` for update/delete.
@@ -323,8 +337,10 @@ This delta model handles single-instance UTC and IANA-zone events. Explicit
 ISO offsets identify instants; offset-free event dates use the supplied zone,
 including its winter/summer offset. Delta responses normalize dates to UTC
 without mutating vendor state. Windows timezone names, ambiguous/nonexistent
-local times, recurrence expansion and unsupported query options remain explicit
-model limitations; refusal does not claim Graph rejects those cases. The separate
+local times and unsupported query options remain explicit model limitations;
+refusal does not claim Graph rejects those cases. Series expansion is UTC-only
+and occurrence ids are `<masterId>_<compact ISO slot>`, where real Graph uses
+opaque ids — resolve instances through `seriesMasterId`, never by parsing an id. The separate
 legacy event-list filter still models UTC values only.
 It reports deletions for previously tracked events; it does not reproduce Graph's
 optional tombstones for unrelated changes outside the window. Tokens are bound
