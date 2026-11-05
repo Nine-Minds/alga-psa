@@ -24,12 +24,6 @@ export async function createPaymentFixture(db: Knex, sourceEmail: string, amount
       total_price: amountCents, net_amount: amountCents, tax_rate: 0, tax_amount: 0, is_manual: true,
       created_at: trx.fn.now(), updated_at: trx.fn.now(),
     });
-    await trx('payment_provider_configs').insert({ tenant: tenant.tenantId, config_id: randomUUID(),
-      provider_type: 'stripe', is_enabled: true, is_default: true,
-      configuration: { publishable_key: 'pk_test_algasim' }, credentials_vault_path: null,
-      settings: { paymentLinkExpirationHours: 24, paymentLinksInEmails: true, sendPaymentConfirmations: false },
-      created_at: trx.fn.now(), updated_at: trx.fn.now(),
-    });
     return { actors, tenant, invoice };
   });
 }

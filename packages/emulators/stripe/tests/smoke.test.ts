@@ -92,6 +92,14 @@ afterAll(async () => {
 });
 
 describe('stripe emulator wire contract', { shuffle: false }, () => {
+  it('serves a stable account through the official Stripe SDK and supports configured account mismatch fixtures', async () => {
+    const sdk = new Stripe(SECRET_KEY, { host: new URL(base).hostname, port: Number(new URL(base).port), protocol: 'http' });
+    expect((await sdk.accounts.retrieve()).id).toBe('acct_algasim');
+    await controlPost('/control/stripe/seed/config', { accountId: 'acct_review_other' });
+    const mismatchSdk = new Stripe(SECRET_KEY, { host: new URL(base).hostname, port: Number(new URL(base).port), protocol: 'http' });
+    expect((await mismatchSdk.accounts.retrieve()).id).toBe('acct_review_other');
+    await controlPost('/control/stripe/seed/config', { accountId: 'acct_algasim' });
+  });
   it('redelivers the same event with a delivery-time signature and increments delivery attempts', async () => {
     const replayHost = new EmulatorHost({ emulators: [stripeEmulator], controlPort: 0, ports: { stripe: 0 } });
     try {
@@ -496,13 +504,18 @@ describe('stripe emulator wire contract', { shuffle: false }, () => {
     await controlPost('/control/stripe/reset');
     const customers = await (await fetch(`${control}/control/stripe/state/customers`)).json();
     const sessions = await (await fetch(`${control}/control/stripe/state/checkout-sessions`)).json();
+    const paymentMethods = await (await fetch(`${control}/control/stripe/state/payment-methods`)).json();
+    const setupIntents = await (await fetch(`${control}/control/stripe/state/setup-intents`)).json();
     expect(customers.result).toHaveLength(0);
     expect(sessions.result).toHaveLength(0);
+    expect(paymentMethods.result).toHaveLength(0);
+    expect(setupIntents.result).toHaveLength(0);
     // Credentials revert to the defaults after reset; the control plane never
     // round-trips raw `sk_*`/`whsec_*` values, and the public publishable key
     // stays visible.
     const config = await (await fetch(`${control}/control/stripe/state/config`)).json();
     expect(config.result.publishableKey).toBe('pk_test_algasim');
+    expect(config.result.accountId).toBe('acct_algasim');
     expect(config.result.secretKey).not.toContain('sk_test_algasim');
     expect(config.result.webhookSecret).not.toContain('whsec_algasim');
     // The emulator still authenticates with the fixture despite the redaction.

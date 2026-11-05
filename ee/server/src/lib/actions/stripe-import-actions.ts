@@ -23,6 +23,22 @@ interface ActionResult<T> {
   success: boolean;
   data?: T;
   error?: string;
+  code?: string;
+}
+
+const IMPORT_CONFIGURATION_ERRORS: Record<string, string> = {
+  'stripe-import/no-tenant-stripe-account': 'This tenant has no Stripe account configured. Connect a tenant Stripe account in Billing settings to enable imports.',
+  'stripe-import/account-unbound': 'The tenant Stripe account has not been verified. Reconnect Stripe in Billing settings before importing.',
+  'stripe-import/account-mismatch': 'The saved Stripe credentials now point to a different account than the tenant’s verified binding. Restore the bound account credentials or contact support.',
+};
+
+function importActionError(error: unknown, fallback: string): ActionResult<never> {
+  const message = error instanceof Error ? error.message : '';
+  const code = (error as { code?: string } | null)?.code ?? message;
+  const actionable = IMPORT_CONFIGURATION_ERRORS[code];
+  return actionable
+    ? { success: false, error: actionable, code }
+    : { success: false, error: message || fallback };
 }
 
 async function assertCanImport(user: any, knex: any): Promise<void> {
@@ -45,7 +61,7 @@ export const previewStripeImportAction = withAuth(async (
     const plan = await service.preview(rows);
     return { success: true, data: { plan, digest: computePlanDigest(plan) } };
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Failed to preview import' };
+    return importActionError(error, 'Failed to preview import');
   }
 });
 
@@ -59,7 +75,7 @@ export const proposeStripeImportMatchesAction = withAuth(async (
     const service = await StripeCustomerImportService.create(tenant);
     return { success: true, data: await service.proposeMatches() };
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Failed to match Stripe customers' };
+    return importActionError(error, 'Failed to match Stripe customers');
   }
 });
 
@@ -91,6 +107,6 @@ export const executeStripeImportAction = withAuth(async (
     });
     return { success: true, data: { results } };
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Failed to import Stripe customers' };
+    return importActionError(error, 'Failed to import Stripe customers');
   }
 });

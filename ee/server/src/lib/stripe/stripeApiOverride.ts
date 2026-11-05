@@ -17,7 +17,7 @@ export function stripeApiOverride(secretKey: string, env: NodeJS.ProcessEnv = pr
   const parsed = new URL(base);
   const loopback = ['localhost', '127.0.0.1', '[::1]', '::1'].includes(parsed.hostname);
   if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password ||
-      parsed.pathname !== '/' || parsed.search || parsed.hash) throw new Error('Invalid Stripe API override.');
+      (parsed.pathname !== '/' && parsed.pathname !== '/v1') || parsed.search || parsed.hash) throw new Error('Invalid Stripe API override.');
   if (production && (!loopback || !secretKey.startsWith('sk_test_'))) {
     throw new Error('Local Stripe review requires a loopback endpoint and a test key.');
   }

@@ -30,6 +30,22 @@ x-provider-environment: &provider-environment
 x-hocuspocus-jwt-secret: &hocuspocus-jwt-secret regression-hocuspocus-jwt-only-20260909
 
 services:
+  # Share only the application network namespace, exposing a fixed emulator
+  # destination on its loopback interface. Production Stripe guards stay intact.
+  stripe-loopback:
+    image: alga-e2e-test-algasim:latest
+    init: true
+    network_mode: service:server
+    entrypoint: ['node', '/provider-ingress.mjs', '--stripe-loopback']
+    command: []
+    volumes:
+      - ./e2e-tests/harness/provider-ingress.mjs:/provider-ingress.mjs:ro
+      - ./e2e-tests/harness/calendar-callback-proxy.mjs:/calendar-callback-proxy.mjs:ro
+    healthcheck:
+      test: ['CMD', 'node', '--input-type=module', '-e', 'const r = await fetch("http://127.0.0.1:4050/v1/account", { headers: { Authorization: "Bearer sk_test_algasim" }, signal: AbortSignal.timeout(2000) }); if (!r.ok) process.exit(1)']
+      interval: 2s
+      timeout: 3s
+      retries: 30
   hocuspocus:
     environment:
       HOCUSPOCUS_JWT_SECRET: *hocuspocus-jwt-secret
@@ -113,6 +129,8 @@ services:
     ports: !reset []
     environment:
       <<: *provider-environment
+      ALGA_STRIPE_LOCAL_REVIEW: 'true'
+      STRIPE_API_BASE_URL: http://127.0.0.1:4050
       HOCUSPOCUS_JWT_SECRET: *hocuspocus-jwt-secret
       TEMPORAL_ADDRESS: temporal-dev:7233
       TEMPORAL_NAMESPACE: default
