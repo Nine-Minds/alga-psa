@@ -78,6 +78,9 @@ const createMockTransaction = (mockData: MockData = {
   // Add fn.now() to the mock transaction itself
   (mockTrx as any).fn = { now: vi.fn().mockReturnValue('NOW()') };
   (mockTrx as any).raw = vi.fn((sql) => sql);
+  (mockTrx as any).isTransaction = true;
+  (mockTrx as any).transaction = vi.fn(async (callback: (trx: Knex.Transaction) => Promise<unknown>) =>
+    callback(mockTrx));
 
   return {
     trx: mockTrx,
@@ -719,7 +722,7 @@ describe('escalateTicket', () => {
     });
   });
 
-  describe('helper failures are not swallowed (alga-2026-0002687)', () => {
+  describe('escalation side-effect failures (alga-2026-0002687)', () => {
     const builder = (overrides: Record<string, unknown> = {}) => ({
       where: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),
@@ -761,13 +764,18 @@ describe('escalateTicket', () => {
       mockTrx.tableBuilders['sla_audit_log'] = builder(overrides.audit);
     };
 
-    it('returns success=false when adding the manager resource fails', async () => {
-      arrange({ resources: { insert: vi.fn().mockRejectedValue(new Error('insert failed')) } });
+    it('continues escalation, notification, and audit when adding the manager resource fails', async () => {
+      const failedInsert = vi.fn().mockRejectedValue(new Error('insert failed'));
+      arrange({ resources: { insert: failedInsert } });
 
       const result = await escalateTicket(mockTrx.trx, TENANT, TICKET_ID, 1);
 
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('insert failed');
+      expect(result.success).toBe(true);
+      expect(result.error).toBeUndefined();
+      expect(result.notificationsSent.inApp).toBe(true);
+      expect(failedInsert).toHaveBeenCalledTimes(1);
+      expect(createNotificationFromTemplateInternal).toHaveBeenCalledTimes(1);
+      expect(mockTrx.tableBuilders['sla_audit_log'].insert).toHaveBeenCalledTimes(1);
     });
 
     it('returns success=false when the in-app notification path throws', async () => {
@@ -877,6 +885,34 @@ describe('checkEscalationNeeded', () => {
   });
 
   describe('escalation threshold checks', () => {
+    it('makes each configured level eligible only at its own percentage boundary', async () => {
+      const ticketBuilder = {
+        where: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        first: vi.fn().mockResolvedValue({
+          sla_policy_id: SLA_POLICY_ID,
+          priority_id: PRIORITY_ID,
+          escalation_level: null,
+        }),
+      };
+      const targetBuilder = {
+        where: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        first: vi.fn().mockResolvedValue({
+          escalation_1_percent: 70,
+          escalation_2_percent: 90,
+          escalation_3_percent: 110,
+        }),
+      };
+      mockTrx.tableBuilders['tickets'] = ticketBuilder as any;
+      mockTrx.tableBuilders['sla_policy_targets'] = targetBuilder as any;
+
+      expect(await checkEscalationNeeded(mockTrx.trx, TENANT, TICKET_ID, 69.999)).toBeNull();
+      expect(await checkEscalationNeeded(mockTrx.trx, TENANT, TICKET_ID, 70)).toBe(1);
+      expect(await checkEscalationNeeded(mockTrx.trx, TENANT, TICKET_ID, 89.999)).toBe(1);
+      expect(await checkEscalationNeeded(mockTrx.trx, TENANT, TICKET_ID, 90)).toBe(2);
+    });
+
     it('should return level 1 when elapsed percentage exceeds escalation_1_percent', async () => {
       const ticketData = {
         sla_policy_id: SLA_POLICY_ID,
