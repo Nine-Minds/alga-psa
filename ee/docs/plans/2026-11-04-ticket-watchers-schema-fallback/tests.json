@@ -1,0 +1,21 @@
+[
+  {
+    "id": "T001",
+    "description": "Real PostgreSQL legacy-schema lifecycle, ticket-insert commit, rollback, concurrent updates, validation, and tenant isolation.",
+    "featureIds": [
+      "F001",
+      "F002"
+    ],
+    "implemented": false
+  },
+  {
+    "id": "T002",
+    "description": "Real watcher migration backfills legacy writes; relational lifecycle and database-error propagation remain correct.",
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003"
+    ],
+    "implemented": false
+  }
+]

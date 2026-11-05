@@ -18,6 +18,8 @@ import { ticketUpdateStamp } from '../../lib/tickets/ticketUpdateStamp';
  * derived mirror kept for one release; every write here locks the ticket row
  * (SELECT ... FOR UPDATE), writes the table, then rewrites the mirror from the
  * table in the same transaction. Nothing else may write `watch_list`.
+ * Before the watcher migration, the same operations use `attributes.watch_list`
+ * as their storage so a staggered worker deployment can still create tickets.
  *
  * Email is the public key (case-insensitive). `contact_id`, `user_id` and bare
  * `email` all resolve to email + name + entity here and nowhere else.
@@ -119,6 +121,7 @@ function toMirrorEntry(row: Record<string, any>): TicketWatchListEntry {
   if (createdAt) entry.created_at = createdAt;
   const updatedAt = iso(row.updated_at);
   if (updatedAt) entry.updated_at = updatedAt;
+  if (row.last_seen_at) entry.last_seen_at = row.last_seen_at;
   return entry;
 }
 
@@ -134,8 +137,62 @@ function parseAttributes(raw: unknown): Record<string, unknown> {
   return raw && typeof raw === 'object' && !Array.isArray(raw) ? { ...(raw as Record<string, unknown>) } : {};
 }
 
-function watchersTable(conn: Conn, tenant: string) {
-  return tenantDb(conn, tenant).table('ticket_watchers');
+type WatcherRow = Record<string, any>;
+
+interface WatcherStore {
+  read(): Promise<WatcherRow[]>;
+  insert(values: WatcherRow): Promise<void>;
+  update(email: string, values: WatcherRow): Promise<void>;
+  remove(email: string): Promise<number>;
+}
+
+/**
+ * Probe before any table query: catching 42P01 afterwards would leave the caller's
+ * transaction aborted. Resolve on this connection on every operation so a
+ * migration or a different search_path is visible without restarting workers.
+ */
+async function openWatcherStore(conn: Conn, tenant: string, ticketId: string): Promise<WatcherStore> {
+  const result = await conn.raw('select to_regclass(?) is not null as present', ['ticket_watchers']);
+  if (result.rows[0].present) {
+    const table = () => tenantDb(conn, tenant).table('ticket_watchers').where({ ticket_id: ticketId });
+    return {
+      read: async () => table().orderBy([{ column: 'created_at', order: 'asc' }, { column: 'email', order: 'asc' }]),
+      insert: async (values) => {
+        await tenantDb(conn, tenant).table('ticket_watchers').insert({ ...values, tenant, ticket_id: ticketId });
+      },
+      update: async (email, values) => {
+        await table().whereRaw('lower(email) = ?', [email]).update({ ...values, updated_at: conn.fn.now() });
+      },
+      remove: async (email) => table().whereRaw('lower(email) = ?', [email]).delete(),
+    };
+  }
+
+  const ticket = await tenantDb(conn, tenant)
+    .table('tickets')
+    .select('attributes')
+    .where({ ticket_id: ticketId })
+    .first();
+  if (!ticket) throw new TicketWatcherError('ticket_not_found');
+  // Mutate this operation's snapshot, then persist it through the common mirror
+  // writer in finish(). Writers already hold the ticket's FOR UPDATE lock.
+  let rows: WatcherRow[] = parseTicketWatchListAttributes(parseAttributes(ticket.attributes));
+  return {
+    read: async () => rows,
+    insert: async (values) => {
+      const now = new Date().toISOString();
+      rows.push({ ...values, created_at: now, updated_at: now });
+    },
+    update: async (email, values) => {
+      rows = rows.map((row) => row.email === email
+        ? { ...row, ...values, updated_at: new Date().toISOString() }
+        : row);
+    },
+    remove: async (email) => {
+      const before = rows.length;
+      rows = rows.filter((row) => row.email !== email);
+      return before - rows.length;
+    },
+  };
 }
 
 async function lockTicket(trx: Conn, tenant: string, ticketId: string): Promise<{ attributes: unknown }> {
@@ -149,12 +206,6 @@ async function lockTicket(trx: Conn, tenant: string, ticketId: string): Promise<
     throw new TicketWatcherError('ticket_not_found');
   }
   return ticket as { attributes: unknown };
-}
-
-async function readRows(trx: Conn, tenant: string, ticketId: string): Promise<Array<Record<string, any>>> {
-  return watchersTable(trx, tenant)
-    .where({ ticket_id: ticketId })
-    .orderBy([{ column: 'created_at', order: 'asc' }, { column: 'email', order: 'asc' }]);
 }
 
 /**
@@ -243,6 +294,20 @@ export async function syncWatchListAttributes(
   actorUserId: string | null = null,
   stamp: boolean = true
 ): Promise<TicketWatchListEntry[]> {
+  // Synchronization also writes attributes, including on the legacy schema.
+  await lockTicket(trx, tenant, ticketId);
+  const store = await openWatcherStore(trx, tenant, ticketId);
+  return syncWatchListFromStore(trx, tenant, ticketId, store, actorUserId, stamp);
+}
+
+async function syncWatchListFromStore(
+  trx: Conn,
+  tenant: string,
+  ticketId: string,
+  store: WatcherStore,
+  actorUserId: string | null,
+  stamp: boolean
+): Promise<TicketWatchListEntry[]> {
   const ticket = await tenantDb(trx, tenant)
     .table('tickets')
     .select('attributes')
@@ -251,7 +316,7 @@ export async function syncWatchListAttributes(
   if (!ticket) {
     throw new TicketWatcherError('ticket_not_found');
   }
-  const entries = (await readRows(trx, tenant, ticketId)).map(toMirrorEntry);
+  const entries = (await store.read()).map(toMirrorEntry);
   const current = parseAttributes((ticket as any).attributes);
   const next = setTicketWatchListOnAttributes(current, entries);
 
@@ -272,21 +337,23 @@ async function finish(
   trx: Conn,
   tenant: string,
   ticketId: string,
+  store: WatcherStore,
   before: TicketWatcher[],
   actorUserId: string | null
 ): Promise<TicketWatcherWriteResult> {
-  const after = (await readRows(trx, tenant, ticketId)).map(toWatcher);
+  const after = (await store.read()).map(toWatcher);
   const changed = snapshot(before) !== snapshot(after);
   // Always resync: also repairs a mirror that drifted before this write. Only a
   // real table change stamps the ticket (with the actor); a repair never does.
-  await syncWatchListAttributes(trx, tenant, ticketId, actorUserId, changed);
+  await syncWatchListFromStore(trx, tenant, ticketId, store, actorUserId, changed);
   return { watchers: after, changed };
 }
 
 export async function listTicketWatchers(conn: Conn, tenant: string, ticketId: string): Promise<TicketWatcher[]> {
   const ticket = await tenantDb(conn, tenant).table('tickets').select('ticket_id').where({ ticket_id: ticketId }).first();
   if (!ticket) throw new TicketWatcherError('ticket_not_found');
-  return (await readRows(conn, tenant, ticketId)).map(toWatcher);
+  const store = await openWatcherStore(conn, tenant, ticketId);
+  return (await store.read()).map(toWatcher);
 }
 
 /**
@@ -303,18 +370,15 @@ export async function addTicketWatcher(
 ): Promise<TicketWatcherWriteResult> {
   await lockTicket(trx, tenant, ticketId);
   const target = await resolveTicketWatcherTarget(trx, tenant, input);
-  const before = (await readRows(trx, tenant, ticketId)).map(toWatcher);
+  const store = await openWatcherStore(trx, tenant, ticketId);
+  const rows = await store.read();
+  const before = rows.map(toWatcher);
   const active = input.active ?? true;
 
-  const existing = await watchersTable(trx, tenant)
-    .where({ ticket_id: ticketId })
-    .whereRaw('lower(email) = ?', [target.email])
-    .first();
+  const existing = rows.find((row) => row.email.toLowerCase() === target.email);
 
   if (!existing) {
-    await watchersTable(trx, tenant).insert({
-      tenant,
-      ticket_id: ticketId,
+    await store.insert({
       email: target.email,
       name: target.name,
       active,
@@ -330,12 +394,10 @@ export async function addTicketWatcher(
       entity_id: existing.entity_id || target.entity_id,
     };
     if (rowDiffers(existing, values)) {
-      await watchersTable(trx, tenant)
-        .where({ watcher_id: existing.watcher_id })
-        .update({ ...values, updated_at: trx.fn.now() });
+      await store.update(target.email, values);
     }
   }
-  return finish(trx, tenant, ticketId, before, actorUserId);
+  return finish(trx, tenant, ticketId, store, before, actorUserId);
 }
 
 /**
@@ -351,7 +413,8 @@ export async function addTicketWatcherRecipients(
   actorUserId: string | null = null
 ): Promise<TicketWatcherWriteResult> {
   await lockTicket(trx, tenant, ticketId);
-  const rows = await readRows(trx, tenant, ticketId);
+  const store = await openWatcherStore(trx, tenant, ticketId);
+  const rows = await store.read();
   const before = rows.map(toWatcher);
   const merged = mergeTicketWatchListRecipients(rows.map(toMirrorEntry), recipients);
   const existingEmails = new Set(rows.map((row) => String(row.email).toLowerCase()));
@@ -367,15 +430,12 @@ export async function addTicketWatcherRecipients(
     if (existingEmails.has(entry.email)) {
       const row = rows.find((r) => String(r.email).toLowerCase() === entry.email);
       if (row && !rowDiffers(row, values)) continue;
-      await watchersTable(trx, tenant)
-        .where({ ticket_id: ticketId })
-        .whereRaw('lower(email) = ?', [entry.email])
-        .update({ ...values, updated_at: trx.fn.now() });
+      await store.update(entry.email, values);
     } else {
-      await watchersTable(trx, tenant).insert({ tenant, ticket_id: ticketId, email: entry.email, ...values });
+      await store.insert({ email: entry.email, ...values });
     }
   }
-  return finish(trx, tenant, ticketId, before, actorUserId);
+  return finish(trx, tenant, ticketId, store, before, actorUserId);
 }
 
 export async function setTicketWatcherActive(
@@ -389,14 +449,15 @@ export async function setTicketWatcherActive(
   await lockTicket(trx, tenant, ticketId);
   const normalized = normalizeEmailAddress(email);
   if (!normalized) throw new TicketWatcherError('invalid_email');
-  const before = (await readRows(trx, tenant, ticketId)).map(toWatcher);
-  const matching = watchersTable(trx, tenant).where({ ticket_id: ticketId }).whereRaw('lower(email) = ?', [normalized]);
-  const existing = await matching.clone().first();
+  const store = await openWatcherStore(trx, tenant, ticketId);
+  const rows = await store.read();
+  const before = rows.map(toWatcher);
+  const existing = rows.find((row) => row.email.toLowerCase() === normalized);
   if (!existing) throw new TicketWatcherError('watcher_not_found');
   if (rowDiffers(existing, { active })) {
-    await matching.clone().update({ active, updated_at: trx.fn.now() });
+    await store.update(normalized, { active });
   }
-  return finish(trx, tenant, ticketId, before, actorUserId);
+  return finish(trx, tenant, ticketId, store, before, actorUserId);
 }
 
 export async function removeTicketWatcher(
@@ -409,13 +470,11 @@ export async function removeTicketWatcher(
   await lockTicket(trx, tenant, ticketId);
   const normalized = normalizeEmailAddress(email);
   if (!normalized) throw new TicketWatcherError('invalid_email');
-  const before = (await readRows(trx, tenant, ticketId)).map(toWatcher);
-  const deleted = await watchersTable(trx, tenant)
-    .where({ ticket_id: ticketId })
-    .whereRaw('lower(email) = ?', [normalized])
-    .delete();
+  const store = await openWatcherStore(trx, tenant, ticketId);
+  const before = (await store.read()).map(toWatcher);
+  const deleted = await store.remove(normalized);
   if (!deleted) throw new TicketWatcherError('watcher_not_found');
-  return finish(trx, tenant, ticketId, before, actorUserId);
+  return finish(trx, tenant, ticketId, store, before, actorUserId);
 }
 
 /**

@@ -1,0 +1,17 @@
+[
+  {
+    "id": "F001",
+    "description": "Select relational or legacy attribute storage before watcher queries without poisoning transactions or caching schema absence.",
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "description": "Preserve watcher semantics and ticket attributes across all shared watcher operations in both schema states.",
+    "implemented": true
+  },
+  {
+    "id": "F003",
+    "description": "Use relational storage after the watcher migration and retain its backfilled legacy watchers.",
+    "implemented": true
+  }
+]
