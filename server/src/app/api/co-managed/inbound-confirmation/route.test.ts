@@ -13,6 +13,8 @@ vi.mock('@alga-psa/co-managed/inboundSenderConfirmation', () => ({
   isInboundSenderConfirmationRedeemable: (state: string, updatedAt: Date) => state === 'pending'
     || (state === 'redeeming' && Date.now() - updatedAt.getTime() > 60_000),
   approveInboundSenderConfirmation: mocks.approve,
+  approveInboundContactSenderConfirmation: vi.fn(),
+  loadInboundContactConfirmation: vi.fn(async () => null),
 }));
 vi.mock('@alga-psa/db', () => ({
   getAdminConnection: async () => ({}),

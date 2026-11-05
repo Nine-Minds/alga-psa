@@ -1448,6 +1448,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
   });
 
   it('Reply threading: reply token resolves ticket and creates exactly 1 new comment', async () => {
+    await seedClientContactSender('sender@example.com');
     const providerId = uuidv4();
     const mailbox = `support-reply-${uuidv4().slice(0, 6)}@example.com`;
     const { defaultsId } = await setupMicrosoftProvider({
@@ -1511,6 +1512,8 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
           html: undefined,
         },
         attachments: [],
+        senderAuthentication: verifiedContactEvidence('microsoft', 'example.com'),
+        headers: dkimPassHeaders('sender@example.com'),
       } as any,
     });
 
@@ -4394,6 +4397,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
   });
 
   it('Attachments: attachment failure does not prevent reply comment creation', async () => {
+    await seedClientContactSender('sender@example.com');
     storageUploadMock.mockImplementation(async (buffer: Buffer, storagePath: string) => {
       if (buffer.toString() === 'attachment') throw new Error('simulated upload failure');
       return { path: storagePath };
@@ -4462,6 +4466,8 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
           html: undefined,
         },
         attachments: [{ id: 'att-1', name: 'file.txt', contentType: 'text/plain', size: 10, content: Buffer.from('attachment').toString('base64') }],
+        senderAuthentication: verifiedContactEvidence('microsoft', 'example.com'),
+        headers: dkimPassHeaders('sender@example.com'),
       } as any,
     });
 
@@ -4478,6 +4484,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
   });
 
   it('Idempotency: replay same reply email does not create duplicate comments', async () => {
+    await seedClientContactSender('sender@example.com');
     const providerId = uuidv4();
     const mailbox = `support-idem-reply-${uuidv4().slice(0, 6)}@example.com`;
     const { defaultsId } = await setupMicrosoftProvider({
@@ -4539,6 +4546,8 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         html: undefined,
       },
       attachments: [],
+      senderAuthentication: verifiedContactEvidence('microsoft', 'example.com'),
+      headers: dkimPassHeaders('sender@example.com'),
     } as any;
 
     const first = await processInboundEmailInApp({ tenantId, providerId, emailData });

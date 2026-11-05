@@ -4,6 +4,8 @@ import { getAdminConnection, tenantDb } from '@alga-psa/db';
 import '@alga-psa/co-managed/deliveryRegistration';
 import {
   approveInboundSenderConfirmation,
+  approveInboundContactSenderConfirmation,
+  loadInboundContactConfirmation,
   isInboundSenderConfirmationRedeemable,
   parseInboundSenderConfirmationToken,
 } from '@alga-psa/co-managed/inboundSenderConfirmation';
@@ -24,6 +26,8 @@ const page = (token: string, message = 'Confirm this reply to add it to the co-m
 async function loadConfirmation(token: string) {
   const claims = parseInboundSenderConfirmationToken(token);
   if (!claims) return null;
+  const contact = await loadInboundContactConfirmation(claims);
+  if (contact) return { tenant: claims.tenant, row: contact.row, payload: contact.payload, contact: true };
   const db = await getAdminConnection();
   const row = await tenantDb(db, claims.tenant).table('co_management_deliveries')
     .where({ tenant: claims.tenant, delivery_kind: 'sender_confirmation', source_id: claims.sourceId })
@@ -33,7 +37,7 @@ async function loadConfirmation(token: string) {
   if (payload.expiresAt !== claims.expiresAt
     || !isInboundSenderConfirmationRedeemable(payload.state, row.updated_at)
     || Date.parse(payload.expiresAt) <= Date.now()) return null;
-  return { tenant: claims.tenant, row, payload };
+  return { tenant: claims.tenant, row, payload, contact: false };
 }
 
 function userMatches(user: any, pending: { tenant: string; row: any; payload: any }): boolean {
@@ -47,6 +51,7 @@ export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get('token') || '';
   const pending = await loadConfirmation(token);
   if (!pending) return denied();
+  if (pending.contact) return page(token, `Confirm reply for ticket ${String(pending.payload.ticketId)}.`, String(pending.payload.emailData?.body?.text || ''));
   const user = await getCurrentUser();
   if (!user) {
     const signIn = new URL('/auth/msp/signin', request.nextUrl.origin);
@@ -65,6 +70,10 @@ export async function POST(request: NextRequest) {
   const token = String(form.get('token') || '');
   const pending = await loadConfirmation(token);
   if (!pending) return denied();
+  if (pending.contact) {
+    const result = await approveInboundContactSenderConfirmation(token);
+    return result ? NextResponse.json({ confirmed: true, result }, { headers }) : denied();
+  }
   const user = await getCurrentUser();
   if (!userMatches(user, pending)) return denied();
 

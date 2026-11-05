@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { sharedWorkSeam } from '../utils/sharedWorkSeam';
 import type { CommentAudience } from './commentAudience';
+import type { EmailMessageDetails } from '../interfaces/inbound-email.interfaces';
 
 /**
  * Delivery seam for co-managed (shared) work.
@@ -142,6 +143,11 @@ export interface CoManagedInboundCommentWriter {
     tenant: string; actor: InboundCommentActor; actorEmail: string; ticketId: string; relationshipId: string;
     threadId: string | null; parentCommentId: string | null; audience: CommentAudience; replyToken: string;
     providerId: string; providerMessageId: string; text: string;
+  }): Promise<void>;
+  /** Queue an unsigned client-contact reply for confirmation at the contact's registered mailbox. */
+  requestContactSenderConfirmation?(input: {
+    tenant: string; contactId: string; contactEmail: string; ticketId: string; providerId: string;
+    providerMessageId: string; emailData: EmailMessageDetails;
   }): Promise<void>;
 }
 export const coManagedInboundCommentSeam = sharedWorkSeam<CoManagedInboundCommentWriter>('inbound-comment');

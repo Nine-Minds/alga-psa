@@ -66,7 +66,7 @@ const MARK = uuidv4().slice(0, 8);
 const PROVIDER_ID = uuidv4();
 const aliceEmail = `alice-${MARK}@customer-it.example.test`;
 let ticketTenant: string, customerTenant: string, aliceId: string, techId: string, ticketId: string;
-let relationshipId: string, threadId: string, parentCommentId: string, token: string;
+let relationshipId: string, threadId: string, parentCommentId: string, token: string, requesterContactId: string;
 let processInbound: typeof import('../../../../shared/services/email/processInboundEmailInApp').processInboundEmailInApp;
 
 const ALIGNED_AUTH = 'mx.google.com; spf=pass smtp.mailfrom=customer-it.example.test; dkim=pass header.d=customer-it.example.test; dmarc=pass header.from=customer-it.example.test';
@@ -123,15 +123,16 @@ beforeAll(async () => {
   tenants.push(ticketTenant, customerTenant);
   techId = await createUser(db, ticketTenant, { first_name: 'Morgan', last_name: 'Tech' });
   aliceId = await createUser(db, customerTenant, { first_name: 'Alice', last_name: 'CustomerIT', email: aliceEmail });
-  const clientId = uuidv4(), boardId = uuidv4(), statusId = uuidv4(), priorityId = uuidv4(), contactId = uuidv4();
+  const clientId = uuidv4(), boardId = uuidv4(), statusId = uuidv4(), priorityId = uuidv4();
+  requesterContactId = uuidv4();
   ticketId = uuidv4();
   await db('clients').insert({ tenant: ticketTenant, client_id: clientId, client_name: 'Inbound Client', billing_cycle: 'monthly', is_tax_exempt: false });
-  await db('contacts').insert({ tenant: ticketTenant, contact_name_id: contactId, full_name: 'Rita Requester', email: `rita-${MARK}@example.com`, client_id: clientId });
+  await db('contacts').insert({ tenant: ticketTenant, contact_name_id: requesterContactId, full_name: 'Rita Requester', email: `rita-${MARK}@example.com`, client_id: clientId });
   await db('boards').insert({ tenant: ticketTenant, board_id: boardId, board_name: 'Support', is_default: true, is_inactive: false });
   await db('priorities').insert({ tenant: ticketTenant, priority_id: priorityId, priority_name: 'High', item_type: 'ticket', color: '#EF4444', order_number: 10, created_by: techId });
   await db('statuses').insert({ tenant: ticketTenant, status_id: statusId, board_id: boardId, name: 'Open', status_type: 'ticket', is_closed: false, is_default: true, order_number: 10, created_by: techId });
   await db('tickets').insert({ tenant: ticketTenant, ticket_id: ticketId, ticket_number: `T-${Date.now()}-${Math.floor(Math.random() * 1e6)}`, title: 'Shared ticket', client_id: clientId,
-    contact_name_id: contactId, board_id: boardId, status_id: statusId, priority_id: priorityId, entered_by: techId });
+    contact_name_id: requesterContactId, board_id: boardId, status_id: statusId, priority_id: priorityId, entered_by: techId });
   relationshipId = uuidv4();
   await db('co_management_relationships').insert({ tenant: ticketTenant, relationship_id: relationshipId, sponsor_tenant: customerTenant, sponsor_client_id: clientId, state: 'active', accepted_by: aliceId, accepted_at: new Date() });
   await db('co_management_ticket_work').insert({ tenant: ticketTenant, relationship_id: relationshipId, ticket_id: ticketId, work_id: uuidv4(), revision: 1,
@@ -350,6 +351,86 @@ describe('email-service boot registers co-managed inbound', () => {
       if (priorGraphUrl === undefined) delete process.env.MICROSOFT_GRAPH_BASE_URL; else process.env.MICROSOFT_GRAPH_BASE_URL = priorGraphUrl;
     }
   }, 60_000);
+
+  it('retries a provider-reported confirmation failure and recovers stale send claims without duplicate comments', async () => {
+    const { registerWorkflowEmailProvider, resetWorkflowEmailProvider } = await import('@alga-psa/shared/workflow/runtime/registries/workflowEmailRegistry');
+    const { deliverPendingSenderConfirmations, approveInboundSenderConfirmation } = await import('@alga-psa/co-managed/inboundSenderConfirmation');
+    const priorSecret = process.env.NEXTAUTH_SECRET, priorOrigin = process.env.APP_BASE_URL;
+    process.env.NEXTAUTH_SECRET = 'confirmation-test-secret-0123456789-abcdef'; process.env.APP_BASE_URL = 'https://psa.example.test';
+    const sendEmail = vi.fn().mockResolvedValueOnce({ success: false, error: 'rate limited', metadata: { errorCode: 'rate_limit' } }).mockResolvedValue({ success: true });
+    registerWorkflowEmailProvider({ TenantEmailService: { getInstance: () => ({ sendEmail }) }, StaticTemplateProcessor: class { constructor(public subject: string, public html: string, public text?: string) {} async process() { return { subject: this.subject, html: this.html, text: this.text }; } } } as any);
+    try {
+      const text = `send-recovery-${MARK}`;
+      const message = emailData(`<send-recovery-${MARK}@customer-it.example.test>`, text, null, { provider: 'microsoft' });
+      await processInbound({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: message });
+      const row = await db('co_management_deliveries').where({ tenant: ticketTenant, delivery_kind: 'sender_confirmation' }).orderBy('created_at', 'desc').first('source_id', 'state', 'payload');
+      expect(row.state).toBe('failed');
+      expect(await sharedComments(text)).toHaveLength(0);
+      // Simulate interruption after claim: no provider result was finalized.
+      await db('co_management_deliveries').where({ tenant: ticketTenant, delivery_kind: 'sender_confirmation', source_id: row.source_id })
+        .update({ state: 'sending', payload: { ...row.payload, state: 'pending', deliveryAttemptId: uuidv4() }, updated_at: new Date(Date.now() - 61_000) });
+      const claimRecovery = await Promise.all([deliverPendingSenderConfirmations(ticketTenant), deliverPendingSenderConfirmations(ticketTenant)]);
+      expect(claimRecovery.reduce((sum, result) => sum + result.sent, 0)).toBe(1);
+      const sentRow = await db('co_management_deliveries').where({ tenant: ticketTenant, delivery_kind: 'sender_confirmation', source_id: row.source_id }).first('payload');
+      const token = new URL(String((sendEmail.mock.calls[1] as any)[0].templateProcessor.text).match(/https:\/\/[^\s]+/)![0]).searchParams.get('token')!;
+      // Model a process interruption after the provider accepted the email but before finalization.
+      await db('co_management_deliveries').where({ tenant: ticketTenant, delivery_kind: 'sender_confirmation', source_id: row.source_id })
+        .update({ state: 'sending', payload: { ...sentRow.payload, state: 'pending', deliveryAttemptId: uuidv4() }, updated_at: new Date(Date.now() - 61_000) });
+      expect((await deliverPendingSenderConfirmations(ticketTenant)).sent).toBe(1);
+      const approved = await approveInboundSenderConfirmation(token, { tenant: customerTenant, user_id: aliceId, user_type: 'internal', email: aliceEmail });
+      expect(approved).toMatchObject({ ticketId });
+      expect(await approveInboundSenderConfirmation(token, { tenant: customerTenant, user_id: aliceId, user_type: 'internal', email: aliceEmail })).toBeNull();
+      expect(await sharedComments(text)).toHaveLength(1);
+      expect(sendEmail).toHaveBeenCalledTimes(3);
+    } finally { resetWorkflowEmailProvider(); if (priorSecret === undefined) delete process.env.NEXTAUTH_SECRET; else process.env.NEXTAUTH_SECRET = priorSecret; if (priorOrigin === undefined) delete process.env.APP_BASE_URL; else process.env.APP_BASE_URL = priorOrigin; }
+  });
+
+  it('confirms an unsigned Microsoft reply from the registered requester contact before native admission and persistence', async () => {
+    const { registerWorkflowEmailProvider, resetWorkflowEmailProvider } = await import('@alga-psa/shared/workflow/runtime/registries/workflowEmailRegistry');
+    const { approveInboundContactSenderConfirmation } = await import('@alga-psa/co-managed/inboundSenderConfirmation');
+    const priorSecret = process.env.NEXTAUTH_SECRET, priorOrigin = process.env.APP_BASE_URL;
+    process.env.NEXTAUTH_SECRET = 'confirmation-test-secret-0123456789-abcdef'; process.env.APP_BASE_URL = 'https://psa.example.test';
+    const sendEmail = vi.fn(async () => ({ success: true }));
+    registerWorkflowEmailProvider({ TenantEmailService: { getInstance: () => ({ sendEmail }) }, StaticTemplateProcessor: class { constructor(public subject: string, public html: string, public text?: string) {} async process() { return { subject: this.subject, html: this.html, text: this.text }; } } } as any);
+    try {
+      const contactEmail = `rita-${MARK}@example.com`, contactText = `unsigned-contact-${MARK}`;
+      const nativeToken = `native:${uuidv4()}`;
+      await db('email_reply_tokens').insert({ tenant: ticketTenant, token: nativeToken, ticket_id: ticketId, comment_id: parentCommentId, entity_type: 'ticket', recipient_email: contactEmail, metadata: null });
+      const message = { ...emailData(`<unsigned-contact-${MARK}@outlook.example.test>`, contactText, null, { provider: 'microsoft' }), from: { email: contactEmail, name: 'Rita Requester' }, body: { text: `${contactText}\n\n[ALGA-REPLY-TOKEN ${nativeToken} ticketId=${ticketId} commentId=${parentCommentId} threadId=${threadId}]` } };
+      const initial: any = await processInbound({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: message });
+      expect(initial).toMatchObject({ outcome: 'quarantined', reason: 'unauthorized_thread_header_sender', ticketId });
+      expect(await sharedComments(contactText)).toHaveLength(0);
+      const url = String((sendEmail.mock.calls[0] as any)[0].templateProcessor.text).match(/https:\/\/[^\s]+/)?.[0];
+      expect((sendEmail.mock.calls[0] as any)[0].to).toBe(contactEmail);
+      const token = new URL(url!).searchParams.get('token')!;
+      const approved: any = await approveInboundContactSenderConfirmation(token);
+      expect(approved).toMatchObject({ outcome: 'replied', ticketId });
+      expect(await sharedComments(contactText)).toHaveLength(1);
+      expect((await sharedComments(contactText))[0]).toMatchObject({ author_type: 'client', contact_id: requesterContactId });
+      expect(await approveInboundContactSenderConfirmation(token)).toBeNull();
+      expect(await sharedComments(contactText)).toHaveLength(1);
+
+      const alteredText = `altered-contact-${MARK}`;
+      const alteredMessage = { ...message, id: `<altered-contact-${MARK}@outlook.example.test>`, body: { text: `${alteredText}\n\n[ALGA-REPLY-TOKEN ${nativeToken} ticketId=${ticketId} commentId=${parentCommentId} threadId=${threadId}]` } };
+      await processInbound({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: alteredMessage });
+      const contactRow = await db('co_management_deliveries').where({ tenant: ticketTenant, delivery_kind: 'sender_contact_confirmation' }).orderBy('created_at', 'desc').first('source_id', 'payload');
+      const alteredUrl = String((sendEmail.mock.calls[1] as any)[0].templateProcessor.text).match(/https:\/\/[^\s]+/)![0];
+      const alteredToken = new URL(alteredUrl).searchParams.get('token')!;
+      await db('co_management_deliveries').where({ tenant: ticketTenant, delivery_kind: 'sender_contact_confirmation', source_id: contactRow.source_id })
+        .update({ payload: { ...contactRow.payload, emailData: { ...contactRow.payload.emailData, body: { text: 'replaced after confirmation email' } } } });
+      expect(await approveInboundContactSenderConfirmation(alteredToken)).toBeNull();
+      expect(await sharedComments(alteredText)).toHaveLength(0);
+
+      const forgedText = `forged-contact-${MARK}`;
+      const forged = { ...message, id: `<forged-contact-${MARK}@attacker.example.test>`, from: { email: `victim-${MARK}@example.com`, name: 'Victim' },
+        headers: { 'authentication-results': 'outlook.com; dkim=pass header.d=example.com; dmarc=pass header.from=example.com', 'x-ms-exchange-organization-authas': 'Internal' },
+        body: { text: `${forgedText}\n\n[ALGA-REPLY-TOKEN ${nativeToken} ticketId=${ticketId} commentId=${parentCommentId} threadId=${threadId}]` } };
+      const forgedResult: any = await processInbound({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: forged });
+      expect(forgedResult.outcome).toBe('quarantined');
+      expect(await sharedComments(forgedText)).toHaveLength(0);
+      expect(sendEmail).toHaveBeenCalledTimes(2);
+    } finally { resetWorkflowEmailProvider(); if (priorSecret === undefined) delete process.env.NEXTAUTH_SECRET; else process.env.NEXTAUTH_SECRET = priorSecret; if (priorOrigin === undefined) delete process.env.APP_BASE_URL; else process.env.APP_BASE_URL = priorOrigin; }
+  });
 
   it('confirmation rejects expiry, content changes and revoked grants, and concurrent redemption writes one comment', async () => {
     const { registerWorkflowEmailProvider, resetWorkflowEmailProvider } = await import('@alga-psa/shared/workflow/runtime/registries/workflowEmailRegistry');

@@ -3,7 +3,7 @@ import { coManagedInboundCommentSeam } from '@alga-psa/shared/lib/coManagedDeliv
 import { withCoManagedMailCredential } from './sharedWorkIdentity';
 import { createSharedTicketComment } from './sharedTicketCommentWriter';
 import { recordRefusalAck, sendRefusalAck } from './refusalAck';
-import { requestInboundSenderConfirmation } from './inboundSenderConfirmation';
+import { requestInboundContactSenderConfirmation, requestInboundSenderConfirmation } from './inboundSenderConfirmation';
 
 /**
  * Registers the writer for admitted shared_it / organization_private email replies (CM L5).
@@ -39,6 +39,9 @@ export function registerCoManagedInboundCommentWriter(): void {
     },
     async requestSenderConfirmation(input) {
       await requestInboundSenderConfirmation(input);
+    },
+    async requestContactSenderConfirmation(input) {
+      await requestInboundContactSenderConfirmation(input);
     },
   }));
 }

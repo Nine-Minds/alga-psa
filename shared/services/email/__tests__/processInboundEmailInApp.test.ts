@@ -620,6 +620,7 @@ describe('processInboundEmailInApp', () => {
   });
 
   it.each(['', 'The restart worked.'])('processes actual notification parsing with reply %j', async (reply) => {
+    findContactByEmailMock.mockResolvedValue({ contact_id: 'contact-notification', client_id: 'client-1', email: 'hello@example.com', matched_email: 'hello@example.com' });
     parseEmailReplyBodyMock.mockImplementation(async (body) => parseEmailReply(body));
     findTicketByReplyTokenMock.mockResolvedValue({ ticketId: 'ticket-1' });
     const token = '[ALGA-REPLY-TOKEN test-token ticketId=ticket-1 commentId=comment-1]';
@@ -681,6 +682,7 @@ describe('processInboundEmailInApp', () => {
   });
 
   it('threads an HTML-only reply (no text part) onto the ticket instead of skipping it as self_notification', async () => {
+    findContactByEmailMock.mockResolvedValue({ contact_id: 'contact-html', client_id: 'client-1', email: 'client@example.com', matched_email: 'client@example.com' });
     const html = '<div>Thanks, that fixed it.</div>';
     parseEmailReplyBodyMock.mockResolvedValue({
       sanitizedText: undefined,
@@ -989,7 +991,7 @@ describe('processInboundEmailInApp', () => {
     );
   });
 
-  it('T022: reply-token path calls watch-list upsert for existing ticket', async () => {
+  it('T022: unmatched reply-token sender is quarantined before comment or watch-list mutation', async () => {
     // Pin the sender as UNMATCHED: beforeEach only clears calls, so without
     // this the mock inherits whichever mockResolvedValue an earlier test set
     // (order-dependent under seed shuffle), and matched senders are excluded
@@ -1010,7 +1012,7 @@ describe('processInboundEmailInApp', () => {
 
     const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
 
-    await processInboundEmailInApp({
+    const result = await processInboundEmailInApp({
       tenantId: 'tenant-1',
       providerId: 'provider-1',
       emailData: buildEmailData({
@@ -1022,26 +1024,9 @@ describe('processInboundEmailInApp', () => {
       }),
     });
 
-    expect(upsertTicketWatchListRecipientsMock).toHaveBeenCalledWith(
-      {
-        ticketId: 'ticket-reply-123',
-        recipients: [
-          {
-            email: 'watcher@example.com',
-            active: true,
-            name: 'Watcher',
-            source: 'inbound_to',
-          },
-          {
-            email: 'client@example.com',
-            active: true,
-            name: 'Client User',
-            source: 'inbound_from',
-          },
-        ],
-      },
-      'tenant-1'
-    );
+    expect(result).toMatchObject({ outcome: 'quarantined', reason: 'unauthorized_thread_header_sender' });
+    expect(createCommentFromEmailMock).not.toHaveBeenCalled();
+    expect(upsertTicketWatchListRecipientsMock).not.toHaveBeenCalled();
   });
 
   it('T023: thread-header path calls watch-list upsert for existing ticket', async () => {
@@ -1099,7 +1084,7 @@ describe('processInboundEmailInApp', () => {
     expect(upsertTicketWatchListRecipientsMock).not.toHaveBeenCalled();
   });
 
-  it('T024: when sender is unmatched and To/CC recipients are excluded, sender is still upserted to watch-list', async () => {
+  it('T024: an unmatched From cannot create a comment or add itself to the ticket watch list', async () => {
     parseEmailReplyBodyMock.mockResolvedValue({
       sanitizedText: 'Reply body',
       sanitizedHtml: undefined,
@@ -1116,7 +1101,7 @@ describe('processInboundEmailInApp', () => {
 
     const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
 
-    await processInboundEmailInApp({
+    const result = await processInboundEmailInApp({
       tenantId: 'tenant-1',
       providerId: 'provider-1',
       emailData: buildEmailData({
@@ -1128,20 +1113,9 @@ describe('processInboundEmailInApp', () => {
       }),
     });
 
-    expect(upsertTicketWatchListRecipientsMock).toHaveBeenCalledWith(
-      {
-        ticketId: 'ticket-reply-123',
-        recipients: [
-          {
-            email: 'client@example.com',
-            active: true,
-            name: 'Client User',
-            source: 'inbound_from',
-          },
-        ],
-      },
-      'tenant-1'
-    );
+    expect(result).toMatchObject({ outcome: 'quarantined', reason: 'unauthorized_thread_header_sender' });
+    expect(createCommentFromEmailMock).not.toHaveBeenCalled();
+    expect(upsertTicketWatchListRecipientsMock).not.toHaveBeenCalled();
   });
 
   // --- Cross-mailbox notification-loop suppression ------------------------
@@ -1449,6 +1423,7 @@ describe('processInboundEmailInApp', () => {
   });
 
   it('negative: a reply carrying attachments is not suppressed and the artifact path still runs', async () => {
+    findContactByEmailMock.mockResolvedValue({ contact_id: 'contact-attachment', client_id: 'client-1', email: 'client@example.com', matched_email: 'client@example.com' });
     findTicketByReplyTokenMock.mockResolvedValue({ ticketId: 'ticket-77' });
     parseEmailReplyBodyMock.mockResolvedValue({
       sanitizedText: 'See the attached screenshot.',

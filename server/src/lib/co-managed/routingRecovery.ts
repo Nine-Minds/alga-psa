@@ -36,7 +36,7 @@ export const coManagedRoutingTenants: JobDescriptorTenantSelector = async (db) =
   const forced = forcedValue(process.env.FORCE_CAPABILITIES, 'co-managed');
   if (forced === 'off' || forced === 'malformed') return [];
   const waiting = await db.unscoped<{ tenant: string }>('co_management_deliveries', 'routing recovery enumerates tenants holding waiting rows')
-    .whereIn('delivery_kind', ['routing_in_app', 'routing_email', 'inbound_refusal_ack', 'sender_confirmation']).whereIn('state', ['pending', 'failed', 'sending']).distinct('tenant');
+    .whereIn('delivery_kind', ['routing_in_app', 'routing_email', 'inbound_refusal_ack', 'sender_confirmation', 'sender_contact_confirmation']).whereIn('state', ['pending', 'failed', 'sending']).distinct('tenant');
   return (await filterServed('co-managed', waiting.map((r) => String(r.tenant)))).map((tenant) => ({ tenant }));
 };
 

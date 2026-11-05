@@ -45,6 +45,7 @@ import {
   type NotificationLoopDetectionResult,
 } from './notificationLoopDetection';
 import { isInternalAttributionTrusted } from '../../lib/email/senderAuthVerification';
+import { inboundMessageSha256 } from '../../lib/email/inboundMessageDigest';
 
 export interface ProcessInboundEmailInAppInput {
   tenantId: string;
@@ -84,6 +85,8 @@ async function logInboundSenderAuthFailure(input: {
 
 export interface ProcessInboundEmailInAppOptions {
   collectDiagnostics?: boolean;
+  /** Internal capability supplied only after the registered contact mailbox confirmed the exact message. */
+  confirmedContact?: { contactId: string; email: string; contentSha256: string };
   /**
    * Durable pipeline execution. When present, all ticket/comment/watch-list/
    * reopen writes execute inside the provided transaction with the injected
@@ -960,6 +963,13 @@ export async function processInboundEmailInApp(
   const isVerifiedListRewrite = Boolean(emailData.headers?.['x-resolved-original-sender']);
   const contactSenderTrusted = emailData.senderAuthentication?.contact?.authorization === 'domain_only'
     || isVerifiedListRewrite;
+  const confirmedContactMatches = (contactId: string | null | undefined, email: string | null | undefined) => {
+    if (!options.confirmedContact || !contactId || !email) return false;
+    const digest = inboundMessageSha256(emailData);
+    return options.confirmedContact.contactId === contactId
+      && options.confirmedContact.email.trim().toLowerCase() === email.trim().toLowerCase()
+      && options.confirmedContact.contentSha256 === digest;
+  };
   const contactAttributionEmail = senderEmail;
   const durableExecution = options.durableExecution ?? null;
 
@@ -1043,12 +1053,17 @@ export async function processInboundEmailInApp(
   const resolveSenderContact = async (context: {
     ticketId?: string;
     defaultClientId?: string | null;
+    includeUntrustedContactCandidate?: boolean;
   } = {}) => {
     if (!senderEmail) {
       return null;
     }
 
-    const matched = await findContactByEmail(contactAttributionEmail ?? senderEmail, tenantId, context);
+    const lookupContext = {
+      ...(context.ticketId ? { ticketId: context.ticketId } : {}),
+      ...(context.defaultClientId !== undefined ? { defaultClientId: context.defaultClientId } : {}),
+    };
+    const matched = await findContactByEmail(contactAttributionEmail ?? senderEmail, tenantId, lookupContext);
     if (!matched) return null;
 
     if (matched.user_type === 'internal') {
@@ -1064,7 +1079,8 @@ export async function processInboundEmailInApp(
       });
       return null;
     }
-    if (contactSenderTrusted) return matched;
+    if (contactSenderTrusted || confirmedContactMatches(matched.contact_id, matched.matched_email ?? matched.email)) return matched;
+    if (context.includeUntrustedContactCandidate && matched.contact_id) return matched;
     console.warn('processInboundEmailInApp: sender auth not aligned; discarding contact match', {
       tenantId, providerId, emailId: emailData.id, senderEmail,
       contactId: matched.contact_id ?? null,
@@ -1333,10 +1349,24 @@ export async function processInboundEmailInApp(
       text: parsedText,
     });
     const serializedBlocks = JSON.stringify(blocks);
-    const matchedSenderContact = await resolveSenderContact({ ticketId: params.ticketId });
+    const matchedSenderContact = await resolveSenderContact({ ticketId: params.ticketId, includeUntrustedContactCandidate: true });
     const matchedSenderIsInternalUser = matchedSenderContact?.user_type === 'internal';
     const matchedSenderContactId = matchedSenderContact?.contact_id || undefined;
     const senderKind = matchedSenderIsInternalUser ? 'internal' : 'client';
+
+    if (matchedSenderContact?.contact_id && !matchedSenderIsInternalUser
+      && !contactSenderTrusted
+      && !confirmedContactMatches(matchedSenderContact.contact_id, matchedSenderContact.matched_email ?? matchedSenderContact.email)) {
+      const writer = await coManagedInboundCommentSeam.resolve(tenantId);
+      if (writer?.requestContactSenderConfirmation && senderEmail) {
+        await writer.requestContactSenderConfirmation({
+          tenant: tenantId, contactId: matchedSenderContact.contact_id,
+          contactEmail: String(matchedSenderContact.matched_email ?? matchedSenderContact.email ?? senderEmail),
+          ticketId: params.ticketId, providerId, providerMessageId: emailData.providerIdentity || emailData.id, emailData,
+        });
+      }
+      return withDiagnostics({ outcome: 'quarantined', reason: 'unauthorized_thread_header_sender', ticketId: params.ticketId, matchedBy: params.matchedBy }, diagnostics);
+    }
 
     let policyContext: InboundReplyReopenPolicyContext | null = null;
     try {
@@ -1354,12 +1384,12 @@ export async function processInboundEmailInApp(
       });
     }
 
-    if (params.matchedBy === 'thread_headers') {
+    if (params.matchedBy === 'thread_headers' || params.matchedBy === 'reply_token') {
       const senderIsTicketClientContact = Boolean(
         matchedSenderContact
         && !matchedSenderIsInternalUser
-        && policyContext?.clientId
-        && matchedSenderContact.client_id === policyContext.clientId
+        && (params.matchedBy === 'reply_token'
+          || (policyContext?.clientId && matchedSenderContact.client_id === policyContext.clientId))
       );
       const senderIsActiveWatcher = Boolean(
         senderEmail && policyContext && getActiveWatchListEmails(policyContext.attributes).includes(senderEmail)

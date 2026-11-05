@@ -2,12 +2,15 @@ import { createHash, createHmac, randomUUID, timingSafeEqual } from 'node:crypto
 import { getAdminConnection, tenantDb } from '@alga-psa/db';
 import { getWorkflowEmailProvider } from '@alga-psa/shared/workflow/runtime/registries/workflowEmailRegistry';
 import { AUTO_GENERATED_MAIL_HEADERS } from '@shared/lib/email/automatedMessage';
-import { CO_MANAGED_LEDGER, claimDelivery, finishDelivery } from '@alga-psa/shared/lib/deliveryLedger';
+import { inboundMessageSha256 } from '@alga-psa/shared/lib/email/inboundMessageDigest';
+import { CO_MANAGED_LEDGER, claimDelivery } from '@alga-psa/shared/lib/deliveryLedger';
 import { coManagedDeliverySeam, coManagedInboundCommentSeam, coManagedInboundOperationId, type InboundCommentActor, type InboundCommentWrite } from '@alga-psa/shared/lib/coManagedDelivery';
 
 const KIND = 'sender_confirmation';
+const CONTACT_KIND = 'sender_contact_confirmation';
 const TTL_MS = 15 * 60 * 1000;
 export const INBOUND_CONFIRMATION_REDEMPTION_LEASE_MS = 60_000;
+export const INBOUND_CONFIRMATION_SEND_LEASE_MS = 60_000;
 
 type ConfirmationPayload = InboundCommentWrite & {
   actorEmail: string;
@@ -18,6 +21,15 @@ type ConfirmationPayload = InboundCommentWrite & {
   contentSha256: string;
   state: 'pending' | 'redeeming' | 'approved' | 'expired';
   redemptionId?: string;
+  deliveryAttemptId?: string;
+};
+
+type ConfirmationSendOutcome = 'sent' | 'failed' | 'skipped';
+type ContactConfirmationPayload = {
+  tenant: string; contactId: string; contactEmail: string; ticketId: string; providerId: string;
+  providerMessageId: string; emailData: import('@alga-psa/shared/interfaces/inbound-email.interfaces').EmailMessageDetails;
+  contentSha256: string; expiresAt: string; state: 'pending' | 'redeeming' | 'approved' | 'expired'; redemptionId?: string;
+  deliveryAttemptId?: string;
 };
 
 /** Pending requests are redeemable; interrupted claims become retryable after their lease. */
@@ -67,39 +79,87 @@ export function parseInboundSenderConfirmationToken(token: string): { tenant: st
   }
 }
 
-async function sendConfirmation(tenant: string, id: string, recipient: string, payload: ConfirmationPayload): Promise<boolean> {
-  if (payload.state !== 'pending') return false;
+async function claimSenderConfirmation(tenant: string, id: string, recipient: string, payload: ConfirmationPayload): Promise<string | null> {
+  const db = await getAdminConnection();
+  const key = { delivery_kind: KIND, source_id: id, recipient: recipient.trim().toLowerCase() };
+  const attemptId = randomUUID();
+  return db.transaction(async (trx) => {
+    if (!await claimDelivery(trx, CO_MANAGED_LEDGER, tenant, key, { recipient_kind: payload.actor.tenant === tenant ? 'customer_user' : 'msp_user' })) return null;
+    const row = await tenantDb(trx, tenant).table('co_management_deliveries')
+      .where({ tenant, ...key, state: 'sending' }).first('payload');
+    if (!row?.payload) throw new Error('Claimed sender confirmation has no persisted payload.');
+    const existing = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload;
+    await tenantDb(trx, tenant).table('co_management_deliveries')
+      .where({ tenant, ...key, state: 'sending' })
+      .update({ payload: { ...existing, deliveryAttemptId: attemptId }, updated_at: trx.fn.now() });
+    return attemptId;
+  });
+}
+
+async function finishSenderConfirmation(
+  tenant: string,
+  id: string,
+  recipient: string,
+  attemptId: string,
+  state: 'sent' | 'failed',
+  error?: string,
+  errorCode?: string,
+): Promise<boolean> {
+  const db = await getAdminConnection();
+  return (await tenantDb(db, tenant).table('co_management_deliveries')
+    .where({ tenant, delivery_kind: KIND, source_id: id, recipient: recipient.trim().toLowerCase(), state: 'sending' })
+    .whereRaw("payload->>'deliveryAttemptId' = ?", [attemptId])
+    .update({ state, updated_at: db.fn.now(), last_error: error ?? null, error_code: errorCode ?? null, requires_reconciliation: false })) > 0;
+}
+
+async function recoverStaleSenderConfirmationClaims(tenant: string): Promise<number> {
+  const db = await getAdminConnection();
+  const staleBefore = new Date(Date.now() - INBOUND_CONFIRMATION_SEND_LEASE_MS);
+  return tenantDb(db, tenant).table('co_management_deliveries')
+    .whereIn('delivery_kind', [KIND, CONTACT_KIND]).where({ tenant, state: 'sending', requires_reconciliation: false })
+    .where('updated_at', '<', staleBefore)
+    .update({ state: 'failed', updated_at: db.fn.now(), error_code: 'sender_confirmation_send_interrupted',
+      last_error: 'Sender confirmation send claim expired before finalization; safe retry uses the same expiring confirmation token.',
+      requires_reconciliation: false });
+}
+
+async function sendConfirmation(tenant: string, id: string, recipient: string, payload: ConfirmationPayload): Promise<ConfirmationSendOutcome> {
+  if (payload.state !== 'pending') return 'skipped';
   if (Date.parse(payload.expiresAt) <= Date.now()) {
     const db = await getAdminConnection();
     await tenantDb(db, tenant).table('co_management_deliveries')
       .where({ tenant, delivery_kind: KIND, source_id: id, recipient: recipient.trim().toLowerCase() })
       .update({ state: 'sent', payload: { ...payload, state: 'expired' }, updated_at: db.fn.now() });
-    return false;
+    return 'skipped';
   }
   let email: ReturnType<typeof getWorkflowEmailProvider>;
-  try { email = getWorkflowEmailProvider(); } catch { return false; }
+  try { email = getWorkflowEmailProvider(); } catch { return 'skipped'; }
   const origin = process.env.NEXTAUTH_URL || process.env.APP_BASE_URL;
-  if (!origin) return false;
+  if (!origin) return 'skipped';
   const url = new URL('/api/co-managed/inbound-confirmation', origin);
   url.searchParams.set('token', makeToken(tenant, id, payload.expiresAt));
   const subject = 'Confirm your co-managed ticket reply';
   const text = `A reply to a co-managed ticket was received using your email address. Sign in as ${recipient} and confirm it here within 15 minutes: ${url.toString()}\n\nIf you did not send this reply, ignore this message. No comment has been posted.`;
-  const db = await getAdminConnection();
-  const key = { delivery_kind: KIND, source_id: id, recipient: recipient.trim().toLowerCase() };
-  if (!await claimDelivery(db, CO_MANAGED_LEDGER, tenant, key, { recipient_kind: payload.actor.tenant === tenant ? 'customer_user' : 'msp_user' })) return false;
+  const attemptId = await claimSenderConfirmation(tenant, id, recipient, payload);
+  if (!attemptId) return 'skipped';
   try {
-    await email.TenantEmailService.getInstance(tenant).sendEmail({
+    const result = await email.TenantEmailService.getInstance(tenant).sendEmail({
       mailClass: 'ticket', to: recipient, tenantId: tenant, entityType: 'ticket', entityId: payload.ticketId,
       templateProcessor: new email.StaticTemplateProcessor(subject, `<p>${text.replaceAll('&', '&amp;').replaceAll('<', '&lt;')}</p>`, text),
       headers: { ...AUTO_GENERATED_MAIL_HEADERS },
     });
-    await finishDelivery(db, CO_MANAGED_LEDGER, tenant, key, 'sent');
-    return true;
+    if (!result?.success) {
+      await finishSenderConfirmation(tenant, id, recipient, attemptId, 'failed', result?.error || 'Email provider reported delivery failure.',
+        String((result as any)?.metadata?.errorCode ?? result?.providerId ?? 'email_send_failed'));
+      return 'failed';
+    }
+    await finishSenderConfirmation(tenant, id, recipient, attemptId, 'sent');
+    return 'sent';
   } catch (error) {
     const e = error as { message?: string; errorCode?: string };
     // A repeated confirmation link is harmless: redemption is bound to an authenticated actor and
     // has an idempotent comment operation id. Retry uncertain sends instead of orphaning a request.
-    await finishDelivery(db, CO_MANAGED_LEDGER, tenant, key, 'failed', { error: e.message, errorCode: e.errorCode });
+    await finishSenderConfirmation(tenant, id, recipient, attemptId, 'failed', e.message, e.errorCode);
     throw error;
   }
 }
@@ -148,18 +208,138 @@ export async function requestInboundSenderConfirmation(input: {
   await sendConfirmation(input.tenant, id, recipient, payload);
 }
 
+/** Queue a one-time mailbox-possession confirmation for a registered ticket contact. */
+export async function requestInboundContactSenderConfirmation(input: {
+  tenant: string; contactId: string; contactEmail: string; ticketId: string; providerId: string;
+  providerMessageId: string; emailData: import('@alga-psa/shared/interfaces/inbound-email.interfaces').EmailMessageDetails;
+}): Promise<void> {
+  const recipient = input.contactEmail.trim().toLowerCase();
+  const digest = inboundMessageSha256(input.emailData);
+  const id = sourceId(input.tenant, input.providerId, input.providerMessageId, { tenant: input.tenant, userId: input.contactId });
+  const db = await getAdminConnection();
+  const payload: ContactConfirmationPayload = {
+    ...input, contactEmail: recipient, contentSha256: digest,
+    expiresAt: new Date(Date.now() + TTL_MS).toISOString(), state: 'pending',
+  };
+  await tenantDb(db, input.tenant).table('co_management_deliveries').insert({
+    tenant: input.tenant, delivery_kind: CONTACT_KIND, source_id: id, recipient, recipient_kind: 'requester_contact',
+    state: 'pending', attempts: 0, payload,
+  }).onConflict(['tenant', 'delivery_kind', 'source_id', 'recipient']).ignore();
+  const row = await tenantDb(db, input.tenant).table('co_management_deliveries')
+    .where({ tenant: input.tenant, delivery_kind: CONTACT_KIND, source_id: id, recipient }).first('payload');
+  if (!row?.payload) throw new Error('Contact confirmation request was not persisted.');
+  const stored: ContactConfirmationPayload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload;
+  if (stored.state !== 'pending' || stored.contentSha256 !== digest) return;
+  if (Date.parse(stored.expiresAt) <= Date.now()) {
+    await tenantDb(db, input.tenant).table('co_management_deliveries').where({ tenant: input.tenant, delivery_kind: CONTACT_KIND, source_id: id, recipient })
+      .update({ state: 'sent', payload: { ...stored, state: 'expired' }, updated_at: db.fn.now() });
+    return;
+  }
+  let attemptId: string | undefined;
+  try {
+    const email = getWorkflowEmailProvider();
+    const origin = process.env.NEXTAUTH_URL || process.env.APP_BASE_URL;
+    if (!origin) return;
+    const url = new URL('/api/co-managed/inbound-confirmation', origin);
+    url.searchParams.set('token', makeToken(input.tenant, id, stored.expiresAt));
+    const text = `A reply to ticket ${input.ticketId} was received using your email address. Open this link and confirm only if you wrote it: ${url.toString()}\n\n${input.emailData.body?.text ?? ''}`;
+    const currentAttemptId = randomUUID();
+    attemptId = currentAttemptId;
+    const claimed = await db.transaction(async (trx) => {
+      const key = { delivery_kind: CONTACT_KIND, source_id: id, recipient };
+      if (!await claimDelivery(trx, CO_MANAGED_LEDGER, input.tenant, key, { recipient_kind: 'requester_contact' })) return false;
+      const latest = await tenantDb(trx, input.tenant).table('co_management_deliveries').where({ tenant: input.tenant, ...key, state: 'sending' }).first('payload');
+      if (!latest?.payload) throw new Error('Claimed contact confirmation has no persisted payload.');
+      const current = typeof latest.payload === 'string' ? JSON.parse(latest.payload) : latest.payload;
+      await tenantDb(trx, input.tenant).table('co_management_deliveries').where({ tenant: input.tenant, ...key, state: 'sending' })
+        .update({ payload: { ...current, deliveryAttemptId: currentAttemptId }, updated_at: trx.fn.now() });
+      return true;
+    });
+    if (!claimed) return;
+    const result = await email.TenantEmailService.getInstance(input.tenant).sendEmail({
+      mailClass: 'ticket', to: recipient, tenantId: input.tenant, entityType: 'ticket', entityId: input.ticketId,
+      templateProcessor: new email.StaticTemplateProcessor('Confirm your ticket reply', `<p>${text.replaceAll('&', '&amp;').replaceAll('<', '&lt;')}</p>`, text),
+      headers: { ...AUTO_GENERATED_MAIL_HEADERS },
+    });
+    await tenantDb(db, input.tenant).table('co_management_deliveries').where({ tenant: input.tenant, delivery_kind: CONTACT_KIND, source_id: id, recipient, state: 'sending' })
+      .whereRaw("payload->>'deliveryAttemptId' = ?", [currentAttemptId])
+      .update({ state: result?.success ? 'sent' : 'failed', error_code: result?.success ? null : String((result as any)?.metadata?.errorCode ?? 'email_send_failed'), last_error: result?.success ? null : result?.error ?? 'Email provider reported delivery failure.', updated_at: db.fn.now() });
+  } catch (error) {
+    if (attemptId) await tenantDb(db, input.tenant).table('co_management_deliveries').where({ tenant: input.tenant, delivery_kind: CONTACT_KIND, source_id: id, recipient, state: 'sending' })
+      .whereRaw("payload->>'deliveryAttemptId' = ?", [attemptId])
+      .update({ state: 'failed', error_code: 'email_send_failed', last_error: error instanceof Error ? error.message : String(error), updated_at: db.fn.now() });
+    throw error;
+  }
+}
+
+export async function loadInboundContactConfirmation(claims: { tenant: string; sourceId: string; expiresAt: string }) {
+  const db = await getAdminConnection();
+  const row = await tenantDb(db, claims.tenant).table('co_management_deliveries')
+    .where({ tenant: claims.tenant, delivery_kind: CONTACT_KIND, source_id: claims.sourceId }).first('recipient', 'payload', 'updated_at');
+  if (!row?.payload) return null;
+  const payload: ContactConfirmationPayload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload;
+  if (payload.expiresAt !== claims.expiresAt || payload.contactEmail !== String(row.recipient).trim().toLowerCase()
+    || Date.parse(payload.expiresAt) <= Date.now() || !isInboundSenderConfirmationRedeemable(payload.state, row.updated_at)) return null;
+  return { row, payload };
+}
+
+export async function approveInboundContactSenderConfirmation(token: string): Promise<unknown | null> {
+  const claims = parseInboundSenderConfirmationToken(token);
+  if (!claims) return null;
+  const pending = await loadInboundContactConfirmation(claims);
+  if (!pending || pending.payload.tenant !== claims.tenant || pending.payload.emailData.tenant !== claims.tenant
+    || pending.payload.emailData.providerId !== pending.payload.providerId
+    || (pending.payload.emailData.providerIdentity || pending.payload.emailData.id) !== pending.payload.providerMessageId
+    || sourceId(claims.tenant, pending.payload.providerId, pending.payload.providerMessageId,
+      { tenant: claims.tenant, userId: pending.payload.contactId }) !== claims.sourceId
+    || inboundMessageSha256(pending.payload.emailData) !== pending.payload.contentSha256) return null;
+  const db = await getAdminConnection();
+  const redemptionId = randomUUID();
+  const claimed = await tenantDb(db, claims.tenant).table('co_management_deliveries')
+    .where({ tenant: claims.tenant, delivery_kind: CONTACT_KIND, source_id: claims.sourceId })
+    .where((q) => q.whereRaw("payload->>'state' = 'pending'").orWhere((stale) => stale.whereRaw("payload->>'state' = 'redeeming'").andWhere('updated_at', '<', new Date(Date.now() - INBOUND_CONFIRMATION_REDEMPTION_LEASE_MS))))
+    .update({ payload: { ...pending.payload, state: 'redeeming', redemptionId }, updated_at: db.fn.now() });
+  if (!claimed) return null;
+  try {
+    const process = await import('../../../shared/services/email/processInboundEmailInApp');
+    const result = await process.processInboundEmailInApp({ tenantId: claims.tenant, providerId: pending.payload.providerId, emailData: pending.payload.emailData }, {
+      confirmedContact: { contactId: pending.payload.contactId, email: pending.payload.contactEmail, contentSha256: pending.payload.contentSha256 },
+    });
+    if (!['replied', 'deduped'].includes((result as any).outcome) || (result as any).ticketId !== pending.payload.ticketId) return null;
+    await tenantDb(db, claims.tenant).table('co_management_deliveries').where({ tenant: claims.tenant, delivery_kind: CONTACT_KIND, source_id: claims.sourceId })
+      .whereRaw("payload->>'redemptionId' = ?", [redemptionId]).update({ payload: { ...pending.payload, state: 'approved' }, updated_at: db.fn.now() });
+    return result;
+  } finally {
+    await tenantDb(db, claims.tenant).table('co_management_deliveries').where({ tenant: claims.tenant, delivery_kind: CONTACT_KIND, source_id: claims.sourceId })
+      .whereRaw("payload->>'redemptionId' = ?", [redemptionId]).whereRaw("payload->>'state' = 'redeeming'")
+      .update({ payload: { ...pending.payload, state: 'pending' }, updated_at: db.fn.now() });
+  }
+}
+
 /** Server recovery delivery; the email-service process can safely leave the intent pending. */
 export async function deliverPendingSenderConfirmations(tenant: string, limit = 100): Promise<{ sent: number; failed: number }> {
   try { getWorkflowEmailProvider(); } catch { return { sent: 0, failed: 0 }; }
   const db = await getAdminConnection();
+  await recoverStaleSenderConfirmationClaims(tenant);
   const rows = await tenantDb(db, tenant).table('co_management_deliveries')
-    .where({ tenant, delivery_kind: KIND }).whereIn('state', ['pending', 'failed'])
-    .orderBy('created_at').limit(limit).select('source_id', 'recipient', 'payload');
+    .where({ tenant }).whereIn('delivery_kind', [KIND, CONTACT_KIND]).whereIn('state', ['pending', 'failed'])
+    .orderBy('created_at').limit(limit).select('delivery_kind', 'source_id', 'recipient', 'payload');
   let sent = 0, failed = 0;
   for (const row of rows) {
-    const payload: ConfirmationPayload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload;
     try {
-      if (await sendConfirmation(tenant, row.source_id, row.recipient, payload)) sent += 1;
+      if (row.delivery_kind === CONTACT_KIND) {
+        const payload: ContactConfirmationPayload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload;
+        await requestInboundContactSenderConfirmation({ tenant, contactId: payload.contactId, contactEmail: payload.contactEmail,
+          ticketId: payload.ticketId, providerId: payload.providerId, providerMessageId: payload.providerMessageId, emailData: payload.emailData });
+        const current = await tenantDb(db, tenant).table('co_management_deliveries')
+          .where({ tenant, delivery_kind: CONTACT_KIND, source_id: row.source_id, recipient: row.recipient }).first('state');
+        if (current?.state === 'sent') sent += 1; else if (current?.state === 'failed') failed += 1;
+      } else {
+        const payload: ConfirmationPayload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload;
+        const result = await sendConfirmation(tenant, row.source_id, row.recipient, payload);
+        if (result === 'sent') sent += 1;
+        else if (result === 'failed') failed += 1;
+      }
     } catch { failed += 1; }
   }
   return { sent, failed };
