@@ -4,29 +4,43 @@ import type { IUserWithRoles } from '@alga-psa/types';
 type Row = Record<string, any>;
 
 const h = vi.hoisted(() => {
-  const dbState: Record<string, Row[]> = { user_roles: [], team_members: [], users: [] };
+  const dbState: Record<string, Row[]> = { user_roles: [], team_members: [], users: [], assets: [], asset_associations: [] };
+  const bundleRules: any[] = [];
 
   const tableQuery = (table: string) => {
     const filters: Array<Record<string, unknown>> = [];
+    const inFilters: Array<{ column: string; values: unknown[] }> = [];
+    let columns: string[] = [];
+    const rows = () => (dbState[table] ?? []).filter((row) =>
+      filters.every((where) => Object.entries(where).every(([key, value]) => row[key] === value)) &&
+      inFilters.every(({ column, values }) => values.includes(row[column]))
+    );
+    const project = (row: Row) => columns.length ? Object.fromEntries(columns.map((column) => [column, row[column]])) : row;
     const query = {
       where(where: Record<string, unknown>) {
         filters.push(where);
         return query;
       },
-      whereIn(_column: string, _values: unknown[]) {
+      whereIn(column: string, values: unknown[]) {
+        inFilters.push({ column, values });
         return query;
       },
-      select<T>(...columns: string[]): Promise<T> {
-        const rows = (dbState[table] ?? []).filter((row) =>
-          filters.every((where) => Object.entries(where).every(([key, value]) => row[key] === value))
-        );
-        return Promise.resolve(rows.map((row) => Object.fromEntries(columns.map((column) => [column, row[column]]))) as T);
+      select(...selected: string[]) {
+        columns = selected;
+        return query;
+      },
+      first() { const row = rows()[0]; return Promise.resolve(row ? project(row) : undefined); },
+      then(resolve: (value: Row[]) => unknown, reject?: (reason: unknown) => unknown) {
+        return Promise.resolve(rows().map(project)).then(resolve, reject);
+      },
+      catch(reject: (reason: unknown) => unknown) {
+        return Promise.resolve(rows().map(project)).catch(reject);
       },
     };
     return query;
   };
 
-  return { dbState, tableQuery };
+  return { dbState, bundleRules, tableQuery };
 });
 
 vi.mock('@alga-psa/db', () => ({
@@ -34,7 +48,7 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 vi.mock('@alga-psa/authorization/bundles/service', () => ({
-  resolveBundleNarrowingRulesForEvaluation: vi.fn(async () => []),
+  resolveBundleNarrowingRulesForEvaluation: vi.fn(async () => h.bundleRules),
 }));
 
 import {
@@ -43,7 +57,8 @@ import {
   RequestLocalAuthorizationCache,
   createAuthorizationKernel,
 } from '@alga-psa/authorization/kernel';
-import { isAssetActionAllowed, isAssetReadAllowed, resolveAuthorizationSubjectForUser } from './assetReadAuthorization';
+import { isAssetActionAllowed, isAssetReadAllowed, loadReadableAssetById, resolveAuthorizationSubjectForUser } from './assetReadAuthorization';
+import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 
 function sessionUser(overrides: Partial<IUserWithRoles>): IUserWithRoles {
   return {
@@ -137,5 +152,28 @@ describe('isAssetActionAllowed', () => {
   it('does not narrow an action the bundle has no rule for', async () => {
     h.dbState.asset_associations = [];
     expect(await isAssetActionAllowed({} as any, 'tenant-a', context(), { asset_id: 'asset-3', client_id: 'client-z' }, 'delete')).toBe(true);
+  });
+});
+
+describe('loadReadableAssetById', () => {
+  const user = sessionUser({ user_id: 'user-1', user_type: 'internal' });
+  const readRule = {
+    id: 'read-scope', resource: 'asset', action: 'read', templateKey: 'selected_clients' as const,
+    selectedClientIds: ['client-a'],
+  };
+
+  beforeEach(() => {
+    h.dbState.assets = [];
+    h.dbState.asset_associations = [];
+    h.bundleRules.splice(0, h.bundleRules.length, readRule);
+  });
+
+  it('loads the asset and applies the record-level read decision in the supplied transaction', async () => {
+    h.dbState.assets.push({ asset_id: 'asset-a', client_id: 'client-a' }, { asset_id: 'asset-b', client_id: 'client-b' });
+
+    expect(await loadReadableAssetById({} as any, 'tenant-a', user, 'asset-a')).toEqual({ asset_id: 'asset-a', client_id: 'client-a' });
+    expect(await loadReadableAssetById({} as any, 'tenant-a', user, 'asset-b')).toBeNull();
+    expect(await loadReadableAssetById({} as any, 'tenant-a', user, 'asset-missing')).toBeNull();
+    expect(resolveBundleNarrowingRulesForEvaluation).toHaveBeenCalled();
   });
 });
