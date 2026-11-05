@@ -23,6 +23,19 @@ function countDistinctItemLocations(quote: IQuote): number {
   return seen.size;
 }
 
+/**
+ * The flat standard default is unreadable for a multi-site quote, so an
+ * assignment that resolves to it — per-quote or tenant-level — is swapped for
+ * the grouped-by-location standard once the quote spans ≥2 locations. Custom
+ * templates and an explicit by-location choice are never swapped: a custom
+ * layout only picks up the per-location binding if its author opts in.
+ */
+function resolveStandardCodeForQuote(quote: IQuote, standardCode: string): string {
+  return standardCode === STANDARD_QUOTE_DEFAULT_CODE && countDistinctItemLocations(quote) >= 2
+    ? STANDARD_QUOTE_BY_LOCATION_CODE
+    : standardCode;
+}
+
 const cloneAst = (ast: TemplateAst): TemplateAst =>
   JSON.parse(JSON.stringify(ast)) as TemplateAst;
 
@@ -108,11 +121,16 @@ export async function resolveQuoteTemplateAst(
 
     const standardMatch = await getStandardTemplateAstByTemplateId(knexOrTrx, quote.template_id);
     if (standardMatch) {
+      const effectiveCode = resolveStandardCodeForQuote(quote, standardMatch.standardCode);
+      const swappedAst = effectiveCode !== standardMatch.standardCode
+        ? await getStandardTemplateAst(knexOrTrx, effectiveCode)
+        : null;
+
       return {
-        templateAst: standardMatch.templateAst,
+        templateAst: swappedAst ?? standardMatch.templateAst,
         source: 'quote',
         templateId: quote.template_id,
-        standardCode: standardMatch.standardCode,
+        standardCode: swappedAst ? effectiveCode : standardMatch.standardCode,
       };
     }
   }
@@ -144,29 +162,25 @@ export async function resolveQuoteTemplateAst(
   }
 
   if (tenantAssignment?.template_source === 'standard' && tenantAssignment.standard_quote_document_template_code) {
-    const standardAst = await getStandardTemplateAst(
-      knexOrTrx,
+    const effectiveCode = resolveStandardCodeForQuote(
+      quote,
       tenantAssignment.standard_quote_document_template_code
     );
+    const standardAst = await getStandardTemplateAst(knexOrTrx, effectiveCode);
 
     if (standardAst) {
       return {
         templateAst: standardAst,
         source: 'tenant-default',
-        standardCode: tenantAssignment.standard_quote_document_template_code,
+        standardCode: effectiveCode,
       };
     }
   }
 
-  // Auto-branch: when no explicit (per-quote or tenant-level) template is
-  // chosen, pick the multi-location standard template when the quote spans
-  // ≥2 distinct locations; otherwise keep the flat default. Custom templates
-  // are explicitly NOT auto-swapped — they only pick up the new binding if
-  // their authors opt in.
-  const distinctLocations = countDistinctItemLocations(quote);
-  const fallbackCode = distinctLocations >= 2
-    ? STANDARD_QUOTE_BY_LOCATION_CODE
-    : STANDARD_QUOTE_DEFAULT_CODE;
+  // Auto-branch: with no explicit (per-quote or tenant-level) template, the
+  // same rule the assigned standard default follows — multi-location quotes
+  // render grouped, everything else stays flat.
+  const fallbackCode = resolveStandardCodeForQuote(quote, STANDARD_QUOTE_DEFAULT_CODE);
   const fallbackAst = await getStandardTemplateAst(knexOrTrx, fallbackCode);
 
   if (!fallbackAst) {

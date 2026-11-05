@@ -57,8 +57,43 @@ type CreateQuoteInput = Omit<
   | 'version'
 > & Partial<Pick<IQuote, 'status' | 'version'>>;
 
+/**
+ * One editor draft row supplied as a create-from-template item override.
+ *
+ * `local_id` is the client-side row key: item-targeted discounts point their
+ * `applies_to_item_id` at it, and the server remaps those references onto the
+ * ids it assigns.
+ */
+export type CreateQuoteFromTemplateItemInput = Partial<
+  Omit<
+    IQuoteItem,
+    | 'quote_item_id'
+    | 'tenant'
+    | 'quote_id'
+    | 'total_price'
+    | 'net_amount'
+    | 'tax_amount'
+    // Server-captured snapshot: never accepted from a caller.
+    | 'catalog_description'
+    | 'created_at'
+    | 'updated_at'
+  >
+> & {
+  local_id: string;
+  description: string;
+  quantity: number;
+};
+
 type CreateQuoteFromTemplateInput = Pick<CreateQuoteInput, 'client_id' | 'quote_date' | 'valid_until'>
-  & Partial<Omit<CreateQuoteInput, 'client_id' | 'quote_date' | 'valid_until' | 'is_template'>>;
+  & Partial<Omit<CreateQuoteInput, 'client_id' | 'quote_date' | 'valid_until' | 'is_template'>>
+  & {
+    /**
+     * The editor's current drafts. When present they replace the template's
+     * own rows, so edits made before the first save — above all the user's
+     * per-item location choices — survive the create.
+     */
+    items?: CreateQuoteFromTemplateItemInput[];
+  };
 
 type CreateQuoteItemInput = Omit<
   IQuoteItem,
@@ -1105,6 +1140,82 @@ export async function copyQuoteItemsToQuote(
   }
 }
 
+/**
+ * Create editor draft rows on a freshly created quote.
+ *
+ * Used by create-from-template when the user had already arranged items before
+ * saving: those drafts — including their per-item locations — are what gets
+ * persisted, instead of the template's own rows. Mirrors
+ * `copyQuoteItemsToQuote`'s two-phase create so an item-targeted discount
+ * still resolves, remapping each client `local_id` onto the id assigned here.
+ *
+ * Draft rows are caller-supplied, so they carry no catalog-description
+ * snapshot: `QuoteItem.create` re-captures the authoritative catalog text.
+ */
+async function createDraftItemsOnQuote(
+  trx: Knex.Transaction,
+  tenant: string,
+  targetQuoteId: string,
+  draftItems: CreateQuoteFromTemplateItemInput[],
+  options: {
+    createdBy?: string | null;
+    resolveLocationId: (locationId?: string | null) => string | null;
+  }
+): Promise<void> {
+  const localToNew = new Map<string, string>();
+  const displayOrderByLocalId = new Map<string, number>();
+  draftItems.forEach((item, index) => displayOrderByLocalId.set(item.local_id, index));
+
+  const createItem = async (
+    draft: CreateQuoteFromTemplateItemInput,
+    appliesToItemId: string | null
+  ): Promise<IQuoteItem> => {
+    return QuoteItem.create(trx, tenant, {
+      quote_id: targetQuoteId,
+      service_id: draft.service_id ?? null,
+      description: draft.description,
+      quantity: draft.quantity,
+      unit_price: draft.unit_price ?? 0,
+      unit_of_measure: draft.unit_of_measure ?? null,
+      unit_code: draft.unit_code ?? null,
+      display_order: displayOrderByLocalId.get(draft.local_id) ?? 0,
+      phase: draft.phase ?? null,
+      is_optional: draft.is_optional ?? false,
+      is_selected: draft.is_selected ?? true,
+      is_recurring: draft.is_recurring ?? false,
+      billing_frequency: draft.billing_frequency ?? null,
+      billing_method: draft.billing_method ?? null,
+      is_discount: draft.is_discount ?? false,
+      discount_type: draft.discount_type ?? null,
+      discount_percentage: draft.discount_percentage ?? null,
+      applies_to_item_id: appliesToItemId,
+      applies_to_service_id: draft.applies_to_service_id ?? null,
+      is_taxable: draft.is_taxable ?? true,
+      tax_region: draft.tax_region ?? null,
+      tax_rate: draft.tax_rate ?? null,
+      cost: draft.cost ?? null,
+      cost_currency: draft.cost_currency ?? null,
+      location_id: options.resolveLocationId(draft.location_id),
+      created_by: options.createdBy,
+    } as any);
+  };
+
+  for (const draft of draftItems.filter((item) => !item.is_discount)) {
+    const createdItem = await createItem(draft, null);
+    localToNew.set(draft.local_id, createdItem.quote_item_id);
+  }
+
+  for (const draft of draftItems.filter((item) => item.is_discount)) {
+    // Same unmatched-target rule as the copy path: an unresolvable target id
+    // is kept so the discount stays item-scoped and resolves to zero rather
+    // than silently widening into a whole-quote discount.
+    const remappedTarget = draft.applies_to_item_id
+      ? (localToNew.get(draft.applies_to_item_id) ?? draft.applies_to_item_id)
+      : null;
+    await createItem(draft, remappedTarget);
+  }
+}
+
 export const createQuoteFromTemplate = withAuth(async (
   user,
   { tenant },
@@ -1183,9 +1294,41 @@ export const createQuoteFromTemplate = withAuth(async (
       total_amount: input.total_amount ?? 0,
     } as any);
 
-    await copyQuoteItemsToQuote(trx, tenant, createdQuote.quote_id, template.quote_items ?? [], {
-      createdBy: actorUserId,
-    });
+    // Locations belong to a client. A template authored against another client
+    // (or a draft row carrying a previously selected client's location) must
+    // never pin an item to a location this quote's client does not own, so
+    // anything outside the client's own set is nulled here rather than
+    // persisted and then rendered under a foreign address.
+    const clientLocationRows = parsedQuote.client_id
+      ? await tenantDb(trx, tenant).table('client_locations')
+          .select('location_id')
+          .where({ client_id: parsedQuote.client_id })
+      : [];
+    const clientLocationIds = new Set(
+      (clientLocationRows as Array<{ location_id?: string | null }>)
+        .map((row) => row.location_id)
+        .filter((locationId): locationId is string => Boolean(locationId))
+    );
+    const resolveLocationId = (locationId?: string | null): string | null =>
+      locationId && clientLocationIds.has(locationId) ? locationId : null;
+
+    if (Array.isArray(input.items)) {
+      await createDraftItemsOnQuote(trx, tenant, createdQuote.quote_id, input.items, {
+        createdBy: actorUserId,
+        resolveLocationId,
+      });
+    } else {
+      await copyQuoteItemsToQuote(
+        trx,
+        tenant,
+        createdQuote.quote_id,
+        (template.quote_items ?? []).map((item) => ({
+          ...item,
+          location_id: resolveLocationId(item.location_id),
+        })),
+        { createdBy: actorUserId },
+      );
+    }
 
     await recalculateQuoteFinancials(trx, tenant, createdQuote.quote_id);
 

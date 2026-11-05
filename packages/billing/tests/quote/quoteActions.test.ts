@@ -40,6 +40,9 @@ const emailTemplateRows: Record<string, any> = {};
 // Filters the email template lookups ran with, so tests can assert the
 // recipient's locale reaches the query rather than a hard-coded 'en'.
 const emailTemplateLookups: Array<{ table: string; filter: any }> = [];
+// Locations the quote client owns, as returned by the `client_locations`
+// lookup. Create-from-template nulls any item location outside this set.
+let clientLocationRows: Array<{ location_id: string }> = [];
 
 const makeQuery = (result: any) => {
   const chain: any = {};
@@ -259,7 +262,7 @@ describe('quoteActions', () => {
         return makeQuery({ email: null });
       }
       if (table === 'client_locations') {
-        return makeListQuery([]);
+        return makeListQuery(clientLocationRows);
       }
       if (table === 'user_roles' || table === 'team_members' || table === 'users') {
         return makeListQuery([]);
@@ -271,6 +274,7 @@ describe('quoteActions', () => {
     delete emailTemplateRows.tenant_email_templates;
     delete emailTemplateRows.system_email_templates;
     emailTemplateLookups.length = 0;
+    clientLocationRows = [];
     resolveEmailLocaleMock.mockResolvedValue('en');
     buildTenantPortalUrlMock.mockImplementation(async (_tenant: string, path: string) => `https://helpdesk.digitalchk.com${path}`);
     fetchTenantPartyMock.mockResolvedValue({
@@ -1165,6 +1169,107 @@ describe('quoteActions', () => {
     const discountCall = QuoteItem.create.mock.calls.find((call: any[]) => (call[2] as any)?.is_discount === true);
     expect(discountCall).toBeTruthy();
     expect((discountCall![2] as any).applies_to_item_id).toBe('new-base-1');
+  });
+
+  describe('createQuoteFromTemplate locations (alga-2026-0002902)', () => {
+    const OWNED_LOCATION_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    const FOREIGN_LOCATION_ID = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+
+    const stubTemplateLoad = (quoteItems: any[]) => {
+      vi.spyOn(Quote, 'getById')
+        .mockResolvedValueOnce({ ...templateQuote, is_template: true, quote_items: quoteItems } as any)
+        .mockResolvedValueOnce({ quote_id: QUOTE_ID, quote_number: 'Q-0200', is_template: false, quote_items: [] } as any);
+      vi.spyOn(Quote, 'create').mockResolvedValueOnce({ quote_id: QUOTE_ID } as any);
+    };
+
+    const locationOfCreatedItem = (description: string) =>
+      (QuoteItem.create as any).mock.calls
+        .map((call: any[]) => call[2])
+        .find((input: any) => input.description === description)?.location_id;
+
+    it('T902a: nulls a template item location the quote client does not own and keeps one it does', async () => {
+      clientLocationRows = [{ location_id: OWNED_LOCATION_ID }];
+      stubTemplateLoad([
+        { ...templateQuote.quote_items[0], location_id: FOREIGN_LOCATION_ID },
+        { ...templateQuote.quote_items[1], location_id: OWNED_LOCATION_ID },
+      ]);
+
+      const { createQuoteFromTemplate } = await import('../../src/actions/quoteActions');
+      await createQuoteFromTemplate(templateQuote.quote_id, {
+        client_id: baseQuoteInput.client_id,
+        quote_date: baseQuoteInput.quote_date,
+        valid_until: baseQuoteInput.valid_until,
+      } as any);
+
+      expect(locationOfCreatedItem('Managed Endpoint')).toBeNull();
+      expect(locationOfCreatedItem('Onboarding')).toBe(OWNED_LOCATION_ID);
+    });
+
+    it('T902b: honours the item override, remapping discount local ids and sanitizing locations', async () => {
+      clientLocationRows = [{ location_id: OWNED_LOCATION_ID }];
+      stubTemplateLoad(templateQuote.quote_items);
+      stubItemCreateWithSequentialIds(['new-site-a', 'new-site-b', 'new-discount']);
+
+      const { createQuoteFromTemplate } = await import('../../src/actions/quoteActions');
+      await createQuoteFromTemplate(templateQuote.quote_id, {
+        client_id: baseQuoteInput.client_id,
+        quote_date: baseQuoteInput.quote_date,
+        valid_until: baseQuoteInput.valid_until,
+        items: [
+          {
+            local_id: 'local-a',
+            description: 'Site A monitoring',
+            quantity: 1,
+            unit_price: 2500,
+            location_id: OWNED_LOCATION_ID,
+          },
+          {
+            local_id: 'local-b',
+            description: 'Site B monitoring',
+            quantity: 2,
+            unit_price: 1500,
+            location_id: FOREIGN_LOCATION_ID,
+          },
+          {
+            local_id: 'local-discount',
+            description: 'Loyalty discount',
+            quantity: 1,
+            unit_price: 0,
+            is_discount: true,
+            discount_type: 'percentage',
+            discount_percentage: 10,
+            applies_to_item_id: 'local-a',
+          },
+        ],
+      } as any);
+
+      // The template's own rows are not copied when drafts are supplied.
+      const createdDescriptions = (QuoteItem.create as any).mock.calls.map((call: any[]) => call[2].description);
+      expect(createdDescriptions).toEqual(['Site A monitoring', 'Site B monitoring', 'Loyalty discount']);
+      expect(locationOfCreatedItem('Site A monitoring')).toBe(OWNED_LOCATION_ID);
+      expect(locationOfCreatedItem('Site B monitoring')).toBeNull();
+
+      const discountCall = (QuoteItem.create as any).mock.calls
+        .map((call: any[]) => call[2])
+        .find((input: any) => input.is_discount === true);
+      expect(discountCall.applies_to_item_id).toBe('new-site-a');
+      // Draft order is preserved regardless of the base-then-discount phases.
+      expect(discountCall.display_order).toBe(2);
+    });
+
+    it('T902c: nulls every item location when the quote client owns none', async () => {
+      clientLocationRows = [];
+      stubTemplateLoad([{ ...templateQuote.quote_items[0], location_id: FOREIGN_LOCATION_ID }]);
+
+      const { createQuoteFromTemplate } = await import('../../src/actions/quoteActions');
+      await createQuoteFromTemplate(templateQuote.quote_id, {
+        client_id: baseQuoteInput.client_id,
+        quote_date: baseQuoteInput.quote_date,
+        valid_until: baseQuoteInput.valid_until,
+      } as any);
+
+      expect(locationOfCreatedItem('Managed Endpoint')).toBeNull();
+    });
   });
 
   it('T141: duplicateQuote remaps item-targeted discounts onto the copied base item', async () => {
