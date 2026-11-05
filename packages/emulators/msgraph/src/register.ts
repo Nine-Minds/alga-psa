@@ -91,9 +91,14 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
       subject: z.string().optional(),
       body: z.string().optional(),
       from: z.string().optional(),
+      sender: z.string().optional(),
       to: z.string().optional(),
       receivedDateTime: z.string().optional(),
       authenticationResults: z.string().regex(/^[^\r\n]*$/).optional(),
+      headers: z.array(z.object({
+        name: z.string().min(1).regex(/^[^\r\n:]+$/),
+        value: z.string().regex(/^[^\r\n]*$/),
+      })).optional(),
     }),
     run: async (input) => {
       const message = core.addMessage(input);

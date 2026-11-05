@@ -117,10 +117,14 @@ describe('inbound reply token matrix (CM L5)', () => {
     const PASS = 'mx; dmarc=pass header.from=msp.test';
     const SPF_ONLY = 'mx; spf=pass smtp.mailfrom=msp.test';
 
-    it('passes internalAttributionTrusted=true when Authentication-Results satisfy allowsInternalSenderAttribution', async () => {
-      admission = { admitted: true, audience: 'shared_it', relationshipId: 'rel', threadId: 'thr', ticketId: 'ticket-1', parentCommentId: null, actor: { tenant: 'msp', userId: 'u1' } };
-      await inbound('cm2:abc', { headers: { 'authentication-results': PASS }, senderAuthentication: { provider: 'google', internalAttributionTrusted: true, contactAttributionTrusted: true } });
-      expect(admitSpy).toHaveBeenCalledWith('tenant-1', 'cm2:abc', expect.anything(), { email: 'agent@msp.test', internalAttributionTrusted: true });
+    it('does not treat even provider-looking Authentication-Results or legacy trust booleans as author evidence', async () => {
+      admission = { admitted: false, reason: 'sender_unauthenticated', acknowledge: false };
+      await inbound('cm2:abc', {
+        headers: { 'authentication-results': PASS },
+        senderAuthentication: { provider: 'google', internalAttributionTrusted: true, contactAttributionTrusted: true },
+      });
+      expect(admitSpy).toHaveBeenCalledWith('tenant-1', 'cm2:abc', expect.anything(), { email: 'agent@msp.test', internalAttributionTrusted: false });
+      expect(writes).toHaveLength(0);
     });
 
     it.each([

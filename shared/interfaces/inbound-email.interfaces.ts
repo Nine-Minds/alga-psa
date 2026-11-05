@@ -155,20 +155,47 @@ export interface EmailMessageDetails extends EmailMessage {
   sourceSha256?: string;
   // Additional details that might be available when fetching full message
   headers?: Record<string, string>;
-  /** Authorization decisions made at the provider ingestion boundary. Raw message headers are not authorization evidence. */
-  senderAuthentication?: {
-    provider: 'google' | 'microsoft' | 'imap';
-    internalAttributionTrusted: boolean;
-    contactAttributionTrusted: boolean;
-    mailboxEvidence?: 'provider_sender_match' | 'mailbox_confirmation_required';
-    authenticatedMailbox?: string;
-    dkim?: { verified: boolean; alignedDomains: string[]; reason: string };
-    reasons?: string[];
-  };
+  /** Typed authorization evidence from ingestion. Message supplied assertions never establish author identity. */
+  senderAuthentication?: SenderAuthenticationEvidence;
   messageSize?: number;
   importance?: 'low' | 'normal' | 'high';
   sensitivity?: 'normal' | 'personal' | 'private' | 'confidential';
 }
+
+export type SenderAuthorEvidence =
+  | { authorization: 'confirmation_required'; provenance: 'receiving_mailbox_only' | 'message_claims_only' }
+  | { authorization: 'internal_actor_attribution'; provenance: 'provider_attested_author' };
+export type SenderContactEvidence =
+  | { authorization: 'untrusted'; provenance: 'missing_or_invalid_dkim'; alignedDomains: [] }
+  | { authorization: 'domain_only'; provenance: 'aligned_original_mime_dkim'; alignedDomains: string[] };
+
+export type SenderAuthenticationEvidence = {
+  provider: 'google' | 'microsoft' | 'imap';
+  reasons?: string[];
+  /** Raw receiver assertions are retained for diagnostics only, in wire order. */
+  diagnostics?: { authenticationResults: string[] };
+} & (
+  | {
+      author: SenderAuthorEvidence;
+      contact: SenderContactEvidence;
+      dkim: { verified: boolean; alignedDomains: string[]; reason: string };
+      /** @deprecated Accepted on old queued payloads and ignored for authorization. */
+      internalAttributionTrusted?: boolean;
+      /** @deprecated Accepted on old queued payloads and ignored for authorization. */
+      contactAttributionTrusted?: boolean;
+      /** @deprecated Accepted on old queued payloads and ignored for authorization. */
+      mailboxEvidence?: 'mailbox_confirmation_required';
+    }
+  | {
+      /** Legacy queued payloads carry only raw booleans; they never grant attribution. */
+      author?: undefined;
+      contact?: undefined;
+      dkim?: { verified: boolean; alignedDomains: string[]; reason: string };
+      internalAttributionTrusted?: boolean;
+      contactAttributionTrusted?: boolean;
+      mailboxEvidence?: 'mailbox_confirmation_required';
+    }
+);
 
 export interface InboundEmailEvent {
   event_type: 'INBOUND_EMAIL_RECEIVED';

@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { EmulatorHost } from '@alga-psa/emulator-host';
 import msgraphEmulator from '../src/index';
+import { simpleParser } from 'mailparser';
+import { mapParsedMimeToEmailMessageDetails } from '../../../../shared/services/email/unifiedInboundEmailQueueJobProcessor';
 
 /**
  * Microsoft Graph simulator smoke coverage. It proves the adapter's request
@@ -113,6 +115,36 @@ describe('MicrosoftGraphAdapter Graph simulator sendMail smoke', { shuffle: fals
       authenticationResults: 'graph-emulator; dmarc=pass\r\nBcc: another@example.test',
     });
     expect(invalid.ok).toBe(false);
+  });
+
+  it('treats Graph Sender/From and forged authentication headers as claims through fetch and MIME mapping', async () => {
+    const adapter = await adapterFor('support@example.test');
+    await adapter.connect();
+    const seeded = await controlPost('/control/msgraph/seed/message', {
+      from: 'attacker@example.test', sender: 'victim@example.test', subject: 'Forged co-managed reply', body: 'reply body',
+      authenticationResults: 'outlook.com; dkim=pass header.d=example.test; dmarc=pass header.from=example.test',
+    });
+    expect(seeded.ok).toBe(true);
+    const graphMessage = await fetch(`${graphBaseUrl}/me/messages/${seeded.result.id}`, {
+      headers: { authorization: `Bearer ${await mintAccessToken()}` },
+    });
+    expect((await graphMessage.json()).sender.emailAddress.address).toBe('victim@example.test');
+    const raw = await adapter.downloadMessageSource(seeded.result.id);
+    expect(raw.toString()).toContain('From: attacker@example.test\r\n');
+    expect(raw.toString()).toContain('Sender: victim@example.test\r\n');
+    const parsed = await simpleParser(raw);
+    const mapped = await mapParsedMimeToEmailMessageDetails({
+      provider: 'microsoft', providerId: 'provider-test', tenant: 'tenant-test',
+      rawMimeBuffer: raw, parsed, fallbackMessageId: seeded.result.id,
+    });
+    expect(mapped.from.email).toBe('attacker@example.test');
+    expect(mapped.senderAuthentication).toMatchObject({
+      author: { authorization: 'confirmation_required', provenance: 'receiving_mailbox_only' },
+      contact: { authorization: 'untrusted', provenance: 'missing_or_invalid_dkim' },
+      diagnostics: { authenticationResults: [
+        'outlook.com; dkim=pass header.d=example.test; dmarc=pass header.from=example.test',
+      ] },
+    });
   });
 
   it('returns not-found for unsupported mailbox folders instead of listing Inbox messages', async () => {

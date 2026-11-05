@@ -1071,19 +1071,6 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     }
   }
 
-  /** Read Graph's authenticated sender mailbox property separately from raw MIME headers. */
-  async getAuthenticatedSenderEmail(messageId: string): Promise<string | null> {
-    try {
-      const response = await this.httpClient.get(`${this.getMailboxBasePath()}/messages/${messageId}`, {
-        params: { $select: 'sender' },
-      });
-      const address = response.data?.sender?.emailAddress?.address;
-      return typeof address === 'string' && address.trim() ? address.trim() : null;
-    } catch (error) {
-      throw this.handleError(error, 'getAuthenticatedSenderEmail');
-    }
-  }
-
   /** Resolve the Graph parent folder for a fetched message. */
   async getMessageParentFolderId(messageId: string): Promise<string | null> {
     try {

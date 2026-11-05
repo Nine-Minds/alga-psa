@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
 import { NextRequest } from 'next/server';
 import { processInboundEmailInApp } from '@alga-psa/shared/services/email/processInboundEmailInApp';
+import { verifiedContactEvidence } from '../../../../shared/services/email/__tests__/senderAuthenticationFixtures';
 import { describeWithDb } from '../../../test-utils/requireDb';
 import { tenantDb } from '@alga-psa/db';
 
@@ -588,14 +589,10 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     return contactId;
   }
 
-  // Aligned DKIM authorizes contact attribution; aligned DMARC is required
-  // before an internal identity is granted (see allowsInternalSenderAttribution).
+  // Raw headers are diagnostics only. Positive cases supply typed evidence as
+  // if original-byte DKIM verification and DNS alignment had succeeded.
   function dkimPassHeaders(email: string) {
     return { 'authentication-results': `mx.example.com; dkim=pass header.d=${email.split('@')[1]}` };
-  }
-
-  function dmarcPassHeaders(email: string) {
-    return { 'authentication-results': `mx.example.com; dmarc=pass header.from=${email.split('@')[1]}` };
   }
 
   beforeAll(async () => {
@@ -1588,6 +1585,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
           html: undefined,
         },
         attachments: [],
+        senderAuthentication: verifiedContactEvidence('microsoft', threadSenderEmail.split('@')[1]),
         headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
@@ -1605,7 +1603,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     expect(ticketAfterReply.board_id).toBe(boardId);
   });
 
-  it('T001: closed ticket internal threaded reply inside cutoff reopens to explicit board reopen status and adds comment', async () => {
+  it('T001: raw DMARC header cannot authenticate an internal threaded reply or reopen a closed ticket', async () => {
     const providerId = uuidv4();
     const mailbox = `support-reopen-internal-${uuidv4().slice(0, 6)}@example.com`;
     const { defaultsId } = await setupMicrosoftProvider({
@@ -1716,22 +1714,19 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
           html: undefined,
         },
         attachments: [],
-        headers: dmarcPassHeaders(internalReplyEmail),
+        headers: { 'authentication-results': `mx.example.com; dmarc=pass header.from=${internalReplyEmail.split('@')[1]}` },
       } as any,
     });
 
-    expect(result.outcome).toBe('replied');
-    expect(result.outcome === 'replied' ? result.ticketId : null).toBe(ticketId);
+    expect(result.outcome).toBe('quarantined');
 
     const ticketAfter = await tenantTable('tickets').where({ ticket_id: ticketId }).first<any>();
     expect(ticketAfter).toBeDefined();
-    expect(ticketAfter.status_id).toBe(explicitReopenStatusId);
-    expect(ticketAfter.is_closed).toBe(false);
-    expect(ticketAfter.closed_at).toBeNull();
-    expect(ticketAfter.closed_by).toBeNull();
+    expect(ticketAfter.status_id).toBe(closedStatus.status_id);
+    expect(ticketAfter.is_closed).toBe(true);
 
     const comments = await tenantTable('comments').where({ ticket_id: ticketId });
-    expect(comments).toHaveLength(1);
+    expect(comments).toHaveLength(0);
   });
 
   it('T002: closed ticket internal threaded reply inside cutoff falls back to board default open status when explicit reopen status is unset', async () => {
@@ -1841,14 +1836,15 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         references: [originalMessageId],
         body: { text: 'Follow-up requiring reopen', html: undefined },
         attachments: [],
-        headers: dmarcPassHeaders(internalReplyEmail),
+        headers: { 'authentication-results': `mx.example.com; dmarc=pass header.from=${internalReplyEmail.split('@')[1]}` },
       } as any,
     });
 
-    expect(result.outcome).toBe('replied');
+    expect(result.outcome).toBe('quarantined');
     const ticketAfter = await tenantTable('tickets').where({ ticket_id: ticketId }).first<any>();
-    expect(ticketAfter.status_id).toBe(defaultOpenStatus.status_id);
-    expect(ticketAfter.is_closed).toBe(false);
+    expect(ticketAfter.status_id).toBe(closedStatus.status_id);
+    expect(ticketAfter.is_closed).toBe(true);
+    expect(await tenantTable('comments').where({ ticket_id: ticketId })).toHaveLength(0);
   });
 
   it('T003: when board reopen-on-reply is disabled, threaded reply on closed ticket adds comment without reopening', async () => {
@@ -1934,6 +1930,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         references: [originalMessageId],
         body: { text: 'Any update?', html: undefined },
         attachments: [],
+        senderAuthentication: verifiedContactEvidence('microsoft', threadSenderEmail.split('@')[1]),
         headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
@@ -2032,6 +2029,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         references: [originalMessageId],
         body: { text: 'Need more work on this issue.', html: undefined },
         attachments: [],
+        senderAuthentication: verifiedContactEvidence('microsoft', threadSenderEmail.split('@')[1]),
         headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
@@ -2145,6 +2143,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         references: [originalMessageId],
         body: { text: 'Can you continue this work?', html: undefined },
         attachments: [],
+        senderAuthentication: verifiedContactEvidence('microsoft', threadSenderEmail.split('@')[1]),
         headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
@@ -2252,6 +2251,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         references: [originalMessageId],
         body: { text: 'Thanks, all set.', html: undefined },
         attachments: [],
+        senderAuthentication: verifiedContactEvidence('microsoft', threadSenderEmail.split('@')[1]),
         headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
@@ -2368,6 +2368,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         references: [originalMessageId],
         body: { text: 'Please reopen and continue work on this issue.', html: undefined },
         attachments: [],
+        senderAuthentication: verifiedContactEvidence('microsoft', threadSenderEmail.split('@')[1]),
         headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
@@ -2478,6 +2479,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         references: [originalMessageId],
         body: { text: 'Please proceed with additional work.', html: undefined },
         attachments: [],
+        senderAuthentication: verifiedContactEvidence('microsoft', threadSenderEmail.split('@')[1]),
         headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
@@ -2588,6 +2590,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         references: [originalMessageId],
         body: { text: 'Please continue work despite classification fallback.', html: undefined },
         attachments: [],
+        senderAuthentication: verifiedContactEvidence('microsoft', threadSenderEmail.split('@')[1]),
         headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
@@ -2791,6 +2794,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         references: [originalMessageId],
         body: { text: 'Thanks for closing this.', html: undefined },
         attachments: [],
+        senderAuthentication: verifiedContactEvidence('microsoft', threadSenderEmail.split('@')[1]),
         headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
@@ -2856,6 +2860,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         subject: 'Contact matched subject',
         body: { text: 'Hello', html: undefined },
         attachments: [],
+        senderAuthentication: verifiedContactEvidence('google', contactEmail.split('@')[1]),
         headers: {
           'authentication-results': `mx.example.com; dkim=pass header.d=${contactEmail.split('@')[1]}`,
         },
@@ -2940,6 +2945,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         subject,
         body: { text: 'Hello from microsoft contact', html: undefined },
         attachments: [],
+        senderAuthentication: verifiedContactEvidence('microsoft', contactEmail.split('@')[1]),
         headers: {
           'authentication-results': `mx.example.com; dkim=pass header.d=${contactEmail.split('@')[1]}`,
         },
@@ -2967,7 +2973,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
   });
 
-  it('Contact match (Microsoft intra-org): same-tenant sender with no Authentication-Results is attributed via the Exchange internal-auth stamp', async () => {
+  it('Contact match (Microsoft intra-org): AuthAs alone cannot attribute a contact', async () => {
     const providerId = uuidv4();
     const mailbox = `support-ms-intraorg-${uuidv4().slice(0, 6)}@example.com`;
     const { defaultsId } = await setupMicrosoftProvider({
@@ -3035,13 +3041,13 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       .where({ title: subject })
       .first<any>();
     expect(ticket).toBeDefined();
-    expect(ticket.client_id).toBe(contactClientId);
-    expect(ticket.contact_name_id).toBe(contactId);
+    expect(ticket.client_id).not.toBe(contactClientId);
+    expect(ticket.contact_name_id).not.toBe(contactId);
 
     const comments = await tenantTable('comments').where({ ticket_id: ticket.ticket_id });
     expect(comments).toHaveLength(1);
     expect(comments[0].author_type).toBe('client');
-    expect(comments[0].contact_id).toBe(contactId);
+    expect(comments[0].contact_id).not.toBe(contactId);
 
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticket.ticket_id }).delete();
@@ -3201,6 +3207,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
           html: undefined,
         },
         attachments: [],
+        senderAuthentication: verifiedContactEvidence('microsoft', contactEmail.split('@')[1]),
         headers: {
           'authentication-results': `mx.example.com; dkim=pass header.d=${contactEmail.split('@')[1]}`,
         },
@@ -3289,6 +3296,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         subject,
         body: { text: 'Hello', html: undefined },
         attachments: [],
+        senderAuthentication: verifiedContactEvidence('google', contactEmail.split('@')[1]),
         headers: {
           'authentication-results': `mx.example.com; dkim=pass header.d=${contactEmail.split('@')[1]}`,
         },
@@ -3453,6 +3461,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         subject,
         body: { text: 'Hello', html: undefined },
         attachments: [],
+        senderAuthentication: verifiedContactEvidence('google', senderEmail.split('@')[1]),
         headers: {
           'authentication-results': `mx.example.com; dkim=pass header.d=${senderEmail.split('@')[1]}`,
         },
@@ -3542,6 +3551,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         subject,
         body: { text: 'Hello', html: undefined },
         attachments: [],
+        senderAuthentication: verifiedContactEvidence('google', senderEmail.split('@')[1]),
         headers: {
           'authentication-results': `mx.example.com; dkim=pass header.d=${senderEmail.split('@')[1]}`,
         },
@@ -4129,7 +4139,10 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     expect(audit.details).toMatchObject({
       emailId: `<${messageId}>`,
       senderEmail: internalEmail,
-      authResults: null,
+      authResults: {
+        provider: 'microsoft',
+        author: { authorization: 'confirmation_required', provenance: 'receiving_mailbox_only' },
+      },
     });
 
     cleanup.push(async () => {
@@ -4139,7 +4152,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
   });
 
-  it('does not mark an authenticated, matched internal sender as unmatched', async () => {
+  it('does not let a forged DMARC header grant internal authorship to a matched From address', async () => {
     const providerId = uuidv4();
     const mailbox = `support-auth-match-${uuidv4().slice(0, 6)}@example.com`;
     const { defaultsId } = await setupInboundDefaults({ providerId, mailbox });
@@ -4196,8 +4209,8 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       .first<any>();
     expect(ticket).toBeDefined();
     const comment = await tenantTable('comments').where({ ticket_id: ticket.ticket_id }).first<any>();
-    expect(comment).toMatchObject({ author_type: 'internal', user_id: internalUserId });
-    expect(comment.metadata).toMatchObject({ unmatchedSender: false });
+    expect(comment).toMatchObject({ author_type: 'client', user_id: null });
+    expect(comment.metadata).toMatchObject({ unmatchedSender: true });
 
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticket.ticket_id }).delete();
@@ -4259,6 +4272,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         subject: 'Contact normalized sender subject',
         body: { text: 'Hello', html: undefined },
         attachments: [],
+        senderAuthentication: verifiedContactEvidence('google', canonicalEmail.split('@')[1]),
         headers: {
           'authentication-results': `mx.example.com; dkim=pass header.d=${canonicalEmail.split('@')[1]}`,
         },
@@ -4646,6 +4660,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       subject,
       body: { text: 'Hello', html: undefined },
       attachments: [],
+      senderAuthentication: verifiedContactEvidence('google', senderEmail.split('@')[1]),
       headers: {
         'authentication-results': `mx.example.com; dkim=pass header.d=${senderEmail.split('@')[1]}`,
       },

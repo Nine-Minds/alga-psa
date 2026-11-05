@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createHash } from 'node:crypto';
 import type { EmailMessageDetails } from '../../../interfaces/inbound-email.interfaces';
+import { unverifiedSenderEvidence, verifiedContactEvidence } from './senderAuthenticationFixtures';
 import { parseEmailReply } from '../../../lib/email/replyParser';
 
 /** Same algorithm as BaseEmailService.logEmailSendResult / notificationLoopDetection.ts. */
@@ -68,10 +69,7 @@ function buildEmailData(
     body: { text: 'Hello from client', html: undefined },
     attachments: [],
     headers: { 'authentication-results': 'mx.example; spf=pass smtp.mailfrom=example.com; dmarc=pass header.from=example.com' },
-    senderAuthentication: {
-      provider: 'google', internalAttributionTrusted: false, contactAttributionTrusted: true,
-      reasons: ['trusted_receiver_domain_auth_for_contact_only'],
-    },
+    senderAuthentication: verifiedContactEvidence('google'),
     ...overrides,
   };
 }
@@ -250,9 +248,23 @@ describe('processInboundEmailInApp auto-create contact', () => {
     const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
     await processInboundEmailInApp({ tenantId: 'tenant-1', providerId: 'provider-1', emailData: buildEmailData({
       headers: { 'authentication-results': 'mx.example; spf=fail; dmarc=fail' },
-      senderAuthentication: { provider: 'google', internalAttributionTrusted: false, contactAttributionTrusted: false, mailboxEvidence: 'mailbox_confirmation_required' },
+      senderAuthentication: unverifiedSenderEvidence('google'),
     }) });
     expect(createContactForInboundSenderMock).not.toHaveBeenCalled();
+  });
+
+  it('uses independently verified aligned DKIM for Microsoft contact attribution without trusting mailbox identity', async () => {
+    findInboundEmailDomainMappingMock.mockResolvedValue({ clientId: 'client-domain', autoCreateContacts: true });
+    createContactForInboundSenderMock.mockResolvedValue({ contactId: 'created-contact', created: true });
+    const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+    await processInboundEmailInApp({ tenantId: 'tenant-1', providerId: 'provider-1', emailData: buildEmailData({
+      senderAuthentication: {
+        ...verifiedContactEvidence('microsoft'),
+      },
+    }) });
+
+    expect(createContactForInboundSenderMock).toHaveBeenCalledTimes(1);
+    expect(createTicketFromEmailMock).toHaveBeenCalledWith(expect.objectContaining({ contact_id: 'created-contact' }), 'tenant-1');
   });
 
   it('skips automated messages and provider mailbox senders', async () => {
@@ -264,7 +276,7 @@ describe('processInboundEmailInApp auto-create contact', () => {
     findContactByEmailMock.mockResolvedValue(null);
     await processInboundEmailInApp({ tenantId: 'tenant-1', providerId: 'provider-1', emailData: buildEmailData({
       from: { email: 'support@example.com', name: 'Support' },
-      senderAuthentication: { provider: 'google', internalAttributionTrusted: false, contactAttributionTrusted: false, mailboxEvidence: 'mailbox_confirmation_required' },
+      senderAuthentication: unverifiedSenderEvidence('google'),
     }) });
     expect(createContactForInboundSenderMock).not.toHaveBeenCalled();
   });

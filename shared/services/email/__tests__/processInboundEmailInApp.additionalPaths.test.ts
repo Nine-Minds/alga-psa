@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EmailMessageDetails } from '../../../interfaces/inbound-email.interfaces';
+import { verifiedContactEvidence, verifiedInternalActorEvidence } from './senderAuthenticationFixtures';
 
 const withAdminTransactionMock = vi.fn();
 const parseEmailReplyBodyMock = vi.fn();
@@ -75,11 +76,7 @@ function buildEmailData(
     headers: {
       'authentication-results': 'mx.example; spf=pass smtp.mailfrom=example.com',
     },
-    senderAuthentication: {
-      provider: 'google',
-      internalAttributionTrusted: true,
-      contactAttributionTrusted: true,
-    },
+    senderAuthentication: verifiedInternalActorEvidence('google'),
     ...overrides,
   };
 }
@@ -309,7 +306,7 @@ describe('processInboundEmailInApp additional authorship paths', () => {
       emailData: buildEmailData({
         id: 'email-reply-internal-1',
         from: { email: 'ROBERT@NINEMINDS.COM', name: 'Robert Isaacs' },
-        senderAuthentication: { provider: 'google', internalAttributionTrusted: true, contactAttributionTrusted: true },
+        senderAuthentication: verifiedInternalActorEvidence('google'),
         headers: { 'authentication-results': 'mx.nineminds.com; dmarc=pass header.from=nineminds.com' },
       }),
     });
@@ -473,7 +470,7 @@ describe('processInboundEmailInApp additional authorship paths', () => {
       providerId: 'provider-1',
       emailData: buildEmailData({
         from: { email: 'munjal@joymode.io', name: 'Munjal Thakkar' },
-        senderAuthentication: { provider: 'google', internalAttributionTrusted: false, contactAttributionTrusted: true },
+        senderAuthentication: verifiedContactEvidence('google', 'techff.onmicrosoft.com'),
         headers: {
           'authentication-results': `mx.google.com;
        dkim=pass header.i=@techff.onmicrosoft.com header.s=selector1-techff-onmicrosoft-com header.b="cmLi/gLS";
@@ -494,9 +491,7 @@ describe('processInboundEmailInApp additional authorship paths', () => {
         email_metadata: expect.objectContaining({
           clientMatchSource: 'email_match',
           authResults: {
-            provider: 'google',
-            internalAttributionTrusted: false,
-            contactAttributionTrusted: true,
+            ...verifiedContactEvidence('google', 'techff.onmicrosoft.com'),
           },
         }),
       }),

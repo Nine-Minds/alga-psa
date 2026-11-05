@@ -151,6 +151,7 @@ describe('GmailAdapter.listMessagesSince', () => {
         },
       },
     });
+    messageGetMock.mockResolvedValueOnce({ data: { raw: Buffer.from('From: sender@example.com\r\n\r\nhello').toString('base64url') } });
 
     const details = await adapter.getMessageDetails('message-forged-header');
 
@@ -158,7 +159,7 @@ describe('GmailAdapter.listMessagesSince', () => {
     expect(details.headers).not.toHaveProperty('X-List-Address');
   });
 
-  it('preserves ordered Gmail auth results and authorizes only the receiver topmost result', async () => {
+  it('preserves ordered Gmail auth results for diagnostics without authorizing them', async () => {
     const adapter = new SharedGmailAdapter(providerConfig);
     messageGetMock.mockResolvedValueOnce({ data: {
       id: 'message-auth-results', labelIds: ['INBOX'], payload: { headers: [
@@ -167,18 +168,26 @@ describe('GmailAdapter.listMessagesSince', () => {
         { name: 'Authentication-Results', value: 'attacker.test; dmarc=pass header.from=msp.test' },
       ] },
     } });
+    messageGetMock.mockResolvedValueOnce({ data: { raw: Buffer.from('From: agent@msp.test\r\n\r\nreply').toString('base64url') } });
 
     const details = await adapter.getMessageDetails('message-auth-results');
-    // The first (receiver) failure wins; the later attacker pass is ignored.
-    expect(details.senderAuthentication?.internalAttributionTrusted === true).toBe(false);
+    expect(details.senderAuthentication?.author).toEqual({ authorization: 'confirmation_required', provenance: 'receiving_mailbox_only' });
+    expect(details.senderAuthentication?.reasons).toContain('gmail_receiver_results_retained_for_diagnostics_only');
+    expect(details.senderAuthentication?.contact.authorization).toBe('untrusted');
+    expect(details.senderAuthentication?.diagnostics?.authenticationResults).toEqual([
+      'mx.google.com; dmarc=fail header.from=msp.test',
+      'attacker.test; dmarc=pass header.from=msp.test',
+    ]);
+    expect(Buffer.from(details.rawMimeBase64!, 'base64').toString()).toContain('reply');
 
     messageGetMock.mockResolvedValueOnce({ data: { id: 'message-auth-results-pass', labelIds: ['INBOX'], payload: { headers: [
       { name: 'From', value: 'Agent <agent@msp.test>' },
       { name: 'Authentication-Results', value: 'mx.google.com; dmarc=pass header.from=msp.test' },
       { name: 'Authentication-Results', value: 'relay.example; dmarc=fail header.from=msp.test' },
     ] } } });
+    messageGetMock.mockResolvedValueOnce({ data: { raw: Buffer.from('From: agent@msp.test\r\n\r\nreply').toString('base64url') } });
     const valid = await adapter.getMessageDetails('message-auth-results-pass');
-    expect(valid.senderAuthentication?.internalAttributionTrusted === true).toBe(true);
+    expect(valid.senderAuthentication?.author.authorization).toBe('confirmation_required');
   });
 
   it('rejects forged Gmail authserv identifiers and missing receiver results at ingestion', async () => {
@@ -188,20 +197,23 @@ describe('GmailAdapter.listMessagesSince', () => {
       { name: 'Authentication-Results', value: 'attacker.test; dmarc=pass header.from=msp.test' },
       { name: 'Authentication-Results', value: 'mx.google.com; dmarc=pass header.from=msp.test' },
     ] } } });
+    messageGetMock.mockResolvedValueOnce({ data: { raw: Buffer.from('From: agent@msp.test\r\n\r\nreply').toString('base64url') } });
     const forged = await adapter.getMessageDetails('message-forged-authserv');
-    expect(forged.senderAuthentication?.internalAttributionTrusted === true).toBe(false);
+    expect(forged.senderAuthentication?.author.authorization).toBe('confirmation_required');
 
     messageGetMock.mockResolvedValueOnce({ data: { id: 'message-no-auth', labelIds: ['INBOX'], payload: { headers: [
       { name: 'From', value: 'Agent <agent@msp.test>' },
       { name: 'Authentication-Results', value: 'attacker.test; dmarc=pass header.from=msp.test' },
     ] } } });
+    messageGetMock.mockResolvedValueOnce({ data: { raw: Buffer.from('From: agent@msp.test\r\n\r\nreply').toString('base64url') } });
     const missing = await adapter.getMessageDetails('message-no-auth');
-    expect(missing.senderAuthentication?.internalAttributionTrusted === true).toBe(false);
+    expect(missing.senderAuthentication?.author.authorization).toBe('confirmation_required');
 
     messageGetMock.mockResolvedValueOnce({ data: { id: 'message-missing-receiver', labelIds: ['INBOX'], payload: { headers: [
       { name: 'From', value: 'Agent <agent@msp.test>' },
     ] } } });
+    messageGetMock.mockResolvedValueOnce({ data: { raw: Buffer.from('From: agent@msp.test\r\n\r\nreply').toString('base64url') } });
     const noEvidence = await adapter.getMessageDetails('message-missing-receiver');
-    expect(noEvidence.senderAuthentication?.internalAttributionTrusted === true).toBe(false);
+    expect(noEvidence.senderAuthentication?.author.authorization).toBe('confirmation_required');
   });
 });

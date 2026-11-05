@@ -1,4 +1,4 @@
-import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { getAdminConnection, tenantDb } from '@alga-psa/db';
 import { getWorkflowEmailProvider } from '@alga-psa/shared/workflow/runtime/registries/workflowEmailRegistry';
 import { AUTO_GENERATED_MAIL_HEADERS } from '@shared/lib/email/automatedMessage';
@@ -15,7 +15,8 @@ type ConfirmationPayload = InboundCommentWrite & {
   providerMessageId: string;
   expiresAt: string;
   contentSha256: string;
-  state: 'pending' | 'approved';
+  state: 'pending' | 'redeeming' | 'approved' | 'expired';
+  redemptionId?: string;
 };
 
 function sourceId(tenant: string, providerId: string, messageId: string, actor: InboundCommentActor): string {
@@ -168,32 +169,57 @@ export async function approveInboundSenderConfirmation(token: string, user: {
     || user.email?.trim().toLowerCase() !== String(row.recipient).trim().toLowerCase()
     || createHash('sha256').update(payload.text, 'utf8').digest('hex') !== payload.contentSha256) return null;
 
-  const reply = await tenantDb(db, claims.tenant).table('email_reply_tokens')
-    .where({ tenant: claims.tenant, token: payload.replyToken }).first('metadata');
-  if (!reply) return null;
-  const provider = await coManagedDeliverySeam.resolve(claims.tenant);
-  if (!provider) return null;
-  const admission = await provider.admitReplyToken(claims.tenant, payload.replyToken, reply.metadata, {
-    email: user.email ?? null,
-    internalAttributionTrusted: true,
-  });
-  if (!admission.admitted || !admission.actor || admission.actor.tenant !== user.tenant
-    || admission.actor.userId !== user.user_id || admission.ticketId !== payload.ticketId) return null;
-  const writer = await coManagedInboundCommentSeam.resolve(claims.tenant);
-  if (!writer) return null;
-  const result = await writer.write({
-    tenant: claims.tenant,
-    ticketId: admission.ticketId,
-    relationshipId: admission.relationshipId,
-    threadId: admission.threadId,
-    parentCommentId: admission.parentCommentId,
-    audience: admission.audience,
-    actor: admission.actor,
-    operationId: payload.operationId,
-    text: payload.text,
-  });
-  await tenantDb(db, claims.tenant).table('co_management_deliveries')
+  // Claim redemption atomically so concurrent POSTs cannot both perform an
+  // admission and comment write. A stale claim is recoverable after process
+  // interruption; the stable operationId makes that retry idempotent.
+  const redemptionId = randomUUID();
+  const claimedPayload: ConfirmationPayload = { ...payload, state: 'redeeming', redemptionId };
+  const claimed = await tenantDb(db, claims.tenant).table('co_management_deliveries')
     .where({ tenant: claims.tenant, delivery_kind: KIND, source_id: claims.sourceId })
-    .update({ payload: { ...payload, state: 'approved' }, updated_at: db.fn.now() });
-  return { ticketId: admission.ticketId, commentId: result.commentId };
+    .where((query) => query.whereRaw("payload->>'state' = 'pending'")
+      .orWhere((stale) => stale.whereRaw("payload->>'state' = 'redeeming'")
+        .andWhere('updated_at', '<', new Date(Date.now() - 60_000))))
+    .update({ payload: claimedPayload, updated_at: db.fn.now() });
+  if (!claimed) return null;
+
+  let completed = false;
+  try {
+    const reply = await tenantDb(db, claims.tenant).table('email_reply_tokens')
+      .where({ tenant: claims.tenant, token: payload.replyToken }).first('metadata');
+    if (!reply) return null;
+    const provider = await coManagedDeliverySeam.resolve(claims.tenant);
+    if (!provider) return null;
+    const admission = await provider.admitReplyToken(claims.tenant, payload.replyToken, reply.metadata, {
+      email: user.email ?? null,
+      internalAttributionTrusted: true,
+    });
+    if (!admission.admitted || !admission.actor || admission.actor.tenant !== user.tenant
+      || admission.actor.userId !== user.user_id || admission.ticketId !== payload.ticketId) return null;
+    const writer = await coManagedInboundCommentSeam.resolve(claims.tenant);
+    if (!writer) return null;
+    const result = await writer.write({
+      tenant: claims.tenant,
+      ticketId: admission.ticketId,
+      relationshipId: admission.relationshipId,
+      threadId: admission.threadId,
+      parentCommentId: admission.parentCommentId,
+      audience: admission.audience,
+      actor: admission.actor,
+      operationId: payload.operationId,
+      text: payload.text,
+    });
+    await tenantDb(db, claims.tenant).table('co_management_deliveries')
+      .where({ tenant: claims.tenant, delivery_kind: KIND, source_id: claims.sourceId })
+      .whereRaw("payload->>'redemptionId' = ?", [redemptionId])
+      .update({ payload: { ...payload, state: 'approved' }, updated_at: db.fn.now() });
+    completed = true;
+    return { ticketId: admission.ticketId, commentId: result.commentId };
+  } finally {
+    if (!completed) {
+      await tenantDb(db, claims.tenant).table('co_management_deliveries')
+        .where({ tenant: claims.tenant, delivery_kind: KIND, source_id: claims.sourceId })
+        .whereRaw("payload->>'redemptionId' = ?", [redemptionId])
+        .update({ payload: { ...payload, state: 'pending' }, updated_at: db.fn.now() });
+    }
+  }
 }

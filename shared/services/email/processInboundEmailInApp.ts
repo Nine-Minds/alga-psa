@@ -957,19 +957,10 @@ export async function processInboundEmailInApp(
   const dedupeKey = buildDedupeKey(input);
   const senderEmail = normalizeEmailAddress(emailData.from?.email);
   const internalSenderTrusted = isInternalAttributionTrusted(emailData.senderAuthentication);
-  const internalActorEmail = internalSenderTrusted
-    ? normalizeEmailAddress(emailData.senderAuthentication?.authenticatedMailbox) ?? senderEmail
-    : senderEmail;
   const isVerifiedListRewrite = Boolean(emailData.headers?.['x-resolved-original-sender']);
-  const providerAuthenticatedMailbox = emailData.senderAuthentication?.mailboxEvidence === 'provider_sender_match'
-    ? normalizeEmailAddress(emailData.senderAuthentication.authenticatedMailbox)
-    : null;
-  const contactSenderTrusted = Boolean(providerAuthenticatedMailbox
-    && emailData.senderAuthentication?.contactAttributionTrusted === true)
-    || (emailData.senderAuthentication?.provider === 'google'
-      && emailData.senderAuthentication.contactAttributionTrusted === true)
+  const contactSenderTrusted = emailData.senderAuthentication?.contact?.authorization === 'domain_only'
     || isVerifiedListRewrite;
-  const contactAttributionEmail = providerAuthenticatedMailbox ?? senderEmail;
+  const contactAttributionEmail = senderEmail;
   const durableExecution = options.durableExecution ?? null;
 
   const helperExecutionOptions = (kind: 'ticket' | 'comment'): InboundEmailExecutionOptions | undefined => {
@@ -1744,10 +1735,9 @@ export async function processInboundEmailInApp(
         // Not served, requester-thread token: the token is inert and thread headers decide (native writer).
         const admission = provider
           ? await provider.admitReplyToken(tenantId, String(token), match.metadata, {
-              // Microsoft Graph's authenticated sender mailbox is independent of MIME From (which
-              // can legitimately differ for send-on-behalf); all other providers use From only
-              // after the bound confirmation flow has admitted the intended user.
-              email: internalActorEmail ?? null,
+              // Provider metadata and message headers do not prove which user authored the message.
+              // Untrusted From may identify a confirmation candidate, never an admitted actor.
+              email: senderEmail ?? null,
               internalAttributionTrusted: internalSenderTrusted,
             })
           : null;

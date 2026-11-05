@@ -20,6 +20,7 @@ export interface GraphMessage {
   bodyPreview: string;
   body: { contentType: string; content: string };
   from: { emailAddress: { address: string; name: string } };
+  sender: { emailAddress: { address: string; name: string } };
   toRecipients: Array<{ emailAddress: { address: string } }>;
   attachments: unknown[];
 }
@@ -359,9 +360,11 @@ export interface SeedMessageInput {
   subject?: string;
   body?: string;
   from?: string;
+  sender?: string;
   to?: string;
   receivedDateTime?: string;
   authenticationResults?: string;
+  headers?: Array<{ name: string; value: string }>;
 }
 
 export interface SeedOrganizationInput {
@@ -872,14 +875,18 @@ export class MsGraphCore implements EmulatorCore {
     const message: GraphMessage = {
       id,
       parentFolderId: this.getMailFolder('inbox').id,
-      internetMessageHeaders: input.authenticationResults
-        ? [{ name: 'Authentication-Results', value: input.authenticationResults }]
-        : [],
+      internetMessageHeaders: [
+        ...(input.authenticationResults ? [{ name: 'Authentication-Results', value: input.authenticationResults }] : []),
+        ...(input.headers ?? []),
+      ],
       receivedDateTime: input.receivedDateTime ?? this.env.clock.now().toISOString(),
       subject: input.subject ?? 'Emulated support email',
       bodyPreview: input.body ?? 'Hello from the Graph emulator',
       body: { contentType: 'text', content: input.body ?? 'Hello from the Graph emulator' },
       from: { emailAddress: { address: input.from ?? 'sender@example.test', name: 'Emulated Sender' } },
+      // Exchange's MIME conversion derives Graph sender from Sender when present,
+      // otherwise from From. Both are message claims, not authenticated author proof.
+      sender: { emailAddress: { address: input.sender ?? input.from ?? 'sender@example.test', name: 'Emulated Sender' } },
       toRecipients: [{ emailAddress: { address: input.to ?? 'support@example.test' } }],
       attachments: [],
     };
@@ -910,6 +917,8 @@ export class MsGraphCore implements EmulatorCore {
       `To: ${message.toRecipients.map((r) => r.emailAddress.address).join(', ')}`,
       `Subject: ${message.subject}`,
       ...message.internetMessageHeaders.map(header => `${header.name}: ${header.value}`),
+      ...(message.sender?.emailAddress.address && message.sender.emailAddress.address !== message.from.emailAddress.address
+        ? [`Sender: ${message.sender.emailAddress.address}`] : []),
       'MIME-Version: 1.0',
       'Content-Type: text/plain; charset=utf-8',
       '',

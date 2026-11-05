@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EmailMessageDetails } from '../../../interfaces/inbound-email.interfaces';
+import { verifiedContactEvidence } from './senderAuthenticationFixtures';
 
 const withAdminTransactionMock = vi.fn();
 const parseEmailReplyBodyMock = vi.fn();
@@ -34,10 +35,7 @@ function buildEmailData(overrides: Partial<EmailMessageDetails> = {}): EmailMess
     headers: {
       'authentication-results': 'mx.huntress.com; spf=pass smtp.mailfrom=huntress.com',
     },
-    senderAuthentication: {
-      provider: 'google', internalAttributionTrusted: false, contactAttributionTrusted: true,
-      reasons: ['trusted_receiver_domain_auth_for_contact_only'],
-    },
+    senderAuthentication: verifiedContactEvidence('google', 'huntress.com'),
     ...overrides,
   };
 }

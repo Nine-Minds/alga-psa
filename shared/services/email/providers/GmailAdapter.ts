@@ -1,7 +1,8 @@
 import axios, { AxiosInstance } from 'axios';
+import { createHash } from 'node:crypto';
 import { BaseEmailAdapter, type AdapterConnectionTestResult } from './base/BaseEmailAdapter';
 import { EmailMessageDetails, EmailProviderConfig } from '../../../interfaces/inbound-email.interfaces';
-import { allowsContactSenderAttribution, allowsInternalSenderAttribution, orderedAuthenticationResults, verifyOriginalMimeDkim, verifyProviderSenderAuthentication } from '../../../lib/email/senderAuthVerification';
+import { contactDkimAuthorization, orderedAuthenticationResults, verifyOriginalMimeDkim } from '../../../lib/email/senderAuthVerification';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
@@ -723,6 +724,8 @@ This indicates a problem with the OAuth token saving process.`;
         providerId: this.config.id,
         tenant: this.config.tenant,
         receivedAt: getHeader('Date') || new Date().toISOString(),
+        sourceSha256: createHash('sha256').update(originalMime).digest('hex'),
+        rawMimeBase64: originalMime.toString('base64'),
         from: {
           email: parsedFrom?.email || fromEmail.trim(),
           name: parsedFrom?.name
@@ -743,26 +746,19 @@ This indicates a problem with the OAuth token saving process.`;
           isInline: att.isInline
         })),
         senderAuthentication: (() => {
-          // Gmail API returns the mailbox's stored RFC 5322 headers. The
-          // receiver assertion is accepted only at index 0 and only when
-          // stamped with Google's documented receiver identifier.
-          const results = verifyProviderSenderAuthentication({
-            provider: 'google',
-            authenticationResults: orderedAuthenticationResults(headers),
-          }, parsedFrom?.email || fromEmail.trim());
+          // Gmail API returns the mailbox's stored RFC 5322 headers without
+          // provenance metadata; keep duplicate receiver claims ordered for
+          // diagnostics but do not use them as authentication evidence.
+          const orderedResults = orderedAuthenticationResults(headers);
           return {
             provider: 'google' as const,
-            // Google's assertion and aligned DKIM establish domain evidence.
-            // Gmail's API does not expose an authenticated per-sender mailbox property.
-            internalAttributionTrusted: false,
-            // Preserve the established receiver-authenticated domain signal for
-            // contact matching only; internal identity still needs mailbox proof.
-            contactAttributionTrusted: allowsContactSenderAttribution(results),
-            mailboxEvidence: 'mailbox_confirmation_required' as const,
+            author: { authorization: 'confirmation_required' as const, provenance: 'receiving_mailbox_only' as const },
+            contact: contactDkimAuthorization(dkim),
             dkim,
+            diagnostics: { authenticationResults: orderedResults },
             reasons: [
               dkim.reason,
-              allowsInternalSenderAttribution(results) ? 'gmail_receiver_domain_auth_pass' : 'gmail_receiver_domain_auth_missing',
+              orderedResults.length ? 'gmail_receiver_results_retained_for_diagnostics_only' : 'gmail_receiver_results_missing',
               'gmail_api_does_not_expose_authenticated_sender_mailbox',
             ],
           };

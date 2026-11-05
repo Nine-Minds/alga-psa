@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createHash } from 'node:crypto';
 import type { EmailMessageDetails } from '../../../interfaces/inbound-email.interfaces';
 import { parseEmailReply } from '../../../lib/email/replyParser';
+import { verifiedContactEvidence, verifiedInternalActorEvidence } from './senderAuthenticationFixtures';
 
 /** Same algorithm as BaseEmailService.logEmailSendResult / notificationLoopDetection.ts. */
 function replyTokenHash(token: string): string {
@@ -67,7 +68,7 @@ function buildEmailData(
     body: { text: 'Hello from client', html: undefined },
     attachments: [],
     headers: { 'authentication-results': 'mx.example; spf=pass smtp.mailfrom=example.com; dmarc=pass header.from=example.com' },
-    senderAuthentication: { provider: 'google', internalAttributionTrusted: true, contactAttributionTrusted: true },
+    senderAuthentication: verifiedInternalActorEvidence('google'),
     ...overrides,
   };
 }
@@ -300,7 +301,7 @@ describe('processInboundEmailInApp', () => {
         body: { text: 'Hello from client', html: undefined },
         attachments: [],
         headers: { 'authentication-results': 'mx.example; spf=pass smtp.mailfrom=example.com' },
-        senderAuthentication: { provider: 'google', internalAttributionTrusted: false, contactAttributionTrusted: true },
+        senderAuthentication: verifiedContactEvidence('google'),
       } as any,
     });
 
@@ -366,7 +367,7 @@ describe('processInboundEmailInApp', () => {
       emailData: buildEmailData({
         from: { email: 'ROBERT@NINEMINDS.COM', name: 'Robert Isaacs' },
         headers: { 'authentication-results': 'mx.nineminds.com; dmarc=pass header.from=nineminds.com' },
-        senderAuthentication: { provider: 'google', internalAttributionTrusted: true, contactAttributionTrusted: true },
+        senderAuthentication: verifiedInternalActorEvidence('google'),
       }),
     });
 
@@ -1369,7 +1370,7 @@ describe('processInboundEmailInApp', () => {
         subject: 'Re: Ticket Updated: TK-PROBE',
         body: { text: 'Hi Jamie, I already called the customer, please close it out.', html: undefined },
         headers: { 'authentication-results': 'mx.jayscomputers.com.au; dmarc=pass header.from=jayscomputers.com.au' },
-        senderAuthentication: { provider: 'google', internalAttributionTrusted: true, contactAttributionTrusted: true },
+        senderAuthentication: verifiedInternalActorEvidence('google'),
       }),
     }, { collectDiagnostics: true });
 
@@ -1431,7 +1432,7 @@ describe('processInboundEmailInApp', () => {
         subject: 'Re: Ticket Assigned: TK-99',
         body: { text: 'Looping in the customer on this — please see the details below.', html: undefined },
         headers: { 'authentication-results': 'mx.jayscomputers.com.au; dmarc=pass header.from=jayscomputers.com.au' },
-        senderAuthentication: { provider: 'google', internalAttributionTrusted: true, contactAttributionTrusted: true },
+        senderAuthentication: verifiedInternalActorEvidence('google'),
       }),
     });
 

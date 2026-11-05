@@ -29,7 +29,7 @@ import { EmailProviderLifecycleService } from '@alga-psa/shared/services/email/E
 import { refreshImapAccessToken } from '@alga-psa/shared/services/email/imapOauthToken';
 import { normalizeInboundMessageIdentity } from '@alga-psa/shared/services/email/inboundEmailIdentity';
 import { createHash } from 'node:crypto';
-import { verifyOriginalMimeDkim } from '@alga-psa/shared/lib/email/senderAuthVerification';
+import { contactDkimAuthorization, verifyOriginalMimeDkim } from '@alga-psa/shared/lib/email/senderAuthVerification';
 
 export class SourceMessageUnavailableError extends Error {
   public readonly reason: string;
@@ -334,7 +334,6 @@ export async function mapParsedMimeToEmailMessageDetails(params: {
   rawMimeBuffer: Buffer;
   parsed: any;
   fallbackMessageId: string;
-  authenticatedSenderEmail?: string | null;
 }): Promise<EmailMessageDetails> {
   const from = params.parsed.from?.value?.[0];
   const to = params.parsed.to?.value || [];
@@ -356,10 +355,9 @@ export async function mapParsedMimeToEmailMessageDetails(params: {
   // logic uses the real sender. Returns null for ordinary direct mail.
   const listRewrite = resolveListRewriteSender(params.parsed);
   const fromEmail = listRewrite ? listRewrite.sender.email : (from?.address || '');
-  const authenticatedSenderEmail = asNonEmptyString(params.authenticatedSenderEmail)?.toLowerCase() ?? null;
-  const providerMailboxMatchesFrom = params.provider === 'microsoft' && Boolean(authenticatedSenderEmail);
   const fromName = listRewrite ? (listRewrite.sender.name || from?.name || undefined) : (from?.name || undefined);
   const resolvedHeaders: Record<string, string> = {};
+  const authenticationResults: string[] = [];
   // Preserve duplicate raw headers in wire order for downstream diagnostics;
   // these values do not establish provider authentication provenance.
   const parsedHeaders = params.parsed.headers;
@@ -373,10 +371,12 @@ export async function mapParsedMimeToEmailMessageDetails(params: {
       }
       if (typeof value === 'string') {
         resolvedHeaders[headerName] = value;
+        if (headerName === 'authentication-results') authenticationResults.push(value);
       } else if (Array.isArray(value)) {
         // Keep repeated fields ordered instead of silently retaining only the
         // last Authentication-Results or Exchange metadata header.
         resolvedHeaders[headerName] = value.filter((item): item is string => typeof item === 'string').join('\n');
+        if (headerName === 'authentication-results') authenticationResults.push(...value.filter((item): item is string => typeof item === 'string'));
       }
     });
   }
@@ -446,12 +446,15 @@ export async function mapParsedMimeToEmailMessageDetails(params: {
     // It is domain evidence only; it never grants a mailbox actor by itself.
     senderAuthentication: {
       provider: params.provider,
-      internalAttributionTrusted: providerMailboxMatchesFrom,
-      contactAttributionTrusted: providerMailboxMatchesFrom,
-      mailboxEvidence: providerMailboxMatchesFrom ? 'provider_sender_match' : 'mailbox_confirmation_required',
-      authenticatedMailbox: providerMailboxMatchesFrom ? authenticatedSenderEmail! : undefined,
+      // Graph sender is derived from the message's Sender/From headers; an OAuth
+      // fetch authenticates the receiving mailbox connection, not the author.
+      // No supported ingestion path currently supplies independently established
+      // mailbox identity, so co-managed actor attribution always uses confirmation.
+      author: { authorization: 'confirmation_required', provenance: 'receiving_mailbox_only' },
+      contact: contactDkimAuthorization(dkim),
       dkim,
-      reasons: [dkim.reason, providerMailboxMatchesFrom ? 'authenticated_graph_sender_property' : 'no_independent_mailbox_assertion'],
+      diagnostics: { authenticationResults },
+      reasons: [dkim.reason, 'provider_does_not_establish_message_author_mailbox'],
     },
   };
 }
@@ -602,7 +605,6 @@ export async function fetchMicrosoftMessageForPointer(job: UnifiedInboundEmailQu
     rawMimeBuffer,
     parsed,
     fallbackMessageId: job.pointer.messageId,
-    authenticatedSenderEmail: await adapter.getAuthenticatedSenderEmail(job.pointer.messageId),
   });
 }
 

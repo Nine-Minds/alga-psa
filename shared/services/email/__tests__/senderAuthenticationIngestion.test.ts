@@ -23,18 +23,30 @@ describe('Microsoft MIME sender-auth ingestion', () => {
       'Authentication-Results: relay.example; dmarc=fail header.from=msp.test',
     ]);
     expect(details.senderAuthentication).toMatchObject({
-      provider: 'microsoft', internalAttributionTrusted: false, contactAttributionTrusted: false,
-      mailboxEvidence: 'mailbox_confirmation_required', dkim: { verified: false },
+      provider: 'microsoft',
+      author: { authorization: 'confirmation_required', provenance: 'receiving_mailbox_only' },
+      contact: { authorization: 'untrusted', provenance: 'missing_or_invalid_dkim' }, dkim: { verified: false },
+      diagnostics: { authenticationResults: [
+        'dmarc=pass header.from=msp.test',
+        'relay.example; dmarc=fail header.from=msp.test',
+      ] },
     });
   });
 
-  it('uses the authenticated Graph sender mailbox even when MIME From represents another sender', async () => {
-    const raw = Buffer.from('From: Agent <agent@msp.test>\r\nTo: support@example.test\r\n\r\nReply');
+  it('does not treat Graph sender metadata or forged Sender/From and Authentication-Results as author proof', async () => {
+    const raw = Buffer.from([
+      'From: Agent <agent@msp.test>', 'Sender: victim@msp.test', 'To: support@example.test',
+      'Authentication-Results: mx.google.com; dmarc=pass header.from=msp.test',
+      'Authentication-Results: outlook.com; dkim=pass header.d=msp.test', '', 'Reply',
+    ].join('\r\n'));
     const parsed = await simpleParser(raw);
-    const matched = await mapParsedMimeToEmailMessageDetails({ provider: 'microsoft', providerId: 'p', tenant: 't', rawMimeBuffer: raw, parsed, fallbackMessageId: 'm1', authenticatedSenderEmail: 'Agent@msp.test' });
-    const mismatch = await mapParsedMimeToEmailMessageDetails({ provider: 'microsoft', providerId: 'p', tenant: 't', rawMimeBuffer: raw, parsed, fallbackMessageId: 'm2', authenticatedSenderEmail: 'attacker@msp.test' });
-    expect(matched.senderAuthentication).toMatchObject({ internalAttributionTrusted: true, authenticatedMailbox: 'agent@msp.test', mailboxEvidence: 'provider_sender_match' });
-    expect(mismatch.senderAuthentication).toMatchObject({ internalAttributionTrusted: true, authenticatedMailbox: 'attacker@msp.test', mailboxEvidence: 'provider_sender_match' });
+    const details = await mapParsedMimeToEmailMessageDetails({ provider: 'microsoft', providerId: 'p', tenant: 't', rawMimeBuffer: raw, parsed, fallbackMessageId: 'm1' });
+    expect(details.from.email).toBe('agent@msp.test');
+    expect(details.senderAuthentication).toMatchObject({
+      author: { authorization: 'confirmation_required' },
+      contact: { authorization: 'untrusted' },
+      reasons: ['no_aligned_signature', 'provider_does_not_establish_message_author_mailbox'],
+    });
   });
 
   it.each([
@@ -51,7 +63,9 @@ describe('Microsoft MIME sender-auth ingestion', () => {
     ]],
   ])('fails closed for %s', async (_case, headers) => {
     const details = await mapMime('microsoft', headers);
-    expect(details.senderAuthentication).toMatchObject({ internalAttributionTrusted: false, contactAttributionTrusted: false });
+    expect(details.senderAuthentication).toMatchObject({
+      author: { authorization: 'confirmation_required' }, contact: { authorization: 'untrusted' },
+    });
   });
 
   it('does not treat IMAP Authentication-Results as verified, but retains an explicit confirmation decision', async () => {
@@ -60,9 +74,9 @@ describe('Microsoft MIME sender-auth ingestion', () => {
       'Authentication-Results: mx.google.com; dmarc=pass header.from=msp.test',
     ]);
     expect(details.senderAuthentication).toMatchObject({
-      provider: 'imap', internalAttributionTrusted: false,
-      mailboxEvidence: 'mailbox_confirmation_required', dkim: { verified: false },
-      reasons: ['no_aligned_signature', 'no_independent_mailbox_assertion'],
+      provider: 'imap', author: { authorization: 'confirmation_required' },
+      contact: { authorization: 'untrusted' }, dkim: { verified: false },
+      reasons: ['no_aligned_signature', 'provider_does_not_establish_message_author_mailbox'],
     });
   });
 });
