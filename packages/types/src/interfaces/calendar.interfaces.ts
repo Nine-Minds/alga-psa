@@ -169,6 +169,15 @@ export interface CalendarEventMapping {
   sync_direction?: 'to_external' | 'from_external';
   alga_last_modified?: string; // ISO date
   external_last_modified?: string; // ISO date
+  /**
+   * On a series master's mapping: the expanded occurrences seen for it, as
+   * `{ <provider occurrence id>: <occurrence start ISO> }`. Microsoft reports a
+   * cancelled occurrence as an `@removed` item carrying nothing but an opaque id
+   * that then 404s on GET, so this is the only way to turn that into an
+   * exception date on the right series. Google needs no index (events.get still
+   * serves a cancelled instance with its `recurringEventId`).
+   */
+  occurrence_index?: Record<string, string> | null;
   created_at: string; // ISO date
   updated_at: string; // ISO date
 }

@@ -130,11 +130,14 @@ export class CalendarWebhookProcessor {
             try {
               // A deleted id may be the series master, a single-occurrence
               // override, or an expanded occurrence of a mapped series; only the
-              // resolver can tell those apart.
+              // resolver can tell those apart, and for an unmapped Google id it
+              // has to ask events.get (a cancelled instance still carries its
+              // series), so it gets this already-connected adapter.
               await this.executeWithRetry(async () => {
                 const result = await this.syncService.handleInboundExternalDelete(change.id, provider.id, {
                   recurringEventId: change.recurringEventId,
-                  originalStart: change.originalStart
+                  originalStart: change.originalStart,
+                  adapter
                 });
                 if (!result.success) {
                   throw new Error(result.error || 'Failed to delete schedule entry');
@@ -291,11 +294,14 @@ export class CalendarWebhookProcessor {
             try {
               // A deleted id may be the series master, a single-occurrence
               // override, or an expanded occurrence of a mapped series; only the
-              // resolver can tell those apart.
+              // resolver can tell those apart, and for an unmapped Google id it
+              // has to ask events.get (a cancelled instance still carries its
+              // series), so it gets this already-connected adapter.
               await this.executeWithRetry(async () => {
                 const result = await this.syncService.handleInboundExternalDelete(change.id, provider.id, {
                   recurringEventId: change.recurringEventId,
-                  originalStart: change.originalStart
+                  originalStart: change.originalStart,
+                  adapter
                 });
                 if (!result.success) {
                   throw new Error(result.error || 'Failed to delete schedule entry');
@@ -461,11 +467,14 @@ export class CalendarWebhookProcessor {
             if (change.changeType === 'deleted') {
               try {
                 // @removed on an occurrence id must become an exception on the
-                // series master, not a delete of the whole series.
+                // series master, not a delete of the whole series. Graph sends
+                // nothing but the opaque id, so the resolver falls back to the
+                // occurrence index recorded when that occurrence was synced.
                 await this.executeWithRetry(async () => {
                   const result = await this.syncService.handleInboundExternalDelete(change.id, provider.id, {
                     recurringEventId: change.recurringEventId,
-                    originalStart: change.originalStart
+                    originalStart: change.originalStart,
+                    adapter
                   });
                   if (!result.success) {
                     throw new Error(result.error || 'Failed to delete schedule entry');

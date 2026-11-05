@@ -71,6 +71,10 @@ function fakeQuery(rows: () => any[], replace: (next: any[]) => void) {
       predicates.push((row) => values.includes(row[column]));
       return builder;
     },
+    whereNotNull: (column: string) => {
+      predicates.push((row) => row[column] !== null && row[column] !== undefined);
+      return builder;
+    },
     first: async () => {
       const [row] = matches();
       return row ? { ...row } : undefined;
@@ -283,6 +287,46 @@ function productionInstances(count = 730): any[] {
   return instances;
 }
 
+const MS_MASTER_ID = 'AAMkAGI2TG93AAA=';
+
+function microsoftMaster(overrides: Record<string, any> = {}) {
+  return {
+    id: MS_MASTER_ID,
+    provider: 'microsoft',
+    title: MASTER_TITLE,
+    description: '',
+    start: { dateTime: '2026-10-01T14:15:00.000Z', timeZone: 'UTC' },
+    end: { dateTime: '2026-10-01T14:45:00.000Z', timeZone: 'UTC' },
+    recurrence: ['RRULE:FREQ=MONTHLY;BYDAY=1TH'],
+    instanceType: 'master',
+    status: 'confirmed',
+    updated: '2026-09-24T18:47:00.000Z',
+    ...overrides,
+  };
+}
+
+/**
+ * Graph occurrence ids are opaque: nothing in them names the master or the slot,
+ * which is why a cancelled Microsoft occurrence can only be resolved from the
+ * index recorded while it was still visible.
+ */
+function microsoftOccurrence(startIso: string, overrides: Record<string, any> = {}) {
+  return {
+    id: `AAMkAGI2TG93occurrence${compactUtc(startIso)}=`,
+    provider: 'microsoft',
+    title: MASTER_TITLE,
+    description: '',
+    start: { dateTime: startIso, timeZone: 'UTC' },
+    end: { dateTime: new Date(new Date(startIso).getTime() + 30 * 60 * 1000).toISOString(), timeZone: 'UTC' },
+    originalStartTime: { dateTime: startIso },
+    recurringEventId: MS_MASTER_ID,
+    instanceType: 'occurrence',
+    status: 'confirmed',
+    updated: '2026-09-24T18:47:00.000Z',
+    ...overrides,
+  };
+}
+
 function registerEvents(events: any[]) {
   for (const event of events) adapterState.events.set(event.id, event);
 }
@@ -437,16 +481,71 @@ describe('CalendarSyncService recurring import', () => {
     expect(adapterState.deleteEventCalls).toEqual([]);
   });
 
-  it('resolves a deleted occurrence from its instance id when the provider sends no hint', async () => {
+  it('asks Google for an unhinted deleted occurrence, which still names its series', async () => {
     const instances = productionInstances(3);
     registerEvents([googleMaster(), ...instances]);
     const service = await newSyncService();
     await service.syncExternalEventToSchedule(instances[0].id, 'provider-1');
+    adapterState.getEventCalls = [];
+    // Google answers events.get for a cancelled instance with status
+    // 'cancelled', recurringEventId and originalStartTime.
+    adapterState.events.set(instances[1].id, { ...instances[1], status: 'cancelled' });
 
     const result = await service.handleInboundExternalDelete(instances[1].id, 'provider-1');
 
     expect(result.success).toBe(true);
+    expect(adapterState.getEventCalls).toContain(instances[1].id);
     expect(masterEntry().recurrence_pattern.exceptions).toHaveLength(1);
+  });
+
+  it('skips an unmapped Google delete the provider no longer serves, adding no exception', async () => {
+    const instances = productionInstances(3);
+    registerEvents([googleMaster(), ...instances]);
+    const service = await newSyncService();
+    await service.syncExternalEventToSchedule(instances[0].id, 'provider-1');
+    // Hard delete: events.get 404s, so nothing proves which series the id was
+    // part of. Guessing from the `_<timestamp>` suffix would except out an
+    // occurrence of whatever series happens to share the id prefix.
+    adapterState.events.delete(instances[1].id);
+
+    const result = await service.handleInboundExternalDelete(instances[1].id, 'provider-1');
+
+    expect(result).toMatchObject({ success: true, skipped: true });
+    expect(masterEntry().recurrence_pattern.exceptions ?? []).toHaveLength(0);
+    expect(db.entries.size).toBe(1);
+    expect(mappings()).toHaveLength(1);
+  });
+
+  it('indexes Microsoft occurrences so an @removed id becomes a master exception', async () => {
+    providerState.provider.provider_type = 'microsoft';
+    const occurrences = [
+      microsoftOccurrence('2026-10-01T14:15:00.000Z'),
+      microsoftOccurrence('2026-11-05T15:15:00.000Z'),
+    ];
+    registerEvents([microsoftMaster(), ...occurrences]);
+    const service = await newSyncService();
+
+    for (const occurrence of occurrences) {
+      expect((await service.syncExternalEventToSchedule(occurrence.id, 'provider-1')).success).toBe(true);
+    }
+
+    expect(db.entries.size).toBe(1);
+    expect(mappings()).toHaveLength(1);
+    expect(Object.keys(mappings()[0].occurrence_index).sort())
+      .toEqual(occurrences.map((occurrence) => occurrence.id).sort());
+
+    // Graph's @removed item carries only the opaque id, and a GET on it 404s.
+    adapterState.events.delete(occurrences[1].id);
+    adapterState.getEventCalls = [];
+    const result = await service.handleInboundExternalDelete(occurrences[1].id, 'provider-1');
+
+    expect(result.success).toBe(true);
+    expect(adapterState.getEventCalls).toEqual([]);
+    expect(db.entries.size).toBe(1);
+    expect(masterEntry().is_recurring).toBe(true);
+    expect(masterEntry().recurrence_pattern.exceptions.map((date: Date) => new Date(date).toISOString()))
+      .toEqual(['2026-11-05T00:00:00.000Z']);
+    expect(adapterState.deleteEventCalls).toEqual([]);
   });
 
   it('deletes the master and its overrides on a master delete, never calling the provider', async () => {

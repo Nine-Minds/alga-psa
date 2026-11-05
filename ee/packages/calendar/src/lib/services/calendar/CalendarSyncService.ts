@@ -113,6 +113,25 @@ function utcMidnight(value: Date): Date {
   return date;
 }
 
+/** `calendar_event_mappings.occurrence_index`, however the driver hands it over. */
+function parseOccurrenceIndex(value: unknown): Record<string, string> {
+  const parsed = typeof value === 'string' ? safeJsonParse(value) : value;
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+  return Object.fromEntries(
+    Object.entries(parsed as Record<string, unknown>)
+      .filter(([, slot]) => typeof slot === 'string')
+      .map(([id, slot]) => [id, slot as string])
+  );
+}
+
+function safeJsonParse(value: string): unknown {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
 export class CalendarSyncService {
   private providerService: CalendarProviderService;
   /**
@@ -124,6 +143,8 @@ export class CalendarSyncService {
   /** Mirrors the Microsoft delta window; never materialize a series unbounded. */
   private static readonly FALLBACK_WINDOW_PAST_MS = 90 * 24 * 60 * 60 * 1000;
   private static readonly FALLBACK_WINDOW_FUTURE_MS = 365 * 24 * 60 * 60 * 1000;
+  /** Occurrence ids kept per series master for delete resolution (see below). */
+  private static readonly OCCURRENCE_INDEX_LIMIT = 600;
 
   constructor() {
     this.providerService = new CalendarProviderService();
@@ -878,6 +899,10 @@ export class CalendarSyncService {
       || this.instanceDiffersFromMaster(instance, masterEntry);
 
     if (!isException) {
+      // No schedule entry for a plain occurrence — but its id is recorded, so a
+      // later provider delete of just that occurrence can be applied to this
+      // master instead of being dropped as an unknown id.
+      await this.recordOccurrenceForDeleteResolution(knex, tenant, masterMapping, instance, occurrenceStart);
       return {
         handled: true,
         result: {
@@ -925,13 +950,124 @@ export class CalendarSyncService {
 
   /** The occurrence slot an instance was generated for, before any move. */
   private occurrenceStartOf(instance: ExternalCalendarEvent): Date {
+    return this.resolvedOccurrenceStart(instance) ?? new Date();
+  }
+
+  /**
+   * Same slot, but null when nothing in the payload resolves one. A delete must
+   * never guess: excepting out "now" would hide an occurrence the user kept.
+   */
+  private resolvedOccurrenceStart(instance: ExternalCalendarEvent): Date | null {
     const original = instance.originalStartTime?.dateTime
       || instance.originalStartTime?.date
       || instance.start?.dateTime
       || instance.start?.date;
-    const parsed = original ? new Date(original) : new Date(NaN);
-    if (!isNaN(parsed.getTime())) return parsed;
-    return instanceIdOccurrenceStart(instance.id) ?? new Date();
+    const parsed = original ? new Date(original) : null;
+    if (parsed && !isNaN(parsed.getTime())) return parsed;
+    return instanceIdOccurrenceStart(instance.id);
+  }
+
+  /**
+   * Record `occurrence id -> slot` on the series master's mapping row.
+   *
+   * Only Microsoft needs it: Graph reports a cancelled occurrence as an
+   * `@removed` item holding nothing but an opaque id, and a GET on that id
+   * answers 404, so the link to the master has to exist before the occurrence
+   * disappears. Google keeps serving a cancelled instance with its
+   * `recurringEventId`, which is cheaper than an index. The index is kept on the
+   * master's row (not as one row per occurrence, which the
+   * (tenant, schedule_entry_id, calendar_provider_id) unique index forbids) so
+   * deleting the master takes its index with it.
+   */
+  private async recordOccurrenceForDeleteResolution(
+    knex: any,
+    tenant: string,
+    masterMapping: CalendarEventMapping,
+    instance: ExternalCalendarEvent,
+    occurrenceStart: Date
+  ): Promise<void> {
+    if (instance.provider !== 'microsoft') return;
+    if (!occurrenceStart || isNaN(occurrenceStart.getTime())) return;
+
+    const row = await tenantDb(knex, tenant).table('calendar_event_mappings')
+      .where('id', masterMapping.id)
+      .first();
+    if (!row) return;
+
+    const index = parseOccurrenceIndex(row.occurrence_index);
+    const slot = occurrenceStart.toISOString();
+    if (index[instance.id] === slot) return;
+
+    index[instance.id] = slot;
+    // Bounded: Graph's delta window is 90 days back / 365 forward, so the newest
+    // slots are the only ones a delete can still arrive for.
+    const entries = Object.entries(index)
+      .sort(([, left], [, right]) => new Date(right).getTime() - new Date(left).getTime())
+      .slice(0, CalendarSyncService.OCCURRENCE_INDEX_LIMIT);
+
+    await tenantDb(knex, tenant).table('calendar_event_mappings')
+      .where('id', masterMapping.id)
+      .update({
+        occurrence_index: Object.fromEntries(entries),
+        updated_at: new Date().toISOString(),
+      });
+  }
+
+  /** Find the series master that recorded this occurrence id, if any. */
+  private async findIndexedOccurrence(
+    knex: any,
+    tenant: string,
+    providerId: string,
+    occurrenceId: string
+  ): Promise<{ masterExternalId: string; occurrenceStart: Date } | null> {
+    const rows = await tenantDb(knex, tenant).table('calendar_event_mappings')
+      .where('calendar_provider_id', providerId)
+      .whereNotNull('occurrence_index')
+      .select('external_event_id', 'occurrence_index');
+
+    for (const row of rows) {
+      const slot = parseOccurrenceIndex(row.occurrence_index)[occurrenceId];
+      if (!slot) continue;
+      const occurrenceStart = new Date(slot);
+      if (isNaN(occurrenceStart.getTime())) continue;
+      return { masterExternalId: row.external_event_id, occurrenceStart };
+    }
+    return null;
+  }
+
+  /**
+   * Ask the provider what a deleted id was. Google still serves a cancelled
+   * instance, complete with `recurringEventId` and `originalStartTime`, which is
+   * how an unmapped Google occurrence delete reaches its master. Null means
+   * "nothing to do": the id is gone (404) or is not part of a series.
+   */
+  private async probeDeletedOccurrence(
+    tenant: string,
+    providerId: string,
+    externalEventId: string,
+    suppliedAdapter?: BaseCalendarAdapter
+  ): Promise<{ masterExternalId: string; occurrenceStart: Date | null } | null> {
+    let adapter = suppliedAdapter;
+    if (!adapter) {
+      const provider = await this.providerService.getProvider(providerId, tenant);
+      if (!provider || this.providerAuthorizationError(provider)) return null;
+      adapter = await this.createAdapter(provider);
+      await adapter.connect();
+    }
+
+    let event: ExternalCalendarEvent;
+    try {
+      event = await adapter.getEvent(externalEventId);
+    } catch (error: any) {
+      if (isProviderEventGone(error)) return null;
+      throw error;
+    }
+
+    if (!event.recurringEventId || event.recurringEventId === event.id) return null;
+    return {
+      masterExternalId: event.recurringEventId,
+      occurrenceStart: this.resolvedOccurrenceStart(event),
+    };
   }
 
   /** An event Alga is allowed to import: opted in with @alga, or Alga's own. */
@@ -1090,7 +1226,7 @@ export class CalendarSyncService {
   async handleInboundExternalDelete(
     externalEventId: string,
     providerId: string,
-    hints?: { recurringEventId?: string; originalStart?: string }
+    hints?: { recurringEventId?: string; originalStart?: string; adapter?: BaseCalendarAdapter }
   ): Promise<{ success: boolean; error?: string; skipped?: boolean; reason?: string }> {
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) return { success: false, error: 'Tenant context is required' };
@@ -1109,9 +1245,32 @@ export class CalendarSyncService {
     }
 
     // No mapping for this exact id: it is an expanded occurrence of a series
-    // whose master Alga stores. Only the master may be keyed by a mapping, so
-    // the base id check below cannot mistake a split master for an instance.
-    const masterExternalId = hints?.recurringEventId ?? instanceIdMasterCandidate(externalEventId);
+    // whose master Alga stores. Resolve the master and the cancelled slot, most
+    // specific source first — and never from the `_<timestamp>` id suffix, which
+    // a split `<base>_R<timestamp>` master shares with real instances.
+    let masterExternalId = hints?.recurringEventId ?? null;
+    let occurrenceStart = hints?.originalStart ? new Date(hints.originalStart) : null;
+
+    if (!masterExternalId) {
+      // Microsoft: the occurrence index recorded while the occurrence existed.
+      const indexed = await this.findIndexedOccurrence(knex, tenant, providerId, externalEventId);
+      if (indexed) {
+        masterExternalId = indexed.masterExternalId;
+        occurrenceStart = occurrenceStart ?? indexed.occurrenceStart;
+      }
+    }
+
+    if (!masterExternalId) {
+      // Google: events.get still answers for a cancelled instance. A 404 here
+      // with no mapping is genuinely nothing to do — it must not become an
+      // exception on some series guessed from the id.
+      const probed = await this.probeDeletedOccurrence(tenant, providerId, externalEventId, hints?.adapter);
+      if (probed) {
+        masterExternalId = probed.masterExternalId;
+        occurrenceStart = occurrenceStart ?? probed.occurrenceStart;
+      }
+    }
+
     if (!masterExternalId) {
       return { success: true, skipped: true, reason: 'No mapping for deleted external event' };
     }
@@ -1126,9 +1285,6 @@ export class CalendarSyncService {
       return { success: true, skipped: true, reason: 'Series master entry no longer exists' };
     }
 
-    const occurrenceStart = hints?.originalStart
-      ? new Date(hints.originalStart)
-      : instanceIdOccurrenceStart(externalEventId);
     if (!occurrenceStart || isNaN(occurrenceStart.getTime())) {
       return { success: true, skipped: true, reason: 'Deleted occurrence has no resolvable date' };
     }
@@ -1562,6 +1718,7 @@ export class CalendarSyncService {
       sync_direction: row.sync_direction,
       alga_last_modified: row.alga_last_modified,
       external_last_modified: row.external_last_modified,
+      occurrence_index: row.occurrence_index ? parseOccurrenceIndex(row.occurrence_index) : null,
       created_at: row.created_at,
       updated_at: row.updated_at
     };
