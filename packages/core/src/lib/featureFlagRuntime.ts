@@ -106,7 +106,8 @@ export interface FeatureFlagsOptions {
 export class FeatureFlags {
   private client: PostHog | null = null;
   private clientInitialized = false;
-  private readonly flagCache = new Map<string, { value: boolean | string; timestamp: number }>();
+  private readonly flagCache = new Map<string, { value: FeatureFlagEvaluation | string; timestamp: number }>();
+  private readonly booleanEvaluations = new Map<string, Promise<FeatureFlagEvaluation>>();
   private readonly manualOverrides = new Map<string, boolean | string>();
   private readonly cacheTtlMs: number;
   private readonly anonymizeUserIds: boolean;
@@ -142,10 +143,28 @@ export class FeatureFlags {
 
     const cacheKey = this.getCacheKey(flagKey, context);
     const cached = this.getCachedValue(cacheKey);
-    if (cached !== null && typeof cached === 'boolean') {
-      return { status: 'evaluated', enabled: cached };
+    if (cached !== null && typeof cached !== 'string') {
+      return cached;
     }
 
+    const pending = this.booleanEvaluations.get(cacheKey);
+    if (pending) return pending;
+
+    // Keep availability alongside the value: an outage must neither become an
+    // evaluated false nor trigger another slow remote call on every page request.
+    // Concurrent bootstrap/admission callers share the same evaluation, and the
+    // normal cache TTL bounds how long recovery can take to become visible.
+    const evaluation = this.evaluateUncached(flagKey, context).then((result) => {
+      if (this.booleanEvaluations.get(cacheKey) === evaluation) this.setCachedValue(cacheKey, result);
+      return result;
+    }).finally(() => {
+      if (this.booleanEvaluations.get(cacheKey) === evaluation) this.booleanEvaluations.delete(cacheKey);
+    });
+    this.booleanEvaluations.set(cacheKey, evaluation);
+    return evaluation;
+  }
+
+  private async evaluateUncached(flagKey: string, context: FeatureFlagContext): Promise<FeatureFlagEvaluation> {
     try {
       const client = await this.resolveClient();
       if (!client) return { status: 'unavailable', enabled: this.getDefaultValue(flagKey) };
@@ -161,7 +180,6 @@ export class FeatureFlags {
       }
 
       const flagValue = Boolean(enabled);
-      this.setCachedValue(cacheKey, flagValue);
 
       try {
         await this.options.onBooleanEvaluation?.({ flagKey, flagValue, context });
@@ -259,6 +277,7 @@ export class FeatureFlags {
 
   clearCache(): void {
     this.flagCache.clear();
+    this.booleanEvaluations.clear();
   }
 
   private async resolveClient(): Promise<PostHog | null> {
@@ -358,7 +377,7 @@ export class FeatureFlags {
     return properties;
   }
 
-  private getCachedValue(cacheKey: string): boolean | string | null {
+  private getCachedValue(cacheKey: string): FeatureFlagEvaluation | string | null {
     const cached = this.flagCache.get(cacheKey);
     if (!cached) {
       return null;
@@ -372,7 +391,7 @@ export class FeatureFlags {
     return cached.value;
   }
 
-  private setCachedValue(cacheKey: string, value: boolean | string): void {
+  private setCachedValue(cacheKey: string, value: FeatureFlagEvaluation | string): void {
     this.flagCache.set(cacheKey, {
       value,
       timestamp: Date.now(),
