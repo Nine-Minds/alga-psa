@@ -22,6 +22,8 @@ import { buildNoteCreatedPayload } from '@alga-psa/workflow-streams';
 import { assertMspPermission } from '../../lib/authHelpers';
 import {
   actionError,
+  isActionMessageError,
+  isActionPermissionError,
   permissionError,
   type ActionMessageError,
   type ActionPermissionError,
@@ -36,6 +38,9 @@ export interface ContactNoteContent {
 type ContactNoteActionError = ActionMessageError | ActionPermissionError;
 
 function contactNoteActionErrorFrom(error: unknown): ContactNoteActionError | null {
+  if (isActionPermissionError(error) || isActionMessageError(error)) {
+    return error as ContactNoteActionError;
+  }
   if (!(error instanceof Error)) {
     return null;
   }
@@ -130,6 +135,7 @@ export const getContactNoteContent = withAuth(async (
 
     // Get the block content
     const blockContent = await getBlockContent(contact.notes_document_id);
+    if (isActionPermissionError(blockContent) || isActionMessageError(blockContent)) return blockContent as ContactNoteActionError;
 
     let parsedBlockData: unknown | null = null;
     if (blockContent?.block_data) {
@@ -191,23 +197,26 @@ export const saveContactNote = withAuth(async (
 
     if (contact.notes_document_id) {
       // Update existing document
-      await updateBlockContent(contact.notes_document_id, {
+      const updateResult = await updateBlockContent(contact.notes_document_id, {
         block_data: blockData,
         user_id: user.user_id,
       });
+      if (isActionPermissionError(updateResult) || isActionMessageError(updateResult)) return updateResult as ContactNoteActionError;
 
       await publishNoteDocumentUpdated(tenant, contact.notes_document_id, user.user_id);
 
       return { document_id: contact.notes_document_id };
     } else {
       // Create new document and link to contact
-      const { document_id } = await createBlockDocument({
+      const createResult = await createBlockDocument({
         document_name: `${contact.full_name} Notes`,
         user_id: user.user_id,
         block_data: blockData,
         entityId: contactId,
         entityType: 'contact',
       });
+      if (isActionPermissionError(createResult) || isActionMessageError(createResult)) return createResult as ContactNoteActionError;
+      const { document_id } = createResult;
 
       // Update contact with notes_document_id
       await tenantDb(knex, tenant).table('contacts')

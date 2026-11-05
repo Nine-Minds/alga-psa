@@ -90,10 +90,14 @@ function DocumentViewerEditor({
   const handleSave = async () => {
     try {
       setIsSaving(true);
-      await updateBlockContent(documentId, {
+      const updateResult = await updateBlockContent(documentId, {
         block_data: JSON.stringify(currentContent),
         user_id: currentUser.user_id
       });
+      if (isReturnedActionError(updateResult)) {
+        handleError(updateResult, getErrorMessage(updateResult));
+        return;
+      }
       setHasContentChanged(false);
       setIsEditMode(false);
       toast.success(t('drawer.saveDocumentSuccess', { defaultValue: 'Document saved successfully' }));
@@ -548,6 +552,9 @@ export function ActivityDetailViewerDrawer({
           try {
             // Load the document content
             const content = await ctx.getBlockContent(documentId);
+            if (isReturnedActionError(content)) {
+              throw new Error(getErrorMessage(content));
+            }
             let parsedContent: PartialBlock[] = [{
               type: "paragraph",
               props: {
@@ -750,6 +757,10 @@ export function ActivityDetailViewerDrawer({
                     try {
                       setIsLoading(true);
                       const documentContent = await ctx.getBlockContent(documentId);
+                      if (isReturnedActionError(documentContent)) {
+                        setError(getErrorMessage(documentContent));
+                        return;
+                      }
                       let parsedContent: PartialBlock[] = [{
                         type: "paragraph",
                         props: {
