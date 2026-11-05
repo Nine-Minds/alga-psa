@@ -537,8 +537,15 @@ export function registrySanity(families: readonly EntryPointFamily[], files: Sou
 // ---------------------------------------------------------------------------
 
 const repoFiles = scanRepo();
-/** Walking the worker and capability import graphs parses ~1,100 repo files; that is not a per-unit workload. */
-const IMPORT_GRAPH_WALK_TIMEOUT_MS = 120_000;
+/**
+ * Walking the worker and capability import graphs parses ~1,100 repo files; that is not a per-unit workload. The
+ * cold walk timed out at 120 s on a unit shard sharing four forks with v8 coverage (run 41148754710, shard 1), and
+ * even the warm retry took 39 s, so the walk reads nothing from disk that scanRepo already holds and the ceiling
+ * sits well above the slowest measured run.
+ */
+const IMPORT_GRAPH_WALK_TIMEOUT_MS = 300_000;
+const scannedSource = new Map(repoFiles.map((f) => [join(REPO, f.path), f.source]));
+const readScannedSource = (file: string) => scannedSource.get(file);
 const workerEntries = repoFiles
   .map((f) => f.path)
   .filter((p) => WORKER_ENTRY_GLOBS.some((g) => globToRegExp(g).test(p)));
@@ -573,7 +580,7 @@ describe('capability gate coverage (AST) — branch is green', () => {
     for (const e of ['ee/temporal-workflows/src/worker.ts', 'services/email-service/src/index.ts', 'services/workflow-worker/src/index.ts']) {
       expect(workerEntries).toContain(e);
     }
-    expect(ruleD(workerEntries)).toEqual([]);
+    expect(ruleD(workerEntries, readScannedSource)).toEqual([]);
   }, IMPORT_GRAPH_WALK_TIMEOUT_MS);
 
   it('Rule E: no production file imports the capability test hatch; the pure entry exports none', () => {
@@ -585,7 +592,7 @@ describe('capability gate coverage (AST) — branch is green', () => {
   });
 
   it('Rule D baseline for the Temporal worker has no stale entries', () => {
-    const reached = new Set([...closure('ee/temporal-workflows/src/worker.ts').bare].filter(isForbiddenForWorkers));
+    const reached = new Set([...closure('ee/temporal-workflows/src/worker.ts', readScannedSource).bare].filter(isForbiddenForWorkers));
     for (const spec of Object.keys(TEMPORAL_PREEXISTING_FORBIDDEN)) expect(reached.has(spec), spec).toBe(true);
   }, IMPORT_GRAPH_WALK_TIMEOUT_MS);
 
