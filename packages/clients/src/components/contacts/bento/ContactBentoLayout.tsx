@@ -48,6 +48,7 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import { formatCurrencyWithSymbol } from '@alga-psa/core/formatters';
 
 type PortalPermissions = {
   canInvite: boolean;
@@ -125,10 +126,7 @@ function centsToMoney(value: string | number | null, currencyCode?: string | nul
   if (value == null) return '—';
   const amount = typeof value === 'number' ? value : Number(value);
   if (Number.isNaN(amount)) return '—';
-  return new Intl.NumberFormat(undefined, {
-    style: 'currency',
-    currency: currencyCode || 'USD',
-  }).format(amount / 100);
+  return formatCurrencyWithSymbol(amount / 100, undefined, currencyCode || 'USD');
 }
 
 function statusChipClass(isPositive: boolean) {
