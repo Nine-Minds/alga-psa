@@ -25,6 +25,38 @@ async function createSourceFixture(db: ReturnType<typeof knex>, customize?: (ids
   return createInvoiceTicketSourceFixture(db, { tenant: state.tenant, userId: state.user.user_id }, customize);
 }
 
+it('aborts hour block invoice linkage when a covered entry was reversed after charge calculation', async () => {
+  const db = await createTestDbConnection();
+  try {
+    state.user = await db('users as u')
+      .join('user_roles as ur', function () { this.on('ur.user_id', 'u.user_id').andOn('ur.tenant', 'u.tenant'); })
+      .join('roles as r', function () { this.on('r.role_id', 'ur.role_id').andOn('r.tenant', 'ur.tenant'); })
+      .where({ 'u.user_type': 'internal', 'r.role_name': 'Admin', 'r.msp': true })
+      .select('u.*').orderBy('u.user_id').first();
+    if (!state.user) throw new Error('Migrated test database must seed an internal fixture user');
+    state.tenant = state.user.tenant;
+    await createSourceFixture(db);
+    const source = await db('time_entries').where({ tenant: state.tenant, approval_status: 'APPROVED', invoiced: false }).first();
+    expect(source).toBeTruthy();
+
+    // Charge calculation has already selected this approved entry. A concurrent
+    // reversal commits before the invoice transaction tries to claim it.
+    await db('time_entries').where({ tenant: state.tenant, entry_id: source.entry_id }).update({ approval_status: 'CHANGES_REQUESTED' });
+    const { linkAndMarkSourceBillingRecord } = await import('@alga-psa/billing/services/invoiceService');
+    await expect(db.transaction((tx) => linkAndMarkSourceBillingRecord({
+      tx,
+      tenant: state.tenant,
+      invoiceId: randomUUID(),
+      invoiceItemId: randomUUID(),
+      charge: { type: 'hour_block', coveredEntryIds: [source.entry_id] } as any,
+      linkedAt: new Date().toISOString(),
+    }))).rejects.toThrow(/no longer approved/);
+    expect(await db('time_entries').where({ tenant: state.tenant, entry_id: source.entry_id }).first())
+      .toMatchObject({ approval_status: 'CHANGES_REQUESTED', invoiced: false });
+    expect(await db('invoice_time_entries').where({ tenant: state.tenant, entry_id: source.entry_id })).toHaveLength(0);
+  } finally { await db.destroy(); }
+}, 120000);
+
 it('renders saved transformed detail and primary tables through preview and PDF', async () => {
   fs.mkdirSync(evidenceDir, { recursive: true });
   const db = await createTestDbConnection();

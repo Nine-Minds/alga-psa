@@ -119,7 +119,7 @@ describe('TimeSheetService.search (real Postgres)', () => {
     expect(rows.every((r) => r.user_name === 'Alice Zebra')).toBe(true);
 
     const full = await serviceFor(f.tenantId).search(parse({ query: 'bob quo', fields: 'user_name' }), ctx);
-    expect(full.map((r) => r.id)).toEqual([f.bobDraft]);
+    expect(full).toEqual([]); // A caller-supplied query cannot escape the caller's sheet scope.
   });
 
   it('returns [] when nothing matches', async () => {
@@ -137,10 +137,10 @@ describe('TimeSheetService.search (real Postgres)', () => {
     expect(approved.map((r) => r.id)).toEqual([f.aliceApproved]);
 
     const drafts = await service.search(parse({ query: ' ', approval_statuses: 'DRAFT' }), ctx);
-    expect(drafts.map((r) => r.id).sort()).toEqual([f.aliceDraft, f.bobDraft].sort());
+    expect(drafts.map((r) => r.id)).toEqual([f.aliceDraft]);
 
     const byUser = await service.search(parse({ query: ' ', user_ids: f.bob }), ctx);
-    expect(byUser.map((r) => r.id)).toEqual([f.bobDraft]);
+    expect(byUser).toEqual([]);
 
     const withDates = await service.search(parse({ query: 'zebra', date_from: '2026-01-01', date_to: '2026-01-31' }), ctx);
     expect(withDates).toHaveLength(2);
@@ -159,12 +159,12 @@ describe('TimeSheetService.search (real Postgres)', () => {
 
     for (const include_entries of ['false', 'true']) {
       const rows = await service.search(parse({ query: ' ', include_entries }), ctx);
-      expect(rows).toHaveLength(3);
+      expect(rows).toHaveLength(2);
       for (const row of JSON.parse(JSON.stringify(rows))) {
         // strict(): an undocumented extra column in the payload fails, as does a missing documented one
         expect(() => timeSheetSearchRowSchema.strict().parse(row)).not.toThrow();
         expect(Object.keys(row).sort()).toEqual(
-          ['tenant', 'id', 'user_id', 'period_id', 'approval_status', 'submitted_at', 'approved_at', 'approved_by', 'notes', 'user_name',
+          ['tenant', 'id', 'user_id', 'period_id', 'approval_status', 'submitted_at', 'approved_at', 'approved_by', 'reversal_reason', 'reversed_at', 'reversed_by', 'notes', 'user_name',
             ...(include_entries === 'true' ? ['time_entries'] : [])].sort(),
         );
       }

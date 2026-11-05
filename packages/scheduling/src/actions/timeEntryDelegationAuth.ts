@@ -9,6 +9,7 @@ import {
   BundleAuthorizationKernelProvider,
   RequestLocalAuthorizationCache,
   createAuthorizationKernel,
+  isSelfApprovalBlocked,
   type AuthorizationEvaluationInput,
   type AuthorizationSubject,
 } from '@alga-psa/authorization/kernel';
@@ -165,7 +166,31 @@ export async function assertCanApproveSubject(
   };
 
   const approvalKernel = createAuthorizationKernel({
-    builtinProvider: new BuiltinAuthorizationKernelProvider(),
+    builtinProvider: new BuiltinAuthorizationKernelProvider({
+      mutationGuards: [
+        (input: AuthorizationEvaluationInput) => {
+          // Time sheets never permit self-approval, including sole-approver cases.
+          if (isSelfApprovalBlocked(input)) {
+            return {
+              allowed: false,
+              reasons: [
+                {
+                  stage: 'mutation' as const,
+                  sourceType: 'builtin' as const,
+                  code: 'scheduling_not_self_approver_denied',
+                  message: 'Approvers cannot approve their own time submissions.',
+                },
+              ],
+            };
+          }
+
+          return {
+            allowed: true,
+            reasons: [],
+          };
+        },
+      ],
+    }),
     bundleProvider: new BundleAuthorizationKernelProvider({
       resolveRules: async (input) =>
         resolveBundleRulesOrThrow(db, input, 'Permission denied: Cannot approve time submissions'),

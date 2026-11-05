@@ -49,6 +49,10 @@
       "import": "./src/lib/calendarAccess.ts",
       "types": "./src/lib/calendarAccess.ts"
     },
+    "./lib/timeSheetApprovalTransition": {
+      "import": "./src/lib/timeSheetApprovalTransition.ts",
+      "types": "./src/lib/timeSheetApprovalTransition.ts"
+    },
     "./lib/timeEntryLauncher": {
       "import": "./src/lib/timeEntryLauncher.tsx",
       "types": "./src/lib/timeEntryLauncher.tsx"

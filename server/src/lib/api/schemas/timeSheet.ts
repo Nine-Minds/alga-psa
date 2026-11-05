@@ -50,9 +50,8 @@ export const createTimeSheetSchema = z.object({
 
 // Update time sheet schema
 export const updateTimeSheetSchema = z.object({
-  notes: z.string().optional(),
-  approval_status: approvalStatusSchema.optional()
-});
+  notes: z.string().optional()
+}).strict();
 
 // Time sheet filter schema
 export const timeSheetFilterSchema = baseFilterSchema.extend({
@@ -88,6 +87,9 @@ export const timeSheetResponseSchema = z.object({
   submitted_at: z.string().datetime().nullable(),
   approved_at: z.string().datetime().nullable(),
   approved_by: uuidSchema.nullable(),
+  reversal_reason: z.string().nullable(),
+  reversed_at: z.string().datetime().nullable(),
+  reversed_by: uuidSchema.nullable(),
   notes: z.string().nullable(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
@@ -260,6 +262,10 @@ export const reverseApprovalSchema = z.object({
   reversal_reason: z.string().min(1, 'Reversal reason is required')
 });
 
+export const rejectTimeSheetSchema = z.object({
+  notes: z.string().min(1, 'Rejection notes are required')
+}).strict();
+
 // Time sheet statistics
 export const timeSheetStatsResponseSchema = z.object({
   total_time_sheets: z.number(),
@@ -343,6 +349,9 @@ export const timeSheetSearchRowSchema = z.object({
   submitted_at: z.string().datetime().nullable(),
   approved_at: z.string().datetime().nullable(),
   approved_by: uuidSchema.nullable(),
+  reversal_reason: z.string().nullable(),
+  reversed_at: z.string().datetime().nullable(),
+  reversed_by: uuidSchema.nullable(),
   notes: z.string().nullable(),
   user_name: z.string(),
   time_entries: z.array(timeSheetEntryRowSchema).optional(),

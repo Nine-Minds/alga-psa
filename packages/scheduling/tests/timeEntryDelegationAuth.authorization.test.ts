@@ -41,6 +41,12 @@ vi.mock('@alga-psa/authorization/bundles/service', () => ({
   resolveBundleNarrowingRulesForEvaluation: (...args: unknown[]) => resolveBundleRulesMock(...args),
 }));
 
+// The shared self-approval predicate resolves "who holds the permission" through
+// @alga-psa/authorization's own RBAC copy, so point that copy at the same fixture.
+vi.mock('@alga-psa/authorization/rbac', () => ({
+  hasPermission: (...args: unknown[]) => hasPermissionMock(...args),
+}));
+
 vi.mock('@alga-psa/authorization/kernel', () => {
   class BuiltinAuthorizationKernelProvider {
     relationshipRules?: Array<{ template: string }>;
@@ -61,6 +67,15 @@ vi.mock('@alga-psa/authorization/kernel', () => {
   }
 
   class RequestLocalAuthorizationCache {}
+
+  // Mirrors packages/authorization/src/kernel/selfApproval.ts so the mocked kernel
+  // exercises the same shared decision the production provider uses.
+  const isSelfApprovalBlocked = (input: any) => {
+    if (input.mutation?.kind !== 'approve') return false;
+    if (input.mutation.allowSelfApproval === true) return false;
+    const ownerUserId = input.record?.ownerUserId;
+    return typeof ownerUserId === 'string' && ownerUserId === input.subject.userId;
+  };
 
   const createAuthorizationKernel = (config: {
     builtinProvider?: BuiltinAuthorizationKernelProvider;
@@ -141,6 +156,7 @@ vi.mock('@alga-psa/authorization/kernel', () => {
     BundleAuthorizationKernelProvider,
     RequestLocalAuthorizationCache,
     createAuthorizationKernel,
+    isSelfApprovalBlocked,
   };
 });
 
@@ -156,7 +172,7 @@ type TestUser = {
   clientId?: string | null;
 };
 
-function buildDb(managedIds: string[]) {
+function buildDb(managedIds: string[], tenantUserIds: string[] = []) {
   return ((table: string) => {
     if (table === 'teams') {
       return {
@@ -167,10 +183,23 @@ function buildDb(managedIds: string[]) {
     }
 
     if (table === 'users') {
-      return {
-        where: vi.fn().mockReturnThis(),
-        select: vi.fn(async () => []),
+      // Tenant approver candidates for the sole-approver check. `.whereNot('user_id', ...)`
+      // records the subject so the mock mirrors the real query's exclusion.
+      let excludedUserId: string | undefined;
+      const builder = {
+        where: vi.fn(() => builder),
+        andWhere: vi.fn(() => builder),
+        whereNot: vi.fn((_column: string, value: string) => {
+          excludedUserId = value;
+          return builder;
+        }),
+        select: vi.fn(async () =>
+          tenantUserIds
+            .filter((user_id) => user_id !== excludedUserId)
+            .map((user_id) => ({ user_id, user_type: 'internal' as const }))
+        ),
       };
+      return builder;
     }
 
     return {
@@ -265,18 +294,32 @@ describe('time authorization delegation and approval contracts', () => {
     );
   });
 
-  it('T019: self-approval is allowed by default and denied only by configured not-self-approver bundle rules', async () => {
+  it('T019: self-approval is denied for multiple and sole approvers, including with not-self-approver bundle rules', async () => {
     const actor: TestUser = { user_id: 'u-1', user_type: 'internal' };
+    const tenantUsers = ['u-1', 'u-2'];
 
-    hasPermissionMock.mockImplementation(async (_user: unknown, resource: string, action: string) => {
-      if (resource !== 'time_sheet') return false;
-      if (action === 'approve') return true;
-      if (action === 'read_all') return true;
-      return false;
+    const grantTo = (holders: Record<string, string[]>) =>
+      hasPermissionMock.mockImplementation(async (user: any, resource: string, action: string) => {
+        if (resource !== 'time_sheet') return false;
+        return (holders[user?.user_id] ?? []).includes(action);
+      });
+
+    // Self-approval is denied when other tenant approvers exist.
+    grantTo({
+      'u-1': ['approve', 'read_all'],
+      'u-2': ['approve', 'read_all'],
     });
+    await expect(assertCanApproveSubject(actor as any, 'tenant-1', 'u-1', buildDb([], tenantUsers))).rejects.toThrow(
+      'Permission denied: Cannot approve your own time submissions'
+    );
 
-    await expect(assertCanApproveSubject(actor as any, 'tenant-1', 'u-1', buildDb([]))).resolves.toBe('self');
+    // Being the sole tenant approver does not bypass the time-sheet guard.
+    grantTo({ 'u-1': ['approve', 'read_all'] });
+    await expect(assertCanApproveSubject(actor as any, 'tenant-1', 'u-1', buildDb([], tenantUsers))).rejects.toThrow(
+      'Permission denied: Cannot approve your own time submissions'
+    );
 
+    // A configured not-self-approver bundle rule denies even the sole approver.
     resolveBundleRulesMock.mockResolvedValueOnce([
       {
         resource: 'time_entry',
@@ -285,11 +328,12 @@ describe('time authorization delegation and approval contracts', () => {
       },
     ]);
 
-    await expect(assertCanApproveSubject(actor as any, 'tenant-1', 'u-1', buildDb([]))).rejects.toThrow(
+    await expect(assertCanApproveSubject(actor as any, 'tenant-1', 'u-1', buildDb([], tenantUsers))).rejects.toThrow(
       'Permission denied: Cannot approve your own time submissions'
     );
 
-    await expect(assertCanApproveSubject(actor as any, 'tenant-1', 'u-2', buildDb(['u-2']))).resolves.toBe('tenant-wide');
+    // Approving someone else's time is unaffected by the self-approval guard.
+    await expect(assertCanApproveSubject(actor as any, 'tenant-1', 'u-2', buildDb(['u-2'], tenantUsers))).resolves.toBe('tenant-wide');
   });
 
   it('T026: delegation and approval checks fail closed when bundle narrowing resolution errors', async () => {

@@ -2,6 +2,7 @@
 
 import { delegateToTimeSource } from '../lib/timeSource';
 import { assertHumanWorkOwner } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
+import { reverseApprovedTimeSheet } from '../lib/timeSheetApprovalTransition';
 import {
   ITimeEntry,
   ITimeSheetApproval,
@@ -701,68 +702,15 @@ export const reverseTimeSheetApproval = withAuth(async (
       throw new Error('Permission denied: Invalid approver');
     }
 
-    await db.transaction(async (trx) => {
-      // Check if time sheet exists and is approved
-      const scopedDb = tenantDb(trx, tenant) as any;
-      const timeSheet = await scopedDb.table('time_sheets')
-        .where({
-          id: timeSheetId,
-          tenant
-        })
-        .first();
-
-      if (!timeSheet) {
-        throw new Error('Time sheet not found');
-      }
-
-      await assertCanActOnBehalf(user, tenant, timeSheet.user_id, trx);
-
-      if (timeSheet.approval_status !== 'APPROVED') {
-        throw new Error('Time sheet is not in an approved state');
-      }
-
-      // Check if any entries are invoiced
-      const invoicedEntries = await scopedDb.table('time_entries')
-        .where({
-          time_sheet_id: timeSheetId,
-          invoiced: true,
-          tenant
-        })
-        .first();
-
-      if (invoicedEntries) {
-        throw new Error('This time sheet contains invoiced time and cannot be reopened.');
-      }
-
-      // Update time sheet status
-      await scopedDb.table('time_sheets')
-        .where({
-          id: timeSheetId,
-          tenant
-        })
-        .update({
-          approval_status: 'CHANGES_REQUESTED' as TimeSheetStatus,
-          approved_at: null,
-          approved_by: null
-        });
-
-      // Update time entries status
-      await scopedDb.table('time_entries')
-        .where({
-          time_sheet_id: timeSheetId,
-          tenant
-        })
-        .update({ approval_status: 'CHANGES_REQUESTED' });
-
-      // Add comment for audit trail
-      await scopedDb.table('time_sheet_comments').insert({
-        time_sheet_id: timeSheetId,
-        user_id: approverId,
-        comment: `Approval reversed: ${reason}`,
-        created_at: trx.fn.now(),
-        is_approver: true,
-        tenant
-      });
+    await reverseApprovedTimeSheet({
+      knex: db,
+      tenant,
+      timeSheetId,
+      actorId: approverId,
+      reason,
+      authorize: async (trx, sheet) => {
+        await assertCanActOnBehalf(user, tenant, sheet.user_id, trx);
+      },
     });
   } catch (error) {
     console.error('Error reversing time sheet approval:', error);
