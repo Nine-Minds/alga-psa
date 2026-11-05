@@ -57,7 +57,7 @@ vi.mock('@alga-psa/ui/components/bento', () => ({
       <span>{label}</span>
     </div>
   ),
-  BentoChip: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+  BentoChip: ({ id, children }: { id?: string; children: React.ReactNode }) => <span id={id}>{children}</span>,
   BentoFooterLinks: ({ idPrefix, links }: {
     idPrefix: string;
     links: Array<{ id: string; label: string; onClick: () => void } | null | undefined>;
@@ -315,6 +315,7 @@ describe('LocationsCard', () => {
   const location = (id: string): ClientPulseLocation => ({
     location_id: id, location_name: `Site ${id}`, address_line1: '1 Main St', city: 'Springfield',
     phone: null, phone_extension: null, country_code: null, email: null, is_default: false, is_billing: false, is_shipping: false,
+    contact_count: 0,
   });
 
   it('shows an empty state with no locations', () => {
@@ -329,6 +330,18 @@ describe('LocationsCard', () => {
     expect(screen.getByText('Site c')).toBeInTheDocument();
     expect(screen.queryByText('Site d')).toBeNull();
     expect(document.getElementById('loc-more')).toHaveTextContent('+2 more');
+  });
+
+  it('shows how many contacts work at a location, and nothing when none do', () => {
+    render(<LocationsCard id="loc" locations={[
+      { ...location('a'), contact_count: 3 },
+      { ...location('b'), contact_count: 1 },
+      { ...location('c'), contact_count: 0 },
+    ]} onManage={null} t={t} />);
+
+    expect(document.getElementById('loc-contact-count-a')).toHaveTextContent('3 contacts');
+    expect(document.getElementById('loc-contact-count-b')).toHaveTextContent('1 contact');
+    expect(document.getElementById('loc-contact-count-c')).toBeNull();
   });
 
   it('formats extensions and national legacy numbers using the location country', () => {

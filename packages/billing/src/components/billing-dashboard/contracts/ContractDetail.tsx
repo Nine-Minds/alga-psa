@@ -61,6 +61,7 @@ import ContractDiscounts from './ContractDiscounts';
 import InvoicePreviewPanel from '../invoicing/InvoicePreviewPanel';
 import { Temporal } from '@js-temporal/polyfill';
 import { toPlainDate, toISODate, toCalendarDisplayDate } from '@alga-psa/core';
+import { currencyFractionDigits, displayCurrencySymbol } from '@alga-psa/core/formatters';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
@@ -150,10 +151,11 @@ const assignmentsDiffer = (
 };
 
 function getCurrencyMeta(currencyCode: string): { fractionDigits: number; symbol: string } {
-  const formatter = new Intl.NumberFormat(undefined, { style: 'currency', currency: currencyCode });
-  const fractionDigits = formatter.resolvedOptions().maximumFractionDigits ?? 2;
-  const symbol = formatter.formatToParts(0).find((part) => part.type === 'currency')?.value ?? currencyCode;
-  return { fractionDigits, symbol };
+  // The product's own glyph, so a ZAR contract shows "R" and not Intl's "ZAR".
+  return {
+    fractionDigits: currencyFractionDigits(currencyCode),
+    symbol: displayCurrencySymbol(currencyCode),
+  };
 }
 
 interface ContractDetailProps {
@@ -302,10 +304,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
 
   const currencyMeta = useMemo(() => {
     const currencyCode = contract?.currency_code ?? 'USD';
-    const formatter = new Intl.NumberFormat(undefined, { style: 'currency', currency: currencyCode });
-    const fractionDigits = formatter.resolvedOptions().maximumFractionDigits ?? 2;
-    const symbol =
-      formatter.formatToParts(0).find((part) => part.type === 'currency')?.value ?? currencyCode;
+    const { fractionDigits, symbol } = getCurrencyMeta(currencyCode);
 
     return {
       currencyCode,

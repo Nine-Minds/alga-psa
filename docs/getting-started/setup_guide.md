@@ -601,6 +601,31 @@ The stack refuses to start in three cases:
 - `no postgres password is available`: the volume still has legacy entries, and `secrets/postgres_password` is empty or missing. Restore the secret and start again.
 - `pg_hba.conf has rules that do not require a password`: `setup` found a rule without a password after Postgres started. Recreate the `postgres` container so it repairs the file, or fix the rule by hand as described above.
 
+### PgBouncer authentication (upgrading from earlier versions)
+
+PgBouncer now enforces `md5` password authentication on every connection. The `postgres` superuser has been removed from PgBouncer's `userlist.txt`; only `app_user` and `hocuspocus_user` are listed there.
+
+**What this means for external connections:**
+
+- **Application connections** go through PgBouncer (port 6432) using `app_user`. Nothing changes for the running stack itself.
+- **Administrative connections** (psql, migrations, schema inspection) must connect directly to Postgres on port 5432, not through PgBouncer. Use `postgres` or another superuser on the direct port.
+- **External database tools** (TablePlus, DBeaver, pg_dump) that previously connected as `postgres` through PgBouncer must switch to either `app_user` through PgBouncer, or any superuser directly on port 5432.
+
+**Developers running the server outside Docker:**
+
+If you run `server` on the host rather than in a container, set two additional environment variables in `server/.env` so the server can reach Postgres directly for admin operations:
+
+```env
+DB_HOST_ADMIN=127.0.0.1
+DB_PORT_ADMIN=5432
+```
+
+`DB_HOST_ADMIN` and `DB_PORT_ADMIN` default to `DB_HOST` and `DB_PORT` (the PgBouncer address) when not set, which prevents migrations and admin queries that require a direct superuser connection. Setting them explicitly routes those operations to Postgres while keeping ordinary queries through PgBouncer.
+
+**Upgrading an existing install:**
+
+No data migration is required. Run `docker compose ... up -d --build` with your usual Compose files; the PgBouncer container rebuilds its `userlist.txt` automatically. After the upgrade, test any external tools that connect through port 6432 and update their credentials to `app_user` if they were using `postgres`.
+
 ### Database image changes
 
 The bundled Postgres image moves to the maintained pgvector image and is pinned by digest in `docker-compose.images.yaml`; the Compose files and the Helm chart use that pinned image rather than a floating tag.
