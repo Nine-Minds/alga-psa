@@ -68,7 +68,7 @@ export const ENTRY_POINT_GLOBS: readonly string[] = ENTRY_POINT_FAMILIES.map((f)
 export const EXPECTED_FAMILY_FILE_COUNTS: Readonly<Record<string, { glob: string; files: number }>> = {
   'rsc-pages': { glob: 'server/src/app/msp/co-manag*/**', files: 13 },
   'rest-routes': { glob: 'server/src/app/api/**/co-management/**', files: 2 },
-  'server-actions': { glob: 'server/src/lib/actions/coManaged*', files: 22 },
+  'server-actions': { glob: 'server/src/lib/actions/coManaged*', files: 24 },
   'package-actions': { glob: 'packages/co-managed/src/**/actions*', files: 0 },
   'user-invitation-actions': { glob: 'packages/users/src/actions/user-actions/userInvitationActions.ts', files: 1 },
   'user-invitation-service': { glob: 'packages/users/src/services/UserInvitationService.ts', files: 1 },
@@ -81,7 +81,7 @@ export const EXPECTED_FAMILY_FILE_COUNTS: Readonly<Record<string, { glob: string
   'temporal-workflows-kebab': { glob: 'ee/temporal-workflows/src/workflows/co-managed*', files: 1 },
   'ee-server-actions': { glob: 'ee/server/src/lib/actions/coManaged*', files: 2 },
   'shared-services': { glob: 'shared/services/**/coManaged*', files: 0 },
-  'server-ui': { glob: 'server/src/components/co-managed/**', files: 67 },
+  'server-ui': { glob: 'server/src/components/co-managed/**', files: 69 },
   'package-ui': { glob: 'packages/co-managed/src/components/**', files: 0 },
 };
 
@@ -833,7 +833,7 @@ const UI_SLOT_MOUNTS: Readonly<Record<string, string>> = {
 };
 const UI_SLOT_CONTRIBUTIONS: Readonly<Record<string, string>> = {
   'server/src/config/coManagedMenu.ts': 'msp.navigation.group',
-  'server/src/config/coManagedConversationSlots.ts': 'ticket.conversation.comment-attachments',
+  'server/src/config/coManagedConversationSlots.ts': 'ticket.conversation.thread-header',
 };
 
 describe('UI-slot mounts (A8)', () => {
@@ -847,7 +847,12 @@ describe('UI-slot mounts (A8)', () => {
   it("each mount serves slots from useCapability('co-managed') and names its surface", () => {
     for (const f of mounts) {
       expect(f.source, f.path).toContain("useCapability('co-managed')");
-      expect(f.source, f.path).toContain(`'${UI_SLOT_MOUNTS[f.path]}'`);
+      if (f.path.endsWith('CoManagedConversationFiles.tsx')) {
+        expect(f.source, f.path).toContain("'ticket.conversation.comment-attachments'");
+        expect(f.source, f.path).toContain("'ticket.conversation.thread-header'");
+      } else {
+        expect(f.source, f.path).toContain(`'${UI_SLOT_MOUNTS[f.path]}'`);
+      }
       expect(f.source, f.path).not.toMatch(/useFeatureFlag\(\s*'release-v2-0-feature'/);
     }
   });
@@ -858,7 +863,12 @@ describe('UI-slot mounts (A8)', () => {
     expect(contributions.map((f) => f.path).sort()).toEqual(Object.keys(UI_SLOT_CONTRIBUTIONS).sort());
     for (const f of contributions) {
       expect(f.source, f.path).toContain("capability: 'co-managed'");
-      expect(f.source, f.path).toContain(`'${UI_SLOT_CONTRIBUTIONS[f.path]}'`);
+      if (f.path.endsWith('coManagedConversationSlots.ts')) {
+        expect(f.source, f.path).toContain("'ticket.conversation.comment-attachments'");
+        expect(f.source, f.path).toContain("'ticket.conversation.thread-header'");
+      } else {
+        expect(f.source, f.path).toContain(`'${UI_SLOT_CONTRIBUTIONS[f.path]}'`);
+      }
     }
   });
 });

@@ -3,14 +3,17 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-
 const mocks = vi.hoisted(() => ({ screen: vi.fn(), assignment: vi.fn() }));
 vi.mock('lucide-react', () => ({ Handshake: () => null, History: () => null }));
 vi.mock('@alga-psa/ui/components/bento/BentoTile', () => ({ BentoTile: ({ id, children, action }: any) => <section id={id}>{action}{children}</section> }));
 vi.mock('@alga-psa/ui/components/Button', () => ({ Button: ({ children, variant: _v, size: _s, ...rest }: any) => <button {...rest}>{children}</button> }));
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({ default: () => null }));
 vi.mock('@alga-psa/ui/components/Dialog', () => ({ Dialog: () => null, DialogContent: () => null }));
-vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (k: string, o?: any) => typeof o === 'string' ? o : o?.defaultValue ?? k }) }));
+vi.mock('@alga-psa/ui/lib/i18n/client', () => {
+  const englishLicensing = require('../../../../public/locales/en/msp/licensing.json');
+  const resolveEnglishKey = (key: string) => key.split('.').reduce((value: any, part: string) => value?.[part], englishLicensing) ?? key;
+  return { useTranslation: () => ({ t: (k: string, o?: any) => typeof o === 'string' ? o : o?.defaultValue ?? resolveEnglishKey(k) }) };
+});
 vi.mock('@/lib/actions/coManagedSharedWorkActions', () => ({ getCoManagedTicketScreenAction: (...a: any[]) => mocks.screen(...a) }));
 vi.mock('@/lib/actions/coManagedTicketAssignmentActions', () => ({
   getSharedTicketAssignmentAction: (...a: any[]) => mocks.assignment(...a), listSharedTicketAssigneesAction: vi.fn(), assignSharedTicketAction: vi.fn(),
@@ -41,6 +44,12 @@ describe('CoManagedTicketSection capability-driven affordances', () => {
     expect(document.getElementById('co-ticket-handback')).not.toBeNull();
     expect(document.getElementById('co-ticket-revoke')).not.toBeNull();
     expect(document.getElementById('co-ticket-read-only')).toBeNull();
+  });
+
+  it('renders the handoff action from the English locale pack', async () => {
+    mocks.screen.mockResolvedValue(screenFor());
+    render(<CoManagedTicketSection target={{ kind: 'shared', resource }} />);
+    expect(await screen.findByRole('button', { name: 'Escalate to MSP' })).toBeInTheDocument();
   });
 
   it('a read-only viewer sees a notice and no write controls', async () => {
