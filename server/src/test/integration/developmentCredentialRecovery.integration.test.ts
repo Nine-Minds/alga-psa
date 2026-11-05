@@ -118,7 +118,10 @@ describe('development credential recovery against PostgreSQL', () => {
     process.env.nextauth_secret = effectiveSecret;
     process.env.NEXTAUTH_SECRET = effectiveSecret;
     const recoveryPassword = generateSecurePassword();
-    const user = await getSeededUser();
+    // Exercise the same model lookup used by setupDevelopmentEnvironment so
+    // recovery has the stored hash available for its compare-and-set.
+    const user = await User.findUserByEmail(EMAIL);
+    expect(user?.hashed_password).toBe(staleHash);
     const { run: preserveRun, log: preserveLog } = setup(user, { configuredPassword: recoveryPassword });
     await preserveRun;
     expect(await User.getPasswordHash(seededUser.user_id, seededUser.tenant)).toBe(staleHash);
