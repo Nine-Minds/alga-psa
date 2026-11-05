@@ -169,6 +169,9 @@ interface TicketDetailsProps {
     initialAvailableAgents?: IUserWithRoles[];
     initialUserMap?: Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>;
     initialContactMap?: Record<string, { contact_id: string; full_name: string; email?: string; avatarUrl: string | null }>;
+    /** Updated alongside a live conversation snapshot; omitted for native screens. */
+    liveUserMap?: Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>;
+    liveContactMap?: Record<string, { contact_id: string; full_name: string; email?: string; avatarUrl: string | null }>;
     statusOptions?: { value: string; label: string; is_closed?: boolean; className?: string; board_id?: string | null }[];
     agentOptions?: { value: string; label: string }[];
     boardOptions?: { value: string; label: string }[];
@@ -308,6 +311,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     initialAvailableAgents = [],
     initialUserMap = {},
     initialContactMap = {},
+    liveUserMap,
+    liveContactMap,
     statusOptions = [],
     agentOptions = [],
     boardOptions = [],
@@ -361,7 +366,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         findCommentsByTicketId, findCommentById, createComment, updateComment, deleteComment,
         addTicketCommentWithCache, deleteDraftClipboardImages,
     } = dataSource.comments;
-    const { getAllActiveContacts, getContactByContactNameId, getContactsByClient, getClientById, getClientLocations } = dataSource.people;
+    const { getAllActiveContacts, getContactByContactNameId, getContactsByClient, getClientById, getClientLocations, getContactEffectiveLocation } = dataSource.people;
     const { addTicketResource, getTicketResources, removeTicketResource, assignTeamToTicket, removeTeamFromTicket, getTeamById, getTeams } = dataSource.resources;
     const { addTicketWatchers, setTicketWatcherActive, removeTicketWatcher } = dataSource.watchers;
     const { checkTicketClosure, getTicketAutoCloseState } = dataSource.closeRules;
@@ -1369,6 +1374,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     // Use pre-fetched options directly
     const [userMap, setUserMap] = useState<Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>>(initialUserMap);
+    const conversationUserMap = liveUserMap ?? userMap;
 
     // Identity stamped into the "Updated … by" header after a local save. The drawer passes a
     // full currentUser; full-page callers do not, so derive one from the session (resolving the
@@ -1377,7 +1383,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         if (currentUser) return currentUser;
         const sessionUserId = session?.user?.id;
         if (!sessionUserId) return null;
-        const mapped = userMap?.[sessionUserId];
+        const mapped = conversationUserMap?.[sessionUserId];
         const sessionName = (session?.user?.name ?? '').trim();
         const [sessionFirst, ...sessionRest] = sessionName.split(/\s+/).filter(Boolean);
         return {
@@ -1387,8 +1393,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             email: mapped?.email ?? session?.user?.email ?? '',
             user_type: mapped?.user_type ?? 'internal',
         } as unknown as IUser;
-    }, [currentUser, session?.user?.id, session?.user?.name, session?.user?.email, userMap]);
+    }, [currentUser, session?.user?.id, session?.user?.name, session?.user?.email, conversationUserMap]);
     const [contactMap] = useState<Record<string, { contact_id: string; full_name: string; email?: string; avatarUrl: string | null }>>(initialContactMap);
+    const conversationContactMap = liveContactMap ?? contactMap;
 
     const [availableAgents, setAvailableAgents] = useState<IUserWithRoles[]>(initialAvailableAgents);
     const [additionalAgents, setAdditionalAgents] = useState<ITicketResource[]>(initialAdditionalAgents);
@@ -2732,6 +2739,18 @@ const handleClose = () => {
             if (newContactId) {
                 const contactData = await getContactByContactNameId(newContactId);
                 setContactInfo(contactData);
+
+                // An empty location is a question nobody answered, so the new requester's own site
+                // answers it — and the write goes through the normal location path, so it lands in
+                // the ticket history like any other change. A location already on the ticket is
+                // never re-pointed here; the tile offers "Use contact's location" for that, which
+                // takes a click.
+                if (!ticket.location_id) {
+                    const effective = await getContactEffectiveLocation(newContactId);
+                    if (effective.locationId) {
+                        await handleLocationChange(effective.locationId);
+                    }
+                }
             } else {
                 setContactInfo(null);
             }
@@ -4544,8 +4563,8 @@ const handleClose = () => {
                     onAgentClick={handleAgentClick}
                     locations={locations}
                     conversations={conversations}
-                    userMap={userMap}
-                    contactMap={contactMap}
+                    userMap={conversationUserMap}
+                    contactMap={conversationContactMap}
                     timelineRefreshKey={`${conversations.length}-${activityLogRefreshKey}-${timeEntriesRefreshKey}`}
                     timelineInitialOrder={timelinePrefOrder}
                     editorKey={editorKey}
@@ -4705,8 +4724,8 @@ const handleClose = () => {
                                     ticket={ticket}
                                     conversations={conversations}
                                     documents={documents}
-                                    userMap={userMap}
-                                    contactMap={contactMap}
+                                    userMap={conversationUserMap}
+                                    contactMap={conversationContactMap}
                                     currentUser={currentUser ? {
                                         id: currentUser.user_id,
                                         name: `${currentUser.first_name} ${currentUser.last_name}`,

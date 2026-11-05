@@ -674,7 +674,14 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         title: data.get('title') as string,
         board_id: data.get('board_id') as string,
         client_id: data.get('client_id') as string,
-        location_id: location_id === '' ? undefined : (location_id as string),
+        // Three states, deliberately: the field absent (or '') means nobody said, so the model
+        // fills it from the contact; the literal 'none' is the operator choosing None and stays
+        // null; anything else is the id they picked.
+        location_id: location_id === null || location_id === ''
+          ? undefined
+          : location_id === 'none'
+            ? null
+            : (location_id as string),
         billing_profile_id: billing_profile_id === '' || billing_profile_id === null
           ? undefined
           : (billing_profile_id as string),
@@ -738,9 +745,11 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
           throw new Error('Permission denied: Cannot use ticket templates');
         }
         // Manual use needs an active template that is offered for it (R4/R5); schedules ignore both.
+        // A client-bound template is only offered for its own client.
         const offered = UUID_PATTERN.test(ticketTemplateId)
           ? await tenantScopedTable(trx, 'ticket_templates', tenant)
               .where({ template_id: ticketTemplateId, is_active: true, offer_for_manual_use: true })
+              .where((builder) => builder.whereNull('client_id').orWhere('client_id', createTicketInput.client_id ?? null))
               .first('template_id')
           : undefined;
         sourceTemplate = offered ? await loadTemplateForInstantiation(trx, tenant, ticketTemplateId) : null;

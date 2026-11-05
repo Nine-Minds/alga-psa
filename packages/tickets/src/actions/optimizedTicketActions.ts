@@ -72,6 +72,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { withAuth } from '@alga-psa/auth';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
+import { attachContactLocations } from '@alga-psa/shared/models/contactLocation';
 import { preserveStoredWatchList } from '@alga-psa/shared/lib/tickets/watchList';
 import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import { ticketUpdateStamp } from '@shared/lib/tickets/ticketUpdateStamp';
@@ -740,6 +741,16 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         .first();
     }
 
+    // Where these people work, in one batched read for the whole page: the requester tile shows
+    // the ticket's contact location (and offers it when the ticket sits elsewhere), and the
+    // contact picker rows carry the same secondary line as everywhere else.
+    if (contacts.length > 0) {
+      contacts = await attachContactLocations(trx, tenant, contacts, (contact) => contact.contact_name_id) as IContact[];
+    }
+    if (contactInfo) {
+      [contactInfo] = await attachContactLocations(trx, tenant, [contactInfo], (contact) => contact.contact_name_id);
+    }
+
     const displayTags = {
       contact: contactInfo?.displayTags ?? [],
       client: client?.displayTags ?? [],
@@ -1308,6 +1319,7 @@ async function buildTicketListBaseQuery(
     tenantLeftJoin(trx, tenant, baseQuery, 'categories as cat', 't.category_id', 'cat.category_id');
     tenantLeftJoin(trx, tenant, baseQuery, 'clients as comp', 't.client_id', 'comp.client_id');
     tenantLeftJoin(trx, tenant, baseQuery, 'contacts as cn', 't.contact_name_id', 'cn.contact_name_id');
+    tenantLeftJoin(trx, tenant, baseQuery, 'client_locations as tloc', 't.location_id', 'tloc.location_id');
     tenantLeftJoin(trx, tenant, baseQuery, 'users as u', 't.entered_by', 'u.user_id');
     tenantLeftJoin(trx, tenant, baseQuery, 'users as au', 't.assigned_to', 'au.user_id');
     tenantLeftJoin(trx, tenant, baseQuery, 'teams as tm', 't.assigned_team_id', 'tm.team_id');
@@ -1780,6 +1792,7 @@ function buildTicketListItemsQuery(
       'cat.category_name',
       'comp.client_name',
       'cn.full_name as contact_name',
+      'tloc.location_name as ticket_location_name',
       displayTagsForEntityQuery(trx, tenant, audience, 'contact', 't.contact_name_id').as('contact_tags'),
       displayTagsForEntityQuery(trx, tenant, audience, 'client', 't.client_id').as('client_tags'),
       trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
@@ -1809,6 +1822,7 @@ function mapTicketListItems(tickets: any[]): ITicketListItem[] {
       category_name,
       client_name,
       contact_name,
+      ticket_location_name,
       entered_by_name,
       assigned_to_name,
       assigned_team_name,
@@ -1851,6 +1865,7 @@ function mapTicketListItems(tickets: any[]): ITicketListItem[] {
       category_name: category_name || 'Unknown',
       client_name: client_name || 'Unknown',
       contact_name: contact_name || null,
+      ticket_location_name: ticket_location_name || null,
       entered_by_name: entered_by_name || 'Unknown',
       assigned_to_name: assigned_to_name || null,
       assigned_team_name: assigned_team_name || null,

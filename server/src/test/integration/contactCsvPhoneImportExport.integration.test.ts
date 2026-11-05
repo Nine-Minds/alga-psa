@@ -424,6 +424,9 @@ describe('contact CSV hybrid email import/export integration', () => {
       'role',
       'notes',
       'tags',
+      'work_arrangement',
+      'locations',
+      'primary_location',
     ]);
     expect(rows[1]?.[2]).toBe('work');
     expect(rows[1]?.[3]).toContain('personal:alice.home@wonderland.com');
@@ -633,7 +636,11 @@ describe('contact CSV hybrid email import/export integration', () => {
       'role',
       'notes',
       'tags',
+      'work_arrangement',
+      'locations',
+      'primary_location',
     ]);
+    // The location columns stay empty for a contact with no links and no work arrangement.
     expect(rows[1]).toEqual([
       'CSV Export Contact',
       'csv-export@acme.com',
@@ -643,6 +650,9 @@ describe('contact CSV hybrid email import/export integration', () => {
       'Acme Client',
       'Coordinator',
       'Export test',
+      '',
+      '',
+      '',
       '',
     ]);
   });

@@ -9,7 +9,7 @@ export { CoManagedSharedWorkError, isCoManagedSharedWorkError, assertCoManagedSe
   snapshotCoManagedSessionActor } from './sharedWorkIdentity';
 
 // Access policy: the single matrix evaluator and policy administration.
-export { evaluateCoManagedAccess, effectiveCoManagedGrant, getCoManagedCollaborationPolicy, replaceCoManagedCustomerScope,
+export { evaluateCoManagedAccess, coManagedRelationshipAllowsWrite, effectiveCoManagedGrant, getCoManagedCollaborationPolicy, replaceCoManagedCustomerScope,
   replaceCoManagedStaffAssignments, replaceCoManagedRedactedFields, lockCoManagedCustomerPolicy, CoManagedPolicyError,
   requireCoManagedPolicyReader, listCoManagedLiveSponsoredRelationships } from './policy';
 export type { CoManagedAccessFacts, CoManagedAccessDecision, CoManagedAccessLayer, CoManagedDenyReason, CoManagedVisibilityMode,
@@ -98,3 +98,6 @@ export type { CoManagedLocalWorkReference, CoManagedWorkSourceKind } from './tim
 export { findCoManagedLocalWorkReference, loadCoManagedLocalWorkReference, recordCoManagedWorkReference } from './timeWorkReference';
 export { retainCoManagedTimeParticipation } from './timeParticipationEvidence';
 export * from './timeBillingProfile';
+
+export * from './portableRestoreUploads';
+export { assertPortableRestoreInstallationAuthority } from './portableRestoreInstallationAuthority';
