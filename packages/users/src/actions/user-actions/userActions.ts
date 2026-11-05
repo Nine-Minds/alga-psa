@@ -1984,16 +1984,14 @@ export const uploadUserAvatar = withAuth(async (
 
     // Permission Check: User can update their own avatar OR have user update permission
     const isOwnAvatar = currentUser.user_id === userId;
-    const isAdmin = currentUser.roles.some(role => role.role_name.toLowerCase() === 'admin');
-
     // Always allow users to update their own avatar, regardless of permissions
     if (isOwnAvatar) {
         console.log(`[uploadUserAvatar] User ${currentUser.user_id} updating their own avatar`);
-    } else if (isAdmin) {
-        console.log(`[uploadUserAvatar] Admin user ${currentUser.user_id} updating avatar for user ${userId}`);
     } else {
-        // Check permission within tenant context
-        const hasUpdatePermission = await hasPermission(currentUser, 'user', 'update', knex);
+        // Portal and MSP roles may share display names such as "Admin". Only
+        // MSP principals may use the MSP user:update permission here.
+        const hasUpdatePermission = isMspPrincipalUserType(currentUser.user_type)
+          && await hasPermission(currentUser, 'user', 'update', knex);
         if (hasUpdatePermission) {
             console.log(`[uploadUserAvatar] User ${currentUser.user_id} with update permission updating avatar for user ${userId}`);
         } else {
@@ -2081,16 +2079,17 @@ export const deleteUserAvatar = withAuth(async (
 
     // Permission Check: User can delete their own avatar OR have user update permission
     const isOwnAvatar = currentUser.user_id === userId;
-    const isAdmin = currentUser.roles.some(role => role.role_name.toLowerCase() === 'admin');
-
     // Always allow users to delete their own avatar, regardless of permissions
     if (isOwnAvatar) {
         console.log(`[deleteUserAvatar] User ${currentUser.user_id} deleting their own avatar`);
-    } else if (isAdmin || await hasPermission(currentUser, 'user', 'update', knex)) {
-        console.log(`[deleteUserAvatar] User ${currentUser.user_id} with admin/update permission deleting avatar for user ${userId}`);
     } else {
-        console.log(`[deleteUserAvatar] Permission denied: User ${currentUser.user_id} trying to delete avatar for user ${userId}`);
-        return { success: false, error: 'Permission denied: You can only delete your own avatar.' };
+        const hasUpdatePermission = isMspPrincipalUserType(currentUser.user_type)
+          && await hasPermission(currentUser, 'user', 'update', knex);
+        if (!hasUpdatePermission) {
+          console.log(`[deleteUserAvatar] Permission denied: User ${currentUser.user_id} trying to delete avatar for user ${userId}`);
+          return { success: false, error: 'Permission denied: You can only delete your own avatar.' };
+        }
+        console.log(`[deleteUserAvatar] User ${currentUser.user_id} with update permission deleting avatar for user ${userId}`);
     }
 
     // Call the generic service function - tenant context already set by withAuth
