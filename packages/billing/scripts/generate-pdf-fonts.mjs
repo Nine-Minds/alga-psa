@@ -46,11 +46,21 @@ const faces = FACES.map((face) => {
   };
 });
 
+// Inter (every weight) substitutes a different glyph for "-" when it sits
+// between two digits — a contextual alternate meant to look like a minus sign
+// in numeric ranges. Chromium's PDF subsetter doesn't carry a ToUnicode
+// mapping for that alternate glyph back to U+002D, so dates, invoice numbers
+// and UUID-ish identifiers (e.g. "2026-11-05", "7dc8-4fee") silently lose the
+// hyphen on copy/extract, which is exactly the illegible-print problem these
+// faces exist to fix. Declaring the feature off on the face itself (a valid
+// @font-face descriptor in Chromium) keeps every consumer off it without
+// touching per-element font-family stacks.
 const rule = (face) => `@font-face {
   font-family: '${face.family}';
   font-style: ${face.style};
   font-weight: ${face.weight};
   font-display: block;
+  font-feature-settings: 'calt' 0;
   src: url(data:font/woff2;base64,${face.base64}) format('woff2');
 }`;
 
