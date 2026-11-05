@@ -2099,11 +2099,11 @@
       },
       "label_assetSerialNumber": {
         "label": "Numéro de série complet de l'actif",
-        "description": "Disponible uniquement sur les fiches de ticket au format Letter. Chemin des données : {{path}}"
+        "description": "Numéro de série complet de l'élément d'actif sélectionné, disponible uniquement sur les fiches client au format Letter."
       },
       "label_ticketDescription": {
         "label": "Description du ticket",
-        "description": "Disponible uniquement sur les fiches de ticket au format Letter. Chemin des données : {{path}}"
+        "description": "Description du ticket en texte brut, disponible uniquement sur les fiches client au format Letter."
       },
       "label_custodyLocation": {
         "label": "Lieu de garde",

@@ -2099,11 +2099,11 @@
       },
       "label_assetSerialNumber": {
         "label": "Volledig serienummer van asset",
-        "description": "Alleen beschikbaar op ticketworksheets in Letter-formaat. Gegevenspad: {{path}}"
+        "description": "Volledig serienummer van het geselecteerde actief, alleen beschikbaar op klantworksheets in Letter-formaat."
       },
       "label_ticketDescription": {
         "label": "Ticketbeschrijving",
-        "description": "Alleen beschikbaar op ticketworksheets in Letter-formaat. Gegevenspad: {{path}}"
+        "description": "Ticketbeschrijving als platte tekst, alleen beschikbaar op klantworksheets in Letter-formaat."
       },
       "label_custodyLocation": {
         "label": "Bewaarlocatie",

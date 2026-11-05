@@ -2151,11 +2151,11 @@
       },
       "label_assetSerialNumber": {
         "label": "Pełny numer seryjny zasobu",
-        "description": "Dostępne tylko na kartach zgłoszenia w formacie Letter. Ścieżka danych: {{path}}"
+        "description": "Pełny numer seryjny wybranego zasobu, dostępny tylko na kartach klienta w formacie Letter."
       },
       "label_ticketDescription": {
         "label": "Opis zgłoszenia",
-        "description": "Dostępne tylko na kartach zgłoszenia w formacie Letter. Ścieżka danych: {{path}}"
+        "description": "Opis zgłoszenia jako zwykły tekst, dostępny tylko na kartach klienta w formacie Letter."
       },
       "label_custodyLocation": {
         "label": "Miejsce przechowywania",
