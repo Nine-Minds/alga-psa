@@ -191,7 +191,6 @@ exit 0
       ALGA_APPLIANCE_STORAGE_LOCK_PATH: path.join(tmp, 'storage-reconcile.lock'),
       ALGA_APPLIANCE_STORAGE_LOCK_ATTEMPTS: options.lockWaitAttempts || '150',
       ALGA_APPLIANCE_STORAGE_STABILITY_SECONDS: '0',
-      ALGA_APPLIANCE_SKIP_DNS_RECONCILE: options.dnsReconcile ? 'false' : 'true',
       ...(options.dnsReconcileScript
         ? { ALGA_APPLIANCE_DNS_RECONCILE_SCRIPT: options.dnsReconcileScript }
         : {})
@@ -314,24 +313,26 @@ test('a lock held by a live process still blocks until the wait times out', () =
   );
 });
 
-test('storage reconciliation invokes the DNS reconcile launcher after storage converges', () => {
+// The update engine runs this reconcile first. Run from here, a DNS activation
+// that failed on an unrelated broken workload blocked the very app update that
+// would have fixed it (stable 1.6.11–1.6.16, email-service). The control
+// plane's DNS reconciler owns activation; storage must never trigger it.
+test('storage reconciliation never stages a cluster DNS activation', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-storage-dns-'));
   const launcher = path.join(tmp, 'reconcile-k3s-dns.sh');
   const marker = path.join(tmp, 'dns-called.log');
   fs.writeFileSync(
     launcher,
-    `#!/usr/bin/env bash\nprintf '%s\\n' "$*" > ${marker}\n`,
+    `#!/usr/bin/env bash\nprintf '%s\\n' "$*" > ${marker}\nexit 1\n`,
     { mode: 0o755 }
   );
 
-  const harness = createHarness({ dnsReconcile: true, dnsReconcileScript: launcher });
+  const harness = createHarness({ dnsReconcileScript: launcher });
   const result = runInstaller(harness);
 
   assert.equal(result.status, 0, result.stderr || result.stdout);
   assert.match(result.stdout, /Storage prerequisites are ready/);
-  const called = fs.readFileSync(marker, 'utf8');
-  assert.match(called, /--kubeconfig/);
-  assert.match(called, new RegExp(harness.kubeconfig.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  assert.equal(fs.existsSync(marker), false, 'the DNS launcher must not be invoked by the storage reconcile');
 });
 
 test('repeated reconciliation preserves application PVs and leaves no smoke resources or side effects', () => {

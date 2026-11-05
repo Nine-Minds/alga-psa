@@ -198,9 +198,14 @@ echo "$*" >> "$CONTAINER_SYSTEMD_RUN_LOG"
 echo "systemd-run: command not usable from the container root" >&2
 exit 1
 `, { mode: 0o755 });
-  // The host root's real tooling.
+  // The host root's real tooling. FAKE_UNIT_STATE is the activation unit's
+  // ActiveState (a fresh host has none loaded: inactive).
   fs.writeFileSync(path.join(hostRoot, 'usr', 'bin', 'systemd-run'), `#!/usr/bin/env bash
 echo "$*" >> "$SYSTEMD_RUN_LOG"
+exit 0
+`, { mode: 0o755 });
+  fs.writeFileSync(path.join(hostRoot, 'usr', 'bin', 'systemctl'), `#!/usr/bin/env bash
+if [ "$1" = "show" ]; then echo "\${FAKE_UNIT_STATE:-inactive}"; fi
 exit 0
 `, { mode: 0o755 });
 
@@ -240,6 +245,9 @@ test('the generated container command executes and launches the host unit', () =
   assert.match(systemdRun, /configure-k3s-dns\.sh/);
   assert.match(systemdRun, /--activate/);
   assert.match(systemdRun, new RegExp(`ALGA_APPLIANCE_DNS_CONFIG_FINGERPRINT=${fingerprint}`));
+  // The Job only triggers the oneshot unit; waiting for it would hold the Job
+  // for the whole activation and report a timeout while the host still works.
+  assert.match(systemdRun, /--no-block/);
 
   // The fixed helper and the host kubectl wrapper landed on the staged host root.
   const stagedDir = path.join(harness.hostRoot, harness.stageDir);
@@ -285,4 +293,32 @@ test('every host nsenter switches to the host root and reaches the host systemd-
   const hostInvocation = nsenterLog.find((line) => /systemd-run/.test(line));
   assert.ok(hostInvocation, 'no nsenter call reached systemd-run');
   assert.match(fs.readFileSync(harness.systemdRunLog, 'utf8'), /--unit=alga-appliance-dns-activate/);
+});
+
+test('a running activation unit is left alone instead of launched a second time', () => {
+  const harness = makeExecHarness();
+  const result = renderManifest({
+    ALGA_APPLIANCE_DNS_JOB_HOST_ROOT: harness.hostRoot,
+    ALGA_APPLIANCE_DNS_HELPER_SOURCE: harness.helperSource,
+    ALGA_APPLIANCE_DNS_STAGE_DIR: harness.stageDir
+  });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const command = YAML.parse(result.stdout).spec.template.spec.containers[0].command[2];
+
+  // A oneshot unit reports `activating` for as long as it runs.
+  const execution = spawnSync('bash', ['-c', command], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      PATH: `${harness.fakeBin}:${process.env.PATH}`,
+      SYSTEMD_RUN_LOG: harness.systemdRunLog,
+      CONTAINER_SYSTEMD_RUN_LOG: harness.containerSystemdRunLog,
+      NSENTER_LOG: harness.nsenterLog,
+      FAKE_UNIT_STATE: 'activating'
+    }
+  });
+  assert.equal(execution.status, 0, execution.stderr || execution.stdout);
+  assert.match(execution.stdout, /already running \(activating\)/);
+  assert.equal(fs.existsSync(harness.systemdRunLog), false, 'a second transient unit must not be launched');
 });

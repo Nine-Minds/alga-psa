@@ -138,13 +138,23 @@ printf '%s\n' \
   'echo "k3s binary not found on host" >&2' \
   'exit 1' > "$stage/kubectl"
 chmod 0755 "$stage/kubectl"
-if host_nsenter systemctl is-active --quiet "__ACTIVATION_UNIT__"; then
-  echo "DNS activation service is already running; nothing to do."
-  exit 0
-fi
+# A running oneshot unit is `activating`, never `active`, so `is-active` cannot
+# see it; launching a second transient unit under the same name would fail.
+unit_state="$(host_nsenter systemctl show -p ActiveState --value "__ACTIVATION_UNIT__" 2>/dev/null || true)"
+case "$unit_state" in
+  active|activating|reloading|deactivating)
+    echo "DNS activation service is already running (${unit_state}); nothing to do."
+    exit 0
+    ;;
+esac
 host_nsenter systemctl reset-failed "__ACTIVATION_UNIT__" >/dev/null 2>&1 || true
+# --no-block: for a oneshot unit systemd-run otherwise waits until the whole
+# activation (k3s restart and every rollout) has finished, so this Job would
+# outlive its wait and report a timeout while the host is still working. The
+# Job only stages and triggers; callers follow the durable activation record.
 host_nsenter systemd-run \
   --unit="__ACTIVATION_UNIT__" \
+  --no-block \
   --collect \
   --property=Type=oneshot \
   --property=TimeoutStartSec=1800 \
