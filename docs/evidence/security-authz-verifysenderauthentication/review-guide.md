@@ -1,6 +1,6 @@
 # PR #4149 sender authentication repair
 
-Review this guide against the commit SHA linked from the PR after publication. This guide contains repository-local checks for the repaired HEAD; earlier screenshots and smoke recordings are historical and are not evidence for this revision.
+Review this guide against the commit SHA linked from the PR after publication. This guide contains repository-local checks for the repaired HEAD; earlier screenshots and smoke recordings are historical and are not evidence for this revision. The original receiver-header authorization and fail-closed-on-all-Microsoft/IMAP policy are superseded: matched active internal candidates use authenticated registered-mailbox confirmation, and unsigned requester contacts use the distinct native contact confirmation flow.
 
 ## Takeover repair: scheduled recovery
 
@@ -111,6 +111,18 @@ The app server and browser/manual review were intentionally not started for this
 - Exact PR head SHA and publication time are recorded in the PR description alongside this guide after publication.
 - PR: https://github.com/Nine-Minds/alga-psa/pull/4149
 - External CI: `gh pr checks 4149` reported no checks for the pushed repair when queried. Recheck the PR for later runs; no external CI was awaited as part of this assignment.
+
+## Draft Implementation verification (2026-11-05)
+
+Re-run on starting HEAD `7407cc73154f617a452f0269cf4ee73cb4eb6487`:
+
+- Server behavioral command above, with `src/test/integration/inboundEmailInApp.webhooks.integration.test.ts`, `src/test/unit/jobs/ceMaintenanceSchedules.unit.test.ts`, and `src/test/unit/maintenanceJobFanout.unit.test.ts` included: **15 files, 240 tests passed**. The local DB integration confirms IMAP internal confirmation and unsigned Microsoft contact confirmation for a non-co-managed PSA tenant each persist exactly one authorized comment. The Graph message fetch uses the in-process Microsoft Graph emulator; Gmail API responses and outbound confirmation transport are test stand-ins; IMAP uses production MIME mapping rather than a live IMAP server. DKIM fixtures are generated and DNS keys are injected; no live DNS or provider interoperability was exercised.
+- `cd ee/temporal-workflows && npx vitest run --config vitest.no-docker.config.ts src/schedules/__tests__/setupSchedules.contract-cadence-replenishment.test.ts`: **3 tests passed**, including actual schedule-upsert calls to a Temporal stand-in.
+- `npm run test --workspace=@alga-psa/co-managed`: **19 files, 210 tests passed**.
+- `NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit -p shared/tsconfig.json`, `npm run typecheck --workspace=@alga-psa/co-managed`, `npm run build:shared`, and `NX_DAEMON=false npx nx build email-service --skip-nx-cache`: passed.
+- Full server TypeScript check was retried with `NODE_OPTIONS=--max-old-space-size=10240 npx tsc --noEmit -p server/tsconfig.json` to address the previous 8 GB V8 heap exhaustion. It again exhausted the V8 heap after about 3 minutes (10 GB heap, approximately 10.6 GB RSS) without a source diagnostic. The server production build was not run in this pass: the shared host had exhausted swap and only about 2.4 GB available RAM after the typecheck, so starting another memory-intensive worker was not viable. The prior 8 GB production build attempt on this repair branch also exhausted its heap, as recorded above. Neither server check is a pass.
+
+The app server was not started or auto-healed. These are local tests/builds, not live UI, DNS, Gmail, Microsoft tenant, IMAP server, or deployed scheduler evidence. Reviewer priority: inspect the confirmation requirements and the evidence boundary for unsigned, forwarded and intra-organization messages, then the CE/EE scheduler registration and recovery fencing. Exact published SHA is recorded after this evidence refresh is committed.
 
 ## Draft Implementation rerun
 
