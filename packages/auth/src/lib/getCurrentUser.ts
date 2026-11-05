@@ -1,4 +1,5 @@
 import type { IUserWithRoles } from '@alga-psa/types';
+import { sanitizeUserForResponse, type SafeApiUser } from '@alga-psa/types';
 import { getUserWithRoles, getUserWithRolesByEmail, createTenantKnex, noteTenantProductCode } from '@alga-psa/db';
 import { getApiKeyUserOverride } from './apiKeyUserContext';
 import { getSession, getSessionWithRevocationCheck, logSessionRejection } from './getSession';
@@ -117,8 +118,9 @@ async function resolveCurrentUser(
   }
 }
 
-export async function getCurrentUser(): Promise<IUserWithRoles | null> {
-  return resolveCurrentUser(getSession);
+export async function getCurrentUser(): Promise<SafeApiUser | null> {
+  const user = await resolveCurrentUser(getSession);
+  return user ? sanitizeUserForResponse(user) : null;
 }
 
 /**
@@ -129,6 +131,7 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
  * session gate both reject revoked or untracked sessions; the latter also
  * protects the development-only edge fallback.
  */
-export async function getCurrentUserWithRevocationCheck(): Promise<IUserWithRoles | null> {
-  return resolveCurrentUser(getSessionWithRevocationCheck);
+export async function getCurrentUserWithRevocationCheck(): Promise<SafeApiUser | null> {
+  const user = await resolveCurrentUser(getSessionWithRevocationCheck);
+  return user ? sanitizeUserForResponse(user) : null;
 }

@@ -1,9 +1,47 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { Auth } from '@auth/core';
 
 const extendExpiryMock = vi.fn(async () => undefined);
 const isRevokedOrIdentityMismatchMock = vi.fn(async () => false);
-const getRejectionReasonMock = vi.fn(async () => null as string | null);
-const createMock = vi.fn(async () => 'sess-created');
+const getRejectionReasonMock = vi.fn(async (
+  _tenant?: string,
+  _sessionId?: string,
+  _identity?: { userId: string; userType: string },
+) => null as string | null);
+const durableSessions: Array<{
+  sessionId: string;
+  tenant: string;
+  userId: string;
+  userType: string;
+  revoked: boolean;
+  expiresAt: Date;
+  lastActivity: number;
+}> = [];
+let nextSessionNumber = 1;
+let statefulSessionMode = false;
+const createMock = vi.fn(async (params?: Record<string, any>) => {
+  const sessionId = nextSessionNumber === 1 ? 'sess-created' : `sess-created-${nextSessionNumber}`;
+  nextSessionNumber += 1;
+  durableSessions.push({
+    sessionId,
+    tenant: params?.tenant ?? 'tenant-1',
+    userId: params?.user_id ?? 'u-1',
+    userType: 'internal',
+    revoked: false,
+    expiresAt: params?.expires_at ?? new Date(Date.now() + 60 * 60 * 1000),
+    lastActivity: Date.now(),
+  });
+  return sessionId;
+});
+const logLifecycleMock = vi.fn();
+const enforceMaxSessionsMock = vi.fn(async (_tenant: string, userId: string, maxSessions: number) => {
+  const active = durableSessions
+    .filter((row) => !row.revoked && row.userId === userId && row.expiresAt.getTime() > Date.now())
+    .sort((a, b) => a.lastActivity - b.lastActivity);
+  for (const row of active.slice(0, Math.max(0, active.length - maxSessions + 1))) {
+    row.revoked = true;
+  }
+});
 
 const tenantFirstMock = vi.fn();
 const subscriptionFirstMock = vi.fn();
@@ -11,10 +49,16 @@ const addonsSelectMock = vi.fn();
 
 function makeTableQuery(table: string) {
   if (table === 'tenants') {
-    return { where: vi.fn(() => ({ select: vi.fn(() => ({ first: tenantFirstMock })) })) };
+    return {
+      select: vi.fn(() => ({ first: tenantFirstMock })),
+      where: vi.fn(() => ({ select: vi.fn(() => ({ first: tenantFirstMock })) })),
+    };
   }
   if (table === 'stripe_subscriptions') {
     return {
+      whereIn: vi.fn(() => ({
+        orderByRaw: vi.fn(() => ({ select: vi.fn(() => ({ first: subscriptionFirstMock })) })),
+      })),
       where: vi.fn(() => ({
         whereIn: vi.fn(() => ({
           orderByRaw: vi.fn(() => ({ select: vi.fn(() => ({ first: subscriptionFirstMock })) })),
@@ -23,7 +67,7 @@ function makeTableQuery(table: string) {
     };
   }
   if (table === 'tenant_addons') {
-    return { where: vi.fn(() => ({ select: addonsSelectMock })) };
+    return { select: addonsSelectMock, where: vi.fn(() => ({ select: addonsSelectMock })) };
   }
   throw new Error(`Unexpected table ${table}`);
 }
@@ -85,6 +129,18 @@ vi.mock('./microsoftConsumerProfileResolution', () => ({
   })),
 }));
 vi.mock('next/headers.js', () => ({ cookies: async () => ({ get: vi.fn(), set: vi.fn() }) }));
+vi.mock('next/headers', () => ({
+  headers: async () => new Headers(),
+  cookies: async () => ({ get: vi.fn(), set: vi.fn() }),
+}));
+vi.mock('../nextauth/auth', () => ({ auth: vi.fn(async () => null) }));
+vi.mock('./assertInteractiveUser', () => ({ assertInteractiveUser: vi.fn(async () => true) }));
+vi.mock('./security/loginProtection', () => ({
+  enforceLoginProtection: vi.fn(async () => undefined),
+  normalizeLoginEmail: (value: string) => value.trim().toLowerCase(),
+  recordLoginFailure: vi.fn(async () => undefined),
+  recordLoginSuccess: vi.fn(async () => undefined),
+}));
 vi.mock('./sso/mspSsoResolution', () => ({
   // clientPortalSsoResolution re-exports several of these, so the mock has to
   // carry them even though nextAuthOptions itself only reads the cookie helpers.
@@ -106,14 +162,24 @@ vi.mock('@alga-psa/db/models/UserSession', () => ({
     isRevokedOrIdentityMismatch: (...args: unknown[]) => isRevokedOrIdentityMismatchMock(...(args as [])),
     getRejectionReason: (...args: unknown[]) => getRejectionReasonMock(...(args as [])),
     extendExpiry: (...args: unknown[]) => extendExpiryMock(...(args as [])),
-    create: (...args: unknown[]) => createMock(...(args as [])),
+    create: (...args: unknown[]) => createMock(...(args as [Record<string, any>])),
+    enforceMaxSessions: (...args: unknown[]) => enforceMaxSessionsMock(...(args as [string, string, number])),
+    logLifecycle: (...args: unknown[]) => logLifecycleMock(...(args as [])),
     updateLocation: vi.fn(),
   },
 }));
-vi.mock('./ipAddress', () => ({ getClientIp: vi.fn() }));
-vi.mock('./deviceFingerprint', () => ({ generateDeviceFingerprint: vi.fn(), getDeviceInfo: vi.fn() }));
+vi.mock('./ipAddress', () => ({ getClientIp: vi.fn(() => '127.0.0.1') }));
+vi.mock('./deviceFingerprint', () => ({
+  generateDeviceFingerprint: vi.fn(() => 'test-fingerprint'),
+  getDeviceInfo: vi.fn(() => ({ name: 'Test Browser', type: 'desktop' })),
+}));
 vi.mock('./geolocation', () => ({ getLocationFromIp: vi.fn(async () => null) }));
-vi.mock('@alga-psa/db', () => ({ getConnection: vi.fn() }));
+vi.mock('@alga-psa/db', () => ({
+  getConnection: vi.fn(),
+  tenantDb: vi.fn((_connection: unknown, _tenant: string) => ({
+    table: (table: string) => makeTableQuery(table),
+  })),
+}));
 vi.mock('./PortalDomainModel', () => ({ getPortalDomain: vi.fn(), getPortalDomainByHostname: vi.fn() }));
 vi.mock('@alga-psa/db/models/user', () => ({ default: { updateLastLogin: vi.fn() } }));
 vi.mock('@alga-psa/db/admin', () => ({
@@ -124,11 +190,45 @@ vi.mock('@alga-psa/core/logger', () => ({ default: { debug: vi.fn(), trace: vi.f
 const { getAuthOptions } = await import('./nextAuthOptions');
 
 describe('nextAuth session expiry sliding', () => {
+  afterEach(() => vi.restoreAllMocks());
+
   beforeEach(() => {
     vi.clearAllMocks();
     isRevokedOrIdentityMismatchMock.mockResolvedValue(false);
     getRejectionReasonMock.mockResolvedValue(null);
     createMock.mockResolvedValue('sess-created');
+    durableSessions.splice(0, durableSessions.length);
+    nextSessionNumber = 1;
+    createMock.mockImplementation(async (params?: Record<string, any>) => {
+      const sessionId = nextSessionNumber === 1 ? 'sess-created' : `sess-created-${nextSessionNumber}`;
+      nextSessionNumber += 1;
+      durableSessions.push({
+        sessionId,
+        tenant: params?.tenant ?? 'tenant-1',
+        userId: params?.user_id ?? 'u-1',
+        userType: 'internal',
+        revoked: false,
+        expiresAt: params?.expires_at ?? new Date(Date.now() + 60 * 60 * 1000),
+        lastActivity: Date.now(),
+      });
+      return sessionId;
+    });
+    enforceMaxSessionsMock.mockImplementation(async (_tenant, userId, maxSessions) => {
+      const active = durableSessions
+        .filter((row) => !row.revoked && row.userId === userId && row.expiresAt.getTime() > Date.now())
+        .sort((a, b) => a.lastActivity - b.lastActivity);
+      for (const row of active.slice(0, Math.max(0, active.length - maxSessions + 1))) row.revoked = true;
+    });
+    statefulSessionMode = false;
+    getRejectionReasonMock.mockImplementation(async (_tenant, sessionId, identity) => {
+      if (!statefulSessionMode) return null;
+      const row = durableSessions.find((candidate) => candidate.sessionId === sessionId);
+      if (!row) return 'missing';
+      if (row.revoked) return 'revoked';
+      if (row.userId !== identity?.userId || row.userType !== identity?.userType) return 'identity_mismatch';
+      return null;
+    });
+    logLifecycleMock.mockReset();
     extendExpiryMock.mockResolvedValue(undefined);
     // Keep plan refresh quiet/side-effect-free for these cases.
     tenantFirstMock.mockResolvedValue({ plan: 'pro', product_code: 'psa' });
@@ -228,6 +328,68 @@ describe('nextAuth session expiry sliding', () => {
     })).resolves.toBeNull();
   });
 
+  it.each([
+    ['missing', 'durable_session_missing'],
+    ['user_missing', 'durable_session_user_missing'],
+    ['identity_mismatch', 'durable_session_identity_mismatch'],
+  ] as const)('correlates the JWT rejection for %s durable-session state', async (reason, loggedReason) => {
+    getRejectionReasonMock.mockResolvedValue(reason);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    await expect(runJwt({
+      id: 'u-1', tenant: 'tenant-1', user_type: 'internal', session_id: 'sess-1',
+      last_plan_check: Date.now(), last_session_extend: Date.now(),
+    })).resolves.toBeNull();
+
+    expect(logLifecycleMock).toHaveBeenCalledWith('rejected', 'sess-1', loggedReason);
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('sess-1');
+    warn.mockRestore();
+  });
+
+  it('correlates an unreadable durable-session lookup while preserving its existing cookie behavior', async () => {
+    getRejectionReasonMock.mockRejectedValue(new Error('database unavailable'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    await expect(runJwt({
+      id: 'u-1', tenant: 'tenant-1', user_type: 'internal', session_id: 'sess-lookup',
+      last_plan_check: 0, last_session_extend: 0,
+    })).resolves.toMatchObject({ id: 'u-1', session_id: 'sess-lookup' });
+
+    expect(logLifecycleMock).toHaveBeenCalledWith(
+      'rejected', 'sess-lookup', 'durable_session_lookup_unavailable',
+    );
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('sess-lookup');
+    warn.mockRestore();
+  });
+
+  it('correlates missing identity claims when a session identifier is available', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    await expect(runJwt({
+      id: 'u-1', tenant: 'tenant-1', session_id: 'sess-claims',
+      last_plan_check: Date.now(), last_session_extend: Date.now(),
+    })).resolves.toBeNull();
+
+    expect(logLifecycleMock).toHaveBeenCalledWith('rejected', 'sess-claims', 'missing_identity_claims');
+    expect(getRejectionReasonMock).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('tests the Auth.js signOut event and passes only its session identifier to diagnostics', async () => {
+    const authOptions = await getAuthOptions();
+    const signOut = authOptions.events?.signOut;
+    expect(signOut).toBeTypeOf('function');
+
+    await signOut!({ token: {
+      session_id: 'sess-signout',
+      hashed_password: 'must-not-log',
+      two_factor_secret: 'must-not-log-either',
+    } } as any);
+
+    expect(logLifecycleMock).toHaveBeenCalledWith('signed_out', 'sess-signout');
+    expect(JSON.stringify(logLifecycleMock.mock.calls)).not.toContain('must-not-log');
+  });
+
   it('T010: drops the cookie for a token whose user_type is service without consulting the sessions table', async () => {
     await expect(runJwt({
       id: 'u-1',
@@ -286,6 +448,91 @@ describe('nextAuth session expiry sliding', () => {
       'sess-created',
       { userId: 'u-1', userType: 'internal' }
     );
+  });
+
+  it('runs credentials sign-in through Auth.js with an existing cookie at the session limit', async () => {
+    statefulSessionMode = true;
+    const options = await getAuthOptions();
+    options.providers = [{
+      id: 'credentials', name: 'Credentials', type: 'credentials', credentials: {},
+      authorize: async () => {
+        await enforceMaxSessionsMock('tenant-1', 'u-1', 5);
+        return {
+          id: 'u-1', email: 'user@example.test', username: 'user', name: 'Test User',
+          tenant: 'tenant-1', user_type: 'internal',
+        };
+      },
+    } as any];
+    const cookieJar = new Map<string, string>();
+    const authConfig = {
+      ...options,
+      secret: 'auth-handler-session-lifecycle-test-secret',
+      trustHost: true,
+      basePath: '/api/auth',
+    } as any;
+    const request = async (path: string, init?: RequestInit) => {
+      const headers = new Headers(init?.headers);
+      if (cookieJar.size) headers.set('cookie', [...cookieJar].map(([key, value]) => `${key}=${value}`).join('; '));
+      const response = await Auth(new Request(`http://app.test/api/auth/${path}`, { ...init, headers }), authConfig);
+      for (const value of response.headers.getSetCookie()) {
+        const pair = value.split(';')[0];
+        const separator = pair.indexOf('=');
+        cookieJar.set(pair.slice(0, separator), pair.slice(separator + 1));
+      }
+      return response;
+    };
+    const csrfResponse = await request('csrf');
+    const { csrfToken } = await csrfResponse.json();
+    const signIn = () => request('callback/credentials', {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded', 'user-agent': 'test-agent' },
+      body: new URLSearchParams({ csrfToken, callbackUrl: 'http://app.test/', email: 'user@example.test', password: 'correct-password' }),
+    });
+
+    expect((await signIn()).status).toBe(302);
+    const firstSession = durableSessions.find((row) => !row.revoked)!;
+    const existingSessionCookie = cookieJar.get('authjs.session-token');
+    expect(existingSessionCookie).toBeTruthy();
+    for (let index = 0; index < 4; index += 1) {
+      durableSessions.push({
+        sessionId: `existing-${index}`,
+        tenant: 'tenant-1', userId: 'u-1', userType: 'internal', revoked: false,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000), lastActivity: Date.now() + index,
+      });
+    }
+    const callbackInputs: Array<Record<string, unknown>> = [];
+    const originalJwt = options.callbacks!.jwt!;
+    options.callbacks!.jwt = async (args: any) => {
+      if (args.user) callbackInputs.push(structuredClone(args.token));
+      return originalJwt(args);
+    };
+
+    expect((await signIn()).status).toBe(302);
+    expect(cookieJar.get('authjs.session-token')).toBeTruthy();
+    expect(cookieJar.get('authjs.session-token')).not.toBe(existingSessionCookie);
+    expect(callbackInputs).toHaveLength(1);
+    expect(callbackInputs[0]).not.toHaveProperty('session_id');
+    expect(firstSession.revoked).toBe(true);
+    expect(durableSessions.filter((row) => !row.revoked)).toHaveLength(5);
+
+    const decoded = await request('session');
+    expect(decoded.status).toBe(200);
+    expect(await decoded.json()).toMatchObject({ user: { id: 'u-1', tenant: 'tenant-1' } });
+    const repeatedRead = await request('session');
+    expect(await repeatedRead.json()).toMatchObject({ user: { id: 'u-1', tenant: 'tenant-1' } });
+    expect(durableSessions.filter((row) => !row.revoked)).toHaveLength(5);
+
+    // Re-authentication grants a new session; it must not revive the old cookie.
+    const revokedReplay = await Auth(new Request('http://app.test/api/auth/session', {
+      headers: { cookie: `authjs.session-token=${existingSessionCookie}` },
+    }), authConfig);
+    expect(revokedReplay.status).toBe(200);
+    expect(await revokedReplay.json()).toBeNull();
+
+    const anonymousRead = await Auth(new Request('http://app.test/api/auth/session'), authConfig);
+    expect(anonymousRead.status).toBe(200);
+    expect(await anonymousRead.json()).toBeNull();
+    expect(durableSessions.filter((row) => !row.revoked)).toHaveLength(5);
   });
 
   it('fails closed when an OAuth session cannot be persisted', async () => {

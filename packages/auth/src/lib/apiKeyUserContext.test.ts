@@ -35,6 +35,7 @@ vi.mock('./getSession', () => ({
 
 import { runWithApiKeyUser } from './apiKeyUserContext';
 import { withAuth } from './withAuth';
+import { getCurrentUser } from './getCurrentUser';
 
 const apiKeyUser = {
   user_id: 'apikey-user-1',
@@ -66,7 +67,18 @@ describe('runWithApiKeyUser -> withAuth', () => {
 
     const resolved = await runWithApiKeyUser(apiKeyUser, () => action());
 
-    expect(resolved).toEqual(apiKeyUser);
+    expect(resolved).toMatchObject({
+      user_id: apiKeyUser.user_id,
+      tenant: apiKeyUser.tenant,
+      first_name: apiKeyUser.first_name,
+      last_name: apiKeyUser.last_name,
+      email: apiKeyUser.email,
+      is_inactive: false,
+      roles: [],
+    });
+    expect(resolved).not.toHaveProperty('hashed_password');
+    expect(resolved).not.toHaveProperty('two_factor_secret');
+    expect(resolved).not.toHaveProperty('unexpected_credential');
     // The API-key identity takes precedence, so the ambient session is never
     // consulted (which is what previously threw a generic AuthenticationError).
     expect(session.getSessionWithRevocationCheck).not.toHaveBeenCalled();
@@ -78,5 +90,32 @@ describe('runWithApiKeyUser -> withAuth', () => {
     const resolvedTenant = await runWithApiKeyUser(apiKeyUser, () => action());
 
     expect(resolvedTenant).toBe('tenant-9f');
+  });
+
+  it('sanitizes API-key identity through the same safe current-user boundary', async () => {
+    const credentialBearingUser = {
+      ...apiKeyUser,
+      phone_extension: '204',
+      hashed_password: 'api-key-password-hash',
+      two_factor_secret: 'api-key-totp-secret',
+      unexpected_credential: 'must-not-escape',
+    } as unknown as IUserWithRoles;
+
+    const resolved = await runWithApiKeyUser(credentialBearingUser, () => getCurrentUser());
+    const serialized = JSON.stringify(resolved);
+
+    expect(resolved).toMatchObject({
+      user_id: 'apikey-user-1',
+      tenant: 'tenant-9f',
+      email: 'apikey@example.test',
+      phone_extension: '204',
+      roles: [],
+    });
+    expect(resolved).not.toHaveProperty('hashed_password');
+    expect(resolved).not.toHaveProperty('two_factor_secret');
+    expect(resolved).not.toHaveProperty('unexpected_credential');
+    expect(serialized).not.toContain('api-key-password-hash');
+    expect(serialized).not.toContain('api-key-totp-secret');
+    expect(serialized).not.toContain('must-not-escape');
   });
 });

@@ -154,7 +154,7 @@ const SESSION_COOKIE = getSessionCookieConfig();
  */
 type TrackedSessionVerdict = 'live' | 'revoked' | 'unverified';
 
-async function logTrackedSessionRejection(reason: string): Promise<void> {
+async function logTrackedSessionRejection(reason: string, sessionId?: string): Promise<void> {
     let requestId = 'unavailable';
     try {
         const requestHeaders = await headers();
@@ -162,6 +162,7 @@ async function logTrackedSessionRejection(reason: string): Promise<void> {
         if (/^[A-Za-z0-9._:-]{1,128}$/.test(candidate)) requestId = candidate;
     } catch { /* Auth callbacks can also run outside a request context. */ }
     console.warn('[auth] session_rejected', { reason, requestId });
+    if (sessionId) UserSession.logLifecycle?.('rejected', sessionId, reason);
 }
 
 async function checkTrackedSession(
@@ -180,7 +181,10 @@ async function checkTrackedSession(
         || typeof userType !== 'string'
         || !isInteractiveUserType(userType)
     ) {
-        await logTrackedSessionRejection('missing_identity_claims');
+        await logTrackedSessionRejection(
+            'missing_identity_claims',
+            typeof sessionId === 'string' && sessionId.length > 0 ? sessionId : undefined,
+        );
         return 'revoked';
     }
 
@@ -190,12 +194,12 @@ async function checkTrackedSession(
             userType,
         });
         if (rejectionReason) {
-            await logTrackedSessionRejection(`durable_session_${rejectionReason}`);
+            await logTrackedSessionRejection(`durable_session_${rejectionReason}`, sessionId);
             return 'revoked';
         }
         return 'live';
     } catch {
-        await logTrackedSessionRejection('durable_session_lookup_unavailable');
+        await logTrackedSessionRejection('durable_session_lookup_unavailable', sessionId);
         return 'unverified';
     }
 }
@@ -1943,6 +1947,15 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
         maxAge: SESSION_MAX_AGE,
     },
     cookies: NEXTAUTH_COOKIES,
+    events: {
+        async signOut({ token }: any) {
+            const sessionId = token?.session_id;
+            if (typeof sessionId === 'string' && sessionId.length > 0) {
+                // Auth.js clears the browser cookie here; durable revocation is a separate action.
+                UserSession.logLifecycle?.('signed_out', sessionId);
+            }
+        },
+    },
     callbacks: {
         async signIn({ user, account, credentials, profile, ...context }: any) {
             const providerId = account?.provider;
