@@ -259,7 +259,7 @@ checks run in the normal msgraph Vitest suite against local HTTP listeners.
 
 | Surface | Contract evidence | Remaining limitation |
 | --- | --- | --- |
-| Recurring series expansion | `calendar.test.ts` expands weekly/relative-monthly/counted/until series through `calendarView/delta`, asserts type/seriesMasterId/originalStart, cancellation as `@removed` and an overridden instance as `type: 'exception'` | UTC-only expansion, synthetic occurrence ids, no Outlook-side series-split (`_R`) behaviour |
+| Recurring series expansion | `calendar.test.ts` expands weekly/relative-monthly/counted/until series through `calendarView/delta`, asserts type/seriesMasterId/originalStart, `$select` projection, occurrence GET/DELETE, cancellation as `@removed` and an overridden instance as `type: 'exception'` | UTC-only expansion, synthetic occurrence ids, no Outlook-side series-split (`_R`) behaviour |
 | Calendar create/error responses | `tests/contracts/calendar.ts` and real HTTP checks in `calendar.test.ts`; malformed event/error bodies and wrong create status fail | Consumed fields only; no full event schema or live sandbox comparison |
 | OAuth token responses | `tests/contracts/oauth.ts` applied to code, refresh and client-credential responses in `smoke.test.ts`; wrong expiry type and bearer type fail | Opaque token envelope only; does not establish Entra signatures, consent, PKCE, SSO, or complete scope-dependent token issuance parity |
 | Subscription validation | `calendar.test.ts` verifies request method/content type, accepts only 200/plain-text matching token responses, and verifies rejected callbacks leave no subscription | HTTP loopback transport; real HTTPS trust and tenant registration require application/sandbox coverage |
@@ -324,6 +324,15 @@ with `noEnd`, `endDate` and `numbered` ranges; anything else answers
 `calendar-occurrence` control action (`action: 'cancel' | 'override'`) to
 cancel one instance — reported as an `@removed` item for that occurrence id —
 or to move/rename one, which is then expanded as `type: 'exception'`.
+
+An occurrence or exception also resolves through `GET /me/events/{id}` and
+`GET /me/calendar/events/{id}` even though nothing is stored for it, and a
+`DELETE` on that id cancels just that slot; once cancelled the id answers 404,
+which is the pair of behaviours a client needs to tell "this occurrence moved"
+from "this occurrence is gone". `$select` is honoured on `calendarView/delta`
+(projected fields plus `id`, `@removed` items untouched) and carried into the
+next/delta link, which is how a client asks for `type`/`seriesMasterId`/
+`originalStart`.
 
 Use the `calendar-change` control action to create/update/delete vendor events;
 it returns the event and each matching webhook delivery's HTTP status. Supply

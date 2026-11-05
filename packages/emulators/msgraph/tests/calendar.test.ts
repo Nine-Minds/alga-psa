@@ -400,6 +400,24 @@ it('honours COUNT and UNTIL ranges', async () => {
   expect((await delta(`${base}/v1.0${seriesWindow}`)).value).toHaveLength(3);
 });
 
+it('serves an occurrence by id until it is cancelled, which is when it 404s', async () => {
+  const master = await createSeries({
+    pattern: { type: 'daily', interval: 1 },
+    range: { type: 'numbered', startDate: '2026-09-20', numberOfOccurrences: 3 },
+  });
+  const items = (await delta(`${base}/v1.0${seriesWindow}`)).value;
+
+  const fetched = await (await graph(`/me/events/${items[1].id}`)).json();
+  expect(fetched).toMatchObject({ id: items[1].id, type: 'occurrence', seriesMasterId: master.id, originalStart: items[1].originalStart });
+
+  // Deleting one occurrence cancels that slot; the master survives, and the
+  // occurrence id stops resolving — exactly what a client sees after @removed.
+  expect((await graph(`/me/calendar/events/${items[1].id}`, 'DELETE')).status).toBe(204);
+  expect((await graph(`/me/events/${items[1].id}`)).status).toBe(404);
+  expect((await graph(`/me/calendar/events/${master.id}`)).status).toBe(200);
+  expect((await delta(`${base}/v1.0${seriesWindow}`)).value).toHaveLength(2);
+});
+
 it('reports a cancelled occurrence as @removed and an overridden one as an exception', async () => {
   const master = await createSeries({
     pattern: { type: 'daily', interval: 1 },

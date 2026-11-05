@@ -1289,11 +1289,31 @@ export class MsGraphCore implements EmulatorCore {
   }
 
   getCalendarEvent(eventId: string): GraphCalendarEvent {
-    const event = this.calendarEvents.get(eventId);
+    const event = this.calendarEvents.get(eventId) ?? this.resolveCalendarOccurrence(eventId);
     if (!event) {
       throw new GraphApiError(404, { error: { code: 'ErrorItemNotFound' } });
     }
     return event;
+  }
+
+  /**
+   * Resolve one expanded occurrence by id. Graph serves an occurrence or an
+   * exception through GET even though no item is stored for it, and answers 404
+   * once that occurrence is cancelled — the pair of behaviours a client has to
+   * tell apart to turn a removal into a series exception.
+   */
+  private resolveCalendarOccurrence(eventId: string): GraphCalendarEvent | undefined {
+    const match = /^(.+)_(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/.exec(eventId);
+    const master = match ? this.calendarEvents.get(match[1]) : undefined;
+    if (!master?.recurrence) return undefined;
+    const [, , year, month, day, hour, minute, second] = match!;
+    const slot = Date.parse(`${year}-${month}-${day}T${hour}:${minute}:${second}Z`);
+    if (!Number.isFinite(slot)) return undefined;
+    // An exception may sit well away from its slot, so expand around it and
+    // match on the id rather than on the instance's own times.
+    const year_ms = 370 * 24 * 60 * 60 * 1000;
+    return this.expandCalendarSeries(master, slot - year_ms, slot + year_ms)
+      .find((instance) => instance.id === eventId);
   }
 
   updateCalendarEvent(eventId: string, patch: Record<string, unknown>): GraphCalendarEvent {
@@ -1330,6 +1350,12 @@ export class MsGraphCore implements EmulatorCore {
 
   deleteCalendarEvent(eventId: string): void {
     const event = this.getCalendarEvent(eventId);
+    // Deleting one expanded occurrence cancels that slot, as Outlook's
+    // "this occurrence" does; the series master stays.
+    if (event.seriesMasterId && !this.calendarEvents.has(eventId)) {
+      this.cancelCalendarOccurrence(event.seriesMasterId, String(event.originalStart));
+      return;
+    }
     this.calendarEvents.delete(eventId);
     if (event.onlineMeetingId) {
       this.onlineMeetings.delete(event.onlineMeetingId);
