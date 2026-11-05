@@ -21,6 +21,15 @@ export async function register() {
       console.error('Failed to initialize application:', error);
     }
 
+    // Native unsigned-contact confirmations also exist for PSA tenants that do not
+    // participate in co-managed work, so their delivery recovery must not share the
+    // optional capability-gated routing job.
+    try {
+      (await import('./lib/email/inboundSenderConfirmationRecovery')).defineInboundSenderConfirmationRecoveryJob();
+    } catch (error) {
+      console.error('Failed to register inbound sender confirmation recovery:', error);
+    }
+
     // Registering the co-managed capability resolvers is a side effect of this import. A failure
     // leaves the gate unregistered, which fails closed (admits/serves are false).
     try {

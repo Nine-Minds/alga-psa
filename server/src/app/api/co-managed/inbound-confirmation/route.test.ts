@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
 const mocks = vi.hoisted(() => ({
-  currentUser: vi.fn(), approve: vi.fn(), payloadState: 'pending' as string, updatedAt: new Date(),
+  currentUser: vi.fn(), approve: vi.fn(), approveContact: vi.fn(), contactPending: false,
+  payloadState: 'pending' as string, updatedAt: new Date(),
 }));
 vi.mock('@alga-psa/user-composition/actions', () => ({ getCurrentUser: mocks.currentUser }));
 vi.mock('@alga-psa/co-managed/deliveryRegistration', () => ({}));
@@ -13,8 +14,11 @@ vi.mock('@alga-psa/co-managed/inboundSenderConfirmation', () => ({
   isInboundSenderConfirmationRedeemable: (state: string, updatedAt: Date) => state === 'pending'
     || (state === 'redeeming' && Date.now() - updatedAt.getTime() > 60_000),
   approveInboundSenderConfirmation: mocks.approve,
-  approveInboundContactSenderConfirmation: vi.fn(),
-  loadInboundContactConfirmation: vi.fn(async () => null),
+  approveInboundContactSenderConfirmation: mocks.approveContact,
+  loadInboundContactConfirmation: vi.fn(async () => mocks.contactPending ? ({
+    row: { recipient: 'rita@example.test' },
+    payload: { ticketId: 'ticket-contact', emailData: { body: { text: 'contact reply text' } } },
+  }) : null),
 }));
 vi.mock('@alga-psa/db', () => ({
   getAdminConnection: async () => ({}),
@@ -31,6 +35,7 @@ describe('inbound sender confirmation HTTP boundary', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.payloadState = 'pending';
+    mocks.contactPending = false;
     mocks.updatedAt = new Date();
     mocks.currentUser.mockResolvedValue({ tenant: 'tenant-1', user_id: 'alice', user_type: 'internal', email: 'alice@example.test' });
     mocks.approve.mockResolvedValue({ ticketId: 'ticket-1', commentId: 'comment-1' });
@@ -101,5 +106,27 @@ describe('inbound sender confirmation HTTP boundary', () => {
     mocks.updatedAt = new Date();
     const active = await GET(new NextRequest('https://psa.example.test/api/co-managed/inbound-confirmation?token=valid-token'));
     expect(active.status).toBe(403);
+  });
+
+  it('renders and accepts anonymous mailbox-possession confirmation with same-origin protection', async () => {
+    mocks.contactPending = true;
+    mocks.approveContact.mockResolvedValue({ outcome: 'replied', ticketId: 'ticket-contact', commentId: 'comment-contact' });
+    const url = 'https://psa.example.test/api/co-managed/inbound-confirmation?token=valid-token';
+    const page = await GET(new NextRequest(url));
+    expect(page.status).toBe(200);
+    expect(await page.text()).toContain('contact reply text');
+    expect(mocks.currentUser).not.toHaveBeenCalled();
+
+    const crossOrigin = await POST(new NextRequest('https://psa.example.test/api/co-managed/inbound-confirmation', {
+      method: 'POST', headers: { origin: 'https://attacker.example.test', 'content-type': 'application/x-www-form-urlencoded' }, body: 'token=valid-token',
+    }));
+    expect(crossOrigin.status).toBe(403);
+    expect(mocks.approveContact).not.toHaveBeenCalled();
+    const approved = await POST(new NextRequest('https://psa.example.test/api/co-managed/inbound-confirmation', {
+      method: 'POST', headers: { origin: 'https://psa.example.test', 'content-type': 'application/x-www-form-urlencoded' }, body: 'token=valid-token',
+    }));
+    expect(approved.status).toBe(200);
+    expect(mocks.approveContact).toHaveBeenCalledTimes(1);
+    expect(mocks.currentUser).not.toHaveBeenCalled();
   });
 });

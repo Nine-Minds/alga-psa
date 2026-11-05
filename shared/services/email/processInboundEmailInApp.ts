@@ -1358,8 +1358,13 @@ export async function processInboundEmailInApp(
       && !contactSenderTrusted
       && !confirmedContactMatches(matchedSenderContact.contact_id, matchedSenderContact.matched_email ?? matchedSenderContact.email)) {
       const writer = await coManagedInboundCommentSeam.resolve(tenantId);
-      if (writer?.requestContactSenderConfirmation && senderEmail) {
-        await writer.requestContactSenderConfirmation({
+      if (senderEmail) {
+        // Native contact confirmation is required for unsigned replies on ordinary PSA
+        // tenants too; it must not depend on optional co-managed participation.
+        const requestConfirmation = writer?.requestContactSenderConfirmation
+          ? writer.requestContactSenderConfirmation.bind(writer)
+          : (await import('@alga-psa/co-managed/inboundSenderConfirmation')).requestInboundContactSenderConfirmation;
+        await requestConfirmation({
           tenant: tenantId, contactId: matchedSenderContact.contact_id,
           contactEmail: String(matchedSenderContact.matched_email ?? matchedSenderContact.email ?? senderEmail),
           ticketId: params.ticketId, providerId, providerMessageId: emailData.providerIdentity || emailData.id, emailData,

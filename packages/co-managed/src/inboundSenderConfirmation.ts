@@ -217,6 +217,11 @@ export async function requestInboundContactSenderConfirmation(input: {
   const digest = inboundMessageSha256(input.emailData);
   const id = sourceId(input.tenant, input.providerId, input.providerMessageId, { tenant: input.tenant, userId: input.contactId });
   const db = await getAdminConnection();
+  const eligibleContact = await tenantDb(db, input.tenant).table('contacts')
+    .where({ contact_name_id: input.contactId })
+    .where((query) => query.whereNot('is_inactive', true).orWhereNull('is_inactive'))
+    .first('contact_name_id');
+  if (!eligibleContact) throw new Error('Contact is no longer active; sender confirmation was not sent.');
   const payload: ContactConfirmationPayload = {
     ...input, contactEmail: recipient, contentSha256: digest,
     expiresAt: new Date(Date.now() + TTL_MS).toISOString(), state: 'pending',
@@ -294,26 +299,36 @@ export async function approveInboundContactSenderConfirmation(token: string): Pr
       { tenant: claims.tenant, userId: pending.payload.contactId }) !== claims.sourceId
     || inboundMessageSha256(pending.payload.emailData) !== pending.payload.contentSha256) return null;
   const db = await getAdminConnection();
-  const redemptionId = randomUUID();
-  const claimed = await tenantDb(db, claims.tenant).table('co_management_deliveries')
-    .where({ tenant: claims.tenant, delivery_kind: CONTACT_KIND, source_id: claims.sourceId })
-    .where((q) => q.whereRaw("payload->>'state' = 'pending'").orWhere((stale) => stale.whereRaw("payload->>'state' = 'redeeming'").andWhere('updated_at', '<', new Date(Date.now() - INBOUND_CONFIRMATION_REDEMPTION_LEASE_MS))))
-    .update({ payload: { ...pending.payload, state: 'redeeming', redemptionId }, updated_at: db.fn.now() });
-  if (!claimed) return null;
-  try {
+  // Hold a database transaction advisory lock across claim, native admission and
+  // comment persistence. A stale retry waits for the original redemption and then
+  // observes its durable comment via processInboundEmailInApp's message dedupe.
+  return db.transaction(async (trx) => {
+    await trx.raw('select pg_advisory_xact_lock(hashtext(?))', [`inbound-contact-confirmation:${claims.tenant}:${claims.sourceId}`]);
+    const row = await tenantDb(trx, claims.tenant).table('co_management_deliveries')
+      .where({ tenant: claims.tenant, delivery_kind: CONTACT_KIND, source_id: claims.sourceId }).first('payload', 'updated_at');
+    const current: ContactConfirmationPayload = typeof row?.payload === 'string' ? JSON.parse(row.payload) : row?.payload;
+    if (!current || !isInboundSenderConfirmationRedeemable(current.state, row.updated_at)
+      || current.contentSha256 !== pending.payload.contentSha256) return null;
+    const contact = await tenantDb(trx, claims.tenant).table('contacts')
+      .where({ contact_name_id: current.contactId })
+      .where((query) => query.whereNot('is_inactive', true).orWhereNull('is_inactive'))
+      .first('contact_name_id');
+    if (!contact) return null;
+    const redemptionId = randomUUID();
+    const claimed = await tenantDb(trx, claims.tenant).table('co_management_deliveries')
+      .where({ tenant: claims.tenant, delivery_kind: CONTACT_KIND, source_id: claims.sourceId })
+      .where((q) => q.whereRaw("payload->>'state' = 'pending'").orWhere((stale) => stale.whereRaw("payload->>'state' = 'redeeming'").andWhere('updated_at', '<', new Date(Date.now() - INBOUND_CONFIRMATION_REDEMPTION_LEASE_MS))))
+      .update({ payload: { ...current, state: 'redeeming', redemptionId }, updated_at: trx.fn.now() });
+    if (!claimed) return null;
     const process = await import('../../../shared/services/email/processInboundEmailInApp');
-    const result = await process.processInboundEmailInApp({ tenantId: claims.tenant, providerId: pending.payload.providerId, emailData: pending.payload.emailData }, {
-      confirmedContact: { contactId: pending.payload.contactId, email: pending.payload.contactEmail, contentSha256: pending.payload.contentSha256 },
+    const result = await process.processInboundEmailInApp({ tenantId: claims.tenant, providerId: current.providerId, emailData: current.emailData }, {
+      confirmedContact: { contactId: current.contactId, email: current.contactEmail, contentSha256: current.contentSha256 },
     });
-    if (!['replied', 'deduped'].includes((result as any).outcome) || (result as any).ticketId !== pending.payload.ticketId) return null;
-    await tenantDb(db, claims.tenant).table('co_management_deliveries').where({ tenant: claims.tenant, delivery_kind: CONTACT_KIND, source_id: claims.sourceId })
-      .whereRaw("payload->>'redemptionId' = ?", [redemptionId]).update({ payload: { ...pending.payload, state: 'approved' }, updated_at: db.fn.now() });
+    if (!['replied', 'deduped'].includes((result as any).outcome) || (result as any).ticketId !== current.ticketId) return null;
+    await tenantDb(trx, claims.tenant).table('co_management_deliveries').where({ tenant: claims.tenant, delivery_kind: CONTACT_KIND, source_id: claims.sourceId })
+      .whereRaw("payload->>'redemptionId' = ?", [redemptionId]).update({ payload: { ...current, state: 'approved' }, updated_at: trx.fn.now() });
     return result;
-  } finally {
-    await tenantDb(db, claims.tenant).table('co_management_deliveries').where({ tenant: claims.tenant, delivery_kind: CONTACT_KIND, source_id: claims.sourceId })
-      .whereRaw("payload->>'redemptionId' = ?", [redemptionId]).whereRaw("payload->>'state' = 'redeeming'")
-      .update({ payload: { ...pending.payload, state: 'pending' }, updated_at: db.fn.now() });
-  }
+  });
 }
 
 /** Server recovery delivery; the email-service process can safely leave the intent pending. */

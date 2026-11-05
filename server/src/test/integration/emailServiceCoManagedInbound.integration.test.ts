@@ -397,7 +397,13 @@ describe('email-service boot registers co-managed inbound', () => {
       const nativeToken = `native:${uuidv4()}`;
       await db('email_reply_tokens').insert({ tenant: ticketTenant, token: nativeToken, ticket_id: ticketId, comment_id: parentCommentId, entity_type: 'ticket', recipient_email: contactEmail, metadata: null });
       const message = { ...emailData(`<unsigned-contact-${MARK}@outlook.example.test>`, contactText, null, { provider: 'microsoft' }), from: { email: contactEmail, name: 'Rita Requester' }, body: { text: `${contactText}\n\n[ALGA-REPLY-TOKEN ${nativeToken} ticketId=${ticketId} commentId=${parentCommentId} threadId=${threadId}]` } };
+      const { coManagedInboundCommentSeam } = await import('@alga-psa/shared/lib/coManagedDelivery');
+      const { registerCoManagedInboundCommentWriter } = await import('@alga-psa/co-managed/inboundCommentWriter');
+      coManagedInboundCommentSeam.reset();
+      expect(coManagedInboundCommentSeam.hasProvider()).toBe(false);
       const initial: any = await processInbound({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: message });
+      // Restore the optional capability after demonstrating the ordinary PSA fallback.
+      registerCoManagedInboundCommentWriter();
       expect(initial).toMatchObject({ outcome: 'quarantined', reason: 'unauthorized_thread_header_sender', ticketId });
       expect(await sharedComments(contactText)).toHaveLength(0);
       const url = String((sendEmail.mock.calls[0] as any)[0].templateProcessor.text).match(/https:\/\/[^\s]+/)?.[0];
@@ -428,7 +434,51 @@ describe('email-service boot registers co-managed inbound', () => {
       const forgedResult: any = await processInbound({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: forged });
       expect(forgedResult.outcome).toBe('quarantined');
       expect(await sharedComments(forgedText)).toHaveLength(0);
-      expect(sendEmail).toHaveBeenCalledTimes(2);
+
+      const interruptedText = `contact-interrupted-after-persist-${MARK}`;
+      const interruptedMessage = { ...message, id: `<contact-interrupted-${MARK}@outlook.example.test>`, body: { text: `${interruptedText}\n\n[ALGA-REPLY-TOKEN ${nativeToken} ticketId=${ticketId} commentId=${parentCommentId} threadId=${threadId}]` } };
+      await processInbound({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: interruptedMessage });
+      const interruptedUrl = String((sendEmail.mock.calls[2] as any)[0].templateProcessor.text).match(/https:\/\/[^\s]+/)![0];
+      const interruptedToken = new URL(interruptedUrl).searchParams.get('token')!;
+      const processModule = await import('../../../../shared/services/email/processInboundEmailInApp');
+      const originalProcess = processModule.processInboundEmailInApp;
+      const persistThenInterrupt = vi.spyOn(processModule, 'processInboundEmailInApp').mockImplementationOnce(async (...args: any[]) => {
+        await originalProcess(...args);
+        throw new Error('simulated process interruption after comment persistence');
+      });
+      await expect(approveInboundContactSenderConfirmation(interruptedToken)).rejects.toThrow('simulated process interruption');
+      persistThenInterrupt.mockRestore();
+      expect(await sharedComments(interruptedText)).toHaveLength(1);
+      expect(await approveInboundContactSenderConfirmation(interruptedToken)).toMatchObject({ outcome: 'deduped', ticketId });
+      expect(await sharedComments(interruptedText)).toHaveLength(1);
+
+      const overlapText = `contact-overlapping-approval-${MARK}`;
+      const overlapMessage = { ...message, id: `<contact-overlap-${MARK}@outlook.example.test>`, body: { text: `${overlapText}\n\n[ALGA-REPLY-TOKEN ${nativeToken} ticketId=${ticketId} commentId=${parentCommentId} threadId=${threadId}]` } };
+      await processInbound({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: overlapMessage });
+      const overlapUrl = String((sendEmail.mock.calls[3] as any)[0].templateProcessor.text).match(/https:\/\/[^\s]+/)![0];
+      const overlapToken = new URL(overlapUrl).searchParams.get('token')!;
+      const overlapResults = await Promise.all([
+        approveInboundContactSenderConfirmation(overlapToken),
+        approveInboundContactSenderConfirmation(overlapToken),
+      ]);
+      expect(overlapResults.filter(Boolean)).toHaveLength(1);
+      expect(await sharedComments(overlapText)).toHaveLength(1);
+
+      const inactiveText = `contact-deactivated-${MARK}`;
+      const inactiveMessage = { ...message, id: `<contact-inactive-${MARK}@outlook.example.test>`, body: { text: `${inactiveText}\n\n[ALGA-REPLY-TOKEN ${nativeToken} ticketId=${ticketId} commentId=${parentCommentId} threadId=${threadId}]` } };
+      await processInbound({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: inactiveMessage });
+      const inactiveUrl = String((sendEmail.mock.calls[4] as any)[0].templateProcessor.text).match(/https:\/\/[^\s]+/)![0];
+      const inactiveToken = new URL(inactiveUrl).searchParams.get('token')!;
+      const watchListBefore = (await db('tickets').where({ tenant: ticketTenant, ticket_id: ticketId }).first('attributes')).attributes;
+      await db('contacts').where({ tenant: ticketTenant, contact_name_id: requesterContactId }).update({ is_inactive: true });
+      try {
+        expect(await approveInboundContactSenderConfirmation(inactiveToken)).toBeNull();
+        expect(await sharedComments(inactiveText)).toHaveLength(0);
+        expect((await db('tickets').where({ tenant: ticketTenant, ticket_id: ticketId }).first('attributes')).attributes).toEqual(watchListBefore);
+      } finally {
+        await db('contacts').where({ tenant: ticketTenant, contact_name_id: requesterContactId }).update({ is_inactive: false });
+      }
+      expect(sendEmail).toHaveBeenCalledTimes(5);
     } finally { resetWorkflowEmailProvider(); if (priorSecret === undefined) delete process.env.NEXTAUTH_SECRET; else process.env.NEXTAUTH_SECRET = priorSecret; if (priorOrigin === undefined) delete process.env.APP_BASE_URL; else process.env.APP_BASE_URL = priorOrigin; }
   });
 

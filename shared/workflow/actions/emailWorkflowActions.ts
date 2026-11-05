@@ -303,6 +303,7 @@ export async function findContactByEmail(
       });
 
       const candidates = await candidatesQuery
+        .where((query: any) => query.whereNot('contacts.is_inactive', true).orWhereNull('contacts.is_inactive'))
         .andWhere(contactEmailMatch(db, trx, normalizedEmail))
         .orderBy('contacts.created_at', 'asc')
         .orderBy('contacts.contact_name_id', 'asc');

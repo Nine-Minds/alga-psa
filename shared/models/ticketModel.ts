@@ -1530,6 +1530,9 @@ export class TicketModel {
       if (!contact) {
         throw new Error('Contact not found or does not belong to tenant');
       }
+      if (contact.is_inactive === true) {
+        throw new Error('Inactive contacts cannot create ticket comments');
+      }
     }
 
     const commentId = uuidv4();
