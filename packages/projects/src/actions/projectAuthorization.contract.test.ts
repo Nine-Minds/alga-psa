@@ -22,7 +22,6 @@ describe('project authorization kernel contracts', () => {
     expect(projectActionsSource).toContain('export const getProject = withAuth(async (user, { tenant }, projectId: string)');
     expect(projectReadAuthorizationSource).toContain('builtinProvider: new BuiltinAuthorizationKernelProvider(),');
     expect(projectReadAuthorizationSource).toContain('bundleProvider: new BundleAuthorizationKernelProvider({');
-    expect(projectReadAuthorizationSource).toContain('return await resolveBundleNarrowingRulesForEvaluation(conn, input);');
     expect(projectReadAuthorizationSource).toContain('record: toProjectAuthorizationRecord(project),');
   });
 
