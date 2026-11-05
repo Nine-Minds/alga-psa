@@ -160,6 +160,7 @@ export function registerQuotesContractsV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'put', path: '/api/v1/quotes/{id}/items/{itemId}', summary: 'Update quote item', description: 'Updates quote item via updateItem().', family: 'quote' },
     { method: 'delete', path: '/api/v1/quotes/{id}/items/{itemId}', summary: 'Delete quote item', description: 'Deletes quote item via deleteItem().', family: 'quote' },
     { method: 'post', path: '/api/v1/quotes/{id}/items/reorder', summary: 'Reorder quote items', description: 'Reorders quote item sequence via reorderItems().', family: 'quote' },
+    { method: 'post', path: '/api/v1/quotes/{id}/cancel', summary: 'Cancel quote', description: 'Cancels quote via cancel(); requires billing:update. Quote status is not editable through PUT /api/v1/quotes/{id}.', family: 'quote' },
     { method: 'post', path: '/api/v1/quotes/{id}/remind', summary: 'Send quote reminder', description: 'Sends reminder for quote via remind().', family: 'quote' },
     { method: 'post', path: '/api/v1/quotes/{id}/request-changes', summary: 'Request quote changes', description: 'Requests changes on pending-approval quote via requestChanges().', family: 'quote' },
     { method: 'post', path: '/api/v1/quotes/{id}/resend', summary: 'Resend quote', description: 'Resends quote via resend().', family: 'quote' },

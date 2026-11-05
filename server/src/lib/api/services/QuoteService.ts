@@ -8,7 +8,7 @@ import type { Knex } from 'knex';
 import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { hasPermission } from '../../auth/rbac';
-import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
+import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 import { Quote, QuoteItem, QuoteActivity } from '@alga-psa/billing/models';
 import {
   buildQuoteConversionPreview,
@@ -32,7 +32,8 @@ import type {
   SendQuoteApi,
   ConvertQuoteApi,
 } from '../schemas/quoteSchemas';
-import { onQuoteAccepted, onQuoteSent } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
+import { canTransitionQuoteStatus } from '@alga-psa/shared/lib/quotes/quoteStatusTransitions';
+import { onQuoteSent } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
 import { QUOTE_ACTIVITY_TYPES, buildApprovalChangesRequestedActivity } from '@alga-psa/billing/lib/quoteActivityTypes';
 import { SELF_APPROVAL_AUDIT_METADATA } from '@alga-psa/authorization/quoteSelfApproval';
 
@@ -263,23 +264,24 @@ export class QuoteService extends BaseService<IQuote> {
   }
 
   async update(id: string, data: UpdateQuoteApi, context: ServiceContext): Promise<IQuote> {
+    // LEVERAGE: pattern crud-door-to-lifecycle — second instance after the bulk-invoice status fix; a generic update carrying a lifecycle field bypasses the command's permission.
+    // `status` is not an update field. Lifecycle transitions are named commands that own their
+    // permission, lock and audit row; letting a generic update carry `status` let a
+    // `billing:update` user approve quotes without `quotes:approve` (alga-2026-0003002).
+    // Checked before any DB access so it also holds for callers that bypass the schema.
+    if ((data as { status?: unknown }).status !== undefined) {
+      throw new BadRequestError(
+        'Quote status is not editable; use a lifecycle command (submit-for-approval, approve, send, cancel)'
+      );
+    }
+
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      const lifecycleData = {
+      return Quote.update(trx, context.tenant, id, {
         ...data,
-        ...(data.status === 'sent' ? { sent_at: new Date().toISOString() } : {}),
-        ...(data.status === 'accepted' ? { accepted_at: new Date().toISOString() } : {}),
-      };
-      const updated = await Quote.update(trx, context.tenant, id, {
-        ...lifecycleData,
         updated_by: context.userId,
       } as Partial<IQuote>);
-
-      if (updated.status === 'sent') await onQuoteSent(trx, updated);
-      if (updated.status === 'accepted') await onQuoteAccepted(trx, updated);
-
-      return updated;
     }).catch(throwQuoteApiError);
   }
 
@@ -465,6 +467,56 @@ export class QuoteService extends BaseService<IQuote> {
       await onQuoteSent(trx, updated);
 
       return updated;
+    }).catch(throwQuoteApiError);
+  }
+
+  /**
+   * Cancels a quote. Locks the quote row first (same order as `approve`, which locks it inside
+   * Quote.update), re-reads the status under the lock and checks the transition table, so a
+   * pending approval and a cancel cannot interleave. Missing quote -> 404, illegal source
+   * status -> 409; an already-cancelled quote is returned unchanged (idempotent no-op).
+   */
+  async cancel(quoteId: string, reason: string | undefined, context: ServiceContext): Promise<IQuote> {
+    await this.validateBillingPermission(context, 'update');
+    const { knex } = await this.getKnex();
+
+    return withTransaction(knex, async (trx) => {
+      const current = await tenantDb(trx, context.tenant)
+        .table('quotes')
+        .where({ quote_id: quoteId })
+        .forUpdate()
+        .first();
+      if (!current) {
+        throw new NotFoundError('Quote not found');
+      }
+      if (current.is_template) {
+        throw new ConflictError('Quote templates do not participate in status transitions');
+      }
+      if (current.status === 'cancelled') {
+        // Idempotent: already cancelled is a no-op (no second audit row).
+        return current as IQuote;
+      }
+      if (!canTransitionQuoteStatus(current.status, 'cancelled')) {
+        throw new ConflictError(`Quote in status '${current.status}' cannot be cancelled`);
+      }
+
+      // Quote.update re-locks (re-entrant within this trx), writes the `status_changed` audit row
+      // with previous/next status and records the lifecycle event.
+      const quote = await Quote.update(trx, context.tenant, quoteId, {
+        status: 'cancelled',
+        cancelled_at: new Date().toISOString(),
+        updated_by: context.userId,
+      } as Partial<IQuote>);
+
+      await QuoteActivity.create(trx, context.tenant, {
+        quote_id: quoteId,
+        activity_type: QUOTE_ACTIVITY_TYPES.cancelled,
+        description: reason ? `Quote cancelled: ${reason}` : 'Quote cancelled',
+        performed_by: context.userId,
+        metadata: { reason: reason ?? null, previous_status: current.status },
+      });
+
+      return quote;
     }).catch(throwQuoteApiError);
   }
 
