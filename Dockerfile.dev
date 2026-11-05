@@ -18,7 +18,7 @@ RUN apk add --no-cache \
     ca-certificates \
     ttf-freefont \
     font-dejavu \
-    font-liberation
+    font-liberation \
     findutils \
     setpriv
 
