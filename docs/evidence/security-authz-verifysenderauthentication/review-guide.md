@@ -77,4 +77,4 @@ The app server and browser/manual review were intentionally not started for this
 
 - Exact PR head SHA and publication time are recorded in the PR description alongside this guide after publication.
 - PR: https://github.com/Nine-Minds/alga-psa/pull/4149
-- External CI: record exact run URL, revision, and status after push. Pending checks are not local verification.
+- External CI: `gh pr checks 4149` reported no checks for the pushed repair when queried. Recheck the PR for later runs; no external CI was awaited as part of this assignment.
