@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { getAdminConnection, tenantDb } from '@alga-psa/db';
 import '@alga-psa/co-managed/deliveryRegistration';
-import { approveInboundSenderConfirmation, parseInboundSenderConfirmationToken } from '@alga-psa/co-managed/inboundSenderConfirmation';
+import {
+  approveInboundSenderConfirmation,
+  isInboundSenderConfirmationRedeemable,
+  parseInboundSenderConfirmationToken,
+} from '@alga-psa/co-managed/inboundSenderConfirmation';
 
 const headers = {
   'Cache-Control': 'private, no-store',
@@ -23,10 +27,12 @@ async function loadConfirmation(token: string) {
   const db = await getAdminConnection();
   const row = await tenantDb(db, claims.tenant).table('co_management_deliveries')
     .where({ tenant: claims.tenant, delivery_kind: 'sender_confirmation', source_id: claims.sourceId })
-    .first('recipient', 'payload');
+    .first('recipient', 'payload', 'updated_at');
   if (!row?.payload) return null;
   const payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload;
-  if (payload.expiresAt !== claims.expiresAt || payload.state !== 'pending' || Date.parse(payload.expiresAt) <= Date.now()) return null;
+  if (payload.expiresAt !== claims.expiresAt
+    || !isInboundSenderConfirmationRedeemable(payload.state, row.updated_at)
+    || Date.parse(payload.expiresAt) <= Date.now()) return null;
   return { tenant: claims.tenant, row, payload };
 }
 
@@ -43,7 +49,7 @@ export async function GET(request: NextRequest) {
   if (!pending) return denied();
   const user = await getCurrentUser();
   if (!user) {
-    const signIn = new URL('/msp/signin', request.nextUrl.origin);
+    const signIn = new URL('/auth/msp/signin', request.nextUrl.origin);
     signIn.searchParams.set('callbackUrl', request.nextUrl.toString());
     return new NextResponse(`<!doctype html><html lang="en"><title>Confirm ticket reply</title><main><h1>Confirm ticket reply</h1><p>Sign in as the intended internal user to confirm this reply.</p><a href="${signIn.toString()}">Sign in</a></main></html>`, { headers: { ...headers, 'Content-Type': 'text/html; charset=utf-8' } });
   }

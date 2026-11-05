@@ -399,6 +399,42 @@ describe('email-service boot registers co-managed inbound', () => {
       ]);
       expect(results.filter(Boolean)).toHaveLength(1);
       expect(await sharedComments(concurrent.text)).toHaveLength(1);
+
+      const interruptedBeforeWrite = await request('interrupted-before-write');
+      const beforeRow = await db('co_management_deliveries').where({ tenant: ticketTenant, delivery_kind: 'sender_confirmation', source_id: interruptedBeforeWrite.sourceId }).first('payload');
+      await db('co_management_deliveries').where({ tenant: ticketTenant, delivery_kind: 'sender_confirmation', source_id: interruptedBeforeWrite.sourceId })
+        .update({ payload: { ...beforeRow.payload, state: 'redeeming', redemptionId: uuidv4() }, updated_at: new Date(Date.now() - 61_000) });
+      expect(await approveInboundSenderConfirmation(interruptedBeforeWrite.confirmationToken, actor)).toMatchObject({ ticketId });
+      expect(await sharedComments(interruptedBeforeWrite.text)).toHaveLength(1);
+
+      const activeClaim = await request('active-claim');
+      const activeRow = await db('co_management_deliveries').where({ tenant: ticketTenant, delivery_kind: 'sender_confirmation', source_id: activeClaim.sourceId }).first('payload');
+      await db('co_management_deliveries').where({ tenant: ticketTenant, delivery_kind: 'sender_confirmation', source_id: activeClaim.sourceId })
+        .update({ payload: { ...activeRow.payload, state: 'redeeming', redemptionId: uuidv4() }, updated_at: new Date() });
+      expect(await approveInboundSenderConfirmation(activeClaim.confirmationToken, actor)).toBeNull();
+      expect(await sharedComments(activeClaim.text)).toHaveLength(0);
+
+      const interruptedAfterWrite = await request('interrupted-after-write');
+      const afterRow = await db('co_management_deliveries').where({ tenant: ticketTenant, delivery_kind: 'sender_confirmation', source_id: interruptedAfterWrite.sourceId }).first('payload');
+      const { coManagedInboundCommentSeam } = await import('@alga-psa/shared/lib/coManagedDelivery');
+      const writer = await coManagedInboundCommentSeam.resolve(ticketTenant);
+      expect(writer).toBeTruthy();
+      await writer!.write({
+        tenant: afterRow.payload.tenant,
+        ticketId: afterRow.payload.ticketId,
+        relationshipId: afterRow.payload.relationshipId,
+        threadId: afterRow.payload.threadId,
+        parentCommentId: afterRow.payload.parentCommentId,
+        audience: afterRow.payload.audience,
+        actor: afterRow.payload.actor,
+        operationId: afterRow.payload.operationId,
+        text: afterRow.payload.text,
+      });
+      expect(await sharedComments(interruptedAfterWrite.text)).toHaveLength(1);
+      await db('co_management_deliveries').where({ tenant: ticketTenant, delivery_kind: 'sender_confirmation', source_id: interruptedAfterWrite.sourceId })
+        .update({ payload: { ...afterRow.payload, state: 'redeeming', redemptionId: uuidv4() }, updated_at: new Date(Date.now() - 61_000) });
+      expect(await approveInboundSenderConfirmation(interruptedAfterWrite.confirmationToken, actor)).toMatchObject({ ticketId });
+      expect(await sharedComments(interruptedAfterWrite.text)).toHaveLength(1);
     } finally {
       resetWorkflowEmailProvider();
       if (priorSecret === undefined) delete process.env.NEXTAUTH_SECRET; else process.env.NEXTAUTH_SECRET = priorSecret;

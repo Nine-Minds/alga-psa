@@ -93,4 +93,18 @@ describe('T010: Next middleware', () => {
     const internal = await run(nextReq('/msp/dashboard', 'internal'));
     expect(internal.headers.get('location')).toBeNull();
   });
+
+  it('lets the confirmation handler reach its own auth checks while unrelated APIs still require an API key', async () => {
+    const confirmation = await (middleware as unknown as (r: NextRequest) => Promise<Response>)(
+      new NextRequest('http://localhost:3000/api/co-managed/inbound-confirmation?token=opaque')
+    );
+    expect(confirmation.status).toBe(200);
+    expect(confirmation.headers.get('x-middleware-next')).toBe('1');
+
+    const unrelated = await (middleware as unknown as (r: NextRequest) => Promise<Response>)(
+      new NextRequest('http://localhost:3000/api/unrelated-session-route')
+    );
+    expect(unrelated.status).toBe(401);
+    expect(await unrelated.json()).toEqual({ error: 'Unauthorized: API key missing' });
+  });
 });

@@ -49,6 +49,13 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/teams/webhooks/recordings')).toBe(true);
   });
 
+  it('exempts only the co-managed confirmation handler path', () => {
+    expect(shouldSkipApiKeyAuth('/api/co-managed/inbound-confirmation')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/co-managed/inbound-confirmation/')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/co-managed/inbound-confirmation/other')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/co-managed/other')).toBe(false);
+  });
+
   it('allows document preview routes to use session auth', () => {
     expect(shouldSkipApiKeyAuth('/api/documents/123/preview')).toBe(true);
     expect(shouldSkipApiKeyAuth('/api/documents/123/thumbnail')).toBe(true);

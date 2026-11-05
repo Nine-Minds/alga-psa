@@ -231,6 +231,9 @@ const exactApiKeySkipPaths = [
   // API-key gate until it is exempted by name.
   '/api/v1/capabilities/co-managed',
   '/api/v1/capabilities/co-managed/',
+  // Session-authenticated confirmation page and POST; handlers validate the
+  // user, tenant, token, and same-origin request before approval.
+  '/api/co-managed/inbound-confirmation',
   // Notification live-stream token: the MSP shell and the client portal both
   // mint a short-lived Hocuspocus token from their browser session (no
   // x-api-key). The route re-checks the session itself, and

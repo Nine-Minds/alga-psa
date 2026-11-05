@@ -7,6 +7,7 @@ import { coManagedDeliverySeam, coManagedInboundCommentSeam, coManagedInboundOpe
 
 const KIND = 'sender_confirmation';
 const TTL_MS = 15 * 60 * 1000;
+export const INBOUND_CONFIRMATION_REDEMPTION_LEASE_MS = 60_000;
 
 type ConfirmationPayload = InboundCommentWrite & {
   actorEmail: string;
@@ -18,6 +19,18 @@ type ConfirmationPayload = InboundCommentWrite & {
   state: 'pending' | 'redeeming' | 'approved' | 'expired';
   redemptionId?: string;
 };
+
+/** Pending requests are redeemable; interrupted claims become retryable after their lease. */
+export function isInboundSenderConfirmationRedeemable(
+  state: unknown,
+  updatedAt: Date | string | null | undefined,
+  now = Date.now(),
+): boolean {
+  if (state === 'pending') return true;
+  if (state !== 'redeeming' || updatedAt == null) return false;
+  const claimedAt = updatedAt instanceof Date ? updatedAt.getTime() : Date.parse(updatedAt);
+  return Number.isFinite(claimedAt) && claimedAt < now - INBOUND_CONFIRMATION_REDEMPTION_LEASE_MS;
+}
 
 function sourceId(tenant: string, providerId: string, messageId: string, actor: InboundCommentActor): string {
   const bytes = createHash('sha256').update([tenant, providerId, messageId, actor.tenant, actor.userId].join('\0')).digest().subarray(0, 16);
@@ -161,10 +174,11 @@ export async function approveInboundSenderConfirmation(token: string, user: {
   const db = await getAdminConnection();
   const row = await tenantDb(db, claims.tenant).table('co_management_deliveries')
     .where({ tenant: claims.tenant, delivery_kind: KIND, source_id: claims.sourceId })
-    .first('recipient', 'payload');
+    .first('recipient', 'payload', 'updated_at');
   if (!row?.payload) return null;
   const payload: ConfirmationPayload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload;
-  if (payload.expiresAt !== claims.expiresAt || payload.state !== 'pending' || Date.parse(payload.expiresAt) <= Date.now()
+  if (payload.expiresAt !== claims.expiresAt || !isInboundSenderConfirmationRedeemable(payload.state, row.updated_at)
+    || Date.parse(payload.expiresAt) <= Date.now()
     || user.tenant !== payload.actor.tenant || user.user_id !== payload.actor.userId
     || user.email?.trim().toLowerCase() !== String(row.recipient).trim().toLowerCase()
     || createHash('sha256').update(payload.text, 'utf8').digest('hex') !== payload.contentSha256) return null;
@@ -178,7 +192,7 @@ export async function approveInboundSenderConfirmation(token: string, user: {
     .where({ tenant: claims.tenant, delivery_kind: KIND, source_id: claims.sourceId })
     .where((query) => query.whereRaw("payload->>'state' = 'pending'")
       .orWhere((stale) => stale.whereRaw("payload->>'state' = 'redeeming'")
-        .andWhere('updated_at', '<', new Date(Date.now() - 60_000))))
+        .andWhere('updated_at', '<', new Date(Date.now() - INBOUND_CONFIRMATION_REDEMPTION_LEASE_MS))))
     .update({ payload: claimedPayload, updated_at: db.fn.now() });
   if (!claimed) return null;
 

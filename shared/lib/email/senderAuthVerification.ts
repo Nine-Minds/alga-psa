@@ -4,7 +4,7 @@ import type { SenderAuthenticationEvidence, SenderContactEvidence } from '../../
 export interface VerifiedDkimEvidence {
   verified: boolean;
   alignedDomains: string[];
-  reason: 'aligned_signature' | 'no_aligned_signature' | 'verification_error';
+  reason: 'aligned_signature' | 'no_aligned_signature' | 'partially_unsigned_body' | 'verification_error';
 }
 
 export function contactDkimAuthorization(dkim: VerifiedDkimEvidence): SenderContactEvidence {
@@ -32,12 +32,18 @@ export async function verifyOriginalMimeDkim(
     ]);
     const requestedFrom = String(fromEmail ?? '').trim().toLowerCase();
     const signedFromMatches = verified.headerFrom.some((address) => address.trim().toLowerCase() === requestedFrom);
-    const alignedDomains = (signedFromMatches ? verified.results : [])
-      .filter((result) => result.status.result === 'pass' && result.status.aligned && result.signingDomain)
+    const alignedResults = (signedFromMatches ? verified.results : [])
+      .filter((result) => result.status.result === 'pass' && result.status.aligned && result.signingDomain);
+    const alignedDomains = alignedResults
+      .filter((result) => result.status.underSized === undefined
+        || result.status.underSized === 0)
       .map((result) => result.signingDomain!.toLowerCase())
       .filter((domain) => Boolean(fromEmail) && Boolean(domain));
-    return alignedDomains.length
-      ? { verified: true, alignedDomains: [...new Set(alignedDomains)], reason: 'aligned_signature' }
+    if (alignedDomains.length) {
+      return { verified: true, alignedDomains: [...new Set(alignedDomains)], reason: 'aligned_signature' };
+    }
+    return alignedResults.some((result) => typeof result.status.underSized === 'number' && result.status.underSized > 0)
+      ? { verified: false, alignedDomains: [], reason: 'partially_unsigned_body' }
       : { verified: false, alignedDomains: [], reason: 'no_aligned_signature' };
   } catch {
     return { verified: false, alignedDomains: [], reason: 'verification_error' };

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { generateKeyPairSync } from 'node:crypto';
 import { dkimSign } from 'mailauth';
 import {
+  contactDkimAuthorization,
   orderedAuthenticationResults,
   isInternalAttributionTrusted,
   verifyOriginalMimeDkim,
@@ -40,6 +41,29 @@ describe('verifyOriginalMimeDkim', () => {
       verified: false,
       reason: 'no_aligned_signature',
     });
+  });
+
+  it('rejects aligned l= signatures that leave appended body bytes unsigned', async () => {
+    const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 1024 });
+    const raw = Buffer.from('From: Agent <agent@example.com>\r\nSubject: Reply\r\n\r\nOriginal signed reply body\r\n');
+    const signed = await dkimSign(raw, {
+      strict: true,
+      signatureData: [{
+        signingDomain: 'example.com', selector: 'partial',
+        privateKey: privateKey.export({ type: 'pkcs8', format: 'pem' }),
+        maxBodyLength: Buffer.byteLength('Original signed reply body\r\n'),
+      }],
+    });
+    const signedMessage = Buffer.concat([Buffer.from(signed.signatures), raw]);
+    const appended = Buffer.concat([signedMessage, Buffer.from('Attacker appended body\r\n')]);
+    const key = publicKey.export({ type: 'spki', format: 'der' }).toString('base64');
+    const resolver = async (name: string) => name === 'partial._domainkey.example.com'
+      ? [`v=DKIM1; k=rsa; p=${key}`]
+      : [];
+
+    const evidence = await verifyOriginalMimeDkim(appended, 'agent@example.com', resolver);
+    expect(evidence).toMatchObject({ verified: false, alignedDomains: [], reason: 'partially_unsigned_body' });
+    expect(contactDkimAuthorization(evidence)).toMatchObject({ authorization: 'untrusted', alignedDomains: [] });
   });
 
   it('reports missing signatures as insufficient evidence', async () => {
