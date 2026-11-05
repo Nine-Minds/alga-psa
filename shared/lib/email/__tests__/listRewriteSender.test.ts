@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
-  computeListRewriteSender,
-  resolveListRewriteSender,
+  computeListRewriteCandidate,
+  resolveListRewriteCandidate,
   type HeaderBag,
 } from '../listRewriteSender';
 
@@ -22,9 +22,9 @@ function groupHeaders(overrides: Partial<HeaderBag> = {}): HeaderBag {
   };
 }
 
-describe('computeListRewriteSender', () => {
+describe('computeListRewriteCandidate', () => {
   it('recovers the original sender from a mailing-list DMARC rewrite', () => {
-    const result = computeListRewriteSender(groupHeaders(), {
+    const result = computeListRewriteCandidate(groupHeaders(), {
       email: 'support@lists.example.com',
       name: "'Jane Doe' via support",
     });
@@ -37,7 +37,7 @@ describe('computeListRewriteSender', () => {
   });
 
   it('prefers X-Original-From over X-Original-Sender and Reply-To', () => {
-    const result = computeListRewriteSender(
+    const result = computeListRewriteCandidate(
       groupHeaders({ 'x-original-from': 'jane.doe@vendor.example' }),
       { email: 'support@lists.example.com' }
     );
@@ -48,13 +48,13 @@ describe('computeListRewriteSender', () => {
   it('falls back to Reply-To when no X-Original-* header is present', () => {
     const headers = groupHeaders();
     delete headers['x-original-sender'];
-    const result = computeListRewriteSender(headers, { email: 'support@lists.example.com' });
+    const result = computeListRewriteCandidate(headers, { email: 'support@lists.example.com' });
     expect(result?.via).toBe('reply-to');
     expect(result?.sender.email).toBe('jane.doe@vendor.example');
   });
 
   it('returns null for ordinary direct mail (no list markers)', () => {
-    const result = computeListRewriteSender(
+    const result = computeListRewriteCandidate(
       { 'authentication-results': AUTHOR_AUTH },
       { email: 'jane.doe@vendor.example' }
     );
@@ -66,57 +66,68 @@ describe('computeListRewriteSender', () => {
     // X-Original-* header; nothing vouches that the relay saw this author.
     const headers = groupHeaders();
     delete headers['x-original-sender'];
-    const result = computeListRewriteSender(headers, {
+    const result = computeListRewriteCandidate(headers, {
       email: 'jane.doe@vendor.example',
     });
     expect(result).toBeNull();
   });
 
-  it('returns null when the recovered sender is not DKIM/DMARC/SPF aligned (anti-spoof)', () => {
+  it('returns a candidate even when raw auth claims do not align; authorization is checked elsewhere', () => {
     const headers = groupHeaders({
       'x-original-sender': 'attacker@evil.example',
       'reply-to': 'attacker@evil.example',
     });
-    // Auth results still only vouch for vendor.example, not evil.example.
-    const result = computeListRewriteSender(headers, { email: 'support@lists.example.com' });
-    expect(result).toBeNull();
+    const result = computeListRewriteCandidate(headers, { email: 'support@lists.example.com' });
+    expect(result?.sender.email).toBe('attacker@evil.example');
   });
 
-  it('returns null when no Authentication-Results header is available', () => {
+  it('returns the candidate without Authentication-Results', () => {
     const headers = groupHeaders();
     delete headers['authentication-results'];
-    const result = computeListRewriteSender(headers, { email: 'support@lists.example.com' });
-    expect(result).toBeNull();
+    const result = computeListRewriteCandidate(headers, { email: 'support@lists.example.com' });
+    expect(result?.sender.email).toBe('jane.doe@vendor.example');
   });
 
-  it('excludes spam relays whose recovered sender fails auth alignment', () => {
-    // Mirrors the observed spam pattern: From rewritten to a junk list domain,
-    // X-Original-Sender claims a brand, but auth does not vouch for it.
+  it('extracts the reported victim only as a candidate from forged list and auth headers', () => {
+    const headers: HeaderBag = {
+      'x-beenthere': 'relay@attacker.test',
+      'list-id': '<relay.attacker.test>',
+      'x-original-from': 'victim@customer.test',
+      'authentication-results': 'attacker; dmarc=pass header.from=customer.test',
+      'arc-authentication-results': 'i=1; attacker; dkim=pass header.d=customer.test',
+    };
+    const result = computeListRewriteCandidate(headers, { email: 'relay@attacker.test' });
+    expect(result).toMatchObject({
+      sender: { email: 'victim@customer.test' },
+      listAddress: 'relay@attacker.test',
+      via: 'x-original-from',
+    });
+  });
+
+  it('treats a spam relay X-Original-Sender as a candidate, never as authorization', () => {
     const headers: HeaderBag = {
       'x-beenthere': 'list@spam.example',
       'list-id': '<bulk.spam.example>',
       'x-original-sender': 'support@bank.example',
       'authentication-results': 'mx.example-mta.com; dkim=none; spf=softfail; dmarc=fail header.from=spam.example',
     };
-    const result = computeListRewriteSender(headers, { email: 'list@spam.example' });
-    expect(result).toBeNull();
+    const result = computeListRewriteCandidate(headers, { email: 'list@spam.example' });
+    expect(result?.sender.email).toBe('support@bank.example');
   });
 
-  it('accepts subdomain-aligned auth domains', () => {
+  it('does not depend on raw auth alignment claims for candidate extraction', () => {
     const headers = groupHeaders({
       'x-original-sender': 'user@mail.vendor.example',
       'reply-to': 'user@mail.vendor.example',
     });
-    const result = computeListRewriteSender(headers, { email: 'support@lists.example.com' });
+    const result = computeListRewriteCandidate(headers, { email: 'support@lists.example.com' });
     expect(result?.sender.email).toBe('user@mail.vendor.example');
   });
 });
 
-describe('computeListRewriteSender (preserved-From relay)', () => {
-  // Google Groups delivering mail from an author whose domain does not enforce
-  // DMARC: From is kept, but the final MX's SPF/DKIM verdicts belong to the
-  // relay (bounce address + re-signature). Only the arc=pass annotation and the
-  // earlier ARC block vouch for the author domain.
+describe('computeListRewriteCandidate (preserved-From relay)', () => {
+  // Google Groups may retain the author's From while the final relay signs the
+  // message with its own domain. The headers below remain claims, not evidence.
   const RELAY_AUTH =
     'mx.example-mta.com; dkim=pass header.i=@lists-example-com.gappssmtp.example header.s=sel1 header.b=ZzYyXx; ' +
     'arc=pass (i=3 spf=pass spfdomain=vendor.example dkim=pass dkdomain=vendor.example); ' +
@@ -135,7 +146,7 @@ describe('computeListRewriteSender (preserved-From relay)', () => {
   }
 
   it('resolves the preserved author when the relay recorded them and the MX vouches via ARC', () => {
-    const result = computeListRewriteSender(preservedHeaders({ sender: 'support@lists.example.com' }), {
+    const result = computeListRewriteCandidate(preservedHeaders({ sender: 'support@lists.example.com' }), {
       email: 'jane.doe@vendor.example',
       name: 'Jane Doe',
     });
@@ -149,38 +160,38 @@ describe('computeListRewriteSender (preserved-From relay)', () => {
   it('accepts X-Original-From as the relay record', () => {
     const headers = preservedHeaders({ sender: 'support@lists.example.com', 'x-original-from': 'Jane Doe <jane.doe@vendor.example>' });
     delete headers['x-original-sender'];
-    const result = computeListRewriteSender(headers, { email: 'jane.doe@vendor.example' });
+    const result = computeListRewriteCandidate(headers, { email: 'jane.doe@vendor.example' });
     expect(result?.via).toBe('preserved-from');
   });
 
   it('returns null when the recorded author differs from From', () => {
-    const result = computeListRewriteSender(
+    const result = computeListRewriteCandidate(
       preservedHeaders({ sender: 'support@lists.example.com', 'x-original-sender': 'someone.else@vendor.example' }),
       { email: 'jane.doe@vendor.example' }
     );
     expect(result).toBeNull();
   });
 
-  it('returns null when nothing in Authentication-Results vouches for the From domain (anti-spoof)', () => {
+  it('keeps a matching preserved From candidate without trusting Authentication-Results', () => {
     const headers = preservedHeaders({
       sender: 'support@lists.example.com',
       'x-original-sender': 'ceo@bank.example',
       'authentication-results': RELAY_AUTH,
     });
-    const result = computeListRewriteSender(headers, { email: 'ceo@bank.example' });
-    expect(result).toBeNull();
+    const result = computeListRewriteCandidate(headers, { email: 'ceo@bank.example' });
+    expect(result).toMatchObject({ sender: { email: 'ceo@bank.example' }, via: 'preserved-from' });
   });
 
   it('returns null without a list address to attribute the relay to', () => {
     const headers = preservedHeaders();
     delete headers['mailing-list'];
     // list-id alone flags list mail but yields no address; no Sender/List-Post either.
-    const result = computeListRewriteSender(headers, { email: 'jane.doe@vendor.example' });
+    const result = computeListRewriteCandidate(headers, { email: 'jane.doe@vendor.example' });
     expect(result).toBeNull();
   });
 });
 
-describe('resolveListRewriteSender (mailparser shape + feature flag)', () => {
+describe('resolveListRewriteCandidate (mailparser shape + feature flag)', () => {
   const FLAG = 'INBOUND_RESOLVE_LIST_ORIGINAL_SENDER';
   afterEach(() => {
     delete process.env[FLAG];
@@ -200,24 +211,24 @@ describe('resolveListRewriteSender (mailparser shape + feature flag)', () => {
   }
 
   it('reads headerLines and recovers the original sender', () => {
-    const result = resolveListRewriteSender(parsedFixture());
+    const result = resolveListRewriteCandidate(parsedFixture());
     expect(result?.sender.email).toBe('jane.doe@vendor.example');
     expect(result?.listAddress).toBe('support@lists.example.com');
   });
 
   it('returns null when the feature flag is disabled', () => {
     process.env[FLAG] = 'false';
-    expect(resolveListRewriteSender(parsedFixture())).toBeNull();
+    expect(resolveListRewriteCandidate(parsedFixture())).toBeNull();
   });
 
-  it('keeps the topmost Authentication-Results when duplicated', () => {
+  it('ignores forged or duplicate Authentication-Results while extracting a candidate', () => {
     const fixture = parsedFixture();
-    // A later (lower) auth header for a different domain must not win.
+    // A later success claim has no authority either.
     fixture.headerLines.push({
       key: 'authentication-results',
       line: 'Authentication-Results: relay.example; dmarc=pass header.from=evil.example',
     });
-    const result = resolveListRewriteSender(fixture);
+    const result = resolveListRewriteCandidate(fixture);
     expect(result?.sender.email).toBe('jane.doe@vendor.example');
   });
 });

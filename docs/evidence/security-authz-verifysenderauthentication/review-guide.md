@@ -1,5 +1,11 @@
 # PR #4149 sender authentication repair
 
+## Latest repair: mailing-list headers are candidates only
+
+Review `shared/lib/email/listRewriteSender.ts` and the queue processor first. `Authentication-Results` and `ARC-Authentication-Results` are sender-controlled MIME fields and are no longer consulted when recovering a list-rewritten sender. The recovered address is retained only as a candidate; it cannot grant contact attribution. In `processInboundEmailInApp`, contact attribution requires independently verified aligned DKIM evidence, otherwise a matching active registered contact must confirm through the native one-time mailbox flow. The confirmation is bound to tenant, actor, reply token, provider message identity, and canonical content, and native admission is repeated before persistence.
+
+New Microsoft and IMAP ingestion-to-persistence regressions reproduce forged `From`, `X-BeenThere`, `X-Original-From`, `X-Original-Sender`, Authentication-Results, and ARC success claims. Both remain quarantined with zero comments until the registered contact confirms; confirmation then writes exactly one correctly attributed comment and replay writes no duplicate. Positive list/forwarded confirmation and forged-list cases use production MIME mapping plus the local DB and native comment path. They do not establish live provider interoperability.
+
 Review this guide against the commit SHA linked from the PR after publication. This guide contains repository-local checks for the repaired HEAD; earlier screenshots and smoke recordings are historical and are not evidence for this revision. The original receiver-header authorization and fail-closed-on-all-Microsoft/IMAP policy are superseded: matched active internal candidates use authenticated registered-mailbox confirmation, and unsigned requester contacts use the distinct native contact confirmation flow.
 
 ## Takeover repair: scheduled recovery
@@ -125,6 +131,17 @@ Re-run on starting HEAD `7407cc73154f617a452f0269cf4ee73cb4eb6487`:
 The app server was not started or auto-healed. These are local tests/builds, not live UI, DNS, Gmail, Microsoft tenant, IMAP server, or deployed scheduler evidence. Reviewer priority: inspect the confirmation requirements and the evidence boundary for unsigned, forwarded and intra-organization messages, then the CE/EE scheduler registration and recovery fencing. Exact published SHA is recorded after this evidence refresh is committed.
 
 ## Draft Implementation rerun
+
+### Mailing-list authorization repair (2026-11-05)
+
+At the prior review revision, the MIME mapper converted raw Authentication-Results/ARC claims into `x-resolved-original-sender`, and contact attribution trusted that synthetic field even when original-byte DKIM failed. This was a concrete forged-header authorization bypass. The current repair deletes that trust bridge: list values nominate candidates only, and unverified candidates use existing registered-contact confirmation.
+
+- `cd server && npx vitest run --config vitest.config.ts ../shared/lib/email/__tests__/listRewriteSender.test.ts ../shared/services/email/__tests__/senderAuthenticationIngestion.test.ts ../shared/services/email/__tests__/processInboundEmailInApp.test.ts src/test/integration/emailServiceCoManagedInbound.integration.test.ts src/test/unit/unifiedInboundEmailQueueJobProcessor.fetch.test.ts src/test/unit/email/GmailAdapter.listMessagesSince.test.ts ../shared/services/email/providers/__tests__/MicrosoftGraphAdapter.diagnostics.test.ts` — **7 files, 101 tests passed**, including Microsoft and IMAP forged-list rejection before confirmation, exactly one correctly attributed comment after confirmation, and replay dedupe.
+- `NODE_OPTIONS=--max-old-space-size=14336 npx tsc --noEmit -p tsconfig.json` from `server/` — passed with the complete project and no diagnostic.
+- `NEXT_BUILD_CPUS=1 NEXT_BUILD_MAX_OLD_SPACE_SIZE=14336 NEXT_DIST_DIR=.next-list-repair ./scripts/build-production-server.sh community` ran the complete community Next.js production build: webpack compilation, all 75 static pages and production trace collection passed; `.next-list-repair/BUILD_ID` exists. The wrapper returned 1 only at its final artifact assertion because it hardcodes `server/.next/BUILD_ID` while this run deliberately set the isolated `NEXT_DIST_DIR`; the `next build --webpack` phase itself returned success. Existing 8 GB failures are superseded for this revision.
+- Confirmation route behavior rerun: `cd server && npx vitest run --config vitest.config.ts src/app/api/co-managed/inbound-confirmation/route.test.ts` — **1 file, 4 tests passed**.
+
+This focused suite uses generated MIME and forged auth headers, production MIME mapping, local DB integration and the native admission/comment writer. It does not exercise a live Gmail/Microsoft tenant, external IMAP server, live DNS, or browser UI. Reviewer priority: inspect that no raw list/auth header can grant contact attribution, then inspect confirmation’s recipient binding and persistence/replay boundary.
 
 At the starting revision `dc3735ab943e16e1bfb78b631c076039a671c61d`, the focused commands above were rerun:
 

@@ -21,7 +21,7 @@ import {
 } from './inboundEmailMetrics';
 import { GmailAdapter } from '@alga-psa/shared/services/email/providers/GmailAdapter';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { resolveListRewriteSender } from '@alga-psa/shared/lib/email/listRewriteSender';
+import { resolveListRewriteCandidate } from '@alga-psa/shared/lib/email/listRewriteSender';
 import { extractRelevantInboundHeaders } from '@alga-psa/shared/lib/email/automatedMessage';
 import { classifyInboundAuthFailure } from '@alga-psa/shared/services/email/InboundEmailAuthFailurePolicy';
 import { classifyGraphFailure } from '@alga-psa/shared/services/diagnostics/graphFailure';
@@ -351,11 +351,13 @@ export async function mapParsedMimeToEmailMessageDetails(params: {
 
   // Mailing-list / Google-Group DMARC rewrites replace the visible From with the
   // list address (e.g. "'Jane Doe' via support <support@lists.example.com>").
-  // Recover the verified original author so downstream contact/watcher/notify
-  // logic uses the real sender. Returns null for ordinary direct mail.
-  const listRewrite = resolveListRewriteSender(params.parsed);
-  const fromEmail = listRewrite ? listRewrite.sender.email : (from?.address || '');
-  const fromName = listRewrite ? (listRewrite.sender.name || from?.name || undefined) : (from?.name || undefined);
+  // A list rewrite can suggest a different contact candidate. The list fields
+  // and its Authentication-Results/ARC headers are message data, so identity
+  // remains untrusted unless original-byte verification or mailbox confirmation
+  // supplies independent evidence.
+  const listRewriteCandidate = resolveListRewriteCandidate(params.parsed);
+  const fromEmail = listRewriteCandidate ? listRewriteCandidate.sender.email : (from?.address || '');
+  const fromName = listRewriteCandidate ? (listRewriteCandidate.sender.name || from?.name || undefined) : (from?.name || undefined);
   const resolvedHeaders: Record<string, string> = {};
   const authenticationResults: string[] = [];
   // Preserve duplicate raw headers in wire order for downstream diagnostics;
@@ -380,16 +382,16 @@ export async function mapParsedMimeToEmailMessageDetails(params: {
       }
     });
   }
-  if (listRewrite) {
-    resolvedHeaders['x-list-address'] = listRewrite.listAddress;
-    resolvedHeaders['x-resolved-original-sender'] = listRewrite.sender.email;
-    resolvedHeaders['x-resolved-original-sender-via'] = listRewrite.via;
-    console.info('[UnifiedInboundEmailQueueJobProcessor] Recovered original sender from list rewrite', {
+  if (listRewriteCandidate) {
+    resolvedHeaders['x-list-address'] = listRewriteCandidate.listAddress;
+    resolvedHeaders['x-list-candidate-sender'] = listRewriteCandidate.sender.email;
+    resolvedHeaders['x-list-candidate-via'] = listRewriteCandidate.via;
+    console.info('[UnifiedInboundEmailQueueJobProcessor] Identified list-rewrite sender candidate', {
       tenant: params.tenant,
       providerId: params.providerId,
-      listAddress: listRewrite.listAddress,
-      originalSender: listRewrite.sender.email,
-      via: listRewrite.via,
+      listAddress: listRewriteCandidate.listAddress,
+      candidateSender: listRewriteCandidate.sender.email,
+      via: listRewriteCandidate.via,
     });
   }
 

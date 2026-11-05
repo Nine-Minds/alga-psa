@@ -960,9 +960,7 @@ export async function processInboundEmailInApp(
   const dedupeKey = buildDedupeKey(input);
   const senderEmail = normalizeEmailAddress(emailData.from?.email);
   const internalSenderTrusted = isInternalAttributionTrusted(emailData.senderAuthentication);
-  const isVerifiedListRewrite = Boolean(emailData.headers?.['x-resolved-original-sender']);
-  const contactSenderTrusted = emailData.senderAuthentication?.contact?.authorization === 'domain_only'
-    || isVerifiedListRewrite;
+  const contactSenderTrusted = emailData.senderAuthentication?.contact?.authorization === 'domain_only';
   const confirmedContactMatches = (contactId: string | null | undefined, email: string | null | undefined) => {
     if (!options.confirmedContact || !contactId || !email) return false;
     const digest = inboundMessageSha256(emailData);
@@ -1068,8 +1066,9 @@ export async function processInboundEmailInApp(
 
     if (matched.user_type === 'internal') {
       if (internalSenderTrusted) return matched;
-      // A list rewrite may be trusted for contact matching, but never grants an
-      // internal identity: only authentication aligned to the original From can.
+      // A list rewrite can select a contact candidate, but its headers do not
+      // grant identity: internal actors require owner confirmation and contacts
+      // require independent DKIM evidence or registered-mailbox confirmation.
       console.warn('SECURITY_EVENT inbound_email_internal_sender_auth_failed', {
         tenantId, providerId, emailId: emailData.id, senderEmail,
         authResults: emailData.senderAuthentication ?? null,

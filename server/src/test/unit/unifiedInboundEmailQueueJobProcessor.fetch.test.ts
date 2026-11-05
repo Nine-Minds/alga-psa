@@ -323,9 +323,8 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
     });
     getAdminConnectionMock.mockResolvedValue(db);
 
-    // Direct mail can carry arbitrary X-* headers. It has no list markers or
-    // Authentication-Results, so this forged processor metadata must not reach
-    // the contact-attribution gate as a verified list rewrite.
+    // Direct mail can carry arbitrary X-* headers. Forged processor metadata
+    // must not reach the contact-attribution gate as a verified list rewrite.
     const rawMimeBuffer = Buffer.from([
       'From: Sender <sender@example.com>',
       'To: Support <support@example.com>',

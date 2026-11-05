@@ -12,6 +12,8 @@ The original `internalAttributionTrusted` shortcut and `sender_unauthenticated` 
 
 The native requester-contact path remains distinct: an unsigned candidate contact receives a one-time confirmation at the active ticket contact's registered address, and redemption re-runs native ticket/client/contact admission before writing as that contact. Aligned DKIM over original MIME may support contact-domain attribution only when the entire body is signed; it never authorizes an internal actor. Intra-organization, unsigned and forwarded messages use mailbox confirmation when a candidate exists and otherwise remain visibly quarantined/recoverable. This is intentionally usable for Gmail, Microsoft and IMAP without treating receiver or message-supplied claims as author proof.
 
+Mailing-list rewrite fields (`X-Original-From`, `X-Original-Sender`, `Reply-To`, `X-BeenThere`, `List-*`) can only nominate a candidate. `Authentication-Results` and `ARC-Authentication-Results` from MIME are also message claims and cannot turn that candidate into trusted attribution. The MIME mapper independently verifies DKIM over original bytes against DNS using the candidate address; if identity/alignment or full-body integrity is not established, the active registered contact receives the existing content-bound confirmation. No processor-generated `x-resolved-original-sender` value is emitted or consulted as an authorization signal.
+
 ## Original contract change (superseded)
 This was the rejected intermediate implementation; do not use it as the current design. In particular, receiver Authentication-Results cannot set the internal-attribution trust bit.
 

@@ -27,11 +27,13 @@ Contact creation today exists only in the workflow action `create_or_find_contac
 
 ## 2. Design decisions
 
+**Security supersession (2026-11-05):** the list-rewrite shortcut below is rejected. `X-Original-From`, `X-Original-Sender`, `Reply-To`, list markers, Authentication-Results and ARC fields can select an untrusted candidate only. They cannot satisfy contact-attribution or auto-create authorization. Require independently verified original-MIME DKIM evidence accepted by the sender-auth boundary, or registered-contact confirmation; unsigned candidates must not auto-create contacts.
+
 1. **Opt-in per domain, off by default.** Add `auto_create_contacts boolean NOT NULL DEFAULT false` to `client_inbound_email_domains`. Admins turn it on for each mapped domain in the client's inbound-domain UI.
    - Why per domain and not per tenant: a client can map a shared or consultancy domain where auto-creating contacts is wrong, and a domain row is exactly the "we trust this domain belongs to this client" assertion.
    - Why default off: existing tenants keep today's behavior and contact lists don't grow unexpectedly. Contacts can affect billing and portal invitations.
 2. **Only for new tickets, and only on the domain-fallback branch.** Creation happens only in the case where the code would otherwise fall back to the primary contact: no rule-assigned client, no matched sender contact, and a domain match. Rule-assigned clients (`assign_client`) and replies on existing tickets are unchanged (see Out of scope).
-3. **Same trust level as matching an existing contact.** Create only when `allowsContactSenderAttribution(senderAuthResults) || isVerifiedListRewrite`. That is the same test that decides whether an existing contact match is kept (`:968`). A spoofed From address must not be able to create an identity that later mail gets attributed to.
+3. **Same trust level as matching an existing contact.** Create only when `allowsContactSenderAttribution(senderAuthResults)` supplies independent verified evidence. Historical `isVerifiedListRewrite` was based on sender-supplied Authentication-Results/ARC and must never authorize contact creation. A spoofed From address must not create an identity that later mail gets attributed to.
 4. **Don't create when the address is already known.** `matchedSenderContact === null` does not prove the address is unknown: the match may have been thrown away because authentication failed, or the address may belong to an internal user whose authentication failed. The create helper checks inside its transaction that no contact (primary or additional email) and no internal user already has the address. If one does, it returns `null` and the email follows today's primary-contact fallback.
 5. **Skip automated and self mail.** No creation when `detectAutomatedInboundMessage(emailData).isAutomated` (noreply, bounces, auto-submitted) or when `senderIsProviderMailbox`.
 6. **Skip inactive clients.** No creation when the target client is inactive (`clients.is_inactive`).
@@ -97,7 +99,7 @@ Contact creation today exists only in the workflow action `create_or_find_contac
   - `targetClientId === domainMatchedClientId`
   - `!senderIsProviderMailbox`
   - `!detectAutomatedInboundMessage(emailData).isAutomated`
-  - `allowsContactSenderAttribution(senderAuthResults) || isVerifiedListRewrite`
+  - `allowsContactSenderAttribution(senderAuthResults)`
 - On success set `autoCreatedContactId`. Because `commentAuthorContactId`, `commentAuthorType`, `targetContactId` and `clientVisibleAttachments` are computed before this point, restructure them to use an "effective sender contact id" (`matchedSenderContactId ?? autoCreatedContactId`):
   - `targetContactId` becomes `autoCreatedContactId` (overriding the primary-contact fallback from `:1830`);
   - `commentAuthorContactId` becomes `autoCreatedContactId`;

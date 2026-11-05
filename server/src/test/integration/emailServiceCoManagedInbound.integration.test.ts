@@ -385,6 +385,74 @@ describe('email-service boot registers co-managed inbound', () => {
     } finally { resetWorkflowEmailProvider(); if (priorSecret === undefined) delete process.env.NEXTAUTH_SECRET; else process.env.NEXTAUTH_SECRET = priorSecret; if (priorOrigin === undefined) delete process.env.APP_BASE_URL; else process.env.APP_BASE_URL = priorOrigin; }
   });
 
+  it.each(['microsoft', 'imap'] as const)('%s list-rewrite claims remain untrusted until registered contact confirmation', async (provider) => {
+    const { registerWorkflowEmailProvider, resetWorkflowEmailProvider } = await import('@alga-psa/shared/workflow/runtime/registries/workflowEmailRegistry');
+    const { approveInboundContactSenderConfirmation } = await import('@alga-psa/co-managed/inboundSenderConfirmation');
+    const { mapParsedMimeToEmailMessageDetails } = await vi.importActual<typeof import('../../../../shared/services/email/unifiedInboundEmailQueueJobProcessor')>('../../../../shared/services/email/unifiedInboundEmailQueueJobProcessor');
+    const { simpleParser } = await import('mailparser');
+    const priorSecret = process.env.NEXTAUTH_SECRET, priorOrigin = process.env.APP_BASE_URL;
+    process.env.NEXTAUTH_SECRET = 'confirmation-test-secret-0123456789-abcdef';
+    process.env.APP_BASE_URL = 'https://psa.example.test';
+    const sendEmail = vi.fn(async () => ({ success: true }));
+    registerWorkflowEmailProvider({
+      TenantEmailService: { getInstance: () => ({ sendEmail }) },
+      StaticTemplateProcessor: class { constructor(public subject: string, public html: string, public text?: string) {} async process() { return { subject: this.subject, html: this.html, text: this.text }; } },
+    } as any);
+    try {
+      const contactEmail = `rita-${MARK}@example.com`;
+      const text = `list-confirm-${provider}-${MARK}`;
+      const nativeToken = `native:${uuidv4()}`;
+      await db('email_reply_tokens').insert({ tenant: ticketTenant, token: nativeToken, ticket_id: ticketId, comment_id: parentCommentId, entity_type: 'ticket', recipient_email: contactEmail, metadata: null });
+      const rawMime = Buffer.from([
+        'From: List relay <relay@attacker.test>',
+        'Sender: relay@attacker.test',
+        'To: support@msp.example.test',
+        'Subject: Re: Shared ticket',
+        'X-BeenThere: relay@attacker.test',
+        'List-Id: <relay.attacker.test>',
+        `X-Original-From: ${contactEmail}`,
+        'X-Original-Sender: victim@customer.test',
+        'Authentication-Results: attacker; dmarc=pass header.from=customer.test',
+        'ARC-Authentication-Results: i=1; attacker; arc=pass dkim=pass header.d=customer.test',
+        '',
+        `${text}\n\n[ALGA-REPLY-TOKEN ${nativeToken} ticketId=${ticketId} commentId=${parentCommentId} threadId=${threadId}]`,
+      ].join('\r\n'));
+      const message = await mapParsedMimeToEmailMessageDetails({
+        provider, providerId: PROVIDER_ID, tenant: ticketTenant, rawMimeBuffer: rawMime,
+        parsed: await simpleParser(rawMime), fallbackMessageId: `${provider}-list-${MARK}`,
+      });
+      expect(message.from.email).toBe(contactEmail);
+      expect(message.headers).toMatchObject({
+        'x-list-candidate-sender': contactEmail,
+        'x-list-candidate-via': 'x-original-from',
+      });
+      expect(message.headers).not.toHaveProperty('x-resolved-original-sender');
+      expect(message.senderAuthentication).toMatchObject({
+        author: { authorization: 'confirmation_required' },
+        contact: { authorization: 'untrusted' },
+        dkim: { verified: false },
+      });
+
+      const initial: any = await processInbound({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: message as any });
+      expect(initial).toMatchObject({ outcome: 'quarantined', reason: 'unauthorized_thread_header_sender', ticketId });
+      expect(await sharedComments(text)).toHaveLength(0);
+      expect(sendEmail).toHaveBeenCalledTimes(1);
+      const sent = (sendEmail.mock.calls[0] as any)[0];
+      expect(sent.to).toBe(contactEmail);
+      const confirmationUrl = String(sent.templateProcessor.text).match(/https:\/\/[^\s]+/)?.[0];
+      const confirmationToken = new URL(confirmationUrl!).searchParams.get('token')!;
+      expect(await approveInboundContactSenderConfirmation(confirmationToken)).toMatchObject({ outcome: 'replied', ticketId });
+      expect(await sharedComments(text)).toHaveLength(1);
+      expect((await sharedComments(text))[0]).toMatchObject({ author_type: 'client', contact_id: requesterContactId });
+      expect(await approveInboundContactSenderConfirmation(confirmationToken)).toBeNull();
+      expect(await sharedComments(text)).toHaveLength(1);
+    } finally {
+      resetWorkflowEmailProvider();
+      if (priorSecret === undefined) delete process.env.NEXTAUTH_SECRET; else process.env.NEXTAUTH_SECRET = priorSecret;
+      if (priorOrigin === undefined) delete process.env.APP_BASE_URL; else process.env.APP_BASE_URL = priorOrigin;
+    }
+  });
+
   it('confirms an unsigned Microsoft reply from the registered requester contact before native admission and persistence', async () => {
     const { registerWorkflowEmailProvider, resetWorkflowEmailProvider } = await import('@alga-psa/shared/workflow/runtime/registries/workflowEmailRegistry');
     const { approveInboundContactSenderConfirmation } = await import('@alga-psa/co-managed/inboundSenderConfirmation');

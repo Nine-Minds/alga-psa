@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     return result ? NextResponse.json({ confirmed: true, result }, { headers }) : denied();
   }
   const user = await getCurrentUser();
-  if (!userMatches(user, pending)) return denied();
+  if (!user || !userMatches(user, pending)) return denied();
 
   // The approval service re-resolves the cm2 token, relationship, audience, and current actor permissions.
   const result = await approveInboundSenderConfirmation(token, user);
