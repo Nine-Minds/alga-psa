@@ -69,7 +69,7 @@ export const ENTRY_POINT_GLOBS: readonly string[] = ENTRY_POINT_FAMILIES.map((f)
  * updates the count in the same diff.
  */
 export const EXPECTED_FAMILY_FILE_COUNTS: Readonly<Record<string, { glob: string; files: number }>> = {
-  'rsc-pages': { glob: 'server/src/app/msp/co-manag*/**', files: 13 },
+  'rsc-pages': { glob: 'server/src/app/msp/co-manag*/**', files: 15 },
   'rest-routes': { glob: 'server/src/app/api/**/co-management/**', files: 3 },
   'server-actions': { glob: 'server/src/lib/actions/coManaged*', files: 24 },
   'package-actions': { glob: 'packages/co-managed/src/**/actions*', files: 0 },
@@ -85,7 +85,7 @@ export const EXPECTED_FAMILY_FILE_COUNTS: Readonly<Record<string, { glob: string
   'temporal-workflows-kebab': { glob: 'ee/temporal-workflows/src/workflows/co-managed*', files: 1 },
   'ee-server-actions': { glob: 'ee/server/src/lib/actions/coManaged*', files: 2 },
   'shared-services': { glob: 'shared/services/**/coManaged*', files: 0 },
-  'server-ui': { glob: 'server/src/components/co-managed/**', files: 59 },
+  'server-ui': { glob: 'server/src/components/co-managed/**', files: 69 },
   'package-ui': { glob: 'packages/co-managed/src/components/**', files: 0 },
 };
 
@@ -773,7 +773,7 @@ describe('negative fixtures: each rule bites, through the real glob and rule fun
     const narrowed = ENTRY_POINT_FAMILIES.map((f) => (f.id === 'server-actions' ? { ...f, glob: 'server/src/lib/actions/coManagedX*' } : f));
     expect(registrySanity(narrowed, repoFiles).some((m) => m.includes('family server-actions glob'))).toBe(true);
 
-    const withFile = [...repoFiles, file('server/src/lib/actions/coManagedProviders.ts', 'export {}')];
+    const withFile = [...repoFiles, file('server/src/lib/actions/coManagedRegistryFixture.ts', 'export {}')];
     expect(registrySanity(ENTRY_POINT_FAMILIES, withFile)).toEqual([
       `capabilityEntryPoints: family server-actions matches ${EXPECTED_FAMILY_FILE_COUNTS['server-actions'].files + 1} production files, expected ${EXPECTED_FAMILY_FILE_COUNTS['server-actions'].files}`,
     ]);

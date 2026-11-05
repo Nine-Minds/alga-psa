@@ -17,6 +17,10 @@ export const buildInvoiceTemplateBindings = (): NonNullable<TemplateAst['binding
     poNumber: { id: 'poNumber', kind: 'value', path: 'poNumber' },
     paymentMethod: { id: 'paymentMethod', kind: 'value', path: 'paymentMethod' },
     subtotal: { id: 'subtotal', kind: 'value', path: 'subtotal' },
+    // Opt-in discount view (positive magnitude; ids match the quote bindings). Unreferenced
+    // by the shipped templates, so adding them changes no render.
+    discountTotal: { id: 'discountTotal', kind: 'value', path: 'discountTotal' },
+    grossSubtotal: { id: 'grossSubtotal', kind: 'value', path: 'grossSubtotal' },
     tax: { id: 'tax', kind: 'value', path: 'tax' },
     total: { id: 'total', kind: 'value', path: 'total' },
     notes: { id: 'notes', kind: 'value', path: 'notes', fallback: '' },

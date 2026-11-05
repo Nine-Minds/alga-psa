@@ -116,7 +116,9 @@
     "clientTags": "Kunden-Tags",
     "tagModeAny": "Mindestens eines von",
     "tagModeNone": "Keines von",
-    "droppedFromLink": "Einige Filter in diesem Link sind ungültig und wurden ignoriert."
+    "droppedFromLink": "Einige Filter in diesem Link sind ungültig und wurden ignoriert.",
+    "location": "Standort",
+    "requesterLocation": "Standort des Anfragenden"
   },
   "create": {
     "title": "Support-Ticket erstellen",
@@ -185,7 +187,7 @@
     "additionalAgents": "Zusätzliche Agents",
     "createdBy": "Erstellt von",
     "lastActivity": "Letzte Aktivität",
-    "location": "Ort",
+    "location": "Standort",
     "contactPhone": "Kontakt-Telefon",
     "clientPhone": "Kunden-Telefon",
     "contactEmail": "Kontakt-E-Mail",
@@ -458,7 +460,9 @@
         "operationConflict": "Dieser Kommentar steht im Konflikt mit einem früheren Versuch. Neu laden und erneut versuchen.",
         "audienceUnresolved": "Wählen Sie, wer diesen Kommentar sehen kann, bevor Sie ihn veröffentlichen.",
         "unknownOutcome": "Wir konnten nicht bestätigen, dass der Kommentar veröffentlicht wurde. Prüfen Sie die Unterhaltung, bevor Sie ihn erneut senden."
-      }
+      },
+      "unavailable": "Dieses Ticket ist nicht verfügbar.",
+      "back": "Zurück zu Kundentickets"
     }
   },
   "responseState": {
@@ -1023,7 +1027,9 @@
       "heading": "Beobachter",
       "placeholder": "Beobachter hinzufügen..."
     },
-    "attachmentsPartialFailure": "Ticket erstellt, aber diese Dateien konnten nicht angehängt werden: {{files}}. Fügen Sie sie im Ticket hinzu."
+    "attachmentsPartialFailure": "Ticket erstellt, aber diese Dateien konnten nicht angehängt werden: {{files}}. Fügen Sie sie im Ticket hinzu.",
+    "contactLocationSuffix": "(Standort des Kontakts)",
+    "contactPrimaryLocationSuffix": "(primärer Standort des Kontakts)"
   },
   "itil": {
     "calculatedPriority": "Priorität (berechnet)",
@@ -1681,7 +1687,14 @@
       "referenceInvalid": "Das ausgewählte Board, der Status, die Priorität, der Bearbeiter, das Team oder die SLA-Richtlinie ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "duplicateName": "Ein Board mit diesem Namen existiert bereits.",
       "duplicate": "Ein Board oder Status mit denselben Einstellungen existiert bereits.",
-      "invalidValue": "Einer der Board- oder Statuswerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut."
+      "invalidValue": "Einer der Board- oder Statuswerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "notificationEmailInvalid": "Benachrichtigungsregel {{rule}} enthält eine ungültige E-Mail-Adresse (maximal {{max}} Zeichen)",
+      "notificationEmailLimit": "Benachrichtigungsregel {{rule}} darf höchstens {{max}} E-Mail-Adressen enthalten",
+      "notificationRecipientRequired": "Benachrichtigungsregel {{rule}} muss mindestens einen Benutzer, ein Team oder eine E-Mail-Adresse benachrichtigen",
+      "notificationEmailIsUser": "Benachrichtigungsregel {{rule}}: {{address}} ist die E-Mail-Adresse eines Alga-Benutzers. Wählen Sie stattdessen den Benutzer aus.",
+      "notificationEmailIsContact": "Benachrichtigungsregel {{rule}}: {{address}} gehört zu einem Kundenkontakt oder Standort und kann kein Empfänger sein.",
+      "notificationEmailClientDomain": "Benachrichtigungsregel {{rule}}: {{address}} befindet sich auf der E-Mail-Domain eines Kunden und kann kein Empfänger sein.",
+      "notificationEmailInboundMailbox": "Benachrichtigungsregel {{rule}}: {{address}} ist ein verbundenes Eingangspostfach und kann kein Empfänger sein."
     },
     "material": {
       "invalidValue": "Einer der ausgewählten Materialwerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
@@ -2057,7 +2070,9 @@
       "changeLocation": "Standort ändern",
       "addDescriptionPrompt": "Beschreibung hinzufügen – worum geht es, und was braucht der Kunde?",
       "projectTasks": "Projektaufgaben",
-      "timeAndBilling": "Zeit & Abrechnung"
+      "timeAndBilling": "Zeit & Abrechnung",
+      "useContactLocation": "Standort des Kontakts übernehmen",
+      "remote": "Im Homeoffice"
     },
     "timeline": {
       "subtitle": "Antworten, Zeit und Systemänderungen an einem Ort",
@@ -2612,12 +2627,15 @@
       "columns": {
         "name": "Name",
         "title": "Tickettitel",
+        "client": "Kunde",
         "board": "Board",
         "checklist": "Checklistenpunkte",
         "status": "Status",
         "schedules": "Zeitpläne"
       },
-      "deleteBlocked": "Wird von {{count}} wiederkehrenden Zeitplan/Zeitplänen verwendet. Weisen Sie ihnen zuerst eine andere Vorlage zu oder archivieren Sie sie."
+      "deleteBlocked": "Wird von {{count}} wiederkehrenden Zeitplan/Zeitplänen verwendet. Weisen Sie ihnen zuerst eine andere Vorlage zu oder archivieren Sie sie.",
+      "allClients": "Alle Kunden",
+      "clientFilter": "Alle Kunden"
     },
     "status": {
       "active": "Aktiv",
@@ -2645,6 +2663,9 @@
       "title": "Tickettitel",
       "description": "Beschreibung",
       "descriptionPlaceholder": "Beschreibung",
+      "client": "Kunde",
+      "clientPlaceholder": "Alle Kunden",
+      "clientHelp": "Leer lassen, um die Vorlage für alle Kunden anzubieten. Wählen Sie einen Kunden, um sie nur für dessen Tickets anzubieten.",
       "offerForManualUse": "In der Auswahl für neue Tickets anbieten",
       "offerForManualUseHelp": "Ausschalten für Vorlagen, die nur wiederkehrende Zeitpläne verwenden.",
       "titleTokens": "Im Titel können Sie {{tokens}} verwenden; sie werden pro Ticket ausgefüllt."

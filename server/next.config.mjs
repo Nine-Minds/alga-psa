@@ -609,6 +609,15 @@ const nextConfig = {
       const byContent = { timestamp: true, hash: true };
       config.snapshot = { ...config.snapshot, module: byContent, resolve: byContent,
         buildDependencies: byContent, resolveBuildDependencies: byContent };
+      // Entries a build no longer uses stay in the pack for webpack's default
+      // 60 days, and the CI snapshot carries the pack from build to build, so
+      // it grew to ~18 GB on disk by early November 2026 and a warm build then
+      // outgrew the 16 GB runner (the VM swapped until GitHub shut it down).
+      // One day keeps the pack at roughly one tree's worth of modules.
+      config.cache.maxAge = 24 * 60 * 60 * 1000;
+      // Release oversized backing buffers after reading a restored cache pack.
+      // Production defaults to retaining them, even when only a slice is used.
+      config.cache.allowCollectingMemory = true;
     }
 
     // Add support for importing from ee/server/src using absolute paths
@@ -1337,6 +1346,8 @@ const nextConfig = {
     // three compilers stack in one process and a warm cache that a branch
     // partly invalidates pushed the EE build past CI's runner memory.
     webpackBuildWorker: true,
+    // Intern shared source strings and avoid keeping both strings and buffers.
+    webpackMemoryOptimizations: true,
     // Disable server source maps (RSC + server actions). Build-only — does
     // not affect production error traces from Sentry or similar tools.
     serverSourceMaps: false,

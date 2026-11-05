@@ -726,7 +726,10 @@
       "reportsToCycle": "Cela créerait une chaîne hiérarchique circulaire",
       "reportsTo": "Rattaché à",
       "noManager": "Aucun responsable",
-      "reportsToHelp": "Un responsable peut voir les tickets, appareils et projets des personnes qui lui sont rattachées lorsque son groupe de visibilité est limité à ses propres éléments."
+      "reportsToHelp": "Un responsable peut voir les tickets, appareils et projets des personnes qui lui sont rattachées lorsque son groupe de visibilité est limité à ses propres éléments.",
+      "locations": "Sites",
+      "primaryLocation": "Principal",
+      "remote": "À distance"
     },
     "visibilityGroups": {
       "title": "Groupes de visibilité",

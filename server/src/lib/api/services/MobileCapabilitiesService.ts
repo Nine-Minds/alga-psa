@@ -44,6 +44,10 @@ export interface MobileFeatureCapabilities {
     opportunitiesCreate: boolean;
     /** Project tasks on mobile; PSA only, like the Projects module itself. */
     projects: boolean;
+    /** Asset browsing on mobile; PSA only. */
+    assets: boolean;
+    /** Site audits; needs asset read AND write, so a read-only tech cannot start one. */
+    assetAudit: boolean;
     /** Client/contact writes follow RBAC alone: both products have clients and contacts. */
     clientsCreate: boolean;
     clientsUpdate: boolean;
@@ -135,6 +139,8 @@ export class MobileCapabilitiesService extends BaseService<never> {
           opportunities: false,
           opportunitiesCreate: false,
           projects: false,
+          assets: false,
+          assetAudit: false,
           ...crm,
         },
         formatting,
@@ -142,11 +148,13 @@ export class MobileCapabilitiesService extends BaseService<never> {
       };
     }
 
-    const [inventory, opportunities, opportunitiesCreate, projects] = await Promise.all([
+    const [inventory, opportunities, opportunitiesCreate, projects, assets, assetsUpdate] = await Promise.all([
       hasPermission(context.user, 'inventory', 'read', knex),
       hasPermission(context.user, 'opportunities', 'read', knex),
       hasPermission(context.user, 'opportunities', 'create', knex),
       hasPermission(context.user, 'project', 'read', knex),
+      hasPermission(context.user, 'asset', 'read', knex),
+      hasPermission(context.user, 'asset', 'update', knex),
     ]);
 
     return {
@@ -155,6 +163,8 @@ export class MobileCapabilitiesService extends BaseService<never> {
         opportunities,
         opportunitiesCreate,
         projects,
+        assets,
+        assetAudit: assets && assetsUpdate,
         ...crm,
       },
       formatting,

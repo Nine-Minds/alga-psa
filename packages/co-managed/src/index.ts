@@ -9,7 +9,7 @@ export { CoManagedSharedWorkError, isCoManagedSharedWorkError, assertCoManagedSe
   snapshotCoManagedSessionActor } from './sharedWorkIdentity';
 
 // Access policy: the single matrix evaluator and policy administration.
-export { evaluateCoManagedAccess, effectiveCoManagedGrant, getCoManagedCollaborationPolicy, replaceCoManagedCustomerScope,
+export { evaluateCoManagedAccess, coManagedRelationshipAllowsWrite, effectiveCoManagedGrant, getCoManagedCollaborationPolicy, replaceCoManagedCustomerScope,
   replaceCoManagedStaffAssignments, replaceCoManagedRedactedFields, lockCoManagedCustomerPolicy, CoManagedPolicyError,
   requireCoManagedPolicyReader, listCoManagedLiveSponsoredRelationships } from './policy';
 export type { CoManagedAccessFacts, CoManagedAccessDecision, CoManagedAccessLayer, CoManagedDenyReason, CoManagedVisibilityMode,
@@ -38,6 +38,7 @@ export { retainCoManagedHistoricalWorkEvidence } from './historicalWorkEvidence'
 export { hasCoManagedLocalPermission } from './localPermission';
 export { loadCoManagedLifecycleFacts, loadCoManagedStaffRoles, loadCoManagedGrantFacts, loadCoManagedHomeFacts } from './sharedWork';
 export { CO_MANAGED_TASK_RESOURCE_ALIASES, isCoManagedTaskResourceHidden } from './sharedWorkProjection';
+export { projectCoManagedNotificationSnapshot } from './sharedWorkProjection';
 export { listCoManagedSharedProjects, listCoManagedSharedProjectTasks } from './projectTaskQueue';
 export type { CoManagedSharedProjectRow, CoManagedSharedProjectPage, CoManagedSharedTaskRow, CoManagedSharedTaskPage } from './projectTaskQueue';
 export { editCoManagedProjectTask, getCoManagedProjectTaskSnapshot, CoManagedTaskEditError, CO_MANAGED_TASK_EDIT_FIELDS } from './projectTaskEditing';
@@ -110,3 +111,6 @@ export type { CoManagedArchiveManifest, CoManagedArchiveFileSource, CoManagedArc
 export { finalizeCoManagedArchive, registerCoManagedClosureEvidenceSource } from './archiveFinalization';
 export { listCoManagedArchives, getCoManagedArchiveHistory, readCoManagedArchiveFile } from './archiveReads';
 export type { CoManagedArchiveSummary, CoManagedArchiveEntry, CoManagedArchiveFile, CoManagedArchiveHistory } from './archiveReads';
+
+export * from './portableRestoreUploads';
+export { assertPortableRestoreInstallationAuthority } from './portableRestoreInstallationAuthority';
