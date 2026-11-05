@@ -80,6 +80,7 @@ const WATCHED_TABLES = [
   'stock_levels', 'stock_units', 'stock_movements', 'invoices', 'invoice_charges', 'time_entries',
   'assets', 'asset_history', 'asset_associations', 'tickets', 'documents', 'document_associations',
   'document_templates', 'document_template_assignments', 'external_files', 'audit_logs',
+  'next_number', 'asset_tag_claims', 'asset_number_reservations', 'asset_tag_audit',
 ];
 
 async function snapshot(): Promise<Record<string, { count: number; maxUpdatedAt: string | null }>> {

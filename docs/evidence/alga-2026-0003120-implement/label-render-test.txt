@@ -1,0 +1,12 @@
+
+> @alga-psa/billing@0.1.0 test
+> vitest run --run src/lib/label-batch/labelBatch.e2e.test.ts -t renders adjacent physical asset pairs --maxWorkers=1
+
+
+ RUN  v4.1.12 /home/robert/alga-copies/feature-asset-numbering-client-prefixes-and-paired-label/packages/billing
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 32 skipped (33)
+   Start at  21:05:29
+   Duration  3.39s (transform 1.04s, setup 22ms, import 2.23s, tests 1.08s, environment 0ms)

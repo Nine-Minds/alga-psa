@@ -12,10 +12,26 @@ import {
   reserveAssetNumber,
 } from '@alga-psa/shared/services/assetNumbering';
 import { activateAssetTagUniquenessForTenant } from '@alga-psa/shared/services/assetTagActivation';
+import { SharedNumberingService } from '@alga-psa/shared/services/numberingService';
 import { ingestNormalizedRmmDeviceSnapshot } from '@alga-psa/shared/rmm/sharedAssetIngestionService';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { AssetService } from '../../lib/api/services/AssetService';
 import { createAssetInTransaction } from '@alga-psa/assets/actions/assetActions';
+import { updateNumberSettings } from '../../../../packages/reference-data/src/actions/number-actions/numberingActions';
+
+const settingsActor = vi.hoisted(() => ({ tenant: '', knex: null as Knex | null }));
+vi.mock('@alga-psa/auth', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@alga-psa/auth')>(),
+  withAuth: (fn: any) => (...args: any[]) => fn(
+    { user_id: '00000000-0000-4000-8000-000000000001', user_type: 'internal' },
+    { tenant: settingsActor.tenant }, ...args,
+  ),
+  hasPermission: vi.fn(async () => true),
+}));
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@alga-psa/db')>(),
+  createTenantKnex: async () => ({ knex: settingsActor.knex }),
+}));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn(async () => undefined) }));
 
@@ -82,6 +98,7 @@ describe('asset numbering persistence (PostgreSQL integration)', () => {
   beforeAll(async () => {
     if (!/^asset_numbering_test_[a-z0-9_]+$/.test(databaseName)) throw new Error('Use a dedicated asset_numbering_test_* database');
     db = await createTestDbConnection({ databaseName, runSeeds: false });
+    settingsActor.knex = db;
   }, 300_000);
 
   afterAll(async () => {
@@ -126,6 +143,73 @@ describe('asset numbering persistence (PostgreSQL integration)', () => {
     await expect(inTenant(tenant, (trx) => claimAssetTag(trx, {
       tenant, assetTag: ' legacy-imported-88 ', ownerKind: 'asset', ownerId: randomUUID(),
     }))).rejects.toThrow(/already exists/);
+  });
+
+  it('does not let a concurrent settings save rewind issuance across client prefixes', async () => {
+    const { tenant, client1, client2 } = await fixture();
+    settingsActor.tenant = tenant;
+    expect(await inTenant(tenant, (trx) => nextAssetTag(trx, tenant, client1))).toBe('NW00001');
+    const allocation = await db.transaction();
+    await allocation.raw("SELECT set_config('app.current_tenant', ?, true)", [tenant]);
+    const { rows: [{ pid }] } = await allocation.raw('SELECT pg_backend_pid() AS pid');
+    expect(await nextAssetTag(allocation, tenant, client1)).toBe('NW00002');
+    const saving = updateNumberSettings('ASSET', { last_number: 1, padding_length: 6 });
+    try {
+      // Wait for real lock contention, rather than relying on a timing delay.
+      await vi.waitFor(async () => {
+        const blocked = await db.raw('SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE ? = ANY(pg_blocking_pids(pid))) AS blocked', [pid]);
+        expect(blocked.rows[0].blocked).toBe(true);
+      }, { timeout: 5_000 });
+      await allocation.commit();
+      await expect(saving).resolves.toMatchObject({ success: false, error: 'New number must be greater than the current last number' });
+    } finally {
+      if (!allocation.isCompleted()) await allocation.rollback();
+      await saving;
+    }
+    expect(await inTenant(tenant, (trx) => nextAssetTag(trx, tenant, client2))).toBe('CT00003');
+  });
+
+  it('initializes settings safely beside first issuance and accepts a no-op save', async () => {
+    const { tenant, client1 } = await fixture();
+    settingsActor.tenant = tenant;
+    const [saved, tag] = await Promise.all([
+      updateNumberSettings('ASSET', { last_number: 40, padding_length: 6 }),
+      inTenant(tenant, (trx) => nextAssetTag(trx, tenant, client1)),
+    ]);
+    expect(saved.success).toBe(true);
+    expect(['NW00001', 'NW000041']).toContain(tag);
+    const before = await db('next_number').where({ tenant, entity_type: 'ASSET' }).first();
+    await expect(updateNumberSettings('ASSET', {})).resolves.toMatchObject({ success: true });
+    expect(await db('next_number').where({ tenant, entity_type: 'ASSET' }).first()).toEqual(before);
+    const next = await inTenant(tenant, (trx) => nextAssetTag(trx, tenant, client1));
+    expect(next).toBe(`NW${String(Number(before.last_number) + 1).padStart(6, '0')}`);
+  });
+
+  it('keeps other entity settings and counters independent from asset numbering', async () => {
+    const { tenant, client1 } = await fixture();
+    settingsActor.tenant = tenant;
+    const number = () => inTenant(tenant, (trx) => SharedNumberingService.getNextNumber('TICKET', { knex: trx, tenant }));
+    expect(await number()).toBe('TIC1000');
+    await expect(updateNumberSettings('TICKET', { last_number: 2000, prefix: 'HELP-', padding_length: 4 }))
+      .resolves.toMatchObject({ success: true });
+    expect(await number()).toBe('HELP-2001');
+    expect(await inTenant(tenant, (trx) => nextAssetTag(trx, tenant, client1))).toBe('NW00001');
+    expect(await number()).toBe('HELP-2002');
+  });
+
+  it.each(['tenant', 'entity_type'])('rejects a caller-supplied %s without relocating the counter', async (field) => {
+    const first = await fixture();
+    const other = await fixture();
+    settingsActor.tenant = first.tenant;
+    await inTenant(first.tenant, (trx) => nextAssetTag(trx, first.tenant, first.client1));
+    await inTenant(other.tenant, (trx) => nextAssetTag(trx, other.tenant, other.client1));
+    const values = { tenant: other.tenant, entity_type: 'TICKET' };
+    await expect(updateNumberSettings('ASSET', { [field]: values[field as keyof typeof values], last_number: 10 } as any))
+      .resolves.toMatchObject({ success: false, error: 'Unknown number setting' });
+    expect(await db('next_number').whereIn('tenant', [first.tenant, other.tenant]).count('* as count').first())
+      .toMatchObject({ count: '2' });
+    expect(await inTenant(first.tenant, (trx) => nextAssetTag(trx, first.tenant, first.client1))).toBe('NW00002');
+    expect(await inTenant(other.tenant, (trx) => nextAssetTag(trx, other.tenant, other.client1))).toBe('NW00002');
   });
 
   it('keeps reservations claimed across release/expiry and allows only one commit owner', async () => {

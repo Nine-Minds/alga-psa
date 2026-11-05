@@ -1,0 +1,7 @@
+
+> @alga-psa/reference-data@0.1.0 typecheck
+> tsc --noEmit --pretty false
+
+
+> server@1.6.17 typecheck
+> tsc --noEmit -p tsconfig.json --pretty false

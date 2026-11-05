@@ -191,3 +191,10 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Gate:** Multiple creation paths, high correctness cost, and stable tenant/tag ownership semantics. A shared identity preparation operation serves all concrete callers.
 - **Execution:** Bounded repair within asset numbering. `prepareAssetIdentity` acquires or transfers a claim before insertion. Colocated foreign keys make the relationship mandatory. Exact legacy bindings and holding claims preserve physical tags until reviewed activation.
 - **Status:** Revised. Database and shared-service behavior is exercised on PostgreSQL and Citus; evidence lives under `docs/evidence/alga-2026-0003120-draft/`. This ledger entry is not an approved implementation plan.
+
+## numbering-settings-allocation-lock — friction
+
+- **What:** The settings mutation read the counter without the allocator's lock. An administrator could save a stale last-used value after a concurrent allocation, allowing a numeric value to recur under another client prefix.
+- **Gate:** Settings and issuance share one persisted counter and one existing PostgreSQL advisory-lock protocol. A deterministic database race reproduced the counter rewind.
+- **Execution:** Bounded repair of the shared settings action. Initialize with conflict-ignore, acquire the allocator's existing tenant/entity lock, then validate and save the current state. All numbered entity settings use the same protocol. No new counters or asset-specific modes were added.
+- **Status:** Revised. The regression fails against the prior action and passes with the repair. PostgreSQL tests also verify concurrent first use, no-op settings saves, and independent ticket/asset counters.
