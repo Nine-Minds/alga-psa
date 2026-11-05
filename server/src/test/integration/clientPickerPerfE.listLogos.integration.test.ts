@@ -150,20 +150,19 @@ describe('client_logo_url on project and asset lists', () => {
   });
 
   it.each([
-    { page: 1, names: ['Acme PC 1', 'Acme PC 2'], clientKey: 'acme' },
-    { page: 2, names: ['Bravo PC'], clientKey: 'bravo' },
-    { page: 3, names: [], clientKey: null },
-  ])('listAssets batches logos only for clients on page $page', async ({ page, names, clientKey }) => {
+    { page: 1, names: ['Acme PC 1', 'Acme PC 2'], clients: ['acme'] },
+    { page: 2, names: ['Bravo PC'], clients: ['bravo'] },
+    { page: 3, names: [], clients: [] },
+  ])('listAssets fetches only distinct client logos on page $page', async ({ page, names, clients }) => {
     context.logoCalls.length = 0;
-    const result: any = await listAssets({
-      page, limit: 2, sort_by: 'name', sort_direction: 'asc',
-    });
+    const result = await listAssets({ page, limit: 2, sort_by: 'name', sort_direction: 'asc' });
+    if (!('assets' in result)) throw new Error('Expected an asset list');
 
-    expect(result.assets.map((asset: any) => asset.name)).toEqual(names);
+    expect(result.assets.map((asset) => asset.name)).toEqual(names);
     expect(result.total).toBe(3);
     for (const asset of result.assets) {
-      expect(asset.client.client_logo_url).toBe(`/logo/${asset.client_id}`);
+      expect(asset.client?.client_logo_url).toBe(`/logo/${asset.client_id}`);
     }
-    expect(context.logoCalls).toEqual(clientKey ? [[ids[clientKey]]] : []);
+    expect(context.logoCalls).toEqual(clients.length ? [clients.map((client) => ids[client])] : []);
   });
 });
