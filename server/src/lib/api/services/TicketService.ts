@@ -32,6 +32,8 @@ import { displayTagKey, loadDisplayTagsForEntities } from '@alga-psa/tags/lib/lo
 import { displayAudienceForUser } from '@alga-psa/tags/lib/tagDisplayRules';
 import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
 import { ITicket, ITicketWithDetails } from 'server/src/interfaces/ticket.interfaces';
+import type { IUserWithRoles } from '@alga-psa/types';
+import { authorizeTicketRecordAccess } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { ITicketMaterial } from 'server/src/interfaces/material.interfaces';
 import { TICKET_ORIGINS, type IExternalEntityLink } from '@alga-psa/types';
@@ -394,6 +396,29 @@ export class TicketService extends BaseService<ITicket> {
       defaultSort: 'entered_at',
       defaultOrder: 'desc'
     });
+  }
+
+  private ticketResourceAuthorization(context: ServiceContext, trx: Knex.Transaction) {
+    const user = context.user as IUserWithRoles | undefined;
+    if (!user || user.user_id !== context.userId || !user.user_type) {
+      throw new ForbiddenError('Ticket resource operations require a verified user authorization context');
+    }
+    return {
+      kind: 'user' as const,
+      authorizeTicket: async (ticketId: string, action: 'read' | 'update') => {
+        try {
+          return await authorizeTicketRecordAccess({ trx, tenant: context.tenant, user, ticketId, action });
+        } catch (error) {
+          if (error instanceof Error && error.message === 'Ticket not found') {
+            throw new NotFoundError('Ticket not found');
+          }
+          if (error instanceof Error && error.message.startsWith('Permission denied')) {
+            throw new ForbiddenError(error.message);
+          }
+          throw error;
+        }
+      },
+    };
   }
 
   /**
@@ -1048,6 +1073,11 @@ export class TicketService extends BaseService<ITicket> {
     this.assertValidTicketId(ticketId);
 
     return withTransaction(knex, async (trx) => {
+      if (!context.user || !(await hasPermission(context.user, 'ticket', 'read', trx))) {
+        throw new ForbiddenError('Permission denied: Cannot view ticket resources');
+      }
+      const authorization = this.ticketResourceAuthorization(context, trx);
+      const resources = await getTicketResourcesCore(trx, context.tenant, ticketId, authorization);
       const ticket = await tenantScopedTable(trx, 'tickets', context.tenant)
         .where({ ticket_id: ticketId })
         .first();
@@ -1055,7 +1085,6 @@ export class TicketService extends BaseService<ITicket> {
         throw new NotFoundError('Ticket not found');
       }
 
-      const resources = await getTicketResourcesCore(trx, context.tenant, ticketId);
       return this.buildTicketAgentsResponse(trx, context, ticket, resources);
     });
   }
@@ -1074,6 +1103,11 @@ export class TicketService extends BaseService<ITicket> {
     const notificationSuppression = resolveTicketNotificationSuppression(data);
 
     const { response, event } = await withTransaction(knex, async (trx) => {
+      if (!context.user || !(await hasPermission(context.user, 'ticket', 'update', trx))) {
+        throw new ForbiddenError('Permission denied: Cannot update ticket resources');
+      }
+      const authorization = this.ticketResourceAuthorization(context, trx);
+      await authorization.authorizeTicket(ticketId, 'update');
       const agentUser = await tenantScopedTable(trx, 'users', context.tenant)
         .where({ user_id: data.user_id })
         .first();
@@ -1090,6 +1124,7 @@ export class TicketService extends BaseService<ITicket> {
           ticketId,
           data.user_id,
           data.role ?? 'support',
+          authorization,
           notificationSuppression,
           'api',
         );
@@ -1105,7 +1140,7 @@ export class TicketService extends BaseService<ITicket> {
       const ticket = await tenantScopedTable(trx, 'tickets', context.tenant)
         .where({ ticket_id: ticketId })
         .first();
-      const resources = await getTicketResourcesCore(trx, context.tenant, ticketId);
+      const resources = await getTicketResourcesCore(trx, context.tenant, ticketId, authorization);
       return {
         response: await this.buildTicketAgentsResponse(trx, context, ticket, resources),
         event: added.event,
@@ -1239,6 +1274,11 @@ export class TicketService extends BaseService<ITicket> {
     this.assertValidTicketId(ticketId);
 
     await withTransaction(knex, async (trx) => {
+      if (!context.user || !(await hasPermission(context.user, 'ticket', 'update', trx))) {
+        throw new ForbiddenError('Permission denied: Cannot update ticket resources');
+      }
+      const authorization = this.ticketResourceAuthorization(context, trx);
+      await authorization.authorizeTicket(ticketId, 'update');
       const resource = await tenantScopedTable(trx, 'ticket_resources', context.tenant)
         .where({ ticket_id: ticketId, additional_user_id: userId })
         .first();
@@ -1246,7 +1286,7 @@ export class TicketService extends BaseService<ITicket> {
         throw new NotFoundError('Additional agent not found on this ticket');
       }
 
-      await removeTicketResourceCore(trx, context.tenant, context.userId, resource.assignment_id, 'api');
+      await removeTicketResourceCore(trx, context.tenant, context.userId, resource.assignment_id, authorization, 'api');
     });
   }
 
