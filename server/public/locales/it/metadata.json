@@ -548,6 +548,9 @@
       "departure": {
         "title": "Termina l’IT co-gestita"
       },
+      "sla": {
+        "title": "Priorità SLA cogestite"
+      },
       "export": {
         "title": "Esporta area di lavoro"
       }

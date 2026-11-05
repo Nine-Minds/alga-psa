@@ -630,6 +630,9 @@
       "departure": {
         "title": "Avsluta samhanterad IT"
       },
+      "sla": {
+        "title": "Samhanterade SLA-prioriteter"
+      },
       "export": {
         "title": "Exportera arbetsyta"
       }

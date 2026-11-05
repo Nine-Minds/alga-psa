@@ -630,6 +630,9 @@
       "departure": {
         "title": "End Co-Managed IT"
       },
+      "sla": {
+        "title": "Co-Managed SLA Priorities"
+      },
       "export": {
         "title": "Export Workspace"
       }

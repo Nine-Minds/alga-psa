@@ -548,6 +548,9 @@
       "departure": {
         "title": "Gemeinsam verwaltete IT beenden"
       },
+      "sla": {
+        "title": "Co-Managed-SLA-Prioritäten"
+      },
       "export": {
         "title": "Arbeitsbereich exportieren"
       }

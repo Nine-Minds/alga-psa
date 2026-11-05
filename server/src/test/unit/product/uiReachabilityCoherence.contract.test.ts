@@ -35,6 +35,7 @@ const INTENTIONALLY_UNLINKED: Record<string, string> = {
   '/msp/co-management/tickets': 'capability-gated (co-managed serves) native shared-ticket screen, reached by row deep links from the Customer Tickets queue (/msp/tickets/customer, sidebar: Tickets > Customer Tickets) and by the old customer-tickets URLs, which redirect here',
   '/msp/co-management/tasks': 'capability-gated (co-managed serves) sponsor Shared Tasks queue, reached from the Projects page via CoManagedProjectTaskQueueLink',
   '/msp/co-management/projects': 'capability-gated (co-managed serves) shared project screen, reached by deep links from the Shared Tasks queue and shared search results',
+  '/msp/co-management/sla': 'capability-gated (co-managed admits) sponsor SLA priority mappings, reached from the Co-managed IT overview (CoManagedOverview) by an admit-only link',
   '/msp/co-management/export': 'capability-gated customer-admin workspace export, reached from the customer side of the /msp/co-managed home via CoManagedPortableExportEntry',
   '/msp/co-management/providers': 'capability-gated provider setup reached through the product-neutral /msp/go/providers entry (Open Providers in email setup, profile SSO)',
   '/msp/create-opportunity': 'reached via the Quick Create button in the header, not the sidebar',

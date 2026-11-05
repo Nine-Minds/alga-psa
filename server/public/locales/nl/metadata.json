@@ -548,6 +548,9 @@
       "departure": {
         "title": "Beëindig gezamenlijk beheerde IT"
       },
+      "sla": {
+        "title": "Co-managed SLA-prioriteiten"
+      },
       "export": {
         "title": "Werkruimte exporteren"
       }

@@ -548,6 +548,9 @@
       "departure": {
         "title": "Mettre fin à la gestion informatique partagée"
       },
+      "sla": {
+        "title": "Priorités SLA cogérées"
+      },
       "export": {
         "title": "Exporter l'espace de travail"
       }
