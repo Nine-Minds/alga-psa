@@ -78,8 +78,8 @@ import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@alga-psa/ui/components/Tabs';
 import { Search, Eye, EyeOff } from 'lucide-react';
-import { getLicenseUsageAction } from '@alga-psa/licensing/actions/license-actions';
-import type { LicenseUsage } from '@alga-psa/licensing/lib/get-license-usage';
+import { getLicenseUsageAction } from '@/lib/actions/licensingActions';
+import type { LicenseUsage } from '@alga-psa/licensing/server';
 import { translateFieldValidation, validateContactName, validateEmailAddress, validateEmailAddressField, validatePassword, getPasswordRequirements, isValidEmail } from '@alga-psa/validation';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';

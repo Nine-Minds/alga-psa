@@ -14,6 +14,7 @@
     "communityEditionDescription": "La Community Edition autohospedada ofrece usuarios ilimitados sin restricciones de licencia ni costos adicionales."
   },
   "purchaseSuccess": {
+    "unlimitedLicenses": "Sin límite",
     "metaTitle": "Compra completada",
     "scheduledTitle": "¡Cambio programado con éxito!",
     "updatedTitle": "¡Actualización completada con éxito!",

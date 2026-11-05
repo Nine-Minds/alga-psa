@@ -6,8 +6,7 @@ import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { CheckCircle, ArrowRight, Loader2, Calendar, Users } from 'lucide-react';
 import Link from 'next/link';
-import { getLicenseUsageAction } from '@alga-psa/licensing/actions/license-actions';
-import { getSubscriptionInfoAction } from '@ee/lib/actions/license-actions';
+import { getLicenseUsageAction, getSubscriptionInfoAction } from '@ee/lib/actions/license-actions';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export default function LicensePurchaseSuccessPage() {
@@ -18,7 +17,7 @@ export default function LicensePurchaseSuccessPage() {
   const { t: tCommon } = useTranslation('common');
   const { formatDate } = useFormatters();
   const [loading, setLoading] = useState(true);
-  const [licenseCount, setLicenseCount] = useState<number | null>(null);
+  const [licenseCount, setLicenseCount] = useState<number | null | undefined>(undefined);
   const [scheduledDate, setScheduledDate] = useState<string | null>(null);
 
   useEffect(() => {
@@ -107,15 +106,21 @@ export default function LicensePurchaseSuccessPage() {
                 </h2>
               </div>
               <div className="text-center space-y-2">
-                {licenseCount !== null && (
+                {licenseCount !== undefined && (
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">
                       {t('purchaseSuccess.youNowHave', { defaultValue: 'You now have' })}
                     </p>
-                    <p className="text-5xl font-bold text-primary-500">{licenseCount}</p>
-                    <p className="text-lg text-muted-foreground mt-1">
-                      {t('purchaseSuccess.totalLicenses', { defaultValue: 'total licenses' })}
+                    <p className="text-5xl font-bold text-primary-500">
+                      {licenseCount === null
+                        ? t('purchaseSuccess.unlimitedLicenses', { defaultValue: 'Unlimited' })
+                        : licenseCount}
                     </p>
+                    {licenseCount !== null && (
+                      <p className="text-lg text-muted-foreground mt-1">
+                        {t('purchaseSuccess.totalLicenses', { defaultValue: 'total licenses' })}
+                      </p>
+                    )}
                   </div>
                 )}
                 {isScheduled && scheduledDate && (
