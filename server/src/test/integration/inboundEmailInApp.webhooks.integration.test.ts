@@ -1492,6 +1492,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       comment_id: null,
       project_id: null,
       created_at: db.fn.now(),
+      expires_at: new Date(Date.now() + 60_000),
     });
     cleanup.push(async () => {
       await tenantTable('email_reply_tokens').where({ token: replyToken }).delete();
@@ -2670,6 +2671,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       comment_id: null,
       project_id: null,
       created_at: db.fn.now(),
+      expires_at: new Date(Date.now() + 60_000),
     });
     cleanup.push(async () => {
       await tenantTable('email_reply_tokens').where({ token: replyToken }).delete();
@@ -3179,6 +3181,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       comment_id: null,
       project_id: null,
       created_at: db.fn.now(),
+      expires_at: new Date(Date.now() + 60_000),
     });
     cleanup.push(async () => {
       await tenantTable('email_reply_tokens').where({ token: replyToken }).delete();
@@ -4426,6 +4429,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       comment_id: null,
       project_id: null,
       created_at: db.fn.now(),
+      expires_at: new Date(Date.now() + 60_000),
     });
     cleanup.push(async () => {
       await tenantTable('email_reply_tokens').where({ token: replyToken }).delete();
@@ -4505,6 +4509,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       comment_id: null,
       project_id: null,
       created_at: db.fn.now(),
+      expires_at: new Date(Date.now() + 60_000),
     });
     cleanup.push(async () => {
       await tenantTable('email_reply_tokens').where({ token: replyToken }).delete();

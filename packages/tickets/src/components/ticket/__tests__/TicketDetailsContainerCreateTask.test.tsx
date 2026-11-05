@@ -4,6 +4,9 @@ import React from 'react';
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import TicketDetailsContainer from '../TicketDetailsContainer';
+import { TicketDataSourceProvider } from '../TicketDataSourceContext';
+import { nativeTicketDataSource } from '../../../lib/nativeTicketDataSource';
+import { composeTicketDataSource } from '../../../lib/ticketDataSource';
 
 let lastTicketDetailsProps: any = null;
 
@@ -93,6 +96,8 @@ describe('TicketDetailsContainer renderCreateProjectTask passthrough', () => {
     );
 
     expect(lastTicketDetailsProps.renderCreateProjectTask).toBe(renderCreateProjectTask);
+    expect(lastTicketDetailsProps.liveUserMap).toBeUndefined();
+    expect(lastTicketDetailsProps.liveContactMap).toBeUndefined();
   });
 
   it('T045: mounts the live provider for a ticket with tenant + ticket id', () => {
@@ -120,5 +125,27 @@ describe('TicketDetailsContainer renderCreateProjectTask passthrough', () => {
 
     expect(screen.getByTestId('ticket-live-provider')).toBeTruthy();
     expect(screen.getByTestId('ticket-details')).toBeTruthy();
+  });
+
+  it('forwards conversation author maps live only when the data source opts in', () => {
+    const userMap = { 'posting-user': { user_id: 'posting-user', first_name: 'Ada', last_name: 'Technician', user_type: 'internal', avatarUrl: null } };
+    const contactMap = { 'contact-1': { contact_id: 'contact-1', full_name: 'Casey Contact', avatarUrl: null } };
+    const ticketData = {
+      ticket: { ticket_id: 'ticket-1' }, comments: [], documents: [], client: null, contacts: [], contactInfo: null,
+      createdByUser: null, board: null, additionalAgents: [], availableAgents: [], userMap, contactMap,
+      options: { status: [], agent: [], board: [], priority: [] }, categories: [], clients: [], locations: [], agentSchedules: [],
+    };
+    const dataSource = composeTicketDataSource(nativeTicketDataSource, { screen: { liveConversationAuthors: true } });
+
+    render(
+      <TicketDataSourceProvider dataSource={dataSource}>
+        <TicketDetailsContainer ticketData={ticketData} />
+      </TicketDataSourceProvider>,
+    );
+
+    expect(lastTicketDetailsProps.initialUserMap).toBe(userMap);
+    expect(lastTicketDetailsProps.initialContactMap).toBe(contactMap);
+    expect(lastTicketDetailsProps.liveUserMap).toBe(userMap);
+    expect(lastTicketDetailsProps.liveContactMap).toBe(contactMap);
   });
 });

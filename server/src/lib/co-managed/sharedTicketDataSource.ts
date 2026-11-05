@@ -189,6 +189,7 @@ export function createCoManagedSharedTicketDataSource(summary: CoManagedSharedWo
   const editable = (edit?.editableFields ?? []) as readonly string[];
   const screen = {
     readOnly: !edit && !writable, backHref,
+    liveConversationAuthors: Boolean(conversation),
     ...(edit || writable ? { frozenFields: TICKET_SCREEN_FIELDS.filter(field => !editable.includes(field)) } : {}),
     refresh: () => { if (typeof window !== 'undefined') window.location.reload(); },
   };
