@@ -2573,6 +2573,7 @@
   "errors": {
     "permissions": {
       "invoiceUpdate": "Autorisation refusée : autorisation de mise à jour des factures requise",
+      "invoiceFinalize": "Autorisation refusée : autorisation de finalisation des factures requise",
       "invoiceDelete": "Autorisation refusée : autorisation de suppression des factures requise",
       "invoiceAccess": "Autorisation refusée : accès à la facture refusé",
       "otherClientInvoices": "Autorisation refusée : impossible d’accéder aux factures d’un autre client",

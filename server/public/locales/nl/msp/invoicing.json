@@ -2573,6 +2573,7 @@
   "errors": {
     "permissions": {
       "invoiceUpdate": "Toestemming geweigerd: bijwerkrechten voor facturen vereist",
+      "invoiceFinalize": "Toestemming geweigerd: finalisatierechten voor facturen vereist",
       "invoiceDelete": "Toestemming geweigerd: verwijderrechten voor facturen vereist",
       "invoiceAccess": "Toestemming geweigerd: toegang tot de factuur geweigerd",
       "otherClientInvoices": "Toestemming geweigerd: facturen van een andere klant zijn niet toegankelijk",

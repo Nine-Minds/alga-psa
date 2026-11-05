@@ -2573,6 +2573,7 @@
   "errors": {
     "permissions": {
       "invoiceUpdate": "Åtkomst nekad: Du saknar behörighet att uppdatera fakturor",
+      "invoiceFinalize": "Åtkomst nekad: behörighet att fastställa fakturor krävs",
       "invoiceDelete": "Åtkomst nekad: Du saknar behörighet att radera fakturor",
       "invoiceAccess": "Åtkomst nekad: Du saknar behörighet att komma åt fakturor",
       "otherClientInvoices": "Åtkomst nekad: Du saknar behörighet att komma åt en annan kunds fakturor",

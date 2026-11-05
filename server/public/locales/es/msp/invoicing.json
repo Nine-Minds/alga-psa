@@ -2573,6 +2573,7 @@
   "errors": {
     "permissions": {
       "invoiceUpdate": "Permiso denegado: se requiere permiso de actualización de facturas",
+      "invoiceFinalize": "Permiso denegado: se requiere permiso para finalizar facturas",
       "invoiceDelete": "Permiso denegado: se requiere permiso de eliminación de facturas",
       "invoiceAccess": "Permiso denegado: acceso a la factura denegado",
       "otherClientInvoices": "Permiso denegado: no se puede acceder a las facturas de otro cliente",
