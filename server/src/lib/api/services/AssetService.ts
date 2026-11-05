@@ -34,6 +34,7 @@ import { validateAssetStatusSlug } from '@alga-psa/assets/lib/assetStatusRegistr
 import { isAssetAssigneeError, setAssetAssignee } from '@alga-psa/assets/lib/assetAssignment';
 import { getAssetGroupSummary, removeAssetFromAnyGroup } from '@alga-psa/assets/lib/assetGroups';
 import { assertBillingProfileForClient } from '@alga-psa/shared/models/assetBillingProfileModel';
+import { commitAssetReservation, nextAssetTag, normalizeAssetTag } from '@alga-psa/shared/services/assetNumbering';
 
 function validationDetails(issues: Array<{ key: string; code: string; message: string }>) {
   return issues.map((issue) => ({ path: ['attributes', issue.key], code: issue.code, message: issue.message }));
@@ -401,7 +402,7 @@ export class AssetService extends BaseService<any> {
 
   async create(data: CreateAssetWithExtensionData, context: ServiceContext): Promise<any> {
     // LEVERAGE: friction rest-asset-write-path — converge REST writes with createAssetRecord/updateAssetRecord for shared history and workflow behavior.
-    const { extension_data, attributes, ...assetData } = data;
+    const { extension_data, attributes, asset_number_reservation_id: reservationId, ...assetData } = data;
     const knex = await this.getDbForContext(context);
 
     const typeEntry = await resolveRestAssetType(knex, context.tenant, assetData.asset_type);
@@ -445,9 +446,36 @@ export class AssetService extends BaseService<any> {
     // without the contact the caller asked for, and a failed extension write
     // must not leave a committed asset with no extension row.
     const asset = await knex.transaction(async (trx) => {
+      let physicalTag = typeof assetColumns.asset_tag === 'string' && normalizeAssetTag(assetColumns.asset_tag)
+        ? assetColumns.asset_tag
+        : '';
+      if (reservationId) {
+        const reservation = await scopedTable(trx, context.tenant, 'asset_number_reservations')
+          .where({ reservation_id: reservationId }).forUpdate()
+          .first<{ asset_tag: string; state: string; asset_id: string | null }>();
+        if (!reservation || !['reserved', 'expired', 'released'].includes(reservation.state) || reservation.asset_id) {
+          throw new ConflictError('Asset number reservation is not available');
+        }
+        if (typeof assetColumns.asset_tag === 'string' && normalizeAssetTag(assetColumns.asset_tag) && assetColumns.asset_tag !== reservation.asset_tag) {
+          throw new ConflictError('Submitted asset tag does not match the reserved label');
+        }
+        physicalTag = reservation.asset_tag;
+        await scopedTable(trx, context.tenant, 'asset_number_reservations')
+          .where({ reservation_id: reservationId }).update({ state: 'committed', updated_at: trx.fn.now() });
+      } else if (!physicalTag) {
+        physicalTag = await nextAssetTag(trx, context.tenant, assetColumns.client_id);
+      }
+      assetColumns.asset_tag = physicalTag;
+      assetRecord.asset_tag = physicalTag;
       const [created] = await scopedTable(trx, context.tenant, this.tableName)
         .insert(assetRecord)
         .returning('*');
+
+      if (reservationId) {
+        await commitAssetReservation(trx, {
+          tenant: context.tenant, reservationId, assetId: created.asset_id, assetTag: physicalTag,
+        });
+      }
 
       if (requestedContactId) {
         await this.applyAssignee(trx, context, created.asset_id, requestedContactId);

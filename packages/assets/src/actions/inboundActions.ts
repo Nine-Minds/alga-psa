@@ -5,6 +5,7 @@ import type { RmmProvider } from '@alga-psa/types';
 
 import { registerAction, type InboundActionDefinition } from '@alga-psa/shared/inboundWebhooks/actions/registry';
 import { lookupAlgaEntityByExternalId, writeEntityMapping } from '@alga-psa/shared/inboundWebhooks/externalEntityMappings';
+import { nextAssetTag, normalizeAssetTag } from '@alga-psa/shared/services/assetNumbering';
 
 const KNOWN_RMM_PROVIDERS = new Set<RmmProvider>([
   'ninjaone',
@@ -130,10 +131,6 @@ const upsertAssetByExternalIdAction: InboundActionDefinition<UpsertAssetByExtern
         location: mappedValues.location ?? '',
         updated_at: now,
       };
-      if (mappedValues.asset_tag !== undefined) {
-        payload.asset_tag = mappedValues.asset_tag;
-      }
-
       if (lookup) {
         const [updated] = await tenantDb(trx, ctx.tenant).table('assets')
           .where({ asset_id: lookup.algaEntityId })
@@ -142,6 +139,9 @@ const upsertAssetByExternalIdAction: InboundActionDefinition<UpsertAssetByExtern
         return updated;
       }
 
+      payload.asset_tag = typeof mappedValues.asset_tag === 'string' && normalizeAssetTag(mappedValues.asset_tag)
+        ? mappedValues.asset_tag
+        : await nextAssetTag(trx, ctx.tenant, resolvedClientId);
       const [created] = await tenantDb(trx, ctx.tenant).table('assets')
         .insert({
           tenant: ctx.tenant,

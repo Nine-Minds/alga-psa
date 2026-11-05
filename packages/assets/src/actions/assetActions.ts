@@ -115,6 +115,7 @@ import {
     type AssetAuthUser as SharedAssetAuthUser,
 } from '../lib/assetReadAuthorization';
 import { isAssetAssigneeError, setAssetAssignee } from '../lib/assetAssignment';
+import { nextAssetTag, commitAssetReservation, normalizeAssetTag } from '../lib/assetNumbering';
 import { getAssetGroupSummariesForAssets, getAssetGroupSummary, removeAssetFromAnyGroup } from '../lib/assetGroups';
 import {
     ASSET_BILLING_PROFILE_UNAVAILABLE,
@@ -1085,6 +1086,29 @@ export async function createAssetInTransaction(
             }
 
             const now = new Date().toISOString();
+            const reservationId = validatedData.asset_number_reservation_id;
+            let assetTag = validatedData.asset_tag ?? '';
+            if (reservationId) {
+                const reservation = await tenantScopedTable(trx, 'asset_number_reservations', tenant)
+                    .where({ reservation_id: reservationId })
+                    .forUpdate()
+                    .first<{ asset_tag: string; state: string; asset_id: string | null }>();
+                if (!reservation || !['reserved', 'expired', 'committed'].includes(reservation.state)) {
+                    throw new Error('Asset number reservation is not available for intake');
+                }
+                if (reservation.asset_id) throw new Error('Asset number reservation is already committed');
+                if (normalizeAssetTag(assetTag) && assetTag !== reservation.asset_tag) {
+                    throw new Error('Submitted asset tag does not match the reserved label');
+                }
+                assetTag = reservation.asset_tag;
+                // Hide the held tag from the database collision trigger inside
+                // this transaction. A later failure rolls this transition back.
+                await tenantScopedTable(trx, 'asset_number_reservations', tenant)
+                    .where({ reservation_id: reservationId })
+                    .update({ state: 'committed', updated_at: trx.fn.now() });
+            } else if (!normalizeAssetTag(assetTag)) {
+                assetTag = await nextAssetTag(trx, tenant, validatedData.client_id);
+            }
             const selectedLocation = await resolveValidatedAssetLocation(
                 trx,
                 tenant,
@@ -1128,7 +1152,7 @@ export async function createAssetInTransaction(
                 tenant,
                 asset_type: validatedData.asset_type,
                 client_id: validatedData.client_id,
-                asset_tag: validatedData.asset_tag,
+                asset_tag: assetTag,
                 name: validatedData.name,
                 status: validatedData.status,
                 ownership: validatedData.ownership ?? 'client',
@@ -1159,6 +1183,12 @@ export async function createAssetInTransaction(
             const [asset] = await tenantScopedTable(trx, 'assets', tenant)
                 .insert(baseAssetData)
                 .returning('*');
+
+            if (reservationId) {
+                await commitAssetReservation(trx, {
+                    tenant, reservationId, assetId: asset.asset_id, assetTag,
+                });
+            }
 
             if (selectedContact?.contact_name_id) {
                 await setAssetAssignee(trx, tenant, asset.asset_id, selectedContact.contact_name_id, {

@@ -2,13 +2,13 @@
 
 Ticket `alga-2026-0003120` · existing PSA ticket `8ea5fb98-0142-429d-9896-14e510033663`
 
-This artifact records the Draft Implementation repair round and keeps the Ryan smoke scenario and response draft reviewable. It does not claim that the product feature has been implemented.
+This artifact records the Draft Implementation work and keeps the Ryan smoke scenario and unsent response draft reviewable. It describes the current implementation plus checks that remain for a live environment.
 
 ## Specification used
 
 `git log main..HEAD --name-only -- docs/plans/` returned no files, and there is no committed asset-numbering implementation plan under `docs/plans/`. The approved design packet is attached to Design Session run `c48ee70c-5102-4a38-917a-c89533c9c2a1`; its decisions were used together with the task requirements. The card dossier identifies Ryan Hoffmann at FTS Technology Group as the requester. Nine Minds LLC is the retained inbound-default ticket association and does not change the customer context. No new PSA ticket was created and no customer response was sent.
 
-The design packet calls for `ASSET` to use `SharedNumberingService.getNextNumber` and the existing atomic allocator, with one tenant-wide sequence and client-specific formatting. It proposes `clients.asset_prefix`, durable reservations with `reserved`, `committed`, `expired`, and `released` states, a 15-minute TTL, no number reuse, and two explicit label instances per asset. These are design decisions, not verified implementation facts. The task additionally requires a normalized matching rule that is enforced consistently in storage and lookup; the packet's raw `(tenant, asset_tag)` partial index proposal is insufficient by itself for case/whitespace-insensitive matching and must be resolved before implementation. Production Citus compatibility also remains to be demonstrated.
+The implementation follows the approved packet: `ASSET` uses `SharedNumberingService.getNextNumber` and its atomic allocator, with one tenant-wide sequence and client-specific formatting via `clients.asset_prefix`. Reservations use the four proposed states, 15-minute expiry metadata, and no reuse. Label-first intake creates a minimal durable asset and commits its reservation before printing, so expiry cannot move a printed identifier to another record. Asset tag matching trims boundary ASCII spaces and folds ASCII `a-z` to `A-Z`; other code points are retained. A database trigger serializes writes by tenant and normalized tag, and a reviewed partial unique index can be activated after legacy reconciliation. Migration execution and production Citus behavior have not been exercised in this run.
 
 ## Repair diagnosis: `stack-up`
 
@@ -32,7 +32,7 @@ HTTP=000 CURL_EXIT=7
 
 The failing command is the `curl` part of the verifier, not application code or dependency wiring. Its precondition conflicts with the deliberate server-off state. The verification was not weakened, and the full `stack-up` command was not rerun. Live HTTP/UI checks belong to a later server-on step. The board-owned `dev-server` service was concluded after discovering that the workflow system had resumed it; it is currently stopped. The earlier `stack-up` failure therefore remains accurately reported as an environment/lifecycle mismatch rather than being relabeled as passed.
 
-## Ryan smoke scenario for the implementation step
+## Ryan smoke scenario for a reviewer / server-on step
 
 Use an isolated tenant with two clients, for example `FTS` and `NORTH`, and a reviewed starting value of `004281`. Do not use or alter Ryan's production inventory for the smoke test.
 
@@ -45,26 +45,43 @@ Use an isolated tenant with two clients, for example `FTS` and `NORTH`, and a re
 7. Change client assignment, client prefix, and MSP/client ownership fields; verify the physical tag remains stable and ownership semantics are preserved. Resync a Level-discovered record and link a manually numbered record; confirm external IDs stay in their external identity fields, no printed tag changes, and no duplicate asset appears. Exercise equivalent Hudu/shared-ingestion paths touched by the implementation.
 8. Repeat through full Add Asset, Quick Add repeated intake, REST creation, and bulk/import behavior. Check that validation failures/retries do not duplicate rows or replace a committed tag. Verify other shared-numbered entities retain their existing formatting and allocation behavior.
 
-Record database rows, audit output, rendered label PDFs/images, barcode decode output, and exact commands in the implementation evidence. This scenario has not been run; no runtime, database, Citus, browser, live-scanner, or physical-printer result is claimed here.
+The isolated Ryan scenario has not been run against a live tenant. Do not use Ryan's production inventory. Offline rendered label evidence is provided as `paired-asset-labels.pdf`; the focused render test verifies pair order, populated asset tags, QR record URLs, and Code 128 payloads. No live PostgreSQL migration, concurrent database race, Citus deployment, browser UI, normal-permission scan lookup, live scanner, or physical-printer result is claimed.
 
 ## Customer-ready procedure draft
 
-1. Export the current SharePoint inventory and import existing printed tags as supplied. Do not regenerate tags during import. Keep the import report and resolve duplicate tags with a human-reviewed asset-to-label reconciliation; blank tags may remain blank until explicitly assigned.
-2. In asset numbering settings, review the duplicate audit and tag matching rule. Set each client's asset prefix, then inspect the legacy suffix continuation preview across all imported tags. Approve an explicit next value and padding before activation. A preview does not reserve a number. The sequence is tenant-wide across clients, so prefixes affect presentation rather than allocation.
-3. For equipment already on hand, create a minimal asset or reserve a number using the approved label-first flow. Print two copies for each asset: attach one to the equipment and one to its box. Complete the remaining inventory fields later by scanning either label; the scan should open the same durable asset record.
-4. To find an existing asset, scan its printed tag or search by tag. To replace a damaged label, reprint the stored asset label; reprinting does not issue another number. Do not treat sequence gaps as missing assets: abandoned reservations are not reused to avoid assigning an identifier that may already have been printed.
+1. Import current inventory with printed asset tags exactly as supplied. Imports do not derive a physical tag from a serial or integration ID. Existing blanks and duplicates remain unchanged and appear in the legacy audit.
+2. In Settings → Assets → Asset numbering, review the suffix scan and suggested continuation across tags of any prefix length. Agree on the continuation value with the customer, then explicitly set the ASSET sequence starting/last value and padding. The suggestion is advisory and is never applied automatically. Set distinct client prefixes or leave a prefix unset; prefixes change presentation, not the tenant-wide counter.
+3. Reconcile normalized duplicates by locating each asset and recording the human decision. Edit only a physical tag the customer agrees to change; do not bulk-rewrite or merge assets. Add a review note, then activate normalized uniqueness after all duplicates are resolved. Blank tags may remain blank.
+4. For new assets, use Full add or Quick Add and choose automatic numbering, or enter an existing/scanned tag to preserve it. For label-first intake, choose the client and create a minimal durable record before printing. Scanning the QR later opens the same asset record to finish its details, even after the reservation's 15-minute expiry.
+5. Print one or many selected assets with Copies per asset set to two. Labels expand into adjacent pairs (`A, A, B, B`) using the selected layout. Attach one copy to the equipment and one to its box. Use the Code 128 tag in asset search to find the same record.
+6. Reprint a stored asset label to replace a damaged copy. Previewing, opening/cancelling intake, printing, and reprinting do not allocate. Issued numbers and collision skips are never reused, so sequence gaps can occur.
 
 ## Customer response draft — unsent
 
 Hi Ryan,
 
-We’re preparing an Alga workflow for your existing numbered labels and new equipment. The intended setup keeps one sequence for your organization, adds each client’s prefix when the asset tag is formatted, and prints two copies of the same stored tag so one can go on the equipment and one on its box. You’ll be able to keep existing printed tags, review the next sequence value before enabling numbering, and scan a label later to finish the same asset record. Reprinting will use the asset’s existing tag.
+The draft now supports your existing printed tags and new equipment. Number allocation uses one sequence for the MSP tenant, and each client's prefix is applied when the physical tag is formatted. Existing imported tags are preserved. The legacy audit identifies blank tags and normalized duplicates for review before uniqueness activation. The settings screen provides a suffix scan and suggested continuation value for review, plus padding and explicit sequence settings.
 
-Before activation, we’ll review any duplicate tags in the imported inventory with you and agree on the continuation value. Previewing does not reserve a number, and abandoned issued numbers may leave gaps so a number that has already been printed is never reused.
+For label-first intake, the draft creates a minimal durable asset before printing. Two adjacent copies of its stored tag are the default; scanning either QR code opens that same record for the remaining details. Existing assets can be reprinted without allocating a number. Previewing does not reserve a number, and issued numbers are not reused, so sequence gaps can occur.
 
-We’ll confirm the setup and walk through a sample intake once implementation and label-output checks are complete.
+We should review the continuation value and duplicate reconciliation with you before activation, then walk through a sample import and label-first intake. Offline label rendering is verified; live database, Citus, scanner, and printer validation remain before customer rollout.
 
 Regards,
 Alga Support
 
 This is a draft only. Do not send it or post it to the PSA ticket from this step.
+
+## Verification record
+
+- `npm run typecheck --workspace=@alga-psa/assets` — passed.
+- `npm run typecheck --workspace=@alga-psa/ui` — passed.
+- `npm run build --workspace=@alga-psa/assets` — passed.
+- `npm run lint:migrations` — passed (0 violations).
+- `npm run test --workspace=@alga-psa/assets -- --run src/lib/assetNumbering.test.ts` — passed (2 tests for normalization and formatting).
+- `npm run test --workspace=@alga-psa/ui -- --run src/components/labels/assetLabelCopies.test.ts` — passed (2 tests for adjacent ordering and copy bounds).
+- `npm run test --workspace=@alga-psa/billing -- --run src/lib/label-batch/labelBatch.e2e.test.ts` — passed (32 offline render/decode tests before adding the paired evidence case); focused `-t 'renders adjacent physical asset pairs'` passed (1 test), producing `paired-asset-labels.pdf` with QR and Code 128 decode assertions.
+- `cd ee/server && npx vitest run src/__tests__/unit/huduAssetImportActions.test.ts` — passed (30 tests).
+- `cd ee/server && npx vitest run src/__tests__/unit/integrations/levelioDeviceMapper.test.ts` — passed (20 tests, including external identity kept separate from the physical tag).
+- `npm run typecheck --workspace=server` — default 4 GB heap attempt exhausted Node's heap; rerun with an 8 GB heap also exhausted Node's heap (exit 134 after about 103 seconds).
+
+The app server remained stopped. The original `stack-up` failure remains an HTTP probe exit 7 against the intentionally stopped listener. PostgreSQL migration/concurrency checks were not run: the configured `.env.localtest` points to `DB_NAME=server`, not a disposable test database, so no migration was applied to it. No Citus deployment, browser UI, normal-permission scan lookup, live scanner, or physical-printer result is claimed. Review database-trigger/index deployment behavior, especially on production Citus, before rollout.
