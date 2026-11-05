@@ -3,6 +3,7 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
 import { recordCoManagedWorkAudit } from './sharedWorkAudit';
+import { withAuditOwnerTenant } from './auditOwnerTenant';
 import { CoManagedSharedWorkError, snapshotCoManagedSessionActor, isCoManagedUuid, type CoManagedSessionActor } from './sharedWorkIdentity';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { isCoManagedTaskResourceHidden, projectCoManagedChanges } from './sharedWorkProjection';
@@ -37,16 +38,9 @@ export async function findCoManagedTaskReplay<Receipt>(context: CoManagedSharedW
 export async function recordCoManagedTaskAudit(context: CoManagedSharedWorkContext, input: {
   operation: CoManagedTaskAuditOperation; operationId: string; requestHash: string; changes: Record<string, unknown>; receipt: unknown;
 }) {
-  // audit_logs has a BEFORE INSERT trigger that files the row under app.current_tenant. The request runs in the sponsor's
-  // tenant context, so pin the GUC to the customer (transaction-local) for the insert, then restore it. Same technique as
-  // delegatedAdministration.ts.
-  await context.trx.raw('select set_config(?, ?, true)', ['app.current_tenant', context.resource.tenant]);
-  try {
-    await recordCoManagedWorkAudit(context, { operation: input.operation, operationId: input.operationId, changes: input.changes,
-      details: { request_hash: input.requestHash, receipt: input.receipt } });
-  } finally {
-    await context.trx.raw('select set_config(?, ?, true)', ['app.current_tenant', context.actor.tenant]);
-  }
+  // audit_logs files rows under app.current_tenant; pin it to the customer for the whole audit write (insert and evidence).
+  await withAuditOwnerTenant(context.trx, context.resource.tenant, () => recordCoManagedWorkAudit(context, { operation: input.operation, operationId: input.operationId,
+    changes: input.changes, details: { request_hash: input.requestHash, receipt: input.receipt } }));
 }
 
 export interface CoManagedTaskHistoryEntry {

@@ -55,6 +55,7 @@ import type {
   getClientById,
   getAllClients,
   getClientBillingProfiles,
+  getContactEffectiveLocation,
   searchClientsForPicker,
 } from '../actions/clientLookupActions';
 import type {
@@ -285,6 +286,8 @@ export interface TicketScreenBehavior {
    * default: writable (absent / false).
    */
   readOnly?: boolean;
+  /** Conversation authors are refreshed with the conversation after writes. */
+  liveConversationAuthors?: boolean;
   /**
    * Fields this data source cannot write even for a writer (for example
    * `board_id`). Frozen fields render disabled. Names are the ticket field
@@ -434,6 +437,7 @@ export interface TicketPeopleMethods {
   getAllClients: typeof getAllClients;
   getClientLocations: typeof getClientLocations;
   getClientBillingProfiles: typeof getClientBillingProfiles;
+  getContactEffectiveLocation: typeof getContactEffectiveLocation;
   /** Paged/searchable client lookup backing the async client picker. */
   searchClientsForPicker: typeof searchClientsForPicker;
 }
