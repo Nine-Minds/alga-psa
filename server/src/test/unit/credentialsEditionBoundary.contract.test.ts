@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import ts from 'typescript';
+import { findSourceBoundaryViolations } from '../../../../scripts/lib/source-boundary';
 
 /**
  * Credentials vault is an EE-only (Pro) feature. Its DB schema lives in
@@ -33,6 +33,7 @@ const ALLOWED_FILES = new Set<string>([
   'server/migrations/20260812110000_expand_credential_associations_entity_types.cjs',
   'server/migrations/20260828120000_add_credential_audit_permission.cjs',
 
+  // Migration metadata / RBAC catalog (data, not logic).
   'server/migrations/utils/tenantDb.cjs',
   'server/migrations/utils/permissions/catalog.cjs',
 
@@ -68,41 +69,6 @@ const METADATA_DECLARATIONS = new Map([
   ['packages/db/src/lib/tenantTableForeignKeys.ts', 'TENANT_TABLE_FOREIGN_KEYS'],
   ['packages/db/src/lib/operationalWriteTables.ts', 'OPERATIONAL_WRITE_TABLES'],
 ]);
-
-function isLiteralData(node: ts.Node): boolean {
-  if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node) || ts.isSatisfiesExpression(node)) {
-    return isLiteralData(node.expression);
-  }
-  if (ts.isArrayLiteralExpression(node)) return node.elements.every(isLiteralData);
-  if (ts.isObjectLiteralExpression(node)) {
-    return node.properties.every(property => ts.isPropertyAssignment(property)
-      && !ts.isComputedPropertyName(property.name) && isLiteralData(property.initializer));
-  }
-  return ts.isStringLiteral(node) || ts.isNumericLiteral(node)
-    || node.kind === ts.SyntaxKind.TrueKeyword || node.kind === ts.SyntaxKind.FalseKeyword
-    || node.kind === ts.SyntaxKind.NullKeyword;
-}
-
-function withoutMetadata(file: string, source: string): string {
-  const declaration = METADATA_DECLARATIONS.get(file);
-  if (!declaration) return source;
-  const ast = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
-  const ranges: Array<{ start: number; end: number }> = [];
-  for (const statement of ast.statements) {
-    if (!ts.isVariableStatement(statement) || !(statement.declarationList.flags & ts.NodeFlags.Const)) continue;
-    if (!statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)) continue;
-    for (const node of statement.declarationList.declarations) {
-      if (ts.isIdentifier(node.name) && node.name.text === declaration
-        && node.initializer && isLiteralData(node.initializer)) {
-        ranges.push({ start: node.initializer.getStart(ast), end: node.initializer.end });
-      }
-    }
-  }
-  for (const { start, end } of ranges.sort((left, right) => right.start - left.start)) {
-    source = source.slice(0, start) + ' '.repeat(end - start) + source.slice(end);
-  }
-  return source;
-}
 
 const TABLES = 'credentials|credential_associations|credential_access_grants';
 const KNEX_TABLE_METHODS =
@@ -149,10 +115,12 @@ function isAllowed(file: string): boolean {
 
 function findViolations(file: string, source: string): string[] {
   if (isAllowed(file)) return [];
-  const outsideMetadata = withoutMetadata(file, source);
-  return VIOLATION_PATTERNS
-    .filter(({ regex, allowsMetadata }) => regex.test(allowsMetadata ? outsideMetadata : source))
-    .map(({ name }) => `${file}: ${name}`);
+  const declaration = METADATA_DECLARATIONS.get(file);
+  return VIOLATION_PATTERNS.flatMap(rule => findSourceBoundaryViolations(
+    source,
+    [rule],
+    rule.allowsMetadata && declaration ? [declaration] : [],
+  ).map(name => `${file}: ${name}`));
 }
 
 describe('credentials boundary validation', () => {

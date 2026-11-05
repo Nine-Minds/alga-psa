@@ -860,7 +860,22 @@
       "verify": "Vérifier",
       "title": "Rien de plus simple",
       "instructions": "Saisissez le code à 6 chiffres de votre application d’authentification.",
-      "digitsLeft": "{{count}} chiffres restants"
+      "digitsLeft": "{{count}} chiffres restants",
+      "enroll": {
+        "title": "Configurer l’authentification à deux facteurs",
+        "instructions": "Votre organisation exige l’authentification à deux facteurs. Scannez le code QR avec une application d’authentification, puis saisissez le code à 6 chiffres.",
+        "qrAlt": "Code QR pour votre application d’authentification",
+        "manualKey": "Ou saisissez cette clé manuellement :",
+        "cancel": "Annuler",
+        "errors": {
+          "invalid_credentials": "Votre adresse e-mail ou votre mot de passe n’est plus valide. Veuillez vous reconnecter.",
+          "enrollment_not_required": "La configuration n’est pas nécessaire pour ce compte. Veuillez vous reconnecter.",
+          "invalid_code": "Ce code n’est pas valide. Veuillez réessayer.",
+          "rate_limited": "Trop de tentatives. Veuillez patienter quelques minutes et réessayer.",
+          "captcha_required": "Veuillez d’abord effectuer la vérification sur la page de connexion.",
+          "unavailable": "La configuration est indisponible pour le moment. Veuillez réessayer."
+        }
+      }
     },
     "messages": {
       "handoffMissingToken": "Le jeton de transfert de connexion est manquant ou invalide. Veuillez vous reconnecter.",
