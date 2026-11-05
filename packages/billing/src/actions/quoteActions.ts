@@ -1298,11 +1298,13 @@ export const createQuoteFromTemplate = withAuth(async (
     // (or a draft row carrying a previously selected client's location) must
     // never pin an item to a location this quote's client does not own, so
     // anything outside the client's own set is nulled here rather than
-    // persisted and then rendered under a foreign address.
+    // persisted and then rendered under a foreign address. The set is the same
+    // active-locations set the editor's picker offers, so a nulled item lands
+    // in a group the user can actually re-site.
     const clientLocationRows = parsedQuote.client_id
       ? await tenantDb(trx, tenant).table('client_locations')
           .select('location_id')
-          .where({ client_id: parsedQuote.client_id })
+          .where({ client_id: parsedQuote.client_id, is_active: true })
       : [];
     const clientLocationIds = new Set(
       (clientLocationRows as Array<{ location_id?: string | null }>)
