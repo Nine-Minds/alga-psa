@@ -10,7 +10,7 @@ import type {
 } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { parseCalendarDateTime } from '@alga-psa/core';
-import { convertRecurrencePatternToRRULE } from './recurrenceConverter';
+import { convertRecurrenceLinesToPattern, convertRecurrencePatternToRRULE } from './recurrenceConverter';
 
 export async function mapScheduleEntryToExternalEvent(
   entry: IScheduleEntry,
@@ -294,8 +294,22 @@ export async function mapExternalEventToScheduleEntry(
   let recurrencePattern: IRecurrencePattern | null = null;
   if (event.recurrence && event.recurrence.length > 0) {
     try {
-      const { convertRRULEToRecurrencePattern } = await import('./recurrenceConverter');
-      recurrencePattern = convertRRULEToRecurrencePattern(event.recurrence[0], startDate);
+      // The whole recurrence[] array matters: Google ships EXDATE/RDATE lines
+      // alongside the RRULE, and the series' own zone keeps local time stable
+      // across DST.
+      const conversion = convertRecurrenceLinesToPattern(
+        event.recurrence,
+        startDate,
+        event.start.timeZone || event.originalStartTime?.timeZone
+      );
+      if (conversion && !conversion.unsupported) {
+        recurrencePattern = conversion.pattern;
+      } else if (conversion?.unsupported) {
+        console.warn('[eventMapping] Unsupported recurrence rule; importing without a pattern', {
+          eventId: event.id,
+          reason: conversion.reason,
+        });
+      }
     } catch (error) {
       console.error('Failed to convert RRULE to recurrence pattern:', error);
     }

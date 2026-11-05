@@ -7,7 +7,7 @@ import {
   formatMicrosoftOAuthFailureForMailboxFlow,
   toSafeMicrosoftOAuthFailure,
 } from '@alga-psa/shared/services/email/microsoftOAuthErrors';
-import { BaseCalendarAdapter } from './base/BaseCalendarAdapter';
+import { BaseCalendarAdapter, type CalendarEventChange } from './base/BaseCalendarAdapter';
 import type { CalendarProviderConfig, ExternalCalendarEvent } from '@alga-psa/types';
 import { resolveMicrosoftConsumerProfileConfig } from '../../../microsoftConsumerProfileResolution';
 import { getAdminConnection, tenantDb } from '@alga-psa/db';
@@ -26,6 +26,77 @@ const ALGA_PROPERTY_NAMES = [
   'alga-calendar-marker-note-count', 'alga-calendar-marker-notes-format',
 ];
 const ALGA_PROPERTIES_EXPAND = `singleValueExtendedProperties($filter=${ALGA_PROPERTY_NAMES.map(name => `id eq '${ALGA_PROPERTY_PREFIX}${name}'`).join(' or ')})`;
+// Graph omits type/seriesMasterId/recurrence unless asked, and without them an
+// expanded occurrence is indistinguishable from a standalone event.
+const EVENT_SELECT = 'id,subject,body,start,end,location,attendees,recurrence,type,seriesMasterId,originalStart,webLink,createdDateTime,lastModifiedDateTime,organizer,isAllDay,sensitivity,categories,showAs';
+
+const GRAPH_WEEKDAYS: Record<string, string> = {
+  monday: 'MO', tuesday: 'TU', wednesday: 'WE', thursday: 'TH',
+  friday: 'FR', saturday: 'SA', sunday: 'SU',
+};
+const GRAPH_INDEXES: Record<string, string> = {
+  first: '1', second: '2', third: '3', fourth: '4', last: '-1',
+};
+
+/**
+ * Convert Graph's native recurrence object (pattern + range) to an RRULE line.
+ * Outlook series created outside Alga carry no AlgaRRULE property, so without
+ * this they imported as one entry per occurrence.
+ */
+export function graphRecurrenceToRRULE(recurrence: any): string | null {
+  const pattern = recurrence?.pattern;
+  const range = recurrence?.range;
+  if (!pattern?.type) return null;
+
+  const parts: string[] = [];
+  const interval = Number(pattern.interval) > 1 ? Number(pattern.interval) : undefined;
+  const byDay = (pattern.daysOfWeek || [])
+    .map((day: string) => GRAPH_WEEKDAYS[String(day).toLowerCase()])
+    .filter(Boolean)
+    .join(',');
+  const ordinal = pattern.index ? GRAPH_INDEXES[String(pattern.index).toLowerCase()] : undefined;
+
+  switch (String(pattern.type).toLowerCase()) {
+    case 'daily':
+      parts.push('FREQ=DAILY');
+      break;
+    case 'weekly':
+      parts.push('FREQ=WEEKLY');
+      if (byDay) parts.push(`BYDAY=${byDay}`);
+      break;
+    case 'absolutemonthly':
+      parts.push('FREQ=MONTHLY');
+      if (pattern.dayOfMonth) parts.push(`BYMONTHDAY=${pattern.dayOfMonth}`);
+      break;
+    case 'relativemonthly':
+      parts.push('FREQ=MONTHLY');
+      if (byDay) parts.push(`BYDAY=${byDay.split(',').map((day: string) => `${ordinal ?? '1'}${day}`).join(',')}`);
+      break;
+    case 'absoluteyearly':
+      parts.push('FREQ=YEARLY');
+      if (pattern.month) parts.push(`BYMONTH=${pattern.month}`);
+      if (pattern.dayOfMonth) parts.push(`BYMONTHDAY=${pattern.dayOfMonth}`);
+      break;
+    case 'relativeyearly':
+      parts.push('FREQ=YEARLY');
+      if (pattern.month) parts.push(`BYMONTH=${pattern.month}`);
+      if (byDay) parts.push(`BYDAY=${byDay.split(',').map((day: string) => `${ordinal ?? '1'}${day}`).join(',')}`);
+      break;
+    default:
+      return null;
+  }
+
+  if (interval) parts.splice(1, 0, `INTERVAL=${interval}`);
+
+  const rangeType = range?.type ? String(range.type).toLowerCase() : 'noend';
+  if (rangeType === 'enddate' && range?.endDate) {
+    parts.push(`UNTIL=${String(range.endDate).replace(/-/g, '')}`);
+  } else if (rangeType === 'numbered' && range?.numberOfOccurrences) {
+    parts.push(`COUNT=${range.numberOfOccurrences}`);
+  }
+
+  return `RRULE:${parts.join(';')}`;
+}
 
 export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
   private httpClient: AxiosInstance;
@@ -452,7 +523,9 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
       await this.ensureValidToken();
 
       const calendarBase = this.getCalendarBasePath();
-      const response = await this.httpClient.get(`${calendarBase}/events/${eventId}`, { params: { '$expand': ALGA_PROPERTIES_EXPAND } });
+      const response = await this.httpClient.get(`${calendarBase}/events/${eventId}`, {
+        params: { '$select': EVENT_SELECT, '$expand': ALGA_PROPERTIES_EXPAND }
+      });
 
       return this.mapMicrosoftEventToExternal(response.data);
     } catch (error: any) {
@@ -481,7 +554,7 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
         params: {
           $filter: `start/dateTime ge '${startDate.toISOString()}' and end/dateTime le '${endDate.toISOString()}'`,
           $orderby: 'start/dateTime',
-          $select: 'id,subject,body,start,end,location,attendees,recurrence,webLink,createdDateTime,lastModifiedDateTime,organizer,isAllDay,sensitivity',
+          $select: EVENT_SELECT,
           $expand: ALGA_PROPERTIES_EXPAND
         }
       });
@@ -648,13 +721,13 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
    * Fetch incremental event changes via Microsoft Graph delta queries.
    */
   async fetchDeltaChanges(deltaLink?: string | null): Promise<{
-    changes: Array<{ id: string; changeType: 'updated' | 'deleted' }>;
+    changes: Array<CalendarEventChange>;
     deltaLink?: string;
     resetRequired?: boolean;
   }> {
     await this.ensureValidToken();
 
-    const changes: Array<{ id: string; changeType: 'updated' | 'deleted' }> = [];
+    const changes: Array<CalendarEventChange> = [];
     // Real Graph has no /events/delta — event change tracking is served by
     // calendarView/delta over an explicit date window, and it returns expanded
     // occurrences rather than series masters. The window below bounds only the
@@ -665,7 +738,8 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
     const initialUrl =
       '/me/calendarView/delta' +
       `?startDateTime=${encodeURIComponent(new Date(Date.now() - DELTA_WINDOW_PAST_MS).toISOString())}` +
-      `&endDateTime=${encodeURIComponent(new Date(Date.now() + DELTA_WINDOW_FUTURE_MS).toISOString())}`;
+      `&endDateTime=${encodeURIComponent(new Date(Date.now() + DELTA_WINDOW_FUTURE_MS).toISOString())}` +
+      `&$select=${encodeURIComponent('id,subject,start,end,type,seriesMasterId,originalStart,isAllDay,lastModifiedDateTime')}`;
     let requestUrl: string | undefined = deltaLink ?? initialUrl;
     let nextDeltaLink: string | undefined;
 
@@ -679,7 +753,12 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
             continue;
           }
           const changeType: 'updated' | 'deleted' = item['@removed'] ? 'deleted' : 'updated';
-          changes.push({ id: item.id, changeType });
+          changes.push({
+            id: item.id,
+            changeType,
+            ...(item.seriesMasterId ? { recurringEventId: item.seriesMasterId } : {}),
+            ...(item.originalStart ? { originalStart: item.originalStart } : {}),
+          });
         }
 
         requestUrl = response.data?.['@odata.nextLink'] || undefined;
@@ -839,9 +918,13 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
       if (propertyName && property.value !== undefined) privateProperties[propertyName] = String(property.value);
     }
 
-    // Extract RRULE from extended properties if present
+    // Prefer Graph's own recurrence (a native Outlook series has no AlgaRRULE),
+    // falling back to the property Alga writes on events it exported.
     let recurrence: string[] | undefined;
-    if (event.singleValueExtendedProperties) {
+    const nativeRecurrence = event.recurrence ? graphRecurrenceToRRULE(event.recurrence) : null;
+    if (nativeRecurrence) {
+      recurrence = [nativeRecurrence];
+    } else if (event.singleValueExtendedProperties) {
       const rruleProp = event.singleValueExtendedProperties.find(
         (prop: any) => prop.id?.includes('AlgaRRULE')
       );
@@ -849,6 +932,15 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
         recurrence = [rruleProp.value];
       }
     }
+
+    const graphType = typeof event.type === 'string' ? event.type.toLowerCase() : undefined;
+    const instanceType: ExternalCalendarEvent['instanceType'] =
+      graphType === 'seriesmaster' ? 'master'
+      : graphType === 'occurrence' ? 'occurrence'
+      : graphType === 'exception' ? 'exception'
+      : recurrence ? 'master'
+      : 'single';
+    const recurringEventId = event.seriesMasterId || undefined;
 
     return {
       id: event.id,
@@ -867,6 +959,9 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
                        a.status?.response === 'tentative' ? 'tentative' : 'needsAction'
       })),
       recurrence,
+      ...(recurringEventId ? { recurringEventId } : {}),
+      ...(event.originalStart ? { originalStartTime: { dateTime: event.originalStart } } : {}),
+      instanceType,
       status: event.showAs === 'free' ? 'cancelled' : 'confirmed',
       htmlLink: event.webLink,
       created: event.createdDateTime,

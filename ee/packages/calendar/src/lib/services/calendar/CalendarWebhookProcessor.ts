@@ -8,7 +8,7 @@ import { CalendarProviderService } from './CalendarProviderService';
 import type { CalendarProviderConfig } from '@alga-psa/types';
 import { GoogleCalendarAdapter } from './providers/GoogleCalendarAdapter';
 import { MicrosoftCalendarAdapter } from './providers/MicrosoftCalendarAdapter';
-import { BaseCalendarAdapter } from './providers/base/BaseCalendarAdapter';
+import { BaseCalendarAdapter, type CalendarEventChange } from './providers/base/BaseCalendarAdapter';
 import { runWithTenant, createTenantKnex, isTenantSuspended, tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
@@ -128,21 +128,14 @@ export class CalendarWebhookProcessor {
 
           if (change.changeType === 'deleted') {
             try {
-              const mapping = await tenantDb(knex, provider.tenant).table('calendar_event_mappings')
-                .where('external_event_id', change.id)
-                .andWhere('calendar_provider_id', provider.id)
-                .first();
-
-              if (!mapping) {
-                console.warn('[CalendarWebhookProcessor] No mapping found for deleted Google event', {
-                  eventId: change.id,
-                  providerId: provider.id
-                });
-                continue;
-              }
-
+              // A deleted id may be the series master, a single-occurrence
+              // override, or an expanded occurrence of a mapped series; only the
+              // resolver can tell those apart.
               await this.executeWithRetry(async () => {
-                const result = await this.syncService.handleInboundProviderDelete(mapping.schedule_entry_id, provider.id);
+                const result = await this.syncService.handleInboundExternalDelete(change.id, provider.id, {
+                  recurringEventId: change.recurringEventId,
+                  originalStart: change.originalStart
+                });
                 if (!result.success) {
                   throw new Error(result.error || 'Failed to delete schedule entry');
                 }
@@ -296,21 +289,14 @@ export class CalendarWebhookProcessor {
 
           if (change.changeType === 'deleted') {
             try {
-              const mapping = await tenantDb(knex, provider.tenant).table('calendar_event_mappings')
-                .where('external_event_id', change.id)
-                .andWhere('calendar_provider_id', provider.id)
-                .first();
-
-              if (!mapping) {
-                console.warn('[CalendarWebhookProcessor] No mapping found for deleted Google event', {
-                  eventId: change.id,
-                  providerId: provider.id
-                });
-                continue;
-              }
-
+              // A deleted id may be the series master, a single-occurrence
+              // override, or an expanded occurrence of a mapped series; only the
+              // resolver can tell those apart.
               await this.executeWithRetry(async () => {
-                const result = await this.syncService.handleInboundProviderDelete(mapping.schedule_entry_id, provider.id);
+                const result = await this.syncService.handleInboundExternalDelete(change.id, provider.id, {
+                  recurringEventId: change.recurringEventId,
+                  originalStart: change.originalStart
+                });
                 if (!result.success) {
                   throw new Error(result.error || 'Failed to delete schedule entry');
                 }
@@ -436,7 +422,7 @@ export class CalendarWebhookProcessor {
             });
           }
 
-          const queuedChanges: Array<{ id: string; changeType: 'updated' | 'deleted' }> = [];
+          const queuedChanges: Array<CalendarEventChange> = [];
           const seen = new Set<string>();
 
           for (const change of deltaResult.changes) {
@@ -474,21 +460,13 @@ export class CalendarWebhookProcessor {
           for (const change of queuedChanges) {
             if (change.changeType === 'deleted') {
               try {
-                const mapping = await tenantDb(knex, provider.tenant).table('calendar_event_mappings')
-                  .where('external_event_id', change.id)
-                  .andWhere('calendar_provider_id', provider.id)
-                  .first();
-
-                if (!mapping) {
-                  console.warn('[CalendarWebhookProcessor] No mapping found for deleted Microsoft event', {
-                    eventId: change.id,
-                    providerId
-                  });
-                  continue;
-                }
-
+                // @removed on an occurrence id must become an exception on the
+                // series master, not a delete of the whole series.
                 await this.executeWithRetry(async () => {
-                  const result = await this.syncService.handleInboundProviderDelete(mapping.schedule_entry_id, provider.id);
+                  const result = await this.syncService.handleInboundExternalDelete(change.id, provider.id, {
+                    recurringEventId: change.recurringEventId,
+                    originalStart: change.originalStart
+                  });
                   if (!result.success) {
                     throw new Error(result.error || 'Failed to delete schedule entry');
                   }

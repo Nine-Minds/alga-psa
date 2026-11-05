@@ -11,6 +11,7 @@ import type {
   ExternalCalendarEvent,
   IScheduleEntry,
 } from '@alga-psa/types';
+import { IEditScope } from '@alga-psa/types';
 import { CalendarProviderService } from './CalendarProviderService';
 import { GoogleCalendarAdapter } from './providers/GoogleCalendarAdapter';
 import { MicrosoftCalendarAdapter } from './providers/MicrosoftCalendarAdapter';
@@ -19,6 +20,10 @@ import {
   mapScheduleEntryToExternalEvent,
   mapExternalEventToScheduleEntry,
 } from '../../utils/calendar/eventMapping';
+import {
+  convertRecurrenceLinesToPattern,
+  isUnsupportedRecurrence,
+} from '../../utils/calendar/recurrenceConverter';
 import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
 import { v4 as uuidv4 } from 'uuid';
 import { publishEvent } from '../../eventBus/publishers';
@@ -71,8 +76,54 @@ function changesSyncedFields(before: IScheduleEntry, after: IScheduleEntry): boo
     || JSON.stringify(before.recurrence_pattern ?? null) !== JSON.stringify(after.recurrence_pattern ?? null);
 }
 
+/**
+ * An expanded instance id as providers emit it: Google
+ * `<masterId>_20261105T151500Z` (date-only for all-day series). Only ever used
+ * as a last-resort hint after the exact id proved to have no mapping of its own,
+ * because a split series master is legitimately named `<base>_R<timestamp>`.
+ */
+const INSTANCE_ID_SUFFIX = /^(.+)_(\d{8}T\d{6}Z|\d{8})$/;
+
+function instanceIdMasterCandidate(externalEventId: string): string | null {
+  const match = INSTANCE_ID_SUFFIX.exec(externalEventId);
+  return match ? match[1] : null;
+}
+
+function instanceIdOccurrenceStart(externalEventId: string): Date | null {
+  const match = INSTANCE_ID_SUFFIX.exec(externalEventId);
+  if (!match) return null;
+  const token = match[2];
+  const year = Number(token.slice(0, 4));
+  const month = Number(token.slice(4, 6)) - 1;
+  const day = Number(token.slice(6, 8));
+  const date = token.length > 8
+    ? new Date(Date.UTC(year, month, day, Number(token.slice(9, 11)), Number(token.slice(11, 13)), Number(token.slice(13, 15))))
+    : new Date(Date.UTC(year, month, day));
+  return isNaN(date.getTime()) ? null : date;
+}
+
+/** Escape a provider id for use as a LIKE prefix (ids may contain _ and %). */
+function likePrefix(value: string): string {
+  return value.replace(/[\\%_]/g, (character) => `\\${character}`);
+}
+
+function utcMidnight(value: Date): Date {
+  const date = new Date(value);
+  date.setUTCHours(0, 0, 0, 0);
+  return date;
+}
+
 export class CalendarSyncService {
   private providerService: CalendarProviderService;
+  /**
+   * Series masters fetched during one processor run. A delta batch can carry
+   * hundreds of instances of the same series; the master must be fetched once.
+   */
+  private masterEventCache = new Map<string, { event: ExternalCalendarEvent | null; fetchedAt: number }>();
+  private static readonly MASTER_CACHE_TTL_MS = 2 * 60 * 1000;
+  /** Mirrors the Microsoft delta window; never materialize a series unbounded. */
+  private static readonly FALLBACK_WINDOW_PAST_MS = 90 * 24 * 60 * 60 * 1000;
+  private static readonly FALLBACK_WINDOW_FUTURE_MS = 365 * 24 * 60 * 60 * 1000;
 
   constructor() {
     this.providerService = new CalendarProviderService();
@@ -272,7 +323,8 @@ export class CalendarSyncService {
   async syncExternalEventToSchedule(
     externalEventId: string,
     calendarProviderId: string,
-    force: boolean = false
+    force: boolean = false,
+    prefetchedEvent?: ExternalCalendarEvent
   ): Promise<CalendarSyncResult> {
     try {
       const { knex, tenant } = await createTenantKnex();
@@ -309,7 +361,7 @@ export class CalendarSyncService {
       // Get event from external calendar
       let externalEvent: ExternalCalendarEvent;
       try {
-        externalEvent = await adapter.getEvent(externalEventId);
+        externalEvent = prefetchedEvent ?? await adapter.getEvent(externalEventId);
       } catch (error: any) {
         // If event returns 404, it was deleted - handle as deletion
         // Google returns status: 404, code: 404 (numeric)
@@ -349,6 +401,36 @@ export class CalendarSyncService {
         }
         // Re-throw other errors
         throw error;
+      }
+
+      // An expanded occurrence belongs to a series: resolve it to its master and
+      // import the series once, instead of creating one entry per occurrence.
+      let unsupportedSeriesReason: string | null = null;
+      if (externalEvent.recurringEventId && externalEvent.recurringEventId !== externalEvent.id) {
+        const outcome = await this.syncSeriesInstance({
+          instance: externalEvent,
+          adapter,
+          provider,
+          tenant,
+          knex,
+          force,
+        });
+        if (outcome.handled) {
+          if (outcome.result.success) {
+            await this.markProviderConnected(provider.id, adapter);
+          }
+          return outcome.result;
+        }
+        // Alga cannot express this rule: fall back to a bounded per-instance
+        // import so the user still sees their meetings, and surface why.
+        unsupportedSeriesReason = outcome.reason;
+        if (!this.isWithinFallbackWindow(externalEvent)) {
+          return {
+            success: true,
+            skipped: true,
+            reason: `Unsupported recurrence rule (${outcome.reason}); occurrence outside the 12-month fallback window`,
+          };
+        }
       }
 
       // Check for existing mapping
@@ -633,6 +715,9 @@ export class CalendarSyncService {
               sync_status: 'synced',
               last_synced_at: new Date().toISOString(),
               sync_direction: 'from_external',
+              ...(unsupportedSeriesReason
+                ? { sync_error_message: this.unsupportedSeriesMessage(unsupportedSeriesReason) }
+                : {}),
               alga_last_modified: createdEntry.updated_at instanceof Date
                 ? createdEntry.updated_at.toISOString()
                 : new Date(createdEntry.updated_at).toISOString(),
@@ -655,6 +740,9 @@ export class CalendarSyncService {
       if (wroteSync) {
         await this.markProviderConnected(provider.id, adapter);
       }
+      if (unsupportedSeriesReason && wroteSync) {
+        await this.noteProviderSeriesFallback(provider.id, unsupportedSeriesReason);
+      }
       if (rePushEntryId) {
         const pushed = await this.syncScheduleEntryToExternal(rePushEntryId, provider.id, true);
         if (!pushed.success) return pushed;
@@ -672,6 +760,410 @@ export class CalendarSyncService {
         success: false,
         error: error.message || 'Failed to sync external event'
       };
+    }
+  }
+
+  /**
+   * Apply one expanded occurrence of a provider series.
+   *
+   * The series master is the only thing Alga stores: a plain occurrence is a
+   * no-op, a moved/renamed one becomes the existing single-occurrence override
+   * (exception date on the master plus a standalone entry), and a cancelled one
+   * becomes an exception date only. `handled: false` means Alga cannot express
+   * the master's rule and the caller should use the bounded fallback.
+   */
+  private async syncSeriesInstance(params: {
+    instance: ExternalCalendarEvent;
+    adapter: BaseCalendarAdapter;
+    provider: CalendarProviderConfig;
+    tenant: string;
+    knex: any;
+    force: boolean;
+  }): Promise<{ handled: true; result: CalendarSyncResult } | { handled: false; reason: string }> {
+    const { instance, adapter, provider, tenant, knex, force } = params;
+    const masterExternalId = instance.recurringEventId!;
+
+    let masterMapping = await this.getMappingByExternalEvent(masterExternalId, provider.id, tenant);
+
+    if (!masterMapping) {
+      const master = await this.fetchSeriesMaster(adapter, provider.id, masterExternalId);
+      if (!master) {
+        // The master is gone on the provider side; never create an entry for an
+        // orphaned occurrence, and clean up anything we already hold for it.
+        const instanceMapping = await this.getMappingByExternalEvent(instance.id, provider.id, tenant);
+        if (instanceMapping) {
+          const deleted = await this.handleInboundProviderDelete(instanceMapping.schedule_entry_id, provider.id);
+          return {
+            handled: true,
+            result: deleted.success
+              ? { success: true, deleted: true, reason: 'Series master no longer exists' }
+              : { success: false, error: deleted.error },
+          };
+        }
+        return { handled: true, result: { success: true, skipped: true, reason: 'Series master no longer exists' } };
+      }
+
+      if (!this.isImportableEvent(master)) {
+        return {
+          handled: true,
+          result: {
+            success: true,
+            skipped: true,
+            reason: 'Series master without @alga marker - not importing',
+          },
+        };
+      }
+
+      const conversion = convertRecurrenceLinesToPattern(master.recurrence, new Date());
+      if (isUnsupportedRecurrence(conversion)) {
+        return { handled: false, reason: conversion.reason };
+      }
+
+      // Import the master itself, reusing the payload already fetched above so a
+      // batch of occurrences costs exactly one master read.
+      const imported = await this.syncExternalEventToSchedule(masterExternalId, provider.id, force, master);
+      if (!imported.success) {
+        return { handled: true, result: imported };
+      }
+      masterMapping = await this.getMappingByExternalEvent(masterExternalId, provider.id, tenant);
+      if (!masterMapping) {
+        return {
+          handled: true,
+          result: { success: true, skipped: true, reason: imported.reason ?? 'Series master was not imported' },
+        };
+      }
+    }
+
+    const masterEntry = await ScheduleEntry.get(knex, tenant, masterMapping.schedule_entry_id);
+    if (!masterEntry) {
+      // Mapping outlived its entry: drop it so the next notification re-imports.
+      await tenantDb(knex, tenant).table('calendar_event_mappings').where('id', masterMapping.id).del();
+      return { handled: true, result: { success: true, skipped: true, reason: 'Series master entry no longer exists' } };
+    }
+
+    const occurrenceStart = this.occurrenceStartOf(instance);
+    const instanceMapping = await this.getMappingByExternalEvent(instance.id, provider.id, tenant);
+
+    // Google marks a cancelled instance with status 'cancelled'; Graph reports
+    // it as an @removed delta item, which lands in handleInboundExternalDelete.
+    if (instance.status === 'cancelled' && instance.provider === 'google') {
+      const result = await this.cancelSeriesOccurrence({
+        tenant,
+        knex,
+        provider,
+        masterEntry,
+        occurrenceStart,
+        instanceMapping,
+      });
+      return { handled: true, result };
+    }
+
+    const isException = instance.instanceType === 'exception'
+      || this.instanceDiffersFromMaster(instance, masterEntry);
+
+    if (!isException) {
+      return {
+        handled: true,
+        result: {
+          success: true,
+          skipped: true,
+          reason: 'Occurrence of an already-synced recurring series',
+        },
+      };
+    }
+
+    const result = await this.applySeriesException({
+      instance,
+      provider,
+      tenant,
+      knex,
+      masterEntry,
+      occurrenceStart,
+      instanceMapping,
+    });
+    return { handled: true, result };
+  }
+
+  /** Fetch (and memoise) a series master; null when the provider no longer has it. */
+  private async fetchSeriesMaster(
+    adapter: BaseCalendarAdapter,
+    providerId: string,
+    masterExternalId: string
+  ): Promise<ExternalCalendarEvent | null> {
+    const key = `${providerId}:${masterExternalId}`;
+    const cached = this.masterEventCache.get(key);
+    if (cached && Date.now() - cached.fetchedAt < CalendarSyncService.MASTER_CACHE_TTL_MS) {
+      return cached.event;
+    }
+
+    let event: ExternalCalendarEvent | null = null;
+    try {
+      event = await adapter.getEvent(masterExternalId);
+    } catch (error: any) {
+      if (!isProviderEventGone(error)) throw error;
+      event = null;
+    }
+    this.masterEventCache.set(key, { event, fetchedAt: Date.now() });
+    return event;
+  }
+
+  /** The occurrence slot an instance was generated for, before any move. */
+  private occurrenceStartOf(instance: ExternalCalendarEvent): Date {
+    const original = instance.originalStartTime?.dateTime
+      || instance.originalStartTime?.date
+      || instance.start?.dateTime
+      || instance.start?.date;
+    const parsed = original ? new Date(original) : new Date(NaN);
+    if (!isNaN(parsed.getTime())) return parsed;
+    return instanceIdOccurrenceStart(instance.id) ?? new Date();
+  }
+
+  /** An event Alga is allowed to import: opted in with @alga, or Alga's own. */
+  private isImportableEvent(event: ExternalCalendarEvent): boolean {
+    if (event.extendedProperties?.private?.['alga-entry-id']) return true;
+    return Boolean(
+      event.title?.toLowerCase().includes('@alga') ||
+      event.description?.toLowerCase().includes('@alga')
+    );
+  }
+
+  /**
+   * A renamed or re-described occurrence is an exception even when it still sits
+   * in its original slot (a moved one is already flagged by the adapter).
+   */
+  private instanceDiffersFromMaster(instance: ExternalCalendarEvent, masterEntry: IScheduleEntry): boolean {
+    if ((instance.title ?? '') !== (masterEntry.title ?? '')) return true;
+    return comparableNotes(instance.description) !== comparableNotes(masterEntry.notes);
+  }
+
+  /** Add an exception date to a master's pattern, idempotently. */
+  private async addMasterException(
+    knex: any,
+    tenant: string,
+    masterEntry: IScheduleEntry,
+    occurrenceStart: Date
+  ): Promise<boolean> {
+    const pattern = ScheduleEntry.parseRecurrencePattern(masterEntry.recurrence_pattern ?? null);
+    if (!pattern) return false;
+
+    const exceptionDate = utcMidnight(occurrenceStart);
+    const existing = (pattern.exceptions ?? []).map((value) => utcMidnight(new Date(value)).getTime());
+    if (existing.includes(exceptionDate.getTime())) return false;
+
+    await ScheduleEntry.update(knex, tenant, masterEntry.entry_id, {
+      ...masterEntry,
+      recurrence_pattern: { ...pattern, exceptions: [...(pattern.exceptions ?? []), exceptionDate] },
+    });
+    return true;
+  }
+
+  /**
+   * A single cancelled occurrence: exception on the master and the override
+   * entry (if any) removed. The master itself must survive.
+   */
+  private async cancelSeriesOccurrence(params: {
+    tenant: string;
+    knex: any;
+    provider: CalendarProviderConfig;
+    masterEntry: IScheduleEntry;
+    occurrenceStart: Date;
+    instanceMapping: CalendarEventMapping | null;
+  }): Promise<CalendarSyncResult> {
+    const { tenant, knex, provider, masterEntry, occurrenceStart, instanceMapping } = params;
+
+    await this.addMasterException(knex, tenant, masterEntry, occurrenceStart);
+
+    if (instanceMapping) {
+      await ScheduleEntry.delete(knex, tenant, instanceMapping.schedule_entry_id);
+      await tenantDb(knex, tenant).table('calendar_event_mappings').where('id', instanceMapping.id).del();
+    }
+
+    return {
+      success: true,
+      deleted: Boolean(instanceMapping),
+      reason: 'Cancelled occurrence recorded as a series exception',
+    };
+  }
+
+  /**
+   * A moved/renamed occurrence: the existing single-occurrence mechanism, i.e.
+   * an exception date on the master plus a standalone entry carrying the
+   * instance's own title and times.
+   */
+  private async applySeriesException(params: {
+    instance: ExternalCalendarEvent;
+    provider: CalendarProviderConfig;
+    tenant: string;
+    knex: any;
+    masterEntry: IScheduleEntry;
+    occurrenceStart: Date;
+    instanceMapping: CalendarEventMapping | null;
+  }): Promise<CalendarSyncResult> {
+    const { instance, provider, tenant, knex, masterEntry, occurrenceStart, instanceMapping } = params;
+
+    const entryData = await mapExternalEventToScheduleEntry(instance, tenant, provider.provider_type);
+    const assignedUserIds = provider.user_id
+      ? [provider.user_id]
+      : (entryData.assigned_user_ids?.length ? entryData.assigned_user_ids : masterEntry.assigned_user_ids);
+
+    const { entry_id: _ignoredEntryId, ...instanceFields } = entryData;
+    const overrideFields = {
+      ...instanceFields,
+      recurrence_pattern: null,
+      is_recurring: false,
+      assigned_user_ids: assignedUserIds,
+      calendar_id: masterEntry.calendar_id ?? null,
+    };
+
+    if (instanceMapping) {
+      const updated = await ScheduleEntry.update(knex, tenant, instanceMapping.schedule_entry_id, overrideFields);
+      if (!updated) {
+        return { success: false, error: 'Failed to update series exception entry' };
+      }
+      await tenantDb(knex, tenant).table('calendar_event_mappings')
+        .where('id', instanceMapping.id)
+        .update({
+          sync_status: 'synced',
+          last_synced_at: new Date().toISOString(),
+          external_last_modified: instance.updated,
+          sync_error_message: null,
+          updated_at: new Date().toISOString(),
+        });
+      return { success: true, externalEventId: instance.id };
+    }
+
+    // The virtual id tells the model which occurrence to except out of the
+    // master before the standalone override is written.
+    const virtualId = `${masterEntry.entry_id}_${utcMidnight(occurrenceStart).getTime()}`;
+    const override = await ScheduleEntry.update(knex, tenant, virtualId, overrideFields, IEditScope.SINGLE);
+    if (!override) {
+      return { success: false, error: 'Failed to create series exception entry' };
+    }
+
+    const [mapping] = await tenantDb(knex, tenant).table('calendar_event_mappings')
+      .insert({
+        id: uuidv4(),
+        tenant,
+        calendar_provider_id: provider.id,
+        schedule_entry_id: override.entry_id,
+        external_event_id: instance.id,
+        sync_status: 'synced',
+        last_synced_at: new Date().toISOString(),
+        sync_direction: 'from_external',
+        alga_last_modified: override.updated_at instanceof Date
+          ? override.updated_at.toISOString()
+          : new Date(override.updated_at ?? Date.now()).toISOString(),
+        external_last_modified: instance.updated,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .returning('*');
+
+    return {
+      success: true,
+      mapping: mapping ? this.mapDbRowToMapping(mapping) : undefined,
+      externalEventId: instance.id,
+    };
+  }
+
+  /**
+   * Apply a provider delete by external id. A deleted occurrence of a synced
+   * series becomes an exception on the master; deleting the master takes its
+   * single-occurrence overrides with it. Never calls back out to the provider.
+   */
+  async handleInboundExternalDelete(
+    externalEventId: string,
+    providerId: string,
+    hints?: { recurringEventId?: string; originalStart?: string }
+  ): Promise<{ success: boolean; error?: string; skipped?: boolean; reason?: string }> {
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) return { success: false, error: 'Tenant context is required' };
+
+    const mapping = await this.getMappingByExternalEvent(externalEventId, providerId, tenant);
+    if (mapping) {
+      const entry = await ScheduleEntry.get(knex, tenant, mapping.schedule_entry_id);
+      if (entry?.is_recurring) {
+        await this.deleteSeriesOverrides(knex, tenant, providerId, externalEventId);
+      }
+      return this.handleInboundProviderDelete(mapping.schedule_entry_id, providerId);
+    }
+
+    // No mapping for this exact id: it is an expanded occurrence of a series
+    // whose master Alga stores. Only the master may be keyed by a mapping, so
+    // the base id check below cannot mistake a split master for an instance.
+    const masterExternalId = hints?.recurringEventId ?? instanceIdMasterCandidate(externalEventId);
+    if (!masterExternalId) {
+      return { success: true, skipped: true, reason: 'No mapping for deleted external event' };
+    }
+
+    const masterMapping = await this.getMappingByExternalEvent(masterExternalId, providerId, tenant);
+    if (!masterMapping) {
+      return { success: true, skipped: true, reason: 'No mapping for deleted external event' };
+    }
+
+    const masterEntry = await ScheduleEntry.get(knex, tenant, masterMapping.schedule_entry_id);
+    if (!masterEntry) {
+      return { success: true, skipped: true, reason: 'Series master entry no longer exists' };
+    }
+
+    const occurrenceStart = hints?.originalStart
+      ? new Date(hints.originalStart)
+      : instanceIdOccurrenceStart(externalEventId);
+    if (!occurrenceStart || isNaN(occurrenceStart.getTime())) {
+      return { success: true, skipped: true, reason: 'Deleted occurrence has no resolvable date' };
+    }
+
+    await this.addMasterException(knex, tenant, masterEntry, occurrenceStart);
+    return { success: true, reason: 'Deleted occurrence recorded as a series exception' };
+  }
+
+  /**
+   * Remove the standalone override entries belonging to a provider series.
+   * Matched on the provider's instance-id shape so a split master
+   * (`<base>_R<timestamp>`) is never swept up with its predecessor.
+   */
+  private async deleteSeriesOverrides(
+    knex: any,
+    tenant: string,
+    providerId: string,
+    masterExternalId: string
+  ): Promise<void> {
+    const rows = await tenantDb(knex, tenant).table('calendar_event_mappings')
+      .where('calendar_provider_id', providerId)
+      .andWhere('external_event_id', 'like', `${likePrefix(masterExternalId)}\\_%`)
+      .select('id', 'external_event_id', 'schedule_entry_id');
+
+    for (const row of rows) {
+      if (instanceIdMasterCandidate(row.external_event_id) !== masterExternalId) continue;
+      await ScheduleEntry.delete(knex, tenant, row.schedule_entry_id);
+      await tenantDb(knex, tenant).table('calendar_event_mappings').where('id', row.id).del();
+    }
+  }
+
+  private isWithinFallbackWindow(event: ExternalCalendarEvent): boolean {
+    const raw = event.start?.dateTime || event.start?.date;
+    const start = raw ? new Date(raw) : null;
+    if (!start || isNaN(start.getTime())) return true;
+    const now = Date.now();
+    return start.getTime() >= now - CalendarSyncService.FALLBACK_WINDOW_PAST_MS
+      && start.getTime() <= now + CalendarSyncService.FALLBACK_WINDOW_FUTURE_MS;
+  }
+
+  private unsupportedSeriesMessage(reason: string): string {
+    return `Recurring series uses a rule Alga cannot represent (${reason}); imported individual occurrences for the next 12 months only.`;
+  }
+
+  private async noteProviderSeriesFallback(providerId: string, reason: string): Promise<void> {
+    try {
+      await this.providerService.updateProviderStatus(providerId, {
+        status: 'connected',
+        errorMessage: this.unsupportedSeriesMessage(reason),
+      });
+    } catch (statusError) {
+      console.warn('[CalendarSyncService] Failed to record unsupported-recurrence note', {
+        providerId,
+        error: statusError instanceof Error ? statusError.message : statusError,
+      });
     }
   }
 
