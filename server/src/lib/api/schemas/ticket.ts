@@ -121,7 +121,8 @@ export const createTicketFieldsSchema = z.object({
   url: z.string().url().optional(),
   board_id: uuidSchema,
   client_id: uuidSchema,
-  location_id: uuidSchema.optional(),
+  /** Omitted asks the contact where the ticket belongs; null is "explicitly none" and is kept. */
+  location_id: uuidSchema.nullish(),
   contact_name_id: uuidSchema.optional(),
   status_id: uuidSchema,
   category_id: uuidSchema.optional(),
@@ -135,6 +136,11 @@ export const createTicketFieldsSchema = z.object({
   attributes: ticketAttributesSchema,
   tags: z.array(z.string()).optional(),
   external_links: inlineTicketExternalLinksSchema,
+  // Devices the ticket is raised against. Linked in the ticket's own
+  // transaction, so a rejected asset leaves no orphan ticket. The first asset
+  // also lends its billing profile (the from-asset rule, which the web create
+  // applies the same way).
+  asset_ids: z.array(uuidSchema).max(50).optional(),
   // Create silently: no customer-facing ticket-created email (which otherwise
   // falls back to the client email when the ticket has no contact) and no
   // portal/in-app notifications. Audit, workflows and webhooks are unaffected.
@@ -156,9 +162,15 @@ export const updateTicketSchema = createUpdateSchema(
     severity_id: true,
     urgency_id: true,
     impact_id: true,
+    // Create-only: later links go through POST /tickets/{id}/assets.
+    asset_ids: true,
   })
 ).extend({
   contact_name_id: uuidSchema.nullable().optional(),
+  // Nullable so a re-classification can clear them: picking a category with no
+  // children has to drop the old parent's subcategory in the same request.
+  category_id: uuidSchema.nullable().optional(),
+  subcategory_id: uuidSchema.nullable().optional(),
   ...ticketNotificationSuppressionSchema,
   // Close despite unmet close rules; honored only when the caller's user holds
   // ticket:close_override. Stripped before the row update.

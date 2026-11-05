@@ -96,6 +96,20 @@ beforeAll(async () => {
     password: await getSecret('postgres_password', 'DB_PASSWORD_ADMIN'),
   };
   admin = knex({ client: 'pg', connection: { ...connection, database: 'postgres' } });
+  // The Stripe migrations below GRANT to DB_USER_SERVER, and roles are
+  // cluster-wide: this suite only passed when some earlier suite happened to
+  // create the role first. Create it here, as the other self-bootstrapping
+  // suites do, so migrations succeed whatever order the files run in. Never
+  // ALTER an existing role — a concurrent suite may rely on its password.
+  const appUser = process.env.DB_USER_SERVER || 'app_user';
+  const appPassword = process.env.DB_PASSWORD_SERVER || connection.password;
+  await admin.raw(`DO $$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${appUser.replace(/'/g, "''")}') THEN
+        CREATE ROLE "${appUser.replace(/"/g, '""')}" WITH LOGIN PASSWORD '${appPassword.replace(/'/g, "''")}';
+      END IF;
+    END;
+  $$;`);
   await admin.raw('CREATE DATABASE ??', [databaseName]);
   created = true;
   db = knex({ client: 'pg', connection: { ...connection, database: databaseName }, pool: { min: 0, max: 6 } });

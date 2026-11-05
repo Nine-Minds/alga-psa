@@ -25,6 +25,8 @@ const TENANT_TABLE_METADATA = {
   asset_group_members: { scope: 'tenant' },
   asset_group_contacts: { scope: 'tenant' },
   asset_assignments: { scope: 'tenant' },
+  asset_audits: { scope: 'tenant' },
+  asset_audit_items: { scope: 'tenant' },
   asset_custody: { scope: 'tenant' },
   asset_custody_events: { scope: 'tenant' },
   rma_cases: { scope: 'tenant' },
