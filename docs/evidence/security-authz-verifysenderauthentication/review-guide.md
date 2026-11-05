@@ -78,3 +78,16 @@ The app server and browser/manual review were intentionally not started for this
 - Exact PR head SHA and publication time are recorded in the PR description alongside this guide after publication.
 - PR: https://github.com/Nine-Minds/alga-psa/pull/4149
 - External CI: `gh pr checks 4149` reported no checks for the pushed repair when queried. Recheck the PR for later runs; no external CI was awaited as part of this assignment.
+
+## Draft Implementation rerun
+
+At the starting revision `dc3735ab943e16e1bfb78b631c076039a671c61d`, the focused commands above were rerun:
+
+- Provider/admission/confirmation/middleware: **12 files, 153 tests passed**.
+- `src/test/integration/inboundEmailInApp.webhooks.integration.test.ts`: **47 tests passed**.
+- `npm run test --workspace=@alga-psa/co-managed`: **19 files, 210 tests passed**.
+- `npm run typecheck --workspace=@alga-psa/co-managed`, `npm run build:shared`, and `npm run build --workspace=@alga-psa/emulator-msgraph`: passed.
+
+The confirmation flow covers successful Gmail adapter, Microsoft Graph emulator, and IMAP MIME ingestion followed by authenticated confirmation and exactly one persisted comment. The integration tests include intra-organization, unsigned, and forwarded cases; they use generated DKIM signatures with controlled DNS-key fixtures, a Graph emulator, Gmail API stand-ins, and production IMAP MIME mapping. They are not live provider, live DNS, or browser interoperability evidence. Raw provider claims remain diagnostics only, and aligned DKIM supports contact-domain attribution only when the complete body is signed.
+
+`NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit -p server/tsconfig.json` was attempted and exhausted the 8 GB V8 heap without a TypeScript diagnostic. `NODE_OPTIONS=--max-old-space-size=8192 npx nx build server --skip-nx-cache` remains in progress; its final outcome will be recorded in the PR description. The app server was not started.
