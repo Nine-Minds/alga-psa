@@ -29,6 +29,7 @@ import { EmailProviderLifecycleService } from '@alga-psa/shared/services/email/E
 import { refreshImapAccessToken } from '@alga-psa/shared/services/email/imapOauthToken';
 import { normalizeInboundMessageIdentity } from '@alga-psa/shared/services/email/inboundEmailIdentity';
 import { createHash } from 'node:crypto';
+import { verifyOriginalMimeDkim } from '@alga-psa/shared/lib/email/senderAuthVerification';
 
 export class SourceMessageUnavailableError extends Error {
   public readonly reason: string;
@@ -326,14 +327,15 @@ export async function fetchGoogleProviderConfig(job: UnifiedInboundEmailQueueJob
   return { provider, googleConfig, config };
 }
 
-export function mapParsedMimeToEmailMessageDetails(params: {
+export async function mapParsedMimeToEmailMessageDetails(params: {
   provider: 'microsoft' | 'imap';
   providerId: string;
   tenant: string;
   rawMimeBuffer: Buffer;
   parsed: any;
   fallbackMessageId: string;
-}): EmailMessageDetails {
+  authenticatedSenderEmail?: string | null;
+}): Promise<EmailMessageDetails> {
   const from = params.parsed.from?.value?.[0];
   const to = params.parsed.to?.value || [];
   const cc = params.parsed.cc?.value || [];
@@ -354,6 +356,8 @@ export function mapParsedMimeToEmailMessageDetails(params: {
   // logic uses the real sender. Returns null for ordinary direct mail.
   const listRewrite = resolveListRewriteSender(params.parsed);
   const fromEmail = listRewrite ? listRewrite.sender.email : (from?.address || '');
+  const authenticatedSenderEmail = asNonEmptyString(params.authenticatedSenderEmail)?.toLowerCase() ?? null;
+  const providerMailboxMatchesFrom = params.provider === 'microsoft' && Boolean(authenticatedSenderEmail);
   const fromName = listRewrite ? (listRewrite.sender.name || from?.name || undefined) : (from?.name || undefined);
   const resolvedHeaders: Record<string, string> = {};
   // Preserve duplicate raw headers in wire order for downstream diagnostics;
@@ -389,6 +393,7 @@ export function mapParsedMimeToEmailMessageDetails(params: {
     });
   }
 
+  const dkim = await verifyOriginalMimeDkim(params.rawMimeBuffer, fromEmail);
   return {
     id: messageId,
     providerIdentity,
@@ -437,13 +442,17 @@ export function mapParsedMimeToEmailMessageDetails(params: {
     inReplyTo: inReplyTo || undefined,
     rawMimeBase64: params.rawMimeBuffer.toString('base64'),
     headers: Object.keys(resolvedHeaders).length ? resolvedHeaders : undefined,
-    // Graph returns stored MIME headers, not a separately authenticated
-    // Exchange provenance claim. Header Firewall normally removes external
-    // organization headers, but connector permissions can preserve them; this
-    // path cannot inspect that mailbox configuration, so fail closed.
-    senderAuthentication: params.provider === 'microsoft'
-      ? { provider: 'microsoft', internalAttributionTrusted: false, contactAttributionTrusted: false }
-      : undefined,
+    // DKIM is independently checked over the original bytes and against DNS.
+    // It is domain evidence only; it never grants a mailbox actor by itself.
+    senderAuthentication: {
+      provider: params.provider,
+      internalAttributionTrusted: providerMailboxMatchesFrom,
+      contactAttributionTrusted: providerMailboxMatchesFrom,
+      mailboxEvidence: providerMailboxMatchesFrom ? 'provider_sender_match' : 'mailbox_confirmation_required',
+      authenticatedMailbox: providerMailboxMatchesFrom ? authenticatedSenderEmail! : undefined,
+      dkim,
+      reasons: [dkim.reason, providerMailboxMatchesFrom ? 'authenticated_graph_sender_property' : 'no_independent_mailbox_assertion'],
+    },
   };
 }
 
@@ -593,6 +602,7 @@ export async function fetchMicrosoftMessageForPointer(job: UnifiedInboundEmailQu
     rawMimeBuffer,
     parsed,
     fallbackMessageId: job.pointer.messageId,
+    authenticatedSenderEmail: await adapter.getAuthenticatedSenderEmail(job.pointer.messageId),
   });
 }
 

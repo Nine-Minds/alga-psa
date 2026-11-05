@@ -67,16 +67,22 @@ let ticketTenant: string, customerTenant: string, aliceId: string, techId: strin
 let relationshipId: string, threadId: string, parentCommentId: string, token: string;
 let processInbound: typeof import('../../../../shared/services/email/processInboundEmailInApp').processInboundEmailInApp;
 
-// Aligned auth: DMARC pass for the From domain (what allowsInternalSenderAttribution requires for an internal sender).
-const ALIGNED_AUTH = 'mx; spf=pass smtp.mailfrom=customer-it.example.test; dkim=pass header.d=customer-it.example.test; dmarc=pass header.from=customer-it.example.test';
-const SPF_ONLY_AUTH = 'mx; spf=pass smtp.mailfrom=customer-it.example.test';
+const ALIGNED_AUTH = 'mx.google.com; spf=pass smtp.mailfrom=customer-it.example.test; dkim=pass header.d=customer-it.example.test; dmarc=pass header.from=customer-it.example.test';
 
-function emailData(id: string, text: string, authenticationResults: string | null = ALIGNED_AUTH) {
+function emailData(id: string, text: string, authenticationResults: string | null = ALIGNED_AUTH, options: {
+  provider?: 'google' | 'microsoft' | 'imap';
+  authenticatedMailbox?: string | null;
+} = {}) {
+  const provider = options.provider ?? 'google';
+  const authenticatedMailbox = options.authenticatedMailbox ?? null;
   return {
-    id, provider: 'google', providerId: PROVIDER_ID, tenant: ticketTenant, receivedAt: new Date().toISOString(),
+    id, provider, providerId: PROVIDER_ID, tenant: ticketTenant, receivedAt: new Date().toISOString(),
     from: { email: aliceEmail, name: 'Alice' }, to: [{ email: 'support@msp.example.test' }], subject: 'Re: Shared ticket',
     body: { text: `${text}\n\n[ALGA-REPLY-TOKEN ${token} ticketId=${ticketId} commentId=${parentCommentId} threadId=${threadId}]` },
     attachments: [], headers: authenticationResults === null ? {} : { 'authentication-results': authenticationResults },
+    senderAuthentication: provider === 'microsoft' && authenticatedMailbox
+      ? { provider, internalAttributionTrusted: true, contactAttributionTrusted: true, mailboxEvidence: 'provider_sender_match', authenticatedMailbox }
+      : { provider, internalAttributionTrusted: false, contactAttributionTrusted: false, mailboxEvidence: 'mailbox_confirmation_required' },
   } as any;
 }
 const sharedComments = (text: string) => db('comments').where({ tenant: ticketTenant, ticket_id: ticketId }).whereRaw('note::text ILIKE ?', [`%${text}%`]);
@@ -176,9 +182,9 @@ describe('email-service boot registers co-managed inbound', () => {
     processInbound = (await import('../../../../shared/services/email/processInboundEmailInApp')).processInboundEmailInApp;
   }, 120_000);
 
-  it('admits a cm2 reply to a shared_it comment and writes it as the verified participant in the shared_it audience; a replay is a no-op', async () => {
+  it('admits a Microsoft Graph authenticated sender and writes the correct actor once; replay is a no-op', async () => {
     const text = `fix-applied-${MARK}`;
-    const message = emailData(`<msg-${MARK}-1@customer-it.example.test>`, text);
+    const message = emailData(`<msg-${MARK}-1@customer-it.example.test>`, text, ALIGNED_AUTH, { provider: 'microsoft', authenticatedMailbox: aliceEmail });
     const result: any = await (processInbound as any)({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: message }, { collectDiagnostics: true });
     expect(result).toMatchObject({ outcome: 'replied', matchedBy: 'reply_token', ticketId });
 
@@ -199,35 +205,108 @@ describe('email-service boot registers co-managed inbound', () => {
     expect(await sharedComments(text)).toHaveLength(1);
   });
 
-  it.each([
-    ['SPF-only', SPF_ONLY_AUTH],
-    ['failing', 'mx; spf=fail smtp.mailfrom=customer-it.example.test; dkim=fail header.d=customer-it.example.test; dmarc=fail header.from=customer-it.example.test'],
-    ['absent', null],
-  ])('quarantines a cm2 reply with %s sender auth: no comment and no refusal ack', async (label, auth) => {
-    const { REFUSAL_ACK_KIND } = await import('@alga-psa/co-managed/refusalAck');
+  it.each(['google', 'imap', 'imap-unsigned', 'imap-forwarded'] as const)('%s asks the registered mailbox owner to confirm, then writes exactly one authorized reply', async (deliveryMode) => {
+    const { registerWorkflowEmailProvider, resetWorkflowEmailProvider } = await import('@alga-psa/shared/workflow/runtime/registries/workflowEmailRegistry');
+    const { approveInboundSenderConfirmation } = await import('@alga-psa/co-managed/inboundSenderConfirmation');
     const { processInboundEmailInApp } = await import('../../../../shared/services/email/processInboundEmailInApp');
-    const text = `forged-${label.replace(/\W/g, '')}-${MARK}`;
-    const message = emailData(`<msg-${MARK}-forged-${label.replace(/\W/g, '')}@customer-it.example.test>`, text, auth);
-    const acks = () => db('co_management_deliveries').where({ tenant: ticketTenant, delivery_kind: REFUSAL_ACK_KIND, recipient: aliceEmail });
-    const acksBefore = (await acks()).length;
+    const priorSecret = process.env.NEXTAUTH_SECRET;
+    const priorOrigin = process.env.APP_BASE_URL;
+    process.env.NEXTAUTH_SECRET = 'confirmation-test-secret-0123456789-abcdef';
+    process.env.APP_BASE_URL = 'https://psa.example.test';
+    const sendEmail = vi.fn(async () => ({ success: true }));
+    registerWorkflowEmailProvider({
+      TenantEmailService: { getInstance: () => ({ sendEmail }) },
+      StaticTemplateProcessor: class { constructor(public subject: string, public html: string, public text?: string) {} async process() { return { subject: this.subject, html: this.html, text: this.text }; } },
+    } as any);
+    try {
+      const text = `confirmed-${deliveryMode}-${MARK}`;
+      const provider = deliveryMode === 'google' ? 'google' : 'imap';
+      const forgedAuth = deliveryMode === 'imap-unsigned' ? null : 'mx.google.com; dmarc=pass header.from=customer-it.example.test';
+      const message = emailData(`<msg-${MARK}-${deliveryMode}@customer-it.example.test>`, text, forgedAuth, { provider, authenticatedMailbox: null });
+      if (deliveryMode === 'imap-forwarded') {
+        message.body.text = `FYI ${text}; please review the message I forwarded below.\n\nForwarded message follows:\nFrom: victim@customer-it.example.test\nAuthentication-Results: mx.google.com; dmarc=pass header.from=customer-it.example.test\n\n${message.body.text}`;
+      }
+      const result: any = await processInboundEmailInApp({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: message });
+      expect(result).toMatchObject({ outcome: 'quarantined', reason: 'co_managed_confirmation_requested', ticketId });
+      expect(await sharedComments(text)).toHaveLength(0);
+      expect(sendEmail).toHaveBeenCalledTimes(1);
+      expect((sendEmail.mock.calls[0] as any)[0]).toMatchObject({ to: aliceEmail });
+      const emailArgs = (sendEmail.mock.calls[0] as any)[0];
+      const processor = emailArgs.templateProcessor;
+      const confirmationUrl = String(processor.text).match(/https:\/\/[^\s]+/)?.[0];
+      expect(confirmationUrl).toBeTruthy();
+      const confirmationToken = new URL(confirmationUrl!).searchParams.get('token')!;
+      const wrongActor = await approveInboundSenderConfirmation(confirmationToken, {
+        tenant: ticketTenant, user_id: techId, user_type: 'internal', email: 'other@msp.example.test',
+      });
+      expect(wrongActor).toBeNull();
+      expect(await sharedComments(text)).toHaveLength(0);
+      const approved = await approveInboundSenderConfirmation(confirmationToken, {
+        tenant: customerTenant, user_id: aliceId, user_type: 'internal', email: aliceEmail,
+      });
+      expect(approved).toMatchObject({ ticketId });
+      expect(await sharedComments(text)).toHaveLength(1);
+      expect(await approveInboundSenderConfirmation(confirmationToken, {
+        tenant: customerTenant, user_id: aliceId, user_type: 'internal', email: aliceEmail,
+      })).toBeNull();
+      expect(await sharedComments(text)).toHaveLength(1);
+      const row = (await sharedComments(text))[0];
+      expect(row).toMatchObject({ author_type: 'internal', actor_display_name: 'Alice CustomerIT', is_internal: true });
+    } finally {
+      resetWorkflowEmailProvider();
+      if (priorSecret === undefined) delete process.env.NEXTAUTH_SECRET; else process.env.NEXTAUTH_SECRET = priorSecret;
+      if (priorOrigin === undefined) delete process.env.APP_BASE_URL; else process.env.APP_BASE_URL = priorOrigin;
+    }
+  });
 
-    const result: any = await processInboundEmailInApp({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: message });
-    expect(result).toMatchObject({ outcome: 'quarantined', reason: 'co_managed_sender_unauthenticated' });
-    expect(await sharedComments(text)).toHaveLength(0);
-    // A spoofer must not be able to make us mail the real sponsor address: nothing is queued.
-    expect(await acks()).toHaveLength(acksBefore);
+  it('does not let forged Gmail headers attribute Alice until she confirms the exact pending message', async () => {
+    const { registerWorkflowEmailProvider, resetWorkflowEmailProvider } = await import('@alga-psa/shared/workflow/runtime/registries/workflowEmailRegistry');
+    const priorSecret = process.env.NEXTAUTH_SECRET, priorOrigin = process.env.APP_BASE_URL;
+    process.env.NEXTAUTH_SECRET = 'confirmation-test-secret-0123456789-abcdef';
+    process.env.APP_BASE_URL = 'https://psa.example.test';
+    const sendEmail = vi.fn(async () => ({ success: true }));
+    registerWorkflowEmailProvider({
+      TenantEmailService: { getInstance: () => ({ sendEmail }) },
+      StaticTemplateProcessor: class { constructor(public subject: string, public html: string, public text?: string) {} async process() { return { subject: this.subject, html: this.html, text: this.text }; } },
+    } as any);
+    try {
+      const text = `forged-google-headers-${MARK}`;
+      const forged = emailData(`<msg-${MARK}-forged-google@customer-it.example.test>`, text,
+        'mx.google.com; dmarc=pass header.from=customer-it.example.test', { provider: 'google', authenticatedMailbox: null });
+      const result: any = await processInbound({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: forged });
+      expect(result).toMatchObject({ outcome: 'quarantined', reason: 'co_managed_confirmation_requested' });
+      expect(await sharedComments(text)).toHaveLength(0);
+      expect(sendEmail).toHaveBeenCalledTimes(1);
+      expect((sendEmail.mock.calls[0] as any)[0]).toMatchObject({ to: aliceEmail });
+    } finally {
+      resetWorkflowEmailProvider();
+      if (priorSecret === undefined) delete process.env.NEXTAUTH_SECRET; else process.env.NEXTAUTH_SECRET = priorSecret;
+      if (priorOrigin === undefined) delete process.env.APP_BASE_URL; else process.env.APP_BASE_URL = priorOrigin;
+    }
+  });
 
-    // Replay stays quarantined, still no comment and no ack.
-    const replay: any = await processInboundEmailInApp({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: message });
-    expect(replay).toMatchObject({ outcome: 'quarantined', reason: 'co_managed_sender_unauthenticated' });
+  it('rejects an authenticated sender from an unrelated tenant before any comment write', async () => {
+    const strangerTenant = await createTenant(db, `Inbound Stranger ${MARK}`, { productCode: 'psa' });
+    tenants.push(strangerTenant);
+    const strangerId = await createUser(db, strangerTenant, { first_name: 'Sam', last_name: 'Stranger', email: `stranger-${MARK}@unrelated.example.test` });
+    const text = `cross-tenant-denied-${MARK}`;
+    const message = emailData(`<msg-${MARK}-stranger@unrelated.example.test>`, text, ALIGNED_AUTH, {
+      provider: 'microsoft', authenticatedMailbox: `stranger-${MARK}@unrelated.example.test`,
+    });
+    const result: any = await processInbound({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: message });
+    expect(result).toMatchObject({ outcome: 'quarantined', reason: 'co_managed_token_refused' });
     expect(await sharedComments(text)).toHaveLength(0);
-    expect(await acks()).toHaveLength(acksBefore);
+    expect(await db('users').where({ tenant: strangerTenant, user_id: strangerId })).toHaveLength(1);
   });
 
   it('email-service writes no comment and queues one ack; the sender path sends it once; a replay adds nothing', async () => {
     const { registerWorkflowEmailProvider } = await import('@alga-psa/shared/workflow/runtime/registries/workflowEmailRegistry');
     const { REFUSAL_ACK_KIND, deliverPendingRefusalAcks } = await import('@alga-psa/co-managed/refusalAck');
     const { processInboundEmailInApp } = await import('../../../../shared/services/email/processInboundEmailInApp');
+    // Earlier confirmation cases intentionally ran without a mail provider, leaving durable
+    // confirmation intents pending. Keep this refusal-ack assertion isolated from that queue.
+    await db('co_management_deliveries').where({ tenant: ticketTenant, delivery_kind: 'sender_confirmation' }).update({ state: 'sent' });
+    await db('co_management_deliveries').where({ tenant: ticketTenant, delivery_kind: REFUSAL_ACK_KIND }).where('state', 'pending').update({ state: 'sent' });
     const legacy = `cm1:${uuidv4()}`;
     await db('email_reply_tokens').insert({ tenant: ticketTenant, token: legacy, ticket_id: ticketId, comment_id: parentCommentId, entity_type: 'ticket', recipient_email: aliceEmail,
       metadata: JSON.stringify({ namespace: 'cm', version: 1, relationshipId }) });
@@ -235,18 +314,19 @@ describe('email-service boot registers co-managed inbound', () => {
     const message = { ...emailData(`<msg-${MARK}-3@customer-it.example.test>`, text) };
     message.body = { text: `${text}\n\n[ALGA-REPLY-TOKEN ${legacy} ticketId=${ticketId} commentId=${parentCommentId} threadId=${threadId}]` };
     const acks = () => db('co_management_deliveries').where({ tenant: ticketTenant, delivery_kind: REFUSAL_ACK_KIND });
+    const ackCountBefore = (await acks()).length;
 
     // email-service has no workflow email provider: the ack must be durably queued, not dropped.
     const result: any = await processInboundEmailInApp({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: message });
     expect(result).toMatchObject({ outcome: 'quarantined', reason: 'co_managed_token_refused' });
     expect(await sharedComments(text)).toHaveLength(0);
     let rows = await acks();
-    expect(rows).toHaveLength(1);
+    expect(rows).toHaveLength(ackCountBefore + 1);
     expect(rows[0]).toMatchObject({ state: 'pending', recipient: aliceEmail, attempts: 0 });
 
     // Replaying the refused message adds no second ack.
     await processInboundEmailInApp({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: message });
-    expect(await acks()).toHaveLength(1);
+    expect(await acks()).toHaveLength(ackCountBefore + 1);
 
     // A process with a mail provider (server recovery job) sends it.
     const sendEmail = vi.fn(async () => ({ success: true }));

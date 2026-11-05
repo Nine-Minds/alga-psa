@@ -96,9 +96,11 @@ describe('admitReplyToken sender authentication', () => {
   describe('shared_it', () => {
     beforeEach(() => seed('shared_it'));
 
-    it('exploit regression: an unauthenticated From naming a sponsor user is refused before any user lookup, with no acknowledgement', async () => {
-      expect(await admit(untrusted('agent@msp.test'))).toEqual({ admitted: false, reason: 'sender_unauthenticated', acknowledge: false });
-      expect(store.lookups).not.toContain('users');
+    it('forged From never admits the named actor; it can only request confirmation for that registered mailbox', async () => {
+      expect(await admit(untrusted('agent@msp.test'))).toMatchObject({
+        admitted: false, reason: 'sender_confirmation_required', acknowledge: false,
+        confirmation: { actor: { tenant: SPONSOR, userId: 'sponsor-user' }, actorEmail: 'Agent@MSP.test', audience: 'shared_it' },
+      });
     });
 
     it('trusted auth + sponsor user is admitted as an actor in the sponsor tenant', async () => {
@@ -119,9 +121,11 @@ describe('admitReplyToken sender authentication', () => {
     it('trusted auth + sponsor user is audience_forbidden', async () => {
       expect(await admit(trusted('agent@msp.test'))).toEqual({ admitted: false, reason: 'audience_forbidden', acknowledge: true });
     });
-    it('untrusted auth is sender_unauthenticated, with no user lookup', async () => {
-      expect(await admit(untrusted('it@customer.test'))).toEqual({ admitted: false, reason: 'sender_unauthenticated', acknowledge: false });
-      expect(store.lookups).not.toContain('users');
+    it('untrusted auth can only request confirmation for the registered customer mailbox', async () => {
+      expect(await admit(untrusted('it@customer.test'))).toMatchObject({
+        admitted: false, reason: 'sender_confirmation_required', acknowledge: false,
+        confirmation: { actor: { tenant: CUSTOMER, userId: 'customer-user' }, actorEmail: 'it@customer.test', audience: 'organization_private' },
+      });
     });
   });
 

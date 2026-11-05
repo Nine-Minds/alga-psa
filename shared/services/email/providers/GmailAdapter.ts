@@ -1,7 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { BaseEmailAdapter, type AdapterConnectionTestResult } from './base/BaseEmailAdapter';
 import { EmailMessageDetails, EmailProviderConfig } from '../../../interfaces/inbound-email.interfaces';
-import { allowsContactSenderAttribution, allowsInternalSenderAttribution, orderedAuthenticationResults, verifyProviderSenderAuthentication } from '../../../lib/email/senderAuthVerification';
+import { allowsContactSenderAttribution, allowsInternalSenderAttribution, orderedAuthenticationResults, verifyOriginalMimeDkim, verifyProviderSenderAuthentication } from '../../../lib/email/senderAuthVerification';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
@@ -714,6 +714,8 @@ This indicates a problem with the OAuth token saving process.`;
       const parsedFrom = parseEmailAddress(fromEmail);
       const parsedTo = parseEmailAddressList(toEmails);
       const parsedCc = parseEmailAddressList(ccEmails);
+      const originalMime = await this.downloadMessageSource(message.data.id!);
+      const dkim = await verifyOriginalMimeDkim(originalMime, parsedFrom?.email || fromEmail.trim());
       
       return {
         id: message.data.id!,
@@ -750,8 +752,19 @@ This indicates a problem with the OAuth token saving process.`;
           }, parsedFrom?.email || fromEmail.trim());
           return {
             provider: 'google' as const,
-            internalAttributionTrusted: allowsInternalSenderAttribution(results),
+            // Google's assertion and aligned DKIM establish domain evidence.
+            // Gmail's API does not expose an authenticated per-sender mailbox property.
+            internalAttributionTrusted: false,
+            // Preserve the established receiver-authenticated domain signal for
+            // contact matching only; internal identity still needs mailbox proof.
             contactAttributionTrusted: allowsContactSenderAttribution(results),
+            mailboxEvidence: 'mailbox_confirmation_required' as const,
+            dkim,
+            reasons: [
+              dkim.reason,
+              allowsInternalSenderAttribution(results) ? 'gmail_receiver_domain_auth_pass' : 'gmail_receiver_domain_auth_missing',
+              'gmail_api_does_not_expose_authenticated_sender_mailbox',
+            ],
           };
         })(),
         headers: headers.reduce((acc: any, header: any) => {

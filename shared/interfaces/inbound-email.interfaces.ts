@@ -157,9 +157,13 @@ export interface EmailMessageDetails extends EmailMessage {
   headers?: Record<string, string>;
   /** Authorization decisions made at the provider ingestion boundary. Raw message headers are not authorization evidence. */
   senderAuthentication?: {
-    provider: 'google' | 'microsoft';
+    provider: 'google' | 'microsoft' | 'imap';
     internalAttributionTrusted: boolean;
     contactAttributionTrusted: boolean;
+    mailboxEvidence?: 'provider_sender_match' | 'mailbox_confirmation_required';
+    authenticatedMailbox?: string;
+    dkim?: { verified: boolean; alignedDomains: string[]; reason: string };
+    reasons?: string[];
   };
   messageSize?: number;
   importance?: 'low' | 'normal' | 'high';

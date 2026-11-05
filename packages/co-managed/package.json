@@ -14,6 +14,10 @@
       "types": "./src/deliveryRegistration.ts",
       "import": "./src/deliveryRegistration.ts"
     },
+    "./inboundSenderConfirmation": {
+      "types": "./src/inboundSenderConfirmation.ts",
+      "import": "./src/inboundSenderConfirmation.ts"
+    },
     "./capability": {
       "types": "./src/capability.ts",
       "import": "./src/capability.ts"

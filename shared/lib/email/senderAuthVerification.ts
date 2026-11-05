@@ -1,10 +1,50 @@
 import { extractEmailDomain } from './addressUtils';
+import { dkimVerify, type DKIMVerifyOptions } from 'mailauth';
 
 export interface SenderAuthResults {
   spf: 'pass' | 'fail' | 'neutral' | 'none' | 'temperror' | 'permerror' | null;
   dkim: 'pass' | 'fail' | 'neutral' | 'none' | 'temperror' | 'permerror' | null;
   dmarc: 'pass' | 'fail' | 'neutral' | 'none' | 'temperror' | 'permerror' | null;
   aligned: { spf: boolean; dkim: boolean; dmarc: boolean };
+}
+
+export interface VerifiedDkimEvidence {
+  verified: boolean;
+  alignedDomains: string[];
+  reason: 'aligned_signature' | 'no_aligned_signature' | 'verification_error';
+}
+
+/** Verify signatures over the original RFC 822 bytes using DNS-published keys.
+ * A passing aligned signature authenticates domain control and signed content;
+ * it deliberately does not establish which mailbox authored the message.
+ */
+export async function verifyOriginalMimeDkim(
+  rawMime: Buffer,
+  fromEmail: string | null | undefined,
+  resolver?: DKIMVerifyOptions['resolver'],
+): Promise<VerifiedDkimEvidence> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const verified = await Promise.race([
+      dkimVerify(rawMime, { strict: true, rejectRsaSha1: true, resolver }),
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(() => reject(new Error('dkim_dns_timeout')), 5_000);
+      }),
+    ]);
+    const requestedFrom = String(fromEmail ?? '').trim().toLowerCase();
+    const signedFromMatches = verified.headerFrom.some((address) => address.trim().toLowerCase() === requestedFrom);
+    const alignedDomains = (signedFromMatches ? verified.results : [])
+      .filter((result) => result.status.result === 'pass' && result.status.aligned && result.signingDomain)
+      .map((result) => result.signingDomain!.toLowerCase())
+      .filter((domain) => Boolean(fromEmail) && Boolean(domain));
+    return alignedDomains.length
+      ? { verified: true, alignedDomains: [...new Set(alignedDomains)], reason: 'aligned_signature' }
+      : { verified: false, alignedDomains: [], reason: 'no_aligned_signature' };
+  } catch {
+    return { verified: false, alignedDomains: [], reason: 'verification_error' };
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
 }
 
 /** Keep repeated provider header fields in their original order. */
@@ -120,9 +160,9 @@ export function allowsInternalSenderAttribution(results: SenderAuthResults | nul
 }
 
 export function isInternalAttributionTrusted(
-  decision: { provider: 'google' | 'microsoft'; internalAttributionTrusted: boolean } | null | undefined
+  decision: { provider: 'google' | 'microsoft' | 'imap'; internalAttributionTrusted: boolean } | null | undefined
 ): boolean {
-  return decision?.provider === 'google' && decision.internalAttributionTrusted === true;
+  return decision?.internalAttributionTrusted === true;
 }
 
 /**

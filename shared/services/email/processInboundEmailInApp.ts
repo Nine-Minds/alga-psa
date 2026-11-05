@@ -155,6 +155,7 @@ export interface ProcessInboundEmailInAppDiagnostics extends Record<string, unkn
       | 'deduped'
       | 'quarantined'
       | 'co_managed_token_unserved'
+      | 'sender_confirmation_required'
       | null;
   };
   /**
@@ -202,7 +203,7 @@ type ProcessInboundEmailInAppBaseResult =
     }
   | {
       outcome: 'quarantined';
-      reason: 'unauthorized_thread_header_sender' | 'co_managed_token_refused' | 'co_managed_token_unserved' | 'co_managed_sender_unauthenticated';
+      reason: 'unauthorized_thread_header_sender' | 'co_managed_token_refused' | 'co_managed_token_unserved' | 'co_managed_sender_unauthenticated' | 'co_managed_confirmation_requested';
       ticketId: string;
       matchedBy: 'thread_headers' | 'reply_token';
     };
@@ -956,9 +957,19 @@ export async function processInboundEmailInApp(
   const dedupeKey = buildDedupeKey(input);
   const senderEmail = normalizeEmailAddress(emailData.from?.email);
   const internalSenderTrusted = isInternalAttributionTrusted(emailData.senderAuthentication);
+  const internalActorEmail = internalSenderTrusted
+    ? normalizeEmailAddress(emailData.senderAuthentication?.authenticatedMailbox) ?? senderEmail
+    : senderEmail;
   const isVerifiedListRewrite = Boolean(emailData.headers?.['x-resolved-original-sender']);
-  const contactSenderTrusted = (emailData.senderAuthentication?.provider === 'google'
-    && emailData.senderAuthentication.contactAttributionTrusted === true) || isVerifiedListRewrite;
+  const providerAuthenticatedMailbox = emailData.senderAuthentication?.mailboxEvidence === 'provider_sender_match'
+    ? normalizeEmailAddress(emailData.senderAuthentication.authenticatedMailbox)
+    : null;
+  const contactSenderTrusted = Boolean(providerAuthenticatedMailbox
+    && emailData.senderAuthentication?.contactAttributionTrusted === true)
+    || (emailData.senderAuthentication?.provider === 'google'
+      && emailData.senderAuthentication.contactAttributionTrusted === true)
+    || isVerifiedListRewrite;
+  const contactAttributionEmail = providerAuthenticatedMailbox ?? senderEmail;
   const durableExecution = options.durableExecution ?? null;
 
   const helperExecutionOptions = (kind: 'ticket' | 'comment'): InboundEmailExecutionOptions | undefined => {
@@ -1046,7 +1057,7 @@ export async function processInboundEmailInApp(
       return null;
     }
 
-    const matched = await findContactByEmail(senderEmail, tenantId, context);
+    const matched = await findContactByEmail(contactAttributionEmail ?? senderEmail, tenantId, context);
     if (!matched) return null;
 
     if (matched.user_type === 'internal') {
@@ -1733,7 +1744,10 @@ export async function processInboundEmailInApp(
         // Not served, requester-thread token: the token is inert and thread headers decide (native writer).
         const admission = provider
           ? await provider.admitReplyToken(tenantId, String(token), match.metadata, {
-              email: senderEmail ?? null,
+              // Microsoft Graph's authenticated sender mailbox is independent of MIME From (which
+              // can legitimately differ for send-on-behalf); all other providers use From only
+              // after the bound confirmation flow has admitted the intended user.
+              email: internalActorEmail ?? null,
               internalAttributionTrusted: internalSenderTrusted,
             })
           : null;
@@ -1742,6 +1756,33 @@ export async function processInboundEmailInApp(
         tokenInert = !admission || (admission.admitted === false && admission.reason === 'not_served');
         if (admission && admission.admitted === false && !tokenInert) {
           const responder = await coManagedInboundCommentSeam.resolve(tenantId);
+          if (admission.reason === 'sender_confirmation_required' && !responder) {
+            throw new InboundRetryLaterError('co-managed sender confirmation service is unavailable; leaving the reply to retry');
+          }
+          if (admission.reason === 'sender_confirmation_required' && admission.confirmation && responder) {
+            const text = (parsedEmail?.sanitizedText ?? emailData.body?.text ?? htmlToVisibleText(parsedEmail?.sanitizedHtml ?? emailData.body?.html ?? '')).trim();
+            await responder.requestSenderConfirmation({
+              tenant: tenantId,
+              actor: admission.confirmation.actor,
+              actorEmail: admission.confirmation.actorEmail,
+              ticketId: admission.confirmation.ticketId,
+              relationshipId: admission.confirmation.relationshipId,
+              threadId: admission.confirmation.threadId,
+              parentCommentId: admission.confirmation.parentCommentId,
+              audience: admission.confirmation.audience,
+              replyToken: String(token),
+              providerId,
+              providerMessageId: emailData.providerIdentity || emailData.id,
+              text,
+            });
+            if (diagnostics) diagnostics.threading.failureReason = 'sender_confirmation_required';
+            return withDiagnostics({
+              outcome: 'quarantined',
+              reason: 'co_managed_confirmation_requested',
+              ticketId: match.ticketId,
+              matchedBy: 'reply_token',
+            }, diagnostics);
+          }
           if (admission.acknowledge && responder && senderEmail && !detectAutomatedInboundMessage(emailData).isAutomated) {
             try {
               await responder.acknowledgeRefusal({ tenant: tenantId, token: String(token), to: senderEmail, ticketId: match.ticketId, reason: admission.reason });

@@ -235,9 +235,36 @@ export function createCoManagedDeliveryProvider(): CoManagedDeliveryProvider {
             : null;
           return contact ? base : { admitted: false, reason: 'not_participant', acknowledge: true };
         }
-        // shared_it / organization_private resolve the sender to an internal user. An unauthenticated From is
-        // only a claim: refuse BEFORE any user lookup, and never mail the unverified address.
-        if (!inboundSender.internalAttributionTrusted) return { admitted: false, reason: 'sender_unauthenticated', acknowledge: false };
+        // An unauthenticated From cannot be admitted as an actor. It may identify a candidate
+        // mailbox only so the writer can send a confirmation to the database-owned address;
+        // no comment is written until that tenant user confirms from an authenticated session.
+        if (!inboundSender.internalAttributionTrusted) {
+          if (!sender) return { admitted: false, reason: 'sender_unauthenticated', acknowledge: false };
+          const candidateTenants = audience === 'organization_private'
+            ? [tenant]
+            : [tenant, shared.relationship.sponsor_tenant as string];
+          for (const candidateTenant of candidateTenants) {
+            const user = await tenantDb(trx, candidateTenant).table('users')
+              .whereRaw('lower(email) = ?', [sender]).where({ user_type: 'internal', is_inactive: false }).first('user_id', 'email');
+            if (user?.user_id && user.email) {
+              return {
+                admitted: false,
+                reason: 'sender_confirmation_required',
+                acknowledge: false,
+                confirmation: {
+                  actor: { tenant: candidateTenant, userId: user.user_id },
+                  actorEmail: user.email,
+                  audience,
+                  relationshipId: parsed.relationshipId,
+                  threadId: parsed.threadId,
+                  ticketId,
+                  parentCommentId: (record?.comment_id as string | null) ?? null,
+                },
+              };
+            }
+          }
+          return { admitted: false, reason: 'sender_unauthenticated', acknowledge: false };
+        }
         if (!sender) return { admitted: false, reason: 'not_participant', acknowledge: true };
         // Resolve the sender to an internal user of either organisation. The writer then re-authorizes them.
         for (const candidateTenant of [tenant, shared.relationship.sponsor_tenant as string]) {

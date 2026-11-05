@@ -68,6 +68,7 @@ describe('inbound reply token matrix (CM L5)', () => {
     coManagedInboundCommentSeam.register(() => ({
       write: async (input: any) => { writes.push(input); return { commentId: 'cm-comment' }; },
       acknowledgeRefusal: async (input: any) => { acks.push(input); },
+      requestSenderConfirmation: async () => {},
     }));
     findTicketByReplyTokenMock.mockResolvedValue(found);
     findTicketByEmailThreadMock.mockResolvedValue(null);

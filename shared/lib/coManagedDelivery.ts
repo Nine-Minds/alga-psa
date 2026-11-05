@@ -43,7 +43,8 @@ export type InboundAdmission =
   | { admitted: true; audience: CommentAudience; relationshipId: string; threadId: string | null; ticketId: string; parentCommentId: string | null;
       /** Set for shared_it / organization_private: the participant to write as. Absent = requester thread (native writer). */
       actor?: InboundCommentActor }
-  | { admitted: false; reason: 'legacy_token' | 'stale_generation' | 'grant_revoked' | 'not_served' | 'not_participant' | 'audience_forbidden' | 'sender_unauthenticated'; acknowledge: boolean };
+  | { admitted: false; reason: 'legacy_token' | 'stale_generation' | 'grant_revoked' | 'not_served' | 'not_participant' | 'audience_forbidden' | 'sender_unauthenticated' | 'sender_confirmation_required'; acknowledge: boolean;
+      confirmation?: { actor: InboundCommentActor; actorEmail: string; audience: CommentAudience; relationshipId: string; threadId: string | null; ticketId: string; parentCommentId: string | null } };
 
 /**
  * The inbound sender as the caller has verified it. `internalAttributionTrusted` is the caller's
@@ -137,6 +138,11 @@ export interface CoManagedInboundCommentWriter {
    * (token, sender) through the delivery ledger; never sent to automated senders.
    */
   acknowledgeRefusal(input: { tenant: string; token: string; to: string; ticketId: string; reason: string }): Promise<void>;
+  requestSenderConfirmation(input: {
+    tenant: string; actor: InboundCommentActor; actorEmail: string; ticketId: string; relationshipId: string;
+    threadId: string | null; parentCommentId: string | null; audience: CommentAudience; replyToken: string;
+    providerId: string; providerMessageId: string; text: string;
+  }): Promise<void>;
 }
 export const coManagedInboundCommentSeam = sharedWorkSeam<CoManagedInboundCommentWriter>('inbound-comment');
 
