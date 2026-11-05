@@ -5,19 +5,29 @@ import { normalizeEmailAddress } from '@alga-psa/shared/lib/email/addressUtils';
 import { contactEmailMatch } from '@alga-psa/shared/lib/email/contactEmailMatch';
 import { resolveCommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import {
-  decideReplyToken, parseCm2Metadata,
+  decideReplyToken, parseCm2Metadata, coManagedInboundOperationId,
   type CoManagedDeliveryProvider, type CommentDeliveryPlan, type InboundSender, type RoutingDelivery, type DeliveryRecipient, type InboundAdmission,
 } from '@alga-psa/shared/lib/coManagedDelivery';
-import { withCoManagedNotificationRecipient } from './sharedWork';
+import { withCoManagedNotificationRecipient, withCoManagedSharedWork } from './sharedWork';
+import { withCoManagedCustomerTicket } from './customerWork';
 import { projectTaskAudience } from './projectTaskAudience';
 import { ROUTING_IN_APP_KIND, ROUTING_EMAIL_KIND, type CoManagedRoutingPayload } from './routingOutbox';
-import { isCoManagedSharedWorkError } from './sharedWorkIdentity';
+import { isCoManagedSharedWorkError, withCoManagedMailCredential } from './sharedWorkIdentity';
 // LEVERAGE: friction customer-ticket-read-authorizer — only the per-record tickets authorizer evaluates bundle/contact-visibility narrowing, but it is shaped for a server action (throws, wants a full IUserWithRoles); we wrap it in try/catch and feed it a raw users row.
 import { authorizeTicketRecordAccess } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
 import { hasPermission } from '@alga-psa/authorization/rbac';
 import type { IUserWithRoles } from '@alga-psa/types';
 
 const normalize = (email: unknown) => String(email ?? '').trim().toLowerCase();
+
+function isReplyTokenExpired(expiresAt: unknown, now = Date.now()): boolean {
+  const expiration = expiresAt instanceof Date
+    ? expiresAt.getTime()
+    : typeof expiresAt === 'string' && expiresAt.trim() !== ''
+      ? Date.parse(expiresAt)
+      : Number.NaN;
+  return !Number.isFinite(expiration) || expiration <= now;
+}
 
 type CustomerUserRow = { user_id: string; email: string | null; is_inactive: boolean } & Record<string, unknown>;
 
@@ -211,40 +221,68 @@ export function createCoManagedDeliveryProvider(): CoManagedDeliveryProvider {
           : { admitted: false, reason: 'legacy_token', acknowledge: true };
       }
       return withAdminTransaction(async (trx): Promise<InboundAdmission> => {
-        const record = await tenantDb(trx, tenant).table('email_reply_tokens').where({ token }).first('ticket_id', 'comment_id');
+        const record = await tenantDb(trx, tenant).table('email_reply_tokens').where({ token }).first('ticket_id', 'comment_id', 'expires_at');
         const ticketId = record?.ticket_id as string | undefined;
         const shared = ticketId ? await loadSharedTicket(trx, tenant, ticketId) : null;
         if (!ticketId || !shared || shared.relationshipId !== parsed.relationshipId) return { admitted: false, reason: 'stale_generation', acknowledge: true };
         const decision = decideReplyToken(token, metadata, shared.grantGeneration);
         if (decision.action === 'refuse') return { admitted: false, reason: decision.reason, acknowledge: true };
         if (shared.work.grant_revoked_at) return { admitted: false, reason: 'grant_revoked', acknowledge: true };
+        // A missing or invalid expiry is indistinguishable from an expired credential.
+        // Use the unauthenticated admission denial before resolving any audience participant.
+        if (isReplyTokenExpired(record?.expires_at)) return { admitted: false, reason: 'sender_unauthenticated', acknowledge: false };
         const thread = parsed.threadId
-          ? await tenantDb(trx, tenant).table('comment_threads').where({ thread_id: parsed.threadId }).first('collaboration_audience', 'is_internal')
+          ? await tenantDb(trx, tenant).table('comment_threads').where({ thread_id: parsed.threadId, ticket_id: ticketId }).first('collaboration_audience', 'is_internal')
           : null;
+        // A token's conversation must belong to its persisted ticket in this tenant.
+        if (parsed.threadId && !thread) return { admitted: false, reason: 'not_participant', acknowledge: true };
+        if (record?.comment_id) {
+          const parent = await tenantDb(trx, tenant).table('comments')
+            .where({ comment_id: record.comment_id, ticket_id: ticketId, thread_id: parsed.threadId }).first('comment_id');
+          if (!parent) return { admitted: false, reason: 'not_participant', acknowledge: true };
+        }
         const audience = resolveCommentAudience(thread ?? { is_internal: false });
         const base = { admitted: true as const, audience, relationshipId: parsed.relationshipId, threadId: parsed.threadId, ticketId, parentCommentId: (record?.comment_id as string | null) ?? null };
         const sender = normalizeEmailAddress(inboundSender.email) ?? '';
         if (audience === 'requester') {
-          // Requester threads keep the native writer (its contact-auth rules still apply), but only an active
-          // contact of the ticket's own client, in this tenant, is admitted to it.
+          // The From address is only a claim until the existing contact-auth policy trusts its attribution.
+          // Refuse before looking up contacts so a forged active contact address cannot be admitted.
+          if (!inboundSender.contactAttributionTrusted) return { admitted: false, reason: 'sender_unauthenticated', acknowledge: false };
           if (!sender) return { admitted: false, reason: 'not_participant', acknowledge: true };
           const ticket = await tenantDb(trx, tenant).table('tickets').where({ ticket_id: ticketId }).first('client_id');
           const contact = ticket?.client_id
             ? await tenantDb(trx, tenant).table('contacts').where({ 'contacts.client_id': ticket.client_id, 'contacts.is_inactive': false })
               .andWhere(contactEmailMatch(tenantDb(trx, tenant), trx, sender)).first('contacts.contact_name_id')
             : null;
-          return contact ? base : { admitted: false, reason: 'not_participant', acknowledge: true };
+          return contact ? {
+            ...base,
+            requesterContactId: contact.contact_name_id as string,
+            requesterClientId: ticket.client_id as string,
+          } : { admitted: false, reason: 'not_participant', acknowledge: true };
         }
         // shared_it / organization_private resolve the sender to an internal user. An unauthenticated From is
         // only a claim: refuse BEFORE any user lookup, and never mail the unverified address.
         if (!inboundSender.internalAttributionTrusted) return { admitted: false, reason: 'sender_unauthenticated', acknowledge: false };
         if (!sender) return { admitted: false, reason: 'not_participant', acknowledge: true };
-        // Resolve the sender to an internal user of either organisation. The writer then re-authorizes them.
+        // Admission and the writer both require current record authority in the actor's own tenant.
         for (const candidateTenant of [tenant, shared.relationship.sponsor_tenant as string]) {
           const user = await tenantDb(trx, candidateTenant).table('users')
             .whereRaw('lower(email) = ?', [sender]).where({ user_type: 'internal', is_inactive: false }).first('user_id');
           if (!user) continue;
           if (audience === 'organization_private' && candidateTenant !== tenant) return { admitted: false, reason: 'audience_forbidden', acknowledge: true };
+          const actor = { kind: 'session' as const, tenant: candidateTenant, userId: user.user_id as string,
+            sessionId: coManagedInboundOperationId(tenant, ticketId, token) };
+          const resource = { tenant, relationshipId: shared.relationshipId, kind: 'ticket' as const, id: ticketId };
+          const authorize = candidateTenant === tenant ? withCoManagedCustomerTicket : withCoManagedSharedWork;
+          try {
+            // Mail supplies identity, never resource authority. Reuse the same live RBAC,
+            // bundle, relationship and grant checks as comment creation, for both actions.
+            await withCoManagedMailCredential(actor, () => authorize(trx as unknown as Knex, actor, resource, 'update',
+              context => authorize(context.trx, actor, resource, 'read', async () => undefined)));
+          } catch (error) {
+            if (!isCoManagedSharedWorkError(error)) throw error;
+            return { admitted: false, reason: 'not_participant', acknowledge: true };
+          }
           return { ...base, actor: { tenant: candidateTenant, userId: user.user_id } };
         }
         return { admitted: false, reason: 'not_participant', acknowledge: true };

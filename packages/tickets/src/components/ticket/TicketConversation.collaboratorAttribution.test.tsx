@@ -107,11 +107,13 @@ vi.mock('../../actions/comment-actions/clipboardImageDraftActions', () => ({
   deleteDraftClipboardImages: vi.fn(),
 }));
 
-vi.mock('./CommentItem', () => ({
-  default: ({ conversation }: any) => (
-    <div data-testid="comment-item">{conversation.comment_id}</div>
-  ),
-}));
+vi.mock('./CommentItem', async () => {
+  const React = await import('react');
+  const { resolveCommentAuthor } = await import('../../lib/commentAuthorResolution');
+  return { default: ({ conversation, userMap, contactMap }: any) => React.createElement(
+    'div', { 'data-testid': 'comment-item' }, resolveCommentAuthor(conversation, { userMap, contactMap }).displayName,
+  ) };
+});
 
 const localStorageState = new Map<string, string>();
 const localStorageMock = {
@@ -130,14 +132,14 @@ const localStorageMock = {
 
 const clientUser = { user_id: 'client-1', first_name: 'Cam', last_name: 'Client', user_type: 'client', avatarUrl: null };
 
-function renderWith(conversations: any[]) {
-  return render(
+function conversationElement(conversations: any[], userMap: Record<string, any> = { 'client-1': { ...clientUser } }) {
+  return (
     <TicketConversation
       id="ticket-conversation"
       ticket={{ ticket_id: 'ticket-1', tenant: 'tenant-1' } as any}
       conversations={conversations}
       documents={[]}
-      userMap={{ 'client-1': { ...clientUser } } as any}
+      userMap={userMap as any}
       contactMap={{}}
       currentUser={{ id: 'user-1' } as any}
       activeTab="all-comments"
@@ -154,6 +156,10 @@ function renderWith(conversations: any[]) {
       onContentChange={vi.fn()}
     />
   );
+}
+
+function renderWith(conversations: any[], userMap?: Record<string, any>) {
+  return render(conversationElement(conversations, userMap));
 }
 
 const comment = (overrides: Record<string, unknown>) => ({
@@ -187,5 +193,18 @@ describe('TicketConversation collaborator attribution', () => {
     await act(async () => { await Promise.resolve(); });
     expect(getUserContactId).not.toHaveBeenCalled();
     expect(getContactAvatarUrlAction).not.toHaveBeenCalled();
+  });
+
+  it('updates the Entry conversation author when its live map refreshes', () => {
+    const conversation = comment({ user_id: 'posting-user', author_type: 'internal' });
+    const view = renderWith([conversation], {});
+    expect(screen.getByText('Unknown User')).toBeInTheDocument();
+
+    view.rerender(conversationElement([conversation], {
+      'posting-user': { user_id: 'posting-user', first_name: 'Ada', last_name: 'Technician', user_type: 'internal', avatarUrl: null },
+    }));
+
+    expect(screen.getByText('Ada Technician')).toBeInTheDocument();
+    expect(screen.queryByText('Unknown User')).not.toBeInTheDocument();
   });
 });
