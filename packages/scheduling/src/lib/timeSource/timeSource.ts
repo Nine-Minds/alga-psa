@@ -155,11 +155,22 @@ export interface TimeSourceSheets {
   requestChanges: TimeSourceMethod<typeof requestChangesForTimeSheet>;
   reverseApproval: TimeSourceMethod<typeof reverseTimeSheetApproval>;
   remove: TimeSourceMethod<typeof deleteTimeSheets>;
-  comment: TimeSourceMethod<typeof addCommentToTimeSheet>;
+  comment: (
+    ctx: TimeSourceContext,
+    timeSheetId: string,
+    comment: string,
+    commenter: TimeSheetCommenter,
+  ) => Promise<TimeSourceValue<Awaited<ReturnType<typeof addCommentToTimeSheet>>>>;
   comments: TimeSourceMethod<typeof fetchTimeSheetComments>;
   listWorkItems: TimeSourceMethod<typeof fetchWorkItemsForTimeSheet>;
   addWorkItem: TimeSourceMethod<typeof addWorkItem>;
   removeWorkItem: TimeSourceMethod<typeof deleteWorkItem>;
+}
+
+/** Server-authenticated attribution passed to a time-source comment writer. */
+export interface TimeSheetCommenter {
+  user_id: string;
+  is_approver: boolean;
 }
 
 /** `time_periods` and their settings. */
