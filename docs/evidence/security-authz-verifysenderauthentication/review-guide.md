@@ -57,6 +57,6 @@ The app server and browser/manual review were intentionally not started for this
 
 ## Publication record
 
-- Repair commit: fill with exact published SHA.
+- Exact PR head SHA and publication time are recorded in the PR description alongside this guide. The implementation commit preceding this documentation-only refresh is `31e4fd302d`.
 - PR: https://github.com/Nine-Minds/alga-psa/pull/4149
 - External CI: record exact run URL, revision, and status after push. Pending checks are not local verification.
