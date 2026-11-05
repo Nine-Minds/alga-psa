@@ -2846,5 +2846,23 @@
       "notAvailable": "Dit standaardantwoord is niet beschikbaar voor dit ticket.",
       "notATeamMember": "U kunt teamantwoorden alleen beheren voor teams waartoe u behoort."
     }
+  },
+  "live": {
+    "updatedOne": "1 ticket bijgewerkt",
+    "updatedMany": "{{count}} tickets bijgewerkt",
+    "newOne": "1 nieuw ticket",
+    "newMany": "{{count}} nieuwe tickets",
+    "both": {
+      "oneNew": {
+        "oneUpdated": "1 nieuw ticket en 1 bijgewerkt ticket",
+        "manyUpdated": "1 nieuw ticket en {{updatedCount}} bijgewerkte tickets"
+      },
+      "manyNew": {
+        "oneUpdated": "{{newCount}} nieuwe tickets en 1 bijgewerkt ticket",
+        "manyUpdated": "{{newCount}} nieuwe tickets en {{updatedCount}} bijgewerkte tickets"
+      }
+    },
+    "updatedBadge": "Bijgewerkt",
+    "boardActivity": "Nieuwe activiteit op dit bord"
   }
 }

@@ -1645,6 +1645,22 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         };
       }
 
+      const hasChangedTicketFields = Object.entries(updateData).some(([field, value]) =>
+        value !== undefined && JSON.stringify(value) !== JSON.stringify(currentTicket[field])
+      );
+      if (hasChangedTicketFields) {
+        await writeTicketActivity(trx, {
+          tenant,
+          ticketId: id,
+          eventType: TICKET_ACTIVITY_EVENT.UPDATED,
+          entityType: TICKET_ACTIVITY_ENTITY.TICKET,
+          actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: user.user_id },
+          source: TICKET_ACTIVITY_SOURCE.UI,
+          occurredAt: occurredAt,
+          changes: structuredChanges,
+        });
+      }
+
       // Keep the ticket row's denormalized close flag aligned with the selected status.
       if (updateData.status_id !== undefined && updateData.status_id !== currentTicket.status_id) {
         const nextIsClosed = !!newStatus?.is_closed;

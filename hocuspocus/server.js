@@ -5,7 +5,7 @@ import { NotificationExtension } from './NotificationExtension.js'
 import { TicketUpdatesExtension } from './TicketUpdatesExtension.js'
 import { AiParticipantExtension } from './AiParticipantExtension.js'
 import { CollabPersistenceExtension } from './CollabPersistenceExtension.js'
-import { validateDocumentRoomAccess } from './tenantValidation.js'
+import { resolveDocumentAuthenticationContext, resolveDocumentConnectionContext } from './ticketChangeConnectionContext.js'
 
 // Helper function to get required env var or fail in production
 function getEnvOrFail(key, fallbackValue = null) {
@@ -53,7 +53,11 @@ const server = Server.configure({
             redisPort: process.env.REDIS_PORT || 6379,
             redisUsername: process.env.REDIS_USERNAME || 'default',
             redisPassword: getEnvOrFail('REDIS_PASSWORD', 'sebastian123'),
-            redisPrefix: process.env.REDIS_PREFIX || 'alga-psa:'
+            redisPrefix: process.env.REDIS_PREFIX || 'alga-psa:',
+            listChangeAuthorizationUrl: process.env.TICKET_LIST_CHANGE_AUTHORIZATION_URL ||
+                process.env.COLLAB_PERSIST_API_URL?.replace('/collab/persist', '/tickets/live-change') ||
+                'http://server:3000/api/internal/tickets/live-change',
+            listChangeApiKey: process.env.COLLAB_PERSIST_API_KEY || '',
         }),
         new AiParticipantExtension({
             aiApiUrl: process.env.AI_DOCUMENT_API_URL || 'http://localhost:3000/api/v1/ai/document-assist',
@@ -64,7 +68,10 @@ const server = Server.configure({
           }),
     ],
     async onConnect(data) {
-        await validateDocumentRoomAccess(data.documentName, data.request);
+        return resolveDocumentConnectionContext(data);
+    },
+    async onAuthenticate(data) {
+        return resolveDocumentAuthenticationContext(data);
     },
     })
 

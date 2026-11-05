@@ -2846,5 +2846,23 @@
       "notAvailable": "〖Ŧħīş ƈȧƞƞḗḓ řḗşƥȯƞşḗ īş ƞȯŧ ȧṽȧīŀȧƀŀḗ ƒȯř ŧħīş ŧīƈķḗŧ. ······················〗",
       "notATeamMember": "〖Ẏȯŭ ƈȧƞ ȯƞŀẏ ḿȧƞȧɠḗ ŧḗȧḿ řḗşƥȯƞşḗş ƒȯř ŧḗȧḿş ẏȯŭ ƀḗŀȯƞɠ ŧȯ. ························〗"
     }
+  },
+  "live": {
+    "updatedOne": "[1 ticket updated]",
+    "updatedMany": "[{{count}} tickets updated]",
+    "newOne": "[1 new ticket]",
+    "newMany": "[{{count}} new tickets]",
+    "both": {
+      "oneNew": {
+        "oneUpdated": "[1 new ticket and 1 updated ticket]",
+        "manyUpdated": "[1 new ticket and {{updatedCount}} updated tickets]"
+      },
+      "manyNew": {
+        "oneUpdated": "[{{newCount}} new tickets and 1 updated ticket]",
+        "manyUpdated": "[{{newCount}} new tickets and {{updatedCount}} updated tickets]"
+      }
+    },
+    "updatedBadge": "[Updated]",
+    "boardActivity": "[New activity on this board]"
   }
 }

@@ -9,7 +9,18 @@ export interface PublishTicketUpdateParams {
   updatedAt: string;
 }
 
+export interface PublishTicketListActivityParams {
+  tenantId: string;
+  ticketId: string;
+  changeKind: 'created' | 'updated';
+  boardId: string | null;
+  changedFields: string[];
+  actorUserId: string | null;
+  updatedAt: string;
+}
+
 const TICKET_UPDATE_CHANNEL_PREFIX = 'ticket-updates:';
+const TICKET_LIST_CHANGE_CHANNEL_PREFIX = 'ticket-list-changes:';
 
 interface RedisPublisherClient {
   publish(channel: string, message: string): Promise<unknown>;
@@ -137,8 +148,33 @@ export async function publishTicketUpdate(params: PublishTicketUpdateParams): Pr
         updatedAt: params.updatedAt,
       })
     );
+    // Ticket-list publication is intentionally not done here: this publisher
+    // has no recipient-specific ticket-read authorization decision. Sending a
+    // ticket id to the tenant room would disclose tickets hidden by board,
+    // relationship, or assignment policy. A list publisher must be wired at a
+    // layer that can authorize each recipient before relay.
   } catch (error) {
     console.warn('[publishTicketUpdate] Failed to publish live ticket update:', error);
+    await resetTicketUpdatePublisherClient();
+  }
+}
+
+/** Publish only to trusted Redis. The live relay authorizes each recipient and
+ * enriches the message before delivery to the shared tenant room. */
+export async function publishTicketListActivity(params: PublishTicketListActivityParams): Promise<void> {
+  if (process.env.LIVE_TICKET_UPDATES_DISABLED === '1') return;
+  try {
+    const client = await getTicketUpdatePublisherClient();
+    await client.publish(`${getRedisPrefix()}${TICKET_LIST_CHANGE_CHANNEL_PREFIX}${params.tenantId}`, JSON.stringify({
+      ticketId: params.ticketId,
+      changeKind: params.changeKind,
+      boardId: params.boardId,
+      changedFields: params.changedFields,
+      actorUserId: params.actorUserId,
+      updatedAt: params.updatedAt,
+    }));
+  } catch (error) {
+    console.warn('[publishTicketListActivity] Failed to publish ticket activity:', error);
     await resetTicketUpdatePublisherClient();
   }
 }

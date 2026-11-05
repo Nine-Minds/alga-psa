@@ -22,6 +22,7 @@ x-common-config: &common-config
     NODE_ENV: ${NODE_ENV:-${APP_ENV:-production}}
     HOCUSPOCUS_PORT: ${HOCUSPOCUS_PORT}
     EXPOSE_HOCUSPOCUS_PORT: ${EXPOSE_HOCUSPOCUS_PORT:-1234}
+    TICKET_LIST_CHANGE_AUTHORIZATION_URL: ${TICKET_LIST_CHANGE_AUTHORIZATION_URL:-http://host.docker.internal:3000/api/internal/tickets/live-change}
 
 services:
   hocuspocus:

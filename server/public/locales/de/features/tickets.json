@@ -2846,5 +2846,23 @@
       "notAvailable": "Dieser Textbaustein ist für dieses Ticket nicht verfügbar.",
       "notATeamMember": "Sie können Team-Textbausteine nur für Teams verwalten, denen Sie angehören."
     }
+  },
+  "live": {
+    "updatedOne": "1 Ticket aktualisiert",
+    "updatedMany": "{{count}} Tickets aktualisiert",
+    "newOne": "1 neues Ticket",
+    "newMany": "{{count}} neue Tickets",
+    "both": {
+      "oneNew": {
+        "oneUpdated": "1 neues Ticket und 1 aktualisiertes Ticket",
+        "manyUpdated": "1 neues Ticket und {{updatedCount}} aktualisierte Tickets"
+      },
+      "manyNew": {
+        "oneUpdated": "{{newCount}} neue Tickets und 1 aktualisiertes Ticket",
+        "manyUpdated": "{{newCount}} neue Tickets und {{updatedCount}} aktualisierte Tickets"
+      }
+    },
+    "updatedBadge": "Aktualisiert",
+    "boardActivity": "Neue Aktivität auf diesem Board"
   }
 }

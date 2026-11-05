@@ -2846,5 +2846,23 @@
       "notAvailable": "Esta respuesta predefinida no está disponible para este ticket.",
       "notATeamMember": "Solo puede administrar respuestas de equipo de los equipos a los que pertenece."
     }
+  },
+  "live": {
+    "updatedOne": "1 ticket actualizado",
+    "updatedMany": "{{count}} tickets actualizados",
+    "newOne": "1 ticket nuevo",
+    "newMany": "{{count}} tickets nuevos",
+    "both": {
+      "oneNew": {
+        "oneUpdated": "1 ticket nuevo y 1 ticket actualizado",
+        "manyUpdated": "1 ticket nuevo y {{updatedCount}} tickets actualizados"
+      },
+      "manyNew": {
+        "oneUpdated": "{{newCount}} tickets nuevos y 1 ticket actualizado",
+        "manyUpdated": "{{newCount}} tickets nuevos y {{updatedCount}} tickets actualizados"
+      }
+    },
+    "updatedBadge": "Actualizado",
+    "boardActivity": "Nueva actividad en este tablero"
   }
 }

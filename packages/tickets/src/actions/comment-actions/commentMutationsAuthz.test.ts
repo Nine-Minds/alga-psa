@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createComment, updateComment, deleteComment } from './commentActions';
 import { toggleCommentReaction } from './commentReactionActions';
+import { summarizeTicketActivityHistory } from '../../lib/ticketChangeCounts';
 
 // Real authorization kernel + real ticketRecordAuthorization; only the DB and the
 // contact-visibility resolver are faked.
@@ -11,7 +12,7 @@ import { toggleCommentReaction } from './commentReactionActions';
 let currentUser: any;
 let ticketRow: Record<string, unknown> | null;
 let commentRow: Record<string, unknown> | null;
-let writes: Array<{ table: string; op: string }>;
+let writes: Array<{ table: string; op: string; value?: any }>;
 
 const hasPermissionMock = vi.fn();
 const createTenantKnexMock = vi.fn();
@@ -19,6 +20,7 @@ const withTransactionMock = vi.fn();
 const commentUpdate = vi.fn();
 const commentDelete = vi.fn();
 const commentInsert = vi.fn();
+const activityWrites: any[] = [];
 let commentAuthorType = 'client';
 let parentThreadRow: Record<string, unknown> | null = null;
 
@@ -28,6 +30,13 @@ vi.mock('@alga-psa/auth', () => ({
   getCurrentUser: vi.fn(async () => null),
 }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: (...args: any[]) => hasPermissionMock(...args) }));
+vi.mock('@alga-psa/shared/lib/ticketActivity', () => ({
+  TICKET_ACTIVITY_ACTOR: { USER: 'USER' },
+  TICKET_ACTIVITY_ENTITY: { COMMENT: 'COMMENT' },
+  TICKET_ACTIVITY_EVENT: { COMMENT_UPDATED: 'TICKET_COMMENT_UPDATED' },
+  TICKET_ACTIVITY_SOURCE: { UI: 'UI' },
+  writeTicketActivity: vi.fn(async (_trx: unknown, entry: any) => { activityWrites.push(entry); }),
+}));
 
 function makeBuilder(table: string) {
   const builder: any = new Proxy(function () {}, {
@@ -37,8 +46,8 @@ function makeBuilder(table: string) {
         return async () => (table === 'tickets' ? ticketRow ?? undefined : table === 'comments' ? commentRow ?? undefined : table === 'comments as parent' ? parentThreadRow ?? undefined : undefined);
       }
       if (prop === 'insert' || prop === 'update' || prop === 'del' || prop === 'delete') {
-        return () => {
-          writes.push({ table, op: prop });
+        return (value?: any) => {
+          writes.push({ table, op: prop, value });
           return Promise.resolve([]);
         };
       }
@@ -110,6 +119,7 @@ const ownComment = (ticket_id: string) => ({ comment_id: 'c-1', ticket_id, user_
 describe('comment mutations: client principals need record access to the owning ticket', () => {
   beforeEach(() => {
     writes = [];
+    activityWrites.length = 0;
     commentInsert.mockReset().mockResolvedValue('new-comment-id');
     commentAuthorType = 'client';
     parentThreadRow = null;
@@ -134,6 +144,22 @@ describe('comment mutations: client principals need record access to the owning 
     commentRow = ownComment('ticket-1');
     await updateComment('c-1', { note: 'edited' });
     expect(commentUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps an own comment edit out of external recovery activity', async () => {
+    currentUser = { user_id: 'editor-1', user_type: 'internal', tenant: 'tenant-1', roles: [] };
+    commentRow = { ...ownComment('ticket-1'), user_id: 'editor-1' };
+    ticketRow = ownTicket;
+    await updateComment('c-1', { note: 'edited by viewer' });
+
+    const audit = activityWrites[0];
+    expect(audit).toMatchObject({ actor: { userId: 'editor-1' }, ticketId: 'ticket-1' });
+    const history = summarizeTicketActivityHistory({
+      entries: [{ actorUserId: audit.actor.userId, occurredAt: new Date().toISOString() }],
+      currentUserId: 'editor-1',
+      listSince: 0,
+    });
+    expect(history.listActivityActors).toEqual([]);
   });
 
   it('deleteComment: rejects a client deleting their own comment on a ticket they cannot see', async () => {

@@ -2846,5 +2846,23 @@
       "notAvailable": "Esta resposta pronta não está disponível para este ticket.",
       "notATeamMember": "Só pode gerir respostas de equipa das equipas a que pertence."
     }
+  },
+  "live": {
+    "updatedOne": "1 chamado atualizado",
+    "updatedMany": "{{count}} chamados atualizados",
+    "newOne": "1 novo chamado",
+    "newMany": "{{count}} novos chamados",
+    "both": {
+      "oneNew": {
+        "oneUpdated": "1 novo chamado e 1 chamado atualizado",
+        "manyUpdated": "1 novo chamado e {{updatedCount}} chamados atualizados"
+      },
+      "manyNew": {
+        "oneUpdated": "{{newCount}} novos chamados e 1 chamado atualizado",
+        "manyUpdated": "{{newCount}} novos chamados e {{updatedCount}} chamados atualizados"
+      }
+    },
+    "updatedBadge": "Atualizado",
+    "boardActivity": "Nova atividade neste quadro"
   }
 }

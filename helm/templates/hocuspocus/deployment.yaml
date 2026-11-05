@@ -158,6 +158,8 @@ spec:
           # ----------- Collaborative Doc Persistence ----------------
           - name: COLLAB_PERSIST_API_URL
             value: "https://{{ .Values.host }}/api/internal/collab/persist"
+          - name: TICKET_LIST_CHANGE_AUTHORIZATION_URL
+            value: "https://{{ .Values.host }}/api/internal/tickets/live-change"
           - name: COLLAB_PERSIST_API_KEY
             valueFrom:
               secretKeyRef:

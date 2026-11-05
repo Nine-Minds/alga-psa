@@ -77,6 +77,7 @@ import { preserveStoredWatchList } from '@alga-psa/shared/lib/tickets/watchList'
 import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import { ticketUpdateStamp } from '@shared/lib/tickets/ticketUpdateStamp';
 import { resolveLatestActivityActor, type LatestActivityNames } from '../lib/latestActivityActor';
+import { countAuthorizedTicketChanges, summarizeTicketActivityHistory } from '../lib/ticketChangeCounts';
 import Comment from '../models/comment';
 import {
   TICKET_ACTIVITY_ACTOR,
@@ -2108,7 +2109,7 @@ export const getTicketsForList = withAuth(async (
   filters: ITicketListFilters,
   page: number = 1,
   pageSize: number = 10
-): Promise<{ tickets: ITicketListItem[], totalCount: number, metadata: { agentAvatarUrls: Record<string, string | null>, teamAvatarUrls: Record<string, string | null>, ticketTags: Record<string, ITag[]> } } | TicketActionError> => {
+): Promise<{ tickets: ITicketListItem[], totalCount: number, loadedAt: number, metadata: { agentAvatarUrls: Record<string, string | null>, teamAvatarUrls: Record<string, string | null>, ticketTags: Record<string, ITag[]> } } | TicketActionError> => {
   const {knex: db} = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
@@ -2177,6 +2178,9 @@ export const getTicketsForList = withAuth(async (
     return {
       tickets: enriched.tickets,
       totalCount,
+      // Classification starts at query completion, so an event during a slow
+      // request is either represented by this snapshot or remains pending.
+      loadedAt: Date.now(),
       metadata: enriched.metadata,
     };
     } catch (error) {
@@ -2243,6 +2247,99 @@ export const getAllMatchingTicketIds = withAuth(async (
         return expected;
       }
       console.error('Failed to fetch matching ticket IDs:', error);
+      throw error;
+    }
+  });
+});
+
+/** Counts-only recovery for changes missed while the tenant live room was
+ * unavailable. Ticket ids and rows remain server-side; authorization is the
+ * same per-record kernel used by the list path. */
+export const getTicketChangeCounts = withAuth(async (
+  user,
+  { tenant },
+  filters: ITicketListFilters,
+  loadedTicketIds: string[],
+  since: number,
+  boardSince: number = since,
+): Promise<{ asOf: number; newCount: number; updatedCount: number; boards: Record<string, number>; boardLatestAt: Record<string, string>; loadedChanged: boolean[] } | TicketActionError> => {
+  const { knex: db } = await createTenantKnex();
+  return withTransaction(db, async trx => {
+    try {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) throw new Error('Permission denied: Cannot view tickets');
+      if (!Number.isFinite(since) || !Number.isFinite(boardSince)) throw new Error('Invalid ticket change cutoff');
+      const recoverySince = Math.min(since, boardSince);
+      const validated = cleanFilterValues(validateData(ticketListFiltersSchema, filters) as ITicketListFilters);
+      const { builder: baseQuery, scopedQuery } = await buildTicketListBaseQuery(trx, tenant, user, validated);
+      const context = await createTicketAuthorizationContext(trx, tenant, user as IUserWithRoles);
+      const scoped = scopedQuery.clone();
+      const authorizedQuery = applyTicketReadAuthorizationSql(scoped, trx, tenant, context);
+      const matchingRows = authorizedQuery.supported
+        ? await scoped.builder.clone().clearSelect().clearOrder().select('t.ticket_id')
+        : await filterAuthorizedTickets(trx, context, await baseQuery.clone().clearSelect().clearOrder()
+          .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id', 't.billing_profile_id', 't.attributes'));
+      const matching = new Set<string>(matchingRows.map((row: { ticket_id?: string }) => row.ticket_id).filter((id: string | undefined): id is string => Boolean(id)));
+      const loaded = new Set(loadedTicketIds.filter((id: string) => typeof id === 'string'));
+      const asOf = Date.now();
+      const commentRows = await tenantDb(trx, tenant).table('comments')
+        .where('created_at', '>', new Date(recoverySince))
+        .andWhere('created_at', '<=', new Date(asOf))
+        .select('ticket_id', 'user_id', 'created_at');
+      const activityRows = await tenantDb(trx, tenant).table('ticket_audit_logs')
+        .where('occurred_at', '>', new Date(recoverySince))
+        .andWhere('occurred_at', '<=', new Date(asOf))
+        .select('ticket_id', 'actor_user_id', 'occurred_at');
+      const historyByTicket = new Map<string, Array<{ actorUserId: string | null; occurredAt: Date | string }>>();
+      const appendHistory = (ticketId: string, entry: { actorUserId: string | null; occurredAt: Date | string }) => {
+        const entries = historyByTicket.get(ticketId) ?? [];
+        entries.push(entry);
+        historyByTicket.set(ticketId, entries);
+      };
+      for (const comment of commentRows as Array<{ ticket_id: string; user_id?: string | null; created_at?: Date | string | null }>) {
+        if (comment.created_at) {
+          appendHistory(comment.ticket_id, { actorUserId: comment.user_id ?? null, occurredAt: comment.created_at });
+        }
+      }
+      for (const activity of activityRows as Array<{ ticket_id: string; actor_user_id?: string | null; occurred_at: Date | string }>) {
+        appendHistory(activity.ticket_id, { actorUserId: activity.actor_user_id ?? null, occurredAt: activity.occurred_at });
+      }
+      const changedActivityTicketIds = Array.from(historyByTicket.keys());
+      const candidates = await tenantDb(trx, tenant).table('tickets')
+        .where(builder => builder.where(query => query.where('updated_at', '>', new Date(recoverySince)).andWhere('updated_at', '<=', new Date(asOf)))
+          .orWhereIn('ticket_id', changedActivityTicketIds))
+        .select('*');
+      const readable = await filterAuthorizedTickets(trx, context, candidates);
+      const activityCandidates = readable.map((ticket: { ticket_id: string; updated_at?: Date | string | null; updated_by?: string | null; updated_by_user_id?: string | null; board_id?: string | null }) => {
+        const id = ticket.ticket_id;
+        const ticketUpdatedAt = ticket.updated_at ? new Date(ticket.updated_at).getTime() : NaN;
+        const fallback = ticketUpdatedAt > recoverySince && ticketUpdatedAt <= asOf
+          ? { actorUserId: ticket.updated_by ?? ticket.updated_by_user_id ?? null, occurredAt: new Date(ticketUpdatedAt).toISOString() }
+          : undefined;
+        const history = summarizeTicketActivityHistory({
+          entries: historyByTicket.get(id) ?? [], currentUserId: user.user_id, listSince: since, fallback,
+        });
+        return { ...ticket, ...history };
+      });
+      // Flags refer only to ids supplied in the loaded page. Recovery never
+      // returns new ticket rows or identifiers, but can restore their badges.
+      const changedLoaded = new Set(activityCandidates.filter(ticket =>
+        ticket.latestActivityAt && Date.parse(ticket.latestActivityAt) > since &&
+        ticket.listActivityActors?.some(actor => actor !== user.user_id)
+      ).map(ticket => ticket.ticket_id));
+      return {
+        asOf,
+        loadedChanged: loadedTicketIds.map(id => changedLoaded.has(id)),
+        ...countAuthorizedTicketChanges({
+          candidates: activityCandidates,
+          matchingTicketIds: matching,
+          loadedTicketIds: loaded,
+          currentUserId: user.user_id,
+          since,
+        }),
+      };
+    } catch (error) {
+      const expected = ticketListActionErrorFrom(error);
+      if (expected) return expected;
       throw error;
     }
   });
@@ -3865,6 +3962,7 @@ export const getConsolidatedTicketListData = withAuth(async (
           options: formOptions,
           tickets: ticketsData.tickets,
           totalCount: ticketsData.totalCount,
+          loadedAt: ticketsData.loadedAt,
           metadata: ticketsData.metadata
         };
       } catch (error) {
