@@ -1,6 +1,6 @@
 'use server'
 
-import { canAccessAttachmentTicket, expireCommentAttachmentDrafts } from '@shared/lib/ticketCommentAttachments';
+import { canWriteAttachmentTicket, expireCommentAttachmentDrafts } from '@shared/lib/ticketCommentAttachments';
 import { applyDocumentProductReadScope, canReadDocument, canReadTicketDocuments, canUploadDocument } from '../lib/documentPermissions';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
@@ -2348,7 +2348,7 @@ export const uploadDocument = withAuth(async (
 
       if (options.commentAttachmentDraft) {
         if (!options.ticketId || !await hasPermission(user, 'ticket', 'update') ||
-            !await canAccessAttachmentTicket(knex, tenant, authenticatedUserId, options.ticketId)) {
+            !await canWriteAttachmentTicket(knex, tenant, authenticatedUserId, options.ticketId)) {
           throw new Error('Permission denied: Cannot attach files to this ticket');
         }
         await expireCommentAttachmentDrafts(knex, tenant);
