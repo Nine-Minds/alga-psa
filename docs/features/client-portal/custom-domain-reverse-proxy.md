@@ -1,10 +1,11 @@
-# Custom Portal Domain — Reverse Proxy Setup (self-hosted)
+# Custom Domain Setup — Reverse Proxy Setup (self-hosted)
 
-This guide is for operators of a **self-hosted** Alga PSA install who want to serve the client
-portal on a branded domain (a "vanity domain") such as `portal.acme.com`. It applies to
-Community Edition, where custom domains work out of the box, and to Enterprise Edition
-running as the on-premise appliance. Nothing below needs a configuration flag as long as your
-reverse proxy preserves the original `Host` header.
+This guide is for operators of a **self-hosted** Alga PSA install who want to serve the
+**client portal**, the **MSP/technician app**, or **both** on a branded domain (a "vanity
+domain") such as `portal.acme.com` or `helpdesk.acme.com`. It applies to Community Edition,
+where custom domains work out of the box, and to Enterprise Edition running as the on-premise
+appliance. Nothing below needs a configuration flag as long as your reverse proxy preserves the
+original `Host` header.
 
 Unlike the hosted cloud, a self-hosted server does **not** verify DNS, issue TLS certificates,
 or configure ingress for you. You bring your own reverse proxy; the server just records the
@@ -95,10 +96,19 @@ portal.acme.com {
 
 ## Activating the domain
 
-1. Confirm DNS resolves `portal.acme.com` to your proxy and the proxy reaches the server.
-2. In Alga: **Settings → Client Portal → Custom Domain**, enter `portal.acme.com`, and save.
-3. The status shows **Active** immediately. Portal links in emails and invitations switch to
-   the new domain right away — which is why DNS + proxy must already be live.
+1. Confirm DNS resolves your custom hostname to your proxy and the proxy reaches the server.
+2. In Alga: **Settings → Security → Custom Domains** (or **Settings → Client Portal →
+   Custom Domain** on older appliance versions), enter the hostname and save.
+3. Choose the **Surface** the domain should serve:
+   - **Client portal** — serves only the client-facing portal (original behavior).
+   - **MSP** — serves only the MSP/technician app (`/msp/*` and `/auth/signin`).
+   - **Both** — serves both the client portal and the MSP app on the same host.
+4. For a domain with surface **MSP** or **Both**, confirm the Google/Microsoft OAuth
+   redirect URIs in the settings card. The domain stays in **pending_redirect_uri** status
+   (requests fail closed to the main host) until this confirmation is saved.
+5. The status shows **Active** immediately after confirmation. Portal links in emails and
+   invitations switch to the new domain right away — which is why DNS + proxy must already
+   be live.
 
 To stop using the domain, click **Remove Domain**; the record is deleted and traffic reverts
 to the default host. You can then retire the DNS record and proxy server block.
@@ -121,17 +131,29 @@ rewritten. Forward `Host` (or `X-Forwarded-Host` with forwarded-host trust enabl
 Your proxy is not sending `X-Forwarded-Proto: https`. The server then treats the request as
 HTTP and won't set a secure session cookie. Add the header.
 
-**MSP (internal) staff hitting the portal domain land on `/msp/dashboard`.**
-Expected — internal users can't use the client portal; they're redirected to the MSP app.
+**MSP (internal) staff hitting the domain get redirected to the main host.**
+Expected for a domain with surface **Client portal** — the MSP app is not served there, so
+MSP staff are sent back to the main host. For a domain with surface **MSP** or **Both**, MSP
+staff sign in and land on `/msp/dashboard` on the custom host directly.
 
 ## How it works (for the curious)
 
 The server keeps serving on its primary host (`NEXTAUTH_URL`, e.g. `https://alga.acme.com`).
-When a request arrives on a registered vanity domain (one that has an active `portal_domains`
-row), the sign-in page resolves the tenant from the host server-side and pre-scopes
-authentication to that tenant. Edge middleware then redirects to the canonical sign-in page,
-the user authenticates there scoped to the correct tenant, and a short-lived one-time token
-hands the session back to the custom domain (cookies can't cross domains). If a request arrives
-on a host that has no active `portal_domains` row, the server falls through to the
-tenant-discovery form rather than signing in unscoped. The only thing that makes this work
-end-to-end is your proxy preserving the `Host` header.
+When a request arrives on a registered custom domain (one that has an active `portal_domains`
+row), edge middleware checks the domain's configured **surface**:
+
+- **Client portal** surface: client-portal paths are served in place; MSP paths (`/msp/*`,
+  `/auth/signin`) redirect to the main host.
+- **MSP** surface: MSP paths are served in place; client-portal paths redirect to the
+  same-host sign-in or `/msp/dashboard`.
+- **Both** surface: all paths are served in place on the custom host.
+
+For client-portal sign-in, the sign-in page resolves the tenant from the host server-side,
+authenticates on the canonical host scoped to that tenant, and a short-lived one-time token
+hands the session back to the custom domain (cookies can't cross domains). For MSP sign-in on
+a custom host, the auth layer runs directly against the custom host (with a host-scoped cookie)
+and ties the session to the tenant that owns the domain — users from another tenant are denied
+at sign-in. An unknown or inactive domain falls through to the tenant-discovery form.
+
+The only thing that makes all of this work end-to-end is your proxy preserving the `Host`
+header.
