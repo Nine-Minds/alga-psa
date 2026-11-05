@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getExperimentalFeaturesForTenant } from '@alga-psa/tenancy/actions';
+import { getExperimentalFeaturesForTenant } from '@alga-psa/tenancy/server/tenantSettings';
 import { ADD_ONS } from '@alga-psa/types';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
 import { AddOnAccessError, assertTenantAddOnAccess } from '@/lib/tier-gating/assertAddOnAccess';
