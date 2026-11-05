@@ -1,0 +1,8 @@
+
+ RUN  v4.1.12 /home/robert/alga-copies/feature-security-2-findings-in-client-tickets-ts/packages/client-portal
+
+
+ Test Files  2 passed (2)
+      Tests  39 passed (39)
+   Start at  02:14:02
+   Duration  2.47s (transform 1.87s, setup 158ms, import 1.88s, tests 1.87s, environment 354ms)

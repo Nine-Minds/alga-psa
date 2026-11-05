@@ -5,6 +5,10 @@ const TICKET_HIDDEN = '00000000-0000-4000-8000-000000000002';
 const SIBLING_TICKET = '00000000-0000-4000-8000-000000000003';
 
 vi.mock('../../lib/portalTicketExternalLinks', () => ({ loadPortalTicketExternalLinks: vi.fn(async () => []) }));
+vi.mock('@shared/lib/ticketCommentAttachments', () => ({
+  reconcileCommentAttachments: vi.fn(), filterReadableCommentAttachments: vi.fn(async (_trx, _tenant, _userId, rows) => rows),
+  withdrawCommentAttachments: vi.fn(),
+}));
 
 let currentUser: any;
 
@@ -157,7 +161,7 @@ function makeListBuilder(rows: any[]) {
 function makeChainable(result: any = []) {
   const builder: any = {};
   for (const method of [
-    'select', 'distinct', 'where', 'whereRaw', 'whereNotNull', 'whereIn',
+    'select', 'distinct', 'where', 'whereRaw', 'whereNotNull', 'whereNull', 'whereIn',
     'orWhereIn', 'join', 'leftJoin', 'innerJoin', 'orderBy', 'as', 'first',
   ]) {
     builder[method] = vi.fn(() => builder);
@@ -194,6 +198,57 @@ describe('client portal ticket visibility enforcement', () => {
     getConnectionMock.mockResolvedValue(makeConnection());
     createTenantKnexMock.mockResolvedValue({ knex: {} as any });
     getDefaultStatusIdMock.mockResolvedValue('status-1');
+  });
+
+  it('projects standalone ticket documents after readable attachment filtering', async () => {
+    const rawDocument = {
+      document_id: 'document-1',
+      document_name: 'Client handoff.pdf',
+      type_id: 'type-1',
+      ticket_id: TICKET_1,
+      order_number: 4,
+      file_id: 'file-1',
+      mime_type: 'application/pdf',
+      file_size: 128,
+      is_client_visible: true,
+      user_id: 'private-user-id',
+      contact_name_id: 'private-contact-id',
+      created_by: 'private-creator-id',
+      storage_path: 'private/storage/key',
+      unexpected_internal_field: 'must not escape',
+    };
+    const ticketBuilder = makeChainable();
+    ticketBuilder.first = vi.fn().mockResolvedValue({ ticket_id: TICKET_1, client_id: 'client-1' });
+    const documentBuilder = makeChainable([rawDocument]);
+    const trx = Object.assign((table: string) => {
+      if (table === 'users') {
+        const userBuilder = makeChainable();
+        userBuilder.first = vi.fn().mockResolvedValue({ contact_id: 'contact-1' });
+        return userBuilder;
+      }
+      if (table === 'tickets') return ticketBuilder;
+      if (table === 'documents as d') return documentBuilder;
+      throw new Error(`Unexpected table: ${table}`);
+    }, { raw: vi.fn() });
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => callback(trx));
+    getVisibilityContextMock.mockResolvedValue({
+      ticketScope: 'client', effectiveTicketScope: 'client', isClientAdmin: false,
+      contactId: 'contact-1', clientId: 'client-1', visibilityGroupId: 'group-1', visibleBoardIds: ['board-visible'],
+    });
+
+    const { getClientTicketDocuments } = await import('./client-tickets');
+    const result = await getClientTicketDocuments(TICKET_1);
+
+    expect(documentBuilder.select).toHaveBeenCalledWith(
+      'd.document_id', 'd.document_name', 'd.type_id', 'da.entity_id as ticket_id',
+      'd.order_number', 'd.entered_at', 'd.updated_at', 'd.file_id', 'd.mime_type',
+      'd.file_size', 'd.folder_path', 'd.is_client_visible',
+    );
+    expect(result).toEqual([{
+      document_id: 'document-1', document_name: 'Client handoff.pdf', type_id: 'type-1',
+      client_id: 'client-1', ticket_id: TICKET_1, order_number: 4, file_id: 'file-1',
+      mime_type: 'application/pdf', file_size: 128, is_client_visible: true,
+    }]);
   });
 
   it('T008: client portal ticket list applies the assigned visibility group boards', async () => {
@@ -597,8 +652,8 @@ describe('client portal ticket visibility enforcement', () => {
       expect(c).not.toHaveProperty('metadata');
       expect(Object.keys(c).sort()).toEqual(
         [
-          'comment_id', 'thread_id', 'parent_comment_id', 'created_at', 'deleted_at', 'user_id',
-          'contact_id', 'is_internal', 'publish_state', 'note', 'markdown_content', 'bundle_mirror_source',
+          'comment_id', 'thread_id', 'parent_comment_id', 'created_at', 'deleted_at',
+          'is_internal', 'publish_state', 'note', 'markdown_content', 'bundle_mirror_source',
         ].sort(),
       );
       expect(c.note).toBe('[deleted]');
@@ -966,6 +1021,239 @@ describe('client portal ticket visibility enforcement', () => {
   });
 });
 
+describe('client portal own-comment deletion authorization', () => {
+  const ownComment = { comment_id: 'own-comment', ticket_id: TICKET_1, user_id: 'portal-user', is_internal: false, is_system_generated: false, deleted_at: null, actor_display_name: null };
+  let persistedComments: any[];
+  let persistedReplyTokens: any[];
+  let deletedCount: number;
+
+  function query(rows: any[], table?: string) {
+    const q: any = {};
+    const predicates: Array<(row: any) => boolean> = [];
+    const matches = (row: any) => predicates.every((predicate) => predicate(row));
+    q.select = vi.fn(() => q);
+    q.where = vi.fn((column: any, value?: any) => {
+      if (typeof column === 'function') column(q);
+      else if (typeof column === 'string') predicates.push((row) => row[column.split('.').pop()!] === value);
+      else if (column && typeof column === 'object') predicates.push((row) => Object.entries(column).every(([key, expected]) => row[key.split('.').pop()!] === expected));
+      return q;
+    });
+    q.whereNull = vi.fn((column: string) => {
+      predicates.push((row) => row[column.split('.').pop()!] == null);
+      return q;
+    });
+    q.whereNotNull = vi.fn((column: string) => {
+      predicates.push((row) => row[column.split('.').pop()!] != null);
+      return q;
+    });
+    q.modify = vi.fn((callback: any) => { callback?.(q); return q; });
+    q.first = vi.fn(async () => rows.find(matches));
+    q.del = vi.fn(async () => {
+      const matchedRows = rows.filter(matches);
+      if (table === 'comments' && matchedRows.some((comment) => persistedReplyTokens.some((token) => token.comment_id === comment.comment_id))) {
+        throw new Error('email_reply_tokens_tenant_comment_id_foreign');
+      }
+      for (const row of matchedRows) rows.splice(rows.indexOf(row), 1);
+      if (table === 'comments') deletedCount += matchedRows.length;
+      return matchedRows.length;
+    });
+    q.update = vi.fn(async (changes: any) => {
+      const matchedRows = rows.filter(matches);
+      for (const row of matchedRows) Object.assign(row, changes);
+      return matchedRows.length;
+    });
+    q.then = (resolve: any, reject?: any) => Promise.resolve(rows.filter(matches)).then(resolve, reject);
+    return q;
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    currentUser = { user_id: 'portal-user', user_type: 'client', email: 'portal@example.test', tenant: 'tenant-1' };
+    getConnectionMock.mockResolvedValue({ raw: vi.fn() });
+    hasPermissionMock.mockImplementation(async (_user: any, resource: string, action: string) => resource === 'ticket' && ['read', 'create', 'update'].includes(action));
+    getVisibilityContextMock.mockResolvedValue({ ticketScope: 'client', effectiveTicketScope: 'client', isClientAdmin: false, contactId: 'contact-1', clientId: 'client-1', visibilityGroupId: null, visibleBoardIds: null });
+    deletedCount = 0;
+    persistedComments = [ownComment];
+    persistedReplyTokens = [];
+    withTransactionMock.mockImplementation(async (_db: any, callback: any) => callback(Object.assign((table: string) => {
+      if (table === 'users') return query([{ user_id: 'portal-user', contact_id: 'contact-1', first_name: 'Dorothy', last_name: 'User' }]);
+      if (table === 'comments') return query(persistedComments, table);
+      if (table === 'email_reply_tokens') return query(persistedReplyTokens, table);
+      if (table === 'tickets as t') return query([{ ticket_id: TICKET_1, client_id: 'client-1', contact_name_id: 'contact-1', board_id: 'board-1' }]);
+      return query([]);
+    }, { raw: vi.fn() })));
+  });
+
+  it('deletes and persists an own comment with read/create/update and no ticket:delete', async () => {
+    const { deleteClientTicketComment } = await import('./client-tickets');
+    const requestedComment = { ...ownComment, comment_id: 'requested-own-comment' };
+    const otherOwnComment = { ...ownComment, comment_id: 'other-own-comment' };
+    const anotherAuthorsComment = { ...ownComment, comment_id: 'another-authors-comment', user_id: 'someone-else' };
+    persistedComments = [requestedComment, otherOwnComment, anotherAuthorsComment];
+    const result = await deleteClientTicketComment(requestedComment.comment_id);
+    expect(result).toBeUndefined();
+    expect(hasPermissionMock).toHaveBeenCalledWith(expect.anything(), 'ticket', 'update', expect.anything());
+    expect(hasPermissionMock).not.toHaveBeenCalledWith(expect.anything(), 'ticket', 'delete', expect.anything());
+    expect(deletedCount).toBe(1);
+    expect(persistedComments).toEqual([otherOwnComment, anotherAuthorsComment]);
+  });
+
+  it('detaches retained email reply tokens before deleting an owned comment', async () => {
+    const { deleteClientTicketComment } = await import('./client-tickets');
+    const requestedComment = { ...ownComment, comment_id: 'requested-own-comment' };
+    const anotherAuthorsComment = { ...ownComment, comment_id: 'another-authors-comment', user_id: 'someone-else' };
+    const replyToken = { tenant: 'tenant-1', token: 'reply-token', ticket_id: TICKET_1, comment_id: requestedComment.comment_id };
+    persistedComments = [requestedComment, anotherAuthorsComment];
+    persistedReplyTokens = [replyToken];
+
+    await expect(deleteClientTicketComment(requestedComment.comment_id)).resolves.toBeUndefined();
+
+    expect(persistedComments).toEqual([anotherAuthorsComment]);
+    expect(persistedReplyTokens).toEqual([{ ...replyToken, comment_id: null }]);
+  });
+
+  it('denies another author and read-only callers without deleting persisted data', async () => {
+    const { deleteClientTicketComment } = await import('./client-tickets');
+    persistedComments = [{ ...ownComment, user_id: 'someone-else' }];
+    const anotherAuthor = await deleteClientTicketComment('own-comment');
+    expect(anotherAuthor).toMatchObject({ actionError: 'Comment not found or not authorized to delete' });
+    expect(deletedCount).toBe(0);
+    hasPermissionMock.mockImplementation(async (_user: any, resource: string, action: string) => resource === 'ticket' && ['read', 'create'].includes(action));
+    const readOnly = await deleteClientTicketComment('own-comment');
+    expect(readOnly).toMatchObject({ permissionError: expect.any(String) });
+    expect(deletedCount).toBe(0);
+  });
+});
+
+describe('client portal ticket response projection', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    currentUser = { user_id: 'portal-user', user_type: 'client', email: 'portal@example.test', tenant: 'tenant-1' };
+    hasPermissionMock.mockResolvedValue(true);
+    const db = makeConnection();
+    db.mockImplementation((table: string) => table === 'contacts'
+      ? makeChainable([{ contact_name_id: 'contact-1', full_name: 'Morgan Contact', email: 'contact-secret@example.test' }])
+      : makeChainable([]));
+    getConnectionMock.mockResolvedValue(db);
+    getVisibilityContextMock.mockResolvedValue({ ticketScope: 'client', effectiveTicketScope: 'client', isClientAdmin: false, contactId: 'contact-1', clientId: 'client-1', visibilityGroupId: null, visibleBoardIds: null });
+  });
+
+  it('serializes list and detail using safe identity and ticket allowlists', async () => {
+    const secretUserId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    const listRow = {
+      ticket_id: TICKET_1, ticket_number: 'T-1', title: 'Portal title', url: null,
+      board_id: 'board-1', client_id: 'client-1', contact_name_id: 'contact-1', status_id: 'status-1',
+      category_id: null, subcategory_id: null, entered_at: '2026-01-01T00:00:00.000Z', updated_at: null,
+      closed_at: null, due_date: null, priority_id: 'priority-1', response_state: null,
+      status_name: 'Open', priority_name: 'Normal', priority_color: '#123456', board_name: 'Support',
+      category_name: null, assigned_to: secretUserId, assigned_to_name: 'Avery Agent', assigned_team_id: 'team-1',
+      assigned_team_name: 'Support Team', tenant: 'tenant-1', additional_agent_count: 1,
+      additional_agents: [{ user_id: secretUserId, name: 'Avery Agent' }],
+      attributes: { description: 'private-watch-data', watch_list: [{ email: 'watcher-secret@example.test', user_id: secretUserId }] },
+      email_metadata: { from: 'sender-secret@example.test' }, future_internal_field: 'unknown-secret',
+    };
+    const listBuilder = makeListBuilder([listRow]);
+    withTransactionMock.mockImplementation(async (_db: any, callback: any) => callback(Object.assign((table: string) => {
+      if (table === 'users') return makeUserQuery();
+      if (table === 'tickets as t') return listBuilder;
+      return makeChainable([]);
+    }, { raw: vi.fn() })));
+
+    const { getClientTickets, getClientTicketDetails } = await import('./client-tickets');
+    const list = await getClientTickets('__status_filter__:all') as any[];
+    const serializedList = JSON.stringify(list);
+    expect(serializedList).not.toContain('watcher-secret@example.test');
+    expect(serializedList).not.toContain('private-watch-data');
+    expect(serializedList).not.toContain('sender-secret@example.test');
+    expect(serializedList).not.toContain(secretUserId);
+    expect(serializedList).not.toContain('unknown-secret');
+    expect(list[0]).toMatchObject({ ticket_number: 'T-1', title: 'Portal title', assigned_to_name: 'Avery Agent', additional_agents: [{ name: 'Avery Agent', role: 'staff' }] });
+
+    const detailRow = {
+      ...listRow,
+      attributes: { description: 'Customer facing description', watch_list: [{ email: 'watcher-secret@example.test', user_id: secretUserId }], hidden: 'unknown-secret' },
+      email_metadata: { from: 'sender-secret@example.test', messageId: 'message-secret' },
+      ticket_origin: 'inbound_email', entered_by_user_type: 'internal',
+      future_internal_field: 'unknown-secret',
+    };
+    const comment = {
+      comment_id: 'comment-1', ticket_id: TICKET_1, thread_id: 'thread-1', parent_comment_id: null,
+      user_id: secretUserId, contact_id: null, author_type: 'internal', note: 'Visible response',
+      is_internal: false, is_system_generated: false, is_resolution: false, audience: 'requester',
+      publish_state: 'published', created_at: '2026-01-01T00:00:00.000Z', updated_at: null, deleted_at: null,
+      metadata: { email: { fromAddress: 'comment-secret@example.test' } },
+    };
+    const ownComment = { ...comment, comment_id: 'comment-own', user_id: 'portal-user', note: 'My response' };
+    const contactComment = { ...comment, comment_id: 'comment-2', user_id: null, contact_id: 'contact-1', author_type: 'contact', note: 'Customer reply' };
+    const collaboratorComment = { ...comment, comment_id: 'comment-collaborator', user_id: null, actor_reference_id: 'foreign-uuid', actor_display_name: 'Taylor Tech', actor_organization_name: 'Partner Co', note: 'Partner response' };
+    const systemComment = { ...comment, comment_id: 'comment-system', user_id: null, is_system_generated: true, author_type: 'system', note: 'System update' };
+    const deletedComment = { ...ownComment, comment_id: 'comment-deleted', deleted_at: '2026-01-02T00:00:00.000Z', note: '' };
+    const involved = makeChainable([
+      { user_id: secretUserId, first_name: 'Avery', last_name: 'Agent', email: 'staff-secret@example.test', user_type: 'internal', avatar_file_id: null },
+      { user_id: 'portal-user', first_name: 'Portal', last_name: 'User', email: 'portal-secret@example.test', user_type: 'client', avatar_file_id: null },
+    ]);
+    withTransactionMock.mockImplementation(async (_db: any, callback: any) => callback(Object.assign((table: string) => {
+      if (table === 'users') return makeUserQuery();
+      if (table === 'tickets as t') return makeDetailBuilder(detailRow);
+      if (table === 'comments') return makeChainable([comment, ownComment, contactComment, collaboratorComment, systemComment, deletedComment]);
+      if (table === 'users as u') return involved;
+      if (table === 'ticket_comment_attachments') return { where: vi.fn().mockReturnThis(), first: vi.fn().mockResolvedValue(undefined) };
+      if (table === 'documents as d') return makeChainable([{
+        document_id: 'document-1', document_name: 'portal.pdf', type_id: null, client_id: 'client-1',
+        ticket_id: TICKET_1, order_number: 1, file_id: 'file-1', mime_type: 'application/pdf', file_size: 12,
+        user_id: secretUserId, created_by: secretUserId, edited_by: secretUserId, future_internal_field: 'unknown-secret',
+      }]);
+      if (table === 'asset_associations as aa') return makeChainable([]);
+      return makeChainable([]);
+    }, { raw: vi.fn() })));
+    const detail = await getClientTicketDetails(TICKET_1) as any;
+    const serializedDetail = JSON.stringify(detail);
+    for (const secret of [secretUserId, 'portal-user', 'foreign-uuid', 'watcher-secret@example.test', 'sender-secret@example.test', 'message-secret', 'staff-secret@example.test', 'portal-secret@example.test', 'contact-secret@example.test', 'comment-secret@example.test', 'unknown-secret', 'email_metadata', 'watch_list']) {
+      expect(serializedDetail).not.toContain(secret);
+    }
+    expect(detail.attributes).toEqual({ description: 'Customer facing description' });
+    expect(detail.has_original_email).toBe(true);
+    expect(detail.ticket_origin).toBe('inbound_email');
+    expect(detail.assigned_to_name).toBe('Avery Agent');
+    expect(detail.assigned_team_id).toBe('team-1');
+    expect(detail.additional_agents).toEqual([{ name: 'Avery Agent', role: 'staff', avatar_url: null }]);
+    expect(detail.conversations[0].note).toBe('Visible response');
+    expect(detail.conversations[0].portal_author).toMatchObject({ name: 'Avery Agent', role: 'staff' });
+    expect(detail.conversations[1].portal_author).toMatchObject({ name: 'Portal User', role: 'client' });
+    expect(detail.conversations[2].portal_author).toMatchObject({ name: 'Morgan Contact', role: 'contact' });
+    expect(detail.conversations[3].portal_author).toMatchObject({ name: 'Taylor Tech (Partner Co)', role: 'collaborator' });
+    expect(detail.conversations[0].portal_can_edit).toBe(false);
+    expect(detail.conversations[1].portal_can_edit).toBe(true);
+    expect(detail.conversations[1].portal_can_delete).toBe(true);
+    expect(detail.conversations[2].portal_can_edit).toBe(false);
+    expect(detail.conversations[3].portal_can_edit).toBe(false);
+    expect(detail.conversations[4].portal_can_edit).toBe(false);
+    expect(detail.conversations[5]).not.toHaveProperty('portal_can_edit');
+    expect(detail.documents).toEqual([expect.objectContaining({ document_id: 'document-1', document_name: 'portal.pdf' })]);
+    expect(detail.documents[0]).not.toHaveProperty('user_id');
+    expect(detail.documents[0]).not.toHaveProperty('created_by');
+    expect(detail.conversations[0]).not.toHaveProperty('user_id');
+    expect(detail.can_interact).toBe(true);
+    expect(detail).not.toHaveProperty('userMap');
+    expect(detail).not.toHaveProperty('contactMap');
+
+    getVisibilityContextMock.mockResolvedValue({ ticketScope: 'contact', effectiveTicketScope: 'contact', isClientAdmin: false, contactId: 'different-contact', clientId: 'client-1', visibilityGroupId: null, visibleBoardIds: null, grantedProfileIds: [], includesUnattributed: false, watchGrant: false });
+    const sharedWorkspaceDetail = await getClientTicketDetails(TICKET_1) as any;
+    expect(sharedWorkspaceDetail.can_interact).toBe(false);
+    const sharedWorkspaceOwnComment = sharedWorkspaceDetail.conversations.find((c: any) => c.comment_id === 'comment-own');
+    expect(sharedWorkspaceOwnComment.portal_can_edit).toBe(false);
+    expect(sharedWorkspaceOwnComment.portal_can_delete).toBe(false);
+
+    getVisibilityContextMock.mockResolvedValue({ ticketScope: 'client', effectiveTicketScope: 'client', isClientAdmin: false, contactId: 'contact-1', clientId: 'client-1', visibilityGroupId: null, visibleBoardIds: null });
+    hasPermissionMock.mockImplementation(async (_user: any, _resource: string, action: string) => action !== 'update');
+    const readOnlyDetail = await getClientTicketDetails(TICKET_1) as any;
+    const readOnlyOwnComment = readOnlyDetail.conversations.find((c: any) => c.comment_id === 'comment-own');
+    expect(readOnlyDetail.can_interact).toBe(true);
+    expect(readOnlyOwnComment.portal_can_edit).toBe(false);
+    expect(readOnlyOwnComment.portal_can_delete).toBe(false);
+  });
+});
+
 // Exercise the real predicate, not just its invocation, against sibling and
 // unassigned rows. The DB suite separately verifies the same column aliases.
 describe('contact-scoped portal enforcement', () => {
@@ -1005,7 +1293,7 @@ describe('contact-scoped portal enforcement', () => {
     const touched: string[] = [];
     withTransactionMock.mockImplementation(async (_db, callback) => callback(Object.assign((table: string) => {
       touched.push(table);
-      if (table === 'comments' && (path === 'edit-comment' || path === 'delete-comment')) return filteredTickets([{ comment_id: 'comment-1', ticket_id: SIBLING_TICKET, user_id: 'u' }]);
+      if (table === 'comments' && (path === 'edit-comment' || path === 'delete-comment')) return filteredTickets([{ comment_id: 'comment-1', ticket_id: SIBLING_TICKET, user_id: 'u', is_internal: false, is_system_generated: false, deleted_at: null, actor_display_name: null }]);
       if (table === 'users') return makeUserQuery();
       if (table === 'tickets as t' || table === 'tickets') return filteredTickets([{ ticket_id: SIBLING_TICKET, client_id: 'client-1', contact_name_id: 'contact-2', board_id: 'board-1' }]);
       return makeChainable([]);
@@ -1036,7 +1324,7 @@ describe('contact-scoped portal enforcement', () => {
   ] as Array<[string, boolean]>)('%s gate includes workspace tickets: %s', async (path, expectsWorkspace) => {
     getVisibilityContextMock.mockResolvedValue({ ticketScope: 'contact', effectiveTicketScope: 'contact', isClientAdmin: false, contactId: 'contact-1', clientId: 'client-1', visibilityGroupId: 'g', visibleBoardIds: ['board-1'] });
     withTransactionMock.mockImplementation(async (_db: any, callback: any) => callback(Object.assign((table: string) => {
-      if (table === 'comments') return filteredTickets([{ comment_id: 'comment-1', ticket_id: TICKET_1, user_id: 'u' }]);
+      if (table === 'comments') return filteredTickets([{ comment_id: 'comment-1', ticket_id: TICKET_1, user_id: 'u', is_internal: false, is_system_generated: false, deleted_at: null, actor_display_name: null }]);
       if (table === 'users') return makeUserQuery();
       if (table === 'tickets as t' || table === 'tickets') return filteredTickets([]);
       return makeChainable([]);
