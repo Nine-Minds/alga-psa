@@ -10,6 +10,8 @@ const state = vi.hoisted(() => ({
   locks: [] as string[],
   deniedPermission: '',
   assetAllowed: true,
+  readDenied: false,
+  updateDenied: false,
   tenant: '11111111-1111-4111-8111-111111111111',
   actor: '22222222-2222-4222-8222-222222222222',
   sequence: 0,
@@ -105,14 +107,14 @@ vi.mock('../../../../../shared/workflow/runtime/actions/businessOperations/share
   };
 });
 
-vi.mock('@alga-psa/authorization/kernel', () => ({
-  BuiltinAuthorizationKernelProvider: class {},
-  BundleAuthorizationKernelProvider: class {},
-  createAuthorizationKernel: () => ({
-    authorizeResource: async () => ({ allowed: state.assetAllowed }),
-  }),
+// The workflow actions must authorize assets through the canonical shared rule, so the spies stand in for it.
+const authorization = vi.hoisted(() => ({
+  createAssetReadContext: vi.fn(async () => ({ subject: { userId: 'subject' }, authorizationKernel: {}, requestCache: {} })),
+  // Read and update narrow independently, the way a bundle's asset:read and asset:update rules do.
+  isAssetActionAllowed: vi.fn(async (_trx: unknown, _tenant: string, _context: unknown, _asset: unknown, action: string) =>
+    state.assetAllowed && !(action === 'read' ? state.readDenied : state.updateDenied)),
 }));
-vi.mock('@alga-psa/authorization/bundles/service', () => ({ resolveBundleNarrowingRulesForEvaluation: vi.fn() }));
+vi.mock('@alga-psa/authorization/assetReadAuthorization', () => authorization);
 vi.mock('../../../../../shared/services/tickets/createTicketWithSideEffects', () => ({
   createTicketWithSideEffects: vi.fn(async () => {
     state.tables.tickets.push({ tenant: state.tenant, ticket_id: ids.ticket, ticket_number: '1001' });
@@ -150,6 +152,8 @@ describe('asset maintenance workflow actions and shared lifecycle', () => {
     state.locks = [];
     state.sequence = 0;
     state.assetAllowed = true;
+    state.readDenied = false;
+    state.updateDenied = false;
     state.deniedPermission = '';
     const scoped = (rows: Row[]) => rows.map((row) => ({ tenant: state.tenant, ...row }));
     state.tables = {
@@ -323,6 +327,47 @@ describe('asset maintenance workflow actions and shared lifecycle', () => {
     await expect(execute(action, input)).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
     expect(state.writes).toEqual([]);
     expect(createTicketWithSideEffects).not.toHaveBeenCalled();
+  });
+
+  it.each(['create_maintenance_ticket', 'complete_maintenance', 'skip_maintenance', 'set_maintenance_paused'])('denies %s when the asset is readable but not updatable', async (action) => {
+    state.updateDenied = true;
+    await expect(execute(action, { ...ticketInput, reason: 'Holiday', schedule_id: ids.schedule, paused: true }))
+      .rejects.toMatchObject({ code: 'PERMISSION_DENIED', details: { denied_action: 'update' } });
+    expect(state.writes).toEqual([]);
+    expect(createTicketWithSideEffects).not.toHaveBeenCalled();
+    expect(authorization.isAssetActionAllowed).toHaveBeenLastCalledWith(
+      expect.anything(), state.tenant, expect.anything(), { asset_id: ids.asset, client_id: ids.client }, 'update',
+    );
+    expect(await execute('get_maintenance', { occurrence_id: ids.occurrence })).toMatchObject({ found: true });
+  });
+
+  // A bundle may narrow asset:read without narrowing asset:update (for example starter 'restricted-asset-operator':
+  // read -> selected_clients, update -> same_team). The UI refuses the mutation with 'Asset not found'; so must we.
+  it.each(['create_maintenance_ticket', 'complete_maintenance', 'skip_maintenance', 'set_maintenance_paused'])('denies %s when the asset is updatable but not readable', async (action) => {
+    state.readDenied = true;
+    await expect(execute(action, { ...ticketInput, reason: 'Holiday', schedule_id: ids.schedule, paused: true }))
+      .rejects.toMatchObject({ code: 'PERMISSION_DENIED', details: { denied_action: 'read' } });
+    expect(state.writes).toEqual([]);
+    expect(createTicketWithSideEffects).not.toHaveBeenCalled();
+    expect(authorization.isAssetActionAllowed).toHaveBeenLastCalledWith(
+      expect.anything(), state.tenant, expect.anything(), { asset_id: ids.asset, client_id: ids.client }, 'read',
+    );
+  });
+
+  it('authorizes reads and mutations through the shared asset authorization helpers', async () => {
+    expect(await execute('get_maintenance', { schedule_id: ids.schedule })).toMatchObject({ found: true });
+    expect(authorization.createAssetReadContext).toHaveBeenCalledWith(
+      expect.anything(), state.tenant, { user_id: state.actor, user_type: 'internal', clientId: null },
+    );
+    expect(authorization.isAssetActionAllowed).toHaveBeenCalledWith(
+      expect.anything(), state.tenant, expect.anything(), { asset_id: ids.asset, client_id: ids.client }, 'read',
+    );
+    expect(await execute('skip_maintenance', { occurrence_id: ids.occurrence, reason: 'Holiday' })).toMatchObject({ already_skipped: false });
+    expect(authorization.isAssetActionAllowed).toHaveBeenLastCalledWith(
+      expect.anything(), state.tenant, expect.anything(), { asset_id: ids.asset, client_id: ids.client }, 'update',
+    );
+    // A mutation clears the record-level read rule first, then 'update' — the order the UI guard uses.
+    expect(authorization.isAssetActionAllowed.mock.calls.slice(-2).map((call) => call[4])).toEqual(['read', 'update']);
   });
 
   it.each(['closed status', 'different board', 'missing priority', 'unowned asset'])('rejects invalid ticket configuration: %s', async (invalid) => {

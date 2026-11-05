@@ -212,6 +212,39 @@ describe('renderEvaluatedTemplateAst', () => {
     expect(rendered.html).toContain('font-style:italic');
   });
 
+  it('renders amounts with the currency symbol, not the ISO code', async () => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      metadata: { currencyCode: 'ZAR' },
+      bindings: {
+        values: { total: { id: 'total', kind: 'value', path: 'total' } },
+        collections: { lineItems: { id: 'lineItems', kind: 'collection', path: 'items' } },
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          // A field node (fieldFormatting) and a totals row (formatValue): both
+          // formatters have to agree with the picker that offered "ZAR (R)".
+          { id: 'invoice-total', type: 'field', label: 'Total', binding: { bindingId: 'total' }, format: 'currency' },
+          {
+            id: 'totals',
+            type: 'totals',
+            sourceBinding: { bindingId: 'lineItems' },
+            rows: [{ id: 'grandTotal', label: 'Grand Total', value: { type: 'binding', bindingId: 'total' }, format: 'currency' }],
+          },
+        ],
+      },
+    };
+
+    const evaluation = evaluateTemplateAst(ast, { ...invoiceFixture, total: 123450 });
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation, { locale: 'en' });
+
+    expect(rendered.html.replace(/&nbsp;|\u00a0/g, ' ')).toContain('R 1,234.50');
+    expect(rendered.html).not.toContain('ZAR');
+  });
+
   it('renders multiline address fields with preserved line breaks', async () => {
     const ast: TemplateAst = {
       kind: 'invoice-template-ast',

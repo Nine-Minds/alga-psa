@@ -41,6 +41,7 @@ import type {
 } from "@alga-psa/types";
 import { RECURRING_RANGE_SEMANTICS } from "@alga-psa/types";
 import { toISODate, toPlainDate } from "@alga-psa/core";
+import { formatCurrencyFromMinorUnits } from "@alga-psa/core/formatters";
 import { tenantDb } from "@alga-psa/db";
 import {
   calculateServicePeriodCoverage,
@@ -743,12 +744,7 @@ export function buildSimulatedPeriod(
 
 /** Minor units in the currency's own digits (JPY has none, KWD has three). */
 function formatCents(minorUnits: number, currencyCode: string): string {
-  const formatter = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: currencyCode,
-  });
-  const digits = formatter.resolvedOptions().maximumFractionDigits ?? 2;
-  return formatter.format(minorUnits / 10 ** digits);
+  return formatCurrencyFromMinorUnits(minorUnits, "en-US", currencyCode);
 }
 
 function formatHours(hours: number): string {

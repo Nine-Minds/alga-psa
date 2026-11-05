@@ -726,7 +726,10 @@
       "reportsToCycle": "Dit zou een circulaire rapportagelijn creëren",
       "reportsTo": "Rapporteert aan",
       "noManager": "Geen leidinggevende",
-      "reportsToHelp": "Een leidinggevende kan de tickets, apparaten en projecten zien van personen die aan hem of haar rapporteren, wanneer de zichtbaarheidsgroep beperkt is tot de eigen gegevens."
+      "reportsToHelp": "Een leidinggevende kan de tickets, apparaten en projecten zien van personen die aan hem of haar rapporteren, wanneer de zichtbaarheidsgroep beperkt is tot de eigen gegevens.",
+      "locations": "Locaties",
+      "primaryLocation": "Primair",
+      "remote": "Op afstand"
     },
     "visibilityGroups": {
       "title": "Zichtbaarheidsgroepen",
