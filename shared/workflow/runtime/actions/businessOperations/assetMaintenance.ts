@@ -2,10 +2,8 @@ import { z } from 'zod';
 import { tenantDb } from '@alga-psa/db';
 import { dateOnlySchema, withWorkflowNotFoundPolicy, withWorkflowPicker } from '@alga-psa/event-schemas';
 import {
-  BuiltinAuthorizationKernelProvider, BundleAuthorizationKernelProvider,
-  createAuthorizationKernel,
-} from '@alga-psa/authorization/kernel';
-import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
+  createAssetReadContext, isAssetActionAllowed, type AssetAuthorizationAction,
+} from '@alga-psa/authorization/assetReadAuthorization';
 import { getActionRegistryV2, type ActionContext } from '../../registries/actionRegistry';
 import {
   completeMaintenanceOccurrence,
@@ -75,39 +73,27 @@ async function audit(ctx: ActionContext, tx: TenantTxContext, actionId: string, 
   });
 }
 
-async function requireAssetReadable(ctx: ActionContext, tx: TenantTxContext, assetId: string): Promise<void> {
+// Per-record asset authorization, delegated to the canonical rule the asset UI uses. Mutating actions must
+// clear both gates, exactly like createAuthorizedAssetUpdateContextForUser in packages/assets: record-level
+// 'read' first, then 'update' — a bundle's asset:update rule can be narrower *or* wider than its asset:read
+// rule, and the workflow must deny wherever the UI denies. Internal actors carry no client on the users row,
+// so clientId is null by construction here; do not widen the canonical module for it.
+async function requireAssetAction(ctx: ActionContext, tx: TenantTxContext, assetId: string, action: AssetAuthorizationAction): Promise<void> {
   const db = tenantDb(tx.trx, tx.tenantId);
   const actor = await db.table('users').where({ user_id: tx.actorUserId }).first<{ user_type: string }>();
   if (actor?.user_type !== 'internal') throwActionError(ctx, { category: 'ActionError', code: 'PERMISSION_DENIED', message: 'Maintenance workflows require an internal actor' });
   const asset = await db.table('assets').where({ asset_id: assetId }).first<{ client_id: string | null }>();
   if (!asset) throw new Error('Maintenance asset not found');
-  const roles = await db.table('user_roles').where({ user_id: tx.actorUserId }).select<{ role_id: string }[]>('role_id');
-  const teams = await db.table('team_members').where({ user_id: tx.actorUserId }).select<{ team_id: string }[]>('team_id');
-  const managed = await db.table('users').where({ reports_to: tx.actorUserId }).select<{ user_id: string }[]>('user_id');
-  const associations = await db.table('asset_associations').where({ asset_id: assetId })
-    .select<{ entity_type: string; entity_id: string }[]>('entity_type', 'entity_id');
-  const assignedUserIds = associations.filter((row) => row.entity_type === 'user').map((row) => row.entity_id);
-  const kernel = createAuthorizationKernel({
-    builtinProvider: new BuiltinAuthorizationKernelProvider(),
-    bundleProvider: new BundleAuthorizationKernelProvider({
-      resolveRules: (input) => resolveBundleNarrowingRulesForEvaluation(tx.trx, input),
-    }),
-    rbacEvaluator: async () => true,
+  const context = await createAssetReadContext(tx.trx, tx.tenantId, { user_id: tx.actorUserId, user_type: 'internal', clientId: null });
+  const assetInput = { asset_id: assetId, client_id: asset.client_id };
+  // The message is shared by both gates; `denied_action` is what tells a run log which rule refused.
+  const deny = (deniedAction: AssetAuthorizationAction) => throwActionError(ctx, {
+    category: 'ActionError', code: 'PERMISSION_DENIED',
+    message: 'Permission denied: Cannot read this maintenance asset',
+    details: { asset_id: assetId, denied_action: deniedAction },
   });
-  const decision = await kernel.authorizeResource({
-    subject: {
-      tenant: tx.tenantId, userId: tx.actorUserId, userType: 'internal',
-      roleIds: roles.map((row) => row.role_id), teamIds: teams.map((row) => row.team_id),
-      managedUserIds: managed.map((row) => row.user_id), clientId: null, portfolioClientIds: [],
-    },
-    resource: { type: 'asset', action: 'read', id: assetId },
-    record: {
-      id: assetId, clientId: asset.client_id, assignedUserIds, ownerUserId: assignedUserIds[0] ?? null,
-      teamIds: associations.filter((row) => row.entity_type === 'team').map((row) => row.entity_id),
-    },
-    knex: tx.trx,
-  });
-  if (!decision.allowed) throwActionError(ctx, { category: 'ActionError', code: 'PERMISSION_DENIED', message: 'Permission denied: Cannot read this maintenance asset' });
+  if (action !== 'read' && !await isAssetActionAllowed(tx.trx, tx.tenantId, context, assetInput, 'read')) deny('read');
+  if (!await isAssetActionAllowed(tx.trx, tx.tenantId, context, assetInput, action)) deny(action);
 }
 
 export function registerAssetMaintenanceActions(): void {
@@ -153,7 +139,7 @@ export function registerAssetMaintenanceActions(): void {
       }
       if (input.schedule_id) occurrence = await db.table('asset_maintenance_occurrences')
         .where({ schedule_id: schedule.schedule_id, status: 'open' }).first<MaintenanceOccurrenceRow>();
-      await requireAssetReadable(ctx, tx, schedule.asset_id);
+      await requireAssetAction(ctx, tx, schedule.asset_id, 'read');
       return { found: true, schedule: scheduleOutput(schedule), occurrence: occurrence ? occurrenceOutput(occurrence) : null };
     }),
   });
@@ -189,7 +175,7 @@ export function registerAssetMaintenanceActions(): void {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'read' });
       const db = tenantDb(tx.trx, tx.tenantId);
       const occurrence = await lockMaintenanceOccurrence(tx.trx, tx.tenantId, input.occurrence_id);
-      await requireAssetReadable(ctx, tx, occurrence.asset_id);
+      await requireAssetAction(ctx, tx, occurrence.asset_id, 'update');
       const identity = { occurrence_id: occurrence.occurrence_id, schedule_id: occurrence.schedule_id, asset_id: occurrence.asset_id };
       if (occurrence.ticket_id) {
         const ticket = await db.table('tickets').where({ ticket_id: occurrence.ticket_id }).first<{ ticket_number: string }>();
@@ -263,7 +249,7 @@ export function registerAssetMaintenanceActions(): void {
       await requirePermission(ctx, tx, { resource: 'asset', action: 'read' });
       await requirePermission(ctx, tx, { resource: 'asset', action: 'update' });
       const occurrence = await lockMaintenanceOccurrence(tx.trx, tx.tenantId, input.occurrence_id);
-      await requireAssetReadable(ctx, tx, occurrence.asset_id);
+      await requireAssetAction(ctx, tx, occurrence.asset_id, 'update');
       if (occurrence.status === 'completed' && occurrence.history_id) {
         return { occurrence_id: occurrence.occurrence_id, history_id: occurrence.history_id, next_occurrence: null, already_completed: true };
       }
@@ -291,7 +277,7 @@ export function registerAssetMaintenanceActions(): void {
       await requirePermission(ctx, tx, { resource: 'asset', action: 'read' });
       await requirePermission(ctx, tx, { resource: 'asset', action: 'update' });
       const occurrence = await lockMaintenanceOccurrence(tx.trx, tx.tenantId, input.occurrence_id);
-      await requireAssetReadable(ctx, tx, occurrence.asset_id);
+      await requireAssetAction(ctx, tx, occurrence.asset_id, 'update');
       if (occurrence.status === 'skipped') return { occurrence_id: input.occurrence_id, next_occurrence: null, already_skipped: true };
       if (occurrence.status !== 'open') throwActionError(ctx, { category: 'ActionError', code: 'CONFLICT', message: 'Only open maintenance occurrences can be skipped' });
       const next = await skipMaintenanceOccurrence(tx.trx, tx.tenantId, tx.actorUserId, input.occurrence_id, input.reason);
@@ -312,7 +298,7 @@ export function registerAssetMaintenanceActions(): void {
       await requirePermission(ctx, tx, { resource: 'asset', action: 'read' });
       await requirePermission(ctx, tx, { resource: 'asset', action: 'update' });
       const schedule = await lockMaintenanceSchedule(tx.trx, tx.tenantId, input.schedule_id);
-      await requireAssetReadable(ctx, tx, schedule.asset_id);
+      await requireAssetAction(ctx, tx, schedule.asset_id, 'update');
       await setMaintenanceSchedulePaused(tx.trx, tx.tenantId, tx.actorUserId, input.schedule_id, input.paused);
       await audit(ctx, tx, 'assets.set_maintenance_paused', input);
       return { schedule_id: input.schedule_id, paused: input.paused };

@@ -13,7 +13,9 @@ RUN apk add --no-cache \
     freetype \
     harfbuzz \
     ca-certificates \
-    ttf-freefont
+    ttf-freefont \
+    findutils \
+    setpriv
 
 # Tell Puppeteer to use system Chromium instead of downloading
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
@@ -39,6 +41,13 @@ COPY . .
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 COPY server/dev-entrypoint.sh /app/server-dev-entrypoint.sh
 RUN chmod +x /app/server-dev-entrypoint.sh
+
+# One-shot ownership fix used by the `runtime-permissions` init service. The dev
+# image itself still runs as root, but the same script is installed so every
+# stack behaves the same.
+COPY scripts/runtime-permissions.sh /usr/local/bin/alga-runtime-permissions
+COPY scripts/repair-secret-permissions.sh /usr/local/bin/alga-repair-secret-permissions
+RUN chmod 0755 /usr/local/bin/alga-runtime-permissions /usr/local/bin/alga-repair-secret-permissions
 
 EXPOSE 3000
 ENV NODE_ENV=development

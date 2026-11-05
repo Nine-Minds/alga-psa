@@ -25,6 +25,7 @@ import { ErrorState, LoadingState } from "../ui/states";
 import { PrimaryButton } from "../ui/components/PrimaryButton";
 import { Avatar } from "../ui/components/Avatar";
 import { Badge } from "../ui/components/Badge";
+import { DisplayTagBadges } from "../ui/components/DisplayTagBadges";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { logger } from "../logging/logger";
 import { usePlaceCall } from "../features/interactions/hooks/usePlaceCall";
@@ -207,6 +208,7 @@ export function ContactDetailScreen({ route, navigation }: Props) {
         />
         <View style={{ marginLeft: theme.spacing.md, flex: 1 }}>
           <Text style={{ ...theme.typography.title, color: theme.colors.text }}>{contact.full_name}</Text>
+          <DisplayTagBadges tags={contact.display_tags} maxBadges={4} style={{ marginTop: theme.spacing.xs }} />
           {contact.role ? (
             <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: 2 }}>
               {contact.role}

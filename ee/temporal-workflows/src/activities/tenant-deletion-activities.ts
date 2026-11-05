@@ -314,6 +314,8 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'asset_group_members',
   'asset_group_contacts',
   'asset_groups',
+  'asset_audit_items',
+  'asset_audits',
   'software_catalog',
   'rmm_webhook_events',
   'rmm_maintenance_windows',

@@ -7,6 +7,8 @@
 FROM node:26.1.0-alpine
 RUN apk add --no-cache \
     bash \
+    findutils \
+    setpriv \
     postgresql-client \
     redis \
     graphicsmagick \
@@ -92,6 +94,9 @@ COPY packages/core/package.json /app/packages/core/package.json
 # Copy the entrypoint with its runtime mode already set. Keeping this as image
 # metadata avoids starting a throwaway build container solely to run chmod.
 COPY --chmod=0755 server/entrypoint.sh /app/entrypoint.sh
+COPY scripts/runtime-permissions.sh /usr/local/bin/alga-runtime-permissions
+COPY scripts/repair-secret-permissions.sh /usr/local/bin/alga-repair-secret-permissions
+RUN chmod 0755 /usr/local/bin/alga-runtime-permissions /usr/local/bin/alga-repair-secret-permissions
 
 # The image must also run as a non-root user (the browser lane runs it as
 # 1000:1000; hardened deployments may too). At runtime the server creates
@@ -100,7 +105,11 @@ COPY --chmod=0755 server/entrypoint.sh /app/entrypoint.sh
 # that cannot create logs/ throws. Give that user the directory, as the old
 # test image did.
 RUN chown 1000:1000 /app/server /app/server/tsconfig.json
+RUN install -d -o 1000 -g 1000 -m 0755 /data/files && \
+    install -d -o 1000 -g 1000 -m 0700 /run/secrets
 
 EXPOSE 3000
 ENV NODE_ENV=production
+ENV HOME=/home/node
+USER 1000:1000
 ENTRYPOINT ["/app/entrypoint.sh"]

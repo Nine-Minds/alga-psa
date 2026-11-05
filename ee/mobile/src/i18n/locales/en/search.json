@@ -1,0 +1,20 @@
+{
+  "title": "Search",
+  "placeholder": "Search tickets, clients, devices…",
+  "minChars": "Keep typing to search.",
+  "empty": "No results for \"{{query}}\"",
+  "unableToLoad": "Unable to search.",
+  "retry": "Retry",
+  "offline": "Search needs a connection.",
+  "more": "More",
+  "recent": "Recent searches",
+  "clearRecent": "Clear",
+  "groups": {
+    "ticket": "Tickets",
+    "client": "Clients",
+    "contact": "Contacts",
+    "asset": "Devices",
+    "project": "Projects",
+    "project_task": "Project tasks"
+  }
+}

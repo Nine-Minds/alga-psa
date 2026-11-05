@@ -105,14 +105,23 @@ export function createCoManagedDeliveryProvider(): CoManagedDeliveryProvider {
         const rows = await query;
         // One users query for the whole batch (customer-side principals only), not one per row.
         const customerIds = new Set<string>();
+        const sponsorIdsByTenant = new Map<string, Set<string>>();
         for (const row of rows) {
-          if (row.recipient_kind === 'msp_user' || row.recipient_kind === 'team') continue;
-          const p = (typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload) as { principalId?: string } | null;
-          if (p?.principalId) customerIds.add(p.principalId);
+          const p = (typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload) as { principalId?: string; sponsorTenant?: string } | null;
+          if (p?.principalId) {
+            if (row.recipient_kind === 'msp_user' || row.recipient_kind === 'team') {
+              if (!sponsorIdsByTenant.has(p.sponsorTenant ?? '')) sponsorIdsByTenant.set(p.sponsorTenant ?? '', new Set());
+              sponsorIdsByTenant.get(p.sponsorTenant ?? '')!.add(p.principalId);
+            } else customerIds.add(p.principalId);
+          }
         }
         const customerUsers = new Map<string, CustomerUserRow>();
         if (customerIds.size) {
           for (const u of await tenantDb(trx, tenant).table('users').whereIn('user_id', [...customerIds])) customerUsers.set(u.user_id, u as CustomerUserRow);
+        }
+        const sponsorUsers = new Map<string, CustomerUserRow>();
+        for (const [sponsorTenant, ids] of sponsorIdsByTenant) {
+          if (sponsorTenant) for (const u of await tenantDb(trx, sponsorTenant).table('users').whereIn('user_id', [...ids])) sponsorUsers.set(`${sponsorTenant}:${u.user_id}`, u as CustomerUserRow);
         }
         for (const row of rows) {
           const payload = (typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload) as (CoManagedRoutingPayload & { principalId: string }) | null;
@@ -124,10 +133,13 @@ export function createCoManagedDeliveryProvider(): CoManagedDeliveryProvider {
           const ticket = tickets.get(payload.ticketId);
           const sponsorSide = row.recipient_kind === 'msp_user' || row.recipient_kind === 'team';
           let allowed = !!ticket;
+          let redactedFields: readonly string[] = [];
           if (allowed && sponsorSide) {
             try {
-              await withCoManagedNotificationRecipient(trx as unknown as Knex, { kind: 'notification_recipient', tenant: payload.sponsorTenant, userId: payload.principalId },
-                { tenant, relationshipId: payload.relationshipId, kind: 'ticket', id: payload.ticketId }, async () => undefined);
+              const user = sponsorUsers.get(`${payload.sponsorTenant}:${payload.principalId}`);
+              allowed = Boolean(user && !user.is_inactive && user.user_type === 'internal');
+              if (allowed) redactedFields = await withCoManagedNotificationRecipient(trx as unknown as Knex, { kind: 'notification_recipient', tenant: payload.sponsorTenant, userId: payload.principalId },
+                { tenant, relationshipId: payload.relationshipId, kind: 'ticket', id: payload.ticketId }, async context => context.redactedFields);
             } catch (error) {
               if (!isCoManagedSharedWorkError(error)) throw error;
               allowed = false;
@@ -135,6 +147,13 @@ export function createCoManagedDeliveryProvider(): CoManagedDeliveryProvider {
           }
           let principalId: string = payload.principalId;
           let email: string | undefined = row.delivery_kind === ROUTING_EMAIL_KIND ? row.recipient : undefined;
+          if (allowed && sponsorSide) {
+            const user = sponsorUsers.get(`${payload.sponsorTenant}:${payload.principalId}`);
+            if (row.delivery_kind === ROUTING_EMAIL_KIND) {
+              email = normalize(user?.email) || undefined;
+              if (!email) allowed = false;
+            }
+          }
           if (allowed && !sponsorSide) {
             // Customer side: never trust the captured snapshot. Re-resolve against the CURRENT user and ticket.
             const user = customerUsers.get(payload.principalId);
@@ -148,7 +167,7 @@ export function createCoManagedDeliveryProvider(): CoManagedDeliveryProvider {
             }
           }
           out.push({ tenant, deliveryKind: row.delivery_kind, sourceId: row.source_id, event: payload.event,
-            recipient: { kind: row.recipient_kind, principalId, email }, ledgerRecipient: row.recipient,
+            recipient: { kind: row.recipient_kind, principalId, email, ...(sponsorSide ? { redactedFields } : {}) }, ledgerRecipient: row.recipient,
             recipientTenant: sponsorSide ? payload.sponsorTenant : tenant, ticketId: payload.ticketId,
             ticketNumber: ticket?.ticket_number ?? '', ticketTitle: ticket?.title ?? '', actorName: payload.actorName, actorOrganization: payload.actorOrganization, allowed });
         }
@@ -174,9 +193,9 @@ export function createCoManagedDeliveryProvider(): CoManagedDeliveryProvider {
           for (const candidate of await sponsorParticipants(trx, tenant, ticketId, shared)) {
             try {
               // Each recipient is re-checked against its OWN current policy; a denied one is simply skipped.
-              await withCoManagedNotificationRecipient(trx as unknown as Knex,
-                { kind: 'notification_recipient', tenant: shared.relationship.sponsor_tenant, userId: candidate.principalId }, resource, async () => undefined);
-              sponsorRecipients.push(candidate);
+              const redactedFields = await withCoManagedNotificationRecipient(trx as unknown as Knex,
+                { kind: 'notification_recipient', tenant: shared.relationship.sponsor_tenant, userId: candidate.principalId }, resource, async context => context.redactedFields);
+              sponsorRecipients.push({ ...candidate, redactedFields });
             } catch (error) {
               if (!isCoManagedSharedWorkError(error)) throw error;
             }
@@ -187,6 +206,13 @@ export function createCoManagedDeliveryProvider(): CoManagedDeliveryProvider {
           replyTokenMetadata: { namespace: 'cm', version: 2, relationshipId: shared.relationshipId, grantGeneration: shared.grantGeneration, threadId: thread.threadId },
         };
       });
+    },
+
+    async reauthorizeCommentRecipient(input) {
+      const plan = await this.planTicketComment(input.tenant, input.ticketId, input.commentId);
+      if (!plan || plan.relationshipId !== input.relationshipId || plan.sponsorTenant !== input.sponsorTenant) return null;
+      return plan.sponsorRecipients.find((recipient) => recipient.principalId === input.principalId &&
+        (recipient.kind === 'msp_user' || recipient.kind === 'team')) ?? null;
     },
 
     async planTaskComment(tenant, taskCommentId) {

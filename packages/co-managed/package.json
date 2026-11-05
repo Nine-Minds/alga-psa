@@ -70,6 +70,10 @@
       "types": "./src/sharedWork.ts",
       "import": "./src/sharedWork.ts"
     },
+    "./sharedWorkProjection": {
+      "types": "./src/sharedWorkProjection.ts",
+      "import": "./src/sharedWorkProjection.ts"
+    },
     "./sharedWorkRead": {
       "types": "./src/sharedWorkRead.ts",
       "import": "./src/sharedWorkRead.ts"
@@ -113,10 +117,6 @@
     "./projectFieldMask": {
       "types": "./src/projectFieldMask.ts",
       "import": "./src/projectFieldMask.ts"
-    },
-    "./sharedWorkProjection": {
-      "types": "./src/sharedWorkProjection.ts",
-      "import": "./src/sharedWorkProjection.ts"
     },
     "./projectTaskEditing": {
       "types": "./src/projectTaskEditing.ts",

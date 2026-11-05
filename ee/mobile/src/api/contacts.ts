@@ -1,6 +1,6 @@
 import type { ApiClient } from "./client";
 import type { ApiResult } from "./types";
-import type { PaginatedResponse, SuccessResponse } from "./tickets";
+import type { PaginatedResponse, SuccessResponse, TicketListTag as DisplayTag } from "./tickets";
 
 export type ContactPhoneNumber = {
   contact_phone_number_id?: string;
@@ -61,6 +61,8 @@ export type ContactListItem = {
   work_arrangement?: ContactWorkArrangement | null;
   locations?: ContactLocation[] | null;
   avatarUrl?: string | null;
+  /** Chip tags picked by the tenant's tag display rules (e.g. VIP), in rule order. */
+  display_tags?: DisplayTag[] | null;
 };
 
 export type ContactDetail = ContactListItem & {

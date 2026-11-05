@@ -266,6 +266,7 @@ export const API_RULES: readonly ApiRule[] = [
       '/api/v1/invoices',
       '/api/v1/projects',
       '/api/v1/assets',
+      '/api/v1/asset-audits',
       '/api/v1/asset-groups',
       '/api/v1/asset-statuses',
       '/api/v1/asset-custody',
