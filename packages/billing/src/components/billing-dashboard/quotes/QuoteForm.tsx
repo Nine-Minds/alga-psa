@@ -233,6 +233,22 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   const [termsEditorKey, setTermsEditorKey] = useState(0);
   const [clientLocations, setClientLocations] = useState<BillingLocationSummary[]>([]);
   /**
+   * Client the loaded `clientLocations` belong to, or null while a lookup is in
+   * flight. Loading them is asynchronous, so without this marker the editor
+   * would keep offering — and stamping — the previous client's sites during the
+   * fetch window, which is how item locations ended up foreign after a client
+   * switch.
+   */
+  const [locationsClientId, setLocationsClientId] = useState<string | null>(null);
+  /**
+   * Set when the user picks a different client, cleared once that client's
+   * locations have been applied. Only a switch may discard an item location id
+   * the loaded list does not contain: a saved quote can legitimately cite a
+   * location that is no longer active, and rewriting that would quietly change
+   * persisted data on the next save.
+   */
+  const pendingClientSwitchRef = useRef(false);
+  /**
    * True once the user has explicitly clicked "+ Add location" OR loaded a quote
    * that already spans multiple locations. False ⇒ render the editor flat with
    * a single header-level location. This state is the sole toggle the editor
@@ -301,24 +317,26 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   }, [quoteId]);
 
   // Load locations whenever the selected client changes so the picker is fresh.
+  // The previous client's list is dropped first: until the new one arrives the
+  // pickers and "+ Add location" must offer nothing rather than a foreign site.
   useEffect(() => {
     let cancelled = false;
+    setClientLocations([]);
+    setLocationsClientId(null);
     const run = async () => {
       if (!form.client_id) {
-        setClientLocations([]);
         return;
       }
       try {
         const locations = await getActiveClientLocationsForBilling(form.client_id);
         if (isActionPermissionError(locations) || isActionMessageError(locations)) {
-          if (!cancelled) setClientLocations([]);
           return;
         }
         if (cancelled) return;
         setClientLocations(locations);
+        setLocationsClientId(form.client_id);
       } catch (locationError) {
         console.error('Failed to load client locations:', locationError);
-        if (!cancelled) setClientLocations([]);
       }
     };
     void run();
@@ -326,6 +344,9 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
       cancelled = true;
     };
   }, [form.client_id]);
+
+  /** Locations currently loaded match the selected client (not mid-switch). */
+  const locationsReady = Boolean(form.client_id) && locationsClientId === form.client_id;
 
   // Derived: whether the quote currently spans ≥2 locations. Combined with
   // `multiLocationMode` this drives the editor's flat-vs-grouped layout.
@@ -354,22 +375,55 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
     }
   }, [distinctLocationIds, extraGroupLocationIds]);
 
+  // How many non-discount rows still lack a location. Drives the siting effect
+  // below: a plain `lineItems.length` dep misses the case where rows are
+  // un-sited in place (a client switch clearing foreign ids).
+  const unsitedItemCount = useMemo(
+    () => lineItems.filter((item) => !item.is_discount && !item.location_id).length,
+    [lineItems],
+  );
+
   // On first render (or client change), make sure every line item carries a
   // location_id. Default to the client's primary location. Discount rows are
   // skipped: they reduce the quote (or a targeted item), they are not sited —
   // the same rule "+ Add location" applies.
+  //
+  // Right after a client switch this also re-sites anything still pointing at
+  // the previous client's locations: the switch nulls them, but a click that
+  // lands inside the lookup window (above all "+ Add location") can stamp one
+  // back on, and such an id renders as a group with no resolvable address and
+  // would be saved verbatim.
   useEffect(() => {
     if (clientLocations.length === 0) return;
+    if (!locationsReady) return;
     const primary = pickDefaultLocation(clientLocations);
     if (!primary) return;
 
-    const hasUnassigned = lineItems.some((item) => !item.is_discount && !item.location_id);
-    if (hasUnassigned) {
-      setLineItems((current) => current.map((item) =>
-        item.is_discount || item.location_id ? item : { ...item, location_id: primary.location_id }
-      ));
+    const afterClientSwitch = pendingClientSwitchRef.current;
+    pendingClientSwitchRef.current = false;
+    const ownedLocationIds = new Set(clientLocations.map((location) => location.location_id));
+    const isForeign = (locationId?: string | null): boolean =>
+      afterClientSwitch && Boolean(locationId) && !ownedLocationIds.has(locationId as string);
+
+    if (afterClientSwitch) {
+      setExtraGroupLocationIds((current) => current.filter((id) => ownedLocationIds.has(id)));
     }
-  }, [clientLocations, lineItems.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const needsSiting = lineItems.some((item) => item.is_discount
+      ? isForeign(item.location_id)
+      : (!item.location_id || isForeign(item.location_id)));
+    if (!needsSiting) return;
+
+    setLineItems((current) => current.map((item) => {
+      // A discount that carried a foreign location is cleared, never re-sited.
+      if (item.is_discount) {
+        return isForeign(item.location_id) ? { ...item, location_id: null } : item;
+      }
+      return !item.location_id || isForeign(item.location_id)
+        ? { ...item, location_id: primary.location_id }
+        : item;
+    }));
+  }, [clientLocations, locationsReady, unsitedItemCount]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Enter multi-location mode automatically when loading a quote that already
   // spans ≥2 locations (e.g. editing an existing multi-site quote).
@@ -1224,13 +1278,22 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   // +Add-location handler moved into the line-items toolbar. Seed an empty
   // second group so the user can pick a location before adding any items.
   const handleAddLocationGroup = () => {
+    // Mid-switch the loaded list still belongs to the previous client (or to
+    // nobody yet), and stamping one of its sites here is exactly how items
+    // ended up pinned to another client's address.
+    if (!locationsReady || clientLocations.length === 0) return;
     const primary = pickDefaultLocation(clientLocations)?.location_id ?? null;
+    const hasUnsited = lineItems.some((item) => !item.is_discount && !item.location_id);
     setLineItems((current) => current.map((item) =>
       item.is_discount || item.location_id ? item : { ...item, location_id: primary }
     ));
     setMultiLocationMode(true);
     const used = new Set<string>(lineItems.map((item) => item.location_id).filter((id): id is string => Boolean(id)));
-    if (primary) used.add(primary);
+    // The primary is only taken when an un-sited row was just stamped with it.
+    // Otherwise it is still free — the sole group may have been re-pointed at
+    // another site — and must stay a candidate for the group being added.
+    if (primary && hasUnsited) used.add(primary);
+    for (const seededId of extraGroupLocationIds) used.add(seededId);
     const candidate = clientLocations.find((loc) => !used.has(loc.location_id));
     if (candidate) {
       setExtraGroupLocationIds((current) => current.includes(candidate.location_id) ? current : [...current, candidate.location_id]);
@@ -1740,6 +1803,10 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                           // auto-assign effect stamp the new client's primary
                           // location once its locations load; keeping them
                           // would render groups with no resolvable address.
+                          // The marker lets that effect also discard any
+                          // foreign id re-stamped while the lookup was in
+                          // flight.
+                          pendingClientSwitchRef.current = true;
                           setLineItems((current) => current.map((item) =>
                             item.location_id ? { ...item, location_id: null } : item
                           ));

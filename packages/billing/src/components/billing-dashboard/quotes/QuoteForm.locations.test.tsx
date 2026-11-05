@@ -172,6 +172,9 @@ vi.mock('./QuoteStatusBadge', () => ({ default: () => <div data-testid="status-b
 type EditorProps = {
   items: DraftQuoteItem[];
   onChange: (items: DraftQuoteItem[]) => void;
+  locations?: Array<{ location_id: string }>;
+  extraGroupLocationIds?: string[];
+  onAddLocationGroup?: () => void;
   onRemoveLocationGroup?: (locationId: string | null, source: 'user' | 'empty-group') => void;
 };
 
@@ -387,6 +390,86 @@ describe('QuoteForm multi-location editing (alga-2026-0002902)', () => {
 
     expect(document.getElementById('quote-location-remove-dialog')).toBeNull();
     expect(currentItems().map((item) => item.local_id)).toEqual(['item-1']);
+  });
+
+  it('ignores "+ Add location" while the new client\'s locations are still loading', async () => {
+    let releaseClient2Locations: (() => void) | null = null;
+    actionMocks.getActiveClientLocationsForBilling.mockImplementation(async (clientId: string) => {
+      if (clientId !== 'client-2') return CLIENT_1_LOCATIONS;
+      await new Promise<void>((resolve) => { releaseClient2Locations = resolve; });
+      return CLIENT_2_LOCATIONS;
+    });
+
+    await renderForm();
+    await setItems([
+      draft({ local_id: 'item-1', location_id: 'loc-a' }),
+      draft({ local_id: 'item-2', location_id: 'loc-b' }),
+    ]);
+
+    await act(async () => {
+      (document.getElementById('quote-client-pick-client-2') as HTMLButtonElement).click();
+    });
+
+    // Mid-switch the editor is offered no locations at all, so its own
+    // "+ Add location" is disabled; the handler refuses too.
+    expect(editorProps!.locations).toEqual([]);
+    await act(async () => {
+      editorProps!.onAddLocationGroup?.();
+    });
+    expect(currentItems().every((item) => !item.location_id)).toBe(true);
+    expect(editorProps!.extraGroupLocationIds ?? []).toEqual([]);
+
+    await act(async () => {
+      releaseClient2Locations?.();
+    });
+    await waitFor(() => {
+      expect(currentItems().map((item) => item.location_id)).toEqual(['loc-c', 'loc-c']);
+    });
+  });
+
+  it('discards a previous client location re-stamped during the switch window', async () => {
+    let releaseClient2Locations: (() => void) | null = null;
+    actionMocks.getActiveClientLocationsForBilling.mockImplementation(async (clientId: string) => {
+      if (clientId !== 'client-2') return CLIENT_1_LOCATIONS;
+      await new Promise<void>((resolve) => { releaseClient2Locations = resolve; });
+      return CLIENT_2_LOCATIONS;
+    });
+
+    await renderForm();
+    await setItems([draft({ local_id: 'item-1', location_id: 'loc-a' })]);
+
+    await act(async () => {
+      (document.getElementById('quote-client-pick-client-2') as HTMLButtonElement).click();
+    });
+
+    // Stand in for any edit landing inside the lookup window that re-applies
+    // the old client's site (a drag, a stale group header, a queued click).
+    await setItems([
+      draft({ local_id: 'item-1', location_id: 'loc-a' }),
+      draft({ local_id: 'discount-1', is_discount: true, location_id: 'loc-b' }),
+    ]);
+
+    await act(async () => {
+      releaseClient2Locations?.();
+    });
+
+    await waitFor(() => {
+      expect(currentItems().map((item) => item.location_id)).toEqual(['loc-c', null]);
+    });
+  });
+
+  it('offers the freed primary location when the only group was re-pointed', async () => {
+    await renderForm();
+    // The single group was switched from the primary (loc-a) to loc-b, so
+    // loc-a is free again and must be what "+ Add location" seeds.
+    await setItems([draft({ local_id: 'item-1', location_id: 'loc-b' })]);
+
+    await act(async () => {
+      editorProps!.onAddLocationGroup?.();
+    });
+
+    await waitFor(() => expect(editorProps!.extraGroupLocationIds).toEqual(['loc-a']));
+    expect(currentItems().map((item) => item.location_id)).toEqual(['loc-b']);
   });
 
   it('sends the current drafts — locations and remapped discount targets — to createQuoteFromTemplate', async () => {
