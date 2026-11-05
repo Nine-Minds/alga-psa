@@ -16,13 +16,17 @@ export interface InteractionPageFilters {
   typeId?: string;
   page?: number;
   pageSize?: number;
+  cursor?: string | null;
 }
 
 export interface InteractionPageResult {
   interactions: IInteraction[];
   total: number;
+  totalExact: boolean;
   page: number;
   pageSize: number;
+  nextCursor?: string | null;
+  hasMore?: boolean;
 }
 
 async function resolveDb(tenantId: string, trx?: DbOrTransaction): Promise<{ db: DbOrTransaction; tenant: string }> {
@@ -339,6 +343,7 @@ class InteractionModel {
         type_name: row.type_name?.toLowerCase() ?? null,
       })) as IInteraction[],
       total: Number(countRow?.count ?? 0),
+      totalExact: true,
       page,
       pageSize,
     };

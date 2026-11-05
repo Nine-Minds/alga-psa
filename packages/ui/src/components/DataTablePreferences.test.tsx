@@ -125,6 +125,20 @@ describe('DataTable page size preference', () => {
     expect(screen.getByText('Page 1 of 6')).toBeTruthy();
   });
 
+  it('shows an incomplete total without presenting it as exact and keeps next-page navigation available', () => {
+    const onPageChange = vi.fn();
+    render(<DataTable id="bounded-manual" data={rows.slice(0, 10)} columns={columns}
+      currentPage={1} pageSize={10} totalItems={100} totalItemsExact={false} onPageChange={onPageChange} />);
+
+    expect(screen.getByText(/Page 1/)).toBeTruthy();
+    expect(screen.getByText(/Total count incomplete/)).toBeTruthy();
+    expect(screen.queryByText('Page 1 of 10')).toBeNull();
+    const next = document.getElementById('bounded-manual-pagination-next-btn') as HTMLButtonElement;
+    expect(next.disabled).toBe(false);
+    fireEvent.click(next);
+    expect(onPageChange).toHaveBeenCalledWith(2);
+  });
+
   it('sends a saved size to a controlled table once after preferences load', async () => {
     const onItemsPerPageChange = vi.fn();
     render(<DataTablePreferencesProvider pageSizes={{ controlled: 50 }} onPageSizesChange={vi.fn()}>
