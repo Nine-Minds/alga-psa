@@ -1288,6 +1288,15 @@ export const createQuoteFromTemplate = withAuth(async (
 
     const createdQuote = await Quote.create(trx, tenant, {
       ...parsedQuote,
+      // `createQuoteSchema` has no template_id, so the parsed payload drops the
+      // document-layout choice and the editor's selection came back as "use
+      // default layout" after the first save. Carry it explicitly: a supplied
+      // value wins (including an explicit null, which is what the editor sends
+      // for "use default"), and a caller that omits it inherits the business
+      // template's own layout.
+      template_id: input.template_id !== undefined
+        ? (input.template_id ?? null)
+        : (template.template_id ?? null),
       subtotal: input.subtotal ?? 0,
       discount_total: input.discount_total ?? 0,
       tax: input.tax ?? 0,

@@ -610,6 +610,60 @@ describe('quoteActions', () => {
     );
   });
 
+  describe('createQuoteFromTemplate document layout (alga-2026-0002902)', () => {
+    const CALLER_LAYOUT_ID = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+    const TEMPLATE_LAYOUT_ID = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+
+    const stubLayoutTemplateLoad = () => {
+      vi.spyOn(Quote, 'getById')
+        .mockResolvedValueOnce({ ...templateQuote, template_id: TEMPLATE_LAYOUT_ID } as any)
+        .mockResolvedValueOnce({ quote_id: QUOTE_ID, quote_number: 'Q-0300', is_template: false, quote_items: [] } as any);
+    };
+
+    const createdLayoutId = () => (Quote.create as any).mock.calls[0][2].template_id;
+
+    it('T902d: keeps the layout the caller picked', async () => {
+      stubLayoutTemplateLoad();
+
+      const { createQuoteFromTemplate } = await import('../../src/actions/quoteActions');
+      await createQuoteFromTemplate(templateQuote.quote_id, {
+        client_id: baseQuoteInput.client_id,
+        quote_date: baseQuoteInput.quote_date,
+        valid_until: baseQuoteInput.valid_until,
+        template_id: CALLER_LAYOUT_ID,
+      } as any);
+
+      expect(createdLayoutId()).toBe(CALLER_LAYOUT_ID);
+    });
+
+    it('T902e: honours an explicit "use default layout" over the template layout', async () => {
+      stubLayoutTemplateLoad();
+
+      const { createQuoteFromTemplate } = await import('../../src/actions/quoteActions');
+      await createQuoteFromTemplate(templateQuote.quote_id, {
+        client_id: baseQuoteInput.client_id,
+        quote_date: baseQuoteInput.quote_date,
+        valid_until: baseQuoteInput.valid_until,
+        template_id: null,
+      } as any);
+
+      expect(createdLayoutId()).toBeNull();
+    });
+
+    it('T902f: inherits the template layout when the caller supplies none', async () => {
+      stubLayoutTemplateLoad();
+
+      const { createQuoteFromTemplate } = await import('../../src/actions/quoteActions');
+      await createQuoteFromTemplate(templateQuote.quote_id, {
+        client_id: baseQuoteInput.client_id,
+        quote_date: baseQuoteInput.quote_date,
+        valid_until: baseQuoteInput.valid_until,
+      } as any);
+
+      expect(createdLayoutId()).toBe(TEMPLATE_LAYOUT_ID);
+    });
+  });
+
   it('T050c: createQuoteFromTemplate returns a newly numbered draft quote', async () => {
     vi.spyOn(Quote, 'getById')
       .mockResolvedValueOnce(templateQuote as any)
