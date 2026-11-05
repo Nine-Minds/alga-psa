@@ -658,8 +658,9 @@ jobs:
 
           echo "Downloading Docker Compose from ${COMPOSE_URL} to ${DEST_PATH}"
           sudo rm -f "${DEST_PATH}" # Remove existing to avoid conflicts
-          # Use curl with -fS (fail silently on server errors, show client errors) and -L (follow redirects)
-          sudo curl -fSL "${COMPOSE_URL}" -o "${DEST_PATH}"
+          # GitHub's release CDN answers an occasional 5xx; curl exit 22 on one of
+          # those failed the whole browser shard on main (run 41942836677).
+          sudo curl -fSL --retry 5 --retry-delay 5 --retry-all-errors "${COMPOSE_URL}" -o "${DEST_PATH}"
           
           # Verify download was successful and file is not empty and is executable
           if [ ! -s "${DEST_PATH}" ]; then
