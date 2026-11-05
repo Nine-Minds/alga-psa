@@ -26,6 +26,8 @@ export const TENANT_TABLE_FOREIGN_KEYS: readonly TenantTableForeignKey[] = [
   { child: 'asset_associations', parent: 'assets', column: 'asset_id', deleteRule: 'CASCADE', name: 'asset_associations_tenant_asset_id_foreign' },
   { child: 'asset_associations', parent: 'tenants', column: '', deleteRule: 'NO ACTION', name: 'asset_associations_tenant_foreign' },
   { child: 'asset_associations', parent: 'users', column: 'created_by', deleteRule: 'NO ACTION', name: 'asset_associations_tenant_created_by_foreign' },
+  { child: 'asset_audit_items', parent: 'tenants', column: '', deleteRule: 'NO ACTION', name: 'asset_audit_items_tenant_foreign' },
+  { child: 'asset_audits', parent: 'tenants', column: '', deleteRule: 'NO ACTION', name: 'asset_audits_tenant_foreign' },
   { child: 'asset_custody', parent: 'assets', column: 'asset_id', deleteRule: 'NO ACTION', name: 'asset_custody_asset_fk' },
   { child: 'asset_custody', parent: 'stock_locations', column: 'location_id', deleteRule: 'NO ACTION', name: 'asset_custody_location_fk' },
   { child: 'asset_custody', parent: 'tenants', column: '', deleteRule: 'NO ACTION', name: 'asset_custody_tenant_foreign' },

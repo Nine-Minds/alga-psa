@@ -126,6 +126,47 @@ describe('useActivitySectionFeed', () => {
     expect(result.current.loading).toBe(false);
   });
 
+  it('issues nothing while disabled, then exactly one request with the resolved filters', async () => {
+    const savedFilters = { types: [ActivityType.TICKET], isClosed: false, clientId: 'c7', ticketStatusIds: ['s9'] } as any;
+    const { result, rerender } = renderHook(
+      ({ enabled, filters }: { enabled: boolean; filters: any }) =>
+        useActivitySectionFeed(ActivityType.TICKET, filters, '', 5, undefined, { enabled }),
+      { wrapper, initialProps: { enabled: false, filters: { types: [ActivityType.TICKET, ActivityType.SCHEDULE], isClosed: false } as any } }
+    );
+    await new Promise((r) => setTimeout(r, 30));
+    expect(mocks.fetchActivities).not.toHaveBeenCalled();
+    // The section keeps its loading state rather than showing an empty list.
+    expect(result.current.loading).toBe(true);
+
+    // The saved filters land together with the readiness flag.
+    rerender({ enabled: true, filters: savedFilters });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(mocks.fetchActivities).toHaveBeenCalledTimes(1);
+    expect(mocks.fetchActivities).toHaveBeenCalledWith(
+      { ...savedFilters, types: [ActivityType.TICKET], targetUserId: undefined },
+      1,
+      5
+    );
+  });
+
+  it('an invalidation bump while disabled does not fetch, and is not replayed once enabled', async () => {
+    const { result, rerender } = renderHook(
+      ({ enabled }: { enabled: boolean }) => ({
+        feed: useActivitySectionFeed(ActivityType.TICKET, { isClosed: false }, '', 5, undefined, { enabled }),
+        signal: useActivitiesInvalidationSignal(),
+      }),
+      { wrapper, initialProps: { enabled: false } }
+    );
+    act(() => result.current.signal.notifyInvalidated());
+    await new Promise((r) => setTimeout(r, 30));
+    expect(mocks.fetchActivities).not.toHaveBeenCalled();
+
+    rerender({ enabled: true });
+    await waitFor(() => expect(result.current.feed.loading).toBe(false));
+    await new Promise((r) => setTimeout(r, 30));
+    expect(mocks.fetchActivities).toHaveBeenCalledTimes(1);
+  });
+
   it('surfaces an error from the latest request', async () => {
     mocks.fetchActivities.mockRejectedValue(new Error('boom'));
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});

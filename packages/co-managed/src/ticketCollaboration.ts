@@ -59,6 +59,7 @@ export async function getCoManagedTicketScreen(db: Knex, inputActor: CoManagedSe
     await assertCoManagedSessionUnexpired(trx, actor);
     return { summary, side, customerName, sponsorName, destinationName: ('board' in summary.fields ? destination?.board_name : undefined) as string | undefined, canWrite, canUpdate,
       canEscalate: side === 'customer' && canWrite && canUpdate && workRevisionVisible && summary.fields.responsibility === 'customer' && Boolean(destination),
+      // LEVERAGE: pattern co-managed-effective-grant — this single-ticket hand-back decision and ticketQueue.ts can_hand_back are the same rule; a shared evaluator row would remove the copy.
       canHandBack: canWrite && canUpdate && workRevisionVisible && summary.fields.responsibility === 'msp',
       canRevoke: canManage && workRevisionVisible && summary.fields.explicit_grant_active === true };
   });

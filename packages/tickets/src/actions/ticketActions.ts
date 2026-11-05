@@ -63,6 +63,10 @@ import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import { TicketModel, CreateTicketInput } from '@alga-psa/shared/models/ticketModel';
 import { resolveAssetBillingProfileIdForClient } from '@alga-psa/shared/models/assetBillingProfileModel';
 import {
+  assetIdForBillingProfileInheritance,
+  dedupeTicketAssetIds,
+} from '@alga-psa/shared/models/ticketAssetLinkModel';
+import {
   TICKET_ACTIVITY_ACTOR,
   TICKET_ACTIVITY_ENTITY,
   TICKET_ACTIVITY_EVENT,
@@ -624,9 +628,12 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
           throw new Error('Permission denied: Cannot link assets to tickets');
         }
       }
-      const linkedAssetIds = Array.from(
-        new Set([...(asset_id ? [asset_id as string] : []), ...extras.assetIds])
-      );
+      // The asset the dialog was opened from leads the picked ones, so it is
+      // also the one whose billing profile the ticket inherits below.
+      const linkedAssetIds = dedupeTicketAssetIds([
+        typeof asset_id === 'string' ? asset_id : '',
+        ...extras.assetIds,
+      ]);
 
       // Duplicate-ticket fields. The client only names the source; the hidden
       // carry-over (custom fields, checklist) is copied below from the source
@@ -674,7 +681,14 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         title: data.get('title') as string,
         board_id: data.get('board_id') as string,
         client_id: data.get('client_id') as string,
-        location_id: location_id === '' ? undefined : (location_id as string),
+        // Three states, deliberately: the field absent (or '') means nobody said, so the model
+        // fills it from the contact; the literal 'none' is the operator choosing None and stays
+        // null; anything else is the id they picked.
+        location_id: location_id === null || location_id === ''
+          ? undefined
+          : location_id === 'none'
+            ? null
+            : (location_id as string),
         billing_profile_id: billing_profile_id === '' || billing_profile_id === null
           ? undefined
           : (billing_profile_id as string),
@@ -697,14 +711,15 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       // FR-F3: a ticket raised against an asset inherits the asset's billing
       // profile (or its location's default) when the caller picked none. This
       // is the QuickAddTicket path used by the asset header, the asset list,
-      // service history and maintenance — `createTicketFromAsset` does the
-      // same for its own dialog.
-      if (linkedAssetIds.length > 0 && createTicketInput.client_id && !createTicketInput.billing_profile_id) {
+      // service history and maintenance — `createTicketFromAsset` and the REST
+      // create read the same rule from ticketAssetLinkModel.
+      const billingProfileSourceAssetId = assetIdForBillingProfileInheritance(linkedAssetIds);
+      if (billingProfileSourceAssetId && createTicketInput.client_id && !createTicketInput.billing_profile_id) {
         createTicketInput.billing_profile_id =
           (await resolveAssetBillingProfileIdForClient(
             trx,
             tenant,
-            linkedAssetIds[0],
+            billingProfileSourceAssetId,
             createTicketInput.client_id
           )) ?? undefined;
       }
@@ -738,9 +753,11 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
           throw new Error('Permission denied: Cannot use ticket templates');
         }
         // Manual use needs an active template that is offered for it (R4/R5); schedules ignore both.
+        // A client-bound template is only offered for its own client.
         const offered = UUID_PATTERN.test(ticketTemplateId)
           ? await tenantScopedTable(trx, 'ticket_templates', tenant)
               .where({ template_id: ticketTemplateId, is_active: true, offer_for_manual_use: true })
+              .where((builder) => builder.whereNull('client_id').orWhere('client_id', createTicketInput.client_id ?? null))
               .first('template_id')
           : undefined;
         sourceTemplate = offered ? await loadTemplateForInstantiation(trx, tenant, ticketTemplateId) : null;

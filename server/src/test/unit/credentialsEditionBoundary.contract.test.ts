@@ -58,6 +58,10 @@ const ALLOWED_FILES = new Set<string>([
   // Client merge: edition-optional table list (skipped when the table is absent in CE).
   'packages/clients/src/lib/clientMergePlan.ts',
   'packages/clients/src/lib/clientMergeEngine.test.ts',
+
+  // Portable vault tests exercise EE-only implementation from the shared server unit suite.
+  'server/src/test/unit/product/coManagedPortableVault.test.ts',
+  'server/src/test/unit/product/coManagedPortableWorkspaceRestoreVault.test.ts',
 ]);
 
 const TABLES = 'credentials|credential_associations|credential_access_grants';

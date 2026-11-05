@@ -314,6 +314,8 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'asset_group_members',
   'asset_group_contacts',
   'asset_groups',
+  'asset_audit_items',
+  'asset_audits',
   'software_catalog',
   'rmm_webhook_events',
   'rmm_maintenance_windows',
@@ -480,6 +482,9 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'co_managed_project_task_references',
   'collaboration_actor_references',
   'co_managed_participation_evidence',
+  'portable_restore_suspensions',
+  'portable_workspace_restores',
+  'portable_workspace_restore_uploads',
   // Handoffs FK to ticket work, which FKs to relationships: children first. References and
   // receipts reference the client/board/relationship rows deleted later.
   'co_management_ticket_handoffs',
@@ -545,6 +550,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'ticket_entity_links',
   'ticket_bundle_status_propagations',
   'tickets',
+  'contact_locations',
   'client_locations',
   'categories',
   'boards',
