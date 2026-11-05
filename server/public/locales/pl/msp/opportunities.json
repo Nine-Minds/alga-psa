@@ -598,6 +598,17 @@
       "projectStatus": "Stan początkowy",
       "projectTemplate": "Utwórz projekt onboardingowy (opcjonalnie)",
       "title": "Oznacz jako wygraną"
+    },
+    "declare": {
+      "title": "Przenieś do etapu {{stage}}",
+      "sourceLabel": "Źródło potwierdzające",
+      "noSource": "Brak źródła",
+      "sourceHelp": "Opcjonalnie. Wskaż interakcję lub dokument tej szansy. Jeśli go nie ma na liście, najpierw dołącz dokument do szansy.",
+      "submit": "Zadeklaruj",
+      "source": "Źródło",
+      "sourceRemoved": "Źródło usunięte",
+      "interactionFallback": "Interakcja",
+      "documentFallback": "Dokument"
     }
   }
 }
