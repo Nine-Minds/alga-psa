@@ -64,6 +64,7 @@ Emulators implement the vendor protocol subsets listed in this guide and the
 | QBO | `QBO_OAUTH_AUTHORIZE_URL=http://localhost:4020/connect/oauth2`, `QBO_OAUTH_TOKEN_URL=http://localhost:4020/oauth2/v1/tokens/bearer`, `QBO_OAUTH_REVOKE_URL=http://localhost:4020/v2/oauth2/tokens/revoke`, `QBO_API_BASE_URL=http://localhost:4020/v3/company` |
 | Stripe | `STRIPE_API_BASE_URL=http://localhost:4050`, `STRIPE_SECRET_KEY=sk_test_algasim`, `STRIPE_PAYMENT_WEBHOOK_SECRET=whsec_algasim`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_algasim` |
 | Xero | `XERO_OAUTH_AUTHORIZE_URL=http://localhost:4060/identity/connect/authorize`, `XERO_OAUTH_TOKEN_URL=http://localhost:4060/connect/token`, `XERO_OAUTH_REVOKE_URL=http://localhost:4060/connect/revocation`, `XERO_REVOCATION_URL=http://localhost:4060/connect/revocation`, `XERO_CONNECTIONS_URL=http://localhost:4060/connections`, `XERO_API_BASE_URL=http://localhost:4060/api.xro/2.0` |
+| Google Calendar | `GOOGLE_CALENDAR_API_ROOT_URL=http://localhost:4100/`, `GOOGLE_OAUTH_TOKEN_URL=http://localhost:4100/token`, then connect a Google calendar provider whose refresh token is `emulated-refresh-token` (or seed your own with `seed/oauth-client`) |
 | Webhooks | Point the integration's webhook/notification URL at `http://localhost:4030/<any path>` |
 | SMTP | Configure the SMTP provider with host `localhost`, port `4040`, no TLS |
 | 3CX | `THREECX_EMULATOR_MODE=true`, then enter `http://localhost:4070` as the PBX base URL on the 3CX integration card |
@@ -351,6 +352,40 @@ instead of disabling that check. Browser configuration, callback persistence and
 worker synchronization require their own full application journey.
 
 Protocol references: [Graph dateTimeTimeZone](https://learn.microsoft.com/en-us/graph/api/resources/datetimetimezone?view=graph-rest-1.0) and [Microsoft calendar-view delta](https://learn.microsoft.com/en-us/graph/api/event-delta?view=graph-rest-1.0).
+
+### Google Calendar synchronization
+
+The Google adapter honours `GOOGLE_CALENDAR_API_ROOT_URL` (and
+`GOOGLE_OAUTH_TOKEN_URL`), so no adapter change is needed to point it here. The
+emulator serves `calendar/v3` as the googleapis client calls it: calendar
+metadata and `calendarList`, `events.list`, `events.get/insert/patch/put/delete`,
+`events.instances`, `events.watch` and `channels.stop`, plus the OAuth token
+refresh on `/token` (JSON or form-encoded).
+
+`events.list` models the parts incremental sync depends on: `singleEvents`
+true/false, `timeMin`/`timeMax`, `showDeleted`, `maxResults` with
+`pageToken`/`nextPageToken`, and `nextSyncToken` — an incremental round returns
+only the events whose version changed plus cancelled tombstones, and an expired
+token answers `410 fullSyncRequired` (arm it with the `expire-sync-tokens`
+action). With `singleEvents=true` a series master is expanded into instances
+with ids `<masterId>_<YYYYMMDDTHHMMSSZ>` (`<masterId>_<YYYYMMDD>` for an all-day
+series), each carrying `recurringEventId` and `originalStartTime` and no
+`recurrence`; the master itself only appears with `singleEvents=false`. Series
+are expanded in the master's own `start.timeZone`, so a 10:15 America/New_York
+series alternates 14:15Z and 15:15Z across DST, exactly as production did.
+
+An unbounded series is capped by instance count — default 730, Google's observed
+answer for the production case — and `seed/expansion-cap` changes it. Deleting
+or `seed/cancel-occurrence`-ing one instance cancels that occurrence (it then
+lists only with `showDeleted=true`, as a tombstone); patching one materializes it
+as a stored exception that keeps its original slot; `EXDATE` lines in the
+master's `recurrence[]` are honoured; and a `<base>_R<timestamp>` split master is
+an ordinary separate master whose instances point at it.
+
+Contract checks live in `google-calendar/tests/contracts/events.ts` and run
+against the real HTTP responses in `google-calendar/tests/calendar.test.ts`.
+Limits: one primary calendar, no push-notification delivery (channels are
+recorded, not called back), no attendee/ACL semantics, and no reminders.
 
 ### Teams meetings and recordings
 
