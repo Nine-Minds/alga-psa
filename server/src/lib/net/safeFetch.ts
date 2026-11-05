@@ -19,7 +19,8 @@
  * (credential-bearing) URLs. Only the hostname may be mentioned.
  */
 import dns from 'node:dns/promises';
-import { BlockList, isIP } from 'node:net';
+import { isIP } from 'node:net';
+import { isGlobalUnicastAddress } from './publicAddress';
 import { domainToASCII } from 'node:url';
 import { Agent, fetch as undiciFetch } from 'undici';
 
@@ -128,81 +129,9 @@ export const SAFE_FETCH_DEFAULTS = {
 // Address policy
 // ---------------------------------------------------------------------------
 
-const blocked = new BlockList();
-for (const [net, prefix] of [
-  ['0.0.0.0', 8],
-  ['10.0.0.0', 8],
-  ['100.64.0.0', 10],
-  ['127.0.0.0', 8],
-  ['169.254.0.0', 16],
-  ['172.16.0.0', 12],
-  ['192.0.0.0', 24],
-  ['192.0.2.0', 24],
-  ['192.168.0.0', 16],
-  ['198.18.0.0', 15],
-  ['198.51.100.0', 24],
-  ['203.0.113.0', 24],
-  ['224.0.0.0', 4],
-  ['240.0.0.0', 4],
-] as const) {
-  blocked.addSubnet(net, prefix, 'ipv4');
-}
-blocked.addAddress('255.255.255.255', 'ipv4');
-blocked.addAddress('::', 'ipv6');
-blocked.addAddress('::1', 'ipv6');
-blocked.addSubnet('fc00::', 7, 'ipv6');
-blocked.addSubnet('fe80::', 10, 'ipv6');
-blocked.addSubnet('ff00::', 8, 'ipv6');
-blocked.addSubnet('64:ff9b::', 96, 'ipv6');
-blocked.addSubnet('2001:db8::', 32, 'ipv6');
-
-/** Expand an IPv6 literal to eight 16-bit groups, or null when malformed. */
-function expandIPv6(input: string): number[] | null {
-  let addr = input.split('%')[0]!;
-  // Trailing dotted IPv4 ("::ffff:127.0.0.1") -> two hex groups.
-  const dotted = /^(.*:)(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/.exec(addr);
-  if (dotted) {
-    const octets = dotted[2]!.split('.').map(Number);
-    if (octets.some((o) => o > 255)) return null;
-    const hi = ((octets[0]! << 8) | octets[1]!).toString(16);
-    const lo = ((octets[2]! << 8) | octets[3]!).toString(16);
-    addr = `${dotted[1]}${hi}:${lo}`;
-  }
-  const halves = addr.split('::');
-  if (halves.length > 2) return null;
-  const parse = (part: string) => (part === '' ? [] : part.split(':'));
-  const head = parse(halves[0]!);
-  const tail = halves.length === 2 ? parse(halves[1]!) : [];
-  const missing = 8 - head.length - tail.length;
-  if (halves.length === 1 ? head.length !== 8 : missing < 1) return null;
-  const groups = [...head, ...Array<string>(halves.length === 2 ? missing : 0).fill('0'), ...tail];
-  const nums = groups.map((g) => (/^[0-9a-f]{1,4}$/i.test(g) ? parseInt(g, 16) : NaN));
-  return nums.length === 8 && nums.every((n) => !Number.isNaN(n)) ? nums : null;
-}
-
-/** If an IPv6 address embeds an IPv4 address (mapped or compatible), return it dotted. */
-function unwrapEmbeddedIPv4(groups: number[]): string | null {
-  const leadingZero = groups.slice(0, 5).every((g) => g === 0);
-  const mapped = leadingZero && groups[5] === 0xffff;
-  const compatible = leadingZero && groups[5] === 0;
-  if (!mapped && !compatible) return null;
-  const hi = groups[6]!;
-  const lo = groups[7]!;
-  return `${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`;
-}
-
-/** True when `address` (a literal IP) is in a range this fetcher must never connect to. */
+/** True when an IP literal or DNS answer is outside globally routable unicast. */
 export function isBlockedAddress(address: string): boolean {
-  const family = isIP(address);
-  if (family === 4) return blocked.check(address, 'ipv4');
-  if (family === 6) {
-    const groups = expandIPv6(address);
-    if (!groups) return true; // unparseable -> fail closed
-    const embedded = unwrapEmbeddedIPv4(groups);
-    if (embedded) return blocked.check(embedded, 'ipv4');
-    return blocked.check(address, 'ipv6');
-  }
-  return true; // not an IP at all -> fail closed
+  return !isGlobalUnicastAddress(address);
 }
 
 // ---------------------------------------------------------------------------
@@ -374,6 +303,13 @@ async function resolveVettedAddress(
     throw new UnsafeUrlError('URL resolved to a private or reserved address');
   }
   return addresses[0]!;
+}
+
+/** Validate a provider URL and its current DNS answers without opening a connection. */
+export async function assertSafeHttpsUrl(rawUrl: string, deps: Pick<SafeFetchDeps, 'lookup'> = {}): Promise<URL> {
+  const url = parseAndCheckUrl(rawUrl);
+  await resolveVettedAddress(url, deps.lookup ?? defaultLookup);
+  return url;
 }
 
 // ---------------------------------------------------------------------------
