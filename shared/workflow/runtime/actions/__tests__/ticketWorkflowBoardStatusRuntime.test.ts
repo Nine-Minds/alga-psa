@@ -111,6 +111,8 @@ class FakeQueryBuilder {
     this.alias = parsed.alias;
   }
 
+  forShare() { return this; }
+
   private static parseTableExpression(tableExpression: string): { tableName: string; alias: string } {
     const asMatch = tableExpression.match(/^(.+?)\s+as\s+(.+)$/i);
     if (asMatch) {

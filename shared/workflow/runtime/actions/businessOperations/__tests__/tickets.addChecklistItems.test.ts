@@ -3,6 +3,7 @@
  * that the insert goes through the shared core with source='workflow'.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useNativeCoManagedVerdict } from '../../__tests__/helpers/nativeCoManagedVerdict';
 
 type Registered = { id: string; version: number; inputSchema: { parse: (v: unknown) => any; safeParse: (v: unknown) => any }; handler: (input: any, ctx: any) => Promise<any> };
 const registered: Registered[] = [];
@@ -53,6 +54,7 @@ async function getAction() {
 vi.setConfig({ testTimeout: 30000 });
 
 describe('tickets.add_checklist_items', () => {
+  useNativeCoManagedVerdict();
   beforeEach(() => {
     vi.clearAllMocks();
     requirePermissionMock.mockResolvedValue(undefined);

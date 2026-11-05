@@ -19,7 +19,6 @@ import {
   isoDateTimeSchema,
   attachmentSourceSchema,
   actionProvidedKey,
-  withTenantTransaction,
   requirePermission,
   writeRunAudit,
   throwActionError,
@@ -29,7 +28,7 @@ import {
   attachDocumentToTicket,
   type TenantTxContext,
 } from './shared';
-import { retainWorkflowTicketAuthority } from './shared';
+import { registerAuthorizedTicketAction, redactWorkflowTicket, workflowTicketFieldHidden } from './ticketAuthorization';
 import { getCurrentTicketAdditionalUserIds } from './userRecipients';
 import { assertHumanWorkAssignee } from '../../../../lib/humanWork/assertHumanWorkAssignee';
 import {
@@ -394,14 +393,74 @@ const normalizeTicketTags = (tags: string[] | undefined): string[] => {
   return normalized;
 };
 
+// Keep the workflow patch surface separate from persisted ticket columns. In
+// particular, keys under `attributes` are data and can never become SQL columns.
+const WORKFLOW_TICKET_UPDATABLE_COLUMNS = new Set([
+  'title', 'status_id', 'priority_id', 'assigned_to', 'assigned_team_id',
+  'category_id', 'subcategory_id', 'location_id', 'attributes', 'updated_by'
+]);
+
+function workflowTicketColumnPatch<T extends Record<string, unknown>>(patch: T): T {
+  if (Object.keys(patch).some(column => !WORKFLOW_TICKET_UPDATABLE_COLUMNS.has(column))) {
+    throw new Error('Unsupported workflow ticket update column');
+  }
+  return patch;
+}
+
+const WORKFLOW_TICKET_PATCH_FIELDS = new Set([
+  'status_id', 'priority_id', 'assignment', 'title', 'category_id', 'subcategory_id',
+  'location_id', 'due_date', 'tags', 'custom_fields', 'attributes'
+]);
+
+function workflowTicketAssignmentScope(assignment: WorkflowTicketAssignmentInput) {
+  const additionalUserIds = assignment.additional_user_ids ?? [];
+  return {
+    assignedUserIds: [
+      ...(assignment.primary?.type === 'user' && assignment.primary.id ? [assignment.primary.id] : []),
+      ...additionalUserIds,
+    ],
+    teamIds: assignment.primary?.type === 'team' && assignment.primary.id ? [assignment.primary.id] : []
+  };
+}
+
 export function registerTicketActions(): void {
   const registry = getActionRegistryV2();
 
   // ---------------------------------------------------------------------------
   // A01 — tickets.create
   // ---------------------------------------------------------------------------
-  registry.register({
+  registerAuthorizedTicketAction(registry, {
     id: 'tickets.create',
+    authority: {
+      operation: 'create',
+      fields: input => [
+        'title', 'description', 'client_id', 'board_id',
+        ...(input.contact_id ? ['contact_id'] : []),
+        ...(input.location_id ? ['location_id'] : []),
+        // createTicketWithSideEffects supplies the board's default when omitted.
+        // The default is still persisted and later returned, so it is always a write.
+        'status_id',
+        ...(input.priority_id ? ['priority_id'] : []),
+        ...(input.assignment ? ['assignment'] : []),
+        ...(input.category_id ? ['category_id'] : []),
+        ...(input.subcategory_id ? ['subcategory_id'] : []),
+        ...(input.tags?.length ? ['tags'] : []),
+        ...(input.custom_fields ? ['custom_fields'] : []),
+        ...(input.attributes
+          ? Object.keys(input.attributes).length
+            ? Object.keys(input.attributes).map(field => `attributes.${field}`)
+            : ['attributes']
+          : []),
+        ...(input.initial_comment ? ['comments'] : []),
+        ...(input.attachments?.length ? ['attachments'] : []),
+      ],
+      // ticket_number and entered_at are returned as ticket_number and created_at.
+      readFields: () => ['status_id', 'priority_id', 'ticket_number', 'entered_at'],
+      target: input => ({ prospective: {
+        clientId: input.client_id, boardId: input.board_id,
+        ...workflowTicketAssignmentScope(input.assignment ?? {})
+      } })
+    },
     version: 1,
     inputSchema: z.object({
       client_id: withWorkflowPicker(uuidSchema, 'Client id', 'client'),
@@ -491,9 +550,7 @@ export function registerTicketActions(): void {
         priority_id: '00000000-0000-0000-0000-000000000000'
       }
     },
-    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
-      await requirePermission(ctx, tx, { resource: 'ticket', action: 'create' });
-
+    handler: async (input, ctx, tx) => {
       const mergedAttributes: Record<string, any> = {
         ...(input.attributes ?? {})
       };
@@ -622,14 +679,15 @@ export function registerTicketActions(): void {
         status_id: createdTicket.status_id,
         priority_id: input.priority_id
       };
-    })
+    }
   });
 
   // ---------------------------------------------------------------------------
   // A02 — tickets.add_comment
   // ---------------------------------------------------------------------------
-  registry.register({
+  registerAuthorizedTicketAction(registry, {
     id: 'tickets.add_comment',
+    authority: { operation: 'update', fields: input => ['comments', ...(input.attachments?.length ? ['attachments'] : [])], target: input => ({ ticketId: input.ticket_id }) },
     version: 1,
     inputSchema: z.object({
       ticket_id: withWorkflowPicker(uuidSchema, 'Ticket id', 'ticket'),
@@ -656,10 +714,7 @@ export function registerTicketActions(): void {
       category: 'Business Operations',
       description: 'Add a public or internal comment to a ticket'
     },
-    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
-      await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
-      await retainWorkflowTicketAuthority(ctx, tx, input.ticket_id, ['comments']);
-
+    handler: async (input, ctx, tx) => {
       const content = input.mentions?.length ? buildBlockNoteWithMentions({ body: input.body, mentions: input.mentions }) : input.body;
 
       const isInternalComment = input.visibility === 'internal';
@@ -724,14 +779,25 @@ export function registerTicketActions(): void {
         created_at: created.created_at,
         visibility: input.visibility
       };
-    })
+    }
   });
 
   // ---------------------------------------------------------------------------
   // A03 — tickets.update_fields
   // ---------------------------------------------------------------------------
-  registry.register({
+  registerAuthorizedTicketAction(registry, {
     id: 'tickets.update_fields',
+    authority: {
+      operation: 'update',
+      fields: input => Object.keys(input.patch).flatMap(field => {
+        if (field !== 'attributes') return [field];
+        const attributeKeys = Object.keys(input.patch.attributes ?? {});
+        return attributeKeys.length ? attributeKeys.map(attribute => `attributes.${attribute}`) : ['attributes'];
+      }),
+      readFields: () => ['status_id', 'priority_id', 'tags'],
+      target: input => ({ ticketId: input.ticket_id,
+        ...(input.patch.assignment ? { assignment: workflowTicketAssignmentScope(input.patch.assignment) } : {}) })
+    },
     version: 1,
     inputSchema: z.object({
       ticket_id: withWorkflowPicker(uuidSchema, 'Ticket id', 'ticket'),
@@ -791,9 +857,11 @@ export function registerTicketActions(): void {
       category: 'Business Operations',
       description: 'Patch core ticket fields (status, priority, assignment, attributes)'
     },
-    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
-      await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
-      await retainWorkflowTicketAuthority(ctx, tx, input.ticket_id, Object.keys(input.patch));
+    handler: async (input, ctx, tx) => {
+      const requestedColumns = Object.keys(input.patch);
+      if (requestedColumns.some((column) => !WORKFLOW_TICKET_PATCH_FIELDS.has(column))) {
+        throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Patch contains an unsupported ticket field' });
+      }
 
       const current = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
       if (!current) {
@@ -888,7 +956,7 @@ export function registerTicketActions(): void {
         const transitionBefore = await captureTicketTransitionSnapshot(tx.trx, tx.tenantId, input.ticket_id);
         updated = await TicketModel.updateTicket(
           input.ticket_id,
-          {
+          workflowTicketColumnPatch({
             ...(input.patch.title ? { title: input.patch.title } : {}),
             ...(input.patch.status_id ? { status_id: input.patch.status_id } : {}),
             ...(input.patch.priority_id ? { priority_id: input.patch.priority_id } : {}),
@@ -903,7 +971,7 @@ export function registerTicketActions(): void {
             ...(input.patch.location_id !== undefined ? { location_id: input.patch.location_id } : {}),
             attributes: mergedAttributes,
             updated_by: tx.actorUserId
-          } as any,
+          }) as any,
           tx.tenantId,
           tx.trx,
           {},
@@ -966,14 +1034,18 @@ export function registerTicketActions(): void {
         priority_id: (updated.priority_id as string | null) ?? null,
         tags: (after.tags as string[] | null) ?? null
       };
-    })
+    }
   });
 
   // ---------------------------------------------------------------------------
   // A04 — tickets.assign
   // ---------------------------------------------------------------------------
-  registry.register({
+  registerAuthorizedTicketAction(registry, {
     id: 'tickets.assign',
+    authority: {
+      operation: 'update', fields: input => ['assignment', ...(input.comment ? ['comments'] : [])],
+      target: input => ({ ticketId: input.ticket_id, assignment: workflowTicketAssignmentScope(input.assignment) })
+    },
     version: 1,
     inputSchema: z.object({
       ticket_id: withWorkflowPicker(uuidSchema, 'Ticket id', 'ticket'),
@@ -1002,10 +1074,7 @@ export function registerTicketActions(): void {
       category: 'Business Operations',
       description: 'Assign a ticket using the canonical workflow assignment model'
     },
-    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
-      await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
-      await retainWorkflowTicketAuthority(ctx, tx, input.ticket_id, ['assignment']);
-
+    handler: async (input, ctx, tx) => {
       const ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
       if (!ticket) {
         throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Ticket not found', details: { ticket_id: input.ticket_id } });
@@ -1129,14 +1198,20 @@ export function registerTicketActions(): void {
         assigned_to: (updated.assigned_to as string | null) ?? null,
         updated_at: new Date(updated.updated_at ?? new Date().toISOString()).toISOString()
       };
-    })
+    }
   });
 
   // ---------------------------------------------------------------------------
   // A05 — tickets.close
   // ---------------------------------------------------------------------------
-  registry.register({
+  registerAuthorizedTicketAction(registry, {
     id: 'tickets.close',
+    authority: {
+      operation: 'update',
+      fields: input => ['status_id', 'resolution_code', 'resolution_text', ...(input.public_note || input.internal_note ? ['comments'] : [])],
+      readFields: input => input.notify_requester ? ['title', 'contact_name_id'] : [],
+      target: input => ({ ticketId: input.ticket_id })
+    },
     version: 1,
     inputSchema: z.object({
       ticket_id: withWorkflowPicker(uuidSchema, 'Ticket id', 'ticket'),
@@ -1166,10 +1241,7 @@ export function registerTicketActions(): void {
       category: 'Business Operations',
       description: 'Close a ticket with resolution and optional notification'
     },
-    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
-      await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
-      await retainWorkflowTicketAuthority(ctx, tx, input.ticket_id, ['status_id']);
-
+    handler: async (input, ctx, tx) => {
       const ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
       if (!ticket) {
         throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Ticket not found', details: { ticket_id: input.ticket_id } });
@@ -1339,14 +1411,15 @@ export function registerTicketActions(): void {
         resolution_code: persistedResolutionCode,
         final_status_id: closedStatus.status_id as string
       };
-    })
+    }
   });
 
   // ---------------------------------------------------------------------------
   // A06 — tickets.link_entities
   // ---------------------------------------------------------------------------
-  registry.register({
+  registerAuthorizedTicketAction(registry, {
     id: 'tickets.link_entities',
+    authority: { operation: 'update', fields: () => ['entity_links'], target: input => ({ ticketId: input.ticket_id }) },
     version: 1,
     inputSchema: z.object({
       ticket_id: withWorkflowPicker(uuidSchema, 'Ticket id', 'ticket'),
@@ -1370,9 +1443,7 @@ export function registerTicketActions(): void {
     sideEffectful: true,
     idempotency: { mode: 'engineProvided' },
     ui: { label: 'Link Ticket Entity', category: 'Business Operations', description: 'Link a ticket to another entity' },
-    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
-      await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
-
+    handler: async (input, ctx, tx) => {
       const ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
       if (!ticket) {
         throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Ticket not found' });
@@ -1460,14 +1531,15 @@ export function registerTicketActions(): void {
         link_type: input.link_type,
         linked_entity_summary: linkedEntitySummary
       };
-    })
+    }
   });
 
   // ---------------------------------------------------------------------------
   // A07 — tickets.add_attachment
   // ---------------------------------------------------------------------------
-  registry.register({
+  registerAuthorizedTicketAction(registry, {
     id: 'tickets.add_attachment',
+    authority: { operation: 'update', fields: input => ['attachments', ...(input.comment ? ['comments'] : [])], target: input => ({ ticketId: input.ticket_id }) },
     version: 1,
     inputSchema: z.object({
       ticket_id: withWorkflowPicker(uuidSchema, 'Ticket id', 'ticket'),
@@ -1489,8 +1561,7 @@ export function registerTicketActions(): void {
     sideEffectful: true,
     idempotency: { mode: 'actionProvided', key: actionProvidedKey },
     ui: { label: 'Add Ticket Attachment', category: 'Business Operations', description: 'Attach a document/file to a ticket' },
-    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
-      await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
+    handler: async (input, ctx, tx) => {
       await requirePermission(ctx, tx, { resource: 'document', action: 'create' });
       const attached = await attachDocumentToTicket(ctx, tx, input.ticket_id, {
         source: input.source,
@@ -1527,7 +1598,7 @@ export function registerTicketActions(): void {
         mime_type: attached.content_type ?? null,
         storage_ref: attached.file_id ?? null
       };
-    })
+    }
   });
 
   // ---------------------------------------------------------------------------
@@ -1577,13 +1648,14 @@ export function registerTicketActions(): void {
 
   // Display names let workflows show and compare a ticket's related records by name
   // (priority_name = "High") without looking up ids.
-  const loadTicketDisplayNames = async (tx: TenantTxContext, ticket: any): Promise<TicketDisplayNames> => {
+  const loadTicketDisplayNames = async (tx: TenantTxContext, ticket: any, redactions: string[]): Promise<TicketDisplayNames> => {
     const lookup = async (table: string, idColumn: string, id: unknown, read: (row: any) => unknown): Promise<string | null> => {
       if (typeof id !== 'string' || id.length === 0) return null;
       const row = await tenantScopedTable(tx, table).where(idColumn, id).first();
       const value = row ? read(row) : null;
       return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
     };
+    const allowed = (field: keyof TicketDisplayNames) => !workflowTicketFieldHidden(redactions, field);
     const clientId = ticket.client_id ?? ticket.company_id ?? null;
 
     const [
@@ -1596,15 +1668,15 @@ export function registerTicketActions(): void {
       subcategory_name,
       assigned_to_name,
     ] = await Promise.all([
-      lookup('clients', 'client_id', clientId, (row) => row.client_name),
-      lookup('boards', 'board_id', ticket.board_id, (row) => row.board_name),
-      lookup('contacts', 'contact_name_id', ticket.contact_name_id, (row) => row.full_name),
-      lookup('statuses', 'status_id', ticket.status_id, (row) => row.name),
-      lookup('priorities', 'priority_id', ticket.priority_id, (row) => row.priority_name),
-      lookup('categories', 'category_id', ticket.category_id, (row) => row.category_name),
-      lookup('categories', 'category_id', ticket.subcategory_id, (row) => row.category_name),
-      lookup('users', 'user_id', ticket.assigned_to, (row) =>
-        `${row.first_name ?? ''} ${row.last_name ?? ''}`.trim() || row.username),
+      allowed('client_name') ? lookup('clients', 'client_id', clientId, (row) => row.client_name) : null,
+      allowed('board_name') ? lookup('boards', 'board_id', ticket.board_id, (row) => row.board_name) : null,
+      allowed('contact_name') ? lookup('contacts', 'contact_name_id', ticket.contact_name_id, (row) => row.full_name) : null,
+      allowed('status_name') ? lookup('statuses', 'status_id', ticket.status_id, (row) => row.name) : null,
+      allowed('priority_name') ? lookup('priorities', 'priority_id', ticket.priority_id, (row) => row.priority_name) : null,
+      allowed('category_name') ? lookup('categories', 'category_id', ticket.category_id, (row) => row.category_name) : null,
+      allowed('subcategory_name') ? lookup('categories', 'category_id', ticket.subcategory_id, (row) => row.category_name) : null,
+      allowed('assigned_to_name') ? lookup('users', 'user_id', ticket.assigned_to, (row) =>
+        `${row.first_name ?? ''} ${row.last_name ?? ''}`.trim() || row.username) : null,
     ]);
 
     return {
@@ -1671,8 +1743,19 @@ export function registerTicketActions(): void {
     return 0;
   };
 
-  registry.register({
+  registerAuthorizedTicketAction(registry, {
     id: 'tickets.find',
+    authority: {
+      operation: 'read',
+      fields: input => [
+        'ticket_id', 'ticket_number', 'title', 'url', 'client_id', 'board_id', 'contact_id',
+        'status_id', 'priority_id', 'category_id', 'subcategory_id', 'assignment',
+        'entered_at', 'updated_at', 'closed_at', 'is_closed', 'response_state', 'comments',
+        ...(input.include?.attributes || input.include?.custom_fields ? ['attributes'] : []),
+        ...(input.include?.attachments ? ['attachments'] : []),
+      ],
+      target: () => ({})
+    },
     version: 1,
     inputSchema: z.object({
       ticket_id: withWorkflowPicker(uuidSchema.optional(), 'Ticket id', 'ticket'),
@@ -1709,32 +1792,11 @@ export function registerTicketActions(): void {
       category: 'Business Operations',
       description: 'Fetch a ticket by id, number, or external reference with optional response-state filter and bounded comments/attachments includes'
     },
-    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
-      await requirePermission(ctx, tx, { resource: 'ticket', action: 'read' });
-
+    handler: async (input, ctx, tx, grant) => {
       const startedAt = Date.now();
-      let ticket: any = null;
-      if (input.ticket_id) {
-        const query = tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id);
-        if (input.response_state) {
-          query.where('response_state', input.response_state);
-        }
-        ticket = await query.first();
-      } else if (input.ticket_number) {
-        const query = tenantScopedTable(tx, 'tickets').where('ticket_number', input.ticket_number);
-        if (input.response_state) {
-          query.where('response_state', input.response_state);
-        }
-        ticket = await query.first();
-      } else if (input.external_ref) {
-        const query = tenantScopedTable(tx, 'tickets')
-          .andWhereRaw(`(attributes->>'external_ref') = ?`, [String(input.external_ref)]);
-        if (input.response_state) {
-          query.where('response_state', input.response_state);
-        }
-        ticket = await query.first();
-      }
-
+      const hidden = (...fields: string[]) => workflowTicketFieldHidden(grant.redactedFields, ...fields);
+      const ticket = grant.ticket && !hidden('ticket_id', 'ticket_number')
+        ? redactWorkflowTicket(grant.ticket, grant.redactedFields) : null;
       if (!ticket) {
         if (input.on_not_found === 'error') {
           throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Ticket not found' });
@@ -1743,12 +1805,13 @@ export function registerTicketActions(): void {
       }
 
       const include: Partial<NonNullable<typeof input.include>> = input.include ?? {};
-      const includeAttributes = Boolean(include.attributes || include.custom_fields);
+      const includeAttributes = Boolean(include.attributes || include.custom_fields)
+        && !hidden('attributes') && ticket.attributes !== undefined;
       const attrs = includeAttributes ? parseJsonMaybe(ticket.attributes) : undefined;
 
-      const displayNames = await loadTicketDisplayNames(tx, ticket);
+      const displayNames = await loadTicketDisplayNames(tx, ticket, grant.redactedFields);
       const clientId = ticket.client_id ?? ticket.company_id ?? null;
-      const parsedTicket = ticketSummarySchema.parse({
+      const parsedTicket = ticketSummarySchema.parse(redactWorkflowTicket({
         ...displayNames,
         ticket_id: ticket.ticket_id,
         ticket_number: ticket.ticket_number,
@@ -1769,14 +1832,14 @@ export function registerTicketActions(): void {
         is_closed: ticket.is_closed ?? null,
         response_state: ticket.response_state ?? null,
         ...(includeAttributes ? { attributes: (attrs && typeof attrs === 'object' && !Array.isArray(attrs)) ? attrs : {} } : {})
-      });
+      }, grant.redactedFields));
 
       const latestCommentQuery = () => orderTicketCommentsNewestFirst(
         tenantScopedTable(tx, 'comments').where('ticket_id', ticket.ticket_id)
       );
       const [latestCommentRow, latestCustomerCommentRow] = await Promise.all([
-        latestCommentQuery().first(),
-        whereCustomerAuthoredComment(latestCommentQuery()).first(),
+        hidden('comments', 'latest_comment') ? null : latestCommentQuery().first(),
+        hidden('comments', 'latest_customer_comment') ? null : whereCustomerAuthoredComment(latestCommentQuery()).first(),
       ]);
 
       const result: any = {
@@ -1785,7 +1848,7 @@ export function registerTicketActions(): void {
         latest_customer_comment: latestCustomerCommentRow ? toTicketComment(latestCustomerCommentRow) : null,
       };
 
-      if (include.comments) {
+      if (include.comments && !hidden('comments')) {
         const commentLimit = include.comments_limit ?? 50;
         const applyCommentFilters = (query: Knex.QueryBuilder) => {
           query.where('ticket_id', ticket.ticket_id);
@@ -1809,7 +1872,7 @@ export function registerTicketActions(): void {
         };
       }
 
-      if (include.attachments) {
+      if (include.attachments && !hidden('attachments')) {
         const attachmentLimit = include.attachments_limit ?? 50;
         const db = tenantDb(tx.trx, tx.tenantId);
         const attachmentQuery = db.table('document_associations as da');
@@ -1843,14 +1906,15 @@ export function registerTicketActions(): void {
       });
 
       return result;
-    })
+    }
   });
 
   // ---------------------------------------------------------------------------
   // A09 — tickets.apply_checklist
   // ---------------------------------------------------------------------------
-  registry.register({
+  registerAuthorizedTicketAction(registry, {
     id: 'tickets.apply_checklist',
+    authority: { operation: 'update', fields: () => ['checklist'], target: input => ({ ticketId: input.ticket_id }) },
     version: 1,
     inputSchema: z.object({
       ticket_id: withWorkflowPicker(uuidSchema, 'Ticket id', 'ticket'),
@@ -1870,9 +1934,7 @@ export function registerTicketActions(): void {
       category: 'Business Operations',
       description: 'Copy a checklist template\'s items onto a ticket (never applies the same template twice)'
     },
-    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
-      await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
-
+    handler: async (input, ctx, tx) => {
       const ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
       if (!ticket) {
         throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Ticket not found', details: { ticket_id: input.ticket_id } });
@@ -1913,14 +1975,15 @@ export function registerTicketActions(): void {
         // (like the idempotent already-applied case) so a run isn't failed by template scope.
         ...(applyResult.reason ? { reason: applyResult.reason } : {})
       };
-    })
+    }
   });
 
   // ---------------------------------------------------------------------------
   // tickets.add_checklist_items
   // ---------------------------------------------------------------------------
-  registry.register({
+  registerAuthorizedTicketAction(registry, {
     id: 'tickets.add_checklist_items',
+    authority: { operation: 'update', fields: () => ['checklist'], target: input => ({ ticketId: input.ticket_id }) },
     version: 1,
     inputSchema: z.object({
       ticket_id: withWorkflowPicker(uuidSchema, 'Ticket id', 'ticket'),
@@ -1944,9 +2007,7 @@ export function registerTicketActions(): void {
       category: 'Business Operations',
       description: 'Append ad-hoc checklist items (unchecked, unassigned) to a ticket'
     },
-    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
-      await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
-
+    handler: async (input, ctx, tx) => {
       const ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
       if (!ticket) {
         throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Ticket not found', details: { ticket_id: input.ticket_id } });
@@ -1964,6 +2025,6 @@ export function registerTicketActions(): void {
       });
 
       return { ticket_id: input.ticket_id, added };
-    })
+    }
   });
 }

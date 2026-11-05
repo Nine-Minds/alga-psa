@@ -196,7 +196,56 @@ export const coManagedDeliverySeam = sharedWorkSeam<CoManagedDeliveryProvider>('
  * lives in shared/ and cannot import the co-managed package, so it asks this seam: not served / not
  * registered answers null with 0 SQL and the native action runs unchanged.
  */
+export interface WorkflowTicketAuthorizationInput {
+  tenant: string;
+  workflowRunId: string;
+  actorUserId: string;
+  operation: 'read' | 'create' | 'update';
+  ticketId?: string;
+  prospective?: { clientId: string; boardId: string; assignedUserIds: string[]; teamIds: string[] };
+  fields: string[];
+  readFields?: string[];
+  /** Selector fields must be authorized before their values affect result matching. */
+  predicateFields?: string[];
+  assignment?: { assignedUserIds: string[]; teamIds: string[] };
+}
+
+export interface WorkflowTicketSelectorInput {
+  tenant: string;
+  workflowRunId: string;
+  actorUserId: string;
+  selector: { ticketId?: string; ticketNumber?: string; externalRef?: string; responseState?: string };
+  predicateFields: string[];
+}
+
+/** Canonical ticket-field provenance shared by result redaction and selector authorization. */
+export const WORKFLOW_TICKET_DERIVED_SOURCES: Readonly<Record<string, readonly string[]>> = {
+  attributes: ['description', 'custom_fields', 'tags', 'due_date', 'resolution_code', 'resolution_text'],
+  client_id: ['company_id', 'client', 'clients'], company_id: ['client_id', 'client', 'clients'],
+  client_name: ['client_id', 'company_id', 'client', 'clients', 'clients.client_name'],
+  board_id: ['board', 'boards'], board_name: ['board_id', 'board', 'boards', 'boards.board_name'],
+  contact_id: ['contact_name_id', 'contact_name', 'requester', 'contact', 'contacts', 'contacts.contact_name_id'],
+  contact_name_id: ['contact_id', 'contact_name', 'requester', 'contact', 'contacts', 'contacts.contact_name_id'],
+  contact_name: ['contact_id', 'contact_name_id', 'requester', 'contact', 'contacts', 'contacts.contact_name_id'],
+  status_id: ['status', 'statuses'], status_name: ['status_id', 'status', 'statuses', 'statuses.name'],
+  priority_id: ['priority', 'priorities'], priority_name: ['priority_id', 'priority', 'priorities', 'priorities.priority_name'],
+  category_id: ['category', 'categories'], category_name: ['category_id', 'category', 'categories', 'categories.category_name'],
+  subcategory_id: ['subcategory', 'categories'], subcategory_name: ['subcategory_id', 'subcategory', 'categories', 'categories.category_name'],
+  assigned_to: ['assignment', 'assignee', 'users'], assigned_to_name: ['assigned_to', 'assignment', 'assignee', 'users', 'users.first_name', 'users.last_name', 'users.username'],
+  is_closed: ['status_id', 'status', 'statuses'], closed_at: ['status_id', 'status', 'statuses'],
+  response_state: ['status_id', 'status', 'statuses'],
+  comments: ['conversation', 'note', 'markdown_content'],
+  attachments: ['documents', 'document_associations', 'file_id', 'storage_ref'],
+};
+
+export function workflowTicketFieldSources(field: string): string[] {
+  return [field, ...(field.startsWith('attributes.') ? [field.slice('attributes.'.length)] : []), ...(WORKFLOW_TICKET_DERIVED_SOURCES[field] ?? [])];
+}
+
 export interface CoManagedWorkflowTicketAuthority {
+  authorize?(trx: unknown, input: WorkflowTicketAuthorizationInput): Promise<{ redactedFields: string[] }>;
+  findCandidates?(trx: unknown, input: WorkflowTicketSelectorInput): Promise<string[]>;
+
   retain(trx: unknown, input: { tenant: string; ticketId: string; workflowRunId: string; actorUserId: string; fields: string[]; readFields: string[] }): Promise<void>;
 }
 export const coManagedWorkflowTicketSeam = sharedWorkSeam<CoManagedWorkflowTicketAuthority>('workflow-ticket');
