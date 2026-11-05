@@ -28,6 +28,8 @@ const INTENTIONALLY_UNLINKED: Record<string, string> = {
   '/msp/account': 'reached via the header avatar menu → Account, not the sidebar',
   '/msp/add-ons': 'reached via add-on notices and paywall CTAs, not the sidebar',
   '/msp/co-managed': 'capability-gated Co-managed IT menu group contributed through the msp.navigation.group UI slot (config/coManagedMenu.ts), not menuConfig; coManagedMenuGroup.test.tsx pins it',
+  '/msp/co-managed/archive': 'capability-gated (co-managed serves) MSP archive, contributed through the same msp.navigation.group slot as /msp/co-managed (config/coManagedMenu.ts)',
+  '/msp/co-management/departure': 'capability-gated (co-managed serves) departure screen for either side of a relationship, reached from the co-managed workspace',
   '/msp/co-management/administration': 'capability-gated Access & administration screen; the sidebar shows it only when the co-managed capability holds (SidebarWithFeatureFlags filters it out otherwise), so the registry-level coherence check does not see it',
   '/msp/co-management/customer-tickets': 'capability-gated (co-managed serves) sponsor queue of customer-shared tickets, now only redirects to the Customer Tickets queue at /msp/tickets/customer (sidebar: Tickets > Customer Tickets)',
   '/msp/co-management/tickets': 'capability-gated (co-managed serves) native shared-ticket screen, reached by row deep links from the Customer Tickets queue (/msp/tickets/customer, sidebar: Tickets > Customer Tickets) and by the old customer-tickets URLs, which redirect here',

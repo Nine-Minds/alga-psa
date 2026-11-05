@@ -81,12 +81,13 @@ export async function register() {
     // CM L0c: install the co-managed write-admission resolver. Fails open: an image
     // whose co-managed packages do not resolve must still boot and write.
     try {
-      const { installCoManagedWriteAdmission, installCoManagedReviewAdmission, devForcedStatesFromEnv } = await import('@alga-psa/licensing/co-managed-write-admission');
+      const { installCoManagedWriteAdmission, installCoManagedReviewAdmission, devForcedStatesFromEnv,
+        readCoManagedLifecycleForServer } = await import('@alga-psa/licensing/co-managed-write-admission');
       // devForcedStatesFromEnv is undefined in production; the installer also ignores it there.
       if (globalThis.__algaCoManagedReviewReader) {
         installCoManagedReviewAdmission(globalThis.__algaCoManagedReviewReader);
       } else {
-        installCoManagedWriteAdmission({ devForcedStates: devForcedStatesFromEnv() });
+        installCoManagedWriteAdmission({ readState: readCoManagedLifecycleForServer, devForcedStates: devForcedStatesFromEnv() });
       }
     } catch (error) {
       console.error('Failed to install co-managed write admission:', error);

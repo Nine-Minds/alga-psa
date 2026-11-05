@@ -115,6 +115,20 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
     behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'allowed' },
   },
   {
+    // Ending a relationship is available to both sides (a customer ends its own MSP; a sponsor ends a client).
+    // The page and its actions decide, per side, what the caller may do.
+    group: 'msp_co_management_departure',
+    staticPrefixes: ['/msp/co-management/departure'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'allowed' },
+  },
+  {
+    // The MSP's read-only archive of ended relationships. Sponsor-only: a co_managed customer has none.
+    // Must precede the shared /msp/co-managed root, which allows both sides (first match wins).
+    group: 'msp_co_managed_archive',
+    staticPrefixes: ['/msp/co-managed/archive'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' },
+  },
+  {
     // Customer-admin workspace export (records). A co_managed customer exports its own workspace, so
     // it reaches this one page beneath the otherwise-closed /msp/co-management prefix; the co-managed capability
     // gate in the page (and the export permission in its actions) still decides admission.
@@ -195,6 +209,14 @@ export const API_RULES: readonly ApiRule[] = [
     group: 'api_capability_probes',
     staticPrefixes: ['/api/v1/capabilities'],
     behaviorByProduct: { psa: 'allowed', algadesk: 'allowed', co_managed: 'allowed' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false, co_managed: false },
+  },
+  {
+    // Retained co-managed archive file bytes. The MSP (psa) reads its own sealed archive; the route
+    // is also capability-gated and 404s by default. A co_managed customer has no archive.
+    group: 'api_co_management_archive_files',
+    staticPrefixes: ['/api/co-management/archive-files'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied', co_managed: 'denied' },
     visibleInMetadataByProduct: { psa: false, algadesk: false, co_managed: false },
   },
   {

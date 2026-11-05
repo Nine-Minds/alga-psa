@@ -207,6 +207,11 @@ interface TicketingDashboardProps {
   initialTeams?: ITeam[];
   canUpdateTickets?: boolean;
   /**
+   * The co-managed workspace is ended or lapsed: reads stay, every create/copy/delete control is withdrawn.
+   * Separate from `canUpdateTickets`, which only gates edits of existing rows.
+   */
+  workspaceReadOnly?: boolean;
+  /**
    * Called immediately before any route change out of the list, so the container
    * can stop mirroring filter state into the URL. A write that lands while the
    * push is in flight replaces the entry the router just made and bounces the
@@ -357,6 +362,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   clientTagDefinitions = EMPTY_TAG_DEFINITIONS,
   initialTeams = [],
   canUpdateTickets = true,
+  workspaceReadOnly = false,
   onNavigateAway,
   allowSlaStatusFilter = true,
   smartSearchAvailable = false,
@@ -549,7 +555,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     () => navigateAwayTo(buildCreateTicketHref({ isAlgaDeskMode: useAlgaDeskQuickAddForm })),
     [navigateAwayTo, useAlgaDeskQuickAddForm],
   );
-  usePageCreateShortcut(openQuickAddTicket);
+  usePageCreateShortcut(openQuickAddTicket, { enabled: !workspaceReadOnly });
 
   // Tag filter values from props
   const selectedTags = filterValues.tags ?? EMPTY_STRING_ARRAY;
@@ -1762,7 +1768,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       canCreateTemplate: templatePermissions.create,
     });
 
-    return [selectionColumn, ...baseColumns, actionsColumn];
+    // Duplicate and "Create template" are the only row actions and both write.
+    return workspaceReadOnly ? [selectionColumn, ...baseColumns] : [selectionColumn, ...baseColumns, actionsColumn];
   }, [
     categories,
     boards,
@@ -1771,6 +1778,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     handleTicketClick,
     handleTagsChange,
     canUpdateTickets,
+    workspaceReadOnly,
     ticketTagsRef,
     onQuickViewClient,
     onQuickViewContact,
@@ -2434,17 +2442,19 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 disabled: !hasSelection,
                 separator: true,
               },
-              {
+              ...(workspaceReadOnly ? [] : [{
                 id: `${id}-share-import`,
                 icon: Upload,
                 label: t('dashboard.importAction', { defaultValue: 'Import CSV' }),
                 onSelect: () => navigateAwayTo('/msp/tickets/import'),
-              },
+              }]),
             ] satisfies ShareAction[]}
           />
-          <Button id="add-ticket-button" onClick={openQuickAddTicket}>
-            {t('dashboard.addTicket', 'Add Ticket')}
-          </Button>
+          {!workspaceReadOnly && (
+            <Button id="add-ticket-button" onClick={openQuickAddTicket}>
+              {t('dashboard.addTicket', 'Add Ticket')}
+            </Button>
+          )}
         </>}
       />
       <BoardTabStrip
@@ -3194,6 +3204,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         showPriority={canUpdateTickets}
         showTags={canUpdateTickets}
         showDueDate={canUpdateTickets}
+        showDelete={!workspaceReadOnly}
         statusDisabled={!selectedTicketsSharedBoardId}
         statusDisabledTitle={isResolvingSelectedBoards
           ? t('bulk.actionBar.statusResolvingBoards', 'Checking the boards of selected tickets…')

@@ -521,7 +521,10 @@
       "defaultTitle": "Tableau de bord | AlgaPSA"
     },
     "coManaged": {
-      "title": "Informatique cogérée"
+      "title": "Informatique cogérée",
+      "archive": {
+        "title": "Archive de la gestion informatique partagée"
+      }
     },
     "coManagement": {
       "title": "Accès cogéré",
@@ -541,6 +544,9 @@
         "title": "Tâches partagées",
         "taskTitle": "Tâche partagée",
         "projectTitle": "Projet partagé"
+      },
+      "departure": {
+        "title": "Mettre fin à la gestion informatique partagée"
       },
       "sla": {
         "title": "Priorités SLA cogérées"
