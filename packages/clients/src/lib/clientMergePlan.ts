@@ -544,6 +544,13 @@ export const CLIENT_KEYED_TABLES_LEFT_BEHIND: Array<{ table: string; reason: str
       + 'misattribute the record (and collide with the target\'s own row on the per-client unique key).',
   },
   {
+    table: 'co_managed_archive_files',
+    reason:
+      'An immutable copy-on-retain snapshot of a customer attachment owned by the sponsor tenant. '
+      + 'Its client_id records the original relationship provenance, not a live client write target; '
+      + 'archive storage and reads use tenant and archive_file_id. Re-pointing it would rewrite retained history.',
+  },
+  {
     table: 'co_managed_participation_evidence',
     reason:
       'Append-only audit of who touched shared work for this client, kept so access reduction cannot '

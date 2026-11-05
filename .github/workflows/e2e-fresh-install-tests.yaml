@@ -288,6 +288,12 @@ jobs:
           # deployment build (nm-kube-config) must use a secret of its own.
           NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: OpTnSkDAbqi/eI+2i8Tg20NhJwnUrrgPdz4I4p/3N+0=
         run: |
+          free -h
+          df -h /
+          # Keep memory, swap and I/O samples even if the runner shuts down.
+          vmstat -w 15 &
+          resource_monitor_pid=$!
+          trap 'kill "$resource_monitor_pid" 2>/dev/null || true' EXIT
           scripts/build-production-server.sh "$EDITION_NAME"
           du -sh server/.next server/node_modules/.cache/webpack .nx/cache 2>/dev/null || true
 
