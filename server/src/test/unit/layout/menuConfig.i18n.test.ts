@@ -76,6 +76,7 @@ describe('menuConfig i18n metadata', () => {
 
     expect(keyedSubItems.map((item) => item.translationKey)).toEqual([
       'nav.ticketsAll',
+      'nav.ticketsCustomer',
       'nav.ticketsRecurring',
       'nav.ticketsTemplates',
       'nav.ticketsCannedResponses',

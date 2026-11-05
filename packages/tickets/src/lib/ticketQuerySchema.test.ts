@@ -84,6 +84,15 @@ describe('ticket query schema: paths', () => {
     ['client.id', 'equals'],
     ['due_date', 'lt'],
     ['response_state', 'is_empty'],
+    ['location_id', 'equals'],
+    ['location_id', 'in'],
+    ['location_id', 'not_in'],
+    ['location_id', 'is_empty'],
+    ['location_id', 'is_not_empty'],
+    ['contact.locations', 'in'],
+    ['contact.locations', 'not_in'],
+    ['contact.locations', 'is_empty'],
+    ['contact.locations', 'is_not_empty'],
   ] as const)('accepts %s %s', (path, operator) => {
     expect(resolvePath(ticketQuerySchema, path)).not.toBeNull();
     expect(allowedOperators(resolvePath(ticketQuerySchema, path)!.attribute)).toContain(operator);
@@ -94,5 +103,50 @@ describe('ticket query schema: paths', () => {
     expect(resolvePath(ticketQuerySchema, 'requester_vip')).toBeNull();
     expect(validateClause(ticketQuerySchema, { path: 'contact.tags', operator: 'contains', value: 'x' })?.code).toBe('operator_not_allowed');
     expect(validateClause(ticketQuerySchema, { path: 'contact.tags', operator: 'in', value: ['VIP'] })?.code).toBe('bad_value');
+  });
+
+  // The two location paths are a persisted filter contract from first release (saved views, URLs),
+  // so their operator sets and value types are pinned here rather than left to drift.
+  it('pins the location paths to uuid values and the declared operators', () => {
+    expect([...allowedOperators(resolvePath(ticketQuerySchema, 'location_id')!.attribute)].sort())
+      .toEqual(['equals', 'in', 'is_empty', 'is_not_empty', 'not_in']);
+    expect([...allowedOperators(resolvePath(ticketQuerySchema, 'contact.locations')!.attribute)].sort())
+      .toEqual(['in', 'is_empty', 'is_not_empty', 'not_in']);
+
+    expect(validateClause(ticketQuerySchema, { path: 'location_id', operator: 'contains', value: 'x' })?.code)
+      .toBe('operator_not_allowed');
+    expect(validateClause(ticketQuerySchema, { path: 'contact.locations', operator: 'equals', value: UUID })?.code)
+      .toBe('operator_not_allowed');
+    expect(validateClause(ticketQuerySchema, { path: 'contact.locations', operator: 'in', value: ['Warehouse'] })?.code)
+      .toBe('bad_value');
+    expect(validateClause(ticketQuerySchema, { path: 'location_id', operator: 'in', value: [UUID] })).toBeNull();
+    expect(validateClause(ticketQuerySchema, { path: 'contact.locations', operator: 'in', value: [UUID] })).toBeNull();
+  });
+
+  // A requester's locations are a set over contact_locations, so the clause has to reach through
+  // the contact hop and correlate both hops on tenant — the same shape a tag clause compiles to.
+  it('compiles contact.locations as a tenant-correlated subselect through the contact hop', () => {
+    const fragment = compilePredicateFragment(
+      schema,
+      { path: 'contact.locations', operator: 'in', value: [UUID] },
+      { rootAlias: 't' },
+    );
+    // Identifiers are bound (??), so the table names and both tenant correlations live in the
+    // bindings: two nested EXISTS, each correlated on tenant.
+    expect(fragment.bindings).toContain('contact_locations');
+    expect(fragment.bindings).toContain('contacts');
+    expect((fragment.sql.match(/EXISTS \(SELECT 1 FROM/g) ?? []).length).toBe(2);
+    expect(fragment.bindings.filter((binding) => String(binding).endsWith('.tenant'))).toHaveLength(4);
+  });
+
+  it('compiles location_id without a join, like any other ticket column', () => {
+    const fragment = compilePredicateFragment(
+      schema,
+      { path: 'location_id', operator: 'in', value: [UUID] },
+      { rootAlias: 't' },
+    );
+    // Columns bind their identifier (??), so no subselect and no join: the clause is on `tickets`.
+    expect(fragment.bindings[0]).toBe('t.location_id');
+    expect(fragment.sql).not.toContain('SELECT 1 FROM');
   });
 });

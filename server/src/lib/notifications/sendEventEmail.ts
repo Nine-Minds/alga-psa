@@ -16,9 +16,16 @@ import Handlebars from 'handlebars';
 import { EmailAddress, EmailAttachment } from '../../types/email.types';
 import { normalizeTicketSubject } from './ticketSubject';
 import { AUTO_GENERATED_MAIL_HEADERS } from '@shared/lib/email/automatedMessage';
+import { persistReplyToken } from './replyTokenPersistence';
 
 const REPLY_BANNER_TEXT = '--- Please reply above this line ---';
 const EMAIL_SERVICE_DISABLED_MESSAGE = 'Email service is disabled or not configured';
+const DEFAULT_REPLY_TOKEN_LIFETIME_DAYS = 30;
+
+function getReplyTokenExpiry(now = Date.now()): Date {
+  const configuredDays = Number(process.env.EMAIL_REPLY_TOKEN_LIFETIME_DAYS ?? DEFAULT_REPLY_TOKEN_LIFETIME_DAYS);
+  return new Date(now + configuredDays * 24 * 60 * 60 * 1000);
+}
 
 function isEmailServiceDisabledErrorMessage(message: unknown): boolean {
   if (typeof message !== 'string') return false;
@@ -179,44 +186,6 @@ function applyReplyMarkers(
   };
 }
 
-async function persistReplyToken(
-  knex: any,
-  tenantId: string,
-  payload: ReplyMarkerPayload,
-  metadata: { template: string; subject: string; recipient: string }
-): Promise<void> {
-  try {
-    const tableExists = await knex.schema.hasTable('email_reply_tokens');
-    if (!tableExists) {
-      return;
-    }
-
-    const record: Record<string, any> = {
-      tenant: tenantId,
-      token: payload.token,
-      ticket_id: payload.ticketId || null,
-      project_id: payload.projectId || null,
-      comment_id: payload.commentId || null,
-      metadata: JSON.stringify({ ...metadata, ...payload.extraMetadata, threadId: payload.threadId }),
-      template: metadata.template,
-      recipient_email: metadata.recipient,
-      entity_type: payload.projectId ? 'project' : 'ticket',
-    };
-
-    await tenantDb(knex, tenantId).table('email_reply_tokens')
-      .insert(record)
-      .onConflict(['tenant', 'token'])
-      .ignore();
-  } catch (error) {
-    logger.warn('[SendEventEmail] Failed to persist email reply token', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      tenantId,
-      ticketId: payload.ticketId,
-      projectId: payload.projectId,
-      commentId: payload.commentId
-    });
-  }
-}
 
 //
 // Template lookup and sending are handled below using DatabaseTemplateProcessor
@@ -677,7 +646,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
         template: params.template,
         subject,
         recipient: params.to,
-      });
+      }, getReplyTokenExpiry());
     }
 
     // Store the outbound RFC Message-ID in the ticket's email_metadata references.

@@ -4,6 +4,7 @@ import {
   computeVisibleTagCount,
   estimateOverflowPillWidth,
   estimateTagChipWidth,
+  mergePartyDisplayTags,
   TAG_CHIP_GAP,
 } from "./ticketRowTags";
 
@@ -52,5 +53,24 @@ describe("computeVisibleTagCount", () => {
 
   it("always shows at least one tag even on very narrow rows", () => {
     expect(computeVisibleTagCount(["extremely-long-tag-name-here", "another"], 60)).toBe(1);
+  });
+});
+
+describe("mergePartyDisplayTags", () => {
+  const tag = (tag_id: string, tag_text: string) => ({ tag_id, tag_text });
+
+  it("puts the requester's chips before the client's", () => {
+    const merged = mergePartyDisplayTags([tag("c1", "POC")], [tag("k1", "Gold")]);
+    expect(merged.map((t) => t.tag_text)).toEqual(["POC", "Gold"]);
+  });
+
+  it("drops a repeat by text so a row never reads VIP VIP", () => {
+    const merged = mergePartyDisplayTags([tag("c1", "VIP")], [tag("k1", "vip"), tag("k2", "Gold")]);
+    expect(merged.map((t) => t.tag_id)).toEqual(["c1", "k2"]);
+  });
+
+  it("tolerates a missing side", () => {
+    expect(mergePartyDisplayTags(null, undefined)).toEqual([]);
+    expect(mergePartyDisplayTags(undefined, [tag("k1", "Gold")]).map((t) => t.tag_text)).toEqual(["Gold"]);
   });
 });
