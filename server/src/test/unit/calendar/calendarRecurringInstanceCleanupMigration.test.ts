@@ -94,6 +94,10 @@ function makeKnex(data: Fixture) {
         checks.push((row) => read(row, column) === null || read(row, column) === undefined);
         return builder;
       },
+      whereNotNull: (column: string) => {
+        checks.push((row) => read(row, column) !== null && read(row, column) !== undefined);
+        return builder;
+      },
       whereIn: (column: string, values: any[]) => {
         checks.push((row) => values.includes(read(row, column)));
         return builder;
@@ -268,6 +272,33 @@ describe('cleanup_calendar_recurring_instance_imports migration', () => {
       'entry-outlook',
     ]);
     expect(data.google_calendar_provider_config[0].sync_token).toBeNull();
+  });
+
+  it('keeps a single-occurrence override its master claims in occurrence_index', async () => {
+    // ScheduleEntry.update(…, SINGLE) writes an override standalone — non-recurring,
+    // original_entry_id null — so it is instance-shaped like a pre-fix import and
+    // only the master's occurrence_index tells them apart.
+    const data = fixture();
+    const master = data.calendar_event_mappings.find((row) => row.id === 'mapping-master')!;
+    master.occurrence_index = { [`${MASTER_ID}_20261105T151500Z`]: '2026-11-05T15:15:00.000Z' };
+    const knex = makeKnex(data);
+    const migration = require(MIGRATION);
+
+    await migration.up(knex);
+
+    expect(data.schedule_entries.map((row) => row.entry_id).sort()).toEqual([
+      'entry-dec',
+      'entry-master',
+      // kept: claimed by the master as its override for that slot
+      'entry-nov',
+      'entry-outlook',
+    ]);
+    expect(data.calendar_event_mappings.map((row) => row.id).sort()).toEqual([
+      'mapping-1',
+      'mapping-2',
+      'mapping-master',
+      'mapping-outlook',
+    ]);
   });
 
   it('is a no-op when nothing matches the instance-id shape', async () => {

@@ -17,13 +17,19 @@
  *      `external_event_id` has the provider's instance-id shape and whose
  *      schedule entry is a plain non-recurring row (`is_recurring = false`,
  *      `original_entry_id IS NULL`) — a master mapping is keyed by the bare
- *      master id and never matches, and a single-occurrence override is reached
- *      only through its own master,
- *   2. skips (and logs) any entry a time entry was logged against, so no
+ *      master id and never matches,
+ *   2. keeps a candidate whose id a series master lists in its
+ *      `occurrence_index`: that is a single-occurrence override the fixed code
+ *      wrote. Overrides go through ScheduleEntry.update(…, SINGLE), which
+ *      stores them standalone (`original_entry_id` null, non-recurring), so the
+ *      index is the only thing that tells them apart from a pre-fix instance
+ *      import. On a first forward deploy the column does not exist yet (it is
+ *      added by the next migration) and no override can exist either,
+ *   3. skips (and logs) any entry a time entry was logged against, so no
  *      billable work loses its work item,
- *   3. deletes the mapping, `schedule_entry_assignees` and `schedule_entries`
+ *   4. deletes the mapping, `schedule_entry_assignees` and `schedule_entries`
  *      rows by id + tenant in plain SQL,
- *   4. nulls `sync_token` on the affected google providers so the next
+ *   5. nulls `sync_token` on the affected google providers so the next
  *      webhook/maintenance run performs a full list and re-imports each series
  *      as one recurring entry under the fixed code.
  *
@@ -44,6 +50,25 @@ const { tenantDb } = require('./utils/tenantDb.cjs');
 const INSTANCE_ID_REGEX = '^(.+)_([0-9]{8}T[0-9]{6}Z|[0-9]{8})$';
 const BATCH_SIZE = 500;
 
+/** Occurrence ids a series master claims as its own single-occurrence overrides. */
+async function overrideOccurrenceIds(db) {
+  const rows = await db.table('calendar_event_mappings')
+    .whereNotNull('occurrence_index')
+    .select('calendar_provider_id', 'occurrence_index');
+  const claimed = new Set();
+  for (const row of rows) {
+    let index = row.occurrence_index;
+    if (typeof index === 'string') {
+      try { index = JSON.parse(index); } catch { index = null; }
+    }
+    if (!index || typeof index !== 'object' || Array.isArray(index)) continue;
+    for (const occurrenceId of Object.keys(index)) {
+      claimed.add(`${row.calendar_provider_id}:${occurrenceId}`);
+    }
+  }
+  return claimed;
+}
+
 async function tenantsWithGoogleCalendarMappings(knex) {
   const rows = await knex('calendar_event_mappings').distinct('tenant');
   return rows.map((row) => row.tenant).filter(Boolean).sort();
@@ -55,12 +80,14 @@ exports.up = async function up(knex) {
   if (!hasMappings || !hasProviders) return;
 
   const hasGoogleSyncToken = await knex.schema.hasColumn('google_calendar_provider_config', 'sync_token');
+  const hasOccurrenceIndex = await knex.schema.hasColumn('calendar_event_mappings', 'occurrence_index');
   let deleted = 0;
   let skipped = 0;
   const providersToReset = new Set();
 
   for (const tenant of await tenantsWithGoogleCalendarMappings(knex)) {
     const db = tenantDb(knex, tenant);
+    const claimedOccurrences = hasOccurrenceIndex ? await overrideOccurrenceIds(db) : new Set();
     // Entries kept for a time entry stay selectable, so they are excluded
     // explicitly to keep the batch loop making progress.
     const keptEntryIds = [];
@@ -100,6 +127,17 @@ exports.up = async function up(knex) {
       const referenced = new Set(referencedRows.map((row) => row.work_item_id));
 
       for (const candidate of candidates) {
+        // A single-occurrence override the fixed code wrote (see note 2).
+        if (claimedOccurrences.has(`${candidate.calendar_provider_id}:${candidate.external_event_id}`)) {
+          keptEntryIds.push(candidate.entry_id);
+          skipped += 1;
+          console.log(
+            '[cleanup_calendar_recurring_instance_imports] keeping a series override claimed by its master',
+            { tenant, entryId: candidate.entry_id, externalEventId: candidate.external_event_id }
+          );
+          continue;
+        }
+
         if (referenced.has(candidate.entry_id)) {
           keptEntryIds.push(candidate.entry_id);
           skipped += 1;

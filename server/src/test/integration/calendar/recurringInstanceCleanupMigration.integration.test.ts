@@ -25,15 +25,17 @@ const tenantId = uuidv4();
 const providerId = uuidv4();
 const userId = uuidv4();
 
-type Seeded = { entryId: string; externalEventId: string };
+type Seeded = { entryId: string; externalEventId: string; mappingId: string };
 
 async function seedEntry(input: {
   externalEventId: string;
   isRecurring?: boolean;
   originalEntryId?: string | null;
   title?: string;
+  occurrenceIndex?: Record<string, string>;
 }): Promise<Seeded> {
   const entryId = uuidv4();
+  const mappingId = uuidv4();
   await db('schedule_entries').insert({
     entry_id: entryId,
     tenant: tenantId,
@@ -52,17 +54,18 @@ async function seedEntry(input: {
     tenant: tenantId, entry_id: entryId, user_id: userId, created_at: new Date(), updated_at: new Date(),
   });
   await db('calendar_event_mappings').insert({
-    id: uuidv4(),
+    id: mappingId,
     tenant: tenantId,
     calendar_provider_id: providerId,
     schedule_entry_id: entryId,
     external_event_id: input.externalEventId,
     sync_status: 'synced',
     sync_direction: 'from_external',
+    occurrence_index: input.occurrenceIndex ? JSON.stringify(input.occurrenceIndex) : null,
     created_at: new Date(),
     updated_at: new Date(),
   });
-  return { entryId, externalEventId: input.externalEventId };
+  return { entryId, externalEventId: input.externalEventId, mappingId };
 }
 
 beforeAll(async () => {
@@ -114,12 +117,20 @@ describe('cleanup_calendar_recurring_instance_imports against the real schema', 
   it('deletes instance-style imports, keeps the rest, and clears the sync token', async () => {
     const timed = await seedEntry({ externalEventId: `${MASTER_ID}_20261105T151500Z` });
     const allDay = await seedEntry({ externalEventId: `${MASTER_ID}_20261105` });
-    // A master mapping is keyed by the bare id, an override is reached through
-    // its master, and a split master only looks like an instance.
-    const master = await seedEntry({ externalEventId: MASTER_ID, isRecurring: true });
+    // A master mapping is keyed by the bare id, and a split master only looks
+    // like an instance. The override is seeded exactly as the fixed code writes
+    // one — ScheduleEntry.update(…, SINGLE) stores it standalone, so it has the
+    // same shape as a pre-fix instance import and is told apart only by the
+    // master listing its id in occurrence_index.
+    const overrideExternalId = `${MASTER_ID}_20261203T151500Z`;
+    const master = await seedEntry({
+      externalEventId: MASTER_ID,
+      isRecurring: true,
+      occurrenceIndex: { [overrideExternalId]: '2026-12-03T15:15:00.000Z' },
+    });
     const override = await seedEntry({
-      externalEventId: `${MASTER_ID}_20261203T151500Z`,
-      originalEntryId: master.entryId,
+      externalEventId: overrideExternalId,
+      originalEntryId: null,
     });
     const split = await seedEntry({ externalEventId: `${MASTER_ID}_R20261105T151500Z` });
     // An entry a time entry was logged against must survive, with its mapping.
