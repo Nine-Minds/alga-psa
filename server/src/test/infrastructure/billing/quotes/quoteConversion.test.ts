@@ -568,8 +568,17 @@ describe('Quote conversion infrastructure', () => {
     const discountCharge = invoiceCharges.find((charge) => charge.is_discount === true);
     const baseCharge = invoiceCharges.find((charge) => charge.is_discount !== true);
 
-    expect(Number(baseCharge.tax_amount)).toBe(825);
-    expect(Number(baseCharge.tax_rate)).toBe(8);
+    const invoiceHeader = await context.db('invoices')
+      .where({ tenant: context.tenantId, invoice_id: result.invoice.invoice_id })
+      .first();
+
+    // The quote's stored tax is only its own estimate: the invoice resolves its
+    // tax source from the client (not from quotes.tax_source) and lets the
+    // invoice tax engine compute the tax. This client has no configured rate for
+    // the carried region, so the engine computes zero rather than copying 825.
+    expect(invoiceHeader.tax_source).toBe('internal');
+    expect(Number(baseCharge.tax_amount)).toBe(0);
+    expect(Number(baseCharge.tax_rate)).toBe(0);
     expect(baseCharge.tax_region).toBe('US-NY');
     // A converted quote percentage discount is written as a fixed allocated
     // amount (no discount_type/percentage) so ordinary invoice recalculation
