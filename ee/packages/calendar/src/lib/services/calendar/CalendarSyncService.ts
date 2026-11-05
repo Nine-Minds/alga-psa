@@ -926,6 +926,11 @@ export class CalendarSyncService {
       // check below compares against.
       masterMapping = (await this.getMappingByExternalEvent(masterMapping.external_event_id, provider.id, tenant))
         ?? masterMapping;
+      // KNOWN GAP: a series edited into an inexpressible rule (RDATE, several
+      // RRULEs, FREQ=HOURLY) after it was already imported lands here — the
+      // refresh above drops the pattern and the series shows as one event with
+      // no health note, because the bounded fallback only arms when no master
+      // mapping exists yet. Neither provider's UI can author those rules.
       if (!masterEntry?.recurrence_pattern) {
         return {
           handled: true,
