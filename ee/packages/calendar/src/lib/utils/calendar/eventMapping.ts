@@ -203,6 +203,28 @@ function restoreCalendarNotes(notes: string | undefined, provider: 'google' | 'm
   return decodeHtmlText(text);
 }
 
+/**
+ * The notes Alga stores for a provider event: the outbound mapper appends an
+ * `[Alga calendar: <name>]` line for group calendars, so a raw provider
+ * description is never comparable with `schedule_entries.notes` directly.
+ * Exported so callers that compare the two baselines (series instance vs. its
+ * stored master) use exactly this pipeline.
+ */
+export function externalEventNotes(
+  event: ExternalCalendarEvent,
+  provider: 'google' | 'microsoft',
+): string | undefined {
+  return restoreCalendarNotes(
+    stripCalendarMarker(
+      event.description,
+      event.extendedProperties?.private?.[CALENDAR_MARKER_NAME_PROPERTY],
+      Number.parseInt(event.extendedProperties?.private?.[CALENDAR_MARKER_NOTE_COUNT_PROPERTY] ?? '', 10)
+    ),
+    provider,
+    event.extendedProperties?.private?.[CALENDAR_MARKER_NOTES_FORMAT_PROPERTY]
+  );
+}
+
 export async function mapExternalEventToScheduleEntry(
   event: ExternalCalendarEvent,
   tenant: string,
@@ -320,15 +342,7 @@ export async function mapExternalEventToScheduleEntry(
     ...(algaEntryId ? { entry_id: algaEntryId } : {}),
     tenant,
     title: event.title,
-    notes: restoreCalendarNotes(
-      stripCalendarMarker(
-        event.description,
-        event.extendedProperties?.private?.[CALENDAR_MARKER_NAME_PROPERTY],
-        Number.parseInt(event.extendedProperties?.private?.[CALENDAR_MARKER_NOTE_COUNT_PROPERTY] ?? '', 10)
-      ),
-      provider,
-      event.extendedProperties?.private?.[CALENDAR_MARKER_NOTES_FORMAT_PROPERTY]
-    ),
+    notes: externalEventNotes(event, provider),
     scheduled_start: startDate,
     scheduled_end: endDate,
     is_all_day: !!event.start.date && !event.start.dateTime && !!event.end.date && !event.end.dateTime,

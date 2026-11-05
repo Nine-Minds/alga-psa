@@ -20,6 +20,7 @@ import { BaseCalendarAdapter } from './providers/base/BaseCalendarAdapter';
 import {
   mapScheduleEntryToExternalEvent,
   mapExternalEventToScheduleEntry,
+  externalEventNotes,
 } from '../../utils/calendar/eventMapping';
 import {
   convertRecurrenceLinesToPattern,
@@ -58,6 +59,10 @@ function comparableNotes(notes: string | null | undefined): string {
 
 const timeOf = (value: Date | string | null | undefined): number | null =>
   value ? new Date(value).getTime() : null;
+
+/** Length between two instants, or null when either end is missing/unparseable. */
+const durationMs = (start: number | null, end: number | null): number | null =>
+  start !== null && end !== null && Number.isFinite(start) && Number.isFinite(end) ? end - start : null;
 
 /**
  * True when an inbound provider edit changed something that syncs to other
@@ -1272,12 +1277,33 @@ export class CalendarSyncService {
   }
 
   /**
-   * A renamed or re-described occurrence is an exception even when it still sits
-   * in its original slot (a moved one is already flagged by the adapter).
+   * A renamed, re-described or re-timed occurrence is an exception even when it
+   * still starts in its original slot (a moved one is already flagged by the
+   * adapter). Notes are compared through the inbound mapper, never against the
+   * raw description: a group-calendar master carries an `[Alga calendar: …]`
+   * line outbound that is stripped again on the way in, and every expanded
+   * occurrence inherits it, so a raw comparison calls every plain occurrence an
+   * exception and materialises the series slot by slot.
    */
   private instanceDiffersFromMaster(instance: ExternalCalendarEvent, masterEntry: IScheduleEntry): boolean {
     if ((instance.title ?? '') !== (masterEntry.title ?? '')) return true;
-    return comparableNotes(instance.description) !== comparableNotes(masterEntry.notes);
+    if (comparableNotes(externalEventNotes(instance, instance.provider)) !== comparableNotes(masterEntry.notes)) {
+      return true;
+    }
+    // A single occurrence whose end moved keeps its slot, so only its length
+    // separates it from the master. Comparing lengths rather than instants is
+    // DST-safe: a zoned series keeps the same duration either side of a shift.
+    const instanceLength = this.instanceDurationMs(instance);
+    const masterLength = durationMs(timeOf(masterEntry.scheduled_start), timeOf(masterEntry.scheduled_end));
+    return instanceLength !== null && masterLength !== null && instanceLength !== masterLength;
+  }
+
+  /** An occurrence's length in ms, or null when the payload does not give both ends. */
+  private instanceDurationMs(instance: ExternalCalendarEvent): number | null {
+    return durationMs(
+      timeOf(instance.start?.dateTime ?? instance.start?.date),
+      timeOf(instance.end?.dateTime ?? instance.end?.date),
+    );
   }
 
   /** Add an exception date to a master's pattern, idempotently. */

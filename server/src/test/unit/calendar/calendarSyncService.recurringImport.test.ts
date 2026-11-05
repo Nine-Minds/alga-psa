@@ -227,6 +227,8 @@ vi.mock('@alga-psa/shared/models/scheduleEntry', () => {
 
 const MASTER_ID = '2ppb6f3ftc40nggeoqtsoh743g';
 const MASTER_TITLE = 'Go over advisories in Git @alga';
+const GROUP_CALENDAR_NAME = 'On-call';
+const GROUP_CALENDAR_MARKER = `[Alga calendar: ${GROUP_CALENDAR_NAME}]`;
 
 function compactUtc(iso: string): string {
   return new Date(iso).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
@@ -419,6 +421,38 @@ describe('CalendarSyncService recurring import', () => {
     expect(db.entries.size).toBe(1);
   });
 
+  it('leaves a group-calendar series whole, marker line and all', async () => {
+    // Outbound, a series on a group calendar gets an `[Alga calendar: <name>]`
+    // line appended to its description; inbound that line is stripped again, so
+    // schedule_entries.notes never holds it. Every expanded occurrence inherits
+    // the decorated description, so comparing it against the stored notes calls
+    // each plain occurrence an exception — the per-occurrence materialisation
+    // this suite exists to prevent, back again for group calendars.
+    const decorated = {
+      description: `Daily sync\n${GROUP_CALENDAR_MARKER}`,
+      extendedProperties: {
+        private: {
+          'alga-calendar-marker-name': GROUP_CALENDAR_NAME,
+          'alga-calendar-marker-note-count': '0',
+          'alga-calendar-marker-notes-format': 'text',
+        },
+      },
+    };
+    const instances = productionInstances(6).map((instance) => ({ ...instance, ...decorated }));
+    registerEvents([googleMaster(decorated), ...instances]);
+    const service = await newSyncService();
+
+    for (const instance of instances) {
+      expect((await service.syncExternalEventToSchedule(instance.id, 'provider-1')).success).toBe(true);
+    }
+
+    expect(db.entries.size).toBe(1);
+    expect(mappings()).toHaveLength(1);
+    const master = masterEntry();
+    expect(master.notes).toBe('Daily sync');
+    expect(master.recurrence_pattern.exceptions ?? []).toHaveLength(0);
+  });
+
   it('turns a moved occurrence into an exception date plus a standalone override', async () => {
     const instances = productionInstances(3);
     const moved = googleOccurrence('2026-12-03T15:15:00.000Z', {
@@ -444,6 +478,32 @@ describe('CalendarSyncService recurring import', () => {
     expect(override.recurrence_pattern).toBeNull();
     const overrideMapping = mappings().find((row) => row.external_event_id === moved.id);
     expect(overrideMapping.schedule_entry_id).toBe(override.entry_id);
+  });
+
+  it('turns an occurrence whose end moved into an override, keeping its slot', async () => {
+    // Google does not flag exceptions, and lengthening just one occurrence
+    // leaves its start — and therefore originalStartTime — untouched, so only
+    // its duration tells it apart from the master.
+    const instances = productionInstances(3);
+    const lengthened = {
+      ...instances[1],
+      end: { dateTime: '2026-11-05T16:15:00.000Z', timeZone: 'America/New_York' },
+    };
+    registerEvents([googleMaster(), ...instances]);
+    adapterState.events.set(lengthened.id, lengthened);
+    const service = await newSyncService();
+
+    await service.syncExternalEventToSchedule(instances[0].id, 'provider-1');
+    const result = await service.syncExternalEventToSchedule(lengthened.id, 'provider-1');
+
+    expect(result.success).toBe(true);
+    expect(db.entries.size).toBe(2);
+    expect(masterEntry().recurrence_pattern.exceptions.map((date: Date) => new Date(date).toISOString()))
+      .toEqual(['2026-11-05T00:00:00.000Z']);
+    const override = [...db.entries.values()].find((entry) => !entry.is_recurring);
+    expect(new Date(override.scheduled_end).toISOString()).toBe('2026-11-05T16:15:00.000Z');
+    expect(mappings().find((row) => row.external_event_id === lengthened.id).schedule_entry_id)
+      .toBe(override.entry_id);
   });
 
   it('records a cancelled occurrence as an exception and keeps the master', async () => {
