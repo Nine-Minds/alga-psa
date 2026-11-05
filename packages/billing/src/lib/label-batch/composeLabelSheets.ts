@@ -7,6 +7,7 @@ import {
   type LabelBatchLayout,
 } from './layout';
 import type { InvoicePdfPrintOptions } from '@alga-psa/types';
+import { PDF_FONT_FACE_CSS } from '../pdf-fonts';
 
 /**
  * One rendered label: body markup + the CSS that goes with it. The markup already carries the
@@ -77,6 +78,7 @@ export function composeLabelSheets(
     <meta charset="utf-8" />
     <title>${escapeHtml(options.title ?? 'Labels')}</title>
     <style>
+${PDF_FONT_FACE_CSS}
 ${css}
 @page { size: ${mmCss(geometry.pageWidthMm)} ${mmCss(geometry.pageHeightMm)}; margin: 0; }
 html, body { margin: 0; padding: 0; background: #fff; }
