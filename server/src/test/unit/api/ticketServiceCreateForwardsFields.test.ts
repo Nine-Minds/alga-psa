@@ -57,6 +57,7 @@ vi.mock('@alga-psa/shared/models/assetTicketContactModel', () => ({
 }));
 
 import { TicketService } from '../../../lib/api/services/TicketService';
+import { createTicketSchema } from '../../../lib/api/schemas/ticket';
 import { TicketModel } from '@shared/models/ticketModel';
 import { writeTicketActivity } from '@alga-psa/shared/lib/ticketActivity';
 
@@ -268,5 +269,69 @@ describe('TicketService.create forwards create fields', () => {
 
     expect(h2.fromAssetSpy).not.toHaveBeenCalled();
     expect(h2.publishSpy).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * T056 — REST v1 ticket create and the location contract. The service must forward the request's
+ * `location_id` exactly as it arrived: omitted (so `TicketModel.createTicket` asks the contact) or
+ * null (so it stays none). Collapsing one into the other would either invent a location or lose
+ * the autofill for every API and mobile caller.
+ */
+describe('TicketService.create keeps the location contract', () => {
+  const contact = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  const location = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+
+  function arrangeCreate() {
+    vi.restoreAllMocks();
+    vi.spyOn(TicketModel, 'validateStatusBelongsToBoard').mockResolvedValue({ valid: true } as any);
+    const createSpy = vi
+      .spyOn(TicketModel, 'createTicketWithRetry')
+      .mockResolvedValue({ ticket_id: h.ticketId } as any);
+    const service = new TicketService();
+    vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: {} });
+    vi.spyOn(service as any, 'safePublishEvent').mockResolvedValue(undefined);
+    return { service, createSpy };
+  }
+
+  const request = (extra: Record<string, unknown>) => createTicketSchema.parse({
+    title: 'Location contract',
+    client_id: h.reloadedTicket.client_id,
+    board_id: h.reloadedTicket.board_id,
+    status_id: h.reloadedTicket.status_id,
+    priority_id: h.reloadedTicket.priority_id,
+    contact_name_id: contact,
+    ...extra,
+  });
+
+  it('T056: an omitted location stays undefined, so the contact answers', async () => {
+    const { service, createSpy } = arrangeCreate();
+
+    await service.create(request({}) as any, { tenant: h.tenant, userId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' } as any);
+
+    const forwarded = createSpy.mock.calls[0][0] as CreateTicketInput;
+    expect(forwarded.contact_id).toBe(contact);
+    expect('location_id' in forwarded ? forwarded.location_id : undefined).toBeUndefined();
+  });
+
+  it('T056: an explicit null survives the request schema and the forward', async () => {
+    const parsed = request({ location_id: null });
+    expect(parsed.location_id).toBeNull();
+
+    const { service, createSpy } = arrangeCreate();
+    await service.create(parsed as any, { tenant: h.tenant, userId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' } as any);
+
+    expect((createSpy.mock.calls[0][0] as CreateTicketInput).location_id).toBeNull();
+  });
+
+  it('T056: an explicit location is forwarded as given', async () => {
+    const { service, createSpy } = arrangeCreate();
+
+    await service.create(
+      request({ location_id: location }) as any,
+      { tenant: h.tenant, userId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' } as any,
+    );
+
+    expect((createSpy.mock.calls[0][0] as CreateTicketInput).location_id).toBe(location);
   });
 });

@@ -60,6 +60,8 @@ import { searchClientsForPicker } from '@alga-psa/clients/actions/clientPickerAc
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import ChecklistRuleMatchers from './ChecklistRuleMatchers';
 import { findAllTagsByType } from '@alga-psa/tags/actions/tagActions';
+import { listTicketFilterLocations } from '@alga-psa/tickets/actions/clientLookupActions';
+import type { WhereLocationOption } from '@alga-psa/tickets/lib/ticketWhereFilters';
 import type { ITag } from '@alga-psa/types';
 import type { PredicateGroup, PredicateNode } from '@alga-psa/predicates';
 
@@ -97,6 +99,7 @@ const ChecklistTemplatesSettings: React.FC = () => {
   const [newItemName, setNewItemName] = useState('');
   const [applyRules, setApplyRules] = useState<IChecklistTemplateApplyRule[]>([]);
   const [tagOptions, setTagOptions] = useState<Record<'client' | 'contact', ITag[]>>({ client: [], contact: [] });
+  const [locationOptions, setLocationOptions] = useState<WhereLocationOption[]>([]);
   const [tagLoadError, setTagLoadError] = useState(false);
   const [clientNames, setClientNames] = useState<Record<string, string>>({});
   const [serviceRequestDefinitions, setServiceRequestDefinitions] = useState<ChecklistRuleServiceRequestDefinitionOption[]>([]);
@@ -123,6 +126,14 @@ const ChecklistTemplatesSettings: React.FC = () => {
       const [client, contact] = await Promise.all([findAllTagsByType('client'), findAllTagsByType('contact')]);
       if (!Array.isArray(client) || !Array.isArray(contact)) throw new Error('Tag options unavailable');
       setTagOptions({ client, contact });
+      // The same list the ticket-list toolbar offers: every active location, labelled by client.
+      // A failure here leaves the location paths with no options rather than failing the panel.
+      const locations = await listTicketFilterLocations(null).catch(() => []);
+      setLocationOptions(locations.map((location) => ({
+        location_id: location.location_id,
+        location_name: location.location_name,
+        client_name: location.client_name,
+      })));
     } catch { setTagLoadError(true); }
   };
 
@@ -978,7 +989,7 @@ const ChecklistTemplatesSettings: React.FC = () => {
                     <Button id={`retry-rule-tags-${index}`} variant="ghost" onClick={() => void loadTagOptions()}>{t('ticketing.checklistTemplates.predicate.retry')}</Button>
                   </AlertDescription></Alert>}
                   <ChecklistRuleMatchers rule={rule} index={index} clientNames={clientNames}
-                    tags={tagOptions} ownerClientName={ownerClientName}
+                    tags={tagOptions} locations={locationOptions} ownerClientName={ownerClientName}
                     options={{ boards: boardOptions, categories: categoryOptionsFor(null),
                       subcategories: categories.filter((category) => category.parent_category).map((category) => ({ value: category.category_id, label: category.category_name })),
                       priorities: priorityOptions,
