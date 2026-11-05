@@ -1678,6 +1678,11 @@ jobs:
           path: e2e-tests/test-results/
           retention-days: 7
 
+      - name: Verify development runtime file permissions
+        if: ${{ !cancelled() && (steps.shard.outputs.teams == 'true' || steps.shard.outputs.microsoft == 'true') && steps.capture_creds.outcome == 'success' }}
+        timeout-minutes: 3
+        run: node --test scripts/tests/development-runtime-permissions.test.mjs
+
       # The setup chain shares the owned, expiring quarantine (scripts/lib/quarantine.json)
       # and must not fail the job carrying other browser gates. Readiness records a missing
       # Teams verdict as quarantined-failing and re-arms when the entry expires.
