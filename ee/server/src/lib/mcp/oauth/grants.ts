@@ -138,7 +138,7 @@ export async function consumeAuthCode(params: {
 
   // Replay of a consumed code → revoke the grant defensively.
   if (row.consumed_at) {
-    await revokeGrantById(row.grant_id);
+    await revokeGrantById(knex, row.grant_id);
     throw new OAuthGrantError('invalid_grant', 'Authorization code already used.');
   }
   if (new Date(row.expires_at).getTime() < Date.now()) {
@@ -181,40 +181,64 @@ export async function issueRefreshToken(grantId: string, tenant: string): Promis
 export async function rotateRefreshToken(refreshToken: string): Promise<{ grant: GrantContext; refreshToken: string }> {
   const knex = await getConnection(null);
   const tokenHash = sha256(refreshToken);
-  const row = await knex('mcp_oauth_refresh_tokens').where({ token_hash: tokenHash }).first();
-  if (!row) throw new OAuthGrantError('invalid_grant', 'Unknown refresh token.');
-  if (row.consumed_at) {
-    await revokeGrantById(row.grant_id);
+  const outcome = await knex.transaction(async (trx) => {
+    const row = await trx('mcp_oauth_refresh_tokens')
+      .where({ token_hash: tokenHash })
+      .forUpdate()
+      .first();
+    if (!row) throw new OAuthGrantError('invalid_grant', 'Unknown refresh token.');
+    if (row.consumed_at) {
+      await revokeGrantById(trx, row.grant_id);
+      return { kind: 'replay' as const };
+    }
+    if (new Date(row.expires_at).getTime() < Date.now()) {
+      throw new OAuthGrantError('invalid_grant', 'Refresh token expired.');
+    }
+    const grant = await trx('mcp_oauth_grants').where({ grant_id: row.grant_id }).first();
+    if (!grant || grant.revoked_at) {
+      throw new OAuthGrantError('invalid_grant', 'Grant is no longer active.');
+    }
+
+    const next = opaque();
+    const claimed = await trx('mcp_oauth_refresh_tokens')
+      .where({ token_hash: tokenHash })
+      .whereNull('consumed_at')
+      .update({ consumed_at: trx.fn.now(), rotated_to: sha256(next) });
+    if (claimed !== 1) {
+      await revokeGrantById(trx, row.grant_id);
+      return { kind: 'replay' as const };
+    }
+
+    await trx('mcp_oauth_refresh_tokens').insert({
+      token_hash: sha256(next),
+      grant_id: row.grant_id,
+      tenant: row.tenant,
+      expires_at: trx.raw(`now() + (? * interval '1 second')`, [REFRESH_TOKEN_TTL_SECONDS]),
+    });
+
+    return {
+      kind: 'rotated' as const,
+      grant: {
+        grantId: grant.grant_id,
+        tenant: grant.tenant,
+        userId: grant.user_id,
+        clientId: grant.client_id,
+        scope: grant.scope,
+        resource: grant.resource,
+      },
+      refreshToken: next,
+    };
+  });
+
+  // Throw only after the transaction commits; a replay revocation must survive
+  // the OAuth error returned to the caller.
+  if (outcome.kind === 'replay') {
     throw new OAuthGrantError('invalid_grant', 'Refresh token already used (replay) — grant revoked.');
   }
-  if (new Date(row.expires_at).getTime() < Date.now()) {
-    throw new OAuthGrantError('invalid_grant', 'Refresh token expired.');
-  }
-  const grant = await knex('mcp_oauth_grants').where({ grant_id: row.grant_id }).first();
-  if (!grant || grant.revoked_at) {
-    throw new OAuthGrantError('invalid_grant', 'Grant is no longer active.');
-  }
-
-  const next = await issueRefreshToken(row.grant_id, row.tenant);
-  await knex('mcp_oauth_refresh_tokens')
-    .where({ token_hash: tokenHash })
-    .update({ consumed_at: knex.fn.now(), rotated_to: sha256(next) });
-
-  return {
-    grant: {
-      grantId: grant.grant_id,
-      tenant: grant.tenant,
-      userId: grant.user_id,
-      clientId: grant.client_id,
-      scope: grant.scope,
-      resource: grant.resource,
-    },
-    refreshToken: next,
-  };
+  return { grant: outcome.grant, refreshToken: outcome.refreshToken };
 }
 
-async function revokeGrantById(grantId: string): Promise<void> {
-  const knex = await getConnection(null);
+async function revokeGrantById(knex: Awaited<ReturnType<typeof getConnection>>, grantId: string): Promise<void> {
   await knex('mcp_oauth_grants').where({ grant_id: grantId }).update({ revoked_at: knex.fn.now() });
   await knex('mcp_oauth_refresh_tokens').where({ grant_id: grantId }).del();
   await knex('mcp_oauth_auth_codes').where({ grant_id: grantId }).whereNull('consumed_at').del();
@@ -224,7 +248,7 @@ async function revokeGrantById(grantId: string): Promise<void> {
 export async function revokeByRefreshToken(refreshToken: string): Promise<void> {
   const knex = await getConnection(null);
   const row = await knex('mcp_oauth_refresh_tokens').where({ token_hash: sha256(refreshToken) }).first();
-  if (row) await revokeGrantById(row.grant_id);
+  if (row) await revokeGrantById(knex, row.grant_id);
 }
 
 /** Revoke a grant the caller owns (RFC 7009 / disconnect). Tenant+user scoped. */
@@ -234,6 +258,6 @@ export async function revokeGrant(params: { tenant: string; userId: string; gran
   if (params.grantId) q.andWhere({ grant_id: params.grantId });
   if (params.clientId) q.andWhere({ client_id: params.clientId });
   const grants = await q.select('grant_id');
-  for (const g of grants) await revokeGrantById(g.grant_id);
+  for (const g of grants) await revokeGrantById(knex, g.grant_id);
   return grants.length;
 }
