@@ -183,3 +183,11 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Missing layer:** one shared implementation. Blocked by the CE/EE packaging boundary and differing
   tenant semantics (server copy has `PROVIDER_TENANT_DISCOVERY`; integrations copy requires `tenant`).
 - **Where:** `// LEVERAGE: pattern calendar-provider-service-triplicate` above `getProviders` in each copy.
+
+
+## asset-identity-claims — friction
+
+- **What:** UI, REST, and ingestion inserted assets before an optional claim. Legacy duplicates also left the tag namespace unoccupied. This allowed persistence callers to bypass identity arbitration and made reservation completion order differ between write paths.
+- **Gate:** Multiple creation paths, high correctness cost, and stable tenant/tag ownership semantics. A shared identity preparation operation serves all concrete callers.
+- **Execution:** Bounded repair within asset numbering. `prepareAssetIdentity` acquires or transfers a claim before insertion. Colocated foreign keys make the relationship mandatory. Exact legacy bindings and holding claims preserve physical tags until reviewed activation.
+- **Status:** Revised. Database and shared-service behavior is exercised on PostgreSQL and Citus; evidence lives under `docs/evidence/alga-2026-0003120-draft/`. This ledger entry is not an approved implementation plan.

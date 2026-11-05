@@ -1776,6 +1776,7 @@
       "updateAssets": "Åtkomst nekad: kan inte uppdatera tillgångar"
     },
     "asset": {
+      "tagAlreadyExists": "Den här tillgångsetiketten används redan eller är reserverad. Skanna den för att hitta den befintliga tillgången eller ange en annan etikett.",
       "notFoundRefresh": "Tillgången hittades inte. Den kan ha raderats. Ladda om sidan och försök igen.",
       "clientNotFound": "Kunden hittades inte. Den kan ha raderats. Ladda om sidan och försök igen.",
       "maintenanceNotFound": "Underhållsschemat hittades inte. Det kan ha raderats. Ladda om sidan och försök igen.",

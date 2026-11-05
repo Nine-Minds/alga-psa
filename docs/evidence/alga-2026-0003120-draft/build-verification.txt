@@ -1,0 +1,13 @@
+npm run build --workspace=@alga-psa/db --workspace=@alga-psa/clients --workspace=@alga-psa/assets --workspace=@alga-psa/inventory
+> @alga-psa/db@0.0.1 build
+> tsc -b && if [ -d dist/db/src ]; then cp -R dist/db/src/. dist/; fi && tsc-alias -p tsconfig.json -f --resolve-full-paths
+> @alga-psa/clients@0.1.0 build
+> tsup
+ESM ⚡️ Build success in 78ms
+> @alga-psa/assets@0.1.0 build
+> tsup
+ESM ⚡️ Build success in 84ms
+> @alga-psa/inventory@0.1.0 build
+> tsup
+ESM ⚡️ Build success in 73ms
+Exit: 0

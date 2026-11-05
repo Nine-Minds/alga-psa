@@ -12,7 +12,7 @@ import {
 } from '@alga-psa/db/admin.js';
 import { tenantDb, isReadOnlyError } from '@alga-psa/db';
 import { getRedisStreamClient } from '@alga-psa/workflow-streams';
-import { claimAssetTag, nextAssetTag, normalizeAssetTag } from '@alga-psa/shared/services/assetNumbering';
+import { prepareAssetIdentity } from '@alga-psa/shared/services/assetNumbering';
 
 import { createNinjaOneClient, NinjaOneClient } from '@ee/lib/integrations/ninjaone/ninjaOneClient';
 import {
@@ -569,15 +569,14 @@ class NinjaOneSyncWorker {
 
     return await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction) => {
       const now = new Date().toISOString();
-      const physicalTag = await nextAssetTag(trx, this.tenantId, createRequest.client_id);
+      const identity = await prepareAssetIdentity(trx, { tenant: this.tenantId, clientId: createRequest.client_id });
 
       const [asset] = await tenantDb(trx, this.tenantId).table('assets')
         .insert({
           tenant: this.tenantId,
           asset_type: createRequest.asset_type,
           client_id: createRequest.client_id,
-          asset_tag: physicalTag,
-          asset_tag_normalized: normalizeAssetTag(physicalTag),
+          ...identity,
           name: createRequest.name,
           status: createRequest.status,
           location: createRequest.location || '',
@@ -592,7 +591,6 @@ class NinjaOneSyncWorker {
           updated_at: now,
         })
         .returning('*');
-      await claimAssetTag(trx, { tenant: this.tenantId, assetTag: physicalTag, ownerKind: 'asset', ownerId: asset.asset_id });
 
       const assetType = createRequest.asset_type;
       if (assetType && mappingResult.extensionFields) {

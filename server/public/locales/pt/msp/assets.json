@@ -1776,6 +1776,7 @@
       "updateAssets": "Permissão negada: não é possível atualizar os ativos"
     },
     "asset": {
+      "tagAlreadyExists": "Esta etiqueta de ativo já está em uso ou reservada. Digitalize-a para encontrar o ativo existente ou introduza outra etiqueta.",
       "notFoundRefresh": "Ativo não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
       "clientNotFound": "Cliente não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
       "maintenanceNotFound": "Agenda de manutenção não encontrada. Ela pode ter sido excluída. Atualize a página e tente novamente.",

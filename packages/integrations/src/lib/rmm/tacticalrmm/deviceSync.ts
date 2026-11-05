@@ -18,7 +18,7 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { applyRmmSignedInUserAssignment } from '@alga-psa/shared/rmm/autoAssignFromSignedInUser';
-import { claimAssetTag, nextAssetTag, normalizeAssetTag } from '@alga-psa/shared/services/assetNumbering';
+import { prepareAssetIdentity } from '@alga-psa/shared/services/assetNumbering';
 
 import { TacticalRmmClient, normalizeTacticalBaseUrl } from './tacticalApiClient';
 import { computeTacticalAgentStatus } from './agentStatus';
@@ -521,14 +521,13 @@ export async function createTacticalAssetRecord(
 ): Promise<{ asset_id: string }> {
   return knex.transaction(async (trx) => {
     const now = new Date().toISOString();
-    const assetTag = await nextAssetTag(trx, args.tenant, args.clientId);
+    const identity = await prepareAssetIdentity(trx, { tenant: args.tenant, clientId: args.clientId });
     const [asset] = await tenantScopedTable(trx, 'assets', args.tenant)
       .insert({
         tenant: args.tenant,
         asset_type: args.assetType,
         client_id: args.clientId,
-        asset_tag: assetTag,
-        asset_tag_normalized: normalizeAssetTag(assetTag),
+        ...identity,
         name: args.name,
         status: args.status ?? 'active',
         location: args.location,
@@ -537,7 +536,6 @@ export async function createTacticalAssetRecord(
         updated_at: now,
       })
       .returning(['asset_id']);
-    await claimAssetTag(trx, { tenant: args.tenant, assetTag, ownerKind: 'asset', ownerId: String(asset.asset_id) });
     return { asset_id: String(asset.asset_id) };
   });
 }

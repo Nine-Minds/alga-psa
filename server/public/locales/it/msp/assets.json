@@ -1776,6 +1776,7 @@
       "updateAssets": "Permesso negato: impossibile aggiornare gli asset"
     },
     "asset": {
+      "tagAlreadyExists": "Questa etichetta del bene è già in uso o riservata. Scansionala per trovare il bene esistente oppure inserisci un’altra etichetta.",
       "notFoundRefresh": "Asset non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
       "clientNotFound": "Cliente non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
       "maintenanceNotFound": "Pianificazione della manutenzione non trovata. Potrebbe essere stata eliminata. Aggiornare la pagina e riprovare.",

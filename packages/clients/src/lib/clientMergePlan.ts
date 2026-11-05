@@ -375,6 +375,8 @@ export const CLIENT_OWNED_MOVE_TABLES: ClientOwnedMoveTable[] = [
   // moves, so its custody (open or closed) follows; one open record per asset,
   // not per client, so a move cannot collide.
   { table: 'asset_custody', label: 'equipment custody record' },
+  // The destination client changes; the reserved physical label stays fixed.
+  { table: 'asset_number_reservations', label: 'asset number reservation' },
   { table: 'client_locations', label: 'location' },
   { table: 'client_inbound_email_domains', label: 'inbound email domain' },
   { table: 'client_name_aliases', label: 'name alias' },

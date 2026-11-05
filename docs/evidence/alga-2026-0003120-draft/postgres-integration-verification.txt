@@ -1,0 +1,16 @@
+npx vitest run src/test/integration/assetNumberingPersistence.integration.test.ts --coverage.enabled=false --maxWorkers=1
+Disposable PostgreSQL 15; dedicated asset_numbering_test_takeover database; app server stopped.
+
+ RUN  v4.1.12 /home/robert/alga-copies/feature-asset-numbering-client-prefixes-and-paired-label/server
+      Running tests with seed "1793843046952"
+
+Environment file path: /home/robert/alga-copies/feature-asset-numbering-client-prefixes-and-paired-label/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-asset-numbering-client-prefixes-and-paired-label/.env.localtest
+ ✓ |node| src/test/integration/assetNumberingPersistence.integration.test.ts (15 tests) 10475ms 141 MB heap used
+
+ Test Files  1 passed (1)
+      Tests  15 passed (15)
+   Start at  01:44:12
+   Duration  13.57s (transform 1.66s, setup 74ms, import 2.93s, tests 10.47s, environment 0ms)
+
+Exit: 0

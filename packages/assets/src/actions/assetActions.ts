@@ -115,7 +115,7 @@ import {
     type AssetAuthUser as SharedAssetAuthUser,
 } from '../lib/assetReadAuthorization';
 import { isAssetAssigneeError, setAssetAssignee } from '../lib/assetAssignment';
-import { nextAssetTag, commitAssetReservation, claimAssetTag, normalizeAssetTag } from '../lib/assetNumbering';
+import { prepareAssetIdentity, claimAssetTag, normalizeAssetTag } from '../lib/assetNumbering';
 import { getAssetGroupSummariesForAssets, getAssetGroupSummary, removeAssetFromAnyGroup } from '../lib/assetGroups';
 import {
     ASSET_BILLING_PROFILE_UNAVAILABLE,
@@ -1086,24 +1086,6 @@ export async function createAssetInTransaction(
             }
 
             const now = new Date().toISOString();
-            const reservationId = validatedData.asset_number_reservation_id;
-            let assetTag = validatedData.asset_tag ?? '';
-            if (reservationId) {
-                const reservation = await tenantScopedTable(trx, 'asset_number_reservations', tenant)
-                    .where({ reservation_id: reservationId })
-                    .forUpdate()
-                    .first<{ asset_tag: string; state: string; asset_id: string | null }>();
-                if (!reservation || !['reserved', 'expired', 'released'].includes(reservation.state)) {
-                    throw new Error('Asset number reservation is not available for intake');
-                }
-                if (reservation.asset_id) throw new Error('Asset number reservation is already committed');
-                if (normalizeAssetTag(assetTag) && assetTag !== reservation.asset_tag) {
-                    throw new Error('Submitted asset tag does not match the reserved label');
-                }
-                assetTag = reservation.asset_tag;
-            } else if (!normalizeAssetTag(assetTag)) {
-                assetTag = await nextAssetTag(trx, tenant, validatedData.client_id);
-            }
             const selectedLocation = await resolveValidatedAssetLocation(
                 trx,
                 tenant,
@@ -1142,13 +1124,18 @@ export async function createAssetInTransaction(
                 await applyPurchaseCostCurrency(trx, tenant, procurement);
             }
 
+            const identity = await prepareAssetIdentity(trx, {
+                tenant, clientId: validatedData.client_id,
+                assetTag: validatedData.asset_tag,
+                reservationId: validatedData.asset_number_reservation_id,
+            });
+
             // Extract only the base asset fields and ensure dates are only included if they exist
             const baseAssetData = {
                 tenant,
                 asset_type: validatedData.asset_type,
                 client_id: validatedData.client_id,
-                asset_tag: assetTag,
-                asset_tag_normalized: normalizeAssetTag(assetTag) || null,
+                ...identity,
                 name: validatedData.name,
                 status: validatedData.status,
                 ownership: validatedData.ownership ?? 'client',
@@ -1179,14 +1166,6 @@ export async function createAssetInTransaction(
             const [asset] = await tenantScopedTable(trx, 'assets', tenant)
                 .insert(baseAssetData)
                 .returning('*');
-
-            if (reservationId) {
-                await commitAssetReservation(trx, {
-                    tenant, reservationId, assetId: asset.asset_id, assetTag,
-                });
-            } else {
-                await claimAssetTag(trx, { tenant, assetTag, ownerKind: 'asset', ownerId: asset.asset_id });
-            }
 
             if (selectedContact?.contact_name_id) {
                 await setAssetAssignee(trx, tenant, asset.asset_id, selectedContact.contact_name_id, {
@@ -1329,7 +1308,7 @@ export const createAsset = withAuth(async (
         throw new Error('Permission denied: Cannot create assets');
     }
 
-    return createAssetRecord(knex, tenant, user.user_id, data, options);
+    return await createAssetRecord(knex, tenant, user.user_id, data, options);
     } catch (error) {
         const expected = expectedAssetActionError(error);
         if (expected) return expected;
@@ -1526,7 +1505,8 @@ export async function updateAssetRecord(
                 const nextTag = String(baseUpdateData.asset_tag ?? '');
                 const normalizedTag = normalizeAssetTag(nextTag);
                 baseUpdateData.asset_tag_normalized = normalizedTag || null;
-                if (normalizedTag && normalizedTag !== asset.asset_tag_normalized) {
+                if (normalizedTag !== normalizeAssetTag(asset.asset_tag ?? '')) {
+                    baseUpdateData.asset_tag_legacy_exempt = false;
                     await claimAssetTag(trx, { tenant, assetTag: nextTag, ownerKind: 'asset', ownerId: asset_id });
                 }
             }

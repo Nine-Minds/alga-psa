@@ -1776,6 +1776,7 @@
       "updateAssets": "Autorisation refusée : impossible de mettre à jour les actifs"
     },
     "asset": {
+      "tagAlreadyExists": "Cette étiquette d’actif est déjà utilisée ou réservée. Scannez-la pour retrouver l’actif existant ou saisissez une autre étiquette.",
       "notFoundRefresh": "Actif introuvable. Il a peut-être été supprimé. Veuillez actualiser la page et réessayer.",
       "clientNotFound": "Client introuvable. Il a peut-être été supprimé. Veuillez actualiser la page et réessayer.",
       "maintenanceNotFound": "Planning de maintenance introuvable. Il a peut-être été supprimé. Veuillez actualiser la page et réessayer.",

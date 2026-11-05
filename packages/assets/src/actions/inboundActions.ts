@@ -5,7 +5,7 @@ import type { RmmProvider } from '@alga-psa/types';
 
 import { registerAction, type InboundActionDefinition } from '@alga-psa/shared/inboundWebhooks/actions/registry';
 import { lookupAlgaEntityByExternalId, writeEntityMapping } from '@alga-psa/shared/inboundWebhooks/externalEntityMappings';
-import { claimAssetTag, nextAssetTag, normalizeAssetTag } from '@alga-psa/shared/services/assetNumbering';
+import { prepareAssetIdentity } from '@alga-psa/shared/services/assetNumbering';
 
 const KNOWN_RMM_PROVIDERS = new Set<RmmProvider>([
   'ninjaone',
@@ -139,19 +139,17 @@ const upsertAssetByExternalIdAction: InboundActionDefinition<UpsertAssetByExtern
         return updated;
       }
 
-      payload.asset_tag = typeof mappedValues.asset_tag === 'string' && normalizeAssetTag(mappedValues.asset_tag)
-        ? mappedValues.asset_tag
-        : await nextAssetTag(trx, ctx.tenant, resolvedClientId);
-      payload.asset_tag_normalized = normalizeAssetTag(String(payload.asset_tag)) || null;
+      const identity = await prepareAssetIdentity(trx, {
+        tenant: ctx.tenant, clientId: resolvedClientId, assetTag: mappedValues.asset_tag,
+      });
       const [created] = await tenantDb(trx, ctx.tenant).table('assets')
         .insert({
           tenant: ctx.tenant,
           ...payload,
+          ...identity,
           created_at: now,
         })
         .returning<{ asset_id: string; name: string }[]>(['asset_id', 'name']);
-
-      await claimAssetTag(trx, { tenant: ctx.tenant, assetTag: String(payload.asset_tag), ownerKind: 'asset', ownerId: created.asset_id });
 
       await writeEntityMapping(ctx.tenant, ctx.webhookSlug, 'asset', created.asset_id, mappedValues.external_id, {
         knex: trx,

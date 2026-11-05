@@ -3,13 +3,15 @@
  * support triggers on distributed tables. Applications write the canonical
  * normalized columns and an atomic tenant-scoped identity claim in the same
  * transaction as the asset/reservation. CHECK constraints reject inconsistent
- * canonical values, while the claim primary key arbitrates concurrent writers.
+ * canonical values; the follow-up binding migration makes claim ownership
+ * mandatory with colocated foreign keys.
  *
  * This migration is intentionally resumable because production runs it with
  * transaction:false. Every DDL/backfill operation is safe to retry.
  */
 const NORMALIZE_TAG = "NULLIF(translate(btrim(asset_tag), 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), '')";
 const NORMALIZE_PREFIX = "NULLIF(translate(btrim(asset_prefix), 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), '')";
+const { ensureConcurrentIndex } = require('./utils/ensureConcurrentIndex.cjs');
 
 async function backfillClients(knex) {
   while (true) {
@@ -67,7 +69,7 @@ exports.up = async function up(knex) {
   )`);
   await knex.raw(`CREATE TABLE IF NOT EXISTS asset_tag_claims (
     tenant uuid NOT NULL, normalized_tag text NOT NULL, asset_tag text NOT NULL,
-    owner_kind text NOT NULL CHECK (owner_kind IN ('asset', 'reservation')),
+    owner_kind text NOT NULL CHECK (owner_kind IN ('asset', 'reservation', 'legacy')),
     owner_id uuid NOT NULL, created_at timestamptz NOT NULL DEFAULT now(),
     PRIMARY KEY (tenant, normalized_tag)
   )`);
@@ -81,11 +83,11 @@ exports.up = async function up(knex) {
     await distributeIfNeeded(knex, table);
   }
 
-  await knex.raw('CREATE INDEX CONCURRENTLY IF NOT EXISTS asset_tag_audit_tenant_norm_idx ON asset_tag_audit (tenant, normalized_tag)');
-  await knex.raw('CREATE INDEX CONCURRENTLY IF NOT EXISTS asset_number_reservations_tag_idx ON asset_number_reservations (tenant, normalized_tag)');
-  await knex.raw('CREATE INDEX CONCURRENTLY IF NOT EXISTS asset_number_reservations_expiry_idx ON asset_number_reservations (tenant, state, expires_at)');
-  await knex.raw('CREATE INDEX CONCURRENTLY IF NOT EXISTS assets_tenant_asset_tag_normalized_idx ON assets (tenant, asset_tag_normalized) WHERE asset_tag_normalized IS NOT NULL');
-  await knex.raw('CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS clients_tenant_asset_prefix_normalized_uq ON clients (tenant, asset_prefix_normalized) WHERE asset_prefix_normalized IS NOT NULL');
+  await ensureConcurrentIndex(knex, 'asset_tag_audit_tenant_norm_idx', 'CREATE INDEX CONCURRENTLY IF NOT EXISTS asset_tag_audit_tenant_norm_idx ON asset_tag_audit (tenant, normalized_tag)');
+  await ensureConcurrentIndex(knex, 'asset_number_reservations_tag_idx', 'CREATE INDEX CONCURRENTLY IF NOT EXISTS asset_number_reservations_tag_idx ON asset_number_reservations (tenant, normalized_tag)');
+  await ensureConcurrentIndex(knex, 'asset_number_reservations_expiry_idx', 'CREATE INDEX CONCURRENTLY IF NOT EXISTS asset_number_reservations_expiry_idx ON asset_number_reservations (tenant, state, expires_at)');
+  await ensureConcurrentIndex(knex, 'assets_tenant_asset_tag_normalized_idx', 'CREATE INDEX CONCURRENTLY IF NOT EXISTS assets_tenant_asset_tag_normalized_idx ON assets (tenant, asset_tag_normalized) WHERE asset_tag_normalized IS NOT NULL');
+  await ensureConcurrentIndex(knex, 'clients_tenant_asset_prefix_normalized_uq', 'CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS clients_tenant_asset_prefix_normalized_uq ON clients (tenant, asset_prefix_normalized) WHERE asset_prefix_normalized IS NOT NULL');
 
   // Normalize all existing clients/tags without changing physical labels.
   await backfillClients(knex);
@@ -135,14 +137,8 @@ exports.up = async function up(knex) {
         AND (asset_prefix IS NULL OR btrim(asset_prefix) = '' OR (length(asset_prefix_normalized) <= 10 AND asset_prefix_normalized ~ '^[A-Z0-9-]+$'))) NOT VALID;
   EXCEPTION WHEN duplicate_object THEN NULL; END $$`);
 
-  for (const table of ['asset_tag_audit', 'asset_number_reservations', 'asset_tag_claims', 'asset_tag_activation']) {
-    await knex.raw(`ALTER TABLE ${table} ENABLE ROW LEVEL SECURITY`);
-    const policyName = `${table}_tenant_policy`;
-    await knex.raw(`DO $$ BEGIN CREATE POLICY ${policyName} ON ${table}
-      USING (tenant::text = current_setting('app.current_tenant', true))
-      WITH CHECK (tenant::text = current_setting('app.current_tenant', true));
-    EXCEPTION WHEN duplicate_object THEN NULL; END $$`);
-  }
+  // Tenant isolation follows the repository's tenantDb facade. Session GUCs
+  // do not propagate to Citus workers, so feature tables must not use RLS.
 };
 
 exports.down = async function down(knex) {

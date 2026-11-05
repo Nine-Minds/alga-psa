@@ -1776,6 +1776,7 @@
       "updateAssets": "Permiso denegado: no se pueden actualizar los activos"
     },
     "asset": {
+      "tagAlreadyExists": "Esta etiqueta de activo ya está en uso o reservada. Escanéela para encontrar el activo existente o introduzca otra etiqueta.",
       "notFoundRefresh": "No se encontró el activo. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
       "clientNotFound": "No se encontró el cliente. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
       "maintenanceNotFound": "No se encontró el plan de mantenimiento. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",

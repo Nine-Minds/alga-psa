@@ -2,9 +2,9 @@
  * Hudu asset-import helpers (F215/F216, EE-only).
  *
  * Kept out of the actions file so tests can assert the tag/status rules
- * directly. The status default mirrors the manual create form. A supplied
- * primary serial remains a physical tag when available; otherwise blank
- * delegates identity to shared numbering. The DB guard remains authoritative.
+ * directly. The status default mirrors the manual create form. Serial and
+ * external identifiers remain separate from the physical tag; a new discovery
+ * delegates tag allocation to shared numbering.
  */
 
 import type { Knex } from 'knex';

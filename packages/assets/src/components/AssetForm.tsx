@@ -131,6 +131,7 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
   const [automaticTag, setAutomaticTag] = useState(createMode);
   const [tagPreview, setTagPreview] = useState<string | null>(null);
   const [addAnother, setAddAnother] = useState(false);
+  const [previewRevision, setPreviewRevision] = useState(0);
   const clientDrawer = useClientDrawer();
 
   useRegisterUIComponent({
@@ -363,7 +364,7 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
       if (active) setTagPreview(preview.tag);
     }).catch(() => { if (active) setTagPreview(null); });
     return () => { active = false; };
-  }, [createMode, automaticTag, formData.client_id]);
+  }, [createMode, automaticTag, formData.client_id, previewRevision]);
 
   useEffect(() => {
     let isMounted = true;
@@ -1288,6 +1289,7 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
           setCustomAttributes({});
           setPurchaseCostInput('');
           setAutomaticTag(true);
+          setPreviewRevision((revision) => revision + 1);
           setSaveError(null);
         } else {
           onSaved?.();
@@ -1554,6 +1556,7 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
                       required={!createMode || !automaticTag}
                       className="mt-1"
                     />}
+                  {renderFieldError('asset_tag')}
                 </div>
                 <div>
                   <label htmlFor="serial_number" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">

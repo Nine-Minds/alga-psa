@@ -10,7 +10,7 @@ import axios from 'axios';
 import { createTenantKnex } from '@/lib/db';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
-import { claimAssetTag, nextAssetTag, normalizeAssetTag } from '@alga-psa/shared/services/assetNumbering';
+import { prepareAssetIdentity } from '@alga-psa/shared/services/assetNumbering';
 
 /**
  * Extract safe error info for logging (avoids circular reference issues with axios errors)
@@ -758,7 +758,7 @@ export class NinjaOneSyncEngine {
     return await withTransaction(this.knex!, async (trx: Knex.Transaction) => {
       const now = new Date().toISOString();
       const db = tenantDb(trx, this.tenantId);
-      const physicalTag = await nextAssetTag(trx, this.tenantId, createRequest.client_id);
+      const identity = await prepareAssetIdentity(trx, { tenant: this.tenantId, clientId: createRequest.client_id });
 
       // Insert base asset
       const [asset] = await db.table('assets')
@@ -766,8 +766,7 @@ export class NinjaOneSyncEngine {
           tenant: this.tenantId,
           asset_type: createRequest.asset_type,
           client_id: createRequest.client_id,
-          asset_tag: physicalTag,
-          asset_tag_normalized: normalizeAssetTag(physicalTag),
+          ...identity,
           name: createRequest.name,
           status: createRequest.status,
           location: createRequest.location || '',
@@ -784,7 +783,6 @@ export class NinjaOneSyncEngine {
           updated_at: now,
         })
         .returning('*');
-      await claimAssetTag(trx, { tenant: this.tenantId, assetTag: physicalTag, ownerKind: 'asset', ownerId: asset.asset_id });
 
       // Insert extension data
       const assetType = createRequest.asset_type;

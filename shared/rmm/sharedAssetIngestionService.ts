@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { claimAssetTag, nextAssetTag, normalizeAssetTag } from '../services/assetNumbering';
+import { prepareAssetIdentity } from '../services/assetNumbering';
 import { applyRmmSignedInUserAssignment } from './autoAssignFromSignedInUser';
 import type {
   NormalizedRmmDeviceType,
@@ -384,14 +384,13 @@ export async function ingestNormalizedRmmDeviceSnapshot(
     // Provider identity stays in rmm_device_id / tenant_external_entity_mappings.
     // snapshot.assetTag can be a provider key (Level's levelio:<id>), never a
     // physical tag. New discoveries receive the shared tenant sequence.
-    const physicalAssetTag = await nextAssetTag(trx, tenant, resolvedClientId);
+    const identity = await prepareAssetIdentity(trx, { tenant, clientId: resolvedClientId });
     const [createdAsset] = await db.table('assets')
       .insert({
         tenant,
         asset_type: assetType,
         client_id: resolvedClientId,
-        asset_tag: physicalAssetTag,
-        asset_tag_normalized: normalizeAssetTag(physicalAssetTag) || null,
+        ...identity,
         serial_number: snapshot.serialNumber ?? '',
         name: snapshot.displayName,
         status: assetStatus,
@@ -409,8 +408,6 @@ export async function ingestNormalizedRmmDeviceSnapshot(
       .returning<{ asset_id: string }[]>('asset_id');
 
     const createdAssetId = String(createdAsset.asset_id);
-
-    await claimAssetTag(trx, { tenant, assetTag: physicalAssetTag, ownerKind: 'asset', ownerId: createdAssetId });
 
     await upsertAssetExtension(trx, {
       tenant,

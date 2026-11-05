@@ -166,7 +166,7 @@ export const getAssetSequenceContinuationReview = withAuth(async (user, { tenant
   const { knex } = await createTenantKnex();
   const rows = await tenantDb(knex, tenant).table('assets').select('asset_tag');
   const suffixes = rows.flatMap((row: { asset_tag: string | null }) => {
-    const match = /([0-9]+)$/.exec(row.asset_tag ?? '');
+    const match = /([0-9]+)$/.exec(normalizeAssetTag(row.asset_tag ?? ''));
     return match ? [{ tag: row.asset_tag as string, value: BigInt(match[1]) }] : [];
   });
   const maximum = suffixes.reduce((max, item) => item.value > max ? item.value : max, 0n);

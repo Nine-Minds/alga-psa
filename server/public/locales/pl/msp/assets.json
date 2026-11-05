@@ -1776,6 +1776,7 @@
       "updateAssets": "Brak uprawnień: nie można aktualizować zasobów"
     },
     "asset": {
+      "tagAlreadyExists": "Ten identyfikator zasobu jest już używany lub zarezerwowany. Zeskanuj go, aby znaleźć istniejący zasób, albo wprowadź inny identyfikator.",
       "notFoundRefresh": "Nie znaleziono zasobu. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
       "clientNotFound": "Nie znaleziono klienta. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
       "maintenanceNotFound": "Nie znaleziono harmonogramu konserwacji. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",

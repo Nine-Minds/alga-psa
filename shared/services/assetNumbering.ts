@@ -1,8 +1,19 @@
 import type { Knex } from 'knex';
+import { randomUUID } from 'node:crypto';
 import { tenantDb } from '@alga-psa/db';
 import { SharedNumberingService } from './numberingService';
 
 export const ASSET_RESERVATION_TTL_MINUTES = 15;
+
+export class AssetTagConflictError extends Error {
+  readonly statusCode = 409;
+  readonly code = 'ASSET_TAG_CONFLICT';
+
+  constructor(message: string) {
+    super(message);
+    this.name = 'AssetTagConflictError';
+  }
+}
 
 export function normalizeAssetTag(value: string): string {
   // Match PostgreSQL btrim(text)'s U+0020 boundary rule exactly.
@@ -22,28 +33,59 @@ export function formatAssetTag(sequenceValue: string, clientPrefix: string | nul
  */
 export async function claimAssetTag(
   trx: Knex.Transaction,
-  args: { tenant: string; assetTag: string; ownerKind: 'asset' | 'reservation'; ownerId: string; allowOwnerTransfer?: boolean; transferFromOwnerId?: string },
+  args: { tenant: string; assetTag: string; ownerKind: 'asset' | 'reservation'; ownerId: string },
 ): Promise<void> {
   const normalized = normalizeAssetTag(args.assetTag);
   if (!normalized) throw new Error('Asset tag cannot be blank');
   const db = tenantDb(trx, args.tenant);
   const existing = await db.table('assets').where({ asset_tag_normalized: normalized })
     .whereNot('asset_id', args.ownerId).first<{ asset_id: string }>('asset_id');
-  if (existing) throw new Error('Asset tag already exists in this tenant');
+  if (existing) throw new AssetTagConflictError('Asset tag already exists in this tenant');
   await db.table('asset_tag_claims').insert({
       tenant: args.tenant, normalized_tag: normalized, asset_tag: args.assetTag,
       owner_kind: args.ownerKind, owner_id: args.ownerId,
+      reservation_id: args.ownerKind === 'reservation' ? args.ownerId : null,
     }).onConflict(['tenant', 'normalized_tag']).ignore();
   const claim = await db.table('asset_tag_claims').where({ normalized_tag: normalized }).forUpdate()
     .first<{ owner_kind: string; owner_id: string }>();
   if (!claim) throw new Error('Asset tag claim could not be persisted');
   if (claim.owner_kind === args.ownerKind && claim.owner_id === args.ownerId) return;
-  if (!args.allowOwnerTransfer || claim.owner_kind !== 'reservation' || args.ownerKind !== 'asset' || claim.owner_id !== args.transferFromOwnerId) {
-    throw new Error('Asset tag is already claimed in this tenant');
+  throw new AssetTagConflictError('Asset tag is already claimed in this tenant');
+}
+
+/** Prepare the database-enforced identity before inserting an asset. All writes
+ * share this ordering, including a reservation-to-asset ownership transfer.
+ * The caller must persist the returned identity in this same transaction. */
+export async function prepareAssetIdentity(
+  trx: Knex.Transaction,
+  args: { tenant: string; clientId: string | null | undefined; assetTag?: string; reservationId?: string },
+): Promise<{ asset_id: string; asset_tag: string; asset_tag_normalized: string; asset_tag_legacy_exempt: false }> {
+  const assetId = randomUUID();
+  let assetTag = args.assetTag ?? '';
+  if (args.reservationId) {
+    const reservation = await tenantDb(trx, args.tenant).table('asset_number_reservations')
+      .where({ reservation_id: args.reservationId }).forUpdate()
+      .first<{ asset_tag: string }>('asset_tag');
+    if (!reservation) throw new AssetTagConflictError('Asset number reservation was not found');
+    if (normalizeAssetTag(assetTag) && normalizeAssetTag(assetTag) !== normalizeAssetTag(reservation.asset_tag)) {
+      throw new AssetTagConflictError('Submitted asset tag does not match the reserved label');
+    }
+    assetTag = reservation.asset_tag;
+    await commitAssetReservation(trx, { tenant: args.tenant, reservationId: args.reservationId, assetId, assetTag });
+  } else if (normalizeAssetTag(assetTag)) {
+    await claimAssetTag(trx, { tenant: args.tenant, assetTag, ownerKind: 'asset', ownerId: assetId });
+  } else {
+    for (let attempt = 0; attempt < 10_000; attempt += 1) {
+      assetTag = await nextAssetTag(trx, args.tenant, args.clientId);
+      try {
+        await claimAssetTag(trx, { tenant: args.tenant, assetTag, ownerKind: 'asset', ownerId: assetId });
+        break;
+      } catch (error) {
+        if (!(error instanceof AssetTagConflictError) || attempt === 9_999) throw error;
+      }
+    }
   }
-  await db.table('asset_tag_claims').where({ normalized_tag: normalized }).update({
-      asset_tag: args.assetTag, owner_kind: 'asset', owner_id: args.ownerId,
-  });
+  return { asset_id: assetId, asset_tag: assetTag, asset_tag_normalized: normalizeAssetTag(assetTag), asset_tag_legacy_exempt: false };
 }
 
 export async function clientAssetPrefix(
@@ -85,27 +127,34 @@ export async function previewNextAssetTag(
   tenant: string,
   clientId: string | null | undefined,
 ): Promise<{ tag: string; value: number; padding: number }> {
-  const row = await tenantDb(db, tenant).table('next_number')
-    .where({ entity_type: 'ASSET' })
-    .first<{ last_number: number | string; initial_value: number | string; prefix: string | null; padding_length: number | null }>();
-  const initial = Number(row?.initial_value ?? 1);
-  const last = Number(row?.last_number ?? 0);
-  const value = Math.max(last + 1, initial);
-  const padding = Number(row?.padding_length ?? 5);
-  const staticPrefix = row?.prefix ?? '';
-  const formatted = `${staticPrefix}${String(value).padStart(padding, '0')}`;
-  return { tag: formatAssetTag(formatted, await clientAssetPrefix(db, tenant, clientId)), value, padding };
+  const preview = await SharedNumberingService.previewNextNumber('ASSET', { knex: db, tenant });
+  return {
+    tag: formatAssetTag(preview.number, await clientAssetPrefix(db, tenant, clientId)),
+    value: preview.value,
+    padding: preview.padding ?? 0,
+  };
 }
 
 export async function reserveAssetNumber(
   trx: Knex.Transaction,
   args: { tenant: string; clientId: string | null; createdBy?: string | null },
 ): Promise<{ reservationId: string; assetTag: string; expiresAt: string }> {
-  const assetTag = await nextAssetTag(trx, args.tenant, args.clientId);
+  const reservationId = randomUUID();
+  let assetTag = '';
+  for (let attempt = 0; attempt < 10_000; attempt += 1) {
+    assetTag = await nextAssetTag(trx, args.tenant, args.clientId);
+    try {
+      await claimAssetTag(trx, { tenant: args.tenant, assetTag, ownerKind: 'reservation', ownerId: reservationId });
+      break;
+    } catch (error) {
+      if (!(error instanceof AssetTagConflictError) || attempt === 9_999) throw error;
+    }
+  }
   const expiresAt = new Date(Date.now() + ASSET_RESERVATION_TTL_MINUTES * 60_000).toISOString();
   const [reservation] = await tenantDb(trx, args.tenant).table('asset_number_reservations')
     .insert({
       tenant: args.tenant,
+      reservation_id: reservationId,
       client_id: args.clientId,
       asset_tag: assetTag,
       normalized_tag: normalizeAssetTag(assetTag),
@@ -114,7 +163,6 @@ export async function reserveAssetNumber(
       created_by: args.createdBy ?? null,
     })
     .returning<{ reservation_id: string }[]>(['reservation_id']);
-  await claimAssetTag(trx, { tenant: args.tenant, assetTag, ownerKind: 'reservation', ownerId: reservation.reservation_id });
   return { reservationId: reservation.reservation_id, assetTag, expiresAt };
 }
 
@@ -131,17 +179,29 @@ export async function commitAssetReservation(
     .where({ reservation_id: args.reservationId })
     .forUpdate()
     .first<{ asset_tag: string; state: string; asset_id: string | null }>();
-  if (!reservation) throw new Error('Asset number reservation was not found');
+  if (!reservation) throw new AssetTagConflictError('Asset number reservation was not found');
   if (normalizeAssetTag(reservation.asset_tag) !== normalizeAssetTag(args.assetTag)) {
-    throw new Error('Asset number reservation does not match the submitted asset tag');
+    throw new AssetTagConflictError('Asset number reservation does not match the submitted asset tag');
   }
   if (reservation.asset_id && reservation.asset_id !== args.assetId) {
-    throw new Error('Asset number reservation is already committed to another asset');
+    throw new AssetTagConflictError('Asset number reservation is already committed to another asset');
   }
+  if (reservation.state === 'committed' && reservation.asset_id === args.assetId) return;
   if (!['reserved', 'expired', 'released'].includes(reservation.state)) {
-    throw new Error(`Asset number reservation cannot be committed from ${reservation.state}`);
+    throw new AssetTagConflictError(`Asset number reservation cannot be committed from ${reservation.state}`);
   }
-  await claimAssetTag(trx, { tenant: args.tenant, assetTag: args.assetTag, ownerKind: 'asset', ownerId: args.assetId, allowOwnerTransfer: true, transferFromOwnerId: args.reservationId });
+  const collision = await db.table('assets').where({ asset_tag_normalized: normalizeAssetTag(args.assetTag) })
+    .whereNot('asset_id', args.assetId).first('asset_id');
+  if (collision) throw new AssetTagConflictError('Asset tag already exists in this tenant');
+  const claim = await db.table('asset_tag_claims')
+    .where({ normalized_tag: normalizeAssetTag(args.assetTag) }).forUpdate()
+    .first<{ owner_kind: string; owner_id: string; reservation_id: string | null }>();
+  if (!claim || claim.owner_kind !== 'reservation' || claim.owner_id !== args.reservationId || claim.reservation_id !== args.reservationId) {
+    throw new AssetTagConflictError('Asset number reservation does not own its tag claim');
+  }
+  await db.table('asset_tag_claims').where({ normalized_tag: normalizeAssetTag(args.assetTag) }).update({
+    owner_kind: 'asset', owner_id: args.assetId,
+  });
   await db.table('asset_number_reservations').where({ reservation_id: args.reservationId }).update({
     state: 'committed', asset_id: args.assetId, updated_at: trx.fn.now(),
   });

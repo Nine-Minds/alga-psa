@@ -1776,6 +1776,7 @@
       "updateAssets": "Zugriff verweigert: Assets können nicht aktualisiert werden"
     },
     "asset": {
+      "tagAlreadyExists": "Dieses Asset-Tag wird bereits verwendet oder ist reserviert. Scannen Sie es, um das vorhandene Asset zu finden, oder geben Sie ein anderes Tag ein.",
       "notFoundRefresh": "Asset nicht gefunden. Es wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "clientNotFound": "Kunde nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "maintenanceNotFound": "Wartungsplan nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",

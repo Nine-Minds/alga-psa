@@ -1776,6 +1776,7 @@
       "updateAssets": "Permission denied: Cannot update assets"
     },
     "asset": {
+      "tagAlreadyExists": "This asset tag is already in use or reserved. Scan it to find the existing asset, or enter a different tag.",
       "notFoundRefresh": "Asset not found. It may have been deleted. Please refresh and try again.",
       "clientNotFound": "Client not found. It may have been deleted. Please refresh and try again.",
       "maintenanceNotFound": "Maintenance schedule not found. It may have been deleted. Please refresh and try again.",

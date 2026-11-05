@@ -233,6 +233,7 @@ beforeEach(() => {
   createAssetMock.mockImplementation(async (data: { name: string }) => ({
     asset_id: `created-${data.name}`,
     ...data,
+    asset_tag: `ALLOC-${data.name}`,
   }));
   deleteAssetMock.mockResolvedValue({ success: true, deleted: true });
   getHuduAssetMappingRowsMock.mockResolvedValue([]);
@@ -291,7 +292,7 @@ describe('T218: importHuduAsset', () => {
       data: {
         asset_id: 'created-EC-WS-001',
         mapping_id: 'map-1',
-        asset_tag: '',
+        asset_tag: 'ALLOC-EC-WS-001',
         asset_type: 'workstation',
         status: huduImportAssetStatus(),
       },

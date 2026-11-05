@@ -7,12 +7,17 @@ import {
   commitAssetReservation,
   nextAssetTag,
   normalizeAssetTag,
+  prepareAssetIdentity,
   previewNextAssetTag,
   reserveAssetNumber,
 } from '@alga-psa/shared/services/assetNumbering';
 import { activateAssetTagUniquenessForTenant } from '@alga-psa/shared/services/assetTagActivation';
 import { ingestNormalizedRmmDeviceSnapshot } from '@alga-psa/shared/rmm/sharedAssetIngestionService';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
+import { AssetService } from '../../lib/api/services/AssetService';
+import { createAssetInTransaction } from '@alga-psa/assets/actions/assetActions';
+
+vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn(async () => undefined) }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: async () => ({ getAppSecret: async () => undefined }),
@@ -33,6 +38,9 @@ async function fixture() {
       { tenant, client_id: client1, client_name: 'Northwind', asset_prefix: 'NW', asset_prefix_normalized: 'NW' },
       { tenant, client_id: client2, client_name: 'Contoso', asset_prefix: 'CT', asset_prefix_normalized: 'CT' },
     ]);
+    await tenantDb(trx, tenant).table('asset_statuses').insert({
+      tenant, slug: 'active', label: 'Active', kind: 'deployable', is_builtin: true, is_active: true, display_order: 0,
+    });
   });
   return { tenant, client1, client2 };
 }
@@ -44,19 +52,30 @@ async function inTenant<T>(tenant: string, body: (trx: Knex.Transaction) => Prom
   });
 }
 
-async function createBareAsset(tenant: string, clientId: string, tag: string, assetId = randomUUID()) {
-  await inTenant(tenant, (trx) => tenantDb(trx, tenant).table('assets').insert({
+async function createBareAsset(tenant: string, clientId: string, tag: string, legacy = false) {
+  return inTenant(tenant, async (trx) => {
+    const identity = legacy
+      ? { asset_id: randomUUID(), asset_tag: tag, asset_tag_normalized: normalizeAssetTag(tag) || null, asset_tag_legacy_exempt: true }
+      : await prepareAssetIdentity(trx, { tenant, clientId, assetTag: tag });
+    if (legacy) {
+      // Seed the same immutable exception an upgrade from old data captures.
+      await trx('asset_tag_legacy_bindings').insert({ tenant, asset_id: identity.asset_id, normalized_tag: normalizeAssetTag(tag), asset_tag: tag });
+      if (normalizeAssetTag(tag)) {
+        await trx('asset_tag_claims').insert({ tenant, normalized_tag: normalizeAssetTag(tag), asset_tag: tag, owner_kind: 'legacy', owner_id: randomUUID() })
+          .onConflict(['tenant', 'normalized_tag']).ignore();
+      }
+    }
+    await tenantDb(trx, tenant).table('assets').insert({
       tenant,
-      asset_id: assetId,
+      ...identity,
       asset_type: 'unknown',
       client_id: clientId,
-      asset_tag: tag,
-      asset_tag_normalized: normalizeAssetTag(tag),
       name: `Fixture ${tag}`,
       status: 'active',
       ownership: 'client',
-    }));
-  return assetId;
+    });
+    return identity.asset_id;
+  });
 }
 
 describe('asset numbering persistence (PostgreSQL integration)', () => {
@@ -68,7 +87,7 @@ describe('asset numbering persistence (PostgreSQL integration)', () => {
   afterAll(async () => {
     for (const tenant of fixtureTenants) {
       await inTenant(tenant, async (trx) => {
-        for (const table of ['asset_tag_activation', 'asset_tag_claims', 'asset_number_reservations', 'asset_tag_audit', 'assets', 'clients', 'next_number', 'tenants']) {
+        for (const table of ['tenant_external_entity_mappings', 'asset_tag_activation', 'asset_number_reservations', 'asset_tag_audit', 'asset_history', 'assets', 'asset_tag_legacy_bindings', 'asset_tag_claims', 'asset_statuses', 'clients', 'users', 'next_number', 'tenants']) {
           await trx(table).where({ tenant }).del().catch(() => undefined);
         }
       }).catch(() => undefined);
@@ -122,9 +141,13 @@ describe('asset numbering persistence (PostgreSQL integration)', () => {
       await tenantDb(trx, tenant).table('asset_number_reservations').where({ reservation_id: reservation.reservationId })
         .update({ state: 'expired' });
     });
-    const commits = await Promise.allSettled(assetIds.map((assetId) => inTenant(tenant, (trx) => commitAssetReservation(trx, {
-      tenant, reservationId: reservation.reservationId, assetId, assetTag: reservation.assetTag,
-    }))));
+    const commits = await Promise.allSettled(assetIds.map((assetId) => inTenant(tenant, async (trx) => {
+      await commitAssetReservation(trx, { tenant, reservationId: reservation.reservationId, assetId, assetTag: reservation.assetTag });
+      await tenantDb(trx, tenant).table('assets').insert({
+        tenant, asset_id: assetId, client_id: client1, asset_type: 'unknown', status: 'active',
+        name: 'Committed intake', asset_tag: reservation.assetTag, asset_tag_normalized: normalizeAssetTag(reservation.assetTag),
+      });
+    })));
     expect(commits.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
     expect(commits.filter((result) => result.status === 'rejected')).toHaveLength(1);
     const claim = await db('asset_tag_claims').where({ tenant, normalized_tag: normalizeAssetTag(reservation.assetTag) }).first();
@@ -145,8 +168,8 @@ describe('asset numbering persistence (PostgreSQL integration)', () => {
     const clean = await fixture();
     const legacy = await fixture();
     await createBareAsset(clean.tenant, clean.client1, 'CLEAN-0001');
-    const duplicate1 = await createBareAsset(legacy.tenant, legacy.client1, 'DUP-9');
-    const duplicate2 = await createBareAsset(legacy.tenant, legacy.client2, ' dup-9 ');
+    const duplicate1 = await createBareAsset(legacy.tenant, legacy.client1, 'DUP-9', true);
+    const duplicate2 = await createBareAsset(legacy.tenant, legacy.client2, ' dup-9 ', true);
     await inTenant(legacy.tenant, (trx) => tenantDb(trx, legacy.tenant).table('asset_tag_audit').insert([
       { tenant: legacy.tenant, asset_id: duplicate1, asset_tag: 'DUP-9', normalized_tag: 'DUP-9', reason: 'duplicate' },
       { tenant: legacy.tenant, asset_id: duplicate2, asset_tag: ' dup-9 ', normalized_tag: 'DUP-9', reason: 'duplicate' },
@@ -157,6 +180,116 @@ describe('asset numbering persistence (PostgreSQL integration)', () => {
     expect(await db('asset_tag_activation').where({ tenant: legacy.tenant }).first()).toBeUndefined();
     const duplicateRows = await db('assets').where({ tenant: legacy.tenant }).count('* as count').first<{ count: string }>();
     expect(Number(duplicateRows?.count)).toBe(2);
+  });
+
+  it('requires an owned claim for inserts and edits even when the writer omits the helper after activation', async () => {
+    const fx = await fixture();
+    const assetId = await createBareAsset(fx.tenant, fx.client1, 'BOUND-01');
+    const secondId = await createBareAsset(fx.tenant, fx.client1, 'BOUND-02');
+    await inTenant(fx.tenant, (trx) => activateAssetTagUniquenessForTenant(trx, fx.tenant, randomUUID()));
+    const raw = { tenant: fx.tenant, asset_id: randomUUID(), asset_type: 'unknown', client_id: fx.client1,
+      asset_tag: ' bound-01 ', asset_tag_normalized: 'BOUND-01', name: 'Unclaimed duplicate', status: 'active' };
+    await expect(db('assets').insert(raw)).rejects.toMatchObject({ code: '23503' });
+    await expect(db('assets').insert({ ...raw, asset_tag_legacy_exempt: true })).rejects.toMatchObject({ code: '23503' });
+    await expect(db('assets').where({ tenant: fx.tenant, asset_id: secondId })
+      .update({ asset_tag: 'BOUND-01', asset_tag_normalized: 'BOUND-01' })).rejects.toMatchObject({ code: '23503' });
+    expect(await db('assets').where({ tenant: fx.tenant, asset_id: assetId }).first('asset_tag')).toMatchObject({ asset_tag: 'BOUND-01' });
+  });
+
+  it('promotes reconciled legacy tags to mandatory claims while retaining an intentionally blank legacy record', async () => {
+    const fx = await fixture();
+    const retained = await createBareAsset(fx.tenant, fx.client1, 'Legacy-0042', true);
+    const changed = await createBareAsset(fx.tenant, fx.client2, ' legacy-0042 ', true);
+    const blank = await createBareAsset(fx.tenant, fx.client1, '', true);
+    await db('asset_tag_audit').insert([
+      { tenant: fx.tenant, asset_id: retained, asset_tag: 'Legacy-0042', normalized_tag: 'LEGACY-0042', reason: 'duplicate' },
+      { tenant: fx.tenant, asset_id: changed, asset_tag: ' legacy-0042 ', normalized_tag: 'LEGACY-0042', reason: 'duplicate' },
+    ]);
+    const ctx = { tenant: fx.tenant, userId: randomUUID(), db } as any;
+    await new AssetService().update(changed, { asset_tag: 'Legacy-0043' }, ctx);
+    expect((await inTenant(fx.tenant, (trx) => activateAssetTagUniquenessForTenant(trx, fx.tenant, ctx.userId))).success).toBe(false);
+    await db('asset_tag_audit').where({ tenant: fx.tenant }).update({ resolved_at: db.fn.now(), resolution_note: 'Reviewed physical equipment; second tag changed with customer approval.' });
+    expect(await inTenant(fx.tenant, (trx) => activateAssetTagUniquenessForTenant(trx, fx.tenant, ctx.userId))).toEqual({ success: true });
+    const rows = await db('assets').where({ tenant: fx.tenant });
+    expect(rows.find((row) => row.asset_id === retained)).toMatchObject({ asset_tag: 'Legacy-0042', asset_tag_legacy_exempt: false });
+    expect(rows.find((row) => row.asset_id === changed)).toMatchObject({ asset_tag: 'Legacy-0043', asset_tag_legacy_exempt: false });
+    expect(rows.find((row) => row.asset_id === blank)).toMatchObject({ asset_tag: '', asset_tag_legacy_exempt: true });
+    await expect(db('assets').where({ tenant: fx.tenant, asset_id: changed }).update({ asset_tag_legacy_exempt: true }))
+      .rejects.toMatchObject({ code: '23503' });
+  });
+
+  it('creates the minimal label-first asset through the UI write core with a committed durable tag', async () => {
+    const fx = await fixture();
+    const actor = randomUUID();
+    await db('users').insert({ tenant: fx.tenant, user_id: actor, username: `intake-${actor}`, hashed_password: 'fixture-only', first_name: 'Ryan', last_name: 'Tester', email: `${actor}@example.test`, user_type: 'internal' });
+    const result = await inTenant(fx.tenant, async (trx) => {
+      const reservation = await reserveAssetNumber(trx, { tenant: fx.tenant, clientId: fx.client1, createdBy: actor });
+      const asset = await createAssetInTransaction(trx, fx.tenant, actor, {
+        client_id: fx.client1, asset_type: 'unknown', status: 'active', name: 'Box awaiting intake',
+        asset_tag: reservation.assetTag, asset_number_reservation_id: reservation.reservationId,
+      });
+      return { asset, reservation };
+    });
+    expect(result.asset.asset_tag).toBe(result.reservation.assetTag);
+    expect(await db('asset_number_reservations').where({ tenant: fx.tenant, reservation_id: result.reservation.reservationId }).first())
+      .toMatchObject({ state: 'committed', asset_id: result.asset.asset_id });
+    expect(await db('asset_tag_claims').where({ tenant: fx.tenant, normalized_tag: normalizeAssetTag(result.asset.asset_tag) }).first())
+      .toMatchObject({ owner_kind: 'asset', owner_id: result.asset.asset_id });
+    expect(await db('asset_history').where({ tenant: fx.tenant, asset_id: result.asset.asset_id }).first()).toMatchObject({ changed_by: actor });
+  });
+
+  it('returns a REST conflict for a normalized manual/import collision without persisting another asset', async () => {
+    const fx = await fixture();
+    await createBareAsset(fx.tenant, fx.client1, 'FTS-Printed-71');
+    await expect(new AssetService().create({
+      client_id: fx.client1, asset_type: 'unknown', status: 'active', name: 'Duplicate import', asset_tag: ' fts-printed-71 ',
+    }, { tenant: fx.tenant, userId: randomUUID(), db } as any)).rejects.toMatchObject({ statusCode: 409, code: 'ASSET_TAG_CONFLICT' });
+    expect(Number((await db('assets').where({ tenant: fx.tenant }).count('* as count').first())?.count)).toBe(1);
+  });
+
+  it.each(['reserved', 'expired', 'released'])('completes a %s reservation through REST without allocating again', async (state) => {
+    const fx = await fixture();
+    const reserved = await inTenant(fx.tenant, (trx) => reserveAssetNumber(trx, { tenant: fx.tenant, clientId: fx.client1 }));
+    await db('asset_number_reservations').where({ tenant: fx.tenant, reservation_id: reserved.reservationId }).update({ state });
+    const before = await db('next_number').where({ tenant: fx.tenant, entity_type: 'ASSET' }).first('last_number');
+    const asset = await new AssetService().create({
+      client_id: fx.client1, asset_type: 'unknown', name: 'Label-first REST equipment', status: 'active',
+      asset_number_reservation_id: reserved.reservationId,
+    }, { tenant: fx.tenant, userId: randomUUID(), db } as any);
+    expect(asset.asset_tag).toBe(reserved.assetTag);
+    expect(await db('asset_number_reservations').where({ tenant: fx.tenant, reservation_id: reserved.reservationId }).first())
+      .toMatchObject({ state: 'committed', asset_id: asset.asset_id });
+    expect(await db('next_number').where({ tenant: fx.tenant, entity_type: 'ASSET' }).first('last_number')).toEqual(before);
+    await inTenant(fx.tenant, (trx) => commitAssetReservation(trx, {
+      tenant: fx.tenant, reservationId: reserved.reservationId, assetId: asset.asset_id, assetTag: reserved.assetTag,
+    }));
+  });
+
+  it('rolls REST reservation ownership back if the asset write fails and permits retry', async () => {
+    const fx = await fixture();
+    const reserved = await inTenant(fx.tenant, (trx) => reserveAssetNumber(trx, { tenant: fx.tenant, clientId: fx.client1 }));
+    const service = new AssetService();
+    const context = { tenant: fx.tenant, userId: randomUUID(), db } as any;
+    const payload = { client_id: fx.client1, asset_type: 'unknown', name: 'Retry intake', status: 'active', asset_number_reservation_id: reserved.reservationId };
+    // A null name violates the real table constraint after ownership transfers.
+    await expect(service.create({ ...payload, name: null } as any, context)).rejects.toMatchObject({ code: '23502' });
+    expect(await db('asset_number_reservations').where({ tenant: fx.tenant, reservation_id: reserved.reservationId }).first())
+      .toMatchObject({ state: 'reserved', asset_id: null });
+    expect(await db('asset_tag_claims').where({ tenant: fx.tenant, normalized_tag: normalizeAssetTag(reserved.assetTag) }).first())
+      .toMatchObject({ owner_kind: 'reservation', owner_id: reserved.reservationId });
+    const asset = await service.create(payload, context);
+    expect(asset.asset_tag).toBe(reserved.assetTag);
+  });
+
+  it('allows only one concurrent REST completion of a reservation', async () => {
+    const fx = await fixture();
+    const reserved = await inTenant(fx.tenant, (trx) => reserveAssetNumber(trx, { tenant: fx.tenant, clientId: fx.client1 }));
+    const payload = { client_id: fx.client1, asset_type: 'unknown', name: 'Concurrent intake', status: 'active', asset_number_reservation_id: reserved.reservationId };
+    const results = await Promise.allSettled(Array.from({ length: 2 }, () => new AssetService().create(payload, { tenant: fx.tenant, userId: randomUUID(), db } as any)));
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
+    expect(results.find((result) => result.status === 'rejected')).toMatchObject({ reason: { statusCode: 409 } });
+    expect(Number((await db('assets').where({ tenant: fx.tenant, asset_tag_normalized: normalizeAssetTag(reserved.assetTag) }).count('* as count').first())?.count)).toBe(1);
   });
 
   it('preserves a stored physical tag when client and ownership fields change', async () => {
