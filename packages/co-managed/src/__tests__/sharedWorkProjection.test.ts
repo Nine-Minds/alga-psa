@@ -3,6 +3,7 @@ import { maskCoManagedSnapshot, CO_MANAGED_TASK_NAME_ALIASES, CO_MANAGED_PROJECT
   CO_MANAGED_ORGANIZATION_NAME_ALIASES, CO_MANAGED_ORGANIZATION_NAME_FIELD_NAMES, CO_MANAGED_ASSIGNEE_NAME_ALIASES,
   CO_MANAGED_PROJECT_FIELD_SOURCE, CO_MANAGED_PHASE_FIELD_SOURCE, CO_MANAGED_TASK_FIELD_SOURCE } from '../sharedWorkProjection';
 import { isCoManagedReadFieldHidden } from '../sharedWorkRedaction';
+import { projectCoManagedNotificationSnapshot } from '../sharedWorkProjection';
 
 const row = { taskName: 'Fix', projectName: 'Rollout', revision: 3 };
 const spec = { taskName: CO_MANAGED_TASK_NAME_ALIASES, projectName: CO_MANAGED_PROJECT_NAME_ALIASES };
@@ -26,6 +27,58 @@ describe('maskCoManagedSnapshot', () => {
   it('does not mutate its input', () => {
     maskCoManagedSnapshot(['*'], row, spec);
     expect(row.taskName).toBe('Fix');
+  });
+});
+
+describe('projectCoManagedNotificationSnapshot', () => {
+  it('masks canonical email and routing fields and suppresses all conversation payload fields', () => {
+    const projected = projectCoManagedNotificationSnapshot(
+      ['tickets.title', 'ticket_number', 'requester_email', 'assigned_to', 'client_name', 'comments.content'],
+      { ticketTitle: 'Sensitive', ticketNumber: 'T-1', requesterEmail: 'person@example.test', assignedToName: 'Agent', clientName: 'Client',
+        commentContent: 'private body', commentPreview: 'private preview', commentHtml: '<p>private body</p>', commentRawContent: 'raw' });
+    expect(projected).toMatchObject({ ticketTitle: null, ticketNumber: null, requesterEmail: null, assignedToName: null, clientName: null,
+      commentContent: null, commentPreview: null, commentHtml: null, commentRawContent: null, conversationSuppressed: true });
+  });
+
+  it('keeps allowed fields and conversation content for an unrelated redaction', () => {
+    const projected = projectCoManagedNotificationSnapshot(['priority'], { ticketTitle: 'Visible', commentPreview: 'visible comment' });
+    expect(projected).toMatchObject({ ticketTitle: 'Visible', commentPreview: 'visible comment', conversationSuppressed: false });
+  });
+
+  it.each(['contact_email', 'fields.contact_email'])('hides requester email composites for %s', alias => {
+    const row = { requesterName: 'Visible requester', requesterEmail: 'hidden@example.test',
+      requesterContact: 'hidden@example.test · 555-0100', requesterDetails: 'Visible requester · hidden@example.test' };
+    expect(projectCoManagedNotificationSnapshot([alias], row)).toMatchObject({ requesterName: 'Visible requester',
+      requesterEmail: null, requesterContact: null, requesterDetails: null });
+  });
+
+  it('hides the assignee composite for the canonical values alias', () => {
+    expect(projectCoManagedNotificationSnapshot(['values.assignee_name'], {
+      assignedToName: 'Hidden agent', assignedDetails: 'Hidden agent (agent@example.test)',
+    })).toMatchObject({ assignedToName: null, assignedDetails: null });
+  });
+
+  it.each(['actor_organization_name', 'actor_tenant', 'actor_display_name'])('hides routing actor references for canonical author source %s', alias => {
+    expect(projectCoManagedNotificationSnapshot([alias], {
+      actorName: 'Hidden actor', actorOrganization: 'Hidden organization', authorName: 'Hidden author', ticketTitle: 'Visible title',
+    })).toMatchObject({ actorName: null, actorOrganization: null, authorName: null, ticketTitle: 'Visible title' });
+  });
+
+  it('masks persisted comment body aliases, canonical author sources, and derived ticket context', () => {
+    const row = { commentContent: 'private', commentPreview: 'private preview', authorName: 'Morgan',
+      priority: 'Urgent', status: 'Open', board: 'Service', categoryDetails: 'Hardware / Laptop',
+      metaLine: 'Ticket #T-9 · Urgent Priority · Open' };
+    expect(projectCoManagedNotificationSnapshot(['note'], row).commentContent).toBeNull();
+    expect(projectCoManagedNotificationSnapshot(['markdown_content'], row).commentPreview).toBeNull();
+    expect(projectCoManagedNotificationSnapshot(['actor_display_name'], row).authorName).toBeNull();
+    expect(projectCoManagedNotificationSnapshot(['contact_id'], { authorName: 'Morgan' }).authorName).toBeNull();
+    expect(projectCoManagedNotificationSnapshot(['priority_id'], row)).toMatchObject({ priority: null, metaLine: null });
+    expect(projectCoManagedNotificationSnapshot(['ticket_number'], row).metaLine).toBeNull();
+    expect(projectCoManagedNotificationSnapshot(['requester_name'], { requesterDetails: 'Name · email' }).requesterDetails).toBeNull();
+    expect(projectCoManagedNotificationSnapshot(['assignee_name'], { assignedDetails: 'Name (email)' }).assignedDetails).toBeNull();
+    expect(projectCoManagedNotificationSnapshot(['subcategory_name'], { categoryDetails: 'Category / Subcategory', subcategory: 'Subcategory' }))
+      .toMatchObject({ categoryDetails: null, subcategory: null });
+    expect(projectCoManagedNotificationSnapshot(['*'], row)).toMatchObject({ priority: null, status: null, board: null, categoryDetails: null, metaLine: null });
   });
 });
 

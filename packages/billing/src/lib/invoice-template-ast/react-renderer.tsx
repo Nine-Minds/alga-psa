@@ -3,7 +3,7 @@ import { TemplateEvaluationError } from './evaluator';
 import { localizeTimePresentation } from './timePresentationLocalization';
 import type { TemplateLabelTranslator } from './i18nLabels';
 import React from 'react';
-import { formatCurrencyFromMinorUnits, fromMinorUnits } from '@alga-psa/core';
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import { SYSTEM_DATE_FORMAT, type CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
 import type {
   TemplateAst,
@@ -261,12 +261,11 @@ const formatValue = (value: unknown, format: TemplateValueFormat | undefined, ct
       return String(value);
     }
     try {
-      // LEVERAGE: pattern minor-unit-currency-format — same Intl currency format as fieldFormatting.formatCurrency; a core formatter honouring a caller-supplied currencyDisplay would remove both
+      // One formatter for every surface: the exponent comes from the currency and
+      // the glyph from the product's symbol table, so a preview or PDF reads
+      // "R 12.34" like the entry screens do — not Intl's "ZAR 12.34".
       const currency = ctx.currencyCode || FALLBACK_CURRENCY;
-      return new Intl.NumberFormat(ctx.locale, {
-        style: 'currency',
-        currency,
-      }).format(fromMinorUnits(numeric, ctx.locale, currency));
+      return formatCurrencyFromMinorUnits(numeric, ctx.locale, currency);
     } catch {
       // Invalid currency code in template metadata — last-resort fallback.
       return formatCurrencyFromMinorUnits(numeric, ctx.locale, FALLBACK_CURRENCY);
