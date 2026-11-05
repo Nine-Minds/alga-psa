@@ -1022,8 +1022,10 @@ jobs:
         run: |
           # Read the mounted secrets as the application's uid; the host runner
           # may have a different uid and cannot read them after permission init.
-          docker-compose -p alga-e2e-test run --rm --no-deps \
-            --entrypoint /bin/bash server /app/scripts/check-pgbouncer-auth.sh
+          # Supply this CI probe from the checkout: production images need not
+          # package the repository's scripts directory (the EE image does not).
+          docker-compose -p alga-e2e-test run --rm --no-deps -T \
+            --entrypoint /bin/bash server -s < scripts/check-pgbouncer-auth.sh
         shell: bash
 
       - name: Start remaining services after setup completion
