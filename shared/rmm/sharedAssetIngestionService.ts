@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { nextAssetTag } from '../services/assetNumbering';
+import { claimAssetTag, nextAssetTag, normalizeAssetTag } from '../services/assetNumbering';
 import { applyRmmSignedInUserAssignment } from './autoAssignFromSignedInUser';
 import type {
   NormalizedRmmDeviceType,
@@ -391,6 +391,7 @@ export async function ingestNormalizedRmmDeviceSnapshot(
         asset_type: assetType,
         client_id: resolvedClientId,
         asset_tag: physicalAssetTag,
+        asset_tag_normalized: normalizeAssetTag(physicalAssetTag) || null,
         serial_number: snapshot.serialNumber ?? '',
         name: snapshot.displayName,
         status: assetStatus,
@@ -408,6 +409,8 @@ export async function ingestNormalizedRmmDeviceSnapshot(
       .returning<{ asset_id: string }[]>('asset_id');
 
     const createdAssetId = String(createdAsset.asset_id);
+
+    await claimAssetTag(trx, { tenant, assetTag: physicalAssetTag, ownerKind: 'asset', ownerId: createdAssetId });
 
     await upsertAssetExtension(trx, {
       tenant,

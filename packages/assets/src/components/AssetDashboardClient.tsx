@@ -49,6 +49,7 @@ import { formatClientLocation } from '../lib/formatClientLocation';
 import { QuickAddAsset } from './QuickAddAsset';
 import Link from 'next/link';
 import LabelFirstAssetIntake from './LabelFirstAssetIntake';
+import { AssetTagScanLookup } from './AssetTagScanLookup';
 import { AssetCommandPalette } from './AssetCommandPalette';
 import { AssetTypeBreakdownCard } from './AssetTypeBreakdownCard';
 import { useAssetTypeRegistry } from './shared/useAssetTypeOptions';
@@ -1538,6 +1539,8 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
               <LabelFirstAssetIntake />
             </div>
           </div>
+
+          <AssetTagScanLookup />
 
           <Card className="p-4 space-y-4" {...withDataAutomationId({ id: 'asset-toolbar-card' })}>
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">

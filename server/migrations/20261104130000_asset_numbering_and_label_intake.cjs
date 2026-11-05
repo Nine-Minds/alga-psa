@@ -1,168 +1,162 @@
 /**
- * Asset numbering primitives. Existing physical tags are never rewritten.
- * Legacy blanks and normalized duplicates are copied to an audit table. A
- * database trigger serializes new nonblank tag writes by tenant + normalized
- * tag and rejects collisions while allowing the legacy rows to remain.
+ * Asset numbering persistence. No triggers are used: Citus 12.1 does not
+ * support triggers on distributed tables. Applications write the canonical
+ * normalized columns and an atomic tenant-scoped identity claim in the same
+ * transaction as the asset/reservation. CHECK constraints reject inconsistent
+ * canonical values, while the claim primary key arbitrates concurrent writers.
+ *
+ * This migration is intentionally resumable because production runs it with
+ * transaction:false. Every DDL/backfill operation is safe to retry.
  */
-exports.up = async function up(knex) {
-  await knex.schema.alterTable('clients', (table) => {
-    table.text('asset_prefix').nullable();
-  });
-  await knex.schema.alterTable('assets', (table) => {
-    table.text('asset_tag_normalized').nullable();
-  });
+const NORMALIZE_TAG = "NULLIF(translate(btrim(asset_tag), 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), '')";
+const NORMALIZE_PREFIX = "NULLIF(translate(btrim(asset_prefix), 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), '')";
 
-  await knex.schema.createTable('asset_tag_audit', (table) => {
-    table.uuid('tenant').notNullable();
-    table.uuid('audit_id').notNullable().defaultTo(knex.raw('gen_random_uuid()'));
-    table.uuid('asset_id').notNullable();
-    table.text('asset_tag').notNullable();
-    table.text('normalized_tag');
-    table.text('reason').notNullable();
-    table.timestamp('discovered_at').notNullable().defaultTo(knex.fn.now());
-    table.timestamp('resolved_at').nullable();
-    table.text('resolution_note').nullable();
-    table.primary(['tenant', 'audit_id']);
-    table.index(['tenant', 'normalized_tag'], 'asset_tag_audit_tenant_norm_idx');
-  });
+async function backfillClients(knex) {
+  while (true) {
+    // Keep locks bounded and resume from rows whose canonical value differs.
+    const result = await knex.raw(`WITH batch AS (
+      SELECT tenant, client_id FROM clients
+       WHERE asset_prefix_normalized IS DISTINCT FROM ${NORMALIZE_PREFIX}
+       LIMIT 1000
+    ) UPDATE clients AS target
+      SET asset_prefix_normalized = NULLIF(translate(btrim(target.asset_prefix), 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), '')
+      FROM batch WHERE target.tenant=batch.tenant AND target.client_id=batch.client_id`);
+    if (result.rowCount < 1000) break;
+  }
+}
 
-  await knex.schema.createTable('asset_number_reservations', (table) => {
-    table.uuid('tenant').notNullable();
-    table.uuid('reservation_id').notNullable().defaultTo(knex.raw('gen_random_uuid()'));
-    table.uuid('client_id').nullable();
-    table.text('asset_tag').notNullable();
-    table.text('normalized_tag').notNullable();
-    table.text('state').notNullable().defaultTo('reserved');
-    table.timestamp('expires_at').notNullable();
-    table.uuid('created_by').nullable();
-    table.uuid('asset_id').nullable();
-    table.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
-    table.timestamp('updated_at').notNullable().defaultTo(knex.fn.now());
-    table.primary(['tenant', 'reservation_id']);
-    table.foreign(['tenant', 'client_id']).references(['tenant', 'client_id']).inTable('clients');
-    table.foreign(['tenant', 'asset_id']).references(['tenant', 'asset_id']).inTable('assets');
-    table.check("state IN ('reserved', 'committed', 'expired', 'released')", [], 'asset_number_reservations_state_ck');
-    table.index(['tenant', 'normalized_tag'], 'asset_number_reservations_tag_idx');
-    table.index(['tenant', 'state', 'expires_at'], 'asset_number_reservations_expiry_idx');
-  });
+async function backfillAssets(knex) {
+  while (true) {
+    const result = await knex.raw(`WITH batch AS (
+      SELECT tenant, asset_id FROM assets
+       WHERE asset_tag_normalized IS DISTINCT FROM ${NORMALIZE_TAG}
+       LIMIT 1000
+    ) UPDATE assets AS target
+      SET asset_tag_normalized = NULLIF(translate(btrim(target.asset_tag), 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), '')
+      FROM batch WHERE target.tenant=batch.tenant AND target.asset_id=batch.asset_id`);
+    if (result.rowCount < 1000) break;
+  }
+}
 
-  await knex.raw(`
-    UPDATE assets
-       SET asset_tag_normalized = NULLIF(translate(btrim(asset_tag), 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), '')
-  `);
-
-  await knex.raw(`
-    INSERT INTO asset_tag_audit (tenant, asset_id, asset_tag, normalized_tag, reason)
-    SELECT tenant, asset_id, asset_tag, NULLIF(translate(btrim(asset_tag), 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), ''), 'blank'
-      FROM assets
-     WHERE btrim(asset_tag) = ''
-  `);
-  await knex.raw(`
-    INSERT INTO asset_tag_audit (tenant, asset_id, asset_tag, normalized_tag, reason)
-    SELECT a.tenant, a.asset_id, a.asset_tag, a.asset_tag_normalized, 'duplicate'
-      FROM assets a
-      JOIN (
-        SELECT tenant, asset_tag_normalized
-          FROM assets
-         WHERE asset_tag_normalized IS NOT NULL
-         GROUP BY tenant, asset_tag_normalized
-        HAVING count(*) > 1
-      ) d ON d.tenant = a.tenant AND d.asset_tag_normalized = a.asset_tag_normalized
-  `);
-
-  await knex.raw(`
-    CREATE INDEX assets_tenant_asset_tag_normalized_idx
-        ON assets (tenant, asset_tag_normalized)
-     WHERE asset_tag_normalized IS NOT NULL
-  `);
-  await knex.raw(`
-    CREATE UNIQUE INDEX clients_tenant_asset_prefix_uq
-        ON clients (tenant, asset_prefix)
-     WHERE asset_prefix IS NOT NULL AND asset_prefix <> ''
-  `);
-
-  await knex.raw(`
-    CREATE OR REPLACE FUNCTION public.normalize_client_asset_prefix()
-    RETURNS trigger LANGUAGE plpgsql AS $$
-    BEGIN
-      IF NEW.asset_prefix IS NULL OR btrim(NEW.asset_prefix) = '' THEN
-        NEW.asset_prefix := NULL;
-      ELSE
-        NEW.asset_prefix := upper(btrim(NEW.asset_prefix));
-        IF length(NEW.asset_prefix) > 10 OR NEW.asset_prefix !~ '^[A-Z0-9-]+$' THEN
-          RAISE EXCEPTION 'Asset prefix must be at most 10 uppercase letters, digits, or hyphens'
-            USING ERRCODE = '23514', CONSTRAINT = 'clients_asset_prefix_format_ck';
-        END IF;
-      END IF;
-      RETURN NEW;
-    END;
-    $$;
-    CREATE TRIGGER clients_normalize_asset_prefix
-      BEFORE INSERT OR UPDATE OF asset_prefix ON clients
-      FOR EACH ROW EXECUTE FUNCTION public.normalize_client_asset_prefix();
-
-    CREATE OR REPLACE FUNCTION public.guard_normalized_asset_tag()
-    RETURNS trigger LANGUAGE plpgsql AS $$
-    DECLARE collision_id uuid;
-    BEGIN
-      NEW.asset_tag_normalized := NULLIF(translate(btrim(NEW.asset_tag), 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), '');
-      IF NEW.asset_tag_normalized IS NULL THEN RETURN NEW; END IF;
-
-      -- Tags belonging to one tenant route to one Citus shard. Locking the
-      -- normalized key makes the check safe against concurrent insert/edit.
-      PERFORM pg_advisory_xact_lock(hashtextextended(NEW.tenant::text || ':' || NEW.asset_tag_normalized, 0));
-      SELECT asset_id INTO collision_id
-        FROM assets
-       WHERE tenant = NEW.tenant
-         AND asset_tag_normalized = NEW.asset_tag_normalized
-         AND asset_id IS DISTINCT FROM NEW.asset_id
-       LIMIT 1;
-      IF collision_id IS NOT NULL THEN
-        RAISE EXCEPTION 'Asset tag already exists in this tenant (asset %)', collision_id
-          USING ERRCODE = '23505', CONSTRAINT = 'assets_tenant_asset_tag_normalized_uq';
-      END IF;
-      IF EXISTS (
-        SELECT 1 FROM asset_number_reservations
-         WHERE tenant = NEW.tenant
-           AND normalized_tag = NEW.asset_tag_normalized
-           AND state IN ('reserved', 'expired', 'released')
-      ) THEN
-        RAISE EXCEPTION 'Asset tag is held by a printed or released reservation'
-          USING ERRCODE = '23505', CONSTRAINT = 'asset_number_reservations_normalized_tag_uq';
-      END IF;
-      RETURN NEW;
-    END;
-    $$;
-    CREATE TRIGGER assets_guard_normalized_tag
-      BEFORE INSERT OR UPDATE OF asset_tag, asset_tag_normalized ON assets
-      FOR EACH ROW EXECUTE FUNCTION public.guard_normalized_asset_tag();
-  `);
-
-  await knex.raw(`ALTER TABLE asset_tag_audit ENABLE ROW LEVEL SECURITY`);
-  await knex.raw(`CREATE POLICY tenant_isolation_policy ON asset_tag_audit USING (tenant::text = current_setting('app.current_tenant')::text)`);
-  await knex.raw(`CREATE POLICY tenant_isolation_insert_policy ON asset_tag_audit FOR INSERT WITH CHECK (tenant::text = current_setting('app.current_tenant')::text)`);
-  await knex.raw(`ALTER TABLE asset_number_reservations ENABLE ROW LEVEL SECURITY`);
-  await knex.raw(`CREATE POLICY tenant_isolation_policy ON asset_number_reservations USING (tenant::text = current_setting('app.current_tenant')::text)`);
-  await knex.raw(`CREATE POLICY tenant_isolation_insert_policy ON asset_number_reservations FOR INSERT WITH CHECK (tenant::text = current_setting('app.current_tenant')::text)`);
-
+async function distributeIfNeeded(knex, table) {
   const citus = await knex.raw("SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'citus') AS enabled");
-  if (citus.rows[0]?.enabled) {
-    await knex.raw("SELECT create_distributed_table('asset_tag_audit', 'tenant', colocate_with => 'assets')");
-    await knex.raw("SELECT create_distributed_table('asset_number_reservations', 'tenant', colocate_with => 'assets')");
+  if (!citus.rows[0]?.enabled) return;
+  const distributed = await knex.raw('SELECT 1 FROM pg_dist_partition WHERE logicalrelid = ?::regclass', [table]);
+  if (!distributed.rows.length) {
+    await knex.raw('SELECT create_distributed_table(?, \'tenant\', colocate_with => \'assets\')', [table]);
+  }
+}
+
+exports.up = async function up(knex) {
+  await knex.raw('ALTER TABLE clients ADD COLUMN IF NOT EXISTS asset_prefix text NULL');
+  await knex.raw('ALTER TABLE clients ADD COLUMN IF NOT EXISTS asset_prefix_normalized text NULL');
+  await knex.raw('ALTER TABLE assets ADD COLUMN IF NOT EXISTS asset_tag_normalized text NULL');
+
+  await knex.raw(`CREATE TABLE IF NOT EXISTS asset_tag_audit (
+    tenant uuid NOT NULL, audit_id uuid NOT NULL DEFAULT gen_random_uuid(), asset_id uuid NOT NULL,
+    asset_tag text NOT NULL, normalized_tag text NULL, reason text NOT NULL,
+    discovered_at timestamptz NOT NULL DEFAULT now(), resolved_at timestamptz NULL, resolution_note text NULL,
+    PRIMARY KEY (tenant, audit_id)
+  )`);
+  await knex.raw(`CREATE TABLE IF NOT EXISTS asset_number_reservations (
+    tenant uuid NOT NULL, reservation_id uuid NOT NULL DEFAULT gen_random_uuid(), client_id uuid NULL,
+    asset_tag text NOT NULL, normalized_tag text NOT NULL, state text NOT NULL DEFAULT 'reserved',
+    expires_at timestamptz NOT NULL, created_by uuid NULL, asset_id uuid NULL,
+    created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (tenant, reservation_id)
+  )`);
+  await knex.raw(`CREATE TABLE IF NOT EXISTS asset_tag_claims (
+    tenant uuid NOT NULL, normalized_tag text NOT NULL, asset_tag text NOT NULL,
+    owner_kind text NOT NULL CHECK (owner_kind IN ('asset', 'reservation')),
+    owner_id uuid NOT NULL, created_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (tenant, normalized_tag)
+  )`);
+  await knex.raw(`CREATE TABLE IF NOT EXISTS asset_tag_activation (
+    tenant uuid PRIMARY KEY, activated_at timestamptz NOT NULL DEFAULT now(), activated_by uuid NULL
+  )`);
+
+  // Distribute before any backfill joins. Citus cannot execute joins between
+  // its distributed assets and local side tables in a distributed write.
+  for (const table of ['asset_tag_audit', 'asset_number_reservations', 'asset_tag_claims', 'asset_tag_activation']) {
+    await distributeIfNeeded(knex, table);
+  }
+
+  await knex.raw('CREATE INDEX CONCURRENTLY IF NOT EXISTS asset_tag_audit_tenant_norm_idx ON asset_tag_audit (tenant, normalized_tag)');
+  await knex.raw('CREATE INDEX CONCURRENTLY IF NOT EXISTS asset_number_reservations_tag_idx ON asset_number_reservations (tenant, normalized_tag)');
+  await knex.raw('CREATE INDEX CONCURRENTLY IF NOT EXISTS asset_number_reservations_expiry_idx ON asset_number_reservations (tenant, state, expires_at)');
+  await knex.raw('CREATE INDEX CONCURRENTLY IF NOT EXISTS assets_tenant_asset_tag_normalized_idx ON assets (tenant, asset_tag_normalized) WHERE asset_tag_normalized IS NOT NULL');
+  await knex.raw('CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS clients_tenant_asset_prefix_normalized_uq ON clients (tenant, asset_prefix_normalized) WHERE asset_prefix_normalized IS NOT NULL');
+
+  // Normalize all existing clients/tags without changing physical labels.
+  await backfillClients(knex);
+  await backfillAssets(knex);
+
+  // Audit blanks and all members of normalized duplicate groups. NOT EXISTS
+  // makes this safe after an interrupted, nontransactional run.
+  await knex.raw(`INSERT INTO asset_tag_audit (tenant, asset_id, asset_tag, normalized_tag, reason)
+    SELECT a.tenant, a.asset_id, a.asset_tag, NULL, 'blank' FROM assets a
+     WHERE ${NORMALIZE_TAG} IS NULL AND NOT EXISTS (
+       SELECT 1 FROM asset_tag_audit x WHERE x.tenant=a.tenant AND x.asset_id=a.asset_id AND x.reason='blank')`);
+  await knex.raw(`INSERT INTO asset_tag_audit (tenant, asset_id, asset_tag, normalized_tag, reason)
+    SELECT a.tenant, a.asset_id, a.asset_tag, a.asset_tag_normalized, 'duplicate' FROM assets a
+      JOIN (SELECT tenant, asset_tag_normalized FROM assets WHERE asset_tag_normalized IS NOT NULL
+            GROUP BY tenant, asset_tag_normalized HAVING count(*) > 1) d
+        ON d.tenant=a.tenant AND d.asset_tag_normalized=a.asset_tag_normalized
+     WHERE NOT EXISTS (SELECT 1 FROM asset_tag_audit x WHERE x.tenant=a.tenant AND x.asset_id=a.asset_id AND x.reason='duplicate')`);
+
+  // Seed one claim for nonconflicting physical tags only. Legacy duplicate
+  // groups remain untouched and are surfaced for explicit reconciliation.
+  await knex.raw(`INSERT INTO asset_tag_claims (tenant, normalized_tag, asset_tag, owner_kind, owner_id)
+    SELECT a.tenant, a.asset_tag_normalized, a.asset_tag, 'asset', a.asset_id
+      FROM assets a JOIN (SELECT tenant, asset_tag_normalized FROM assets
+          WHERE asset_tag_normalized IS NOT NULL GROUP BY tenant, asset_tag_normalized HAVING count(*) = 1) u
+        ON u.tenant=a.tenant AND u.asset_tag_normalized=a.asset_tag_normalized
+     ON CONFLICT (tenant, normalized_tag) DO NOTHING`);
+  await knex.raw(`UPDATE asset_number_reservations SET normalized_tag = COALESCE(NULLIF(translate(btrim(asset_tag), 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), ''), normalized_tag)
+    WHERE normalized_tag IS DISTINCT FROM COALESCE(NULLIF(translate(btrim(asset_tag), 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), ''), normalized_tag)`);
+  await knex.raw(`INSERT INTO asset_tag_claims (tenant, normalized_tag, asset_tag, owner_kind, owner_id)
+    SELECT r.tenant, r.normalized_tag, r.asset_tag, 'reservation', r.reservation_id
+      FROM asset_number_reservations r
+      JOIN (SELECT tenant, normalized_tag FROM asset_number_reservations GROUP BY tenant, normalized_tag HAVING count(*) = 1) u
+        ON u.tenant=r.tenant AND u.normalized_tag=r.normalized_tag
+     WHERE r.normalized_tag IS NOT NULL AND r.state <> 'committed'
+       AND NOT EXISTS (SELECT 1 FROM assets a WHERE a.tenant=r.tenant AND a.asset_tag_normalized=r.normalized_tag)
+     ON CONFLICT (tenant, normalized_tag) DO NOTHING`);
+
+  // Constraints are idempotent and deliberately nonunique on assets. The
+  // canonical value must match the same ASCII btrim/case fold used by lookup.
+  await knex.raw(`DO $$ BEGIN
+    ALTER TABLE assets ADD CONSTRAINT assets_asset_tag_normalized_ck
+      CHECK (asset_tag_normalized IS NOT DISTINCT FROM ${NORMALIZE_TAG}) NOT VALID;
+  EXCEPTION WHEN duplicate_object THEN NULL; END $$`);
+  await knex.raw(`DO $$ BEGIN
+    ALTER TABLE clients ADD CONSTRAINT clients_asset_prefix_normalized_ck
+      CHECK (asset_prefix_normalized IS NOT DISTINCT FROM ${NORMALIZE_PREFIX}
+        AND (asset_prefix IS NULL OR btrim(asset_prefix) = '' OR (length(asset_prefix_normalized) <= 10 AND asset_prefix_normalized ~ '^[A-Z0-9-]+$'))) NOT VALID;
+  EXCEPTION WHEN duplicate_object THEN NULL; END $$`);
+
+  for (const table of ['asset_tag_audit', 'asset_number_reservations', 'asset_tag_claims', 'asset_tag_activation']) {
+    await knex.raw(`ALTER TABLE ${table} ENABLE ROW LEVEL SECURITY`);
+    const policyName = `${table}_tenant_policy`;
+    await knex.raw(`DO $$ BEGIN CREATE POLICY ${policyName} ON ${table}
+      USING (tenant::text = current_setting('app.current_tenant', true))
+      WITH CHECK (tenant::text = current_setting('app.current_tenant', true));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$`);
   }
 };
 
 exports.down = async function down(knex) {
-  await knex.raw('DROP TRIGGER IF EXISTS assets_guard_normalized_tag ON assets');
-  await knex.raw('DROP TRIGGER IF EXISTS clients_normalize_asset_prefix ON clients');
-  await knex.raw('DROP FUNCTION IF EXISTS public.guard_normalized_asset_tag()');
-  await knex.raw('DROP FUNCTION IF EXISTS public.normalize_client_asset_prefix()');
-  await knex.schema.dropTableIfExists('asset_number_reservations');
-  await knex.schema.dropTableIfExists('asset_tag_audit');
+  // Retain physical tag columns. This rollback removes only feature metadata.
+  for (const table of ['asset_tag_activation', 'asset_tag_claims', 'asset_number_reservations', 'asset_tag_audit']) {
+    await knex.schema.dropTableIfExists(table);
+  }
+  await knex.raw('ALTER TABLE assets DROP CONSTRAINT IF EXISTS assets_asset_tag_normalized_ck');
+  await knex.raw('ALTER TABLE clients DROP CONSTRAINT IF EXISTS clients_asset_prefix_normalized_ck');
   await knex.raw('DROP INDEX IF EXISTS assets_tenant_asset_tag_normalized_idx');
-  await knex.raw('DROP INDEX IF EXISTS clients_tenant_asset_prefix_uq');
-  await knex.schema.alterTable('assets', (table) => table.dropColumn('asset_tag_normalized'));
-  await knex.schema.alterTable('clients', (table) => table.dropColumn('asset_prefix'));
+  await knex.raw('DROP INDEX IF EXISTS clients_tenant_asset_prefix_normalized_uq');
+  await knex.raw('ALTER TABLE assets DROP COLUMN IF EXISTS asset_tag_normalized');
+  await knex.raw('ALTER TABLE clients DROP COLUMN IF EXISTS asset_prefix_normalized');
+  await knex.raw('ALTER TABLE clients DROP COLUMN IF EXISTS asset_prefix');
 };
 
 exports.config = { transaction: false };

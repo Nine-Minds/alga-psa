@@ -115,7 +115,7 @@ import {
     type AssetAuthUser as SharedAssetAuthUser,
 } from '../lib/assetReadAuthorization';
 import { isAssetAssigneeError, setAssetAssignee } from '../lib/assetAssignment';
-import { nextAssetTag, commitAssetReservation, normalizeAssetTag } from '../lib/assetNumbering';
+import { nextAssetTag, commitAssetReservation, claimAssetTag, normalizeAssetTag } from '../lib/assetNumbering';
 import { getAssetGroupSummariesForAssets, getAssetGroupSummary, removeAssetFromAnyGroup } from '../lib/assetGroups';
 import {
     ASSET_BILLING_PROFILE_UNAVAILABLE,
@@ -1093,7 +1093,7 @@ export async function createAssetInTransaction(
                     .where({ reservation_id: reservationId })
                     .forUpdate()
                     .first<{ asset_tag: string; state: string; asset_id: string | null }>();
-                if (!reservation || !['reserved', 'expired', 'committed'].includes(reservation.state)) {
+                if (!reservation || !['reserved', 'expired', 'released'].includes(reservation.state)) {
                     throw new Error('Asset number reservation is not available for intake');
                 }
                 if (reservation.asset_id) throw new Error('Asset number reservation is already committed');
@@ -1101,11 +1101,6 @@ export async function createAssetInTransaction(
                     throw new Error('Submitted asset tag does not match the reserved label');
                 }
                 assetTag = reservation.asset_tag;
-                // Hide the held tag from the database collision trigger inside
-                // this transaction. A later failure rolls this transition back.
-                await tenantScopedTable(trx, 'asset_number_reservations', tenant)
-                    .where({ reservation_id: reservationId })
-                    .update({ state: 'committed', updated_at: trx.fn.now() });
             } else if (!normalizeAssetTag(assetTag)) {
                 assetTag = await nextAssetTag(trx, tenant, validatedData.client_id);
             }
@@ -1153,6 +1148,7 @@ export async function createAssetInTransaction(
                 asset_type: validatedData.asset_type,
                 client_id: validatedData.client_id,
                 asset_tag: assetTag,
+                asset_tag_normalized: normalizeAssetTag(assetTag) || null,
                 name: validatedData.name,
                 status: validatedData.status,
                 ownership: validatedData.ownership ?? 'client',
@@ -1188,6 +1184,8 @@ export async function createAssetInTransaction(
                 await commitAssetReservation(trx, {
                     tenant, reservationId, assetId: asset.asset_id, assetTag,
                 });
+            } else {
+                await claimAssetTag(trx, { tenant, assetTag, ownerKind: 'asset', ownerId: asset.asset_id });
             }
 
             if (selectedContact?.contact_name_id) {
@@ -1523,6 +1521,15 @@ export async function updateAssetRecord(
                     baseUpdateData[key] = value;
                 }
             });
+
+            if (Object.prototype.hasOwnProperty.call(baseUpdateData, 'asset_tag')) {
+                const nextTag = String(baseUpdateData.asset_tag ?? '');
+                const normalizedTag = normalizeAssetTag(nextTag);
+                baseUpdateData.asset_tag_normalized = normalizedTag || null;
+                if (normalizedTag && normalizedTag !== asset.asset_tag_normalized) {
+                    await claimAssetTag(trx, { tenant, assetTag: nextTag, ownerKind: 'asset', ownerId: asset_id });
+                }
+            }
 
             if (attributesPayload !== undefined) {
                 // jsonb merge (not replace) so sibling namespaces like

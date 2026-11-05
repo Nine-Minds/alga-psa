@@ -75,11 +75,14 @@ export const getNumberSettings = withAuth(async (_user, { tenant }, entityType: 
 });
 
 export const updateNumberSettings = withAuth(async (
-  _user,
+  user,
   { tenant },
   entityType: EntityType,
   updates: Partial<NumberSettings>
 ): Promise<UpdateResponse> => {
+  if (!await hasPermission(user, 'settings', 'update')) {
+    throw new Error('Permission denied: Cannot update numbering settings');
+  }
   const { knex: db } = await createTenantKnex();
 
   try {

@@ -34,7 +34,7 @@ import { validateAssetStatusSlug } from '@alga-psa/assets/lib/assetStatusRegistr
 import { isAssetAssigneeError, setAssetAssignee } from '@alga-psa/assets/lib/assetAssignment';
 import { getAssetGroupSummary, removeAssetFromAnyGroup } from '@alga-psa/assets/lib/assetGroups';
 import { assertBillingProfileForClient } from '@alga-psa/shared/models/assetBillingProfileModel';
-import { commitAssetReservation, nextAssetTag, normalizeAssetTag } from '@alga-psa/shared/services/assetNumbering';
+import { claimAssetTag, commitAssetReservation, nextAssetTag, normalizeAssetTag } from '@alga-psa/shared/services/assetNumbering';
 
 function validationDetails(issues: Array<{ key: string; code: string; message: string }>) {
   return issues.map((issue) => ({ path: ['attributes', issue.key], code: issue.code, message: issue.message }));
@@ -467,6 +467,7 @@ export class AssetService extends BaseService<any> {
       }
       assetColumns.asset_tag = physicalTag;
       assetRecord.asset_tag = physicalTag;
+      assetRecord.asset_tag_normalized = normalizeAssetTag(physicalTag) || null;
       const [created] = await scopedTable(trx, context.tenant, this.tableName)
         .insert(assetRecord)
         .returning('*');
@@ -475,6 +476,8 @@ export class AssetService extends BaseService<any> {
         await commitAssetReservation(trx, {
           tenant: context.tenant, reservationId, assetId: created.asset_id, assetTag: physicalTag,
         });
+      } else {
+        await claimAssetTag(trx, { tenant: context.tenant, assetTag: physicalTag, ownerKind: 'asset', ownerId: created.asset_id });
       }
 
       if (requestedContactId) {
@@ -630,6 +633,14 @@ export class AssetService extends BaseService<any> {
     // committed without its FR-E5 group removal (or the other way round), and a
     // failed extension write left the rest of the same PUT committed.
     const after = await knex.transaction(async (trx) => {
+      if (Object.prototype.hasOwnProperty.call(updateData, 'asset_tag')) {
+        const physicalTag = String(updateData.asset_tag ?? '');
+        const normalizedTag = normalizeAssetTag(physicalTag);
+        updateData.asset_tag_normalized = normalizedTag || null;
+        if (normalizedTag && normalizedTag !== normalizeAssetTag(String(before?.asset_tag ?? ''))) {
+          await claimAssetTag(trx, { tenant: context.tenant, assetTag: physicalTag, ownerKind: 'asset', ownerId: id });
+        }
+      }
       const [updated] = await scopedTable(trx, context.tenant, this.tableName)
         .where({ [this.primaryKey]: id })
         .update(updateData)

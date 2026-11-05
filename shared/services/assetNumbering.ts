@@ -14,6 +14,38 @@ export function formatAssetTag(sequenceValue: string, clientPrefix: string | nul
   return `${normalizedPrefix}${sequenceValue}`;
 }
 
+/**
+ * One tenant-scoped claim is shared by pending labels and persisted assets.
+ * Its primary key is (tenant, normalized_tag), which is enforceable on Citus
+ * because the distribution key participates in the key. Claims are retained
+ * after release/expiry so a printed label can never be assigned elsewhere.
+ */
+export async function claimAssetTag(
+  trx: Knex.Transaction,
+  args: { tenant: string; assetTag: string; ownerKind: 'asset' | 'reservation'; ownerId: string; allowOwnerTransfer?: boolean; transferFromOwnerId?: string },
+): Promise<void> {
+  const normalized = normalizeAssetTag(args.assetTag);
+  if (!normalized) throw new Error('Asset tag cannot be blank');
+  const db = tenantDb(trx, args.tenant);
+  const existing = await db.table('assets').where({ asset_tag_normalized: normalized })
+    .whereNot('asset_id', args.ownerId).first<{ asset_id: string }>('asset_id');
+  if (existing) throw new Error('Asset tag already exists in this tenant');
+  await db.table('asset_tag_claims').insert({
+      tenant: args.tenant, normalized_tag: normalized, asset_tag: args.assetTag,
+      owner_kind: args.ownerKind, owner_id: args.ownerId,
+    }).onConflict(['tenant', 'normalized_tag']).ignore();
+  const claim = await db.table('asset_tag_claims').where({ normalized_tag: normalized }).forUpdate()
+    .first<{ owner_kind: string; owner_id: string }>();
+  if (!claim) throw new Error('Asset tag claim could not be persisted');
+  if (claim.owner_kind === args.ownerKind && claim.owner_id === args.ownerId) return;
+  if (!args.allowOwnerTransfer || claim.owner_kind !== 'reservation' || args.ownerKind !== 'asset' || claim.owner_id !== args.transferFromOwnerId) {
+    throw new Error('Asset tag is already claimed in this tenant');
+  }
+  await db.table('asset_tag_claims').where({ normalized_tag: normalized }).update({
+      asset_tag: args.assetTag, owner_kind: 'asset', owner_id: args.ownerId,
+  });
+}
+
 export async function clientAssetPrefix(
   db: Knex | Knex.Transaction,
   tenant: string,
@@ -41,7 +73,7 @@ export async function nextAssetTag(
     const normalized = normalizeAssetTag(tag);
     const [asset, reservation] = await Promise.all([
       tenantDb(db, tenant).table('assets').where({ asset_tag_normalized: normalized }).first('asset_id'),
-      tenantDb(db, tenant).table('asset_number_reservations').where({ normalized_tag: normalized }).first('reservation_id'),
+      tenantDb(db, tenant).table('asset_tag_claims').where({ normalized_tag: normalized }).first('owner_id'),
     ]);
     if (!asset && !reservation) return tag;
   }
@@ -82,6 +114,7 @@ export async function reserveAssetNumber(
       created_by: args.createdBy ?? null,
     })
     .returning<{ reservation_id: string }[]>(['reservation_id']);
+  await claimAssetTag(trx, { tenant: args.tenant, assetTag, ownerKind: 'reservation', ownerId: reservation.reservation_id });
   return { reservationId: reservation.reservation_id, assetTag, expiresAt };
 }
 
@@ -105,9 +138,10 @@ export async function commitAssetReservation(
   if (reservation.asset_id && reservation.asset_id !== args.assetId) {
     throw new Error('Asset number reservation is already committed to another asset');
   }
-  if (!['reserved', 'expired', 'released', 'committed'].includes(reservation.state)) {
+  if (!['reserved', 'expired', 'released'].includes(reservation.state)) {
     throw new Error(`Asset number reservation cannot be committed from ${reservation.state}`);
   }
+  await claimAssetTag(trx, { tenant: args.tenant, assetTag: args.assetTag, ownerKind: 'asset', ownerId: args.assetId, allowOwnerTransfer: true, transferFromOwnerId: args.reservationId });
   await db.table('asset_number_reservations').where({ reservation_id: args.reservationId }).update({
     state: 'committed', asset_id: args.assetId, updated_at: trx.fn.now(),
   });
