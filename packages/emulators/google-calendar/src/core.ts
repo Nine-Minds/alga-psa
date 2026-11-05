@@ -15,7 +15,9 @@ function apiError(status: number, reason: string, message: string): GoogleCalend
   });
 }
 
-const STATUS_NAMES: Record<number, string> = { 400: 'INVALID_ARGUMENT', 401: 'UNAUTHENTICATED', 404: 'NOT_FOUND', 410: 'GONE' };
+const STATUS_NAMES: Record<number, string> = {
+  400: 'INVALID_ARGUMENT', 401: 'UNAUTHENTICATED', 404: 'NOT_FOUND', 409: 'ALREADY_EXISTS', 410: 'GONE',
+};
 
 export interface GoogleEventDate {
   dateTime?: string;
@@ -172,7 +174,7 @@ export class GoogleCalendarCore implements EmulatorCore {
     this.getCalendar(calendarId);
     const now = this.env.clock.now().toISOString();
     const id = typeof body.id === 'string' && body.id ? body.id : this.newId('event');
-    if (this.events.has(id)) throw apiError(409 in STATUS_NAMES ? 409 : 409, 'duplicate', 'The requested identifier already exists.');
+    if (this.events.has(id)) throw apiError(409, 'duplicate', 'The requested identifier already exists.');
     const event: GoogleCalendarEvent = {
       id,
       status: (body.status as GoogleCalendarEvent['status']) ?? 'confirmed',
