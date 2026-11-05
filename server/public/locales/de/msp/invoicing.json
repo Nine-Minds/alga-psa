@@ -2329,11 +2329,11 @@
       },
       "label_assetSerialNumber": {
         "label": "Vollständige Asset-Seriennummer",
-        "description": "Nur auf Ticket-Arbeitsblättern im Letter-Format verfügbar. Datenpfad: {{path}}"
+        "description": "Vollständige Seriennummer des ausgewählten Assets, nur auf Kunden-Arbeitsblättern im Letter-Format verfügbar."
       },
       "label_ticketDescription": {
         "label": "Ticketbeschreibung",
-        "description": "Nur auf Ticket-Arbeitsblättern im Letter-Format verfügbar. Datenpfad: {{path}}"
+        "description": "Ticketbeschreibung als Klartext, nur auf Kunden-Arbeitsblättern im Letter-Format verfügbar."
       },
       "label_custodyLocation": {
         "label": "Aufbewahrungsort",

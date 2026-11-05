@@ -2329,11 +2329,11 @@
       },
       "label_assetSerialNumber": {
         "label": "Tillgångens fullständiga serienummer",
-        "description": "Endast tillgängligt på ärendeblad i Letter-format. Datasökväg: {{path}}"
+        "description": "Fullständigt serienummer för vald tillgång, endast tillgängligt på kundblad i Letter-format."
       },
       "label_ticketDescription": {
         "label": "Ärendebeskrivning",
-        "description": "Endast tillgängligt på ärendeblad i Letter-format. Datasökväg: {{path}}"
+        "description": "Ärendebeskrivning som ren text, endast tillgängligt på kundblad i Letter-format."
       },
       "label_custodyLocation": {
         "label": "Förvaringsplats",

@@ -2329,11 +2329,11 @@
       },
       "label_assetSerialNumber": {
         "label": "Número de série completo do ativo",
-        "description": "Disponível apenas em folhas de ticket no formato Letter. Caminho dos dados: {{path}}"
+        "description": "Número de série completo do ativo selecionado, disponível apenas em folhas de cliente no formato Letter."
       },
       "label_ticketDescription": {
         "label": "Descrição do ticket",
-        "description": "Disponível apenas em folhas de ticket no formato Letter. Caminho dos dados: {{path}}"
+        "description": "Descrição do ticket como texto simples, disponível apenas em folhas de cliente no formato Letter."
       },
       "label_custodyLocation": {
         "label": "Local de custódia",

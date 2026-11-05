@@ -2329,11 +2329,11 @@
       },
       "label_assetSerialNumber": {
         "label": "Numero di serie completo dell'asset",
-        "description": "Disponibile solo sui fogli ticket in formato Letter. Percorso dati: {{path}}"
+        "description": "Serie completa dell'asset selezionato, disponibile solo sui fogli cliente in formato Letter."
       },
       "label_ticketDescription": {
         "label": "Descrizione del ticket",
-        "description": "Disponibile solo sui fogli ticket in formato Letter. Percorso dati: {{path}}"
+        "description": "Descrizione del ticket come testo normale, disponibile solo sui fogli cliente in formato Letter."
       },
       "label_custodyLocation": {
         "label": "Luogo di custodia",
