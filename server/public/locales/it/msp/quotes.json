@@ -537,6 +537,7 @@
       "recurring": "Ricorrente",
       "service": "servizio",
       "setPrice": "Imposta il prezzo",
+      "taxable": "Imponibile",
       "ungroupedItems": "Elementi non raggruppati"
     },
     "placeholders": {

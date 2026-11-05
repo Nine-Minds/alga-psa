@@ -537,6 +537,7 @@
       "recurring": "Återkommande",
       "service": "tjänst",
       "setPrice": "Ange pris",
+      "taxable": "Skattepliktig",
       "ungroupedItems": "Ogrupperade rader"
     },
     "placeholders": {
