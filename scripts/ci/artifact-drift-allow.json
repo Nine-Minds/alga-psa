@@ -670,5 +670,35 @@
     "doc": "sdk/docs/openapi/alga-openapi.ee.json",
     "pointer": "/components/schemas/InvoiceBulkStatusBody/properties/finalized_at",
     "reason": "alga-2026-0002945: bulk invoice status no longer accepts finalized_at; finalization is owned by the finalize command (invoice:finalize). Requests that send it now get 400 instead of a raw write."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1contracts~1{contractId}~1contract-lines~1{contractLineId}/delete/parameters",
+    "reason": "PR #3774 / alga-2026-0002744 (Foreground REST contract API parity): Document the required contractLineId path parameter consumed by the existing detach route and controller; the URL cannot identify a line without it."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/CreateContractBodyV1/required",
+    "reason": "PR #3774 / alga-2026-0002744 (Foreground REST contract API parity): Require contract_name, billing_frequency and start_date as enforced by createContractSchema; start_date supports the client assignment created atomically with the contract. The compatibility checker reports required-field additions at the containing required array."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/CreateContractBodyV1/properties/end_date/type",
+    "reason": "PR #3774 / alga-2026-0002744 (Foreground REST contract API parity): Document the nullable end_date accepted by createContractSchema and stored as an open-ended client assignment; this expands the accepted input."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1contracts~1{contractId}~1contract-lines~1{contractLineId}/delete/parameters",
+    "reason": "PR #3774 / alga-2026-0002744 (Foreground REST contract API parity): Document the required contractLineId path parameter consumed by the existing detach route and controller; the URL cannot identify a line without it."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/CreateContractBodyV1/required",
+    "reason": "PR #3774 / alga-2026-0002744 (Foreground REST contract API parity): Require contract_name, billing_frequency and start_date as enforced by createContractSchema; start_date supports the client assignment created atomically with the contract. The compatibility checker reports required-field additions at the containing required array."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/CreateContractBodyV1/properties/end_date/type",
+    "reason": "PR #3774 / alga-2026-0002744 (Foreground REST contract API parity): Document the nullable end_date accepted by createContractSchema and stored as an open-ended client assignment; this expands the accepted input."
   }
 ]
