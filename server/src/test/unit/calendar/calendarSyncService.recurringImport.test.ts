@@ -516,6 +516,25 @@ describe('CalendarSyncService recurring import', () => {
     expect(mappings()).toHaveLength(1);
   });
 
+  it('deletes the series when a removed Google master only shows up as instance tombstones', async () => {
+    const instances = productionInstances(3);
+    registerEvents([googleMaster(), ...instances]);
+    const service = await newSyncService();
+    await service.syncExternalEventToSchedule(instances[0].id, 'provider-1');
+
+    // The user deleted the whole series. An expanded (singleEvents) list never
+    // carries the master, so the next sync reports one cancelled tombstone per
+    // instance and nothing at all under the master's own id.
+    adapterState.events.clear();
+    const laterRun = await newSyncService();
+    const result = await laterRun.handleInboundExternalDelete(instances[1].id, 'provider-1');
+
+    expect(result.success).toBe(true);
+    expect(db.entries.size).toBe(0);
+    expect(mappings()).toHaveLength(0);
+    expect(adapterState.deleteEventCalls).toEqual([]);
+  });
+
   it('indexes Microsoft occurrences so an @removed id becomes a master exception', async () => {
     providerState.provider.provider_type = 'microsoft';
     const occurrences = [

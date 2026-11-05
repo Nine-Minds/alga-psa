@@ -1042,32 +1042,65 @@ export class CalendarSyncService {
    * "nothing to do": the id is gone (404) or is not part of a series.
    */
   private async probeDeletedOccurrence(
-    tenant: string,
-    providerId: string,
     externalEventId: string,
-    suppliedAdapter?: BaseCalendarAdapter
-  ): Promise<{ masterExternalId: string; occurrenceStart: Date | null } | null> {
-    let adapter = suppliedAdapter;
-    if (!adapter) {
-      const provider = await this.providerService.getProvider(providerId, tenant);
-      if (!provider || this.providerAuthorizationError(provider)) return null;
-      adapter = await this.createAdapter(provider);
-      await adapter.connect();
-    }
-
+    adapter: BaseCalendarAdapter
+  ): Promise<
+    | { kind: 'instance'; masterExternalId: string; occurrenceStart: Date | null }
+    | { kind: 'standalone' }
+    | { kind: 'gone' }
+  > {
     let event: ExternalCalendarEvent;
     try {
       event = await adapter.getEvent(externalEventId);
     } catch (error: any) {
-      if (isProviderEventGone(error)) return null;
+      if (isProviderEventGone(error)) return { kind: 'gone' };
       throw error;
     }
 
-    if (!event.recurringEventId || event.recurringEventId === event.id) return null;
+    if (!event.recurringEventId || event.recurringEventId === event.id) return { kind: 'standalone' };
     return {
+      kind: 'instance',
       masterExternalId: event.recurringEventId,
       occurrenceStart: this.resolvedOccurrenceStart(event),
     };
+  }
+
+  /** The webhook's own connected adapter where there is one, else a fresh one. */
+  private async adapterFor(
+    tenant: string,
+    providerId: string,
+    supplied?: BaseCalendarAdapter
+  ): Promise<BaseCalendarAdapter | null> {
+    if (supplied) return supplied;
+    const provider = await this.providerService.getProvider(providerId, tenant);
+    if (!provider || this.providerAuthorizationError(provider)) return null;
+    const adapter = await this.createAdapter(provider);
+    await adapter.connect();
+    return adapter;
+  }
+
+  /**
+   * A Google series master never appears in an expanded (`singleEvents`) list,
+   * so deleting the whole series arrives as a tombstone per instance and never
+   * under the master's own id. When one of those tombstones is gone on the
+   * provider side, ask whether its series master is gone too — confirmed with
+   * the provider, never inferred from the id alone.
+   */
+  private async deletedSeriesMasterOf(
+    knex: any,
+    tenant: string,
+    providerId: string,
+    instanceExternalId: string,
+    adapter: BaseCalendarAdapter
+  ): Promise<string | null> {
+    const candidate = instanceIdMasterCandidate(instanceExternalId);
+    if (!candidate) return null;
+    const mapping = await this.getMappingByExternalEvent(candidate, providerId, tenant);
+    if (!mapping) return null;
+    const entry = await ScheduleEntry.get(knex, tenant, mapping.schedule_entry_id);
+    if (!entry?.is_recurring) return null;
+    const master = await this.fetchSeriesMaster(adapter, providerId, candidate);
+    return master ? null : candidate;
   }
 
   /** An event Alga is allowed to import: opted in with @alga, or Alga's own. */
@@ -1262,12 +1295,21 @@ export class CalendarSyncService {
 
     if (!masterExternalId) {
       // Google: events.get still answers for a cancelled instance. A 404 here
-      // with no mapping is genuinely nothing to do — it must not become an
-      // exception on some series guessed from the id.
-      const probed = await this.probeDeletedOccurrence(tenant, providerId, externalEventId, hints?.adapter);
-      if (probed) {
+      // with no mapping is nothing to do — it must never become an exception on
+      // a series guessed from the id — except when the provider also confirms
+      // the series master itself is gone.
+      const adapter = await this.adapterFor(tenant, providerId, hints?.adapter);
+      const probed = adapter
+        ? await this.probeDeletedOccurrence(externalEventId, adapter)
+        : { kind: 'gone' as const };
+      if (probed.kind === 'instance') {
         masterExternalId = probed.masterExternalId;
         occurrenceStart = occurrenceStart ?? probed.occurrenceStart;
+      } else if (probed.kind === 'gone' && adapter) {
+        const deletedMaster = await this.deletedSeriesMasterOf(knex, tenant, providerId, externalEventId, adapter);
+        if (deletedMaster) {
+          return this.handleInboundExternalDelete(deletedMaster, providerId, { adapter });
+        }
       }
     }
 
