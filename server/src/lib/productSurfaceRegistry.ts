@@ -99,6 +99,13 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
     behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' },
   },
   {
+    // Sponsor-only SLA priority mappings for tickets customers escalate to the sponsor. The page is gated by the
+    // co-managed capability ('admits'); a co_managed customer has no such configuration.
+    group: 'msp_co_managed_sla',
+    staticPrefixes: ['/msp/co-management/sla'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' },
+  },
+  {
     // Customer-owned Google / Microsoft provider setup. The page itself is
     // gated by the co-managed capability ('serves'), so a co_managed workspace
     // reaches this one capability-scoped page without the wider integrations
@@ -142,10 +149,17 @@ export const PORTAL_ROUTE_RULES: readonly RouteRule[] = [
     behaviorByProduct: { psa: 'allowed', algadesk: 'allowed', co_managed: 'allowed' },
   },
   {
+    // CM L4c (cross-card touch, owner to confirm): only /client-portal/projects is opened to co_managed, for
+    // the shared-project requester task thread. psa and algadesk are unchanged from portal_upgrade_or_not_found;
+    // the capability gate and permissions inside the route still decide what a co_managed contact sees.
+    group: 'portal_projects',
+    staticPrefixes: ['/client-portal/projects'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'upgrade_boundary', co_managed: 'allowed' },
+  },
+  {
     group: 'portal_upgrade_or_not_found',
     staticPrefixes: [
       '/client-portal/billing',
-      '/client-portal/projects',
       '/client-portal/devices',
       '/client-portal/documents',
       '/client-portal/appointments',
@@ -180,6 +194,14 @@ export const API_RULES: readonly ApiRule[] = [
     // the public v1 metadata surface.
     group: 'api_capability_probes',
     staticPrefixes: ['/api/v1/capabilities'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'allowed', co_managed: 'allowed' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false, co_managed: false },
+  },
+  {
+    // Session-authenticated co-managed conversation file download. Every product
+    // may reach it; capabilityRouteGuard inside the route decides (closed => 404).
+    group: 'api_co_management_attachments',
+    staticPrefixes: ['/api/co-management'],
     behaviorByProduct: { psa: 'allowed', algadesk: 'allowed', co_managed: 'allowed' },
     visibleInMetadataByProduct: { psa: false, algadesk: false, co_managed: false },
   },

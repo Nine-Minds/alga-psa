@@ -22,9 +22,11 @@ interface ScheduleSectionProps {
   targetUserId?: string;
   /** Viewing another user: no quick-add, no action menus. */
   readOnly?: boolean;
+  /** False while the saved filters are still resolving: hold the first query. */
+  filtersReady?: boolean;
 }
 
-export function ScheduleSection({ limit = 5, onViewAll, noCard = false, filters, targetUserId = '', readOnly = false }: ScheduleSectionProps) {
+export function ScheduleSection({ limit = 5, onViewAll, noCard = false, filters, targetUserId = '', readOnly = false, filtersReady = true }: ScheduleSectionProps) {
   const { t } = useTranslation('msp/user-activities');
   const { openActivityDrawer } = useActivityDrawer();
   const [adHocTitle, setAdHocTitle] = useState('');
@@ -36,7 +38,8 @@ export function ScheduleSection({ limit = 5, onViewAll, noCard = false, filters,
     filters,
     targetUserId,
     limit,
-    { collapseRecurringSeries: true }
+    { collapseRecurringSeries: true },
+    { enabled: filtersReady }
   );
   const { activities, loading } = feed;
   const error = addError

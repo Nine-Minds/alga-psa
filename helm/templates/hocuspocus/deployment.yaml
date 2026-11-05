@@ -31,7 +31,7 @@ spec:
         {{- end }}
     spec:
       securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+        {{- toYaml .Values.hocuspocus.podSecurityContext | nindent 8 }}
       {{- if .Values.hocuspocus.image.is_private }}
       imagePullSecrets:
         - name: "{{ .Values.hocuspocus.image.credentials }}"
@@ -39,6 +39,15 @@ spec:
       initContainers:
         - name: wait-for-redis
           image: redis:latest
+          # Only runs redis-cli, so it takes the redis image user and no privileges.
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+            runAsGroup: 999
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           command: ['sh', '-c', 'until redis-cli -h $REDIS_HOST -p $REDIS_PORT -a $REDIS_PASSWORD ping; do echo waiting for redis; sleep 2; done;']
           env:
           {{- if .Values.redis.enabled }}
@@ -77,7 +86,7 @@ spec:
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
+            {{- toYaml .Values.hocuspocus.securityContext | nindent 12 }}
           image: "{{ .Values.hocuspocus.image.name }}:{{ .Values.hocuspocus.image.tag }}"
           imagePullPolicy: {{ .Values.hocuspocus.pullPolicy }}
           env:

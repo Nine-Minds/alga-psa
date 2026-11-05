@@ -474,6 +474,11 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'co_management_private_comments',
   'co_management_private_threads',
   'co_management_private_command_receipts',
+  // L4b: files -> drafts (FK), then transfer records and retained archive files.
+  'co_management_conversation_attachments',
+  'co_management_conversation_drafts',
+  'co_management_thread_transfers',
+  'co_managed_archive_files',
   'co_managed_project_task_references',
   'collaboration_actor_references',
   'co_managed_participation_evidence',
@@ -485,6 +490,10 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'co_management_ticket_handoffs',
   'co_management_ticket_work',
   'co_managed_ticket_references',
+  'sla_organization_notification_events',
+  'sla_organization_events',
+  'sla_organization_obligations',
+  'co_managed_sla_priority_mappings',
   'co_management_command_receipts',
   // Delivery ledger rows cite tickets/users only by soft id; leaf, before relationships.
   'co_management_deliveries',

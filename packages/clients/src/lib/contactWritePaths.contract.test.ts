@@ -45,6 +45,7 @@ const SILENT_WRITERS: Record<string, string> = {
   'packages/clients/src/actions/inboundTicketDestinationActions.ts': 'inbound_ticket_defaults_id is email-routing configuration, not a contact attribute',
   'packages/integrations/src/actions/email-actions/inboundTicketDefaultsActions.ts': 'detaches routing defaults from contacts when a defaults row is deleted (configuration cleanup)',
   'packages/marketing/src/lib/sequences.ts': 'read-only lookup of the contact (update targets marketing_sequence_enrollments)',
+  'packages/co-managed/src/requesterTaskConversation.ts': 'read-only FOR SHARE lookup of the authoring contact (insert targets project_task_comments)',
 };
 
 const WRITE_VERB = /\.(insert|update|del|delete|upsert)\(/;

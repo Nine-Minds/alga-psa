@@ -31,13 +31,15 @@ export { getCoManagedDelegatedScreen, saveCoManagedDelegatedGrant, revokeCoManag
 export type { CoManagedDelegatedOperation, CoManagedDelegatedTarget, CoManagedDelegatedGrantInput, CoManagedDelegatedCommand } from './delegatedAdministration';
 export { coManagedAssigneeOption } from './sharedWorkAssignees';
 export { recordCoManagedWorkAudit } from './sharedWorkAudit';
-export { withRequesterTaskAccess, withRequesterTaskRecipientAccess } from './requesterTaskAccess';
+export { withRequesterTaskAccess, withRequesterTaskRecipientAccess, listRequesterSharedTaskIds } from './requesterTaskAccess';
+export { requesterSharedTaskIds, isRequesterTaskSharedWork } from './requesterSharedWork';
 export { retainCoManagedWorkflowTicketAuthority } from './workflowTicketAuthority';
 export { retainCoManagedWorkSnapshot } from './workSnapshotEvidence';
 export { retainCoManagedHistoricalWorkEvidence } from './historicalWorkEvidence';
 export { hasCoManagedLocalPermission } from './localPermission';
 export { loadCoManagedLifecycleFacts, loadCoManagedStaffRoles, loadCoManagedGrantFacts, loadCoManagedHomeFacts } from './sharedWork';
 export { CO_MANAGED_TASK_RESOURCE_ALIASES, isCoManagedTaskResourceHidden } from './sharedWorkProjection';
+export { projectCoManagedNotificationSnapshot } from './sharedWorkProjection';
 export { listCoManagedSharedProjects, listCoManagedSharedProjectTasks } from './projectTaskQueue';
 export type { CoManagedSharedProjectRow, CoManagedSharedProjectPage, CoManagedSharedTaskRow, CoManagedSharedTaskPage } from './projectTaskQueue';
 export { editCoManagedProjectTask, getCoManagedProjectTaskSnapshot, CoManagedTaskEditError, CO_MANAGED_TASK_EDIT_FIELDS } from './projectTaskEditing';
@@ -80,6 +82,27 @@ export { retainCoManagedConversationBeforeSourceChange } from './sourceChangeRet
 export { snapshotConversationContent, encodeConversationContent, plainTextContent } from './conversationContent';
 export type { CoManagedConversationContent } from './conversationContent';
 export { projectTaskAudience, projectTaskAudienceSql } from './projectTaskAudience';
+export { readCoManagedSlaPolicyScreen, replaceCoManagedSlaPriorityMappings } from './slaPriorityMappings';
+export type { CoManagedSlaPolicyScreen, CoManagedSlaPriorityMapping } from './slaPriorityMappings';
+export { withCoManagedSlaNotification, fanoutCoManagedSlaNotification } from './slaNotification';
+export type { CoManagedSlaNotification, CoManagedSlaNotificationChannel } from './slaNotification';
+export { withCoManagedStoredSlaNotification } from './storedSlaNotification';
+export type { CoManagedStoredSlaNotification } from './storedSlaNotification';
+export { enqueueCoManagedSlaDeliveries, pendingCoManagedSlaDeliveries, flagStaleCoManagedSlaSending, SLA_STALE_SENDING_MS, SLA_IN_APP_KIND, SLA_EMAIL_KIND } from './slaDeliveries';
+export type { CoManagedSlaDeliveryRow, CoManagedSlaDeliveryPayload } from './slaDeliveries';
+export { observeDueCoManagedTicketSlas } from './ticketSla';
+export { getCoManagedTicketSlaDisplay, type CoManagedTicketSlaDisplay, type CoManagedSlaDisplay, type CoManagedSlaTargetDisplay } from './ticketSlaRead';
+// L4b: attachments, drafts, thread disclosure, archive files.
+export * from './attachmentParent';
+export * from './attachmentStoragePath';
+export * from './conversationAttachments';
+export * from './conversationDrafts';
+export * from './uploadCleanup';
+export * from './archiveFiles';
+export * from './attachmentExport';
+export * from './threadDisclosure';
+export * from './privateThreadDisclosure';
+export * from './privateThreadTransferCleanup';
 // Time, effort and billing modes (L6a2).
 export * from './effortTotals';
 export * from './timeEntryBillingMode';

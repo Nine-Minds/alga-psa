@@ -20,20 +20,19 @@ export function NotificationSettings() {
   const tenant = (session?.user as any)?.tenant as string | undefined;
 
   useEffect(() => {
-    const tenantValue = tenant;
-    if (!tenantValue) {
+    if (!tenant) {
       return;
     }
-    async function init(tenantForRequest: string) {
+    async function init() {
       try {
-        const currentSettings = await getNotificationSettingsAction(tenantForRequest);
+        const currentSettings = await getNotificationSettingsAction();
         setSettings(currentSettings);
       } catch (err) {
         console.error('Failed to load notification settings:', err);
         setError(t('notifications.settingsForm.loadError', 'Failed to load settings'));
       }
     }
-    init(tenantValue);
+    init();
   }, [tenant]);
 
   if (error) {
@@ -52,15 +51,13 @@ export function NotificationSettings() {
     );
   }
 
-  return <NotificationSettingsForm initialSettings={settings} tenant={tenant} />;
+  return <NotificationSettingsForm initialSettings={settings} />;
 }
 
-function NotificationSettingsForm({ 
-  initialSettings,
-  tenant
-}: { 
+function NotificationSettingsForm({
+  initialSettings
+}: {
   initialSettings: NotificationSettingsType;
-  tenant: string;
 }) {
   const { t } = useTranslation('msp/settings');
   const [settings, setSettings] = useState(initialSettings);
@@ -70,7 +67,7 @@ function NotificationSettingsForm({
     e.preventDefault();
     setIsSaving(true);
     try {
-      await updateNotificationSettingsAction(tenant, settings);
+      await updateNotificationSettingsAction(settings);
     } catch (error) {
       console.error("Failed to update notification settings:", error);
     } finally {

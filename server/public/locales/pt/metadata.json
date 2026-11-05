@@ -542,6 +542,9 @@
         "taskTitle": "Tarefa compartilhada",
         "projectTitle": "Projeto compartilhado"
       },
+      "sla": {
+        "title": "Prioridades de SLA cogerido"
+      },
       "export": {
         "title": "Exportar espaço de trabalho"
       }

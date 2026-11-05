@@ -451,7 +451,8 @@
       "workspace": "Workspace",
       "capacity": "{{allocated}} of {{count}} co-managed seats allocated.",
       "openClient": "Set up co-managed IT for this client",
-      "readOnly": "Co-managed IT is read-only for this workspace. Existing relationships are shown; new setup is not available."
+      "readOnly": "Co-managed IT is read-only for this workspace. Existing relationships are shown; new setup is not available.",
+      "slaPriorities": "SLA priority mappings"
     },
     "provisioning": {
       "administrator": "Administrator",
@@ -689,7 +690,8 @@
       "viewer": "Viewer",
       "viewOnly": "View only",
       "visibility": "Ticket visibility",
-      "whyTitle": "Why can't someone see this?"
+      "whyTitle": "Why can't someone see this?",
+      "readOnly": "You can view this configuration but not change it."
     },
     "sharedTasks": {
       "link": "Shared Tasks",
@@ -798,7 +800,12 @@
         "capabilityUnavailable": "This isn’t available for your workspace right now.",
         "notAvailable": "This ticket is no longer shared or available to you.",
         "readOnly": "This ticket is read-only right now, so this change can’t be made."
-      }
+      },
+      "cancel": "Cancel",
+      "loading": "Loading…",
+      "reload": "Reload current state",
+      "retry": "Retry",
+      "saving": "Saving…"
     },
     "callout": {
       "title": "Customer tickets need you",
@@ -889,6 +896,116 @@
         "assign": "Assign",
         "clear": "Remove MSP assignment"
       }
+    },
+    "editor": {
+      "errors": {
+        "invalid": "Some values are not valid. Check your changes and try again.",
+        "conflict": "This ticket changed. Reload it before saving your changes.",
+        "operationConflict": "This save request was already used for a different edit. Reload the ticket.",
+        "forbidden": "Your access to this ticket changed. Reload to continue.",
+        "readOnly": "This workspace is read-only. Reload to see its current state.",
+        "closeRules": "The ticket must meet its board’s closing requirements before it can be closed.",
+        "unknownOutcome": "We could not confirm whether the edit was saved. Retry the same save, or discard your changes and reload.",
+        "slaSetupRequired": "Your MSP must configure its SLA policy and priority mapping before this ticket can be reopened under MSP responsibility."
+      }
+    },
+    "sla": {
+      "title": "Co-managed SLA priorities",
+      "description": "Choose which of your priorities, and so which of your SLA targets, applies when a customer escalates a ticket of each priority.",
+      "missingPolicy": "No SLA policy is configured",
+      "settings": "Manage SLA policies",
+      "mappingFor": "Customer priority {{name}} maps to",
+      "unmapped": "Not mapped"
+    },
+    "attachments": {
+      "title": "Attachments",
+      "add": "Attach file",
+      "choose": "Choose file",
+      "help": "Files inherit this message’s audience. Maximum {{size}} MiB.",
+      "uploading": "Uploading…",
+      "upload": "Upload",
+      "invalid": "Choose an allowed file within the size limit.",
+      "loadError": "Attachments are unavailable. Refresh to check your access.",
+      "unknownOutcome": "We could not confirm the upload. Retry to check the same file.",
+      "remove": "Remove",
+      "removeTitle": "Remove attachment",
+      "removeHelp": "Remove {{name}} from this message? People viewing the message will no longer be able to download this file.",
+      "removeUnknownOutcome": "We could not confirm removal. Retry to check the same file.",
+      "removing": "Removing…",
+      "removeNamed": "Remove {{name}}"
+    },
+    "disclosure": {
+      "title": "Change thread audience",
+      "review": "Review again",
+      "confirm": "Confirm audience change",
+      "scope": "This changes the audience of the entire thread: {{comments}} messages and {{attachments}} attachments.",
+      "current": "Current audience: {{audience}}",
+      "help": "Replies and attachments inherit this audience. Restricting access cannot recall information people have already read or downloaded.",
+      "pending": "An attachment upload is still pending. Finish the upload before changing the audience.",
+      "unknownOutcome": "The result is unknown. Retry to check the same audience change.",
+      "transferHelp": "Sharing transfers this thread and its attachments into the customer workspace. The original MSP-private thread is retained as read-only history.",
+      "open": "Change who can see this thread"
+    },
+    "conversation": {
+      "audience": "Visible to",
+      "audiences": {
+        "requester": "Requester and IT teams",
+        "shared_it": "Shared IT teams",
+        "organization_private": "My organization only"
+      },
+      "audienceHelp": {
+        "requester": "Visible to authorized requesters and IT staff in both organizations.",
+        "shared_it": "Visible to authorized IT staff in both organizations, without requester access.",
+        "organization_private": "Visible only to authorized staff in your organization."
+      },
+      "drafts": {
+        "title": "Unsent messages",
+        "help": "These messages were started but not sent. Review one, re-select any files that are missing, then send or discard it.",
+        "fileReady": "Uploaded",
+        "fileMissing": "Needs to be selected again",
+        "choose": "Select the missing files",
+        "resume": "Send",
+        "discard": "Discard",
+        "missing": "Select every missing file with the same name before sending.",
+        "unsent": "We could not confirm your message and files were sent. They are saved and will appear under “Unsent messages” — resume or discard them there."
+      },
+      "files": {
+        "choose": "Attach files",
+        "help": "Up to {{count}} files, {{size}} MiB each. Files are shared with this message’s audience.",
+        "remove": "Remove",
+        "removeNamed": "Remove {{name}}",
+        "invalid": "Remove files that exceed the size limit or file count before sending.",
+        "preparing": "Preparing files…",
+        "uploading": "Uploaded {{completed}} of {{total}} files…",
+        "publishing": "Publishing message and files…",
+        "notReady": "Some files are not ready. Retry to finish uploading and send the same message.",
+        "preparationFailed": "Could not read the selected files. Select them again or remove them before retrying.",
+        "abandoned": "This draft was discarded. Save again to create a new message with the selected files.",
+        "audienceUnavailable": "Files cannot be attached to messages for this audience. Remove the files or choose another audience.",
+        "cancelUnknownOutcome": "We could not confirm cancellation. Retry to check the same cancellation request.",
+        "canceling": "Canceling…"
+      },
+      "title": "Conversation",
+      "reload": "Reload",
+      "loadError": "The conversation could not be loaded.",
+      "readOnly": "You can read this conversation but not add to it.",
+      "new": "New comment",
+      "empty": "No comments yet.",
+      "restrictedAuthor": "Author hidden",
+      "replyMarker": "Reply",
+      "deleted": "This comment was deleted.",
+      "reply": "Reply",
+      "edit": "Edit",
+      "delete": "Delete",
+      "newer": "Newer",
+      "older": "Older",
+      "message": "Message",
+      "deleteHelp": "The comment is replaced by a deleted marker. Replies stay in the thread.",
+      "conflict": "This comment changed since you opened it. Cancel and reload to continue.",
+      "unknownOutcome": "We could not confirm the save. Try again; it will not be applied twice.",
+      "invalid": "This comment could not be saved.",
+      "send": "Send",
+      "cancel": "Cancel"
     },
     "editor": {
       "errors": {

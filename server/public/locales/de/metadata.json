@@ -542,6 +542,9 @@
         "taskTitle": "Geteilte Aufgabe",
         "projectTitle": "Geteiltes Projekt"
       },
+      "sla": {
+        "title": "Co-Managed-SLA-Prioritäten"
+      },
       "export": {
         "title": "Arbeitsbereich exportieren"
       }

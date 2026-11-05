@@ -19,9 +19,9 @@ import {
 // App shell: dashboard landing container (server-owned, uses analytics).
 import {
   Ticket,
-  BarChart3,
+  FileBarChart,
   Shield,
-  HeartPulse,
+  SquareActivity,
   ClipboardList,
   Calendar,
 } from 'lucide-react';
@@ -68,7 +68,8 @@ const featureCards: FeatureCardDefinition[] = [
   },
   {
     id: 'monitoring',
-    icon: HeartPulse,
+    // Same glyph the nav uses for System Monitoring.
+    icon: SquareActivity,
     href: '/msp/jobs',
     analyticsName: 'system_monitoring',
     titleKey: 'features.monitoring.title',
@@ -98,7 +99,8 @@ const featureCards: FeatureCardDefinition[] = [
   },
   {
     id: 'reports',
-    icon: BarChart3,
+    // Same glyph the nav uses for Reports.
+    icon: FileBarChart,
     analyticsName: 'reporting_analytics',
     titleKey: 'features.reports.title',
     titleDefault: 'Reporting & Analytics',

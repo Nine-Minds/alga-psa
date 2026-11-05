@@ -436,7 +436,8 @@
       "workspace": "Area di lavoro",
       "capacity": "{{allocated}} di {{count}} postazioni co-gestite assegnate.",
       "openClient": "Configura l’IT co-gestita per questo cliente",
-      "readOnly": "L'IT co-gestito è in sola lettura per questo spazio di lavoro. Vengono mostrate le relazioni esistenti; una nuova configurazione non è disponibile."
+      "readOnly": "L'IT co-gestito è in sola lettura per questo spazio di lavoro. Vengono mostrate le relazioni esistenti; una nuova configurazione non è disponibile.",
+      "slaPriorities": "Mappature delle priorità SLA"
     },
     "provisioning": {
       "administrator": "Amministratore",
@@ -674,7 +675,8 @@
       "viewer": "Visualizzatore",
       "viewOnly": "Sola lettura",
       "visibility": "Visibilità dei ticket",
-      "whyTitle": "Perché qualcuno non riesce a vederlo?"
+      "whyTitle": "Perché qualcuno non riesce a vederlo?",
+      "readOnly": "Puoi visualizzare questa configurazione ma non modificarla."
     },
     "sharedTasks": {
       "link": "Attività condivise",
@@ -731,6 +733,14 @@
       "rejected": "Impossibile salvare questa attività.",
       "saved": "Salvato.",
       "save": "Salva"
+    },
+    "sla": {
+      "title": "Priorità SLA in co-gestione",
+      "description": "Scegli quale delle tue priorità, e quindi quale dei tuoi obiettivi SLA, si applica quando un cliente escala un ticket di ciascuna priorità.",
+      "missingPolicy": "Nessuna policy SLA configurata",
+      "settings": "Gestisci le policy SLA",
+      "mappingFor": "La priorità cliente {{name}} corrisponde a",
+      "unmapped": "Non associata"
     },
     "portableExport": {
       "title": "Esporta area di lavoro",
@@ -901,6 +911,96 @@
         "unknownOutcome": "Non è stato possibile confermare il salvataggio. Riprova con la stessa richiesta oppure scarta le modifiche e ricarica.",
         "slaSetupRequired": "Il MSP deve configurare la policy SLA e la corrispondenza delle priorità prima di riaprire questo ticket sotto la propria responsabilità."
       }
+    },
+    "attachments": {
+      "title": "Allegati",
+      "add": "Allega file",
+      "choose": "Scegli file",
+      "help": "I file ereditano la visibilità di questo messaggio. Massimo {{size}} MiB.",
+      "uploading": "Caricamento…",
+      "upload": "Carica",
+      "invalid": "Scegli un file consentito entro il limite di dimensione.",
+      "loadError": "Gli allegati non sono disponibili. Aggiorna per verificare il tuo accesso.",
+      "unknownOutcome": "Impossibile confermare il caricamento. Riprova con lo stesso file.",
+      "remove": "Rimuovi",
+      "removeTitle": "Rimuovi allegato",
+      "removeHelp": "Rimuovere {{name}} da questo messaggio? Chi visualizza il messaggio non potrà più scaricare questo file.",
+      "removeUnknownOutcome": "Impossibile confermare la rimozione. Riprova per verificare lo stesso file.",
+      "removing": "Rimozione…",
+      "removeNamed": "Rimuovi {{name}}"
+    },
+    "disclosure": {
+      "title": "Modifica il pubblico della discussione",
+      "review": "Rivedi",
+      "confirm": "Conferma modifica",
+      "scope": "Questo cambia il pubblico dell’intera discussione: {{comments}} messaggi e {{attachments}} allegati.",
+      "current": "Pubblico attuale: {{audience}}",
+      "help": "Risposte e allegati ereditano questo pubblico. Limitare l’accesso non recupera le informazioni già lette o scaricate.",
+      "pending": "Il caricamento di un allegato è in sospeso. Completalo prima di modificare il pubblico.",
+      "unknownOutcome": "Il risultato è sconosciuto. Riprova per verificare la stessa modifica.",
+      "transferHelp": "La condivisione trasferisce questa discussione e i suoi allegati nello spazio di lavoro del cliente. La discussione privata originale dell’MSP viene conservata come storico di sola lettura.",
+      "open": "Modifica chi può vedere questa conversazione"
+    },
+    "conversation": {
+      "audience": "Visibile a",
+      "audiences": {
+        "requester": "Richiedente e team IT",
+        "shared_it": "Team IT condivisi",
+        "organization_private": "Solo la mia organizzazione"
+      },
+      "audienceHelp": {
+        "requester": "Visibile ai richiedenti autorizzati e al personale IT di entrambe le organizzazioni.",
+        "shared_it": "Visibile al personale IT autorizzato di entrambe le organizzazioni, senza accesso per il richiedente.",
+        "organization_private": "Visibile solo al personale autorizzato della tua organizzazione."
+      },
+      "drafts": {
+        "title": "Messaggi non inviati",
+        "help": "Questi messaggi sono stati iniziati ma non inviati. Controllane uno, seleziona di nuovo i file mancanti, poi invialo o scartalo.",
+        "fileReady": "Caricato",
+        "fileMissing": "Da selezionare di nuovo",
+        "choose": "Seleziona i file mancanti",
+        "resume": "Invia",
+        "discard": "Scarta",
+        "missing": "Prima di inviare, seleziona ogni file mancante con lo stesso nome.",
+        "unsent": "Non è stato possibile confermare l’invio del messaggio e dei file. Sono salvati e compariranno in «Messaggi non inviati»: riprendili o scartali da lì."
+      },
+      "files": {
+        "choose": "Allega file",
+        "help": "Fino a {{count}} file da {{size}} MiB ciascuno. I file sono condivisi con i destinatari di questo messaggio.",
+        "remove": "Rimuovi",
+        "removeNamed": "Rimuovi {{name}}",
+        "invalid": "Rimuovi i file che superano il limite di dimensione o quantità prima di inviare.",
+        "preparing": "Preparazione dei file…",
+        "uploading": "Caricati {{completed}} di {{total}} file…",
+        "publishing": "Pubblicazione del messaggio e dei file…",
+        "notReady": "Alcuni file non sono pronti. Riprova per completare il caricamento e inviare lo stesso messaggio.",
+        "preparationFailed": "Impossibile leggere i file selezionati. Selezionali di nuovo o rimuovili prima di riprovare.",
+        "abandoned": "Questa bozza è stata eliminata. Salva di nuovo per creare un nuovo messaggio con i file selezionati.",
+        "audienceUnavailable": "Non è possibile allegare file ai messaggi per questo pubblico. Rimuovi i file o scegli un altro pubblico.",
+        "cancelUnknownOutcome": "Impossibile confermare l’annullamento. Riprova per verificare la stessa richiesta di annullamento.",
+        "canceling": "Annullamento…"
+      },
+      "title": "Conversazione",
+      "reload": "Ricarica",
+      "loadError": "Impossibile caricare la conversazione.",
+      "readOnly": "Puoi leggere questa conversazione, ma non aggiungere messaggi.",
+      "new": "Nuovo commento",
+      "empty": "Ancora nessun commento.",
+      "restrictedAuthor": "Autore nascosto",
+      "replyMarker": "Risposta",
+      "deleted": "Questo commento è stato eliminato.",
+      "reply": "Rispondi",
+      "edit": "Modifica",
+      "delete": "Elimina",
+      "newer": "Più recenti",
+      "older": "Meno recenti",
+      "message": "Messaggio",
+      "deleteHelp": "Il commento viene sostituito da un indicatore di eliminazione. Le risposte restano nel thread.",
+      "conflict": "Questo commento è cambiato da quando l’hai aperto. Annulla e ricarica per continuare.",
+      "unknownOutcome": "Non è stato possibile confermare il salvataggio. Riprova; non verrà applicato due volte.",
+      "invalid": "Impossibile salvare questo commento.",
+      "send": "Invia",
+      "cancel": "Annulla"
     }
   },
   "common": {

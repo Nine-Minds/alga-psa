@@ -163,6 +163,8 @@ There are two types of invoice layouts:
 | `standard-invoice-by-location` | Per-location bands (address header, items, location subtotal) using the repeatable stack + `groupsByLocation` |
 | `standard-invoice-by-ticket` | One primary table of eligible ticket rollups and retained charges using `ticketPresentationRows`; entry detail is optional |
 
+**Service period and currency in standard templates.** All five standard invoice templates include a **Service Period** column on each line-item row, showing the billing period as a formatted date range (e.g. `Sep 1, 2026 – Sep 30, 2026`) for recurring contract lines and blank for one-time charges. A **Currency** field also appears in the document header and the totals block. Custom templates can reproduce either element by binding `item.servicePeriodLabel` (per item, inside a `table` or `dynamic-table`) or `currencyCode` (a top-level document binding) from the field picker.
+
 A parallel set exists for quotes (`standard-quote-default`, `standard-quote-detailed`, `standard-quote-by-location`).
 
 ### Auto-Selection for Multi-Location Documents
