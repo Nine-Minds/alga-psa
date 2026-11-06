@@ -63,13 +63,15 @@ type QuoteItemSpec = {
 };
 
 /**
- * Quote conversion delegates invoice tax (alga-2026-0002902).
+ * Quote conversion resolves invoice tax source from the client (alga-2026-0002902).
  *
  * A quote estimates tax internally because quotes never reach the accounting
- * system. The invoice it converts into must not inherit that: it resolves the
- * client's effective tax source like every other invoice path and lets the
- * invoice tax engine own the amounts. Converted contract lines must also carry
- * the service's catalog category so category-based billing splits see them.
+ * system. The invoice it converts into must not inherit that flag: it resolves
+ * the client's effective tax source like every other invoice path. An external
+ * client's invoice goes out 'pending_external' with zero tax so the accounting
+ * integration owns it; an internal client's invoice keeps the tax the customer
+ * accepted on the quote. Converted contract lines must also carry the service's
+ * catalog category so category-based billing splits see them.
  *
  * Lives beside quoteConversion.test.ts rather than inside it to keep this
  * behaviour out of the way of in-flight quote-side tax work.
@@ -158,7 +160,7 @@ describe('quote conversion tax delegation and service category (alga-2026-000290
         accepted_at: ACCEPTED_AT,
         accepted_by: context.userId,
         updated_by: context.userId,
-        // Quotes always estimate internally; the invoice must not inherit it.
+        // Quotes always estimate internally; the client decides for the invoice.
         tax_source: 'internal',
       });
 
@@ -188,8 +190,8 @@ describe('quote conversion tax delegation and service category (alga-2026-000290
 
   describe('external-tax clients hand invoice tax to the accounting integration', () => {
     it('invoice conversion writes pending_external with zero charge tax', async () => {
-      // A configured internal rate the engine would otherwise apply: proof the
-      // delegation decision (not a missing rate) is what zeroes the tax.
+      // The quote row below carries a stored estimate that an internal client
+      // would inherit: proof the delegation decision is what zeroes the tax.
       await setupClientTaxConfiguration(context, { regionCode: 'US-NY', taxPercentage: 10 });
       await setTenantTaxSource('external');
 
@@ -274,23 +276,28 @@ describe('quote conversion tax delegation and service category (alga-2026-000290
     }, 60000);
   });
 
-  describe('internal-tax clients get engine-computed tax, not the quote estimate', () => {
-    it('converted invoice tax comes from the invoice tax engine', async () => {
+  describe('internal-tax clients keep the tax quoted to the customer', () => {
+    async function internalQuote() {
+      // A configured rate that disagrees with the quoted tax: the invoice must
+      // still show what the customer accepted, not a recomputation.
       await setupClientTaxConfiguration(context, { regionCode: 'US-NY', taxPercentage: 10 });
       await setTenantTaxSource('internal');
       await context.db('clients')
         .where({ tenant: context.tenantId, client_id: context.clientId })
         .update({ region_code: 'US-NY', is_tax_exempt: false });
 
-      const { quote } = await createAcceptedQuote([
+      return createAcceptedQuote([
         {
           description: 'Implementation',
           quantity: 1,
           unit_price: 20000,
-          // A deliberately wrong estimate: nothing may copy it onto the invoice.
           rawUpdates: { net_amount: 20000, tax_amount: 999, tax_rate: 5, total_price: 20999 },
         },
       ]);
+    }
+
+    it('converted invoice carries the quote per-row tax verbatim', async () => {
+      const { quote } = await internalQuote();
 
       const result = await context.db.transaction((trx) =>
         convertQuoteToDraftInvoice(trx, context.tenantId, quote.quote_id, context.userId)
@@ -300,46 +307,54 @@ describe('quote conversion tax delegation and service category (alga-2026-000290
       const charge = charges[0];
 
       expect(header.tax_source).toBe('internal');
-      // 10% of the 20000-cent net, per the configured US-NY rate.
-      expect(Number(charge.tax_amount)).toBe(2000);
-      expect(Number(charge.tax_rate)).toBe(10);
-      expect(Number(charge.total_price)).toBe(22000);
-      expect(Number(header.tax)).toBe(2000);
+      expect(Number(charge.tax_amount)).toBe(999);
+      expect(Number(charge.tax_rate)).toBe(5);
+      expect(Number(charge.total_price)).toBe(20999);
+      expect(Number(header.tax)).toBe(999);
       expect(Number(header.subtotal)).toBe(20000);
-      expect(Number(header.total_amount)).toBe(22000);
+      expect(Number(header.total_amount)).toBe(20999);
     }, 60000);
 
-    it('a charge in a region with no configured rate converts with zero tax', async () => {
-      await setupClientTaxConfiguration(context, { regionCode: 'US-NY', taxPercentage: 10 });
-      await setTenantTaxSource('internal');
-      await context.db('clients')
-        .where({ tenant: context.tenantId, client_id: context.clientId })
-        .update({ region_code: 'US-NY', is_tax_exempt: false });
+    it('the workflow-worker conversion path carries it the same way', async () => {
+      const { quote } = await internalQuote();
 
-      const { quote, items } = await createAcceptedQuote([
-        { description: 'Taxed work', quantity: 1, unit_price: 20000 },
+      const result = await context.db.transaction((trx) =>
+        runtimeConvertQuoteToDraftInvoice(trx, context.tenantId, quote.quote_id, context.userId)
+      );
+
+      const { header, charges } = await readInvoice(result.invoice.invoice_id);
+      const charge = charges[0];
+
+      expect(header.tax_source).toBe('internal');
+      expect(Number(charge.tax_amount)).toBe(999);
+      expect(Number(charge.tax_rate)).toBe(5);
+      expect(Number(charge.total_price)).toBe(20999);
+      expect(Number(header.tax)).toBe(999);
+      expect(Number(header.total_amount)).toBe(20999);
+    }, 60000);
+
+    it('a quote tax_source of external does not leak onto the invoice', async () => {
+      await setTenantTaxSource('internal');
+      const { quote } = await createAcceptedQuote([
         {
-          description: 'Untaxed region work',
+          description: 'Advisory',
           quantity: 1,
-          unit_price: 30000,
-          // No tax_rates row exists for this region in this tenant.
-          rawUpdates: { tax_region: 'US-NR', tax_amount: 2500, tax_rate: 8 },
+          unit_price: 10000,
+          rawUpdates: { net_amount: 10000, tax_amount: 825, tax_rate: 8, total_price: 10825 },
         },
       ]);
+      // Quote rows have carried 'external' historically; only the client decides.
+      await context.db('quotes')
+        .where({ tenant: context.tenantId, quote_id: quote.quote_id })
+        .update({ tax_source: 'external' });
 
       const result = await context.db.transaction((trx) =>
         convertQuoteToDraftInvoice(trx, context.tenantId, quote.quote_id, context.userId)
       );
 
       const { header, charges } = await readInvoice(result.invoice.invoice_id);
-      const rateless = charges.find((charge) => charge.service_id === items[1].service_id);
-      const taxed = charges.find((charge) => charge.service_id === items[0].service_id);
-
-      expect(Number(rateless.tax_amount)).toBe(0);
-      expect(Number(rateless.total_price)).toBe(30000);
-      expect(Number(taxed.tax_amount)).toBe(2000);
-      expect(Number(header.tax)).toBe(2000);
-      expect(Number(header.total_amount)).toBe(52000);
+      expect(header.tax_source).toBe('internal');
+      expect(Number(charges[0].tax_amount)).toBe(825);
     }, 60000);
   });
 

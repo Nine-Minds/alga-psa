@@ -1573,12 +1573,13 @@ async function convertQuoteToDraftInvoiceRecords(
   });
 
   const invoiceId = uuidv4();
-  // A quote always estimates tax internally; the invoice it becomes must
-  // delegate tax like every other invoice path, so the client's effective tax
-  // source decides. External clients start 'pending_external' with zero tax —
-  // the accounting import fills it after export. The invoice tax engine lives
-  // in packages/billing, which this runtime must not import, so the internal
-  // case keeps carrying the quote's estimate here.
+  // LEVERAGE: pattern quote-convert-tax-source — same resolution as
+  // convertQuoteToDraftInvoiceRecords in packages/billing; both paths must agree.
+  // A quote always estimates tax internally (quotes never reach the accounting
+  // system), but the invoice it becomes must honour the client's effective tax
+  // source. External clients start 'pending_external' with zero tax so the
+  // accounting import fills it after export; internal clients keep the quote's
+  // tax so the invoice matches the accepted quote line for line.
   const { taxSource: clientTaxSource } = await getEffectiveTaxSourceForClient(
     knexOrTrx,
     tenant,
