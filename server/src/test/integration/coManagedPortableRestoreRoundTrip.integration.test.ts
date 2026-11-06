@@ -51,7 +51,7 @@ const migrations = ['20261102120200_create_portable_workspace_restore_uploads.cj
   '20261102120000_create_portable_restore_suspensions.cjs'].map(file => require(`../../../migrations/${file}`));
 // L8b's activation receipt has a foreign key to the L7b2 restore receipt. Keep the
 // test's L7b2 down/up cycle valid against the complete current migration sequence.
-const activationMigration = require('../../../migrations/20261106090200_create_portable_workspace_activations.cjs');
+const activationMigration = require('../../../migrations/20261106000200_create_portable_workspace_activations.cjs');
 
 const PASSPHRASE = 'round trip passphrase 2026 correct horse';
 const FILE_BYTES = Buffer.from('portable restore integration bytes\n'.repeat(64));
