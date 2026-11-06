@@ -54,6 +54,10 @@
       "types": "./src/localPermission.ts",
       "import": "./src/localPermission.ts"
     },
+    "./exportAuthorization": {
+      "types": "./src/exportAuthorization.ts",
+      "import": "./src/exportAuthorization.ts"
+    },
     "./localAuthentication": {
       "types": "./src/localAuthentication.ts",
       "import": "./src/localAuthentication.ts"

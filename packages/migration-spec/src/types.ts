@@ -12,6 +12,7 @@ export interface AmpManifest {
   export_started_at?: string | null;
   export_completed_at?: string | null;
   content_sha256: string;
+  attachments_sha256?: string | null;
   capabilities_json?: string | null;
 }
 
@@ -137,6 +138,26 @@ export interface AmpPackageDiagnosticRecord {
   entity_package_record_id?: string | null;
 }
 
+/** Binary content is stored at attachments/<first-two-hex>/<sha256> in the ZIP. */
+export interface AmpAttachmentRecord {
+  package_record_id: string;
+  entity_type: string;
+  entity_package_record_id: string;
+  sha256: string;
+  size: number;
+  media_type?: string | null;
+  file_name?: string | null;
+}
+
+/** Exclusions explain material deliberately or necessarily omitted from an export. */
+export interface AmpExclusionRecord {
+  package_record_id: string;
+  entity_type?: string | null;
+  entity_package_record_id?: string | null;
+  reason: 'msp_private' | 'commercial' | 'secret' | 'deferred' | 'unreadable';
+  detail: string;
+}
+
 export interface AmpEntityRecordMap {
   organizations: AmpOrganizationRecord;
   locations: AmpLocationRecord;
@@ -164,6 +185,8 @@ export interface AmpAuxiliaryRows {
   external_identifiers?: ReadonlyArray<AmpExternalIdentifierRecord>;
   custom_field_values?: ReadonlyArray<AmpCustomFieldValueRecord>;
   package_diagnostics?: ReadonlyArray<AmpPackageDiagnosticRecord>;
+  attachments?: ReadonlyArray<AmpAttachmentRecord>;
+  exclusions?: ReadonlyArray<AmpExclusionRecord>;
 }
 
 export type AmpPackageRows = AmpEntityRows & AmpAuxiliaryRows;

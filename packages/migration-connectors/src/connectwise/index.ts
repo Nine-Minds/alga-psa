@@ -178,7 +178,7 @@ export const connectwisePsaCsvDescriptor: AmpConnectorDescriptor = {
     'Time entries are not exported.',
     'Agreements and agreement additions are not exported.',
     'Invoices and other billing records are not exported.',
-    'Attachments and documents are not exported (AMP v1 carries no binaries).',
+    'This connector does not export attachments or documents.',
     'Boards, members, statuses, and workflow rules are tenant taxonomy; only their names travel on tickets.',
   ],
   prerequisites: [

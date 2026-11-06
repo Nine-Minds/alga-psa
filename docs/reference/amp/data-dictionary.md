@@ -1,8 +1,13 @@
-# AMP v1 data dictionary
+# AMP v2 data dictionary
 
 Types are SQLite storage classes; all text is UTF-8. "Opaque id" means a UUID
 or producer-chosen string of at most 256 bytes, never an Alga database ID.
 Limits from [security.md](security.md) apply to every text value.
+
+## amp_manifest
+
+The manifest has exactly one row. `attachments_sha256` is required and covers
+the sorted unique digest/size index as specified in [spec.md](spec.md).
 
 ## Shared entity columns
 
@@ -154,3 +159,28 @@ Producer warnings, displayed but never treated as validation.
 | `code` | yes | Producer-defined stable code |
 | `message` | yes | Human-readable explanation |
 | `entity_type` / `entity_package_record_id` | no | The record the diagnostic concerns |
+
+## attachments
+
+The binary is stored at `attachments/<sha256-prefix>/<sha256>` in the ZIP.
+The same content digest may have more than one owner row.
+
+| Column | Required | Meaning |
+| --- | --- | --- |
+| `package_record_id` | yes | Attachment association row key |
+| `entity_type` / `entity_package_record_id` | yes | Owning entity record |
+| `sha256` | yes | Lowercase digest of the expanded file bytes |
+| `size` | yes | Expanded byte size, at most 100 MiB |
+| `media_type` / `file_name` | no | Descriptive source metadata; neither is used to form a path |
+
+## exclusions
+
+An explicit declaration of content that could not or should not be exported.
+This table is distinct from `package_diagnostics`.
+
+| Column | Required | Meaning |
+| --- | --- | --- |
+| `package_record_id` | yes | Exclusion row key |
+| `entity_type` / `entity_package_record_id` | no | Related entity when known |
+| `reason` | yes | `msp_private`, `commercial`, `secret`, `deferred`, or `unreadable` |
+| `detail` | yes | Human-readable explanation |

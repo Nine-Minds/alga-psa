@@ -1,6 +1,8 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { writeFile } from 'node:fs/promises';
+import AdmZip from 'adm-zip';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildSamplePackage, openPackageDatabase } from '../src/index';
 
@@ -18,6 +20,9 @@ beforeAll(async () => {
   dir = await mkdtemp(join(tmpdir(), 'amp-security-'));
   packagePath = join(dir, 'sample.amp');
   buildSamplePackage(packagePath);
+  const sqlitePath = join(dir, 'data.sqlite');
+  await writeFile(sqlitePath, new AdmZip(packagePath).readFile('data.sqlite')!);
+  packagePath = sqlitePath;
 });
 
 afterAll(async () => {

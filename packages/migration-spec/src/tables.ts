@@ -1,5 +1,5 @@
 /**
- * AMP v1 table allowlist.
+ * AMP v2 table allowlist.
  *
  * A conforming package contains only these tables. The manifest table holds
  * exactly one row; entity tables hold canonical records; auxiliary tables hold
@@ -21,6 +21,8 @@ export const AMP_AUXILIARY_TABLES = [
   'external_identifiers',
   'custom_field_values',
   'package_diagnostics',
+  'attachments',
+  'exclusions',
 ] as const;
 
 export const AMP_MANIFEST_TABLE = 'amp_manifest' as const;
@@ -61,6 +63,7 @@ export const AMP_TABLE_COLUMNS: Record<AmpTable, readonly string[]> = {
     'export_started_at',
     'export_completed_at',
     'content_sha256',
+    'attachments_sha256',
     'capabilities_json',
   ],
   organizations: [...AMP_ENTITY_IDENTITY_COLUMNS, 'name', 'website', 'phone'],
@@ -162,6 +165,12 @@ export const AMP_TABLE_COLUMNS: Record<AmpTable, readonly string[]> = {
     'entity_type',
     'entity_package_record_id',
   ],
+  attachments: [
+    'package_record_id', 'entity_type', 'entity_package_record_id', 'sha256', 'size', 'media_type', 'file_name',
+  ],
+  exclusions: [
+    'package_record_id', 'entity_type', 'entity_package_record_id', 'reason', 'detail',
+  ],
 } as const;
 
 /**
@@ -206,7 +215,7 @@ export const AMP_DIAGNOSTIC_SEVERITIES = ['info', 'warning'] as const;
 
 /**
  * Reserved `extension_json` key carrying the source client/company name from a
- * single-sheet contacts import. AMP v1 contacts have no client-name column and
+ * single-sheet contacts import. AMP contacts have no client-name column and
  * references must resolve inside the package, so the name travels as bounded
  * data and the contacts applier resolves it against existing tenant clients.
  */

@@ -4,8 +4,12 @@
  */
 
 export interface AmpLimits {
-  /** Maximum package file size in bytes. */
+  /** Maximum expanded package size in bytes (ZIP metadata + all expanded entries). */
   packageBytes: number;
+  /** Maximum expanded size of one attachment. */
+  attachmentBytes: number;
+  /** Maximum number of ZIP entries, including data.sqlite. */
+  zipEntries: number;
   /** Maximum rows in any single entity table. */
   rowsPerEntity: number;
   /** Maximum rows across all entity tables. */
@@ -21,7 +25,9 @@ export interface AmpLimits {
 }
 
 export const AMP_LIMITS: AmpLimits = {
-  packageBytes: 250 * 1024 * 1024,
+  packageBytes: 1024 * 1024 * 1024,
+  attachmentBytes: 100 * 1024 * 1024,
+  zipEntries: 50_000,
   rowsPerEntity: 500_000,
   rowsPerPackage: 2_000_000,
   textBytes: 64 * 1024,
@@ -32,6 +38,7 @@ export const AMP_LIMITS: AmpLimits = {
 
 /** Retention defaults, enforced server-side rather than by the validator. */
 export const AMP_RETENTION = {
+  abandonedPackageHours: 24,
   sourcePackageDays: 30,
   reportDays: 90,
 } as const;

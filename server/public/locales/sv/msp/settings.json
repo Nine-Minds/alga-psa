@@ -2509,7 +2509,7 @@
         "noImportableRecords": "Paketet innehöll inga poster som kunde importeras.",
         "permissionDenied": "Du har inte behörighet att importera eller exportera data.",
         "invalidSpreadsheet": "Det gick inte att läsa kalkylbladet. Kontrollera att det är en giltig CSV- eller XLSX-fil och försök igen.",
-        "notAmpPackage": "Filen är inte ett AMP-paket. Ladda upp en .amp- eller .sqlite-fil.",
+        "notAmpPackage": "Filen är inte ett AMP-paket. Ladda upp en .amp-fil.",
         "tooLarge": "Uppladdningen överskrider den högsta tillåtna storleken.",
         "sizeMismatch": "Uppladdningen slutfördes inte. Försök igen.",
         "noRecognizedHeaders": "Inga kolumner i kalkylbladet kändes igen. Kontrollera rubrikraden och försök igen.",

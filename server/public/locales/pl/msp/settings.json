@@ -2509,7 +2509,7 @@
         "noImportableRecords": "Ten pakiet nie zawierał rekordów możliwych do zaimportowania.",
         "permissionDenied": "Nie masz uprawnień do importowania lub eksportowania danych.",
         "invalidSpreadsheet": "Nie udało się odczytać tego arkusza. Sprawdź, czy to prawidłowy plik CSV lub XLSX, i spróbuj ponownie.",
-        "notAmpPackage": "Ten plik nie jest pakietem AMP. Prześlij plik .amp lub .sqlite.",
+        "notAmpPackage": "Ten plik nie jest pakietem AMP. Prześlij plik .amp.",
         "tooLarge": "To przesłanie przekracza maksymalny dozwolony rozmiar.",
         "sizeMismatch": "Przesyłanie nie zostało ukończone. Spróbuj ponownie.",
         "noRecognizedHeaders": "Nie rozpoznano żadnej z kolumn tego arkusza. Sprawdź wiersz nagłówka i spróbuj ponownie.",

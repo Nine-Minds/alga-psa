@@ -15,8 +15,9 @@ import {
   type AmpManifest,
   type AmpTable,
 } from '@alga-psa/migration-spec';
-import { AmpSqliteReader } from './reader';
+import { AmpSqliteReader, AmpPackageStructureError } from './reader';
 import { canonicalContentSha256 } from './hash';
+import { canonicalAttachmentsSha256 } from './builder';
 
 export interface AmpDiagnostic {
   code: AmpErrorCode;
@@ -33,7 +34,7 @@ export interface AmpValidationResult {
   rowCounts: Partial<Record<AmpTable, number>>;
 }
 
-const SQLITE_HEADER = 'SQLite format 3\u0000';
+const AMP_ZIP_HEADER = '504b0304';
 const RFC3339_UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -119,8 +120,8 @@ export function validateAmpPackage(
     });
   }
 
-  if (readHeader(path) !== SQLITE_HEADER) {
-    diagnostics.push({ code: 'AMP_NOT_SQLITE', message: 'File header is not a SQLite header.' });
+  if (Buffer.from(readHeader(path), 'latin1').subarray(0, 4).toString('hex') !== AMP_ZIP_HEADER) {
+    diagnostics.push({ code: 'AMP_NOT_SQLITE', message: 'AMP 2 package is not a ZIP archive.' });
     return { valid: false, diagnostics, rowCounts };
   }
 
@@ -129,8 +130,10 @@ export function validateAmpPackage(
     reader = new AmpSqliteReader(path);
   } catch (error) {
     diagnostics.push({
-      code: 'AMP_NOT_SQLITE',
-      message: `SQLite could not open the file read-only: ${(error as Error).message}`,
+      code: error instanceof AmpPackageStructureError ? error.code : 'AMP_NOT_SQLITE',
+      message: error instanceof AmpPackageStructureError
+        ? (error as Error).message
+        : `SQLite could not open data.sqlite read-only: ${(error as Error).message}`,
     });
     return { valid: false, diagnostics, rowCounts };
   }
@@ -145,7 +148,7 @@ export function validateAmpPackage(
       if (!(AMP_ALLOWLISTED_TABLES as readonly string[]).includes(table)) {
         diagnostics.push({
           code: 'AMP_UNKNOWN_TABLE',
-          message: `Table "${table}" is not part of AMP v1.`,
+          message: `Table "${table}" is not part of AMP 2.0.`,
           table,
         });
       }
@@ -167,7 +170,7 @@ export function validateAmpPackage(
       if (JSON.stringify(actual) !== JSON.stringify(expected)) {
         diagnostics.push({
           code: 'AMP_SCHEMA_MISMATCH',
-          message: `Table "${table}" columns [${actual.join(', ')}] do not match the AMP v1 column set.`,
+          message: `Table "${table}" columns [${actual.join(', ')}] do not match the AMP 2.0 column set.`,
           table,
         });
       }
@@ -198,6 +201,7 @@ export function validateAmpPackage(
           'producer_version',
           'source_system',
           'content_sha256',
+          'attachments_sha256',
         ] as const) {
           if (typeof manifest[field] !== 'string' || manifest[field].length === 0) {
             diagnostics.push({
@@ -302,6 +306,40 @@ export function validateAmpPackage(
     }
 
     validateAuxiliaryTables(reader, presentTables, idsByTable, limits, diagnostics);
+
+    const attachmentRows = presentTables.includes('attachments') ? reader.allRows('attachments') : [];
+    const attachmentIndex = new Map<string, number>();
+    for (const row of attachmentRows) {
+      const sha = row.sha256;
+      const size = row.size;
+      if (typeof sha !== 'string' || !/^[a-f0-9]{64}$/.test(sha) || !Number.isSafeInteger(size) || Number(size) < 0 || Number(size) > limits.attachmentBytes) {
+        diagnostics.push({ code: 'AMP_INVALID_VALUE', message: 'Attachment sha256 and size are invalid.', table: 'attachments', recordId: String(row.package_record_id ?? '') });
+        continue;
+      }
+      if (typeof row.entity_type !== 'string' || !idsByTable[row.entity_type as AmpEntityType]?.has(String(row.entity_package_record_id))) {
+        diagnostics.push({ code: 'AMP_INVALID_REFERENCE', message: 'Attachment owner does not resolve to an included entity.', table: 'attachments', recordId: String(row.package_record_id ?? '') });
+      }
+      const prior = attachmentIndex.get(sha);
+      if (prior !== undefined && prior !== Number(size)) diagnostics.push({ code: 'AMP_INVALID_VALUE', message: 'A repeated attachment digest declares conflicting sizes.', table: 'attachments', recordId: String(row.package_record_id ?? '') });
+      attachmentIndex.set(sha, Number(size));
+      if (!reader.attachmentPath(sha)) diagnostics.push({ code: 'AMP_INVALID_REFERENCE', message: `Attachment ${sha} has no ZIP entry.`, table: 'attachments', recordId: String(row.package_record_id ?? '') });
+    }
+    const indexedHash = canonicalAttachmentsSha256([...attachmentIndex].map(([sha256, size]) => ({ sha256, size })));
+    if (manifest?.attachments_sha256 !== indexedHash) diagnostics.push({ code: 'AMP_HASH_MISMATCH', message: 'attachments_sha256 does not match the canonical attachment index.', field: 'attachments_sha256' });
+    const contentDigests = reader.attachmentDigests();
+    if (contentDigests.length !== attachmentIndex.size || contentDigests.some((digest) => !attachmentIndex.has(digest))) {
+      diagnostics.push({ code: 'AMP_INVALID_REFERENCE', message: 'ZIP attachment entries do not exactly match the attachment index.', table: 'attachments' });
+    }
+    const exclusions = presentTables.includes('exclusions') ? reader.allRows('exclusions') : [];
+    const exclusionReasons = ['msp_private', 'commercial', 'secret', 'deferred', 'unreadable'];
+    for (const row of exclusions) {
+      if (!exclusionReasons.includes(String(row.reason)) || typeof row.detail !== 'string' || row.detail.length === 0) {
+        diagnostics.push({ code: 'AMP_INVALID_VALUE', message: 'Exclusions require a supported reason and non-empty detail.', table: 'exclusions', recordId: String(row.package_record_id ?? '') });
+      }
+      if (row.entity_type != null && (typeof row.entity_type !== 'string' || !idsByTable[row.entity_type as AmpEntityType]?.has(String(row.entity_package_record_id)))) {
+        diagnostics.push({ code: 'AMP_INVALID_REFERENCE', message: 'Exclusion owner does not resolve to an included entity.', table: 'exclusions', recordId: String(row.package_record_id ?? '') });
+      }
+    }
 
     if (manifest && typeof manifest.content_sha256 === 'string') {
       const expectedHash = canonicalContentSha256(entityRows);
@@ -524,6 +562,10 @@ function validateAuxiliaryTables(
         }
         continue;
       }
+
+      // These tables have their own validation pass after the generic entity
+      // references have been collected.
+      if (table === 'attachments' || table === 'exclusions') continue;
 
       if (!(AMP_ENTITY_TABLES as readonly string[]).includes(String(entityType))) {
         diagnostics.push({

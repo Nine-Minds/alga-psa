@@ -290,7 +290,7 @@ const MIGRATION_UPLOAD_ERROR_COPY: Record<MigrationUploadErrorCode, MigrationUpl
   },
   AMP_NOT_SQLITE: {
     key: 'importExport.migration.errors.notAmpPackage',
-    defaultValue: 'That file is not an AMP package. Upload a .amp or .sqlite file.',
+    defaultValue: 'That file is not an AMP package. Upload a .amp file.',
   },
   AMP_LIMIT_EXCEEDED: {
     key: 'importExport.migration.errors.tooLarge',

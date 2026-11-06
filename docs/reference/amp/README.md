@@ -1,6 +1,7 @@
 # Alga Migration Package (AMP)
 
-An AMP is a single SQLite file that carries an MSP's book of business —
+An AMP is a ZIP package with a canonical SQLite interchange database and
+content-addressed files. It carries an MSP's book of business —
 organizations, locations, contacts, tickets, ticket comments, assets,
 products, and vendor price lists — from any source system into AlgaPSA. The product is the contract, not the
 container: SQLite is only a portable relational file that consumers read with
@@ -9,7 +10,7 @@ never trusted.
 
 | Document | Contents |
 | --- | --- |
-| [spec.md](spec.md) | Format v1: tables, manifest, value rules, content hash, compatibility |
+| [spec.md](spec.md) | Format v2: ZIP layout, tables, manifest, values, digests, compatibility |
 | [data-dictionary.md](data-dictionary.md) | Every table and column, with requiredness and semantics |
 | [mapping.md](mapping.md) | How canonical entities map into Alga, and what operators configure at preflight |
 | [source-keys.md](source-keys.md) | Source keys, namespaces, and the idempotency contract |
@@ -21,7 +22,7 @@ never trusted.
 
 - `@alga-psa/migration-spec` — the contract: table/column allowlists, JSON
   Schemas, limits, error codes, canonical DDL.
-- `@alga-psa/migration-sdk` — builder, read-only reader, validator, and
+- `@alga-psa/migration-sdk` — ZIP builder, verified read-only reader, validator, and
   conformance helpers for producing and checking packages.
 - `@alga-psa/migration-cli` — `alga-migrate`; validates, inspects, and
   converts without any database access.

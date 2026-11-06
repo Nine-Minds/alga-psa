@@ -221,7 +221,7 @@ describe('migration upload routes', () => {
 
     expect(vi.mocked(FileStoreModel.create)).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ mime_type: 'application/vnd.sqlite3' })
+      expect.objectContaining({ mime_type: 'application/vnd.alga.amp+zip' })
     );
   });
 

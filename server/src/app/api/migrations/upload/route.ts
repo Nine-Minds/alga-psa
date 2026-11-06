@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'AMP_LIMIT_EXCEEDED' }, { status: 400 });
   }
   const lowered = fileName.toLowerCase();
-  if (!lowered.endsWith('.amp') && !lowered.endsWith('.sqlite')) {
+  if (!lowered.endsWith('.amp')) {
     return NextResponse.json({ error: 'AMP_NOT_SQLITE' }, { status: 400 });
   }
   const directory = await mkdtemp(join(tmpdir(), 'amp-upload-'));
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
       // content-type: the extension was already checked and this artifact is
       // ours, so a bypass must not become user-controlled.
       const upload = StorageService.uploadStream(user.tenant, storageInput, fileName, {
-        mime_type: 'application/vnd.sqlite3', uploaded_by_id: user.user_id,
+        mime_type: 'application/vnd.alga.amp+zip', uploaded_by_id: user.user_id,
         size: declaredSize, origin: 'system-artifact',
       });
       const [stored] = await Promise.all([upload, pipeline(createReadStream(packagePath), storageInput)]);

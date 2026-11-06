@@ -4,7 +4,9 @@ An AMP is untrusted input even when Alga tooling produced it.
 
 ## Consumer obligations
 
-- Verify the SQLite file header before opening; open read-only with
+- Verify ZIP paths, entry counts, declared and expanded sizes, and digests before
+  extracting only to a private temporary directory. Verify the SQLite file
+  header in `data.sqlite`; open it read-only with
   extensions disabled (`node:sqlite` `readOnly: true, allowExtension: false`),
   from a sandboxed temporary location. Never modify the uploaded file.
 - Execute only parameterized SELECTs over the allowlisted tables and columns,
@@ -26,13 +28,16 @@ configure them:
 
 | Limit | Default |
 | --- | --- |
-| Package file size | 250 MB |
+| Compressed package size | 1 GiB |
+| Expanded package size | 1 GiB |
+| Attachment size | 100 MiB |
+| ZIP entry count | 50,000 |
 | Rows per entity table | 500,000 |
 | Rows per package (all entity tables) | 2,000,000 |
 | Text value length | 64 KiB |
 | `extension_json` / `value_json` size and depth | 16 KiB, depth 8 |
 | Opaque identifier length | 256 bytes |
-| Attachments | not supported in v1 |
+| Attachments | SHA-256 validated and associated through the `attachments` table |
 
 ## Server-side posture (AlgaPSA)
 
@@ -48,6 +53,16 @@ configure them:
   tenant-scoped end to end.
 - Source packages are retained 30 days after a terminal job state; reports 90
   days.
+- Customer workspace exports are authorized against the active session tenant,
+  co-managed capability, relationship and customer-admin permission before
+  records are read. The exporter creates its package in private OS temporary
+  storage and removes it on success or failure. Abandoned SDK staging folders
+  are removed after 24 hours once their originating process is no longer live.
+- The customer export response is not persisted in object storage: it is
+  generated for that download, then its temporary package is deleted before
+  response streaming begins. An interrupted download leaves no server-side
+  package to resume; the customer starts a new export. Response buffers are
+  released when the request is disposed.
 
 ## What safety does not mean
 

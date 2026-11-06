@@ -8,6 +8,7 @@ const COLUMN_TYPES: Record<string, string> = {
   cost_minor: 'INTEGER',
   unit_cost_minor: 'INTEGER',
   lead_time_days: 'INTEGER',
+  size: 'INTEGER',
 };
 
 const NOT_NULL_COLUMNS: Record<AmpTable, readonly string[]> = {
@@ -19,6 +20,7 @@ const NOT_NULL_COLUMNS: Record<AmpTable, readonly string[]> = {
     'producer_version',
     'source_system',
     'content_sha256',
+    'attachments_sha256',
   ],
   organizations: ['package_record_id', 'source_record_id', 'external_identifier_namespace', 'name'],
   locations: [
@@ -60,6 +62,8 @@ const NOT_NULL_COLUMNS: Record<AmpTable, readonly string[]> = {
     'value_json',
   ],
   package_diagnostics: ['package_record_id', 'severity', 'code', 'message'],
+  attachments: ['package_record_id', 'entity_type', 'entity_package_record_id', 'sha256', 'size'],
+  exclusions: ['package_record_id', 'reason', 'detail'],
 };
 
 function createTableSql(table: AmpTable): string {
@@ -72,5 +76,5 @@ function createTableSql(table: AmpTable): string {
   return `CREATE TABLE ${table} (\n${columns.join(',\n')}\n);`;
 }
 
-/** Canonical DDL for a conforming AMP v1 package. */
+/** Canonical DDL for a conforming AMP v2 data.sqlite. */
 export const AMP_SCHEMA_SQL = AMP_ALLOWLISTED_TABLES.map(createTableSql).join('\n');

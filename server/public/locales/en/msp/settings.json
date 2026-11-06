@@ -2509,7 +2509,7 @@
         "noImportableRecords": "This package contained no importable records.",
         "permissionDenied": "You do not have permission to import or export data.",
         "invalidSpreadsheet": "That spreadsheet could not be read. Check that it is a valid CSV or XLSX file and try again.",
-        "notAmpPackage": "That file is not an AMP package. Upload a .amp or .sqlite file.",
+        "notAmpPackage": "That file is not an AMP package. Upload a .amp file.",
         "tooLarge": "This upload is larger than the maximum allowed size.",
         "sizeMismatch": "The upload did not complete. Please try again.",
         "noRecognizedHeaders": "None of the columns in that spreadsheet were recognized. Check the header row and try again.",

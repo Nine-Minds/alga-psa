@@ -2509,7 +2509,7 @@
         "noImportableRecords": "Ce paquet ne contenait aucun enregistrement importable.",
         "permissionDenied": "Vous n'avez pas la permission d'importer ou d'exporter des données.",
         "invalidSpreadsheet": "Cette feuille de calcul n'a pas pu être lue. Vérifiez qu'il s'agit d'un fichier CSV ou XLSX valide et réessayez.",
-        "notAmpPackage": "Ce fichier n'est pas un paquet AMP. Téléversez un fichier .amp ou .sqlite.",
+        "notAmpPackage": "Ce fichier n'est pas un paquet AMP. Téléversez un fichier .amp.",
         "tooLarge": "Ce téléversement dépasse la taille maximale autorisée.",
         "sizeMismatch": "Le téléversement ne s'est pas terminé. Veuillez réessayer.",
         "noRecognizedHeaders": "Aucune des colonnes de cette feuille de calcul n'a été reconnue. Vérifiez la ligne d'en-tête et réessayez.",

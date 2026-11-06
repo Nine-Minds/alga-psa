@@ -1,5 +1,4 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
@@ -18,6 +17,7 @@ import {
 } from '@alga-psa/migration-spec';
 import { validateAmpPackage } from '@alga-psa/migration-sdk';
 import { writeAlgaExport } from '@alga-psa/migration-connectors';
+import { createAmpTemporaryDirectory } from '@alga-psa/migration-sdk';
 
 const EXPORT_BATCH_SIZE = 5000;
 
@@ -48,16 +48,27 @@ export class AmpExportService {
 
   async exportTenant(): Promise<AmpExportResult> {
     const namespace = `alga:${this.tenant}`;
-    const db = tenantDb(this.knex, this.tenant);
+    // The graph is read under one MVCC snapshot; parallel per-table reads must
+    // share the same transaction or references can point across two versions.
+    const rows = await this.knex.transaction(async (trx) => {
+      const db = tenantDb(trx, this.tenant);
+      return this.exportSnapshot(db, namespace);
+    }, { isolationLevel: 'repeatable read' });
+    return this.writePackage(rows);
+  }
 
-    const [organizations, locations, contacts, tickets, ticketComments, assets] = await Promise.all([
-      this.exportOrganizations(db, namespace),
-      this.exportLocations(db, namespace),
-      this.exportContacts(db, namespace),
-      this.exportTickets(db, namespace),
-      this.exportTicketComments(db, namespace),
-      this.exportAssets(db, namespace),
-    ]);
+  private async exportSnapshot(db: ReturnType<typeof tenantDb>, namespace: string): Promise<AmpPackageRows> {
+    const extractorMap = {
+      organizations: () => this.exportOrganizations(db, namespace),
+      locations: () => this.exportLocations(db, namespace),
+      contacts: () => this.exportContacts(db, namespace),
+      tickets: () => this.exportTickets(db, namespace),
+      ticket_comments: () => this.exportTicketComments(db, namespace),
+      assets: () => this.exportAssets(db, namespace),
+    };
+    const [organizations, locations, contacts, tickets, ticketComments, assets] = await Promise.all(
+      Object.values(extractorMap).map((extractor) => extractor())
+    );
 
     // Children whose parent rows were filtered (e.g. a comment on a ticket
     // outside the export) would break package referential integrity; drop
@@ -66,6 +77,8 @@ export class AmpExportService {
     const contactIds = new Set(contacts.map((contact) => contact.package_record_id));
     const organizationIds = new Set(organizations.map((org) => org.package_record_id));
     const locationIds = new Set(locations.map((location) => location.package_record_id));
+    const privateComments = ticketComments.filter((comment) => comment.is_internal === 1);
+    const customerComments = ticketComments.filter((comment) => comment.is_internal !== 1);
 
     const rows: AmpPackageRows = {
       organizations,
@@ -96,7 +109,7 @@ export class AmpExportService {
             ? ticket.location_package_record_id
             : null,
       })),
-      ticket_comments: ticketComments
+      ticket_comments: customerComments
         .filter((comment) => ticketIds.has(comment.ticket_package_record_id))
         .map((comment) => ({
           ...comment,
@@ -117,6 +130,12 @@ export class AmpExportService {
             ? asset.location_package_record_id
             : null,
       })),
+      exclusions: [
+        { package_record_id: 'credential-vault-excluded', reason: 'secret', detail: 'Credential vault material and connection secrets are never exported.' },
+        { package_record_id: 'commercial-catalog-excluded', reason: 'commercial', detail: 'Products and vendor price lists are not part of workspace export.' },
+        { package_record_id: 'deferred-workspace-domains', reason: 'deferred', detail: 'Project/work-item, workflow, time, schedule, meeting, conversation, and knowledge-base records are not yet emitted by this producer.' },
+        ...privateComments.map((comment) => ({ package_record_id: `excluded-private-${comment.source_record_id}`, entity_type: 'ticket_comments', entity_package_record_id: comment.package_record_id, reason: 'msp_private' as const, detail: 'MSP-private ticket comment excluded from customer export.' })),
+      ],
     };
 
     // Producer obligation: emitted values must respect the AMP limits. Live
@@ -127,7 +146,11 @@ export class AmpExportService {
       rows.package_diagnostics = [...(rows.package_diagnostics ?? []), ...diagnostics];
     }
 
-    const directory = await mkdtemp(join(tmpdir(), 'amp-export-'));
+    return rows;
+  }
+
+  private async writePackage(rows: AmpPackageRows): Promise<AmpExportResult> {
+    const directory = createAmpTemporaryDirectory('package');
     const packagePath = join(directory, 'export.amp');
     try {
       const manifest = writeAlgaExport(packagePath, rows, this.tenant);

@@ -251,7 +251,7 @@ const UploadPackageDialog = ({ isOpen, onClose, onUploaded }: UploadPackageDialo
       const response = await fetch(spreadsheet ? '/api/migrations/spreadsheet' : '/api/migrations/upload', {
         method: 'POST',
         headers: {
-          'content-type': file.type || 'application/vnd.sqlite3',
+          'content-type': file.type || 'application/vnd.alga.amp+zip',
           'x-amp-file-size': String(file.size),
           'x-amp-file-name': encodeURIComponent(file.name),
           ...(spreadsheet ? { 'x-amp-entity-type': entityType } : {}),

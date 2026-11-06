@@ -7,6 +7,7 @@
 export type AmpErrorCode =
   | 'AMP_FILE_NOT_FOUND'
   | 'AMP_NOT_SQLITE'
+  | 'AMP_INVALID_PACKAGE_STRUCTURE'
   | 'AMP_UNKNOWN_TABLE'
   | 'AMP_SCHEMA_MISMATCH'
   | 'AMP_FORBIDDEN_SQLITE_OBJECT'
@@ -23,6 +24,7 @@ export type AmpErrorCode =
 export const AMP_ERROR_CODES: Record<AmpErrorCode, string> = {
   AMP_FILE_NOT_FOUND: 'The package file does not exist or is unreadable.',
   AMP_NOT_SQLITE: 'The file is not a SQLite database.',
+  AMP_INVALID_PACKAGE_STRUCTURE: 'The ZIP container contains an unsafe or unsupported package structure.',
   AMP_UNKNOWN_TABLE: 'The package contains a table that AMP does not allow.',
   AMP_SCHEMA_MISMATCH: 'An allowlisted table does not match the AMP column set.',
   AMP_FORBIDDEN_SQLITE_OBJECT:

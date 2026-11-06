@@ -82,3 +82,6 @@ Hard: L0a (`packages/co-managed`, capability adapters).   Soft: L0g. Consumers: 
 - pattern `portable-contributor-boilerplate` (x4): admission wrapper, permission check, tenantDb handle, JSON round-trip repeated per contributor.
 - friction `global-table-read`: `tenantDb` refuses global tables; one allowlisted unscoped read.
 - friction `manifest-inlines-records`: records inside the 64 MiB-capped manifest.
+> **Historical card:** its encrypted portable archive was replaced by AMP 2.0.
+> Use `docs/reference/amp/*` and the current AMP migration plan for active format
+> and implementation requirements.

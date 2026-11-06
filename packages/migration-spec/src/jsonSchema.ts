@@ -1,5 +1,6 @@
 import {
   AMP_ENTITY_TABLES,
+  AMP_AUXILIARY_TABLES,
   AMP_TABLE_COLUMNS,
   AMP_ENTITY_IDENTITY_COLUMNS,
   AMP_DIAGNOSTIC_SEVERITIES,
@@ -160,7 +161,7 @@ function requiredColumns(table: AmpEntityType): string[] {
 function entityRowSchema(table: AmpEntityType): Record<string, unknown> {
   return {
     $schema: 'https://json-schema.org/draft/2020-12/schema',
-    $id: `https://spec.algapsa.com/amp/v1/${table}.json`,
+    $id: `https://spec.algapsa.com/amp/v2/${table}.json`,
     type: 'object',
     properties: { ...ENTITY_BASE_PROPERTIES, ...ENTITY_EXTRA_PROPERTIES[table] },
     required: requiredColumns(table),
@@ -178,7 +179,7 @@ export const AMP_ENTITY_ROW_SCHEMAS: Record<AmpEntityType, Record<string, unknow
 /** Row schema for the manifest table. */
 export const AMP_MANIFEST_SCHEMA: Record<string, unknown> = {
   $schema: 'https://json-schema.org/draft/2020-12/schema',
-  $id: 'https://spec.algapsa.com/amp/v1/amp_manifest.json',
+  $id: 'https://spec.algapsa.com/amp/v2/amp_manifest.json',
   type: 'object',
   properties: {
     format_version: { type: 'string', pattern: '^\\d+\\.\\d+\\.\\d+$' },
@@ -191,6 +192,7 @@ export const AMP_MANIFEST_SCHEMA: Record<string, unknown> = {
     export_started_at: RFC3339_UTC,
     export_completed_at: RFC3339_UTC,
     content_sha256: { type: 'string', pattern: '^[0-9a-f]{64}$' },
+    attachments_sha256: { type: 'string', pattern: '^[0-9a-f]{64}$' },
     capabilities_json: EXTENSION_JSON,
   },
   required: [
@@ -201,6 +203,7 @@ export const AMP_MANIFEST_SCHEMA: Record<string, unknown> = {
     'producer_version',
     'source_system',
     'content_sha256',
+    'attachments_sha256',
   ],
   additionalProperties: false,
 };
@@ -209,7 +212,7 @@ export const AMP_MANIFEST_SCHEMA: Record<string, unknown> = {
 export const AMP_AUXILIARY_ROW_SCHEMAS: Record<string, Record<string, unknown>> = {
   external_identifiers: {
     $schema: 'https://json-schema.org/draft/2020-12/schema',
-    $id: 'https://spec.algapsa.com/amp/v1/external_identifiers.json',
+    $id: 'https://spec.algapsa.com/amp/v2/external_identifiers.json',
     type: 'object',
     properties: {
       package_record_id: OPAQUE_ID,
@@ -223,7 +226,7 @@ export const AMP_AUXILIARY_ROW_SCHEMAS: Record<string, Record<string, unknown>> 
   },
   custom_field_values: {
     $schema: 'https://json-schema.org/draft/2020-12/schema',
-    $id: 'https://spec.algapsa.com/amp/v1/custom_field_values.json',
+    $id: 'https://spec.algapsa.com/amp/v2/custom_field_values.json',
     type: 'object',
     properties: {
       package_record_id: OPAQUE_ID,
@@ -237,7 +240,7 @@ export const AMP_AUXILIARY_ROW_SCHEMAS: Record<string, Record<string, unknown>> 
   },
   package_diagnostics: {
     $schema: 'https://json-schema.org/draft/2020-12/schema',
-    $id: 'https://spec.algapsa.com/amp/v1/package_diagnostics.json',
+    $id: 'https://spec.algapsa.com/amp/v2/package_diagnostics.json',
     type: 'object',
     properties: {
       package_record_id: OPAQUE_ID,
@@ -250,6 +253,36 @@ export const AMP_AUXILIARY_ROW_SCHEMAS: Record<string, Record<string, unknown>> 
     required: ['package_record_id', 'severity', 'code', 'message'],
     additionalProperties: false,
   },
+  attachments: {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    $id: 'https://spec.algapsa.com/amp/v2/attachments.json',
+    type: 'object',
+    properties: {
+      package_record_id: OPAQUE_ID,
+      entity_type: { type: 'string', enum: [...AMP_ENTITY_TABLES] },
+      entity_package_record_id: OPAQUE_ID,
+      sha256: { type: 'string', pattern: '^[a-f0-9]{64}$' },
+      size: { type: 'integer', minimum: 0, maximum: AMP_LIMITS.attachmentBytes },
+      media_type: BOUNDED_TEXT,
+      file_name: BOUNDED_TEXT,
+    },
+    required: ['package_record_id', 'entity_type', 'entity_package_record_id', 'sha256', 'size'],
+    additionalProperties: false,
+  },
+  exclusions: {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    $id: 'https://spec.algapsa.com/amp/v2/exclusions.json',
+    type: 'object',
+    properties: {
+      package_record_id: OPAQUE_ID,
+      entity_type: { type: ['string', 'null'], enum: [...AMP_ENTITY_TABLES, null] },
+      entity_package_record_id: NULLABLE_OPAQUE_ID,
+      reason: { type: 'string', enum: ['msp_private', 'commercial', 'secret', 'deferred', 'unreadable'] },
+      detail: REQUIRED_TEXT,
+    },
+    required: ['package_record_id', 'reason', 'detail'],
+    additionalProperties: false,
+  },
 };
 
 /** Sanity guard: schemas and column allowlists must agree. */
@@ -257,6 +290,15 @@ for (const table of AMP_ENTITY_TABLES) {
   const schemaColumns = Object.keys(
     (AMP_ENTITY_ROW_SCHEMAS[table] as { properties: Record<string, unknown> }).properties
   ).sort();
+  const specColumns = [...AMP_TABLE_COLUMNS[table]].sort();
+  if (JSON.stringify(schemaColumns) !== JSON.stringify(specColumns)) {
+    throw new Error(`AMP JSON Schema for ${table} disagrees with AMP_TABLE_COLUMNS`);
+  }
+}
+for (const table of AMP_AUXILIARY_TABLES) {
+  const schema = AMP_AUXILIARY_ROW_SCHEMAS[table];
+  if (!schema) throw new Error(`AMP JSON Schema is missing auxiliary table ${table}`);
+  const schemaColumns = Object.keys((schema as { properties: Record<string, unknown> }).properties).sort();
   const specColumns = [...AMP_TABLE_COLUMNS[table]].sort();
   if (JSON.stringify(schemaColumns) !== JSON.stringify(specColumns)) {
     throw new Error(`AMP JSON Schema for ${table} disagrees with AMP_TABLE_COLUMNS`);

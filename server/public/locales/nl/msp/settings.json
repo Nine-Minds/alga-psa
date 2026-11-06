@@ -2509,7 +2509,7 @@
         "noImportableRecords": "Dit pakket bevatte geen importeerbare records.",
         "permissionDenied": "U hebt geen toestemming om gegevens te importeren of exporteren.",
         "invalidSpreadsheet": "Dat spreadsheet kon niet worden gelezen. Controleer of het een geldig CSV- of XLSX-bestand is en probeer het opnieuw.",
-        "notAmpPackage": "Dat bestand is geen AMP-pakket. Upload een .amp- of .sqlite-bestand.",
+        "notAmpPackage": "Dat bestand is geen AMP-pakket. Upload een .amp-bestand.",
         "tooLarge": "Deze upload is groter dan de maximaal toegestane grootte.",
         "sizeMismatch": "De upload is niet voltooid. Probeer het opnieuw.",
         "noRecognizedHeaders": "Geen van de kolommen in dat spreadsheet werd herkend. Controleer de kopregel en probeer het opnieuw.",

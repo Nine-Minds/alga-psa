@@ -48,6 +48,8 @@ export type {
   AmpExternalIdentifierRecord,
   AmpCustomFieldValueRecord,
   AmpPackageDiagnosticRecord,
+  AmpAttachmentRecord,
+  AmpExclusionRecord,
   AmpEntityRecordMap,
   AmpEntityRecord,
   AmpRecord,

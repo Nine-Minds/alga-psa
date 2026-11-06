@@ -3,10 +3,10 @@
 import { withAuth } from '@alga-psa/auth';
 import { requireCapabilityForAction } from '@alga-psa/core/capability/server';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { withCoManagedExportAdmin } from '@alga-psa/co-managed/portableExport';
+import { withCoManagedExportAdmin } from '@alga-psa/co-managed/exportAuthorization';
 import { coManagedBrowserActor } from '../co-managed/browserActor';
 
-export const getCoManagedPortableExportScreenAction = withAuth(async (user, { tenant }) => {
+export const getCoManagedAmpExportScreenAction = withAuth(async (user, { tenant }) => {
   await requireCapabilityForAction('co-managed', tenant, 'serves');
   const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
   return withCoManagedExportAdmin(knex, actor, async trx => {

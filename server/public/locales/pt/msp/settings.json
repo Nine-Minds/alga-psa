@@ -2509,7 +2509,7 @@
         "noImportableRecords": "Este pacote não continha registros importáveis.",
         "permissionDenied": "Você não tem permissão para importar ou exportar dados.",
         "invalidSpreadsheet": "Não foi possível ler essa planilha. Verifique se é um arquivo CSV ou XLSX válido e tente novamente.",
-        "notAmpPackage": "Esse arquivo não é um pacote AMP. Envie um arquivo .amp ou .sqlite.",
+        "notAmpPackage": "Esse arquivo não é um pacote AMP. Envie um arquivo .amp.",
         "tooLarge": "Este upload é maior que o tamanho máximo permitido.",
         "sizeMismatch": "O upload não foi concluído. Tente novamente.",
         "noRecognizedHeaders": "Nenhuma das colunas dessa planilha foi reconhecida. Verifique a linha de cabeçalho e tente novamente.",

@@ -4,7 +4,19 @@ import {
   type AmpManifest,
   type AmpTable,
 } from '@alga-psa/migration-spec';
+import AdmZip from 'adm-zip';
+import { createHash } from 'node:crypto';
+import { readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { openPackageDatabase, type SqliteDatabase } from './sqlite';
+import { createAmpTemporaryDirectory } from './temporary';
+
+export class AmpPackageStructureError extends Error {
+  constructor(message: string, readonly code: 'AMP_INVALID_PACKAGE_STRUCTURE' | 'AMP_LIMIT_EXCEEDED' | 'AMP_HASH_MISMATCH' = 'AMP_INVALID_PACKAGE_STRUCTURE') {
+    super(message);
+    this.name = 'AmpPackageStructureError';
+  }
+}
 
 /**
  * Read-only access to an AMP package. All queries are parameterized SELECTs
@@ -12,10 +24,77 @@ import { openPackageDatabase, type SqliteDatabase } from './sqlite';
  */
 export class AmpSqliteReader {
   private readonly db: SqliteDatabase;
+  private readonly stagingDirectory?: string;
+  private readonly attachmentFiles = new Map<string, string>();
+  private readonly packagePath: string;
 
   constructor(path: string) {
-    this.db = openPackageDatabase(path);
+    if (statSync(path).size > 1024 * 1024 * 1024) throw new AmpPackageStructureError('AMP compressed package limit exceeded', 'AMP_LIMIT_EXCEEDED');
+    const input = readFileSync(path);
+    if (input.subarray(0, 4).toString('hex') !== '504b0304') {
+      throw new AmpPackageStructureError('AMP 2 packages must be ZIP archives containing data.sqlite');
+    }
+    const zip = new AdmZip(input);
+    const entries = zip.getEntries();
+    if (entries.length === 0 || entries.length > 50_000) throw new AmpPackageStructureError('AMP ZIP entry limit exceeded', 'AMP_LIMIT_EXCEEDED');
+    const names = new Set<string>();
+    let expandedBytes = 0;
+    let sqliteBytes: Buffer | undefined;
+    const rawAttachments: Array<{ path: string; bytes: Buffer }> = [];
+    for (const entry of entries) {
+      const name = entry.entryName;
+      if (entry.isDirectory) throw new AmpPackageStructureError(`AMP ZIP directories are not allowed: ${name}`);
+      const unixType = (entry.header.attr >>> 16) & 0o170000;
+      if (entry.header.encrypted || ![0, 8].includes(entry.header.method) || unixType === 0o120000 ||
+          !Number.isSafeInteger(entry.header.compressedSize) || entry.header.compressedSize < 0 || entry.header.compressedSize > 1024 * 1024 * 1024 ||
+          !entry.rawEntryName.equals(Buffer.from(name, 'utf8'))) {
+        throw new AmpPackageStructureError(`Unsupported or unsafe AMP ZIP entry metadata: ${name}`);
+      }
+      if (names.has(name)) throw new AmpPackageStructureError(`Duplicate AMP ZIP entry: ${name}`);
+      names.add(name);
+      if (name.includes('\\') || name.startsWith('/') || name.split('/').some((part) => part === '.' || part === '..' || part.length === 0)) {
+        throw new AmpPackageStructureError(`Unsafe AMP ZIP entry path: ${name}`);
+      }
+      if (!Number.isSafeInteger(entry.header.size) || entry.header.size < 0 || entry.header.size > 100 * 1024 * 1024 && name !== 'data.sqlite') {
+        throw new AmpPackageStructureError(`AMP ZIP entry declared size is invalid: ${name}`, 'AMP_LIMIT_EXCEEDED');
+      }
+      expandedBytes += entry.header.size;
+      if (expandedBytes > 1024 * 1024 * 1024) throw new AmpPackageStructureError('AMP expanded package limit exceeded', 'AMP_LIMIT_EXCEEDED');
+      if (name === 'data.sqlite') {
+        sqliteBytes = entry.getData();
+        if (sqliteBytes.length !== entry.header.size) throw new AmpPackageStructureError('AMP ZIP declared size mismatch', 'AMP_LIMIT_EXCEEDED');
+      } else if (/^attachments\/[a-f0-9]{2}\/[a-f0-9]{64}$/.test(name)) {
+        const bytes = entry.getData();
+        if (bytes.length !== entry.header.size) throw new AmpPackageStructureError('AMP ZIP declared size mismatch', 'AMP_LIMIT_EXCEEDED');
+        const digest = name.split('/')[2];
+        if (digest.slice(0, 2) !== name.split('/')[1] || createHash('sha256').update(bytes).digest('hex') !== digest) {
+          throw new AmpPackageStructureError(`AMP attachment content digest mismatch: ${digest}`, 'AMP_HASH_MISMATCH');
+        }
+        rawAttachments.push({ path: name, bytes });
+      } else {
+        throw new AmpPackageStructureError(`Unsupported AMP ZIP entry: ${name}`);
+      }
+    }
+    if (!sqliteBytes) throw new AmpPackageStructureError('AMP ZIP is missing data.sqlite');
+    this.stagingDirectory = createAmpTemporaryDirectory('reader');
+    this.packagePath = join(this.stagingDirectory, 'data.sqlite');
+    try {
+      writeFileSync(this.packagePath, sqliteBytes, { flag: 'wx', mode: 0o600 });
+      for (const { path: entryPath, bytes } of rawAttachments) {
+        const digest = entryPath.split('/')[2];
+        const filePath = join(this.stagingDirectory, digest);
+        writeFileSync(filePath, bytes, { flag: 'wx', mode: 0o600 });
+        this.attachmentFiles.set(digest, filePath);
+      }
+      this.db = openPackageDatabase(this.packagePath);
+    } catch (error) {
+      rmSync(this.stagingDirectory, { recursive: true, force: true });
+      throw error;
+    }
   }
+
+  attachmentPath(sha256: string): string | undefined { return this.attachmentFiles.get(sha256); }
+  attachmentDigests(): string[] { return [...this.attachmentFiles.keys()].sort(); }
 
   /** Names of every table present in the file, from sqlite_master. */
   tableNames(): string[] {
@@ -98,6 +177,7 @@ export class AmpSqliteReader {
 
   close(): void {
     this.db.close();
+    if (this.stagingDirectory) rmSync(this.stagingDirectory, { recursive: true, force: true });
   }
 
   private assertAllowlisted(table: string): asserts table is AmpTable {

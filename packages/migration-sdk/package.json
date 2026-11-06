@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@alga-psa/migration-spec": "*"
+    "@alga-psa/migration-spec": "*",
+    "adm-zip": "^0.6.1"
   },
   "devDependencies": {
     "typescript": "^5.7.3",

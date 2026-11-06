@@ -1,8 +1,10 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { createHash } from 'node:crypto';
 import { afterAll, describe, expect, it } from 'vitest';
+import AdmZip from 'adm-zip';
 import { AMP_ENTITY_TABLES, AMP_LIMITS } from '@alga-psa/migration-spec';
 import {
   AmpPackageBuilder,
@@ -64,6 +66,26 @@ describe('AMP package round trip', () => {
     expect(report.countMismatches).toEqual([]);
     expect(report.conformant).toBe(true);
   });
+
+  it('packages attachment bytes by digest and validates their owner and canonical index', () => {
+    const path = nextPath();
+    const blob = Buffer.from('customer document bytes');
+    const blobPath = join(workDir, 'attachment.bin');
+    writeFileSync(blobPath, blob);
+    const sha256 = createHash('sha256').update(blob).digest('hex');
+    const rows = sampleEntityRows();
+    rows.attachments = [{
+      package_record_id: 'attachment-1', entity_type: 'assets',
+      entity_package_record_id: String(rows.assets![0].package_record_id),
+      sha256, size: blob.length, media_type: 'application/octet-stream', file_name: '../../source-name.bin',
+    }];
+    new AmpPackageBuilder(path).write(sampleManifest(), rows, [{ sha256, size: blob.length, filePath: blobPath }]);
+    expect(validateAmpPackage(path).valid).toBe(true);
+    const reader = new AmpSqliteReader(path);
+    try {
+      expect(readFileSync(reader.attachmentPath(sha256)!)).toEqual(blob);
+    } finally { reader.close(); }
+  });
 });
 
 describe('AMP builder allowlisting', () => {
@@ -112,7 +134,20 @@ describe('AMP validator attacks', () => {
 
   function rawDb(path: string) {
     const { DatabaseSync } = testRequire('node:sqlite') as RawSqlite;
-    return new DatabaseSync(path);
+    const zip = new AdmZip(path);
+    const databasePath = join(workDir, `mutation-${++fileCounter}.sqlite`);
+    writeFileSync(databasePath, zip.readFile('data.sqlite')!);
+    const db = new DatabaseSync(databasePath);
+    return {
+      exec: (sql: string) => db.exec(sql),
+      prepare: (sql: string) => db.prepare(sql),
+      close: () => {
+        db.close();
+        zip.updateFile('data.sqlite', readFileSync(databasePath));
+        zip.writeZip(path);
+        unlinkSync(databasePath);
+      },
+    };
   }
 
   it('rejects a file that is not SQLite', () => {
@@ -158,6 +193,28 @@ describe('AMP validator attacks', () => {
     });
     expect(result.valid).toBe(false);
     expect(result.diagnostics.map((d) => d.code)).toContain('AMP_FORBIDDEN_SQLITE_OBJECT');
+  });
+
+  it('rejects unsafe ZIP entries before using their paths', () => {
+    const path = nextPath();
+    buildSamplePackage(path);
+    const zip = new AdmZip(path);
+    zip.addFile('../outside', Buffer.from('must not be extracted'));
+    zip.writeZip(path);
+    expect(validateAmpPackage(path).valid).toBe(false);
+  });
+
+  it('rejects attachment bytes whose content no longer matches the indexed digest', () => {
+    const path = nextPath(), blobPath = join(workDir, 'tamper-source.bin');
+    const bytes = Buffer.from('verified attachment'), sha256 = createHash('sha256').update(bytes).digest('hex');
+    writeFileSync(blobPath, bytes);
+    const rows = sampleEntityRows();
+    rows.attachments = [{ package_record_id: 'attachment-tamper', entity_type: 'assets', entity_package_record_id: 'asset-fw-1', sha256, size: bytes.length }];
+    new AmpPackageBuilder(path).write(sampleManifest(), rows, [{ sha256, size: bytes.length, filePath: blobPath }]);
+    const zip = new AdmZip(path);
+    zip.updateFile(`attachments/${sha256.slice(0, 2)}/${sha256}`, Buffer.from('tampered'));
+    zip.writeZip(path);
+    expect(validateAmpPackage(path).valid).toBe(false);
   });
 
   it('rejects a table whose columns deviate from the spec', () => {
@@ -281,11 +338,11 @@ describe('AMP validator attacks', () => {
 
   it('rejects an unsupported format version with a reason', () => {
     const path = nextPath();
-    new AmpPackageBuilder(path).write(sampleManifest({ format_version: '2.0.0' }), sampleEntityRows());
+    new AmpPackageBuilder(path).write(sampleManifest({ format_version: '3.0.0' }), sampleEntityRows());
     const result = validateAmpPackage(path);
     expect(result.valid).toBe(false);
     const diagnostic = result.diagnostics.find((d) => d.code === 'AMP_UNSUPPORTED_VERSION');
-    expect(diagnostic?.message).toContain('major version 2');
+    expect(diagnostic?.message).toContain('major version 3');
   });
 
   it('rejects an invalid timestamp value', () => {
@@ -356,12 +413,18 @@ describe('AMP products and vendor_products entities', () => {
   it('rejects a products table with a missing column', () => {
     const path = nextPath();
     buildSamplePackage(path);
+    const zip = new AdmZip(path);
+    const databasePath = join(workDir, `mutation-${++fileCounter}.sqlite`);
+    writeFileSync(databasePath, zip.readFile('data.sqlite')!);
     const { DatabaseSync } = createRequire(import.meta.url)('node:sqlite') as {
       DatabaseSync: new (p: string) => { exec(sql: string): void; close(): void };
     };
-    const db = new DatabaseSync(path);
+    const db = new DatabaseSync(databasePath);
     db.exec('ALTER TABLE vendor_products DROP COLUMN lead_time_days');
     db.close();
+    zip.updateFile('data.sqlite', readFileSync(databasePath));
+    zip.writeZip(path);
+    unlinkSync(databasePath);
     const result = validateAmpPackage(path);
     expect(result.valid).toBe(false);
     expect(result.diagnostics.some((d) => d.code === 'AMP_SCHEMA_MISMATCH' && d.table === 'vendor_products')).toBe(true);

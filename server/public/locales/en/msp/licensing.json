@@ -364,21 +364,6 @@
     "accountManagementRead": "Permission denied: account_management read required"
   },
   "coManaged": {
-    "portableExport": {
-      "title": "Export workspace",
-      "description": "Download an encrypted, portable archive of your workspace records and files.",
-      "recovery": "Keep the recovery passphrase somewhere safe. Without it, the archive cannot be opened.",
-      "connections": "The archive contains your workspace records and the files stored in your workspace. Document records and associations, time, schedule, meeting and conversation history are not included yet and arrive in a later release. Billing, MSP-private data and integration secrets are not included.",
-      "passphrase": "Recovery passphrase",
-      "confirmPassphrase": "Confirm recovery passphrase",
-      "download": "Prepare and download archive",
-      "requested": "Your request opens in a new tab. Preparation may take a few minutes; your browser will download the file when it is ready.",
-      "loadError": "You cannot export this workspace with your current access.",
-      "lengthError": "Use a passphrase between 16 and 1024 UTF-8 bytes.",
-      "matchError": "The recovery passphrases must match.",
-      "unavailable": "Workspace export is not available in this edition.",
-      "loading": "Loading…"
-    },
     "acceptance": {
       "accept": "Accept and activate workspace",
       "administratorRequired": "A local workspace administrator must accept this relationship before your team can begin.",
@@ -800,12 +785,7 @@
         "capabilityUnavailable": "This isn’t available for your workspace right now.",
         "notAvailable": "This ticket is no longer shared or available to you.",
         "readOnly": "This ticket is read-only right now, so this change can’t be made."
-      },
-      "cancel": "Cancel",
-      "loading": "Loading…",
-      "reload": "Reload current state",
-      "retry": "Retry",
-      "saving": "Saving…"
+      }
     },
     "callout": {
       "title": "Customer tickets need you",
@@ -1006,18 +986,6 @@
       "invalid": "This comment could not be saved.",
       "send": "Send",
       "cancel": "Cancel"
-    },
-    "editor": {
-      "errors": {
-        "invalid": "Some values are not valid. Check your changes and try again.",
-        "conflict": "This ticket changed. Reload it before saving your changes.",
-        "operationConflict": "This save request was already used for a different edit. Reload the ticket.",
-        "forbidden": "Your access to this ticket changed. Reload to continue.",
-        "readOnly": "This workspace is read-only. Reload to see its current state.",
-        "closeRules": "The ticket must meet its board’s closing requirements before it can be closed.",
-        "unknownOutcome": "We could not confirm whether the edit was saved. Retry the same save, or discard your changes and reload.",
-        "slaSetupRequired": "Your MSP must configure its SLA policy and priority mapping before this ticket can be reopened under MSP responsibility."
-      }
     }
   },
   "common": {
