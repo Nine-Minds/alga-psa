@@ -594,11 +594,16 @@ export class QboSimulator {
     // These mirror the exact field lists the integration's catalog actions
     // issue; anything wider still fails loud below.
 
-    const namedCatalog = selectQuery.match(/^SELECT\s+Id,\s*Name\s+FROM\s+(Class|Department|Term|Item)\s*$/i);
+    // Item now pages like the other catalogs (STARTPOSITION/MAXRESULTS);
+    // Class/Department/Term still issue the bare form, so the suffix stays optional.
+    const namedCatalog = selectQuery.match(
+      /^SELECT\s+Id,\s*Name\s+FROM\s+(Class|Department|Term|Item)(?:\s+STARTPOSITION\s+(\d+)\s+MAXRESULTS\s+(\d+))?\s*$/i
+    );
     if (namedCatalog) {
       const entityType = this.normalizeEntityType(namedCatalog[1]);
       // QBO returns ACTIVE rows only unless Active is filtered explicitly.
-      return this.activeRows(entityType).map((row) => ({ Id: row.Id, Name: row.Name }));
+      const rows = this.activeRows(entityType).map((row) => ({ Id: row.Id, Name: row.Name }));
+      return namedCatalog[2] && namedCatalog[3] ? this.page(rows, namedCatalog[2], namedCatalog[3]) : rows;
     }
 
     const accountCatalog = selectQuery.match(/^SELECT\s+Id,\s*Name,\s*AccountType\s+FROM\s+Account\s*$/i);

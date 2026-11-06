@@ -387,6 +387,8 @@
     },
     "locations": {
       "billing": "Billing",
+      "contactCount_one": "1 contact",
+      "contactCount_other": "{{count}} contacts",
       "manage": "Manage",
       "more": "+{{count}} more",
       "none": "No locations yet.",
@@ -1381,7 +1383,10 @@
         "phoneLabel": "Phone",
         "setDefault": "Set as default",
         "shippingTag": "Shipping",
-        "unnamed": "Unnamed Location"
+        "unnamed": "Unnamed Location",
+        "contactCount_one": "1 contact",
+        "contactCount_other": "{{count}} contacts",
+        "contactPrimary": "Primary"
       },
       "dialog": {
         "addTitle": "Add New Location",
@@ -1978,7 +1983,8 @@
       "sourceIsTenantDefault": "Your own organisation record cannot be merged into a client.",
       "sourceHasCoManagement": "This client has a co-managed IT workspace. Cancel its setup or end co-management before merging it.",
       "parentLinkCycle": "That client is recorded as a child of the one you are merging, so merging this way would invert the hierarchy.",
-      "invalidContractCutover": "One of the cutover dates falls outside its contract term."
+      "invalidContractCutover": "One of the cutover dates falls outside its contract term.",
+      "invalidContactLocation": "A chosen location belongs to neither client being merged."
     },
     "profileContacts": {
       "duplicateManager": "A billing profile can only have one manager.",
@@ -2033,7 +2039,16 @@
     "billingStrategyHeading": "Bill merged work and devices under",
     "billingStrategySource": "{{source}} billing profile, kept as a separate profile on {{target}}",
     "billingStrategyTarget": "{{target}} default billing profile",
-    "billingStrategyHelp": "Applies to {{tickets}} ticket(s), {{projects}} project(s), {{assets}} asset(s) and {{mappings}} RMM device group(s) that have no billing profile of their own. Rows with an explicit profile keep it, and invoices, billing cycles, payments and credits always stay on the merged profile."
+    "billingStrategyHelp": "Applies to {{tickets}} ticket(s), {{projects}} project(s), {{assets}} asset(s) and {{mappings}} RMM device group(s) that have no billing profile of their own. Rows with an explicit profile keep it, and invoices, billing cycles, payments and credits always stay on the merged profile.",
+    "locationsColumn": "Locations",
+    "remoteBadge": "Remote",
+    "noLocationsAfterMerge": "No locations",
+    "unnamedLocation": "Location",
+    "movingFrom": "moving from {{client}}",
+    "primaryLocation": "Primary",
+    "targetAlsoHas": "{{client}} also has \"{{location}}\"",
+    "useIt": "Use it",
+    "contactLocationSummary": "{{count}} contact location links, {{repointed}} re-pointed"
   },
   "billingProfileContacts": {
     "title": "Profile contacts",

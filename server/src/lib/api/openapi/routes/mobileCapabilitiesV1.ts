@@ -37,6 +37,8 @@ export function registerMobileCapabilitiesV1Routes(registry: ApiOpenApiRegistry)
           opportunities: zOpenApi.boolean(),
           opportunitiesCreate: zOpenApi.boolean(),
           projects: zOpenApi.boolean().describe('Project tasks on mobile (project:read; PSA product only).'),
+          assets: zOpenApi.boolean().describe('Asset browsing on mobile (asset:read; PSA product only).'),
+          assetAudit: zOpenApi.boolean().describe('Site audits on mobile (asset:read AND asset:update; PSA product only).'),
           clientsCreate: zOpenApi.boolean(),
           clientsUpdate: zOpenApi.boolean(),
           contactsCreate: zOpenApi.boolean(),
@@ -88,7 +90,7 @@ export function registerMobileCapabilitiesV1Routes(registry: ApiOpenApiRegistry)
     extensions: {
       'x-tenant-scoped': true,
       'x-auth-mechanism': 'x-api-key validated in ApiBaseController.authenticate()',
-      'x-rbac-resource': 'inventory/read and opportunities/read/create',
+      'x-rbac-resource': 'inventory/read, opportunities/read/create, project/read and asset/read/update',
     },
     edition: 'both',
   });

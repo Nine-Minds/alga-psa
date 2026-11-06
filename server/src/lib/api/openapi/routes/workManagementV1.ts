@@ -207,6 +207,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
         actor: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).nullable().optional(),
         external_status: zOpenApi.string().nullable().optional(),
       })).optional().describe('Ticket-level external references written in the same transaction as the ticket. A conflicting link rolls back the create.'),
+      asset_ids: zOpenApi.array(zOpenApi.string().uuid()).max(50).optional().describe(
+        'Assets the ticket is raised against, linked in the same transaction as the ticket; an unknown asset rejects the whole create. The first asset also makes the ticket inherit that asset\'s billing profile when billing_profile_id is omitted, as POST /tickets/from-asset and the web create do.',
+      ),
       ...ticketNotificationSuppressionProperties,
     }).describe('Ticket fields to create. Notification suppression applies only to this operation.'),
   );
@@ -221,8 +224,8 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       location_id: zOpenApi.string().guid().optional(),
       contact_name_id: zOpenApi.string().guid().nullable().optional(),
       status_id: zOpenApi.string().guid().optional(),
-      category_id: zOpenApi.string().guid().optional(),
-      subcategory_id: zOpenApi.string().guid().optional(),
+      category_id: zOpenApi.string().guid().nullable().optional().describe('Parent category, or null to clear the classification.'),
+      subcategory_id: zOpenApi.string().guid().nullable().optional().describe('Child of category_id, or null when the selected category has no subcategory.'),
       assigned_to: zOpenApi.string().guid().nullable().optional(),
       priority_id: zOpenApi.string().guid().optional(),
       attributes: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).nullable().optional(),
@@ -1000,6 +1003,10 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'WorkV1TicketStatusesQuery',
     zOpenApi.object({ board_id: zOpenApi.string().guid().optional().describe('Filter statuses to this board.') }),
   );
+  const TicketCategoriesQuery = registry.registerSchema(
+    'WorkV1TicketCategoriesQuery',
+    zOpenApi.object({ board_id: zOpenApi.string().uuid().optional().describe('Filter categories to this board.') }),
+  );
   const TicketCommentUpdateBody = registry.registerSchema(
     'WorkV1TicketCommentUpdateBody',
     zOpenApi.object({ comment_text: zOpenApi.string().min(1).max(5000).describe('Updated comment text (1–5000 visible chars).') }),
@@ -1130,6 +1137,16 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     tags: [tag], security: [{ ApiKeyAuth: [] }],
     request: { query: TicketStatusesQuery },
     responses: ticketStdResponses({ code: 200, description: 'Ticket statuses.' }, false),
+    extensions: ticketExt('read'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get', path: '/api/v1/tickets/categories',
+    summary: 'List ticket categories',
+    description: 'Returns the tenant ticket categories (parents and children via parent_category), optionally filtered by board_id, sorted by display_order then name. Read surface for classifying a ticket; configuring categories stays on /api/v1/categories/ticket.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { query: TicketCategoriesQuery },
+    responses: ticketStdResponses({ code: 200, description: 'Ticket categories.' }, false),
     extensions: ticketExt('read'), edition: 'both',
   });
 

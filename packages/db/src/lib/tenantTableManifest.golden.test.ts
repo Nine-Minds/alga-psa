@@ -29,10 +29,23 @@ describe('tenant table manifest golden order', () => {
     expect(tenantDeletionOrder()).toEqual(literal);
   });
 
-  it('has 587 unique ordered names', () => {
+  it('has 600 unique ordered names', () => {
     const order = tenantDeletionOrder();
-    expect(order).toHaveLength(587);
-    expect(new Set(order).size).toBe(587);
+    expect(order).toHaveLength(600);
+    expect(new Set(order).size).toBe(600);
+  });
+
+  it('schedules organization SLA history and priority mappings before their parents', () => {
+    const order = tenantDeletionOrder();
+    const history = [
+      'sla_organization_notification_events',
+      'sla_organization_events',
+      'sla_organization_obligations',
+    ];
+    expect(order.filter(table => history.includes(table))).toEqual(history);
+
+    const mappings = ['co_managed_sla_priority_mappings', 'priorities'];
+    expect(order.filter(table => mappings.includes(table))).toEqual(mappings);
   });
 
   it('declares the eight breakCircularDependencies FKs as null-before-delete', () => {
