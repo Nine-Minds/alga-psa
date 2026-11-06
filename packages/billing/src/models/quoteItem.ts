@@ -3,6 +3,7 @@ import type { IQuoteItem } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
 import { recalculateQuoteFinancials } from '../services/quoteCalculationService';
 import { resolveTenantUnitCodeForLabel } from '@alga-psa/shared/billingClients/tenantUnitsOfMeasure';
+import { deriveServiceTaxTreatment } from '@alga-psa/shared/billingClients/serviceTaxTreatment';
 import { knownUnitCodeForLabel } from '@alga-psa/core/unitOfMeasure';
 
 function ensureIntegerField(value: unknown, fieldName: string): void {
@@ -76,44 +77,6 @@ async function getNextDisplayOrder(
     .first();
 
   return Number(result?.max ?? -1) + 1;
-}
-
-/**
- * Region a service's tax rate selects. Same semantics as
- * `invoiceService.resolveTaxRegionCodeForRate`: an unknown or foreign rate id
- * yields null so the line is never silently taxed in the wrong region.
- */
-async function resolveTaxRegionCodeForRate(
-  knexOrTrx: Knex | Knex.Transaction,
-  tenant: string,
-  taxRateId: string
-): Promise<string | null> {
-  const rate = await quoteTable<{ tenant?: string; tax_rate_id?: string; region_code?: string | null }>(
-    knexOrTrx, tenant, 'tax_rates',
-  )
-    .where({ tax_rate_id: taxRateId })
-    .first('region_code');
-  return rate?.region_code ?? null;
-}
-
-/**
- * Tax treatment a catalog-backed line inherits from its service, mirroring the
- * manual-invoice-charge rule in `invoiceService`: a service with no
- * `tax_rate_id` is non-taxable, a service with one is taxed in that rate's
- * region, and a rate id that resolves to no tenant row is non-taxable rather
- * than taxed in an unknown region.
- */
-async function deriveServiceTaxTreatment(
-  knexOrTrx: Knex | Knex.Transaction,
-  tenant: string,
-  taxRateId: string | null | undefined
-): Promise<{ isTaxable: boolean; taxRegion: string | null }> {
-  if (!taxRateId) {
-    return { isTaxable: false, taxRegion: null };
-  }
-
-  const taxRegion = await resolveTaxRegionCodeForRate(knexOrTrx, tenant, taxRateId);
-  return { isTaxable: taxRegion != null, taxRegion };
 }
 
 /** Empty or whitespace-only catalog text snapshots as `null`. */

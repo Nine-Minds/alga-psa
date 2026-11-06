@@ -28,6 +28,7 @@ import {
 } from '../../../../billingClients/quoteConversionDiscounts';
 import { resolveFixedMemberRatePair } from '../../../../billingClients/fixedMemberRate';
 import { allocateIncludedQuoteDiscounts } from '../../../../billingClients/quoteDiscountAllocation';
+import { deriveServiceTaxTreatment } from '../../../../billingClients/serviceTaxTreatment';
 import { prepareQuoteTermsForDb } from '../../../../lib/quoteTerms';
 import { SharedNumberingService } from '../../../../services/numberingService';
 
@@ -117,9 +118,13 @@ const createQuoteItemBaseSchema = z.object({
   discount_percentage: z.number().int().min(0).max(100).optional().nullable(),
   applies_to_item_id: z.string().guid().optional().nullable(),
   applies_to_service_id: z.string().guid().optional().nullable(),
-  is_taxable: z.boolean().default(true),
+  // Left optional so "not sent" stays distinguishable from an explicit `true`:
+  // an omitted value is derived from the service's tax configuration.
+  is_taxable: z.boolean().optional(),
   tax_region: z.string().trim().optional().nullable(),
-  tax_rate: z.number().int().min(0).optional().nullable(),
+  // `quote_items.tax_rate` is numeric(10,4): a fractional rate like 6.875 is
+  // valid and must not be rejected.
+  tax_rate: z.number().min(0).optional().nullable(),
   location_id: z.string().guid().optional().nullable(),
   cost: z.number().int().min(0).optional().nullable(),
   cost_currency: z.string().trim().length(3).optional().nullable(),
@@ -497,7 +502,9 @@ async function recalculateQuoteFinancials(
         );
 
         taxAmount = taxResult.taxAmount;
-        taxRate = Math.round(Number(taxResult.taxRate ?? 0));
+        // Store the exact percentage: rounding 6.875 to 7 displayed a rate the
+        // line was never charged at. `quote_items.tax_rate` is numeric(10,4).
+        taxRate = Number(taxResult.taxRate ?? 0);
       } else if (taxSource !== 'internal') {
         taxAmount = 0;
         taxRate = 0;
@@ -726,7 +733,7 @@ export const QuoteItem = {
     // only through the internal `options.catalogDescriptionSnapshot` channel,
     // used exclusively by trusted server-internal copy flows (e.g.
     // crm.create_quote_from_template).
-    let resolvedItem = { ...item } as Record<string, unknown> & { service_id?: string | null; quote_id: string; display_order?: number; unit_price?: number | null; quantity?: number | null; description?: string | null; service_item_kind?: string | null; cost?: number | null; cost_currency?: string | null };
+    let resolvedItem = { ...item } as Record<string, unknown> & { service_id?: string | null; quote_id: string; display_order?: number; unit_price?: number | null; quantity?: number | null; description?: string | null; service_item_kind?: string | null; cost?: number | null; cost_currency?: string | null; is_taxable?: boolean; tax_region?: string | null };
     delete (resolvedItem as { catalog_description?: string | null }).catalog_description;
 
     const snapshotFromOptions =
@@ -746,7 +753,8 @@ export const QuoteItem = {
           'billing_method',
           'item_kind',
           'cost',
-          'cost_currency'
+          'cost_currency',
+          'tax_rate_id'
         )
         .first();
 
@@ -782,8 +790,22 @@ export const QuoteItem = {
           ? snapshotFromOptions
           : normalizeCatalogDescription(service.description);
 
+      // Tax treatment follows the catalog service unless the caller made an
+      // explicit choice. A service with no tax_rate_id is non-taxable (the
+      // invoice rule), so a quote can no longer charge phantom tax on a
+      // non-taxable service via the client's default rate.
+      const taxTreatment = resolvedItem.is_taxable === undefined
+        ? await deriveServiceTaxTreatment(knexOrTrx, tenant, service.tax_rate_id)
+        : null;
+
       resolvedItem = {
         ...resolvedItem,
+        ...(taxTreatment
+          ? {
+            is_taxable: taxTreatment.isTaxable,
+            tax_region: resolvedItem.tax_region ?? taxTreatment.taxRegion,
+          }
+          : {}),
         service_name: resolvedItem.service_name ?? service.service_name,
         service_sku: resolvedItem.service_sku ?? service.sku ?? null,
         unit_price: resolvedUnitPrice,
@@ -806,6 +828,10 @@ export const QuoteItem = {
         catalog_description: snapshotFromOptions !== undefined ? snapshotFromOptions : null,
       };
     }
+
+    // Always explicit on insert: the column default (true) must never be the
+    // thing that decides a line's tax treatment.
+    resolvedItem.is_taxable = resolvedItem.is_taxable ?? true;
 
     const quantity = Number(resolvedItem.quantity ?? 1);
     const unitPrice = Number(resolvedItem.unit_price ?? 0);

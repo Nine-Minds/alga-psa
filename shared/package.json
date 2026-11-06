@@ -15,6 +15,7 @@
     "./billingClients/contractMonthlyValue": "./dist/billingClients/contractMonthlyValue.js",
     "./billingClients/quoteDiscountAllocation": "./dist/billingClients/quoteDiscountAllocation.js",
     "./billingClients/quoteConversionDiscounts": "./dist/billingClients/quoteConversionDiscounts.js",
+    "./billingClients/serviceTaxTreatment": "./dist/billingClients/serviceTaxTreatment.js",
     "./types": "./dist/types/index.js",
     "./core": "./dist/core/index.js",
     "./core/logger.js": "./dist/core/logger.js",
