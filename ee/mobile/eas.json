@@ -7,6 +7,9 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "ios": {
+        "image": "sdk-58"
+      },
       "android": {
         "buildType": "apk"
       },
@@ -19,7 +22,8 @@
         "EXPO_PUBLIC_ALGA_ENV": "prod"
       },
       "ios": {
-        "distribution": "store"
+        "distribution": "store",
+        "image": "sdk-58"
       }
     },
     "playInternal": {
@@ -36,7 +40,8 @@
         "EXPO_PUBLIC_ANALYTICS_ENABLED": "true"
       },
       "ios": {
-        "distribution": "store"
+        "distribution": "store",
+        "image": "sdk-58"
       },
       "android": {
         "distribution": "store"
