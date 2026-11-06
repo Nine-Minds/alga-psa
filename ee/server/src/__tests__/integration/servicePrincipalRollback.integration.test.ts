@@ -20,8 +20,8 @@ vi.mock('@alga-psa/licensing', () => ({
 import { createAgent } from '../../lib/mcp/agents';
 
 const requireCjs = createRequire(import.meta.url);
-const schema = requireCjs('../../../migrations/20261018100000_create_service_principals_schema.cjs');
-const data = requireCjs('../../../migrations/20261018100200_migrate_agent_users_to_service.cjs');
+const schema = requireCjs('../../../migrations/20261105100000_create_service_principals_schema.cjs');
+const data = requireCjs('../../../migrations/20261105100200_migrate_agent_users_to_service.cjs');
 const userTypes = requireCjs('../../../migrations/20261018090000_widen_users_user_type_check_for_service.cjs');
 let db: Knex;
 let mergedDir: string;

@@ -3,7 +3,7 @@
  * the MSP Admin role of every PSA tenant. Contributed to the shared permission
  * catalog (server/migrations/utils/permissions/catalog.cjs), so new tenants get
  * it through onboarding/seed reconciliation exactly like every other resource.
- * Existing tenants got it from migration 20261018100100.
+ * Existing tenants got it from migration 20261105100100.
  */
 const grant = { psa: ['msp:Admin'] };
 

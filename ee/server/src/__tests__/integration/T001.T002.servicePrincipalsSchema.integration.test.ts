@@ -21,12 +21,12 @@ import { buildMergedEeMigrationsDir } from '../../../../../server/test-utils/eeM
 const requireCjs = createRequire(import.meta.url);
 const AGENT_MIGRATION = path.resolve(
   __dirname,
-  '../../../migrations/20261018100200_migrate_agent_users_to_service.cjs'
+  '../../../migrations/20261105100200_migrate_agent_users_to_service.cjs'
 );
 
 const PERMISSION_MIGRATION = path.resolve(
   __dirname,
-  '../../../migrations/20261018100100_add_service_principal_permissions.cjs'
+  '../../../migrations/20261105100100_add_service_principal_permissions.cjs'
 );
 
 let eeDb: Knex;
@@ -60,7 +60,7 @@ async function insertUser(db: Knex, tenant: string, userType: string, extra: Rec
 beforeAll(async () => {
   mergedDir = buildMergedEeMigrationsDir();
   eeDb = await createTestDbConnection({ databaseName: 'sp_c4_ee_schema_test', migrationsDir: mergedDir });
-  ceDb = await createTestDbConnection({ databaseName: 'sp_c4_ce_schema_test' });
+  ceDb = await createTestDbConnection({ databaseName: 'sp_c4_ce_schema_test', migrationsDir: path.resolve(__dirname, '../../../../../server/migrations') });
 }, 600_000);
 
 afterAll(async () => {
@@ -176,4 +176,34 @@ describe('agent -> service user data migration (T002)', () => {
     const spCount = await eeDb('service_principals').where({ tenant }).count<{ count: string }>('* as count').first();
     expect(Number(spCount?.count)).toBe(2);
   });
+
+  it('continues past a full page of agents without backing users', async () => {
+    const tenant = await insertTenant(eeDb);
+    const backingUser = await insertUser(eeDb, tenant, 'internal');
+    const finalAgentId = 'ffffffff-ffff-4fff-8fff-ffffffffffff';
+    const agents = Array.from({ length: 500 }, (_, index) => ({
+      tenant,
+      agent_id: `${index.toString(16).padStart(8, '0')}-0000-4000-8000-000000000000`,
+      name: `unbound-${index}`,
+      active: true,
+      metadata: JSON.stringify({}),
+    }));
+    await eeDb('agents').insert(agents);
+    await eeDb('agents').insert({
+      tenant, agent_id: finalAgentId, name: 'last-page-agent', active: true,
+      metadata: JSON.stringify({ backing_user_id: backingUser }),
+    });
+
+    await requireCjs(AGENT_MIGRATION).up(eeDb);
+
+    expect(await eeDb('agents').where({ tenant, agent_id: finalAgentId }).first('service_user_id'))
+      .toMatchObject({ service_user_id: backingUser });
+    expect(await eeDb('users').where({ tenant, user_id: backingUser }).first('user_type'))
+      .toMatchObject({ user_type: 'service' });
+    expect(await eeDb('service_principals').where({ tenant, user_id: backingUser }).first('kind'))
+      .toMatchObject({ kind: 'mcp_agent' });
+    expect(await eeDb('service_principals').where({ tenant }).count('* as count').first())
+      .toMatchObject({ count: '1' });
+  });
+
 });

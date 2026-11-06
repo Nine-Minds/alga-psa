@@ -14,11 +14,12 @@
  */
 
 import type { Knex } from 'knex';
-import { tenantDb, withViaPrincipal } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 
 import {
   TICKET_ACTIVITY_ACTOR,
+  TICKET_ACTIVITY_SOURCE,
   type TicketActivityChanges,
   type WriteTicketActivityInput,
 } from './types';
@@ -173,7 +174,10 @@ export async function writeTicketActivity(
   const viaPrincipalUserId = actor.viaPrincipalUserId ?? null;
   // The human is the actor under act-as, whichever channel the request arrived on.
   if (viaPrincipalUserId && actorType === TICKET_ACTIVITY_ACTOR.API) actorType = TICKET_ACTIVITY_ACTOR.USER;
+  // Service identities enter through the API boundary; interactive UI and
+  // inbound-email writes already know their actor kind and need no user lookup.
   if (
+    input.source === TICKET_ACTIVITY_SOURCE.API &&
     (actorType === TICKET_ACTIVITY_ACTOR.USER || actorType === TICKET_ACTIVITY_ACTOR.API) &&
     actor.userId &&
     !viaPrincipalUserId
@@ -187,7 +191,7 @@ export async function writeTicketActivity(
   const changes = isEmptyChanges(input.changes) ? {} : input.changes ?? {};
   const details = input.details ?? {};
 
-  await tenantScopedTable(knex, 'ticket_audit_logs', input.tenant).insert(withViaPrincipal(actor, {
+  await tenantScopedTable(knex, 'ticket_audit_logs', input.tenant).insert({
     tenant: input.tenant,
     audit_id: auditId,
     ticket_id: input.ticketId,
@@ -204,7 +208,8 @@ export async function writeTicketActivity(
     changes: JSON.stringify(changes),
     details: JSON.stringify(details),
     created_at: new Date().toISOString(),
-  }, 'via_principal_user_id'));
+    ...(viaPrincipalUserId ? { via_principal_user_id: viaPrincipalUserId } : {}),
+  });
 
   return auditId;
 }

@@ -32,6 +32,7 @@ const VIA_COLUMNS = [
 async function addNullableUuid(knex, table, column) {
   if (!(await knex.schema.hasTable(table))) return;
   if (await knex.schema.hasColumn(table, column)) return;
+  // migration-lint: allow UNRESOLVED — table and column come only from the literal VIA_COLUMNS list or agents; the operation adds a nullable UUID.
   await knex.schema.alterTable(table, (t) => {
     t.uuid(column).nullable();
   });
@@ -40,6 +41,7 @@ async function addNullableUuid(knex, table, column) {
 async function dropColumnIfPresent(knex, table, column) {
   if (!(await knex.schema.hasTable(table))) return;
   if (!(await knex.schema.hasColumn(table, column))) return;
+  // migration-lint: allow UNRESOLVED — rollback drops only this migration's nullable provenance columns, after its service-user safety guard.
   await knex.schema.alterTable(table, (t) => {
     t.dropColumn(column);
   });
@@ -70,7 +72,7 @@ exports.up = async function up(knex) {
   await addNullableUuid(knex, 'agents', 'service_user_id');
   if (await knex.schema.hasTable('agents')) {
     await knex.raw(
-      'CREATE INDEX IF NOT EXISTS agents_tenant_service_user_idx ON agents (tenant, service_user_id)'
+      'CREATE INDEX CONCURRENTLY IF NOT EXISTS agents_tenant_service_user_idx ON agents (tenant, service_user_id)'
     );
   }
 

@@ -31,6 +31,7 @@ exports.up = async function up(knex) {
         .where({ resource: RESOURCE, action: definition.action })
         .first(['permission_id']);
       if (!permission) {
+        // migration-lint: allow 8 — permissions are tenant-scoped here; insert only these four EE definitions for the current tenant and grant only its MSP Admin.
         const [inserted] = await knex('permissions')
           .insert({
             tenant,

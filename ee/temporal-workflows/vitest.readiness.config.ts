@@ -71,6 +71,7 @@ export default defineConfig({
       'src/workflows/__tests__/threecx-call-control-workflow.test.ts',
       'src/db/__tests__/product-bootstrap-resolver.test.ts',
       'src/db/__tests__/permission-catalog-packaging.test.ts',
+      'src/db/__tests__/tenantTableManifest.test.ts',
       'src/db/__tests__/product-upgrade-role-grants.contract.test.ts',
       'src/schedules/__tests__/**/*.test.ts',
       'src/scripts/__tests__/upgrade-tenant-product.test.ts',

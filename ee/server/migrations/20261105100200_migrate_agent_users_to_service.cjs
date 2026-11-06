@@ -1,7 +1,7 @@
 /**
  * Service principals (card C / F087, F088; PRD R9.2, R9.3, R9.4).
  *
- * Data migration, ordered after 20261018100000_create_service_principals_schema.
+ * Data migration, ordered after 20261105100000_create_service_principals_schema.
  * For every `agents` row whose backing user still exists:
  *   - users.user_type      -> 'service'
  *   - users.is_inactive    -> NOT agents.active   (fixes existing drift)
@@ -35,71 +35,68 @@ exports.up = async function up(knex) {
     return;
   }
 
-  // agents.tenant is varchar in the base MCP schema; users.tenant is uuid.
-  const agents = await knex('agents').select(
-    'agent_id',
-    'tenant',
-    'name',
-    'description',
-    'active',
-    'created_by',
-    'metadata',
-    'service_user_id'
-  );
-
   let converted = 0;
   let skipped = 0;
-  for (const agent of agents) {
-    const metadata =
-      typeof agent.metadata === 'string' ? safeParse(agent.metadata) : agent.metadata || {};
-    const userId = agent.service_user_id || metadata.backing_user_id;
-    if (!userId) {
-      log(`skip agent ${agent.agent_id} (tenant ${agent.tenant}): no backing user recorded`);
-      skipped += 1;
-      continue;
-    }
-
-    await knex.transaction(async (trx) => {
-      const alreadyMigrated = await trx('service_principals')
-        .where({ tenant: agent.tenant, user_id: userId })
-        .first('user_id');
-      if (alreadyMigrated) return;
-
-      const user = await trx('users').where({ tenant: agent.tenant, user_id: userId }).first('user_id', 'user_type');
-      if (!user) {
-        log(`skip agent ${agent.agent_id} (tenant ${agent.tenant}): backing user ${userId} is missing`);
+  let lastAgentId;
+  while (true) {
+    const query = knex('agents').select('agent_id', 'tenant', 'name', 'description', 'active', 'created_by', 'metadata', 'service_user_id')
+      .orderBy('agent_id').limit(500);
+    if (lastAgentId) query.where('agent_id', '>', lastAgentId);
+    const agents = await query;
+    if (agents.length === 0) break;
+    for (const agent of agents) {
+      const metadata =
+        typeof agent.metadata === 'string' ? safeParse(agent.metadata) : agent.metadata || {};
+      const userId = agent.service_user_id || metadata.backing_user_id;
+      if (!userId) {
+        log(`skip agent ${agent.agent_id} (tenant ${agent.tenant}): no backing user recorded`);
         skipped += 1;
-        return;
-      }
-      if (user.user_type !== 'internal' && user.user_type !== 'service') {
-        log(
-          `skip agent ${agent.agent_id} (tenant ${agent.tenant}): backing user ${userId} is '${user.user_type}', not internal`
-        );
-        skipped += 1;
-        return;
+        continue;
       }
 
-      await trx('users')
-        .where({ tenant: agent.tenant, user_id: userId })
-        .update({
-          user_type: 'service',
-          is_inactive: !agent.active,
-          first_name: agent.name,
+      await knex.transaction(async (trx) => {
+        const alreadyMigrated = await trx('service_principals')
+          .where({ tenant: agent.tenant, user_id: userId })
+          .first('user_id');
+        if (alreadyMigrated) return;
+
+        const user = await trx('users').where({ tenant: agent.tenant, user_id: userId }).first('user_id', 'user_type');
+        if (!user) {
+          log(`skip agent ${agent.agent_id} (tenant ${agent.tenant}): backing user ${userId} is missing`);
+          skipped += 1;
+          return;
+        }
+        if (user.user_type !== 'internal' && user.user_type !== 'service') {
+          log(
+            `skip agent ${agent.agent_id} (tenant ${agent.tenant}): backing user ${userId} is '${user.user_type}', not internal`
+          );
+          skipped += 1;
+          return;
+        }
+
+        await trx('users')
+          .where({ tenant: agent.tenant, user_id: userId })
+          .update({
+            user_type: 'service',
+            is_inactive: !agent.active,
+            first_name: agent.name,
+          });
+        await trx('agents')
+          .where({ tenant: agent.tenant, agent_id: agent.agent_id })
+          .update({ service_user_id: userId });
+        await trx('service_principals').insert({
+          tenant: agent.tenant,
+          user_id: userId,
+          kind: 'mcp_agent',
+          name: agent.name,
+          description: agent.description ?? null,
+          allow_act_as: false,
+          created_by: agent.created_by ?? null,
         });
-      await trx('agents')
-        .where({ tenant: agent.tenant, agent_id: agent.agent_id })
-        .update({ service_user_id: userId });
-      await trx('service_principals').insert({
-        tenant: agent.tenant,
-        user_id: userId,
-        kind: 'mcp_agent',
-        name: agent.name,
-        description: agent.description ?? null,
-        allow_act_as: false,
-        created_by: agent.created_by ?? null,
+        converted += 1;
       });
-      converted += 1;
-    });
+    }
+    lastAgentId = agents[agents.length - 1].agent_id;
   }
   log(`converted ${converted} agent user(s); skipped ${skipped}`);
 };

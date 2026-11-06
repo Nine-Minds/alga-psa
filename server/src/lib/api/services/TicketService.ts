@@ -3705,7 +3705,7 @@ export class TicketService extends BaseService<ITicket> {
           occurredAt,
           mergedReason: `bundle:${params.mode}`,
         });
-        if (!attached.ok) {
+        if (attached.ok === false) {
           this.throwBundleAttachFailure(attached, {
             masterIsChildMessage: 'Cannot select a child ticket as the master.',
           });
@@ -3751,7 +3751,7 @@ export class TicketService extends BaseService<ITicket> {
           occurredAt,
           mergedReason: 'bundle:added_children',
         });
-        if (!attached.ok) {
+        if (attached.ok === false) {
           this.throwBundleAttachFailure(attached, {
             masterIsChildMessage: 'Cannot add children to a bundled child ticket.',
           });
@@ -3865,7 +3865,7 @@ export class TicketService extends BaseService<ITicket> {
         source: TICKET_ACTIVITY_SOURCE.API,
         occurredAt,
       });
-      if (!changed.ok) {
+      if (changed.ok === false) {
         if (changed.code === 'settings_not_found') throw new NotFoundError('Bundle settings not found');
         this.throwBundleAttachFailure(changed);
       }

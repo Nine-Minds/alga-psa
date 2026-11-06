@@ -1,6 +1,6 @@
 import { getConnection } from '@alga-psa/db';
 import { servicePrincipalDb } from './tables';
-import { findUserByIdForApi } from '@alga-psa/users/actions';
+import { findUserByIdForApi } from '@alga-psa/users/actions/user-actions/findUserByIdForApi';
 import { getForKey } from 'server/src/lib/api/rateLimit/apiRateLimitSettingsModel';
 import { BoundaryError } from './errors';
 export { mapServicePrincipalError } from './errors';

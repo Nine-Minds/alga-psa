@@ -33,7 +33,7 @@ describe('TicketService.updateComment operator repair contract', () => {
     expect(body).toContain('context.user != null');
     // The RBAC gate is the established ticket update permission (the
     // `comment` RBAC resource is deprecated), checked in-transaction.
-    expect(body).toContain("hasPermission(context.user, 'ticket', 'update', trx)");
+    expect(body).toContain("hasApiContextPermission(context, 'ticket', 'update', trx)");
   });
 
   it('preserves existing metadata and appends an attributable operatorEdits audit record', () => {

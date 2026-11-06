@@ -9,6 +9,7 @@ import {
   tenantDeletionOrder,
   type TenantTableEntry,
 } from './tenantTableManifest';
+import { TENANT_TABLE_MANIFEST as ENTERPRISE_TENANT_TABLE_MANIFEST } from '../../../../ee/temporal-workflows/src/db/tenantTableManifest';
 import type { TenantTableForeignKey } from './tenantTableForeignKeys';
 
 const ACTIVITY = path.resolve(__dirname, '../../../../ee/temporal-workflows/src/activities/tenant-deletion-activities.ts');
@@ -23,16 +24,16 @@ function parseActivityLiteral(): string[] {
 describe('tenant table manifest golden order', () => {
   it('computed order equals the activity literal element for element, with zero violations', () => {
     const literal = parseActivityLiteral();
-    const computed = computeTenantDeletionOrder();
+    const computed = computeTenantDeletionOrder(ENTERPRISE_TENANT_TABLE_MANIFEST);
     expect(computed.violations).toEqual([]);
     expect(computed.order).toEqual(literal);
-    expect(tenantDeletionOrder()).toEqual(literal);
+    expect(tenantDeletionOrder(ENTERPRISE_TENANT_TABLE_MANIFEST)).toEqual(literal);
   });
 
-  it('has 594 unique ordered names', () => {
-    const order = tenantDeletionOrder();
-    expect(order).toHaveLength(594);
-    expect(new Set(order).size).toBe(594);
+  it('has 595 unique ordered names', () => {
+    const order = tenantDeletionOrder(ENTERPRISE_TENANT_TABLE_MANIFEST);
+    expect(order).toHaveLength(595);
+    expect(new Set(order).size).toBe(595);
   });
 
   it('declares the eight breakCircularDependencies FKs as null-before-delete', () => {

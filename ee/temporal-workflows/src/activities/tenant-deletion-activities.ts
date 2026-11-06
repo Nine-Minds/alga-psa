@@ -15,6 +15,7 @@ import { getAdminConnection, refreshAdminConnection } from '@alga-psa/db/admin.j
 import { getTenantTableScope, retryOnReadOnly, tenantDb, type TenantTableScope } from '@alga-psa/db';
 // Subpath import: the activity suites mock the '@alga-psa/db' barrel with a fixed export set.
 import { tenantDeletionOrder } from '@alga-psa/db/tenantTableManifest';
+import { TENANT_TABLE_MANIFEST } from '../db/tenantTableManifest.js';
 import { TagModel } from '@alga-psa/shared/models/tagModel.js';
 import { Knex } from 'knex';
 import { getSecret } from '@alga-psa/core/secrets';
@@ -56,6 +57,7 @@ export {
  * Synced from cli/cleanup-tenant.nu
  */
 export const TENANT_TABLES_DELETION_ORDER: string[] = [
+  'service_principals',
   'email_sender_routes',
   'email_sender_addresses',
   // rma_cases has a NO ACTION FK to asset_custody (rma_cases_custody_fk) plus FKs to clients/assets/
@@ -1819,7 +1821,7 @@ export async function deleteTenantData(
     // The loop runs the manifest order. The local binding keeps the established loop
     // shape that source-text contract tests assert; the exported literal above is the
     // golden copy `tenantTableManifest.golden.test.ts` compares against.
-    const TENANT_TABLES_DELETION_ORDER = tenantDeletionOrder();
+    const TENANT_TABLES_DELETION_ORDER = tenantDeletionOrder(TENANT_TABLE_MANIFEST);
     for (const tableName of TENANT_TABLES_DELETION_ORDER) {
       try {
         const tableBoundary = await resolveTenantDeletionTableBoundary(

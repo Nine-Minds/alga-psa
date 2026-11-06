@@ -8,7 +8,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
 import { rmSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import path from 'node:path';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
@@ -16,7 +15,6 @@ import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../../../server/test-utils/dbConfig';
 import { buildMergedEeMigrationsDir } from '../../../../../server/test-utils/eeMigrations';
 
-const require = createRequire(import.meta.url);
 const onboarding = path.resolve(__dirname, '../../../seeds/onboarding/psa');
 const ACTIONS = ['create', 'delete', 'read', 'update'];
 
@@ -33,7 +31,7 @@ async function provisionTenant(product: string): Promise<string> {
   });
   // The seeds Temporal runs for a new tenant, in order.
   for (const seed of ['01_roles.cjs', '02_permissions.cjs', '03_role_permissions.cjs']) {
-    await require(path.join(onboarding, seed)).seed(db, tenant);
+    await (await import(/* @vite-ignore */ path.join(onboarding, seed))).seed(db, tenant);
   }
   return tenant;
 }
@@ -80,7 +78,7 @@ describe('a freshly provisioned tenant', () => {
   it('is idempotent when the seeds replay', async () => {
     const tenant = await provisionTenant('psa');
     for (const seed of ['02_permissions.cjs', '03_role_permissions.cjs']) {
-      await require(path.join(onboarding, seed)).seed(db, tenant);
+      await (await import(/* @vite-ignore */ path.join(onboarding, seed))).seed(db, tenant);
     }
     expect(await grantedTo(tenant, 'Admin')).toEqual(ACTIONS);
   });

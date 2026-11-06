@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@alga-psa/agent-tooling', async (importOriginal) => ({
-  ...await importOriginal<typeof import('@alga-psa/agent-tooling')>(),
+  ...await importOriginal() as typeof import('@alga-psa/agent-tooling'),
   runRegistrySearch: vi.fn(),
   buildRequest: vi.fn(),
   buildMetaToolDefinitions: vi.fn(() => []),
