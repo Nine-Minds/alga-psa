@@ -71,7 +71,7 @@ import {
 } from '@alga-psa/shared/services/assets/maintenanceLifecycle';
 import { advanceMaintenanceDate, parseCustomRecurrence } from '../lib/maintenanceRecurrence';
 import { orderEntityAssetIds, type EntityAssociationRow } from '../lib/entityAssetOrder';
-import { applyAssetListFilters, applyAssetTypeFilter, joinAssetListRelations } from '../lib/assetListFilters';
+import { applyAssetListFilters, applyAssetTypeFilter, joinAssetListRelations, selectedAssetTypes } from '../lib/assetListFilters';
 import { localizeActionError, withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { resolveEffectiveTimeZone } from '@alga-psa/db';
@@ -2321,9 +2321,10 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 && (rule.templateKey === 'own' || rule.templateKey === 'own_or_assigned' || rule.templateKey === 'own_or_managed')
             );
             // Restricted users must authorize every matching type before counting.
+            const assetTypeFilter = selectedAssetTypes(validatedParams);
             const listQuery = requiresRecordAuthorization
                 ? facetQuery.clone()
-                : applyAssetTypeFilter(facetQuery.clone(), validatedParams.asset_type);
+                : applyAssetTypeFilter(facetQuery.clone(), assetTypeFilter);
             const assetTypeCounts = new Map<string, number>();
 
             if (!requiresRecordAuthorization) {
@@ -2377,7 +2378,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                     if (requiresRecordAuthorization) {
                         const assetType = asset.asset_type ?? 'unknown';
                         assetTypeCounts.set(assetType, (assetTypeCounts.get(assetType) ?? 0) + 1);
-                        return !validatedParams.asset_type || asset.asset_type === validatedParams.asset_type;
+                        return assetTypeFilter.length === 0 || assetTypeFilter.includes(asset.asset_type);
                     }
                     return true;
                 },

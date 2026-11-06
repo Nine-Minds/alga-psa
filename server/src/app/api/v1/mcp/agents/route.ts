@@ -5,6 +5,7 @@
 import { editionGateResponse } from '@/lib/editionGating/response';
 import { NextRequest, NextResponse } from 'next/server';
 import { isEnterpriseEdition } from '@/lib/features';
+import { withServiceErrorMapping } from '@/lib/api/utils/mapServiceError';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -32,10 +33,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   };
   if (!body.name) return NextResponse.json({ error: '"name" is required' }, { status: 400 });
 
-  try {
+  return withServiceErrorMapping(async () => {
     const agent = await createAgent({
       tenant: admin.tenant,
-      name: body.name,
+      name: body.name!,
       description: body.description,
       idpIssuer: body.idpIssuer,
       idpSubject: body.idpSubject,
@@ -43,13 +44,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       createdBy: admin.userId ?? undefined,
     });
     return NextResponse.json({ data: agent }, { status: 201 });
-  } catch (e) {
-    // Duplicate (issuer, subject) binding -> 409 with the friendly message.
-    if (e instanceof Error && e.name === 'AgentBindingConflictError') {
-      return NextResponse.json({ error: e.message }, { status: 409 });
-    }
-    throw e;
-  }
+  });
 }
 
 // Toggle an agent's active flag (the reversible soft-disable).
@@ -63,8 +58,11 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
   if (!body.agentId || typeof body.active !== 'boolean') {
     return NextResponse.json({ error: '"agentId" and a boolean "active" are required.' }, { status: 400 });
   }
-  await setAgentActive(admin.tenant, body.agentId, body.active);
-  return NextResponse.json({ ok: true });
+  const { agentId, active } = body;
+  return withServiceErrorMapping(async () => {
+    await setAgentActive(admin.tenant, agentId, active);
+    return NextResponse.json({ ok: true });
+  });
 }
 
 // Permanently remove an agent (irreversible — tears down roles, audit, backing user).
@@ -76,6 +74,8 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
 
   const agentId = req.nextUrl.searchParams.get('agentId');
   if (!agentId) return NextResponse.json({ error: '"agentId" is required.' }, { status: 400 });
-  await deleteAgent(admin.tenant, agentId);
-  return NextResponse.json({ ok: true });
+  return withServiceErrorMapping(async () => {
+    await deleteAgent(admin.tenant, agentId);
+    return NextResponse.json({ ok: true });
+  });
 }

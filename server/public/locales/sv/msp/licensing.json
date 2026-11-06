@@ -364,6 +364,21 @@
     "accountManagementRead": "Åtkomst nekad: läsbehörighet för account_management krävs"
   },
   "coManaged": {
+    "portableExport": {
+      "title": "Exportera arbetsyta",
+      "description": "Ladda ned ett krypterat, portabelt arkiv med arbetsytans poster och filer.",
+      "recovery": "Förvara återställningslösenfrasen på ett säkert ställe. Utan den går arkivet inte att öppna.",
+      "connections": "Arkivet innehåller arbetsytans poster och de filer som lagras i arbetsytan. Dokumentposter och -kopplingar samt historik för tid, schema, möten och konversationer ingår ännu inte och kommer i en senare version. Faktureringsdata, MSP-privata data och integrationshemligheter ingår inte.",
+      "passphrase": "Återställningslösenfras",
+      "confirmPassphrase": "Bekräfta återställningslösenfras",
+      "download": "Förbered och ladda ned arkiv",
+      "requested": "Din begäran öppnas i en ny flik. Förberedelsen kan ta några minuter; webbläsaren laddar ned filen när den är klar.",
+      "loadError": "Du kan inte exportera den här arbetsytan med din nuvarande behörighet.",
+      "lengthError": "Använd en lösenfras på mellan 16 och 1024 UTF-8-byte.",
+      "matchError": "Återställningslösenfraserna måste matcha.",
+      "unavailable": "Export av arbetsytor är inte tillgängligt i den här utgåvan.",
+      "loading": "Läser in…"
+    },
     "acceptance": {
       "accept": "Godkänn och aktivera arbetsytan",
       "administratorRequired": "En lokal administratör för arbetsytan måste godkänna relationen innan ert team kan komma igång.",
@@ -436,7 +451,8 @@
       "workspace": "Arbetsyta",
       "capacity": "{{allocated}} av {{count}} samhanterade platser tilldelade.",
       "openClient": "Konfigurera samhanterad IT för den här kunden",
-      "readOnly": "Samhanterad IT är skrivskyddad för den här arbetsytan. Befintliga relationer visas; ny konfiguration är inte tillgänglig."
+      "readOnly": "Samhanterad IT är skrivskyddad för den här arbetsytan. Befintliga relationer visas; ny konfiguration är inte tillgänglig.",
+      "slaPriorities": "SLA-prioritetsmappningar"
     },
     "provisioning": {
       "administrator": "Administratör",
@@ -674,7 +690,8 @@
       "viewer": "Läsare",
       "viewOnly": "Endast visning",
       "visibility": "Ärendesynlighet",
-      "whyTitle": "Varför kan någon inte se detta?"
+      "whyTitle": "Varför kan någon inte se detta?",
+      "readOnly": "Du kan se den här konfigurationen men inte ändra den."
     },
     "sharedTasks": {
       "link": "Delade uppgifter",
@@ -730,116 +747,16 @@
       "reloadLatest": "Läs in senaste versionen",
       "rejected": "Det gick inte att spara uppgiften.",
       "saved": "Sparat.",
-      "save": "Spara"
+      "save": "Spara",
+      "projectNotFound": "Det här projektet är inte tillgängligt. Det kanske inte längre delas med dig."
     },
-    "attachments": {
-      "title": "Bilagor",
-      "add": "Bifoga fil",
-      "choose": "Välj fil",
-      "help": "Filer ärver meddelandets målgrupp. Högst {{size}} MiB.",
-      "uploading": "Laddar upp…",
-      "upload": "Ladda upp",
-      "invalid": "Välj en tillåten fil inom storleksgränsen.",
-      "loadError": "Bilagor är inte tillgängliga. Uppdatera för att kontrollera din åtkomst.",
-      "unknownOutcome": "Vi kunde inte bekräfta uppladdningen. Försök igen för att kontrollera samma fil.",
-      "remove": "Ta bort",
-      "removeTitle": "Ta bort bilaga",
-      "removeHelp": "Ta bort {{name}} från det här meddelandet? De som visar meddelandet kommer inte längre att kunna ladda ner filen.",
-      "removeUnknownOutcome": "Vi kunde inte bekräfta borttagningen. Försök igen för att kontrollera samma fil.",
-      "removing": "Tar bort…",
-      "removeNamed": "Ta bort {{name}}"
-    },
-    "disclosure": {
-      "title": "Ändra trådens målgrupp",
-      "review": "Granska igen",
-      "confirm": "Bekräfta ändrad målgrupp",
-      "scope": "Detta ändrar målgruppen för hela tråden: {{comments}} meddelanden och {{attachments}} bilagor.",
-      "current": "Nuvarande målgrupp: {{audience}}",
-      "help": "Svar och bilagor ärver den här målgruppen. Begränsad åtkomst kan inte ta tillbaka information som redan har lästs eller laddats ner.",
-      "pending": "En bilaga laddas fortfarande upp. Slutför uppladdningen innan du ändrar målgruppen.",
-      "unknownOutcome": "Resultatet är okänt. Försök igen för att kontrollera samma målgruppsändring.",
-      "transferHelp": "Delning överför den här tråden och dess bilagor till kundens arbetsyta. Den ursprungliga MSP-privata tråden sparas som skrivskyddad historik.",
-      "open": "Ändra vem som kan se den här tråden"
-    },
-    "conversation": {
-      "audience": "Synligt för",
-      "audiences": {
-        "requester": "Anmälare och IT-team",
-        "shared_it": "Delade IT-team",
-        "organization_private": "Endast min organisation"
-      },
-      "audienceHelp": {
-        "requester": "Synligt för behöriga anmälare och IT-personal i båda organisationerna.",
-        "shared_it": "Synligt för behörig IT-personal i båda organisationerna, utan åtkomst för anmälare.",
-        "organization_private": "Synligt endast för behörig personal i din organisation."
-      },
-      "drafts": {
-        "title": "Ej skickade meddelanden",
-        "help": "Dessa meddelanden påbörjades men skickades inte. Granska ett, välj saknade filer igen och skicka eller kassera det.",
-        "fileReady": "Uppladdad",
-        "fileMissing": "Måste väljas igen",
-        "choose": "Välj de saknade filerna",
-        "resume": "Skicka",
-        "discard": "Kassera",
-        "missing": "Välj varje saknad fil med samma namn innan du skickar.",
-        "unsent": "Vi kunde inte bekräfta att ditt meddelande och dina filer skickades. De är sparade och visas under ”Ej skickade meddelanden” – återuppta eller kasta dem där."
-      },
-      "files": {
-        "choose": "Bifoga filer",
-        "help": "Upp till {{count}} filer, {{size}} MiB vardera. Filer delas med meddelandets målgrupp.",
-        "remove": "Ta bort",
-        "removeNamed": "Ta bort {{name}}",
-        "invalid": "Ta bort filer som överskrider storleksgränsen eller antalsgränsen innan du skickar.",
-        "preparing": "Förbereder filer…",
-        "uploading": "Har laddat upp {{completed}} av {{total}} filer…",
-        "publishing": "Publicerar meddelande och filer…",
-        "notReady": "Vissa filer är inte klara. Försök igen för att slutföra uppladdningen och skicka samma meddelande.",
-        "preparationFailed": "Det gick inte att läsa de valda filerna. Välj dem igen eller ta bort dem innan du försöker igen.",
-        "abandoned": "Utkastet har kastats. Spara igen för att skapa ett nytt meddelande med de valda filerna.",
-        "audienceUnavailable": "Filer kan inte bifogas till meddelanden för den här målgruppen. Ta bort filerna eller välj en annan målgrupp.",
-        "cancelUnknownOutcome": "Det gick inte att bekräfta avbrytandet. Försök igen för att kontrollera samma avbrytandebegäran.",
-        "canceling": "Avbryter…"
-      },
-      "title": "Konversation",
-      "reload": "Läs in igen",
-      "loadError": "Konversationen kunde inte läsas in.",
-      "readOnly": "Du kan läsa den här konversationen men inte lägga till något.",
-      "new": "Ny kommentar",
-      "empty": "Inga kommentarer ännu.",
-      "restrictedAuthor": "Författare dold",
-      "replyMarker": "Svar",
-      "deleted": "Den här kommentaren har tagits bort.",
-      "reply": "Svara",
-      "edit": "Redigera",
-      "delete": "Ta bort",
-      "newer": "Nyare",
-      "older": "Äldre",
-      "message": "Meddelande",
-      "deleteHelp": "Kommentaren ersätts med en borttagningsmarkering. Svar finns kvar i tråden.",
-      "conflict": "Den här kommentaren har ändrats sedan du öppnade den. Avbryt och läs in igen för att fortsätta.",
-      "unknownOutcome": "Vi kunde inte bekräfta att det sparades. Försök igen; det tillämpas inte två gånger.",
-      "invalid": "Den här kommentaren kunde inte sparas.",
-      "send": "Skicka",
-      "cancel": "Avbryt"
-    },
-    "ticket": {
-      "cancel": "Avbryt",
-      "loading": "Läser in…",
-      "reload": "Ladda om aktuellt tillstånd",
-      "retry": "Försök igen",
-      "saving": "Sparar…"
-    },
-    "editor": {
-      "errors": {
-        "invalid": "Vissa värden är ogiltiga. Kontrollera dina ändringar och försök igen.",
-        "conflict": "Ärendet har ändrats. Ladda om det innan du sparar dina ändringar.",
-        "operationConflict": "Den här sparbegäran har redan använts för en annan ändring. Ladda om ärendet.",
-        "forbidden": "Din åtkomst till ärendet har ändrats. Ladda om för att fortsätta.",
-        "readOnly": "Den här arbetsytan är skrivskyddad. Ladda om för att se aktuellt tillstånd.",
-        "closeRules": "Ärendet måste uppfylla tavlans stängningskrav innan det kan stängas.",
-        "unknownOutcome": "Det gick inte att bekräfta om ändringen sparades. Försök spara igen, eller kasta ändringarna och ladda om.",
-        "slaSetupRequired": "Din MSP måste konfigurera sin SLA-policy och prioritetsmappning innan ärendet kan öppnas igen under MSP-ansvar."
-      }
+    "sla": {
+      "title": "SLA-prioriteringar vid samförvaltning",
+      "description": "Välj vilken av dina prioriteringar, och därmed vilket av dina SLA-mål, som gäller när en kund eskalerar ett ärende med respektive prioritet.",
+      "missingPolicy": "Ingen SLA-policy är konfigurerad",
+      "settings": "Hantera SLA-policyer",
+      "mappingFor": "Kundprioritet {{name}} motsvarar",
+      "unmapped": "Inte kopplad"
     },
     "portableExport": {
       "title": "Exportera arbetsyta",
@@ -1010,6 +927,96 @@
         "unknownOutcome": "Det gick inte att bekräfta om ändringen sparades. Försök spara igen, eller kasta ändringarna och ladda om.",
         "slaSetupRequired": "Din MSP måste konfigurera sin SLA-policy och prioritetsmappning innan ärendet kan öppnas igen under MSP-ansvar."
       }
+    },
+    "attachments": {
+      "title": "Bilagor",
+      "add": "Bifoga fil",
+      "choose": "Välj fil",
+      "help": "Filer ärver meddelandets målgrupp. Högst {{size}} MiB.",
+      "uploading": "Laddar upp…",
+      "upload": "Ladda upp",
+      "invalid": "Välj en tillåten fil inom storleksgränsen.",
+      "loadError": "Bilagor är inte tillgängliga. Uppdatera för att kontrollera din åtkomst.",
+      "unknownOutcome": "Vi kunde inte bekräfta uppladdningen. Försök igen för att kontrollera samma fil.",
+      "remove": "Ta bort",
+      "removeTitle": "Ta bort bilaga",
+      "removeHelp": "Ta bort {{name}} från det här meddelandet? De som visar meddelandet kommer inte längre att kunna ladda ner filen.",
+      "removeUnknownOutcome": "Vi kunde inte bekräfta borttagningen. Försök igen för att kontrollera samma fil.",
+      "removing": "Tar bort…",
+      "removeNamed": "Ta bort {{name}}"
+    },
+    "disclosure": {
+      "title": "Ändra trådens målgrupp",
+      "review": "Granska igen",
+      "confirm": "Bekräfta ändrad målgrupp",
+      "scope": "Detta ändrar målgruppen för hela tråden: {{comments}} meddelanden och {{attachments}} bilagor.",
+      "current": "Nuvarande målgrupp: {{audience}}",
+      "help": "Svar och bilagor ärver den här målgruppen. Begränsad åtkomst kan inte ta tillbaka information som redan har lästs eller laddats ner.",
+      "pending": "En bilaga laddas fortfarande upp. Slutför uppladdningen innan du ändrar målgruppen.",
+      "unknownOutcome": "Resultatet är okänt. Försök igen för att kontrollera samma målgruppsändring.",
+      "transferHelp": "Delning överför den här tråden och dess bilagor till kundens arbetsyta. Den ursprungliga MSP-privata tråden sparas som skrivskyddad historik.",
+      "open": "Ändra vem som kan se den här tråden"
+    },
+    "conversation": {
+      "audience": "Synligt för",
+      "audiences": {
+        "requester": "Anmälare och IT-team",
+        "shared_it": "Delade IT-team",
+        "organization_private": "Endast min organisation"
+      },
+      "audienceHelp": {
+        "requester": "Synligt för behöriga anmälare och IT-personal i båda organisationerna.",
+        "shared_it": "Synligt för behörig IT-personal i båda organisationerna, utan åtkomst för anmälare.",
+        "organization_private": "Synligt endast för behörig personal i din organisation."
+      },
+      "drafts": {
+        "title": "Ej skickade meddelanden",
+        "help": "Dessa meddelanden påbörjades men skickades inte. Granska ett, välj saknade filer igen och skicka eller kassera det.",
+        "fileReady": "Uppladdad",
+        "fileMissing": "Måste väljas igen",
+        "choose": "Välj de saknade filerna",
+        "resume": "Skicka",
+        "discard": "Kassera",
+        "missing": "Välj varje saknad fil med samma namn innan du skickar.",
+        "unsent": "Vi kunde inte bekräfta att ditt meddelande och dina filer skickades. De är sparade och visas under ”Ej skickade meddelanden” – återuppta eller kasta dem där."
+      },
+      "files": {
+        "choose": "Bifoga filer",
+        "help": "Upp till {{count}} filer, {{size}} MiB vardera. Filer delas med meddelandets målgrupp.",
+        "remove": "Ta bort",
+        "removeNamed": "Ta bort {{name}}",
+        "invalid": "Ta bort filer som överskrider storleksgränsen eller antalsgränsen innan du skickar.",
+        "preparing": "Förbereder filer…",
+        "uploading": "Har laddat upp {{completed}} av {{total}} filer…",
+        "publishing": "Publicerar meddelande och filer…",
+        "notReady": "Vissa filer är inte klara. Försök igen för att slutföra uppladdningen och skicka samma meddelande.",
+        "preparationFailed": "Det gick inte att läsa de valda filerna. Välj dem igen eller ta bort dem innan du försöker igen.",
+        "abandoned": "Utkastet har kastats. Spara igen för att skapa ett nytt meddelande med de valda filerna.",
+        "audienceUnavailable": "Filer kan inte bifogas till meddelanden för den här målgruppen. Ta bort filerna eller välj en annan målgrupp.",
+        "cancelUnknownOutcome": "Det gick inte att bekräfta avbrytandet. Försök igen för att kontrollera samma avbrytandebegäran.",
+        "canceling": "Avbryter…"
+      },
+      "title": "Konversation",
+      "reload": "Läs in igen",
+      "loadError": "Konversationen kunde inte läsas in.",
+      "readOnly": "Du kan läsa den här konversationen men inte lägga till något.",
+      "new": "Ny kommentar",
+      "empty": "Inga kommentarer ännu.",
+      "restrictedAuthor": "Författare dold",
+      "replyMarker": "Svar",
+      "deleted": "Den här kommentaren har tagits bort.",
+      "reply": "Svara",
+      "edit": "Redigera",
+      "delete": "Ta bort",
+      "newer": "Nyare",
+      "older": "Äldre",
+      "message": "Meddelande",
+      "deleteHelp": "Kommentaren ersätts med en borttagningsmarkering. Svar finns kvar i tråden.",
+      "conflict": "Den här kommentaren har ändrats sedan du öppnade den. Avbryt och läs in igen för att fortsätta.",
+      "unknownOutcome": "Vi kunde inte bekräfta att det sparades. Försök igen; det tillämpas inte två gånger.",
+      "invalid": "Den här kommentaren kunde inte sparas.",
+      "send": "Skicka",
+      "cancel": "Avbryt"
     }
   },
   "common": {

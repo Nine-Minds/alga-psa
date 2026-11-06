@@ -250,8 +250,10 @@ it('generates immutable ticket presentation from approved source records', async
     expect(adjusted.invoice_id, JSON.stringify(adjusted)).toBe(result.invoice_id);
     const adjustedVm = mapDbInvoiceToWasmViewModel(adjusted)!;
     expect(adjustedVm.subtotal).toBe(86000);
-    expect(adjustedVm.tax).toBe(8750);
-    expect(adjustedVm.total).toBe(94750);
+    // Discounts lower the taxable base before tax: the -1000 line discount and
+    // -500 negative credit take 87500 down to 86000, so tax is 10% of 86000.
+    expect(adjustedVm.tax).toBe(8600);
+    expect(adjustedVm.total).toBe(94600);
     expect(Number(adjusted.credit_applied)).toBe(2500);
     const adjustmentCharges = await db('invoice_charges').where({ tenant, invoice_id: result.invoice_id });
     for (const charge of adjustmentCharges) {

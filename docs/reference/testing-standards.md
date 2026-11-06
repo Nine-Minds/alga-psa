@@ -964,10 +964,14 @@ same committed file, so the partitions the merge verifies are the ones the
 shards took; without the file the split falls back to the sorted modulo slice.
 The sorted modulo split put 11.0 / 10.1 / 5.6 / 9.6 minutes of test time on
 the four shards of main run 41983121491; the balanced split puts 9.1 on each.
-Refresh the file whenever the shards drift apart again, and commit it:
+The integration lane's four shards balance the same way from
+`scripts/integration-durations.json`, read by the tier-1 runner and by the
+integration gate. Refresh a lane's file whenever its shards drift apart again,
+and commit it:
 
 ```bash
-node scripts/update-server-unit-durations.mjs   # GITHUB_TOKEN or a logged-in gh
+node scripts/update-shard-durations.mjs server-unit   # GITHUB_TOKEN or a logged-in gh
+node scripts/update-shard-durations.mjs integration
 ```
 
 Both the shards and the merge step run coverage through

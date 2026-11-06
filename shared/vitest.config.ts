@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { defineConfig } from 'vitest/config';
+import { exportedSourceAliases } from '../scripts/lib/vitest-exported-source-aliases.mjs';
 
 export default defineConfig({
   test: {
@@ -9,9 +10,9 @@ export default defineConfig({
   resolve: {
     alias: [
       { find: /^@alga-psa\/db$/, replacement: path.resolve(__dirname, '../packages/db/src/index.ts') },
-      { find: /^@alga-psa\/db\/writeAdmission$/, replacement: path.resolve(__dirname, '../packages/db/src/writeAdmission.ts') },
-      { find: /^@alga-psa\/db\/tenantDb$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/tenantDb.ts') },
-      { find: /^@alga-psa\/db\/commentEventRegistry$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/commentEventRegistry.ts') },
+      // Published subpaths need not mirror src/: tenantDb lives in src/lib,
+      // while writeAdmission lives in src. Keep worker tests aligned with exports.
+      ...exportedSourceAliases('@alga-psa/db', path.resolve(__dirname, '../packages/db')),
       { find: /^@alga-psa\/storage$/, replacement: path.resolve(__dirname, '../packages/storage/src/index.ts') },
       { find: /^@alga-psa\/storage\/(.*)$/, replacement: path.resolve(__dirname, '../packages/storage/src/$1') },
       { find: /^@alga-psa\/types$/, replacement: path.resolve(__dirname, '../packages/types/src/index.ts') },
@@ -40,22 +41,6 @@ export default defineConfig({
       { find: /^@alga-psa\/tickets\/(.*)$/, replacement: path.resolve(__dirname, '../packages/tickets/src/$1') },
       { find: /^@alga-psa\/shared$/, replacement: path.resolve(__dirname, './index.ts') },
       { find: /^@alga-psa\/shared\/(.*)$/, replacement: path.resolve(__dirname, './$1') },
-      {
-        find: /^@alga-psa\/db\/admin$/,
-        replacement: path.resolve(__dirname, '../packages/db/src/lib/admin.ts'),
-      },
-      {
-        find: /^@alga-psa\/db\/tenant$/,
-        replacement: path.resolve(__dirname, '../packages/db/src/lib/tenant.ts'),
-      },
-      {
-        find: /^@alga-psa\/db\/connection$/,
-        replacement: path.resolve(__dirname, '../packages/db/src/lib/connection.ts'),
-      },
-      {
-        find: /^@alga-psa\/db\/workDate$/,
-        replacement: path.resolve(__dirname, '../packages/db/src/lib/workDate.ts'),
-      },
       {
         find: /^@alga-psa\/db\/(.*)$/,
         replacement: path.resolve(__dirname, '../packages/db/src/$1'),
