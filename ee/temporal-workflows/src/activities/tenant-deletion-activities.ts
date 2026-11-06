@@ -672,8 +672,8 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'tax_regions',
 ];
 
-// The manifest (packages/db tenantTableManifest) owns membership and order; the array above is its
-// golden projection, asserted element-for-element by tenantTableManifest.golden.test.ts.
+// The composed manifest (db/tenantTableManifest) owns membership and order; the array above is its
+// golden projection, asserted element-for-element by db/__tests__/tenantTableManifest.test.ts.
 const TENANT_TABLES_DELETION_SET = new Set(tenantDeletionOrder());
 const MANAGEMENT_TENANT_DISCOVERY_CONTEXT = '__tenant_deletion_management_tenant_discovery__';
 
@@ -1826,7 +1826,7 @@ export async function deleteTenantData(
     // Step 2: Delete from each table in order
     // The loop runs the manifest order. The local binding keeps the established loop
     // shape that source-text contract tests assert; the exported literal above is the
-    // golden copy `tenantTableManifest.golden.test.ts` compares against.
+    // golden copy `db/__tests__/tenantTableManifest.test.ts` compares against.
     const TENANT_TABLES_DELETION_ORDER = tenantDeletionOrder(TENANT_TABLE_MANIFEST);
     for (const tableName of TENANT_TABLES_DELETION_ORDER) {
       try {
