@@ -10,7 +10,11 @@ import type {
 } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { parseCalendarDateTime } from '@alga-psa/core';
-import { convertRecurrenceLinesToPattern, convertRecurrencePatternToRRULE } from './recurrenceConverter';
+import {
+  convertRecurrenceLinesToPattern,
+  convertRecurrencePatternToRRULE,
+  isUnsupportedRecurrence,
+} from './recurrenceConverter';
 
 export async function mapScheduleEntryToExternalEvent(
   entry: IScheduleEntry,
@@ -325,9 +329,9 @@ export async function mapExternalEventToScheduleEntry(
         startDate,
         event.recurrenceTimeZone || event.start.timeZone || event.originalStartTime?.timeZone
       );
-      if (conversion && !conversion.unsupported) {
+      if (conversion && !isUnsupportedRecurrence(conversion)) {
         recurrencePattern = conversion.pattern;
-      } else if (conversion?.unsupported) {
+      } else if (conversion && isUnsupportedRecurrence(conversion)) {
         console.warn('[eventMapping] Unsupported recurrence rule; importing without a pattern', {
           eventId: event.id,
           reason: conversion.reason,

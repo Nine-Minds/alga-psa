@@ -343,7 +343,7 @@ export function convertRRULEToRecurrencePattern(
   timeZone?: string
 ): IRecurrencePattern | null {
   const conversion = convertRecurrenceLinesToPattern(rrule, startDate, timeZone);
-  if (!conversion || conversion.unsupported) {
+  if (!conversion || isUnsupportedRecurrence(conversion)) {
     return null;
   }
   return conversion.pattern;

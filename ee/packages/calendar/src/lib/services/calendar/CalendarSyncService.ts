@@ -478,7 +478,7 @@ export class CalendarSyncService {
           knex,
           force,
         });
-        if (outcome.handled) {
+        if (outcome.handled === true) {
           if (outcome.result.success) {
             await this.markProviderConnected(provider.id, adapter);
           }
