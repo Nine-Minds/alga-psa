@@ -83,11 +83,63 @@ import { createApiResponse, createErrorResponse, createPaginatedResponse } from 
 import { getHateoasLinks } from '../utils/hateoas';
 import { requireRequestContext } from '../utils/requestContext';
 
+/** Reads a repeatable, comma-separated id list from the query string. */
+function idListParam(params: URLSearchParams, name: string): string[] | null {
+  const values = params
+    .getAll(name)
+    .flatMap((value) => value.split(','))
+    .map((value) => value.trim())
+    .filter(Boolean);
+  return values.length > 0 ? values : null;
+}
+
 export class ApiContractLineController {
   private contractLineService: ContractLineService;
 
   constructor() {
     this.contractLineService = new ContractLineService();
+  }
+
+  /**
+   * Reads a bulk-operation body without letting a missing one become a 500:
+   * `req.json()` throws a SyntaxError on an empty body, and plenty of clients
+   * (our own agent tooling included) never send a body on DELETE. A bodyless
+   * DELETE may instead carry the ids in the query string.
+   */
+  private async readBulkBody(
+    req: NextRequest,
+    expectedBody: string,
+    fromQuery: (params: URLSearchParams) => Record<string, unknown> | null
+  ): Promise<{ data: unknown } | { error: NextResponse }> {
+    let raw = '';
+    try {
+      raw = await req.text();
+    } catch {
+      raw = '';
+    }
+
+    if (raw.trim() !== '') {
+      try {
+        return { data: JSON.parse(raw) };
+      } catch {
+        return { error: createErrorResponse('Request body must be valid JSON', 400, 'VALIDATION_ERROR') };
+      }
+    }
+
+    if (req.method === 'DELETE') {
+      const fromQueryString = fromQuery(new URL(req.url).searchParams);
+      if (fromQueryString) {
+        return { data: fromQueryString };
+      }
+    }
+
+    return {
+      error: createErrorResponse(
+        `Request body is required: ${expectedBody}`,
+        400,
+        'VALIDATION_ERROR'
+      )
+    };
   }
 
   /**
@@ -695,15 +747,25 @@ export class ApiContractLineController {
   }
 
   /**
-   * DELETE /api/v2/contract-lines/bulk/delete - Bulk delete plans
+   * DELETE|POST /api/v2/contract-lines/bulk/delete - Bulk delete plans
    */
   bulkDeletePlans() {
     return async (req: NextRequest): Promise<NextResponse> => {
-      const data = await req.json();
+      const body = await this.readBulkBody(
+        req,
+        '{ "contract_line_ids": ["<uuid>", ...] } (a DELETE may instead pass ?contract_line_ids=<uuid>,<uuid>)',
+        (params) => {
+          const ids = idListParam(params, 'contract_line_ids') ?? idListParam(params, 'contract_line_id');
+          return ids ? { contract_line_ids: ids } : null;
+        }
+      );
+      if ('error' in body) {
+        return body.error;
+      }
       const context = requireRequestContext(req);
-      
+
       // Validate request body
-      const validation = bulkDeleteContractLinesSchema.safeParse(data);
+      const validation = bulkDeleteContractLinesSchema.safeParse(body.data);
       if (!validation.success) {
         return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
       }
@@ -746,15 +808,28 @@ export class ApiContractLineController {
   }
 
   /**
-   * DELETE /api/v2/contract-lines/bulk/remove-services - Bulk remove services from plan
+   * DELETE|POST /api/v2/contract-lines/bulk/remove-services - Bulk remove services from plan
    */
   bulkRemoveServicesFromPlan() {
     return async (req: NextRequest): Promise<NextResponse> => {
-      const data = await req.json();
+      const body = await this.readBulkBody(
+        req,
+        '{ "contract_line_id": "<uuid>", "service_ids": ["<uuid>", ...] } (a DELETE may instead pass ?contract_line_id=<uuid>&service_ids=<uuid>,<uuid>)',
+        (params) => {
+          const contractLineId = params.get('contract_line_id')?.trim();
+          const serviceIds = idListParam(params, 'service_ids') ?? idListParam(params, 'service_id');
+          return contractLineId && serviceIds
+            ? { contract_line_id: contractLineId, service_ids: serviceIds }
+            : null;
+        }
+      );
+      if ('error' in body) {
+        return body.error;
+      }
       const context = requireRequestContext(req);
-      
+
       // Validate request body
-      const validation = bulkRemoveServicesFromPlanSchema.safeParse(data);
+      const validation = bulkRemoveServicesFromPlanSchema.safeParse(body.data);
       if (!validation.success) {
         return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
       }
