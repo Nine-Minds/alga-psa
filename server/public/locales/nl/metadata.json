@@ -553,6 +553,9 @@
       },
       "export": {
         "title": "Werkruimte exporteren"
+      },
+      "upgrade": {
+        "title": "Overstappen naar AlgaPSA"
       }
     }
   },

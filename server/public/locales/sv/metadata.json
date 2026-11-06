@@ -635,6 +635,9 @@
       },
       "export": {
         "title": "Exportera arbetsyta"
+      },
+      "upgrade": {
+        "title": "Byt till AlgaPSA"
       }
     }
   },
