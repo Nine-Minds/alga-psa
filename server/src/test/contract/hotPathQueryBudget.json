@@ -65,7 +65,7 @@
     },
     {
       "name": "invoice.generate",
-      "statements": 211,
+      "statements": 229,
       "locks": 4
     },
     {
@@ -85,7 +85,7 @@
     }
   ],
   "totals": {
-    "statements": 469,
+    "statements": 487,
     "locks": 17
   },
   "denylist": [
