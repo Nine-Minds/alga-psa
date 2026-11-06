@@ -4,15 +4,18 @@ export const QUOTE_ALLOWED_STATUS_TRANSITIONS: Record<
   QuoteStatus,
   QuoteStatus[]
 > = {
-  draft: ['pending_approval', 'sent', 'cancelled'],
+  // `archived` is the terminal "put it away" state offered as the alternative
+  // when a hard delete is refused (deletionValidation supportsArchive), so it
+  // has to be reachable from every status a caller may want to retire.
+  draft: ['pending_approval', 'sent', 'cancelled', 'archived'],
   pending_approval: ['approved', 'draft', 'cancelled'],
   approved: ['sent', 'cancelled'],
   sent: ['accepted', 'rejected', 'expired', 'cancelled'],
   accepted: ['converted', 'cancelled'],
-  rejected: ['cancelled'],
-  expired: ['cancelled'],
+  rejected: ['cancelled', 'archived'],
+  expired: ['cancelled', 'archived'],
   converted: [],
-  cancelled: [],
+  cancelled: ['archived'],
   superseded: [],
   archived: [],
 };
