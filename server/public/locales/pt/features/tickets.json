@@ -1651,7 +1651,9 @@
       "agentAlreadyAssigned": "Este usuário já está atribuído como agente adicional.",
       "teamNotFound": "Equipe não encontrada. Ela pode ter sido excluída. Atualize a página e tente novamente.",
       "teamLeadNotFound": "A equipe selecionada não tem líder. Escolha outra equipe ou defina um líder primeiro.",
-      "commentNotFound": "Comentário não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente."
+      "commentNotFound": "Comentário não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "boardNotFound": "Quadro não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "boardInactive": "O quadro de destino está inativo. Escolha um quadro ativo."
     },
     "bundle": {
       "masterAlreadyBundleMaster": "O ticket {{tickets}} já é um ticket principal de agrupamento e não pode ser adicionado como ticket filho. Desfaça o agrupamento primeiro ou use-o como ticket principal.",

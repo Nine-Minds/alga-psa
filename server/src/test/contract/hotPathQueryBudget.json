@@ -30,7 +30,7 @@
     },
     {
       "name": "ticket.boardMove",
-      "statements": 25,
+      "statements": 27,
       "locks": 0
     },
     {
@@ -85,7 +85,7 @@
     }
   ],
   "totals": {
-    "statements": 469,
+    "statements": 471,
     "locks": 17
   },
   "denylist": [

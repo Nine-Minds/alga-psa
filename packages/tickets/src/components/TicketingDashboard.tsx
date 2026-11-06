@@ -3038,6 +3038,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 value={selectedDestinationBoardId}
                 options={boards
                   .filter((board): board is IBoard & { board_id: string } => typeof board.board_id === 'string')
+                  .filter((board) => !board.is_inactive)
                   .map((board) => ({
                     value: board.board_id,
                     label: board.board_name ?? t('bulk.move.unnamedBoard', 'Unnamed board'),
