@@ -50,9 +50,35 @@ also produced a blank page and was not counted as a validation pass.
 The saved server typecheck ran with a 6 GB heap and exited 1 with diagnostics in
 nine files. None overlap the branch's changed files: billing profitability
 reports, document editors/viewer, ticket mobile editor, UI editor components,
-and `sanitizeEmailHtml`. This is a recorded failing workspace typecheck, not a
-passing check. It was not repeated. The existing build and authorization test
-results were retained; no application code changed during this takeover.
+and `sanitizeEmailHtml`. This completed typecheck has unrelated workspace
+diagnostics; it is not a passing check. A later rerun of `npm run typecheck`
+without a heap override exited 134 from V8 heap exhaustion before diagnostics,
+so that rerun is incomplete. Its output is preserved at
+`/tmp/send-user-invitation-server-typecheck-rerun.log`. No application code
+changed.
+
+## Revision reconciliation
+
+The application tree at `025f46ac5c6ca3c49b638b169b61b8312d3d0da9` is identical
+to `ef5f216168bd8bfedeec1834e7e1464829995c71`; `025f46ac5c` adds this verification
+record only. Therefore the preserved 2026-11-04 Users edit-drawer click-through
+and response metadata apply to the current application revision. That evidence
+records four successful browser action responses and populated database
+password/MFA fields excluded from the response while identity and Admin role
+remain. Fresh click-through was not claimed: the current Users page still loops
+through Turbopack HMR reloads. The saved HTTP credential-response and GreenMail
+acceptance artifacts also target `ef5f216168bd` and are valid for the unchanged
+application tree. The current `ensure-test-login.mjs` invocation exited zero;
+the preserved live verification log records a real QA credentials callback and
+a fresh browser-context session response identifying the expected QA account.
+
+The managed board service record names this worktree's `server` directory,
+`PORT=3358`, and the existing `dev-server:3` process. The card-origin sign-in
+probe responds, and the saved process/environment inspection confirms the
+service database is `127.0.0.1:6472`, database `server`. No service was started
+or recovery duplicated during this verification.
+
+No applicable approved plan was found in `main..HEAD` under `docs/plans/`.
 
 ## Cleanup and artifacts
 
