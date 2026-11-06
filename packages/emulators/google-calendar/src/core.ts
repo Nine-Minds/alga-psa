@@ -1,5 +1,22 @@
-import { rrulestr } from 'rrule';
+import * as rrulePkg from 'rrule';
 import type { EmulatorCore, HostEnv } from '@alga-psa/emulator-host';
+
+// `rrule` ships a webpack UMD bundle with no `exports` map, so plain Node ESM
+// (this package runs unbundled inside the algasim container) cannot
+// statically detect its named exports and only exposes `default`. Resolve
+// either shape, matching shared/utils/recurrenceUtils.ts.
+type RRuleStrFn = typeof import('rrule').rrulestr;
+
+function resolveRrulestr(): RRuleStrFn {
+  const rruleExports = rrulePkg as unknown as { rrulestr?: RRuleStrFn; default?: { rrulestr?: RRuleStrFn } };
+  const resolved = rruleExports.rrulestr ?? rruleExports.default?.rrulestr;
+  if (!resolved) {
+    throw new Error('Unable to resolve rrulestr export from rrule package');
+  }
+  return resolved;
+}
+
+const rrulestr = resolveRrulestr();
 
 /** An error carrying the status and body the Google Calendar API would return. */
 export class GoogleCalendarApiError extends Error {
