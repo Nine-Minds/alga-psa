@@ -261,6 +261,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'migration_identity_mappings',
   'migration_reports',
   'migration_mapping_profiles',
+  'migration_staged_attachments',
   'migration_jobs',
   'job_details',
   'jobs',
@@ -484,9 +485,6 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'co_managed_project_task_references',
   'collaboration_actor_references',
   'co_managed_participation_evidence',
-  'portable_restore_suspensions',
-  'portable_workspace_restores',
-  'portable_workspace_restore_uploads',
   // Handoffs FK to ticket work, which FKs to relationships: children first. References and
   // receipts reference the client/board/relationship rows deleted later.
   'co_management_ticket_handoffs',

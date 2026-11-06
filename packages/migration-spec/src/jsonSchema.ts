@@ -1,3 +1,4 @@
+import { AMP_WORKSPACE_TABLES, workspaceFields } from './workspace';
 import {
   AMP_ENTITY_TABLES,
   AMP_AUXILIARY_TABLES,
@@ -74,6 +75,10 @@ const ENTITY_BASE_PROPERTIES = {
 } as const;
 
 const ENTITY_EXTRA_PROPERTIES: Record<AmpEntityType, Record<string, unknown>> = {
+  ...Object.fromEntries(AMP_WORKSPACE_TABLES.map(table => [table, Object.fromEntries(Object.entries(workspaceFields(table)).map(([column, field]) => {
+    const types: Record<string, unknown> = { text: BOUNDED_TEXT, json: EXTENSION_JSON, timestamp: RFC3339_UTC, date: DATE_ONLY, reference: NULLABLE_OPAQUE_ID, flag: FLAG, integer: { type: ['integer', 'null'] }, number: { type: ['number', 'null'] } };
+    return [column, field.required ? { ...(types[field.kind] as object), type: field.kind === 'reference' || field.kind === 'text' ? 'string' : field.kind === 'integer' ? 'integer' : 'string', minLength: 1 } : types[field.kind]];
+  }))])) as Record<(typeof AMP_WORKSPACE_TABLES)[number], Record<string, unknown>>,
   organizations: {
     name: REQUIRED_TEXT,
     website: BOUNDED_TEXT,
@@ -100,6 +105,11 @@ const ENTITY_EXTRA_PROPERTIES: Record<AmpEntityType, Record<string, unknown>> = 
     title: BOUNDED_TEXT,
   },
   tickets: {
+    board_package_record_id: NULLABLE_OPAQUE_ID,
+    status_package_record_id: NULLABLE_OPAQUE_ID,
+    priority_package_record_id: NULLABLE_OPAQUE_ID,
+    category_package_record_id: NULLABLE_OPAQUE_ID,
+    assignee_package_record_id: NULLABLE_OPAQUE_ID,
     organization_package_record_id: NULLABLE_OPAQUE_ID,
     location_package_record_id: NULLABLE_OPAQUE_ID,
     requester_package_record_id: NULLABLE_OPAQUE_ID,
@@ -114,6 +124,15 @@ const ENTITY_EXTRA_PROPERTIES: Record<AmpEntityType, Record<string, unknown>> = 
     ticket_package_record_id: OPAQUE_ID,
     author_package_record_id: NULLABLE_OPAQUE_ID,
     body: REQUIRED_TEXT,
+    author_historical_package_record_id: NULLABLE_OPAQUE_ID,
+    author_name: BOUNDED_TEXT,
+    author_organization: BOUNDED_TEXT,
+    publication_state: { type: ['string', 'null'], enum: ['draft', 'scheduled', 'published', 'cancelled', null] },
+    scheduled_at: RFC3339_UTC,
+    published_at: RFC3339_UTC,
+    thread_package_record_id: NULLABLE_OPAQUE_ID,
+    author_person_package_record_id: NULLABLE_OPAQUE_ID,
+    parent_package_record_id: NULLABLE_OPAQUE_ID,
     is_internal: { type: ['integer', 'null'], enum: [0, 1, null] },
   },
   assets: {
@@ -121,6 +140,12 @@ const ENTITY_EXTRA_PROPERTIES: Record<AmpEntityType, Record<string, unknown>> = 
     location_package_record_id: NULLABLE_OPAQUE_ID,
     name: REQUIRED_TEXT,
     asset_type_name: BOUNDED_TEXT,
+    tag: BOUNDED_TEXT,
+    warranty_ends_on: DATE_ONLY,
+    assignee_package_record_id: NULLABLE_OPAQUE_ID,
+    notes_document_package_record_id: NULLABLE_OPAQUE_ID,
+    status: BOUNDED_TEXT,
+    assignee_external_identifier: BOUNDED_TEXT,
     serial_number: BOUNDED_TEXT,
     manufacturer: BOUNDED_TEXT,
     model: BOUNDED_TEXT,
@@ -277,7 +302,7 @@ export const AMP_AUXILIARY_ROW_SCHEMAS: Record<string, Record<string, unknown>> 
       package_record_id: OPAQUE_ID,
       entity_type: { type: ['string', 'null'], enum: [...AMP_ENTITY_TABLES, null] },
       entity_package_record_id: NULLABLE_OPAQUE_ID,
-      reason: { type: 'string', enum: ['msp_private', 'commercial', 'secret', 'deferred', 'unreadable'] },
+      reason: { type: 'string', enum: ['msp_private', 'commercial', 'secret', 'deferred', 'attachment_unreadable'] },
       detail: REQUIRED_TEXT,
     },
     required: ['package_record_id', 'reason', 'detail'],

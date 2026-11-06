@@ -6,6 +6,9 @@ export {
   AMP_ENTITY_IDENTITY_COLUMNS,
   AMP_TABLE_COLUMNS,
   AMP_ENTITY_REFERENCES,
+  AMP_CONTENT_TABLES,
+  AMP_LINK_TARGETS,
+  AMP_POLYMORPHIC_REFERENCES,
   AMP_DIAGNOSTIC_SEVERITIES,
   AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY,
   AMP_ASSUMED_CURRENCY_EXTENSION_KEY,
@@ -57,3 +60,9 @@ export type {
   AmpAuxiliaryRows,
   AmpPackageRows,
 } from './types';
+
+export { AMP_WORKSPACE_FIELDS, AMP_WORKSPACE_TABLES, workspaceFields } from './workspace';
+export type { AmpWorkspaceEntity, WorkspaceField } from './workspace';
+export { orderAmpRecords } from './graph';
+export { AMP_CONTENT_COLUMNS, ampContentUri, parseAmpContentUri } from './content';
+export type { AmpContentReference } from './content';

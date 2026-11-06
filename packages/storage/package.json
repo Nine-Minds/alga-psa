@@ -2,6 +2,7 @@
   "name": "@alga-psa/storage",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
   "types": "./src/index.ts",

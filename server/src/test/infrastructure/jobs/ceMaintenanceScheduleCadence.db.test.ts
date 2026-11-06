@@ -88,7 +88,7 @@ describe('CE maintenance fan-out durable pg-boss schedules', () => {
           delivered.push(name);
           seen[name]?.push([]);
           const result = await runMaintenanceJob(name);
-          if (name === 'portable-restore-upload-cleanup') restoreResults.push(result);
+
         },
         retry: { maxAttempts: 1 },
       } as any);
@@ -159,37 +159,6 @@ describe('CE maintenance fan-out durable pg-boss schedules', () => {
     await runner.getBoss().send(`${PREFIX}sla-timer`, { jobName: 'sla-timer' });
     const after = await waitFor(async () => (delivered.length > before ? true : undefined));
     expect(after, 'delivery after restart did not arrive').toBe(true);
-
-    // Exercise the production restore descriptor through the CE scheduler's
-    // real registry -> pg-boss convergence -> fan-out handler path.
-    const forceBefore = process.env.FORCE_CAPABILITIES;
-    delete process.env.FORCE_CAPABILITIES;
-    const restoreAttempt = randomUUID();
-    try {
-      await db('portable_workspace_restore_uploads').insert({ tenant: tenantId, attempt_id: restoreAttempt,
-        package_id: randomUUID(), archive_sha256: 'a'.repeat(64), provider_identity: 'b'.repeat(64),
-        file_ids: JSON.stringify([]), status: 'uploading', expires_at: db.raw("now() + interval '35 minutes'"),
-        next_cleanup_at: db.raw("now() + interval '35 minutes'") });
-      const { registerPortableRestoreJobs, PORTABLE_RESTORE_UPLOAD_CLEANUP_JOB } = await import('server/src/lib/jobs/portableRestoreJobs');
-      expect(await registerPortableRestoreJobs('ce')).toBe(true);
-      await convergeCeMaintenanceSchedules(runner, {});
-      const restoreSchedule = (await scheduleRows()).find((r: any) => r.name === `${PREFIX}${PORTABLE_RESTORE_UPLOAD_CLEANUP_JOB}`);
-      expect(restoreSchedule).toMatchObject({ cron: '*/15 * * * *', timezone: 'UTC' });
-
-      process.env.FORCE_CAPABILITIES = 'co-managed:off';
-      const restoreDeliveries = delivered.filter((name) => name === PORTABLE_RESTORE_UPLOAD_CLEANUP_JOB).length;
-      await runner.getBoss().send(`${PREFIX}${PORTABLE_RESTORE_UPLOAD_CLEANUP_JOB}`, { jobName: PORTABLE_RESTORE_UPLOAD_CLEANUP_JOB });
-      const executed = await waitFor(async () => (delivered.filter((name) => name === PORTABLE_RESTORE_UPLOAD_CLEANUP_JOB).length > restoreDeliveries ? true : undefined));
-      expect(executed, 'portable restore descriptor did not execute through the durable schedule').toBe(true);
-      await waitFor(async () => (restoreResults.length > 0 ? true : undefined));
-      expect(restoreResults).toContainEqual(expect.objectContaining({
-        jobName: PORTABLE_RESTORE_UPLOAD_CLEANUP_JOB, total: 1, succeeded: 1, failed: 0,
-      }));
-    } finally {
-      await db('portable_workspace_restore_uploads').where({ tenant: tenantId, attempt_id: restoreAttempt }).delete();
-      if (forceBefore === undefined) delete process.env.FORCE_CAPABILITIES;
-      else process.env.FORCE_CAPABILITIES = forceBefore;
-    }
 
     await runner.stop();
     PgBossJobRunner.reset();

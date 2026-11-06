@@ -56,10 +56,6 @@ const ALLOWED_FILES = new Set<string>([
   'packages/clients/src/lib/clientMergePlan.ts',
   'packages/clients/src/lib/clientMergeEngine.test.ts',
 
-  // Behavioral test for the EE-only portable vault implementation. Its
-  // fixtures intentionally reference EE credential APIs, outside the CE scan.
-  'ee/server/src/lib/credentials/__tests__/portableVault.test.ts',
-  'server/src/test/unit/product/coManagedPortableWorkspaceRestoreVault.test.ts',
 ]);
 
 const TABLES = 'credentials|credential_associations|credential_access_grants';

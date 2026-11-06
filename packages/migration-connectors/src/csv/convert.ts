@@ -151,7 +151,7 @@ export async function runConversion(options: RunConversionOptions): Promise<CsvC
     ...entityRows,
     custom_field_values: customFieldValues,
     package_diagnostics: toDiagnosticRows(diagnostics),
-  } as AmpPackageRows;
+  } as unknown as AmpPackageRows;
 
   // The output path is this conversion's artifact: replace any previous run's
   // file rather than failing on the leftover SQLite schema inside it.

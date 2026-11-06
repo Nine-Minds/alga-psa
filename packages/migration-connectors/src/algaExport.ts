@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { AmpManifest, AmpPackageRows } from '@alga-psa/migration-spec';
 import { AMP_FORMAT_VERSION } from '@alga-psa/migration-spec';
-import { AmpPackageBuilder } from '@alga-psa/migration-sdk';
+import { AmpPackageBuilder, type AmpAttachmentInput } from '@alga-psa/migration-sdk';
 
 /**
  * Write canonical, already tenant-filtered Alga records as an AMP package.
@@ -10,7 +10,9 @@ import { AmpPackageBuilder } from '@alga-psa/migration-sdk';
 export function writeAlgaExport(
   path: string,
   records: AmpPackageRows,
-  sourceInstanceId: string
+  sourceInstanceId: string,
+  attachments: readonly AmpAttachmentInput[] = [],
+  snapshot?: { startedAt: string; completedAt: string }
 ): AmpManifest {
   return new AmpPackageBuilder(path).write(
     {
@@ -21,7 +23,10 @@ export function writeAlgaExport(
       producer_version: '1.0.0',
       source_system: 'alga-psa',
       source_instance_id: sourceInstanceId,
+      export_started_at: snapshot?.startedAt,
+      export_completed_at: snapshot?.completedAt,
     },
-    records
+    records,
+    attachments
   );
 }

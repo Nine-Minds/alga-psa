@@ -111,7 +111,7 @@ const TIMESTAMP_COLUMNS = ['created_at', 'updated_at', 'closed_at'];
  * one are skipped with a diagnostic instead of producing an invalid package.
  * Mirrors the validator's required-text rules (spec `NOT NULL` columns).
  */
-const REQUIRED_TEXT_COLUMNS: Record<AmpEntityType, readonly string[]> = {
+const REQUIRED_TEXT_COLUMNS: Partial<Record<AmpEntityType, readonly string[]>> = {
   organizations: ['name'],
   locations: ['name'],
   // Contacts must be applicable: email is always required, and at least one
@@ -142,7 +142,7 @@ function requiredColumns(entityType: AmpEntityType): string[] {
   const references = AMP_ENTITY_REFERENCES[entityType]
     .filter((reference) => reference.required)
     .map((reference) => reference.column);
-  return [...REQUIRED_TEXT_COLUMNS[entityType], ...references];
+  return [...(REQUIRED_TEXT_COLUMNS[entityType] ?? []), ...references];
 }
 
 function isEmptyValue(value: unknown): boolean {

@@ -1,3 +1,4 @@
+import { cleanupAmpStaging } from '../migrations/cleanupAmpStaging';
 import { createTenantKnex } from '@alga-psa/db';
 import { recoverFileUploads } from '@alga-psa/storage/fileUploadTransaction';
 import { registerMaintenanceJob } from '@alga-psa/jobs/fanout';
@@ -43,9 +44,12 @@ export function registerServerMaintenanceJobs(): void {
 
   registerMaintenanceJob(SERVER_MAINTENANCE_JOBS.recoverFileUploads, {
     scope: 'tenant',
+    // Storage recovery and retention are housekeeping, including isolated imports awaiting review.
+    includeSuspended: true,
     run: async tenant => {
       const { knex } = await createTenantKnex(tenant);
       await recoverFileUploads(knex, tenant);
+      await cleanupAmpStaging(knex, tenant);
     },
   });
   registerMaintenanceJob(SERVER_MAINTENANCE_JOBS.lowStockNotification, {

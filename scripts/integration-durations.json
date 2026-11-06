@@ -213,8 +213,6 @@
   "server/src/test/integration/coManagedL3cScopeAndSearch.integration.test.ts": 4321,
   "server/src/test/integration/coManagedL3cTaskEditing.integration.test.ts": 4063,
   "server/src/test/integration/coManagedNativeAttachmentNeutrality.integration.test.ts": 6651,
-  "server/src/test/integration/coManagedPortableRestoreRoundTrip.integration.test.ts": 11109,
-  "server/src/test/integration/coManagedPortableSchemaContract.integration.test.ts": 2029,
   "server/src/test/integration/coManagedPrivateNoteReceipts.integration.test.ts": 1685,
   "server/src/test/integration/coManagedProviderSetup.integration.test.ts": 3566,
   "server/src/test/integration/coManagedPurchaseEmulator.integration.test.ts": 2618,

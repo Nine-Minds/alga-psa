@@ -1,0 +1,1405 @@
+{
+  "people": [
+    {
+      "package_record_id": "people-example",
+      "source_record_id": "source-people",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "username": "username example",
+      "first_name": "first_name example",
+      "last_name": "last_name example",
+      "email": "email example",
+      "phone": "phone example",
+      "timezone": "timezone example"
+    }
+  ],
+  "work_boards": [
+    {
+      "package_record_id": "work_boards-example",
+      "source_record_id": "source-work_boards",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "name": "name example",
+      "description": "description example"
+    }
+  ],
+  "work_statuses": [
+    {
+      "package_record_id": "work_statuses-example",
+      "source_record_id": "source-work_statuses",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "name": "name example",
+      "kind": "kind example",
+      "item_kind": "item_kind example",
+      "position": 1,
+      "closed": 0,
+      "board_package_record_id": "work_boards-example"
+    }
+  ],
+  "work_priorities": [
+    {
+      "package_record_id": "work_priorities-example",
+      "source_record_id": "source-work_priorities",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "name": "name example",
+      "position": 1,
+      "color": "color example",
+      "item_kind": "item_kind example"
+    }
+  ],
+  "projects": [
+    {
+      "package_record_id": "projects-example",
+      "source_record_id": "source-projects",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "name": "name example",
+      "description": "description example",
+      "starts_on": "2026-11-01",
+      "ends_on": "2026-11-01",
+      "state_package_record_id": "work_statuses-example",
+      "organization_package_record_id": "org-acme",
+      "assignee_package_record_id": "people-example",
+      "budget_hours": 1.5
+    }
+  ],
+  "project_phases": [
+    {
+      "package_record_id": "project_phases-example",
+      "source_record_id": "source-project_phases",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "project_package_record_id": "projects-example",
+      "name": "name example",
+      "description": "description example",
+      "starts_on": "2026-11-01",
+      "ends_on": "2026-11-01",
+      "state": "state example",
+      "position": 1,
+      "sort_key": "sort_key example"
+    }
+  ],
+  "project_states": [
+    {
+      "package_record_id": "project_states-example",
+      "source_record_id": "source-project_states",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "project_package_record_id": "projects-example",
+      "phase_package_record_id": "project_phases-example",
+      "status_package_record_id": "work_statuses-example",
+      "name": "name example",
+      "position": 1,
+      "visible": 0,
+      "standard": 0
+    }
+  ],
+  "work_items": [
+    {
+      "package_record_id": "work_items-example",
+      "source_record_id": "source-work_items",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "phase_package_record_id": "project_phases-example",
+      "name": "name example",
+      "description": "description example",
+      "assignee_package_record_id": "people-example",
+      "estimate_hours": 1.5,
+      "actual_hours": 1.5,
+      "due_at": "2026-11-01T12:00:00Z",
+      "state_package_record_id": "project_states-example",
+      "priority_package_record_id": "work_priorities-example",
+      "sort_key": "sort_key example"
+    }
+  ],
+  "work_dependencies": [
+    {
+      "package_record_id": "work_dependencies-example",
+      "source_record_id": "source-work_dependencies",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "predecessor_package_record_id": "work_items-example",
+      "successor_package_record_id": "work_items-example",
+      "kind": "kind example",
+      "lag_days": 1,
+      "notes": "notes example"
+    }
+  ],
+  "work_checklists": [
+    {
+      "package_record_id": "work_checklists-example",
+      "source_record_id": "source-work_checklists",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "work_item_package_record_id": "work_items-example",
+      "name": "name example",
+      "description": "description example",
+      "assignee_package_record_id": "people-example",
+      "completed": 0,
+      "due_at": "2026-11-01T12:00:00Z",
+      "position": 1
+    }
+  ],
+  "work_messages": [
+    {
+      "package_record_id": "work_messages-example",
+      "source_record_id": "source-work_messages",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "work_item_package_record_id": "work_items-example",
+      "author_package_record_id": "people-example",
+      "body": "body example",
+      "markdown": "markdown example",
+      "thread_package_record_id": null,
+      "parent_package_record_id": null
+    }
+  ],
+  "work_reactions": [
+    {
+      "package_record_id": "work_reactions-example",
+      "source_record_id": "source-work_reactions",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "message_package_record_id": "work_messages-example",
+      "author_package_record_id": "people-example",
+      "emoji": "emoji example"
+    }
+  ],
+  "time_periods": [
+    {
+      "package_record_id": "time_periods-example",
+      "source_record_id": "source-time_periods",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "starts_on": "2026-11-01",
+      "ends_on": "2026-11-01",
+      "closed": 0
+    }
+  ],
+  "time_sheets": [
+    {
+      "package_record_id": "time_sheets-example",
+      "source_record_id": "source-time_sheets",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "person_package_record_id": "people-example",
+      "period_package_record_id": "time_periods-example",
+      "state": "state example",
+      "notes": "notes example",
+      "submitted_at": "2026-11-01T12:00:00Z",
+      "approved_at": "2026-11-01T12:00:00Z"
+    }
+  ],
+  "time_records": [
+    {
+      "package_record_id": "time_records-example",
+      "source_record_id": "source-time_records",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "person_package_record_id": "people-example",
+      "sheet_package_record_id": "time_sheets-example",
+      "starts_at": "2026-11-01T12:00:00Z",
+      "ends_at": "2026-11-01T12:00:00Z",
+      "notes": "notes example",
+      "work_date": "2026-11-01",
+      "timezone": "timezone example",
+      "state": "state example",
+      "ticket_package_record_id": null,
+      "work_item_package_record_id": "work_items-example"
+    }
+  ],
+  "time_comments": [
+    {
+      "package_record_id": "time_comments-example",
+      "source_record_id": "source-time_comments",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "sheet_package_record_id": "time_sheets-example",
+      "author_package_record_id": "people-example",
+      "body": "body example",
+      "approver": 0
+    }
+  ],
+  "calendar_entries": [
+    {
+      "package_record_id": "calendar_entries-example",
+      "source_record_id": "source-calendar_entries",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "title": "title example",
+      "starts_at": "2026-11-01T12:00:00Z",
+      "ends_at": "2026-11-01T12:00:00Z",
+      "state": "state example",
+      "notes": "notes example",
+      "recurrence": "{\"content\": \"example\"}",
+      "recurring": 0,
+      "private": 0,
+      "ticket_package_record_id": null,
+      "work_item_package_record_id": "work_items-example"
+    }
+  ],
+  "interactions": [
+    {
+      "package_record_id": "interactions-example",
+      "source_record_id": "source-interactions",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "title": "title example",
+      "organization_package_record_id": "org-acme",
+      "contact_package_record_id": "contact-jane",
+      "project_package_record_id": "projects-example",
+      "ticket_package_record_id": "ticket-1001",
+      "author_package_record_id": "people-example",
+      "occurred_at": "2026-11-01T12:00:00Z",
+      "starts_at": "2026-11-01T12:00:00Z",
+      "ends_at": "2026-11-01T12:00:00Z",
+      "notes": "notes example",
+      "category": "category example",
+      "visibility": "visibility example",
+      "kind_package_record_id": "interaction_kinds-example"
+    }
+  ],
+  "appointments": [
+    {
+      "package_record_id": "appointments-example",
+      "source_record_id": "source-appointments",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "organization_package_record_id": "org-acme",
+      "contact_package_record_id": "contact-jane",
+      "ticket_package_record_id": "ticket-1001",
+      "calendar_entry_package_record_id": "calendar_entries-example",
+      "date": "2026-11-01",
+      "time": "time example",
+      "duration_minutes": 1,
+      "state": "state example",
+      "description": "description example",
+      "requester_name": "requester_name example",
+      "requester_email": "requester_email example",
+      "timezone": "timezone example",
+      "service_package_record_id": "services-example"
+    }
+  ],
+  "meetings": [
+    {
+      "package_record_id": "meetings-example",
+      "source_record_id": "source-meetings",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "title": "title example",
+      "starts_at": "2026-11-01T12:00:00Z",
+      "ends_at": "2026-11-01T12:00:00Z",
+      "state": "state example",
+      "provider": "provider example",
+      "appointment_package_record_id": "appointments-example",
+      "interaction_package_record_id": "interactions-example",
+      "calendar_entry_package_record_id": "calendar_entries-example"
+    }
+  ],
+  "document_types": [
+    {
+      "package_record_id": "document_types-example",
+      "source_record_id": "source-document_types",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "name": "name example",
+      "icon": "icon example"
+    }
+  ],
+  "documents": [
+    {
+      "package_record_id": "documents-example",
+      "source_record_id": "source-documents",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "name": "name example",
+      "body": "body example",
+      "media_type": "media_type example",
+      "type_package_record_id": "document_types-example",
+      "author_package_record_id": "people-example",
+      "folder": "folder example",
+      "client_visible": 0,
+      "file_package_record_id": "files-example"
+    }
+  ],
+  "document_revisions": [
+    {
+      "package_record_id": "document_revisions-example",
+      "source_record_id": "source-document_revisions",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "document_package_record_id": "documents-example",
+      "revision": 1,
+      "active": 0,
+      "author_package_record_id": "people-example"
+    }
+  ],
+  "document_text": [
+    {
+      "package_record_id": "document_text-example",
+      "source_record_id": "source-document_text",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "document_package_record_id": "documents-example",
+      "body": "body example",
+      "author_package_record_id": "people-example"
+    }
+  ],
+  "document_blocks": [
+    {
+      "package_record_id": "document_blocks-example",
+      "source_record_id": "source-document_blocks",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "document_package_record_id": "documents-example",
+      "revision_package_record_id": "document_revisions-example",
+      "blocks": "{\"content\": \"example\"}"
+    }
+  ],
+  "knowledge_articles": [
+    {
+      "package_record_id": "knowledge_articles-example",
+      "source_record_id": "source-knowledge_articles",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "document_package_record_id": "documents-example",
+      "slug": "slug example",
+      "kind": "kind example",
+      "audience": "audience example",
+      "state": "state example",
+      "review_due_at": "2026-11-01T12:00:00Z",
+      "review_days": 1,
+      "published_at": "2026-11-01T12:00:00Z"
+    }
+  ],
+  "knowledge_relations": [
+    {
+      "package_record_id": "knowledge_relations-example",
+      "source_record_id": "source-knowledge_relations",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "source_package_record_id": "knowledge_articles-example",
+      "target_package_record_id": "knowledge_articles-example",
+      "kind": "kind example"
+    }
+  ],
+  "workflow_definitions": [
+    {
+      "package_record_id": "workflow_definitions-example",
+      "source_record_id": "source-workflow_definitions",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "name": "name example",
+      "description": "description example",
+      "trigger": "{\"content\": \"example\"}",
+      "definition": "{\"content\": \"example\"}",
+      "revision": 1,
+      "state": "state example",
+      "schema_ref": "schema_ref example"
+    }
+  ],
+  "workflow_versions": [
+    {
+      "package_record_id": "workflow_versions-example",
+      "source_record_id": "source-workflow_versions",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "workflow_package_record_id": "workflow_definitions-example",
+      "revision": 1,
+      "definition": "{\"content\": \"example\"}",
+      "schema": "{\"content\": \"example\"}",
+      "published_at": "2026-11-01T12:00:00Z"
+    }
+  ],
+  "workflow_forms": [
+    {
+      "package_record_id": "workflow_forms-example",
+      "source_record_id": "source-workflow_forms",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "name": "name example",
+      "description": "description example",
+      "revision": 1,
+      "state": "state example",
+      "category": "category example"
+    }
+  ],
+  "workflow_form_schemas": [
+    {
+      "package_record_id": "workflow_form_schemas-example",
+      "source_record_id": "source-workflow_form_schemas",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "form_package_record_id": "workflow_forms-example",
+      "schema": "{\"content\": \"example\"}",
+      "layout": "{\"content\": \"example\"}",
+      "defaults": "{\"content\": \"example\"}"
+    }
+  ],
+  "workflow_task_types": [
+    {
+      "package_record_id": "workflow_task_types-example",
+      "source_record_id": "source-workflow_task_types",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "name": "name example",
+      "description": "description example",
+      "form_package_record_id": "workflow_forms-example",
+      "kind": "kind example"
+    }
+  ],
+  "workflow_tasks": [
+    {
+      "package_record_id": "workflow_tasks-example",
+      "source_record_id": "source-workflow_tasks",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "title": "title example",
+      "description": "description example",
+      "type_package_record_id": "workflow_task_types-example",
+      "state": "state example",
+      "priority": "priority example",
+      "due_at": "2026-11-01T12:00:00Z",
+      "completed_at": "2026-11-01T12:00:00Z",
+      "response": "{\"content\": \"example\"}"
+    }
+  ],
+  "workflow_history": [
+    {
+      "package_record_id": "workflow_history-example",
+      "source_record_id": "source-workflow_history",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "task_package_record_id": "workflow_tasks-example",
+      "action": "action example",
+      "previous_state": "previous_state example",
+      "state": "state example",
+      "author_name": "author_name example",
+      "occurred_at": "2026-11-01T12:00:00Z",
+      "details": "{\"content\": \"example\"}"
+    }
+  ],
+  "teams": [
+    {
+      "package_record_id": "teams-example",
+      "source_record_id": "source-teams",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "name": "name example",
+      "manager_package_record_id": "people-example"
+    }
+  ],
+  "roles": [
+    {
+      "package_record_id": "roles-example",
+      "source_record_id": "source-roles",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "name": "name example",
+      "description": "description example",
+      "internal": 0,
+      "external": 0
+    }
+  ],
+  "permissions": [
+    {
+      "package_record_id": "permissions-example",
+      "source_record_id": "source-permissions",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "resource": "resource example",
+      "action": "action example",
+      "description": "description example",
+      "internal": 0,
+      "external": 0
+    }
+  ],
+  "ticket_checklists": [
+    {
+      "package_record_id": "ticket_checklists-example",
+      "source_record_id": "source-ticket_checklists",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "ticket_package_record_id": "ticket-1001",
+      "name": "name example",
+      "description": "description example",
+      "assignee_package_record_id": "people-example",
+      "completed": 0,
+      "position": 1
+    }
+  ],
+  "ticket_reactions": [
+    {
+      "package_record_id": "ticket_reactions-example",
+      "source_record_id": "source-ticket_reactions",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "message_package_record_id": "comment-1",
+      "author_package_record_id": "people-example",
+      "emoji": "emoji example"
+    }
+  ],
+  "business_calendars": [
+    {
+      "package_record_id": "business_calendars-example",
+      "source_record_id": "source-business_calendars",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "name": "name example",
+      "timezone": "timezone example",
+      "default": 0,
+      "always_open": 0
+    }
+  ],
+  "business_hours": [
+    {
+      "package_record_id": "business_hours-example",
+      "source_record_id": "source-business_hours",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "calendar_package_record_id": "business_calendars-example",
+      "weekday": 1,
+      "starts_at": "starts_at example",
+      "ends_at": "ends_at example",
+      "enabled": 0
+    }
+  ],
+  "holidays": [
+    {
+      "package_record_id": "holidays-example",
+      "source_record_id": "source-holidays",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "calendar_package_record_id": "business_calendars-example",
+      "name": "name example",
+      "date": "2026-11-01",
+      "recurring": 0
+    }
+  ],
+  "service_policies": [
+    {
+      "package_record_id": "service_policies-example",
+      "source_record_id": "source-service_policies",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "name": "name example",
+      "description": "description example",
+      "calendar_package_record_id": "business_calendars-example",
+      "default": 0
+    }
+  ],
+  "service_targets": [
+    {
+      "package_record_id": "service_targets-example",
+      "source_record_id": "source-service_targets",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "policy_package_record_id": "service_policies-example",
+      "priority_package_record_id": "work_priorities-example",
+      "response_minutes": 1,
+      "resolution_minutes": 1,
+      "always_open": 0
+    }
+  ],
+  "time_change_requests": [
+    {
+      "package_record_id": "time_change_requests-example",
+      "source_record_id": "source-time_change_requests",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "sheet_package_record_id": "time_sheets-example",
+      "time_record_package_record_id": "time_records-example",
+      "author_package_record_id": "people-example",
+      "body": "body example",
+      "handled_at": "2026-11-01T12:00:00Z"
+    }
+  ],
+  "availability": [
+    {
+      "package_record_id": "availability-example",
+      "source_record_id": "source-availability",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "kind": "kind example",
+      "person_package_record_id": "people-example",
+      "weekday": 1,
+      "starts_at": "starts_at example",
+      "ends_at": "ends_at example",
+      "available": 0,
+      "buffer_before": 1,
+      "buffer_after": 1
+    }
+  ],
+  "availability_exceptions": [
+    {
+      "package_record_id": "availability_exceptions-example",
+      "source_record_id": "source-availability_exceptions",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "person_package_record_id": "people-example",
+      "date": "2026-11-01",
+      "available": 0,
+      "reason": "reason example"
+    }
+  ],
+  "document_folders": [
+    {
+      "package_record_id": "document_folders-example",
+      "source_record_id": "source-document_folders",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "path": "path example",
+      "name": "name example",
+      "parent_package_record_id": null,
+      "client_visible": 0
+    }
+  ],
+  "knowledge_reviewers": [
+    {
+      "package_record_id": "knowledge_reviewers-example",
+      "source_record_id": "source-knowledge_reviewers",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "article_package_record_id": "knowledge_articles-example",
+      "person_package_record_id": "people-example",
+      "state": "state example",
+      "notes": "notes example",
+      "assigned_at": "2026-11-01T12:00:00Z",
+      "reviewed_at": "2026-11-01T12:00:00Z"
+    }
+  ],
+  "knowledge_templates": [
+    {
+      "package_record_id": "knowledge_templates-example",
+      "source_record_id": "source-knowledge_templates",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "name": "name example",
+      "description": "description example",
+      "kind": "kind example",
+      "body": "{\"content\": \"example\"}",
+      "default": 0
+    }
+  ],
+  "files": [
+    {
+      "package_record_id": "files-example",
+      "source_record_id": "source-files",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "name": "name example",
+      "media_type": "media_type example",
+      "size": 23,
+      "uploader_package_record_id": "people-example"
+    }
+  ],
+  "meeting_artifacts": [
+    {
+      "package_record_id": "meeting_artifacts-example",
+      "source_record_id": "source-meeting_artifacts",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "meeting_package_record_id": "meetings-example",
+      "document_package_record_id": "documents-example",
+      "file_package_record_id": "files-example",
+      "kind": "kind example"
+    }
+  ],
+  "document_links": [
+    {
+      "package_record_id": "document_links-example",
+      "source_record_id": "source-document_links",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "document_package_record_id": "documents-example",
+      "target_type": "tickets",
+      "target_id": "ticket-1001"
+    }
+  ],
+  "interaction_kinds": [
+    {
+      "package_record_id": "interaction_kinds-example",
+      "source_record_id": "source-interaction_kinds",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "name": "name example",
+      "icon": "icon example"
+    }
+  ],
+  "service_types": [
+    {
+      "package_record_id": "service_types-example",
+      "source_record_id": "source-service_types",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "name": "name example",
+      "description": "description example",
+      "active": 0
+    }
+  ],
+  "services": [
+    {
+      "package_record_id": "services-example",
+      "source_record_id": "source-services",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "name": "name example",
+      "description": "description example",
+      "unit": "unit example",
+      "type_package_record_id": "service_types-example",
+      "active": 0
+    }
+  ],
+  "team_memberships": [
+    {
+      "package_record_id": "team_memberships-example",
+      "source_record_id": "source-team_memberships",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "team_package_record_id": "teams-example",
+      "person_package_record_id": "people-example",
+      "role": "role example"
+    }
+  ],
+  "person_roles": [
+    {
+      "package_record_id": "person_roles-example",
+      "source_record_id": "source-person_roles",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "person_package_record_id": "people-example",
+      "role_package_record_id": "roles-example"
+    }
+  ],
+  "role_grants": [
+    {
+      "package_record_id": "role_grants-example",
+      "source_record_id": "source-role_grants",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "role_package_record_id": "roles-example",
+      "permission_package_record_id": "permissions-example"
+    }
+  ],
+  "calendar_assignees": [
+    {
+      "package_record_id": "calendar_assignees-example",
+      "source_record_id": "source-calendar_assignees",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "calendar_entry_package_record_id": "calendar_entries-example",
+      "person_package_record_id": "people-example"
+    }
+  ],
+  "working_hours": [
+    {
+      "package_record_id": "working_hours-example",
+      "source_record_id": "source-working_hours",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "person_package_record_id": "people-example",
+      "weekday": 1,
+      "starts_at": "starts_at example",
+      "ends_at": "ends_at example",
+      "working": 0
+    }
+  ],
+  "project_ticket_links": [
+    {
+      "package_record_id": "project_ticket_links-example",
+      "source_record_id": "source-project_ticket_links",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "project_package_record_id": "projects-example",
+      "phase_package_record_id": "project_phases-example",
+      "work_item_package_record_id": "work_items-example",
+      "ticket_package_record_id": "ticket-1001"
+    }
+  ],
+  "conversation_threads": [
+    {
+      "package_record_id": "conversation_threads-example",
+      "source_record_id": "source-conversation_threads",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "ticket_package_record_id": "ticket-1001",
+      "work_item_package_record_id": null,
+      "audience": "audience example",
+      "internal": 0,
+      "reply_count": 1,
+      "last_activity_at": "2026-11-01T12:00:00Z",
+      "root_ticket_message_package_record_id": "comment-1",
+      "root_work_message_package_record_id": null
+    }
+  ],
+  "conversation_files": [
+    {
+      "package_record_id": "conversation_files-example",
+      "source_record_id": "source-conversation_files",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "ticket_package_record_id": "ticket-1001",
+      "message_package_record_id": "comment-1",
+      "document_package_record_id": "documents-example",
+      "state": "state example"
+    }
+  ],
+  "workspaces": [
+    {
+      "package_record_id": "workspaces-example",
+      "source_record_id": "source-workspaces",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "name": "name example",
+      "email": "email example",
+      "phone": "phone example",
+      "industry": "industry example"
+    }
+  ],
+  "work_categories": [
+    {
+      "package_record_id": "work_categories-example",
+      "source_record_id": "source-work_categories",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "name": "name example",
+      "parent_package_record_id": null,
+      "board_package_record_id": "work_boards-example",
+      "position": 1
+    }
+  ],
+  "ticket_assignments": [
+    {
+      "package_record_id": "ticket_assignments-example",
+      "source_record_id": "source-ticket_assignments",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "ticket_package_record_id": "ticket-1001",
+      "assignee_package_record_id": "people-example",
+      "person_package_record_id": "people-example",
+      "role": "role example",
+      "assigned_at": "2026-11-01T12:00:00Z"
+    }
+  ],
+  "work_assignments": [
+    {
+      "package_record_id": "work_assignments-example",
+      "source_record_id": "source-work_assignments",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "work_item_package_record_id": "work_items-example",
+      "assignee_package_record_id": "people-example",
+      "person_package_record_id": "people-example",
+      "role": "role example",
+      "assigned_at": "2026-11-01T12:00:00Z"
+    }
+  ],
+  "checklist_templates": [
+    {
+      "package_record_id": "checklist_templates-example",
+      "source_record_id": "source-checklist_templates",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "name": "name example",
+      "description": "description example",
+      "active": 0
+    }
+  ],
+  "checklist_template_items": [
+    {
+      "package_record_id": "checklist_template_items-example",
+      "source_record_id": "source-checklist_template_items",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "template_package_record_id": "checklist_templates-example",
+      "name": "name example",
+      "description": "description example",
+      "position": 1,
+      "required": 0
+    }
+  ],
+  "checklist_rules": [
+    {
+      "package_record_id": "checklist_rules-example",
+      "source_record_id": "source-checklist_rules",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "template_package_record_id": "checklist_templates-example",
+      "board_package_record_id": "work_boards-example",
+      "category_package_record_id": "work_categories-example",
+      "priority_package_record_id": "work_priorities-example",
+      "enabled": 0
+    }
+  ],
+  "time_rules": [
+    {
+      "package_record_id": "time_rules-example",
+      "source_record_id": "source-time_rules",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "start_day": 1,
+      "frequency": 1,
+      "frequency_unit": "frequency_unit example",
+      "active": 0,
+      "effective_on": "2026-11-01",
+      "expires_on": "2026-11-01",
+      "end_day": 1
+    }
+  ],
+  "asset_kinds": [
+    {
+      "package_record_id": "asset_kinds-example",
+      "source_record_id": "source-asset_kinds",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "slug": "slug example",
+      "name": "name example",
+      "icon": "icon example",
+      "fields": "{\"content\": \"example\"}",
+      "builtin": 0,
+      "position": 1
+    }
+  ],
+  "asset_workstations": [
+    {
+      "package_record_id": "asset_workstations-example",
+      "source_record_id": "source-asset_workstations",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "asset_package_record_id": "asset-fw-1",
+      "os": "os example",
+      "os_version": "os_version example",
+      "cpu": "cpu example",
+      "cores": 1,
+      "memory_gb": 1.5,
+      "storage_kind": "storage_kind example",
+      "storage_gb": 1.5,
+      "gpu": "gpu example",
+      "software": "{\"content\": \"example\"}",
+      "system": "{\"content\": \"example\"}"
+    }
+  ],
+  "asset_servers": [
+    {
+      "package_record_id": "asset_servers-example",
+      "source_record_id": "source-asset_servers",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "asset_package_record_id": "asset-fw-1",
+      "os": "os example",
+      "os_version": "os_version example",
+      "cpu": "cpu example",
+      "cores": 1,
+      "memory_gb": 1.5,
+      "storage": "{\"content\": \"example\"}",
+      "raid": "raid example",
+      "virtual": 0,
+      "hypervisor": "hypervisor example",
+      "interfaces": "{\"content\": \"example\"}",
+      "software": "{\"content\": \"example\"}",
+      "system": "{\"content\": \"example\"}"
+    }
+  ],
+  "asset_network_devices": [
+    {
+      "package_record_id": "asset_network_devices-example",
+      "source_record_id": "source-asset_network_devices",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "asset_package_record_id": "asset-fw-1",
+      "kind": "kind example",
+      "address": "address example",
+      "ports": 1,
+      "firmware": "firmware example",
+      "poe": 0,
+      "vlans": "{\"content\": \"example\"}",
+      "port_config": "{\"content\": \"example\"}"
+    }
+  ],
+  "asset_printers": [
+    {
+      "package_record_id": "asset_printers-example",
+      "source_record_id": "source-asset_printers",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "asset_package_record_id": "asset-fw-1",
+      "model": "model example",
+      "address": "address example",
+      "networked": 0,
+      "color": 0,
+      "duplex": 0,
+      "paper_size": "paper_size example",
+      "supplies": "{\"content\": \"example\"}"
+    }
+  ],
+  "asset_mobile_devices": [
+    {
+      "package_record_id": "asset_mobile_devices-example",
+      "source_record_id": "source-asset_mobile_devices",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "asset_package_record_id": "asset-fw-1",
+      "os": "os example",
+      "os_version": "os_version example",
+      "model": "model example",
+      "imei": "imei example",
+      "phone": "phone example",
+      "carrier": "carrier example",
+      "supervised": 0,
+      "applications": "{\"content\": \"example\"}"
+    }
+  ],
+  "software": [
+    {
+      "package_record_id": "software-example",
+      "source_record_id": "source-software",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "name": "name example",
+      "publisher": "publisher example",
+      "category": "category example",
+      "kind": "kind example",
+      "managed": 0,
+      "security_relevant": 0
+    }
+  ],
+  "software_installations": [
+    {
+      "package_record_id": "software_installations-example",
+      "source_record_id": "source-software_installations",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "asset_package_record_id": "asset-fw-1",
+      "software_package_record_id": "software-example",
+      "version": "version example",
+      "installed_at": "2026-11-01T12:00:00Z",
+      "path": "path example",
+      "size": 1,
+      "first_seen_at": "2026-11-01T12:00:00Z",
+      "last_seen_at": "2026-11-01T12:00:00Z",
+      "current": 0,
+      "removed_at": "2026-11-01T12:00:00Z"
+    }
+  ],
+  "asset_facts": [
+    {
+      "package_record_id": "asset_facts-example",
+      "source_record_id": "source-asset_facts",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "asset_package_record_id": "asset-fw-1",
+      "kind": "kind example",
+      "namespace": "namespace example",
+      "key": "key example",
+      "label": "label example",
+      "text": "text example",
+      "number": 1.5,
+      "flag": 0,
+      "value": "{\"content\": \"example\"}",
+      "source": "source example"
+    }
+  ],
+  "asset_changes": [
+    {
+      "package_record_id": "asset_changes-example",
+      "source_record_id": "source-asset_changes",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "asset_package_record_id": "asset-fw-1",
+      "actor_package_record_id": "people-example",
+      "kind": "kind example",
+      "changes": "{\"content\": \"example\"}",
+      "occurred_at": "2026-11-01T12:00:00Z"
+    }
+  ],
+  "asset_relationships": [
+    {
+      "package_record_id": "asset_relationships-example",
+      "source_record_id": "source-asset_relationships",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "parent_package_record_id": "asset-fw-1",
+      "child_package_record_id": "asset-fw-1",
+      "kind": "kind example"
+    }
+  ],
+  "asset_service_records": [
+    {
+      "package_record_id": "asset_service_records-example",
+      "source_record_id": "source-asset_service_records",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "asset_package_record_id": "asset-fw-1",
+      "ticket_package_record_id": "ticket-1001",
+      "kind": "kind example",
+      "description": "description example",
+      "details": "{\"content\": \"example\"}",
+      "performed_on": "2026-11-01",
+      "next_on": "2026-11-01",
+      "person_package_record_id": "people-example"
+    }
+  ],
+  "asset_maintenance_rules": [
+    {
+      "package_record_id": "asset_maintenance_rules-example",
+      "source_record_id": "source-asset_maintenance_rules",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "asset_package_record_id": "asset-fw-1",
+      "name": "name example",
+      "description": "description example",
+      "kind": "kind example",
+      "frequency": "frequency example",
+      "interval": 1,
+      "configuration": "{\"content\": \"example\"}",
+      "last_at": "2026-11-01T12:00:00Z",
+      "next_at": "2026-11-01T12:00:00Z",
+      "active": 0,
+      "creator_package_record_id": "people-example"
+    }
+  ],
+  "asset_maintenance_records": [
+    {
+      "package_record_id": "asset_maintenance_records-example",
+      "source_record_id": "source-asset_maintenance_records",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "rule_package_record_id": "asset_maintenance_rules-example",
+      "asset_package_record_id": "asset-fw-1",
+      "kind": "kind example",
+      "description": "description example",
+      "data": "{\"content\": \"example\"}",
+      "performed_at": "2026-11-01T12:00:00Z",
+      "person_package_record_id": "people-example"
+    }
+  ],
+  "asset_maintenance_occurrences": [
+    {
+      "package_record_id": "asset_maintenance_occurrences-example",
+      "source_record_id": "source-asset_maintenance_occurrences",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "rule_package_record_id": "asset_maintenance_rules-example",
+      "asset_package_record_id": "asset-fw-1",
+      "due_on": "2026-11-01",
+      "state": "state example",
+      "ticket_package_record_id": "ticket-1001",
+      "history_package_record_id": "asset_maintenance_records-example",
+      "skip_reason": "skip_reason example",
+      "closed_at": "2026-11-01T12:00:00Z"
+    }
+  ],
+  "asset_documents": [
+    {
+      "package_record_id": "asset_documents-example",
+      "source_record_id": "source-asset_documents",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "asset_package_record_id": "asset-fw-1",
+      "document_package_record_id": "documents-example",
+      "notes": "notes example",
+      "creator_package_record_id": "people-example"
+    }
+  ],
+  "asset_tickets": [
+    {
+      "package_record_id": "asset_tickets-example",
+      "source_record_id": "source-asset_tickets",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "asset_package_record_id": "asset-fw-1",
+      "ticket_package_record_id": "ticket-1001",
+      "kind": "kind example",
+      "notes": "notes example",
+      "creator_package_record_id": "people-example"
+    }
+  ],
+  "contact_phone_labels": [
+    {
+      "package_record_id": "contact_phone_labels-example",
+      "source_record_id": "source-contact_phone_labels",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "label": "label example"
+    }
+  ],
+  "contact_email_labels": [
+    {
+      "package_record_id": "contact_email_labels-example",
+      "source_record_id": "source-contact_email_labels",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "label": "label example"
+    }
+  ],
+  "contact_phones": [
+    {
+      "package_record_id": "contact_phones-example",
+      "source_record_id": "source-contact_phones",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "contact_package_record_id": "contact-jane",
+      "number": "+0012345",
+      "kind": "kind example",
+      "label_package_record_id": "contact_phone_labels-example",
+      "default": 0,
+      "position": 1,
+      "extension": "extension example"
+    }
+  ],
+  "contact_emails": [
+    {
+      "package_record_id": "contact_emails-example",
+      "source_record_id": "source-contact_emails",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "contact_package_record_id": "contact-jane",
+      "email": "email example",
+      "kind": "kind example",
+      "label_package_record_id": "contact_email_labels-example",
+      "position": 1
+    }
+  ],
+  "historical_people": [
+    {
+      "package_record_id": "historical_people-example",
+      "source_record_id": "source-historical_people",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "name": "name example",
+      "organization": "organization example"
+    }
+  ],
+  "work_severities": [
+    {
+      "package_record_id": "work_severities-example",
+      "source_record_id": "source-work_severities",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "name": "name example"
+    }
+  ],
+  "work_urgencies": [
+    {
+      "package_record_id": "work_urgencies-example",
+      "source_record_id": "source-work_urgencies",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "name": "name example"
+    }
+  ],
+  "work_impacts": [
+    {
+      "package_record_id": "work_impacts-example",
+      "source_record_id": "source-work_impacts",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "name": "name example"
+    }
+  ],
+  "work_activity": [
+    {
+      "package_record_id": "work_activity-example",
+      "source_record_id": "source-work_activity",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "ticket_package_record_id": "ticket-1001",
+      "kind": "kind example",
+      "actor_name": "actor_name example",
+      "actor_organization": "actor_organization example",
+      "occurred_at": "2026-11-01T12:00:00Z",
+      "changes": "{\"content\": \"example\"}",
+      "details": "{\"content\": \"example\"}"
+    }
+  ],
+  "handoff_activity": [
+    {
+      "package_record_id": "handoff_activity-example",
+      "source_record_id": "source-handoff_activity",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "ticket_package_record_id": "ticket-1001",
+      "revision": 1,
+      "kind": "kind example",
+      "actor_name": "actor_name example",
+      "actor_organization": "actor_organization example",
+      "note": "note example",
+      "audience": "audience example",
+      "occurred_at": "2026-11-01T12:00:00Z"
+    }
+  ],
+  "asset_links": [
+    {
+      "package_record_id": "asset_links-example",
+      "source_record_id": "source-asset_links",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "asset_package_record_id": "asset-fw-1",
+      "target_type": "tickets",
+      "target_id": "ticket-1001",
+      "kind": "kind example",
+      "notes": "notes example"
+    }
+  ],
+  "time_period_kinds": [
+    {
+      "package_record_id": "time_period_kinds-example",
+      "source_record_id": "source-time_period_kinds",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "name": "name example",
+      "description": "description example"
+    }
+  ],
+  "service_policy_settings": [
+    {
+      "package_record_id": "service_policy_settings-example",
+      "source_record_id": "source-service_policy_settings",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "pause_awaiting_client": 0
+    }
+  ],
+  "service_policy_alerts": [
+    {
+      "package_record_id": "service_policy_alerts-example",
+      "source_record_id": "source-service_policy_alerts",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "policy_package_record_id": "service_policies-example",
+      "percentage": 1,
+      "kind": "kind example",
+      "assignee": 0,
+      "manager": 0,
+      "escalation_manager": 0,
+      "channels": "{\"content\": \"example\"}"
+    }
+  ],
+  "service_categories": [
+    {
+      "package_record_id": "service_categories-example",
+      "source_record_id": "source-service_categories",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "name": "name example",
+      "description": "description example",
+      "active": 0,
+      "position": 1
+    }
+  ],
+  "document_folder_rules": [
+    {
+      "package_record_id": "document_folder_rules-example",
+      "source_record_id": "source-document_folder_rules",
+      "external_identifier_namespace": "neutral:example",
+      "created_at": "2026-11-01T00:00:00Z",
+      "kind": "tickets",
+      "path": "path example",
+      "name": "name example",
+      "client_visible": 0,
+      "position": 1
+    }
+  ]
+}

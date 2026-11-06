@@ -986,6 +986,16 @@
       "invalid": "Den här kommentaren kunde inte sparas.",
       "send": "Skicka",
       "cancel": "Avbryt"
+    },
+    "ampExport": {
+      "title": "Exportera arbetsyta",
+      "description": "Ladda ned ett AMP-paket med arbetsytans poster och filer.",
+      "download": "Förbered och ladda ned AMP-paket",
+      "requested": "Begäran öppnas i en ny flik. Webbläsaren laddar ned paketet när det är klart.",
+      "unavailable": "Export är inte tillgänglig i den här utgåvan.",
+      "loadError": "Export är inte tillgänglig. Uppdatera sidan och försök igen.",
+      "loading": "Laddar…",
+      "security": "Paketet innehåller känsliga uppgifter. Förvara det säkert. Inloggningsuppgifter och leverantörshemligheter ingår inte."
     }
   },
   "common": {

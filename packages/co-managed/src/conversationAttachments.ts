@@ -253,7 +253,7 @@ export async function listPublishedCoManagedAttachments(context: CoManagedAttach
   const rows = await visibleAttachmentQuery(context).where('status', 'ready').forShare().orderBy('created_at').orderBy('attachment_id');
   return rows.map((row: any) => summary(row, context.audience));
 }
-/** Internal portable-source projection under already-retained customer read
+/** Internal AMP-source projection under already-retained customer read
  * admission. It grants no authority and never reads a foreign private store. */
 export async function listPublishedCoManagedAttachmentSources(context: CoManagedAttachmentReadContext) {
   if (!context.trx.isTransaction || context.comment.storeTenant !== context.resource.tenant) deny();

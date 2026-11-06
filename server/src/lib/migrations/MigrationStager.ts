@@ -1,13 +1,14 @@
+import { readFileSync } from 'node:fs';
 import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
-import { AMP_ENTITY_TABLES, type AmpEntityType } from '@alga-psa/migration-spec';
+import { AMP_ENTITY_TABLES, AMP_WORKSPACE_TABLES, type AmpEntityType } from '@alga-psa/migration-spec';
 import {
   AmpSqliteReader,
   validateAmpPackage,
   type AmpDiagnostic,
   type AmpValidationResult,
 } from '@alga-psa/migration-sdk';
-import { migrationPhaseFor } from './types';
+import { migrationPhaseFor, migrationTargetPolicies } from './types';
 
 const STAGING_BATCH_SIZE = 500;
 
@@ -93,13 +94,33 @@ export class MigrationStager {
           throw new Error(`Migration job ${migrationJobId} was not found in this tenant`);
         }
 
+        const workspace = AMP_WORKSPACE_TABLES.some(entity => (validation.rowCounts[entity] ?? 0) > 0) || (validation.rowCounts.attachments ?? 0) > 0;
+        if (workspace && !migrationTargetPolicies(job)) {
+          throw new Error('Full workspace AMP import requires a fresh installation target with all safety policies');
+        }
+
+        await trx.raw('SELECT pg_advisory_xact_lock(hashtextextended(?, 0))', [`amp-stage:${this.tenant}:${migrationJobId}`]);
         // Staging is idempotent per job: restage replaces prior staging.
         await db.table('migration_staged_records').where({ migration_job_id: migrationJobId }).delete();
         await db.table('migration_job_entities').where({ migration_job_id: migrationJobId }).delete();
 
+        await db.table('migration_staged_attachments').where({ migration_job_id: migrationJobId }).delete();
+        for (const sha256 of reader.attachmentDigests()) {
+          const content = readFileSync(reader.attachmentPath(sha256)!);
+          await db.table('migration_staged_attachments').insert({ tenant: this.tenant, migration_job_id: migrationJobId, sha256, size: content.length, content });
+        }
+        const attachmentIndex = new Map<string, Record<string, unknown>>();
+        for (const attachment of reader.allRows('attachments')) {
+          // Native files are regular ledger entities; their binary payload is a separate, verified index.
+          if (attachment.entity_type === 'files') {
+            const key = String(attachment.entity_package_record_id);
+            if (attachmentIndex.has(key)) throw new Error('A file must own exactly one attachment');
+            attachmentIndex.set(key, attachment);
+          }
+        }
         const presentTables = reader.tableNames();
         for (const entityType of AMP_ENTITY_TABLES) {
-          if (!presentTables.includes(entityType)) {
+          if (!presentTables.includes(entityType) || (!validation.rowCounts[entityType] && (AMP_WORKSPACE_TABLES as readonly string[]).includes(entityType))) {
             continue;
           }
           let staged = 0;
@@ -117,7 +138,7 @@ export class MigrationStager {
                 package_record_id: String(row.package_record_id),
                 source_record_id: String(row.source_record_id),
                 namespace: String(row.external_identifier_namespace),
-                payload: JSON.stringify(row),
+                payload: JSON.stringify(entityType === 'files' ? { ...row, attachment: row.attachment ?? attachmentIndex.get(String(row.package_record_id)) } : row),
                 custom_field_values: JSON.stringify({}),
                 source_created_at: (row.created_at as string | null) ?? null,
                 source_updated_at: (row.updated_at as string | null) ?? null,
@@ -125,10 +146,24 @@ export class MigrationStager {
                 validation_errors: '[]',
               }))
             );
+            const links = batch.filter(row => row.attachmentOwner != null);
+            if (links.length) await db.table('migration_staged_records').insert(links.map(row => ({
+              tenant: this.tenant, migration_job_id: migrationJobId, entity_type: 'attachment_links',
+              package_record_id: `attachment-owner:${row.package_record_id}`, source_record_id: String(row.source_record_id), namespace: String(row.external_identifier_namespace),
+              payload: JSON.stringify({ ...row, file_package_record_id: row.package_record_id }), custom_field_values: '{}', validation_state: 'valid', validation_errors: '[]',
+            })));
             staged += batch.length;
             batch = [];
           };
 
+          if (entityType === 'files') {
+            for (const attachment of reader.allRows('attachments').filter(row => row.entity_type !== 'files')) {
+              batch.push({ package_record_id: `attachment-file:${attachment.package_record_id}`, source_record_id: `attachment:${attachment.package_record_id}`,
+                external_identifier_namespace: `amp:${manifest.package_id}`, name: attachment.file_name ?? 'attachment', media_type: attachment.media_type ?? 'application/octet-stream', size: attachment.size,
+                attachment, attachmentOwner: { entityType: attachment.entity_type, packageRecordId: attachment.entity_package_record_id } });
+              if (batch.length >= STAGING_BATCH_SIZE) await flush();
+            }
+          }
           for (const row of reader.readRows(entityType, STAGING_BATCH_SIZE)) {
             batch.push(row);
             if (batch.length >= STAGING_BATCH_SIZE) {
@@ -167,6 +202,9 @@ export class MigrationStager {
           await flushCustomFields(grouped, trx, migrationJobId, this.tenant);
         }
 
+        await db.table('migration_reports').where({ migration_job_id: migrationJobId, report_type: 'inspection' }).delete();
+        await db.table('migration_reports').insert({ tenant: this.tenant, migration_job_id: migrationJobId, report_type: 'inspection',
+          summary: JSON.stringify({ diagnostics: validation.diagnostics, exclusions: reader.allRows('exclusions') }) });
         await db.table('migration_jobs').where({ migration_job_id: migrationJobId }).update({
           state: 'needs_configuration',
           package_id: manifest.package_id,

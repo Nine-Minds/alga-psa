@@ -1,3 +1,4 @@
+import { AMP_WORKSPACE_TABLES, workspaceFields } from './workspace';
 import { AMP_TABLE_COLUMNS, AMP_ALLOWLISTED_TABLES, type AmpTable } from './tables';
 
 const COLUMN_TYPES: Record<string, string> = {
@@ -12,6 +13,7 @@ const COLUMN_TYPES: Record<string, string> = {
 };
 
 const NOT_NULL_COLUMNS: Record<AmpTable, readonly string[]> = {
+  ...Object.fromEntries(AMP_WORKSPACE_TABLES.map(table => [table, ['package_record_id', 'source_record_id', 'external_identifier_namespace', ...Object.entries(workspaceFields(table)).filter(([, field]) => field.required).map(([column]) => column)]])) as Record<(typeof AMP_WORKSPACE_TABLES)[number], string[]>,
   amp_manifest: [
     'format_version',
     'package_id',
@@ -68,10 +70,11 @@ const NOT_NULL_COLUMNS: Record<AmpTable, readonly string[]> = {
 
 function createTableSql(table: AmpTable): string {
   const columns = AMP_TABLE_COLUMNS[table].map((column) => {
-    const type = COLUMN_TYPES[column] ?? 'TEXT';
+    const field = workspaceFields(table)[column];
+    const type = field ? field.kind === 'number' ? 'REAL' : ['integer', 'flag'].includes(field.kind) ? 'INTEGER' : 'TEXT' : COLUMN_TYPES[column] ?? 'TEXT';
     const notNull = NOT_NULL_COLUMNS[table].includes(column) ? ' NOT NULL' : '';
     const primaryKey = column === 'package_record_id' ? ' PRIMARY KEY' : '';
-    return `  ${column} ${type}${primaryKey}${notNull}`;
+    return `  "${column}" ${type}${primaryKey}${notNull}`;
   });
   return `CREATE TABLE ${table} (\n${columns.join(',\n')}\n);`;
 }

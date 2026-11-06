@@ -1,6 +1,7 @@
 import {
   AMP_ALLOWLISTED_TABLES,
   AMP_ENTITY_TABLES,
+  AMP_CONTENT_TABLES,
   AMP_SCHEMA_SQL,
   AMP_TABLE_COLUMNS,
   AMP_LIMITS,
@@ -47,7 +48,7 @@ export class AmpPackageBuilder {
     }
 
     const entityRows: Partial<Record<string, ReadonlyArray<Record<string, unknown>>>> = {};
-    for (const table of AMP_ENTITY_TABLES) {
+    for (const table of AMP_CONTENT_TABLES) {
       entityRows[table] = (rows[table] ?? []) as unknown as ReadonlyArray<Record<string, unknown>>;
     }
     const completedManifest: AmpManifest = {
@@ -77,11 +78,13 @@ export class AmpPackageBuilder {
         if (!/^[a-f0-9]{64}$/.test(attachment.sha256) || !Number.isSafeInteger(attachment.size) || attachment.size < 0 || attachment.size > AMP_LIMITS.attachmentBytes) {
           throw new Error('Invalid AMP attachment digest or size');
         }
+        if (statSync(attachment.filePath).size !== attachment.size) throw new Error('AMP attachment bytes do not match their declared digest and size');
         const bytes = readFileSync(attachment.filePath);
         const digest = createHash('sha256').update(bytes).digest('hex');
         if (bytes.length !== attachment.size || digest !== attachment.sha256) throw new Error('AMP attachment bytes do not match their declared digest and size');
         const prior = byDigest.get(digest);
         if (prior && prior.size !== bytes.length) throw new Error('Duplicate attachment digest has conflicting sizes');
+        if (prior) continue;
         byDigest.set(digest, attachment);
         expanded += bytes.length;
         if (expanded > AMP_LIMITS.packageBytes || zip.getEntries().length >= AMP_LIMITS.zipEntries) throw new Error('AMP package limits exceeded');
@@ -97,6 +100,7 @@ export class AmpPackageBuilder {
         throw new Error('AMP attachment index and ZIP content do not match');
       }
       zip.writeZip(this.path);
+      if (statSync(this.path).size > AMP_LIMITS.packageBytes) { rmSync(this.path, { force: true }); throw new Error('AMP compressed package limit exceeded'); }
       return completedManifest;
     } finally {
       try { db.close(); } catch { /* already closed after serialization */ }
@@ -118,7 +122,7 @@ export class AmpPackageBuilder {
     const columns = allowedColumns.filter((column) => row[column] !== undefined);
     const placeholders = columns.map(() => '?').join(', ');
     const statement = db.prepare(
-      `INSERT INTO ${table} (${columns.join(', ')}) VALUES (${placeholders})`
+      `INSERT INTO ${table} (${columns.map(column => `"${column}"`).join(', ')}) VALUES (${placeholders})`
     );
     statement.run(...columns.map((column) => row[column] ?? null));
   }

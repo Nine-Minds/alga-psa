@@ -986,6 +986,16 @@
       "invalid": "Deze opmerking kon niet worden opgeslagen.",
       "send": "Verzenden",
       "cancel": "Annuleren"
+    },
+    "ampExport": {
+      "title": "Werkruimte exporteren",
+      "description": "Download een AMP-pakket met de gegevens en bestanden van uw werkruimte.",
+      "download": "AMP-pakket voorbereiden en downloaden",
+      "requested": "De aanvraag opent in een nieuw tabblad. Uw browser downloadt het pakket zodra het klaar is.",
+      "unavailable": "Exporteren is niet beschikbaar in deze editie.",
+      "loadError": "Exporteren is niet beschikbaar. Vernieuw de pagina en probeer het opnieuw.",
+      "loading": "Laden…",
+      "security": "Het pakket bevat gevoelige gegevens. Bewaar het veilig. Aanmeldgegevens en geheimen van providers zijn uitgesloten."
     }
   },
   "common": {

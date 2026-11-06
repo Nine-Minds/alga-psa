@@ -40,7 +40,7 @@ describe('AMP package round trip', () => {
     expect(result.valid).toBe(true);
     expect(result.manifest?.package_id).toBe('amp-sample-package');
     for (const table of AMP_ENTITY_TABLES) {
-      expect(result.rowCounts[table]).toBe(1);
+      expect(result.rowCounts[table]).toBe(sampleEntityRows()[table]?.length ?? 0);
     }
   });
 
@@ -203,6 +203,39 @@ describe('AMP validator attacks', () => {
     zip.addFile('../outside', Buffer.from('must not be extracted'));
     zip.writeZip(path);
     expect(validateAmpPackage(path).valid).toBe(false);
+  });
+
+  it('rejects declared attachment sizes above the cap before inflating them', () => {
+    const path = nextPath(); buildSamplePackage(path);
+    const zip = new AdmZip(path), name = `attachments/aa/${'a'.repeat(64)}`;
+    zip.addFile(name, Buffer.from('small compressed body'));
+    const bytes = zip.toBuffer();
+    for (let offset = 0; offset < bytes.length - 46; offset++) {
+      if (bytes.readUInt32LE(offset) !== 0x02014b50) continue;
+      const length = bytes.readUInt16LE(offset + 28);
+      if (bytes.subarray(offset + 46, offset + 46 + length).toString() === name) bytes.writeUInt32LE(AMP_LIMITS.attachmentBytes + 1, offset + 24);
+    }
+    writeFileSync(path, bytes);
+    expect(validateAmpPackage(path).diagnostics).toContainEqual(expect.objectContaining({ code: 'AMP_LIMIT_EXCEEDED' }));
+  });
+
+  it('rejects symlink entries and unindexed directory entries', () => {
+    for (const directory of [false, true]) {
+      const path = nextPath(); buildSamplePackage(path);
+      const zip = new AdmZip(path), name = directory ? 'attachments/' : `attachments/aa/${'a'.repeat(64)}`;
+      zip.addFile(name, Buffer.from('target'));
+      if (!directory) zip.getEntry(name)!.header.attr = 0xa1ff0000;
+      zip.writeZip(path);
+      expect(validateAmpPackage(path).valid).toBe(false);
+    }
+  });
+
+  it('protects custom-field business values with the package content digest', () => {
+    const result = buildWith(path => {
+      const db = rawDb(path);
+      db.exec("UPDATE custom_field_values SET value_json = '123'"); db.close();
+    });
+    expect(result.diagnostics).toContainEqual(expect.objectContaining({ code: 'AMP_HASH_MISMATCH' }));
   });
 
   it('rejects attachment bytes whose content no longer matches the indexed digest', () => {

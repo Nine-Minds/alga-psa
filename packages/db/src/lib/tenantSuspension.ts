@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from './tenantDb';
 
-export type TenantSuspensionReason = 'tenant_cancelled';
+export type TenantSuspensionReason = 'tenant_cancelled' | 'amp_workspace_review';
 
 const SUSPENSION_LOOKUP_TENANT = '__tenant_suspension_lookup__';
 

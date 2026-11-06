@@ -15,3 +15,4 @@ export type { ConformanceExpectation, ConformanceReport } from './conformance';
 export { openPackageDatabase, openWritableDatabase } from './sqlite';
 export { createAmpTemporaryDirectory } from './temporary';
 export type { SqliteDatabase, SqliteStatement } from './sqlite';
+export { rewriteAmpContent } from './content';

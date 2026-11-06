@@ -12,6 +12,7 @@ export default defineConfig({
     'config/storage': 'src/config/storage.ts',
   },
   format: ['esm'],
+  outExtension: () => ({ js: '.mjs' }),
   dts: false,
   bundle: true,
   splitting: true,

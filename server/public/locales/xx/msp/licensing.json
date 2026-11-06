@@ -986,6 +986,16 @@
       "invalid": "⟦Ŧħīş ƈȯḿḿḗƞŧ ƈȯŭŀḓ ƞȯŧ ƀḗ şȧṽḗḓ.⟧",
       "send": "⟦Şḗƞḓ⟧",
       "cancel": "⟦Ƈȧƞƈḗŀ⟧"
+    },
+    "ampExport": {
+      "title": "11111",
+      "description": "11111",
+      "download": "11111",
+      "requested": "11111",
+      "unavailable": "11111",
+      "loadError": "11111",
+      "loading": "11111",
+      "security": "11111"
     }
   },
   "common": {

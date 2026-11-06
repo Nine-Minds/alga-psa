@@ -1,3 +1,4 @@
+import type { AmpWorkspaceEntity } from './workspace';
 import type { AmpEntityType } from './tables';
 
 /** The single row of `amp_manifest`. */
@@ -55,6 +56,12 @@ export interface AmpContactRecord extends AmpEntityRecordBase {
 }
 
 export interface AmpTicketRecord extends AmpEntityRecordBase {
+  board_package_record_id?: string | null;
+  status_package_record_id?: string | null;
+  priority_package_record_id?: string | null;
+  category_package_record_id?: string | null;
+  assignee_package_record_id?: string | null;
+
   organization_package_record_id?: string | null;
   location_package_record_id?: string | null;
   requester_package_record_id?: string | null;
@@ -70,10 +77,23 @@ export interface AmpTicketCommentRecord extends AmpEntityRecordBase {
   ticket_package_record_id: string;
   author_package_record_id?: string | null;
   body: string;
+  author_historical_package_record_id?: string | null;
+  author_name?: string | null;
+  author_organization?: string | null;
+  publication_state?: string | null;
+  scheduled_at?: string | null;
+  published_at?: string | null;
+  thread_package_record_id?: string | null;
+  author_person_package_record_id?: string | null;
+  parent_package_record_id?: string | null;
   is_internal?: number | null;
 }
 
 export interface AmpAssetRecord extends AmpEntityRecordBase {
+  tag?: string | null;
+  warranty_ends_on?: string | null;
+  assignee_package_record_id?: string | null;
+  notes_document_package_record_id?: string | null;
   organization_package_record_id?: string | null;
   location_package_record_id?: string | null;
   name: string;
@@ -154,11 +174,11 @@ export interface AmpExclusionRecord {
   package_record_id: string;
   entity_type?: string | null;
   entity_package_record_id?: string | null;
-  reason: 'msp_private' | 'commercial' | 'secret' | 'deferred' | 'unreadable';
+  reason: 'msp_private' | 'commercial' | 'secret' | 'deferred' | 'attachment_unreadable';
   detail: string;
 }
 
-export interface AmpEntityRecordMap {
+export type AmpEntityRecordMap = Record<AmpWorkspaceEntity, AmpEntityRecordBase & Record<string, unknown>> & {
   organizations: AmpOrganizationRecord;
   locations: AmpLocationRecord;
   contacts: AmpContactRecord;

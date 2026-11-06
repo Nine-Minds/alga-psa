@@ -986,6 +986,16 @@
       "invalid": "Dieser Kommentar konnte nicht gespeichert werden.",
       "send": "Senden",
       "cancel": "Abbrechen"
+    },
+    "ampExport": {
+      "title": "Arbeitsbereich exportieren",
+      "description": "Laden Sie ein AMP-Paket mit den Datensätzen und Dateien Ihres Arbeitsbereichs herunter.",
+      "download": "AMP-Paket erstellen und herunterladen",
+      "requested": "Die Anfrage wird in einem neuen Tab geöffnet. Ihr Browser lädt das Paket herunter, sobald es bereit ist.",
+      "unavailable": "Der Arbeitsbereichsexport ist in dieser Edition nicht verfügbar.",
+      "loadError": "Der Export ist nicht verfügbar. Laden Sie die Seite neu und versuchen Sie es erneut.",
+      "loading": "Wird geladen…",
+      "security": "Das Paket enthält vertrauliche Arbeitsbereichsdaten. Bewahren Sie es sicher auf. Zugangsdaten und Anbieter-Geheimnisse sind ausgeschlossen."
     }
   },
   "common": {

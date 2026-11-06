@@ -155,7 +155,7 @@ export function migrationClaimLabel(
   });
 }
 
-export const MIGRATION_ENTITY_LABELS: Record<AmpEntityType, string> = {
+export const MIGRATION_ENTITY_LABELS: Partial<Record<AmpEntityType, string>> = {
   organizations: 'Organizations',
   locations: 'Locations',
   contacts: 'Contacts',
@@ -167,7 +167,7 @@ export const MIGRATION_ENTITY_LABELS: Record<AmpEntityType, string> = {
 };
 
 export function migrationEntityLabel(entityType: string): string {
-  return MIGRATION_ENTITY_LABELS[entityType as AmpEntityType] ?? entityType;
+  return MIGRATION_ENTITY_LABELS[entityType as AmpEntityType] ?? entityType.replace(/_/g, ' ').replace(/^./, letter => letter.toUpperCase());
 }
 
 /** Job-lifecycle steps shown in the detail stepper. */

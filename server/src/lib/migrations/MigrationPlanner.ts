@@ -5,6 +5,7 @@ import { getAssetTypeBySlug } from '@alga-psa/assets/lib/assetTypeRegistry';
 import { coerceAttributeValue, isBuiltinAssetTypeSlug } from '@alga-psa/assets/lib/assetTypeAttributes';
 import {
   MIGRATION_PHASE_ORDER,
+  parseConfiguration,
   type MigrationJobConfiguration,
   type PreflightEntityPlan,
   type PreflightIssue,
@@ -682,12 +683,4 @@ function hasPresentCustomValue(value: unknown): boolean {
   return value !== undefined && value !== null && (typeof value !== 'string' || value.trim().length > 0);
 }
 
-export function parseConfiguration(raw: unknown): MigrationJobConfiguration {
-  if (raw === null || raw === undefined) {
-    return {};
-  }
-  if (typeof raw === 'string') {
-    return JSON.parse(raw) as MigrationJobConfiguration;
-  }
-  return raw as MigrationJobConfiguration;
-}
+export { parseConfiguration } from './types';

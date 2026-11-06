@@ -4,11 +4,8 @@ import { coManagedAttachmentParent } from './attachmentParent';
 import { assertCoManagedAttachmentPath } from './attachmentStoragePath';
 import { coManagedArchiveStorageProvider } from './archiveStorageProvider';
 
-/**
- * Reader primitives inherited by L7a (closure enumeration) and L7b3 (portable
- * export). They are exported, deliberately NOT registered anywhere: registering
- * into L7b1's registry from here would be a downward dependency.
- */
+/** Published conversation-file readers shared by closure and workspace export. Callers retain
+ * their own tenant/customer-admin authority; these readers never grant access by themselves. */
 const TABLE = 'co_management_conversation_attachments';
 
 export interface ConversationDocumentScope {
@@ -28,20 +25,40 @@ export interface ConversationDocumentMeta {
 
 /** Attachment metadata only, no bytes. Published, ready, not removed/purged. `tenant` is the store tenant: files in a sponsor's store whose customer differs are private-thread files. */
 export async function listConversationDocumentsForExport(db: Knex, tenant: string, scope: ConversationDocumentScope): Promise<ConversationDocumentMeta[]> {
+  const rows = await exportableConversationFiles(db, tenant)
+    .where(coManagedAttachmentParent(scope.parent))
+    .modify(query => { if (scope.relationshipId) query.where('relationship_id', scope.relationshipId); });
+  return rows.map((row: any) => {
+    assertCoManagedAttachmentPath(row);
+    return conversationDocumentMetadata(row, row.storage_path);
+  });
+}
+
+function conversationDocumentMetadata(row: any, storagePath: string): ConversationDocumentMeta {
+  return { attachmentId: row.attachment_id, threadId: row.thread_id, commentId: row.comment_id, fileName: row.file_name, mimeType: row.mime_type,
+      size: Number(row.file_size), contentHash: row.content_hash, storagePath, createdAt: new Date(row.created_at).toISOString(),
+      actorTenant: row.actor_tenant, actorUserId: row.actor_user_id, disclosureOperationId: row.disclosure_operation_id ?? null,
+      organizationPrivate: row.customer_tenant !== row.tenant };
+}
+
+function exportableConversationFiles(db: Knex, tenant: string) {
   const owner = tenantDb(db, tenant);
-  const rows = await owner.table(TABLE).where({ ...coManagedAttachmentParent(scope.parent), status: 'ready' })
-    .whereNull('discarded_at').whereNull('purged_at')
-    .modify(query => { if (scope.relationshipId) query.where('relationship_id', scope.relationshipId); })
+  return owner.table(TABLE).where({ status: 'ready' }).whereNull('discarded_at').whereNull('purged_at')
     .where(query => query.whereNull('draft_operation_id').orWhereExists(owner.table('co_management_conversation_drafts as d')
       .where('d.status', 'published').whereRaw('d.operation_id = co_management_conversation_attachments.draft_operation_id')
       .whereRaw('d.relationship_id = co_management_conversation_attachments.relationship_id')))
     .orderBy('created_at').orderBy('attachment_id');
+}
+
+/** Whole-workspace variant under the export-admin boundary, without a query for every empty ticket.
+ * Bad locators remain unreadable descriptors so the producer can record individual exclusions. */
+export async function listWorkspaceConversationDocumentsForExport(db: Knex, tenant: string): Promise<Array<ConversationDocumentMeta & { projectTask: boolean }>> {
+  const rows = await exportableConversationFiles(db, tenant).limit(100_001);
+  if (rows.length > 100_000) throw new Error('Workspace conversation attachment limit exceeded');
   return rows.map((row: any) => {
-    assertCoManagedAttachmentPath(row);
-    return { attachmentId: row.attachment_id, threadId: row.thread_id, commentId: row.comment_id, fileName: row.file_name, mimeType: row.mime_type,
-      size: row.file_size, contentHash: row.content_hash, storagePath: row.storage_path, createdAt: new Date(row.created_at).toISOString(),
-      actorTenant: row.actor_tenant, actorUserId: row.actor_user_id, disclosureOperationId: row.disclosure_operation_id ?? null,
-      organizationPrivate: row.customer_tenant !== row.tenant };
+    let storagePath = '';
+    try { storagePath = assertCoManagedAttachmentPath(row); } catch { /* Producer records unreadable metadata. */ }
+    return { ...conversationDocumentMetadata(row, storagePath), projectTask: Boolean(row.project_task_id) };
   });
 }
 

@@ -39,9 +39,6 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   co_managed_project_task_references: { scope: 'tenant' },
   collaboration_actor_references: { scope: 'tenant' },
   co_managed_participation_evidence: { scope: 'tenant' },
-  portable_restore_suspensions: { scope: 'tenant' },
-  portable_workspace_restores: { scope: 'tenant' },
-  portable_workspace_restore_uploads: { scope: 'tenant' },
   co_management_ticket_work: { scope: 'tenant' },
   co_management_ticket_handoffs: { scope: 'tenant' },
   co_managed_ticket_references: { scope: 'tenant' },
@@ -379,6 +376,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   microsoft_profile_consumer_bindings: { scope: 'tenant' },
   microsoft_profiles: { scope: 'tenant' },
   // AMP tables are tenant-distributed in server/migrations/20260825130000_create_amp_migration_tables.cjs.
+  migration_staged_attachments: { scope: 'tenant' },
   migration_jobs: { scope: 'tenant' },
   migration_job_entities: { scope: 'tenant' },
   migration_staged_records: { scope: 'tenant' },

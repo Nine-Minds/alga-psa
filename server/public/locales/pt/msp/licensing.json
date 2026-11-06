@@ -986,6 +986,16 @@
       "invalid": "Não foi possível salvar este comentário.",
       "send": "Enviar",
       "cancel": "Cancelar"
+    },
+    "ampExport": {
+      "title": "Exportar espaço de trabalho",
+      "description": "Transfira um pacote AMP com os dados e ficheiros do espaço de trabalho.",
+      "download": "Preparar e transferir pacote AMP",
+      "requested": "O pedido abre num novo separador. O navegador transfere o pacote quando estiver pronto.",
+      "unavailable": "A exportação não está disponível nesta edição.",
+      "loadError": "A exportação está indisponível. Atualize a página e tente novamente.",
+      "loading": "A carregar…",
+      "security": "O pacote contém dados sensíveis. Guarde-o em segurança. As credenciais e os segredos dos fornecedores são excluídos."
     }
   },
   "common": {

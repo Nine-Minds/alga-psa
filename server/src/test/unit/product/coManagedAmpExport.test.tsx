@@ -30,7 +30,7 @@ it('downloads an AMP package through the native form without sending a passphras
   expect(form).toHaveAttribute('target', '_blank');
   expect([...new FormData(form).entries()]).toEqual([]);
   fireEvent.submit(form);
-  expect(screen.getByRole('status')).toHaveTextContent('Your AMP download has started.');
+  expect(screen.getByRole('status')).toHaveTextContent('Your request opens in a new tab. Your browser will download the package when it is ready.');
 });
 
 it('shows a visible failure when the authorized export screen cannot be loaded', async () => {

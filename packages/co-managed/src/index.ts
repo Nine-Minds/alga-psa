@@ -122,6 +122,3 @@ export type { CoManagedArchiveManifest, CoManagedArchiveFileSource, CoManagedArc
 export { finalizeCoManagedArchive, registerCoManagedClosureEvidenceSource } from './archiveFinalization';
 export { listCoManagedArchives, getCoManagedArchiveHistory, readCoManagedArchiveFile } from './archiveReads';
 export type { CoManagedArchiveSummary, CoManagedArchiveEntry, CoManagedArchiveFile, CoManagedArchiveHistory } from './archiveReads';
-
-export * from './portableRestoreUploads';
-export { assertPortableRestoreInstallationAuthority } from './portableRestoreInstallationAuthority';

@@ -1,6 +1,8 @@
+import { authorizeAmpWorkspaceExport } from 'server/src/lib/co-managed/ampExportAuthorization';
+import { isCoManagedSharedWorkError } from '@alga-psa/co-managed/sharedWorkIdentity';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { createTenantKnex } from '@alga-psa/db';
-import { CoManagedSharedWorkError, withCoManagedExportAdmin } from '@alga-psa/co-managed/exportAuthorization';
+import { withCoManagedExportAdmin } from '@alga-psa/co-managed/exportAuthorization';
 import { AmpExportService } from 'server/src/lib/migrations/AmpExportService';
 import { coManagedBrowserActor } from 'server/src/lib/co-managed/browserActor';
 
@@ -20,8 +22,8 @@ export async function handleCoManagedAmpExport(): Promise<Response> {
     if (!user?.tenant || user.user_type !== 'internal') return new Response(null, { status: 404, headers });
     const { knex } = await createTenantKnex(user.tenant);
     const actor = await coManagedBrowserActor(user, user.tenant);
-    const result = await withCoManagedExportAdmin(knex, actor, async () =>
-      new AmpExportService(knex, user.tenant).exportTenant());
+    const result = await withCoManagedExportAdmin(knex, actor, async (_retained, verified, subject) =>
+      new AmpExportService(knex, verified.tenant).exportWorkspace((snapshot, rows) => authorizeAmpWorkspaceExport(snapshot, verified, subject, rows)));
     return new Response(new Uint8Array(result.buffer), {
       headers: {
         ...headers,
@@ -31,7 +33,7 @@ export async function handleCoManagedAmpExport(): Promise<Response> {
       },
     });
   } catch (error) {
-    if (error instanceof CoManagedSharedWorkError) return new Response(null, { status: 404, headers });
+    if (isCoManagedSharedWorkError(error)) return new Response(null, { status: 404, headers });
     return Response.json({ error: 'WORKSPACE_EXPORT_FAILED' }, { status: 500, headers });
   }
 }

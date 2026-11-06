@@ -154,7 +154,7 @@ export class AmpSqliteReader {
   /** One batch of rows, ordered by package_record_id for determinism. */
   readBatch(table: AmpTable, limit: number, offset: number): Record<string, unknown>[] {
     this.assertAllowlisted(table);
-    const columns = AMP_TABLE_COLUMNS[table].join(', ');
+    const columns = AMP_TABLE_COLUMNS[table].map(column => `"${column}"`).join(', ');
     return this.db
       .prepare(`SELECT ${columns} FROM ${table} ORDER BY package_record_id LIMIT ? OFFSET ?`)
       .all(limit, offset) as Record<string, unknown>[];

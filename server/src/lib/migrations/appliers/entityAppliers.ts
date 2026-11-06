@@ -1,3 +1,4 @@
+import { WORKSPACE_APPLIERS } from './workspaceAppliers';
 import type { Knex } from 'knex';
 import { silentTicketCreation } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import {
@@ -739,6 +740,7 @@ export class VendorProductMigrationApplier implements EntityApplier {
 }
 
 export const ENTITY_APPLIERS: Record<AmpEntityType, EntityApplier> = {
+  ...WORKSPACE_APPLIERS,
   organizations: new OrganizationMigrationApplier(),
   locations: new LocationMigrationApplier(),
   contacts: new ContactMigrationApplier(),

@@ -1,12 +1,12 @@
 import { createHash } from 'node:crypto';
-import { AMP_ENTITY_TABLES } from '@alga-psa/migration-spec';
+import { AMP_CONTENT_TABLES } from '@alga-psa/migration-spec';
 
 /**
  * Canonical content hash of a package.
  *
  * Definition (normative, mirrored in docs/reference/amp/spec.md):
- * - Only the canonical entity tables (AMP_ENTITY_TABLES) participate; the manifest and
- *   auxiliary tables are excluded so the hash is never self-referential.
+ * - Canonical entities, identifiers, custom fields, attachment ownership metadata and exclusions participate; the manifest
+ *   and producer diagnostics are excluded so the hash is never self-referential.
  * - Tables are processed in ascending table-name order; rows in ascending
  *   `package_record_id` order (code-point comparison).
  * - Each row serializes as JSON with keys sorted ascending and null/undefined
@@ -18,7 +18,7 @@ export function canonicalContentSha256(
   entityRows: Partial<Record<string, ReadonlyArray<Record<string, unknown>>>>
 ): string {
   const lines: string[] = [];
-  const tables = [...AMP_ENTITY_TABLES].sort();
+  const tables = [...AMP_CONTENT_TABLES].sort();
   for (const table of tables) {
     const rows = entityRows[table] ?? [];
     const sorted = [...rows].sort((a, b) =>

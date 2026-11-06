@@ -1,10 +1,17 @@
+import { rewriteAmpContent } from './content';
 import { existsSync, openSync, readSync, closeSync, statSync } from 'node:fs';
 import {
   AMP_ALLOWLISTED_TABLES,
   AMP_AUXILIARY_TABLES,
   AMP_DIAGNOSTIC_SEVERITIES,
   AMP_ENTITY_REFERENCES,
+  AMP_POLYMORPHIC_REFERENCES,
   AMP_ENTITY_TABLES,
+  AMP_CONTENT_COLUMNS,
+  parseAmpContentUri,
+  orderAmpRecords,
+  AMP_WORKSPACE_TABLES,
+  workspaceFields,
   AMP_LIMITS,
   AMP_TABLE_COLUMNS,
   isSupportedFormatVersion,
@@ -38,9 +45,10 @@ const AMP_ZIP_HEADER = '504b0304';
 const RFC3339_UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
-const ENTITY_TIMESTAMP_COLUMNS = ['created_at', 'updated_at', 'closed_at'];
+const ENTITY_TIMESTAMP_COLUMNS = ['created_at', 'updated_at', 'closed_at', 'scheduled_at', 'published_at'];
 const ENTITY_DATE_COLUMNS = ['purchase_date'];
 const ENTITY_REQUIRED_TEXT: Record<AmpEntityType, readonly string[]> = {
+  ...Object.fromEntries(AMP_WORKSPACE_TABLES.map(table => [table, Object.entries(workspaceFields(table)).filter(([, f]) => f.required).map(([column]) => column)])) as Record<(typeof AMP_WORKSPACE_TABLES)[number], string[]>,
   organizations: ['name'],
   locations: ['organization_package_record_id', 'name'],
   contacts: [],
@@ -277,6 +285,7 @@ export function validateAmpPackage(
     }
 
     for (const table of AMP_ENTITY_TABLES) {
+      try { orderAmpRecords(entityRows[table] ?? [], AMP_ENTITY_REFERENCES[table].filter(edge => edge.targetTable === table).map(edge => edge.column)); } catch { diagnostics.push({ code: 'AMP_INVALID_REFERENCE', message: 'Entity contains a self-reference cycle.', table }); }
       for (const row of entityRows[table] ?? []) {
         for (const reference of AMP_ENTITY_REFERENCES[table]) {
           const value = row[reference.column];
@@ -307,9 +316,19 @@ export function validateAmpPackage(
 
     validateAuxiliaryTables(reader, presentTables, idsByTable, limits, diagnostics);
 
+    for (const [table, reference] of Object.entries(AMP_POLYMORPHIC_REFERENCES)) for (const row of entityRows[table] ?? []) {
+      if (!reference.targetTables.includes(row[reference.typeColumn] as AmpEntityType) || !idsByTable[String(row[reference.typeColumn]) as AmpEntityType]?.has(String(row[reference.idColumn]))) diagnostics.push({ code: 'AMP_INVALID_REFERENCE', message: 'Link target must resolve to an included AMP entity.', table, recordId: String(row.package_record_id) });
+    }
+
+    for (const row of entityRows.conversation_threads ?? []) {
+      const ticket = row.ticket_package_record_id != null, work = row.work_item_package_record_id != null;
+      if (ticket === work || ticket && (!row.root_ticket_message_package_record_id || row.root_work_message_package_record_id) || work && (!row.root_work_message_package_record_id || row.root_ticket_message_package_record_id)) diagnostics.push({ code: 'AMP_INVALID_REFERENCE', message: 'Conversation thread requires exactly one parent and its corresponding root message.', table: 'conversation_threads', recordId: String(row.package_record_id) });
+    }
     const attachmentRows = presentTables.includes('attachments') ? reader.allRows('attachments') : [];
     const attachmentIndex = new Map<string, number>();
+    const fileAttachments = new Map<string, { count: number; size: unknown }>();
     for (const row of attachmentRows) {
+      if (row.entity_type === 'files') { const key = String(row.entity_package_record_id), prior = fileAttachments.get(key); fileAttachments.set(key, { count: (prior?.count ?? 0) + 1, size: row.size }); }
       const sha = row.sha256;
       const size = row.size;
       if (typeof sha !== 'string' || !/^[a-f0-9]{64}$/.test(sha) || !Number.isSafeInteger(size) || Number(size) < 0 || Number(size) > limits.attachmentBytes) {
@@ -325,6 +344,10 @@ export function validateAmpPackage(
       if (!reader.attachmentPath(sha)) diagnostics.push({ code: 'AMP_INVALID_REFERENCE', message: `Attachment ${sha} has no ZIP entry.`, table: 'attachments', recordId: String(row.package_record_id ?? '') });
       else if (reader.attachmentSize(sha) !== Number(size)) diagnostics.push({ code: 'AMP_INVALID_VALUE', message: `Attachment ${sha} size does not match its ZIP content.`, table: 'attachments', recordId: String(row.package_record_id ?? '') });
     }
+    for (const file of entityRows.files ?? []) {
+      const indexed = fileAttachments.get(String(file.package_record_id));
+      if (indexed?.count !== 1 || indexed.size !== file.size) diagnostics.push({ code: 'AMP_INVALID_REFERENCE', message: 'A file record must own exactly one attachment of the same size.', table: 'files', recordId: String(file.package_record_id) });
+    }
     const indexedHash = canonicalAttachmentsSha256([...attachmentIndex].map(([sha256, size]) => ({ sha256, size })));
     if (manifest?.attachments_sha256 !== indexedHash) diagnostics.push({ code: 'AMP_HASH_MISMATCH', message: 'attachments_sha256 does not match the canonical attachment index.', field: 'attachments_sha256' });
     const contentDigests = reader.attachmentDigests();
@@ -332,7 +355,7 @@ export function validateAmpPackage(
       diagnostics.push({ code: 'AMP_INVALID_REFERENCE', message: 'ZIP attachment entries do not exactly match the attachment index.', table: 'attachments' });
     }
     const exclusions = presentTables.includes('exclusions') ? reader.allRows('exclusions') : [];
-    const exclusionReasons = ['msp_private', 'commercial', 'secret', 'deferred', 'unreadable'];
+    const exclusionReasons = ['msp_private', 'commercial', 'secret', 'deferred', 'attachment_unreadable'];
     for (const row of exclusions) {
       if (!exclusionReasons.includes(String(row.reason)) || typeof row.detail !== 'string' || row.detail.length === 0) {
         diagnostics.push({ code: 'AMP_INVALID_VALUE', message: 'Exclusions require a supported reason and non-empty detail.', table: 'exclusions', recordId: String(row.package_record_id ?? '') });
@@ -342,6 +365,24 @@ export function validateAmpPackage(
       }
     }
 
+    const attachmentIds = new Set(attachmentRows.map(row => String(row.package_record_id))), exclusionIds = new Set(exclusions.map(row => String(row.package_record_id)));
+    for (const [table, columns] of Object.entries(AMP_CONTENT_COLUMNS)) for (const row of entityRows[table] ?? []) for (const field of columns) {
+      if (row[field] == null) continue;
+      try {
+        rewriteAmpContent(row[field], url => {
+          const reference = parseAmpContentUri(url);
+          if (!reference) return url;
+          const ids = reference.entityType === 'attachments' ? attachmentIds : reference.entityType === 'exclusions' ? exclusionIds : idsByTable[reference.entityType];
+          if (!ids?.has(reference.packageRecordId)) throw new Error('Unresolved AMP content reference');
+          return url;
+        });
+      } catch {
+        diagnostics.push({ code: 'AMP_INVALID_REFERENCE', message: 'Content contains an invalid or unresolved AMP URI.', table, recordId: String(row.package_record_id), field });
+      }
+    }
+    for (const table of ['custom_field_values', 'external_identifiers'] as const) entityRows[table] = presentTables.includes(table) ? reader.allRows(table) : [];
+    entityRows.attachments = attachmentRows;
+    entityRows.exclusions = exclusions;
     if (manifest && typeof manifest.content_sha256 === 'string') {
       const expectedHash = canonicalContentSha256(entityRows);
       if (manifest.content_sha256 !== expectedHash) {
@@ -386,6 +427,20 @@ function validateEntityRow(
         field,
       });
     }
+  }
+
+  for (const [field, spec] of Object.entries(workspaceFields(table))) {
+    const value = row[field];
+    if (value == null) continue;
+    let valid = true;
+    if (['text', 'reference', 'date', 'timestamp', 'json'].includes(spec.kind)) valid = typeof value === 'string';
+    if (spec.kind === 'integer') valid = Number.isSafeInteger(value);
+    if (spec.kind === 'number') valid = typeof value === 'number' && Number.isFinite(value);
+    if (spec.kind === 'flag') valid = value === 0 || value === 1;
+    if (spec.kind === 'date') valid = typeof value === 'string' && DATE_ONLY.test(value) && Number.isFinite(Date.parse(value));
+    if (spec.kind === 'timestamp') valid = typeof value === 'string' && RFC3339_UTC.test(value) && Number.isFinite(Date.parse(value));
+    if (spec.kind === 'json') { try { const parsed = JSON.parse(String(value)); valid = Buffer.byteLength(String(value)) <= limits.extensionJsonBytes && jsonDepth(parsed) <= limits.extensionJsonDepth; } catch { valid = false; } }
+    if (!valid) diagnostics.push({ code: 'AMP_INVALID_VALUE', message: `Invalid ${spec.kind} value for ${field}.`, table, recordId, field });
   }
 
   for (const field of ENTITY_REQUIRED_TEXT[table]) {
@@ -460,6 +515,8 @@ function validateEntityRow(
       });
     }
   }
+
+  if (table === 'ticket_comments' && row.publication_state != null && !['draft', 'scheduled', 'published', 'cancelled'].includes(String(row.publication_state))) diagnostics.push({ code: 'AMP_INVALID_VALUE', message: 'Invalid comment publication state.', table, recordId, field: 'publication_state' });
 
   if (table === 'vendor_products') {
     const hasRef = typeof row.product_package_record_id === 'string' && row.product_package_record_id.length > 0;

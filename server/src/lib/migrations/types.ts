@@ -1,3 +1,4 @@
+import { AMP_ENTITY_TABLES, AMP_ENTITY_REFERENCES, AMP_POLYMORPHIC_REFERENCES, AMP_LIMITS } from '@alga-psa/migration-spec';
 import type { AmpDiagnostic } from '@alga-psa/migration-sdk';
 import type { AmpEntityType, AmpManifest } from '@alga-psa/migration-spec';
 
@@ -44,6 +45,12 @@ export interface ProductMigrationConfiguration {
   serviceTypeId?: string | null;
 }
 
+export interface MigrationTargetPolicies {
+  createTargetTenant: true;
+  deactivateImportedUsers: true;
+  requireReauthForConnections: true;
+  pauseDispatch: true;
+}
 export interface MigrationJobConfiguration {
   /** Client that receives orphaned contacts/assets (no resolvable organization). */
   defaultClientId?: string | null;
@@ -177,21 +184,46 @@ export interface MigrationUploadResult {
 }
 
 /** Entity application order (dependency order). */
-export const MIGRATION_PHASE_ORDER: readonly AmpEntityType[] = [
-  'organizations',
-  'locations',
-  'contacts',
-  'tickets',
-  'ticket_comments',
-  'assets',
-  // Vendor offers reference products, so products always apply first.
-  'products',
-  'vendor_products',
-];
+/** Dependency order comes from the interchange graph, not a second hand-maintained roster. */
+function orderedEntities(): AmpEntityType[] {
+  const ordered: AmpEntityType[] = [], pending = new Set<AmpEntityType>(AMP_ENTITY_TABLES);
+  while (pending.size) {
+    let progressed = false;
+    for (const entity of pending) {
+      if (AMP_POLYMORPHIC_REFERENCES[entity]?.targetTables.some(target => pending.has(target))) continue;
+      if (AMP_ENTITY_REFERENCES[entity].some(edge => !edge.deferred && edge.targetTable !== entity && pending.has(edge.targetTable))) continue;
+      ordered.push(entity); pending.delete(entity); progressed = true;
+    }
+    if (!progressed) throw new Error('AMP dependency graph has a cycle');
+  }
+  return ordered;
+}
+export const MIGRATION_PHASE_ORDER: readonly AmpEntityType[] = orderedEntities();
 
 export function migrationPhaseFor(entityType: AmpEntityType): number {
   return MIGRATION_PHASE_ORDER.indexOf(entityType) + 1;
 }
 
 /** AMP packages get their own cap — deliberately not the legacy asset-CSV cap. */
-export const MAX_MIGRATION_PACKAGE_BYTES = 250 * 1024 * 1024;
+export const MAX_MIGRATION_PACKAGE_BYTES = AMP_LIMITS.packageBytes;
+
+export function parseConfiguration(raw: unknown): MigrationJobConfiguration {
+  if (raw === null || raw === undefined) {
+    return {};
+  }
+  if (typeof raw === 'string') {
+    return JSON.parse(raw) as MigrationJobConfiguration;
+  }
+  return raw as MigrationJobConfiguration;
+}
+
+/** Only engine-owned job columns can authorize a full workspace target. Editable configuration
+ * never grants this policy, even if a caller sends a similarly named configuration property. */
+export function migrationTargetPolicies(job: { created_target?: unknown; target_policies?: unknown }): MigrationTargetPolicies | undefined {
+  if (job.created_target !== true) return undefined;
+  const raw = typeof job.target_policies === 'string' ? JSON.parse(job.target_policies) : job.target_policies;
+  if (!raw || typeof raw !== 'object') return undefined;
+  const value = raw as Record<string, unknown>;
+  if (!['createTargetTenant', 'deactivateImportedUsers', 'requireReauthForConnections', 'pauseDispatch'].every(key => value[key] === true)) return undefined;
+  return value as unknown as MigrationTargetPolicies;
+}

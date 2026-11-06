@@ -986,6 +986,16 @@
       "invalid": "Impossible d’enregistrer ce commentaire.",
       "send": "Envoyer",
       "cancel": "Annuler"
+    },
+    "ampExport": {
+      "title": "Exporter l’espace de travail",
+      "description": "Téléchargez un paquet AMP contenant les données et les fichiers de votre espace de travail.",
+      "download": "Préparer et télécharger le paquet AMP",
+      "requested": "La demande s’ouvre dans un nouvel onglet. Votre navigateur téléchargera le paquet dès qu’il sera prêt.",
+      "unavailable": "L’exportation n’est pas disponible dans cette édition.",
+      "loadError": "L’exportation est indisponible. Actualisez la page et réessayez.",
+      "loading": "Chargement…",
+      "security": "Le paquet contient des données sensibles. Conservez-le en lieu sûr. Les identifiants et les secrets des fournisseurs sont exclus."
     }
   },
   "common": {

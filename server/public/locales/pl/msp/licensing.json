@@ -996,6 +996,16 @@
       "invalid": "Nie udało się zapisać tego komentarza.",
       "send": "Wyślij",
       "cancel": "Anuluj"
+    },
+    "ampExport": {
+      "title": "Eksportuj obszar roboczy",
+      "description": "Pobierz pakiet AMP zawierający dane i pliki obszaru roboczego.",
+      "download": "Przygotuj i pobierz pakiet AMP",
+      "requested": "Żądanie otworzy się w nowej karcie. Przeglądarka pobierze gotowy pakiet.",
+      "unavailable": "Eksport nie jest dostępny w tej edycji.",
+      "loadError": "Eksport jest niedostępny. Odśwież stronę i spróbuj ponownie.",
+      "loading": "Ładowanie…",
+      "security": "Pakiet zawiera poufne dane. Przechowuj go bezpiecznie. Dane logowania i sekrety dostawców są wykluczone."
     }
   },
   "common": {

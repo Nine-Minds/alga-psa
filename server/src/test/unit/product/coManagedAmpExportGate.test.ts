@@ -48,3 +48,19 @@ describe('AMP export entry points with the capability forced off', () => {
     await expect((getCoManagedAmpExportScreenAction as any)()).rejects.toMatchObject({ code: 'CAPABILITY_UNAVAILABLE' });
   });
 });
+
+it('release flag on without entitlement or participation keeps export entry points closed', async () => {
+  delete process.env.FORCE_CAPABILITIES;
+  const { registerCapabilityEligibility, registerCapabilityParticipation } = await import('@alga-psa/core/capability');
+  const { registerFeatureFlagChecker } = await import('@alga-psa/core/features');
+  registerFeatureFlagChecker(async () => true);
+  registerCapabilityEligibility('co-managed', async () => false);
+  registerCapabilityParticipation('co-managed', async () => new Set());
+  const { POST } = await import('../../../app/api/co-management/export/route');
+  expect((await POST()).status).toBe(404);
+  expect(mocks.handler).not.toHaveBeenCalled();
+  const page = (await import('../../../app/msp/co-management/export/page')).default;
+  await expect(page()).rejects.toThrow('NEXT_NOT_FOUND');
+  const { getCoManagedAmpExportScreenAction } = await import('../../../lib/actions/coManagedAmpExportActions');
+  await expect((getCoManagedAmpExportScreenAction as any)()).rejects.toMatchObject({ code: 'CAPABILITY_UNAVAILABLE' });
+});

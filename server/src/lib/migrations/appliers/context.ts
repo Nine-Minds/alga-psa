@@ -2,8 +2,7 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import type { AmpEntityType } from '@alga-psa/migration-spec';
 import { MigrationLedger } from '../MigrationLedger';
-import type { MigrationJobConfiguration } from '../types';
-import { getAssetTypeBySlug } from '@alga-psa/assets/lib/assetTypeRegistry';
+import type { MigrationJobConfiguration, MigrationTargetPolicies } from '../types';
 import type { AssetTypeField } from '@alga-psa/types';
 
 /**
@@ -21,12 +20,14 @@ export class ApplierContext {
     readonly attempt: number,
     readonly actorUserId: string,
     readonly configuration: MigrationJobConfiguration,
-    readonly ledger: MigrationLedger
+    readonly ledger: MigrationLedger,
+    readonly targetPolicies?: MigrationTargetPolicies
   ) {}
 
   async assetTypeFields(trx: Knex.Transaction, slug: string): Promise<AssetTypeField[]> {
     const cached = this.assetTypeFieldCache.get(slug);
     if (cached) return cached;
+    const { getAssetTypeBySlug } = await import('@alga-psa/assets/lib/assetTypeRegistry');
     const type = await getAssetTypeBySlug(trx, this.tenant, slug);
     const fields = type?.fields_schema ?? [];
     this.assetTypeFieldCache.set(slug, fields);

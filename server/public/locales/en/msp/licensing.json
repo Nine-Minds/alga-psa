@@ -986,6 +986,16 @@
       "invalid": "This comment could not be saved.",
       "send": "Send",
       "cancel": "Cancel"
+    },
+    "ampExport": {
+      "title": "Export workspace",
+      "description": "Download an AMP package containing your workspace records and files.",
+      "download": "Prepare and download AMP package",
+      "requested": "Your request opens in a new tab. Your browser will download the package when it is ready.",
+      "unavailable": "Workspace export is not available in this edition.",
+      "loadError": "Workspace export is unavailable. Refresh and try again.",
+      "loading": "Loading…",
+      "security": "The package contains sensitive workspace data. Store it securely. Credentials and provider secrets are excluded."
     }
   },
   "common": {

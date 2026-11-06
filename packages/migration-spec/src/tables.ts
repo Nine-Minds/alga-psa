@@ -1,3 +1,4 @@
+import { AMP_WORKSPACE_TABLES, workspaceFields } from './workspace';
 /**
  * AMP v2 table allowlist.
  *
@@ -15,6 +16,7 @@ export const AMP_ENTITY_TABLES = [
   'assets',
   'products',
   'vendor_products',
+  ...AMP_WORKSPACE_TABLES,
 ] as const;
 
 export const AMP_AUXILIARY_TABLES = [
@@ -52,6 +54,7 @@ export const AMP_ENTITY_IDENTITY_COLUMNS = [
  * tables carry any other column, and treat a missing column as a schema error.
  */
 export const AMP_TABLE_COLUMNS: Record<AmpTable, readonly string[]> = {
+  ...Object.fromEntries(AMP_WORKSPACE_TABLES.map(table => [table, [...AMP_ENTITY_IDENTITY_COLUMNS, ...Object.keys(workspaceFields(table))]])) as unknown as Record<(typeof AMP_WORKSPACE_TABLES)[number], readonly string[]>,
   amp_manifest: [
     'format_version',
     'package_id',
@@ -91,6 +94,12 @@ export const AMP_TABLE_COLUMNS: Record<AmpTable, readonly string[]> = {
   ],
   tickets: [
     ...AMP_ENTITY_IDENTITY_COLUMNS,
+    'board_package_record_id',
+    'status_package_record_id',
+    'priority_package_record_id',
+    'category_package_record_id',
+    'assignee_package_record_id',
+
     'organization_package_record_id',
     'location_package_record_id',
     'requester_package_record_id',
@@ -106,6 +115,15 @@ export const AMP_TABLE_COLUMNS: Record<AmpTable, readonly string[]> = {
     'ticket_package_record_id',
     'author_package_record_id',
     'body',
+    'author_historical_package_record_id',
+    'author_name',
+    'author_organization',
+    'publication_state',
+    'scheduled_at',
+    'published_at',
+    'thread_package_record_id',
+    'author_person_package_record_id',
+    'parent_package_record_id',
     'is_internal',
   ],
   assets: [
@@ -114,6 +132,12 @@ export const AMP_TABLE_COLUMNS: Record<AmpTable, readonly string[]> = {
     'location_package_record_id',
     'name',
     'asset_type_name',
+    'tag',
+    'warranty_ends_on',
+    'assignee_package_record_id',
+    'notes_document_package_record_id',
+    'status',
+    'assignee_external_identifier',
     'serial_number',
     'manufacturer',
     'model',
@@ -179,8 +203,9 @@ export const AMP_TABLE_COLUMNS: Record<AmpTable, readonly string[]> = {
  */
 export const AMP_ENTITY_REFERENCES: Record<
   AmpEntityType,
-  ReadonlyArray<{ column: string; targetTable: AmpEntityType; required: boolean }>
+  ReadonlyArray<{ column: string; targetTable: AmpEntityType; required: boolean; deferred?: boolean }>
 > = {
+  ...Object.fromEntries(AMP_WORKSPACE_TABLES.map(table => [table, Object.entries(workspaceFields(table)).filter(([, field]) => field.kind === 'reference').map(([column, field]) => ({ column, targetTable: field.target as AmpEntityType, required: Boolean(field.required), deferred: Boolean(field.deferred) }))])) as Record<(typeof AMP_WORKSPACE_TABLES)[number], Array<{ column: string; targetTable: AmpEntityType; required: boolean; deferred?: boolean }>>,
   organizations: [],
   locations: [
     { column: 'organization_package_record_id', targetTable: 'organizations', required: true },
@@ -190,15 +215,26 @@ export const AMP_ENTITY_REFERENCES: Record<
     { column: 'location_package_record_id', targetTable: 'locations', required: false },
   ],
   tickets: [
+    { column: 'board_package_record_id', targetTable: 'work_boards', required: false },
+    { column: 'status_package_record_id', targetTable: 'work_statuses', required: false },
+    { column: 'priority_package_record_id', targetTable: 'work_priorities', required: false },
+    { column: 'category_package_record_id', targetTable: 'work_categories', required: false },
+    { column: 'assignee_package_record_id', targetTable: 'people', required: false },
     { column: 'organization_package_record_id', targetTable: 'organizations', required: false },
     { column: 'location_package_record_id', targetTable: 'locations', required: false },
     { column: 'requester_package_record_id', targetTable: 'contacts', required: false },
   ],
   ticket_comments: [
+    { column: 'author_historical_package_record_id', targetTable: 'historical_people', required: false },
+    { column: 'thread_package_record_id', targetTable: 'conversation_threads', required: false },
+    { column: 'author_person_package_record_id', targetTable: 'people', required: false },
+    { column: 'parent_package_record_id', targetTable: 'ticket_comments', required: false },
     { column: 'ticket_package_record_id', targetTable: 'tickets', required: true },
     { column: 'author_package_record_id', targetTable: 'contacts', required: false },
   ],
   assets: [
+    { column: 'assignee_package_record_id', targetTable: 'contacts', required: false },
+    { column: 'notes_document_package_record_id', targetTable: 'documents', required: false },
     { column: 'organization_package_record_id', targetTable: 'organizations', required: false },
     { column: 'location_package_record_id', targetTable: 'locations', required: false },
   ],
@@ -229,3 +265,13 @@ export const AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY = '__contact_client_name';
  * tenant currency at apply time differs, since the minor-unit scale could differ.
  */
 export const AMP_ASSUMED_CURRENCY_EXTENSION_KEY = '__assumed_currency';
+
+/** Business-bearing rows protected by the canonical content digest. */
+export const AMP_CONTENT_TABLES = [...AMP_ENTITY_TABLES, 'attachments', 'exclusions', 'custom_field_values', 'external_identifiers'] as const;
+
+/** Polymorphic association targets are canonical records, never other association edges. */
+export const AMP_LINK_TARGETS: readonly AmpEntityType[] = AMP_ENTITY_TABLES.filter(entity => entity !== 'asset_links' && entity !== 'document_links');
+export const AMP_POLYMORPHIC_REFERENCES: Partial<Record<AmpEntityType, { typeColumn: string; idColumn: string; targetTables: readonly AmpEntityType[] }>> = {
+  document_links: { typeColumn: 'target_type', idColumn: 'target_id', targetTables: AMP_LINK_TARGETS },
+  asset_links: { typeColumn: 'target_type', idColumn: 'target_id', targetTables: AMP_LINK_TARGETS },
+};

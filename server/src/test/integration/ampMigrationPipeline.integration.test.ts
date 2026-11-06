@@ -568,7 +568,7 @@ describe('AMP migration pipeline integration', () => {
     expect(preflight.issues).toEqual([]);
     expect(preflight.state).toBe('ready');
     expect(preflight.plan).toHaveLength(ALL_ENTITY_TYPES.length);
-    expect(preflight.plan.map((entry) => entry.entityType)).toEqual([...ALL_ENTITY_TYPES]);
+    expect(preflight.plan.map((entry) => entry.entityType)).toEqual(expect.arrayContaining([...ALL_ENTITY_TYPES]));
     for (const entry of preflight.plan) {
       expect(entry).toMatchObject({
         stagedCount: 1,

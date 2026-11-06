@@ -21,7 +21,7 @@ export default function CoManagedAmpExport({ available = true }: { available?: b
   const { data: session, status } = useSession(), { t } = useTranslation('msp/licensing');
   if (!available) return <div className="mx-auto max-w-3xl p-6"><Card><CardHeader><CardTitle>{t('coManaged.ampExport.title', { defaultValue: 'Export workspace' })}</CardTitle></CardHeader>
     <CardContent><p role="status">{t('coManaged.ampExport.unavailable', { defaultValue: 'Workspace export is not available in this edition.' })}</p></CardContent></Card></div>;
-  if (status === 'loading') return <div className="mx-auto max-w-3xl p-6"><p role="status">{t('coManaged.loading')}</p></div>;
+  if (status === 'loading') return <div className="mx-auto max-w-3xl p-6"><p role="status">{t('coManaged.ampExport.loading', { defaultValue: 'Loading…' })}</p></div>;
   return <ExportContent key={`${session?.session_id}:${session?.user?.tenant}:${session?.user?.id}`} />;
 }
 
@@ -42,16 +42,17 @@ function ExportContent() {
   };
   return <div className="mx-auto max-w-3xl space-y-5 p-6 text-[rgb(var(--color-text-700))]">
     <Card><CardHeader><CardTitle>{t('coManaged.ampExport.title', { defaultValue: 'Export workspace' })}</CardTitle>
-      <CardDescription>{t('coManaged.ampExport.description', { defaultValue: 'Download an AMP package you can inspect or restore with a conforming AMP consumer.' })}</CardDescription></CardHeader>
+      <CardDescription>{t('coManaged.ampExport.description', { defaultValue: 'Download an AMP package containing your workspace records and files.' })}</CardDescription></CardHeader>
       <CardContent className="space-y-5">
         {loadError && <p role="alert" className="text-destructive">{t('coManaged.ampExport.loadError', { defaultValue: 'Workspace export is unavailable. Refresh and try again.' })}</p>}
-        {workspace === null && !loadError && <p role="status">{t('coManaged.loading')}</p>}
+        {workspace === null && !loadError && <p role="status">{t('coManaged.ampExport.loading', { defaultValue: 'Loading…' })}</p>}
         {workspace !== null && <>
           <p className="font-medium">{workspace}</p>
+          <p className="text-sm">{t('coManaged.ampExport.security', { defaultValue: 'The package contains sensitive workspace data. Store it securely. Credentials and provider secrets are excluded.' })}</p>
           <form id="co-amp-export-form" action="/api/co-management/export" method="post" target="_blank" rel="noopener noreferrer" onSubmit={submit}>
-            <Button id="co-amp-export-download" type="submit">{t('coManaged.ampExport.download', { defaultValue: 'Download AMP package' })}</Button>
+            <Button id="co-amp-export-download" type="submit">{t('coManaged.ampExport.download', { defaultValue: 'Prepare and download AMP package' })}</Button>
           </form>
-          {requested && <p role="status">{t('coManaged.ampExport.requested', { defaultValue: 'Your AMP download has started.' })}</p>}
+          {requested && <p role="status">{t('coManaged.ampExport.requested', { defaultValue: 'Your request opens in a new tab. Your browser will download the package when it is ready.' })}</p>}
         </>}
       </CardContent>
     </Card>

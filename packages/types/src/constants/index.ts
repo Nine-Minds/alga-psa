@@ -13,7 +13,6 @@ export * from './billingJobNames';
 export * from './maintenanceFanoutSchedules';
 export * from './jobScheduleExtensions';
 export * from './ceMaintenanceSchedules';
-export * from './portableRestoreSchedule';
 export * from './accountingDiscountMapping';
 export * from './accountingMappingTargetPolicy';
 export * from './userResponseSanitizer';

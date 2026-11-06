@@ -1,3 +1,7 @@
+import { canonicalizeAlgaContent } from './algaContent';
+import { exportWorkspaceRecords, reconcileWorkspaceReferences } from './workspaceExport';
+import { exportWorkspaceFiles } from './workspaceFiles';
+import type { AmpAttachmentInput } from '@alga-psa/migration-sdk';
 import { readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { Knex } from 'knex';
@@ -19,7 +23,6 @@ import { validateAmpPackage } from '@alga-psa/migration-sdk';
 import { writeAlgaExport } from '@alga-psa/migration-connectors';
 import { createAmpTemporaryDirectory } from '@alga-psa/migration-sdk';
 
-const EXPORT_BATCH_SIZE = 5000;
 
 export interface AmpExportResult {
   buffer: Buffer;
@@ -28,7 +31,7 @@ export interface AmpExportResult {
 }
 
 /**
- * Alga → AMP export for the v1 entities. The export is a conforming AMP
+ * Alga → AMP 2 export for workspace records and files. The export is a conforming AMP
  * producer: identifiers are namespaced Alga ids (never interpreted as Alga
  * ids on re-import — the identity ledger treats them as opaque source keys),
  * reference data travels as names, and the output validates against the same
@@ -46,29 +49,50 @@ export class AmpExportService {
     private readonly tenant: string
   ) {}
 
+  /** Existing general export retains its core-record coverage. Full workspace extraction is
+   * admitted separately by the co-managed customer-admin boundary. Both use the same AMP writer. */
   async exportTenant(): Promise<AmpExportResult> {
+    return this.exportWith(async (_trx, rows) => {
+      rows.exclusions = [...(rows.exclusions ?? []), { package_record_id: 'core-record-export-only', reason: 'deferred',
+        detail: 'This configured export covers core organization, contact, ticket and asset records. Workspace domains and files require the customer-admin workspace export.' }];
+      return undefined;
+    });
+  }
+
+  async exportWorkspace(authorize?: (trx: Knex.Transaction, rows: AmpPackageRows) => Promise<void>): Promise<AmpExportResult> {
+    return this.exportWith(async (trx, records) => {
+      await exportWorkspaceRecords(trx, this.tenant, records);
+      if (authorize) await authorize(trx, records);
+      return exportWorkspaceFiles(trx, this.tenant, records);
+    });
+  }
+
+  private async exportWith(contribute: (trx: Knex.Transaction, rows: AmpPackageRows) => Promise<Awaited<ReturnType<typeof exportWorkspaceFiles>> | undefined>): Promise<AmpExportResult> {
     const namespace = `alga:${this.tenant}`;
     // The graph is read under one MVCC snapshot; parallel per-table reads must
     // share the same transaction or references can point across two versions.
-    const rows = await this.knex.transaction(async (trx) => {
-      const db = tenantDb(trx, this.tenant);
-      return this.exportSnapshot(db, namespace);
-    }, { isolationLevel: 'repeatable read' });
-    return this.writePackage(rows);
+    const startedAt = new Date().toISOString();
+    let files: Awaited<ReturnType<typeof exportWorkspaceFiles>> | undefined;
+    try {
+      const rows = await this.knex.transaction(async (trx) => {
+        const db = tenantDb(trx, this.tenant);
+        const records = await this.exportSnapshot(db, namespace);
+        files = await contribute(trx, records);
+        reconcileWorkspaceReferences(records, (reason, detail) => {
+          records.exclusions = [...(records.exclusions ?? []), { package_record_id: `missing-parent-${records.exclusions?.length}`, reason, detail }];
+        });
+        return records;
+      }, { isolationLevel: 'repeatable read' });
+      canonicalizeAlgaContent(rows);
+      return await this.writePackage(rows, files?.attachments ?? [], { startedAt, completedAt: new Date().toISOString() });
+    } finally { await files?.dispose(); }
   }
 
   private async exportSnapshot(db: ReturnType<typeof tenantDb>, namespace: string): Promise<AmpPackageRows> {
-    const extractorMap = {
-      organizations: () => this.exportOrganizations(db, namespace),
-      locations: () => this.exportLocations(db, namespace),
-      contacts: () => this.exportContacts(db, namespace),
-      tickets: () => this.exportTickets(db, namespace),
-      ticket_comments: () => this.exportTicketComments(db, namespace),
-      assets: () => this.exportAssets(db, namespace),
-    };
-    const [organizations, locations, contacts, tickets, ticketComments, assets] = await Promise.all(
-      Object.values(extractorMap).map((extractor) => extractor())
-    );
+    const [organizations, locations, contacts, tickets, ticketComments, assets] = await Promise.all([
+      this.exportOrganizations(db, namespace), this.exportLocations(db, namespace), this.exportContacts(db, namespace),
+      this.exportTickets(db, namespace), this.exportTicketComments(db, namespace), this.exportAssets(db, namespace),
+    ]);
 
     // Children whose parent rows were filtered (e.g. a comment on a ticket
     // outside the export) would break package referential integrity; drop
@@ -77,8 +101,8 @@ export class AmpExportService {
     const contactIds = new Set(contacts.map((contact) => contact.package_record_id));
     const organizationIds = new Set(organizations.map((org) => org.package_record_id));
     const locationIds = new Set(locations.map((location) => location.package_record_id));
-    const privateComments = ticketComments.filter((comment) => comment.is_internal === 1);
-    const customerComments = ticketComments.filter((comment) => comment.is_internal !== 1);
+    // Tenant-local internal notes belong to this workspace. MSP-private stores are never queried.
+    const customerComments = ticketComments;
 
     const rows: AmpPackageRows = {
       organizations,
@@ -133,8 +157,8 @@ export class AmpExportService {
       exclusions: [
         { package_record_id: 'credential-vault-excluded', reason: 'secret', detail: 'Credential vault material and connection secrets are never exported.' },
         { package_record_id: 'commercial-catalog-excluded', reason: 'commercial', detail: 'Products and vendor price lists are not part of workspace export.' },
-        { package_record_id: 'deferred-workspace-domains', reason: 'deferred', detail: 'Project/work-item, workflow, time, schedule, meeting, conversation, and knowledge-base records are not yet emitted by this producer.' },
-        ...privateComments.map((_, index) => ({ package_record_id: `excluded-private-comment-${index + 1}`, entity_type: null, entity_package_record_id: null, reason: 'msp_private' as const, detail: 'One MSP-private ticket comment was excluded. No private comment content or source identifier is included.' })),
+        { package_record_id: 'provider-state-excluded', reason: 'secret', detail: 'Provider credentials, bindings, attendance and provider-only recordings are excluded. Connections must be reauthorized in the target.' },
+        { package_record_id: 'msp-private-stores-excluded', reason: 'msp_private', detail: 'MSP-owned private conversation stores, authorizations and cross-tenant provider state are excluded.' },
       ],
     };
 
@@ -149,11 +173,11 @@ export class AmpExportService {
     return rows;
   }
 
-  private async writePackage(rows: AmpPackageRows): Promise<AmpExportResult> {
+  private async writePackage(rows: AmpPackageRows, attachments: readonly AmpAttachmentInput[], snapshot: { startedAt: string; completedAt: string }): Promise<AmpExportResult> {
     const directory = createAmpTemporaryDirectory('package');
     const packagePath = join(directory, 'export.amp');
     try {
-      const manifest = writeAlgaExport(packagePath, rows, this.tenant);
+      const manifest = writeAlgaExport(packagePath, rows, this.tenant, attachments, snapshot);
 
       const validation = validateAmpPackage(packagePath);
       if (!validation.valid) {
@@ -182,7 +206,7 @@ export class AmpExportService {
       .table('clients')
       .select('client_id', 'client_name', 'url', 'properties', 'created_at', 'updated_at')
       .orderBy('client_id')
-      .limit(EXPORT_BATCH_SIZE * 100);
+;
     return rows.map((row) => ({
       package_record_id: `org-${row.client_id}`,
       source_record_id: row.client_id,
@@ -281,6 +305,7 @@ export class AmpExportService {
       })
       .select(
         't.ticket_id',
+        't.board_id', 't.status_id', 't.priority_id', 't.category_id', 't.assigned_to', 't.attributes',
         't.title',
         't.client_id',
         't.contact_name_id',
@@ -301,6 +326,12 @@ export class AmpExportService {
       requester_package_record_id: row.contact_name_id ? `contact-${row.contact_name_id}` : null,
       location_package_record_id: row.location_id ? `loc-${row.location_id}` : null,
       title: row.title,
+      description: typeof row.attributes?.description === 'string' ? row.attributes.description : row.attributes?.description == null ? null : JSON.stringify(row.attributes.description),
+      board_package_record_id: row.board_id ? `work_boards:${row.board_id}` : null,
+      status_package_record_id: row.status_id ? `work_statuses:${row.status_id}` : null,
+      priority_package_record_id: row.priority_id ? `work_priorities:${row.priority_id}` : null,
+      category_package_record_id: row.category_id ? `work_categories:${row.category_id}` : null,
+      assignee_package_record_id: row.assigned_to ? `people:${row.assigned_to}` : null,
       status_name: row.status_name || null,
       priority_name: row.priority_name || null,
       category_name: row.category_name || null,
@@ -316,7 +347,7 @@ export class AmpExportService {
   ): Promise<AmpTicketCommentRecord[]> {
     const rows = await db
       .table('comments')
-      .select('comment_id', 'ticket_id', 'note', 'is_internal', 'contact_id', 'created_at', 'updated_at')
+      .select('comment_id', 'ticket_id', 'note', 'is_internal', 'contact_id', 'thread_id', 'user_id', 'parent_comment_id', 'actor_reference_id', 'actor_display_name', 'actor_organization_name', 'publish_state', 'scheduled_publish_at', 'published_at', 'created_at', 'updated_at')
       .whereNull('deleted_at')
       .whereNotNull('note')
       .orderBy('comment_id');
@@ -329,6 +360,15 @@ export class AmpExportService {
         ticket_package_record_id: `ticket-${row.ticket_id}`,
         author_package_record_id: row.contact_id ? `contact-${row.contact_id}` : null,
         body: row.note,
+        author_historical_package_record_id: row.actor_reference_id ? `historical_people:${row.actor_reference_id}` : null,
+        author_name: row.actor_display_name ?? null,
+        author_organization: row.actor_organization_name ?? null,
+        publication_state: row.publish_state === 'canceled' ? 'cancelled' : row.publish_state ?? 'published',
+        scheduled_at: toRfc3339(row.scheduled_publish_at),
+        published_at: toRfc3339(row.published_at),
+        thread_package_record_id: row.thread_id ? `conversation_threads:${row.thread_id}` : null,
+        author_person_package_record_id: row.user_id ? `people:${row.user_id}` : null,
+        parent_package_record_id: row.parent_comment_id ? `comment-${row.parent_comment_id}` : null,
         is_internal: row.is_internal ? 1 : 0,
         created_at: toRfc3339(row.created_at),
         updated_at: toRfc3339(row.updated_at),
@@ -343,6 +383,9 @@ export class AmpExportService {
       .table('assets')
       .select(
         'asset_id',
+        'asset_tag',
+        'warranty_end_date',
+        'notes_document_id',
         'name',
         'asset_type',
         'serial_number',
@@ -369,6 +412,10 @@ export class AmpExportService {
         location_package_record_id: row.location_id ? `loc-${row.location_id}` : null,
         name: row.name,
         asset_type_name: row.asset_type || null,
+        tag: row.asset_tag ?? null,
+        warranty_ends_on: toDateOnly(row.warranty_end_date),
+        notes_document_package_record_id: row.notes_document_id ? `documents:${row.notes_document_id}` : null,
+        assignee_package_record_id: row.contact_name_id ? `contact-${row.contact_name_id}` : null,
         serial_number: row.serial_number || null,
         manufacturer: row.manufacturer ?? attributes.manufacturer ?? null,
         model: row.model ?? attributes.model ?? null,
@@ -387,7 +434,7 @@ function sanitizeTextLimits(rows: AmpPackageRows): AmpPackageDiagnosticRecord[] 
   let diagnosticSequence = 0;
 
   for (const table of AMP_ENTITY_TABLES) {
-    const tableRows = rows[table] as Array<Record<string, unknown>> | undefined;
+    const tableRows = rows[table] as readonly Record<string, unknown>[] | undefined;
     if (!tableRows) {
       continue;
     }

@@ -42,3 +42,5 @@ alga-migrate validate acme-migration.amp
 A package that validates cleanly here will pass AlgaPSA's server-side
 inspection; the server additionally applies tenant-scoped mapping and
 reference-data checks during preflight.
+
+For customer workspace exports and installation imports, see [Workspace import](workspace-import.md).
