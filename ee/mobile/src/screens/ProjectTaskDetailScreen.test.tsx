@@ -50,7 +50,7 @@ vi.mock("../features/comments/commentTarget", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../features/comments/commentTarget")>()),
   createCommentApi: () => ({ supportsVisibility: false, list: (...args: unknown[]) => mocks.listComments(...args), add: vi.fn(), update: vi.fn(), toggleReaction: vi.fn() }),
 }));
-vi.mock("../capabilities/CapabilitiesContext", () => ({ useCapabilities: () => ({ features: mocks.features, defaultCountry: "US", loaded: true }) }));
+vi.mock("../capabilities/CapabilitiesContext", () => ({ useCapabilities: () => ({ features: mocks.features, defaultCountry: "US", loaded: true }), useDontNotifyCustomerDefault: () => false }));
 vi.mock("../network/useNetworkStatus", () => ({ useNetworkStatus: () => ({ isConnected: true, isInternetReachable: true }) }));
 vi.mock("../api/users", () => ({ listUsers: vi.fn(), getUserDisplayName: () => "" }));
 vi.mock("../api/priorities", () => ({ listPriorities: (...args: unknown[]) => mocks.listPriorities(...args) }));

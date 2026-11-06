@@ -26,6 +26,7 @@ export default defineConfig({
       { find: /^@alga-psa\/licensing$/, replacement: pkg('licensing') },
       { find: /^@alga-psa\/licensing\/(.*)$/, replacement: path.resolve(__dirname, '../licensing/src/$1') },
       { find: /^@alga-psa\/shared\/(.*)$/, replacement: path.resolve(__dirname, '../../shared/$1') },
+      { find: /^@alga-psa\/tickets\/lib\/ticketLifecycleHooks$/, replacement: path.resolve(__dirname, '../tickets/src/lib/ticketLifecycleHooks.ts') },
       { find: /^@alga-psa\/co-managed$/, replacement: pkg('co-managed') },
       { find: /^@alga-psa\/co-managed\/(.*)$/, replacement: path.resolve(__dirname, './src/$1') },
     ],

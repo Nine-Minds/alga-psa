@@ -3,6 +3,7 @@
  * Handles HTTP requests for asset-related operations
  */
 
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { NextRequest, NextResponse } from 'next/server';
 import { AssetService } from '../services/AssetService';
 import { 
@@ -26,7 +27,6 @@ import { requireRequestContext } from '../utils/requestContext';
 import { ApiContext } from '../middleware/apiMiddleware';
 import { ProductAccessError, getTenantProduct } from '@/lib/productAccess';
 import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
-import { hasPermission } from '../../auth/rbac';
 import { getConnection } from '../../db/db';
 import { guardAssetRead } from './assetReadGuard';
 
@@ -211,7 +211,7 @@ export class ApiAssetController {
     }
     const knex = await getConnection(context.tenant);
     for (const resource of resources) {
-      const allowed = await hasPermission(context.user, resource, 'read', knex);
+      const allowed = await hasApiContextPermission(context, resource, 'read', knex);
       if (!allowed) {
         return createErrorResponse(`Permission denied: Cannot read ${resource}`, 403, 'FORBIDDEN');
       }
@@ -230,7 +230,7 @@ export class ApiAssetController {
     }
     const knex = await getConnection(context.tenant);
     for (const { resource, action } of checks) {
-      const allowed = await hasPermission(context.user, resource, action, knex);
+      const allowed = await hasApiContextPermission(context, resource, action, knex);
       if (!allowed) {
         return createErrorResponse(`Permission denied: Cannot ${action} ${resource}`, 403, 'FORBIDDEN');
       }

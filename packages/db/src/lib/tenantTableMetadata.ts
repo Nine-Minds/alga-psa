@@ -18,6 +18,8 @@ export interface ParsedTableExpression {
 export const tenantTableMetadata: Record<string, TenantTableScope> = {
   co_management_board_scopes: { scope: 'tenant' },
   co_managed_allocations: { scope: 'tenant' },
+  co_managed_relationship_closures: { scope: 'tenant' },
+  co_managed_archive_manifests: { scope: 'tenant' },
   co_managed_entitlements: { scope: 'tenant' },
   co_managed_provisioning_operations: { scope: 'tenant' },
   co_managed_purchase_operations: { scope: 'tenant' },
@@ -45,6 +47,10 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   co_managed_ticket_references: { scope: 'tenant' },
   co_managed_time_work_references: { scope: 'tenant' },
   co_management_command_receipts: { scope: 'tenant' },
+  sla_organization_obligations: { scope: 'tenant' },
+  sla_organization_events: { scope: 'tenant' },
+  sla_organization_notification_events: { scope: 'tenant' },
+  co_managed_sla_priority_mappings: { scope: 'tenant' },
   co_management_deliveries: { scope: 'tenant' },
   co_management_delegated_grants: { scope: 'tenant' },
   co_management_delegated_receipts: { scope: 'tenant' },
@@ -725,6 +731,22 @@ export function parseTableExpression(tableExpression: string): ParsedTableExpres
     tableName: baseTableName(trimmed),
     rootAlias: baseTableName(trimmed),
   };
+}
+
+/**
+ * Registers tables owned by an optional module (for example an Enterprise-only
+ * table) so that module can use tenantDb without its table names living in the
+ * shared registry. Idempotent; a table that is already registered must keep its
+ * scope, so a conflicting registration throws.
+ */
+export function registerTenantTables(tables: Record<string, TenantTableScope>): void {
+  for (const [name, scope] of Object.entries(tables)) {
+    const existing = tenantTableMetadata[name];
+    if (existing && JSON.stringify(existing) !== JSON.stringify(scope)) {
+      throw new Error(`Table ${name} is already registered with a different scope`);
+    }
+    tenantTableMetadata[name] = scope;
+  }
 }
 
 export function getTenantTableScope(tableName: string): TenantTableScope | undefined {

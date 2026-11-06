@@ -2,6 +2,7 @@
 
 import { readUserEmailPreferenceState, saveUserEmailPreferences } from '../../notifications/userEmailPreferences';
 import { getEmailNotificationService } from "../../notifications/email";
+import { readDontNotifyCustomerDefault } from "../../notifications/notificationPolicy";
 import { revalidatePath } from "next/cache";
 import { withTransaction, createTenantKnex, tenantDb } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -44,6 +45,10 @@ async function requireSettingsUpdate(user: any, trx: Knex.Transaction): Promise<
   }
 }
 
+export type NotificationSettingsUpdate = Partial<Pick<NotificationSettings, 'is_enabled' | 'default_dont_notify_customer'>>;
+
+const UPDATABLE_NOTIFICATION_SETTINGS = ['is_enabled', 'default_dont_notify_customer'] as const;
+
 export const getNotificationSettingsAction = withAuth(async (
   user,
   { tenant },
@@ -58,15 +63,59 @@ export const getNotificationSettingsAction = withAuth(async (
 export const updateNotificationSettingsAction = withAuth(async (
   user,
   { tenant },
-  settings: Partial<NotificationSettings>
+  settings: NotificationSettingsUpdate
 ): Promise<NotificationSettings> => {
   const { knex } = await createTenantKnex();
   await withTransaction(knex, (trx: Knex.Transaction) => requireSettingsUpdate(user, trx));
 
+  if (!settings || typeof settings !== 'object') {
+    throw new Error('Notification settings update must be an object');
+  }
+
+  const unknownKeys = Object.keys(settings).filter(
+    (key) => !(UPDATABLE_NOTIFICATION_SETTINGS as readonly string[]).includes(key)
+  );
+  if (unknownKeys.length > 0) {
+    throw new Error(`Notification settings cannot update: ${unknownKeys.join(', ')}`);
+  }
+
+  const update: NotificationSettingsUpdate = {};
+  for (const key of UPDATABLE_NOTIFICATION_SETTINGS) {
+    const value = settings[key];
+    if (value === undefined) continue;
+    if (typeof value !== 'boolean') {
+      throw new Error(`${key} must be a boolean`);
+    }
+    update[key] = value;
+  }
+  if (Object.keys(update).length === 0) {
+    throw new Error('Notification settings update has no changes');
+  }
+
   const notificationService = getEmailNotificationService();
-  const updated = await notificationService.updateSettings(tenant, settings);
+  // Creates the tenant row on first use so the update below always lands.
+  await notificationService.getSettings(tenant);
+  const updated = await notificationService.updateSettings(tenant, update);
   revalidatePath("/msp/settings/notifications");
+  // Ticket screens receive the default from the MSP layout.
+  revalidatePath("/msp", "layout");
   return updated;
+});
+
+/**
+ * The tenant's "Don't notify the customer" default for ticket screens. Any
+ * signed-in internal user may read it: agents need the policy, not settings
+ * access.
+ */
+export const getDontNotifyCustomerDefaultAction = withAuth(async (
+  user,
+  { tenant }
+): Promise<boolean> => {
+  if (user.user_type !== 'internal') {
+    return false;
+  }
+  const { knex } = await createTenantKnex();
+  return readDontNotifyCustomerDefault(knex, tenant);
 });
 
 export const getTemplatesAction = withAuth(async (

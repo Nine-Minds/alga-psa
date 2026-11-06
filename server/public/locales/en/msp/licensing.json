@@ -451,7 +451,8 @@
       "workspace": "Workspace",
       "capacity": "{{allocated}} of {{count}} co-managed seats allocated.",
       "openClient": "Set up co-managed IT for this client",
-      "readOnly": "Co-managed IT is read-only for this workspace. Existing relationships are shown; new setup is not available."
+      "readOnly": "Co-managed IT is read-only for this workspace. Existing relationships are shown; new setup is not available.",
+      "slaPriorities": "SLA priority mappings"
     },
     "provisioning": {
       "administrator": "Administrator",
@@ -689,7 +690,8 @@
       "viewer": "Viewer",
       "viewOnly": "View only",
       "visibility": "Ticket visibility",
-      "whyTitle": "Why can't someone see this?"
+      "whyTitle": "Why can't someone see this?",
+      "readOnly": "You can view this configuration but not change it."
     },
     "sharedTasks": {
       "link": "Shared Tasks",
@@ -716,6 +718,7 @@
       "unassigned": "Not assigned",
       "projectHeading": "Shared project tasks",
       "back": "Back to Shared Tasks",
+      "projectNotFound": "This project is not available. It may no longer be shared with you.",
       "search": "Search shared projects",
       "searchSubmit": "Search",
       "resultCount": "{{count}} results",
@@ -906,6 +909,14 @@
         "unknownOutcome": "We could not confirm whether the edit was saved. Retry the same save, or discard your changes and reload.",
         "slaSetupRequired": "Your MSP must configure its SLA policy and priority mapping before this ticket can be reopened under MSP responsibility."
       }
+    },
+    "sla": {
+      "title": "Co-managed SLA priorities",
+      "description": "Choose which of your priorities, and so which of your SLA targets, applies when a customer escalates a ticket of each priority.",
+      "missingPolicy": "No SLA policy is configured",
+      "settings": "Manage SLA policies",
+      "mappingFor": "Customer priority {{name}} maps to",
+      "unmapped": "Not mapped"
     },
     "attachments": {
       "title": "Attachments",
