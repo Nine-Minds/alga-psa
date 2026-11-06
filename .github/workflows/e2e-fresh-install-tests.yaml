@@ -244,8 +244,8 @@ jobs:
       # the recipe of the Dockerfile.build artifact builders) and packaged by
       # the production Dockerfiles from the context, the same way the Argo
       # build packages them for deployment, so the candidate under test is the
-      # image that ships. Outside the image the webpack filesystem cache and the
-      # Nx cache can be carried between runs: a snapshot of both travels through
+      # image that ships. Outside the image the Nx package cache can be carried
+      # between runs: its snapshot travels through
       # the registry like the candidate images do, under one moving tag per
       # edition. Only runs of main write it, because a cache shapes build
       # output; pull requests only read it. A missing or unreadable snapshot
@@ -265,33 +265,27 @@ jobs:
         if: matrix.prebuild
         run: npm install --include=optional
 
-      # The snapshot tag carries a generation. `-v2` started cold on 2026-11-04:
-      # the first-generation packs had grown to ~18 GB on disk (next.config.mjs
-      # now bounds a pack to entries used within a day) and every build that
-      # restored one outgrew the runner, so no build could write a smaller one.
+      # v3 contains only Nx artifacts. Webpack packs reached 16 GB in v2 and
+      # exhausted the runner while being restored/rewritten during compilation.
       - name: Restore the build-cache snapshot
         if: matrix.prebuild
         id: build_cache
         env:
-          BUILD_CACHE_REFERENCE: ${{ needs.changes.outputs.registry_namespace }}/build-cache:${{ matrix.edition }}-v2
-        run: node scripts/build-cache-snapshot.mjs restore --reference "$BUILD_CACHE_REFERENCE" --path server/node_modules/.cache/webpack --path .nx/cache
+          BUILD_CACHE_REFERENCE: ${{ needs.changes.outputs.registry_namespace }}/build-cache:${{ matrix.edition }}-v3
+        run: node scripts/build-cache-snapshot.mjs restore --reference "$BUILD_CACHE_REFERENCE" --path .nx/cache
 
-      # The same recipe workflows-ee-build-guard.yml compiles the enterprise
-      # app with on this runner size: one build worker and a 14 GB heap. On
-      # 2026-11-05 that guard passed every run while this step, at four
-      # workers and 12 GB, lost the runner to a memory kill mid-compile on main
-      # (18:01Z, 18:17Z, 19:44Z) and on every branch that built after it.
+      # Each worker inherits the 14 GB heap allowance. Two workers exhausted
+      # the 16 GB runner and its swap on both attempts of run 42159685683.
+      # Use the single-worker recipe validated by the enterprise build guard
+      # for both candidate editions, including the compilation/minifier phase.
       - name: Build the production application on the runner
         if: matrix.prebuild
         env:
           NEXT_BUILD_CPUS: '1'
           NEXT_BUILD_MAX_OLD_SPACE_SIZE: '14336'
           EDITION_NAME: ${{ matrix.edition }}
-          # Next folds this key into the webpack cache version and generates a
-          # new one per build when it is unset, which would make every restored
-          # snapshot a miss. The candidates are test images that never serve
-          # traffic, so a fixed, public, test-only key is right for them; the
-          # deployment build (nm-kube-config) must use a secret of its own.
+          # Fixed, public encryption key for test-only server actions. Deployment
+          # builds (nm-kube-config) must use a secret of their own.
           NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: OpTnSkDAbqi/eI+2i8Tg20NhJwnUrrgPdz4I4p/3N+0=
         run: |
           free -h
@@ -301,7 +295,7 @@ jobs:
           resource_monitor_pid=$!
           trap 'kill "$resource_monitor_pid" 2>/dev/null || true' EXIT
           scripts/build-production-server.sh "$EDITION_NAME"
-          du -sh server/.next server/node_modules/.cache/webpack .nx/cache 2>/dev/null || true
+          du -sh server/.next .nx/cache 2>/dev/null || true
 
       - name: Build and export ${{ matrix.service }}
         id: export_image
@@ -389,8 +383,8 @@ jobs:
         if: matrix.prebuild && github.event_name == 'push' && github.ref == 'refs/heads/main' && env.IMAGE_TRANSPORT == 'registry'
         continue-on-error: true
         env:
-          BUILD_CACHE_REFERENCE: ${{ needs.changes.outputs.registry_namespace }}/build-cache:${{ matrix.edition }}-v2
-        run: node scripts/build-cache-snapshot.mjs save --reference "$BUILD_CACHE_REFERENCE" --path server/node_modules/.cache/webpack --path .nx/cache
+          BUILD_CACHE_REFERENCE: ${{ needs.changes.outputs.registry_namespace }}/build-cache:${{ matrix.edition }}-v3
+        run: node scripts/build-cache-snapshot.mjs save --reference "$BUILD_CACHE_REFERENCE" --path .nx/cache
 
       - name: Upload image build record
         uses: actions/upload-artifact@v4

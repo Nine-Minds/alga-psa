@@ -8,6 +8,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { createCoManagedSharedTicketDataSource, sharedTicketOptions, sharedTicketRecord } from '@/lib/co-managed/sharedTicketDataSource';
 import { conversationAuthorMaps } from '@/lib/co-managed/sharedConversationMapping';
+import CoManagedTicketSlaStatus from './CoManagedTicketSlaStatus';
 import { createAttachmentStaging } from '@/lib/co-managed/attachmentStaging';
 import { useCapability } from '@alga-psa/ui/hooks';
 import { useCoManagedSharedTimeConfig } from './useCoManagedSharedTimeConfig';
@@ -96,6 +97,7 @@ export default function CoManagedSharedTicket({ summary, backHref }: { summary: 
         <Button id="co-managed-shared-ticket-reload" variant="outline" size="sm" onClick={load}>{t('conversation.shared.reload', 'Reload')}</Button>
       </div>
     )}
+    <CoManagedTicketSlaStatus resource={summary.resource} />
     <TicketDataSourceProvider dataSource={dataSource}>
       <TicketDetailsContainer ticketData={ticketData} hideSlaStatus hideBilling hideScheduling hideTimeEntry={!timeEnabled} hideMaterials disableAgentSchedule />
     </TicketDataSourceProvider>
