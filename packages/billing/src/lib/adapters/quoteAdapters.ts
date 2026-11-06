@@ -39,6 +39,15 @@ type QuoteItemGroupSummary = {
 export const OPTIONAL_INCLUDED_LABEL = 'Optional (included)';
 export const OPTIONAL_PENDING_LABEL = 'Optional (if selected)';
 
+/**
+ * Band name for the group holding rows that belong to no single site —
+ * quote-wide discounts above all, which are deliberately never sited. The
+ * by-location band header binds `path 'name'`, so without this the group
+ * rendered as an unlabelled coloured bar on the client's quote. English
+ * fallback; localized by the PDF service like the optional markers.
+ */
+export const UNASSIGNED_LOCATION_LABEL = 'Quote-wide';
+
 const asTrimmedString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
 export const toIsoDateString = (value: unknown): string | null => {
@@ -160,7 +169,9 @@ const buildLocationGroups = (
       entry = {
         location_id: key === UNASSIGNED ? null : key,
         location: item.location ?? null,
-        name: item.location?.location_name ?? null,
+        name: key === UNASSIGNED
+          ? UNASSIGNED_LOCATION_LABEL
+          : (item.location?.location_name ?? null),
         address: buildLocationAddress(item.location ?? null),
         items: [],
         subtotal: 0,

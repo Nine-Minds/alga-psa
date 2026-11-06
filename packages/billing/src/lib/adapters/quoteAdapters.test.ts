@@ -7,7 +7,7 @@ vi.mock('./tenantPartyAdapter', () => ({
   fetchTenantParty: (...args: unknown[]) => fetchTenantPartyMock(...args),
 }));
 
-import { mapLoadedQuoteToViewModel, toDateOnlyString, toIsoDateString } from './quoteAdapters';
+import { UNASSIGNED_LOCATION_LABEL, mapLoadedQuoteToViewModel, toDateOnlyString, toIsoDateString } from './quoteAdapters';
 import { summarizeQuoteTotals } from '../quoteTotals';
 import { calculateDraftQuoteTotals, type DraftQuoteItem } from '../../components/billing-dashboard/quotes/quoteLineItemDraft';
 
@@ -1367,5 +1367,53 @@ describe('quoteAdapters one source of truth: PDF view model == editor draft == p
     expect(viewModel.optional_total).toBe(expectedOptional);
     expect(draft.optional_total).toBe(expectedOptional);
     expect((viewModel.groups_by_cadence_with_optionals ?? []).length > 0).toBe(expectedOptional > 0);
+  });
+});
+
+describe('quoteAdapters by-location bands', () => {
+  beforeEach(() => {
+    fetchTenantPartyMock.mockReset();
+    fetchTenantPartyMock.mockResolvedValue({
+      name: 'Northwind MSP',
+      address: '400 SW Main',
+      email: 'billing@example.com',
+      phone: '555-0100',
+      logo_url: null,
+    });
+  });
+
+  // Discounts are deliberately never sited, so a multi-site quote always has a
+  // group of rows belonging to no one location. The band header binds
+  // `path 'name'`: a null there rendered as an unlabelled coloured bar on the
+  // client's PDF, between two named location bands.
+  it('names the band holding rows that belong to no location', async () => {
+    const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', buildQuote({
+      quote_items: [
+        baseQuoteItem({
+          quote_item_id: 'base-1',
+          description: 'Managed Support',
+          unit_price: 1000,
+          total_price: 1000,
+          location_id: null,
+        }),
+        baseQuoteItem({
+          quote_item_id: 'disc-1',
+          description: 'Discount',
+          unit_price: 100,
+          total_price: 100,
+          is_discount: true,
+          discount_type: 'fixed',
+          location_id: null,
+        }),
+      ],
+    }));
+
+    const groups = viewModel.groups_by_location ?? [];
+    expect(groups).toHaveLength(1);
+    expect(groups[0].location_id).toBeNull();
+    expect(groups[0].name).toBe(UNASSIGNED_LOCATION_LABEL);
+    // The placeholder names the band only; it must not invent an address.
+    expect(groups[0].address).toBeNull();
+    expect(groups[0].items.map((item) => item.quote_item_id)).toEqual(['base-1', 'disc-1']);
   });
 });

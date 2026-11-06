@@ -29,6 +29,7 @@
     "invoiceTitle": "FACTUUR",
     "issueDate": "Factuurdatum",
     "locationSubtotal": "Subtotaal locatie",
+    "unassignedLocation": "Hele offerte",
     "monthly": "Maandelijks",
     "monthlyItems": "Maandelijkse regels",
     "monthlyTotal": "Maandtotaal",

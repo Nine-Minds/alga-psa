@@ -29,6 +29,7 @@
     "invoiceTitle": "FACTURA",
     "issueDate": "Fecha de emisión",
     "locationSubtotal": "Subtotal por ubicación",
+    "unassignedLocation": "Toda la cotización",
     "monthly": "Mensual",
     "monthlyItems": "Artículos mensuales",
     "monthlyTotal": "Total mensual",
