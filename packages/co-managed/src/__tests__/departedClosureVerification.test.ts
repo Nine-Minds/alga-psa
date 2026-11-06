@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFake } from './fakeCoManagedDb';
+import { coManagedArchiveManifestHash, type CoManagedArchiveManifest } from '../archiveManifest';
 
 vi.mock('@alga-psa/db', async () => {
   const fake = await import('./fakeCoManagedDb');
@@ -15,7 +16,9 @@ const CUSTOMER = '00000000-0000-4000-8000-0000000000c1';
 const REL = '00000000-0000-4000-8000-0000000000d1';
 const CLOSURE_OP = '00000000-0000-4000-8000-0000000000e1';
 const ENDED = '2026-10-30T12:00:00.000Z';
-const HASH = 'a'.repeat(64);
+const MANIFEST: CoManagedArchiveManifest = { version: 1, evidence: [], files: [], exclusions: [], retentionFailures: [] };
+const identity = { tenant: SPONSOR, customer_tenant: CUSTOMER, relationship_id: REL, operation_id: CLOSURE_OP, cutoff_at: ENDED };
+const HASH = coManagedArchiveManifestHash(identity, MANIFEST);
 const target = { customerTenant: CUSTOMER, relationshipId: REL };
 const relationship: { revision: number; ended_at: string | null; sponsor_tenant: string } = { revision: 5, ended_at: ENDED, sponsor_tenant: SPONSOR };
 
@@ -26,7 +29,7 @@ function world(missing: string[] = []) {
   store.seed('co_managed_relationship_closures', { tenant: SPONSOR, operation_id: CLOSURE_OP, customer_tenant: CUSTOMER, relationship_id: REL,
     reason: 'departure', applied_revision: 5, cutoff_at: ENDED, closed_at: ENDED });
   store.seed('co_managed_archive_manifests', { tenant: SPONSOR, operation_id: CLOSURE_OP, customer_tenant: CUSTOMER, relationship_id: REL,
-    cutoff_at: ENDED, content_hash: HASH });
+    cutoff_at: ENDED, manifest: MANIFEST, content_hash: HASH });
   store.seed('co_managed_allocations', { tenant: SPONSOR, operation_id: 'alloc', customer_tenant: CUSTOMER, relationship_id: REL, released_at: ENDED });
   return { store, db };
 }
@@ -43,7 +46,15 @@ describe('departed closure verification (L7a contract, read-only)', () => {
 
   it('is what the wiring uses for departed customers', () => {
     expect(coManagedUpgradeClosure.verifyDepartedClosure).toBe(verifyCoManagedDepartedClosure);
-    expect(coManagedUpgradeClosure.available).toBe(false);
+    expect(coManagedUpgradeClosure.available).toBe(true);
+  });
+
+  it('rejects a well-formed but incorrect digest and a payload changed after sealing', async () => {
+    ctx.store.tables.co_managed_archive_manifests[0].content_hash = 'a'.repeat(64);
+    await expect(verifyCoManagedDepartedClosure(ctx.db, target, relationship)).rejects.toBeInstanceOf(CoManagedDepartedClosureError);
+    ctx = world();
+    ctx.store.tables.co_managed_archive_manifests[0].manifest.evidence.push(['tampered', 'b'.repeat(64)]);
+    await expect(verifyCoManagedDepartedClosure(ctx.db, target, relationship)).rejects.toBeInstanceOf(CoManagedDepartedClosureError);
   });
 
   it.each(['co_managed_relationship_closures', 'co_managed_archive_manifests', 'co_managed_allocations'])(

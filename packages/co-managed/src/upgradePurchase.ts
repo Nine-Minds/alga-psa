@@ -58,7 +58,7 @@ export function prepareCoManagedUpgradePurchase(db: Knex, actor: CoManagedSessio
       return previous;
     }
     if ((await own.table('tenants').first('product_code'))?.product_code !== 'co_managed') throw new CoManagedSharedWorkError();
-    // Never take money for an upgrade the closure step cannot complete (L7a not wired in this build).
+    // Never take money unless the installed L7a closure adapter is available.
     if (!coManagedUpgradeClosure.available) throw new Error('Independent upgrade is not available in this build');
     if (await own.table('co_managed_upgrade_purchases').whereIn('state', [...CO_MANAGED_UPGRADE_PENDING_STATES]).first('operation_id')) throw new Error('Resume the pending independent PSA purchase');
     if (await own.table('stripe_subscriptions').whereNotIn('status', ['canceled', 'incomplete_expired'])

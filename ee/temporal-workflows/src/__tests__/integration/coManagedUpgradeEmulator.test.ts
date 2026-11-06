@@ -8,7 +8,7 @@
  * Real here: the Stripe SDK talking HTTP to `@alga-psa/emulator-stripe` (routed through
  * `stripeApiOverride`), the emulator's signed webhook deliveries, `createCoManagedPaymentHandlers` +
  * `dispatchPaymentEvent`, every table, CHECK and index, and the whole purchase/upgrade domain.
- * Faked (and why): the L7a closure (not on main) — a recording `CoManagedUpgradeClosure`, marked `available`; PSA seed
+ * Faked (and why): the L7a closure — a recording `CoManagedUpgradeClosure` keeps this emulator test focused on payment dispatch; PSA seed
  * initialisation (`initializeIndependentPsa`, needs the full seed catalogue); the `co-managed`
  * capability gate (`serves` open, `admits` closed: a customer has no sponsor entitlement). `sessionShape` below adapts three
  * response-shape gaps in the emulator, listed on that function.
@@ -40,6 +40,7 @@ import { createCoManagedPaymentHandlers } from '@ee/lib/stripe/coManagedPaymentE
 import { dispatchPaymentEvent } from '@ee/lib/stripe/paymentEventRegistry.js';
 import { coManagedUpgradeClosure } from '@alga-psa/co-managed';
 import { upgradeCoManagedWorkspaceWithHostedSubscription } from '../../db/co-managed-hosted-upgrade.js';
+import { seedBoundaryFixture } from '../../../../../server/src/test/integration/coManagedArchiveBoundaryCases';
 
 const url = process.env.L8B_TEST_DATABASE_URL;
 const SECRET = 'sk_test_l8b_emulator';
@@ -108,15 +109,23 @@ describe.skipIf(!url)('independent upgrade against the Stripe emulator and a rea
         'ee/server/migrations/20260309200000_add_billing_interval_to_stripe_subscriptions.cjs', 'ee/server/migrations/20260309100000_add_fk_stripe_base_price_id.cjs',
         'server/migrations/20261027090100_add_stripe_subscription_item_id.cjs']) await root(`../../../../../${f}`).up(db);
     }
-    const found = await db('tenants').where('product_code', 'co_managed').first();
-    if (!found) throw new Error('L8B_TEST_DATABASE_URL needs a co_managed customer tenant fixture');
+    let found = await db('tenants as t').join('co_management_relationships as r', 't.tenant', 'r.tenant')
+      .where({ 't.product_code': 'co_managed', 'r.state': 'active' }).first('t.tenant', 't.email');
+    let seededBoundary: Awaited<ReturnType<typeof seedBoundaryFixture>> | undefined;
+    if (!found) {
+      seededBoundary = await seedBoundaryFixture(db);
+      found = await db('tenants').where({ tenant: seededBoundary.customer }).first();
+    }
     tenant = found.tenant; customerEmail = found.email;
     relationship = await db('co_management_relationships').where('tenant', tenant).first();
-    const permitted = await db('users').join('user_roles', 'users.user_id', 'user_roles.user_id').join('role_permissions', 'user_roles.role_id', 'role_permissions.role_id')
-      .join('permissions', 'role_permissions.permission_id', 'permissions.permission_id')
-      .where({ 'users.tenant': tenant, 'users.user_type': 'internal', 'users.is_inactive': false, 'permissions.resource': 'co_management', 'permissions.action': 'manage' }).first('users.user_id');
-    if (!permitted) throw new Error('fixture tenant needs a user with co_management:manage');
-    userId = permitted.user_id;
+    if (seededBoundary) userId = seededBoundary.customerAdmin.userId;
+    else {
+      const permitted = await db('users').join('user_roles', 'users.user_id', 'user_roles.user_id').join('role_permissions', 'user_roles.role_id', 'role_permissions.role_id')
+        .join('permissions', 'role_permissions.permission_id', 'permissions.permission_id')
+        .where({ 'users.tenant': tenant, 'users.user_type': 'internal', 'users.is_inactive': false, 'permissions.resource': 'co_management', 'permissions.action': 'manage' }).first('users.user_id');
+      if (!permitted) throw new Error('fixture tenant needs a user with co_management:manage');
+      userId = permitted.user_id;
+    }
 
     sink = http.createServer(async (req, res) => {
       const chunks: Buffer[] = []; for await (const c of req) chunks.push(c as Buffer);

@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { assertPortableRestoreInstallationAuthority } from '@alga-psa/co-managed';
 
 /**
  * What activation needs from CM L7b2 (portable restore), written against L7b2's contract
@@ -47,14 +48,10 @@ export const portableRestoreTables = {
 };
 
 /**
- * Default wiring. Fails closed until L7b2 lands on main: plug its `assertPortableRestoreInstallationAuthority`
- * into `assertInstallationAuthority` and nothing else here changes. Because authority is asserted first,
- * no restore read, password check, provider call or write happens before then.
+ * L7b2's authority check runs before restore reads, password validation, provider calls or writes.
  */
 export const portableRestoreSeam: PortableRestoreSeam = {
-  async assertInstallationAuthority() {
-    throw new Error('Portable restore installation authority is not available in this build (CM L7b2)');
-  },
+  assertInstallationAuthority: assertPortableRestoreInstallationAuthority,
   findPendingActivation: portableRestoreTables.findPendingActivation,
   releasePendingActivation: portableRestoreTables.releasePendingActivation,
 };

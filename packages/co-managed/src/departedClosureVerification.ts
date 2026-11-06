@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import type { CoManagedPolicyTarget } from './policy';
+import { coManagedArchiveManifestHash, type CoManagedArchiveManifest } from './archiveManifest';
 
 /**
  * L8b's read-only check that a customer who ALREADY DEPARTED left through a sealed L7a closure, so an
@@ -10,8 +11,8 @@ import type { CoManagedPolicyTarget } from './policy';
  *    relationship's `ended_at`, `applied_revision` equal to its current revision;
  *  - `co_managed_archive_manifests`: one sealed manifest for the same `operation_id` and `cutoff_at`;
  *  - `co_managed_allocations`: nothing left with `released_at IS NULL` for the relationship.
- * It never re-derives the manifest hash (that function is L7a's, `coManagedArchiveManifestHash`); the
- * wiring adds that check when L7a is on main. Any missing table or mismatch throws: verify, never redo.
+ * The manifest hash is recomputed from L7a's canonical identity and payload. Any missing table or
+ * mismatch throws: verify, never redo.
  */
 export class CoManagedDepartedClosureError extends Error {
   constructor(reason: string) { super(`Departed closure is not sealed: ${reason}`); this.name = 'CoManagedDepartedClosureError'; }
@@ -36,10 +37,14 @@ export async function verifyCoManagedDepartedClosure(trx: Knex.Transaction, targ
   if (Number(closure.applied_revision) !== Number(relationship.revision)) fail('relationship changed after closure');
   const manifest = await sponsor.table('co_managed_archive_manifests')
     .where({ operation_id: closure.operation_id, customer_tenant: target.customerTenant, relationship_id: target.relationshipId }).forShare()
-    .first('cutoff_at', 'content_hash');
+    .first('tenant', 'customer_tenant', 'relationship_id', 'operation_id', 'cutoff_at', 'manifest', 'content_hash');
   if (!manifest) fail('no sealed archive manifest');
   if (at(manifest.cutoff_at) !== at(closure.cutoff_at)) fail('archive cutoff differs from the closure cutoff');
   if (typeof manifest.content_hash !== 'string' || !/^[0-9a-f]{64}$/.test(manifest.content_hash)) fail('archive manifest hash is malformed');
+  const computedHash = coManagedArchiveManifestHash({ tenant: manifest.tenant, customer_tenant: manifest.customer_tenant,
+    relationship_id: manifest.relationship_id, operation_id: manifest.operation_id, cutoff_at: manifest.cutoff_at },
+  manifest.manifest as CoManagedArchiveManifest);
+  if (computedHash !== manifest.content_hash) fail('archive manifest hash does not match its identity and payload');
   if (await sponsor.table('co_managed_allocations')
     .where({ customer_tenant: target.customerTenant, relationship_id: target.relationshipId }).whereNull('released_at').first('relationship_id')) {
     fail('allocation was not released');

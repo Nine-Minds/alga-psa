@@ -13,7 +13,7 @@ import type { CoManagedPolicyTarget } from './policy';
  */
 export interface CoManagedUpgradeClosure {
   /**
-   * False until L7a is wired. While false, nothing that leads to an upgrade may start: the upgrade
+   * False only when the L7a adapter is unavailable. While false, nothing that leads to an upgrade may start: the upgrade
    * gate is closed (no page, no screen, no mutation) and no purchase is prepared, so a customer can
    * never be charged for an independence that the closure step would then refuse.
    */

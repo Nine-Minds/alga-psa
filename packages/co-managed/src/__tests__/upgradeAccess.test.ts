@@ -37,11 +37,11 @@ describe('resolveCoManagedUpgradeAccess', () => {
   it('customer: flag on, serves, customer-side relationship', async () => {
     expect(await resolveCoManagedUpgradeAccess(world({ relationship: true }), CUSTOMER)).toBe('customer');
   });
-  it('a serving customer is closed while the L7a closure is not wired (nothing can start, nothing is charged)', async () => {
+  it('a serving customer is closed when its closure adapter is unavailable', async () => {
     gate.closureWired = false;
     expect(await resolveCoManagedUpgradeAccess(world({ relationship: true }), CUSTOMER)).toBe('closed');
   });
-  it('a former customer still reaches its completed screen regardless of the closure wiring', async () => {
+  it('a former customer still reaches its completed screen regardless of current closure availability', async () => {
     gate.closureWired = false; gate.served = false;
     expect(await resolveCoManagedUpgradeAccess(world({ relationship: true, upgradeRow: true }), CUSTOMER)).toBe('former');
   });

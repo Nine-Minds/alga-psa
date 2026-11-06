@@ -14,10 +14,11 @@
  */
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createRequire } from 'node:module';
+import { spawnSync } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { copyFile, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import type { Knex } from 'knex';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createTenant, createUser } from '../../../test-utils/testDataFactory';
@@ -44,6 +45,9 @@ import { beginPortableRestoreUpload, cleanupPortableRestoreUploadsForInstallatio
 const require = createRequire(import.meta.url);
 const migrations = ['20261102120200_create_portable_workspace_restore_uploads.cjs', '20261102120100_create_portable_workspace_restores.cjs',
   '20261102120000_create_portable_restore_suspensions.cjs'].map(file => require(`../../../migrations/${file}`));
+// L8b's activation receipt has a foreign key to the L7b2 restore receipt. Keep the
+// test's L7b2 down/up cycle valid against the complete current migration sequence.
+const activationMigration = require('../../../migrations/20261106090200_create_portable_workspace_activations.cjs');
 
 const PASSPHRASE = 'round trip passphrase 2026 correct horse';
 const FILE_BYTES = Buffer.from('portable restore integration bytes\n'.repeat(64));
@@ -51,6 +55,31 @@ const FILE_SHA = createHash('sha256').update(FILE_BYTES).digest('hex');
 let db: Knex, root: string, archivePath: string, storageRoot: string;
 let source: string, third: string, thirdClientId: string, sourceAdmin: string, sourceAuthor: string, ticketId: string, sourceContact: string, sourceFileId: string;
 const destination = randomUUID();
+
+function cliResult(stdout: string): Record<string, unknown> {
+  for (let start = stdout.indexOf('{'); start >= 0; start = stdout.indexOf('{', start + 1)) {
+    let depth = 0; let quoted = false; let escaped = false;
+    for (let end = start; end < stdout.length; end++) {
+      const char = stdout[end];
+      if (quoted) {
+        if (escaped) escaped = false;
+        else if (char === '\\') escaped = true;
+        else if (char === '"') quoted = false;
+        continue;
+      }
+      if (char === '"') quoted = true;
+      else if (char === '{') depth++;
+      else if (char === '}' && --depth === 0) {
+        try {
+          const parsed = JSON.parse(stdout.slice(start, end + 1));
+          if (parsed && typeof parsed === 'object' && 'outcome' in parsed && 'status' in parsed) return parsed;
+        } catch { /* CLI logs may contain object-like fragments before its result. */ }
+        break;
+      }
+    }
+  }
+  throw new Error('CLI did not emit a restore result');
+}
 
 const testRegistry = (): PortableContributorRegistry => createCorePortableRegistry();
 
@@ -86,7 +115,10 @@ async function counts(tenant: string, tables: string[]) {
 }
 
 beforeAll(async () => {
-  db = await createTestDbConnection();
+  const fixtureDatabase = process.env.CM_L8B_RESTORE_FIXTURE_DB;
+  db = await createTestDbConnection(fixtureDatabase
+    ? { databaseName: fixtureDatabase, recreate: false, runSeeds: false }
+    : {});
   root = await mkdtemp(join(tmpdir(), 'alga-l7b2-roundtrip-'));
   storageRoot = join(root, 'storage');
   process.env.STORAGE_DEFAULT_PROVIDER = 'local'; process.env.STORAGE_LOCAL_BASE_PATH = storageRoot;
@@ -179,9 +211,11 @@ describe('portable restore round trip (A6)', () => {
   it('migrates, restores, resumes, is idempotent and isolated, and refuses non-fresh installations', async () => {
     const request = () => ({ archivePath, passphrase: PASSPHRASE, destinationTenant: destination, sourceAdministratorUserId: sourceAdmin });
     await step('L7b2 migrations run down, up and up again', async () => {
+      await activationMigration.down(db);
       for (const migration of migrations) await migration.down(db);
       for (const table of ['portable_restore_suspensions', 'portable_workspace_restores', 'portable_workspace_restore_uploads']) expect(await db.schema.hasTable(table)).toBe(false);
       for (const migration of [...migrations].reverse()) await migration.up(db);
+      await activationMigration.up(db);
       for (const migration of [...migrations].reverse()) await migration.up(db); // expand-only and idempotent
       for (const table of ['portable_restore_suspensions', 'portable_workspace_restores', 'portable_workspace_restore_uploads']) expect(await db.schema.hasTable(table)).toBe(true);
     });
@@ -262,11 +296,21 @@ describe('portable restore round trip (A6)', () => {
       expect((await journal()).every(row => row.status !== 'committed')).toBe(true);
     });
 
-    await step('the same destination then restores in a single --apply', async () => {
+    await step('the shipped CLI restores the same destination in a single --apply', async () => {
       const provider = await localProvider();
-      const result = await restorePortableWorkspaceForInstallation(db, request(), {}, { createProvider: async () => provider as never });
+      const cli = spawnSync('npm', ['exec', '--', 'tsx', '--tsconfig', '../ee/server/tsconfig.json', 'scripts/restore-portable-workspace.ts',
+        '--apply', '--archive', archivePath, '--destination-tenant', destination, '--administrator-user-id', sourceAdmin], {
+        cwd: resolve(__dirname, '../../..'), encoding: 'utf8', timeout: 180_000,
+        env: { ...process.env, DB_NAME_SERVER: process.env.CM_L8B_RESTORE_FIXTURE_DB ?? process.env.TEST_DB_NAME ?? 'test_database',
+          FORCE_CAPABILITIES: '', ALGA_PORTABLE_RESTORE_PASSPHRASE: PASSPHRASE },
+      });
+      expect(cli.status, cli.stderr).toBe(0);
+      const result = cliResult(cli.stdout);
+      expect(result.status).toMatch(/remains suspended pending activation/);
+      const restoredReceipt = await db('portable_workspace_restores').where({ tenant: destination }).first();
+      expect(restoredReceipt).toMatchObject({ state: 'verified' });
       expect(result.outcome).toBe('restored');
-      expect(result.receipt.state).toBe('verified');
+      expect(result.receipt.administrator_user_id).toBe(restoredReceipt.administrator_user_id);
       expect(await db('portable_workspace_restores').where({ tenant: destination })).toHaveLength(1);
       expect(await db('tickets').where({ tenant: destination })).toHaveLength(1);
       expect(await db('portable_restore_suspensions').where({ tenant: destination }).first()).toMatchObject({ reason: 'portable_restore_pending_activation' });
@@ -279,7 +323,7 @@ describe('portable restore round trip (A6)', () => {
       const files = await db('external_files').where({ tenant: destination });
       expect(files).toHaveLength(1);
       expect(files[0]).toMatchObject({ file_name: files[0].file_id, original_name: 'report.txt', mime_type: 'text/plain',
-        uploaded_by_id: result.receipt.administrator_user_id, is_deleted: false,
+        uploaded_by_id: restoredReceipt.administrator_user_id, is_deleted: false,
         metadata: { portable_restore: { version: 2, source_blob_id: expect.stringMatching(/^file:/), sha256: FILE_SHA } } });
       expect(files[0].file_id).not.toBe(sourceFileId);
       const stored = await provider.download(files[0].storage_path);
@@ -287,7 +331,7 @@ describe('portable restore round trip (A6)', () => {
       expect(Number(files[0].file_size)).toBe(FILE_BYTES.length);
       expect((await storedObjects()).filter(path => path.endsWith(files[0].storage_path.split('/').pop()))).toHaveLength(1); // the bytes landed once
       expect(await storedObjects()).toHaveLength(4); // source, promoted destination, and the live/referenced recovery objects
-      expect(await db('users').where({ tenant: destination, user_id: result.receipt.administrator_user_id }).first()).toBeTruthy();
+      expect(await db('users').where({ tenant: destination, user_id: restoredReceipt.administrator_user_id }).first()).toBeTruthy();
     });
 
     await step('rewrites every row: the written table set equals the archive manifest, and no row carries the source tenant', async () => {

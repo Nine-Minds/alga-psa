@@ -15,7 +15,6 @@ vi.mock('../sharedWorkIdentity', async importOriginal => ({
 }));
 
 import { upgradeCoManagedRelationship, CoManagedIndependentUpgradeError } from '../independentUpgrade';
-import { prepareCoManagedUpgradePurchase } from '../upgradePurchase';
 import { coManagedUpgradeClosure } from '../upgradeClosureWiring';
 import type { CoManagedUpgradeClosure } from '../upgradeClosure';
 
@@ -83,16 +82,9 @@ describe('independent upgrade (A1: receipt idempotency)', () => {
     expect(ctx.calls.close).toBe(0);
   });
 
-  it('no purchase is prepared (so Stripe is never reached) while the closure is not wired', async () => {
-    expect(coManagedUpgradeClosure.available).toBe(false);
-    await expect(prepareCoManagedUpgradePurchase(ctx.db, actor, { operationId: OP, quantity: 3, interval: 'month' }, 'price_psa'))
-      .rejects.toThrow(/not available in this build/);
-    expect(ctx.store.rows('co_managed_upgrade_purchases')).toHaveLength(0);
-  });
-
-  it('the default closure seam fails closed until CM L7a is wired', async () => {
-    await expect(upgradeCoManagedRelationship(ctx.db, actor, target, request, entitlement, coManagedUpgradeClosure))
-      .rejects.toThrow(/L7a/);
-    expect(ctx.store.rows('tenants').find(t => t.tenant === CUSTOMER)?.product_code).toBe('co_managed');
+  it('the default closure seam is wired to the merged L7a closure contract', () => {
+    expect(coManagedUpgradeClosure.available).toBe(true);
+    expect(typeof coManagedUpgradeClosure.closeAndArchive).toBe('function');
+    expect(typeof coManagedUpgradeClosure.verifyDepartedClosure).toBe('function');
   });
 });

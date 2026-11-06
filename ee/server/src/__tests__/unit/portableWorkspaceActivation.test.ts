@@ -43,7 +43,13 @@ vi.mock('@alga-psa/licensing', () => ({
 vi.mock('@alga-psa/validation', async () => ({
   validatePassword: (await import('../../../../../packages/validation/src/lib/passwordValidation')).validatePassword,
 }));
-vi.mock('@alga-psa/co-managed', () => ({ isCoManagedUuid: (v: unknown) => typeof v === 'string' && /^[0-9a-f-]{36}$/i.test(v) }));
+vi.mock('@alga-psa/co-managed', () => ({
+  isCoManagedUuid: (v: unknown) => typeof v === 'string' && /^[0-9a-f-]{36}$/i.test(v),
+  assertPortableRestoreInstallationAuthority: async (db: any) => {
+    const { rows } = await db.raw();
+    if (rows.length !== 1 || rows[0].allowed !== true) throw new Error('Portable installation restore rejected: database owner authority required');
+  },
+}));
 vi.mock('../../lib/stripe/coManagedIndependentEntitlement', () => ({ paidPsaUpgradeFromStripe: vi.fn(), createIndependentPsaStripeReader: vi.fn() }));
 vi.mock('../../../../temporal-workflows/src/db/product-upgrade-operations', () => ({ initializeIndependentPsa: vi.fn(async () => { world.writes.push('initializeIndependentPsa'); }) }));
 
@@ -79,6 +85,13 @@ beforeEach(() => {
 });
 
 describe('portable workspace activation preconditions (A4)', () => {
+  it('delegates installation authority before reading the restore receipt', async () => {
+    const database = { raw: async () => ({ rows: [{ allowed: true }] }) } as any;
+    await expect(portableRestoreSeam.assertInstallationAuthority(database)).resolves.toBeUndefined();
+    await expect(portableRestoreSeam.assertInstallationAuthority({ raw: async () => ({ rows: [{ allowed: false }] }) } as any))
+      .rejects.toThrow(/database owner authority required/);
+  });
+
   it('passes with a customer-owned licence and a valid new password; writes one receipt', async () => {
     const receipt = await activate();
     expect(receipt).toMatchObject({ tenant: TENANT, operation_id: OP, administrator_user_id: ADMIN, entitlement_source: 'tenant_license', entitlement_reference: 'lic_own', seats: 5 });
@@ -138,9 +151,12 @@ describe('portable workspace activation preconditions (A4)', () => {
     await expect(activate()).rejects.toThrow(/already completed/);
   });
 
-  it('default seam fails closed until CM L7b2 supplies installation authority', async () => {
-    await expect(activatePortableWorkspaceWithTenantLicense(db(), input(), log as any, portableRestoreSeam))
-      .rejects.toThrow(/L7b2/);
+  it('default seam rejects a connection without installation-owner authority before restore access', async () => {
+    const unprivileged: any = { isTransaction: false, transaction: async (work: any) => work({
+      raw: async () => ({ rows: [{ allowed: false }] }),
+    }) };
+    await expect(activatePortableWorkspaceWithTenantLicense(unprivileged, input(), log as any, portableRestoreSeam))
+      .rejects.toThrow(/database owner authority required/);
     expect(world.writes).toEqual([]);
   });
 
