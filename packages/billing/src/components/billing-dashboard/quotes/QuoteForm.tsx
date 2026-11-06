@@ -718,7 +718,9 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
             discount_percentage: item.discount_percentage ?? null,
             applies_to_item_id: item.applies_to_item_id ? (quoteItemIdMap.get(item.applies_to_item_id) ?? item.applies_to_item_id) : null,
             applies_to_service_id: item.applies_to_service_id ?? null,
-            is_taxable: item.is_taxable ?? true,
+            // Sent as-is: an omitted value lets the server derive the treatment
+            // from the service's tax configuration instead of forcing `true`.
+            is_taxable: item.is_taxable,
             tax_region: item.tax_region ?? null,
             tax_rate: item.tax_rate ?? null,
             location_id: item.location_id ?? null,

@@ -531,8 +531,10 @@ describe('Quote infrastructure', () => {
 
     const reloadedItem = await context.db('quote_items').where({ tenant: context.tenantId, quote_item_id: item.quote_item_id }).first();
     expect(reloadedItem.tax_region).toBe('US-NY');
-    expect(Number(reloadedItem.tax_rate)).toBe(9);
-    expect(Number(reloadedItem.tax_amount)).toBeGreaterThan(0);
+    // alga-2026-0002902: the stored rate is the rate charged — 8.875, not a
+    // rounded 9 beside a tax amount computed at 8.875.
+    expect(Number(reloadedItem.tax_rate)).toBe(8.875);
+    expect(Number(reloadedItem.tax_amount)).toBe(Math.ceil((10000 * 8.875) / 100));
   });
 
   it('T056: Discount: percentage discount calculates correct amount from target item total', async () => {
