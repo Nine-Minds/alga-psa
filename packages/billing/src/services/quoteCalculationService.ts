@@ -259,8 +259,19 @@ async function calculateTaxWithConnection(
 interface ResolvedRowTax {
   /** Tax the row carries when included in the quote (0 for discounts / external tax). */
   taxAmountIfIncluded: number;
+  /** Persisted rate, rounded to whole percent as `quote_items.tax_rate` stores it. */
   taxRate: number;
+  /** The exact percentage the engine used, which the rounded one cannot recover. */
+  taxPercentage: number;
   taxRegion: string | null;
+}
+
+/** Per-row tax inputs the client portal needs to preview a selection locally. */
+export interface QuoteItemTaxIfIncluded {
+  /** Tax on the row's gross amount, in minor units. */
+  taxAmount: number;
+  /** Exact percentage behind that amount; 0 when the row carries no internal tax. */
+  taxPercentage: number;
 }
 
 /**
@@ -272,7 +283,8 @@ interface ResolvedRowTax {
  * included discounts: tax is computed on the discounted base, so a
  * seller-funded discount lowers the taxable amount of the rows it applies to.
  * Discounts only allocate across included bases, so a pending optional row's
- * share is 0 and its "if selected" tax is resolved on its full amount.
+ * share is 0 and its "if selected" tax is resolved on its full amount. Pass an
+ * empty map for selection-independent, gross-amount tax.
  */
 async function resolveQuoteRowTaxes(
   knexOrTrx: Knex | Knex.Transaction,
@@ -330,6 +342,7 @@ async function resolveQuoteRowTaxes(
 
     let taxAmount = 0;
     let taxRate = toNumber(item.tax_rate);
+    let taxPercentage = taxRate;
 
     if (!isDiscount) {
       if (quote.client_id && taxSource === 'internal') {
@@ -351,14 +364,16 @@ async function resolveQuoteRowTaxes(
         );
 
         taxAmount = taxResult.taxAmount;
-        taxRate = Math.round(Number(taxResult.taxRate ?? 0));
+        taxPercentage = Number(taxResult.taxRate ?? 0);
+        taxRate = Math.round(taxPercentage);
       } else if (taxSource !== 'internal') {
         taxAmount = 0;
         taxRate = 0;
+        taxPercentage = 0;
       }
     }
 
-    resolved.set(item.quote_item_id, { taxAmountIfIncluded: taxAmount, taxRate, taxRegion });
+    resolved.set(item.quote_item_id, { taxAmountIfIncluded: taxAmount, taxRate, taxPercentage, taxRegion });
   }
 
   return resolved;
@@ -366,14 +381,16 @@ async function resolveQuoteRowTaxes(
 
 /**
  * Read-only: the tax each non-discount quote row would carry if it were
- * included, keyed by quote_item_id. The client portal feeds this to
- * `computeQuoteTotals` for its local optional-item preview. Writes nothing.
+ * included, keyed by quote_item_id, with the exact rate behind it. The client
+ * portal feeds both to `computeQuoteTotals` for its local optional-item
+ * preview: discounts apply before tax, so the preview re-derives the row's tax
+ * on the base its own selection leaves. Writes nothing.
  */
 export async function resolveQuoteItemTaxesIfIncluded(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
   quoteId: string
-): Promise<Map<string, number>> {
+): Promise<Map<string, QuoteItemTaxIfIncluded>> {
   const db = tenantDb(knexOrTrx, tenant);
   const quote = await db.table('quotes')
     .where({ quote_id: quoteId })
@@ -387,22 +404,18 @@ export async function resolveQuoteItemTaxesIfIncluded(
     .orderBy('display_order', 'asc')
     .orderBy('created_at', 'asc') as QuoteItemRow[];
 
-  // Tax follows the discounted base, so the preview starts from the discount
-  // shares of the selection as it stands; a pending row absorbs none and is
-  // quoted on its full amount, exactly as the persisted recalculation does.
-  const { byItemId: discountAmountById, shareByBaseId } = resolveQuoteDiscounts(items);
-  const resolved = await resolveQuoteRowTaxes(
-    knexOrTrx,
-    tenant,
-    quote,
-    items,
-    discountAmountById,
-    shareByBaseId
-  );
-  const result = new Map<string, number>();
+  // Gross-amount tax, with no discount share taken off: which share a row
+  // absorbs depends on the selection the client is previewing, so
+  // `computeQuoteTotals` applies the discount before tax per selection.
+  const resolved = await resolveQuoteRowTaxes(knexOrTrx, tenant, quote, items, new Map(), new Map());
+  const result = new Map<string, QuoteItemTaxIfIncluded>();
   for (const item of items) {
     if (item.is_discount === true) continue;
-    result.set(item.quote_item_id, resolved.get(item.quote_item_id)?.taxAmountIfIncluded ?? 0);
+    const rowTax = resolved.get(item.quote_item_id);
+    result.set(item.quote_item_id, {
+      taxAmount: rowTax?.taxAmountIfIncluded ?? 0,
+      taxPercentage: rowTax?.taxPercentage ?? 0,
+    });
   }
   return result;
 }
@@ -446,10 +459,14 @@ export async function recalculateQuoteFinancials(
     shareByBaseId
   );
 
+  // The tax handed over is already on the discounted base, so passing the exact
+  // rate alongside it lets computeQuoteTotals recognise that and take the
+  // amounts as they are instead of discounting them twice.
   const totals = computeQuoteTotals(
     items.map((item) => ({
       ...item,
       id: item.quote_item_id,
+      taxRateIfIncluded: rowTaxes.get(item.quote_item_id)?.taxPercentage ?? 0,
       taxAmountIfIncluded: rowTaxes.get(item.quote_item_id)?.taxAmountIfIncluded ?? 0,
     }))
   );
