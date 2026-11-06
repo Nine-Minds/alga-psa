@@ -21,7 +21,7 @@
     "@alga-psa/emulator-host": "*",
     "mailparser": "^3.9.8",
     "smtp-server": "^3.14.0",
-    "zod": "^3.25.67"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/mailparser": "^3.4.6",

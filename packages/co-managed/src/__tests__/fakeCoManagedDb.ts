@@ -12,6 +12,10 @@ const uniqueKeys: Record<string, string[]> = {
   co_managed_allocations: ['tenant', 'operation_id'],
   co_managed_provisioning_operations: ['tenant', 'operation_id'],
   co_management_relationships: ['tenant', 'relationship_id'],
+  co_management_ticket_work: ['tenant', 'relationship_id', 'ticket_id'],
+  co_management_ticket_handoffs: ['tenant', 'operation_id'],
+  co_management_command_receipts: ['tenant', 'operation_id'],
+  co_managed_ticket_references: ['tenant', 'customer_tenant', 'relationship_id', 'ticket_id'],
 };
 /** jsonb columns come back from Postgres as objects; the domain code writes them as JSON strings. */
 const jsonColumns: Record<string, string[]> = {
@@ -75,6 +79,8 @@ function makeBuilder(store: FakeStore, table: string, tenant: string | undefined
     /** Raw SQL predicates are not interpreted; tests seed no rows that rely on them. */
     whereRaw() { return builder; },
     orderBy() { return builder; },
+    /** Row limits are not applied: seed fewer rows than the page size. */
+    limit() { return builder; },
     select() { return builder; },
     async first() { const row = selected()[0]; return row ? { ...row } : undefined; },
     /** Awaitable (row count) and `.returning()`-able, like knex. */

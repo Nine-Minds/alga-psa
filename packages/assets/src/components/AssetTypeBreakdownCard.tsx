@@ -1,17 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import { Card } from '@alga-psa/ui/components/Card';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { getAssetCountsByType } from '../actions/assetStatisticsActions';
-import { getErrorMessage, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface AssetTypeBreakdownCardProps {
   /** Registry-aware label resolver shared with the asset list. */
   getTypeLabel: (slug: string) => string;
-  /** Bump to refetch counts (e.g. after bulk actions or manual refresh). */
-  refreshToken?: number;
+  /** Counts returned with the current asset list, or null while loading. */
+  counts: Record<string, number> | null;
   /** Slugs currently active in the type filter (rendered highlighted). */
   activeTypes?: string[];
   onSelectType?: (slug: string) => void;
@@ -24,34 +22,22 @@ interface AssetTypeBreakdownCardProps {
  */
 export function AssetTypeBreakdownCard({
   getTypeLabel,
-  refreshToken = 0,
+  counts,
   activeTypes = [],
   onSelectType,
 }: AssetTypeBreakdownCardProps) {
   const { t } = useTranslation('msp/assets');
-  const [counts, setCounts] = useState<Record<string, number> | null>(null);
 
-  useEffect(() => {
-    let mounted = true;
-    getAssetCountsByType()
-      .then((next) => {
-        if (isActionPermissionError(next)) {
-          console.warn('Unable to load asset counts by type:', getErrorMessage(next));
-          if (mounted) setCounts({});
-          return;
-        }
-        if (mounted) setCounts(next);
-      })
-      .catch((error) => {
-        console.error('Error loading asset counts by type:', error);
-        if (mounted) setCounts({});
-      });
-    return () => {
-      mounted = false;
-    };
-  }, [refreshToken]);
-
-  const items = Object.entries(counts ?? {}).sort((a, b) => b[1] - a[1]);
+  const items = useMemo(() => {
+    const merged = new Map(Object.entries(counts ?? {}));
+    // A selected type can legitimately drop out of the GROUP BY once other
+    // filters exclude all of its assets. Keep it visible at 0 so the active chip
+    // the user just clicked never disappears from under them.
+    for (const slug of activeTypes) {
+      if (!merged.has(slug)) merged.set(slug, 0);
+    }
+    return Array.from(merged.entries()).sort((a, b) => b[1] - a[1]);
+  }, [counts, activeTypes]);
 
   if (counts !== null && items.length === 0) {
     return null;

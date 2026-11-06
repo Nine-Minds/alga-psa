@@ -5,6 +5,7 @@ import { compareCadenceKeys, cadenceDefaultName, isRecurringCadenceKey, resolveC
 import { isPendingOptional } from '../../../lib/quoteItemInclusion';
 import { buildQuoteDiscountAllocationInputs, summarizeQuoteTotals } from '../../../lib/quoteTotals';
 import { hypotheticalTaxAmount } from '../../../lib/quoteItemTax';
+import { formatCurrencyWithSymbol } from '@alga-psa/core/formatters';
 
 export type DraftQuoteItem = {
   local_id: string;
@@ -342,9 +343,6 @@ export function calculateDraftMonthlyRecurringNet(items: DraftQuoteItem[]): numb
 }
 
 export function formatDraftQuoteMoney(minorUnits: number, currencyCode: string): string {
-  return new Intl.NumberFormat(undefined, {
-    style: 'currency',
-    currency: currencyCode,
   // LEVERAGE: pattern currency-minor-units — hard-coded /100 assumes a 2-digit currency; display/compute formatting should go through formatCurrencyFromMinorUnits (alga0002091 follow-up)
-  }).format((minorUnits || 0) / 100);
+  return formatCurrencyWithSymbol((minorUnits || 0) / 100, undefined, currencyCode);
 }

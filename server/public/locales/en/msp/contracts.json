@@ -150,7 +150,11 @@
       "title": "Client Assignment",
       "useTenantRenewalDefaults": "Use tenant renewal defaults",
       "usingCustomSettings": "Using custom assignment settings",
-      "usingTenantDefaults": "Using tenant defaults"
+      "usingTenantDefaults": "Using tenant defaults",
+      "billingProfileUseDefault": "Use {{name}} (client default)",
+      "billingProfileAssigned": "Assigned billing profile",
+      "billingProfileUnavailable": "No profile — allocation pending",
+      "billingProfileLoading": "Loading billing profile…"
     },
     "clientOwnership": {
       "assignmentStatus": "Assignment Status",
@@ -375,6 +379,82 @@
         "failed": "Could not change how this service is measured."
       },
       "effectiveFrom": "Measurement change effective from"
+    },
+    "billing": {
+      "title": "Billing profile & payment terms",
+      "asOf": "as of {{date}}",
+      "profileLabel": "Billing profile",
+      "inactive": "Inactive",
+      "lineCountOne": "{{count}} line",
+      "lineCountOther": "{{count}} lines",
+      "termsLabel": "Payment terms",
+      "terms": {
+        "net_30": "Net 30",
+        "net_15": "Net 15",
+        "net_14": "Net 14",
+        "net_7": "Net 7",
+        "due_on_receipt": "Due on receipt"
+      },
+      "termsSource": {
+        "profile": "from the billing profile",
+        "client": "from the client",
+        "tenant": "from the tenant default",
+        "default": "default — no terms are set"
+      },
+      "profileSource": {
+        "client_default": "client default",
+        "contract": "assigned on contract",
+        "contract_line": "set on line",
+        "work_item": "set on ticket or project"
+      },
+      "valueSource": {
+        "profile": "Profile",
+        "client": "Client",
+        "contract": "Contract",
+        "default": "Default"
+      },
+      "dueSentence": "A {{invoiceDate}} invoice is due {{dueDate}} — {{terms}} {{source}}",
+      "detailsToggle": "Other billing details",
+      "fieldNone": "None",
+      "taxRegionChain": "Service region, then contract-line location, then client default",
+      "taxExempt": "Tax exempt",
+      "taxable": "Taxable",
+      "templateCustom": "Custom template",
+      "templateDefault": "Default template",
+      "paymentMethod": {
+        "credit_card": "Credit Card",
+        "bank_transfer": "Bank Transfer",
+        "check": "Check"
+      },
+      "fieldLabel": {
+        "bill_to": "Bill to",
+        "payment_method": "Payment method",
+        "tax_exemption": "Tax exemption",
+        "tax_region": "Tax region",
+        "delivery": "Invoice delivery",
+        "template": "Invoice template",
+        "po_number": "PO number",
+        "currency": "Currency",
+        "cadence": "Billing cadence",
+        "profile_billing_cycle": "Profile billing cycle",
+        "profile_billing_cycle_unapplied": "Profile billing cycle (not yet applied)"
+      },
+      "warnings": {
+        "inactiveProfile": "{{name}} is inactive. Charges stay attributed to it, but they are invoiced on the default profile with its payment terms.",
+        "mixedProfiles": "This contract bills {{count}} different profiles, so no single profile covers it. Each invoice uses the payment terms of the profile it is issued on.",
+        "lineOverride": "Line \"{{line}}\" bills {{name}} instead of the contract's profile.",
+        "workItemOverride": "Time on a ticket or project is billed to that work item's profile when it has one. Without one, it goes to the client default.",
+        "workItemOverrideWithProfiles": "Time on a ticket or project is billed to that work item's profile when it has one ({{names}}). Without one, it goes to the client default.",
+        "mixedProfilesSameInvoice": "This contract's charges are attributed to {{count}} different profiles, but they all land on {{invoice}}'s invoice, so one set of payment terms applies.",
+        "bucketCoverageNote": "On lines with a prepaid bucket or hour block, time the bucket or block covers does not follow the work item; only the remaining hourly time does."
+      },
+      "simulationNote": "Simulated pricing uses the client-level tax exemption. A profile's own exemption is not applied in this simulation.",
+      "dueSentenceWorkItem": "A {{invoiceDate}} invoice is due {{dueDate}} — {{terms}} {{source}}, unless the ticket or project is billed to another profile",
+      "workItemProfileLine": "If the ticket or project is billed to {{name}}:",
+      "invoiceLanding": {
+        "notBilledSeparately": "Attributed to {{attributed}}; invoiced on {{invoice}} ({{attributed}} does not bill separately) — {{terms}}, due {{dueDate}}",
+        "inactiveProfile": "Attributed to {{attributed}}; invoiced on {{invoice}} ({{attributed}} is inactive, so it has no invoice of its own) — {{terms}}, due {{dueDate}}"
+      }
     }
   },
   "contractDialog": {
@@ -588,7 +668,8 @@
       "failedToResetRate": "Failed to reset the line rate",
       "protectedStartDate": "Start date must be on or before {{boundary}} to include protected service history.",
       "protectedEndDate": "End date must be on or after {{boundary}} to include protected service history.",
-      "cannotEditWithInvoices": "Cannot edit contract line: This contract has associated invoices. Contract lines cannot be edited once invoices have been generated."
+      "cannotEditWithInvoices": "Cannot edit contract line: This contract has associated invoices. Contract lines cannot be edited once invoices have been generated.",
+      "reloadLatest": "Reload latest"
     },
     "loading": {
       "contractLines": "Loading contract lines",
@@ -1702,6 +1783,9 @@
       "label": "Billing profile",
       "none": "Use the client's default profile",
       "hint": "Charges from this contract are billed to this profile unless a line overrides it."
+    },
+    "billingTiming": {
+      "label": "Billing Timing"
     }
   },
   "wizardFixed": {
@@ -1751,7 +1835,8 @@
       "recurringQuantityLabel": "Recurring quantity",
       "allocationQuantityLabel": "Allocation quantity",
       "noCurrencyPrice": "No {{currency}} price in the catalog. Enter a unit rate."
-    }
+    },
+    "billingTimingLabel": "Billing Timing"
   },
   "wizardProducts": {
     "actions": {
@@ -1774,7 +1859,8 @@
       "productMissingPrice": "This product has no default price and no override. It cannot be billed until you enter a unit price.",
       "noCurrencyPriceEnterUnitPrice": "No {{currency}} price in the catalog. Enter a unit price.",
       "noCurrencyPriceWithLegacyHint": "No {{currency}} price in the catalog. Legacy default rate: {{rate}}. Enter a unit price in {{currency}}."
-    }
+    },
+    "billingTimingLabel": "Billing Timing"
   },
   "wizardHourly": {
     "actions": {
@@ -1832,7 +1918,8 @@
         "rolloverDisabled": "Disabled",
         "rolloverEnabled": "Enabled"
       }
-    }
+    },
+    "billingTimingLabel": "Billing Timing"
   },
   "wizardUsage": {
     "actions": {
@@ -1870,7 +1957,8 @@
     },
     "values": {
       "defaultUnit": "unit"
-    }
+    },
+    "billingTimingLabel": "Billing Timing"
   },
   "wizardReview": {
     "heading": "Review Contract",
@@ -2028,6 +2116,13 @@
       "neverExpires": "never expires",
       "cadenceSummary": "{{hours}} h every billing period for {{price}}",
       "overageRate": "overage {{rate}}/h"
+    },
+    "billingTiming": {
+      "label": "Billing timing:",
+      "advance": "In advance",
+      "arrears": "In arrears",
+      "advanceInherited": "In advance (contract default)",
+      "arrearsInherited": "In arrears (contract default)"
     }
   },
   "wizardTemplateLines": {
@@ -2773,6 +2868,7 @@
   "wizardFirstInvoice": {
     "loading": "Checking the client's billing schedule…",
     "arrearsPreviewNote": "Until then, an invoice preview for this client has nothing to bill for this line.",
+    "arrearsPreviewNoteMany": "Until then, an invoice preview for this client has nothing to bill for these lines.",
     "unavailable": {
       "missingStartDate": "Choose a start date to see when this contract first invoices.",
       "unsupportedFrequency": "No first invoice date is shown because contract-cadence billing doesn't support this frequency. Pick a supported frequency or bill on the client's schedule.",
@@ -2809,7 +2905,11 @@
     "options": {
       "advance": "In Advance (bill at start of period)",
       "arrears": "In Arrears (bill at end of period)"
-    }
+    },
+    "inheritWithValue": "Use contract default — {{timing}}",
+    "inheritedAdvance": "In advance",
+    "inheritedArrears": "In arrears",
+    "contractDefaultHelp": "Default for fixed lines, which can bill in advance. Hourly and usage lines always bill in arrears, whatever you choose here."
   },
   "contractDiscounts": {
     "title": "Discounts",

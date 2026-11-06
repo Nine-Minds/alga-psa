@@ -5,8 +5,13 @@
 # Pin to the production-known-good Node runtime. node:alpine floated to Node 26.2.0
 # and broke bundled Vault provider initialization in the blue deployment.
 FROM node:26.1.0-alpine
+# FreeFont ships as CFF-based OTF (and ghostscript's fonts are Type 1); Chromium embeds
+# those in PDFs as Type 3 glyph outlines that print poorly. DejaVu (sans-serif/monospace)
+# and Liberation (Arial/Helvetica/Courier) are TrueType and embed cleanly.
 RUN apk add --no-cache \
     bash \
+    findutils \
+    setpriv \
     postgresql-client \
     redis \
     graphicsmagick \
@@ -21,6 +26,8 @@ RUN apk add --no-cache \
     harfbuzz \
     ca-certificates \
     ttf-freefont \
+    font-dejavu \
+    font-liberation \
     ffmpeg
 
 # Tell Puppeteer to skip installing Chrome. We'll use the installed chromium.
@@ -56,7 +63,7 @@ COPY ./shared/package.json ./shared/package.json
 
 # Copy pre-built Next.js artifacts (must exist locally)
 # server/dist is no longer required here; workflow-worker is built/deployed separately
-COPY ./server/.next ./server/.next
+COPY --chown=1000:1000 ./server/.next ./server/.next
 
 # Copy runtime files
 COPY ./server/public ./server/public
@@ -69,14 +76,33 @@ COPY ./server/seeds/ ./server/seeds/
 COPY ./server/src/ ./server/src/
 COPY ./ee/packages/workflows/ ./ee/packages/workflows/
 COPY ./scripts ./scripts
+COPY scripts/runtime-permissions.sh /usr/local/bin/alga-runtime-permissions
+COPY scripts/repair-secret-permissions.sh /usr/local/bin/alga-repair-secret-permissions
+RUN chmod 0755 /usr/local/bin/alga-runtime-permissions /usr/local/bin/alga-repair-secret-permissions
 COPY ./shared/workflow/ ./shared/workflow/
 
-# Copy core package.json for version info
-COPY packages/core/package.json /app/packages/core/package.json
+# Copy the workspace packages with their pre-built dist directories, as the
+# enterprise image does. npm links @alga-psa/* into node_modules from the
+# lockfile whether or not the directories exist, so without them every runtime
+# import of a workspace package (the file-system secret provider that the
+# server, workers and email service share, the admin scripts) fails with
+# "Cannot find package" while the webpack bundle, which compiled them in, runs.
+COPY ./packages/ ./packages/
+RUN test -f /app/packages/core/dist/index.js
 
 # Copy entrypoint
 COPY server/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
+
+# The image must also run as a non-root user (the browser lane runs it as
+# 1000:1000; hardened deployments may too). At runtime the server creates
+# logs/ in its working directory for winston's file transport and .next/cache
+# for the image optimizer, and Next may rewrite tsconfig.json; a page render
+# that cannot create logs/ throws. Give that user the directory, as the old
+# test image did.
+RUN chown 1000:1000 /app/server /app/server/tsconfig.json
+RUN install -d -o 1000 -g 1000 -m 0755 /data/files && \
+    install -d -o 1000 -g 1000 -m 0700 /run/secrets
 
 # Create build timestamp for verification
 RUN echo "BUILD_TIME=$(date)" > /app/build-info.txt && \
@@ -93,5 +119,7 @@ ENV NODE_ENV=production
 # See docs/DOCKER_SECRET_PROVIDER_CONFIG.md for details
 ENV SECRET_READ_CHAIN="env,filesystem"
 ENV SECRET_WRITE_PROVIDER="filesystem"
+ENV HOME=/home/node
+USER 1000:1000
 
 ENTRYPOINT ["/app/entrypoint.sh"]

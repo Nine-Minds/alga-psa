@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
+import { createHash } from 'node:crypto';
 import { v4 as uuidv4 } from 'uuid';
 
 import { tenantDb } from '@alga-psa/db';
@@ -1027,6 +1028,74 @@ describe('client merge into a billing profile (TM010, TM011, TM012, TM016)', () 
     } finally {
       if (installedHere) await autopayMigration.down(db);
     }
+  }, HOOK_TIMEOUT);
+
+  it('leaves shared project task references pinned to the client their relationship names', async () => {
+    // The reference's client_id copies the customer relationship's
+    // sponsor_client_id, which this merge cannot reach; re-pointing it would
+    // stop participation lookups from matching the reference to its relationship.
+    const target = await seedClient('Shared Work Group');
+    const source = await seedClient('Shared Work North');
+    await ensureDefaultBillingProfile({ db, tenantId }, target);
+    await ensureDefaultBillingProfile({ db, tenantId }, source);
+
+    const referenceId = uuidv4();
+    await table('co_managed_project_task_references').insert({
+      tenant: tenantId,
+      reference_id: referenceId,
+      customer_tenant: uuidv4(),
+      relationship_id: uuidv4(),
+      task_id: uuidv4(),
+      client_id: source,
+      assigned_to: userId,
+      active: false,
+      task_name: 'Firewall refresh',
+      project_name: 'Network upgrade',
+    });
+
+    await db.transaction((trx) =>
+      executeClientMerge(trx, tenantId, userId, { sourceClientId: source, targetClientId: target }));
+
+    expect(await table('co_managed_project_task_references').where({ reference_id: referenceId }).first())
+      .toMatchObject({ client_id: source, task_name: 'Firewall refresh', revision: 1 });
+  }, HOOK_TIMEOUT);
+
+  it.each(['pending', 'ready'] as const)('preserves %s retained archive files and their original client provenance across a merge', async (status) => {
+    const target = await seedClient(`Archive Group ${status}`);
+    const source = await seedClient(`Archive North ${status}`);
+    await ensureDefaultBillingProfile({ db, tenantId }, target);
+    await ensureDefaultBillingProfile({ db, tenantId }, source);
+
+    const customerTenant = uuidv4();
+    const archiveFileId = uuidv4();
+    const content = Buffer.from('Retained customer attachment');
+    await table('co_managed_archive_files').insert({
+      tenant: tenantId,
+      archive_file_id: archiveFileId,
+      customer_tenant: customerTenant,
+      relationship_id: uuidv4(),
+      client_id: source,
+      source_tenant: customerTenant,
+      attachment_id: uuidv4(),
+      thread_id: uuidv4(),
+      comment_id: uuidv4(),
+      ticket_id: uuidv4(),
+      audience: 'shared_it',
+      file_name: 'retained.txt',
+      mime_type: 'text/plain',
+      file_size: content.length,
+      content_hash: createHash('sha256').update(content).digest('hex'),
+      status,
+      staged_bytes: status === 'pending' ? content : null,
+      stored_at: status === 'ready' ? db.fn.now() : null,
+    });
+    const before = await table('co_managed_archive_files').where({ archive_file_id: archiveFileId }).first();
+
+    await db.transaction((trx) =>
+      executeClientMerge(trx, tenantId, userId, { sourceClientId: source, targetClientId: target }));
+
+    expect(await table('co_managed_archive_files').where({ archive_file_id: archiveFileId }).first())
+      .toEqual(before);
   }, HOOK_TIMEOUT);
 
   it('TM019: accounts for every client-keyed table in the schema', async () => {

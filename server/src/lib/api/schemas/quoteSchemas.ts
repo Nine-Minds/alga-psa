@@ -8,6 +8,7 @@ import {
   uuidSchema,
   booleanTransform,
 } from './common';
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
 // ============================================================================
 // Enums
@@ -67,7 +68,7 @@ export const createQuoteItemSchema = z.object({
   // reaches the model.
 });
 
-export const updateQuoteItemSchema = createQuoteItemSchema.partial();
+export const updateQuoteItemSchema = partialWithoutDefaults(createQuoteItemSchema);
 
 // ============================================================================
 // Quote Schemas
@@ -99,7 +100,7 @@ export const createQuoteApiSchema = z.object({
   items: z.array(createQuoteItemSchema).optional(),
 });
 
-export const updateQuoteApiSchema = createQuoteApiSchema.partial().extend({
+export const updateQuoteApiSchema = partialWithoutDefaults(createQuoteApiSchema).extend({
   status: quoteStatusSchema.optional().nullable(),
 });
 

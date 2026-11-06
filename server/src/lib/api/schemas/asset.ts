@@ -13,6 +13,7 @@ import {
   booleanTransform,
   dateSchema
 } from './common';
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
 // Asset type schema — any registry slug (built-in or custom tenant type), not a
 // fixed enum. Validation against the tenant's asset_type_registry happens in
@@ -40,11 +41,11 @@ export const createAssetSchema = z.object({
   purchase_cost_currency: z.string().length(3).nullable().optional(),
   order_number: z.string().max(255).nullable().optional(),
   billing_profile_id: uuidSchema.nullable().optional(),
-  attributes: z.record(z.unknown()).optional()
+  attributes: z.record(z.string(), z.unknown()).optional()
 });
 
 // Checked per asset type in AssetService: an untagged union matched workstation first and stripped other types' fields.
-const assetExtensionDataInputSchema = z.record(z.unknown());
+const assetExtensionDataInputSchema = z.record(z.string(), z.unknown());
 
 // Update asset schema (all fields optional)
 export const updateAssetSchema = createAssetSchema.partial().extend({
@@ -67,13 +68,13 @@ export const workstationAssetSchema = z.object({
 
 export const networkDeviceAssetSchema = z.object({
   device_type: z.enum(['switch', 'router', 'firewall', 'access_point', 'load_balancer']).optional(),
-  management_ip: z.string().ip().optional(),
+  management_ip: z.union([z.ipv4(), z.ipv6()]).optional(),
   port_count: z.number().min(0).optional(),
   firmware_version: z.string().optional(),
   supports_poe: z.boolean().optional(),
   power_draw_watts: z.number().min(0).optional(),
-  vlan_config: z.record(z.any()).optional(),
-  port_config: z.record(z.any()).optional()
+  vlan_config: z.record(z.string(), z.any()).optional(),
+  port_config: z.record(z.string(), z.any()).optional()
 });
 
 export const serverAssetSchema = z.object({
@@ -82,12 +83,12 @@ export const serverAssetSchema = z.object({
   cpu_model: z.string().optional(),
   cpu_cores: z.number().min(1).optional(),
   ram_gb: z.number().min(0).optional(),
-  storage_config: z.array(z.record(z.any())).optional(),
+  storage_config: z.array(z.record(z.string(), z.any())).optional(),
   raid_config: z.string().optional(),
   is_virtual: z.boolean().optional(),
   hypervisor: z.string().optional(),
-  network_interfaces: z.array(z.record(z.any())).optional(),
-  primary_ip: z.string().ip().optional(),
+  network_interfaces: z.array(z.record(z.string(), z.any())).optional(),
+  primary_ip: z.union([z.ipv4(), z.ipv6()]).optional(),
   installed_services: z.array(z.string()).optional()
 });
 
@@ -105,17 +106,17 @@ export const mobileDeviceAssetSchema = z.object({
 
 export const printerAssetSchema = z.object({
   model: z.string().optional(),
-  ip_address: z.string().ip().optional(),
+  ip_address: z.union([z.ipv4(), z.ipv6()]).optional(),
   is_network_printer: z.boolean().optional(),
   supports_color: z.boolean().optional(),
   supports_duplex: z.boolean().optional(),
   max_paper_size: z.string().optional(),
   supported_paper_types: z.array(z.string()).optional(),
   monthly_duty_cycle: z.number().min(0).optional(),
-  supply_levels: z.record(z.number()).optional()
+  supply_levels: z.record(z.string(), z.number()).optional()
 });
 
-const assetExtensionSchemas: Record<string, z.AnyZodObject> = {
+const assetExtensionSchemas: Record<string, z.ZodObject> = {
   workstation: workstationAssetSchema,
   network_device: networkDeviceAssetSchema,
   server: serverAssetSchema,
@@ -186,7 +187,7 @@ export const assetResponseSchema = z.object({
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   tenant: uuidSchema,
-  attributes: z.record(z.unknown()).nullable().optional(),
+  attributes: z.record(z.string(), z.unknown()).nullable().optional(),
 
   // Computed/joined fields
   client_name: z.string().optional(),
@@ -316,7 +317,7 @@ const maintenanceScheduleWriteSchema = z.object({
   // UTC only (`Z` suffix); timestamps with a numeric offset are rejected.
   next_maintenance: z.string().datetime(),
   is_active: z.boolean().optional().default(true),
-  schedule_config: z.record(z.unknown())
+  schedule_config: z.record(z.string(), z.unknown())
 }).strict();
 
 // A custom frequency needs a valid rule. On partial updates this only runs
@@ -342,8 +343,7 @@ const maintenanceScheduleReadOnlyFields = [
   'created_at', 'updated_at', 'last_maintenance', 'archived_at'
 ] as const;
 
-export const updateMaintenanceScheduleSchema = maintenanceScheduleWriteSchema
-  .partial()
+export const updateMaintenanceScheduleSchema = partialWithoutDefaults(maintenanceScheduleWriteSchema)
   .extend(Object.fromEntries(maintenanceScheduleReadOnlyFields.map((field) => [field, z.unknown().optional()])))
   .strict()
   .superRefine(requireCustomRecurrence)
@@ -364,7 +364,7 @@ export const maintenanceScheduleResponseSchema = z.object({
   last_maintenance: dateSchema.nullable(),
   next_maintenance: z.string().datetime(),
   is_active: z.boolean(),
-  schedule_config: z.record(z.unknown()),
+  schedule_config: z.record(z.string(), z.unknown()),
   created_by: uuidSchema,
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
@@ -392,7 +392,7 @@ export const recordMaintenanceSchema = z.object({
   cost: z.number().min(0).optional(),
   notes: z.string().optional(),
   parts_used: z.array(z.string()).optional(),
-  maintenance_data: z.record(z.any()).optional()
+  maintenance_data: z.record(z.string(), z.any()).optional()
 });
 
 export const maintenanceHistoryResponseSchema = z.object({
@@ -406,7 +406,7 @@ export const maintenanceHistoryResponseSchema = z.object({
   cost: z.number().nullable(),
   notes: z.string().nullable(),
   parts_used: z.array(z.string()).nullable(),
-  maintenance_data: z.record(z.any()).nullable(),
+  maintenance_data: z.record(z.string(), z.any()).nullable(),
   created_at: z.string().datetime(),
   tenant: uuidSchema,
   
@@ -437,9 +437,9 @@ export const assetStatsResponseSchema = z.object({
   total_assets: z.number(),
   /** Assets whose status kind is `deployable` (FR-B5). */
   deployed_assets: z.number().optional(),
-  assets_by_type: z.record(z.number()),
-  assets_by_status: z.record(z.number()),
-  assets_by_client: z.record(z.number()),
+  assets_by_type: z.record(z.string(), z.number()),
+  assets_by_status: z.record(z.string(), z.number()),
+  assets_by_client: z.record(z.string(), z.number()),
   warranty_expiring_soon: z.number(),
   warranty_expired: z.number(),
   maintenance_due: z.number(),
@@ -456,8 +456,8 @@ export const assetSearchSchema = z.object({
   asset_types: z.array(assetTypeSchema).optional(),
   statuses: z.array(z.string()).optional(),
   client_ids: z.array(uuidSchema).optional(),
-  include_extension_data: booleanTransform.optional().default('false'),
-  limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).optional().default('25')
+  include_extension_data: booleanTransform.prefault('false'),
+  limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).prefault('25')
 });
 
 // Asset export schema

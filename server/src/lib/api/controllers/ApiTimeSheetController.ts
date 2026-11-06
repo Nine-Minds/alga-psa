@@ -31,27 +31,14 @@ import {
 import { 
   ApiKeyServiceForApi 
 } from '../../services/apiKeyServiceForApi';
-import { findUserByIdForApi } from '@alga-psa/users/actions';
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { 
   runWithTenant 
 } from '../../db';
 import { 
   getConnection 
 } from '../../db/db';
-import { 
-  hasPermission 
-} from '../../auth/rbac';
-import {
-  assertInternalApiUser,
-  AuthenticatedApiRequest,
-  UnauthorizedError,
-  ForbiddenError,
-  NotFoundError,
-  ValidationError,
-  createSuccessResponse,
-  createPaginatedResponse,
-  handleApiError
-} from '../middleware/apiMiddleware';
+import { AuthenticatedApiRequest, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError, buildAuthenticatedApiContext, createPaginatedResponse, createSuccessResponse, handleApiError } from '../middleware/apiMiddleware';
 import {
   canAssignUser,
   evaluateEntryAccess,
@@ -67,8 +54,9 @@ export class ApiTimeSheetController extends ApiBaseController {
    * Shared-calendar access for the caller, resolved exactly as the schedule server actions do
    * (user_schedule:update is the global escalation, not a prerequisite).
    */
-  private async resolveScheduleAccess(user: any, tenantId: string, db: any) {
-    const canUpdateGlobally = await hasPermission(user, 'user_schedule', 'update', db);
+  private async resolveScheduleAccess(apiAuthContext: any, user: any, tenantId: string, db: any) {
+    const canUpdateGlobally = await hasApiContextPermission(
+          apiAuthContext, 'user_schedule', 'update', db);
     return resolveCalendarAccess(db, tenantId, user, canUpdateGlobally);
   }
 
@@ -76,10 +64,12 @@ export class ApiTimeSheetController extends ApiBaseController {
     req: NextRequest,
     keyRecord: { user_id: string; tenant: string; api_key_id?: string },
     user: AuthenticatedApiRequest['context']['user'],
+    apiAuthContext: { userId: string; viaPrincipalUserId?: string | null },
   ): Promise<AuthenticatedApiRequest> {
     const apiRequest = req as AuthenticatedApiRequest;
     apiRequest.context = {
-      userId: keyRecord.user_id,
+      userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
       tenant: keyRecord.tenant,
       user,
       apiKeyId: keyRecord.api_key_id,
@@ -139,16 +129,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_sheet',
           'read',
           db
@@ -231,14 +220,14 @@ export class ApiTimeSheetController extends ApiBaseController {
           throw new UnauthorizedError('Invalid API key');
         }
 
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+        const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(user, 'time_sheet', 'read', db);
+        const hasReadPermission = await hasApiContextPermission(apiAuthContext, 'time_sheet', 'read', db);
 
         if (!hasReadPermission) {
           throw new ForbiddenError('Permission denied: Cannot read time sheets');
@@ -247,11 +236,11 @@ export class ApiTimeSheetController extends ApiBaseController {
         const params = await (req as any).params;
         const parsedId = uuidSchema.safeParse(params?.id);
         if (!parsedId.success) {
-          throw new ValidationError('Invalid time sheet id', parsedId.error.errors);
+          throw new ValidationError('Invalid time sheet id', parsedId.error.issues);
         }
         const id = parsedId.data;
 
-        const ctx = { userId: user.user_id, user, tenant: tenantId! };
+        const ctx = { userId: apiAuthContext.userId, viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null, user, tenant: tenantId! };
         const result = await runWithTenant(tenantId!, async () => {
           const timeSheet = await this.timeSheetService.getById(id, ctx);
           if (!timeSheet) {
@@ -302,16 +291,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasUpdatePermission = await hasPermission(
-          user,
+        const hasUpdatePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_sheet',
           'update',
           db
@@ -333,7 +321,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           submitData = submitTimeSheetSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid submit data', error.errors);
+            throw new ValidationError('Invalid submit data', error.issues);
           }
           throw error;
         }
@@ -385,16 +373,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasApprovePermission = await hasPermission(
-          user,
+        const hasApprovePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_sheet',
           'approve',
           db
@@ -416,7 +403,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           approveData = approveTimeSheetSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid approve data', error.errors);
+            throw new ValidationError('Invalid approve data', error.issues);
           }
           throw error;
         }
@@ -468,16 +455,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasApprovePermission = await hasPermission(
-          user,
+        const hasApprovePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_sheet',
           'approve',
           db
@@ -499,7 +485,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           requestChangesData = requestChangesTimeSheetSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid request changes data', error.errors);
+            throw new ValidationError('Invalid request changes data', error.issues);
           }
           throw error;
         }
@@ -551,16 +537,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasManagePermission = await hasPermission(
-          user,
+        const hasManagePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_sheet',
           'manage',
           db
@@ -582,7 +567,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           reverseData = reverseApprovalSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid reverse approval data', error.errors);
+            throw new ValidationError('Invalid reverse approval data', error.issues);
           }
           throw error;
         }
@@ -634,16 +619,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasApprovePermission = await hasPermission(
-          user,
+        const hasApprovePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_sheet',
           'approve',
           db
@@ -660,7 +644,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           bulkApproveData = bulkApproveTimeSheetSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid bulk approve data', error.errors);
+            throw new ValidationError('Invalid bulk approve data', error.issues);
           }
           throw error;
         }
@@ -715,16 +699,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_sheet',
           'read',
           db
@@ -786,16 +769,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasUpdatePermission = await hasPermission(
-          user,
+        const hasUpdatePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_sheet',
           'update',
           db
@@ -817,7 +799,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           commentData = createTimeSheetCommentSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid comment data', error.errors);
+            throw new ValidationError('Invalid comment data', error.issues);
           }
           throw error;
         }
@@ -869,16 +851,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_sheet',
           'read',
           db
@@ -904,7 +885,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           searchParams = timeSheetSearchSchema.parse(queryParams);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid search parameters', error.errors);
+            throw new ValidationError('Invalid search parameters', error.issues);
           }
           throw error;
         }
@@ -956,16 +937,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_sheet',
           'read',
           db
@@ -984,7 +964,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           exportParams = timeSheetExportQuerySchema.parse(queryParams);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid export parameters', error.errors);
+            throw new ValidationError('Invalid export parameters', error.issues);
           }
           throw error;
         }
@@ -1048,16 +1028,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_sheet',
           'read',
           db
@@ -1116,16 +1095,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_period',
           'read',
           db
@@ -1182,16 +1160,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_period',
           'read',
           db
@@ -1256,16 +1233,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_period',
           'read',
           db
@@ -1334,16 +1310,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasCreatePermission = await hasPermission(
-          user,
+        const hasCreatePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_period',
           'create',
           db
@@ -1360,7 +1335,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           periodData = createTimePeriodSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid time period data', error.errors);
+            throw new ValidationError('Invalid time period data', error.issues);
           }
           throw error;
         }
@@ -1412,16 +1387,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasUpdatePermission = await hasPermission(
-          user,
+        const hasUpdatePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_period',
           'update',
           db
@@ -1442,7 +1416,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           periodData = updateTimePeriodSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid time period data', error.errors);
+            throw new ValidationError('Invalid time period data', error.issues);
           }
           throw error;
         }
@@ -1496,16 +1470,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasUpdatePermission = await hasPermission(
-          user,
+        const hasUpdatePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_period',
           'update',
           db
@@ -1519,7 +1492,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         const { id: rawId } = await (req as any).params;
         const idResult = uuidSchema.safeParse(rawId);
         if (!idResult.success) {
-          throw new ValidationError('Invalid time period id', idResult.error.errors);
+          throw new ValidationError('Invalid time period id', idResult.error.issues);
         }
         const id = idResult.data;
 
@@ -1570,16 +1543,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasUpdatePermission = await hasPermission(
-          user,
+        const hasUpdatePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_period',
           'update',
           db
@@ -1593,7 +1565,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         const { id: rawId } = await (req as any).params;
         const idResult = uuidSchema.safeParse(rawId);
         if (!idResult.success) {
-          throw new ValidationError('Invalid time period id', idResult.error.errors);
+          throw new ValidationError('Invalid time period id', idResult.error.issues);
         }
         const id = idResult.data;
 
@@ -1644,16 +1616,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasDeletePermission = await hasPermission(
-          user,
+        const hasDeletePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_period',
           'delete',
           db
@@ -1714,16 +1685,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_period',
           'read',
           db
@@ -1780,16 +1750,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasManagePermission = await hasPermission(
-          user,
+        const hasManagePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_period',
           'manage',
           db
@@ -1806,7 +1775,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           settingsData = createTimePeriodSettingsSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid settings data', error.errors);
+            throw new ValidationError('Invalid settings data', error.issues);
           }
           throw error;
         }
@@ -1858,16 +1827,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasManagePermission = await hasPermission(
-          user,
+        const hasManagePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_period',
           'manage',
           db
@@ -1888,7 +1856,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           settingsData = updateTimePeriodSettingsSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid settings data', error.errors);
+            throw new ValidationError('Invalid settings data', error.issues);
           }
           throw error;
         }
@@ -1951,16 +1919,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'user_schedule',
           'read',
           db
@@ -1981,7 +1948,7 @@ export class ApiTimeSheetController extends ApiBaseController {
             return schema.parse(rawQuery);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Invalid schedule query parameters', error.errors);
+              throw new ValidationError('Invalid schedule query parameters', error.issues);
             }
             throw error;
           }
@@ -2038,12 +2005,13 @@ export class ApiTimeSheetController extends ApiBaseController {
           throw new UnauthorizedError('Invalid API key');
         }
 
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-        assertInternalApiUser(user);
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         const db = await getConnection(tenantId!);
-        const canRead = await hasPermission(user, 'user_schedule', 'read', db);
+        const canRead = await hasApiContextPermission(
+          apiAuthContext, 'user_schedule', 'read', db);
         if (!canRead) {
           throw new ForbiddenError('Permission denied: Cannot read schedules');
         }
@@ -2057,7 +2025,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           });
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid query parameters', error.errors);
+            throw new ValidationError('Invalid query parameters', error.issues);
           }
           throw error;
         }
@@ -2108,16 +2076,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'user_schedule',
           'read',
           db
@@ -2183,16 +2150,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'user_schedule',
           'read',
           db
@@ -2209,7 +2175,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           scheduleData = createScheduleEntrySchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid schedule data', error.errors);
+            throw new ValidationError('Invalid schedule data', error.issues);
           }
           throw error;
         }
@@ -2218,7 +2184,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // assignee's personal calendar. TimeSheetService re-checks this for group calendars.
         const assignedIds: string[] = scheduleData.assigned_user_ids || [];
         if (assignedIds.length > 0) {
-          const access = await this.resolveScheduleAccess(user, tenantId!, db);
+          const access = await this.resolveScheduleAccess(apiAuthContext, user, tenantId!, db);
           if (assignedIds.some((assignedId) => !canAssignUser(assignedId, access))) {
             throw new ForbiddenError('Permission denied: Cannot assign schedules to other users');
           }
@@ -2271,15 +2237,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const canReadSchedule = await hasPermission(user, 'user_schedule', 'read', db);
+        const canReadSchedule = await hasApiContextPermission(
+          apiAuthContext, 'user_schedule', 'read', db);
         if (!canReadSchedule) {
           throw new ForbiddenError('Permission denied: Cannot update schedules');
         }
@@ -2295,7 +2261,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           scheduleData = updateScheduleEntrySchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid schedule data', error.errors);
+            throw new ValidationError('Invalid schedule data', error.issues);
           }
           throw error;
         }
@@ -2320,7 +2286,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // LEVERAGE: pattern rest-calendar-access — resolve + evaluateEntryAccess block repeated in update/delete (and the service)
-        const access = await this.resolveScheduleAccess(user, tenantId!, db);
+        const access = await this.resolveScheduleAccess(apiAuthContext, user, tenantId!, db);
         const decision = evaluateEntryAccess(existing, access);
         if (decision.access === 'none') {
           throw new NotFoundError('Schedule entry not found');
@@ -2385,17 +2351,17 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
 
         // Read is the floor, as in the deleteScheduleEntry server action.
-        if (!await hasPermission(user, 'user_schedule', 'read', db)) {
+        if (!await hasApiContextPermission(
+          apiAuthContext, 'user_schedule', 'read', db)) {
           throw new ForbiddenError('Permission denied: Cannot delete schedules');
         }
 
@@ -2424,7 +2390,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // LEVERAGE: pattern rest-calendar-access — resolve + evaluateEntryAccess block repeated in update/delete (and the service)
-        const access = await this.resolveScheduleAccess(user, tenantId!, db);
+        const access = await this.resolveScheduleAccess(apiAuthContext, user, tenantId!, db);
         const decision = evaluateEntryAccess(existing, access);
         if (decision.access === 'none') {
           throw new NotFoundError('Schedule entry not found');

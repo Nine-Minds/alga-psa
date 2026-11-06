@@ -31,6 +31,10 @@ vi.mock('@alga-psa/billing/actions/contractLineSemanticsActions', () => ({
   setUsageMeasurementMode: vi.fn(),
   getNextContractServiceBoundary: vi.fn(async () => null),
 }));
+vi.mock('@alga-psa/billing/actions/contractLineSaveAction', () => ({
+  saveContractLineEdit: vi.fn(async () => ({ status: 'saved', version: 'v2', rematerialized: false })),
+  getContractLineEditVersion: vi.fn(async () => 'v1'),
+}));
 vi.mock('@alga-psa/billing/actions/contractLineAction', () => ({
   hasContractLineProtectedHistory: vi.fn(async () => false),
   updateContractLine: vi.fn(),

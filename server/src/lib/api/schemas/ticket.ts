@@ -44,7 +44,7 @@ function getVisibleCommentLength(value: string): number {
 }
 
 // Ticket attributes schema (flexible JSON object)
-const ticketAttributesSchema = z.record(z.unknown()).optional();
+const ticketAttributesSchema = z.record(z.string(), z.unknown()).optional();
 
 // External system links. `url` is constrained to http(s) so javascript:/data:
 // links can never be persisted; the action layer revalidates.
@@ -75,7 +75,7 @@ export const createExternalLinkSchema = z.object({
   actor: externalLinkActorSchema.nullable().optional(),
   external_status: z.string().nullable().optional(),
   external_updated_at: z.string().datetime().nullable().optional(),
-  metadata: z.record(z.unknown()).nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
 }).strict();
 
 /**
@@ -98,7 +98,7 @@ export const updateExternalLinkSchema = z.object({
   external_status: z.string().nullable().optional(),
   external_updated_at: z.string().datetime().nullable().optional(),
   last_synced_at: z.string().datetime().nullable().optional(),
-  metadata: z.record(z.unknown()).nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
 }).strict();
 
 export const externalLinkLookupQuerySchema = z.object({
@@ -121,7 +121,8 @@ export const createTicketFieldsSchema = z.object({
   url: z.string().url().optional(),
   board_id: uuidSchema,
   client_id: uuidSchema,
-  location_id: uuidSchema.optional(),
+  /** Omitted asks the contact where the ticket belongs; null is "explicitly none" and is kept. */
+  location_id: uuidSchema.nullish(),
   contact_name_id: uuidSchema.optional(),
   status_id: uuidSchema,
   category_id: uuidSchema.optional(),
@@ -135,6 +136,11 @@ export const createTicketFieldsSchema = z.object({
   attributes: ticketAttributesSchema,
   tags: z.array(z.string()).optional(),
   external_links: inlineTicketExternalLinksSchema,
+  // Devices the ticket is raised against. Linked in the ticket's own
+  // transaction, so a rejected asset leaves no orphan ticket. The first asset
+  // also lends its billing profile (the from-asset rule, which the web create
+  // applies the same way).
+  asset_ids: z.array(uuidSchema).max(50).optional(),
   // Create silently: no customer-facing ticket-created email (which otherwise
   // falls back to the client email when the ticket has no contact) and no
   // portal/in-app notifications. Audit, workflows and webhooks are unaffected.
@@ -156,9 +162,15 @@ export const updateTicketSchema = createUpdateSchema(
     severity_id: true,
     urgency_id: true,
     impact_id: true,
+    // Create-only: later links go through POST /tickets/{id}/assets.
+    asset_ids: true,
   })
 ).extend({
   contact_name_id: uuidSchema.nullable().optional(),
+  // Nullable so a re-classification can clear them: picking a category with no
+  // children has to drop the old parent's subcategory in the same request.
+  category_id: uuidSchema.nullable().optional(),
+  subcategory_id: uuidSchema.nullable().optional(),
   ...ticketNotificationSuppressionSchema,
   // Close despite unmet close rules; honored only when the caller's user holds
   // ticket:close_override. Stripped before the row update.
@@ -435,10 +447,14 @@ export const createTicketCommentSchema = z.object({
       (value) => getVisibleCommentLength(value) <= MAX_TICKET_COMMENT_LENGTH,
       `Comment text is too long (max ${MAX_TICKET_COMMENT_LENGTH} characters)`
     ),
-  is_internal: z.boolean().optional().default(false),
+  // No default: an unspecified visibility is distinguishable from an explicit false
+  // (a service principal's unspecified comment is internal; an explicit public one needs act-as).
+  is_internal: z.boolean().optional(),
+  /** Audience for a co-managed workspace; ignored natively. Must agree with is_internal. */
+  collaboration_audience: z.enum(['requester', 'organization_private']).optional(),
   is_resolution: z.boolean().optional().default(false),
   time_spent: z.number().min(0).optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
   parent_comment_id: uuidSchema.optional(),
   external_links: inlineTicketExternalLinksSchema,
   scheduled_publish_at: z.string().datetime({ offset: true }).optional(),
@@ -533,10 +549,10 @@ export const ticketStatsResponseSchema = z.object({
   closed_tickets: z.number(),
   overdue_tickets: z.number(),
   unassigned_tickets: z.number(),
-  tickets_by_status: z.record(z.number()),
-  tickets_by_priority: z.record(z.number()),
-  tickets_by_category: z.record(z.number()),
-  tickets_by_board: z.record(z.number()),
+  tickets_by_status: z.record(z.string(), z.number()),
+  tickets_by_priority: z.record(z.string(), z.number()),
+  tickets_by_category: z.record(z.string(), z.number()),
+  tickets_by_board: z.record(z.string(), z.number()),
   average_resolution_time: z.number().nullable(),
   tickets_created_today: z.number(),
   tickets_created_this_week: z.number(),
@@ -566,15 +582,15 @@ export const ticketSearchSchema = z.object({
     z.array(uuidSchema),
     arrayTransform(uuidSchema)
   ]).optional(),
-  include_closed: booleanTransform.optional().default("false"),
-  limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).optional().default('25')
+  include_closed: booleanTransform.prefault("false"),
+  limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).prefault('25')
 });
 
 // Ticket export schema
 export const ticketExportQuerySchema = z.object({
   format: z.enum(['csv', 'json', 'xlsx']).optional().default('csv'),
-  include_closed: booleanTransform.optional().default("false"),
-  include_comments: booleanTransform.optional().default("false"),
+  include_closed: booleanTransform.prefault("false"),
+  include_comments: booleanTransform.prefault("false"),
   date_range: z.enum(['today', 'week', 'month', 'quarter', 'year', 'custom']).optional(),
   start_date: z.string().datetime().optional(),
   end_date: z.string().datetime().optional(),

@@ -316,6 +316,20 @@ vi.mock('@alga-psa/ui/components/MultiUserPicker', () => ({
   ),
 }));
 
+vi.mock('@alga-psa/ui/components/EmailRecipientsInput', () => ({
+  EmailRecipientsInput: ({ id, value, onChange, invalidEntries, onInvalidEntriesChange }: any) => (
+    <div id={id} data-invalid-count={(invalidEntries ?? []).length}>
+      <button
+        type="button"
+        id={`${id}-add`}
+        onClick={() => onChange([...value, { email: 'queue-dl@msp.test' }])}
+      />
+      <button type="button" id={`${id}-add-invalid`} onClick={() => onInvalidEntriesChange?.(['not an address'])} />
+      <button type="button" id={`${id}-clear-invalid`} onClick={() => onInvalidEntriesChange?.([])} />
+    </div>
+  ),
+}));
+
 // The Button/Switch mocks surface their id as data-testid.
 const findById = (id: string) => document.getElementById(id) ?? document.querySelector(`[data-testid="${id}"]`);
 
@@ -466,6 +480,7 @@ describe('BoardsSettings notifications section', () => {
           status_ids: [],
           user_ids: ['user-9'],
           team_ids: [],
+          email_addresses: [],
           is_enabled: true,
         },
         {
@@ -474,6 +489,7 @@ describe('BoardsSettings notifications section', () => {
           status_ids: ['status-new'],
           user_ids: ['user-1'],
           team_ids: ['team-1'],
+          email_addresses: [],
           is_enabled: false,
         },
       ],
@@ -481,6 +497,69 @@ describe('BoardsSettings notifications section', () => {
     });
     expect(updateBoardMock).toHaveBeenCalled();
   });
+  it('gives each rule a unique email input id, accepts an addresses-only rule and sends email_addresses', async () => {
+    await openEditor();
+    click('add-board-notification-rule-button');
+    click('add-board-notification-rule-button');
+    expect(document.getElementById('board-notification-rule-0-emails')).toBeTruthy();
+    expect(document.getElementById('board-notification-rule-1-emails')).toBeTruthy();
+
+    // Rule 0 has no user/team, only an address; rule 1 is removed to keep the payload simple.
+    click('board-notification-rule-1-remove');
+    click('board-notification-rule-0-emails-add');
+    click('save-board-section-notifications');
+
+    await waitFor(() => {
+      expect(saveBoardNotificationSettingsMock).toHaveBeenCalledTimes(1);
+    });
+    const [, payload] = saveBoardNotificationSettingsMock.mock.calls[0];
+    expect(payload.rules).toHaveLength(1);
+    expect(payload.rules[0]).toMatchObject({
+      user_ids: [],
+      team_ids: [],
+      email_addresses: ['queue-dl@msp.test'],
+    });
+  });
+
+  it('loads stored addresses into the rule and blocks save while an invalid entry is present', async () => {
+    getBoardNotificationSettingsMock.mockResolvedValue({
+      rules: [
+        {
+          rule_id: 'rule-existing',
+          notify_on_create: true,
+          status_ids: [],
+          user_ids: [],
+          team_ids: [],
+          email_addresses: ['stored-dl@msp.test'],
+          is_enabled: true,
+        },
+      ],
+      default_watcher_user_ids: [],
+    });
+    await openEditor();
+    await waitFor(() => {
+      expect(document.getElementById('board-notification-rule-0-emails')).toBeTruthy();
+    });
+
+    // The section is only saveable once dirty: add a second address, then an invalid entry.
+    click('board-notification-rule-0-emails-add');
+    click('board-notification-rule-0-emails-add-invalid');
+    click('save-board-section-notifications');
+    await waitFor(() => {
+      expect(screen.getByTestId('board-editor-section-error-notifications')).toHaveTextContent(
+        'ticketing.boards.editor.sections.notificationsEmailInvalid'
+      );
+    });
+    expect(saveBoardNotificationSettingsMock).not.toHaveBeenCalled();
+
+    click('board-notification-rule-0-emails-clear-invalid');
+    click('save-board-section-notifications');
+    await waitFor(() => {
+      expect(saveBoardNotificationSettingsMock).toHaveBeenCalledTimes(1);
+    });
+    expect(saveBoardNotificationSettingsMock.mock.calls[0][1].rules[0].email_addresses).toEqual(['stored-dl@msp.test', 'queue-dl@msp.test']);
+  });
+
   describe('creating a board by copying statuses', () => {
     const SOURCE_IDS = ['status-new', 'status-done'];
 

@@ -44,6 +44,25 @@ test('Swedish default time-entry service settings have localized copy at both sc
   }
 });
 
+test('pseudo-localized co-managed ticket copy resolves with the same keys as English', () => {
+  const readTicketCopy = (locale) => {
+    const pack = JSON.parse(readFileSync(new URL(
+      `../../../server/public/locales/${locale}/msp/licensing.json`, import.meta.url,
+    ), 'utf8'));
+    return collectLeaves(pack.coManaged?.ticket ?? {});
+  };
+  const english = readTicketCopy('en');
+  assert.ok(english.size > 0, 'expected English co-managed ticket copy');
+
+  for (const locale of ['xx', 'yy']) {
+    assert.deepEqual(
+      [...readTicketCopy(locale).keys()].sort(),
+      [...english.keys()].sort(),
+      `${locale}: every co-managed ticket label must resolve in pseudo-localized UI`,
+    );
+  }
+});
+
 test('French audit accepts the cognate Question but rejects English question prose', (t) => {
   const root = mkdtempSync(join(tmpdir(), 'question-audit-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
@@ -120,7 +139,7 @@ for (const locale of ['pt', 'es', 'fr', 'it']) {
   });
 }
 
-for (const namespace of ['client-portal', 'msp/contacts']) {
+for (const namespace of ['client-portal', 'msp/contacts', 'msp/licensing']) {
   test(`Brazilian Portuguese ${namespace} copy passes the locale quality audit`, () => {
     const { report } = runAudit({
       locale: 'pt',

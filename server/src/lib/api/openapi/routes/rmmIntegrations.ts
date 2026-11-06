@@ -26,7 +26,7 @@ export function registerRmmIntegrationRoutes(registry: ApiOpenApiRegistry) {
     'RmmIntegrationStatus',
     zOpenApi.object({
       provider: zOpenApi.string().describe('RMM provider slug.'),
-      integrationId: zOpenApi.string().uuid(),
+      integrationId: zOpenApi.string().guid(),
       isActive: zOpenApi.boolean().describe('Whether the integration is connected and enabled.'),
       syncStatus: zOpenApi.string().nullable().describe("Last sync outcome: 'completed', 'error', 'syncing', or 'pending'."),
       syncError: zOpenApi.string().nullable().describe('Failure detail from the last run, when it failed.'),

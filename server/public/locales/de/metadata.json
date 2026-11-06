@@ -521,7 +521,10 @@
       "defaultTitle": "Dashboard | AlgaPSA"
     },
     "coManaged": {
-      "title": "Co-Managed-IT"
+      "title": "Co-Managed-IT",
+      "archive": {
+        "title": "Archiv für gemeinsam verwaltete IT"
+      }
     },
     "coManagement": {
       "title": "Co-Managed-Zugriff",
@@ -536,6 +539,20 @@
       },
       "providers": {
         "title": "E-Mail- und Identitätsanbieter"
+      },
+      "sharedTasks": {
+        "title": "Geteilte Aufgaben",
+        "taskTitle": "Geteilte Aufgabe",
+        "projectTitle": "Geteiltes Projekt"
+      },
+      "departure": {
+        "title": "Gemeinsam verwaltete IT beenden"
+      },
+      "sla": {
+        "title": "Co-Managed-SLA-Prioritäten"
+      },
+      "export": {
+        "title": "Arbeitsbereich exportieren"
       }
     }
   },

@@ -851,11 +851,15 @@
           "notificationsRecipients": "Notifica a",
           "notificationsRecipientsPlaceholder": "Seleziona utenti e team...",
           "notificationsRecipientsHelp": "I membri del team vengono determinati a ogni invio di una notifica.",
+          "notificationsEmails": "Indirizzi e-mail",
+          "notificationsEmailsPlaceholder": "Aggiungi una lista di distribuzione o una casella condivisa...",
+          "notificationsEmailsHelp": "Questi indirizzi ricevono tutti i dettagli di ogni ticket corrispondente di questa bacheca, anche se non sono utenti Alga e non viene applicato alcun controllo dei permessi. Usalo per liste di distribuzione che controlli. Per notificare una persona con un account Alga, selezionala invece qui sopra.",
+          "notificationsEmailInvalid": "Correggi o rimuovi gli indirizzi e-mail non validi nelle regole di notifica.",
           "notificationsDefaultWatchers": "Osservatori predefiniti",
           "notificationsDefaultWatchersPlaceholder": "Seleziona utenti...",
           "notificationsDefaultWatchersHelp": "Aggiunti all'elenco degli osservatori di ogni nuovo ticket di questa bacheca e avvisati di ogni aggiornamento successivo.",
           "notificationsTriggerRequired": "Ogni regola di notifica richiede almeno un attivatore: la creazione di un ticket o uno stato.",
-          "notificationsRecipientRequired": "Ogni regola di notifica richiede almeno un utente o un team da notificare.",
+          "notificationsRecipientRequired": "Ogni regola di notifica richiede almeno un utente, un team o un indirizzo e-mail da notificare.",
           "notificationsFetchFailed": "Impossibile caricare le impostazioni di notifica",
           "notificationsStatusRemapFailed": "La bacheca è stata creata, ma lo stato di una regola di notifica non ha potuto essere associato alla nuova bacheca. Aggiungi di nuovo le regole di notifica.",
           "inbound": "Email e risposte in arrivo",
@@ -1171,6 +1175,8 @@
           "client_id": "Cliente",
           "client_tags": "Etichette del cliente",
           "contact_tags": "Etichette del contatto",
+          "location_id": "Sede",
+          "contact_locations": "Sede del richiedente",
           "ticket_origin": "Origine del ticket",
           "title_folded": "Titolo",
           "description_folded": "Descrizione",
@@ -1185,6 +1191,9 @@
           "contains": "Contiene",
           "starts_with": "Inizia con",
           "ends_with": "Termina con",
+          "not_contains": "Non contiene",
+          "not_starts_with": "Non inizia con",
+          "not_ends_with": "Non termina con",
           "is_empty": "È vuoto",
           "is_not_empty": "Non è vuoto"
         },
@@ -3534,7 +3543,7 @@
       "platformManaged": "Gestito da AlgaPSA: non è necessaria alcuna configurazione. Connetti un agente a uno di questi nel passaggio 2.",
       "addAnother": "Aggiungi un altro provider",
       "advancedOptions": "Opzioni avanzate",
-      "googleNoSetup": "Google non richiede configurazione. Gli agenti accedono con l’ID del proprio account di servizio Google.",
+      "googleSetup": "Gli agenti accedono con un token ID di un account di servizio Google. Solo il destinatario qui sotto deve corrispondere a come lo richiedono.",
       "kinds": {
         "microsoft": "Microsoft Entra",
         "google": "Google",
@@ -3548,9 +3557,14 @@
       "fields": {
         "provider": "Provider di identità",
         "entraTenantId": "ID tenant Entra",
-        "audienceOptional": "Destinatario (facoltativo)",
         "audience": "Destinatario",
         "subjectClaim": "Identifica gli agenti tramite",
+        "audienceHelp": {
+          "microsoft": "L'ID applicazione (client) della registrazione dell'app Entra per cui i tuoi agenti richiedono token. Gli agenti richiedono l'ambito api://<quell'ID>/.default.",
+          "google": "Gli agenti devono richiedere il token ID Google esattamente con questo destinatario. Abbiamo inserito l'URL MCP di questo server, la scelta abituale.",
+          "custom": "L'identificatore di API o risorsa configurato nel tuo provider (ad esempio, un identificatore API di Auth0). Deve corrispondere esattamente al claim aud nei token degli agenti. L'URL MCP di questo server è una buona scelta."
+        },
+        "audienceWhy": "I token emessi dal tuo provider per altre app non verranno accettati qui.",
         "subjectClaimHelp": "Lascia vuoto a meno che il provider non indichi diversamente.",
         "issuer": "Emittente",
         "jwksUri": "URL delle chiavi di firma"
@@ -3663,6 +3677,36 @@
         "message": "Vuoi disconnettere \"{{name}}\"? Perderà immediatamente l’accesso e dovrà essere autorizzato di nuovo per riconnettersi.",
         "confirm": "Disconnetti",
         "cancel": "Annulla"
+      }
+    },
+    "loading": "Caricamento…",
+    "downloadHosts": {
+      "title": "Host di download consentiti",
+      "intro": "Quando un documento viene allegato tramite URL, AlgaPSA lo scarica solo dagli host elencati qui. Questo vale per chiunque alleghi documenti, inclusi agenti IA, client API e l'API REST. Preferisci host specifici di un bucket, come acme-uploads.s3.us-east-1.amazonaws.com, a quelli generici.",
+      "readOnly": "Puoi visualizzare questo elenco. Per modificarlo serve l'autorizzazione \"Gestisci host di download\".",
+      "builtIn": "Predefinito",
+      "empty": "Nessun host personalizzato.",
+      "add": "Aggiungi host",
+      "addTitle": "Aggiungi host di download consentito",
+      "remove": "Rimuovi",
+      "removeTitle": "Rimuovere l'host?",
+      "removeMessage": "I download da {{host}} non funzioneranno finché non verrà aggiunto di nuovo.",
+      "fields": {
+        "host": "Host",
+        "hostHelp": "Un nome host, oppure *.example.com per consentire tutti i sottodomini.",
+        "note": "Nota (facoltativa)"
+      },
+      "table": {
+        "host": "Host",
+        "used": "Usato per",
+        "allowed": "Consentito",
+        "note": "Nota",
+        "addedBy": "Aggiunto da",
+        "addedOn": "Aggiunto il"
+      },
+      "errors": {
+        "load": "Impossibile caricare gli host di download consentiti.",
+        "save": "Impossibile salvare la modifica."
       }
     }
   },
@@ -3843,7 +3887,8 @@
     }
   },
   "common": {
-    "saving": "Salvataggio…"
+    "saving": "Salvataggio…",
+    "cancel": "Annulla"
   },
   "featureFlags": {
     "categories": {

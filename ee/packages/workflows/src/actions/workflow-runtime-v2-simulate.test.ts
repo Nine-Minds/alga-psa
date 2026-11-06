@@ -135,7 +135,7 @@ vi.mock('@alga-psa/workflows/persistence', () => {
 });
 
 vi.mock('@alga-psa/workflows/runtime', async () => ({
-  workflowDefinitionSchema: z.record(z.any()),
+  workflowDefinitionSchema: z.record(z.string(), z.any()),
   initializeWorkflowRuntimeV2: vi.fn(),
   getActionRegistryV2: vi.fn(() => ({ list: () => [] })),
   getNodeTypeRegistry: vi.fn(() => ({ list: () => [] })),
@@ -143,7 +143,7 @@ vi.mock('@alga-psa/workflows/runtime', async () => ({
     has: (ref: string) => ref === 'payload.Workflow.v1' || ref === 'payload.Event.v1',
     get: (ref: string) => {
       if (ref === 'payload.Workflow.v1') return z.object({ ticketId: z.string() });
-      return z.record(z.any());
+      return z.record(z.string(), z.any());
     },
     toJsonSchema: (ref: string) =>
       ref === 'payload.Event.v1'

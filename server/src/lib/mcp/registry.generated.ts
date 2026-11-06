@@ -5131,10 +5131,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "search",
         "in": "query",
         "required": false,
-        "description": "General search filter accepted by the shared filter schema. The current AssetService.list implementation does not apply this filter.",
+        "description": "Case-insensitive substring match across asset_tag, name, serial_number, location, manufacturer and model. Applied to both the returned rows and the pagination total.",
         "schema": {
           "type": "string",
-          "description": "General search filter accepted by the shared filter schema. The current AssetService.list implementation does not apply this filter."
+          "description": "Case-insensitive substring match across asset_tag, name, serial_number, location, manufacturer and model. Applied to both the returned rows and the pagination total."
         }
       },
       {
@@ -6794,7 +6794,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "location_id",
         "bin",
         "purpose"
-      ]
+      ],
+      "additionalProperties": {}
     },
     "responseBodySchema": {
       "type": "object",
@@ -6851,6 +6852,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "required": [
         "event_type"
       ],
+      "additionalProperties": {},
       "description": "Fields depend on event_type: moved {location_id?, bin?}, handed_off {to_holder_user_id}, shipped {counterparty}, received {location_id, bin}, returned {counterparty?}."
     },
     "responseBodySchema": {
@@ -8778,6 +8780,1696 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "get-_api_v1_assetaudits",
+    "method": "get",
+    "path": "/api/v1/asset-audits",
+    "displayName": "List site audits",
+    "summary": "List site audits",
+    "description": "Returns the tenant audits newest first, optionally narrowed to one client.",
+    "tags": [
+      "Asset audits"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "description": "Page number. Defaults to 1.",
+        "schema": {
+          "type": "string",
+          "description": "Page number. Defaults to 1."
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Page size, 1 through 100. Defaults to 25.",
+        "schema": {
+          "type": "string",
+          "description": "Page size, 1 through 100. Defaults to 25."
+        }
+      },
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": false,
+        "description": "Only audits of this client.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Only audits of this client."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "audit_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "tenant": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "client_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "location_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "in_progress",
+                  "completed",
+                  "cancelled"
+                ]
+              },
+              "started_by": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "started_at": {
+                "type": "string"
+              },
+              "completed_at": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "expected_count": {
+                "type": "integer"
+              },
+              "present_count": {
+                "type": "integer"
+              },
+              "missing_count": {
+                "type": "integer"
+              },
+              "unexpected_count": {
+                "type": "integer"
+              },
+              "statuses": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "string"
+                }
+              },
+              "notes": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "client_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "location_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "asset_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "result": {
+                      "type": "string",
+                      "enum": [
+                        "expected",
+                        "present",
+                        "missing",
+                        "unexpected"
+                      ]
+                    },
+                    "method": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "scan",
+                        "manual",
+                        "register",
+                        null
+                      ]
+                    },
+                    "marked_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "marked_by": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    },
+                    "asset_name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "asset_tag": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "serial_number": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "client_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    },
+                    "location_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    },
+                    "location": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "asset_id",
+                    "result",
+                    "method",
+                    "marked_at",
+                    "marked_by"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "audit_id",
+              "tenant",
+              "client_id",
+              "location_id",
+              "status",
+              "started_by",
+              "started_at",
+              "completed_at",
+              "expected_count",
+              "present_count",
+              "missing_count",
+              "unexpected_count"
+            ]
+          }
+        },
+        "pagination": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer"
+            },
+            "limit": {
+              "type": "integer"
+            },
+            "total": {
+              "type": "integer"
+            },
+            "totalPages": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "page",
+            "limit",
+            "total",
+            "totalPages"
+          ]
+        }
+      },
+      "required": [
+        "success",
+        "data",
+        "pagination"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_assetaudits",
+    "method": "post",
+    "path": "/api/v1/asset-audits",
+    "displayName": "Start a site audit",
+    "summary": "Start a site audit",
+    "description": "Snapshots the assets expected for the client, location and status slugs in scope as expected items and opens the audit. Needs asset:update because completing the audit writes asset history.",
+    "tags": [
+      "Asset audits"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "client_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Client whose assets are audited."
+        },
+        "location_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Client location in scope. null or omitted audits the client assets that have no location."
+        },
+        "statuses": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Asset status slugs in scope. Omitted means every status."
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 2000
+        }
+      },
+      "required": [
+        "client_id"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "audit_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "tenant": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "client_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "location_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "in_progress",
+                "completed",
+                "cancelled"
+              ]
+            },
+            "started_by": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "started_at": {
+              "type": "string"
+            },
+            "completed_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "expected_count": {
+              "type": "integer"
+            },
+            "present_count": {
+              "type": "integer"
+            },
+            "missing_count": {
+              "type": "integer"
+            },
+            "unexpected_count": {
+              "type": "integer"
+            },
+            "statuses": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "notes": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "client_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "location_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "asset_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "result": {
+                    "type": "string",
+                    "enum": [
+                      "expected",
+                      "present",
+                      "missing",
+                      "unexpected"
+                    ]
+                  },
+                  "method": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "scan",
+                      "manual",
+                      "register",
+                      null
+                    ]
+                  },
+                  "marked_at": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "asset_name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "asset_tag": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "serial_number": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "client_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "asset_id",
+                  "result",
+                  "method",
+                  "marked_at",
+                  "marked_by"
+                ]
+              }
+            }
+          },
+          "required": [
+            "audit_id",
+            "tenant",
+            "client_id",
+            "location_id",
+            "status",
+            "started_by",
+            "started_at",
+            "completed_at",
+            "expected_count",
+            "present_count",
+            "missing_count",
+            "unexpected_count"
+          ]
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_assetaudits_id",
+    "method": "get",
+    "path": "/api/v1/asset-audits/{id}",
+    "displayName": "Get a site audit",
+    "summary": "Get a site audit",
+    "description": "Returns the audit with its items joined to each asset name, tag, serial and location.",
+    "tags": [
+      "Asset audits"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Audit UUID from asset_audits.audit_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Audit UUID from asset_audits.audit_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "audit_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "tenant": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "client_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "location_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "in_progress",
+                "completed",
+                "cancelled"
+              ]
+            },
+            "started_by": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "started_at": {
+              "type": "string"
+            },
+            "completed_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "expected_count": {
+              "type": "integer"
+            },
+            "present_count": {
+              "type": "integer"
+            },
+            "missing_count": {
+              "type": "integer"
+            },
+            "unexpected_count": {
+              "type": "integer"
+            },
+            "statuses": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "notes": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "client_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "location_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "asset_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "result": {
+                    "type": "string",
+                    "enum": [
+                      "expected",
+                      "present",
+                      "missing",
+                      "unexpected"
+                    ]
+                  },
+                  "method": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "scan",
+                      "manual",
+                      "register",
+                      null
+                    ]
+                  },
+                  "marked_at": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "asset_name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "asset_tag": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "serial_number": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "client_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "asset_id",
+                  "result",
+                  "method",
+                  "marked_at",
+                  "marked_by"
+                ]
+              }
+            }
+          },
+          "required": [
+            "audit_id",
+            "tenant",
+            "client_id",
+            "location_id",
+            "status",
+            "started_by",
+            "started_at",
+            "completed_at",
+            "expected_count",
+            "present_count",
+            "missing_count",
+            "unexpected_count"
+          ]
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_assetaudits_id_items",
+    "method": "post",
+    "path": "/api/v1/asset-audits/{id}/items",
+    "displayName": "Mark an asset in a site audit",
+    "summary": "Mark an asset in a site audit",
+    "description": "Marks the asset present, or unexpected when it is not in the audit snapshot. Idempotent per asset: a second mark keeps the first marked_at.",
+    "tags": [
+      "Asset audits"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Audit UUID from asset_audits.audit_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Audit UUID from asset_audits.audit_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "asset_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset being marked."
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "present",
+            "unexpected"
+          ],
+          "description": "Caller intent; an asset outside the snapshot is stored as unexpected regardless. Defaults to present."
+        },
+        "method": {
+          "type": "string",
+          "enum": [
+            "scan",
+            "manual",
+            "register"
+          ],
+          "description": "How the asset was marked. Defaults to manual."
+        }
+      },
+      "required": [
+        "asset_id"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "audit_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "tenant": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "client_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "location_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "in_progress",
+                "completed",
+                "cancelled"
+              ]
+            },
+            "started_by": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "started_at": {
+              "type": "string"
+            },
+            "completed_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "expected_count": {
+              "type": "integer"
+            },
+            "present_count": {
+              "type": "integer"
+            },
+            "missing_count": {
+              "type": "integer"
+            },
+            "unexpected_count": {
+              "type": "integer"
+            },
+            "statuses": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "notes": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "client_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "location_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "asset_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "result": {
+                    "type": "string",
+                    "enum": [
+                      "expected",
+                      "present",
+                      "missing",
+                      "unexpected"
+                    ]
+                  },
+                  "method": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "scan",
+                      "manual",
+                      "register",
+                      null
+                    ]
+                  },
+                  "marked_at": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "asset_name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "asset_tag": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "serial_number": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "client_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "asset_id",
+                  "result",
+                  "method",
+                  "marked_at",
+                  "marked_by"
+                ]
+              }
+            }
+          },
+          "required": [
+            "audit_id",
+            "tenant",
+            "client_id",
+            "location_id",
+            "status",
+            "started_by",
+            "started_at",
+            "completed_at",
+            "expected_count",
+            "present_count",
+            "missing_count",
+            "unexpected_count"
+          ]
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_assetaudits_id_items_assetid",
+    "method": "delete",
+    "path": "/api/v1/asset-audits/{id}/items/{assetId}",
+    "displayName": "Undo a site audit mark",
+    "summary": "Undo a site audit mark",
+    "description": "Returns an expected asset to the remaining list; an unexpected asset was never in scope, so its item is removed.",
+    "tags": [
+      "Asset audits"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Audit UUID from asset_audits.audit_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Audit UUID from asset_audits.audit_id."
+        }
+      },
+      {
+        "name": "assetId",
+        "in": "path",
+        "required": true,
+        "description": "Asset UUID from assets.asset_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset UUID from assets.asset_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "audit_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "tenant": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "client_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "location_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "in_progress",
+                "completed",
+                "cancelled"
+              ]
+            },
+            "started_by": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "started_at": {
+              "type": "string"
+            },
+            "completed_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "expected_count": {
+              "type": "integer"
+            },
+            "present_count": {
+              "type": "integer"
+            },
+            "missing_count": {
+              "type": "integer"
+            },
+            "unexpected_count": {
+              "type": "integer"
+            },
+            "statuses": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "notes": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "client_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "location_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "asset_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "result": {
+                    "type": "string",
+                    "enum": [
+                      "expected",
+                      "present",
+                      "missing",
+                      "unexpected"
+                    ]
+                  },
+                  "method": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "scan",
+                      "manual",
+                      "register",
+                      null
+                    ]
+                  },
+                  "marked_at": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "asset_name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "asset_tag": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "serial_number": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "client_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "asset_id",
+                  "result",
+                  "method",
+                  "marked_at",
+                  "marked_by"
+                ]
+              }
+            }
+          },
+          "required": [
+            "audit_id",
+            "tenant",
+            "client_id",
+            "location_id",
+            "status",
+            "started_by",
+            "started_at",
+            "completed_at",
+            "expected_count",
+            "present_count",
+            "missing_count",
+            "unexpected_count"
+          ]
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_assetaudits_id_complete",
+    "method": "post",
+    "path": "/api/v1/asset-audits/{id}/complete",
+    "displayName": "Complete a site audit",
+    "summary": "Complete a site audit",
+    "description": "Turns every still-expected item into missing, writes the counts, and records one asset_history row (change_type audit) plus assets.last_audited_at and last_audit_result for each present and missing asset, in one transaction.",
+    "tags": [
+      "Asset audits"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Audit UUID from asset_audits.audit_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Audit UUID from asset_audits.audit_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "audit_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "tenant": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "client_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "location_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "in_progress",
+                "completed",
+                "cancelled"
+              ]
+            },
+            "started_by": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "started_at": {
+              "type": "string"
+            },
+            "completed_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "expected_count": {
+              "type": "integer"
+            },
+            "present_count": {
+              "type": "integer"
+            },
+            "missing_count": {
+              "type": "integer"
+            },
+            "unexpected_count": {
+              "type": "integer"
+            },
+            "statuses": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "notes": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "client_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "location_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "asset_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "result": {
+                    "type": "string",
+                    "enum": [
+                      "expected",
+                      "present",
+                      "missing",
+                      "unexpected"
+                    ]
+                  },
+                  "method": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "scan",
+                      "manual",
+                      "register",
+                      null
+                    ]
+                  },
+                  "marked_at": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "asset_name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "asset_tag": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "serial_number": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "client_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "asset_id",
+                  "result",
+                  "method",
+                  "marked_at",
+                  "marked_by"
+                ]
+              }
+            }
+          },
+          "required": [
+            "audit_id",
+            "tenant",
+            "client_id",
+            "location_id",
+            "status",
+            "started_by",
+            "started_at",
+            "completed_at",
+            "expected_count",
+            "present_count",
+            "missing_count",
+            "unexpected_count"
+          ]
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_assetaudits_id_cancel",
+    "method": "post",
+    "path": "/api/v1/asset-audits/{id}/cancel",
+    "displayName": "Cancel a site audit",
+    "summary": "Cancel a site audit",
+    "description": "Abandons an open audit; it writes no asset history.",
+    "tags": [
+      "Asset audits"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Audit UUID from asset_audits.audit_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Audit UUID from asset_audits.audit_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "audit_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "tenant": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "client_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "location_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "in_progress",
+                "completed",
+                "cancelled"
+              ]
+            },
+            "started_by": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "started_at": {
+              "type": "string"
+            },
+            "completed_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "expected_count": {
+              "type": "integer"
+            },
+            "present_count": {
+              "type": "integer"
+            },
+            "missing_count": {
+              "type": "integer"
+            },
+            "unexpected_count": {
+              "type": "integer"
+            },
+            "statuses": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "notes": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "client_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "location_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "asset_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "result": {
+                    "type": "string",
+                    "enum": [
+                      "expected",
+                      "present",
+                      "missing",
+                      "unexpected"
+                    ]
+                  },
+                  "method": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "scan",
+                      "manual",
+                      "register",
+                      null
+                    ]
+                  },
+                  "marked_at": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "asset_name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "asset_tag": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "serial_number": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "client_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "asset_id",
+                  "result",
+                  "method",
+                  "marked_at",
+                  "marked_by"
+                ]
+              }
+            }
+          },
+          "required": [
+            "audit_id",
+            "tenant",
+            "client_id",
+            "location_id",
+            "status",
+            "started_by",
+            "started_at",
+            "completed_at",
+            "expected_count",
+            "present_count",
+            "missing_count",
+            "unexpected_count"
+          ]
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    }
+  },
+  {
     "id": "get-_api_v1_integrations_rmm",
     "method": "get",
     "path": "/api/v1/integrations/rmm",
@@ -9517,7 +11209,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "type": "string"
                   },
                   "website": {
-                    "type": "string"
+                    "type": [
+                      "string",
+                      "null"
+                    ]
                   },
                   "parent_client_id": {
                     "type": "string",
@@ -9799,8 +11494,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "properties": {
             "tax_id": {
               "type": "string",
-              "description": "Deprecated legacy input. Send tax_id_number instead.",
-              "deprecated": true
+              "deprecated": true,
+              "description": "Deprecated legacy input. Send tax_id_number instead."
             }
           },
           "additionalProperties": {}
@@ -10003,7 +11698,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "type": "string"
                 },
                 "website": {
-                  "type": "string"
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "parent_client_id": {
                   "type": "string",
@@ -10319,7 +12017,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "type": "string"
                 },
                 "website": {
-                  "type": "string"
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "parent_client_id": {
                   "type": "string",
@@ -10556,8 +12257,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "properties": {
             "tax_id": {
               "type": "string",
-              "description": "Deprecated legacy input. Send tax_id_number instead.",
-              "deprecated": true
+              "deprecated": true,
+              "description": "Deprecated legacy input. Send tax_id_number instead."
             }
           },
           "additionalProperties": {}
@@ -10760,7 +12461,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "type": "string"
                 },
                 "website": {
-                  "type": "string"
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "parent_client_id": {
                   "type": "string",
@@ -11040,7 +12744,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/clients/{id}/contacts",
     "displayName": "List contacts for client",
     "summary": "List contacts for client",
-    "description": "Returns paginated contacts filtered by client_id after client existence check.",
+    "description": "Returns paginated contacts filtered by client_id after client existence check. Each row carries work_arrangement and locations[]; accepts the same location_id and work_arrangement filters as /api/v1/contacts (a client_id in the query is ignored — the path wins).",
     "tags": [
       "Clients"
     ],
@@ -11053,6 +12757,183 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "schema": {
           "type": "string",
           "format": "uuid"
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "sort",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "order",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        }
+      },
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "created_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "created_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "updated_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "updated_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "full_name",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "email",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "phone_number",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "role",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "is_inactive",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      {
+        "name": "has_client",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      {
+        "name": "client_name",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "location_id",
+        "in": "query",
+        "required": false,
+        "description": "Contacts linked to this client location in any role, primary or not.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Contacts linked to this client location in any role, primary or not."
+        }
+      },
+      {
+        "name": "work_arrangement",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "on_site",
+            "hybrid",
+            "remote"
+          ]
         }
       }
     ],
@@ -11262,6 +13143,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               },
               "is_active": {
                 "type": "boolean"
+              },
+              "contact_count": {
+                "type": "integer",
+                "minimum": 0
               },
               "created_at": {
                 "type": "string",
@@ -11525,6 +13410,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             "is_active": {
               "type": "boolean"
+            },
+            "contact_count": {
+              "type": "integer",
+              "minimum": 0
             },
             "created_at": {
               "type": "string",
@@ -12076,77 +13965,71 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       }
     ],
     "requestBodySchema": {
-      "allOf": [
-        {
-          "$ref": "#/components/schemas/ClientLocationBody"
+      "type": "object",
+      "properties": {
+        "location_name": {
+          "type": "string"
         },
-        {
-          "properties": {
-            "location_name": {
-              "type": "string"
-            },
-            "address_line1": {
-              "type": "string"
-            },
-            "address_line2": {
-              "type": "string"
-            },
-            "address_line3": {
-              "type": "string"
-            },
-            "city": {
-              "type": "string"
-            },
-            "state_province": {
-              "type": "string"
-            },
-            "postal_code": {
-              "type": "string"
-            },
-            "country_code": {
-              "type": "string",
-              "minLength": 2,
-              "maxLength": 3
-            },
-            "country_name": {
-              "type": "string",
-              "minLength": 1
-            },
-            "region_code": {
-              "type": "string"
-            },
-            "is_billing_address": {
-              "type": "boolean"
-            },
-            "is_shipping_address": {
-              "type": "boolean"
-            },
-            "is_default": {
-              "type": "boolean"
-            },
-            "phone": {
-              "type": "string"
-            },
-            "fax": {
-              "type": "string"
-            },
-            "email": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "format": "email",
-              "description": "null clears the email"
-            },
-            "notes": {
-              "type": "string"
-            },
-            "is_active": {
-              "type": "boolean"
-            }
-          }
+        "address_line1": {
+          "type": "string"
+        },
+        "address_line2": {
+          "type": "string"
+        },
+        "address_line3": {
+          "type": "string"
+        },
+        "city": {
+          "type": "string"
+        },
+        "state_province": {
+          "type": "string"
+        },
+        "postal_code": {
+          "type": "string"
+        },
+        "country_code": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 3
+        },
+        "country_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "region_code": {
+          "type": "string"
+        },
+        "is_billing_address": {
+          "type": "boolean"
+        },
+        "is_shipping_address": {
+          "type": "boolean"
+        },
+        "is_default": {
+          "type": "boolean"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "fax": {
+          "type": "string"
+        },
+        "email": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "email",
+          "description": "null clears the email"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "is_active": {
+          "type": "boolean"
         }
-      ]
+      }
     },
     "responseBodySchema": {
       "type": "object",
@@ -12258,6 +14141,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "is_active": {
               "type": "boolean"
             },
+            "contact_count": {
+              "type": "integer",
+              "minimum": 0
+            },
             "created_at": {
               "type": "string",
               "format": "date-time"
@@ -12345,7 +14232,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contacts",
     "displayName": "List Contacts",
     "summary": "Fetch contacts",
-    "description": "Paginated list of contacts. Filter by client_id to retrieve contacts for a specific client when preparing a ticket.",
+    "description": "Paginated list of contacts. Filter by client_id to retrieve contacts for a specific client when preparing a ticket, or by location_id / work_arrangement to find who works at a client location. Every row carries work_arrangement and locations[].",
     "tags": [
       "Contacts"
     ],
@@ -12368,6 +14255,30 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "description": "Search text to match against contact names or emails.",
         "schema": {
           "type": "string"
+        }
+      },
+      {
+        "name": "location_id",
+        "in": "query",
+        "required": false,
+        "description": "Contacts who work at this client location, primary or not. Discover location ids from /api/v1/clients/{id}/locations.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "work_arrangement",
+        "in": "query",
+        "required": false,
+        "description": "Where the person works: on_site, hybrid or remote.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "on_site",
+            "hybrid",
+            "remote"
+          ]
         }
       },
       {
@@ -12452,6 +14363,15 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           }
         },
         "notes": "Use the client_id discovered from the clients endpoint to retrieve matching contacts and resolve contact_name_id."
+      },
+      {
+        "name": "Who works at a location",
+        "request": {
+          "query": {
+            "location_id": "33333333-3333-3333-3333-333333333333"
+          }
+        },
+        "notes": "The location ids come from /api/v1/clients/{id}/locations; the same filter works on /api/v1/clients/{id}/contacts."
       }
     ]
   },
@@ -12461,7 +14381,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contacts",
     "displayName": "Create contact",
     "summary": "Create contact",
-    "description": "Inherited ApiBaseController create route for contacts.",
+    "description": "Inherited ApiBaseController create route for contacts. Accepts work_arrangement and locations[{location_id, is_primary}]; every location must belong to the contact's client (a location of another client returns 400 contact_location_client_mismatch) and at most one may be primary. A single link is made primary automatically.",
     "tags": [
       "Contacts"
     ],
@@ -12505,7 +14425,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "type": "string"
               },
               "extension": {
-                "type": "string",
+                "type": [
+                  "string",
+                  "null"
+                ],
                 "description": "Digits only."
               },
               "canonical_type": {
@@ -12554,7 +14477,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "type": "string"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   },
                   {
                     "type": "null"
@@ -12568,7 +14492,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "type": "string"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   },
                   {
                     "type": "null"
@@ -12671,7 +14596,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "type": "string"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   },
                   {
                     "type": "null"
@@ -12685,7 +14611,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "type": "string"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   },
                   {
                     "type": "null"
@@ -12712,6 +14639,36 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "is_inactive": {
           "type": "boolean",
           "default": false
+        },
+        "work_arrangement": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "on_site",
+            "hybrid",
+            "remote",
+            null
+          ]
+        },
+        "locations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "location_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "is_primary": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "location_id"
+            ]
+          }
         },
         "tags": {
           "type": "array",
@@ -12748,7 +14705,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contacts/{id}",
     "displayName": "Get contact",
     "summary": "Get contact",
-    "description": "Inherited ApiBaseController get route for one contact_name_id.",
+    "description": "Inherited ApiBaseController get route for one contact_name_id. Carries work_arrangement and locations[] (location_id, location_name, is_primary, is_active and the address fields); an unlinked contact returns an empty array.",
     "tags": [
       "Contacts"
     ],
@@ -12786,7 +14743,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contacts/{id}",
     "displayName": "Update contact",
     "summary": "Update contact",
-    "description": "Inherited ApiBaseController update route for one contact_name_id.",
+    "description": "Inherited ApiBaseController update route for one contact_name_id. work_arrangement and locations[] behave as on create; locations omitted leaves the links untouched, an empty array removes them all, and changing client_id removes them (a location never crosses clients).",
     "tags": [
       "Contacts"
     ],
@@ -12833,7 +14790,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "type": "string"
               },
               "extension": {
-                "type": "string",
+                "type": [
+                  "string",
+                  "null"
+                ],
                 "description": "Digits only."
               },
               "canonical_type": {
@@ -12882,7 +14842,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "type": "string"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   },
                   {
                     "type": "null"
@@ -12896,7 +14857,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "type": "string"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   },
                   {
                     "type": "null"
@@ -12910,8 +14872,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             ],
             "additionalProperties": false,
             "description": "Each row needs canonical_type (work|mobile|home|fax|other) or custom_type, not both. When any rows are sent, exactly one must have is_default: true. On update, the array replaces all of the contact's phone numbers; include contact_phone_number_id to keep an existing row."
-          },
-          "default": []
+          }
         },
         "email": {
           "type": "string"
@@ -12999,7 +14960,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "type": "string"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   },
                   {
                     "type": "null"
@@ -13013,7 +14975,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "type": "string"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   },
                   {
                     "type": "null"
@@ -13027,8 +14990,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             ],
             "additionalProperties": false,
             "description": "Each row needs canonical_type (work|personal|billing|other) or custom_type, not both. On update, the array replaces all of the contact's additional email addresses; include contact_additional_email_address_id to keep an existing row."
-          },
-          "default": []
+          }
         },
         "role": {
           "type": "string",
@@ -13038,8 +15000,37 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string"
         },
         "is_inactive": {
-          "type": "boolean",
-          "default": false
+          "type": "boolean"
+        },
+        "work_arrangement": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "on_site",
+            "hybrid",
+            "remote",
+            null
+          ]
+        },
+        "locations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "location_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "is_primary": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "location_id"
+            ]
+          }
         },
         "tags": {
           "type": "array",
@@ -13211,7 +15202,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contacts/search",
     "displayName": "Search contacts",
     "summary": "Search contacts",
-    "description": "Runs advanced contact search with explicit API-key auth and contact:read permission check.",
+    "description": "Runs advanced contact search with explicit API-key auth and contact:read permission check. Rows carry work_arrangement and locations[] like the list response.",
     "tags": [
       "Contacts"
     ],
@@ -13291,7 +15282,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contacts/export",
     "displayName": "Export contacts",
     "summary": "Export contacts",
-    "description": "Exports contacts as CSV or JSON using explicit API-key auth and contact:read permission.",
+    "description": "Exports contacts as CSV or JSON using explicit API-key auth and contact:read permission. CSV gains Work Arrangement, Locations (\"Warehouse; Head office\") and Primary Location columns; JSON rows carry work_arrangement and locations[].",
     "tags": [
       "Contacts"
     ],
@@ -13972,7 +15963,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -14124,7 +16116,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -14195,7 +16188,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -14354,7 +16348,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -14454,7 +16449,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -14542,7 +16538,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -14618,7 +16615,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -14693,7 +16691,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -14781,7 +16780,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -14857,7 +16857,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -14937,7 +16938,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -15018,7 +17020,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -15110,7 +17113,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -15181,7 +17185,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -15288,7 +17293,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -15359,7 +17365,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -15450,7 +17457,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -15521,7 +17529,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -15627,7 +17636,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -15709,7 +17719,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -15824,7 +17835,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -15953,7 +17965,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -16085,7 +18098,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -16208,7 +18222,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -16333,6 +18348,153 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "schema": {
           "type": "string",
           "description": "Optional API key fallback for non-browser clients. Used only when no valid session cookie is present."
+        }
+      }
+    ]
+  },
+  {
+    "id": "get-_api_v1_documents",
+    "method": "get",
+    "path": "/api/v1/documents",
+    "displayName": "Documents API namespace root",
+    "summary": "Documents API namespace root",
+    "description": "Namespace root with no resource of its own — it returns 404. Documents are accessed per parent entity, e.g. /api/v1/tickets/{id}/documents.",
+    "tags": [
+      "Documents"
+    ],
+    "approvalRequired": false,
+    "parameters": []
+  },
+  {
+    "id": "post-_api_v1_documents",
+    "method": "post",
+    "path": "/api/v1/documents",
+    "displayName": "Attach File to Record",
+    "summary": "Attach one file to a ticket, project task, client, contact or asset",
+    "description": "Attaches ONE file to a ticket, project_task, client, contact or asset. Prefer source.type=url: give an https URL and the server downloads it (max size is the tenant storage limit). The URL host must be on the workspace's allowed download hosts (a tenant admin manages the list under Settings > MCP Server > Allowed download hosts; the ChatGPT file host is built in). If the call fails with 400 FETCH_HOST_NOT_ALLOWED, nothing was downloaded: tell the user an admin can add that host, and do not retry with other URLs. Use source.type=base64 only for small content you wrote yourself, never to relay a user's file, and file_name is then required. One file per call; make several calls for several files. In an MCP client with the attach_file tool, use that instead. Returns 201 with the stored document; 400 for a disallowed type, oversize file, unfetchable URL or a host that is not allowed (FETCH_HOST_NOT_ALLOWED), 403 without permission, 404 for a missing record.",
+    "tags": [
+      "Documents"
+    ],
+    "rbacResource": "document",
+    "approvalRequired": true,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "entity_type": {
+          "type": "string",
+          "enum": [
+            "ticket",
+            "project_task",
+            "client",
+            "contact",
+            "asset"
+          ],
+          "description": "Kind of record the file is attached to."
+        },
+        "entity_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID of the ticket, project task, client, contact or asset."
+        },
+        "source": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "url"
+                  ]
+                },
+                "url": {
+                  "type": "string",
+                  "description": "https URL the server downloads the file from. The host must be on the workspace's allowed download hosts (managed by tenant admins under Settings > MCP Server; the ChatGPT file host is built in), otherwise the call fails with 400 FETCH_HOST_NOT_ALLOWED. Port 443 only, public addresses only, at most 3 redirects (each re-checked against the allowlist), size capped at the storage limit. Signed URLs are used once and never logged."
+                }
+              },
+              "required": [
+                "type",
+                "url"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "base64"
+                  ]
+                },
+                "content": {
+                  "type": "string",
+                  "description": "Standard base64 of the file bytes. Only for small content the caller wrote itself; requires file_name."
+                }
+              },
+              "required": [
+                "type",
+                "content"
+              ]
+            }
+          ],
+          "description": "Where the file bytes come from: an https URL (preferred) or base64."
+        },
+        "file_name": {
+          "type": "string",
+          "description": "File name including extension. Required for base64. For url, defaults to the Content-Disposition name, then the last URL path segment."
+        },
+        "mime_type": {
+          "type": "string",
+          "description": "Declared MIME type. The server sniffs the bytes and a recognised type overrides this; the storage allowlist is applied to the resolved type."
+        }
+      },
+      "required": [
+        "entity_type",
+        "entity_id",
+        "source"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {},
+          "description": "The created document row (document_id, document_name, mime_type, file_size, folder_path, ...)."
+        }
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "examples": [
+      {
+        "name": "Attach a file to a ticket by URL",
+        "request": {
+          "body": {
+            "entity_type": "ticket",
+            "entity_id": "00000000-0000-4000-8000-000000000001",
+            "source": {
+              "type": "url",
+              "url": "https://acme-uploads.s3.us-east-1.amazonaws.com/screenshot.png?X-Amz-Signature=example"
+            }
+          }
+        }
+      },
+      {
+        "name": "Attach small authored text to a contact by base64",
+        "request": {
+          "body": {
+            "entity_type": "contact",
+            "entity_id": "00000000-0000-4000-8000-000000000002",
+            "source": {
+              "type": "base64",
+              "content": "UGhvbmUgbm90ZXM="
+            },
+            "file_name": "notes.txt",
+            "mime_type": "text/plain"
+          }
         }
       }
     ]
@@ -17098,6 +19260,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "responseBodySchema": {
       "type": "object",
       "properties": {},
+      "additionalProperties": {},
       "description": "Extension-specific response relayed from the runner. Status code, content type, and body are controlled by the extension."
     }
   },
@@ -17159,11 +19322,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "requestBodySchema": {
       "type": "object",
       "properties": {},
+      "additionalProperties": {},
       "description": "Extension-specific request body. The gateway treats this as opaque, enforces a 10 MB limit for non-GET methods, base64-encodes it, and forwards it to the extension runner."
     },
     "responseBodySchema": {
       "type": "object",
       "properties": {},
+      "additionalProperties": {},
       "description": "Extension-specific response relayed from the runner. Status code, content type, and body are controlled by the extension."
     }
   },
@@ -17225,11 +19390,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "requestBodySchema": {
       "type": "object",
       "properties": {},
+      "additionalProperties": {},
       "description": "Extension-specific request body. The gateway treats this as opaque, enforces a 10 MB limit for non-GET methods, base64-encodes it, and forwards it to the extension runner."
     },
     "responseBodySchema": {
       "type": "object",
       "properties": {},
+      "additionalProperties": {},
       "description": "Extension-specific response relayed from the runner. Status code, content type, and body are controlled by the extension."
     }
   },
@@ -17291,11 +19458,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "requestBodySchema": {
       "type": "object",
       "properties": {},
+      "additionalProperties": {},
       "description": "Extension-specific request body. The gateway treats this as opaque, enforces a 10 MB limit for non-GET methods, base64-encodes it, and forwards it to the extension runner."
     },
     "responseBodySchema": {
       "type": "object",
       "properties": {},
+      "additionalProperties": {},
       "description": "Extension-specific response relayed from the runner. Status code, content type, and body are controlled by the extension."
     }
   },
@@ -17357,11 +19526,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "requestBodySchema": {
       "type": "object",
       "properties": {},
+      "additionalProperties": {},
       "description": "Extension-specific request body. The gateway treats this as opaque, enforces a 10 MB limit for non-GET methods, base64-encodes it, and forwards it to the extension runner."
     },
     "responseBodySchema": {
       "type": "object",
       "properties": {},
+      "additionalProperties": {},
       "description": "Extension-specific response relayed from the runner. Status code, content type, and body are controlled by the extension."
     }
   },
@@ -20045,7 +22216,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
+          "type": "string",
+          "default": "1"
         }
       },
       {
@@ -20053,7 +22225,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
+          "type": "string",
+          "default": "25"
         }
       },
       {
@@ -21292,7 +23465,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/invoices/bulk",
     "displayName": "Bulk update invoice status",
     "summary": "Bulk update invoice status",
-    "description": "Bulk status transition route using bulkInvoiceStatusUpdateSchema.",
+    "description": "Bulk status transition route using bulkInvoiceStatusUpdateSchema. Only metadata transitions are applied; paid, cancelled and finalize transitions are reported as per-invoice errors naming the dedicated command. finalized_at is not accepted.",
     "tags": [
       "Invoices"
     ],
@@ -21322,9 +23495,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "prepayment",
             "partially_applied"
           ]
-        },
-        "finalized_at": {
-          "type": "string"
         }
       },
       "required": [
@@ -22223,14 +24393,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "max_generations": {
           "type": "number"
         }
-      },
-      "required": [
-        "client_id",
-        "name",
-        "frequency",
-        "start_date",
-        "invoice_template"
-      ]
+      }
     },
     "responseBodySchema": {
       "type": "object",
@@ -22648,7 +24811,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/invoices/{id}",
     "displayName": "Update invoice",
     "summary": "Update invoice",
-    "description": "Updates an invoice using ApiBaseController.update().",
+    "description": "Updates editable billing terms only (payment_method, billing_profile_id, due_date, invoice_date, items, tax_source). Status, client, totals, credits and other lifecycle fields are rejected with 400; use the finalize, send and payment endpoints (or the bulk status operation for void) instead.",
     "tags": [
       "Invoices"
     ],
@@ -22669,60 +24832,107 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "requestBodySchema": {
       "type": "object",
       "properties": {
-        "client_id": {
-          "type": "string",
-          "format": "uuid"
-        },
-        "invoice_date": {
-          "type": "string"
-        },
-        "due_date": {
-          "type": "string"
-        },
-        "subtotal": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "tax": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "total_amount": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "status": {
-          "type": "string",
+        "payment_method": {
+          "type": [
+            "string",
+            "null"
+          ],
           "enum": [
-            "draft",
-            "sent",
-            "paid",
-            "overdue",
-            "cancelled",
-            "pending",
-            "prepayment",
-            "partially_applied"
+            "credit_card",
+            "bank_transfer",
+            "check",
+            null
           ]
         },
-        "credit_applied": {
-          "type": "integer",
-          "minimum": 0
+        "billing_profile_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
         },
-        "is_manual": {
-          "type": "boolean"
+        "due_date": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "YYYY-MM-DD. Draft invoices only."
         },
-        "is_prepayment": {
-          "type": "boolean"
+        "invoice_date": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "YYYY-MM-DD. Draft invoices only."
         },
         "items": {
           "type": "array",
           "items": {
             "type": "object",
-            "additionalProperties": {}
-          }
+            "properties": {
+              "service_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "contract_line_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "description": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              "quantity": {
+                "type": "number",
+                "minimum": 0
+              },
+              "unit_price": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total_price": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "tax_amount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "net_amount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "rate": {
+                "type": "number",
+                "minimum": 0
+              },
+              "is_manual": {
+                "type": "boolean"
+              },
+              "is_taxable": {
+                "type": "boolean"
+              },
+              "is_discount": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "description",
+              "quantity",
+              "unit_price",
+              "tax_amount",
+              "rate"
+            ]
+          },
+          "description": "Replaces items on draft, non-recurring invoices only."
+        },
+        "tax_source": {
+          "type": "string",
+          "enum": [
+            "internal",
+            "external",
+            "pending_external"
+          ]
         }
       },
-      "additionalProperties": {}
+      "additionalProperties": false
     },
     "responseBodySchema": {
       "type": "object",
@@ -24331,19 +26541,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "description": "Namespace root with no resource of its own — it returns 404. Comments are accessed per ticket: /api/v1/tickets/{id}/comments and its sub-paths.",
     "tags": [
       "Comments"
-    ],
-    "approvalRequired": false,
-    "parameters": []
-  },
-  {
-    "id": "get-_api_v1_documents",
-    "method": "get",
-    "path": "/api/v1/documents",
-    "displayName": "Documents API namespace root",
-    "summary": "Documents API namespace root",
-    "description": "Namespace root with no resource of its own — it returns 404. Documents are accessed per parent entity, e.g. /api/v1/tickets/{id}/documents.",
-    "tags": [
-      "Documents"
     ],
     "approvalRequired": false,
     "parameters": []
@@ -28315,20 +30512,84 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       }
     ],
     "requestBodySchema": {
-      "allOf": [
-        {
-          "$ref": "#/components/schemas/InboundWebhookCreateInput"
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
         },
-        {
+        "slug": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "auth_type": {
+          "type": "string",
+          "enum": [
+            "hmac_sha256",
+            "bearer",
+            "ip_allowlist",
+            "path_token"
+          ]
+        },
+        "auth_config": {
           "type": "object",
+          "additionalProperties": {}
+        },
+        "idempotency_source": {
+          "type": [
+            "object",
+            "null"
+          ],
           "properties": {
-            "inbound_webhook_id": {
+            "type": {
               "type": "string",
-              "format": "uuid"
+              "enum": [
+                "header",
+                "jsonata"
+              ]
+            },
+            "value": {
+              "type": "string"
             }
-          }
+          },
+          "required": [
+            "type",
+            "value"
+          ]
+        },
+        "idempotency_window_seconds": {
+          "type": "integer",
+          "exclusiveMinimum": 0
+        },
+        "handler_type": {
+          "type": "string",
+          "enum": [
+            "direct_action",
+            "workflow"
+          ]
+        },
+        "handler_config": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "is_active": {
+          "type": "boolean"
+        },
+        "rate_limit_per_minute": {
+          "type": "integer",
+          "exclusiveMinimum": 0
+        },
+        "inbound_webhook_id": {
+          "type": "string",
+          "format": "uuid"
         }
-      ]
+      }
     },
     "responseBodySchema": {
       "type": "object",
@@ -36181,9 +38442,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -36195,9 +38453,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -36206,9 +38461,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "maxLength": 2048
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -36406,9 +38658,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -36420,9 +38669,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -36431,9 +38677,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "maxLength": 2048
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -36783,9 +39026,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -36794,9 +39034,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "format": "uuid"
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -36811,9 +39048,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -36822,9 +39056,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "maxLength": 128
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -36839,9 +39070,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -36850,9 +39078,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "number",
               "minimum": 0
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -36868,9 +39093,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -36879,9 +39101,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "maxLength": 255
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -36896,9 +39115,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -36907,9 +39123,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "maxLength": 255
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -36928,9 +39141,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -36939,9 +39149,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "maxLength": 64
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -37139,9 +39346,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -37150,9 +39354,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "format": "uuid"
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -37167,9 +39368,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -37178,9 +39376,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "maxLength": 128
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -37195,9 +39390,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -37206,9 +39398,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "number",
               "minimum": 0
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -37224,9 +39413,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -37235,9 +39421,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "maxLength": 255
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -37252,9 +39435,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -37263,9 +39443,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "maxLength": 255
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -37284,9 +39461,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -37295,9 +39469,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "maxLength": 64
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -38579,12 +40750,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "type": "string"
           }
         }
-      },
-      "required": [
-        "name",
-        "url",
-        "event_types"
-      ]
+      }
     },
     "responseBodySchema": {
       "type": "object",
@@ -39140,12 +41306,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "type": "string"
           }
         }
-      },
-      "required": [
-        "name",
-        "url",
-        "event_types"
-      ]
+      }
     },
     "responseBodySchema": {
       "type": "object",
@@ -40537,7 +42698,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "tenant",
               "createdAt",
               "updatedAt"
-            ]
+            ],
+            "additionalProperties": {}
           }
         },
         "pagination": {
@@ -40768,7 +42930,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "tenant",
             "createdAt",
             "updatedAt"
-          ]
+          ],
+          "additionalProperties": {}
         },
         "meta": {}
       },
@@ -40964,7 +43127,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "tenant",
             "createdAt",
             "updatedAt"
-          ]
+          ],
+          "additionalProperties": {}
         },
         "meta": {}
       },
@@ -41166,7 +43330,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "tenant",
             "createdAt",
             "updatedAt"
-          ]
+          ],
+          "additionalProperties": {}
         },
         "meta": {}
       },
@@ -41747,7 +43912,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string"
         },
         "assigned_to": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "format": "uuid"
         },
         "estimated_hours": {
@@ -41759,16 +43927,21 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "format": "date-time"
         },
         "due_date": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "format": "date-time"
         },
         "priority_id": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "format": "uuid"
         },
         "task_type_key": {
-          "type": "string",
-          "default": "general"
+          "type": "string"
         },
         "project_status_mapping_id": {
           "type": "string",
@@ -44007,6 +46180,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "start_date",
         "in": "query",
         "required": false,
+        "description": "ISO 8601 date or date-time; entries starting at or after. A date-only value means 00:00:00Z that day.",
         "schema": {
           "type": "string",
           "description": "ISO 8601 date or date-time; entries starting at or after. A date-only value means 00:00:00Z that day."
@@ -44016,6 +46190,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "end_date",
         "in": "query",
         "required": false,
+        "description": "ISO 8601 date or date-time; entries ending at or before. A date-only value includes the whole UTC day (entries ending before 00:00:00Z the next day).",
         "schema": {
           "type": "string",
           "description": "ISO 8601 date or date-time; entries ending at or before. A date-only value includes the whole UTC day (entries ending before 00:00:00Z the next day)."
@@ -44219,6 +46394,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "start_date",
         "in": "query",
         "required": false,
+        "description": "ISO 8601 date or date-time; entries starting at or after. A date-only value means 00:00:00Z that day.",
         "schema": {
           "type": "string",
           "description": "ISO 8601 date or date-time; entries starting at or after. A date-only value means 00:00:00Z that day."
@@ -44228,6 +46404,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "end_date",
         "in": "query",
         "required": false,
+        "description": "ISO 8601 date or date-time; entries ending at or before. A date-only value includes the whole UTC day (entries ending before 00:00:00Z the next day).",
         "schema": {
           "type": "string",
           "description": "ISO 8601 date or date-time; entries ending at or before. A date-only value includes the whole UTC day (entries ending before 00:00:00Z the next day)."
@@ -44419,8 +46596,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string"
         },
         "is_private": {
-          "type": "boolean",
-          "default": false
+          "type": "boolean"
         },
         "is_all_day": {
           "type": "boolean"
@@ -48187,7 +50363,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "project_task",
             "non_billable_category",
             "ad_hoc",
-            "interaction"
+            "interaction",
+            "co_managed"
           ]
         },
         "start_time": {
@@ -48442,7 +50619,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "project_task",
                   "non_billable_category",
                   "ad_hoc",
-                  "interaction"
+                  "interaction",
+                  "co_managed"
                 ]
               },
               "start_time": {
@@ -48566,7 +50744,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                       "project_task",
                       "non_billable_category",
                       "ad_hoc",
-                      "interaction"
+                      "interaction",
+                      "co_managed"
                     ]
                   },
                   "start_time": {
@@ -48604,8 +50783,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "description": "Optional. Must be one of the contract lines eligible for the work item's client, the service and the work date, else 400. When omitted the line is resolved automatically; if several lines are eligible and none can be chosen the request fails with 400 (details.reason = contract_line_ambiguous, details.eligible_contract_lines) and should be resent with contract_line_id set. Ignored for non-billable entries."
                   },
                   "is_billable": {
-                    "type": "boolean",
-                    "default": true
+                    "type": "boolean"
                   }
                 }
               }
@@ -49445,7 +51623,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "project_task",
             "non_billable_category",
             "ad_hoc",
-            "interaction"
+            "interaction",
+            "co_managed"
           ]
         },
         "start_time": {
@@ -49483,8 +51662,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "description": "Optional. Must be one of the contract lines eligible for the work item's client, the service and the work date, else 400. When omitted the line is resolved automatically; if several lines are eligible and none can be chosen the request fails with 400 (details.reason = contract_line_ambiguous, details.eligible_contract_lines) and should be resent with contract_line_id set. Ignored for non-billable entries."
         },
         "is_billable": {
-          "type": "boolean",
-          "default": true
+          "type": "boolean"
         }
       }
     },
@@ -50403,7 +52581,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-sheets",
     "displayName": "Create time sheet",
     "summary": "Create time sheet",
-    "description": "Creates time sheet via create() path.",
+    "description": "Creates a time sheet. A time sheet is unique per tenant, effective owner (`user_id`, defaulting to the caller) and `period_id`, in every approval status. The first request returns 201 with a DRAFT sheet; a request for a user and period that already has a sheet returns 409 CONFLICT (\"A time sheet already exists for this user and period\") and changes nothing. To recover, GET /api/v1/time-sheets filtered by `user_id` and `period_id`.",
     "tags": [
       "Work Management v1"
     ],
@@ -50855,6 +53033,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                         "non_billable_category",
                         "ad_hoc",
                         "interaction",
+                        "co_managed",
                         null
                       ]
                     },
@@ -51413,6 +53592,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "non_billable_category",
                   "ad_hoc",
                   "interaction",
+                  "co_managed",
                   null
                 ]
               },
@@ -52423,6 +54603,58 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "get-_api_v1_tickets_categories",
+    "method": "get",
+    "path": "/api/v1/tickets/categories",
+    "displayName": "List ticket categories",
+    "summary": "List ticket categories",
+    "description": "Returns the tenant ticket categories (parents and children via parent_category), optionally filtered by board_id, sorted by display_order then name. Read surface for classifying a ticket; configuring categories stays on /api/v1/categories/ticket.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "board_id",
+        "in": "query",
+        "required": false,
+        "description": "Filter categories to this board.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Filter categories to this board."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
     "id": "put-_api_v1_tickets_id_comments_commentid",
     "method": "put",
     "path": "/api/v1/tickets/{id}/comments/{commentId}",
@@ -52694,12 +54926,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "method": "post",
     "path": "/api/v1/tickets/{id}/documents",
     "displayName": "Upload a ticket document",
-    "summary": "Upload a ticket document",
-    "description": "Uploads a file as a document attachment to a ticket. Send multipart/form-data with a `file` field. Returns the created document.",
+    "summary": "Upload a ticket document (multipart only)",
+    "description": "Multipart/form-data upload only; this endpoint cannot be called through call_api_endpoint, which sends JSON. To attach a file to a ticket, use the attach_file tool or POST /api/v1/documents (entity_type ticket) instead.",
     "tags": [
       "Work Management v1"
     ],
-    "approvalRequired": false,
+    "rbacResource": "ticket",
+    "approvalRequired": true,
     "parameters": [
       {
         "name": "id",
@@ -52913,6 +55146,722 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       },
       "required": [
         "completed"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_tickets_templates",
+    "method": "get",
+    "path": "/api/v1/tickets/templates",
+    "displayName": "List ticket templates",
+    "summary": "List ticket templates",
+    "description": "Returns the tenant ticket templates: the ticket fields, tags, custom fields and checklist each one produces, with how many recurring schedules and tickets use it. Filter with client_id to see what one client can use (its own templates plus the tenant-wide ones). Use a template with POST /api/v1/tickets/templates/{templateId}/instantiate instead of creating a ticket and then adding its checklist item by item.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket_template",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "description": "1-based page number. Default 1.",
+        "schema": {
+          "type": "string",
+          "description": "1-based page number. Default 1."
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Page size, 1-100. Default 25.",
+        "schema": {
+          "type": "string",
+          "description": "Page size, 1-100. Default 25."
+        }
+      },
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": false,
+        "description": "Templates this client can use: the ones bound to it plus every tenant-wide template. Resolve the UUID with GET /api/v1/clients first.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Templates this client can use: the ones bound to it plus every tenant-wide template. Resolve the UUID with GET /api/v1/clients first."
+        }
+      },
+      {
+        "name": "is_active",
+        "in": "query",
+        "required": false,
+        "description": "Omitted or 'true': active templates only (the default). 'false': the inactive ones.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ],
+          "description": "Omitted or 'true': active templates only (the default). 'false': the inactive ones."
+        }
+      },
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "description": "Case-insensitive substring of the template name or of the ticket title it produces.",
+        "schema": {
+          "type": "string",
+          "description": "Case-insensitive substring of the template name or of the ticket title it produces."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "pagination": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer"
+            },
+            "limit": {
+              "type": "integer"
+            },
+            "total": {
+              "type": "integer"
+            },
+            "totalPages": {
+              "type": "integer"
+            },
+            "hasNext": {
+              "type": "boolean"
+            },
+            "hasPrev": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "page",
+            "limit",
+            "total",
+            "totalPages",
+            "hasNext",
+            "hasPrev"
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data",
+        "pagination"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_tickets_templates",
+    "method": "post",
+    "path": "/api/v1/tickets/templates",
+    "displayName": "Create a ticket template",
+    "summary": "Create a ticket template",
+    "description": "Creates a reusable ticket template with its whole checklist in one request. Resolve client_id, board_id, category_id and priority_id to UUIDs first (GET /api/v1/clients, /api/v1/boards, /api/v1/categories, /api/v1/tickets/priorities); a reference that does not exist is refused with 400. Leave client_id out for a template every client can use. A second active template with the same name returns 409.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket_template",
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "Template name, unique among active templates in the tenant."
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000,
+          "description": "Note for your team; never copied onto tickets."
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "description": "Title the created ticket gets. May contain {{client}}, {{contact}}, {{due_date}}, {{month}} and {{year}}, which are filled in per ticket; any other {{token}} is rejected."
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Ticket description (plain text or serialized BlockNote JSON)."
+        },
+        "client_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Client the template belongs to. Omit or null to offer it for every client; set it to offer the template only on that client’s tickets. Resolve the UUID with GET /api/v1/clients first."
+        },
+        "board_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Board the created ticket lands on. Resolve with GET /api/v1/boards first."
+        },
+        "category_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Category on that board; a subcategory requires its parent category."
+        },
+        "subcategory_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "priority_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Priority. Resolve with GET /api/v1/tickets/priorities first."
+        },
+        "itil_impact": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 5
+        },
+        "itil_urgency": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 5
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "maxItems": 50,
+          "description": "Tag text applied to the created ticket (tag definitions are created as needed)."
+        },
+        "custom_fields": {
+          "type": "object",
+          "additionalProperties": {},
+          "description": "Custom field values copied onto the ticket."
+        },
+        "offer_for_manual_use": {
+          "type": "boolean",
+          "description": "Whether the template is offered for manual ticket creation. Defaults to true; turn it off for templates only recurring schedules use."
+        },
+        "checklist": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "item_name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500,
+                "description": "Checklist item text."
+              },
+              "description": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "is_required": {
+                "type": "boolean",
+                "description": "Whether the item gates ticket closure."
+              },
+              "checklist_template_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid",
+                "description": "Checklist template the item came from; leave null for a plain item."
+              }
+            },
+            "required": [
+              "item_name",
+              "is_required"
+            ]
+          },
+          "maxItems": 200,
+          "description": "The whole checklist, in order. On update this list replaces the stored items."
+        }
+      },
+      "required": [
+        "name",
+        "title"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_tickets_templates_templateid",
+    "method": "get",
+    "path": "/api/v1/tickets/templates/{templateId}",
+    "displayName": "Get a ticket template",
+    "summary": "Get a ticket template",
+    "description": "Returns one ticket template with its checklist items in order, its client scope, usage counts, and referenceProblems: fields pointing at a board, category or priority that no longer exists (they are left blank when the template is applied).",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket_template",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "templateId",
+        "in": "path",
+        "required": true,
+        "description": "Ticket template UUID from ticket_templates.template_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket template UUID from ticket_templates.template_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_tickets_templates_templateid",
+    "method": "put",
+    "path": "/api/v1/tickets/templates/{templateId}",
+    "displayName": "Update a ticket template",
+    "summary": "Update a ticket template",
+    "description": "Replaces the template wholesale: omitted fields are reset and the checklist you send replaces the stored items, so GET the template first and send it back edited. `is_active` activates or deactivates it (deactivating only hides it from manual use; recurring schedules keep running). Changes apply to every schedule that uses the template, from the next ticket each one creates.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket_template",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "templateId",
+        "in": "path",
+        "required": true,
+        "description": "Ticket template UUID from ticket_templates.template_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket template UUID from ticket_templates.template_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "Template name, unique among active templates in the tenant."
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000,
+          "description": "Note for your team; never copied onto tickets."
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "description": "Title the created ticket gets. May contain {{client}}, {{contact}}, {{due_date}}, {{month}} and {{year}}, which are filled in per ticket; any other {{token}} is rejected."
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Ticket description (plain text or serialized BlockNote JSON)."
+        },
+        "client_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Client the template belongs to. Omit or null to offer it for every client; set it to offer the template only on that client’s tickets. Resolve the UUID with GET /api/v1/clients first."
+        },
+        "board_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Board the created ticket lands on. Resolve with GET /api/v1/boards first."
+        },
+        "category_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Category on that board; a subcategory requires its parent category."
+        },
+        "subcategory_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "priority_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Priority. Resolve with GET /api/v1/tickets/priorities first."
+        },
+        "itil_impact": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 5
+        },
+        "itil_urgency": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 5
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "maxItems": 50,
+          "description": "Tag text applied to the created ticket (tag definitions are created as needed)."
+        },
+        "custom_fields": {
+          "type": "object",
+          "additionalProperties": {},
+          "description": "Custom field values copied onto the ticket."
+        },
+        "offer_for_manual_use": {
+          "type": "boolean",
+          "description": "Whether the template is offered for manual ticket creation. Defaults to true; turn it off for templates only recurring schedules use."
+        },
+        "checklist": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "item_name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500,
+                "description": "Checklist item text."
+              },
+              "description": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "is_required": {
+                "type": "boolean",
+                "description": "Whether the item gates ticket closure."
+              },
+              "checklist_template_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid",
+                "description": "Checklist template the item came from; leave null for a plain item."
+              }
+            },
+            "required": [
+              "item_name",
+              "is_required"
+            ]
+          },
+          "maxItems": 200,
+          "description": "The whole checklist, in order. On update this list replaces the stored items."
+        },
+        "is_active": {
+          "type": "boolean",
+          "description": "Activate or deactivate the template. Deactivating only hides it from manual use; recurring schedules keep running."
+        }
+      },
+      "required": [
+        "name",
+        "title"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_tickets_templates_templateid",
+    "method": "delete",
+    "path": "/api/v1/tickets/templates/{templateId}",
+    "displayName": "Delete a ticket template",
+    "summary": "Delete a ticket template",
+    "description": "Deletes the template and its checklist items. Tickets already created from it are not changed. Refused with 409 while any non-archived recurring schedule still uses it; point those schedules at another template or archive them first, or deactivate the template instead (PUT with is_active=false).",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket_template",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "templateId",
+        "in": "path",
+        "required": true,
+        "description": "Ticket template UUID from ticket_templates.template_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket template UUID from ticket_templates.template_id."
+        }
+      }
+    ]
+  },
+  {
+    "id": "post-_api_v1_tickets_templates_templateid_instantiate",
+    "method": "post",
+    "path": "/api/v1/tickets/templates/{templateId}/instantiate",
+    "displayName": "Create a ticket from a ticket template",
+    "summary": "Create a ticket from a ticket template",
+    "description": "Creates one ticket from the template and returns it, exactly as POST /api/v1/tickets does. The template supplies the title (with its {{client}}/{{contact}}/{{due_date}} tokens filled in), description, board, category, priority, ITIL values, tags, custom fields and every checklist item, and the ticket records created_from_template_id. Prefer this over POST /api/v1/tickets followed by one POST /api/v1/tickets/{id}/checklist per item whenever a template exists. Requires ticket:create as well as ticket_template:read. Resolve client_id (and contact_name_id, location_id, assigned_to) to UUIDs first; a contact, location or asset that does not belong to client_id, a status that is not on the template’s board, or a template bound to a different client are all refused with 400.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket_template",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "templateId",
+        "in": "path",
+        "required": true,
+        "description": "Ticket template UUID from ticket_templates.template_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket template UUID from ticket_templates.template_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "client_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Client the ticket is for. A template bound to another client is refused with 400."
+        },
+        "contact_name_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Requester contact; must belong to client_id. Also fills the {{contact}} title token."
+        },
+        "location_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Client location; must belong to client_id."
+        },
+        "asset_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "maxItems": 50,
+          "description": "Assets to link to the ticket; each must belong to client_id."
+        },
+        "assigned_to": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Primary assignee. Defaults to unassigned."
+        },
+        "status_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Status for the new ticket; must belong to the template's board. Defaults to that board's default status."
+        },
+        "due_date": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Due date, ISO date (YYYY-MM-DD) or date-time. Also fills the {{due_date}}, {{month}} and {{year}} title tokens."
+        },
+        "suppressContactNotifications": {
+          "type": "boolean",
+          "description": "Create the ticket without notifying the customer."
+        },
+        "suppressInternalNotifications": {
+          "type": "boolean",
+          "description": "Also skip internal notifications. Requires suppressContactNotifications=true."
+        }
+      },
+      "required": [
+        "client_id"
       ]
     },
     "responseBodySchema": {
@@ -56791,23 +59740,19 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "medium",
             "high",
             "committed"
-          ],
-          "default": "medium"
+          ]
         },
         "mrr_cents": {
           "type": "integer",
-          "minimum": 0,
-          "default": 0
+          "minimum": 0
         },
         "nrr_cents": {
           "type": "integer",
-          "minimum": 0,
-          "default": 0
+          "minimum": 0
         },
         "hardware_cents": {
           "type": "integer",
-          "minimum": 0,
-          "default": 0
+          "minimum": 0
         },
         "currency_code": {
           "type": "string",
@@ -56964,23 +59909,19 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "medium",
             "high",
             "committed"
-          ],
-          "default": "medium"
+          ]
         },
         "mrr_cents": {
           "type": "integer",
-          "minimum": 0,
-          "default": 0
+          "minimum": 0
         },
         "nrr_cents": {
           "type": "integer",
-          "minimum": 0,
-          "default": 0
+          "minimum": 0
         },
         "hardware_cents": {
           "type": "integer",
-          "minimum": 0,
-          "default": 0
+          "minimum": 0
         },
         "currency_code": {
           "type": "string",
@@ -59104,16 +62045,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "body_markdown": {
           "type": "string",
-          "maxLength": 50000,
-          "default": ""
+          "maxLength": 50000
         },
         "channel_variants": {
           "type": "object",
           "additionalProperties": {
             "type": "string",
             "maxLength": 10000
-          },
-          "default": {}
+          }
         },
         "campaign_id": {
           "type": [
@@ -60091,8 +63030,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "subject"
             ]
           },
-          "maxItems": 50,
-          "default": []
+          "maxItems": 50
         }
       }
     },
@@ -60433,7 +63371,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "format": "date-time"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   }
                 ]
               },
@@ -60444,7 +63383,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "format": "date-time"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   },
                   {
                     "type": "null"
@@ -60458,7 +63398,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "format": "date-time"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   },
                   {
                     "type": "null"
@@ -60753,7 +63694,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "format": "date-time"
                 },
                 {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 }
               ]
             },
@@ -60764,7 +63706,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "format": "date-time"
                 },
                 {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 },
                 {
                   "type": "null"
@@ -60778,7 +63721,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "format": "date-time"
                 },
                 {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 },
                 {
                   "type": "null"
@@ -60982,7 +63926,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "format": "date-time"
                 },
                 {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 }
               ]
             },
@@ -60993,7 +63938,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "format": "date-time"
                 },
                 {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 },
                 {
                   "type": "null"
@@ -61007,7 +63953,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "format": "date-time"
                 },
                 {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 },
                 {
                   "type": "null"
@@ -61228,7 +64175,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "format": "date-time"
                 },
                 {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 }
               ]
             },
@@ -61239,7 +64187,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "format": "date-time"
                 },
                 {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 },
                 {
                   "type": "null"
@@ -61253,7 +64202,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "format": "date-time"
                 },
                 {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 },
                 {
                   "type": "null"
@@ -62300,6 +65250,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "type": "boolean",
                   "description": "Project tasks on mobile (project:read; PSA product only)."
                 },
+                "assets": {
+                  "type": "boolean",
+                  "description": "Asset browsing on mobile (asset:read; PSA product only)."
+                },
+                "assetAudit": {
+                  "type": "boolean",
+                  "description": "Site audits on mobile (asset:read AND asset:update; PSA product only)."
+                },
                 "clientsCreate": {
                   "type": "boolean"
                 },
@@ -62318,6 +65276,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "opportunities",
                 "opportunitiesCreate",
                 "projects",
+                "assets",
+                "assetAudit",
                 "clientsCreate",
                 "clientsUpdate",
                 "contactsCreate",
@@ -64052,6 +67012,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "description": "Optional future agreement sync flag. Currently ignored by the MVP handlers."
         }
       },
+      "additionalProperties": {},
       "description": "Sync options. The current SoftwareOne MVP handlers parse JSON but ignore all body fields."
     },
     "responseBodySchema": {
@@ -64191,6 +67152,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "description": "Optional future agreement sync flag. Currently ignored by the MVP handlers."
         }
       },
+      "additionalProperties": {},
       "description": "Sync options. The current SoftwareOne MVP handlers parse JSON but ignore all body fields."
     },
     "responseBodySchema": {
@@ -64355,6 +67317,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "description": "Optional future agreement sync flag. Currently ignored by the MVP handlers."
         }
       },
+      "additionalProperties": {},
       "description": "Sync options. The current SoftwareOne MVP handlers parse JSON but ignore all body fields."
     },
     "responseBodySchema": {
@@ -64783,6 +67746,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "description": "Optional future agreement sync flag. Currently ignored by the MVP handlers."
         }
       },
+      "additionalProperties": {},
       "description": "Sync options. The current SoftwareOne MVP handlers parse JSON but ignore all body fields."
     },
     "responseBodySchema": {

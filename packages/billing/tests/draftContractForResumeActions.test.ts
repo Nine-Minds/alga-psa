@@ -805,4 +805,41 @@ describe('getDraftContractForResume: per-line fixed pricing and fidelity', () =>
     expect(merged.messageKey).toBeUndefined();
     expect(merged.hourly_services.map((s: any) => s.service_id)).toEqual(['a', 'b']);
   });
+
+  it('7: an advance fixed line plus stored-arrears hourly line resumes with advance billing_timing', async () => {
+    arrange(
+      [
+        { contract_line_id: 'f1', contract_line_name: 'F1', contract_line_type: 'Fixed', billing_frequency: 'monthly', billing_timing: 'advance', rate: 10000 },
+        { contract_line_id: 'h1', contract_line_name: 'H1', contract_line_type: 'Hourly', billing_frequency: 'monthly', billing_timing: 'arrears' },
+      ],
+      {
+        f1: [member('s1')],
+        h1: [{ service: { service_id: 'hs', service_name: 'H hs', item_kind: 'service' }, configuration: {}, typeConfig: { hourly_rate: 12500 }, bucketConfig: null }],
+      },
+    );
+    const result = await resume();
+    expect(result.messageKey).toBeUndefined();
+    expect(result.billing_timing).toBe('advance');
+    expect(result.hourly_services.map((s: any) => s.service_id)).toEqual(['hs']);
+  });
+
+  it('8: an advance products line with an arrears default resumes as a products advance override next to hourly', async () => {
+    arrange(
+      [
+        { contract_line_id: 'f1', contract_line_name: 'F1', contract_line_type: 'Fixed', billing_frequency: 'monthly', billing_timing: 'arrears', rate: 10000 },
+        { contract_line_id: 'p1', contract_line_name: 'P1', contract_line_type: 'Fixed', billing_frequency: 'monthly', billing_timing: 'advance' },
+        { contract_line_id: 'h1', contract_line_name: 'H1', contract_line_type: 'Hourly', billing_frequency: 'monthly', billing_timing: 'arrears' },
+      ],
+      {
+        f1: [member('s1')],
+        p1: [{ service: { service_id: 'prod', service_name: 'Prod', item_kind: 'product' }, configuration: { quantity: 2, custom_rate: 500 }, bucketConfig: null }],
+        h1: [{ service: { service_id: 'hs', service_name: 'H hs', item_kind: 'service' }, configuration: {}, typeConfig: { hourly_rate: 12500 }, bucketConfig: null }],
+      },
+    );
+    const result = await resume();
+    expect(result.messageKey).toBeUndefined();
+    expect(result.billing_timing).toBe('arrears');
+    expect(result.product_billing_timing).toBe('advance');
+    expect(result.product_services.map((s: any) => s.service_id)).toEqual(['prod']);
+  });
 });

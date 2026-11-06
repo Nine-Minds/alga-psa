@@ -20,6 +20,7 @@ import { ArrearsFirstInvoiceHint } from '../ArrearsFirstInvoiceHint';
 import type { FirstInvoiceClientSchedule } from '../../../../lib/firstInvoiceDate';
 import { ServiceCatalogPicker, ServiceCatalogPickerItem } from '../ServiceCatalogPicker';
 import { BillingFrequencyOverrideSelect } from '../BillingFrequencyOverrideSelect';
+import { BillingTimingField } from '../BillingTimingField';
 import { getRecurringAuthoringPreview } from '../recurringAuthoringPreview';
 import { FixedServiceConfigPanel } from '../../service-configurations/FixedServiceConfigPanel';
 import { resolveContractAuthoringRate } from '../../../../lib/contractAuthoringRate';
@@ -502,6 +503,24 @@ export function FixedLineEditor({ line, index, contract, clientSchedule, updateL
           onChange={(value) => updateLine({ billing_frequency: value })}
           label={t('wizardFixed.alternateFrequencyLabel', { defaultValue: 'Alternate Billing Frequency (Optional)' })}
         />
+      )}
+
+      {(line.services.length > 0 || servicelessWarning) && (
+        <div className="space-y-2">
+          <Label htmlFor={`${idPrefix}-billing-timing`} className="text-sm">
+            {t('wizardFixed.billingTimingLabel', { defaultValue: 'Billing Timing' })}
+          </Label>
+          <BillingTimingField
+            id={`${idPrefix}-billing-timing`}
+            lineType="Fixed"
+            value={line.billing_timing}
+            allowInherit
+            inheritedValue={contract.billing_timing ?? 'arrears'}
+            onChange={(value) => updateLine({ billing_timing: value })}
+            onInherit={() => updateLine({ billing_timing: undefined })}
+            hideHelp
+          />
+        </div>
       )}
 
       <ArrearsFirstInvoiceHint

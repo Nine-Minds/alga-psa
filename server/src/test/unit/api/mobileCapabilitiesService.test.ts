@@ -11,8 +11,12 @@ vi.mock('@/lib/productAccess', () => ({
   getTenantProduct: mocks.getTenantProduct,
 }));
 
-vi.mock('@alga-psa/auth/rbac', () => ({
+vi.mock('@/lib/auth/rbac', () => ({
   hasPermission: mocks.hasPermission,
+}));
+
+vi.mock('@alga-psa/users/actions', () => ({
+  findUserByIdForApi: vi.fn(async (userId: string) => ({ user_id: userId, user_type: 'internal', tenant: 'tenant-1' })),
 }));
 
 vi.mock('@alga-psa/tenancy/lib/tenantDefaultCountry', () => ({
@@ -42,6 +46,7 @@ const context = {
 };
 
 const CRM_ALL = { clientsCreate: true, clientsUpdate: true, contactsCreate: true, contactsUpdate: true };
+const ASSETS_ALL = { assets: true, assetAudit: true };
 
 const customTokens = (overrides: Record<string, string> = {}) => ({
   ...CUSTOM_THEME_PRESETS.forest.light,
@@ -67,6 +72,7 @@ describe('MobileCapabilitiesService', () => {
       opportunities: true,
       opportunitiesCreate: true,
       projects: true,
+      ...ASSETS_ALL,
       ...CRM_ALL,
     });
     expect(result.formatting).toEqual(SYSTEM_DATE_FORMAT);
@@ -74,6 +80,17 @@ describe('MobileCapabilitiesService', () => {
     expect(mocks.hasPermission).toHaveBeenCalledWith(user, 'project', 'read', db);
     expect(mocks.hasPermission).toHaveBeenCalledWith(user, 'opportunities', 'read', db);
     expect(mocks.hasPermission).toHaveBeenCalledWith(user, 'opportunities', 'create', db);
+  });
+
+  it('requires the delegating identity to hold the new asset permissions too', async () => {
+    mocks.hasPermission.mockImplementation(async (subject, resource) => (
+      subject.user_id !== 'delegating-user' || resource !== 'asset'
+    ));
+    const service = new MobileCapabilitiesService();
+    const result = await service.getMyCapabilities({ ...context, viaPrincipalUserId: 'delegating-user' });
+    expect(result.features.assets).toBe(false);
+    expect(result.features.assetAudit).toBe(false);
+    expect(result.features.projects).toBe(true);
   });
 
   it('T050 disables both features for an AlgaDesk tenant regardless of RBAC', async () => {
@@ -86,12 +103,57 @@ describe('MobileCapabilitiesService', () => {
       opportunities: false,
       opportunitiesCreate: false,
       projects: false,
+      assets: false,
+      assetAudit: false,
       ...CRM_ALL,
     });
     expect(result.formatting).toEqual(SYSTEM_DATE_FORMAT);
     expect(mocks.hasPermission).not.toHaveBeenCalledWith(user, 'inventory', 'read', db);
     expect(mocks.hasPermission).not.toHaveBeenCalledWith(user, 'project', 'read', db);
     expect(mocks.hasPermission).not.toHaveBeenCalledWith(user, 'opportunities', 'read', db);
+    expect(mocks.hasPermission).not.toHaveBeenCalledWith(user, 'asset', 'read', db);
+    expect(mocks.hasPermission).not.toHaveBeenCalledWith(user, 'asset', 'update', db);
+  });
+
+  it('T001 enables assets and assetAudit for a PSA user with asset read and update', async () => {
+    const service = new MobileCapabilitiesService();
+
+    const result = await service.getMyCapabilities(context);
+    expect(result.features.assets).toBe(true);
+    expect(result.features.assetAudit).toBe(true);
+    expect(mocks.hasPermission).toHaveBeenCalledWith(user, 'asset', 'read', db);
+    expect(mocks.hasPermission).toHaveBeenCalledWith(user, 'asset', 'update', db);
+  });
+
+  it('T002 leaves assetAudit off for a PSA user with asset read only', async () => {
+    mocks.hasPermission.mockImplementation(async (_user, resource, action) => (
+      !(resource === 'asset' && action === 'update')
+    ));
+    const service = new MobileCapabilitiesService();
+
+    const result = await service.getMyCapabilities(context);
+    expect(result.features.assets).toBe(true);
+    expect(result.features.assetAudit).toBe(false);
+  });
+
+  it('T002 leaves assetAudit off when asset read is missing but update is granted', async () => {
+    mocks.hasPermission.mockImplementation(async (_user, resource, action) => (
+      !(resource === 'asset' && action === 'read')
+    ));
+    const service = new MobileCapabilitiesService();
+
+    const result = await service.getMyCapabilities(context);
+    expect(result.features.assets).toBe(false);
+    expect(result.features.assetAudit).toBe(false);
+  });
+
+  it('T003 keeps assets and assetAudit off for an AlgaDesk tenant with asset permissions', async () => {
+    mocks.getTenantProduct.mockResolvedValue('algadesk');
+    const service = new MobileCapabilitiesService();
+
+    const result = await service.getMyCapabilities(context);
+    expect(result.features.assets).toBe(false);
+    expect(result.features.assetAudit).toBe(false);
   });
 
   it('reports client and contact write permissions for every product', async () => {
@@ -131,6 +193,7 @@ describe('MobileCapabilitiesService', () => {
       opportunities: expectedOpportunities,
       opportunitiesCreate: expectedOpportunities,
       projects: true,
+      ...ASSETS_ALL,
       ...CRM_ALL,
     });
   });
@@ -147,6 +210,7 @@ describe('MobileCapabilitiesService', () => {
       opportunities: true,
       opportunitiesCreate: false,
       projects: true,
+      ...ASSETS_ALL,
       ...CRM_ALL,
     });
   });
@@ -245,6 +309,7 @@ describe('MobileCapabilitiesService', () => {
         opportunities: true,
         opportunitiesCreate: true,
         projects: true,
+        ...ASSETS_ALL,
         ...CRM_ALL,
       });
     });

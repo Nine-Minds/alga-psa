@@ -3,6 +3,7 @@
  * Handles all quote-related API endpoints with API key authentication
  */
 
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiBaseController } from './ApiBaseController';
 import type { AuthenticatedApiRequest } from '../middleware/apiMiddleware';
@@ -22,7 +23,6 @@ import {
   runWithTenant,
 } from '../../db';
 import { getConnection } from '../../db/db';
-import { hasPermission } from '../../auth/rbac';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import {
   BuiltinAuthorizationKernelProvider,
@@ -83,7 +83,7 @@ export class ApiQuoteController extends ApiBaseController {
     }
 
     const knex = await getConnection(apiRequest.context.tenant);
-    const allowed = await hasPermission(apiRequest.context.user, 'quotes', 'approve', knex);
+    const allowed = await hasApiContextPermission(apiRequest.context, 'quotes', 'approve', knex);
     if (!allowed) {
       throw new ForbiddenError('Permission denied: Cannot approve quote');
     }
@@ -435,7 +435,7 @@ export class ApiQuoteController extends ApiBaseController {
         });
       } catch (error) {
         if (error instanceof ZodError) {
-          return handleApiError(new ValidationError('Validation failed', error.errors));
+          return handleApiError(new ValidationError('Validation failed', error.issues));
         }
         return handleApiError(error);
       }
@@ -469,7 +469,7 @@ export class ApiQuoteController extends ApiBaseController {
         });
       } catch (error) {
         if (error instanceof ZodError) {
-          return handleApiError(new ValidationError('Validation failed', error.errors));
+          return handleApiError(new ValidationError('Validation failed', error.issues));
         }
         return handleApiError(error);
       }
@@ -524,7 +524,7 @@ export class ApiQuoteController extends ApiBaseController {
         });
       } catch (error) {
         if (error instanceof ZodError) {
-          return handleApiError(new ValidationError('Validation failed', error.errors));
+          return handleApiError(new ValidationError('Validation failed', error.issues));
         }
         return handleApiError(error);
       }
@@ -555,7 +555,7 @@ export class ApiQuoteController extends ApiBaseController {
         });
       } catch (error) {
         if (error instanceof ZodError) {
-          return handleApiError(new ValidationError('Validation failed', error.errors));
+          return handleApiError(new ValidationError('Validation failed', error.issues));
         }
         return handleApiError(error);
       }
@@ -582,7 +582,7 @@ export class ApiQuoteController extends ApiBaseController {
         });
       } catch (error) {
         if (error instanceof ZodError) {
-          return handleApiError(new ValidationError('Validation failed', error.errors));
+          return handleApiError(new ValidationError('Validation failed', error.issues));
         }
         return handleApiError(error);
       }
@@ -684,7 +684,7 @@ export class ApiQuoteController extends ApiBaseController {
         });
       } catch (error) {
         if (error instanceof ZodError) {
-          return handleApiError(new ValidationError('Validation failed', error.errors));
+          return handleApiError(new ValidationError('Validation failed', error.issues));
         }
         return handleApiError(error);
       }
@@ -738,7 +738,7 @@ export class ApiQuoteController extends ApiBaseController {
         });
       } catch (error) {
         if (error instanceof ZodError) {
-          return handleApiError(new ValidationError('Validation failed', error.errors));
+          return handleApiError(new ValidationError('Validation failed', error.issues));
         }
         return handleApiError(error);
       }

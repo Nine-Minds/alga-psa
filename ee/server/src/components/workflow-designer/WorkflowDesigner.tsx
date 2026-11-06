@@ -3920,6 +3920,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     if (itemWithAction.groupKey || itemWithAction.iconToken) {
       switch (itemWithAction.iconToken ?? itemWithAction.groupKey) {
         case 'ticket': return <Ticket className={iconClass} />;
+        case 'maintenance': return <Cog className={iconClass} />;
         case 'contact': return <Contact className={iconClass} />;
         case 'client': return <Building className={iconClass} />;
         case 'communication': return <Mail className={iconClass} />;
@@ -4566,7 +4567,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                           setDateOffsetDirection('on');
                                           setTriggerTypeSelection('date');
                                           handleDefinitionChange({
-                                            trigger: buildDateTriggerForSource(dateSource, activeDefinition?.trigger?.type === 'date' ? (activeDefinition.trigger as Record<string, unknown>) : undefined),
+                                            trigger: buildDateTriggerForSource(dateSource, activeDefinition?.trigger?.type === 'date' ? (activeDefinition.trigger as Record<string, unknown>) : undefined) as WorkflowDefinition['trigger'],
                                             payloadSchemaRef: dateSource.payloadSchemaRef,
                                           });
                                           return;
@@ -4737,7 +4738,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                     }))}
                                     onValueChange={(value) => {
                                       const nextDefinition = getDateTriggerSourceDefinition(value);
-                                      const nextTrigger = buildDateTriggerForSource(nextDefinition!, dateTrigger as Record<string, unknown>);
+                                      const nextTrigger = buildDateTriggerForSource(nextDefinition!, dateTrigger as Record<string, unknown>) as WorkflowDefinition['trigger'];
                                       if (!nextDefinition?.usesOffset) setDateOffsetDirection('on');
                                       handleDefinitionChange({ trigger: nextTrigger, payloadSchemaRef: DATE_TRIGGER_PAYLOAD_SCHEMA_REFS[value as keyof typeof DATE_TRIGGER_PAYLOAD_SCHEMA_REFS] });
                                     }}

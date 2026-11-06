@@ -10,7 +10,7 @@ import {
   quoteSupersededEventPayloadSchema,
   quoteCancelledEventPayloadSchema,
 } from './quoteEventSchemas';
-import { ZodTypeAny } from 'zod';
+import type { ZodType } from 'zod';
 import {
   emailProviderConnectedEventPayloadSchema,
   emailProviderDisconnectedEventPayloadSchema,
@@ -205,6 +205,7 @@ import {
   inventoryCountApprovedEventPayloadSchema,
   inventoryPoReceivedEventPayloadSchema,
   inventoryRmaCreatedEventPayloadSchema,
+  inventoryRmaUpdatedEventPayloadSchema,
   inventorySoFulfilledEventPayloadSchema,
   inventoryStockLowEventPayloadSchema,
   inventoryCountSubmittedEventPayloadSchema,
@@ -218,7 +219,7 @@ import {
   inventoryTransferReceivedEventPayloadSchema,
 } from './inventoryEventSchemas';
 
-export const workflowEventPayloadSchemas: Record<string, ZodTypeAny> = {
+export const workflowEventPayloadSchemas: Record<string, ZodType<any, any>> = {
   // Existing/already-present
   'payload.TicketCreated.v1': ticketCreatedEventPayloadSchema,
   'payload.TicketUpdated.v1': ticketUpdatedEventPayloadSchema,
@@ -432,6 +433,7 @@ export const workflowEventPayloadSchemas: Record<string, ZodTypeAny> = {
   'payload.InventoryPoReceived.v1': inventoryPoReceivedEventPayloadSchema,
   'payload.InventorySoFulfilled.v1': inventorySoFulfilledEventPayloadSchema,
   'payload.InventoryRmaCreated.v1': inventoryRmaCreatedEventPayloadSchema,
+  'payload.InventoryRmaUpdated.v1': inventoryRmaUpdatedEventPayloadSchema,
   'payload.InventorySalesOrderCreated.v1': inventorySalesOrderCreatedEventPayloadSchema,
   'payload.InventorySalesOrderUpdated.v1': inventorySalesOrderUpdatedEventPayloadSchema,
   'payload.InventorySalesOrderDeleted.v1': inventorySalesOrderDeletedEventPayloadSchema,

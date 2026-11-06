@@ -14,6 +14,8 @@ RUN case "$TARGETARCH" in amd64|arm64) ;; *) echo "Unsupported kubectl architect
 
 WORKDIR /app
 ENV NODE_PATH=/app/shared/node_modules
+# The image does not copy the repository .npmrc; peers such as openai@4 still declare zod 3.
+ENV NPM_CONFIG_LEGACY_PEER_DEPS=true
 
 COPY shared/ /app/shared
 COPY packages/ /app/packages/
@@ -26,13 +28,13 @@ COPY tsconfig.base.json /app/tsconfig.base.json
 COPY tsconfig.json /app/tsconfig.json
 
 WORKDIR /app/packages/integrations
-RUN npm install --ignore-scripts
+RUN npm install --ignore-scripts --legacy-peer-deps
 
 WORKDIR /app/ee/temporal-workflows
 # Install global build tooling required by shared package scripts
 RUN npm install -g typescript
 # Install dependencies (skip prepare scripts to avoid building shared during base stage)
-RUN npm install --ignore-scripts
+RUN npm install --ignore-scripts --legacy-peer-deps
 
 # Development stage
 FROM base AS development
@@ -137,6 +139,8 @@ COPY ee/server/seeds/onboarding /app/ee/temporal-workflows/dist/seeds/onboarding
 # when the source checkout is absent. tenantDb.cjs travels with it: the catalog
 # modules require it as ../tenantDb.cjs.
 COPY server/migrations/utils/permissions /app/ee/temporal-workflows/dist/seeds/permissions
+# Edition contributions to the catalog (loaded from ./contributions when packaged).
+COPY ee/server/permission-catalog /app/ee/temporal-workflows/dist/seeds/permissions/contributions
 COPY server/migrations/utils/tenantDb.cjs /app/ee/temporal-workflows/dist/seeds/tenantDb.cjs
 
 # Verify seeds were copied (debug step)
@@ -150,6 +154,8 @@ FROM base AS prebuilt
 COPY ee/temporal-workflows/dist /app/ee/temporal-workflows/dist
 COPY ee/server/seeds/onboarding /app/ee/temporal-workflows/dist/seeds/onboarding
 COPY server/migrations/utils/permissions /app/ee/temporal-workflows/dist/seeds/permissions
+# Edition contributions to the catalog (loaded from ./contributions when packaged).
+COPY ee/server/permission-catalog /app/ee/temporal-workflows/dist/seeds/permissions/contributions
 COPY server/migrations/utils/tenantDb.cjs /app/ee/temporal-workflows/dist/seeds/tenantDb.cjs
 
 RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds directory not found in prebuilt stage"
