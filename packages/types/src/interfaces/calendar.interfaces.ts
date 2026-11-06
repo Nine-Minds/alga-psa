@@ -116,7 +116,32 @@ export interface ExternalCalendarEvent {
     name?: string;
     responseStatus?: 'needsAction' | 'accepted' | 'declined' | 'tentative';
   }>;
-  recurrence?: string[]; // RRULE strings
+  recurrence?: string[]; // RRULE/EXDATE/RDATE lines as returned by the provider
+  /**
+   * Id of the series master this event belongs to (Google `recurringEventId`,
+   * Graph `seriesMasterId`). Set on expanded occurrences and on exceptions only.
+   */
+  recurringEventId?: string;
+  /** The occurrence slot this instance was generated for, before any move. */
+  originalStartTime?: {
+    dateTime?: string;
+    date?: string;
+    timeZone?: string;
+  };
+  /**
+   * IANA zone the recurrence rule is anchored in, so occurrences keep their
+   * local wall-clock time across DST. Google carries it on `start.timeZone`;
+   * Graph answers `start` in UTC unless asked otherwise and keeps the series'
+   * own zone on `recurrence.range.recurrenceTimeZone`, which is where this
+   * comes from.
+   */
+  recurrenceTimeZone?: string;
+  /**
+   * How this event relates to a series. `single` is a standalone event,
+   * `master` carries the recurrence rule, `occurrence`/`exception` are expanded
+   * instances (an `exception` was moved or edited away from the series).
+   */
+  instanceType?: 'master' | 'occurrence' | 'exception' | 'single';
   status?: 'confirmed' | 'tentative' | 'cancelled';
   htmlLink?: string; // Link to view event in external calendar
   iCalUID?: string; // iCalendar UID
@@ -152,6 +177,15 @@ export interface CalendarEventMapping {
   sync_direction?: 'to_external' | 'from_external';
   alga_last_modified?: string; // ISO date
   external_last_modified?: string; // ISO date
+  /**
+   * On a series master's mapping: the expanded occurrences seen for it, as
+   * `{ <provider occurrence id>: <occurrence start ISO> }`. Microsoft reports a
+   * cancelled occurrence as an `@removed` item carrying nothing but an opaque id
+   * that then 404s on GET, so this is the only way to turn that into an
+   * exception date on the right series. Google needs no index (events.get still
+   * serves a cancelled instance with its `recurringEventId`).
+   */
+  occurrence_index?: Record<string, string> | null;
   created_at: string; // ISO date
   updated_at: string; // ISO date
 }
