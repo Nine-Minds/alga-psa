@@ -1,83 +1,84 @@
 #!/usr/bin/env node
+// CM L8b owns the ACTIVATION half of this CLI. `--inspect`, `--restore` and `--cleanup-uploads` belong to
+// CM L7b2, which adds them to the same option table and dispatcher below.
+import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Writable } from 'node:stream';
 import { createInterface } from 'node:readline';
 import { config } from 'dotenv';
+import { constants } from 'node:fs';
+import { open } from 'node:fs/promises';
 
-const HELP = `Portable workspace restore (installation operator; restore half only)
+const HELP = `Portable workspace activation (installation operator)
 
 Run from server with:
   npm exec -- tsx --tsconfig ../ee/server/tsconfig.json scripts/restore-portable-workspace.ts <options>
 
-  --inspect --archive /absolute/backup.alga
-  --apply   --archive /absolute/backup.alga --destination-tenant <new UUID> --administrator-user-id <source UUID> [--max-staged-bytes N]
-  --resume  --archive /absolute/backup.alga --destination-tenant <same UUID> --administrator-user-id <source UUID> [--max-staged-bytes N]
-  --help    Show this help without connecting to the database.
+  --activate --destination-tenant <restored UUID> --operation-id <retained UUID> --license-file /absolute/own-pro-license.jwt
+  --activate-hosted --destination-tenant <restored UUID> --operation-id <retained UUID>
+  --password-stdin      Read the new administrator password from a protected pipe.
+  --help               Show this help without connecting to the database.
 
-Passphrase: read from the ALGA_PORTABLE_RESTORE_PASSPHRASE environment variable, else from stdin (a protected
-pipe, exact UTF-8 bytes, or a hidden terminal prompt). It is never accepted as a command argument; any
---passphrase option is rejected.
-Staged bytes are capped (default 16 GiB; --max-staged-bytes overrides) before any storage write.
-The restored tenant stays suspended (portable_restore_suspensions) until a later activation step; this tool
-performs no activation or billing. FORCE_CAPABILITIES=co-managed:off disables it entirely.
+Activation accepts only a licence or subscription the customer owns, plus a NEW administrator password.
+The restored administrator is enabled; other users and restored dispatch remain inactive.
+The activation receipt is printed as JSON.
 `;
 
-const MODES = ['--inspect', '--apply', '--resume'];
 function args(argv: string[]) {
   const values: Record<string, string | true> = {};
-  const fields = new Set(['--archive', '--destination-tenant', '--administrator-user-id', '--max-staged-bytes']);
+  const flags = new Set(['--activate', '--activate-hosted', '--password-stdin', '--help']);
+  const fields = new Set(['--destination-tenant', '--operation-id', '--license-file']);
   for (let i = 0; i < argv.length; i++) {
     const key = argv[i];
-    if (/^--passphrase/.test(key) || /^--password/.test(key)) throw new Error('Secrets are never accepted as arguments');
     if (key in values) throw new Error('Repeated option');
-    if (MODES.includes(key) || key === '--help') values[key] = true;
+    if (flags.has(key)) values[key] = true;
     else if (fields.has(key) && argv[i + 1] && !argv[i + 1].startsWith('--')) values[key] = argv[++i];
     else throw new Error('Unknown option or missing value');
   }
   if (values['--help']) return values;
-  if (MODES.filter(key => values[key]).length !== 1) throw new Error('Choose inspect, apply or resume');
-  if (typeof values['--archive'] !== 'string') throw new Error('Archive required');
-  if (values['--inspect']) {
-    if (['--destination-tenant', '--administrator-user-id', '--max-staged-bytes'].some(key => values[key])) throw new Error('Inspect does not take restore options');
-  } else if (typeof values['--destination-tenant'] !== 'string' || typeof values['--administrator-user-id'] !== 'string') {
-    throw new Error('Restore requires destination and source administrator UUIDs');
-  }
-  if ('--max-staged-bytes' in values && !/^[1-9][0-9]{0,15}$/.test(String(values['--max-staged-bytes']))) throw new Error('Invalid staged-bytes cap');
+  if (['--activate', '--activate-hosted'].filter(key => values[key]).length !== 1) throw new Error('Choose activate or activate-hosted');
+  if (['--destination-tenant', '--operation-id'].some(key => typeof values[key] !== 'string') ||
+      (values['--activate'] && typeof values['--license-file'] !== 'string') ||
+      (values['--activate-hosted'] && values['--license-file'])) throw new Error('Activation options are invalid');
   return values;
 }
 
-/** The shared kill switch: `FORCE_CAPABILITIES=co-managed:off` (or a malformed co-managed entry) disables the tool. */
-const capabilityForcedOff = async () => {
-  const { forcedValue } = await import('@alga-psa/core/capability');
-  const state = forcedValue(process.env.FORCE_CAPABILITIES, 'co-managed');
-  return state === 'off' || state === 'malformed';
-};
-
-async function passphrase(): Promise<string> {
-  const fromEnv = process.env.ALGA_PORTABLE_RESTORE_PASSPHRASE;
-  delete process.env.ALGA_PORTABLE_RESTORE_PASSPHRASE;
-  if (fromEnv) return fromEnv;
-  if (!process.stdin.isTTY) {
+async function password(fromPipe: boolean, label: string): Promise<string> {
+  if (fromPipe) {
+    if (process.stdin.isTTY) throw new Error('Password stdin requires a protected pipe');
     const chunks: Buffer[] = []; let size = 0;
     try {
       for await (const input of process.stdin) {
         const chunk = Buffer.from(input); chunks.push(chunk); size += chunk.length;
-        if (size > 1024) throw new Error('Passphrase exceeds 1024 UTF-8 bytes');
+        if (size > 1024) throw new Error('Password exceeds 1024 UTF-8 bytes');
       }
       const bytes = Buffer.concat(chunks);
       try { return new TextDecoder('utf-8', { fatal: true }).decode(bytes); } finally { bytes.fill(0); }
     } finally { for (const chunk of chunks) chunk.fill(0); }
   }
-  if (!process.stderr.isTTY) throw new Error('Use an interactive terminal, a protected pipe or the environment variable');
-  process.stderr.write('Archive passphrase: ');
+  if (!process.stdin.isTTY || !process.stderr.isTTY) throw new Error('Use an interactive terminal or --password-stdin');
+  process.stderr.write(`${label}: `);
   const hidden = new Writable({ write(_chunk, _encoding, callback) { callback(); } });
   const rl = createInterface({ input: process.stdin, output: hidden, terminal: true });
-  try { return await new Promise<string>((resolvePhrase, reject) => {
-    rl.once('line', resolvePhrase);
+  try { return await new Promise<string>((resolvePassword, reject) => {
+    rl.once('line', resolvePassword);
     rl.once('SIGINT', () => reject(new Error('Cancelled')));
-    rl.once('close', () => reject(new Error('Passphrase input closed')));
+    rl.once('close', () => reject(new Error('Password input closed')));
   }); } finally { rl.close(); hidden.end(); process.stderr.write('\n'); }
+}
+
+async function licenseFile(path: string): Promise<string> {
+  const file = await open(resolve(path), constants.O_RDONLY | constants.O_NOFOLLOW);
+  const bytes = Buffer.alloc(16_385);
+  try {
+    const stat = await file.stat();
+    if (!stat.isFile() || stat.size < 1 || stat.size > 16_384) throw new Error('Invalid license file');
+    let size = 0;
+    while (size < bytes.length) { const read = await file.read(bytes, size, bytes.length - size); if (!read.bytesRead) break; size += read.bytesRead; }
+    if (size !== stat.size) throw new Error('License file changed');
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes.subarray(0, size));
+  } finally { bytes.fill(0); await file.close(); }
 }
 
 let phase = 'options';
@@ -86,36 +87,29 @@ async function main() {
   if (options['--help']) { process.stdout.write(HELP); return; }
   phase = 'environment';
   config({ path: fileURLToPath(new URL('../../.env', import.meta.url)), quiet: true });
-  if (await capabilityForcedOff()) throw new Error('Capability disabled');
-  phase = 'passphrase input';
-  let phrase = await passphrase();
+  phase = 'password input';
+  let secret = await password(!!options['--password-stdin'], 'New administrator password');
   let db: import('knex').Knex | undefined;
   try {
-    if (Buffer.byteLength(phrase, 'utf8') < 16 || Buffer.byteLength(phrase, 'utf8') > 1024) throw new Error('Invalid secret length');
-    phase = 'restore module loading';
-    // Dynamic import (not require): the storage package exports are import-only, so a CJS require of the
-    // EE modules fails with ERR_PACKAGE_PATH_NOT_EXPORTED. Loaded only after help/options/kill-switch/input.
-    const restore = await import('../../ee/server/src/lib/co-managed/portableWorkspaceRestore');
-    const archivePath = resolve(String(options['--archive']));
-    if (options['--inspect']) {
-      phase = 'archive inspection';
-      process.stdout.write(`${JSON.stringify(await restore.inspectPortableWorkspaceArchive(archivePath, phrase), null, 2)}\n`);
-      return;
-    }
-    phase = 'database connection';
-    const { getAdminConnection } = await import('@alga-psa/db/admin');
-    db = await getAdminConnection();
-    phase = 'workspace restore';
-    const result = await restore.restorePortableWorkspaceForInstallation(db, { archivePath, passphrase: phrase, resume: !!options['--resume'],
-      destinationTenant: String(options['--destination-tenant']), sourceAdministratorUserId: String(options['--administrator-user-id']),
-      ...(options['--max-staged-bytes'] ? { maxStagedBytes: Number(options['--max-staged-bytes']) } : {}) });
-    process.stdout.write(`${JSON.stringify({ ...result, status: 'restored; the tenant remains suspended pending activation' }, null, 2)}\n`);
-  } finally { phrase = ''; await db?.destroy(); }
+    if (!options['--password-stdin'] && secret !== await password(false, 'Confirm administrator password')) throw new Error('Passwords differ');
+    if (Buffer.byteLength(secret, 'utf8') < 8 || Buffer.byteLength(secret, 'utf8') > 1024) throw new Error('Invalid secret length');
+    // EE sources are CJS under tsx; defer loading them until after help/input.
+    phase = 'activation module loading';
+    const require = createRequire(import.meta.url);
+    const { activatePortableWorkspaceWithTenantLicense, activatePortableWorkspaceWithHostedSubscription } = require('../../ee/server/src/lib/co-managed/portableWorkspaceActivation') as typeof import('../../ee/server/src/lib/co-managed/portableWorkspaceActivation');
+    const { getAdminConnection } = require('@alga-psa/db/admin') as typeof import('@alga-psa/db/admin');
+    phase = 'database connection'; db = await getAdminConnection();
+    phase = 'workspace activation';
+    const activation = { tenant: String(options['--destination-tenant']), operationId: String(options['--operation-id']), administratorPassword: secret };
+    const log = { info() {}, error() {} };
+    const receipt = options['--activate-hosted'] ? await activatePortableWorkspaceWithHostedSubscription(db, activation, log)
+      : await activatePortableWorkspaceWithTenantLicense(db, { ...activation, licenseToken: await licenseFile(String(options['--license-file'])) }, log);
+    process.stdout.write(`${JSON.stringify({ ...receipt, status: 'activation recorded; review current workspace and workflow state before use' }, null, 2)}\n`);
+  } finally { secret = ''; await db?.destroy(); }
 }
 
 main().catch(() => {
-  // Provider/database errors may contain secrets or imported values. Keep the
-  // operator failure output deliberately bounded and never print raw errors.
-  process.stderr.write(`Portable workspace operation failed during ${phase}. Check options, archive passphrase, destination identity, storage, and database authority.\n`);
+  // Provider/database errors may contain secrets. Keep operator failure output bounded.
+  process.stderr.write(`Portable workspace activation failed during ${phase}. Check options, licence or subscription, destination identity and database authority.\n`);
   process.exitCode = 1;
 });
