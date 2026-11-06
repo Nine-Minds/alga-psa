@@ -43,6 +43,7 @@ export default defineConfig({
       'src/activities/__tests__/teamsObservabilityTenantDeletionOrder.test.ts',
       'src/activities/__tests__/coManagedTenantDeletion.test.ts',
       'src/activities/__tests__/coManagedTenantDeletionOrder.test.ts',
+      'src/activities/__tests__/servicePrincipalsTenantDeletionOrder.test.ts',
       'src/activities/__tests__/tenant-email-ingestion-activities.test.ts',
       'src/db/__tests__/tenant-operations.email-settings.test.ts',
       'src/activities/__tests__/product-upgrade-activities.test.ts',

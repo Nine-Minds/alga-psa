@@ -674,7 +674,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
 
 // The composed manifest (db/tenantTableManifest) owns membership and order; the array above is its
 // golden projection, asserted element-for-element by db/__tests__/tenantTableManifest.test.ts.
-const TENANT_TABLES_DELETION_SET = new Set(tenantDeletionOrder());
+const TENANT_TABLES_DELETION_SET = new Set(tenantDeletionOrder(TENANT_TABLE_MANIFEST));
 const MANAGEMENT_TENANT_DISCOVERY_CONTEXT = '__tenant_deletion_management_tenant_discovery__';
 
 type TenantColumnName = 'tenant' | 'tenant_id';

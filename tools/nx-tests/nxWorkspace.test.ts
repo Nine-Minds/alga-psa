@@ -63,6 +63,7 @@ describe('nx workspace', () => {
   });
 
   it('plans standalone database builds without application or worker tasks', { timeout: 180_000 }, async () => {
+    // LEVERAGE: pattern nx-build-plan-fixture — task graph fixtures repeat across build boundary checks
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-nx-db-build-'));
     try {
       const outFile = path.join(tmpDir, 'tasks.json');
@@ -81,6 +82,7 @@ describe('nx workspace', () => {
   });
 
   it('plans dependency builds without prematurely building the server', { timeout: 180_000 }, async () => {
+    // LEVERAGE: pattern nx-build-plan-fixture — task graph fixtures repeat across build boundary checks
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-nx-build-deps-'));
     try {
       const outFile = path.join(tmpDir, 'tasks.json');
@@ -105,6 +107,7 @@ describe('nx workspace', () => {
   });
 
   it('plans standalone integrations builds without pulling in the server', { timeout: 180_000 }, async () => {
+    // LEVERAGE: pattern nx-build-plan-fixture — task graph fixtures repeat across build boundary checks
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-nx-integrations-build-'));
     try {
       const outFile = path.join(tmpDir, 'tasks.json');
