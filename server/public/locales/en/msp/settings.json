@@ -1858,10 +1858,15 @@
         "label": "Enable Notifications",
         "description": "Toggle all notifications on or off for this tenant"
       },
+      "defaultDontNotifyCustomer": {
+        "label": "Start tickets with \"Don't notify the customer\" ticked",
+        "description": "Ticket comments, status and contact changes, and closures start with customer notifications off. Agents can untick the box to notify the customer for a single action."
+      },
       "loading": "Loading notification settings...",
       "loadError": "Failed to load settings",
       "save": "Save Changes",
-      "saving": "Saving..."
+      "saving": "Saving...",
+      "saveError": "Failed to save notification settings"
     },
     "emailTemplatesUi": {
       "preview": {

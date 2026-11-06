@@ -1858,10 +1858,15 @@
         "label": "Activer les notifications",
         "description": "Activer ou désactiver toutes les notifications pour ce locataire"
       },
+      "defaultDontNotifyCustomer": {
+        "label": "Démarrer les tickets avec « Ne pas notifier le client » coché",
+        "description": "Les commentaires, changements de statut et de contact et clôtures de tickets démarrent sans notification client. Les agents peuvent décocher la case pour notifier le client lors d'une action ponctuelle."
+      },
       "loading": "Chargement des paramètres de notification...",
       "loadError": "Échec du chargement des paramètres",
       "save": "Enregistrer les modifications",
-      "saving": "Enregistrement..."
+      "saving": "Enregistrement...",
+      "saveError": "Impossible d'enregistrer les paramètres de notification"
     },
     "emailTemplatesUi": {
       "preview": {

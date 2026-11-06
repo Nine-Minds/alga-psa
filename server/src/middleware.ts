@@ -251,6 +251,9 @@ export function shouldSkipApiKeyAuth(pathname: string): boolean {
     // session, run capabilityRouteGuard and resolveAttachmentAccess (denied, closed or
     // kill-switched readers get 404). Single-segment ids only; no nested paths.
     /^\/api\/co-management\/attachments\/[^/]+$/.test(pathname) ||
+    // Archived conversation bytes: the route independently checks the session,
+    // capability, sealed-manifest membership and archive ownership.
+    /^\/api\/co-management\/archive-files\/[^/]+$/.test(pathname) ||
     /^\/api\/client-portal\/conversation-attachments\/[^/]+$/.test(pathname) ||
     exactApiKeySkipPaths.includes(pathname) ||
     apiKeySkipPaths.some((path) => pathname.startsWith(path)) ||

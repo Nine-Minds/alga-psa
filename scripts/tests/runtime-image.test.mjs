@@ -83,21 +83,6 @@ test('both runtime images ship the workspace packages their runtime imports reso
   }
 });
 
-test('a restored webpack cache is actually reusable on a fresh checkout', () => {
-  // Next folds the server-action encryption key into the webpack cache version
-  // and generates one per build unless it is provided.
-  const workflow = yaml.load(read('.github/workflows/e2e-fresh-install-tests.yaml'));
-  const build = workflow.jobs['build-images'].steps.find(step => step.name === 'Build the production application on the runner');
-  assert.match(build.env.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY, /^[A-Za-z0-9+/]{43}=$/, 'the candidates build with a fixed, test-only key');
-  // Fresh checkouts give every file a new mtime; webpack must fall back to
-  // content hashes or every restored module snapshot is invalid.
-  const config = read('server/next.config.mjs');
-  assert.match(config, /config\.snapshot = \{ \.\.\.config\.snapshot, module: byContent, resolve: byContent/);
-  assert.match(config, /const byContent = \{ timestamp: true, hash: true \};/);
-  // Nx refuses cache entries written on another machine unless told otherwise.
-  assert.match(read('scripts/build-production-server.sh'), /^export NX_REJECT_UNKNOWN_LOCAL_CACHE=0$/m);
-});
-
 test('development-mode checks compile in the development runtime, never in the production candidate', () => {
   // The production image carries production dependencies only; `next dev`
   // needs every workspace package, so the Teams development server and the

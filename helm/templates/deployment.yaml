@@ -434,6 +434,14 @@ spec:
             value: "server"
           - name: DB_USER_ADMIN
             value: "postgres"
+          # Admin and pg-boss connections go straight to Postgres, never through
+          # PgBouncer (see "pgbouncer: serve only the application role"). Without
+          # these the runtime inherits DB_HOST_ADMIN=postgres from the baked-in
+          # .env.example and admin pools fail with ENOTFOUND.
+          - name: DB_HOST_ADMIN
+            value: "db.{{ include "sebastian.namespace" . }}.svc.cluster.local"
+          - name: DB_PORT_ADMIN
+            value: "{{ .Values.db.service.port | default 5432 }}"
           - name: DB_PASSWORD_ADMIN
             valueFrom:
               secretKeyRef:
@@ -460,6 +468,12 @@ spec:
             value: "postgres"
           - name: DB_PORT
             value: "{{ .Values.config.db.port }}"
+          # Explicit admin endpoint so the baked-in .env.example default
+          # (DB_HOST_ADMIN=postgres) never leaks into the runtime.
+          - name: DB_HOST_ADMIN
+            value: "{{ .Values.config.db.adminHost | default .Values.config.db.host }}"
+          - name: DB_PORT_ADMIN
+            value: "{{ .Values.config.db.adminPort | default .Values.config.db.port }}"
           - name: DB_NAME_SERVER
             value: "{{ .Values.config.db.server_database }}"
           - name: DB_PASSWORD_ADMIN

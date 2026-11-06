@@ -1858,10 +1858,15 @@
         "label": "Włącz powiadomienia",
         "description": "Włącz lub wyłącz wszystkie powiadomienia dla tej organizacji"
       },
+      "defaultDontNotifyCustomer": {
+        "label": "Rozpoczynaj zgłoszenia z zaznaczonym „Nie powiadamiaj klienta”",
+        "description": "Komentarze, zmiany statusu i kontaktu oraz zamknięcia zgłoszeń rozpoczynają się bez powiadomień klienta. Agenci mogą odznaczyć pole, aby powiadomić klienta przy pojedynczej akcji."
+      },
       "loading": "Ładowanie ustawień powiadomień...",
       "loadError": "Nie udało się załadować ustawień",
       "save": "Zapisz zmiany",
-      "saving": "Zapisywanie..."
+      "saving": "Zapisywanie...",
+      "saveError": "Nie udało się zapisać ustawień powiadomień"
     },
     "emailTemplatesUi": {
       "preview": {
