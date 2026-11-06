@@ -357,8 +357,7 @@
       "opportunityPlaceholder": "Opportunity ID (optional)",
       "pdfLayout": "PDF layout",
       "pdfLayoutPlaceholder": "Use default layout",
-      "pdfLayoutHelp": "Choose which layout the client will see. Leave default to use tenant default.",
-      "pdfLayoutByLocationHint": "A quote with items at two or more locations renders grouped by location while the default standard layout applies. Pick a layout above to override that."
+      "pdfLayoutHelp": "Choose which layout the client will see. Leave default to use tenant default."
     },
     "footer": {
       "savedAgo": "Changes saved · {{ago}}",
@@ -854,7 +853,6 @@
   "templatesPage": {
     "title": "Quote Layouts",
     "description": "Design the layouts used to render quote PDFs and previews.",
-    "byLocationNote": "Quotes with items at two or more locations automatically use the grouped-by-location standard layout while the default standard layout applies. A custom layout is always used exactly as designed.",
     "actions": {
       "openMenu": "Open menu"
     },

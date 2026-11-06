@@ -357,8 +357,7 @@
       "opportunityPlaceholder": "Gelegenheits-ID (optional)",
       "pdfLayout": "PDF-Layout",
       "pdfLayoutPlaceholder": "Standard-Layout verwenden",
-      "pdfLayoutHelp": "Wählen Sie das Layout, das der Kunde sieht. Leer lassen, um den Mandanten-Standard zu verwenden.",
-      "pdfLayoutByLocationHint": "Ein Angebot mit Positionen an zwei oder mehr Standorten wird nach Standort gruppiert dargestellt, solange das Standardlayout gilt. Wählen Sie oben ein Layout, um das zu überschreiben."
+      "pdfLayoutHelp": "Wählen Sie das Layout, das der Kunde sieht. Leer lassen, um den Mandanten-Standard zu verwenden."
     },
     "footer": {
       "savedAgo": "Änderungen gespeichert · {{ago}}",
@@ -854,7 +853,6 @@
   "templatesPage": {
     "title": "Angebotslayouts",
     "description": "Entwerfen Sie die Layouts, die zum Rendern von Angebots-PDFs und Vorschauen verwendet werden.",
-    "byLocationNote": "Angebote mit Positionen an zwei oder mehr Standorten verwenden automatisch das nach Standort gruppierte Standardlayout, solange das Standardlayout gilt. Ein eigenes Layout wird immer genau wie entworfen verwendet.",
     "actions": {
       "openMenu": "Menü öffnen"
     },

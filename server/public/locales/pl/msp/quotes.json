@@ -357,8 +357,7 @@
       "opportunityPlaceholder": "ID szansy (opcjonalnie)",
       "pdfLayout": "Układ PDF",
       "pdfLayoutPlaceholder": "Użyj domyślnego układu",
-      "pdfLayoutHelp": "Wybierz układ, który zobaczy klient. Pozostaw ustawienie domyślne, aby użyć domyślnego układu organizacji.",
-      "pdfLayoutByLocationHint": "Oferta z pozycjami w dwóch lub więcej lokalizacjach jest renderowana z grupowaniem według lokalizacji, dopóki obowiązuje standardowy układ domyślny. Wybierz powyżej układ, aby to zmienić."
+      "pdfLayoutHelp": "Wybierz układ, który zobaczy klient. Pozostaw ustawienie domyślne, aby użyć domyślnego układu organizacji."
     },
     "footer": {
       "savedAgo": "Zmiany zapisane · {{ago}}",
@@ -854,7 +853,6 @@
   "templatesPage": {
     "title": "Układy wyceny",
     "description": "Zaprojektuj układy używane do renderowania plików PDF z ofertami i podglądów.",
-    "byLocationNote": "Oferty z pozycjami w dwóch lub więcej lokalizacjach automatycznie używają standardowego układu grupowanego według lokalizacji, dopóki obowiązuje standardowy układ domyślny. Układ niestandardowy jest zawsze używany dokładnie tak, jak został zaprojektowany.",
     "actions": {
       "openMenu": "Otwórz menu"
     },

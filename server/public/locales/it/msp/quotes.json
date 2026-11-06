@@ -357,8 +357,7 @@
       "opportunityPlaceholder": "ID opportunità (opzionale)",
       "pdfLayout": "Layout PDF",
       "pdfLayoutPlaceholder": "Usa layout predefinito",
-      "pdfLayoutHelp": "Scegli quale layout vedrà il cliente. Lascia il predefinito per usare quello del tenant.",
-      "pdfLayoutByLocationHint": "Un preventivo con voci in due o più sedi viene reso raggruppato per sede finché si applica il layout standard predefinito. Scegli un layout qui sopra per sostituirlo."
+      "pdfLayoutHelp": "Scegli quale layout vedrà il cliente. Lascia il predefinito per usare quello del tenant."
     },
     "footer": {
       "savedAgo": "Modifiche salvate · {{ago}}",
@@ -854,7 +853,6 @@
   "templatesPage": {
     "title": "Layout preventivo",
     "description": "Progetta i layout utilizzati per il rendering dei PDF e delle anteprime dei preventivi.",
-    "byLocationNote": "I preventivi con voci in due o più sedi usano automaticamente il layout standard raggruppato per sede finché si applica il layout standard predefinito. Un layout personalizzato viene sempre usato esattamente come è stato progettato.",
     "actions": {
       "openMenu": "Apri il menu"
     },

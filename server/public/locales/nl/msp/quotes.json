@@ -357,8 +357,7 @@
       "opportunityPlaceholder": "Opportunity-ID (optioneel)",
       "pdfLayout": "Pdf-lay-out",
       "pdfLayoutPlaceholder": "Standaard lay-out gebruiken",
-      "pdfLayoutHelp": "Kies welke lay-out de klant ziet. Laat standaard staan om tenant-standaard te gebruiken.",
-      "pdfLayoutByLocationHint": "Een offerte met regels op twee of meer locaties wordt per locatie gegroepeerd weergegeven zolang de standaardlay-out geldt. Kies hierboven een lay-out om dat te overschrijven."
+      "pdfLayoutHelp": "Kies welke lay-out de klant ziet. Laat standaard staan om tenant-standaard te gebruiken."
     },
     "footer": {
       "savedAgo": "Wijzigingen opgeslagen · {{ago}}",
@@ -854,7 +853,6 @@
   "templatesPage": {
     "title": "Offertelayouts",
     "description": "Ontwerp de lay-outs die worden gebruikt om offerte-PDF's en voorbeelden weer te geven.",
-    "byLocationNote": "Offertes met regels op twee of meer locaties gebruiken automatisch de per locatie gegroepeerde standaardlay-out zolang de standaardlay-out geldt. Een eigen lay-out wordt altijd precies gebruikt zoals ontworpen.",
     "actions": {
       "openMenu": "Menu openen"
     },

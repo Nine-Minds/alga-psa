@@ -2072,11 +2072,6 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                       <span className="text-xs font-normal text-muted-foreground">
                         {t('quoteForm.moreDetails.pdfLayoutHelp', { defaultValue: 'Choose which layout the client will see. Leave default to use tenant default.' })}
                       </span>
-                      <span id="quote-document-layout-by-location-hint" className="text-xs font-normal text-muted-foreground">
-                        {t('quoteForm.moreDetails.pdfLayoutByLocationHint', {
-                          defaultValue: 'A quote with items at two or more locations renders grouped by location while the default standard layout applies. Pick a layout above to override that.',
-                        })}
-                      </span>
                     </div>
                   </div>
                 )}

@@ -357,8 +357,7 @@
       "opportunityPlaceholder": "ID da oportunidade (opcional)",
       "pdfLayout": "Layout de PDF",
       "pdfLayoutPlaceholder": "Usar layout padrão",
-      "pdfLayoutHelp": "Escolha qual layout o cliente verá. Deixe o padrão para usar o padrão do locatário.",
-      "pdfLayoutByLocationHint": "Uma cotação com itens em dois ou mais locais é renderizada agrupada por local enquanto o layout padrão se aplica. Selecione um layout acima para substituir isso."
+      "pdfLayoutHelp": "Escolha qual layout o cliente verá. Deixe o padrão para usar o padrão do locatário."
     },
     "footer": {
       "savedAgo": "Alterações salvas · {{ago}}",
@@ -854,7 +853,6 @@
   "templatesPage": {
     "title": "Layouts de cotação",
     "description": "Projete os layouts usados ​​para renderizar PDFs de cotação e visualizações.",
-    "byLocationNote": "Cotações com itens em dois ou mais locais usam automaticamente o layout padrão agrupado por local enquanto o layout padrão se aplica. Um layout personalizado é sempre usado exatamente como foi projetado.",
     "actions": {
       "openMenu": "Abrir menu"
     },
