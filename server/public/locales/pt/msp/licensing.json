@@ -747,7 +747,8 @@
       "reloadLatest": "Recarregar a versão mais recente",
       "rejected": "Não foi possível salvar esta tarefa.",
       "saved": "Salvo.",
-      "save": "Salvar"
+      "save": "Salvar",
+      "projectNotFound": "Este projeto não está disponível. Pode já não estar partilhado consigo."
     },
     "sla": {
       "title": "Prioridades de SLA em cogestão",

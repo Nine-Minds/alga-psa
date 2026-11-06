@@ -751,7 +751,8 @@
       "reloadLatest": "Wczytaj najnowszą wersję",
       "rejected": "Nie udało się zapisać tego zadania.",
       "saved": "Zapisano.",
-      "save": "Zapisz"
+      "save": "Zapisz",
+      "projectNotFound": "Ten projekt jest niedostępny. Możliwe, że nie jest już Ci udostępniany."
     },
     "sla": {
       "title": "Priorytety SLA we współzarządzaniu",

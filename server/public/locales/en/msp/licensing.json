@@ -718,6 +718,7 @@
       "unassigned": "Not assigned",
       "projectHeading": "Shared project tasks",
       "back": "Back to Shared Tasks",
+      "projectNotFound": "This project is not available. It may no longer be shared with you.",
       "search": "Search shared projects",
       "searchSubmit": "Search",
       "resultCount": "{{count}} results",
