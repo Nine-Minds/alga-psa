@@ -50,12 +50,92 @@ through the same writer and are consumed by the same import pipeline.
 
 ## Developer validation
 
-The workspace suite requires a migrated, disposable database named `amp_*_test`. It creates only
-synthetic tenants and uses a private in-memory object provider; it never starts the application:
+The workspace suite requires a migrated, disposable database named `amp_*_test`. The setup below
+applies the checkout's CE and EE migrations without seeds, so it creates schema and migration
+metadata only. Pick a new database name and confirm it does not exist first: the test database helper
+drops and recreates the exact `TEST_DB_NAME` it receives. Do not point it at a database containing
+tenant data. The suite then creates synthetic tenants and uses a private in-memory object provider;
+it never starts the application.
 
 ```bash
-cd server
-AMP_WORKSPACE_TEST_DATABASE=amp_workspace_test npx vitest run --config vitest.amp-workspace.config.ts
+export AMP_TEST_DB=amp_workspace_validation_test
+export DB_HOST=127.0.0.1 DB_PORT=5472 DB_USER_ADMIN=postgres
+export PGPASSWORD="$(cat secrets/postgres_password)"
+
+# Empty output means this isolated target name is available.
+psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER_ADMIN" -d postgres -Atc \
+  "select datname from pg_database where datname='$AMP_TEST_DB'"
+
+# The EE files overlay same-named CE files before any migration is applied.
+mkdir -p server/.ee-combined-migrations-amp
+cp -a server/migrations/. server/.ee-combined-migrations-amp/
+cp -a ee/server/migrations/. server/.ee-combined-migrations-amp/
+(
+  cd server
+  TEST_DB_NAME="$AMP_TEST_DB" \
+  TEST_MIGRATIONS_DIR="$PWD/.ee-combined-migrations-amp" \
+  npx tsx -e "import { createTestDbConnection } from './test-utils/dbConfig.ts'; void (async () => { const db = await createTestDbConnection({ runSeeds: false }); await db.destroy(); })();"
+)
+
+# Schema-only bootstrap must not create any tenants.
+test "$(psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER_ADMIN" -d "$AMP_TEST_DB" -Atc \
+  "select count(*) from tenants")" = 0
+
+(
+  cd server
+  AMP_WORKSPACE_TEST_DATABASE="$AMP_TEST_DB" \
+  AMP_WORKSPACE_TEST_EXPORT_PACKAGE=/tmp/amp-workspace-cli.amp \
+  npx vitest run --config vitest.amp-workspace.config.ts
+)
+
+node packages/migration-cli/bin/alga-migrate.mjs validate /tmp/amp-workspace-cli.amp
+node packages/migration-cli/bin/alga-migrate.mjs inspect /tmp/amp-workspace-cli.amp
+(
+  cd server
+  npm exec -- tsx --tsconfig ../ee/server/tsconfig.json scripts/import-amp-workspace.ts --help
+)
+```
+
+For a standalone restore check after the workspace suite, choose another fresh tenant UUID and run
+the documented importer with the same package. Query the newly created tenant's `documents` and
+`external_files` rows, then read the corresponding storage objects and compare their hashes with the
+known fixture payloads. CLI validation verifies the package attachment digests. Set
+`STORAGE_LOCAL_BASE_PATH` to a temporary directory for this check. The
+workspace integration test checks both record restore and byte equality via an isolated in-memory
+provider; the CLI check exercises the installation entry point against persistent local storage.
+
+Example standalone CLI/file-byte check (run only after confirming the target UUID is absent):
+
+```bash
+export AMP_TARGET_TENANT=8a8f60a6-e4c0-4650-9bb2-235b8c30e44f
+export AMP_STORAGE=/tmp/amp-workspace-cli-storage
+(
+  cd server
+  NODE_ENV=development DB_HOST="$DB_HOST" DB_PORT="$DB_PORT" DB_USER_ADMIN="$DB_USER_ADMIN" \
+  DB_PASSWORD_ADMIN="$(cat ../secrets/postgres_password)" DB_NAME_SERVER="$AMP_TEST_DB" \
+  STORAGE_DEFAULT_PROVIDER=local STORAGE_LOCAL_BASE_PATH="$AMP_STORAGE" \
+  npm exec -- tsx --tsconfig ../ee/server/tsconfig.json scripts/import-amp-workspace.ts \
+    --package /tmp/amp-workspace-cli.amp --tenant "$AMP_TARGET_TENANT" \
+    --name 'AMP CLI verification' --email amp-cli@example.invalid
+)
+
+document_path=$(psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER_ADMIN" -d "$AMP_TEST_DB" -Atc \
+  "select f.storage_path from documents d join external_files f on f.tenant=d.tenant and f.file_id=d.file_id where d.tenant='$AMP_TARGET_TENANT' and d.document_name='Runbook'")
+conversation_path=$(psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER_ADMIN" -d "$AMP_TEST_DB" -Atc \
+  "select f.storage_path from documents d join external_files f on f.tenant=d.tenant and f.file_id=d.file_id where d.tenant='$AMP_TARGET_TENANT' and d.document_name='conversation.txt'")
+expected=$(printf 'workspace document bytes\0' | sha256sum | cut -d' ' -f1)
+document_sha=$(sha256sum "$AMP_STORAGE/$document_path" | cut -d' ' -f1)
+conversation_sha=$(sha256sum "$AMP_STORAGE/$conversation_path" | cut -d' ' -f1)
+test "$document_sha" = "$expected"
+test "$(printf 'conversation bytes' | sha256sum | cut -d' ' -f1)" = "$conversation_sha"
+```
+
+After validation, remove the disposable database and temporary migration directory:
+
+```bash
+psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER_ADMIN" -d postgres -v ON_ERROR_STOP=1 \
+  -c "DROP DATABASE \"$AMP_TEST_DB\""
+node -e "require('node:fs').rmSync('server/.ee-combined-migrations-amp', { recursive: true, force: true })"
 ```
 
 The ordinary AMP pipeline suite recreates its own named test database. Run the Temporal case in a
@@ -69,6 +149,9 @@ TEST_DB_NAME=amp_pipeline_test npx vitest run --config vitest.amp-existing.confi
 TEST_DB_NAME=amp_temporal_test REAL_REDIS=1 npx vitest run --config vitest.amp-existing.config.ts \
   --testNamePattern='persists typed custom asset fields'
 ```
+
+These two pipeline databases are recreated by the runner. Use only new `amp_*_test` names that have
+been confirmed absent from the PostgreSQL instance; never use a database with tenant data.
 
 Fresh import targets use the native tenant dispatch suspension (`suspended_at`, reason
 `amp_workspace_review`) from creation onward. Job dispatch and tenant maintenance exclude them;

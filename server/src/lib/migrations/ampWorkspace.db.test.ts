@@ -106,6 +106,9 @@ describe('AMP workspace replacement', () => {
   it('exports a tenant snapshot with neutral domain records, files and explicit exclusions', async () => {
     const result = await new AmpExportService(db, source).exportWorkspace();
     await writeFile(packagePath, result.buffer);
+    if (process.env.AMP_WORKSPACE_TEST_EXPORT_PACKAGE) {
+      await copyFile(packagePath, process.env.AMP_WORKSPACE_TEST_EXPORT_PACKAGE);
+    }
     expect(validateAmpPackage(packagePath)).toMatchObject({ valid: true });
     const reader = new AmpSqliteReader(packagePath);
     try {
