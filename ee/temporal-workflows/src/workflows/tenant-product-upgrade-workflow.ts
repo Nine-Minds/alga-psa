@@ -9,6 +9,7 @@ import type * as productUpgradeActivities from '../activities/product-upgrade-ac
 export interface TenantProductUpgradeInput {
   tenantId: string;
   requestedByUserId: string;
+  coManaged?: import('@alga-psa/co-managed').CoManagedIndependentUpgradeCommand;
 }
 
 export interface TenantProductUpgradeStatus {
@@ -18,7 +19,7 @@ export interface TenantProductUpgradeStatus {
 
 type DatabaseActivities = Omit<
   typeof productUpgradeActivities,
-  'product_upgrade_stripe_swap'
+  'product_upgrade_stripe_swap' | 'product_upgrade_co_managed'
 >;
 
 const databaseActivities = proxyActivities<DatabaseActivities>({
@@ -36,6 +37,10 @@ const stripeActivities = proxyActivities<Pick<
     initialInterval: '1s',
     maximumInterval: '30s',
   },
+});
+
+const independentUpgradeActivities = proxyActivities<Pick<typeof productUpgradeActivities, 'product_upgrade_co_managed'>>({
+  startToCloseTimeout: '5m', retry: { maximumAttempts: 3, initialInterval: '1s', maximumInterval: '30s' },
 });
 
 export const productUpgradeStatusQuery = defineQuery<TenantProductUpgradeStatus>(
@@ -64,6 +69,13 @@ export async function tenantProductUpgradeWorkflow(
     tenantId: input.tenantId,
     requestedByUserId: input.requestedByUserId,
   });
+
+  if (input.coManaged) {
+    await runStep('product_upgrade_co_managed', () =>
+      independentUpgradeActivities.product_upgrade_co_managed(input.coManaged!));
+    status.currentStep = null;
+    return;
+  }
 
   await runStep('product_upgrade_preflight', () =>
     databaseActivities.product_upgrade_preflight(input.tenantId));

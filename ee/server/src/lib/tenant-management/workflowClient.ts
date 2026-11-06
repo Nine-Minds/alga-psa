@@ -55,6 +55,8 @@ const DEFAULT_TEMPORAL_TASK_QUEUE = 'tenant-workflows';
 export interface TenantProductUpgradeInput {
   tenantId: string;
   requestedByUserId: string;
+  /** Present only for an independent co-managed upgrade (CM L8b); absent = the AlgaDesk upgrade. */
+  coManaged?: import('@alga-psa/co-managed').CoManagedIndependentUpgradeCommand;
 }
 
 export type TenantProductUpgradeStartClientResult =

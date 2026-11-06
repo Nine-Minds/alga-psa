@@ -553,6 +553,9 @@
       },
       "export": {
         "title": "Eksportuj obszar roboczy"
+      },
+      "upgrade": {
+        "title": "Przejdź na AlgaPSA"
       }
     }
   },

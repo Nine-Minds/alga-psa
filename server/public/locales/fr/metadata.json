@@ -553,6 +553,9 @@
       },
       "export": {
         "title": "Exporter l'espace de travail"
+      },
+      "upgrade": {
+        "title": "Passer à AlgaPSA"
       }
     }
   },

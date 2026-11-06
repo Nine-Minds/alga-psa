@@ -553,6 +553,9 @@
       },
       "export": {
         "title": "Exportar espacio de trabajo"
+      },
+      "upgrade": {
+        "title": "Cambiar a AlgaPSA"
       }
     }
   },
