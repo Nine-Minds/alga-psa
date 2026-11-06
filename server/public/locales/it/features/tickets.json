@@ -1652,8 +1652,8 @@
       "teamNotFound": "Team non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
       "teamLeadNotFound": "Il team selezionato non ha un responsabile. Scegliere un altro team o assegnare prima un responsabile.",
       "commentNotFound": "Commento non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
-      "boardNotFound": "Board non trovata. Potrebbe essere stata eliminata. Aggiornare la pagina e riprovare.",
-      "boardInactive": "La board di destinazione è inattiva. Scegliere una board attiva."
+      "boardNotFound": "Bacheca non trovata. Potrebbe essere stata eliminata. Aggiornare la pagina e riprovare.",
+      "boardInactive": "La bacheca di destinazione è inattiva. Scegliere una bacheca attiva."
     },
     "bundle": {
       "masterAlreadyBundleMaster": "Il ticket {{tickets}} è già un ticket principale di raggruppamento e non può essere aggiunto come ticket figlio. Sciogliere prima il raggruppamento oppure usarlo come ticket principale.",

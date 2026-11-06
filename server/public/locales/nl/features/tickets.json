@@ -1652,8 +1652,8 @@
       "teamNotFound": "Team niet gevonden. Het is mogelijk verwijderd. Vernieuw de pagina en probeer het opnieuw.",
       "teamLeadNotFound": "Het geselecteerde team heeft geen teamleider. Kies een ander team of wijs eerst een teamleider toe.",
       "commentNotFound": "Reactie niet gevonden. Deze is mogelijk verwijderd. Vernieuw de pagina en probeer het opnieuw.",
-      "boardNotFound": "Board niet gevonden. Dit is mogelijk verwijderd. Vernieuw de pagina en probeer het opnieuw.",
-      "boardInactive": "Het doelboard is inactief. Kies een actief board."
+      "boardNotFound": "Bord niet gevonden. Dit is mogelijk verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "boardInactive": "Het doelbord is inactief. Kies een actief bord."
     },
     "bundle": {
       "masterAlreadyBundleMaster": "Ticket {{tickets}} is al een hoofdticket van een bundel en kan niet als onderliggend ticket worden toegevoegd. Hef de bundel eerst op of gebruik het als hoofdticket.",
