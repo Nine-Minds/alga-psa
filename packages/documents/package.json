@@ -50,6 +50,10 @@
       "import": "./src/lib/documentPreviewGenerator.ts",
       "types": "./src/lib/documentPreviewGenerator.ts"
     },
+    "./lib/secureHtmlPage": {
+      "import": "./src/lib/secureHtmlPage.ts",
+      "types": "./src/lib/secureHtmlPage.ts"
+    },
     "./lib/documentMarkdownExport": {
       "import": "./src/lib/documentMarkdownExport.ts",
       "types": "./src/lib/documentMarkdownExport.ts"

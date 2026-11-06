@@ -17,6 +17,7 @@ import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildDocumentGeneratedPayload } from '@alga-psa/workflow-streams';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- filing a generated PDF is a documents write; direct model access, as quoteActions did before this moved here
 import { Document as DocumentModel, DocumentAssociation } from '@alga-psa/documents/models';
+import { setSecureHtmlContent } from '@alga-psa/documents/lib/secureHtmlPage';
 import {
   getTenantDefaultLocale,
   getUserInfoForEmail,
@@ -205,6 +206,15 @@ interface RenderedPdf {
   templateVersion: number | null;
   /** The locale this render was produced in — labels and formatting both. */
   renderedLocale: string;
+}
+
+export function escapeHtmlText(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 const SALES_ORDER_DOCUMENT_PREFIX: Record<SalesOrderDocumentKind, string> = {
@@ -1225,17 +1235,14 @@ export class PDFGenerationService {
         }
       }
 
-      const escapedTitle = (document.document_name || 'Document')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
+      const escapedTitle = escapeHtmlText(document.document_name || 'Document');
 
       return `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${document.document_name || 'Document'}</title>
+    <title>${escapedTitle}</title>
     <style>
 ${PDF_FONT_FACE_CSS}
       body { font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif; margin: 0; padding: 5mm; }
@@ -1279,7 +1286,7 @@ ${PDF_FONT_FACE_CSS}
 
     try {
       page = await browser.newPage();
-      await page.setContent(htmlContent, { waitUntil: 'load' });
+      await setSecureHtmlContent(page, htmlContent);
       const pdfBuffer = await page.pdf(
         templateAst ? resolvePdfPrintOptionsFromAst(templateAst) : DEFAULT_DOCUMENT_PDF_OPTIONS
       );
