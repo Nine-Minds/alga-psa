@@ -71,8 +71,8 @@ COPY ./server/next.config.mjs ./server/
 COPY ./server/knexfile.cjs ./server/
 COPY ./server/tsconfig.json ./server/
 COPY ./server/index.ts ./server/
-COPY ./server/migrations/ ./server/migrations/
-COPY ./server/seeds/ ./server/seeds/
+COPY --chown=1000:1000 ./server/migrations/ ./server/migrations/
+COPY --chown=1000:1000 ./server/seeds/ ./server/seeds/
 COPY ./server/src/ ./server/src/
 COPY ./ee/packages/workflows/ ./ee/packages/workflows/
 COPY ./scripts ./scripts
