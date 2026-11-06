@@ -17,8 +17,19 @@ export const LABEL_TEMPLATE_VALUE_BINDINGS: LabelTemplateValueBindings = {
   detail: { id: 'detail', kind: 'value', path: 'detail', fallback: '' },
   secondaryIdentifier: { id: 'secondaryIdentifier', kind: 'value', path: 'secondaryIdentifier', fallback: '' },
   serialSuffix: { id: 'serialSuffix', kind: 'value', path: 'serialSuffix', fallback: '' },
+  assetSerialNumber: { id: 'assetSerialNumber', kind: 'value', path: 'assetSerialNumber', fallback: '' },
+  ticketDescription: { id: 'ticketDescription', kind: 'value', path: 'ticketDescription', fallback: '' },
   custodyLocation: { id: 'custodyLocation', kind: 'value', path: 'custodyLocation', fallback: '' },
   nextAction: { id: 'nextAction', kind: 'value', path: 'nextAction', fallback: '' },
+  // Ticket worksheet only: the full identification of the asset the label is about, behind the asset
+  // read check. The 4 x 2 in tag has no room for these; the full-page customer worksheet does.
+  assetName: { id: 'assetName', kind: 'value', path: 'linkedAsset.name', fallback: '' },
+  assetManufacturer: { id: 'assetManufacturer', kind: 'value', path: 'linkedAsset.manufacturer', fallback: '' },
+  assetModel: { id: 'assetModel', kind: 'value', path: 'linkedAsset.model', fallback: '' },
+  assetOs: { id: 'assetOs', kind: 'value', path: 'linkedAsset.osLine', fallback: '' },
+  assetCpu: { id: 'assetCpu', kind: 'value', path: 'linkedAsset.cpuLine', fallback: '' },
+  assetRam: { id: 'assetRam', kind: 'value', path: 'linkedAsset.ramLine', fallback: '' },
+  assetStorage: { id: 'assetStorage', kind: 'value', path: 'linkedAsset.storageLine', fallback: '' },
   // Display lines derived by the renderer AFTER hidden fields are nulled ("Asset {tag}", "S/N ...{suffix}").
   assetLine: { id: 'assetLine', kind: 'value', path: 'display.assetLine', fallback: '' },
   serialLine: { id: 'serialLine', kind: 'value', path: 'display.serialLine', fallback: '' },

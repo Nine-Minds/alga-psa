@@ -126,7 +126,28 @@
     "replacementSerial": "Serienummer vervanging",
     "shipping": "Verzending",
     "returnBy": "Retour vóór",
-    "returnShipTo": "Retour verzenden naar"
+    "returnShipTo": "Retour verzenden naar",
+    "worksheet": {
+      "ticketNumber": "Ticketnr.",
+      "customer": "Klant",
+      "assetTag": "Assettag",
+      "serial": "Serienummer",
+      "custodyLocation": "Bewaarlocatie",
+      "nextAction": "Volgende actie",
+      "assetSpecifications": "Assetspecificaties",
+      "ticketDetails": "Ticketdetails",
+      "assetName": "Naam",
+      "make": "Merk",
+      "model": "Model",
+      "os": "Besturingssysteem",
+      "cpu": "Processor",
+      "ram": "Werkgeheugen",
+      "storage": "Opslag",
+      "cpuCoreCount_one": "{{count}} kern",
+      "cpuCoreCount_other": "{{count}} kernen",
+      "cpuCoreCount_few": "{{count}} kernen",
+      "cpuCoreCount_many": "{{count}} kernen"
+    }
   },
   "errors": {
     "permissions": {

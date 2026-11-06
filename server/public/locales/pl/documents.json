@@ -126,7 +126,28 @@
     "replacementSerial": "Numer seryjny zamiennika",
     "shipping": "Wysyłka",
     "returnBy": "Zwrot do",
-    "returnShipTo": "Adres wysyłki zwrotnej"
+    "returnShipTo": "Adres wysyłki zwrotnej",
+    "worksheet": {
+      "ticketNumber": "Zgłoszenie nr",
+      "customer": "Klient",
+      "assetTag": "Tag zasobu",
+      "serial": "Numer seryjny",
+      "custodyLocation": "Miejsce przechowywania",
+      "nextAction": "Następne działanie",
+      "assetSpecifications": "Specyfikacja zasobu",
+      "ticketDetails": "Szczegóły zgłoszenia",
+      "assetName": "Nazwa",
+      "make": "Producent",
+      "model": "Model",
+      "os": "System operacyjny",
+      "cpu": "Procesor",
+      "ram": "Pamięć RAM",
+      "storage": "Pamięć masowa",
+      "cpuCoreCount_one": "{{count}} rdzeń",
+      "cpuCoreCount_other": "{{count}} rdzenia",
+      "cpuCoreCount_few": "{{count}} rdzenie",
+      "cpuCoreCount_many": "{{count}} rdzeni"
+    }
   },
   "errors": {
     "permissions": {

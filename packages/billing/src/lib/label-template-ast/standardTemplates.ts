@@ -1,4 +1,4 @@
-import type { LabelClass, TemplateAst } from '@alga-psa/types';
+import type { LabelClass, TemplateAst, TemplateI18nRef } from '@alga-psa/types';
 import { TEMPLATE_AST_VERSION } from '@alga-psa/types';
 
 import { buildLabelTemplateBindings } from './bindings';
@@ -9,6 +9,7 @@ import { buildLabelTemplateBindings } from './bindings';
  * QR content is only the canonical record URL (binding `recordUrl`), never a token or secret.
  */
 export const STANDARD_LABEL_TICKET_WORK_TAG_CODE = 'standard-ticket-work-tag';
+export const STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_CODE = 'standard-ticket-customer-worksheet';
 export const STANDARD_LABEL_ASSET_CODE = 'standard-asset-label';
 export const STANDARD_LABEL_ASSET_CODE128_CODE = 'standard-asset-label-code128';
 export const STANDARD_LABEL_STOCK_UNIT_CODE = 'standard-stock-unit-label';
@@ -26,6 +27,7 @@ export const LABEL_STANDARD_CODE_BY_CLASS: Record<LabelClass, string> = {
 /** The label class a standard code prints (used to validate a requested code against a class). */
 export const LABEL_CLASS_BY_STANDARD_CODE: Record<string, LabelClass> = {
   [STANDARD_LABEL_TICKET_WORK_TAG_CODE]: 'ticket-work-tag',
+  [STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_CODE]: 'ticket-work-tag',
   [STANDARD_LABEL_ASSET_CODE]: 'asset-identity',
   [STANDARD_LABEL_ASSET_CODE128_CODE]: 'asset-identity',
   [STANDARD_LABEL_STOCK_UNIT_CODE]: 'stock-unit-identity',
@@ -163,6 +165,169 @@ const lines = (count: number, fontPx: number, lineHeight: number) => ({
 const identifier = (id: string, fontPx: number): Node =>
   text(id, 'identifier', { fontSize: `${fontPx}px`, fontWeight: 800, fontFamily: '"JetBrains Mono", monospace', lineHeight: 1.1 });
 
+/**
+ * The full-page customer worksheet (`worksheetMode: 'letter'`): the ticket work tag printed on Letter
+ * paper instead of the 4 x 2 in roll. Ported from the tenant-authored template the MSP runs today, with
+ * two changes: the logo binds `tenantLogo` (a hardcoded `/api/documents/view/...` source only resolves
+ * server-side, never in the print path), and an "Asset Specifications" block prints the linked asset's
+ * name, make/model, OS, CPU, RAM and storage. Field labels remain visible when values are missing,
+ * so a technician can fill in the blanks. The line-budget trims that shrink fields to a 4 x 2 in tag
+ * do not apply in worksheet mode.
+ */
+const WORKSHEET_FIELD_STYLE: Record<string, unknown> = {
+  width: 'auto',
+  height: 'auto',
+  fontSize: '14px',
+  lineHeight: '1.5',
+  overflowWrap: 'anywhere',
+  // Field rows default to space-between; keep each value next to its label.
+  justifyContent: 'flex-start',
+};
+
+const worksheetField = (id: string, bindingId: string, labelText: TemplateI18nRef): Node => ({
+  id,
+  type: 'field',
+  binding: { bindingId },
+  label: labelText,
+  labelStyle: { inline: { color: '#374151', fontWeight: 700 } },
+  style: { inline: { ...WORKSHEET_FIELD_STYLE } },
+});
+
+const buildTicketCustomerWorksheet = (): TemplateAst => ({
+  kind: 'invoice-template-ast',
+  version: TEMPLATE_AST_VERSION,
+  metadata: {
+    templateName: 'Standard Customer Worksheet',
+    labelSettings: { hiddenFields: [], worksheetMode: 'letter' },
+    printSettings: { paperPreset: 'Letter', marginMm: 15, customPageSize: { width: 8.5, height: 11, unit: 'in' } },
+  },
+  bindings: buildLabelTemplateBindings(),
+  layout: {
+    id: 'root',
+    type: 'document',
+    style: { inline: { width: '816px', height: '1056px' } },
+    children: [
+      {
+        id: 'header',
+        type: 'stack',
+        direction: 'row',
+        style: { inline: { width: '100%', display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: '24px' } },
+        children: [
+          {
+            id: 'header-text',
+            type: 'stack',
+            direction: 'column',
+            style: { inline: { minWidth: '0', flexGrow: 1, display: 'flex', flexDirection: 'column', gap: '4px' } },
+            children: [
+              {
+                id: 'logo',
+                type: 'image',
+                src: { type: 'binding', bindingId: 'tenantLogo' },
+                alt: { type: 'binding', bindingId: 'tenantName' },
+                style: { inline: { width: '180px', height: 'auto', maxHeight: '72px', objectFit: 'contain', objectPosition: 'left center' } },
+              },
+              {
+                id: 'ticket-number',
+                type: 'stack',
+                direction: 'row',
+                style: { inline: { gap: '0.25em', fontSize: '30px', fontWeight: 800, fontFamily: 'monospace', lineHeight: '1.2' } },
+                children: [
+                  {
+                    id: 'ticket-number-label',
+                    type: 'text',
+                    content: { type: 'i18n', i18nKey: 'labels.worksheet.ticketNumber', defaultValue: 'Ticket #' },
+                    style: { inline: { margin: '0' } },
+                  },
+                  text('ticket-number-value', 'identifier', { minWidth: '0', flex: '1 1 0', overflowWrap: 'anywhere' }),
+                ],
+              },
+              {
+                id: 'ticket-title',
+                type: 'text',
+                content: { type: 'binding', bindingId: 'title' },
+                style: { inline: { margin: '0', fontSize: '20px', fontWeight: 600, lineHeight: '1.3', overflowWrap: 'anywhere' } },
+              },
+            ],
+          },
+          {
+            id: 'header-code',
+            type: 'stack',
+            direction: 'column',
+            style: { inline: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' } },
+            // The QR scans straight to the ticket, the same code the 4 x 2 in tag carries.
+            children: [qr('qr', '120px')],
+          },
+        ],
+      },
+      { id: 'header-divider', type: 'divider', style: { inline: { margin: '16px 0' } } },
+      {
+        id: 'info',
+        type: 'stack',
+        direction: 'row',
+        style: { inline: { width: '100%', display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: '32px' } },
+        children: [
+          {
+            id: 'info-left',
+            type: 'stack',
+            direction: 'column',
+            style: { inline: { minWidth: '0', flexGrow: 1, flexBasis: '0', display: 'flex', flexDirection: 'column', gap: '8px' } },
+            children: [
+              worksheetField('fld-name', 'clientName', { i18nKey: 'labels.worksheet.customer', defaultValue: 'Customer' }),
+              worksheetField('fld-asset', 'secondaryIdentifier', { i18nKey: 'labels.worksheet.assetTag', defaultValue: 'Asset Tag' }),
+              worksheetField('fld-serial', 'assetSerialNumber', { i18nKey: 'labels.worksheet.serial', defaultValue: 'Serial' }),
+            ],
+          },
+          {
+            id: 'info-right',
+            type: 'stack',
+            direction: 'column',
+            style: { inline: { minWidth: '0', flexGrow: 1, flexBasis: '0', display: 'flex', flexDirection: 'column', gap: '8px' } },
+            children: [
+              worksheetField('fld-custody', 'custodyLocation', { i18nKey: 'labels.worksheet.custodyLocation', defaultValue: 'Custody location' }),
+              worksheetField('fld-next', 'nextAction', { i18nKey: 'labels.worksheet.nextAction', defaultValue: 'Next action' }),
+            ],
+          },
+        ],
+      },
+      { id: 'asset-divider', type: 'divider', style: { inline: { margin: '18px 0 12px 0' } } },
+      {
+        id: 'asset-specs',
+        type: 'stack',
+        direction: 'column',
+        style: { inline: { display: 'flex', flexDirection: 'column', gap: '4px' } },
+        children: [
+          {
+            id: 'asset-specs-heading',
+            type: 'text',
+            content: { type: 'i18n', i18nKey: 'labels.worksheet.assetSpecifications', defaultValue: 'Asset Specifications' },
+            style: { inline: { margin: '0 0 6px 0', color: '#111827', fontSize: '15px', fontWeight: 700 } },
+          },
+          worksheetField('spec-name', 'assetName', { i18nKey: 'labels.worksheet.assetName', defaultValue: 'Name' }),
+          worksheetField('spec-make', 'assetManufacturer', { i18nKey: 'labels.worksheet.make', defaultValue: 'Make' }),
+          worksheetField('spec-model', 'assetModel', { i18nKey: 'labels.worksheet.model', defaultValue: 'Model' }),
+          worksheetField('spec-os', 'assetOs', { i18nKey: 'labels.worksheet.os', defaultValue: 'Operating system' }),
+          worksheetField('spec-cpu', 'assetCpu', { i18nKey: 'labels.worksheet.cpu', defaultValue: 'CPU' }),
+          worksheetField('spec-ram', 'assetRam', { i18nKey: 'labels.worksheet.ram', defaultValue: 'RAM' }),
+          worksheetField('spec-storage', 'assetStorage', { i18nKey: 'labels.worksheet.storage', defaultValue: 'Storage' }),
+        ],
+      },
+      { id: 'details-divider', type: 'divider', style: { inline: { margin: '18px 0 12px 0' } } },
+      {
+        id: 'details-heading',
+        type: 'text',
+        content: { type: 'i18n', i18nKey: 'labels.worksheet.ticketDetails', defaultValue: 'Ticket Details' },
+        style: { inline: { margin: '0 0 6px 0', color: '#111827', fontSize: '15px', fontWeight: 700 } },
+      },
+      {
+        id: 'fld-details',
+        type: 'text',
+        content: { type: 'binding', bindingId: 'ticketDescription' },
+        style: { inline: { margin: '0', fontSize: '14px', lineHeight: '1.6', overflowWrap: 'anywhere', whiteSpace: 'pre-wrap' } },
+      },
+    ],
+  },
+} as unknown as TemplateAst);
+
 const buildTicketWorkTag = (): TemplateAst =>
   label(
     'Standard Ticket Work Tag',
@@ -260,6 +425,7 @@ const buildRmaLabel = (): TemplateAst =>
 
 export const STANDARD_LABEL_TEMPLATE_ASTS: Record<string, TemplateAst> = {
   [STANDARD_LABEL_TICKET_WORK_TAG_CODE]: buildTicketWorkTag(),
+  [STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_CODE]: buildTicketCustomerWorksheet(),
   [STANDARD_LABEL_ASSET_CODE]: buildAssetLabel('Standard Asset Label', false),
   [STANDARD_LABEL_ASSET_CODE128_CODE]: buildAssetLabel('Standard Asset Label with Code 128', true),
   [STANDARD_LABEL_STOCK_UNIT_CODE]: buildStockUnitLabel(),

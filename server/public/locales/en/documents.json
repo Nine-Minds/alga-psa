@@ -126,7 +126,28 @@
     "replacementSerial": "Replacement serial",
     "shipping": "Shipping",
     "returnBy": "Return by",
-    "returnShipTo": "Return ship to"
+    "returnShipTo": "Return ship to",
+    "worksheet": {
+      "ticketNumber": "Ticket #",
+      "customer": "Customer",
+      "assetTag": "Asset Tag",
+      "serial": "Serial",
+      "custodyLocation": "Custody location",
+      "nextAction": "Next action",
+      "assetSpecifications": "Asset Specifications",
+      "ticketDetails": "Ticket Details",
+      "assetName": "Name",
+      "make": "Make",
+      "model": "Model",
+      "os": "Operating system",
+      "cpu": "CPU",
+      "ram": "RAM",
+      "storage": "Storage",
+      "cpuCoreCount_one": "{{count}} core",
+      "cpuCoreCount_other": "{{count}} cores",
+      "cpuCoreCount_few": "{{count}} cores",
+      "cpuCoreCount_many": "{{count}} cores"
+    }
   },
   "errors": {
     "permissions": {

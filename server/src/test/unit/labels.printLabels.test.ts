@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { LabelViewModel, LabelViewModelProvider } from '@alga-psa/types';
 import { printLabels, sanitizeLabelOverride, type PrintLabelsDeps } from '../../lib/labels/printLabels';
+import { getStandardLabelTemplateAstByCode } from '@alga-psa/billing/lib/label-template-ast/standardTemplates';
 
 const A = '11111111-1111-4111-8111-111111111111';
 const B = '22222222-2222-4222-8222-222222222222';
@@ -85,6 +86,34 @@ describe('printLabels', () => {
     expect(parts.mock.calls[0][1]).toEqual([{ recordId: A, linkedAssetId: C }]);
     const vms = ((s.renderPdf.mock.calls[0] as unknown[])[1] as Array<{ viewModel: LabelViewModel }>).map((i) => i.viewModel);
     expect(vms[0]).toMatchObject({ secondaryIdentifier: 'WL-1', serialSuffix: '9876' });
+  });
+
+  it('requests worksheet details only for the resolved Letter template, including custom templates', async () => {
+    const s = setup([A]);
+    const parts = s.deps.getLinkedAssetParts as ReturnType<typeof vi.fn>;
+    parts.mockResolvedValue([{ assetId: C, assetTag: 'WL-1', serialSuffix: null, assetSerialNumber: '1234567' }]);
+    const resolve = s.deps.resolveTemplate as ReturnType<typeof vi.fn>;
+
+    await printLabels(s.deps, s.caller, { labelClass: 'ticket-work-tag', labels: L([A]) });
+    expect(s.provider.getLabelViewModels).toHaveBeenLastCalledWith(expect.objectContaining({ includeWorksheetDetails: false }), [A]);
+    expect(parts).toHaveBeenLastCalledWith(expect.objectContaining({ includeWorksheetDetails: false }), expect.anything());
+    expect(((s.renderPdf.mock.calls.at(-1) as unknown[])[1] as Array<{ viewModel: LabelViewModel }>)[0].viewModel)
+      .not.toHaveProperty('assetSerialNumber');
+
+    resolve.mockResolvedValue({ ok: true, templateCode: 'standard-ticket-customer-worksheet', templateAst: null });
+    await printLabels(s.deps, s.caller, { labelClass: 'ticket-work-tag', labels: L([A]) });
+    expect(s.provider.getLabelViewModels).toHaveBeenLastCalledWith(expect.objectContaining({ includeWorksheetDetails: true }), [A]);
+    expect(parts).toHaveBeenLastCalledWith(expect.objectContaining({ includeWorksheetDetails: true }), expect.anything());
+    expect(((s.renderPdf.mock.calls.at(-1) as unknown[])[1] as Array<{ viewModel: LabelViewModel }>)[0].viewModel.assetSerialNumber)
+      .toBe('1234567');
+
+    resolve.mockResolvedValue({
+      ok: true,
+      templateCode: 'custom',
+      templateAst: getStandardLabelTemplateAstByCode('standard-ticket-customer-worksheet'),
+    });
+    await printLabels(s.deps, s.caller, { labelClass: 'ticket-work-tag', labels: L([A]) });
+    expect(s.provider.getLabelViewModels).toHaveBeenLastCalledWith(expect.objectContaining({ includeWorksheetDetails: true }), [A]);
   });
 
   it('F3: one ticket named three times with different picks gives three labels, each with its own parts', async () => {
@@ -199,9 +228,26 @@ describe('printLabels', () => {
       status: 422,
       message: 'bad layout',
     });
+
     s.renderPdf.mockRejectedValueOnce(new Error('boom'));
     s.deps.describeClientError = () => null;
     await expect(printLabels(s.deps, s.caller, { labelClass: 'ticket-work-tag', labels: L([A]) })).rejects.toThrow('boom');
+  });
+
+  it('preserves worksheet error codes and sheet numbers for client localization', async () => {
+    const s = setup([A]);
+    s.renderPdf.mockRejectedValueOnce(new Error('overflow'));
+    s.deps.describeClientError = () => ({
+      message: 'Worksheet 2 is clipped',
+      errorCode: 'worksheetTextOverflow',
+      worksheetNumbers: [2],
+    });
+    expect(await printLabels(s.deps, s.caller, { labelClass: 'ticket-work-tag', labels: L([A]) })).toMatchObject({
+      ok: false,
+      status: 422,
+      errorCode: 'worksheetTextOverflow',
+      worksheetNumbers: [2],
+    });
   });
 
   it('a 422 lists every record that cannot print, with the suggested template', async () => {

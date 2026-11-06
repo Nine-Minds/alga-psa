@@ -19,7 +19,7 @@ import {
   getStandardLabelTemplateAstByCode,
 } from '../label-template-ast/standardTemplates';
 import { composeLabelSheets, type ComposedLabelDocument, type RenderedLabelCell } from './composeLabelSheets';
-import type { LabelBatchLayout } from './layout';
+import { LabelLayoutError, resolveCellSizeMm, resolveWorksheetDesignSizeMm, type LabelBatchLayout } from './layout';
 
 export interface LabelPrintItem {
   viewModel: LabelViewModel;
@@ -82,7 +82,8 @@ export function assertCanonicalLabelUrl(viewModel: LabelViewModel): void {
 export function buildLabelModel(
   viewModel: LabelViewModel,
   tenantClient: LabelTenantClient | null | undefined,
-  hiddenFields: readonly LabelHideableField[] = []
+  hiddenFields: readonly LabelHideableField[] = [],
+  options: { worksheetMode?: 'letter' } = {}
 ): LabelViewModel {
   const hidden = new Set<LabelHideableField>(hiddenFields);
   const base = tenantClient ?? viewModel.tenantClient ?? null;
@@ -93,8 +94,13 @@ export function buildLabelModel(
   const custodyLocation = hidden.has('custodyLocation') ? null : viewModel.custodyLocation ?? null;
   const nextAction = hidden.has('nextAction') ? null : viewModel.nextAction ?? null;
   // Line budget: the two held-equipment lines take the work-reason and serial lines' place (the 4x2 in tag
-  // has no spare height). The asset line still names the held device; its serial suffix yields.
-  const custodyPrints = viewModel.labelClass === 'ticket-work-tag' && Boolean(custodyLocation || nextAction);
+  // has no spare height). The asset line still names the held device; its serial suffix yields. A Letter
+  // worksheet (`metadata.labelSettings.worksheetMode`) has room for every line, so the budget never applies.
+  const custodyPrints =
+    options.worksheetMode !== 'letter' &&
+    viewModel.labelClass === 'ticket-work-tag' &&
+    Boolean(custodyLocation || nextAction);
+  const worksheet = options.worksheetMode === 'letter' && viewModel.labelClass === 'ticket-work-tag';
   return {
     ...viewModel,
     title: hidden.has('title') ? null : viewModel.title,
@@ -102,6 +108,14 @@ export function buildLabelModel(
     detail: hidden.has('detail') || custodyPrints ? null : viewModel.detail,
     secondaryIdentifier,
     serialSuffix,
+    assetSerialNumber:
+      worksheet && !hidden.has('assetSerialNumber') && !hidden.has('serialSuffix')
+        ? viewModel.assetSerialNumber ?? null
+        : null,
+    ticketDescription:
+      worksheet && !hidden.has('ticketDescription') && !hidden.has('detail')
+        ? viewModel.ticketDescription ?? null
+        : null,
     custodyLocation,
     nextAction,
     tenantClient: base || name || logoUrl ? { name, logoUrl, brandText: logoUrl ? null : name } : null,
@@ -152,15 +166,32 @@ export async function renderLabelBatchHtml(
     try {
       assertCanonicalLabelUrl(item.viewModel);
       const { ast, code } = resolveTemplateAst(item);
-      const model = buildLabelModel(item.viewModel, options.tenantClient, ast.metadata?.labelSettings?.hiddenFields);
+      const labelSettings = ast.metadata?.labelSettings;
+      const worksheetSize = resolveWorksheetDesignSizeMm(ast.metadata);
+      if (worksheetSize) {
+        const cellSize = resolveCellSizeMm(layout);
+        if (
+          cellSize.widthMm >= cellSize.heightMm ||
+          worksheetSize.widthMm > cellSize.widthMm + 0.05 ||
+          worksheetSize.heightMm > cellSize.heightMm + 0.05
+        ) {
+          throw new LabelLayoutError('The selected print layout is too small for this Letter worksheet.', {
+            errorCode: 'worksheetPageSize',
+          });
+        }
+      }
+      const model = buildLabelModel(item.viewModel, options.tenantClient, labelSettings?.hiddenFields, {
+        worksheetMode: labelSettings?.worksheetMode,
+      });
       const evaluation = evaluateTemplateAst(ast, model as unknown as Record<string, unknown>);
       const { html, css } = await renderTemplateAstFragment(ast, evaluation, { locale: options.locale });
       const printSettings = ast.metadata?.printSettings;
       cells.push({
         html,
         css,
-        designedSizeMm: printSettings?.customPageSize ? customPageSizeToMm(printSettings.customPageSize) : null,
+        designedSizeMm: worksheetSize ?? (printSettings?.customPageSize ? customPageSizeToMm(printSettings.customPageSize) : null),
         description: `Label ${index + 1} (${code})`,
+        validateTextFits: Boolean(worksheetSize && item.viewModel.labelClass === 'ticket-work-tag'),
       });
     } catch (error) {
       const fallback = LABEL_FALLBACK_TEMPLATE_BY_CODE[templateCode];
@@ -170,6 +201,7 @@ export async function renderLabelBatchHtml(
         identifier: item.viewModel.identifier,
         templateCode,
         message: error instanceof Error ? error.message : String(error),
+        ...(error instanceof LabelLayoutError && error.errorCode ? { errorCode: error.errorCode } : {}),
         // Only a barcode the record's data cannot fit is fixed by switching template.
         ...(fallback && error instanceof BarcodeError ? { suggestedTemplateCode: fallback } : {}),
       });

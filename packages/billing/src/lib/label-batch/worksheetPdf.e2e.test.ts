@@ -1,0 +1,161 @@
+import { execFileSync } from 'node:child_process';
+import { createRequire } from 'node:module';
+import jsQR from 'jsqr';
+import { afterAll, describe, expect, it } from 'vitest';
+import { recordUrl, type LabelViewModel } from '@alga-psa/types';
+
+import { browserPoolService } from '../../services/browserPoolService';
+import { renderHtmlToPdf } from '../../services/labelPdfService';
+import { getStandardLabelTemplateAstByCode, STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_CODE } from '../label-template-ast/standardTemplates';
+import { renderLabelBatchHtml, type LabelPrintItem } from './renderLabelBatchHtml';
+
+const { PNG } = createRequire(import.meta.url)('pngjs') as {
+  PNG: { sync: { read(buffer: Buffer): { width: number; height: number; data: Buffer } } };
+};
+const pageLayout = { kind: 'one-per-page', pageSize: { width: 8.5, height: 11, unit: 'in' } } as const;
+const recordId = '11111111-1111-4111-8111-111111111111';
+const viewModel: LabelViewModel = {
+  labelClass: 'ticket-work-tag',
+  entityType: 'ticket',
+  recordId,
+  url: recordUrl('ticket', recordId, 'https://psa.example.com'),
+  identifier: 'TIC-32108',
+  code128Value: null,
+  title: 'Desktop cannot connect',
+  clientName: 'Customer',
+  detail: 'Hardware',
+  secondaryIdentifier: 'CFD-DC-2021',
+  serialSuffix: null,
+  assetSerialNumber: '1234567',
+  ticketDescription: 'First paragraph of the customer report.\nSecond paragraph with troubleshooting details.',
+  linkedAsset: {
+    assetId: '22222222-2222-4222-8222-222222222222',
+    name: 'Customer desktop',
+    manufacturer: 'Example',
+    model: 'Workstation',
+    osLine: 'Windows',
+    cpuLine: 'Intel Core i7 / 8 cores',
+    ramLine: '16 GB',
+    storageLine: '512 GB SSD',
+  },
+};
+const item = (description = viewModel.ticketDescription): LabelPrintItem => ({
+  templateCode: STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_CODE,
+  viewModel: { ...viewModel, ticketDescription: description },
+});
+
+function pdfPageSizes(pdf: Buffer): Array<{ width: number; height: number }> {
+  const info = execFileSync('pdfinfo', ['-f', '1', '-l', '100000', '-'], { input: pdf, encoding: 'utf8' });
+  return [...info.matchAll(/^Page\s+\d+\s+size:\s+([\d.]+)\s+x\s+([\d.]+)\s+pts/gm)].map((match) => ({
+    width: Number(match[1]),
+    height: Number(match[2]),
+  }));
+}
+
+afterAll(async () => {
+  await browserPoolService.cleanup();
+});
+
+describe('Letter customer worksheet PDF', () => {
+  it('prints the full serial and multiline description on one Letter page with a canonical QR', async () => {
+    const { html, printOptions } = await renderLabelBatchHtml([item()], pageLayout);
+    const pdf = await renderHtmlToPdf(html, printOptions);
+    const pages = pdfPageSizes(pdf);
+    expect(pages).toHaveLength(1);
+    expect(pages[0].width).toBeCloseTo(612, 0);
+    expect(pages[0].height).toBeCloseTo(792, 0);
+    const printedText = execFileSync('pdftotext', ['-layout', '-', '-'], { input: pdf, encoding: 'utf8' });
+    expect(printedText).toContain('CFD-DC-2021');
+    expect(printedText).toContain('1234567');
+    expect(printedText).toContain('First paragraph of the customer report.');
+    expect(printedText).toContain('Second paragraph with troubleshooting details.');
+    expect(printedText).toContain('Intel Core i7 / 8 cores');
+
+    const browser = await browserPoolService.getBrowser();
+    const page = await browser.newPage();
+    try {
+      await page.setContent(html, { waitUntil: 'load' });
+      await page.emulateMediaType('print');
+      const fields = await page.evaluate(() => {
+        const gapAfterLabel = (id: string) => {
+          const [label, value] = Array.from(document.querySelectorAll(`#${id} > span`));
+          return value.getBoundingClientRect().left - label.getBoundingClientRect().right;
+        };
+        return {
+          assetTag: document.querySelector('#fld-asset')?.textContent,
+          serial: document.querySelector('#fld-serial')?.textContent,
+          description: document.querySelector('#fld-details')?.textContent,
+          assetTagGap: gapAfterLabel('fld-asset'),
+          specGap: gapAfterLabel('spec-cpu'),
+        };
+      });
+      expect(fields.assetTag).toBe('Asset Tag: CFD-DC-2021');
+      expect(fields.serial).toContain('1234567');
+      expect(fields.description).toBe(viewModel.ticketDescription);
+      // Values sit next to their labels instead of being pushed to the far edge of the row.
+      expect(fields.assetTagGap).toBeLessThan(16);
+      expect(fields.specGap).toBeLessThan(16);
+      const qr = await page.$('#qr');
+      if (!qr) throw new Error('The worksheet QR code was not rendered');
+      const raster = PNG.sync.read(Buffer.from(await qr.screenshot({ type: 'png' })));
+      const pixels = new Uint8ClampedArray(raster.data.buffer, raster.data.byteOffset, raster.data.byteLength);
+      expect(jsQR(pixels, raster.width, raster.height)?.data).toBe(viewModel.url);
+    } finally {
+      await page.close();
+      await browserPoolService.releaseBrowser(browser);
+    }
+  }, 120_000);
+
+  it('refuses a worksheet whose long description would be clipped, identifying its batch position', async () => {
+    const longDescription = Array.from({ length: 100 }, (_, index) => `Description line ${index + 1}`).join('\n');
+    const { html, printOptions } = await renderLabelBatchHtml([item(), item(longDescription)], pageLayout);
+    await expect(renderHtmlToPdf(html, printOptions)).rejects.toThrow(
+      /Worksheet 2 contains text that does not fit/,
+    );
+  }, 120_000);
+
+  it('also detects text clipped inside an explicitly sized custom worksheet field', async () => {
+    const ast = getStandardLabelTemplateAstByCode(STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_CODE);
+    if (!ast?.layout.children) throw new Error('The worksheet template has no layout children');
+    ast.layout.children.push({
+      id: 'small-description',
+      type: 'text',
+      content: { type: 'binding', bindingId: 'ticketDescription' },
+      style: { inline: { width: '200px', height: '15px', overflow: 'hidden', whiteSpace: 'pre-wrap' } },
+    });
+    const { html, printOptions } = await renderLabelBatchHtml([{ ...item(), templateAst: ast }], pageLayout);
+    await expect(renderHtmlToPdf(html, printOptions)).rejects.toThrow(/Worksheet 1 contains text that does not fit/);
+  }, 120_000);
+
+  it('wraps a long ticket number without clipping it', async () => {
+    const identifier = `TIC-${'1234567890'.repeat(6)}`;
+    const { html, printOptions } = await renderLabelBatchHtml([
+      { ...item(), viewModel: { ...viewModel, identifier } },
+    ], pageLayout);
+    const pdf = await renderHtmlToPdf(html, printOptions);
+    expect(pdfPageSizes(pdf)).toHaveLength(1);
+
+    const browser = await browserPoolService.getBrowser();
+    const page = await browser.newPage();
+    try {
+      await page.setContent(html, { waitUntil: 'load' });
+      await page.emulateMediaType('print');
+      const ticketNumber = await page.$eval('#ticket-number-value', (element) => {
+        const style = getComputedStyle(element);
+        return {
+          text: element.textContent,
+          width: element.clientWidth,
+          scrollWidth: element.scrollWidth,
+          height: element.getBoundingClientRect().height,
+          lineHeight: Number.parseFloat(style.lineHeight),
+        };
+      });
+      expect(ticketNumber.text).toBe(identifier);
+      expect(ticketNumber.scrollWidth).toBeLessThanOrEqual(ticketNumber.width + 1);
+      expect(ticketNumber.height).toBeGreaterThan(ticketNumber.lineHeight * 1.5);
+    } finally {
+      await page.close();
+      await browserPoolService.releaseBrowser(browser);
+    }
+  }, 120_000);
+});

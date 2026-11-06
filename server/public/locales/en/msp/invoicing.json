@@ -1377,7 +1377,9 @@
           "quote-totals": "Quote Totals",
           "invoice": "Invoice",
           "customer": "Customer",
-          "tenant": "Tenant"
+          "tenant": "Tenant",
+          "work-tag": "Work Tag",
+          "asset": "Asset"
         }
       },
       "noFieldsMatch": "No fields match this search.",
@@ -1436,6 +1438,12 @@
       "insertDataField": "+ Insert data field…",
       "searchDataFields": "Search data fields…",
       "dataFields": "Data fields",
+      "noFieldSelected": "No field selected",
+      "bindingPathHint": "Type any binding path when the field you need is not listed.",
+      "useFieldPicker": "Use field picker",
+      "currentField": "Current",
+      "unbound": "Unbound",
+      "useCustomPath": "Use custom path",
       "box": {
         "top": "Top",
         "right": "Right",
@@ -2056,6 +2064,86 @@
       "tenantClient_address": {
         "label": "Tenant Address",
         "description": "Your company address."
+      },
+      "label_recordUrl": {
+        "label": "Record link",
+        "description": "Data path: {{path}}"
+      },
+      "label_identifier": {
+        "label": "Identifier",
+        "description": "Data path: {{path}}"
+      },
+      "label_code128Value": {
+        "label": "Barcode value",
+        "description": "Data path: {{path}}"
+      },
+      "label_title": {
+        "label": "Title",
+        "description": "Data path: {{path}}"
+      },
+      "label_clientName": {
+        "label": "Client name",
+        "description": "Data path: {{path}}"
+      },
+      "label_detail": {
+        "label": "Detail / reason",
+        "description": "Data path: {{path}}"
+      },
+      "label_secondaryIdentifier": {
+        "label": "Secondary identifier",
+        "description": "Data path: {{path}}"
+      },
+      "label_serialSuffix": {
+        "label": "Serial suffix",
+        "description": "Data path: {{path}}"
+      },
+      "label_assetSerialNumber": {
+        "label": "Full asset serial number",
+        "description": "Full serial of the selected asset, available on Letter customer worksheets."
+      },
+      "label_ticketDescription": {
+        "label": "Ticket description",
+        "description": "Ticket description as plain text, available on Letter customer worksheets."
+      },
+      "label_custodyLocation": {
+        "label": "Custody location",
+        "description": "Data path: {{path}}"
+      },
+      "label_nextAction": {
+        "label": "Next action",
+        "description": "Data path: {{path}}"
+      },
+      "linkedAsset_name": {
+        "label": "Asset name",
+        "description": "Data path: {{path}}"
+      },
+      "linkedAsset_manufacturer": {
+        "label": "Asset make",
+        "description": "Data path: {{path}}"
+      },
+      "linkedAsset_model": {
+        "label": "Asset model",
+        "description": "Data path: {{path}}"
+      },
+      "linkedAsset_osLine": {
+        "label": "Asset operating system",
+        "description": "Data path: {{path}}"
+      },
+      "linkedAsset_cpuLine": {
+        "label": "Asset CPU",
+        "description": "Data path: {{path}}"
+      },
+      "linkedAsset_ramLine": {
+        "label": "Asset RAM",
+        "description": "Data path: {{path}}"
+      },
+      "linkedAsset_storageLine": {
+        "label": "Asset storage",
+        "description": "Data path: {{path}}"
+      },
+      "tenant_brandText": {
+        "label": "Company name without logo",
+        "description": "Data path: {{path}}"
       }
     },
     "canvas": {
@@ -2527,7 +2615,10 @@
         "version": "Version",
         "labelClass": "Label class",
         "labelFields": "Fields shown on the label",
-        "labelFieldsHint": "The record link (QR code) and the identifier are always shown."
+        "labelFieldsHint": "The record link (QR code) and the identifier are always shown.",
+        "worksheetMode": "Letter customer worksheet",
+        "worksheetModeHint": "Allows the full asset serial and ticket description. Set the page size to Letter in the designer.",
+        "worksheetFieldsHint": "Hiding the serial suffix also hides the full serial; hiding detail also hides the ticket description."
       },
       "placeholders": {
         "templateName": "{{type}} Template"
@@ -2568,6 +2659,29 @@
       "workTag": "Work Tag / Label",
       "stagingManifest": "Packing Manifest",
       "rmaReturnSlip": "RMA Return Slip"
+    },
+    "labelClasses": {
+      "ticket-work-tag": "Ticket work tag",
+      "asset-identity": "Asset label",
+      "stock-unit-identity": "Stock unit label",
+      "staging-container": "Staging box label",
+      "rma-work-tag": "RMA tag"
+    },
+    "labelFields": {
+      "clientName": "Client name",
+      "title": "Title",
+      "detail": "Detail / reason",
+      "secondaryIdentifier": "Secondary identifier",
+      "serialSuffix": "Serial suffix",
+      "assetSerialNumber": "Full asset serial number",
+      "ticketDescription": "Ticket description",
+      "custodyLocation": "Custody location",
+      "nextAction": "Next action",
+      "tenantLogo": "Company logo",
+      "tenantName": "Company name"
+    },
+    "standardNames": {
+      "standard-ticket-customer-worksheet": "Standard Customer Worksheet"
     }
   },
   "errors": {

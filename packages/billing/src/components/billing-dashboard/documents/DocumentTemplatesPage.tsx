@@ -75,6 +75,12 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
   const [view, setView] = useState<ViewState>({ mode: 'list' });
   const [templateToDelete, setTemplateToDelete] = useState<DocumentTemplateListItem | null>(null);
 
+  const templateDisplayName = useCallback((record: DocumentTemplateListItem) =>
+    record.source === 'standard'
+      ? t(`documentTemplates.standardNames.${record.template_id}`, { defaultValue: record.name })
+      : record.name,
+  [t]);
+
   const fetchTemplates = useCallback(async () => {
     try {
       const result = await getDocumentTemplates(documentType);
@@ -117,7 +123,7 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
       setView({
         mode: 'editor',
         draft: {
-          name: t('templates.values.copyOfName', { defaultValue: 'Copy of {{name}}', name: record.name }),
+          name: t('templates.values.copyOfName', { defaultValue: 'Copy of {{name}}', name: templateDisplayName(record) }),
           version: 1,
           templateAst: withRecordLabelClass(record),
           source: 'standard',
@@ -136,12 +142,12 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
         source: 'custom',
       },
     });
-  }, [t]);
+  }, [t, templateDisplayName]);
 
   const handleCloneTemplate = useCallback(async (record: DocumentTemplateListItem) => {
     try {
       const result = await saveDocumentTemplate(documentType, {
-        name: t('documentTemplates.values.copyName', { defaultValue: '{{name}} (Copy)', name: record.name }),
+        name: t('documentTemplates.values.copyName', { defaultValue: '{{name}} (Copy)', name: templateDisplayName(record) }),
         version: 1,
         templateAst: withRecordLabelClass(record),
         isClone: true,
@@ -160,7 +166,7 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
       console.error('Error cloning template:', err);
       toast.error(t('documentTemplates.errors.cloneFailed', { defaultValue: 'Failed to clone template' }));
     }
-  }, [documentType, fetchTemplates, t]);
+  }, [documentType, fetchTemplates, t, templateDisplayName]);
 
   const handleSetDefaultTemplate = useCallback(async (record: DocumentTemplateListItem) => {
     try {
@@ -235,7 +241,7 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
             <>
               <FileTextIcon className="w-4 h-4 shrink-0" /> {t('documentTemplates.values.nameWithStandardSuffix', {
                 defaultValue: '{{name}} (Standard)',
-                name: value,
+                name: templateDisplayName(record),
               })}
             </>
           ) : (
@@ -349,7 +355,7 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
         </DropdownMenu>
       ),
     },
-  ], [documentType, handleCloneTemplate, handleSetDefaultTemplate, openEditTemplate, t]);
+  ], [documentType, handleCloneTemplate, handleSetDefaultTemplate, openEditTemplate, t, templateDisplayName]);
 
   if (view.mode === 'editor') {
     return (

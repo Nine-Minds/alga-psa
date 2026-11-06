@@ -35,6 +35,7 @@ import { getTicketLinkedAssetLabelParts, listTicketLinkedAssetChoices } from './
 
 const T = 'ticket-1';
 const ctx = { tenant: 't', user: { user_id: 'u' }, baseUrl: 'https://x.test' } as never;
+const worksheetCtx = { tenant: 't', user: { user_id: 'u' }, baseUrl: 'https://x.test', includeWorksheetDetails: true } as never;
 
 const held = (bin: string, followUp: string | null) => ({
   state: 'in_office', location_name: 'Main Office', bin, next_action_party: 'vendor', follow_up_on: followUp,
@@ -45,6 +46,7 @@ function seed(opts: { assets: string[]; held?: Record<string, ReturnType<typeof 
   state.links = opts.assets.map((asset_id) => ({ asset_id, entity_id: T }));
   state.assets = opts.assets.map((asset_id, i) => ({
     asset_id, asset_tag: `TAG-${asset_id}`, name: `Item ${asset_id}`, serial_number: `SERIAL-000${i}-WXYZ`, client_id: 'c',
+    asset_type: 'unknown', manufacturer: null, model: null,
   }));
   state.custody = new Map(Object.entries(opts.held ?? {}));
 }
@@ -68,13 +70,23 @@ describe('getTicketLinkedAssetLabelParts', () => {
     expect(r).toMatchObject({
       assetId: 'b', assetTag: 'TAG-b', serialSuffix: 'WXYZ',
       custodyLocation: 'Main Office / Shelf B3', nextAction: 'Waiting on vendor, Oct 29',
+      linkedAssetInfo: { assetId: 'b', name: 'Item b', manufacturer: null, model: null, cpuLine: null, ramLine: null, storageLine: null, osLine: null },
     });
+  });
+
+  it('no asset line (count only): no worksheet info block', async () => {
+    three();
+    const [r] = await getTicketLinkedAssetLabelParts(ctx, [{ recordId: T }]);
+    expect(r?.linkedAssetInfo).toBeNull();
   });
 
   it('no pick on several held items: count plus the earliest follow-up, no asset line', async () => {
     three();
     const [r] = await getTicketLinkedAssetLabelParts(ctx, [{ recordId: T }]);
-    expect(r).toEqual({ assetId: '', assetTag: null, serialSuffix: null, custodyLocation: '3 items held', nextAction: 'Follow up Oct 29' });
+    expect(r).toEqual({
+      assetId: '', assetTag: null, serialSuffix: null, linkedAssetInfo: null,
+      custodyLocation: '3 items held', nextAction: 'Follow up Oct 29',
+    });
   });
 
   it('the same ticket can appear several times with different picks (batch)', async () => {
@@ -126,6 +138,51 @@ describe('getTicketLinkedAssetLabelParts', () => {
     expect(JSON.stringify(r)).not.toContain('SECRET NOTE');
     state.canReadAssets = false;
     expect(await getTicketLinkedAssetLabelParts(ctx, [{ recordId: T, linkedAssetId: 'a' }])).toEqual([null]);
+  });
+
+  it('includes even a short full serial only for a worksheet and retains the suffix rule', async () => {
+    seed({ assets: ['a'] });
+    state.assets[0].serial_number = ' 1234567 ';
+    const [tag] = await getTicketLinkedAssetLabelParts(ctx, [{ recordId: T }]);
+    const [worksheet] = await getTicketLinkedAssetLabelParts(worksheetCtx, [{ recordId: T }]);
+    expect(tag).toMatchObject({ serialSuffix: null });
+    expect(tag).not.toHaveProperty('assetSerialNumber');
+    expect(worksheet).toMatchObject({ serialSuffix: null, assetSerialNumber: '1234567' });
+
+    state.assets[0].serial_number = 'LONG-12345678';
+    const [long] = await getTicketLinkedAssetLabelParts(worksheetCtx, [{ recordId: T }]);
+    expect(long).toMatchObject({ serialSuffix: '5678', assetSerialNumber: 'LONG-12345678' });
+
+    state.assets[0].serial_number = '  ';
+    const [empty] = await getTicketLinkedAssetLabelParts(worksheetCtx, [{ recordId: T }]);
+    expect(empty).toMatchObject({ serialSuffix: null, assetSerialNumber: null });
+  });
+
+  it('uses the requested core-count formatter for the selected asset specification', async () => {
+    seed({ assets: ['a'] });
+    Object.assign(state.assets[0], { asset_type: 'workstation', cpu_model: 'Example CPU', cpu_cores: 8 });
+    const [worksheet] = await getTicketLinkedAssetLabelParts(
+      worksheetCtx,
+      [{ recordId: T }],
+      { formatCpuCoreCount: (count) => `${count} cœurs` },
+    );
+    expect(worksheet?.linkedAssetInfo?.cpuLine).toBe('Example CPU / 8 cœurs');
+  });
+
+  it('full serial follows the selected readable asset and never an unreadable or ambiguous pick', async () => {
+    three();
+    const selected = await getTicketLinkedAssetLabelParts(
+      worksheetCtx,
+      ['a', 'b'].map((linkedAssetId) => ({ recordId: T, linkedAssetId })),
+    );
+    expect(selected.map((part) => part?.assetSerialNumber)).toEqual(['SERIAL-0000-WXYZ', 'SERIAL-0001-WXYZ']);
+    const [ambiguous] = await getTicketLinkedAssetLabelParts(worksheetCtx, [{ recordId: T }]);
+    expect(ambiguous?.assetSerialNumber).toBeNull();
+    state.unreadable.add('b');
+    const [denied] = await getTicketLinkedAssetLabelParts(worksheetCtx, [{ recordId: T, linkedAssetId: 'b' }]);
+    expect(JSON.stringify(denied)).not.toContain('SERIAL-0001-WXYZ');
+    state.canReadAssets = false;
+    expect(await getTicketLinkedAssetLabelParts(worksheetCtx, [{ recordId: T, linkedAssetId: 'a' }])).toEqual([null]);
   });
 });
 

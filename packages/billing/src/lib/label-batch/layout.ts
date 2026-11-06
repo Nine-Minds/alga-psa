@@ -7,6 +7,7 @@ import {
   type CustomPageSize,
   type InvoicePaperPresetId,
   type InvoicePdfPrintOptions,
+  type LabelPrintErrorCode,
 } from '@alga-psa/types';
 
 /**
@@ -65,9 +66,13 @@ export interface LabelBatchGeometry {
 }
 
 export class LabelLayoutError extends Error {
-  constructor(message: string) {
+  readonly errorCode?: LabelPrintErrorCode;
+  readonly worksheetNumbers?: number[];
+  constructor(message: string, details?: { errorCode: LabelPrintErrorCode; worksheetNumbers?: number[] }) {
     super(message);
     this.name = 'LabelLayoutError';
+    this.errorCode = details?.errorCode;
+    this.worksheetNumbers = details?.worksheetNumbers;
   }
 }
 
@@ -207,3 +212,91 @@ export function resolveLabelBatchPdfOptions(geometry: LabelBatchGeometry): Invoi
 }
 
 export const LABEL_SHEET_MIN_MM = CUSTOM_PAGE_SIZE_MM_RANGE.min;
+
+/**
+ * Page size range a template may ask the printer for on its own (the print dialog's "template paper"
+ * default). Wider than the schema's absolute bounds (10 - 1200 mm) on the small end because a page
+ * below ~60 mm is a die-cut tag, not paper a normal printer holds, and belongs on the roll layout.
+ */
+export const LABEL_TEMPLATE_FIT_PAGE_MM_RANGE = { min: 60, max: 1200 } as const;
+
+type LabelTemplatePageMetadata = {
+  labelSettings?: { worksheetMode?: 'letter' };
+  printSettings?: { customPageSize?: CustomPageSize; paperPreset?: InvoicePaperPresetId };
+};
+
+/** Worksheet details require a portrait Letter-size or larger design, even for custom templates. */
+export function resolveWorksheetDesignSizeMm(
+  metadata?: LabelTemplatePageMetadata | null
+): { widthMm: number; heightMm: number } | null {
+  if (metadata?.labelSettings?.worksheetMode !== 'letter') return null;
+  const settings = metadata.printSettings;
+  let size: { widthMm: number; heightMm: number };
+  if (settings?.customPageSize) {
+    const problem = validateCustomPageSize(settings.customPageSize);
+    if (problem) throw new LabelLayoutError(problem, { errorCode: 'worksheetPageSize' });
+    size = customPageSizeToMm(settings.customPageSize);
+  } else {
+    const preset = settings?.paperPreset && INVOICE_PAPER_PRESET_REGISTRY[settings.paperPreset];
+    if (!preset) {
+      throw new LabelLayoutError('A Letter worksheet must specify Letter or a larger portrait page size in the designer.', {
+        errorCode: 'worksheetPageSize',
+      });
+    }
+    size = { widthMm: preset.widthMm, heightMm: preset.heightMm };
+  }
+  const letter = INVOICE_PAPER_PRESET_REGISTRY.Letter;
+  if (
+    size.widthMm >= size.heightMm ||
+    size.widthMm + 0.05 < letter.widthMm ||
+    size.heightMm + 0.05 < letter.heightMm
+  ) {
+    throw new LabelLayoutError('A Letter worksheet must be designed for Letter or a larger portrait page size.', {
+      errorCode: 'worksheetPageSize',
+    });
+  }
+  return size;
+}
+
+/** True when a template's own page size is paper an ordinary printer holds (a worksheet, not a tag). */
+export function labelMetadataPrefersPaperPage(
+  metadata?: LabelTemplatePageMetadata | null
+): boolean {
+  const pageSize = metadata?.printSettings?.customPageSize;
+  const preset = metadata?.labelSettings?.worksheetMode === 'letter' && metadata.printSettings?.paperPreset
+    ? INVOICE_PAPER_PRESET_REGISTRY[metadata.printSettings.paperPreset]
+    : null;
+  if (pageSize && validateCustomPageSize(pageSize)) return false;
+  const size = pageSize ? customPageSizeToMm(pageSize) : preset;
+  if (!size) return false;
+  const { widthMm, heightMm } = size;
+  const { min, max } = LABEL_TEMPLATE_FIT_PAGE_MM_RANGE;
+  return widthMm >= min && widthMm <= max && heightMm >= min && heightMm <= max;
+}
+
+/**
+ * The page size every template in the batch asks for, when they all agree on one explicit
+ * `customPageSize` (one label per page) that ordinary paper can hold. Returns null otherwise, which
+ * keeps the caller's default layout. This is what lets a Letter worksheet template print on Letter
+ * without the caller having to pick the paper twice.
+ */
+export function resolveTemplatePreferredPageSizes(
+  templates: readonly { metadata?: LabelTemplatePageMetadata | undefined }[]
+): CustomPageSize | null {
+  if (templates.length === 0) return null;
+  let preferred: CustomPageSize | null = null;
+  for (const template of templates) {
+    const worksheetSize = resolveWorksheetDesignSizeMm(template.metadata);
+    const pageSize = template.metadata?.printSettings?.customPageSize ??
+      (worksheetSize ? { width: worksheetSize.widthMm, height: worksheetSize.heightMm, unit: 'mm' as const } : undefined);
+    if (!pageSize || !labelMetadataPrefersPaperPage(template.metadata)) return null;
+    if (preferred === null) {
+      preferred = pageSize;
+    } else {
+      const a = customPageSizeToMm(preferred);
+      const b = customPageSizeToMm(pageSize);
+      if (Math.abs(a.widthMm - b.widthMm) > EPSILON_MM || Math.abs(a.heightMm - b.heightMm) > EPSILON_MM) return null;
+    }
+  }
+  return preferred;
+}

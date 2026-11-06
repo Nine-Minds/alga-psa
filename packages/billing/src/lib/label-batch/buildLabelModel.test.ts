@@ -45,14 +45,43 @@ describe('buildLabelModel', () => {
     expect(templateAstSchema.safeParse({ ...base, metadata: { templateName: 'Invoice' } }).success).toBe(true);
   });
 
-  it('T-sens: the binding catalog exposes only view-model fields and never a full serial or ids', () => {
+  it('T-sens: the catalog exposes worksheet fields without exposing record ids or contact data', () => {
     const paths = Object.values(LABEL_TEMPLATE_VALUE_BINDINGS).map((b) => (b as { path: string }).path).sort();
     expect(paths).toEqual([
-      'clientName', 'code128Value', 'custodyLocation', 'detail', 'display.assetLine', 'display.rmaReturnByLine', 'display.rmaTicketLine', 'display.sequenceLine', 'display.serialLine',
-      'identifier', 'nextAction', 'rma.shipping', 'rma.statusLabel', 'secondaryIdentifier', 'sequence.n', 'sequence.total', 'serialSuffix', 'tenantClient.brandText',
-      'tenantClient.logoUrl', 'tenantClient.name', 'title', 'url',
+      'assetSerialNumber', 'clientName', 'code128Value', 'custodyLocation', 'detail', 'display.assetLine', 'display.rmaReturnByLine', 'display.rmaTicketLine', 'display.sequenceLine', 'display.serialLine',
+      'identifier', 'linkedAsset.cpuLine', 'linkedAsset.manufacturer', 'linkedAsset.model', 'linkedAsset.name', 'linkedAsset.osLine', 'linkedAsset.ramLine', 'linkedAsset.storageLine',
+      'nextAction', 'rma.shipping', 'rma.statusLabel', 'secondaryIdentifier', 'sequence.n', 'sequence.total', 'serialSuffix', 'tenantClient.brandText',
+      'tenantClient.logoUrl', 'tenantClient.name', 'ticketDescription', 'title', 'url',
     ]);
-    expect(paths.some((p) => /serial$|recordId|email|phone/i.test(p) && p !== 'serialSuffix')).toBe(false);
+    expect(paths.some((p) => /recordId|email|phone/i.test(p))).toBe(false);
+  });
+
+  it('provides the full serial and description only to Letter ticket worksheets before evaluation', () => {
+    const withDetails = { ...vm, assetSerialNumber: '1234567', ticketDescription: 'First line\nSecond line' };
+    expect(buildLabelModel(withDetails, tenant)).toMatchObject({ assetSerialNumber: null, ticketDescription: null });
+    expect(buildLabelModel(withDetails, tenant, [], { worksheetMode: 'letter' })).toMatchObject({
+      assetSerialNumber: '1234567',
+      ticketDescription: 'First line\nSecond line',
+      url: vm.url,
+    });
+    expect(buildLabelModel({ ...withDetails, labelClass: 'asset-identity' }, tenant, [], { worksheetMode: 'letter' }))
+      .toMatchObject({ assetSerialNumber: null, ticketDescription: null });
+  });
+
+  it.each([
+    [['assetSerialNumber'], null, 'Description'],
+    [['serialSuffix'], null, 'Description'],
+    [['ticketDescription'], '1234567', null],
+    [['detail'], '1234567', null],
+  ] as const)('respects worksheet hiding and existing privacy controls: %s', (hidden, serial, description) => {
+    const model = buildLabelModel(
+      { ...vm, assetSerialNumber: '1234567', ticketDescription: 'Description' },
+      tenant,
+      hidden,
+      { worksheetMode: 'letter' },
+    );
+    expect(model.assetSerialNumber).toBe(serial);
+    expect(model.ticketDescription).toBe(description);
   });
 
   it('C5: an RMA tag derives its return-by and ticket lines; other classes get none', () => {

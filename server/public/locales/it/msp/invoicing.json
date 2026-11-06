@@ -1377,7 +1377,9 @@
           "quote-totals": "Totali preventivo",
           "invoice": "Fattura",
           "customer": "Cliente",
-          "tenant": "Tenant"
+          "tenant": "Tenant",
+          "work-tag": "Etichetta di lavoro",
+          "asset": "Asset"
         }
       },
       "noFieldsMatch": "Nessun campo trovato.",
@@ -1436,6 +1438,12 @@
       "insertDataField": "+ Inserisci campo dati…",
       "searchDataFields": "Cerca campi dati…",
       "dataFields": "Campi dati",
+      "noFieldSelected": "Nessun campo selezionato",
+      "bindingPathHint": "Inserisci un percorso di associazione se il campo desiderato non è nell'elenco.",
+      "useFieldPicker": "Usa selettore di campi",
+      "currentField": "Corrente",
+      "unbound": "Non associato",
+      "useCustomPath": "Usa percorso personalizzato",
       "box": {
         "top": "Sopra",
         "right": "Destra",
@@ -2056,6 +2064,86 @@
       "tenantClient_address": {
         "label": "Indirizzo tenant",
         "description": "L'indirizzo della tua azienda."
+      },
+      "label_recordUrl": {
+        "label": "Link al record",
+        "description": "Percorso dati: {{path}}"
+      },
+      "label_identifier": {
+        "label": "Identificativo",
+        "description": "Percorso dati: {{path}}"
+      },
+      "label_code128Value": {
+        "label": "Valore del codice a barre",
+        "description": "Percorso dati: {{path}}"
+      },
+      "label_title": {
+        "label": "Titolo",
+        "description": "Percorso dati: {{path}}"
+      },
+      "label_clientName": {
+        "label": "Nome cliente",
+        "description": "Percorso dati: {{path}}"
+      },
+      "label_detail": {
+        "label": "Dettaglio / motivo",
+        "description": "Percorso dati: {{path}}"
+      },
+      "label_secondaryIdentifier": {
+        "label": "Identificativo secondario",
+        "description": "Percorso dati: {{path}}"
+      },
+      "label_serialSuffix": {
+        "label": "Parte finale del numero di serie",
+        "description": "Percorso dati: {{path}}"
+      },
+      "label_assetSerialNumber": {
+        "label": "Numero di serie completo dell'asset",
+        "description": "Serie completa dell'asset selezionato, disponibile solo sui fogli cliente in formato Letter."
+      },
+      "label_ticketDescription": {
+        "label": "Descrizione del ticket",
+        "description": "Descrizione del ticket come testo normale, disponibile solo sui fogli cliente in formato Letter."
+      },
+      "label_custodyLocation": {
+        "label": "Luogo di custodia",
+        "description": "Percorso dati: {{path}}"
+      },
+      "label_nextAction": {
+        "label": "Prossima azione",
+        "description": "Percorso dati: {{path}}"
+      },
+      "linkedAsset_name": {
+        "label": "Nome dell'asset",
+        "description": "Percorso dati: {{path}}"
+      },
+      "linkedAsset_manufacturer": {
+        "label": "Produttore dell'asset",
+        "description": "Percorso dati: {{path}}"
+      },
+      "linkedAsset_model": {
+        "label": "Modello dell'asset",
+        "description": "Percorso dati: {{path}}"
+      },
+      "linkedAsset_osLine": {
+        "label": "Sistema operativo dell'asset",
+        "description": "Percorso dati: {{path}}"
+      },
+      "linkedAsset_cpuLine": {
+        "label": "CPU dell'asset",
+        "description": "Percorso dati: {{path}}"
+      },
+      "linkedAsset_ramLine": {
+        "label": "RAM dell'asset",
+        "description": "Percorso dati: {{path}}"
+      },
+      "linkedAsset_storageLine": {
+        "label": "Archiviazione dell'asset",
+        "description": "Percorso dati: {{path}}"
+      },
+      "tenant_brandText": {
+        "label": "Nome dell'azienda senza logo",
+        "description": "Percorso dati: {{path}}"
       }
     },
     "canvas": {
@@ -2527,7 +2615,10 @@
         "version": "Versione",
         "labelClass": "Classe di etichetta",
         "labelFields": "Campi mostrati sull'etichetta",
-        "labelFieldsHint": "Il collegamento al record (codice QR) e l'identificativo sono sempre mostrati."
+        "labelFieldsHint": "Il collegamento al record (codice QR) e l'identificativo sono sempre mostrati.",
+        "worksheetMode": "Foglio cliente in formato Letter",
+        "worksheetModeHint": "Consente di includere il numero di serie completo e la descrizione del ticket. Imposta il formato Letter nel designer.",
+        "worksheetFieldsHint": "Nascondere la parte finale della serie nasconde anche il numero completo; nascondere il dettaglio nasconde anche la descrizione del ticket."
       },
       "placeholders": {
         "templateName": "Modello per {{type}}"
@@ -2568,6 +2659,29 @@
       "workTag": "Etichetta di lavoro / Etichetta",
       "stagingManifest": "Distinta di imballaggio",
       "rmaReturnSlip": "Bolla di reso RMA"
+    },
+    "labelClasses": {
+      "ticket-work-tag": "Etichetta ticket",
+      "asset-identity": "Etichetta asset",
+      "stock-unit-identity": "Etichetta unità di magazzino",
+      "staging-container": "Etichetta scatola di preparazione",
+      "rma-work-tag": "Etichetta RMA"
+    },
+    "labelFields": {
+      "clientName": "Nome cliente",
+      "title": "Titolo",
+      "detail": "Dettaglio / motivo",
+      "secondaryIdentifier": "Identificativo secondario",
+      "serialSuffix": "Parte finale del numero di serie",
+      "assetSerialNumber": "Numero di serie completo dell'asset",
+      "ticketDescription": "Descrizione del ticket",
+      "custodyLocation": "Luogo di custodia",
+      "nextAction": "Prossima azione",
+      "tenantLogo": "Logo aziendale",
+      "tenantName": "Nome dell'azienda"
+    },
+    "standardNames": {
+      "standard-ticket-customer-worksheet": "Foglio cliente standard"
     }
   },
   "errors": {

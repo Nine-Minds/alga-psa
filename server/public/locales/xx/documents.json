@@ -126,7 +126,28 @@
     "replacementSerial": "⟦Řḗƥŀȧƈḗḿḗƞŧ şḗřīȧŀ⟧",
     "shipping": "⟦Şħīƥƥīƞɠ⟧",
     "returnBy": "⟦Řḗŧŭřƞ ƀẏ⟧",
-    "returnShipTo": "⟦Řḗŧŭřƞ şħīƥ ŧȯ⟧"
+    "returnShipTo": "⟦Řḗŧŭřƞ şħīƥ ŧȯ⟧",
+    "worksheet": {
+      "ticketNumber": "⟦Ŧīƈķḗŧ #⟧",
+      "customer": "⟦Ƈŭşŧȯḿḗř⟧",
+      "assetTag": "⟦Ȧşşḗŧ Ŧȧɠ⟧",
+      "serial": "⟦Şḗřīȧŀ⟧",
+      "custodyLocation": "⟦Ƈŭşŧȯḓẏ ŀȯƈȧŧīȯƞ⟧",
+      "nextAction": "⟦Ƞḗẋŧ ȧƈŧīȯƞ⟧",
+      "assetSpecifications": "⟦Ȧşşḗŧ Şƥḗƈīƒīƈȧŧīȯƞş⟧",
+      "ticketDetails": "⟦Ŧīƈķḗŧ Ḓḗŧȧīŀş⟧",
+      "assetName": "⟦Ƞȧḿḗ⟧",
+      "make": "⟦Ḿȧķḗ⟧",
+      "model": "⟦Ḿȯḓḗŀ⟧",
+      "os": "⟦Ȯƥḗřȧŧīƞɠ şẏşŧḗḿ⟧",
+      "cpu": "⟦ƇƤŬ⟧",
+      "ram": "⟦ŘȦḾ⟧",
+      "storage": "⟦Şŧȯřȧɠḗ⟧",
+      "cpuCoreCount_one": "⟦{{count}} ƈȯřḗ⟧",
+      "cpuCoreCount_other": "⟦{{count}} ƈȯřḗş⟧",
+      "cpuCoreCount_few": "⟦{{count}} ƈȯřḗş⟧",
+      "cpuCoreCount_many": "⟦{{count}} ƈȯřḗş⟧"
+    }
   },
   "errors": {
     "permissions": {

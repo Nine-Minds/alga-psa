@@ -126,7 +126,28 @@
     "replacementSerial": "Número de serie del reemplazo",
     "shipping": "Envío",
     "returnBy": "Devolver antes de",
-    "returnShipTo": "Enviar devolución a"
+    "returnShipTo": "Enviar devolución a",
+    "worksheet": {
+      "ticketNumber": "Ticket n.º",
+      "customer": "Cliente",
+      "assetTag": "Etiqueta del activo",
+      "serial": "Serie",
+      "custodyLocation": "Ubicación de custodia",
+      "nextAction": "Próxima acción",
+      "assetSpecifications": "Especificaciones del activo",
+      "ticketDetails": "Detalles del ticket",
+      "assetName": "Nombre",
+      "make": "Fabricante",
+      "model": "Modelo",
+      "os": "Sistema operativo",
+      "cpu": "Procesador",
+      "ram": "Memoria RAM",
+      "storage": "Almacenamiento",
+      "cpuCoreCount_one": "{{count}} núcleo",
+      "cpuCoreCount_other": "{{count}} núcleos",
+      "cpuCoreCount_few": "{{count}} núcleos",
+      "cpuCoreCount_many": "{{count}} núcleos"
+    }
   },
   "errors": {
     "permissions": {

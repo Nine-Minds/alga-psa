@@ -13,10 +13,23 @@ export const buildSampleLabelViewModel = (): LabelViewModel => ({
   detail: 'Diagnose power fault',
   secondaryIdentifier: 'AT-000123',
   serialSuffix: '7K2Q',
+  assetSerialNumber: 'LAPTOP-7K2Q',
+  ticketDescription: 'The laptop no longer powers on.\nPlease diagnose the power fault.',
   // Held-equipment lines replace the reason line when present; the preview shows the common case (none) so it
   // matches the print path, which collapses the reason when custody prints.
   custodyLocation: null,
   nextAction: null,
+  // Shown only by the full-page customer worksheet; the 4 x 2 in tag templates bind none of these.
+  linkedAsset: {
+    assetId: 'b2d4e6f6-8a0c-4c1e-9e2g-4h6i8j8k0l2m',
+    name: 'Dell Latitude 5540',
+    manufacturer: 'Dell',
+    model: 'Latitude 5540',
+    osLine: 'Windows 11 Pro 23H2',
+    cpuLine: 'Intel Core i7-1365U',
+    ramLine: '16 GB',
+    storageLine: 'SSD 512 GB',
+  },
   // Shown only by templates that bind it (the staging box label): "Box n of m".
   sequence: { n: 3, total: 5 },
   tenantClient: { name: 'Example MSP', logoUrl: null, brandText: 'Example MSP' },

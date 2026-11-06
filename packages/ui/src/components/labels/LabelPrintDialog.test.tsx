@@ -23,9 +23,9 @@ vi.mock('./useLabelPrint', () => ({
   useLabelPrint: () => ({ ...hook, isPrinting: false }),
 }));
 vi.mock('../Dialog', () => ({
-  Dialog: ({ isOpen, children }: { isOpen: boolean; children: React.ReactNode }) => (isOpen ? <div>{children}</div> : null),
+  Dialog: ({ isOpen, children, footer }: { isOpen: boolean; children: React.ReactNode; footer?: React.ReactNode }) =>
+    isOpen ? <div>{children}<div data-testid="dialog-footer">{footer}</div></div> : null,
   DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 vi.mock('../CustomSelect', () => ({
   default: ({ id, disabled, options }: { id: string; disabled?: boolean; options: Array<{ value: string; label: string }> }) => (
@@ -60,6 +60,15 @@ beforeEach(() => {
 });
 
 describe('LabelPrintDialog', () => {
+  it('places print and close actions in the dialog footer', () => {
+    const onClose = vi.fn();
+    render(<LabelPrintDialog isOpen onClose={onClose} labelClass="asset-identity" ids={[A]} />);
+    const footer = screen.getByTestId('dialog-footer');
+    expect(footer.contains(screen.getByText('Print'))).toBe(true);
+    fireEvent.click(screen.getByText('Close'));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
   it('reports the skipped count after printing', async () => {
     hook.print.mockResolvedValue({ status: 'printed', printed: 2, skipped: 3, blobUrl: 'blob:x', popupBlocked: false });
     render(<LabelPrintDialog isOpen onClose={vi.fn()} labelClass="asset-identity" ids={[A, B]} />);
@@ -88,6 +97,39 @@ describe('LabelPrintDialog', () => {
     fireEvent.click(screen.getByText('Skip these and print the rest'));
     await waitFor(() => expect(hook.print).toHaveBeenCalledTimes(2));
     expect(hook.print.mock.calls[1][0].labels).toEqual([{ recordId: B }]);
+  });
+
+  it('localizes a worksheet overflow error and preserves the affected sheet numbers', async () => {
+    hook.print.mockResolvedValue({
+      status: 'failed',
+      httpStatus: 422,
+      message: 'server fallback',
+      failures: [],
+      errorCode: 'worksheetTextOverflow',
+      worksheetNumbers: [2, 4],
+    });
+    render(<LabelPrintDialog isOpen onClose={vi.fn()} labelClass="ticket-work-tag" ids={[A]} />);
+    fireEvent.click(screen.getByText('Print'));
+    await waitFor(() => expect(screen.getByText(
+      'Worksheet 2, 4 contains text that will not fit. Adjust the layout or shorten the content before printing.',
+    )).toBeTruthy());
+    expect(screen.queryByText('server fallback')).toBeNull();
+  });
+
+  it('localizes worksheet page-size failures instead of showing the server fallback', async () => {
+    hook.print.mockResolvedValue({
+      status: 'failed',
+      httpStatus: 422,
+      message: 'server fallback',
+      failures: [{ index: 0, recordId: A, identifier: 'TIC-1', templateCode: 'custom', message: 'server detail', errorCode: 'worksheetPageSize' }],
+    });
+    render(<LabelPrintDialog isOpen onClose={vi.fn()} labelClass="ticket-work-tag" ids={[A]} />);
+    fireEvent.click(screen.getByText('Print'));
+    await waitFor(() => expect(screen.getByText(
+      /The worksheet must use Letter or larger portrait paper/,
+    )).toBeTruthy());
+    expect(screen.queryByText('server fallback')).toBeNull();
+    expect(screen.queryByText(/server detail/)).toBeNull();
   });
 
   it('disables printing above the 200-label limit and says why', async () => {

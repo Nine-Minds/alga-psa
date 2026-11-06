@@ -1619,7 +1619,20 @@
       "ticketTitle": "Arbeitsetiketten drucken",
       "tooMany": "Sie können höchstens {{max}} Etiketten auf einmal drucken.",
       "unnamedAsset": "Unbenanntes Asset",
-      "useTemplate": "{{template}} verwenden"
+      "useTemplate": "{{template}} verwenden",
+      "templatePaperWarning": "Diese Vorlage wird auf ein ganzes Blatt gedruckt. Wählen Sie „Vorlagenpapier“ (oder ein Ganzseiten-Layout), sonst passt der Inhalt nicht auf das Etikett.",
+      "worksheetPageSizeError": "Das Arbeitsblatt muss im Designer und im Drucklayout Letter-Papier oder größeres Papier im Hochformat verwenden.",
+      "worksheetTextOverflowError": "Arbeitsblatt {{numbers}} enthält Text, der nicht hineinpasst. Passen Sie das Layout an oder kürzen Sie den Inhalt vor dem Drucken."
+    },
+    "layout": {
+      "template-preferred": "Vorlagenpapier (Standard)",
+      "roll-4x2": "Eines pro Etikett (4 × 2 in Rolle)",
+      "letter-2x5": "Letter-Blatt, 2 × 5 (Avery-5163-Stil)",
+      "a4-2x7": "A4-Blatt, 2 × 7 (99,1 × 38,1 mm-Stil)",
+      "letter-full": "Letter-Blatt, eines pro Seite"
+    },
+    "standardTemplates": {
+      "standard-ticket-customer-worksheet": "Standard-Kundenarbeitsblatt"
     }
   },
   "deleteEntity": {

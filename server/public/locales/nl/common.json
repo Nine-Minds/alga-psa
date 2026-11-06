@@ -1619,7 +1619,20 @@
       "ticketTitle": "Werklabels afdrukken",
       "tooMany": "U kunt maximaal {{max}} labels tegelijk afdrukken.",
       "unnamedAsset": "Naamloze asset",
-      "useTemplate": "{{template}} gebruiken"
+      "useTemplate": "{{template}} gebruiken",
+      "templatePaperWarning": "Deze sjabloon wordt op een volledig vel afgedrukt. Kies \"Sjabloonpapier\" (of een lay-out voor een volledig vel), anders past de inhoud niet op het etiket.",
+      "worksheetPageSizeError": "Het werkblad moet zowel in de ontwerper als in de afdrukindeling staand Letter-papier of groter gebruiken.",
+      "worksheetTextOverflowError": "Werkblad {{numbers}} bevat tekst die niet past. Pas de indeling aan of verkort de inhoud voordat u afdrukt."
+    },
+    "layout": {
+      "template-preferred": "Sjabloonpapier (standaard)",
+      "roll-4x2": "Eén per etiket (rol van 4 × 2 in)",
+      "letter-2x5": "Letter-vel, 2 × 5 (Avery 5163-stijl)",
+      "a4-2x7": "A4-vel, 2 × 7 (99,1 × 38,1 mm-stijl)",
+      "letter-full": "Letter-vel, één per pagina"
+    },
+    "standardTemplates": {
+      "standard-ticket-customer-worksheet": "Standaard klantwerkblad"
     }
   },
   "deleteEntity": {

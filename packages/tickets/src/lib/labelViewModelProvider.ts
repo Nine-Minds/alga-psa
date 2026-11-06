@@ -1,5 +1,6 @@
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { flattenBlockContentToPlainText } from '@alga-psa/formatting/blocknoteUtils';
 import {
   recordUrl,
   type LabelRequestContext,
@@ -61,6 +62,9 @@ export const ticketLabelViewModelProvider: LabelViewModelProvider = {
           .table('tickets as t')
           .where('t.ticket_id', ticketId)
           .select('t.ticket_id', 't.ticket_number', 't.title', 'c.client_name', 'cat.category_name', 'sub.category_name as subcategory_name');
+        if (context.includeWorksheetDetails) {
+          query.select('t.attributes');
+        }
         facade.tenantJoin(query, 'clients as c', 't.client_id', 'c.client_id', { type: 'left' });
         facade.tenantJoin(query, 'categories as cat', 't.category_id', 'cat.category_id', { type: 'left' });
         facade.tenantJoin(query, 'categories as sub', 't.subcategory_id', 'sub.category_id', { type: 'left' });
@@ -72,6 +76,7 @@ export const ticketLabelViewModelProvider: LabelViewModelProvider = {
               client_name: string | null;
               category_name: string | null;
               subcategory_name: string | null;
+              attributes?: { description?: unknown } | null;
             }
           | undefined;
         if (!row) {
@@ -88,6 +93,9 @@ export const ticketLabelViewModelProvider: LabelViewModelProvider = {
           title: row.title ?? null,
           clientName: row.client_name ?? null,
           detail: deriveWorkReason(row.subcategory_name, row.category_name),
+          ...(context.includeWorksheetDetails
+            ? { ticketDescription: flattenBlockContentToPlainText(row.attributes?.description).trim() || null }
+            : {}),
           secondaryIdentifier: null,
           serialSuffix: null,
           custodyLocation: null,

@@ -126,7 +126,28 @@
     "replacementSerial": "Ersättningens serienummer",
     "shipping": "Frakt",
     "returnBy": "Retur senast",
-    "returnShipTo": "Returnera till"
+    "returnShipTo": "Returnera till",
+    "worksheet": {
+      "ticketNumber": "Ärende nr",
+      "customer": "Kund",
+      "assetTag": "Tillgångstagg",
+      "serial": "Serienummer",
+      "custodyLocation": "Förvaringsplats",
+      "nextAction": "Nästa åtgärd",
+      "assetSpecifications": "Tillgångsspecifikationer",
+      "ticketDetails": "Ärendedetaljer",
+      "assetName": "Namn",
+      "make": "Tillverkare",
+      "model": "Modell",
+      "os": "Operativsystem",
+      "cpu": "Processor",
+      "ram": "Arbetsminne",
+      "storage": "Lagring",
+      "cpuCoreCount_one": "{{count}} kärna",
+      "cpuCoreCount_other": "{{count}} kärnor",
+      "cpuCoreCount_few": "{{count}} kärnor",
+      "cpuCoreCount_many": "{{count}} kärnor"
+    }
   },
   "errors": {
     "permissions": {

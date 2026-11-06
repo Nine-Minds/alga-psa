@@ -1,13 +1,15 @@
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import type { LabelRequestContext } from '@alga-psa/types';
+import type { LabelLinkedAssetInfo, LabelRequestContext } from '@alga-psa/types';
 
 import { createAssetReadContext, isAssetReadAllowed } from './assetReadAuthorization';
 import { getOpenCustodyForAssets } from './custody/queries';
 import { formatCustodyForLabel, formatCustodyForLabelSubject, type CustodyLabelFacts } from './custody/labelFormat';
+import { getLinkedAssetInfoForAssets, type FormatCpuCoreCount, type LinkedAssetInfoBase } from './linkedAssetLabelInfo';
 
 /**
- * The asset half of a ticket work tag: the linked asset's tag and a serial SUFFIX. Read-only.
+ * The asset half of a ticket work tag: the linked asset's tag and a serial suffix. Read-only.
+ * A Letter worksheet may also receive the full serial of the same authorized asset.
  *
  * Lives in the assets package because the asset kernel check must run here (tickets never import
  * assets; the composition root merges this into the ticket view models). An asset the caller cannot
@@ -18,10 +20,18 @@ export interface TicketLinkedAssetLabelParts {
   assetId: string;
   assetTag: string | null;
   serialSuffix: string | null;
+  /** Present only when the resolved template explicitly requests Letter worksheet details. */
+  assetSerialNumber?: string | null;
   /** Held-equipment line ("Main Office / Shelf B3", "With vendor", "2 items held"), or null. Never the note. */
   custodyLocation: string | null;
   /** "Waiting on vendor, Oct 29" etc., or null. Derived from party + follow-up date only. */
   nextAction: string | null;
+  /**
+   * Full identification of the asset this label is about (name, Make/Model, OS, CPU, RAM, Storage) for
+   * the full-page customer worksheet. Null when the label has no asset (custody-only labels) or the
+   * asset row is missing. Never filled for an asset the caller cannot read.
+   */
+  linkedAssetInfo: LabelLinkedAssetInfo | null;
 }
 
 /** Serials shorter than this produce no suffix, so the suffix can never be the whole serial. */
@@ -52,7 +62,8 @@ export interface TicketLabelSubject {
  */
 export async function getTicketLinkedAssetLabelParts(
   context: LabelRequestContext,
-  subjects: ReadonlyArray<TicketLabelSubject>
+  subjects: ReadonlyArray<TicketLabelSubject>,
+  options: { formatCpuCoreCount?: FormatCpuCoreCount } = {}
 ): Promise<Array<TicketLinkedAssetLabelParts | null>> {
   const result: Array<TicketLinkedAssetLabelParts | null> = subjects.map(() => null);
   const ticketIds = Array.from(new Set(subjects.map((s) => s.recordId)));
@@ -75,12 +86,18 @@ export async function getTicketLinkedAssetLabelParts(
   const assets = await db
     .table('assets')
     .whereIn('asset_id', assetIds)
-    .select<Array<{ asset_id: string; asset_tag: string | null; serial_number: string | null; client_id: string | null }>>(
-      'asset_id',
-      'asset_tag',
-      'serial_number',
-      'client_id'
-    );
+    .select<
+      Array<{
+        asset_id: string;
+        asset_tag: string | null;
+        serial_number: string | null;
+        client_id: string | null;
+        asset_type: string | null;
+        name: string | null;
+        manufacturer: string | null;
+        model: string | null;
+      }>
+    >('asset_id', 'asset_tag', 'serial_number', 'client_id', 'asset_type', 'name', 'manufacturer', 'model');
   const byId = new Map(assets.map((a) => [a.asset_id, a]));
 
   const authContext = await createAssetReadContext(knex, context.tenant, context.user);
@@ -113,10 +130,12 @@ export async function getTicketLinkedAssetLabelParts(
   }
   const factsOf = (assetId: string): CustodyLabelFacts | null => formatCustodyForLabel(custodyByAsset.get(assetId));
 
+  const resolved: Array<string | null> = [];
   subjects.forEach((subject, index) => {
     const readableLinked = readableByTicket.get(subject.recordId) ?? [];
     const pickedId = subject.linkedAssetId && readableLinked.includes(subject.linkedAssetId) ? subject.linkedAssetId : null;
     const assetId = pickedId ?? (readableLinked.length === 1 ? readableLinked[0] : null);
+    resolved[index] = assetId;
     const held = readableLinked.flatMap((id) => {
       const facts = factsOf(id);
       return facts ? [facts] : [];
@@ -128,10 +147,30 @@ export async function getTicketLinkedAssetLabelParts(
       assetId: assetId ?? '',
       assetTag: asset?.asset_tag ?? null,
       serialSuffix: asset ? serialSuffixOf(asset.serial_number) : null,
+      ...(context.includeWorksheetDetails
+        ? { assetSerialNumber: asset?.serial_number?.trim() || null }
+        : {}),
       custodyLocation: custody?.custodyLocation ?? null,
       nextAction: custody?.nextAction ?? null,
+      linkedAssetInfo: null,
     };
   });
+
+  // The worksheet block is fetched only for the assets the labels actually resolved — always readable.
+  const infoIds = Array.from(new Set(resolved.filter((id): id is string => Boolean(id))));
+  if (infoIds.length > 0) {
+    const bases: LinkedAssetInfoBase[] = infoIds.flatMap((id) => {
+      const a = byId.get(id);
+      if (!a) return [];
+      return [{ asset_id: a.asset_id, asset_type: a.asset_type, name: a.name, manufacturer: a.manufacturer, model: a.model }];
+    });
+    const infoById = await getLinkedAssetInfoForAssets(knex, context.tenant, bases, options.formatCpuCoreCount);
+    result.forEach((parts, index) => {
+      const assetId = resolved[index];
+      if (!parts || !assetId) return;
+      parts.linkedAssetInfo = infoById.get(assetId) ?? null;
+    });
+  }
   return result;
 }
 

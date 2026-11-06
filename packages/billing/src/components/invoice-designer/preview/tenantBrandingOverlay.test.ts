@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { QuoteViewModel, WasmInvoiceViewModel } from '@alga-psa/types';
+import type { LabelViewModel, QuoteViewModel, WasmInvoiceViewModel } from '@alga-psa/types';
 
 import type { TenantParty } from '../../../lib/adapters/tenantPartyAdapter';
 import {
   overlayInvoiceSampleTenant,
+  overlayLabelSampleTenant,
   overlayQuoteSampleTenant,
   overlaySalesOrderSampleTenant,
 } from './tenantBrandingOverlay';
@@ -58,6 +59,13 @@ const buildSalesOrderSample = (): Record<string, unknown> => ({
   },
 });
 
+const buildLabelSample = (): LabelViewModel =>
+  ({
+    labelClass: 'ticket-work-tag',
+    identifier: 'TKT-0042',
+    tenantClient: { name: 'Northwind MSP', logoUrl: null, brandText: 'Northwind MSP' },
+  }) as unknown as LabelViewModel;
+
 describe('tenantBrandingOverlay', () => {
   it('replaces the quote sample issuer with the tenant party (snake_case logo_url)', () => {
     const overlaid = overlayQuoteSampleTenant(buildQuoteSample(), realParty);
@@ -96,10 +104,38 @@ describe('tenantBrandingOverlay', () => {
     expect(overlaid.customer).toEqual({ name: 'Acme Corp', address: '123 Main St' });
   });
 
+  it('replaces the label sample issuer with the tenant party in the camelCase LabelTenantClient shape', () => {
+    const overlaid = overlayLabelSampleTenant(buildLabelSample(), realParty);
+
+    expect(overlaid.tenantClient).toEqual({
+      name: 'Cascade IT Partners',
+      logoUrl: 'https://cdn.example/logo.png',
+      // The name shows as a text brand only when there is no logo.
+      brandText: null,
+    });
+    expect(overlaid.identifier).toBe('TKT-0042');
+  });
+
+  it('falls back to the text brand line when the tenant party has no logo', () => {
+    const overlaid = overlayLabelSampleTenant(buildLabelSample(), {
+      name: 'Solo Shop',
+      address: null,
+      email: null,
+      phone: null,
+      logo_url: null,
+    });
+
+    expect(overlaid.tenantClient).toEqual({ name: 'Solo Shop', logoUrl: null, brandText: 'Solo Shop' });
+  });
+
   it('leaves the synthetic sample issuer in place when no tenant party resolves', () => {
     const quote = buildQuoteSample();
     const invoice = buildInvoiceSample();
     const salesOrder = buildSalesOrderSample();
+    const label = buildLabelSample();
+
+    expect(overlayLabelSampleTenant(label, null)).toBe(label);
+    expect(overlayLabelSampleTenant(label, null).tenantClient?.name).toBe('Northwind MSP');
 
     expect(overlayQuoteSampleTenant(quote, null)).toBe(quote);
     expect(overlayQuoteSampleTenant(quote, null).tenant?.name).toBe('Northwind MSP');
