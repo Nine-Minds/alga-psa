@@ -73,7 +73,8 @@ export function isAdditionalWorkspaceTest(file, lane) {
     if (file === 'ee/temporal-workflows/src/activities/__tests__/tenant-deletion-external-links.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/tenant-deletion-answer-mappings.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/tenant-deletion-prepaid-block-order.test.ts') return true;
-    if (/^ee\/temporal-workflows\/src\/activities\/__tests__\/(defaultTaxRate|workSchedule|teamsObservability)TenantDeletionOrder\.test\.ts$/.test(file)) return true;
+    if (/^ee\/temporal-workflows\/src\/activities\/__tests__\/(defaultTaxRate|workSchedule|teamsObservability|coManaged)TenantDeletionOrder\.test\.ts$/.test(file)) return true;
+    if (file === 'ee/temporal-workflows/src/activities/__tests__/coManagedTenantDeletion.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/email-activities.temporal.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/maintenance-fanout-activities.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/portal-domain-reconcile.integration.test.ts') return true;

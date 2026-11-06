@@ -436,7 +436,8 @@
       "workspace": "Arbeitsbereich",
       "capacity": "{{allocated}} von {{count}} Co-Managed-Plätzen zugewiesen.",
       "openClient": "Co-Managed IT für diesen Kunden einrichten",
-      "readOnly": "Co-Managed IT ist für diesen Arbeitsbereich schreibgeschützt. Bestehende Beziehungen werden angezeigt; eine neue Einrichtung ist nicht verfügbar."
+      "readOnly": "Co-Managed IT ist für diesen Arbeitsbereich schreibgeschützt. Bestehende Beziehungen werden angezeigt; eine neue Einrichtung ist nicht verfügbar.",
+      "slaPriorities": "SLA-Prioritätszuordnungen"
     },
     "provisioning": {
       "administrator": "Administrator",
@@ -674,7 +675,8 @@
       "viewer": "Betrachter",
       "viewOnly": "Nur Ansicht",
       "visibility": "Ticket-Sichtbarkeit",
-      "whyTitle": "Warum kann jemand dies nicht sehen?"
+      "whyTitle": "Warum kann jemand dies nicht sehen?",
+      "readOnly": "Sie können diese Konfiguration ansehen, aber nicht ändern."
     },
     "sharedTasks": {
       "link": "Geteilte Aufgaben",
@@ -732,93 +734,13 @@
       "saved": "Gespeichert.",
       "save": "Speichern"
     },
-    "attachments": {
-      "title": "Anhänge",
-      "add": "Datei anhängen",
-      "choose": "Datei auswählen",
-      "help": "Dateien übernehmen den Empfängerkreis dieser Nachricht. Maximal {{size}} MiB.",
-      "uploading": "Wird hochgeladen…",
-      "upload": "Hochladen",
-      "invalid": "Wählen Sie eine zulässige Datei innerhalb der Größenbegrenzung.",
-      "loadError": "Anhänge sind nicht verfügbar. Aktualisieren Sie, um Ihren Zugriff zu prüfen.",
-      "unknownOutcome": "Der Upload konnte nicht bestätigt werden. Versuchen Sie es mit derselben Datei erneut.",
-      "remove": "Entfernen",
-      "removeTitle": "Anhang entfernen",
-      "removeHelp": "{{name}} aus dieser Nachricht entfernen? Personen, die die Nachricht sehen, können diese Datei dann nicht mehr herunterladen.",
-      "removeUnknownOutcome": "Das Entfernen konnte nicht bestätigt werden. Versuchen Sie es erneut, um dieselbe Datei zu prüfen.",
-      "removing": "Wird entfernt…",
-      "removeNamed": "{{name}} entfernen"
-    },
-    "disclosure": {
-      "title": "Sichtbarkeit des Verlaufs ändern",
-      "review": "Erneut prüfen",
-      "confirm": "Änderung bestätigen",
-      "scope": "Dies ändert die Sichtbarkeit des gesamten Verlaufs: {{comments}} Nachrichten und {{attachments}} Anhänge.",
-      "current": "Aktuelle Sichtbarkeit: {{audience}}",
-      "help": "Antworten und Anhänge übernehmen diese Sichtbarkeit. Bereits gelesene oder heruntergeladene Informationen können nicht zurückgerufen werden.",
-      "pending": "Ein Anhang wird noch hochgeladen. Schließen Sie den Upload ab, bevor Sie die Sichtbarkeit ändern.",
-      "unknownOutcome": "Das Ergebnis ist unbekannt. Wiederholen Sie die Anfrage, um dieselbe Änderung zu prüfen.",
-      "transferHelp": "Beim Teilen werden dieser Verlauf und seine Anhänge in den Kundenarbeitsbereich übertragen. Der ursprüngliche MSP-private Verlauf bleibt als schreibgeschützter Verlauf erhalten.",
-      "open": "Sichtbarkeit dieses Threads ändern"
-    },
-    "conversation": {
-      "audience": "Sichtbar für",
-      "audiences": {
-        "requester": "Anfragende und IT-Teams",
-        "shared_it": "Gemeinsame IT-Teams",
-        "organization_private": "Nur meine Organisation"
-      },
-      "audienceHelp": {
-        "requester": "Sichtbar für berechtigte Anfragende und IT-Mitarbeitende beider Organisationen.",
-        "shared_it": "Sichtbar für berechtigte IT-Mitarbeitende beider Organisationen, ohne Zugriff für Anfragende.",
-        "organization_private": "Nur für berechtigte Mitarbeitende Ihrer Organisation sichtbar."
-      },
-      "drafts": {
-        "title": "Nicht gesendete Nachrichten",
-        "help": "Diese Nachrichten wurden begonnen, aber nicht gesendet. Prüfen Sie eine Nachricht, wählen Sie fehlende Dateien erneut aus und senden oder verwerfen Sie sie.",
-        "fileReady": "Hochgeladen",
-        "fileMissing": "Muss erneut ausgewählt werden",
-        "choose": "Fehlende Dateien auswählen",
-        "resume": "Senden",
-        "discard": "Verwerfen",
-        "missing": "Wählen Sie vor dem Senden jede fehlende Datei mit demselben Namen aus.",
-        "unsent": "Wir konnten nicht bestätigen, dass Ihre Nachricht und die Dateien gesendet wurden. Sie sind gespeichert und erscheinen unter „Nicht gesendete Nachrichten“ – setzen Sie sie dort fort oder verwerfen Sie sie."
-      },
-      "files": {
-        "choose": "Dateien anhängen",
-        "help": "Bis zu {{count}} Dateien mit jeweils {{size}} MiB. Dateien sind für den Empfängerkreis dieser Nachricht sichtbar.",
-        "remove": "Entfernen",
-        "removeNamed": "{{name}} entfernen",
-        "invalid": "Entfernen Sie vor dem Senden Dateien, die die Größen- oder Anzahlbegrenzung überschreiten.",
-        "preparing": "Dateien werden vorbereitet…",
-        "uploading": "{{completed}} von {{total}} Dateien hochgeladen…",
-        "publishing": "Nachricht und Dateien werden veröffentlicht…",
-        "notReady": "Einige Dateien sind noch nicht bereit. Versuchen Sie es erneut, um den Upload abzuschließen und dieselbe Nachricht zu senden.",
-        "preparationFailed": "Die ausgewählten Dateien konnten nicht gelesen werden. Wählen Sie sie erneut aus oder entfernen Sie sie vor dem nächsten Versuch.",
-        "abandoned": "Dieser Entwurf wurde verworfen. Speichern Sie erneut, um eine neue Nachricht mit den ausgewählten Dateien zu erstellen.",
-        "audienceUnavailable": "An Nachrichten für diese Zielgruppe können keine Dateien angehängt werden. Entfernen Sie die Dateien oder wählen Sie eine andere Zielgruppe.",
-        "cancelUnknownOutcome": "Die Stornierung konnte nicht bestätigt werden. Versuchen Sie es erneut, um dieselbe Anfrage zu prüfen.",
-        "canceling": "Wird abgebrochen…"
-      }
-    },
-    "ticket": {
-      "cancel": "Abbrechen",
-      "loading": "Wird geladen…",
-      "reload": "Aktuellen Stand laden",
-      "retry": "Erneut versuchen",
-      "saving": "Wird gespeichert…"
-    },
-    "editor": {
-      "errors": {
-        "invalid": "Einige Werte sind ungültig. Prüfen Sie Ihre Änderungen und versuchen Sie es erneut.",
-        "conflict": "Dieses Ticket wurde geändert. Laden Sie es vor dem Speichern neu.",
-        "operationConflict": "Diese Speicheranfrage wurde bereits für eine andere Änderung verwendet. Laden Sie das Ticket neu.",
-        "forbidden": "Ihr Zugriff auf dieses Ticket hat sich geändert. Laden Sie es neu.",
-        "readOnly": "Dieser Arbeitsbereich ist schreibgeschützt. Laden Sie den aktuellen Stand neu.",
-        "closeRules": "Das Ticket muss die Abschlussbedingungen seines Boards erfüllen, bevor es geschlossen werden kann.",
-        "unknownOutcome": "Es konnte nicht bestätigt werden, ob die Änderung gespeichert wurde. Wiederholen Sie dieselbe Speicherung oder verwerfen Sie Ihre Änderungen und laden Sie neu.",
-        "slaSetupRequired": "Ihr MSP muss seine SLA-Richtlinie und Prioritätszuordnung konfigurieren, bevor dieses Ticket unter MSP-Verantwortung wieder geöffnet werden kann."
-      }
+    "sla": {
+      "title": "SLA-Prioritäten bei gemeinsamer Verwaltung",
+      "description": "Legen Sie fest, welche Ihrer Prioritäten – und damit welches Ihrer SLA-Ziele – gilt, wenn ein Kunde ein Ticket der jeweiligen Priorität eskaliert.",
+      "missingPolicy": "Keine SLA-Richtlinie konfiguriert",
+      "settings": "SLA-Richtlinien verwalten",
+      "mappingFor": "Kundenpriorität {{name}} entspricht",
+      "unmapped": "Nicht zugeordnet"
     },
     "portableExport": {
       "title": "Arbeitsbereich exportieren",
@@ -989,6 +911,96 @@
         "unknownOutcome": "Es konnte nicht bestätigt werden, ob die Änderung gespeichert wurde. Wiederholen Sie dieselbe Speicherung oder verwerfen Sie Ihre Änderungen und laden Sie neu.",
         "slaSetupRequired": "Ihr MSP muss seine SLA-Richtlinie und Prioritätszuordnung konfigurieren, bevor dieses Ticket unter MSP-Verantwortung wieder geöffnet werden kann."
       }
+    },
+    "attachments": {
+      "title": "Anhänge",
+      "add": "Datei anhängen",
+      "choose": "Datei auswählen",
+      "help": "Dateien übernehmen den Empfängerkreis dieser Nachricht. Maximal {{size}} MiB.",
+      "uploading": "Wird hochgeladen…",
+      "upload": "Hochladen",
+      "invalid": "Wählen Sie eine zulässige Datei innerhalb der Größenbegrenzung.",
+      "loadError": "Anhänge sind nicht verfügbar. Aktualisieren Sie, um Ihren Zugriff zu prüfen.",
+      "unknownOutcome": "Der Upload konnte nicht bestätigt werden. Versuchen Sie es mit derselben Datei erneut.",
+      "remove": "Entfernen",
+      "removeTitle": "Anhang entfernen",
+      "removeHelp": "{{name}} aus dieser Nachricht entfernen? Personen, die die Nachricht sehen, können diese Datei dann nicht mehr herunterladen.",
+      "removeUnknownOutcome": "Das Entfernen konnte nicht bestätigt werden. Versuchen Sie es erneut, um dieselbe Datei zu prüfen.",
+      "removing": "Wird entfernt…",
+      "removeNamed": "{{name}} entfernen"
+    },
+    "disclosure": {
+      "title": "Sichtbarkeit des Verlaufs ändern",
+      "review": "Erneut prüfen",
+      "confirm": "Änderung bestätigen",
+      "scope": "Dies ändert die Sichtbarkeit des gesamten Verlaufs: {{comments}} Nachrichten und {{attachments}} Anhänge.",
+      "current": "Aktuelle Sichtbarkeit: {{audience}}",
+      "help": "Antworten und Anhänge übernehmen diese Sichtbarkeit. Bereits gelesene oder heruntergeladene Informationen können nicht zurückgerufen werden.",
+      "pending": "Ein Anhang wird noch hochgeladen. Schließen Sie den Upload ab, bevor Sie die Sichtbarkeit ändern.",
+      "unknownOutcome": "Das Ergebnis ist unbekannt. Wiederholen Sie die Anfrage, um dieselbe Änderung zu prüfen.",
+      "transferHelp": "Beim Teilen werden dieser Verlauf und seine Anhänge in den Kundenarbeitsbereich übertragen. Der ursprüngliche MSP-private Verlauf bleibt als schreibgeschützter Verlauf erhalten.",
+      "open": "Sichtbarkeit dieses Threads ändern"
+    },
+    "conversation": {
+      "audience": "Sichtbar für",
+      "audiences": {
+        "requester": "Anfragende und IT-Teams",
+        "shared_it": "Gemeinsame IT-Teams",
+        "organization_private": "Nur meine Organisation"
+      },
+      "audienceHelp": {
+        "requester": "Sichtbar für berechtigte Anfragende und IT-Mitarbeitende beider Organisationen.",
+        "shared_it": "Sichtbar für berechtigte IT-Mitarbeitende beider Organisationen, ohne Zugriff für Anfragende.",
+        "organization_private": "Nur für berechtigte Mitarbeitende Ihrer Organisation sichtbar."
+      },
+      "drafts": {
+        "title": "Nicht gesendete Nachrichten",
+        "help": "Diese Nachrichten wurden begonnen, aber nicht gesendet. Prüfen Sie eine Nachricht, wählen Sie fehlende Dateien erneut aus und senden oder verwerfen Sie sie.",
+        "fileReady": "Hochgeladen",
+        "fileMissing": "Muss erneut ausgewählt werden",
+        "choose": "Fehlende Dateien auswählen",
+        "resume": "Senden",
+        "discard": "Verwerfen",
+        "missing": "Wählen Sie vor dem Senden jede fehlende Datei mit demselben Namen aus.",
+        "unsent": "Wir konnten nicht bestätigen, dass Ihre Nachricht und die Dateien gesendet wurden. Sie sind gespeichert und erscheinen unter „Nicht gesendete Nachrichten“ – setzen Sie sie dort fort oder verwerfen Sie sie."
+      },
+      "files": {
+        "choose": "Dateien anhängen",
+        "help": "Bis zu {{count}} Dateien mit jeweils {{size}} MiB. Dateien sind für den Empfängerkreis dieser Nachricht sichtbar.",
+        "remove": "Entfernen",
+        "removeNamed": "{{name}} entfernen",
+        "invalid": "Entfernen Sie vor dem Senden Dateien, die die Größen- oder Anzahlbegrenzung überschreiten.",
+        "preparing": "Dateien werden vorbereitet…",
+        "uploading": "{{completed}} von {{total}} Dateien hochgeladen…",
+        "publishing": "Nachricht und Dateien werden veröffentlicht…",
+        "notReady": "Einige Dateien sind noch nicht bereit. Versuchen Sie es erneut, um den Upload abzuschließen und dieselbe Nachricht zu senden.",
+        "preparationFailed": "Die ausgewählten Dateien konnten nicht gelesen werden. Wählen Sie sie erneut aus oder entfernen Sie sie vor dem nächsten Versuch.",
+        "abandoned": "Dieser Entwurf wurde verworfen. Speichern Sie erneut, um eine neue Nachricht mit den ausgewählten Dateien zu erstellen.",
+        "audienceUnavailable": "An Nachrichten für diese Zielgruppe können keine Dateien angehängt werden. Entfernen Sie die Dateien oder wählen Sie eine andere Zielgruppe.",
+        "cancelUnknownOutcome": "Die Stornierung konnte nicht bestätigt werden. Versuchen Sie es erneut, um dieselbe Anfrage zu prüfen.",
+        "canceling": "Wird abgebrochen…"
+      },
+      "title": "Unterhaltung",
+      "reload": "Neu laden",
+      "loadError": "Die Unterhaltung konnte nicht geladen werden.",
+      "readOnly": "Sie können diese Unterhaltung lesen, aber nichts hinzufügen.",
+      "new": "Neuer Kommentar",
+      "empty": "Noch keine Kommentare.",
+      "restrictedAuthor": "Autor verborgen",
+      "replyMarker": "Antwort",
+      "deleted": "Dieser Kommentar wurde gelöscht.",
+      "reply": "Antworten",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "newer": "Neuere",
+      "older": "Ältere",
+      "message": "Nachricht",
+      "deleteHelp": "Der Kommentar wird durch einen Löschvermerk ersetzt. Antworten bleiben im Verlauf.",
+      "conflict": "Dieser Kommentar wurde geändert, seit Sie ihn geöffnet haben. Brechen Sie ab und laden Sie neu, um fortzufahren.",
+      "unknownOutcome": "Das Speichern konnte nicht bestätigt werden. Versuchen Sie es erneut; es wird nicht doppelt angewendet.",
+      "invalid": "Dieser Kommentar konnte nicht gespeichert werden.",
+      "send": "Senden",
+      "cancel": "Abbrechen"
     }
   },
   "common": {

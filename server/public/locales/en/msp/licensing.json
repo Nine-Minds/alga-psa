@@ -451,7 +451,8 @@
       "workspace": "Workspace",
       "capacity": "{{allocated}} of {{count}} co-managed seats allocated.",
       "openClient": "Set up co-managed IT for this client",
-      "readOnly": "Co-managed IT is read-only for this workspace. Existing relationships are shown; new setup is not available."
+      "readOnly": "Co-managed IT is read-only for this workspace. Existing relationships are shown; new setup is not available.",
+      "slaPriorities": "SLA priority mappings"
     },
     "provisioning": {
       "administrator": "Administrator",
@@ -689,7 +690,8 @@
       "viewer": "Viewer",
       "viewOnly": "View only",
       "visibility": "Ticket visibility",
-      "whyTitle": "Why can't someone see this?"
+      "whyTitle": "Why can't someone see this?",
+      "readOnly": "You can view this configuration but not change it."
     },
     "sharedTasks": {
       "link": "Shared Tasks",
@@ -798,7 +800,12 @@
         "capabilityUnavailable": "This isn’t available for your workspace right now.",
         "notAvailable": "This ticket is no longer shared or available to you.",
         "readOnly": "This ticket is read-only right now, so this change can’t be made."
-      }
+      },
+      "cancel": "Cancel",
+      "loading": "Loading…",
+      "reload": "Reload current state",
+      "retry": "Retry",
+      "saving": "Saving…"
     },
     "callout": {
       "title": "Customer tickets need you",
@@ -902,6 +909,14 @@
         "slaSetupRequired": "Your MSP must configure its SLA policy and priority mapping before this ticket can be reopened under MSP responsibility."
       }
     },
+    "sla": {
+      "title": "Co-managed SLA priorities",
+      "description": "Choose which of your priorities, and so which of your SLA targets, applies when a customer escalates a ticket of each priority.",
+      "missingPolicy": "No SLA policy is configured",
+      "settings": "Manage SLA policies",
+      "mappingFor": "Customer priority {{name}} maps to",
+      "unmapped": "Not mapped"
+    },
     "attachments": {
       "title": "Attachments",
       "add": "Attach file",
@@ -969,6 +984,39 @@
         "audienceUnavailable": "Files cannot be attached to messages for this audience. Remove the files or choose another audience.",
         "cancelUnknownOutcome": "We could not confirm cancellation. Retry to check the same cancellation request.",
         "canceling": "Canceling…"
+      },
+      "title": "Conversation",
+      "reload": "Reload",
+      "loadError": "The conversation could not be loaded.",
+      "readOnly": "You can read this conversation but not add to it.",
+      "new": "New comment",
+      "empty": "No comments yet.",
+      "restrictedAuthor": "Author hidden",
+      "replyMarker": "Reply",
+      "deleted": "This comment was deleted.",
+      "reply": "Reply",
+      "edit": "Edit",
+      "delete": "Delete",
+      "newer": "Newer",
+      "older": "Older",
+      "message": "Message",
+      "deleteHelp": "The comment is replaced by a deleted marker. Replies stay in the thread.",
+      "conflict": "This comment changed since you opened it. Cancel and reload to continue.",
+      "unknownOutcome": "We could not confirm the save. Try again; it will not be applied twice.",
+      "invalid": "This comment could not be saved.",
+      "send": "Send",
+      "cancel": "Cancel"
+    },
+    "editor": {
+      "errors": {
+        "invalid": "Some values are not valid. Check your changes and try again.",
+        "conflict": "This ticket changed. Reload it before saving your changes.",
+        "operationConflict": "This save request was already used for a different edit. Reload the ticket.",
+        "forbidden": "Your access to this ticket changed. Reload to continue.",
+        "readOnly": "This workspace is read-only. Reload to see its current state.",
+        "closeRules": "The ticket must meet its board’s closing requirements before it can be closed.",
+        "unknownOutcome": "We could not confirm whether the edit was saved. Retry the same save, or discard your changes and reload.",
+        "slaSetupRequired": "Your MSP must configure its SLA policy and priority mapping before this ticket can be reopened under MSP responsibility."
       }
     }
   },

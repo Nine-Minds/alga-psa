@@ -31,7 +31,8 @@ export { getCoManagedDelegatedScreen, saveCoManagedDelegatedGrant, revokeCoManag
 export type { CoManagedDelegatedOperation, CoManagedDelegatedTarget, CoManagedDelegatedGrantInput, CoManagedDelegatedCommand } from './delegatedAdministration';
 export { coManagedAssigneeOption } from './sharedWorkAssignees';
 export { recordCoManagedWorkAudit } from './sharedWorkAudit';
-export { withRequesterTaskAccess, withRequesterTaskRecipientAccess } from './requesterTaskAccess';
+export { withRequesterTaskAccess, withRequesterTaskRecipientAccess, listRequesterSharedTaskIds } from './requesterTaskAccess';
+export { requesterSharedTaskIds, isRequesterTaskSharedWork } from './requesterSharedWork';
 export { retainCoManagedWorkflowTicketAuthority } from './workflowTicketAuthority';
 export { retainCoManagedWorkSnapshot } from './workSnapshotEvidence';
 export { retainCoManagedHistoricalWorkEvidence } from './historicalWorkEvidence';
@@ -81,6 +82,16 @@ export { retainCoManagedConversationBeforeSourceChange } from './sourceChangeRet
 export { snapshotConversationContent, encodeConversationContent, plainTextContent } from './conversationContent';
 export type { CoManagedConversationContent } from './conversationContent';
 export { projectTaskAudience, projectTaskAudienceSql } from './projectTaskAudience';
+export { readCoManagedSlaPolicyScreen, replaceCoManagedSlaPriorityMappings } from './slaPriorityMappings';
+export type { CoManagedSlaPolicyScreen, CoManagedSlaPriorityMapping } from './slaPriorityMappings';
+export { withCoManagedSlaNotification, fanoutCoManagedSlaNotification } from './slaNotification';
+export type { CoManagedSlaNotification, CoManagedSlaNotificationChannel } from './slaNotification';
+export { withCoManagedStoredSlaNotification } from './storedSlaNotification';
+export type { CoManagedStoredSlaNotification } from './storedSlaNotification';
+export { enqueueCoManagedSlaDeliveries, pendingCoManagedSlaDeliveries, flagStaleCoManagedSlaSending, SLA_STALE_SENDING_MS, SLA_IN_APP_KIND, SLA_EMAIL_KIND } from './slaDeliveries';
+export type { CoManagedSlaDeliveryRow, CoManagedSlaDeliveryPayload } from './slaDeliveries';
+export { observeDueCoManagedTicketSlas } from './ticketSla';
+export { getCoManagedTicketSlaDisplay, type CoManagedTicketSlaDisplay, type CoManagedSlaDisplay, type CoManagedSlaTargetDisplay } from './ticketSlaRead';
 // L4b: attachments, drafts, thread disclosure, archive files.
 export * from './attachmentParent';
 export * from './attachmentStoragePath';
@@ -100,6 +111,17 @@ export type { CoManagedLocalWorkReference, CoManagedWorkSourceKind } from './tim
 export { findCoManagedLocalWorkReference, loadCoManagedLocalWorkReference, recordCoManagedWorkReference } from './timeWorkReference';
 export { retainCoManagedTimeParticipation } from './timeParticipationEvidence';
 export * from './timeBillingProfile';
+// L7a: departure, closure and the participation-evidence-only MSP archive.
+export { closeCoManagedRelationship, endCoManagedSponsorshipsForDeletion, releaseCoManagedSeatsForCustomerDeletion, CoManagedClosureError } from './relationshipClosure';
+export type { CoManagedClosureRequest, CoManagedClosureReceipt, CoManagedClosureContext } from './relationshipClosure';
+export { getCoManagedDepartureScreen, departCoManagedRelationship } from './departure';
+export type { CoManagedDepartureQualifiedTarget, CoManagedDepartureReview, CoManagedDepartureRequest } from './departure';
+export { sealCoManagedArchive, classifyArchiveCandidate, coManagedArchiveManifestHash, registerCoManagedArchiveFileSource,
+  ARCHIVE_EVIDENCE_CLASSES, ARCHIVE_ALLOWED_AUDIENCES } from './archiveManifest';
+export type { CoManagedArchiveManifest, CoManagedArchiveFileSource, CoManagedArchiveFileContent } from './archiveManifest';
+export { finalizeCoManagedArchive, registerCoManagedClosureEvidenceSource } from './archiveFinalization';
+export { listCoManagedArchives, getCoManagedArchiveHistory, readCoManagedArchiveFile } from './archiveReads';
+export type { CoManagedArchiveSummary, CoManagedArchiveEntry, CoManagedArchiveFile, CoManagedArchiveHistory } from './archiveReads';
 
 export * from './portableRestoreUploads';
 export { assertPortableRestoreInstallationAuthority } from './portableRestoreInstallationAuthority';

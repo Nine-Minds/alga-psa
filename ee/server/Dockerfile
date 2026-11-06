@@ -5,6 +5,9 @@
 # Pin to the production-known-good Node runtime. node:alpine floated to Node 26.2.0
 # and broke bundled Vault provider initialization in the blue deployment.
 FROM node:26.1.0-alpine
+# FreeFont ships as CFF-based OTF (and ghostscript's fonts are Type 1); Chromium embeds
+# those in PDFs as Type 3 glyph outlines that print poorly. DejaVu (sans-serif/monospace)
+# and Liberation (Arial/Helvetica/Courier) are TrueType and embed cleanly.
 RUN apk add --no-cache \
     bash \
     findutils \
@@ -23,6 +26,8 @@ RUN apk add --no-cache \
     harfbuzz \
     ca-certificates \
     ttf-freefont \
+    font-dejavu \
+    font-liberation \
     ffmpeg
 
 # Tell Puppeteer to skip installing Chrome. We'll use the installed chromium.

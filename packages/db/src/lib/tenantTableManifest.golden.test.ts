@@ -30,10 +30,23 @@ describe('tenant table manifest golden order', () => {
     expect(tenantDeletionOrder(ENTERPRISE_TENANT_TABLE_MANIFEST)).toEqual(literal);
   });
 
-  it('has 595 unique ordered names', () => {
+  it('has 601 unique ordered names', () => {
     const order = tenantDeletionOrder(ENTERPRISE_TENANT_TABLE_MANIFEST);
-    expect(order).toHaveLength(595);
-    expect(new Set(order).size).toBe(595);
+    expect(order).toHaveLength(601);
+    expect(new Set(order).size).toBe(601);
+  });
+
+  it('schedules organization SLA history and priority mappings before their parents', () => {
+    const order = tenantDeletionOrder(ENTERPRISE_TENANT_TABLE_MANIFEST);
+    const history = [
+      'sla_organization_notification_events',
+      'sla_organization_events',
+      'sla_organization_obligations',
+    ];
+    expect(order.filter(table => history.includes(table))).toEqual(history);
+
+    const mappings = ['co_managed_sla_priority_mappings', 'priorities'];
+    expect(order.filter(table => mappings.includes(table))).toEqual(mappings);
   });
 
   it('declares the eight breakCircularDependencies FKs as null-before-delete', () => {
