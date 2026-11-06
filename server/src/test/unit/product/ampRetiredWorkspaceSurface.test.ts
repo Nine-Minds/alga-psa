@@ -1,8 +1,7 @@
-import { createRequire } from 'node:module';
+import { withCoManagedExportAdmin } from '@alga-psa/co-managed/exportAuthorization';
 import { describe, expect, it } from 'vitest';
 import { collectApiRoutes, collectMspPageRoutes } from './support/appRouteInventory';
 
-const require = createRequire(import.meta.url);
 const retiredPackageEntries = [
   '@alga-psa/co-managed/portableWorkspaceExport',
   '@alga-psa/co-managed/portableWorkspaceRestore',
@@ -11,14 +10,26 @@ const retiredPackageEntries = [
 const retiredRoute = /portable|(?:^|\/)(?:restore[^/]*workspace|workspace[^/]*restore)(?:\/|$)/i;
 
 describe('retired workspace archive surface', () => {
-  it('does not expose retired package entry points to runtime consumers', () => {
+  it('resolves the current ESM export and does not expose retired package entry points', () => {
+    expect(withCoManagedExportAdmin).toBeTypeOf('function');
+    expect(import.meta.resolve('@alga-psa/co-managed/exportAuthorization')).toContain(
+      'exportAuthorization.ts',
+    );
+
     for (const entry of retiredPackageEntries) {
-      expect(() => require.resolve(entry), entry).toThrow(/not defined by.*exports|not found|cannot find/i);
+      expect(() => import.meta.resolve(entry), entry).toThrow(
+        expect.objectContaining({ code: 'ERR_PACKAGE_PATH_NOT_EXPORTED' }),
+      );
     }
   });
 
   it('does not register a retired export or restore route in the App Router', () => {
-    const registeredRoutes = [...collectApiRoutes(), ...collectMspPageRoutes()];
+    const apiRoutes = collectApiRoutes();
+    const pageRoutes = collectMspPageRoutes();
+    expect(apiRoutes).toContain('/api/co-management/export');
+    expect(pageRoutes).toContain('/msp/co-management/export');
+
+    const registeredRoutes = [...apiRoutes, ...pageRoutes];
     expect(registeredRoutes.filter(route => retiredRoute.test(route))).toEqual([]);
   });
 });
