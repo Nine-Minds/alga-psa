@@ -7,6 +7,8 @@ import type { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex, withTransaction } from '../lib/tenant';
 import { tenantDb } from '../lib/tenantDb';
+import { withViaPrincipal } from '../lib/viaPrincipal';
+export { withViaPrincipal } from '../lib/viaPrincipal';
 import { admitOperationalWrite } from '../lib/writeAdmission';
 
 const tableColumnsCache = new Map<string, Promise<Set<string>>>();
@@ -55,23 +57,20 @@ export interface ServiceContext {
 }
 
 /**
- * Adds the via-principal column(s) to a row, only when the context carries a
- * `viaPrincipalUserId`. Otherwise the row is returned unchanged (same object),
- * so a write path behaves identically when no principal is involved.
+ * Stamps via-principal column(s) onto an already-written row, for writers that
+ * go through a shared model and cannot take the columns at insert time. Runs on
+ * the caller's transaction; a no-op when the context carries no via principal.
  */
-export function withViaPrincipal<T extends object>(
-  ctx: Pick<ServiceContext, 'viaPrincipalUserId'>,
-  row: T,
-  columns: string | readonly string[] = 'via_principal_id'
-): T {
-  if (!ctx.viaPrincipalUserId) {
-    return row;
-  }
-  const via: Record<string, string> = {};
-  for (const column of typeof columns === 'string' ? [columns] : columns) {
-    via[column] = ctx.viaPrincipalUserId;
-  }
-  return { ...row, ...via };
+export async function stampViaPrincipalRow(
+  conn: Knex | Knex.Transaction,
+  context: Pick<ServiceContext, 'tenant' | 'viaPrincipalUserId'>,
+  table: string,
+  where: Record<string, unknown>,
+  columns: string | readonly string[]
+): Promise<void> {
+  const patch = withViaPrincipal(context, {}, columns);
+  if (Object.keys(patch).length === 0) return;
+  await tenantDb(conn, context.tenant).table(table).where(where).update(patch);
 }
 
 export interface ListResult<T> {
@@ -90,6 +89,14 @@ export interface ServiceOptions {
     updatedBy?: string;
     createdAt?: string;
     updatedAt?: string;
+  };
+  /**
+   * Via-principal columns stamped from `context.viaPrincipalUserId` (via
+   * `withViaPrincipal`) on create and/or update. Absent means the table has none.
+   */
+  viaPrincipalColumns?: {
+    create?: readonly string[];
+    update?: readonly string[];
   };
   searchableFields?: string[];
   defaultSort?: string;
@@ -111,6 +118,7 @@ export abstract class BaseService<T = any> {
     createdAt: string;
     updatedAt: string;
   };
+  protected viaPrincipalColumns: { create: readonly string[]; update: readonly string[] };
   protected searchableFields: string[];
   protected defaultSort: string;
   protected defaultOrder: 'asc' | 'desc';
@@ -127,6 +135,10 @@ export abstract class BaseService<T = any> {
       createdAt: 'created_at',
       updatedAt: 'updated_at',
       ...options.auditFields
+    };
+    this.viaPrincipalColumns = {
+      create: options.viaPrincipalColumns?.create ?? [],
+      update: options.viaPrincipalColumns?.update ?? [],
     };
     this.searchableFields = options.searchableFields || [];
     this.defaultSort = options.defaultSort || this.auditFields.createdAt;
@@ -330,16 +342,22 @@ export abstract class BaseService<T = any> {
     const now = new Date().toISOString();
     return this.filterAuditFields(
       conn,
-      {
+      this.stampVia(context, 'create', {
         ...data,
         [this.auditFields.createdBy]: context.userId,
         [this.auditFields.updatedBy]: context.userId,
         [this.auditFields.createdAt]: now,
         [this.auditFields.updatedAt]: now,
         [this.tenantColumn]: context.tenant
-      },
+      }),
       targetTable
     );
+  }
+
+  /** Applies this service's via-principal columns for the operation; a no-op without a via principal. */
+  protected stampVia<R extends object>(context: ServiceContext, op: 'create' | 'update', row: R): R {
+    const columns = this.viaPrincipalColumns[op];
+    return columns.length > 0 ? withViaPrincipal(context, row, columns) : row;
   }
 
   /**
@@ -354,11 +372,11 @@ export abstract class BaseService<T = any> {
   ): Promise<any> {
     return this.filterAuditFields(
       conn,
-      {
+      this.stampVia(context, 'update', {
         ...data,
         [this.auditFields.updatedBy]: context.userId,
         [this.auditFields.updatedAt]: new Date().toISOString()
-      },
+      }),
       targetTable
     );
   }

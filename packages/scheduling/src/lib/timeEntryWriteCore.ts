@@ -67,6 +67,8 @@ export interface PersistTimeEntryInput {
   tenant: string;
   /** The acting user (who is doing the write; may differ from the entry's subject). */
   actor: IUser;
+  /** Optional EE attribution supplied by an authenticated API boundary. */
+  viaPrincipalUserId?: string | null;
   /** Already validated with saveTimeEntryParamsSchema. */
   entry: SaveTimeEntryParams;
   /**
@@ -619,6 +621,23 @@ export async function persistTimeEntry(
       }
     }
   }
+
+  // Provenance columns belong to EE. The edition seam clears stale update
+  // attribution for human writes and stamps the current principal for delegated
+  // writes; its CE implementation is inert against the CE schema.
+  const entryId = (resultingEntry as { entry_id?: string } | null)?.entry_id;
+  if (entryId && resultingEntry) {
+    const { stampTimeEntryAttribution } = await import('@product/service-principals/entry');
+    const stampedAttribution = await stampTimeEntryAttribution(
+      trx,
+      tenant,
+      entryId,
+      entry_id ? 'update' : 'create',
+      input.viaPrincipalUserId,
+    );
+    Object.assign(resultingEntry, stampedAttribution);
+  }
+
   // Bucket draw + hour-block reconciliation (extracted verbatim; see timeEntryBillingAllocations.ts).
   const { prepaidBlockUsage } = await reconcileTimeEntryBillingAllocations(trx, tenant, {
     entry_id,

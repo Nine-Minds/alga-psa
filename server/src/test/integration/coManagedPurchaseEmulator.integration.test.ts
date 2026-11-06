@@ -22,15 +22,10 @@ import { reconcileHostedCoManagedEntitlement } from '../../../../packages/licens
 import { isCoManagedPurchaseSurfaceOpen } from '../../../../packages/licensing/src/lib/co-managed-purchase-surface';
 import { hasCoManagedEntitlement } from '../../../../packages/co-managed/src/capability';
 import { admits } from '../../../../packages/core/src/lib/capability';
+import { registerFeatureFlagChecker } from '../../../../packages/core/src/lib/features';
 import { StripeService } from '@ee/lib/stripe/StripeService';
 
-const holder = vi.hoisted(() => ({ db: null as unknown as Knex, flag: true }));
-// The release flag is the only thing replaced: entitlement eligibility, the kill switch and the
-// capability gate all run for real.
-vi.mock('../../../../packages/core/src/lib/features', async (importOriginal) => ({
-  ...(await importOriginal<Record<string, unknown>>()),
-  isFeatureFlagEnabled: async () => holder.flag,
-}));
+const holder = vi.hoisted(() => ({ db: null as unknown as Knex, flag: true as boolean | 'unavailable' }));
 vi.mock('@/lib/db/db', () => ({ getConnection: async () => holder.db }));
 vi.mock('@alga-psa/db/admin.js', () => ({
   getAdminConnection: async () => holder.db,
@@ -89,6 +84,11 @@ async function state(view: string): Promise<any[]> {
 }
 
 beforeAll(async () => {
+  // Replace the provider at its registration boundary so both the boolean purchase-surface
+  // check and the status-aware capability gate exercise the real feature-flag API.
+  registerFeatureFlagChecker(async () => holder.flag === 'unavailable'
+    ? { status: 'unavailable', enabled: false }
+    : holder.flag);
   const connection = {
     host: process.env.DB_HOST || 'localhost',
     port: Number(process.env.DB_PORT || 5432),
@@ -242,8 +242,15 @@ describe('co-managed purchase against the Stripe emulator', () => {
     expect(await hasCoManagedEntitlement(tenant, db)).toBe(true);
     expect(await admits('co-managed', tenant)).toMatchObject({ admitted: true, reasons: { admitted: 'open' } });
     holder.flag = false;
-    expect((await admits('co-managed', tenant)).admitted).toBe(false); // entitlement alone is not enough
+    expect(await isCoManagedPurchaseSurfaceOpen(tenant)).toBe(false);
+    expect(await admits('co-managed', tenant)).toMatchObject({ admitted: false, reasons: { admitted: 'flag-off' } });
+    holder.flag = 'unavailable';
+    expect(await isCoManagedPurchaseSurfaceOpen(tenant)).toBe(false);
+    expect(await admits('co-managed', tenant)).toMatchObject({ admitted: false, reasons: { admitted: 'flag-unavailable' } });
+    expect(await getCoManagedEntitlementState(db, tenant)).toMatchObject({ capacity: 3, available: 3 });
     holder.flag = true;
+    expect(await isCoManagedPurchaseSurfaceOpen(tenant)).toBe(true);
+    expect(await admits('co-managed', tenant)).toMatchObject({ admitted: true, reasons: { admitted: 'open' } });
     process.env.FORCE_CAPABILITIES = 'co-managed:on';
     expect((await admits('co-managed', tenant)).admitted).toBe(true);
     delete process.env.FORCE_CAPABILITIES;

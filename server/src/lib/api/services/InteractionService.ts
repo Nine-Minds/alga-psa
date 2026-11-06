@@ -1,10 +1,12 @@
 import type { Knex } from 'knex';
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { assertHumanWorkOwner } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import {
   BaseService,
   type ListOptions,
   type ListResult,
   type ServiceContext,
+  stampViaPrincipalRow,
   tenantDb,
   withTransaction,
 } from '@alga-psa/db';
@@ -14,7 +16,6 @@ import {
   createInteractionScheduleEntry,
   resolveScheduleAssignees,
 } from '@alga-psa/clients/actions/interactionCreateHelper';
-import { hasPermission } from '@alga-psa/auth/rbac';
 import { ForbiddenError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 import type {
   CreateInteractionApi,
@@ -140,6 +141,7 @@ export class InteractionService extends BaseService<InteractionApiRow> {
       primaryKey: 'interaction_id',
       tenantColumn: 'tenant',
       searchableFields: ['title', 'notes'],
+      viaPrincipalColumns: { create: ['created_via_principal_id'] },
       defaultSort: 'interaction_date',
       defaultOrder: 'desc',
     });
@@ -209,7 +211,7 @@ export class InteractionService extends BaseService<InteractionApiRow> {
         throw new ValidationError('start_time is required when creating a schedule entry');
       }
       if (assignedUserIds.some((id) => id !== context.userId) &&
-          (!context.user || !await hasPermission(context.user, 'user_schedule', 'update', knex))) {
+          (!context.user || !await hasApiContextPermission(context, 'user_schedule', 'update', knex))) {
         throw new ForbiddenError('Permission denied to assign schedule entries to other users.');
       }
     }
@@ -237,6 +239,9 @@ export class InteractionService extends BaseService<InteractionApiRow> {
         interactionData,
       });
       publishSideEffects = result.publishSideEffects;
+      // The shared helper writes the row itself, so BaseService's create-time via
+      // stamping never runs here; stamp it in the same transaction.
+      await stampViaPrincipalRow(trx, context, 'interactions', { interaction_id: result.interaction.interaction_id }, 'created_via_principal_id');
       if (input.create_schedule_entry) {
         try {
           const scheduled = await createInteractionScheduleEntry({
@@ -247,6 +252,9 @@ export class InteractionService extends BaseService<InteractionApiRow> {
             assignedByUserId: context.userId,
           });
           publishScheduleEntryCreated = scheduled?.publishScheduleEntryCreated;
+          if (scheduled) {
+            await stampViaPrincipalRow(trx, context, 'schedule_entries', { entry_id: scheduled.entry.entry_id }, 'created_via_principal_id');
+          }
         } catch (error) {
           if (error instanceof Error && /^Users .+ not found/.test(error.message)) {
             throw new ValidationError('One or more assigned users could not be found.');
