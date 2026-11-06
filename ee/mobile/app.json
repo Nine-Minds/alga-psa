@@ -7,11 +7,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#8a4dea"
-    },
     "ios": {
       "bundleIdentifier": "com.nineminds.algapsa",
       "buildNumber": "39",
@@ -86,6 +81,15 @@
       "expo-document-picker",
       "expo-web-browser",
       "expo-apple-authentication",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#8a4dea"
+        }
+      ],
       [
         "@sentry/react-native/expo",
         {
