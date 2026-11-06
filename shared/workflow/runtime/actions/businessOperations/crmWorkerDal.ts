@@ -123,7 +123,7 @@ const createQuoteItemBaseSchema = z.object({
   // an omitted value is derived from the service's tax configuration.
   is_taxable: z.boolean().optional(),
   tax_region: z.string().trim().optional().nullable(),
-  // `quote_items.tax_rate` is numeric(10,4): a fractional rate like 6.875 is
+  // `quote_items.tax_rate` is numeric: a fractional rate like 6.875 is
   // valid and must not be rejected.
   tax_rate: z.number().min(0).optional().nullable(),
   location_id: z.string().guid().optional().nullable(),
@@ -504,7 +504,7 @@ async function recalculateQuoteFinancials(
 
         taxAmount = taxResult.taxAmount;
         // Store the exact percentage: rounding 6.875 to 7 displayed a rate the
-        // line was never charged at. `quote_items.tax_rate` is numeric(10,4).
+        // line was never charged at. `quote_items.tax_rate` is numeric.
         taxRate = Number(taxResult.taxRate ?? 0);
       } else if (taxSource !== 'internal') {
         taxAmount = 0;

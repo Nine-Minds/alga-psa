@@ -366,7 +366,7 @@ async function resolveQuoteRowTaxes(
         taxAmount = taxResult.taxAmount;
         taxPercentage = Number(taxResult.taxRate ?? 0);
         // Store the exact percentage: rounding 6.875 to 7 displayed a rate the
-        // line was never charged at. `quote_items.tax_rate` is numeric(10,4).
+        // line was never charged at. `quote_items.tax_rate` is numeric.
         taxRate = taxPercentage;
       } else if (taxSource !== 'internal') {
         taxAmount = 0;
