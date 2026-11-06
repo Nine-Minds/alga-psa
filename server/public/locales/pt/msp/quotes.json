@@ -358,7 +358,7 @@
       "pdfLayout": "Layout de PDF",
       "pdfLayoutPlaceholder": "Usar layout padrão",
       "pdfLayoutHelp": "Escolha qual layout o cliente verá. Deixe o padrão para usar o padrão do locatário.",
-      "pdfLayoutByLocationHint": "Um orçamento com itens em dois ou mais locais é renderizado agrupado por local enquanto o layout padrão se aplica. Selecione um layout acima para substituir isso."
+      "pdfLayoutByLocationHint": "Uma cotação com itens em dois ou mais locais é renderizada agrupada por local enquanto o layout padrão se aplica. Selecione um layout acima para substituir isso."
     },
     "footer": {
       "savedAgo": "Alterações salvas · {{ago}}",
@@ -854,7 +854,7 @@
   "templatesPage": {
     "title": "Layouts de cotação",
     "description": "Projete os layouts usados ​​para renderizar PDFs de cotação e visualizações.",
-    "byLocationNote": "Orçamentos com itens em dois ou mais locais usam automaticamente o layout padrão agrupado por local enquanto o layout padrão se aplica. Um layout personalizado é sempre usado exatamente como foi projetado.",
+    "byLocationNote": "Cotações com itens em dois ou mais locais usam automaticamente o layout padrão agrupado por local enquanto o layout padrão se aplica. Um layout personalizado é sempre usado exatamente como foi projetado.",
     "actions": {
       "openMenu": "Abrir menu"
     },
