@@ -72,14 +72,15 @@
     "eslint": "^9.39.2",
     "patch-package": "^8.0.1",
     "react-test-renderer": "^19.3.1",
-    "typescript": "~6.0.3",
+    "typescript": "~5.9.2",
     "vitest": "^4.1.12"
   },
   "private": true,
   "expo": {
     "install": {
       "exclude": [
-        "@sentry/react-native"
+        "@sentry/react-native",
+        "typescript"
       ]
     }
   },
