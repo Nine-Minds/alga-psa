@@ -84,6 +84,7 @@
         "server/src/pages/*"
       ],
       "@product/chat/entry": ["packages/product-chat/oss/entry"],
+      "@product/mcp/entry": ["packages/product-mcp/ee/entry"],
       "@product/service-principals/entry": ["packages/product-service-principals/oss/entry"],
       "@product/service-principals/types": ["packages/product-service-principals/types"],
       "@product/extensions/entry": ["packages/product-extensions/oss/entry"],

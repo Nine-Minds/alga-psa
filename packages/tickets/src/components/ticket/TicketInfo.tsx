@@ -62,6 +62,7 @@ import {
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
 } from './TicketNotificationSuppressionControl';
+import { useDefaultNotificationSuppression } from '../../lib/notificationSuppressionDefaults';
 
 const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
   isActionMessageError(value) || isActionPermissionError(value);
@@ -207,10 +208,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [isFormInitialized, setIsFormInitialized] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [notificationSuppression, setNotificationSuppression] = useState<TicketNotificationSuppressionValue>({
-    suppressContactNotifications: false,
-    suppressInternalNotifications: false,
-  });
+  const defaultNotificationSuppression = useDefaultNotificationSuppression();
+  const [notificationSuppression, setNotificationSuppression] = useState<TicketNotificationSuppressionValue>(defaultNotificationSuppression);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const activityCrossFeature = useOptionalActivityCrossFeature();
   const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
@@ -1044,10 +1043,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           }));
           setPendingChanges({});
           setPendingItilChanges({});
-          setNotificationSuppression({
-            suppressContactNotifications: false,
-            suppressInternalNotifications: false,
-          });
+          setNotificationSuppression(defaultNotificationSuppression());
           setPendingBoardConfig(null);
           setPendingCategories(null);
           if (isEditingDescription) {
@@ -1077,10 +1073,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
         }));
         setPendingChanges({});
         setPendingItilChanges({});
-        setNotificationSuppression({
-          suppressContactNotifications: false,
-          suppressInternalNotifications: false,
-        });
+        setNotificationSuppression(defaultNotificationSuppression());
         setPendingBoardConfig(null);
         setPendingCategories(null);
         if (isEditingDescription) {
@@ -1116,10 +1109,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     setTitleValue(ticket.title);
     setPendingChanges({});
     setPendingItilChanges({});
-    setNotificationSuppression({
-      suppressContactNotifications: false,
-      suppressInternalNotifications: false,
-    });
+    setNotificationSuppression(defaultNotificationSuppression());
     setPendingBoardConfig(null);
     setPendingCategories(null);
     setPendingTeamId(null);

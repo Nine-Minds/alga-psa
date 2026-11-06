@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getUserTimeZone } from '@alga-psa/core';
 import { deriveWorkReason } from '../../lib/deriveWorkReason';
+import { useDefaultNotificationSuppression } from '../../lib/notificationSuppressionDefaults';
 import { formatTicketDateTime, formatTicketRelativeToNow } from '../../lib/ticketDateTimeFormat';
 import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
 import { DeleteEntityDialog } from "@alga-psa/ui/components/DeleteEntityDialog";
@@ -133,11 +134,6 @@ const LIVE_UPDATE_HIGHLIGHT_MS = 600;
 
 const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
     isActionMessageError(value) || isActionPermissionError(value);
-
-const emptyNotificationSuppression = (): TicketNotificationSuppressionValue => ({
-    suppressContactNotifications: false,
-    suppressInternalNotifications: false,
-});
 
 const handleTicketActionError = (error: unknown, fallback: string) => {
     if (isReturnedActionError(error)) {
@@ -480,11 +476,12 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // Flagging an existing comment as the resolution while editing it offers the
     // close the composer's resolution toggle would have done inline. Declining
     // leaves the comment flagged and the status untouched.
+    const defaultNotificationSuppression = useDefaultNotificationSuppression();
     const [resolutionClosePrompt, setResolutionClosePrompt] = useState<{
         isOpen: boolean;
         statusId: string | null;
         suppression: TicketNotificationSuppressionValue;
-    }>({ isOpen: false, statusId: null, suppression: emptyNotificationSuppression() });
+    }>({ isOpen: false, statusId: null, suppression: defaultNotificationSuppression() });
     const [isSubmittingResolutionClosePrompt, setIsSubmittingResolutionClosePrompt] = useState(false);
 
     // Bundle status propagation confirmation. The preview is fetched first; when
@@ -754,6 +751,31 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             return false;
         }
     }, [t, ticket.ticket_id]);
+
+    // An app layer may signal that comments changed outside this screen's composer; re-read through the same path.
+    // Native sources provide no signal, so nothing subscribes.
+    const subscribeCommentsChanged = dataSource.screen.subscribeCommentsChanged;
+    useEffect(() => {
+        const ticketId = ticket.ticket_id;
+        if (!subscribeCommentsChanged || !ticketId) return undefined;
+        return subscribeCommentsChanged(() => {
+            void (async () => {
+                try {
+                    const updatedComments = await findCommentsByTicketId(ticketId);
+                    if (isReturnedActionError(updatedComments)) {
+                        handleTicketActionError(updatedComments, t('messages.loadCommentsFailed', 'Failed to load comments'));
+                    } else {
+                        setConversations(updatedComments);
+                    }
+                } catch (e) {
+                    console.error('Failed to refresh comments after a comments-changed signal:', e);
+                }
+            })();
+        });
+        // Deliberately omits `t` / `handleTicketActionError`: they change identity per render and would tear down and
+        // re-subscribe on every render; they are only used to word a load-failure toast, so the ones captured at subscribe time are adequate.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [subscribeCommentsChanged, ticket.ticket_id]);
 
     const [board, setBoard] = useState<any>(initialBoard);
     const [savedBoardId, setSavedBoardId] = useState<string | null>(initialBoard?.board_id ?? initialTicket.board_id ?? null);
@@ -2380,7 +2402,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 setResolutionClosePrompt({
                     isOpen: true,
                     statusId: closedStatusOptions.length === 1 ? closedStatusOptions[0].value : null,
-                    suppression: emptyNotificationSuppression(),
+                    suppression: defaultNotificationSuppression(),
                 });
             }
         } catch (error) {
@@ -2389,7 +2411,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     };
 
     const closeResolutionClosePrompt = () => {
-        setResolutionClosePrompt({ isOpen: false, statusId: null, suppression: emptyNotificationSuppression() });
+        setResolutionClosePrompt({ isOpen: false, statusId: null, suppression: defaultNotificationSuppression() });
     };
 
     const confirmResolutionClosePrompt = async () => {
@@ -2430,6 +2452,7 @@ const handleClose = () => {
             onSaved?.();
         } catch (error) {
             console.error("Error deleting comment:", error);
+            handleTicketActionError(error, t('messages.deleteCommentFailed', 'Failed to delete comment'));
         }
     };
 
@@ -2704,7 +2727,7 @@ const handleClose = () => {
         isOpen: boolean;
         contactId: string | null;
         suppression: TicketNotificationSuppressionValue;
-    }>({ isOpen: false, contactId: null, suppression: emptyNotificationSuppression() });
+    }>({ isOpen: false, contactId: null, suppression: defaultNotificationSuppression() });
     const [isSubmittingContactChange, setIsSubmittingContactChange] = useState(false);
 
     const handleContactChange = async (newContactId: string | null) => {
@@ -2712,7 +2735,7 @@ const handleClose = () => {
             setIsChangeContactDialogOpen(false);
             return;
         }
-        setContactChangePrompt({ isOpen: true, contactId: newContactId, suppression: emptyNotificationSuppression() });
+        setContactChangePrompt({ isOpen: true, contactId: newContactId, suppression: defaultNotificationSuppression() });
     };
 
     const applyContactChange = async (
@@ -2764,7 +2787,7 @@ const handleClose = () => {
     };
 
     const closeContactChangePrompt = () => {
-        setContactChangePrompt({ isOpen: false, contactId: null, suppression: emptyNotificationSuppression() });
+        setContactChangePrompt({ isOpen: false, contactId: null, suppression: defaultNotificationSuppression() });
     };
 
     const confirmContactChangePrompt = async () => {

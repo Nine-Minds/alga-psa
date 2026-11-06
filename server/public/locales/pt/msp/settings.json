@@ -1858,10 +1858,15 @@
         "label": "Habilitar notificações",
         "description": "Habilite ou desabilite todas as notificações para este locatário"
       },
+      "defaultDontNotifyCustomer": {
+        "label": "Iniciar chamados com \"Não notificar o cliente\" marcado",
+        "description": "Comentários, alterações de status e de contato e encerramentos de chamados começam sem notificações ao cliente. Os agentes podem desmarcar a caixa para notificar o cliente em uma ação individual."
+      },
       "loading": "Carregando configurações de notificação...",
       "loadError": "Falha ao carregar configurações",
       "save": "Salvar alterações",
-      "saving": "Salvando..."
+      "saving": "Salvando...",
+      "saveError": "Falha ao salvar as configurações de notificação"
     },
     "emailTemplatesUi": {
       "preview": {

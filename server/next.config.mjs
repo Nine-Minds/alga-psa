@@ -578,43 +578,30 @@ const nextConfig = {
       // when billing compiled. Compact IDs retain all actions and source maps.
       config.optimization = { ...config.optimization, moduleIds: 'deterministic' };
     }
-    // Filesystem cache: persists across builds (even after `rm -rf .next`)
-    // so the second cold build reuses module compilation work. Stored under
-    // node_modules/.cache/webpack so it survives `.next` clears.
-    // Keep Next's cache version and dev memory policy. Replacing this object
-    // discarded maxMemoryGenerations: 0 (Next manages its own memory cache)
-    // and the version metadata that invalidates incompatible cached builds.
-    const nextCache = typeof config.cache === 'object' && config.cache !== null ? config.cache : {};
-    config.cache = {
-      ...nextCache,
-      type: 'filesystem',
-      cacheDirectory: path.join(__dirname, 'node_modules/.cache/webpack'),
-      buildDependencies: {
-        ...nextCache.buildDependencies,
-        config: [...new Set([...(nextCache.buildDependencies?.config ?? []), __filename])],
-      },
-      // Snapshot all node_modules as immutable by mtime — avoids hash-stat on
-      // every file (huge in this monorepo).
-      managedPaths: [
-        path.resolve(__dirname, 'node_modules'),
-        path.resolve(__dirname, '../node_modules'),
-      ],
-    };
-    // Production builds run from fresh checkouts (CI, the Argo build), where
-    // every file's mtime is new. webpack's default snapshots trust timestamps
-    // alone, so a restored filesystem cache would be invalidated wholesale on
-    // the first build. Check the content hash when the timestamp has moved;
-    // development keeps the cheap timestamp-only default.
+    // Production cache packs reached 16 GB even with a one-day maxAge. Loading
+    // and rewriting them alongside the live module graph exhausted a 16 GB CI
+    // runner plus 11 GB of swap. A one-shot production compiler must release
+    // modules instead of retaining a second copy for the next build. Nx still
+    // caches the upstream package builds; development keeps its filesystem cache.
     if (!dev) {
-      const byContent = { timestamp: true, hash: true };
-      config.snapshot = { ...config.snapshot, module: byContent, resolve: byContent,
-        buildDependencies: byContent, resolveBuildDependencies: byContent };
-      // Entries a build no longer uses stay in the pack for webpack's default
-      // 60 days, and the CI snapshot carries the pack from build to build, so
-      // it grew to ~18 GB on disk by early November 2026 and a warm build then
-      // outgrew the 16 GB runner (the VM swapped until GitHub shut it down).
-      // One day keeps the pack at roughly one tree's worth of modules.
-      config.cache.maxAge = 24 * 60 * 60 * 1000;
+      config.cache = false;
+    } else {
+      // Preserve Next's cache version and maxMemoryGenerations: 0, since Next
+      // manages development's in-memory cache itself.
+      const nextCache = typeof config.cache === 'object' && config.cache !== null ? config.cache : {};
+      config.cache = {
+        ...nextCache,
+        type: 'filesystem',
+        cacheDirectory: path.join(__dirname, 'node_modules/.cache/webpack'),
+        buildDependencies: {
+          ...nextCache.buildDependencies,
+          config: [...new Set([...(nextCache.buildDependencies?.config ?? []), __filename])],
+        },
+        managedPaths: [
+          path.resolve(__dirname, 'node_modules'),
+          path.resolve(__dirname, '../node_modules'),
+        ],
+      };
     }
 
     // Add support for importing from ee/server/src using absolute paths
@@ -1343,6 +1330,8 @@ const nextConfig = {
     // three compilers stack in one process and a warm cache that a branch
     // partly invalidates pushed the EE build past CI's runner memory.
     webpackBuildWorker: true,
+    // Intern shared source strings and avoid keeping both strings and buffers.
+    webpackMemoryOptimizations: true,
     // Disable server source maps (RSC + server actions). Build-only — does
     // not affect production error traces from Sentry or similar tools.
     serverSourceMaps: false,
