@@ -1,0 +1,48 @@
+{
+  "capturedAt": "2026-11-04T16:14Z",
+  "runtime": {
+    "service": "dev-server:6",
+    "projectId": "bc0ab06c-5ada-5c35-95a7-37f75d01a131",
+    "cwd": "/home/robert/alga-copies/feature-security-authz-in-post-3/server",
+    "command": "PORT=3594 npm run dev",
+    "port": 3594,
+    "health": "HTTP 200 /api/health",
+    "revisionAttestation": "Scheduler exposes no SHA; process cwd/start time and unchanged route file support an inference only."
+  },
+  "sessions": {
+    "internalReader": {
+      "user": "refresh-reader-3100@example.test",
+      "sessionVerified": true,
+      "valid": 403,
+      "malformed": 403,
+      "empty": 403
+    },
+    "client": {
+      "user": "refresh-client-3100@example.test",
+      "sessionVerified": true,
+      "userType": "client",
+      "grantedPermission": "ticket_settings:update",
+      "valid": 403,
+      "malformed": 403,
+      "empty": 403
+    },
+    "anonymous": {
+      "valid": 401,
+      "malformed": 401,
+      "empty": 401
+    },
+    "administrator": {
+      "foreignTenantProvider": 404,
+      "afterReaderAndClientDenialsProvider3": [409, 429],
+      "httpOriginConfigurationError": "Google Pub/Sub requires a public HTTPS endpoint; the 409 does not establish successful registration."
+    }
+  },
+  "administratorSettingsUi": {
+    "route": "/msp/settings/email, Inbound Email tab",
+    "button": "Refresh Pub/Sub & Watch",
+    "provider1": [409, 429, 409],
+    "meaning": "Initial request reached Google configuration, immediate repeat was throttled, and a post-window click reached configuration again."
+  },
+  "throttlePreservation": "After reader and client valid/malformed/empty denials against provider3, the first admin request returned 409 rather than 429; its immediate repeat returned 429.",
+  "cleanup": "Pending in this capture; see cleanup-check.json after fixture removal."
+}

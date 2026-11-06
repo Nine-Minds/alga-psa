@@ -1,0 +1,16 @@
+HTTP/1.1 500 Internal Server Error
+access-control-allow-credentials: true
+access-control-allow-origin: *
+set-cookie: authjs.csrf-token=b58316b98e322293a17993e3935a3f742a7c533eecb874de333225a8e13011ff%7C82310a46c94d142d621038432fb231c4d4a231f12bec0b6950cacd55331cb1a3; Path=/; HttpOnly; SameSite=Lax
+set-cookie: authjs.callback-url=http%3A%2F%2Ffeature-security-authz-in-post-3.localhost%3A3594; Path=/; HttpOnly; SameSite=Lax
+x-pathname: /api/health
+Cache-Control: no-store
+X-Powered-By: Next.js
+ETag: "c7i55c6zfu4ju"
+Content-Type: text/html; charset=utf-8
+Content-Length: 5898
+Vary: Accept-Encoding
+Date: Wed, 04 Nov 2026 19:39:08 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+

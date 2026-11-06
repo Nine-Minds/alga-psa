@@ -1,0 +1,18 @@
+Required gate searched: security-finding-resolved
+
+Repository search:
+  rg -n --hidden 'security-finding-resolved' .github scripts tools docs/plans docs/evidence /home/robert/.local/bin/alga-dev --glob '!*.jsonl' --glob '!*.log' --glob '!node_modules/**'
+Result: mentions in docs/plans and prior evidence only; no runnable definition in tooling/workflow files.
+
+Installed command surface:
+  command -v security-finding-resolved
+Result: no executable found.
+  alga-dev --help
+Result: no security-finding-resolved command.
+
+Workflow templates:
+  alga-dev workflow-list-templates
+  jq -r '[.. | objects | select((.label? == "security-finding-resolved") or (.name? == "security-finding-resolved"))] | length' /tmp/refresh-watch-workflow-templates.json
+Result: 0 matching configured verification labels/names. Available Security Review template does not define this label.
+
+External owner action required: the Security Review owner for finding card bcf52eba-4ee9-5da6-b031-1555619d898c must provide the canonical acceptance check/runner and determine whether the interrupted full build/client-session replay require additional evidence. Prior owner annotations are recorded in the mitigation dossier. No substitute gate was run and no acceptance pass is claimed.
