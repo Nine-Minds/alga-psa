@@ -7,7 +7,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -31,7 +30,6 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "googleServicesFile": "./google-services.json",
       "intentFilters": [
@@ -108,9 +106,9 @@
     "extra": {
       "eas": {
         "projectId": "2bca0b9d-3deb-4e30-8134-55e03b7479d7"
-      }
+      },
+      "privacyPolicyUrl": "https://algapsa.com/static/privacy_policy"
     },
-    "privacyPolicyUrl": "https://algapsa.com/static/privacy_policy",
     "owner": "nine-minds-llc"
   }
 }
