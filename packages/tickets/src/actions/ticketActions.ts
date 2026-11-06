@@ -136,6 +136,7 @@ import {
   shouldApplyOpenOnlyStatusFilter,
 } from '../lib/ticketStatusFilter';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
+import { assertBoardAcceptsTickets } from './ticketBoardGuards';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 // SLA cancellation is injected by the composition layer to avoid tickets→sla cross-package violation
 let _cancelSlaFn: ((tenantId: string, ticketId: string) => Promise<void>) | null = null;
@@ -2338,6 +2339,8 @@ export const moveTicketsToBoard = withAuth(async (
 
   try {
     resolvedStatusId = await withTransaction(ticketKnex, async (trx: Knex.Transaction) => {
+      await assertBoardAcceptsTickets(trx, tenantAlias, destinationBoardId);
+
       if (!destinationStatusId) {
         const defaultStatusId = await TicketModel.getDefaultStatusId(tenantAlias, trx, destinationBoardId);
         if (!defaultStatusId) {

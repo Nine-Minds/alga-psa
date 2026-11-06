@@ -135,6 +135,7 @@ import {
   TICKET_STATUS_FILTER_OPEN,
 } from '../lib/ticketStatusFilter';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
+import { assertBoardAcceptsTickets } from './ticketBoardGuards';
 import { resolveTicketListSortSpec, ticketLatestActivitySql } from './ticketListSortSql';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import { resolveBoardStopwatchEnabled } from '../lib/boardLiveTicketTimer';
@@ -908,8 +909,11 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       label: `${agent.first_name} ${agent.last_name}`
     }));
 
-    const boardOptions = (boards as Array<{ board_id?: string; board_name?: string | null }>)
-      .filter((board): board is { board_id: string; board_name?: string | null } => board.board_id !== undefined)
+    // Inactive boards stay listed only while the ticket is already on one, so
+    // the picker can still show its current value.
+    const boardOptions = (boards as Array<{ board_id?: string; board_name?: string | null; is_inactive?: boolean | null }>)
+      .filter((board): board is { board_id: string; board_name?: string | null; is_inactive?: boolean | null } => board.board_id !== undefined)
+      .filter((board) => !board.is_inactive || board.board_id === ticket.board_id)
       .map((board) => ({
         value: board.board_id,
         label: board.board_name || ""
@@ -2720,6 +2724,10 @@ export async function updateTicketInTransaction(
 
     if (isBoardChange && !updateData.status_id) {
       throw new Error('Changing the board requires selecting a status for the destination board');
+    }
+
+    if (isBoardChange) {
+      await assertBoardAcceptsTickets(trx, tenant, updateData.board_id as string);
     }
 
     // If updating category or subcategory, ensure they are compatible

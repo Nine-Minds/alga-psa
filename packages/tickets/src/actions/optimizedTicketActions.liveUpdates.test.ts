@@ -279,8 +279,10 @@ function buildTrx(params: {
   currentTicket?: Record<string, unknown>;
   bundleSettings?: Record<string, unknown> | undefined;
   childTickets?: Array<Record<string, unknown>>;
+  boards?: Array<{ board_id: string; is_inactive: boolean }>;
 }) {
   const currentTicket = { ...makeTicket(), ...(params.currentTicket ?? {}) };
+  const boards = params.boards ?? [{ board_id: 'board-1', is_inactive: false }, { board_id: 'board-2', is_inactive: false }];
   let childTickets = (params.childTickets ?? []).map((child) => ({ ...child }));
   const bundleSettings = params.bundleSettings;
 
@@ -368,6 +370,16 @@ function buildTrx(params: {
 
     if (table === 'statuses') {
       return statusesTable;
+    }
+
+    if (table === 'boards') {
+      const boardsBuilder: any = {
+        select: vi.fn(() => boardsBuilder),
+        where: vi.fn((whereArgs: Record<string, unknown>) => ({
+          first: vi.fn(async () => boards.find((board) => board.board_id === whereArgs.board_id)),
+        })),
+      };
+      return boardsBuilder;
     }
 
     if (table === 'ticket_bundle_settings') {
@@ -504,6 +516,28 @@ describe('updateTicketWithCache live updates', () => {
 
     expect(ticketUpdates[0]).toMatchObject({ title: 'Renamed' });
     expect(ticketUpdates[0]).not.toHaveProperty('status_changed_at');
+  });
+
+  it('rejects moving a ticket onto an inactive board and writes nothing', async () => {
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) =>
+      callback(buildTrx({ boards: [{ board_id: 'board-1', is_inactive: false }, { board_id: 'board-2', is_inactive: true }] }))
+    );
+
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+    const result = await updateTicketWithCache('ticket-1', { board_id: 'board-2', status_id: 'status-2' });
+
+    expect(result).toEqual(
+      expect.objectContaining({ actionError: 'The destination board is inactive. Choose an active board.' })
+    );
+    expect(ticketUpdates).toHaveLength(0);
+    expect(publishRedisMock).not.toHaveBeenCalled();
+  });
+
+  it('moves a ticket onto an active board', async () => {
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+    await expect(updateTicketWithCache('ticket-1', { board_id: 'board-2', status_id: 'status-2' })).resolves.toBe('success');
+
+    expect(ticketUpdates[0]).toMatchObject({ board_id: 'board-2', status_id: 'status-2' });
   });
 
   it('T005: permission failure results in zero live-update publishes', async () => {
