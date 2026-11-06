@@ -1,0 +1,23 @@
+{
+  "revision": "ef5f216168bd8bfedeec1834e7e1464829995c71",
+  "sessionIssued": true,
+  "sessionEmail": "authz-takeover-20261106@example.test",
+  "sessionTenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+  "account": {
+    "user_id": "da7deff6-e2e1-4cda-9e01-cee61c7bd7d2",
+    "email": "authz-takeover-20261106@example.test",
+    "is_inactive": false,
+    "password_populated": true,
+    "roles": [
+      "Project Manager"
+    ],
+    "role_ids": [
+      "257d116f-bfab-49c8-b625-6fcb78d878c1"
+    ]
+  },
+  "invitation": {
+    "email": "authz-takeover-20261106@example.test",
+    "email_normalized": "authz-takeover-20261106@example.test",
+    "used": true
+  }
+}
