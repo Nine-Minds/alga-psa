@@ -37,6 +37,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@alga-psa/authorization": "*",
     "@alga-psa/auth": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",

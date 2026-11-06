@@ -6,6 +6,7 @@
 import { IRole, IUserRole, getRoleAssignmentViolation } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
+import { assertMspRoleGrantsWithinActorPermissions } from '@alga-psa/authorization/roleGrantAuthorization';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import {
     actionError,
@@ -112,6 +113,8 @@ export const assignRoleToUser = withAuth(async (
             if (roleViolation === 'msp_role_on_portal_user') {
                 return actionError('Cannot assign an MSP role to a client portal user.', 'msp/settings:errors.roles.mspRoleOnPortalUser');
             }
+
+            await assertMspRoleGrantsWithinActorPermissions(currentUser.user_id, tenant, trx, [roleId]);
 
             const [userRole] = await tenantDb(trx, tenant).table<IUserRole>('user_roles')
                 .insert({ user_id: userId, role_id: roleId, tenant })

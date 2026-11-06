@@ -14,6 +14,10 @@ const isEnterpriseRef = vi.hoisted(() => ({ value: false }));
 const deleteEntityWithValidationMock = vi.hoisted(() => vi.fn());
 const publishWorkflowEventMock = vi.hoisted(() => vi.fn());
 const modelGetUserRolesMock = vi.hoisted(() => vi.fn());
+const modelGetUserRolesWithPermissionsMock = vi.hoisted(() => vi.fn());
+const assignedRolePermissions = vi.hoisted(() => [] as Array<{ role_id: string; resource: string; action: string; msp: boolean }>);
+const roleWriteCounts = vi.hoisted(() => ({ users: 0, userRoles: 0 }));
+const existingAssignments = vi.hoisted(() => ['existing-role'] as string[]);
 
 vi.mock('@alga-psa/core', () => ({
   get isEnterprise() {
@@ -48,6 +52,7 @@ vi.mock('@alga-psa/db', () => ({
   tenantDb: (conn: any, _tenant: string) => ({
     table: (t: string) => conn(t),
     unscoped: (t: string, _reason?: string) => conn(t),
+    tenantJoin: () => undefined,
   }),
 }));
 
@@ -60,6 +65,7 @@ vi.mock('@alga-psa/db/models/user', () => ({
     update: userUpdateMock,
     getUserWithRoles: getUserWithRolesMock,
     getUserRoles: modelGetUserRolesMock,
+    getUserRolesWithPermissions: modelGetUserRolesWithPermissionsMock,
     isInReportsToChain: isInReportsToChainMock,
   },
 }));
@@ -156,6 +162,19 @@ function createTenantDb(input: { plan: 'solo' | 'pro'; licensedUserCount: number
         where: (_criteria: Record<string, any>) => ({
           first: async () => ({ role_id: 'role-1', client: false, msp: true }),
         }),
+        whereIn: (_column: string, ids: string[]) => ({
+          select: async () => ids.map((role_id) => ({ role_id, client: false, msp: true })),
+        }),
+      };
+    }
+
+    if (table === 'role_permissions as rp') {
+      return {
+        whereIn: (_column: string, ids: string[]) => ({
+          where: () => ({
+            select: async () => assignedRolePermissions.filter((row) => ids.includes(row.role_id)),
+          }),
+        }),
       };
     }
 
@@ -184,6 +203,7 @@ function createTenantDb(input: { plan: 'solo' | 'pro'; licensedUserCount: number
         }),
         insert: (values: Record<string, any>) => ({
           returning: async () => {
+            roleWriteCounts.users += 1;
             insertedUser = { user_id: 'new-user', ...values };
             return [insertedUser];
           },
@@ -193,7 +213,7 @@ function createTenantDb(input: { plan: 'solo' | 'pro'; licensedUserCount: number
 
     if (table === 'user_roles') {
       return {
-        insert: async (_values: Record<string, any>) => [],
+        insert: async (_values: Record<string, any>) => { roleWriteCounts.userRoles += 1; return []; },
       };
     }
 
@@ -237,6 +257,22 @@ function createUpdateTenantDb(current: { email: string; user_type?: 'internal' |
   }) as any;
 }
 
+function createRoleUpdateTenantDb() {
+  const trx: any = (table: string) => {
+    if (table === 'users') return { where: () => ({ first: async () => ({ user_type: 'internal' }) }) };
+    if (table === 'roles') return { whereIn: (_column: string, ids: string[]) => ({ select: async () => ids.map((role_id) => ({ role_id, msp: true })) }) };
+    if (table === 'role_permissions as rp') return {
+      whereIn: (_column: string, ids: string[]) => ({ where: () => ({ select: async () => assignedRolePermissions.filter((row) => ids.includes(row.role_id)) }) }),
+    };
+    if (table === 'user_roles') return {
+      where: () => ({ del: async () => { existingAssignments.splice(0); } }),
+      insert: async (rows: Array<{ role_id: string }>) => { existingAssignments.push(...rows.map((row) => row.role_id)); },
+    };
+    throw new Error(`Unexpected tenant table ${table}`);
+  };
+  return trx;
+}
+
 describe('addUser', () => {
   beforeEach(() => {
     vi.resetModules();
@@ -252,9 +288,18 @@ describe('addUser', () => {
     isInReportsToChainMock.mockReset();
     publishWorkflowEventMock.mockReset();
     modelGetUserRolesMock.mockReset();
+    modelGetUserRolesWithPermissionsMock.mockReset();
+    assignedRolePermissions.splice(0);
+    roleWriteCounts.users = 0;
+    roleWriteCounts.userRoles = 0;
+    existingAssignments.splice(0, existingAssignments.length, 'existing-role');
 
     publishWorkflowEventMock.mockResolvedValue(undefined);
     modelGetUserRolesMock.mockResolvedValue([]);
+    modelGetUserRolesWithPermissionsMock.mockResolvedValue([{
+      msp: true,
+      permissions: [{ resource: 'ticket', action: 'read', msp: true }],
+    }]);
     hasPermissionMock.mockResolvedValue(true);
     hashPasswordMock.mockResolvedValue('hashed-password');
     upsertMock.mockResolvedValue(undefined);
@@ -337,6 +382,41 @@ describe('addUser', () => {
         email: 'solo@example.com',
       },
     });
+  });
+
+  it('rejects direct creation with a role outside the actor permission set before inserting either row', async () => {
+    assignedRolePermissions.push({ role_id: 'role-1', resource: 'system', action: 'admin', msp: true });
+    createTenantKnexMock.mockResolvedValue({ knex: createTenantDb({ plan: 'pro', licensedUserCount: 5, usedInternalUsers: 0 }) });
+
+    const addUser = await loadAddUser();
+    const result = await addUser(actingUser, tenantContext, userData);
+
+    expect(result).toMatchObject({ success: false, code: 'PERMISSION_DENIED' });
+    expect(roleWriteCounts).toEqual({ users: 0, userRoles: 0 });
+  });
+
+  it('rejects role updates with an overpowered role before changing existing assignments', async () => {
+    assignedRolePermissions.push({ role_id: 'admin-role', resource: 'system', action: 'admin', msp: true });
+    createTenantKnexMock.mockResolvedValue({ knex: createRoleUpdateTenantDb() });
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => callback(createRoleUpdateTenantDb()));
+
+    const { updateUserRoles } = await import('./userActions');
+    const result = await (updateUserRoles as any)(actingUser, tenantContext, 'target-user', ['admin-role']);
+
+    expect(result).toMatchObject({ success: false, error: expect.stringMatching(/Cannot assign an MSP role/) });
+    expect(existingAssignments).toEqual(['existing-role']);
+  });
+
+  it('updates roles when the nonempty target permission set is within the actor permission set', async () => {
+    assignedRolePermissions.push({ role_id: 'eligible-role', resource: 'ticket', action: 'read', msp: true });
+    createTenantKnexMock.mockResolvedValue({ knex: createRoleUpdateTenantDb() });
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => callback(createRoleUpdateTenantDb()));
+
+    const { updateUserRoles } = await import('./userActions');
+    const result = await (updateUserRoles as any)(actingUser, tenantContext, 'target-user', ['eligible-role']);
+
+    expect(result).toBeUndefined();
+    expect(existingAssignments).toEqual(['eligible-role']);
   });
 
   it('rejects updating an email when another tenant already uses it', async () => {

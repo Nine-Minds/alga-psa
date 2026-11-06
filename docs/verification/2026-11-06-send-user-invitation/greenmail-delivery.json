@@ -1,0 +1,10 @@
+{
+  "revision": "ef5f216168bd8bfedeec1834e7e1464829995c71",
+  "email": "authz-takeover-20261106@example.test",
+  "messageCount": 1,
+  "parsedRealMime": true,
+  "setupOrigin": "http://feature-security-authz-in-senduserinvitation.localhost:3358",
+  "setupPath": "/auth/team/setup",
+  "tokenPresent": true,
+  "tokenRetained": false
+}

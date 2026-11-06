@@ -73,8 +73,10 @@ async function createInitialAdministratorInvitation(trx: Knex.Transaction, opera
   const role = await customer.table('roles').where({ role_name: 'Admin', msp: true, client: false }).first();
   if (!role) throw new Error('Customer administrator role is missing');
   const administrator = operation.request.administrator;
+  const normalizedEmail = administrator.email.trim().toLowerCase();
   await customer.table('user_invitations').insert({ tenant: operation.customer_tenant,
     invitation_id: operation.administrator_invitation_id, email: administrator.email,
+    email_normalized: normalizedEmail,
     first_name: administrator.firstName, last_name: administrator.lastName, role_id: role.role_id,
     token: randomBytes(32).toString('hex'), expires_at: trx.raw("now() + interval '24 hours'"),
     metadata: { co_managed_initial_admin: true, co_managed_relationship_id: operation.relationship_id,
