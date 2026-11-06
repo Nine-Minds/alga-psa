@@ -14,6 +14,7 @@ export default defineConfig({
       "react-native": path.resolve(__dirname, "test/mocks/react-native.ts"),
       "react-native-safe-area-context": path.resolve(__dirname, "test/mocks/react-native-safe-area-context.ts"),
       "react-native-webview": path.resolve(__dirname, "test/mocks/react-native-webview.ts"),
+      expo: path.resolve(__dirname, "test/mocks/expo.ts"),
       "expo-modules-core": path.resolve(__dirname, "test/mocks/expo-modules-core.ts"),
       "expo-localization": path.resolve(__dirname, "test/mocks/expo-localization.ts"),
       "rn-emoji-keyboard": path.resolve(__dirname, "test/mocks/rn-emoji-keyboard.ts"),

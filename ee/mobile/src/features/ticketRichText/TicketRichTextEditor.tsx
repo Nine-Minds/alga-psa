@@ -1,6 +1,6 @@
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Linking, Platform, Pressable, Text, View } from "react-native";
-import { WebView, type WebViewMessageEvent } from "react-native-webview";
+import { WebView, type WebViewMessageEvent, type WebViewProps } from "react-native-webview";
 import {
   TicketMobileEditorBridgeClient,
 } from "./bridge";
@@ -23,6 +23,13 @@ import {
   TICKET_MOBILE_EDITOR_HTML,
 } from "./generatedEditorHtml";
 import { TicketRichTextToolbar } from "./TicketRichTextToolbar";
+
+// react-native-webview 14 declares `class WebView<P = undefined> extends
+// Component<WebViewProps & P>`, so the element's props collapse to `never`.
+// Re-type it for JSX; the class type still describes the imperative ref.
+const WebViewElement = WebView as unknown as React.ComponentType<
+  WebViewProps & { ref?: React.Ref<WebView> }
+>;
 
 /** The active theme as the payload the web view's CSS variables expect. */
 function toEditorThemePayload(theme: Theme): TicketMobileEditorThemePayload {
@@ -511,7 +518,7 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
             position: "relative",
           }}
         >
-          <WebView
+          <WebViewElement
             ref={webViewRef}
             originWhitelist={["*"]}
             source={{

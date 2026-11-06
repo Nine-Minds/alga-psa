@@ -303,7 +303,7 @@ export function TimeEntriesScreen() {
         </Text>
       ) : null}
     </View>
-  ) : null;
+  ) : undefined;
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>

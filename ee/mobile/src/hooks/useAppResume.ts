@@ -3,7 +3,7 @@ import { AppState, type AppStateStatus } from "react-native";
 import { isResumeTransition } from "./appStateTransitions";
 
 export function useAppResume(onResume: () => void) {
-  const lastState = useRef<AppStateStatus>(AppState.currentState);
+  const lastState = useRef<AppStateStatus>((AppState.currentState ?? "unknown") as AppStateStatus);
 
   useEffect(() => {
     const sub = AppState.addEventListener("change", (nextState) => {

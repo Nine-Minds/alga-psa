@@ -286,7 +286,7 @@ export function InteractionsScreen({ navigation }: Props) {
             ? <EmptyState title={t("list.noResults")} description={t("list.noResultsDescription")} />
             : <EmptyState title={t("list.empty")} description={t("list.emptyDescription")} />
         }
-        ListFooterComponent={loadingMore ? <ActivityIndicator style={{ marginVertical: theme.spacing.md }} color={theme.colors.primary} /> : null}
+        ListFooterComponent={loadingMore ? <ActivityIndicator style={{ marginVertical: theme.spacing.md }} color={theme.colors.primary} /> : undefined}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
         onEndReached={() => void onEndReached()}
         onEndReachedThreshold={NEXT_PAGE_PREFETCH_THRESHOLD}

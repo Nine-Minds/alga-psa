@@ -268,7 +268,7 @@ export function ContactsListScreen({ navigation }: Props) {
         ListHeaderComponent={header}
         renderItem={renderItem}
         ListEmptyComponent={
-          searching ? null : (
+          searching ? undefined : (
             <EmptyState
               title={search ? t("list.noResults") : t("list.noContacts")}
               description={search ? t("list.noResultsDescription") : t("list.noContactsDescription")}
@@ -287,7 +287,7 @@ export function ContactsListScreen({ navigation }: Props) {
             <View style={{ paddingVertical: theme.spacing.lg, alignItems: "center" }}>
               <ActivityIndicator color={theme.colors.primary} />
             </View>
-          ) : null
+          ) : undefined
         }
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"

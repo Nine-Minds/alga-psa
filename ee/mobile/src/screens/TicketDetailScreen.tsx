@@ -1,6 +1,6 @@
 import { formatPhoneForDisplay, formatPhoneLabel } from "../../../../packages/validation/src/lib/phone";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { Linking, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
+import { Linking, Pressable, RefreshControl, ScrollView, Text, TextInput, View, type ScrollViewInstance } from "react-native";
 import { DisplayTagBadges, type DisplayTag } from "../ui/components/DisplayTagBadges";
 import { mergePartyDisplayTags } from "./ticketRowTags";
 import { buildMapsUrl } from "../urls/mapsUrl";
@@ -147,7 +147,7 @@ export function TicketDetailBody({
   const [callsReloadKey, setCallsReloadKey] = useState(0);
   const network = useNetworkStatus();
   const isOffline = isOfflineStatus(network);
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const sectionsYRef = useRef(0);
   const checklistYRef = useRef(0);
 

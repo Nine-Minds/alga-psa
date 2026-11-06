@@ -450,7 +450,7 @@ export function ProjectsScreen({ navigation }: Props) {
             <View style={{ paddingVertical: theme.spacing.lg, alignItems: "center" }}>
               <ActivityIndicator color={theme.colors.primary} />
             </View>
-          ) : null
+          ) : undefined
         }
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
