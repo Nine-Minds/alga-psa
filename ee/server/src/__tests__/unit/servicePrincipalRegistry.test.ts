@@ -2,8 +2,8 @@
 
 import { describe, expect, it } from 'vitest';
 import { buildRequest, runRegistrySearch } from '@alga-psa/agent-tooling';
-import { chatApiRegistry as ceRegistry } from '../../../lib/mcp/registry.generated';
-import { chatApiRegistry as eeRegistry } from '../../../../../ee/server/src/chat/registry/apiRegistry.generated';
+import { chatApiRegistry as ceRegistry } from '../../../../../server/src/lib/mcp/registry.generated';
+import { chatApiRegistry as eeRegistry } from '../../chat/registry/apiRegistry.generated';
 
 const actorId = 'f8f6c9bc-b0b1-4c7e-9478-f601911cf119';
 const humanWork = [
@@ -42,5 +42,11 @@ describe.each(humanWork)('service-principal API discovery: %s', (query, path) =>
     const hit = search.data.results.find((entry) => entry.method === 'POST' && entry.path === path);
     expect(hit).toBeDefined();
     expect(hit?.parameters.some((parameter) => parameter.name === 'X-Alga-Act-As')).toBe(false);
+
+    const entry = ceRegistry.find((entry) => entry.id === hit?.entryId);
+    if (!entry) throw new Error(`Missing registry entry for POST ${path}`);
+    const request = buildRequest(entry, { parameters: { 'X-Alga-Act-As': actorId } });
+    expect(request.headers).toEqual({});
+    expect(request.query).toEqual({});
   });
 });
