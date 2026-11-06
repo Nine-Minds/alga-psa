@@ -34,5 +34,10 @@ describe("priorityDelivery", () => {
     const low = calls.find((c) => c[0] === PRIORITY_CHANNEL_IDS.low)?.[1];
     expect(low?.sound).toBeNull();
     expect(low?.importance).toBe(2);
+    // Audible channels must omit `sound` entirely: expo-notifications treats a
+    // string as a bundled file name, so "default" resolves to nothing.
+    for (const id of [PRIORITY_CHANNEL_IDS.high, PRIORITY_CHANNEL_IDS.normal]) {
+      expect(calls.find((c) => c[0] === id)?.[1]).not.toHaveProperty("sound");
+    }
   });
 });

@@ -38,7 +38,13 @@ export function shouldToastInForeground(priority: NotificationPriority): boolean
 
 let channelsEnsured = false;
 
-/** Create the per-priority Android channels the server targets. Idempotent. */
+/**
+ * Create the per-priority Android channels the server targets. Idempotent.
+ *
+ * `sound` is a bundled sound file name here, never the string "default":
+ * omitting the key is what selects the system notification sound, and `null`
+ * is what silences a channel.
+ */
 export async function ensurePriorityChannels(): Promise<void> {
   if (Platform.OS !== "android" || channelsEnsured) return;
   const t = (key: string, defaultValue: string) => i18n.t(`settings:notifications.channels.${key}`, { defaultValue });
@@ -47,14 +53,12 @@ export async function ensurePriorityChannels(): Promise<void> {
       name: t("high", "High priority"),
       description: t("highDescription", "SLA breaches, escalations, and other urgent alerts."),
       importance: Notifications.AndroidImportance.MAX,
-      sound: "default",
       vibrationPattern: [0, 250, 250, 250],
     }),
     Notifications.setNotificationChannelAsync(PRIORITY_CHANNEL_IDS.normal, {
       name: t("normal", "Normal priority"),
       description: t("normalDescription", "Ticket assignments, comments, and updates."),
       importance: Notifications.AndroidImportance.DEFAULT,
-      sound: "default",
     }),
     Notifications.setNotificationChannelAsync(PRIORITY_CHANNEL_IDS.low, {
       name: t("low", "Low priority"),
