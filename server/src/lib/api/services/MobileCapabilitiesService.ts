@@ -1,9 +1,9 @@
 import { createHash } from 'node:crypto';
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import {
   BaseService,
   type ServiceContext,
 } from '@alga-psa/db';
-import { hasPermission } from '@alga-psa/auth/rbac';
 import { resolveDateFormatCountry } from '@alga-psa/tenancy/lib/tenantDefaultCountry';
 import {
   countryDateFormat,
@@ -23,6 +23,7 @@ import {
   getThemePairMeta,
   type ThemePairId,
 } from '@alga-psa/tenancy/lib/themePairs';
+import { readDontNotifyCustomerDefault } from '@alga-psa/notifications/notifications/notificationPolicy';
 
 /** The 15 seed tokens the mobile app derives its whole palette from. */
 export type MobileThemeSeedTokens = CustomThemeTokens;
@@ -53,6 +54,12 @@ export interface MobileFeatureCapabilities {
     clientsUpdate: boolean;
     contactsCreate: boolean;
     contactsUpdate: boolean;
+    /**
+     * Tenant setting: every "Don't notify the customer" checkbox starts ticked.
+     * Mirrors `notification_settings.default_dont_notify_customer` (Settings ->
+     * Notifications -> Email -> Settings on the web).
+     */
+    dontNotifyCustomerDefault: boolean;
   };
   /**
    * How this user's dates are written, resolved from their country exactly as
@@ -118,6 +125,17 @@ export class MobileCapabilitiesService extends BaseService<never> {
     }
   }
 
+  private async getDontNotifyCustomerDefault(
+    knex: Parameters<typeof readDontNotifyCustomerDefault>[0],
+    tenant: string,
+  ): Promise<boolean> {
+    try {
+      return await readDontNotifyCustomerDefault(knex, tenant);
+    } catch {
+      // Fail open: the historical behavior is unticked checkboxes.
+      return false;
+    }
+  }
   async getMyCapabilities(context: ServiceContext): Promise<MobileFeatureCapabilities> {
     const formatting = await this.getFormatting(context);
     const theme = await this.resolveTheme(context.tenant);
@@ -125,12 +143,13 @@ export class MobileCapabilitiesService extends BaseService<never> {
     const knex = await this.getDbForContext(context);
 
     const [clientsCreate, clientsUpdate, contactsCreate, contactsUpdate] = await Promise.all([
-      hasPermission(context.user, 'client', 'create', knex),
-      hasPermission(context.user, 'client', 'update', knex),
-      hasPermission(context.user, 'contact', 'create', knex),
-      hasPermission(context.user, 'contact', 'update', knex),
+      hasApiContextPermission(context, 'client', 'create', knex),
+      hasApiContextPermission(context, 'client', 'update', knex),
+      hasApiContextPermission(context, 'contact', 'create', knex),
+      hasApiContextPermission(context, 'contact', 'update', knex),
     ]);
     const crm = { clientsCreate, clientsUpdate, contactsCreate, contactsUpdate };
+    const dontNotifyCustomerDefault = await this.getDontNotifyCustomerDefault(knex, context.tenant);
 
     if (productCode !== 'psa') {
       return {
@@ -141,6 +160,7 @@ export class MobileCapabilitiesService extends BaseService<never> {
           projects: false,
           assets: false,
           assetAudit: false,
+          dontNotifyCustomerDefault,
           ...crm,
         },
         formatting,
@@ -149,12 +169,12 @@ export class MobileCapabilitiesService extends BaseService<never> {
     }
 
     const [inventory, opportunities, opportunitiesCreate, projects, assets, assetsUpdate] = await Promise.all([
-      hasPermission(context.user, 'inventory', 'read', knex),
-      hasPermission(context.user, 'opportunities', 'read', knex),
-      hasPermission(context.user, 'opportunities', 'create', knex),
-      hasPermission(context.user, 'project', 'read', knex),
-      hasPermission(context.user, 'asset', 'read', knex),
-      hasPermission(context.user, 'asset', 'update', knex),
+      hasApiContextPermission(context, 'inventory', 'read', knex),
+      hasApiContextPermission(context, 'opportunities', 'read', knex),
+      hasApiContextPermission(context, 'opportunities', 'create', knex),
+      hasApiContextPermission(context, 'project', 'read', knex),
+      hasApiContextPermission(context, 'asset', 'read', knex),
+      hasApiContextPermission(context, 'asset', 'update', knex),
     ]);
 
     return {
@@ -165,6 +185,7 @@ export class MobileCapabilitiesService extends BaseService<never> {
         projects,
         assets,
         assetAudit: assets && assetsUpdate,
+        dontNotifyCustomerDefault,
         ...crm,
       },
       formatting,

@@ -1,6 +1,7 @@
 'use client'
 
 import { encodeTicketWhere } from '../lib/ticketWhereUrl';
+import { useDefaultNotificationSuppression } from '../lib/notificationSuppressionDefaults';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -168,11 +169,6 @@ function SmartSearchResults<TScope, TRow extends object, TMetadata>(
 ) {
   return <EnterpriseSmartSearchResults {...(props as unknown as AnySmartSearchResultsProps)} />;
 }
-
-const defaultNotificationSuppression = (): TicketNotificationSuppressionValue => ({
-  suppressContactNotifications: false,
-  suppressInternalNotifications: false,
-});
 
 interface TicketingDashboardProps {
   id?: string;
@@ -416,6 +412,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [selectedDestinationStatusId, setSelectedDestinationStatusId] = useState<string>('');
   const [isLoadingDestinationStatuses, setIsLoadingDestinationStatuses] = useState(false);
   const [destinationStatusError, setDestinationStatusError] = useState<string>('');
+  const defaultNotificationSuppression = useDefaultNotificationSuppression();
   const [bulkMoveNotificationSuppression, setBulkMoveNotificationSuppression] =
     useState<TicketNotificationSuppressionValue>(() => defaultNotificationSuppression());
   const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>(initialAgentAvatarUrls);

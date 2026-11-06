@@ -27,7 +27,7 @@ import type { SupportedLocale } from '@alga-psa/core/i18n/config';
  * columns the UI never offers — identity, language key, the system template a
  * row shadows — are allow-listed out instead of trusted.
  */
-const SETTINGS_WRITABLE_COLUMNS = ['is_enabled', 'rate_limit_per_minute'] as const;
+const SETTINGS_WRITABLE_COLUMNS = ['is_enabled', 'default_dont_notify_customer', 'rate_limit_per_minute'] as const;
 const TEMPLATE_WRITABLE_COLUMNS = ['subject', 'html_content', 'text_content', 'language_code'] as const;
 
 function pickDefined<T extends object>(source: T, columns: readonly (keyof T & string)[]): Partial<T> {

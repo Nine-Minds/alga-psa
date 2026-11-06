@@ -36,6 +36,10 @@ export async function authenticateMcpAdmin(req: NextRequest): Promise<McpAdminCo
     // MCP provisioning endpoints (create agents / register IdP providers) and
     // self-escalate by minting an internal user bound to the Admin role.
     const { knex } = await createTenantKnex(record.tenant);
+    // Provisioning is a human act. A service principal's key (even with the Admin
+    // role) must never mint further principals or register IdPs.
+    const owner = await knex('users').where({ tenant: record.tenant, user_id: record.user_id }).first('user_type');
+    if (owner?.user_type !== 'internal') return null;
     const roles = await User.getUserRoles(knex, record.user_id, record.tenant);
     return rolesIncludeAdmin(roles) ? { tenant: record.tenant, userId: record.user_id } : null;
   }

@@ -125,6 +125,44 @@ describe('computeQuoteTotals (pure preview/server derivation)', () => {
     expect(off.perGroup.has('loc-2')).toBe(false);
   });
 
+  // Discounts apply before tax. The server resolves each row's tax on its
+  // gross amount (it cannot know the selection being previewed), so these
+  // rows carry that figure plus the exact rate behind it: 8.875% of $200.01
+  // is ceil(1775.08875) = 1776, and $25.00 off leaves ceil(1553.21) = 1554.
+  it('taxes an included row on its amount minus the discount share', () => {
+    const totals = computeQuoteTotals([
+      { id: 'base', quantity: 1, unit_price: 20001, taxAmountIfIncluded: 1776, taxRateIfIncluded: 8.875 },
+      { id: 'disc', quantity: 1, unit_price: 2500, is_discount: true, discount_type: 'fixed' as const },
+    ]);
+    expect(totals).toMatchObject({ subtotal: 20001, discountTotal: 2500, tax: 1554, totalAmount: 19055 });
+  });
+
+  it('splits a discount over both bases and taxes each on what is left', () => {
+    const totals = computeQuoteTotals([
+      { id: 'core', quantity: 1, unit_price: 20001, taxAmountIfIncluded: 1776, taxRateIfIncluded: 8.875 },
+      { id: 'add', quantity: 1, unit_price: 5555, taxAmountIfIncluded: 494, taxRateIfIncluded: 8.875 },
+      { id: 'disc', quantity: 1, unit_price: 2500, is_discount: true, discount_type: 'fixed' as const },
+    ]);
+    // Shares 1957/543 of the $25.00: ceil(18044 x 8.875%) + ceil(5012 x 8.875%).
+    expect(totals).toMatchObject({ subtotal: 25556, discountTotal: 2500, tax: 2047, totalAmount: 25103 });
+  });
+
+  it('keeps a tax the rate cannot reproduce (thresholds, or already discounted)', () => {
+    const threshold = computeQuoteTotals([
+      { id: 'base', quantity: 1, unit_price: 20001, taxAmountIfIncluded: 1200, taxRateIfIncluded: 8.875 },
+      { id: 'disc', quantity: 1, unit_price: 2500, is_discount: true, discount_type: 'fixed' as const },
+    ]);
+    expect(threshold.tax).toBe(1200);
+
+    // recalculateQuoteFinancials hands over tax the engine already computed on
+    // the discounted base; it must not be discounted a second time.
+    const persisted = computeQuoteTotals([
+      { id: 'base', quantity: 1, unit_price: 20001, taxAmountIfIncluded: 1554, taxRateIfIncluded: 8.875 },
+      { id: 'disc', quantity: 1, unit_price: 2500, is_discount: true, discount_type: 'fixed' as const },
+    ]);
+    expect(persisted.tax).toBe(1554);
+  });
+
   it('is side-effect free and tolerates missing tax input', () => {
     const input = [{ id: 'x', quantity: 1, unit_price: 100 }];
     const snapshot = JSON.stringify(input);

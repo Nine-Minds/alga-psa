@@ -8,6 +8,7 @@ import { Label } from "@alga-psa/ui/components/Label";
 import { Button } from "@alga-psa/ui/components/Button";
 import { useSession } from "next-auth/react";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
+import { handleError } from "@alga-psa/ui/lib/errorHandling";
 import { getNotificationSettingsAction, updateNotificationSettingsAction } from "../../actions";
 import { NotificationSettings as NotificationSettingsType } from "../../types/notification";
 import LoadingIndicator from "@alga-psa/ui/components/LoadingIndicator";
@@ -23,16 +24,18 @@ export function NotificationSettings() {
     if (!tenant) {
       return;
     }
-    async function init() {
-      try {
-        const currentSettings = await getNotificationSettingsAction();
-        setSettings(currentSettings);
-      } catch (err) {
+    let active = true;
+    getNotificationSettingsAction()
+      .then((currentSettings) => {
+        if (active) setSettings(currentSettings);
+      })
+      .catch((err) => {
         console.error('Failed to load notification settings:', err);
-        setError(t('notifications.settingsForm.loadError', 'Failed to load settings'));
-      }
-    }
-    init();
+        if (active) setError(t('notifications.settingsForm.loadError', 'Failed to load settings'));
+      });
+    return () => {
+      active = false;
+    };
   }, [tenant]);
 
   if (error) {
@@ -55,7 +58,7 @@ export function NotificationSettings() {
 }
 
 function NotificationSettingsForm({
-  initialSettings
+  initialSettings,
 }: {
   initialSettings: NotificationSettingsType;
 }) {
@@ -67,9 +70,13 @@ function NotificationSettingsForm({
     e.preventDefault();
     setIsSaving(true);
     try {
-      await updateNotificationSettingsAction(settings);
+      const updated = await updateNotificationSettingsAction({
+        is_enabled: settings.is_enabled,
+        default_dont_notify_customer: settings.default_dont_notify_customer === true,
+      });
+      setSettings(updated);
     } catch (error) {
-      console.error("Failed to update notification settings:", error);
+      handleError(error, t('notifications.settingsForm.saveError', 'Failed to save notification settings'));
     } finally {
       setIsSaving(false);
     }
@@ -93,6 +100,27 @@ function NotificationSettingsForm({
               checked={settings.is_enabled}
               onCheckedChange={(checked) => 
                 setSettings(prev => ({ ...prev, is_enabled: checked }))
+              }
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="notifications-default-dont-notify-customer" className="text-base font-medium">
+                {t('notifications.settingsForm.defaultDontNotifyCustomer.label', "Start tickets with \"Don't notify the customer\" ticked")}
+              </Label>
+              <p className="text-sm text-gray-500">
+                {t(
+                  'notifications.settingsForm.defaultDontNotifyCustomer.description',
+                  'Ticket comments, status and contact changes, and closures start with customer notifications off. Agents can untick the box to notify the customer for a single action.'
+                )}
+              </p>
+            </div>
+            <Switch
+              id="notifications-default-dont-notify-customer"
+              checked={settings.default_dont_notify_customer === true}
+              onCheckedChange={(checked) =>
+                setSettings(prev => ({ ...prev, default_dont_notify_customer: checked }))
               }
             />
           </div>

@@ -318,6 +318,7 @@ export const assetQuerySchema = z.object({
   location_id: z.string().guid().optional(),
   contact_name_id: z.string().guid().optional(),
   asset_type: z.string().optional(),
+  asset_types: z.array(z.string().min(1)).max(100).optional(),
   status: z.string().optional(),
   ownership: z.enum(['client', 'msp']).optional(),
   in_custody: z.boolean().optional(),
@@ -334,6 +335,9 @@ export const assetQuerySchema = z.object({
   sort_by: z.string().optional(),
   sort_direction: z.enum(['asc', 'desc']).optional(),
   include_extension_data: z.boolean().optional()
+}).refine((params) => !(params.asset_type && params.asset_types?.length), {
+  message: 'Provide either asset_type or asset_types, not both',
+  path: ['asset_types'],
 });
 
 export const assetMaintenanceReportSchema = z.object({
