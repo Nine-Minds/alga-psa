@@ -60,7 +60,8 @@ describe('documented restore command (tsx with the EE tsconfig)', () => {
     { cwd: serverDir, env: { ...process.env, FORCE_CAPABILITIES: '' }, input: password, encoding: 'utf8', timeout: 60_000 });
     expect(activation.status).not.toBe(0);
     expect(activation.stdout + activation.stderr).not.toContain(password);
-    expect(activation.stderr).toMatch(/failed during (activation module loading|database connection|workspace activation)/);
+    // The EE activation module must load before this credential-free fixture reaches the database boundary.
+    expect(activation.stderr).toMatch(/failed during (database connection|workspace activation)/);
     const invalid = [
       ['--inspect', '--apply', '--archive', '/tmp/x.alga'],
       ['--apply', '--archive', '/tmp/x.alga'],

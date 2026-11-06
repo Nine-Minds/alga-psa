@@ -19,7 +19,8 @@ export default {
   ],
   test: {
     ...base.test,
-    include: ['src/__tests__/integration/coManagedUpgradeWorkflow.test.ts', 'src/__tests__/integration/coManagedUpgradeEmulator.test.ts'],
+    include: ['src/__tests__/integration/coManagedUpgradeWorkflow.test.ts', 'src/__tests__/integration/coManagedUpgradeEmulator.test.ts',
+      'src/__tests__/integration/coManagedUpgradeFullStackEmulator.integration.test.ts'],
     exclude: ['**/node_modules/**'],
   },
 };

@@ -5,9 +5,9 @@ import { finalizeCoManagedArchive } from './archiveFinalization';
 
 /**
  * L7a owns closure, evidence retention, archive sealing, relationship termination and the one-time
- * allocation release. Its closure primitive creates its own transaction, so calling it with the
- * upgrade transaction uses Knex's nested transaction/savepoint contract: any later upgrade failure
- * rolls the enclosing transaction (including the closure savepoint) back atomically.
+ * allocation release. The closure primitive calls withTransaction; when passed the upgrade
+ * transaction, that helper reuses it directly. Any later upgrade failure therefore rolls back the
+ * closure writes and the enclosing upgrade writes together, without opening a nested savepoint.
  */
 export const coManagedUpgradeClosure: CoManagedUpgradeClosure = {
   get available() { return true; },
