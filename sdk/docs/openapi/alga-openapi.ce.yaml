@@ -78,9 +78,11 @@ tags:
   - name: auth
   - name: billing
   - name: calendar
+  - name: capabilities
   - name: chat
   - name: client-portal
   - name: clients
+  - name: co-management
   - name: documents
   - name: email
   - name: ext
@@ -92,15 +94,19 @@ tags:
   - name: integrations
   - name: internal
   - name: inventory
+  - name: labels
   - name: marketing
   - name: mcp
   - name: meta
   - name: migrations
   - name: mobile
+  - name: notifications
   - name: online-meetings
   - name: platform-feature-flags
   - name: platform-notifications
   - name: platform-reports
+  - name: portal-domain
+  - name: projects
   - name: public
   - name: scim
   - name: secrets
@@ -112,6 +118,7 @@ tags:
   - name: tenant-management
   - name: ticket-comment-attachments
   - name: tickets
+  - name: time-entries
   - name: webhooks
 components:
   securitySchemes:
@@ -87657,6 +87664,37 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/client-portal/conversation-attachments/{attachmentId}:
+    get:
+      summary: GET client-portal
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - client-portal
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/client-portal/documents/{documentId}/export:
     get:
       summary: GET client-portal
@@ -87802,6 +87840,104 @@ paths:
         - psa
       responses:
         "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/co-management/archive-files/{archiveFileId}:
+    get:
+      summary: GET co-management
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - co-management
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products: []
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/co-management/attachments/{attachmentId}:
+    get:
+      summary: GET co-management
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - co-management
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products: []
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/co-management/export:
+    post:
+      summary: POST co-management
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - co-management
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products: []
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            description: Placeholder request body
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+      responses:
+        "201":
           description: Placeholder success response
           content:
             application/json:
@@ -90166,6 +90302,37 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/inventory/rma/{id}/document:
+    get:
+      summary: GET inventory
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - inventory
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/inventory/sales-orders/{id}/document:
     get:
       summary: GET inventory
@@ -90219,6 +90386,104 @@ paths:
               $ref: "#/components/schemas/PlaceholderObject"
       responses:
         "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/labels/linked-assets:
+    get:
+      summary: GET labels
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - labels
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products: []
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/labels/pdf:
+    post:
+      summary: POST labels
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - labels
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products: []
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            description: Placeholder request body
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/labels/templates:
+    get:
+      summary: GET labels
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - labels
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products: []
+      responses:
+        "200":
           description: Placeholder success response
           content:
             application/json:
@@ -90753,6 +91018,67 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/notifications/live-token:
+    get:
+      summary: GET notifications
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - notifications
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products: []
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/online-meetings/artifacts/{artifactId}:
+    get:
+      summary: GET online-meetings
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - online-meetings
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/online-meetings/recordings/{artifactId}:
     get:
       summary: GET online-meetings
@@ -90760,6 +91086,68 @@ paths:
         inventory. Replace with canonical OpenAPI metadata.
       tags:
         - online-meetings
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/portal-domain/surface:
+    get:
+      summary: GET portal-domain
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - portal-domain
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/projects/staging/containers/{id}/manifest:
+    get:
+      summary: GET projects
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - projects
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -92637,6 +93025,37 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/tickets/{id}/email-html:
+    get:
+      summary: GET tickets
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - tickets
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/tickets/{id}/live-token:
     get:
       summary: GET tickets
@@ -92840,6 +93259,36 @@ paths:
         x-placeholder: true
       x-alga-products:
         - psa
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/capabilities/co-managed:
+    get:
+      summary: GET v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - capabilities
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products: []
       responses:
         "200":
           description: Placeholder success response
@@ -96297,6 +96746,45 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/time-entries/cancel-tracking/{sessionId}:
+    post:
+      summary: POST v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - time-entries
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products:
+        - psa
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            description: Placeholder request body
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/webhooks/ai-gateway:
     options:
       summary: OPTIONS webhooks
@@ -96369,6 +96857,75 @@ paths:
   /api/webhooks/alternative-payments:
     get:
       summary: GET webhooks
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - webhooks
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      summary: POST webhooks
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - webhooks
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products:
+        - psa
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            description: Placeholder request body
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/webhooks/datto:
+    options:
+      summary: OPTIONS webhooks
       description: This operation was generated automatically from the route
         inventory. Replace with canonical OpenAPI metadata.
       tags:
