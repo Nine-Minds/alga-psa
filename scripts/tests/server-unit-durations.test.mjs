@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { durationsFromProgressJournal, readServerUnitDurations, SERVER_UNIT_DURATIONS_PATH } from '../lib/server-unit-durations.mjs';
+import { durationsFromProgressJournal, readServerUnitDurations, readShardDurations, SERVER_UNIT_DURATIONS_PATH, SHARD_DURATIONS } from '../lib/server-unit-durations.mjs';
 
 const line = (runId, event, file, seconds) => JSON.stringify({ schemaVersion: 1, runId, sequence: 0,
   timestamp: new Date(Date.parse('2026-11-05T07:00:00.000Z') + seconds * 1000).toISOString(), event, file });
@@ -42,4 +42,8 @@ test('the committed durations document is read from the repository root and vali
   assert.deepEqual(readServerUnitDurations(root).durationsMs, { 'server/src/test/unit/a.test.ts': 3000 });
   writeFileSync(file, JSON.stringify({ schemaVersion: 2 }));
   assert.throws(() => readServerUnitDurations(root), /schemaVersion 1/);
+  // Every lane keeps its own file beside the scripts, never under data/.
+  assert.equal(readShardDurations(root, 'integration'), null);
+  for (const lane of Object.keys(SHARD_DURATIONS)) assert.doesNotMatch(SHARD_DURATIONS[lane].path, /(^|\/)data\//);
+  assert.throws(() => readShardDurations(root, 'browser'), /No shard durations/);
 });
