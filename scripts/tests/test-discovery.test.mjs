@@ -117,7 +117,7 @@ test('questionnaire mapping deletion is required by the Temporal readiness inven
 });
 
 test('tenant deletion regressions remain required in the Temporal readiness lane', () => {
-  const files = ['defaultTaxRate', 'workSchedule', 'teamsObservability', 'coManaged'].map(name =>
+  const files = ['defaultTaxRate', 'workSchedule', 'teamsObservability', 'coManaged', 'servicePrincipals'].map(name =>
     `ee/temporal-workflows/src/activities/__tests__/${name}TenantDeletionOrder.test.ts`);
   files.push('ee/temporal-workflows/src/activities/__tests__/coManagedTenantDeletion.test.ts');
   const candidates = files.filter(file => isAdditionalWorkspaceTest(file, 'temporal-readiness'));
