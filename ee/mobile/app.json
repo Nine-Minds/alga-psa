@@ -4,7 +4,7 @@
     "slug": "mobile",
     "version": "1.6.5",
     "scheme": "alga",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -101,6 +101,8 @@
         "expo-build-properties",
         {
           "android": {
+            "compileSdkVersion": 37,
+            "targetSdkVersion": 37,
             "enableMinifyInReleaseBuilds": true,
             "enableShrinkResourcesInReleaseBuilds": true
           }
