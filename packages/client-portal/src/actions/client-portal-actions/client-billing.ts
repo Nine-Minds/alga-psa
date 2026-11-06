@@ -578,16 +578,22 @@ export const getClientQuoteById = withAuth(async (user, { tenant }, quoteId: str
         return actionError('Quote not found or access denied', 'client-portal:errors.billing.quoteNotFound');
       }
 
-      // Read-only: resolved per-row tax so the portal can preview optional-item
-      // toggles locally with the same math as the server. Only needed while the
+      // Read-only: resolved per-row tax and the exact rate behind it, so the
+      // portal can preview optional-item toggles locally with the same math as
+      // the server (including discounts before tax). Only needed while the
       // client can still change selections.
       if (updatedQuote.status === 'sent' && updatedQuote.quote_items?.length) {
         const taxByItemId = await resolveQuoteItemTaxesIfIncluded(trx, tenant, quoteId);
-        updatedQuote.quote_items = updatedQuote.quote_items.map((item) =>
-          taxByItemId.has(item.quote_item_id)
-            ? { ...item, tax_amount_if_included: taxByItemId.get(item.quote_item_id)! }
-            : item
-        );
+        updatedQuote.quote_items = updatedQuote.quote_items.map((item) => {
+          const rowTax = taxByItemId.get(item.quote_item_id);
+          return rowTax
+            ? {
+                ...item,
+                tax_amount_if_included: rowTax.taxAmount,
+                tax_rate_if_included: rowTax.taxPercentage,
+              }
+            : item;
+        });
       }
 
       return updatedQuote;

@@ -38,6 +38,7 @@ import {
   DATA_TABLE_PAGE_SIZES_PREFERENCE_KEY,
   type DataTablePageSizes,
 } from '@alga-psa/ui/components/DataTablePreferences';
+import { TicketNotificationDefaultsProvider } from '@alga-psa/tickets/lib/notificationSuppressionDefaults';
 
 interface Props {
   children: React.ReactNode;
@@ -48,6 +49,8 @@ interface Props {
   currencyCode?: string;
   /** Date shape resolved from the tenant's country, for DateFormatProvider. */
   dateFormat?: CountryDateFormat | null;
+  /** notification_settings.default_dont_notify_customer, seeding ticket notification checkboxes. */
+  dontNotifyCustomerDefault?: boolean;
   productCode: ProductCode;
   needsOnboarding: boolean;
   /** Whether this user may run workspace setup; only they are sent to it. */
@@ -98,6 +101,7 @@ export function MspLayoutClient({
   session,
   currencyCode,
   dateFormat,
+  dontNotifyCustomerDefault = false,
   productCode,
   needsOnboarding,
   canRunOnboarding = false,
@@ -277,7 +281,9 @@ export function MspLayoutClient({
     <I18nWrapper portal="msp" initialLocale={initialLocale || undefined} preloadedResources={preloadedLocaleResources}>
       <CurrencyFormatProvider currencyCode={currencyCode || 'USD'}>
         <DateFormatProvider dateFormat={dateFormat}>
-          {content}
+          <TicketNotificationDefaultsProvider dontNotifyCustomer={dontNotifyCustomerDefault}>
+            {content}
+          </TicketNotificationDefaultsProvider>
         </DateFormatProvider>
       </CurrencyFormatProvider>
     </I18nWrapper>

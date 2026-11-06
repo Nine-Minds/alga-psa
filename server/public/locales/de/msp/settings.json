@@ -1858,10 +1858,15 @@
         "label": "Benachrichtigungen aktivieren",
         "description": "Alle Benachrichtigungen für diesen Mandanten ein- oder ausschalten"
       },
+      "defaultDontNotifyCustomer": {
+        "label": "Tickets mit aktiviertem „Kunde nicht benachrichtigen“ beginnen",
+        "description": "Ticketkommentare, Status- und Kontaktänderungen sowie Abschlüsse beginnen ohne Kundenbenachrichtigung. Mitarbeiter können das Kästchen deaktivieren, um den Kunden bei einer einzelnen Aktion zu benachrichtigen."
+      },
       "loading": "Benachrichtigungseinstellungen werden geladen...",
       "loadError": "Einstellungen konnten nicht geladen werden",
       "save": "Änderungen speichern",
-      "saving": "Wird gespeichert..."
+      "saving": "Wird gespeichert...",
+      "saveError": "Benachrichtigungseinstellungen konnten nicht gespeichert werden"
     },
     "emailTemplatesUi": {
       "preview": {

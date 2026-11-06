@@ -23,7 +23,11 @@
  *   taxAdjustmentCents models Automated Sales Tax changing the total at
  *   create time. DiscountLineDetail lines carry a positive Amount that QBO
  *   subtracts (Intuit's Invoice reference sample), and tax is computed before
- *   the discount, matching ApplyTaxAfterDiscount's documented default (false).
+ *   the discount unless the invoice sets ApplyTaxAfterDiscount=true, matching
+ *   the flag's documented default (false). With the flag on, DiscountLineDetail
+ *   magnitudes reduce the taxable lines proportionally before tax. A negative
+ *   SalesItemLineDetail line is simply a negative taxable line and nets
+ *   against positive ones when its TaxCodeRef is taxable.
  * - Automated Sales Tax: with the automatedSalesTax option, invoices get a
  *   TxnTaxDetail computed from per-line TaxCodeRefs against seeded TaxCode and
  *   TaxRate entities. NON exempts a line; TAX and an *absent* code are both
@@ -301,12 +305,26 @@ export class QboSimulator {
    * Intuit's 2018 change an absent code means "taxable", not "exempt", which is
    * the trap this simulator exists to catch.
    */
-  private computeAutomatedSalesTax(lines: any[], currency: string): { totalCents: number; detail: any } | null {
+  private computeAutomatedSalesTax(lines: any[], currency: string, applyTaxAfterDiscount = false): { totalCents: number; detail: any } | null {
     const ast = this.options.automatedSalesTax;
     if (!ast) return null;
 
     const componentCentsByRateId = new Map<string, number>();
     let totalCents = 0;
+
+    // ApplyTaxAfterDiscount: DiscountLineDetail magnitudes come off the
+    // positive taxable lines pro rata before the rate is applied.
+    const isTaxableSalesLine = (line: any) =>
+      line?.DetailType === 'SalesItemLineDetail' && line?.SalesItemLineDetail?.TaxCodeRef?.value !== 'NON';
+    const discountCents = applyTaxAfterDiscount
+      ? lines
+          .filter((line) => line?.DetailType === 'DiscountLineDetail')
+          .reduce((sum, line) => sum + Math.abs(toCents(line?.Amount, currency)), 0)
+      : 0;
+    const positiveTaxableCents = lines
+      .filter((line) => isTaxableSalesLine(line) && toCents(line?.Amount, currency) > 0)
+      .reduce((sum, line) => sum + toCents(line?.Amount, currency), 0);
+    const appliedDiscountCents = Math.min(discountCents, positiveTaxableCents);
 
     for (const line of lines) {
       if (line?.DetailType !== 'SalesItemLineDetail') continue;
@@ -317,7 +335,10 @@ export class QboSimulator {
       const taxCode = this.stores.TaxCode.get(codeId);
       if (!taxCode) continue;
 
-      const lineCents = toCents(line?.Amount, currency);
+      let lineCents = toCents(line?.Amount, currency);
+      if (appliedDiscountCents > 0 && lineCents > 0) {
+        lineCents -= Math.round((lineCents * appliedDiscountCents) / positiveTaxableCents);
+      }
       for (const detail of taxCode.SalesTaxRateList?.TaxRateDetail ?? []) {
         const rateId = detail?.TaxRateRef?.value;
         const rate = rateId ? this.stores.TaxRate.get(String(rateId)) : undefined;
@@ -380,7 +401,7 @@ export class QboSimulator {
     const lines = Array.isArray(data.Line) ? data.Line : [];
     const currency = this.currencyOf(data);
     this.assertLineAmountsReconcile(lines, currency);
-    const astTax = type === 'Invoice' ? this.computeAutomatedSalesTax(lines, currency) : null;
+    const astTax = type === 'Invoice' ? this.computeAutomatedSalesTax(lines, currency, data.ApplyTaxAfterDiscount === true) : null;
     // QBO computes the total from lines; the caller's TotalAmt is not trusted.
     const totalCents =
       this.sumSalesLines(lines, currency) +

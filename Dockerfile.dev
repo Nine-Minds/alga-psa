@@ -1,5 +1,8 @@
 FROM node:alpine
 
+# FreeFont ships as CFF-based OTF (and ghostscript's fonts are Type 1); Chromium embeds
+# those in PDFs as Type 3 glyph outlines that print poorly. DejaVu (sans-serif/monospace)
+# and Liberation (Arial/Helvetica/Courier) are TrueType and embed cleanly.
 RUN apk add --no-cache \
     bash \
     curl \
@@ -14,6 +17,8 @@ RUN apk add --no-cache \
     harfbuzz \
     ca-certificates \
     ttf-freefont \
+    font-dejavu \
+    font-liberation \
     findutils \
     setpriv
 

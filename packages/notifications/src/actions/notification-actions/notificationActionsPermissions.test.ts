@@ -104,11 +104,18 @@ describe('notification settings and template actions require settings permission
     hasPermissionMock.mockResolvedValue(true);
     const actions = await import('./notificationActions');
 
-    await actions.updateNotificationSettingsAction({ is_enabled: false, tenant: OTHER_TENANT } as any);
-    expect(service.updateSettings).toHaveBeenCalledWith(SESSION_TENANT, {
-      is_enabled: false,
-      tenant: OTHER_TENANT,
-    });
+    // Settings updates now fail fast on keys outside the allow-list, so a
+    // caller-named tenant never reaches the service at all.
+    await expect(
+      actions.updateNotificationSettingsAction({ is_enabled: false, tenant: OTHER_TENANT } as any),
+    ).rejects.toThrow('cannot update: tenant');
+    expect(service.updateSettings).not.toHaveBeenCalledWith(
+      SESSION_TENANT,
+      expect.objectContaining({ tenant: OTHER_TENANT }),
+    );
+
+    await actions.updateNotificationSettingsAction({ is_enabled: false });
+    expect(service.updateSettings).toHaveBeenCalledWith(SESSION_TENANT, { is_enabled: false });
 
     await actions.createTenantTemplateAction({ name: 'invoice', tenant: OTHER_TENANT } as any);
     expect(service.createTenantTemplate).toHaveBeenCalledWith(SESSION_TENANT, {

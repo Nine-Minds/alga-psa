@@ -1,23 +1,34 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
-// Per-file wall time of the full server unit suite, measured on main and
-// committed, so every shard and the merge job partition from the same numbers.
-// scripts/update-server-unit-durations.mjs refreshes it from the newest main
-// run's merged progress journal; a stale file only balances approximately, and
-// a missing one falls back to the modulo split.
-// Not under a data/ directory: the root .gitignore drops every one of those.
-export const SERVER_UNIT_DURATIONS_PATH = 'scripts/server-unit-durations.json';
+// Per-file fork occupancy of a sharded lane, measured on main and committed,
+// so every shard and its merge or gate job partition from the same numbers.
+// scripts/update-shard-durations.mjs <lane> refreshes a file from the newest
+// main run's progress journals; a stale file only balances approximately, and
+// a missing one falls back to the modulo split. Not under a data/ directory:
+// the root .gitignore drops every one of those.
+export const SHARD_DURATIONS = Object.freeze({
+  'server-unit': { path: 'scripts/server-unit-durations.json', artifacts: ['server-unit-execution'],
+    member: 'test-results/server-coverage/progress.jsonl' },
+  integration: { path: 'scripts/integration-durations.json',
+    // One upload path, so the archive holds the directory's contents at its root.
+    artifacts: [1, 2, 3, 4].map(shard => `server-integration-shard-${shard}`), member: 'progress.jsonl' },
+});
+export const SERVER_UNIT_DURATIONS_PATH = SHARD_DURATIONS['server-unit'].path;
 
-export function readServerUnitDurations(root) {
-  const file = path.join(root, SERVER_UNIT_DURATIONS_PATH);
+export function readShardDurations(root, lane) {
+  const lanePath = SHARD_DURATIONS[lane]?.path;
+  if (!lanePath) throw new Error(`No shard durations are kept for lane ${lane}`);
+  const file = path.join(root, lanePath);
   if (!existsSync(file)) return null;
   const parsed = JSON.parse(readFileSync(file, 'utf8'));
   if (parsed?.schemaVersion !== 1 || !parsed.durationsMs || typeof parsed.durationsMs !== 'object') {
-    throw new Error(`${SERVER_UNIT_DURATIONS_PATH} is not a schemaVersion 1 durations document`);
+    throw new Error(`${lanePath} is not a schemaVersion 1 durations document`);
   }
   return parsed;
 }
+
+export const readServerUnitDurations = root => readShardDurations(root, 'server-unit');
 
 // The journal names files relative to server/; the shard inventory is relative
 // to the repository root. A file's cost is the whole time it holds a fork:

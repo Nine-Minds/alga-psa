@@ -65472,6 +65472,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 },
                 "contactsUpdate": {
                   "type": "boolean"
+                },
+                "dontNotifyCustomerDefault": {
+                  "type": "boolean",
+                  "description": "Tenant setting: every \"Don't notify the customer\" checkbox starts ticked."
                 }
               },
               "required": [
@@ -65484,7 +65488,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "clientsCreate",
                 "clientsUpdate",
                 "contactsCreate",
-                "contactsUpdate"
+                "contactsUpdate",
+                "dontNotifyCustomerDefault"
               ]
             },
             "formatting": {

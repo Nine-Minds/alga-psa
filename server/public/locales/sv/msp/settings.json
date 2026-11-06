@@ -1858,10 +1858,15 @@
         "label": "Aktivera aviseringar",
         "description": "Slå på eller av alla aviseringar för organisationen"
       },
+      "defaultDontNotifyCustomer": {
+        "label": "Börja ärenden med \"Meddela inte kunden\" ikryssad",
+        "description": "Ärendekommentarer, status- och kontaktändringar samt avslutningar börjar utan kundaviseringar. Handläggare kan ta bort krysset för att meddela kunden vid en enskild åtgärd."
+      },
       "loading": "Läser in aviseringsinställningar…",
       "loadError": "Det gick inte att läsa in inställningarna",
       "save": "Spara ändringar",
-      "saving": "Sparar…"
+      "saving": "Sparar…",
+      "saveError": "Det gick inte att spara aviseringsinställningarna"
     },
     "emailTemplatesUi": {
       "preview": {
