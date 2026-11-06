@@ -11,8 +11,12 @@ vi.mock('@/lib/productAccess', () => ({
   getTenantProduct: mocks.getTenantProduct,
 }));
 
-vi.mock('@alga-psa/auth/rbac', () => ({
+vi.mock('@/lib/auth/rbac', () => ({
   hasPermission: mocks.hasPermission,
+}));
+
+vi.mock('@alga-psa/users/actions', () => ({
+  findUserByIdForApi: vi.fn(async (userId: string) => ({ user_id: userId, user_type: 'internal', tenant: 'tenant-1' })),
 }));
 
 vi.mock('@alga-psa/tenancy/lib/tenantDefaultCountry', () => ({
@@ -76,6 +80,17 @@ describe('MobileCapabilitiesService', () => {
     expect(mocks.hasPermission).toHaveBeenCalledWith(user, 'project', 'read', db);
     expect(mocks.hasPermission).toHaveBeenCalledWith(user, 'opportunities', 'read', db);
     expect(mocks.hasPermission).toHaveBeenCalledWith(user, 'opportunities', 'create', db);
+  });
+
+  it('requires the delegating identity to hold the new asset permissions too', async () => {
+    mocks.hasPermission.mockImplementation(async (subject, resource) => (
+      subject.user_id !== 'delegating-user' || resource !== 'asset'
+    ));
+    const service = new MobileCapabilitiesService();
+    const result = await service.getMyCapabilities({ ...context, viaPrincipalUserId: 'delegating-user' });
+    expect(result.features.assets).toBe(false);
+    expect(result.features.assetAudit).toBe(false);
+    expect(result.features.projects).toBe(true);
   });
 
   it('T050 disables both features for an AlgaDesk tenant regardless of RBAC', async () => {
