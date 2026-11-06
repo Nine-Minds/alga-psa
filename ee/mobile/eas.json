@@ -17,6 +17,17 @@
         "EXPO_PUBLIC_PHASE2_NOTIFICATIONS": "true"
       }
     },
+    "developmentSimulator": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "ios": {
+        "simulator": true,
+        "image": "sdk-58"
+      },
+      "env": {
+        "EXPO_PUBLIC_PHASE2_NOTIFICATIONS": "true"
+      }
+    },
     "testflight": {
       "env": {
         "EXPO_PUBLIC_ALGA_ENV": "prod"
