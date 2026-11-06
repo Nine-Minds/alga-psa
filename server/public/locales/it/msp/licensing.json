@@ -364,6 +364,21 @@
     "accountManagementRead": "Autorizzazione negata: è richiesta l'autorizzazione di lettura per la gestione degli account"
   },
   "coManaged": {
+    "portableExport": {
+      "title": "Esporta area di lavoro",
+      "description": "Scarica un archivio portabile e crittografato dei record e dei file della tua area di lavoro.",
+      "recovery": "Conserva la passphrase di recupero in un luogo sicuro. Senza di essa, l’archivio non può essere aperto.",
+      "connections": "L’archivio contiene i record della tua area di lavoro e i file in essa archiviati. I record e le associazioni dei documenti, così come la cronologia di tempi, pianificazioni, riunioni e conversazioni, non sono ancora inclusi e arriveranno in una versione successiva. Dati di fatturazione, dati privati dell’MSP e segreti delle integrazioni non sono inclusi.",
+      "passphrase": "Passphrase di recupero",
+      "confirmPassphrase": "Conferma passphrase di recupero",
+      "download": "Prepara e scarica l’archivio",
+      "requested": "La richiesta si apre in una nuova scheda. La preparazione può richiedere alcuni minuti; il browser scaricherà il file quando sarà pronto.",
+      "loadError": "Non puoi esportare questa area di lavoro con il tuo accesso attuale.",
+      "lengthError": "Usa una passphrase compresa tra 16 e 1024 byte UTF-8.",
+      "matchError": "Le passphrase di recupero devono corrispondere.",
+      "unavailable": "L’esportazione dell’area di lavoro non è disponibile in questa edizione.",
+      "loading": "Caricamento…"
+    },
     "acceptance": {
       "accept": "Accetta e attiva lo spazio di lavoro",
       "administratorRequired": "Un amministratore locale dello spazio di lavoro deve accettare questa relazione prima che il tuo team possa iniziare.",

@@ -22,9 +22,6 @@ const ALLOWED_PREFIXES = ['ee/', 'packages/ee/'];
 const ALLOWED_FILES = new Set<string>([
   // This guard itself (contains the patterns).
   'server/src/test/unit/credentialsEditionBoundary.contract.test.ts',
-  // Portable vault coverage intentionally exercises EE-only encryption and export modules.
-  'server/src/test/unit/product/coManagedPortableVault.test.ts',
-
   // CE no-op placeholders for migrations whose real files live in ee/server/migrations.
   'server/migrations/20260811100000_create_credentials_tables.cjs',
   'server/migrations/20260811110000_add_credential_permissions.cjs',
@@ -59,8 +56,9 @@ const ALLOWED_FILES = new Set<string>([
   'packages/clients/src/lib/clientMergePlan.ts',
   'packages/clients/src/lib/clientMergeEngine.test.ts',
 
-  // Portable vault tests exercise EE-only implementation from the shared server unit suite.
-  'server/src/test/unit/product/coManagedPortableVault.test.ts',
+  // Behavioral test for the EE-only portable vault implementation. Its
+  // fixtures intentionally reference EE credential APIs, outside the CE scan.
+  'ee/server/src/lib/credentials/__tests__/portableVault.test.ts',
   'server/src/test/unit/product/coManagedPortableWorkspaceRestoreVault.test.ts',
 ]);
 
