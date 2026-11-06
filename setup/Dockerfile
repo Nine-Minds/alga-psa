@@ -25,6 +25,7 @@ RUN rm -rf /app/server/migrations /app/server/seeds /app/ee/server/migrations &&
 COPY scripts/ /app/scripts/
 COPY server/migrations/ /app/server/migrations/
 COPY server/seeds/ /app/server/seeds/
+COPY server/public/locales/ /app/server/public/locales/
 COPY ee/server/migrations/ /app/ee/server/migrations/
 RUN chmod +x ./entrypoint.sh
 

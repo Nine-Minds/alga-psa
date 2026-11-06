@@ -1,18 +1,28 @@
 # Editing ticket email HTML
 
 Open **Settings > Notifications > Email Templates**, customize the
-**Ticket Closed** template, and edit its HTML and plain-text versions.
+**Ticket Closed Client** or **Ticket Closed Internal** template, and edit its
+HTML and plain-text versions independently.
 The **Variables** panel lists the variables available to that particular
 template. Its examples and the preview use sample data, not a customer's ticket.
 Save only after checking both versions and sending a test email.
 
-The fields below are available for `ticket-closed`, in both client and internal
-emails. They are not automatically available in other ticket notification types.
-Existing templates do not change until you add the variables to their markup.
+The fields below apply to `ticket-closed-client` and `ticket-closed-internal`;
+they are not automatically available in other ticket notification types.
+The stock templates include the full `ticket.categoryPath`, for example
+`Remote -> Password Change`.
+
+When upgrading, existing tenant-specific `ticket-closed` templates, notification
+settings, and user preferences are copied to both audiences without
+overwriting existing audience-specific choices. Review both copies and edit
+them independently. The legacy template and notification history are retained,
+but the shared template no longer sends closed-ticket notifications.
+Client messages receive empty values for the internal-only detail blocks even
+when a copied template still references them.
 
 ## Quick start
 
-For the common case, add this fragment to your existing **Ticket Closed** HTML
+For the common case, add this fragment to your **Ticket Closed Internal** HTML
 template. It includes linked devices, materials/services, time totals, and the
 remaining prepaid balance without rebuilding the email layout:
 
@@ -33,7 +43,7 @@ remaining prepaid balance without rebuilding the email layout:
 
 Remove any section you do not want to share. For optional asset columns rather
 than the fixed device table, use the [selected-column example](#example-omit-fields-from-the-html).
-These variables work in **both client and internal Ticket Closed emails only**.
+In the client template, omit materials and individual time-entry sections.
 
 ## Email styles versus application themes
 
@@ -59,22 +69,30 @@ transform a delivered message.
 
 ## Fields added for ticket details
 
-| Variable | Content |
-| --- | --- |
-| `ticket.assets` | Editable list of linked assets; use `{{#each ticket.assets}}`. |
-| `ticket.assetsHtml` | Fixed HTML table: asset tag, name, serial number, status, relationship. |
-| `ticket.materialsHtml` | Fixed HTML table: material/service, quantity, rate, amount, billed state. |
-| `ticket.materialsTotal` | Formatted total of the material/service line amounts. |
-| `ticket.timeHtml` | Fixed HTML table: technician, date, worked time, billable time. |
-| `ticket.totalTimeWorked` | Total time recorded as worked on this ticket. |
-| `ticket.totalTimeBillable` | Total recorded billable time, including time not yet invoiced. |
-| `ticket.remainingBlockHours` | Client's available prepaid block hours when the email is generated. |
+| Variable | Audience | Content |
+| --- | --- | --- |
+| `ticket.categoryPath` | Both | Full category and subcategory path. |
+| `ticket.assets` | Both | Editable list of linked assets; use `{{#each ticket.assets}}`. |
+| `ticket.assetsHtml` | Both | Fixed HTML table: asset tag, name, serial number, status, relationship. |
+| `ticket.materialsHtml` | Internal | Fixed HTML table: material/service, quantity, rate, amount, billed state. |
+| `ticket.materialsTotal` | Internal | Formatted material/service totals, separated by currency. |
+| `ticket.timeHtml` | Internal | Fixed HTML table: technician, date, worked time, billable time. |
+| `ticket.totalTimeWorked` | Both | Total time recorded as worked on this ticket. |
+| `ticket.totalTimeBillable` | Both | Total recorded billable time, including time not yet invoiced. |
+| `ticket.remainingBlockHours` | Both | Client's available prepaid block hours when the email is generated. |
 
 Remaining block hours include usage already deducted before invoicing. They
 are a client balance, not just this ticket's usage, and may differ between the
 preview sample and an actual send. A ticket without a client reports `0 hrs`.
-Money and dates in the detail tables follow the email's resolved locale, with
-dates using its resolved timezone.
+Table labels, quantities, durations, and money follow the recipient's resolved
+email locale. Dates also use the configured date format and resolved timezone.
+When the currency code is missing or unsupported, an unlabelled localized amount
+is shown instead of assuming USD. A message's To recipient determines its
+language, including for any Cc/Bcc recipients.
+
+The client template includes the aggregate worked and billable totals to match
+the existing template. Comparing them can reveal aggregate non-billable time;
+remove one or both fields if that should not be shared.
 
 ### Editable asset fields
 
@@ -94,7 +112,9 @@ optional **in your markup**: omit the field to omit it from the email.
 | `{{relationship}}` | Affected | Affected or Related ticket relationship. |
 
 Missing asset values are empty strings. No linked assets means an empty list.
-The Variables panel inserts a complete editable loop for `ticket.assets`.
+The Variables panel inserts `{{ticket.assets}}`, not table markup. Copy the
+[editable loop example](#example-omit-fields-from-the-html) or customize the
+loop already present in the stock template.
 Individual field insertions use `{{this.name}}`, for example; insert those
 **inside** the loop. `{{name}}` and `{{this.name}}` are equivalent there.
 
@@ -105,10 +125,10 @@ customizable asset table.
 
 ## Complete example: all added fields
 
-This example shows all nine editable asset fields, the fixed asset table
+This internal-audience example shows all nine editable asset fields, the fixed asset table
 alternative, material/service details and total, time entries, worked and
 billable totals, and remaining block hours. Showing both asset layouts is for
-documentation only; normally choose one. The stock template is not replaced.
+documentation only; normally choose one.
 
 All detail tables below use the fixed renderer's exact inline styles: font,
 cell padding, border colors, alignment, and wrapping are identical. Only the
@@ -275,7 +295,7 @@ Devices:
 {{/each}}
 {{/if}}
 
-Materials and Services Total: {{ticket.materialsTotal}}
+Materials and Services Total (internal only): {{ticket.materialsTotal}}
 ```
 
 Only assets have individually selectable row fields in this addition.

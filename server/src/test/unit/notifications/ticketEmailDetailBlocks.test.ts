@@ -34,12 +34,19 @@ vi.mock('@alga-psa/shared/billingClients/hourBlockService', () => ({
   getAvailableHourBlockMinutes: vi.fn(async () => runtime.availableBlockMinutes),
 }));
 
+vi.mock('@alga-psa/core/logger', () => ({
+  default: { debug: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() },
+}));
+
 import {
   buildTicketEmailDetailBlocks,
+  clientFacingDetailBlocks,
+  emptyTicketEmailDetailBlocks,
   escapeHtml,
   formatCentsAmount,
 } from '../../../lib/notifications/ticketEmailDetailBlocks';
 import { getAvailableHourBlockMinutes } from '@alga-psa/shared/billingClients/hourBlockService';
+import logger from '@alga-psa/core/logger';
 
 // The module calls db.raw() on the raw knex handle for the technician-name select.
 const fakeDb: any = { raw: (sql: string) => ({ sql }) };
@@ -69,14 +76,16 @@ describe('formatCentsAmount', () => {
     expect(formatCentsAmount(123456, 'EUR', 'de-DE')).toBe('1.234,56\u00a0€');
   });
 
-  it('defaults to USD when currency code missing', () => {
-    expect(formatCentsAmount(990, null)).toBe('$9.90');
-    expect(formatCentsAmount(990, '  ')).toBe('$9.90');
+  it('logs and displays an unlabelled localized amount when the currency is missing', () => {
+    expect(formatCentsAmount(990, null, 'de')).toBe('9,90');
+    expect(formatCentsAmount(990, '  ')).toBe('9.90');
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('Missing or unsupported currency code'),
+      expect.any(Object),
+    );
   });
 
-  it('falls back to plain number for malformed currency codes', () => {
-    // Intl accepts syntactically valid (if unassigned) 3-letter codes, printing
-    // them literally; only malformed codes hit the toFixed fallback.
+  it('logs and formats unsupported currency codes as plain numbers', () => {
     expect(formatCentsAmount(1250, 'TOOLONG')).toBe('12.50');
   });
 });
@@ -102,7 +111,7 @@ describe('buildTicketEmailDetailBlocks', () => {
     expect(blocks.assets).toEqual([]);
     expect(blocks.materialsHtml).toBe('');
     expect(blocks.timeHtml).toBe('');
-    expect(blocks.materialsTotal).toBe('$0.00');
+    expect(blocks.materialsTotal).toBe('');
     expect(blocks.totalTimeWorked).toBe('0 hrs');
     expect(blocks.totalTimeBillable).toBe('0 hrs');
     expect(blocks.remainingBlockHours).toBe('0 hrs');
@@ -192,16 +201,59 @@ describe('buildTicketEmailDetailBlocks', () => {
   });
 
   it('uses the supplied locale throughout the rendered blocks', async () => {
+    runtime.assets = [
+      { asset_tag: 'AST-001', name: 'Printer', serial_number: 'SN42', relationship_type: 'affected' },
+    ];
     runtime.materials = [
-      { item_name: 'SSD', quantity: 2, rate: 7500, currency_code: 'EUR', is_billed: false },
+      { item_name: 'SSD', quantity: 2.5, rate: 7500, currency_code: 'EUR', is_billed: false },
     ];
     runtime.timeEntries = [
       { entry_id: 'e1', start_time: '2026-02-03T10:00:00Z', end_time: '2026-02-03T11:00:00Z', billable_duration: 60 },
     ];
     const blocks = await buildTicketEmailDetailBlocks(fakeDb, tenantId, ticketId, clientId, 'UTC', 'de-DE');
-    expect(blocks.materialsTotal).toBe('150,00\u00a0€');
+    expect(blocks.assetsHtml).toContain('Seriennummer');
+    expect(blocks.assetsHtml).toContain('Betroffen');
+    expect(blocks.materialsTotal).toBe('187,50\u00a0€');
     expect(blocks.materialsHtml).toContain('75,00\u00a0€');
+    expect(blocks.materialsHtml).toContain('2,5');
+    expect(blocks.materialsHtml).toContain('Abgerechnet');
+    expect(blocks.materialsHtml).toContain('Nein');
+    expect(blocks.timeHtml).toContain('Techniker');
     expect(blocks.timeHtml).toContain('3. Feb. 2026');
+    expect(blocks.totalTimeWorked).toBe('1 Std.');
+  });
+
+  it('keeps totals in different currencies separate', async () => {
+    runtime.materials = [
+      { item_name: 'EUR item', quantity: 2, rate: 1000, currency_code: 'EUR', is_billed: false },
+      { item_name: 'USD item', quantity: 1, rate: 500, currency_code: 'USD', is_billed: false },
+    ];
+    const blocks = await buildTicketEmailDetailBlocks(fakeDb, tenantId, ticketId, clientId, 'UTC', 'de');
+    expect(blocks.materialsTotal).toBe(
+      `${new Intl.NumberFormat('de', { style: 'currency', currency: 'EUR' }).format(20)} + ${new Intl.NumberFormat('de', { style: 'currency', currency: 'USD' }).format(5)}`,
+    );
+  });
+
+  it('redacts internal-only tables and totals from client contexts without altering the source', () => {
+    const internal = {
+      ...emptyTicketEmailDetailBlocks(),
+      assetsHtml: '<table>asset</table>',
+      materialsHtml: '<table>rate and billed state</table>',
+      materialsTotal: '$100.00',
+      timeHtml: '<table>technician</table>',
+      totalTimeWorked: '2 hrs',
+      totalTimeBillable: '1 hr',
+    };
+    const client = clientFacingDetailBlocks(internal);
+    expect(client).toMatchObject({
+      assetsHtml: '<table>asset</table>',
+      materialsHtml: '',
+      materialsTotal: '',
+      timeHtml: '',
+      totalTimeWorked: '2 hrs',
+      totalTimeBillable: '1 hr',
+    });
+    expect(internal.timeHtml).toContain('technician');
   });
 
   it('sums worked vs billable minutes across time entries', async () => {

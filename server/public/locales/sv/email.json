@@ -1,0 +1,69 @@
+{
+  "ticketClosed": {
+    "title": "Ärende stängt",
+    "subject": "Ärende stängt • {{ticket.title}}",
+    "intro": "Ett ärende för {{ticket.clientName}} har lösts och stängts. Granska lösningen nedan.",
+    "ticketNumber": "Ärende #",
+    "status": "Status",
+    "closed": "Stängt",
+    "closedBy": "Stängt av",
+    "assignedTo": "Tilldelat till",
+    "requester": "Beställare",
+    "category": "Kategori",
+    "location": "Plats",
+    "totalTimeWorked": "Total arbetad tid",
+    "totalBillableTime": "Total debiterbar tid",
+    "remainingHours": "Återstående timmar",
+    "devices": "Enheter",
+    "deviceName": "Namn",
+    "deviceType": "Typ",
+    "manufacturerModel": "Tillverkare / Modell",
+    "serialNumber": "Serienummer",
+    "timeEntries": "Tidsregistreringar",
+    "materials": "Material",
+    "materialsTotal": "Totalt materialbelopp",
+    "resolution": "Lösning",
+    "footer": "Drivs av AlgaPSA"
+  },
+  "ticketDetails": {
+    "assets": {
+      "columns": {
+        "assetTag": "Tillgångsetikett",
+        "name": "Namn",
+        "relationship": "Relation",
+        "serialNumber": "Serienummer",
+        "status": "Status"
+      }
+    },
+    "duration": {
+      "hr": "h",
+      "hrs": "h",
+      "min": "min"
+    },
+    "materials": {
+      "columns": {
+        "amount": "Belopp",
+        "billed": "Fakturerad",
+        "item": "Artikel",
+        "quantity": "Antal",
+        "rate": "Pris"
+      },
+      "fallback": "Material"
+    },
+    "no": "Nej",
+    "relationship": {
+      "affected": "Berörd",
+      "related": "Relaterad"
+    },
+    "time": {
+      "columns": {
+        "billable": "Debiterbar",
+        "date": "Datum",
+        "technician": "Tekniker",
+        "worked": "Arbetstid"
+      },
+      "unknownTechnician": "Okänd"
+    },
+    "yes": "Ja"
+  }
+}

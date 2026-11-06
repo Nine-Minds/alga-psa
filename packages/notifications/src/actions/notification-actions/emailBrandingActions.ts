@@ -35,6 +35,7 @@ import {
   type EmailBrandingTemplateStatus,
   type TenantSettingsBlob,
 } from '../../lib/emailBranding';
+import { LEGACY_TICKET_CLOSED_TEMPLATE } from '../../lib/legacyEmailCatalog';
 
 function tenantScopedTable(conn: Knex | Knex.Transaction, table: string, tenant: string) {
   return tenantDb(conn, tenant).table(table) as Knex.QueryBuilder<any, any>;
@@ -106,8 +107,10 @@ async function loadTemplateRows(trx: Knex.Transaction, tenant: string): Promise<
   systemQuery = db.tenantJoin(systemQuery, "notification_subtypes as s", "t.notification_subtype_id", "s.id");
   systemQuery = db.tenantJoin(systemQuery, "notification_categories as c", "s.category_id", "c.id");
 
-  const systemTemplates = await systemQuery.orderBy(["c.name", "t.name"]);
-  const tenantTemplates = await tenantScopedTable(trx, "tenant_email_templates", tenant).orderBy("name");
+  const systemTemplates = await systemQuery.whereNot("t.name", LEGACY_TICKET_CLOSED_TEMPLATE).orderBy(["c.name", "t.name"]);
+  const tenantTemplates = await tenantScopedTable(trx, "tenant_email_templates", tenant)
+    .whereNot("name", LEGACY_TICKET_CLOSED_TEMPLATE)
+    .orderBy("name");
 
   return { systemTemplates, tenantTemplates };
 }

@@ -1,0 +1,69 @@
+{
+  "ticketClosed": {
+    "title": "Ticket gesloten",
+    "subject": "Ticket gesloten • {{ticket.title}}",
+    "intro": "Een ticket voor {{ticket.clientName}} is opgelost en gesloten. Bekijk de oplossingsdetails hieronder.",
+    "ticketNumber": "Ticket #",
+    "status": "Status",
+    "closed": "Gesloten",
+    "closedBy": "Gesloten door",
+    "assignedTo": "Toegewezen aan",
+    "requester": "Aanvrager",
+    "category": "Categorie",
+    "location": "Locatie",
+    "totalTimeWorked": "Totale gewerkte tijd",
+    "totalBillableTime": "Totale factureerbare tijd",
+    "remainingHours": "Resterende uren",
+    "devices": "Apparaten",
+    "deviceName": "Naam",
+    "deviceType": "Type",
+    "manufacturerModel": "Fabrikant / Model",
+    "serialNumber": "Serienummer",
+    "timeEntries": "Tijdregistraties",
+    "materials": "Materialen",
+    "materialsTotal": "Totaal materialen",
+    "resolution": "Oplossing",
+    "footer": "Mogelijk gemaakt door AlgaPSA"
+  },
+  "ticketDetails": {
+    "assets": {
+      "columns": {
+        "assetTag": "Asset-tag",
+        "name": "Naam",
+        "relationship": "Relatie",
+        "serialNumber": "Serienummer",
+        "status": "Status"
+      }
+    },
+    "duration": {
+      "hr": "uur",
+      "hrs": "uur",
+      "min": "min"
+    },
+    "materials": {
+      "columns": {
+        "amount": "Bedrag",
+        "billed": "Gefactureerd",
+        "item": "Artikel",
+        "quantity": "Aantal",
+        "rate": "Tarief"
+      },
+      "fallback": "Materiaal"
+    },
+    "no": "Nee",
+    "relationship": {
+      "affected": "Getroffen",
+      "related": "Gerelateerd"
+    },
+    "time": {
+      "columns": {
+        "billable": "Factureerbaar",
+        "date": "Datum",
+        "technician": "Technicus",
+        "worked": "Gewerkt"
+      },
+      "unknownTechnician": "Onbekend"
+    },
+    "yes": "Ja"
+  }
+}

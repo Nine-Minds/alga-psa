@@ -19,20 +19,21 @@ function loadTemplate(relative: string, language = 'en'): { subject: string; htm
 }
 
 describe('replaceTemplateVariables #each handling', () => {
-  it('previews selectable ticket asset fields and inserts usable loop tokens', () => {
-    const variables = templateVariableRegistry['ticket-closed'].variables;
-    const array = variables.find((variable) => variable.path === 'ticket.assets')!;
-    const name = variables.find((variable) => variable.path === 'ticket.assets[].name')!;
-    expect(getTemplateVariableToken(name)).toBe('{{this.name}}');
-    expect(getTemplateVariableToken(array)).toBe(array.example);
-    const data = getSampleDataForPreview('ticket-closed', array.example, '');
-    const html = replaceTemplateVariables(array.example, data);
+  it('previews selectable ticket asset fields and inserts plain asset tokens', () => {
+    for (const templateName of ['ticket-closed', 'ticket-closed-client', 'ticket-closed-internal']) {
+      const variables = templateVariableRegistry[templateName].variables;
+      const array = variables.find((variable) => variable.path === 'ticket.assets')!;
+      const name = variables.find((variable) => variable.path === 'ticket.assets[].name')!;
+      expect(getTemplateVariableToken(name)).toBe('{{this.name}}');
+      expect(getTemplateVariableToken(array)).toBe('{{ticket.assets}}');
+    }
+    const stock = loadTemplate('tickets/ticketClosedClient.cjs');
+    const data = getSampleDataForPreview('ticket-closed-client', stock.html, stock.subject);
+    const html = replaceTemplateVariables(stock.html, data);
     expect(html).toContain('Office Printer');
     expect(html).toContain('Brother HL-L6200DW');
     expect(html).toContain('SN-0042');
     expect(html).toContain('<table');
-    expect(html.match(/<th /g)).toHaveLength(4);
-    expect(html.match(/<td /g)).toHaveLength(4);
     expect(html).not.toContain('{{');
     expect(html).not.toContain('AST-0042');
     expect(replaceTemplateVariables('{{#each ticket.assets}}{{this.assetTag}}{{/each}}', data)).toBe('AST-0042');

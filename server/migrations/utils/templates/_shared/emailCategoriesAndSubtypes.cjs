@@ -23,7 +23,10 @@ const SUBTYPES = [
   // Tickets
   { category: 'Tickets', name: 'Ticket Created', description: 'When a new ticket is created' },
   { category: 'Tickets', name: 'Ticket Updated', description: 'When a ticket is modified' },
+  // Kept for historical migrations and notification logs; new sends use the audience-specific subtypes.
   { category: 'Tickets', name: 'Ticket Closed', description: 'When a ticket is closed' },
+  { category: 'Tickets', name: 'Ticket Closed Client', description: 'When a ticket is closed (client-facing)' },
+  { category: 'Tickets', name: 'Ticket Closed Internal', description: 'When a ticket is closed (internal)' },
   { category: 'Tickets', name: 'Ticket Assigned', description: 'When a ticket is assigned to a user' },
   { category: 'Tickets', name: 'Ticket Comment Added', description: 'When a comment is added to a ticket' },
   { category: 'Tickets', name: 'Ticket Team Assigned', description: 'When a team is assigned to a ticket' },

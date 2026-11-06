@@ -1,0 +1,69 @@
+{
+  "ticketClosed": {
+    "title": "Ticket fermé",
+    "subject": "Ticket fermé • {{ticket.title}}",
+    "intro": "Un ticket pour {{ticket.clientName}} a été résolu et fermé. Consultez les détails de la résolution ci-dessous.",
+    "ticketNumber": "Ticket n°",
+    "status": "Statut",
+    "closed": "Fermé",
+    "closedBy": "Fermé par",
+    "assignedTo": "Assigné à",
+    "requester": "Demandeur",
+    "category": "Catégorie",
+    "location": "Emplacement",
+    "totalTimeWorked": "Temps total travaillé",
+    "totalBillableTime": "Temps total facturable",
+    "remainingHours": "Heures restantes",
+    "devices": "Appareils",
+    "deviceName": "Nom",
+    "deviceType": "Type",
+    "manufacturerModel": "Fabricant / Modèle",
+    "serialNumber": "N° de série",
+    "timeEntries": "Saisies de temps",
+    "materials": "Matériaux",
+    "materialsTotal": "Total des matériaux",
+    "resolution": "Résolution",
+    "footer": "Propulsé par AlgaPSA"
+  },
+  "ticketDetails": {
+    "assets": {
+      "columns": {
+        "assetTag": "Étiquette d'actif",
+        "name": "Nom",
+        "relationship": "Relation",
+        "serialNumber": "N° de série",
+        "status": "Statut"
+      }
+    },
+    "duration": {
+      "hr": "h",
+      "hrs": "h",
+      "min": "min"
+    },
+    "materials": {
+      "columns": {
+        "amount": "Montant",
+        "billed": "Facturé",
+        "item": "Article",
+        "quantity": "Qté",
+        "rate": "Tarif"
+      },
+      "fallback": "Matériel"
+    },
+    "no": "Non",
+    "relationship": {
+      "affected": "Concerné",
+      "related": "Associé"
+    },
+    "time": {
+      "columns": {
+        "billable": "Facturable",
+        "date": "Date",
+        "technician": "Technicien",
+        "worked": "Travaillé"
+      },
+      "unknownTechnician": "Inconnu"
+    },
+    "yes": "Oui"
+  }
+}
