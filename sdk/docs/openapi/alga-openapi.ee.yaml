@@ -67037,8 +67037,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.getAccounts()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /accounts
@@ -67175,8 +67175,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.getAccountMappings()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /accounts/mappings
@@ -67276,8 +67276,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: write
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: mappings_manage
         x-controller-method: ApiQuickBooksController.configureAccountMappings()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /accounts/mappings
@@ -67386,8 +67386,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: write
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: connections_manage
         x-controller-method: ApiQuickBooksController.refreshConnection()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /connection/refresh
@@ -67489,8 +67489,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.getConnectionStatus()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /connection/status
@@ -67590,8 +67590,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.testConnection()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /connection/test
@@ -67699,8 +67699,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.getCustomerMappings()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /customers/mappings
@@ -67836,8 +67836,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: write
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: mappings_manage
         x-controller-method: ApiQuickBooksController.deleteCustomerMapping()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /customers/mappings/{mapping_id}
@@ -67942,8 +67942,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: write
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: exports_execute
         x-controller-method: ApiQuickBooksController.syncCustomers()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /customers/sync
@@ -68052,8 +68052,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: admin
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: connections_manage
         x-controller-method: ApiQuickBooksController.runDiagnostics()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /diagnostics
@@ -68155,8 +68155,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.getHealth()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /health
@@ -68256,8 +68256,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.getHealthConfig()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /health/config
@@ -68357,8 +68357,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: admin
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: connections_manage
         x-controller-method: ApiQuickBooksController.updateHealthConfig()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /health/config
@@ -68467,8 +68467,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: write
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: exports_execute
         x-controller-method: ApiQuickBooksController.exportInvoices()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /invoices/export
@@ -68577,8 +68577,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: write
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: exports_execute
         x-controller-method: ApiQuickBooksController.importInvoices()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /invoices/import
@@ -68687,8 +68687,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.getItems()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /items
@@ -68825,8 +68825,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.getDataMappings()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /mappings
@@ -68962,8 +68962,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: write
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: mappings_manage
         x-controller-method: ApiQuickBooksController.createDataMapping()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /mappings
@@ -69071,8 +69071,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.getDataMappingById()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /mappings/{mapping_id}
@@ -69184,8 +69184,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: write
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: mappings_manage
         x-controller-method: ApiQuickBooksController.updateDataMapping()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /mappings/{mapping_id}
@@ -69300,8 +69300,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: write
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: mappings_manage
         x-controller-method: ApiQuickBooksController.deleteDataMapping()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /mappings/{mapping_id}
@@ -69407,8 +69407,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: write
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: connections_manage
         x-controller-method: ApiQuickBooksController.handleOAuthCallback()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /oauth/callback
@@ -69516,8 +69516,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: admin
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: connections_manage
         x-controller-method: ApiQuickBooksController.disconnectOAuth()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /oauth/disconnect
@@ -69615,8 +69615,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: write
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: connections_manage
         x-controller-method: ApiQuickBooksController.initiateOAuth()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /oauth/initiate
@@ -69724,8 +69724,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.getPaymentMethods()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /payment-methods
@@ -69861,8 +69861,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: write
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: exports_execute
         x-controller-method: ApiQuickBooksController.syncPayments()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /payments/sync
@@ -69970,8 +69970,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: write
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: exports_execute
         x-controller-method: ApiQuickBooksController.bulkSync()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /sync/bulk
@@ -70079,8 +70079,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: admin
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: exports_execute
         x-controller-method: ApiQuickBooksController.fullSync()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /sync/full
@@ -70182,8 +70182,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.getSyncHistory()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /sync/history
@@ -70330,8 +70330,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.getSyncStatus()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /sync/status
@@ -70431,8 +70431,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.getSyncStatusById()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /sync/status/{sync_id}
@@ -70545,8 +70545,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: write
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: exports_execute
         x-controller-method: ApiQuickBooksController.cancelSync()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /sync/{sync_id}/cancel
@@ -70651,8 +70651,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: write
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: exports_execute
         x-controller-method: ApiQuickBooksController.retrySync()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /sync/{sync_id}/retry
@@ -70761,8 +70761,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.getTaxCodes()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /tax-codes
@@ -70899,8 +70899,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.getTaxMappings()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /tax-codes/mappings
@@ -70999,8 +70999,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: write
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: mappings_manage
         x-controller-method: ApiQuickBooksController.configureTaxMappings()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /tax-codes/mappings
@@ -71109,8 +71109,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.getTerms()
         x-quickbooks-route-family: integrations
         x-quickbooks-alias-path: /terms
@@ -71247,8 +71247,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.getAccounts()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /accounts
@@ -71386,8 +71386,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.getAccountMappings()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /accounts/mappings
@@ -71488,8 +71488,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: write
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: mappings_manage
         x-controller-method: ApiQuickBooksController.configureAccountMappings()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /accounts/mappings
@@ -71599,8 +71599,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: write
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: connections_manage
         x-controller-method: ApiQuickBooksController.refreshConnection()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /connection/refresh
@@ -71703,8 +71703,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.getConnectionStatus()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /connection/status
@@ -71805,8 +71805,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.testConnection()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /connection/test
@@ -71915,8 +71915,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.getCustomerMappings()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /customers/mappings
@@ -72053,8 +72053,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: write
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: mappings_manage
         x-controller-method: ApiQuickBooksController.deleteCustomerMapping()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /customers/mappings/{mapping_id}
@@ -72160,8 +72160,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: write
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: exports_execute
         x-controller-method: ApiQuickBooksController.syncCustomers()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /customers/sync
@@ -72271,8 +72271,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: admin
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: connections_manage
         x-controller-method: ApiQuickBooksController.runDiagnostics()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /diagnostics
@@ -72375,8 +72375,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.getHealth()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /health
@@ -72477,8 +72477,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.getHealthConfig()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /health/config
@@ -72579,8 +72579,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: admin
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: connections_manage
         x-controller-method: ApiQuickBooksController.updateHealthConfig()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /health/config
@@ -72690,8 +72690,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: write
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: exports_execute
         x-controller-method: ApiQuickBooksController.exportInvoices()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /invoices/export
@@ -72801,8 +72801,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: write
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: exports_execute
         x-controller-method: ApiQuickBooksController.importInvoices()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /invoices/import
@@ -72911,8 +72911,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.getItems()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /items
@@ -73050,8 +73050,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.getDataMappings()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /mappings
@@ -73188,8 +73188,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: write
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: mappings_manage
         x-controller-method: ApiQuickBooksController.createDataMapping()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /mappings
@@ -73298,8 +73298,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.getDataMappingById()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /mappings/{mapping_id}
@@ -73412,8 +73412,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: write
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: mappings_manage
         x-controller-method: ApiQuickBooksController.updateDataMapping()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /mappings/{mapping_id}
@@ -73529,8 +73529,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: write
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: mappings_manage
         x-controller-method: ApiQuickBooksController.deleteDataMapping()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /mappings/{mapping_id}
@@ -73637,8 +73637,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: write
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: connections_manage
         x-controller-method: ApiQuickBooksController.handleOAuthCallback()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /oauth/callback
@@ -73747,8 +73747,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: admin
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: connections_manage
         x-controller-method: ApiQuickBooksController.disconnectOAuth()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /oauth/disconnect
@@ -73847,8 +73847,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: write
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: connections_manage
         x-controller-method: ApiQuickBooksController.initiateOAuth()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /oauth/initiate
@@ -73957,8 +73957,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.getPaymentMethods()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /payment-methods
@@ -74095,8 +74095,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: write
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: exports_execute
         x-controller-method: ApiQuickBooksController.syncPayments()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /payments/sync
@@ -74205,8 +74205,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: write
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: exports_execute
         x-controller-method: ApiQuickBooksController.bulkSync()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /sync/bulk
@@ -74315,8 +74315,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: admin
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: exports_execute
         x-controller-method: ApiQuickBooksController.fullSync()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /sync/full
@@ -74419,8 +74419,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.getSyncHistory()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /sync/history
@@ -74568,8 +74568,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.getSyncStatus()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /sync/status
@@ -74670,8 +74670,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.getSyncStatusById()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /sync/status/{sync_id}
@@ -74785,8 +74785,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: write
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: exports_execute
         x-controller-method: ApiQuickBooksController.cancelSync()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /sync/{sync_id}/cancel
@@ -74892,8 +74892,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: write
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: exports_execute
         x-controller-method: ApiQuickBooksController.retrySync()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /sync/{sync_id}/retry
@@ -75003,8 +75003,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.getTaxCodes()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /tax-codes
@@ -75142,8 +75142,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.getTaxMappings()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /tax-codes/mappings
@@ -75243,8 +75243,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: write
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: mappings_manage
         x-controller-method: ApiQuickBooksController.configureTaxMappings()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /tax-codes/mappings
@@ -75353,8 +75353,8 @@ paths:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated by ApiQuickBooksController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: quickbooks
-        x-rbac-action: read
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: catalog_read
         x-controller-method: ApiQuickBooksController.getTerms()
         x-quickbooks-route-family: quickbooks
         x-quickbooks-alias-path: /terms
