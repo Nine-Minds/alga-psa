@@ -72,6 +72,7 @@ export class AmpPackageBuilder {
       zip.addLocalFile(databasePath, '');
       const byDigest = new Map<string, AmpAttachmentInput>();
       let expanded = statSync(databasePath).size;
+      if (expanded > AMP_LIMITS.packageBytes) throw new Error('AMP package limits exceeded');
       for (const attachment of attachments) {
         if (!/^[a-f0-9]{64}$/.test(attachment.sha256) || !Number.isSafeInteger(attachment.size) || attachment.size < 0 || attachment.size > AMP_LIMITS.attachmentBytes) {
           throw new Error('Invalid AMP attachment digest or size');
@@ -86,8 +87,13 @@ export class AmpPackageBuilder {
         if (expanded > AMP_LIMITS.packageBytes || zip.getEntries().length >= AMP_LIMITS.zipEntries) throw new Error('AMP package limits exceeded');
         zip.addFile(`attachments/${digest.slice(0, 2)}/${digest}`, bytes);
       }
-      const indexed = new Set((rows.attachments ?? []).map((row) => row.sha256));
-      if (indexed.size !== byDigest.size || [...indexed].some((sha) => !byDigest.has(sha))) {
+      const indexed = new Map<string, number>();
+      for (const row of rows.attachments ?? []) {
+        const previous = indexed.get(row.sha256);
+        if (previous !== undefined && previous !== row.size) throw new Error('AMP attachment index declares conflicting sizes');
+        indexed.set(row.sha256, row.size);
+      }
+      if (indexed.size !== byDigest.size || [...indexed].some(([sha, size]) => byDigest.get(sha)?.size !== size)) {
         throw new Error('AMP attachment index and ZIP content do not match');
       }
       zip.writeZip(this.path);

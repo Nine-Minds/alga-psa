@@ -323,6 +323,7 @@ export function validateAmpPackage(
       if (prior !== undefined && prior !== Number(size)) diagnostics.push({ code: 'AMP_INVALID_VALUE', message: 'A repeated attachment digest declares conflicting sizes.', table: 'attachments', recordId: String(row.package_record_id ?? '') });
       attachmentIndex.set(sha, Number(size));
       if (!reader.attachmentPath(sha)) diagnostics.push({ code: 'AMP_INVALID_REFERENCE', message: `Attachment ${sha} has no ZIP entry.`, table: 'attachments', recordId: String(row.package_record_id ?? '') });
+      else if (reader.attachmentSize(sha) !== Number(size)) diagnostics.push({ code: 'AMP_INVALID_VALUE', message: `Attachment ${sha} size does not match its ZIP content.`, table: 'attachments', recordId: String(row.package_record_id ?? '') });
     }
     const indexedHash = canonicalAttachmentsSha256([...attachmentIndex].map(([sha256, size]) => ({ sha256, size })));
     if (manifest?.attachments_sha256 !== indexedHash) diagnostics.push({ code: 'AMP_HASH_MISMATCH', message: 'attachments_sha256 does not match the canonical attachment index.', field: 'attachments_sha256' });
@@ -336,7 +337,7 @@ export function validateAmpPackage(
       if (!exclusionReasons.includes(String(row.reason)) || typeof row.detail !== 'string' || row.detail.length === 0) {
         diagnostics.push({ code: 'AMP_INVALID_VALUE', message: 'Exclusions require a supported reason and non-empty detail.', table: 'exclusions', recordId: String(row.package_record_id ?? '') });
       }
-      if (row.entity_type != null && (typeof row.entity_type !== 'string' || !idsByTable[row.entity_type as AmpEntityType]?.has(String(row.entity_package_record_id)))) {
+      if ((row.entity_type == null) !== (row.entity_package_record_id == null) || (row.entity_type != null && (typeof row.entity_type !== 'string' || !idsByTable[row.entity_type as AmpEntityType]?.has(String(row.entity_package_record_id))))) {
         diagnostics.push({ code: 'AMP_INVALID_REFERENCE', message: 'Exclusion owner does not resolve to an included entity.', table: 'exclusions', recordId: String(row.package_record_id ?? '') });
       }
     }

@@ -39,6 +39,7 @@ export class AmpSqliteReader {
     if (entries.length === 0 || entries.length > 50_000) throw new AmpPackageStructureError('AMP ZIP entry limit exceeded', 'AMP_LIMIT_EXCEEDED');
     const names = new Set<string>();
     let expandedBytes = 0;
+    let actualExpandedBytes = 0;
     let sqliteBytes: Buffer | undefined;
     const rawAttachments: Array<{ path: string; bytes: Buffer }> = [];
     for (const entry of entries) {
@@ -63,9 +64,12 @@ export class AmpSqliteReader {
       if (name === 'data.sqlite') {
         sqliteBytes = entry.getData();
         if (sqliteBytes.length !== entry.header.size) throw new AmpPackageStructureError('AMP ZIP declared size mismatch', 'AMP_LIMIT_EXCEEDED');
+        actualExpandedBytes += sqliteBytes.length;
       } else if (/^attachments\/[a-f0-9]{2}\/[a-f0-9]{64}$/.test(name)) {
         const bytes = entry.getData();
         if (bytes.length !== entry.header.size) throw new AmpPackageStructureError('AMP ZIP declared size mismatch', 'AMP_LIMIT_EXCEEDED');
+        actualExpandedBytes += bytes.length;
+        if (actualExpandedBytes > 1024 * 1024 * 1024) throw new AmpPackageStructureError('AMP actual expanded package limit exceeded', 'AMP_LIMIT_EXCEEDED');
         const digest = name.split('/')[2];
         if (digest.slice(0, 2) !== name.split('/')[1] || createHash('sha256').update(bytes).digest('hex') !== digest) {
           throw new AmpPackageStructureError(`AMP attachment content digest mismatch: ${digest}`, 'AMP_HASH_MISMATCH');
@@ -74,6 +78,7 @@ export class AmpSqliteReader {
       } else {
         throw new AmpPackageStructureError(`Unsupported AMP ZIP entry: ${name}`);
       }
+      if (actualExpandedBytes > 1024 * 1024 * 1024) throw new AmpPackageStructureError('AMP actual expanded package limit exceeded', 'AMP_LIMIT_EXCEEDED');
     }
     if (!sqliteBytes) throw new AmpPackageStructureError('AMP ZIP is missing data.sqlite');
     this.stagingDirectory = createAmpTemporaryDirectory('reader');
@@ -94,6 +99,10 @@ export class AmpSqliteReader {
   }
 
   attachmentPath(sha256: string): string | undefined { return this.attachmentFiles.get(sha256); }
+  attachmentSize(sha256: string): number | undefined {
+    const path = this.attachmentFiles.get(sha256);
+    return path ? statSync(path).size : undefined;
+  }
   attachmentDigests(): string[] { return [...this.attachmentFiles.keys()].sort(); }
 
   /** Names of every table present in the file, from sqlite_master. */

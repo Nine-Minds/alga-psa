@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import { afterAll, describe, expect, it } from 'vitest';
 import AdmZip from 'adm-zip';
 import { AMP_ENTITY_TABLES, AMP_LIMITS } from '@alga-psa/migration-spec';
+import { canonicalAttachmentsSha256 } from '../src/builder';
 import {
   AmpPackageBuilder,
   AmpSqliteReader,
@@ -215,6 +216,39 @@ describe('AMP validator attacks', () => {
     zip.updateFile(`attachments/${sha256.slice(0, 2)}/${sha256}`, Buffer.from('tampered'));
     zip.writeZip(path);
     expect(validateAmpPackage(path).valid).toBe(false);
+  });
+
+  it('rejects an indexed attachment size mismatch even when the canonical index hash is recomputed', () => {
+    const path = nextPath(), blobPath = join(workDir, 'size-source.bin');
+    const bytes = Buffer.from('size must match actual bytes'), sha256 = createHash('sha256').update(bytes).digest('hex');
+    writeFileSync(blobPath, bytes);
+    const rows = sampleEntityRows();
+    rows.attachments = [{ package_record_id: 'attachment-size', entity_type: 'assets', entity_package_record_id: 'asset-fw-1', sha256, size: bytes.length }];
+    new AmpPackageBuilder(path).write(sampleManifest(), rows, [{ sha256, size: bytes.length, filePath: blobPath }]);
+    const db = rawDb(path);
+    db.prepare('UPDATE attachments SET size = ? WHERE package_record_id = ?').run(bytes.length + 1, 'attachment-size');
+    db.prepare('UPDATE amp_manifest SET attachments_sha256 = ?').run(canonicalAttachmentsSha256([{ sha256, size: bytes.length + 1 }]));
+    db.close();
+    const result = validateAmpPackage(path);
+    expect(result.valid).toBe(false);
+    expect(result.diagnostics.some((diagnostic) => diagnostic.message.includes('size does not match'))).toBe(true);
+  });
+
+  it('rejects a builder attachment index whose size differs from supplied bytes', () => {
+    const path = nextPath(), blobPath = join(workDir, 'builder-size-source.bin');
+    const bytes = Buffer.from('builder checks indexed sizes'), sha256 = createHash('sha256').update(bytes).digest('hex');
+    writeFileSync(blobPath, bytes);
+    const rows = sampleEntityRows();
+    rows.attachments = [{ package_record_id: 'attachment-size-builder', entity_type: 'assets', entity_package_record_id: 'asset-fw-1', sha256, size: bytes.length + 1 }];
+    expect(() => new AmpPackageBuilder(path).write(sampleManifest(), rows, [{ sha256, size: bytes.length, filePath: blobPath }])).toThrow(/index and ZIP content/);
+  });
+
+  it('permits anonymous exclusion records for omitted private entities', () => {
+    const path = nextPath();
+    const rows = sampleEntityRows();
+    rows.exclusions = [{ package_record_id: 'private-comment-1', entity_type: null, entity_package_record_id: null, reason: 'msp_private', detail: 'One private comment omitted without identifying it.' }];
+    new AmpPackageBuilder(path).write(sampleManifest(), rows);
+    expect(validateAmpPackage(path).valid).toBe(true);
   });
 
   it('rejects a table whose columns deviate from the spec', () => {

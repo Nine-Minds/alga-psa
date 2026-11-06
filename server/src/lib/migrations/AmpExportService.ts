@@ -134,7 +134,7 @@ export class AmpExportService {
         { package_record_id: 'credential-vault-excluded', reason: 'secret', detail: 'Credential vault material and connection secrets are never exported.' },
         { package_record_id: 'commercial-catalog-excluded', reason: 'commercial', detail: 'Products and vendor price lists are not part of workspace export.' },
         { package_record_id: 'deferred-workspace-domains', reason: 'deferred', detail: 'Project/work-item, workflow, time, schedule, meeting, conversation, and knowledge-base records are not yet emitted by this producer.' },
-        ...privateComments.map((comment) => ({ package_record_id: `excluded-private-${comment.source_record_id}`, entity_type: 'ticket_comments', entity_package_record_id: comment.package_record_id, reason: 'msp_private' as const, detail: 'MSP-private ticket comment excluded from customer export.' })),
+        ...privateComments.map((_, index) => ({ package_record_id: `excluded-private-comment-${index + 1}`, entity_type: null, entity_package_record_id: null, reason: 'msp_private' as const, detail: 'One MSP-private ticket comment was excluded. No private comment content or source identifier is included.' })),
       ],
     };
 
