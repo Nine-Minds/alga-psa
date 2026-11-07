@@ -50,6 +50,7 @@ describe('provider setup allow/deny matrix (L9 A1)', () => {
       rule.staticPrefixes?.some((prefix) => prefix.startsWith('/msp/co-management')));
     expect(opened.map((rule) => rule.group)).toEqual([
       'msp_co_managed_administration',
+      'msp_co_managed_upgrade',
       'msp_co_managed_customer_tickets',
       'msp_co_managed_shared_projects',
       'msp_co_managed_sla',

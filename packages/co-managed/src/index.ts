@@ -128,3 +128,13 @@ export type { CoManagedArchiveSummary, CoManagedArchiveEntry, CoManagedArchiveFi
 
 export * from './portableRestoreUploads';
 export { assertPortableRestoreInstallationAuthority } from './portableRestoreInstallationAuthority';
+// Independent upgrade (CM L8b): customer-owned purchase, screen and the receipt-idempotent transition.
+export { upgradeCoManagedRelationship, prepareCoManagedIndependentUpgrade, CoManagedIndependentUpgradeError } from './independentUpgrade';
+export type { CoManagedIndependentUpgradeRequest, CoManagedIndependentUpgradeCommand, CoManagedIndependentEntitlement,
+  CoManagedIndependentUpgradeReceipt } from './independentUpgrade';
+export type { CoManagedUpgradeClosure } from './upgradeClosure';
+export { coManagedUpgradeClosure } from './upgradeClosureWiring';
+export { getCoManagedIndependentUpgradeScreen, resolveCoManagedUpgradeAccess, type CoManagedUpgradeAccess } from './independentUpgradeScreen';
+export { prepareCoManagedUpgradePurchase, withCoManagedUpgradePurchaseAdmin, CO_MANAGED_UPGRADE_PURCHASE_STATES,
+  CO_MANAGED_UPGRADE_PENDING_STATES } from './upgradePurchase';
+export type { CoManagedUpgradePurchase, CoManagedUpgradePurchaseRequest, CoManagedUpgradePurchaseState } from './upgradePurchase';

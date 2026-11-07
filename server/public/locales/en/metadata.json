@@ -635,6 +635,9 @@
       },
       "export": {
         "title": "Export Workspace"
+      },
+      "upgrade": {
+        "title": "Upgrade to AlgaPSA"
       }
     }
   },

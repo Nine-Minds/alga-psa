@@ -160,6 +160,9 @@ COPY server/migrations/utils/tenantDb.cjs /app/ee/temporal-workflows/dist/seeds/
 
 RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds directory not found in prebuilt stage"
 
+# Validate the prebuilt worker artifact's adjacent CommonJS runtime dependency.
+RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = await import('./dist/packages/co-managed/src/upgradePurchase.js'); if (m.CO_MANAGED_UPGRADE_PURCHASE_STATES?.length !== 5 || !m.CO_MANAGED_UPGRADE_PENDING_STATES?.includes('payment_failed')) throw new Error('co-managed purchase runtime artifact is incomplete')"
+
 RUN cd /app/ee/temporal-workflows && node -e "const { syncPermissionCatalog } = require('./dist/seeds/permissions/syncPermissionCatalog.cjs'); const { ACTIVE_PERMISSIONS } = require('./dist/seeds/permissions/catalog.cjs'); if (typeof syncPermissionCatalog !== 'function' || ACTIVE_PERMISSIONS.length === 0) throw new Error('packaged permission catalog is incomplete')"
 
 # Production image from prebuilt artifacts (skips in-container TypeScript compilation).
