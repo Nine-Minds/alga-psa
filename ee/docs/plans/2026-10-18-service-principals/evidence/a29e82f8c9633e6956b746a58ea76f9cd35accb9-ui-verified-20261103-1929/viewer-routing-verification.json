@@ -1,0 +1,46 @@
+{
+  "projectId": "408b0ddd-de45-4ef6-bf35-b88251c8515c",
+  "productRevision": "a29e82f8c9633e6956b746a58ea76f9cd35accb9",
+  "recordingStartedAt": "2026-11-03T19:29:52.915Z",
+  "algaDevCheckout": "/home/robert/alga-dev/ghostty-pane-ide-cli-viewer-fix/ghostty-pane-ide",
+  "algaDevBranch": "fix/cli-capable-viewer-routing",
+  "algaDevRevision": "f1627486d2440b5b82734a29c0782482630e17eb",
+  "routingBehavioralTests": "22 passed across 5 files",
+  "buildChecks": "npm run agent:build && npm run build passed",
+  "interactions": [
+    {
+      "command": "space-new-tab --type=browser --projectId=408b0ddd-de45-4ef6-bf35-b88251c8515c",
+      "result": "success",
+      "paneId": "f6e6f7ad-3ce5-4724-89cb-41ccf5f537a9",
+      "spaceId": "14c569cf-e425-4097-8d12-89e18c801429"
+    },
+    {
+      "command": "get-layout",
+      "result": "success",
+      "detail": "reported scopedTo ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series"
+    },
+    {
+      "command": "browser inventory, navigate, DOM/page inspection, reload, harmless UI click, screenshot",
+      "result": "success",
+      "paneId": "f6e6f7ad-3ce5-4724-89cb-41ccf5f537a9"
+    },
+    {
+      "command": "browser-record-stop",
+      "result": "viewer disconnected before stop; video stream was remuxed with stream copy"
+    }
+  ],
+  "limitations": [
+    "viewer handover disconnected original authenticated browser pane during timesheet flow",
+    "new local card-scoped browser had no QA session",
+    "reopened notes field not visually asserted"
+  ],
+  "activationCaveat": {
+    "observedSupervisorRelease": "202611031936-gf1627486d2",
+    "matchesAlgaDevRevision": "f1627486d2440b5b82734a29c0782482630e17eb",
+    "explicitSupervisorRestartCommandIssued": false,
+    "algaPsaAppRestarted": false,
+    "authenticatedPaneDisconnectedDuringHandover": true,
+    "impactToOtherAlgaDevSessions": "unknown",
+    "safeFollowUpRequirement": "Install the tested dispatcher without replacing the shared supervised release while unrelated viewers are connected, then attach an authenticated QA browser to the card project."
+  }
+}

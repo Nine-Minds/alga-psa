@@ -18,6 +18,7 @@ import {
 import { 
   ApiKeyServiceForApi 
 } from '../../services/apiKeyServiceForApi';
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { 
   runWithTenant 
@@ -29,19 +30,7 @@ import {
   hasPermission 
 } from '../../auth/rbac';
 import { createSystemContext, tenantDb } from '@alga-psa/db';
-import {
-  assertApiPrincipal,
-  ApiRequest,
-  UnauthorizedError,
-  ForbiddenError,
-  NotFoundError,
-  ValidationError,
-  createSuccessResponse,
-  createPaginatedResponse,
-  handleApiError,
-  withApiKeyAuth,
-  withQueryValidation
-} from '../middleware/apiMiddleware';
+import { ApiRequest, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError, buildAuthenticatedApiContext, createPaginatedResponse, createSuccessResponse, handleApiError, withApiKeyAuth, withQueryValidation } from '../middleware/apiMiddleware';
 import { ZodError, z } from 'zod';
 
 export class ApiUserController extends ApiBaseController {
@@ -127,14 +116,14 @@ export class ApiUserController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertApiPrincipal(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Create request with context
         const apiRequest = req as ApiRequest;
         apiRequest.context = {
-          userId: keyRecord.user_id,
+          userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
           tenant: keyRecord.tenant,
           user
         };
@@ -143,7 +132,8 @@ export class ApiUserController extends ApiBaseController {
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
           const knex = await getConnection(tenantId!);
-          const hasAccess = await hasPermission(user, 'user', 'read', knex);
+          const hasAccess = await hasApiContextPermission(
+          apiAuthContext, 'user', 'read', knex);
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot read user');
           }
@@ -189,14 +179,14 @@ export class ApiUserController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertApiPrincipal(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Create request with context
         const apiRequest = req as ApiRequest;
         apiRequest.context = {
-          userId: keyRecord.user_id,
+          userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
           tenant: keyRecord.tenant,
           user
         };
@@ -205,7 +195,8 @@ export class ApiUserController extends ApiBaseController {
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
           const knex = await getConnection(tenantId!);
-          const hasAccess = await hasPermission(user, 'user', 'read', knex);
+          const hasAccess = await hasApiContextPermission(
+          apiAuthContext, 'user', 'read', knex);
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot read user');
           }
@@ -288,14 +279,14 @@ export class ApiUserController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertApiPrincipal(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Create request with context
         const apiRequest = req as ApiRequest;
         apiRequest.context = {
-          userId: keyRecord.user_id,
+          userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
           tenant: keyRecord.tenant,
           user
         };
@@ -310,7 +301,8 @@ export class ApiUserController extends ApiBaseController {
         return await runWithTenant(tenantId!, async () => {
           // Check permissions - users can change their own password, admins can change any
           const knex = await getConnection(tenantId!);
-          const canChangeAny = await hasPermission(user, 'user', 'update', knex);
+          const canChangeAny = await hasApiContextPermission(
+          apiAuthContext, 'user', 'update', knex);
           
           if (targetUserId !== user.user_id && !canChangeAny) {
             throw new ForbiddenError('Permission denied: Cannot change password for other users');
@@ -372,14 +364,14 @@ export class ApiUserController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertApiPrincipal(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Create request with context
         const apiRequest = req as ApiRequest;
         apiRequest.context = {
-          userId: keyRecord.user_id,
+          userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
           tenant: keyRecord.tenant,
           user
         };
@@ -394,7 +386,8 @@ export class ApiUserController extends ApiBaseController {
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
           const knex = await getConnection(tenantId!);
-          const hasAccess = await hasPermission(user, 'user', 'read', knex);
+          const hasAccess = await hasApiContextPermission(
+          apiAuthContext, 'user', 'read', knex);
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot read user');
           }
@@ -457,14 +450,14 @@ export class ApiUserController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertApiPrincipal(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Create request with context
         const apiRequest = req as ApiRequest;
         apiRequest.context = {
-          userId: keyRecord.user_id,
+          userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
           tenant: keyRecord.tenant,
           user
         };
@@ -479,7 +472,8 @@ export class ApiUserController extends ApiBaseController {
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
           const knex = await getConnection(tenantId!);
-          const hasAccess = await hasPermission(user, 'user', 'read', knex);
+          const hasAccess = await hasApiContextPermission(
+          apiAuthContext, 'user', 'read', knex);
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot read user');
           }

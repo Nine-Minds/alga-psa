@@ -8,11 +8,14 @@ import { nativeTicketDataSource } from '@alga-psa/tickets/lib/nativeTicketDataSo
 import { TicketDataSourceProvider } from '@alga-psa/tickets/components/ticket/TicketDataSourceContext';
 import { composeTicketDataSource, type TicketDataSource, type TicketDataSourceOverrides } from '@alga-psa/tickets/lib/ticketDataSource';
 import { getCoManagedLocalTicketResourceAction } from '@/lib/actions/coManagedLocalTicketActions';
+import { createAttachmentStaging } from '@/lib/co-managed/attachmentStaging';
 import type { CoManagedSharedResource } from '@alga-psa/co-managed';
 import { CoManagedEffortSummary } from './CoManagedEffortSummary';
 import { CoManagedEffortPerspectiveProvider } from './coManagedEffortPerspective';
 import CoManagedTicketSection from './CoManagedTicketSection';
 import { createSharedConversationSession, type SharedConversationSession } from './sharedConversationSession';
+import CoManagedConversationFiles from './CoManagedConversationFiles';
+import { createCommentsChangedSignal } from './commentsChangedSignal';
 
 /** Audiences a co_managed workspace's own tickets offer before the server has resolved the shared ones. */
 const NATIVE_AUDIENCES: readonly CommentAudience[] = ['requester', 'organization_private'];
@@ -23,22 +26,23 @@ const NATIVE_AUDIENCES: readonly CommentAudience[] = ['requester', 'organization
  * through the co-managed comment command; requester and organization_private stay on the native
  * path with their audience. A workspace without a relationship simply never learns `shared_it`.
  */
-export function CoManagedLocalTicketDataSourceProvider({ ticketId, children }: { ticketId: string; children: React.ReactNode }) {
+export function CoManagedLocalTicketDataSourceProvider({ ticketId, readOnly = false, children }: { ticketId: string; readOnly?: boolean; children: React.ReactNode }) {
   const { t } = useTranslation('features/tickets');
   const [session, setSession] = useState<SharedConversationSession | null>(null);
   const [version, setVersion] = useState(0);
-  const [resource, setResource] = useState<CoManagedSharedResource | null>(null);
+  const [resource, setResource] = useState<Awaited<ReturnType<typeof getCoManagedLocalTicketResourceAction>>>(null);
+  const commentsChanged = useMemo(() => createCommentsChangedSignal(), [ticketId]);
+  const staging = useMemo(() => createAttachmentStaging(() => globalThis.crypto.randomUUID()), [ticketId]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const local = await getCoManagedLocalTicketResourceAction(ticketId);
+        const local: CoManagedSharedResource | null = await getCoManagedLocalTicketResourceAction(ticketId);
         if (!local || cancelled) return;
-        setResource(local);
-        const next = createSharedConversationSession(local, { t: (key, fallback) => t(key, { defaultValue: fallback }) });
+        const next = createSharedConversationSession(local, { t: (key, fallback) => t(key, { defaultValue: fallback }), staging });
         await next.load();
-        if (!cancelled) { setSession(next); setVersion(v => v + 1); }
+        if (!cancelled) { setResource(local); setSession(next); setVersion(v => v + 1); }
       } catch {
         // No shared conversation is reachable: the ticket keeps its native audiences.
       }
@@ -49,7 +53,8 @@ export function CoManagedLocalTicketDataSourceProvider({ ticketId, children }: {
 
   const dataSource = useMemo<TicketDataSource>(() => {
     const shared = session?.writeAudiences() ?? [];
-    const audiences: CommentAudience[] = [...NATIVE_AUDIENCES, ...(shared.includes('shared_it') ? ['shared_it' as const] : [])];
+    // A read-only workspace (lapsed, ended) offers no composer audience; the write choke point refuses regardless.
+    const audiences: CommentAudience[] = readOnly ? [] : [...NATIVE_AUDIENCES, ...(shared.includes('shared_it') ? ['shared_it' as const] : [])];
     const native = nativeTicketDataSource.comments;
     const viaWriter = (audience: unknown, parent?: string | null) =>
       !!session && (audience === 'shared_it' || (!!parent && session.audienceOf(parent) === 'shared_it'));
@@ -60,6 +65,11 @@ export function CoManagedLocalTicketDataSourceProvider({ ticketId, children }: {
       try { return await session!.write({ content, audience: 'shared_it' }); } catch (error) { return failure(error); }
     };
     return composeTicketDataSource(nativeTicketDataSource, {
+      screen: {
+        subscribeCommentsChanged: commentsChanged.subscribe,
+        onComposerCancel: staging.clear,
+        ...(readOnly ? { readOnly: true } : {}),
+      },
       // L6a2: the customer's own view of the shared ticket carries the same effort split (customer / MSP / combined).
       // The resource is resolved only for a workspace that serves co-managed with a relationship; otherwise no slot.
       ...(resource || session ? { slots: {
@@ -89,8 +99,9 @@ export function CoManagedLocalTicketDataSourceProvider({ ticketId, children }: {
     } as unknown as TicketDataSourceOverrides);
     // `version` re-derives the audiences once the session has loaded.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, version, resource, ticketId]);
+  }, [session, version, resource, readOnly, ticketId]);
 
-  // Mounted from the customer's own workspace: the effort split inside labels its sides from the customer's perspective.
-  return <CoManagedEffortPerspectiveProvider value="customer"><TicketDataSourceProvider dataSource={dataSource}>{children}</TicketDataSourceProvider></CoManagedEffortPerspectiveProvider>;
+  return <CoManagedEffortPerspectiveProvider value="customer"><TicketDataSourceProvider dataSource={dataSource}>{children}
+    {session && resource && <CoManagedConversationFiles session={session} resource={resource} staging={staging} onCommentsChanged={commentsChanged.fire} />}
+  </TicketDataSourceProvider></CoManagedEffortPerspectiveProvider>;
 }

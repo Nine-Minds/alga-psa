@@ -1,21 +1,27 @@
 /** @vitest-environment jsdom */
 /// <reference types="@testing-library/jest-dom/vitest" />
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-const mocks = vi.hoisted(() => ({ screen: vi.fn(), assignment: vi.fn() }));
+const mocks = vi.hoisted(() => ({ screen: vi.fn(), assignment: vi.fn(), sla: vi.fn() }));
 vi.mock('lucide-react', () => ({ Handshake: () => null, History: () => null }));
 vi.mock('@alga-psa/ui/components/bento/BentoTile', () => ({ BentoTile: ({ id, children, action }: any) => <section id={id}>{action}{children}</section> }));
 vi.mock('@alga-psa/ui/components/Button', () => ({ Button: ({ children, variant: _v, size: _s, ...rest }: any) => <button {...rest}>{children}</button> }));
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({ default: () => null }));
 vi.mock('@alga-psa/ui/components/Dialog', () => ({ Dialog: () => null, DialogContent: () => null }));
-vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (k: string, o?: any) => typeof o === 'string' ? o : o?.defaultValue ?? k }) }));
-vi.mock('@/lib/actions/coManagedSharedWorkActions', () => ({ getCoManagedTicketScreenAction: (...a: any[]) => mocks.screen(...a) }));
+vi.mock('@alga-psa/ui/lib/i18n/client', () => {
+  const englishLicensing = require('../../../../public/locales/en/msp/licensing.json');
+  const resolveEnglishKey = (key: string) => key.split('.').reduce((value: any, part: string) => value?.[part], englishLicensing) ?? key;
+  return {
+    useFormatters: () => ({ formatDate: (date: Date) => date.toISOString() }),
+    useTranslation: () => ({ t: (k: string, o?: any) => typeof o === 'string' ? o : o?.defaultValue ?? resolveEnglishKey(k) }),
+  };
+});
+vi.mock('@/lib/actions/coManagedSharedWorkActions', () => ({ getCoManagedTicketScreenAction: (...a: any[]) => mocks.screen(...a), getSharedTicketSlaAction: (...a: any[]) => mocks.sla(...a) }));
 vi.mock('@/lib/actions/coManagedTicketAssignmentActions', () => ({
   getSharedTicketAssignmentAction: (...a: any[]) => mocks.assignment(...a), listSharedTicketAssigneesAction: vi.fn(), assignSharedTicketAction: vi.fn(),
 }));
-vi.mock('@/components/co-managed/CoManagedHandoffDialog', () => ({ default: () => null }));
+vi.mock('@/components/co-managed/CoManagedHandoffDialog', () => ({ default: ({ onSaved }: any) => <button onClick={onSaved}>Confirm handoff</button> }));
 vi.mock('@/components/co-managed/CoManagedHandoffHistoryDrawer', () => ({ default: () => null }));
 
 import CoManagedTicketSection from '@/components/co-managed/CoManagedTicketSection';
@@ -28,7 +34,8 @@ const screenFor = (over: Record<string, unknown> = {}) => ({
 });
 
 beforeEach(() => {
-  mocks.screen.mockReset(); mocks.assignment.mockReset();
+  mocks.screen.mockReset(); mocks.assignment.mockReset(); mocks.sla.mockReset();
+  mocks.sla.mockResolvedValue({ msp: { state: 'not_started' } });
   mocks.assignment.mockResolvedValue({ resource, canEdit: false, canAssign: false, revision: 4, hasAssignment: true, mspAssignment: { name: 'Pat Person', organizationName: 'MSP Co' } });
 });
 
@@ -41,6 +48,28 @@ describe('CoManagedTicketSection capability-driven affordances', () => {
     expect(document.getElementById('co-ticket-handback')).not.toBeNull();
     expect(document.getElementById('co-ticket-revoke')).not.toBeNull();
     expect(document.getElementById('co-ticket-read-only')).toBeNull();
+  });
+
+  it('renders the handoff action from the English locale pack', async () => {
+    mocks.screen.mockResolvedValue(screenFor());
+    render(<CoManagedTicketSection target={{ kind: 'shared', resource }} />);
+    expect(await screen.findByRole('button', { name: 'Escalate to MSP' })).toBeInTheDocument();
+  });
+
+  it('shows the admitted SLA and reloads it after a successful handback', async () => {
+    const target = { status: 'running', dueAt: '2026-11-05T01:00:00Z', completedAt: null };
+    mocks.screen.mockResolvedValue(screenFor());
+    mocks.sla.mockResolvedValueOnce({ msp: { state: 'tracking', paused: false, elapsedMinutes: 1, response: target, resolution: target } })
+      .mockResolvedValueOnce({ msp: { state: 'tracking', paused: true, elapsedMinutes: 1,
+        response: { ...target, status: 'paused', dueAt: null }, resolution: { ...target, status: 'paused', dueAt: null } } });
+    render(<CoManagedTicketSection target={{ kind: 'shared', resource }} />);
+    expect(await screen.findByText('running')).toBeInTheDocument();
+    fireEvent.click(document.getElementById('co-ticket-handback')!);
+    fireEvent.click(await screen.findByText('Confirm handoff'));
+    expect(await screen.findByText('paused')).toBeInTheDocument();
+    expect(screen.queryByText('running')).toBeNull();
+    expect(mocks.sla).toHaveBeenCalledTimes(2);
+    expect(mocks.sla).toHaveBeenLastCalledWith(resource);
   });
 
   it('a read-only viewer sees a notice and no write controls', async () => {
@@ -84,4 +113,21 @@ describe('CoManagedTicketSection capability-driven affordances', () => {
     expect(value).toHaveClass('break-words', 'flex-1', 'text-right');
     expect(value).not.toHaveClass('truncate');
   });
+});
+
+
+it('shows the admitted SLA and reloads it after a successful handback', async () => {
+  const target = { status: 'running', dueAt: '2026-11-05T01:00:00Z', completedAt: null };
+  mocks.screen.mockResolvedValue(screenFor());
+  mocks.sla.mockResolvedValueOnce({ msp: { state: 'tracking', paused: false, elapsedMinutes: 1, response: target, resolution: target } })
+    .mockResolvedValueOnce({ msp: { state: 'tracking', paused: true, elapsedMinutes: 1,
+      response: { ...target, status: 'paused', dueAt: null }, resolution: { ...target, status: 'paused', dueAt: null } } });
+  render(<CoManagedTicketSection target={{ kind: 'shared', resource }} />);
+  expect(await screen.findByText('running')).toBeInTheDocument();
+  fireEvent.click(document.getElementById('co-ticket-handback')!);
+  fireEvent.click(await screen.findByText('Confirm handoff'));
+  expect(await screen.findByText('paused')).toBeInTheDocument();
+  expect(screen.queryByText('running')).toBeNull();
+  expect(mocks.sla).toHaveBeenCalledTimes(2);
+  expect(mocks.sla).toHaveBeenLastCalledWith(resource);
 });

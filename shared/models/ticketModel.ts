@@ -9,6 +9,7 @@ import { reconcileCommentAttachments } from '../lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import { ticketUpdateStamp } from '../lib/tickets/ticketUpdateStamp';
 import { tenantDb } from '@alga-psa/db';
+import { applyCommentResponseState, announcerFor } from '../lib/tickets/responseState';
 import {
   assertReplyAudience, lockLabelledThreadAudience, nativeThreadAudience, type NativeCommentAudience,
 } from '../lib/commentAudience';
@@ -1694,24 +1695,15 @@ export class TicketModel {
         });
     }
 
-    // D3: key off the final stored visibility, not the requested flag.
-    if (!commentIsInternal && validatedData.author_type === 'contact') {
-      // Only update response state if tracking is enabled for this tenant
-      const tenantSettingsRow = await db.table('tenant_settings')
-        .select('ticket_display_settings')
-        .first();
-      const responseStateEnabled = (tenantSettingsRow?.ticket_display_settings as any)?.responseStateTrackingEnabled ?? true;
-
-      if (responseStateEnabled) {
-        // LEVERAGE: pattern response-state-from-comment — inbound-email/model comment path sets awaiting_internal directly and emits no TICKET_RESPONSE_STATE_CHANGED; use applyCommentResponseState (shared/lib/tickets/responseState.ts) once the model can emit after-commit events.
-        await db.table('tickets')
-          .where({
-            ticket_id: validatedData.ticket_id,
-          })
-          .update({
-            response_state: 'awaiting_internal',
-          });
-      }
+    if (validatedData.author_type === 'contact') {
+      await applyCommentResponseState(trx, {
+        tenant,
+        ticketId: validatedData.ticket_id,
+        authorType: 'client',
+        isInternal: commentIsInternal,
+        userId: validatedData.author_id ?? userId ?? null,
+        announce: announcerFor(eventPublisher),
+      });
     }
 
     // Publish comment event if publisher provided

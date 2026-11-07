@@ -43,6 +43,7 @@ vi.mock("../ui/ThemeContext", async () => {
 vi.mock("../auth/AuthContext", () => ({ useAuth: () => mocks.authValue }));
 vi.mock("../capabilities/CapabilitiesContext", () => ({
   useCapabilities: () => ({ features: { projects: true }, loaded: true }),
+  useDontNotifyCustomerDefault: () => false,
 }));
 vi.mock("../config/appConfig", () => ({ getAppConfig: () => ({ ok: true, env: "dev", baseUrl: "https://algapsa.com" }) }));
 vi.mock("../api", () => ({ createApiClient: () => ({ request: vi.fn() }) }));

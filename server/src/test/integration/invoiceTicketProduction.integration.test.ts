@@ -257,7 +257,14 @@ async function generateProductionVariant(db: ReturnType<typeof knex>, variant: s
       { description: 'Cap acceptance information', quantity: 1, rate: 0, is_taxable: false, service_id: charges.find((c) => Number(c.net_amount) > 0)!.service_id },
     ] as any) as any;
     const adjustedVm = mapDbInvoiceToWasmViewModel(adjusted)!;
-    expect(adjustedVm.subtotal).toBe(vm.subtotal - 1500); expect(adjustedVm.tax).toBe(vm.tax); expect(adjustedVm.total).toBe(vm.total - 1500);
+    expect(adjustedVm.subtotal).toBe(vm.subtotal - 1500);
+    // Discounts lower the taxable base before tax. The generated invoice has no
+    // discount (tax stays 2000 / 5500 above); the -1000 line discount and -500
+    // negative credit then take 1500 off the base, i.e. 10% = 150 off the tax:
+    // 2000 -> 1850 (cap) and 5500 -> 5350 (recurring-cap).
+    expect(adjustedVm.tax).toBe(vm.tax - 150);
+    expect(adjustedVm.tax).toBe(variant === 'cap' ? 1850 : 5350);
+    expect(adjustedVm.total).toBe(vm.total - 1500 - 150);
     for (const description of ['Cap acceptance line discount', 'Cap acceptance negative credit', 'Cap acceptance information']) {
       expect(adjustedVm.ticketPresentationRows!.filter((row) => row.description === description)).toHaveLength(1);
     }

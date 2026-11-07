@@ -3097,7 +3097,8 @@
     "edition": "CE",
     "route_path": "/api/v1/contract-lines/bulk/delete",
     "methods": [
-      "DELETE"
+      "DELETE",
+      "POST"
     ],
     "route_file": "server/src/app/api/v1/contract-lines/bulk/delete/route.ts",
     "controller": "ApiContractLineController",
@@ -3108,7 +3109,8 @@
     "edition": "CE",
     "route_path": "/api/v1/contract-lines/bulk/remove-services",
     "methods": [
-      "DELETE"
+      "DELETE",
+      "POST"
     ],
     "route_file": "server/src/app/api/v1/contract-lines/bulk/remove-services/route.ts",
     "controller": "ApiContractLineController",

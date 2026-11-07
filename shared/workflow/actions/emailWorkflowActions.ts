@@ -1674,24 +1674,18 @@ export async function createCommentFromEmail(
         )
       }, tenant, trx, eventPublisher, analyticsTracker, userId);
 
-      // Only update response state if tracking is enabled for this tenant
-      const tenantSettingsRow = await db.table('tenant_settings')
-        .select('ticket_display_settings')
-        .first();
-      const responseStateEnabled = (tenantSettingsRow?.ticket_display_settings as any)?.responseStateTrackingEnabled ?? true;
-
-      // D3: response state follows the comment's final stored visibility, never the
-      // requested flag or the parent thread's. An internal comment must not flip it.
-      if (responseStateEnabled && !result.is_internal) {
-        if (normalizedAuthorType === 'client') {
-          await db.table('tickets')
-            .where({ ticket_id: commentData.ticket_id })
-            .update({ response_state: 'awaiting_internal' });
-        } else if (normalizedAuthorType === 'internal') {
-          await db.table('tickets')
-            .where({ ticket_id: commentData.ticket_id })
-            .update({ response_state: 'awaiting_client' });
-        }
+      // Apply the shared response-state rules to the comment's final visibility.
+      // The announcer writes to the durable outbox on inbound-email paths.
+      if (normalizedAuthorType === 'client' || normalizedAuthorType === 'internal') {
+        const { applyCommentResponseState, announcerFor } = await import('../../lib/tickets/responseState');
+        await applyCommentResponseState(trx, {
+          tenant,
+          ticketId: commentData.ticket_id,
+          authorType: normalizedAuthorType,
+          isInternal: result.is_internal,
+          userId: commentData.author_id ?? userId ?? null,
+          announce: announcerFor(eventPublisher),
+        });
       }
 
       // Activity row for the inbound-email comment. Source is always

@@ -1651,7 +1651,9 @@
       "agentAlreadyAssigned": "Dieser Benutzer ist bereits als zusätzlicher Bearbeiter zugewiesen.",
       "teamNotFound": "Team nicht gefunden. Es wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "teamLeadNotFound": "Das ausgewählte Team hat keine Teamleitung. Wählen Sie ein anderes Team oder legen Sie zuerst eine Teamleitung fest.",
-      "commentNotFound": "Kommentar nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut."
+      "commentNotFound": "Kommentar nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "boardNotFound": "Board nicht gefunden. Es wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "boardInactive": "Das Zielboard ist inaktiv. Wählen Sie ein aktives Board."
     },
     "bundle": {
       "masterAlreadyBundleMaster": "Ticket {{tickets}} ist bereits ein Bündel-Haupt-Ticket und kann nicht als untergeordnetes Ticket hinzugefügt werden. Lösen Sie das Bündel zuerst auf oder verwenden Sie es als Haupt-Ticket.",
@@ -1687,7 +1689,14 @@
       "referenceInvalid": "Das ausgewählte Board, der Status, die Priorität, der Bearbeiter, das Team oder die SLA-Richtlinie ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "duplicateName": "Ein Board mit diesem Namen existiert bereits.",
       "duplicate": "Ein Board oder Status mit denselben Einstellungen existiert bereits.",
-      "invalidValue": "Einer der Board- oder Statuswerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut."
+      "invalidValue": "Einer der Board- oder Statuswerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "notificationEmailInvalid": "Benachrichtigungsregel {{rule}} enthält eine ungültige E-Mail-Adresse (maximal {{max}} Zeichen)",
+      "notificationEmailLimit": "Benachrichtigungsregel {{rule}} darf höchstens {{max}} E-Mail-Adressen enthalten",
+      "notificationRecipientRequired": "Benachrichtigungsregel {{rule}} muss mindestens einen Benutzer, ein Team oder eine E-Mail-Adresse benachrichtigen",
+      "notificationEmailIsUser": "Benachrichtigungsregel {{rule}}: {{address}} ist die E-Mail-Adresse eines Alga-Benutzers. Wählen Sie stattdessen den Benutzer aus.",
+      "notificationEmailIsContact": "Benachrichtigungsregel {{rule}}: {{address}} gehört zu einem Kundenkontakt oder Standort und kann kein Empfänger sein.",
+      "notificationEmailClientDomain": "Benachrichtigungsregel {{rule}}: {{address}} befindet sich auf der E-Mail-Domain eines Kunden und kann kein Empfänger sein.",
+      "notificationEmailInboundMailbox": "Benachrichtigungsregel {{rule}}: {{address}} ist ein verbundenes Eingangspostfach und kann kein Empfänger sein."
     },
     "material": {
       "invalidValue": "Einer der ausgewählten Materialwerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
@@ -2846,5 +2855,35 @@
       "notAvailable": "Dieser Textbaustein ist für dieses Ticket nicht verfügbar.",
       "notATeamMember": "Sie können Team-Textbausteine nur für Teams verwalten, denen Sie angehören."
     }
+  },
+  "sharedSla": {
+    "title": "Servicelevel",
+    "msp": "Servicelevel des MSP",
+    "customer": "Servicelevel des Kunden",
+    "state": {
+      "running": "Läuft",
+      "paused": "Pausiert",
+      "met": "Eingehalten",
+      "breached": "Verletzt"
+    },
+    "target": {
+      "response": "Erste Antwort",
+      "resolution": "Lösung"
+    },
+    "elapsed": "Verstrichen: {{time}}",
+    "dueAt": "Fällig: {{date}}",
+    "completedAt": "Eingehalten am {{date}}",
+    "breached": "Verletzt",
+    "targetPaused": "Pausiert",
+    "noTarget": "Kein Ziel",
+    "duration": {
+      "hoursMinutes": "{{hours}} Std. {{minutes}} Min.",
+      "minutes": "{{minutes}} Min."
+    },
+    "notStarted": "Die Uhr startet, sobald das Ticket eskaliert wird.",
+    "unavailable": "Dieser Servicelevel ist nicht mehr verfügbar.",
+    "notConfigured": "Es gilt kein Servicelevel.",
+    "empty": "Für dieses Ticket wird noch kein Servicelevel verfolgt.",
+    "loadError": "Der Servicelevel konnte nicht geladen werden."
   }
 }
