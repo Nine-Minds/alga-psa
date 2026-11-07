@@ -21,20 +21,15 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     expect(source).not.toContain('compileResourceReadAuthorizationSql,');
   });
 
-  it('uses structural tenant scoping for authorization subject and response-state roots', () => {
+  it('uses structural tenant scoping for the authorization subject and the shared response-state engine', () => {
     const source = fs.readFileSync(path.resolve(__dirname, './optimizedTicketActions.ts'), 'utf8');
     const authStart = source.indexOf('async function resolveAuthorizationSubjectForUser');
     const authEnd = source.indexOf('function toTicketAuthorizationRecord', authStart);
-    const responseStart = source.indexOf('async function updateTicketResponseStateFromComment');
-    const responseEnd = source.indexOf('// Helper function to safely convert dates', responseStart);
 
     expect(authStart).toBeGreaterThanOrEqual(0);
     expect(authEnd).toBeGreaterThan(authStart);
-    expect(responseStart).toBeGreaterThanOrEqual(0);
-    expect(responseEnd).toBeGreaterThan(responseStart);
 
     const authSection = source.slice(authStart, authEnd);
-    const responseSection = source.slice(responseStart, responseEnd);
 
     expect(authSection).toContain("tenantScopedTable(trx, 'user_roles', tenant)");
     expect(authSection).toContain("tenantScopedTable(trx, 'team_members', tenant)");
@@ -42,8 +37,12 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     expect(authSection).not.toContain(".where({ tenant, user_id: user.user_id })");
     expect(authSection).not.toContain(".where({ tenant, reports_to: user.user_id })");
 
-    expect(responseSection).toContain("tenantScopedTable(trx, 'tickets', tenant)");
-    expect(responseSection).not.toContain(".where({ ticket_id: ticketId, tenant })");
+    // Comment-driven response state goes through the shared engine (structurally
+    // tenant scoped via tenantDb); no local copy and no direct state write.
+    expect(source).not.toContain('updateTicketResponseStateFromComment');
+    expect(source).toContain("from '@alga-psa/shared/lib/tickets/responseState'");
+    expect(source).toContain('await applyCommentResponseState(trx, {');
+    expect(source).not.toContain('LEVERAGE: pattern ' + 'response-state-from-comment');
   });
 
   it('uses structural tenant scoping for consolidated ticket top-level hydration roots', () => {

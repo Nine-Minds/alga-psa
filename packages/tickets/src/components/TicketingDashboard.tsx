@@ -1,6 +1,7 @@
 'use client'
 
 import { encodeTicketWhere } from '../lib/ticketWhereUrl';
+import { useDefaultNotificationSuppression } from '../lib/notificationSuppressionDefaults';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -169,11 +170,6 @@ function SmartSearchResults<TScope, TRow extends object, TMetadata>(
   return <EnterpriseSmartSearchResults {...(props as unknown as AnySmartSearchResultsProps)} />;
 }
 
-const defaultNotificationSuppression = (): TicketNotificationSuppressionValue => ({
-  suppressContactNotifications: false,
-  suppressInternalNotifications: false,
-});
-
 interface TicketingDashboardProps {
   id?: string;
   initialTickets: ITicketListItem[];
@@ -206,6 +202,11 @@ interface TicketingDashboardProps {
   initialTicketTags?: Record<string, ITag[]>;
   initialTeams?: ITeam[];
   canUpdateTickets?: boolean;
+  /**
+   * The co-managed workspace is ended or lapsed: reads stay, every create/copy/delete control is withdrawn.
+   * Separate from `canUpdateTickets`, which only gates edits of existing rows.
+   */
+  workspaceReadOnly?: boolean;
   /**
    * Called immediately before any route change out of the list, so the container
    * can stop mirroring filter state into the URL. A write that lands while the
@@ -357,6 +358,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   clientTagDefinitions = EMPTY_TAG_DEFINITIONS,
   initialTeams = [],
   canUpdateTickets = true,
+  workspaceReadOnly = false,
   onNavigateAway,
   allowSlaStatusFilter = true,
   smartSearchAvailable = false,
@@ -410,6 +412,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [selectedDestinationStatusId, setSelectedDestinationStatusId] = useState<string>('');
   const [isLoadingDestinationStatuses, setIsLoadingDestinationStatuses] = useState(false);
   const [destinationStatusError, setDestinationStatusError] = useState<string>('');
+  const defaultNotificationSuppression = useDefaultNotificationSuppression();
   const [bulkMoveNotificationSuppression, setBulkMoveNotificationSuppression] =
     useState<TicketNotificationSuppressionValue>(() => defaultNotificationSuppression());
   const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>(initialAgentAvatarUrls);
@@ -549,7 +552,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     () => navigateAwayTo(buildCreateTicketHref({ isAlgaDeskMode: useAlgaDeskQuickAddForm })),
     [navigateAwayTo, useAlgaDeskQuickAddForm],
   );
-  usePageCreateShortcut(openQuickAddTicket);
+  usePageCreateShortcut(openQuickAddTicket, { enabled: !workspaceReadOnly });
 
   // Tag filter values from props
   const selectedTags = filterValues.tags ?? EMPTY_STRING_ARRAY;
@@ -1762,7 +1765,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       canCreateTemplate: templatePermissions.create,
     });
 
-    return [selectionColumn, ...baseColumns, actionsColumn];
+    // Duplicate and "Create template" are the only row actions and both write.
+    return workspaceReadOnly ? [selectionColumn, ...baseColumns] : [selectionColumn, ...baseColumns, actionsColumn];
   }, [
     categories,
     boards,
@@ -1771,6 +1775,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     handleTicketClick,
     handleTagsChange,
     canUpdateTickets,
+    workspaceReadOnly,
     ticketTagsRef,
     onQuickViewClient,
     onQuickViewContact,
@@ -2434,17 +2439,19 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 disabled: !hasSelection,
                 separator: true,
               },
-              {
+              ...(workspaceReadOnly ? [] : [{
                 id: `${id}-share-import`,
                 icon: Upload,
                 label: t('dashboard.importAction', { defaultValue: 'Import CSV' }),
                 onSelect: () => navigateAwayTo('/msp/tickets/import'),
-              },
+              }]),
             ] satisfies ShareAction[]}
           />
-          <Button id="add-ticket-button" onClick={openQuickAddTicket}>
-            {t('dashboard.addTicket', 'Add Ticket')}
-          </Button>
+          {!workspaceReadOnly && (
+            <Button id="add-ticket-button" onClick={openQuickAddTicket}>
+              {t('dashboard.addTicket', 'Add Ticket')}
+            </Button>
+          )}
         </>}
       />
       <BoardTabStrip
@@ -3031,6 +3038,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 value={selectedDestinationBoardId}
                 options={boards
                   .filter((board): board is IBoard & { board_id: string } => typeof board.board_id === 'string')
+                  .filter((board) => !board.is_inactive)
                   .map((board) => ({
                     value: board.board_id,
                     label: board.board_name ?? t('bulk.move.unnamedBoard', 'Unnamed board'),
@@ -3194,6 +3202,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         showPriority={canUpdateTickets}
         showTags={canUpdateTickets}
         showDueDate={canUpdateTickets}
+        showDelete={!workspaceReadOnly}
         statusDisabled={!selectedTicketsSharedBoardId}
         statusDisabledTitle={isResolvingSelectedBoards
           ? t('bulk.actionBar.statusResolvingBoards', 'Checking the boards of selected tickets…')

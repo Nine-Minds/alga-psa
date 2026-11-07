@@ -1659,7 +1659,9 @@
       "agentAlreadyAssigned": "Den här användaren är redan tilldelad som ytterligare handläggare.",
       "teamNotFound": "Teamet hittades inte. Det kan ha raderats. Ladda om sidan och försök igen.",
       "teamLeadNotFound": "Det valda teamet har ingen teamledare. Välj ett annat team eller tilldela en teamledare först.",
-      "commentNotFound": "Kommentaren hittades inte. Den kan ha raderats. Ladda om sidan och försök igen."
+      "commentNotFound": "Kommentaren hittades inte. Den kan ha raderats. Ladda om sidan och försök igen.",
+      "boardNotFound": "Tavlan hittades inte. Den kan ha raderats. Ladda om sidan och försök igen.",
+      "boardInactive": "Måltavlan är inaktiv. Välj en aktiv tavla."
     },
     "bundle": {
       "masterAlreadyBundleMaster": "Ärende {{tickets}} är redan huvudärende i en grupp och kan inte läggas till som underärende. Lös upp gruppen först eller använd ärendet som huvudärende.",
@@ -1695,7 +1697,14 @@
       "referenceInvalid": "Den valda tavlan, statusen, prioriteten, den ansvariga, teamet eller SLA-policyn är inte längre giltig. Ladda om sidan och försök igen.",
       "duplicateName": "En tavla med det här namnet finns redan.",
       "duplicate": "En tavla eller status med samma inställningar finns redan.",
-      "invalidValue": "Ett av tavlans eller statusens värden är ogiltigt. Ladda om sidan och försök igen."
+      "invalidValue": "Ett av tavlans eller statusens värden är ogiltigt. Ladda om sidan och försök igen.",
+      "notificationEmailInvalid": "Aviseringsregel {{rule}} har en ogiltig e-postadress (högst {{max}} tecken)",
+      "notificationEmailLimit": "Aviseringsregel {{rule}} får ha högst {{max}} e-postadresser",
+      "notificationRecipientRequired": "Aviseringsregel {{rule}} måste avisera minst en användare, ett team eller en e-postadress",
+      "notificationEmailIsUser": "Aviseringsregel {{rule}}: {{address}} är en Alga-användares e-postadress. Välj användaren i stället.",
+      "notificationEmailIsContact": "Aviseringsregel {{rule}}: {{address}} tillhör en kundkontakt eller plats och kan inte vara mottagare.",
+      "notificationEmailClientDomain": "Aviseringsregel {{rule}}: {{address}} finns på en kunds e-postdomän och kan inte vara mottagare.",
+      "notificationEmailInboundMailbox": "Aviseringsregel {{rule}}: {{address}} är en ansluten inkommande brevlåda och kan inte vara mottagare."
     },
     "material": {
       "invalidValue": "Ett av de valda materialvärdena är ogiltigt. Ladda om sidan och försök igen.",
@@ -2846,5 +2855,35 @@
       "notAvailable": "Det här färdiga svaret är inte tillgängligt för det här ärendet.",
       "notATeamMember": "Du kan bara hantera teamsvar för team som du tillhör."
     }
+  },
+  "sharedSla": {
+    "title": "Servicenivå",
+    "msp": "MSP:ns servicenivå",
+    "customer": "Kundens servicenivå",
+    "state": {
+      "running": "Pågår",
+      "paused": "Pausad",
+      "met": "Uppfylld",
+      "breached": "Överträdd"
+    },
+    "target": {
+      "response": "Första svar",
+      "resolution": "Lösning"
+    },
+    "elapsed": "Förflutet: {{time}}",
+    "dueAt": "Förfaller: {{date}}",
+    "completedAt": "Uppfylld {{date}}",
+    "breached": "Överträdd",
+    "targetPaused": "Pausad",
+    "noTarget": "Inget mål",
+    "duration": {
+      "hoursMinutes": "{{hours}} h {{minutes}} min",
+      "minutes": "{{minutes}} min"
+    },
+    "notStarted": "Klockan startar när ärendet eskaleras.",
+    "unavailable": "Den här servicenivån är inte längre tillgänglig.",
+    "notConfigured": "Ingen servicenivå gäller.",
+    "empty": "Ingen servicenivå följs ännu upp för det här ärendet.",
+    "loadError": "Servicenivån kunde inte laddas."
   }
 }

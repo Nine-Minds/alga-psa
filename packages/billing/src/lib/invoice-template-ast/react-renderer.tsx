@@ -306,7 +306,9 @@ interface RenderedCellLine {
  * blank lines (missing names, absent descriptions) are dropped. When a column
  * has no `lines`, or every line resolves empty, the function returns null so
  * the caller falls back to the flat `value` expression — keeping discount and
- * custom rows whose name is absent readable.
+ * custom rows whose name is absent readable. A line repeating text the cell
+ * already shows is dropped, so stacks such as the standard quote description
+ * (line `description` over `catalog_description`) print the text once.
  */
 const resolveColumnCellLines = (
   column: TemplateTableColumn,
@@ -328,6 +330,15 @@ const resolveColumnCellLines = (
     };
   };
   const nonEmpty = (entry: RenderedCellLine): boolean => entry.text.trim().length > 0;
+  const withoutRepeats = (entries: RenderedCellLine[]): RenderedCellLine[] => {
+    const seen = new Set<string>();
+    return entries.filter((entry) => {
+      const key = entry.text.trim();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
 
   // Primary lines decide whether the stack replaces the flat value; a
   // supplemental line (an annotation such as an optional-row marker) only
@@ -336,12 +347,12 @@ const resolveColumnCellLines = (
   const supplemental = column.lines.filter((line) => line.supplemental).map(resolveLine).filter(nonEmpty);
 
   if (primary.length > 0) {
-    return [...primary, ...supplemental];
+    return withoutRepeats([...primary, ...supplemental]);
   }
   if (supplemental.length > 0) {
     const value = resolveExpressionValue(column.value, evaluation, scope, ctx);
     const flat: RenderedCellLine = { text: formatValue(value ?? '', column.format, ctx) };
-    return [...(nonEmpty(flat) ? [flat] : []), ...supplemental];
+    return withoutRepeats([...(nonEmpty(flat) ? [flat] : []), ...supplemental]);
   }
   return null;
 };
@@ -401,7 +412,7 @@ const resolveTableStyle = (style: React.CSSProperties | undefined): React.CSSPro
 const buildAstCss = (ast: TemplateAst): string => {
   const baseCss = `
 .invoice-template-root {
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 14px;
   line-height: 1.35;
   color: #111827;

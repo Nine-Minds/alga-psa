@@ -851,11 +851,15 @@
           "notificationsRecipients": "Melden aan",
           "notificationsRecipientsPlaceholder": "Selecteer gebruikers en teams...",
           "notificationsRecipientsHelp": "Teamleden worden bij elke melding opnieuw opgezocht.",
+          "notificationsEmails": "E-mailadressen",
+          "notificationsEmailsPlaceholder": "Voeg een distributielijst of gedeelde mailbox toe...",
+          "notificationsEmailsHelp": "Deze adressen ontvangen de volledige ticketgegevens van elk overeenkomend ticket op dit bord, ook al zijn het geen Alga-gebruikers en geldt er geen toestemmingscontrole. Gebruik dit voor distributielijsten die u beheert. Kies een persoon met een Alga-account liever hierboven.",
+          "notificationsEmailInvalid": "Corrigeer of verwijder de ongeldige e-mailadressen in de meldingsregels.",
           "notificationsDefaultWatchers": "Standaardvolgers",
           "notificationsDefaultWatchersPlaceholder": "Selecteer gebruikers...",
           "notificationsDefaultWatchersHelp": "Toegevoegd aan de volgerslijst van elk nieuw ticket op dit bord en op de hoogte gebracht van elke latere update.",
           "notificationsTriggerRequired": "Elke meldingsregel heeft minstens één trigger nodig: het aanmaken van een ticket of een status.",
-          "notificationsRecipientRequired": "Elke meldingsregel heeft minstens één gebruiker of team nodig om te informeren.",
+          "notificationsRecipientRequired": "Elke meldingsregel heeft minstens één gebruiker, team of e-mailadres nodig om te informeren.",
           "notificationsFetchFailed": "Meldingsinstellingen laden mislukt",
           "notificationsStatusRemapFailed": "Het bord is aangemaakt, maar de status van een meldingsregel kon niet aan het nieuwe bord worden gekoppeld. Voeg de meldingsregels opnieuw toe.",
           "inbound": "E-mail & inkomende antwoorden",
@@ -1854,10 +1858,15 @@
         "label": "Meldingen inschakelen",
         "description": "Alle meldingen voor deze tenant in- of uitschakelen"
       },
+      "defaultDontNotifyCustomer": {
+        "label": "Tickets starten met \"Klant niet informeren\" aangevinkt",
+        "description": "Ticketopmerkingen, status- en contactwijzigingen en afsluitingen starten zonder klantmeldingen. Medewerkers kunnen het vakje uitvinken om de klant voor een enkele actie te informeren."
+      },
       "loading": "Meldingsinstellingen laden...",
       "loadError": "Kan instellingen niet laden",
       "save": "Wijzigingen opslaan",
-      "saving": "Opslaan..."
+      "saving": "Opslaan...",
+      "saveError": "Meldingsinstellingen konden niet worden opgeslagen"
     },
     "emailTemplatesUi": {
       "preview": {

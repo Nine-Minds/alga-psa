@@ -24,9 +24,10 @@ vi.mock('@/lib/co-managed/sharedTicketDataSource', () => ({
   createCoManagedSharedTicketDataSource: (_s: any, _b: any, options: any) => { mocks.sourceOptions.push(options); return { __time: options.time }; },
   sharedTicketOptions: () => ({}), sharedTicketRecord: () => ({ ticket_id: 't1', ticket_number: 'T-1', title: 'Shared' }),
 }));
-vi.mock('@/lib/co-managed/sharedConversationMapping', () => ({ conversationAuthorMaps: () => ({ userMap: {}, contactMap: {} }) }));
-vi.mock('../../../components/co-managed/sharedConversationSession', () => ({
-  createSharedConversationSession: () => ({ load: async () => undefined, snapshot: () => null, comments: () => [] }),
+vi.mock('../../../lib/actions/coManagedTicketConversationActions', () => ({
+  getCoManagedTicketConversationScreenAction: async () => ({
+    items: [], nextBefore: null, actor: { tenant: 'home-a', userId: 'user-a' }, writeAudiences: [],
+  }),
 }));
 vi.mock('../../../components/co-managed/useCoManagedSharedTimeConfig', () => ({ useCoManagedSharedTimeConfig: () => ({}) }));
 vi.mock('../../../lib/actions/coManagedLocalTicketActions', () => ({ getCoManagedLocalTicketResourceAction: async () => null }));

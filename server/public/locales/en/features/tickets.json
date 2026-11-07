@@ -1659,7 +1659,9 @@
       "agentAlreadyAssigned": "This user is already assigned as an additional agent.",
       "teamNotFound": "Team not found. It may have been deleted. Please refresh and try again.",
       "teamLeadNotFound": "The selected team does not have a team lead. Choose another team or assign a lead first.",
-      "commentNotFound": "Comment not found. It may have been deleted. Please refresh and try again."
+      "commentNotFound": "Comment not found. It may have been deleted. Please refresh and try again.",
+      "boardNotFound": "Board not found. It may have been deleted. Please refresh and try again.",
+      "boardInactive": "The destination board is inactive. Choose an active board."
     },
     "bundle": {
       "masterAlreadyBundleMaster": "Ticket {{tickets}} is already a bundle master and cannot be added as children. Unbundle them first, or use one of them as the master.",
@@ -1695,7 +1697,14 @@
       "referenceInvalid": "The selected board, status, priority, assignee, team, or SLA policy is no longer valid. Please refresh and try again.",
       "duplicateName": "A board with this name already exists.",
       "duplicate": "A board or status with the same settings already exists.",
-      "invalidValue": "One of the board or status values is invalid. Please refresh and try again."
+      "invalidValue": "One of the board or status values is invalid. Please refresh and try again.",
+      "notificationEmailInvalid": "Notification rule {{rule}} has an invalid email address (up to {{max}} characters)",
+      "notificationEmailLimit": "Notification rule {{rule}} can have at most {{max}} email addresses",
+      "notificationRecipientRequired": "Notification rule {{rule}} must notify at least one user, team or email address",
+      "notificationEmailIsUser": "Notification rule {{rule}}: {{address}} is an Alga user's email address. Choose the user instead.",
+      "notificationEmailIsContact": "Notification rule {{rule}}: {{address}} belongs to a client contact or location and cannot be a recipient.",
+      "notificationEmailClientDomain": "Notification rule {{rule}}: {{address}} is on a client's email domain and cannot be a recipient.",
+      "notificationEmailInboundMailbox": "Notification rule {{rule}}: {{address}} is a connected inbound mailbox and cannot be a recipient."
     },
     "material": {
       "invalidValue": "One of the selected material values is invalid. Please refresh and try again.",
@@ -2846,5 +2855,35 @@
       "notAvailable": "This canned response is not available for this ticket.",
       "notATeamMember": "You can only manage team responses for teams you belong to."
     }
+  },
+  "sharedSla": {
+    "title": "Service level",
+    "msp": "MSP service level",
+    "customer": "Customer service level",
+    "state": {
+      "running": "Running",
+      "paused": "Paused",
+      "met": "Met",
+      "breached": "Breached"
+    },
+    "target": {
+      "response": "First response",
+      "resolution": "Resolution"
+    },
+    "elapsed": "Elapsed {{time}}",
+    "dueAt": "Due {{date}}",
+    "completedAt": "Met {{date}}",
+    "breached": "Breached",
+    "targetPaused": "Paused",
+    "noTarget": "No target",
+    "duration": {
+      "hoursMinutes": "{{hours}}h {{minutes}}m",
+      "minutes": "{{minutes}}m"
+    },
+    "notStarted": "The clock starts when the ticket is escalated.",
+    "unavailable": "This service level is no longer available.",
+    "notConfigured": "No service level applies.",
+    "empty": "No service level is being tracked for this ticket yet.",
+    "loadError": "The service level could not be loaded."
   }
 }

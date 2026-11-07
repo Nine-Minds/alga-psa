@@ -1651,7 +1651,9 @@
       "agentAlreadyAssigned": "Deze gebruiker is al toegewezen als extra behandelaar.",
       "teamNotFound": "Team niet gevonden. Het is mogelijk verwijderd. Vernieuw de pagina en probeer het opnieuw.",
       "teamLeadNotFound": "Het geselecteerde team heeft geen teamleider. Kies een ander team of wijs eerst een teamleider toe.",
-      "commentNotFound": "Reactie niet gevonden. Deze is mogelijk verwijderd. Vernieuw de pagina en probeer het opnieuw."
+      "commentNotFound": "Reactie niet gevonden. Deze is mogelijk verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "boardNotFound": "Bord niet gevonden. Dit is mogelijk verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "boardInactive": "Het doelbord is inactief. Kies een actief bord."
     },
     "bundle": {
       "masterAlreadyBundleMaster": "Ticket {{tickets}} is al een hoofdticket van een bundel en kan niet als onderliggend ticket worden toegevoegd. Hef de bundel eerst op of gebruik het als hoofdticket.",
@@ -1687,7 +1689,14 @@
       "referenceInvalid": "Het geselecteerde bord, de status, de prioriteit, de behandelaar, het team of het SLA-beleid is niet langer geldig. Vernieuw de pagina en probeer het opnieuw.",
       "duplicateName": "Er bestaat al een bord met deze naam.",
       "duplicate": "Er bestaat al een bord of status met dezelfde instellingen.",
-      "invalidValue": "Een van de bord- of statuswaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw."
+      "invalidValue": "Een van de bord- of statuswaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "notificationEmailInvalid": "Meldingsregel {{rule}} bevat een ongeldig e-mailadres (maximaal {{max}} tekens)",
+      "notificationEmailLimit": "Meldingsregel {{rule}} mag maximaal {{max}} e-mailadressen bevatten",
+      "notificationRecipientRequired": "Meldingsregel {{rule}} moet minstens één gebruiker, team of e-mailadres informeren",
+      "notificationEmailIsUser": "Meldingsregel {{rule}}: {{address}} is het e-mailadres van een Alga-gebruiker. Kies in plaats daarvan de gebruiker.",
+      "notificationEmailIsContact": "Meldingsregel {{rule}}: {{address}} hoort bij een klantcontact of locatie en kan geen ontvanger zijn.",
+      "notificationEmailClientDomain": "Meldingsregel {{rule}}: {{address}} staat op het e-maildomein van een klant en kan geen ontvanger zijn.",
+      "notificationEmailInboundMailbox": "Meldingsregel {{rule}}: {{address}} is een gekoppelde inkomende mailbox en kan geen ontvanger zijn."
     },
     "material": {
       "invalidValue": "Een van de geselecteerde materiaalwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
@@ -2846,5 +2855,35 @@
       "notAvailable": "Dit standaardantwoord is niet beschikbaar voor dit ticket.",
       "notATeamMember": "U kunt teamantwoorden alleen beheren voor teams waartoe u behoort."
     }
+  },
+  "sharedSla": {
+    "title": "Serviceniveau",
+    "msp": "Serviceniveau van de MSP",
+    "customer": "Serviceniveau van de klant",
+    "state": {
+      "running": "Loopt",
+      "paused": "Gepauzeerd",
+      "met": "Gehaald",
+      "breached": "Overschreden"
+    },
+    "target": {
+      "response": "Eerste reactie",
+      "resolution": "Oplossing"
+    },
+    "elapsed": "Verstreken: {{time}}",
+    "dueAt": "Deadline: {{date}}",
+    "completedAt": "Gehaald op {{date}}",
+    "breached": "Overschreden",
+    "targetPaused": "Gepauzeerd",
+    "noTarget": "Geen doel",
+    "duration": {
+      "hoursMinutes": "{{hours}} u {{minutes}} min",
+      "minutes": "{{minutes}} min"
+    },
+    "notStarted": "De klok start wanneer het ticket wordt geëscaleerd.",
+    "unavailable": "Dit serviceniveau is niet meer beschikbaar.",
+    "notConfigured": "Er is geen serviceniveau van toepassing.",
+    "empty": "Voor dit ticket wordt nog geen serviceniveau bijgehouden.",
+    "loadError": "Het serviceniveau kon niet worden geladen."
   }
 }

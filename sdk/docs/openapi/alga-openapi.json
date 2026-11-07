@@ -224,6 +224,9 @@
       "name": "calendar"
     },
     {
+      "name": "capabilities"
+    },
+    {
       "name": "chat"
     },
     {
@@ -231,6 +234,9 @@
     },
     {
       "name": "clients"
+    },
+    {
+      "name": "co-management"
     },
     {
       "name": "documents"
@@ -266,6 +272,9 @@
       "name": "inventory"
     },
     {
+      "name": "labels"
+    },
+    {
       "name": "marketing"
     },
     {
@@ -281,6 +290,9 @@
       "name": "mobile"
     },
     {
+      "name": "notifications"
+    },
+    {
       "name": "online-meetings"
     },
     {
@@ -291,6 +303,12 @@
     },
     {
       "name": "platform-reports"
+    },
+    {
+      "name": "portal-domain"
+    },
+    {
+      "name": "projects"
     },
     {
       "name": "public"
@@ -324,6 +342,9 @@
     },
     {
       "name": "tickets"
+    },
+    {
+      "name": "time-entries"
     },
     {
       "name": "webhooks"
@@ -11378,6 +11399,15 @@
           "contract_line_ids"
         ]
       },
+      "BulkDeleteContractLinesQuery": {
+        "type": "object",
+        "properties": {
+          "contract_line_ids": {
+            "type": "string",
+            "description": "Comma-separated contract line UUIDs. DELETE-only alternative to the request body, for clients that cannot send a body on DELETE."
+          }
+        }
+      },
       "BulkAddServicesBody": {
         "type": "object",
         "properties": {
@@ -11420,6 +11450,20 @@
           "contract_line_id",
           "service_ids"
         ]
+      },
+      "BulkRemoveServicesQuery": {
+        "type": "object",
+        "properties": {
+          "contract_line_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Contract line UUID. DELETE-only alternative to the request body."
+          },
+          "service_ids": {
+            "type": "string",
+            "description": "Comma-separated service UUIDs. DELETE-only alternative to the request body, for clients that cannot send a body on DELETE."
+          }
+        }
       },
       "CreateContractLineTemplateBody": {
         "type": "object",
@@ -23484,13 +23528,17 @@
             "format": "uuid"
           },
           "user_id": {
-            "type": "string",
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "uuid"
           },
           "author_type": {
             "type": "string",
             "enum": [
-              "internal"
+              "internal",
+              "client"
             ]
           },
           "note": {
@@ -23530,7 +23578,10 @@
             ],
             "properties": {
               "user_id": {
-                "type": "string",
+                "type": [
+                  "string",
+                  "null"
+                ],
                 "format": "uuid"
               },
               "first_name": {
@@ -23565,6 +23616,30 @@
               "email",
               "avatar_url"
             ]
+          },
+          "organization_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "author_kind": {
+            "type": "string",
+            "enum": [
+              "user",
+              "contact"
+            ]
+          },
+          "audience": {
+            "type": "string",
+            "enum": [
+              "requester",
+              "shared_it",
+              "organization_private"
+            ]
+          },
+          "collaboration_revision": {
+            "type": "integer"
           },
           "reactions": {
             "type": "array",
@@ -30395,6 +30470,10 @@
                   },
                   "contactsUpdate": {
                     "type": "boolean"
+                  },
+                  "dontNotifyCustomerDefault": {
+                    "type": "boolean",
+                    "description": "Tenant setting: every \"Don't notify the customer\" checkbox starts ticked."
                   }
                 },
                 "required": [
@@ -30407,7 +30486,8 @@
                   "clientsCreate",
                   "clientsUpdate",
                   "contactsCreate",
-                  "contactsUpdate"
+                  "contactsUpdate",
+                  "dontNotifyCustomerDefault"
                 ]
               },
               "formatting": {
@@ -51044,7 +51124,7 @@
       },
       "delete": {
         "summary": "Bulk delete contract lines",
-        "description": "Alias route to bulkDeleteContractLines; deletes multiple contract lines by ID list.",
+        "description": "Alias route to bulkDeleteContractLines; deletes multiple contract lines by ID list. The ids may come from the request body or, for clients that cannot send a body on DELETE, from the `contract_line_ids` query parameter.",
         "tags": [
           "Contract Lines"
         ],
@@ -51062,8 +51142,20 @@
         "x-alga-products": [
           "psa"
         ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated contract line UUIDs. DELETE-only alternative to the request body, for clients that cannot send a body on DELETE."
+            },
+            "required": false,
+            "description": "Comma-separated contract line UUIDs. DELETE-only alternative to the request body, for clients that cannot send a body on DELETE.",
+            "name": "contract_line_ids",
+            "in": "query"
+          }
+        ],
         "requestBody": {
-          "required": true,
+          "required": false,
           "content": {
             "application/json": {
               "schema": {
@@ -51084,7 +51176,7 @@
             }
           },
           "400": {
-            "description": "Invalid request payload.",
+            "description": "Invalid, unparseable or missing request payload (no body and no `contract_line_ids` query parameter).",
             "content": {
               "application/json": {
                 "schema": {
@@ -51269,7 +51361,92 @@
     "/api/v1/contract-lines/bulk/delete": {
       "delete": {
         "summary": "Bulk delete contract lines (explicit route)",
-        "description": "Same controller behavior as DELETE /api/v1/contract-lines/bulk.",
+        "description": "Same controller behavior as DELETE /api/v1/contract-lines/bulk. The ids may come from the request body or from the `contract_line_ids` query parameter.",
+        "tags": [
+          "Contract Lines"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-source": "middleware API-key presence + request context requirement in controller",
+          "x-request-context-required": true,
+          "x-request-context-wiring-gap": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated contract line UUIDs. DELETE-only alternative to the request body, for clients that cannot send a body on DELETE."
+            },
+            "required": false,
+            "description": "Comma-separated contract line UUIDs. DELETE-only alternative to the request body, for clients that cannot send a body on DELETE.",
+            "name": "contract_line_ids",
+            "in": "query"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkDeleteContractLinesBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Bulk delete completed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid, unparseable or missing request payload (no body and no `contract_line_ids` query parameter).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Request context missing or delete blocked by dependency rules.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Bulk delete contract lines (POST alias)",
+        "description": "Same controller behavior as DELETE /api/v1/contract-lines/bulk/delete, for clients that cannot send a body on DELETE.",
         "tags": [
           "Contract Lines"
         ],
@@ -51309,7 +51486,7 @@
             }
           },
           "400": {
-            "description": "Invalid request payload.",
+            "description": "Invalid, unparseable or missing request payload.",
             "content": {
               "application/json": {
                 "schema": {
@@ -51420,7 +51597,104 @@
     "/api/v1/contract-lines/bulk/remove-services": {
       "delete": {
         "summary": "Bulk remove services from contract line",
-        "description": "Removes multiple services from one contract_line_id and returns per-service success/failure results.",
+        "description": "Removes multiple services from one contract_line_id and returns per-service success/failure results. The ids may come from the request body or, for clients that cannot send a body on DELETE, from the `contract_line_id` + `service_ids` query parameters.",
+        "tags": [
+          "Contract Lines"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-source": "middleware API-key presence + request context requirement in controller",
+          "x-request-context-required": true,
+          "x-request-context-wiring-gap": true,
+          "x-partial-failures-in-response": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Contract line UUID. DELETE-only alternative to the request body."
+            },
+            "required": false,
+            "description": "Contract line UUID. DELETE-only alternative to the request body.",
+            "name": "contract_line_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated service UUIDs. DELETE-only alternative to the request body, for clients that cannot send a body on DELETE."
+            },
+            "required": false,
+            "description": "Comma-separated service UUIDs. DELETE-only alternative to the request body, for clients that cannot send a body on DELETE.",
+            "name": "service_ids",
+            "in": "query"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkRemoveServicesBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Bulk service removal completed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid, unparseable or missing request payload (no body and no `contract_line_id` + `service_ids` query parameters).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Request context missing or unhandled service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Bulk remove services from contract line (POST alias)",
+        "description": "Same controller behavior as DELETE /api/v1/contract-lines/bulk/remove-services, for clients that cannot send a body on DELETE.",
         "tags": [
           "Contract Lines"
         ],
@@ -51461,7 +51735,7 @@
             }
           },
           "400": {
-            "description": "Invalid request payload.",
+            "description": "Invalid, unparseable or missing request payload.",
             "content": {
               "application/json": {
                 "schema": {
@@ -129476,6 +129750,54 @@
         }
       }
     },
+    "/api/client-portal/conversation-attachments/{attachmentId}": {
+      "get": {
+        "summary": "GET client-portal",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "client-portal"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/client-portal/documents/{documentId}/export": {
       "get": {
         "summary": "GET client-portal",
@@ -129694,6 +130016,156 @@
         ],
         "responses": {
           "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/co-management/archive-files/{archiveFileId}": {
+      "get": {
+        "summary": "GET co-management",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "co-management"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/co-management/attachments/{attachmentId}": {
+      "get": {
+        "summary": "GET co-management",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "co-management"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/co-management/export": {
+      "post": {
+        "summary": "POST co-management",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "co-management"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [],
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "description": "Placeholder request body",
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
             "description": "Placeholder success response",
             "content": {
               "application/json": {
@@ -133336,6 +133808,54 @@
         }
       }
     },
+    "/api/inventory/rma/{id}/document": {
+      "get": {
+        "summary": "GET inventory",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "inventory"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/inventory/sales-orders/{id}/document": {
       "get": {
         "summary": "GET inventory",
@@ -133412,6 +133932,156 @@
         },
         "responses": {
           "201": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/labels/linked-assets": {
+      "get": {
+        "summary": "GET labels",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "labels"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/labels/pdf": {
+      "post": {
+        "summary": "POST labels",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "labels"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [],
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "description": "Placeholder request body",
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/labels/templates": {
+      "get": {
+        "summary": "GET labels",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "labels"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [],
+        "responses": {
+          "200": {
             "description": "Placeholder success response",
             "content": {
               "application/json": {
@@ -134236,12 +134906,202 @@
         }
       }
     },
+    "/api/notifications/live-token": {
+      "get": {
+        "summary": "GET notifications",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "notifications"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/online-meetings/artifacts/{artifactId}": {
+      "get": {
+        "summary": "GET online-meetings",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "online-meetings"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/online-meetings/recordings/{artifactId}": {
       "get": {
         "summary": "GET online-meetings",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
           "online-meetings"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portal-domain/surface": {
+      "get": {
+        "summary": "GET portal-domain",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "portal-domain"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/staging/containers/{id}/manifest": {
+      "get": {
+        "summary": "GET projects",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "projects"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -137122,6 +137982,54 @@
         }
       }
     },
+    "/api/tickets/{id}/email-html": {
+      "get": {
+        "summary": "GET tickets",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "tickets"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/tickets/{id}/live-token": {
       "get": {
         "summary": "GET tickets",
@@ -137430,6 +138338,52 @@
         "x-alga-products": [
           "psa"
         ],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/capabilities/co-managed": {
+      "get": {
+        "summary": "GET v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "capabilities"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [],
         "responses": {
           "200": {
             "description": "Placeholder success response",
@@ -142766,6 +143720,66 @@
         }
       }
     },
+    "/api/v1/time-entries/cancel-tracking/{sessionId}": {
+      "post": {
+        "summary": "POST v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "time-entries"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "description": "Placeholder request body",
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/webhooks/ai-gateway": {
       "options": {
         "summary": "OPTIONS webhooks",
@@ -142875,6 +143889,112 @@
     "/api/webhooks/alternative-payments": {
       "get": {
         "summary": "GET webhooks",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "webhooks"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "POST webhooks",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "webhooks"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "description": "Placeholder request body",
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/webhooks/datto": {
+      "options": {
+        "summary": "OPTIONS webhooks",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
           "webhooks"

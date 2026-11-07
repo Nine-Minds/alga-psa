@@ -3,14 +3,15 @@
 import type { ElementType } from 'react';
 import { TIER_FEATURES } from '@alga-psa/types';
 import {
+  Activity,
   AtSign,
-  BarChart3,
   Bell,
   BookOpen,
   Building2,
   Calendar,
   CalendarClock,
   CheckCircle,
+  ClipboardCheck,
   ClipboardList,
   Clock,
   Coins,
@@ -26,11 +27,11 @@ import {
   Gauge,
   Ghost,
   Handshake,
+  HardDrive,
   HelpCircle,
   Home,
   KeyRound,
   Layers3,
-  LayoutDashboard,
   LayoutTemplate,
   MessageSquareText,
   ListTodo,
@@ -39,7 +40,6 @@ import {
   Mail,
   MapPin,
   Megaphone,
-  Monitor,
   Package,
   Palette,
   Percent,
@@ -52,12 +52,12 @@ import {
   Share2,
   Shield,
   SlidersHorizontal,
+  SquareActivity,
   SquareDashedKanban,
   Timer,
   User,
   UserCog,
   Users,
-  Star,
   Target,
   Repeat,
   Ticket,
@@ -80,7 +80,8 @@ export interface MenuItem {
   href?: string;
   /**
    * Route prefixes that belong to this item although they live outside `href`
-   * (detail pages such as a workflow run). Used to label the header breadcrumb.
+   * (detail pages such as a workflow run). Used to label the header breadcrumb
+   * and to keep the parent row highlighted across the whole subtree.
    */
   relatedPaths?: readonly string[];
   subItems?: MenuItem[];
@@ -113,7 +114,9 @@ export const navigationSections: NavigationSection[] = [
       {
         name: 'User Activities',
         translationKey: 'nav.userActivities',
-        icon: BarChart3,
+        // Not a bar chart: that glyph family belongs to Reports, and a collapsed
+        // rail reader guesses "Reports" every time it appears here.
+        icon: ListChecks,
         href: '/msp/user-activities'
       },
       {
@@ -138,7 +141,8 @@ export const navigationSections: NavigationSection[] = [
       {
         name: 'Surveys',
         translationKey: 'nav.surveys',
-        icon: Star,
+        // A star reads as "favourites", not "surveys".
+        icon: ClipboardCheck,
         href: '/msp/surveys/dashboard'
       },
       {
@@ -200,9 +204,10 @@ export const navigationSections: NavigationSection[] = [
       {
         name: 'Assets',
         translationKey: 'nav.assets',
-        icon: Monitor,
+        // A screen is the System Monitoring metaphor; assets are devices.
+        icon: HardDrive,
         subItems: [
-          { name: 'All Assets', translationKey: 'nav.assetsAll', icon: Monitor, href: '/msp/assets' },
+          { name: 'All Assets', translationKey: 'nav.assetsAll', icon: HardDrive, href: '/msp/assets' },
           { name: 'Maintenance', translationKey: 'nav.assetsMaintenance', icon: Wrench, href: '/msp/assets/maintenance' },
           { name: 'Equipment in custody', translationKey: 'nav.assetsCustody', icon: PackageOpen, href: '/msp/assets/custody' }
         ]
@@ -284,9 +289,12 @@ export const navigationSections: NavigationSection[] = [
       {
         name: 'System Monitoring',
         translationKey: 'nav.systemMonitoring',
-        icon: LayoutDashboard,
+        // A screen with an activity trace — the monitoring metaphor, and the same
+        // glyph the dashboard's System Monitoring card uses.
+        icon: SquareActivity,
         subItems: [
-          { name: 'Job Monitoring', translationKey: 'nav.jobMonitoring', icon: LayoutDashboard, href: '/msp/jobs' },
+          // Same glyph the header's job activity indicator uses for /msp/jobs.
+          { name: 'Job Monitoring', translationKey: 'nav.jobMonitoring', icon: Activity, href: '/msp/jobs' },
           { name: 'Email Logs', translationKey: 'nav.emailLogs', icon: Mail, href: '/msp/email-logs' },
         ]
       },
@@ -309,6 +317,9 @@ export const bottomMenuItems: MenuItem[] = [
     name: 'Settings',
     translationKey: 'sidebar.settings',
     icon: Settings,
+    // The quick links below only cover three of the settings pages; without these
+    // prefixes the main nav has nothing highlighted anywhere else under settings.
+    relatedPaths: ['/msp/settings', '/msp/licenses'],
     subItems: [
       { name: 'General', translationKey: 'settings.tabs.general', icon: SlidersHorizontal, href: '/msp/settings' },
       { name: 'Profile', translationKey: 'settings.tabs.profile', icon: User, href: '/msp/profile' },
@@ -354,7 +365,7 @@ export const settingsNavigationSections: NavigationSection[] = [
       { name: 'Tags', translationKey: 'settings.tabs.tags', icon: Tags, href: '/msp/settings/tags' },
       { name: 'SLA', translationKey: 'settings.tabs.sla', icon: Timer, href: '/msp/settings/sla' },
       { name: 'Projects', translationKey: 'settings.tabs.projects', icon: ListTodo, href: '/msp/settings/projects' },
-      { name: 'Assets', translationKey: 'settings.tabs.assets', icon: Monitor, href: '/msp/settings/assets' },
+      { name: 'Assets', translationKey: 'settings.tabs.assets', icon: HardDrive, href: '/msp/settings/assets' },
       { name: 'Interactions', translationKey: 'settings.tabs.interactions', icon: Handshake, href: '/msp/settings/interactions' },
       { name: 'Opportunities', translationKey: 'settings.tabs.opportunities', icon: Target, href: '/msp/settings/opportunities' },
     ]

@@ -2274,5 +2274,6 @@
         "inventoryStock": "Potrzebujesz dostępu do magazynu, aby zobaczyć stany zapasów."
       }
     }
-  }
+  },
+  "backToSharedTasks": "← Wróć do udostępnionych zadań"
 }
