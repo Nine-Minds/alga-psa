@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import {
   TENANT_TABLE_MANIFEST,
   TenantManifestCycleError,
@@ -7,7 +9,9 @@ import {
   tenantDeletionOrder,
   type TenantTableEntry,
 } from './tenantTableManifest';
-import type { TenantTableForeignKey } from './tenantTableForeignKeys';
+import { TENANT_TABLE_FOREIGN_KEYS, type TenantTableForeignKey } from './tenantTableForeignKeys';
+
+const ACTIVITY = path.resolve(__dirname, '../../../../ee/temporal-workflows/src/activities/tenant-deletion-activities.ts');
 
 describe('shared tenant table manifest', () => {
   it('preserves the declared deletion order with no restrictive FK violations', () => {
@@ -15,8 +19,49 @@ describe('shared tenant table manifest', () => {
     const computed = computeTenantDeletionOrder(TENANT_TABLE_MANIFEST);
     expect(computed.violations).toEqual([]);
     expect(computed.order).toEqual(order);
-    expect(order).toHaveLength(600);
+    expect(order).toHaveLength(601);
     expect(new Set(order).size).toBe(order.length);
+  });
+
+  it('deletes client-keyed fixed-fee entries before their ordered foreign-key parents', () => {
+    const table = 'ticket_fixed_fee_services';
+    const entry = TENANT_TABLE_MANIFEST.find(entry => entry.table === table);
+    expect(entry).toMatchObject({ deletion: 'ordered', clientKeyed: true });
+    const order = tenantDeletionOrder();
+    const foreignKeys = TENANT_TABLE_FOREIGN_KEYS.filter(fk => fk.child === table);
+    expect(foreignKeys.map(fk => fk.parent).sort()).toEqual(['clients', 'service_catalog', 'tenants', 'tickets']);
+    expect(order.indexOf(table)).toBeGreaterThan(-1);
+    for (const fk of foreignKeys.filter(fk => fk.parent !== 'tenants')) {
+      expect(order.indexOf(table), fk.name).toBeLessThan(order.indexOf(fk.parent));
+    }
+  });
+
+  it('declares the eight breakCircularDependencies FKs as null-before-delete', () => {
+    const declared = TENANT_TABLE_MANIFEST.flatMap(e => (e.references ?? []).map(r => `${e.table}.${r.column}->${r.table}`)).sort();
+    expect(declared).toEqual([
+      'assets.stock_unit_id->stock_units',
+      'authorization_bundles.published_revision_id->authorization_bundle_revisions',
+      'clients.account_manager_id->users',
+      'contacts.client_id->clients',
+      'inbound_ticket_defaults.client_id->clients',
+      'opportunities.suggestion_id->opportunity_suggestions',
+      'statuses.board_id->boards',
+      'stock_units.allocated_staging_line_id->project_staging_lines',
+    ]);
+  });
+
+  it('keeps the eight declarations in step with the breakCircularDependencies source', () => {
+    const src = readFileSync(ACTIVITY, 'utf-8');
+    const start = src.indexOf('breakCircularDependencies');
+    expect(start).toBeGreaterThan(-1);
+    const body = src.slice(start);
+    for (const [table, column] of [
+      ['assets', 'stock_unit_id'], ['authorization_bundles', 'published_revision_id'], ['clients', 'account_manager_id'],
+      ['contacts', 'client_id'], ['inbound_ticket_defaults', 'client_id'], ['opportunities', 'suggestion_id'],
+      ['statuses', 'board_id'], ['stock_units', 'allocated_staging_line_id'],
+    ]) {
+      expect(body, `${table}.${column}`).toMatch(new RegExp(`${table}[\\s\\S]{0,400}${column}`));
+    }
   });
 });
 

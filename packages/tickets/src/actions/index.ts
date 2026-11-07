@@ -40,6 +40,7 @@ export * from './ticketCategoryActions';
 export * from './ticketResourceActions';
 export * from './teamAssignmentActions';
 export * from './materialCatalogActions';
+export * from './ticketFixedFeeActions';
 export * from './ticketExportActions';
 export * from './ticketImportActions';
 export * from './ticketActivityActions';
