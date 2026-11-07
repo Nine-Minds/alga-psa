@@ -14,7 +14,8 @@ import {
 } from './applyEmailBrandingState';
 import type { EmailBrandingTemplateStatus } from '../../lib/emailBranding';
 
-const dialogSource = readFileSync(resolve(__dirname, 'ApplyEmailBrandingDialog.tsx'), 'utf8');
+// Normalize CRLF so the multi-line assertions below match on Windows checkouts too.
+const dialogSource = readFileSync(resolve(__dirname, 'ApplyEmailBrandingDialog.tsx'), 'utf8').replace(/\r\n/g, '\n');
 
 const row = (
   name: string,

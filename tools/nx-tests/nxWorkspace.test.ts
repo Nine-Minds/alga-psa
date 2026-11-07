@@ -6,11 +6,18 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const execFileAsync = promisify(execFile);
-const nxBin = path.resolve(process.cwd(), 'node_modules/.bin/nx');
+// execFile can't spawn the extensionless POSIX shim on Windows; use the .cmd shim there.
+const isWindows = process.platform === 'win32';
+const nxBin = path.resolve(
+  process.cwd(),
+  isWindows ? 'node_modules/.bin/nx.cmd' : 'node_modules/.bin/nx',
+);
 
 async function runNx(args: string[]) {
   const { stdout } = await execFileAsync(nxBin, args, {
     cwd: process.cwd(),
+    // Node refuses to spawn .cmd shims directly (EINVAL since the CVE-2024-31811 fixes).
+    ...(isWindows ? { shell: true } : {}),
     env: {
       ...process.env,
       NX_DAEMON: 'false',

@@ -1,5 +1,5 @@
 const path = require('node:path');
-const { wrapEmailLayout } = require('../../_shared/emailLayout.cjs');
+const { wrapEmailLayout } = require('./emailLayout.cjs');
 const {
   BADGE_BG,
   BRAND_DARK,
@@ -7,9 +7,9 @@ const {
   INFO_BOX_BG,
   INFO_BOX_BORDER,
   SUPPORTED_LANGUAGES,
-} = require('../../_shared/constants.cjs');
+} = require('./constants.cjs');
 
-const localeRoot = path.resolve(__dirname, '../../../../../public/locales');
+const localeRoot = path.resolve(__dirname, '../../../../public/locales');
 const requiredKeys = Object.keys(require(path.join(localeRoot, 'en', 'email.json')).ticketClosed);
 
 function copyFor(language) {

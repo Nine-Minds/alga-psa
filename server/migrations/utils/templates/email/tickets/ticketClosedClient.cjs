@@ -1,3 +1,3 @@
-const { getClientTemplate } = require('./ticketClosedAudience.cjs');
+const { getClientTemplate } = require('../../_shared/ticketClosedAudience.cjs');
 
 module.exports = { getTemplate: getClientTemplate };

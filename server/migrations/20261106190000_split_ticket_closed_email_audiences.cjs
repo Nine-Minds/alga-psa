@@ -3,7 +3,7 @@ const { upsertEmailTemplate } = require('./utils/templates/_shared/upsertEmailTe
 const {
   getClientTemplate,
   getInternalTemplate,
-} = require('./utils/templates/email/tickets/ticketClosedAudience.cjs');
+} = require('./utils/templates/_shared/ticketClosedAudience.cjs');
 
 const audiences = [
   { subtype: 'Ticket Closed Client', template: 'ticket-closed-client', getTemplate: getClientTemplate },
@@ -20,6 +20,7 @@ exports.up = async function up(knex) {
     .where({ category_id: category.id, name: 'Ticket Closed' })
     .first();
   for (const audience of audiences) {
+    // migration-lint: allow 5 - two new subtype rows only, one per audience, loop-bounded by the static audience list
     await knex('notification_subtypes').insert({
       category_id: category.id,
       name: audience.subtype,
@@ -56,6 +57,7 @@ exports.up = async function up(knex) {
         if (!subtypeId) throw new Error(`Missing notification subtype ${audience.subtype}`);
 
         if (oldSetting) {
+          // migration-lint: allow 5 - copies a single legacy setting row per tenant and audience; at most two inserts per tenant
           await db.table('tenant_notification_subtype_settings').insert({
             tenant,
             subtype_id: subtypeId,
@@ -65,6 +67,7 @@ exports.up = async function up(knex) {
         }
 
         if (oldPreferences.length) {
+          // migration-lint: allow 5 - per-tenant copy of legacy opt-in rows, bounded by that tenant's user count and run one tenant per transaction
           await db.table('user_notification_preferences').insert(oldPreferences.map((preference) => ({
             tenant,
             user_id: preference.user_id,
@@ -76,6 +79,7 @@ exports.up = async function up(knex) {
         }
 
         if (oldTemplates.length) {
+          // migration-lint: allow 5 - per-tenant copy of customised ticket-closed templates, bounded by installed languages and run one tenant per transaction
           await db.table('tenant_email_templates').insert(oldTemplates.map((template) => ({
             tenant,
             name: audience.template,

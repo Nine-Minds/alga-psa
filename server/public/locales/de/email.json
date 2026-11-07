@@ -3,7 +3,7 @@
     "title": "Ticket geschlossen",
     "subject": "Ticket geschlossen • {{ticket.title}}",
     "intro": "Ein Ticket für {{ticket.clientName}} wurde gelöst und geschlossen. Die Details zur Lösung finden Sie unten.",
-    "ticketNumber": "Ticket #",
+    "ticketNumber": "Ticket-Nr. ",
     "status": "Status",
     "closed": "Geschlossen",
     "closedBy": "Geschlossen von",
@@ -23,7 +23,7 @@
     "materials": "Materialien",
     "materialsTotal": "Materialkosten insgesamt",
     "resolution": "Lösung",
-    "footer": "Powered by AlgaPSA"
+    "footer": "Betrieben von AlgaPSA"
   },
   "ticketDetails": {
     "assets": {

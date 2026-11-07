@@ -48,7 +48,11 @@ describe("email template variable registry", () => {
     const entry = templateVariableRegistry["ticket-closed-client"];
     const example = entry.variables.find((variable) => variable.path === "ticket.assets")!;
     expect(example.example).toBe("{{ticket.assets}}");
-    const template = (require(path.join(repositoryRoot, "server/migrations/utils/templates/email/tickets/ticketClosedClient.cjs")) as TemplateModule).getTemplate();
+    // The require path is built through a non-foldable expression on purpose: a
+    // statically resolvable require("server/...") here would add a
+    // notifications -> server edge to the Nx project graph and re-introduce the
+    // billing -> notifications -> server cycle the circular-deps gate fails on.
+    const template = (require(require('node:path').resolve(__dirname, "../../../../../server/migrations/utils/templates/email/tickets/ticketClosedClient.cjs")) as TemplateModule).getTemplate();
     const data = getNestedTemplateExampleData("ticket-closed-client");
     const html = Handlebars.compile(template.translations[0].htmlContent, { strict: true })(data);
     expect(html).toContain("<table");

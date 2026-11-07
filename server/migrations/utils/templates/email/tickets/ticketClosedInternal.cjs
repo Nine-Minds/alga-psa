@@ -1,3 +1,3 @@
-const { getInternalTemplate } = require('./ticketClosedAudience.cjs');
+const { getInternalTemplate } = require('../../_shared/ticketClosedAudience.cjs');
 
 module.exports = { getTemplate: getInternalTemplate };
