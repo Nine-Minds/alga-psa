@@ -1,0 +1,69 @@
+{
+  "ticketClosed": {
+    "title": "Zgłoszenie zamknięte",
+    "subject": "Zgłoszenie zamknięte • {{ticket.title}}",
+    "intro": "Zgłoszenie dla {{ticket.clientName}} zostało rozwiązane i zamknięte. Szczegóły rozwiązania znajdują się poniżej.",
+    "ticketNumber": "Zgłoszenie nr ",
+    "status": "Status",
+    "closed": "Zamknięte",
+    "closedBy": "Zamknięte przez",
+    "assignedTo": "Przypisane do",
+    "requester": "Zgłaszający",
+    "category": "Kategoria",
+    "location": "Lokalizacja",
+    "totalTimeWorked": "Łączny czas pracy",
+    "totalBillableTime": "Łączny czas rozliczany",
+    "remainingHours": "Pozostałe godziny",
+    "devices": "Urządzenia",
+    "deviceName": "Nazwa",
+    "deviceType": "Typ",
+    "manufacturerModel": "Producent / Model",
+    "serialNumber": "Numer seryjny",
+    "timeEntries": "Wpisy czasu",
+    "materials": "Materiały",
+    "materialsTotal": "Łączny koszt materiałów",
+    "resolution": "Rozwiązanie",
+    "footer": "Obsługiwane przez AlgaPSA"
+  },
+  "ticketDetails": {
+    "assets": {
+      "columns": {
+        "assetTag": "Tag zasobu",
+        "name": "Nazwa",
+        "relationship": "Powiązanie",
+        "serialNumber": "Nr seryjny",
+        "status": "Status"
+      }
+    },
+    "duration": {
+      "hr": "godz.",
+      "hrs": "godz.",
+      "min": "min"
+    },
+    "materials": {
+      "columns": {
+        "amount": "Kwota",
+        "billed": "Rozliczono",
+        "item": "Pozycja",
+        "quantity": "Ilość",
+        "rate": "Stawka"
+      },
+      "fallback": "Materiał"
+    },
+    "no": "Nie",
+    "relationship": {
+      "affected": "Dotknięty",
+      "related": "Powiązany"
+    },
+    "time": {
+      "columns": {
+        "billable": "Do rozliczenia",
+        "date": "Data",
+        "technician": "Technik",
+        "worked": "Przepracowano"
+      },
+      "unknownTechnician": "Nieznany"
+    },
+    "yes": "Tak"
+  }
+}

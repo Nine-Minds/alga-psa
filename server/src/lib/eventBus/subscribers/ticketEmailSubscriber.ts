@@ -11,6 +11,13 @@ import {
   TicketCommentAddedEvent
 } from '@alga-psa/event-schemas';
 import { sendEventEmail, SendEmailParams } from '../../notifications/sendEventEmail';
+import {
+  buildTicketEmailDetailBlocks,
+  clientFacingDetailBlocks,
+  emptyTicketEmailDetailBlocks,
+  type TicketEmailDetailBlocks,
+} from '../../notifications/ticketEmailDetailBlocks';
+import { resolveEventEmailLocale } from '../../notifications/eventEmailLocale';
 import { resolveCoManagedCommentStep, audienceRecipients, coManagedSendFields } from '../../notifications/coManagedCommentDelivery';
 import { projectCoManagedNotificationSnapshot } from '@alga-psa/co-managed/sharedWorkProjection';
 import { EventEmailRetryQueue } from '../../notifications/EventEmailRetryQueue';
@@ -41,6 +48,7 @@ import {
   RetryableAccumulatorError,
 } from '../../notifications/NotificationAccumulator';
 import { isValidEmail } from '@alga-psa/core';
+import type { SupportedLocale } from '@alga-psa/core/i18n/config';
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { resolveTenantDefaultCountry } from '@alga-psa/tenancy/lib/tenantDefaultCountry';
 import {
@@ -55,6 +63,7 @@ import {
   extractActiveWatcherEmails,
   sendOneEmailPerWatcher,
   resolveInternalWatcherEmails,
+  resolveInternalWatcherUserIds,
 } from './watcherRecipients';
 import { readCommentEmailRecipients } from '@shared/lib/tickets/commentEmailRecipients';
 import type { CommentEmailRecipient, CommentEmailRecipients } from '@alga-psa/types';
@@ -592,7 +601,8 @@ function selectOneOffEmailRecipients(
 async function sendNotificationIfEnabled(
   params: SendEmailParams,
   subtypeName: string,
-  recipientUserId?: string
+  recipientUserId?: string,
+  requireSubtype = false,
 ): Promise<boolean> {
   try {
     if (!isValidEmail(params.to)) {
@@ -623,6 +633,9 @@ async function sendNotificationIfEnabled(
         subtypeName,
         recipient: params.to
       });
+      if (requireSubtype) {
+        return false;
+      }
       await sendEventEmail(params);
       return true;
     }
@@ -3486,6 +3499,71 @@ function resolveCloseEmailResolutions(
   };
 }
 
+function buildClosedTicketSummary(ticket: NonNullable<TicketEmailRow>) {
+  const safeString = (value?: unknown) => {
+    if (typeof value === 'string') return value.trim();
+    return value == null ? '' : String(value).trim();
+  };
+  const priority = safeString(ticket.priority_name) || 'Unspecified';
+  const status = safeString(ticket.status_name) || 'Unknown';
+  const assignedToName = safeString(ticket.assigned_to_name) || 'Unassigned';
+  const assignedEmail = safeString(ticket.assigned_to_email);
+  const assignedToEmail = assignedToName === 'Unassigned' ? 'Not assigned' : assignedEmail || 'Not provided';
+  const assignedDetails = assignedToName === 'Unassigned'
+    ? 'Unassigned'
+    : assignedEmail ? `${assignedToName} (${assignedEmail})` : assignedToName;
+  const requesterName = safeString(ticket.contact_name) || 'Not specified';
+  const requesterEmail = safeString(ticket.contact_email) || 'Not provided';
+  const requesterPhone = safeString(ticket.contact_phone) || 'Not provided';
+  const requesterContactParts = [requesterEmail, requesterPhone].filter((value) => value !== 'Not provided');
+  const requesterDetailsParts = [
+    ...(requesterName !== 'Not specified' ? [requesterName] : []),
+    ...requesterContactParts,
+  ];
+  const categoryName = safeString(ticket.category_name);
+  const subcategoryName = safeString(ticket.subcategory_name);
+  const addressLines = [displayAddressField(safeString(ticket.address_line1)), safeString(ticket.address_line2)].filter(Boolean);
+  const cityState = [displayAddressField(safeString(ticket.city)), safeString(ticket.state_province)].filter(Boolean).join(', ');
+  const postalCountry = [safeString(ticket.postal_code), displayCountry(undefined, safeString(ticket.country_code))].filter(Boolean).join(' ');
+  const locationDetails = [...addressLines, cityState, postalCountry].filter(Boolean).join(' · ');
+  const locationSummary = [safeString(ticket.location_name), locationDetails].filter(Boolean).join(' • ') || 'Not specified';
+
+  let rawDescription = '';
+  if (ticket.attributes && typeof ticket.attributes === 'object' && 'description' in ticket.attributes) {
+    rawDescription = safeString((ticket.attributes as Record<string, unknown>).description);
+  }
+  if (!rawDescription && 'description' in ticket) {
+    rawDescription = safeString(ticket.description);
+  }
+  const description = formatBlockNoteContent(rawDescription).text.trim() || 'No description provided.';
+
+  return {
+    id: ticket.ticket_number,
+    title: ticket.title,
+    description,
+    priority,
+    priorityColor: safeString(ticket.priority_color) || '#8A4DEA',
+    status,
+    metaLine: `Ticket #${ticket.ticket_number} · ${priority} Priority · ${status}`,
+    clientName: safeString(ticket.client_name) || 'Unassigned Client',
+    assignedToName,
+    assignedToEmail,
+    assignedDetails,
+    requesterName,
+    requesterEmail,
+    requesterPhone,
+    requesterContact: requesterContactParts.join(' · ') || 'Not provided',
+    requesterDetails: requesterDetailsParts.join(' · ') || 'Not specified',
+    board: safeString(ticket.board_name) || 'Not specified',
+    category: categoryName || 'Not categorized',
+    subcategory: subcategoryName || 'Not specified',
+    categoryDetails: categoryName && subcategoryName
+      ? `${categoryName} / ${subcategoryName}`
+      : categoryName || subcategoryName || 'Not categorized',
+    locationSummary,
+  };
+}
+
 async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
   const { payload } = event;
   const { tenantId } = payload;
@@ -3518,87 +3596,12 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
     };
 
     const emailTimeZone = await resolveEffectiveTimeZone(db, tenantId, closerUserId);
+    const emailDateFormat = await getTenantDateFormat(tenantId);
     // Shared context reused across recipients; use tenant default locale
     // (falls back to system default 'en').
     const emailLocale = await getTenantDefaultLocale(tenantId);
 
-    const priorityName = safeString(ticket.priority_name) || 'Unspecified';
-    const statusName = safeString(ticket.status_name) || 'Unknown';
-    const metaLine = `Ticket #${ticket.ticket_number} · ${priorityName} Priority · ${statusName}`;
-    const priorityColor = safeString(ticket.priority_color) || '#8A4DEA';
-
-    const clientName = safeString(ticket.client_name) || 'Unassigned Client';
-
-    const assignedToName = safeString(ticket.assigned_to_name) || 'Unassigned';
     const assignedEmail = safeString(ticket.assigned_to_email);
-    const assignedToEmailDisplay = assignedToName === 'Unassigned'
-      ? 'Not assigned'
-      : assignedEmail || 'Not provided';
-    const assignedDetails = assignedToName === 'Unassigned'
-      ? 'Unassigned'
-      : assignedEmail
-        ? `${assignedToName} (${assignedEmail})`
-        : assignedToName;
-
-    const requesterName = safeString(ticket.contact_name) || 'Not specified';
-    const requesterEmail = safeString(ticket.contact_email) || 'Not provided';
-    const requesterPhone = safeString(ticket.contact_phone) || 'Not provided';
-    const requesterContactParts: string[] = [];
-    if (requesterEmail && requesterEmail !== 'Not provided') {
-      requesterContactParts.push(requesterEmail);
-    }
-    if (requesterPhone && requesterPhone !== 'Not provided') {
-      requesterContactParts.push(requesterPhone);
-    }
-    const requesterDetailsParts: string[] = [];
-    if (requesterName && requesterName !== 'Not specified') {
-      requesterDetailsParts.push(requesterName);
-    }
-    requesterDetailsParts.push(...requesterContactParts);
-    const requesterContact = requesterContactParts.length > 0 ? requesterContactParts.join(' · ') : 'Not provided';
-    const requesterDetails = requesterDetailsParts.length > 0 ? requesterDetailsParts.join(' · ') : 'Not specified';
-
-    const boardName = safeString(ticket.board_name) || 'Not specified';
-    const categoryName = safeString(ticket.category_name);
-    const subcategoryName = safeString(ticket.subcategory_name);
-    const categoryDetails = categoryName && subcategoryName
-      ? `${categoryName} / ${subcategoryName}`
-      : categoryName || subcategoryName || 'Not categorized';
-
-    const locationSegments: string[] = [];
-    const locationName = safeString(ticket.location_name);
-    if (locationName) {
-      locationSegments.push(locationName);
-    }
-    const addressLines = [displayAddressField(safeString(ticket.address_line1)), safeString(ticket.address_line2)].filter(Boolean);
-    const cityState = [displayAddressField(safeString(ticket.city)), safeString(ticket.state_province)].filter(Boolean).join(', ');
-    const postalCountry = [safeString(ticket.postal_code), displayCountry(undefined, safeString(ticket.country_code))].filter(Boolean).join(' ');
-    const locationDetailsParts = [...addressLines];
-    if (cityState) {
-      locationDetailsParts.push(cityState);
-    }
-    if (postalCountry) {
-      locationDetailsParts.push(postalCountry);
-    }
-    if (locationDetailsParts.length > 0) {
-      locationSegments.push(locationDetailsParts.join(' · '));
-    }
-    const locationSummary = locationSegments.length > 0 ? locationSegments.join(' • ') : 'Not specified';
-
-    let rawDescription = '';
-    if (ticket.attributes && typeof ticket.attributes === 'object' && 'description' in ticket.attributes) {
-      rawDescription = safeString((ticket.attributes as Record<string, unknown>).description);
-    }
-    if (!rawDescription && 'description' in ticket) {
-      rawDescription = safeString((ticket as Record<string, unknown>).description);
-    }
-    // formatBlockNoteContent returns { html:'', text:'' } for empty or
-    // non-extractable BlockNote input — do NOT fall back to rawDescription
-    // here because it may be raw JSON we'd otherwise leak into the email.
-    const descriptionFormatting = formatBlockNoteContent(rawDescription);
-    const descriptionText = descriptionFormatting.text.trim();
-    const description = descriptionText || 'No description provided.';
-
     const changes = await formatChanges(db, payload.changes || {}, tenantId, emailTimeZone, emailLocale);
 
     // Get closer's name
@@ -3638,27 +3641,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
     const { internalUrl, portalUrl } = await resolveTicketLinks(db, tenantId, ticket.ticket_id, ticket.ticket_number);
 
     const baseTicketContext = {
-      id: ticket.ticket_number,
-      title: ticket.title,
-      description,
-      priority: priorityName,
-      priorityColor,
-      status: statusName,
-      metaLine,
-      clientName,
-      assignedToName,
-      assignedToEmail: assignedToEmailDisplay,
-      assignedDetails,
-      requesterName,
-      requesterEmail,
-      requesterPhone,
-      requesterContact,
-      requesterDetails,
-      board: boardName,
-      category: categoryName || 'Not categorized',
-      subcategory: subcategoryName || 'Not specified',
-      categoryDetails,
-      locationSummary,
+      ...buildClosedTicketSummary(ticket),
       changes,
       closedBy,
       // Client-safe by default: every context that spreads this base is
@@ -3690,10 +3673,33 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
     };
     const activeWatcherEmails = extractActiveWatcherEmails(ticket.attributes);
     const sentEmails = new Set<string>();
+    type DetailScope = { ticketId: string; clientId: string | null | undefined };
+    type ClosedEmailParams = Omit<TicketNotificationParams, 'context' | 'template'> & {
+      context: { ticket: Record<string, unknown> };
+      template: 'ticket-closed-client' | 'ticket-closed-internal';
+    };
+    const detailBlocksByScope = new Map<string, Promise<TicketEmailDetailBlocks>>();
+    const getDetailBlocks = (locale: SupportedLocale, scope: DetailScope): Promise<TicketEmailDetailBlocks> => {
+      const key = JSON.stringify([scope.ticketId, scope.clientId, locale]);
+      const existing = detailBlocksByScope.get(key);
+      if (existing) return existing;
+
+      const blocks = buildTicketEmailDetailBlocks(
+        db, tenantId, scope.ticketId, scope.clientId, emailTimeZone, locale, emailDateFormat,
+      ).catch((error: unknown) => {
+        logger.error('[TicketEmailSubscriber] Failed to build ticket detail blocks; sending without them', {
+          error, tenantId, ticketId: scope.ticketId, eventId: event.id, locale,
+        });
+        return emptyTicketEmailDetailBlocks();
+      });
+      detailBlocksByScope.set(key, blocks);
+      return blocks;
+    };
     const sendIfUnique = async (
-      params: TicketNotificationParams,
+      params: ClosedEmailParams,
       subtypeName: string,
-      recipientUserId?: string | null
+      recipientUserId?: string | null,
+      detailScope: DetailScope = { ticketId: ticket.ticket_id, clientId: ticket.client_id },
     ): Promise<boolean> => {
       const email = params.to?.trim();
       if (!isValidEmail(email)) {
@@ -3705,10 +3711,27 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
         return false;
       }
 
-      sentEmails.add(key);
+      const locale = await resolveEventEmailLocale({
+        ...params,
+        recipientUserId: recipientUserId ?? params.recipientUserId,
+      });
+      const blocks = await getDetailBlocks(locale, detailScope);
+      const audienceBlocks = params.template === 'ticket-closed-client'
+        ? clientFacingDetailBlocks(blocks)
+        : blocks;
       // The flag reports whether a message really went out, so the Cc/Bcc
       // fallback below never treats a gated send as "the requester was reached".
-      return sendNotificationIfEnabled({ ...params, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
+      const sent = await sendNotificationIfEnabled({
+        ...params,
+        locale,
+        context: { ...params.context, ticket: { ...params.context.ticket, ...audienceBlocks } },
+        mailClass: 'ticket',
+        boardId: params.boardId ?? ticket.board_id,
+      }, subtypeName, recipientUserId ?? undefined, true);
+      if (sent) {
+        sentEmails.add(key);
+      }
+      return sent;
     };
 
     // The requester is the `To` of the close message, so they never belong in
@@ -3754,13 +3777,14 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
         contactId: primaryContactId,
         to: primaryEmail,
         subject: `Ticket Closed: ${ticket.title}`,
-        template: 'ticket-closed',
+        template: 'ticket-closed-client',
         context: externalContext,
+        recipientClientId: ticket.client_id || undefined,
         replyContext: closeReplyContext,
         // Real Cc/Bcc headers from the resolution that closed the ticket, so
         // the requester sees who was copied and reply-all reaches them.
         ...oneOffHeaderParams,
-      }, 'Ticket Closed');
+      }, 'Ticket Closed Client');
       if (primaryCloseEmailSent) {
         markOneOffRecipientsSent();
       }
@@ -3777,7 +3801,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
         tenantId,
         ...emailEntityContext,
         subject: `Ticket Closed: ${ticket.title}`,
-        template: 'ticket-closed',
+        template: 'ticket-closed-client' as const,
         context: externalContext,
         replyContext: closeReplyContext,
         ...(ticket.client_id ? { recipientClientId: ticket.client_id } : {}),
@@ -3792,13 +3816,13 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
           to: firstCc.email,
           ...(remainingCc.length > 0 ? { cc: remainingCc } : {}),
           ...(oneOffBcc.length > 0 ? { bcc: oneOffBcc } : {}),
-        }, 'Ticket Closed');
+        }, 'Ticket Closed Client');
         if (sent) {
           markOneOffRecipientsSent();
         }
       } else {
         for (const entry of oneOffBcc) {
-          await sendIfUnique({ ...fallbackBase, to: entry.email }, 'Ticket Closed');
+          await sendIfUnique({ ...fallbackBase, to: entry.email }, 'Ticket Closed Client');
         }
       }
     }
@@ -3816,10 +3840,17 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       if (bundleChildren.length > 0) {
         const bundlePortalCtx = await resolvePortalLinkContext(db, tenantId);
         for (const child of bundleChildren) {
-          const childPrimaryEmail = safeString(child.contact_email) || safeString(child.client_email);
+          const childTicket = await fetchTicketForEmail(db, tenantId, child.ticket_id);
+          if (!childTicket) {
+            logger.warn('[TicketEmailSubscriber] Could not find bundled child for ticket closed email', {
+              tenantId, ticketId: child.ticket_id, eventId: event.id,
+            });
+            continue;
+          }
+          const childPrimaryEmail = safeString(childTicket.contact_email) || safeString(childTicket.client_email);
           if (!childPrimaryEmail) continue;
 
-          const childMeta = child.email_metadata || {};
+          const childMeta = childTicket.email_metadata || {};
           const childMessageId = childMeta.messageId;
           const headers: Record<string, string> = {};
           if (childMessageId) {
@@ -3828,57 +3859,59 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
             headers['References'] = [...refs, childMessageId].join(' ');
           }
 
-          const { portalUrl: childPortalUrl } = buildTicketLinks(bundlePortalCtx, child.ticket_id);
+          const { portalUrl: childPortalUrl } = buildTicketLinks(bundlePortalCtx, childTicket.ticket_id);
 
           await sendIfUnique({
             tenantId,
             entityType: 'ticket',
-            entityId: child.ticket_id,
+            entityId: childTicket.ticket_id,
+            contactId: safeString(childTicket.contact_email) && childTicket.contact_name_id
+              ? String(childTicket.contact_name_id).trim()
+              : undefined,
             to: childPrimaryEmail,
-            subject: `Ticket Closed: ${ticket.title}`,
-            template: 'ticket-closed',
+            subject: `Ticket Closed: ${childTicket.title}`,
+            template: 'ticket-closed-client',
             context: {
               ticket: {
-                ...baseTicketContext,
-                id: child.ticket_number,
-                clientName: safeString(child.client_name) || baseTicketContext.clientName,
-                requesterName: safeString(child.contact_name) || baseTicketContext.requesterName,
-                requesterEmail: safeString(child.contact_email) || safeString(child.client_email) || baseTicketContext.requesterEmail,
-                requesterPhone: safeString(child.contact_phone) || baseTicketContext.requesterPhone,
+                ...buildClosedTicketSummary(childTicket),
+                changes: '',
+                closedBy,
+                resolution: externalResolutionHtml,
                 url: childPortalUrl
               }
             },
             replyContext: {
-              ticketId: child.ticket_id,
+              ticketId: childTicket.ticket_id,
               threadId: childMeta.threadId
             },
             headers: Object.keys(headers).length > 0 ? headers : undefined,
-            recipientClientId: child.client_id || undefined
-          }, 'Ticket Closed (Bundled Child)');
+            recipientClientId: childTicket.client_id || undefined
+          }, 'Ticket Closed Client', undefined, { ticketId: childTicket.ticket_id, clientId: childTicket.client_id });
         }
       }
     }
 
-    // Send to assigned user if different from primary email
+    // Let the successful-send deduplication decide whether the assignee was
+    // already notified; a disabled client subtype must not suppress them.
     if (!shouldSendInternalTicketEmail(suppression)) {
       logger.debug('[TicketEmailSubscriber] Skipped ticket closed internal email notifications due to suppression', {
         eventId: event.id,
         ticketId: payload.ticketId,
         tenantId,
       });
-    } else if (assignedEmail && assignedEmail !== primaryEmail) {
+    } else if (assignedEmail) {
       await sendIfUnique({
         tenantId,
         ...emailEntityContext,
         to: assignedEmail,
         subject: `Ticket Closed: ${ticket.title}`,
-        template: 'ticket-closed',
+        template: 'ticket-closed-internal',
         context: internalContext,
         replyContext: {
           ticketId: ticket.ticket_id || payload.ticketId,
           threadId: ticket.email_metadata?.threadId
         },
-      }, 'Ticket Closed', ticket.assigned_to);
+      }, 'Ticket Closed Internal', ticket.assigned_to);
     }
 
     // Get and notify all additional resources
@@ -3893,22 +3926,23 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
             ...emailEntityContext,
             to: resource.email ?? '',
             subject: `Ticket Closed: ${ticket.title}`,
-            template: 'ticket-closed',
+            template: 'ticket-closed-internal',
             context: internalContext,
             replyContext: {
               ticketId: ticket.ticket_id || payload.ticketId,
               threadId: ticket.email_metadata?.threadId
             },
-          }, 'Ticket Closed', resource.user_id);
+          }, 'Ticket Closed Internal', resource.user_id);
         }
       }
     }
 
-    const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails);
+    const internalWatcherUserIds = await resolveInternalWatcherUserIds(db, tenantId, activeWatcherEmails);
     await sendOneEmailPerWatcher(
       activeWatcherEmails,
       async (watcherEmail) => {
-        const isInternalWatcher = internalWatcherEmails.has(normalizeRecipientEmail(watcherEmail));
+        const internalWatcherUserId = internalWatcherUserIds.get(normalizeRecipientEmail(watcherEmail));
+        const isInternalWatcher = Boolean(internalWatcherUserId);
         if (!shouldSendTicketClosedWatcherEmail(suppression, isInternalWatcher)) {
           logger.debug('[TicketEmailSubscriber] Skipped ticket closed watcher email due to suppression', {
             eventId: event.id,
@@ -3927,13 +3961,13 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
           ...emailEntityContext,
           to: watcherEmail,
           subject: `Ticket Closed: ${ticket.title}`,
-          template: 'ticket-closed',
+          template: isInternalWatcher ? 'ticket-closed-internal' : 'ticket-closed-client',
           context: watcherContext,
           replyContext: {
             ticketId: ticket.ticket_id || payload.ticketId,
             threadId: ticket.email_metadata?.threadId
           },
-        }, 'Ticket Closed');
+        }, isInternalWatcher ? 'Ticket Closed Internal' : 'Ticket Closed Client', internalWatcherUserId);
       },
       {
         excludeEmails: sentEmails,

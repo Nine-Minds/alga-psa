@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import type { NotificationCategory, NotificationSubtype, UserEmailPreferenceCategoryState, UserNotificationPreference } from '../types/notification';
 import { resolveEmailPreferenceEnabled } from './emailPreferenceState';
+import { LEGACY_TICKET_CLOSED_SUBTYPE } from '../lib/legacyEmailCatalog';
 
 type PreferenceTarget = { kind: 'category' | 'subtype'; id: number; enabled: boolean };
 
@@ -27,7 +28,7 @@ export async function readUserEmailPreferenceState(
   const subtypes = await subtypeQuery.select('ns.*',
     trx.raw('COALESCE(tss.is_enabled, true) as is_enabled'),
     trx.raw('COALESCE(tss.is_default_enabled, true) as is_default_enabled'),
-  ).orderBy('ns.name') as NotificationSubtype[];
+  ).whereNot('ns.name', LEGACY_TICKET_CLOSED_SUBTYPE).orderBy('ns.name') as NotificationSubtype[];
   const preferences = await db.table('user_notification_preferences')
     .where({ user_id: userId }).select('subtype_id', 'is_enabled');
   const overrides = new Map<number, boolean>(preferences.map(row => [row.subtype_id, row.is_enabled]));

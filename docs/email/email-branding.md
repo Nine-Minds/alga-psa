@@ -82,5 +82,7 @@ Similarly, **Remove Branding** deletes previously written rows but leaves the sa
 
 ## Related Documentation
 
+- [Editing ticket email HTML](editing-ticket-email-html.md) - Select individual asset fields, include ticket detail blocks, and omit unwanted fields or sections.
+
 - [`docs/email/email_settings_access.md`](email_settings_access.md) — Email delivery settings (SMTP, custom domains, outbound providers).
 - [`docs/email/email-i18n-implementation-summary.md`](email-i18n-implementation-summary.md) — How per-language email templates work and how languages are resolved.

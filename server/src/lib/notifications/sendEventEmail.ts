@@ -10,8 +10,8 @@ import { TenantEmailService } from '@alga-psa/email';
 import { StaticTemplateProcessor } from '@alga-psa/email';
 import { EmailProviderError } from '@alga-psa/types';
 import type { OutboundMailClass } from '@alga-psa/types';
-import { getUserInfoForEmail, resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
-import { SupportedLocale } from '@alga-psa/core/i18n/config';
+import { resolveEventEmailLocale } from './eventEmailLocale';
+import type { SupportedLocale } from '@alga-psa/core/i18n/config';
 import Handlebars from 'handlebars';
 import { EmailAddress, EmailAttachment } from '../../types/email.types';
 import { normalizeTicketSubject } from './ticketSubject';
@@ -307,31 +307,13 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     });
 
     // Resolve recipient locale for language-aware email templates
-    let recipientLocale: SupportedLocale;
-    if (params.locale) {
-      recipientLocale = params.locale;
-      logger.debug('[SendEventEmail] Using explicitly provided locale:', { locale: recipientLocale });
-    } else {
-      // Get recipient information for locale resolution
-      const baseInfo = params.recipientUserId
-        ? { email: params.to, userId: params.recipientUserId }
-        : await getUserInfoForEmail(params.tenantId, params.to) || { email: params.to };
-
-      // Merge in clientId if provided (for contacts without user accounts yet)
-      const recipientInfo = {
-        ...baseInfo,
-        ...(params.recipientClientId && { clientId: params.recipientClientId })
-      };
-
-      recipientLocale = await resolveEmailLocale(params.tenantId, recipientInfo);
-      logger.debug('[SendEventEmail] Resolved recipient locale:', {
-        locale: recipientLocale,
-        email: params.to,
-        userId: recipientInfo.userId,
-        userType: recipientInfo.userType,
-        clientId: recipientInfo.clientId
-      });
-    }
+    const recipientLocale = await resolveEventEmailLocale(params);
+    logger.debug('[SendEventEmail] Resolved recipient locale:', {
+      locale: recipientLocale,
+      email: params.to,
+      userId: params.recipientUserId,
+      clientId: params.recipientClientId,
+    });
 
     // Get the template content using tenant-aware connection
     const knex = await getConnection(params.tenantId);

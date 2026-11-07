@@ -26,6 +26,7 @@ function queryStub(): any {
   const stub: any = {
     select: () => stub,
     where: () => stub,
+    whereNot: () => stub,
     orderBy: async () => [],
     first: async () => undefined,
     del: deleteMock,

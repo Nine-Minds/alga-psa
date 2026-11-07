@@ -1,0 +1,69 @@
+{
+  "ticketClosed": {
+    "title": "⟦Ŧīƈķḗŧ Ƈŀȯşḗḓ⟧",
+    "subject": "⟦Ŧīƈķḗŧ Ƈŀȯşḗḓ • {{ticket.title}}⟧",
+    "intro": "⟦Ȧ ŧīƈķḗŧ ƒȯř {{ticket.clientName}} ħȧş ƀḗḗƞ řḗşȯŀṽḗḓ ȧƞḓ ƈŀȯşḗḓ. Řḗṽīḗẇ ŧħḗ řḗşȯŀŭŧīȯƞ ḓḗŧȧīŀş ƀḗŀȯẇ.⟧",
+    "ticketNumber": "⟦Ŧīƈķḗŧ #⟧",
+    "status": "⟦Şŧȧŧŭş⟧",
+    "closed": "⟦Ƈŀȯşḗḓ⟧",
+    "closedBy": "⟦Ƈŀȯşḗḓ Ɓẏ⟧",
+    "assignedTo": "⟦Ȧşşīɠƞḗḓ Ŧȯ⟧",
+    "requester": "⟦Řḗʠŭḗşŧḗř⟧",
+    "category": "⟦Ƈȧŧḗɠȯřẏ⟧",
+    "location": "⟦Ŀȯƈȧŧīȯƞ⟧",
+    "totalTimeWorked": "⟦Ŧȯŧȧŀ Ŧīḿḗ Ẇȯřķḗḓ⟧",
+    "totalBillableTime": "⟦Ŧȯŧȧŀ Ɓīŀŀȧƀŀḗ Ŧīḿḗ⟧",
+    "remainingHours": "⟦Řḗḿȧīƞīƞɠ Ħȯŭřş⟧",
+    "devices": "⟦Ḓḗṽīƈḗş⟧",
+    "deviceName": "⟦Ƞȧḿḗ⟧",
+    "deviceType": "⟦Ŧẏƥḗ⟧",
+    "manufacturerModel": "⟦Ḿȧƞŭƒȧƈŧŭřḗř / Ḿȯḓḗŀ⟧",
+    "serialNumber": "⟦Şḗřīȧŀ #⟧",
+    "timeEntries": "⟦Ŧīḿḗ Ḗƞŧřīḗş⟧",
+    "materials": "⟦Ḿȧŧḗřīȧŀş⟧",
+    "materialsTotal": "⟦Ḿȧŧḗřīȧŀş Ŧȯŧȧŀ⟧",
+    "resolution": "⟦Řḗşȯŀŭŧīȯƞ⟧",
+    "footer": "⟦Ƥȯẇḗřḗḓ ƀẏ ȦŀɠȧƤŞȦ⟧"
+  },
+  "ticketDetails": {
+    "assets": {
+      "columns": {
+        "assetTag": "⟦Ȧşşḗŧ Ŧȧɠ⟧",
+        "name": "⟦Ƞȧḿḗ⟧",
+        "relationship": "⟦Řḗŀȧŧīȯƞşħīƥ⟧",
+        "serialNumber": "⟦Şḗřīȧŀ #⟧",
+        "status": "⟦Şŧȧŧŭş⟧"
+      }
+    },
+    "duration": {
+      "hr": "⟦ħř⟧",
+      "hrs": "⟦ħřş⟧",
+      "min": "⟦ḿīƞ⟧"
+    },
+    "materials": {
+      "columns": {
+        "amount": "⟦Ȧḿȯŭƞŧ⟧",
+        "billed": "⟦Ɓīŀŀḗḓ⟧",
+        "item": "⟦Īŧḗḿ⟧",
+        "quantity": "⟦Ɋŧẏ⟧",
+        "rate": "⟦Řȧŧḗ⟧"
+      },
+      "fallback": "⟦Ḿȧŧḗřīȧŀ⟧"
+    },
+    "no": "⟦Ƞȯ⟧",
+    "relationship": {
+      "affected": "⟦Ȧƒƒḗƈŧḗḓ⟧",
+      "related": "⟦Řḗŀȧŧḗḓ⟧"
+    },
+    "time": {
+      "columns": {
+        "billable": "⟦Ɓīŀŀȧƀŀḗ⟧",
+        "date": "⟦Ḓȧŧḗ⟧",
+        "technician": "⟦Ŧḗƈħƞīƈīȧƞ⟧",
+        "worked": "⟦Ẇȯřķḗḓ⟧"
+      },
+      "unknownTechnician": "⟦Ŭƞķƞȯẇƞ⟧"
+    },
+    "yes": "⟦Ẏḗş⟧"
+  }
+}

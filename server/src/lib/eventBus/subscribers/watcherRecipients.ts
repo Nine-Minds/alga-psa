@@ -20,19 +20,30 @@ export async function resolveInternalWatcherEmails(
   tenantId: string,
   emails: string[]
 ): Promise<Set<string>> {
+  return new Set((await resolveInternalWatcherUserIds(db, tenantId, emails)).keys());
+}
+
+export async function resolveInternalWatcherUserIds(
+  db: Knex,
+  tenantId: string,
+  emails: string[]
+): Promise<Map<string, string>> {
   const normalized = Array.from(
     new Set(emails.map((email) => normalizeRecipientEmail(email)).filter((email) => isValidEmail(email)))
   );
   if (normalized.length === 0) {
-    return new Set<string>();
+    return new Map<string, string>();
   }
 
   const rows = await tenantDb(db, tenantId).table('users')
-    .select('email')
+    .select('email', 'user_id')
     .where({ user_type: 'internal' })
     .whereIn(db.raw('lower(email)') as unknown as string, normalized);
 
-  return new Set<string>(rows.map((row: { email: string }) => normalizeRecipientEmail(row.email)));
+  return new Map(rows.map((row: { email: string; user_id: string }) => [
+    normalizeRecipientEmail(row.email),
+    row.user_id,
+  ]));
 }
 
 export function extractActiveWatcherEmails(attributes: unknown): string[] {
