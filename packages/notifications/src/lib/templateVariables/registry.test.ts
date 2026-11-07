@@ -25,7 +25,7 @@ const repositoryRoot = path.resolve(__dirname, "../../../../..");
 describe("email template variable registry", () => {
   it("exposes shared and internal-only detail variables to the correct audiences", () => {
     for (const variablePath of [
-      "ticket.assets", "ticket.assetsHtml", "ticket.categoryPath",
+      "ticket.assets", "ticket.assetsHtml", "ticket.categoryDetails",
       "ticket.totalTimeWorked", "ticket.totalTimeBillable", "ticket.remainingBlockHours",
     ]) {
       for (const audience of ["client", "internal"]) {

@@ -3560,7 +3560,6 @@ function buildClosedTicketSummary(ticket: NonNullable<TicketEmailRow>) {
     categoryDetails: categoryName && subcategoryName
       ? `${categoryName} / ${subcategoryName}`
       : categoryName || subcategoryName || 'Not categorized',
-    categoryPath: [categoryName, subcategoryName].filter(Boolean).join(' -> '),
     locationSummary,
   };
 }

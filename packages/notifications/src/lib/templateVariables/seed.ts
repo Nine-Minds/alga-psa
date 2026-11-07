@@ -3160,18 +3160,11 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
             "availability": "available-unused"
           },
           {
-            "path": "ticket.categoryPath",
-            "type": "string",
-            "description": "Full category and subcategory path.",
-            "example": "Remote -> Password Change",
-            "availability": "used"
-          },
-          {
             "path": "ticket.categoryDetails",
             "type": "string",
-            "description": "Legacy category and subcategory display using a slash; the stock template uses ticket.categoryPath.",
+            "description": "Category / subcategory combined.",
             "example": "Hardware / Printer",
-            "availability": "available-unused"
+            "availability": "used"
           },
           {
             "path": "ticket.locationSummary",
@@ -3225,14 +3218,14 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
           {
             "path": "ticket.category",
             "type": "string",
-            "description": "Individual category value; the stock template uses ticket.categoryPath.",
+            "description": "Individual category value; the stock template uses ticket.categoryDetails.",
             "example": "Hardware",
             "availability": "available-unused"
           },
           {
             "path": "ticket.subcategory",
             "type": "string",
-            "description": "Individual category value; the stock template uses ticket.categoryPath.",
+            "description": "Individual category value; the stock template uses ticket.categoryDetails.",
             "example": "Printer",
             "availability": "available-unused"
           },
@@ -3446,18 +3439,11 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
             "availability": "available-unused"
           },
           {
-            "path": "ticket.categoryPath",
-            "type": "string",
-            "description": "Full category and subcategory path.",
-            "example": "Remote -> Password Change",
-            "availability": "used"
-          },
-          {
             "path": "ticket.categoryDetails",
             "type": "string",
-            "description": "Legacy category and subcategory display using a slash; the stock template uses ticket.categoryPath.",
+            "description": "Category / subcategory combined.",
             "example": "Hardware / Printer",
-            "availability": "available-unused"
+            "availability": "used"
           },
           {
             "path": "ticket.locationSummary",
@@ -3511,14 +3497,14 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
           {
             "path": "ticket.category",
             "type": "string",
-            "description": "Individual category value; the stock template uses ticket.categoryPath.",
+            "description": "Individual category value; the stock template uses ticket.categoryDetails.",
             "example": "Hardware",
             "availability": "available-unused"
           },
           {
             "path": "ticket.subcategory",
             "type": "string",
-            "description": "Individual category value; the stock template uses ticket.categoryPath.",
+            "description": "Individual category value; the stock template uses ticket.categoryDetails.",
             "example": "Printer",
             "availability": "available-unused"
           },

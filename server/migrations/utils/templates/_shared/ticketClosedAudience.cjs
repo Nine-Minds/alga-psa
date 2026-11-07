@@ -64,7 +64,7 @@ function buildHtml(copy, internal) {
     ${detailRow(copy.closedBy, '{{ticket.closedBy}}')}
     ${detailRow(copy.assignedTo, '<div style="font-weight:600;">{{ticket.assignedToName}}</div><div style="color:#667085;font-size:13px;">{{ticket.assignedToEmail}}</div>')}
     ${detailRow(copy.requester, '<div style="font-weight:600;">{{ticket.requesterName}}</div><div style="color:#667085;font-size:13px;">{{ticket.requesterContact}}</div>')}
-    ${detailRow(copy.category, '{{ticket.categoryPath}}')}
+    ${detailRow(copy.category, '{{ticket.categoryDetails}}')}
     ${detailRow(copy.location, '{{ticket.locationSummary}}')}
     ${optionalRow('ticket.totalTimeWorked', copy.totalTimeWorked)}
     ${optionalRow('ticket.totalTimeBillable', copy.totalBillableTime)}
@@ -86,7 +86,7 @@ ${copy.closedBy}: {{ticket.closedBy}}
 ${copy.status}: ${copy.closed}
 ${copy.assignedTo}: {{ticket.assignedDetails}}
 ${copy.requester}: {{ticket.requesterDetails}}
-${copy.category}: {{ticket.categoryPath}}
+${copy.category}: {{ticket.categoryDetails}}
 ${copy.location}: {{ticket.locationSummary}}
 {{#if ticket.totalTimeWorked}}${copy.totalTimeWorked}: {{ticket.totalTimeWorked}}
 {{/if}}{{#if ticket.totalTimeBillable}}${copy.totalBillableTime}: {{ticket.totalTimeBillable}}

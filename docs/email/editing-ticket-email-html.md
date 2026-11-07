@@ -9,8 +9,8 @@ Save only after checking both versions and sending a test email.
 
 The fields below apply to `ticket-closed-client` and `ticket-closed-internal`;
 they are not automatically available in other ticket notification types.
-The stock templates include the full `ticket.categoryPath`, for example
-`Remote -> Password Change`.
+The stock templates include the combined category and subcategory value
+`ticket.categoryDetails`, for example `Hardware / Printer`.
 
 When upgrading, existing tenant-specific `ticket-closed` templates, notification
 settings, and user preferences are copied to both audiences without
@@ -71,7 +71,7 @@ transform a delivered message.
 
 | Variable | Audience | Content |
 | --- | --- | --- |
-| `ticket.categoryPath` | Both | Full category and subcategory path. |
+| `ticket.categoryDetails` | Both | Category and subcategory combined with a slash. |
 | `ticket.assets` | Both | Editable list of linked assets; use `{{#each ticket.assets}}`. |
 | `ticket.assetsHtml` | Both | Fixed HTML table: asset tag, name, serial number, status, relationship. |
 | `ticket.materialsHtml` | Internal | Fixed HTML table: material/service, quantity, rate, amount, billed state. |
