@@ -30,7 +30,7 @@ const changed = { msp_assignee: assignee, task_name: { from: 'a', to: 'b' } };
 describe('projectCoManagedChanges', () => {
   it('derives the assignee-name aliases for msp_assignee only', () => {
     expect(coManagedAuditFieldAliases('msp_assignee')).toEqual(expect.arrayContaining(['msp_assignee', 'values.msp_assignee', 'assignee_name', 'users', 'teams', 'assignee']));
-    expect(coManagedAuditFieldAliases('task_name')).toEqual(['task_name', 'values.task_name', 'project_tasks.task_name']);
+    expect(projectCoManagedChanges(['tasks.task_name'], changed)).toEqual({ msp_assignee: assignee });
   });
   it.each(['assignee_name', 'values.assignee_name', 'users', 'teams', 'assignee', 'msp_assignee', 'values.msp_assignee', '*', 'fields', 'fields.assignee_name'])(
     'omits msp_assignee when %s is redacted', redaction => {

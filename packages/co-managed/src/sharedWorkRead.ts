@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { lockCoManagedLocalAuthentication } from './localAuthentication';
 import { evaluateCoManagedAccess, type CoManagedVisibilityMode } from './policy';
+import { coManagedEditFieldPaths } from './sharedWorkProjection';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { withCoManagedSharedWork, CoManagedSharedWorkError, loadCoManagedHomeFacts, loadCoManagedLifecycleFacts,
   loadCoManagedStaffRoles, type CoManagedSessionActor, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
@@ -135,16 +136,16 @@ export async function readCoManagedSummaryCandidates(trx: Knex.Transaction, reso
     trx.raw('CASE WHEN psm.project_status_mapping_id IS NULL THEN NULL ELSE COALESCE(s.is_closed, ss.is_closed, false) END as is_closed'));
   if (!row) throw new CoManagedSharedWorkError();
   return {
-    task_name: { value: text(row.task_name), sources: ['project_tasks.task_name'] },
-    wbs_code: { value: text(row.wbs_code), sources: ['project_tasks.wbs_code'] },
+    task_name: { value: text(row.task_name), sources: coManagedEditFieldPaths('task_name') },
+    wbs_code: { value: text(row.wbs_code), sources: coManagedEditFieldPaths('wbs_code') },
     project: { value: reference(resource.tenant, 'project', row.project_id, row.project_name), sources: ['project_id', 'project_name', 'projects'] },
     phase: { value: reference(resource.tenant, 'project_phase', row.phase_id, row.phase_name), sources: ['phase_id', 'phase_name', 'project_phases'] },
     status: { value: reference(resource.tenant, 'project_status_mapping', row.project_status_mapping_id, row.status_name),
-      sources: ['project_status_mapping_id', 'project_tasks.project_status_mapping_id', 'status_id', 'status_name', 'custom_name', 'project_status_mappings', 'statuses', 'standard_statuses'] },
-    is_closed: { value: row.is_closed == null ? null : Boolean(row.is_closed), sources: ['status', 'status_id', 'project_status_mapping_id', 'project_tasks.project_status_mapping_id', 'project_status_mappings', 'statuses', 'standard_statuses'] },
-    due_date: { value: date(row.due_date), sources: ['project_tasks.due_date'] },
-    created_at: { value: date(row.created_at), sources: ['project_tasks.created_at'] },
-    updated_at: { value: date(row.updated_at), sources: ['project_tasks.updated_at'] },
+      sources: coManagedEditFieldPaths('project_status_mapping_id') },
+    is_closed: { value: row.is_closed == null ? null : Boolean(row.is_closed), sources: coManagedEditFieldPaths('project_status_mapping_id') },
+    due_date: { value: date(row.due_date), sources: coManagedEditFieldPaths('due_date') },
+    created_at: { value: date(row.created_at), sources: coManagedEditFieldPaths('created_at') },
+    updated_at: { value: date(row.updated_at), sources: coManagedEditFieldPaths('updated_at') },
   };
 }
 
