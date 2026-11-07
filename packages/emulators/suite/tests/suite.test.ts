@@ -27,6 +27,7 @@ describe('emulator suite', () => {
   it('boots all emulators with distinct ports and a full catalog', async () => {
     const catalog = ((await (await fetch(`${control}/control/catalog`)).json()) as any).result;
     expect(catalog.emulators.map((emu: any) => emu.id).sort()).toEqual([
+      'google-calendar',
       'huntress',
       'levelio',
       'msgraph',

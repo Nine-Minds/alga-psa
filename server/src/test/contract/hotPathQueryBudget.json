@@ -20,7 +20,7 @@
     },
     {
       "name": "ticket.open",
-      "statements": 34,
+      "statements": 33,
       "locks": 0
     },
     {
@@ -30,7 +30,7 @@
     },
     {
       "name": "ticket.boardMove",
-      "statements": 25,
+      "statements": 27,
       "locks": 0
     },
     {
@@ -65,7 +65,7 @@
     },
     {
       "name": "invoice.generate",
-      "statements": 207,
+      "statements": 211,
       "locks": 4
     },
     {
@@ -85,7 +85,7 @@
     }
   ],
   "totals": {
-    "statements": 466,
+    "statements": 471,
     "locks": 17
   },
   "denylist": [

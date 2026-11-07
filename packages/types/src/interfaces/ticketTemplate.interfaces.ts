@@ -1,6 +1,7 @@
 /**
  * Ticket templates: a reusable starting point for a ticket (fields, description, tags, checklist,
- * custom fields). Not client-specific; status, assignment, client and contact are never templated.
+ * custom fields). A template is tenant-wide (`client_id: null`) or bound to one client; status,
+ * assignment, client and contact are never templated.
  */
 
 /** A checklist item as the template editor holds it (no completion state, no assignee). */
@@ -25,6 +26,8 @@ export interface TicketTemplateDraft {
   title: string;
   /** Same format as `tickets.attributes.description` (serialized BlockNote JSON or plain text). */
   description: string | null;
+  /** Client the template is bound to; null = offered for every client (tenant-wide). */
+  client_id: string | null;
   board_id: string | null;
   category_id: string | null;
   subcategory_id: string | null;
@@ -68,7 +71,7 @@ export interface TicketTemplateReferenceProblem {
   /** Template saves only ever report the first four; the wider set is shared with recurring schedules. */
   field:
     | 'board_id' | 'category_id' | 'subcategory_id' | 'priority_id' | 'status_id' | 'assigned_to'
-    | 'assigned_team_id' | 'additional_agent_ids' | 'contact_id' | 'location_id' | 'asset_ids';
+    | 'assigned_team_id' | 'additional_agent_ids' | 'client_id' | 'contact_id' | 'location_id' | 'asset_ids';
   /** Actionable, user-facing English message. */
   message: string;
 }
@@ -77,6 +80,9 @@ export interface TicketTemplateListItem {
   template_id: string;
   name: string;
   title: string;
+  client_id: string | null;
+  /** Name of the client the template is bound to; null for a tenant-wide template. */
+  client_name: string | null;
   board_id: string | null;
   board_name: string | null;
   checklist_count: number;
@@ -88,10 +94,11 @@ export interface TicketTemplateListItem {
   updated_at: string;
 }
 
-/** Picker entry for Quick Add. */
+/** Picker entry for Quick Add. `client_id` null = offered for every client. */
 export interface TicketTemplateOption {
   template_id: string;
   name: string;
+  client_id: string | null;
   board_id: string | null;
 }
 
@@ -101,6 +108,7 @@ export interface TicketTemplateForCreate {
   name: string;
   title: string;
   description: string;
+  client_id: string | null;
   board_id: string | null;
   category_id: string | null;
   subcategory_id: string | null;
@@ -122,7 +130,8 @@ export interface TicketTemplateForCreate {
 }
 
 export interface TicketTemplateDraftFromTicket {
-  draft: TicketTemplateDraft;
+  /** The source ticket's client is never copied, so the scope is the editor's to pick. */
+  draft: Omit<TicketTemplateDraft, 'client_id'>;
   source_ticket_id: string;
   source_ticket_number: string;
   /** True when the description embeds images that point at the source ticket's documents (R2). */

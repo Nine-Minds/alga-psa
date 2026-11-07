@@ -52,6 +52,19 @@ describe('product surface registry', () => {
     expect(resolveProductRouteBehavior('algadesk', '/client-portal/billing')).toBe('upgrade_boundary');
   });
 
+  it('CM L4c: /client-portal/projects is open to co_managed; psa and algadesk are unchanged; sibling operational routes stay closed', () => {
+    for (const path of ['/client-portal/projects', '/client-portal/projects/abc?taskId=t']) {
+      expect(resolveProductRouteBehavior('co_managed', path.split('?')[0])).toBe('allowed');
+      expect(resolveProductRouteBehavior('psa', path.split('?')[0])).toBe('allowed');
+      expect(resolveProductRouteBehavior('algadesk', path.split('?')[0])).toBe('upgrade_boundary');
+    }
+    for (const path of ['/client-portal/devices', '/client-portal/documents', '/client-portal/appointments', '/client-portal/billing']) {
+      expect(resolveProductRouteBehavior('co_managed', path)).toBe('not_found');
+      expect(resolveProductRouteBehavior('psa', path)).toBe('allowed');
+      expect(resolveProductRouteBehavior('algadesk', path)).toBe('upgrade_boundary');
+    }
+  });
+
   it('T003: exact /client-portal root resolves allowed like its dashboard target, never not_found', () => {
     expect(resolveProductRouteBehavior('algadesk', '/client-portal')).toBe('allowed');
     expect(resolveProductRouteBehavior('psa', '/client-portal')).toBe('allowed');

@@ -521,7 +521,10 @@
       "defaultTitle": "Panel | AlgaPSA"
     },
     "coManaged": {
-      "title": "TI cogestionada"
+      "title": "TI cogestionada",
+      "archive": {
+        "title": "Archivo de TI cogestionada"
+      }
     },
     "coManagement": {
       "title": "Acceso cogestionado",
@@ -541,6 +544,15 @@
         "title": "Tareas compartidas",
         "taskTitle": "Tarea compartida",
         "projectTitle": "Proyecto compartido"
+      },
+      "departure": {
+        "title": "Finalizar TI cogestionada"
+      },
+      "sla": {
+        "title": "Prioridades de SLA cogestionado"
+      },
+      "export": {
+        "title": "Exportar espacio de trabajo"
       }
     }
   },

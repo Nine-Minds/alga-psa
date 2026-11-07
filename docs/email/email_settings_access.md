@@ -42,6 +42,8 @@ Alternatively, you can directly access it via:
 - Enable/disable providers
 - Set provider priorities for failover
 
+> **Credential storage.** SMTP passwords and Resend API keys are stored as versioned tenant secrets rather than as plain-text columns. When you read back a saved SMTP or Resend configuration, the password or API key field shows `***` — this is by design. To replace a credential, overwrite the field with the new value and save; the previous version is retained internally but is no longer used. This change affects the API response shape for `/api/v1/email-settings`: credential fields that previously returned the raw value now return `***`.
+
 ### 2. Custom Domains
 - Add custom email domains
 - View DNS configuration requirements

@@ -8,6 +8,7 @@ import { reconcileDiscovery, repositoryTestFiles } from './lib/test-discovery.mj
 import { normalizeTestFile, reconcileExecution } from './lib/test-execution-evidence.mjs';
 import { testRevision } from './lib/test-revision.mjs';
 import { partitionTestFiles } from './lib/test-sharding.mjs';
+import { collectedTestsFromJournal } from './lib/vitest-progress-reporter.mjs';
 import { requiredInfrastructureFiles } from './lib/infrastructure-selection.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -20,12 +21,13 @@ mkdirSync(output, { recursive: true });
 const files = Object.fromEntries(['all-files', 'collected', 'collected-tests', 'results', 'discovery', 'evidence', 'flaky-tests'].map(name => [name, path.join(output, `${name}.json`)]));
 const save = (name, data) => writeFileSync(files[name], JSON.stringify(data, null, 2) + '\n');
 const read = name => JSON.parse(readFileSync(files[name], 'utf8'));
-for (const file of Object.values(files)) writeFileSync(file, 'null\n');
+const progressPath = path.join(output, 'progress.jsonl');
+for (const file of [...Object.values(files), progressPath]) writeFileSync(file, 'null\n');
 // The flaky journal rides along in this shard's evidence artifact; the copy the
 // weekly report downloads is published only when something retried.
 const flakyUpload = path.join(root, 'test-results/infrastructure-flaky');
 resetFlakyPublication(flakyUpload);
-const env = { ...process.env, REQUIRE_DB: '1', SKIP_DB_TESTS: '', REAL_REDIS: '1',
+const env = { ...process.env, REQUIRE_DB: '1', SKIP_DB_TESTS: '', REAL_REDIS: '1', TEST_PROGRESS_PATH: progressPath,
   FLAKY_TESTS_PATH: files['flaky-tests'], FLAKY_SUITE: 'infrastructure',
   FLAKY_JOB: `infrastructure shard ${index}/${total}`, FLAKY_SHARD_INDEX: String(index), FLAKY_SHARD_TOTAL: String(total) };
 const run = args => spawnSync(process.execPath, [path.join(root, 'node_modules/vitest/vitest.mjs'), ...args], { cwd, env, stdio: 'inherit' });
@@ -52,13 +54,15 @@ try {
   if (filtered.status !== 0) throw new Error('Infrastructure shard collection failed');
   const actual = read('collected').map(entry => normalizeTestFile(typeof entry === 'string' ? entry : entry.file, root)).sort();
   if (JSON.stringify(actual) !== JSON.stringify(selected)) throw new Error('Runner file filters did not collect the exact assigned partition');
-  const testCollection = run(['list', ...filters, `--json=${files['collected-tests']}`]);
-  if (testCollection.status !== 0) throw new Error('Infrastructure test collection failed');
   // --retry=1 and the flaky reporter belong to this runner, never to a shared
   // vitest config: a fail-then-pass becomes a recorded flake judged by the same
-  // policy every other lane uses.
+  // policy every other lane uses. Each file reports its registrations through
+  // the progress reporter as its fork imports it, so the run is the only
+  // import of the partition; collected-tests.json is read back from the journal.
   const result = run(['run', ...filters, '--coverage.enabled=false', '--retry=1', '--reporter=default', '--reporter=json',
-    `--outputFile.json=${files.results}`, `--reporter=${path.join(root, 'scripts/lib/vitest-flaky-reporter.mjs')}`]);
+    `--outputFile.json=${files.results}`, `--reporter=${path.join(root, 'scripts/lib/vitest-flaky-reporter.mjs')}`,
+    `--reporter=${path.join(root, 'scripts/lib/vitest-progress-reporter.mjs')}`]);
+  save('collected-tests', collectedTestsFromJournal(readFileSync(progressPath, 'utf8'), { root: cwd }));
   let report;
   try { report = read('results'); } catch { report = null; }
   evidence = reconcileExecution({ root, suite: 'infrastructure', revision: before.revision, exitCode: result.status,

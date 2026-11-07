@@ -364,6 +364,21 @@
     "accountManagementRead": "Odmowa uprawnień: wymagane uprawnienie odczytu zarządzania kontami"
   },
   "coManaged": {
+    "portableExport": {
+      "title": "Eksportuj obszar roboczy",
+      "description": "Pobierz zaszyfrowane, przenośne archiwum rekordów i plików z obszaru roboczego.",
+      "recovery": "Przechowuj hasło odzyskiwania w bezpiecznym miejscu. Bez niego nie można otworzyć archiwum.",
+      "connections": "Archiwum zawiera rekordy obszaru roboczego oraz przechowywane w nim pliki. Rekordy i powiązania dokumentów oraz historia czasu pracy, harmonogramów, spotkań i rozmów nie są jeszcze uwzględnione i pojawią się w późniejszej wersji. Dane rozliczeniowe, prywatne dane MSP i sekrety integracji nie są uwzględnione.",
+      "passphrase": "Hasło odzyskiwania",
+      "confirmPassphrase": "Potwierdź hasło odzyskiwania",
+      "download": "Przygotuj i pobierz archiwum",
+      "requested": "Żądanie otworzy się w nowej karcie. Przygotowanie może potrwać kilka minut; przeglądarka pobierze plik, gdy będzie gotowy.",
+      "loadError": "Przy obecnych uprawnieniach nie możesz wyeksportować tego obszaru roboczego.",
+      "lengthError": "Użyj hasła o długości od 16 do 1024 bajtów UTF-8.",
+      "matchError": "Hasła odzyskiwania muszą być zgodne.",
+      "unavailable": "Eksport obszaru roboczego nie jest dostępny w tej edycji.",
+      "loading": "Ładowanie…"
+    },
     "acceptance": {
       "accept": "Zaakceptuj i aktywuj obszar roboczy",
       "administratorRequired": "Lokalny administrator obszaru roboczego musi zaakceptować tę współpracę, zanim Twój zespół zacznie pracę.",
@@ -436,7 +451,8 @@
       "workspace": "Obszar roboczy",
       "capacity": "Przydzielono {{allocated}} z {{count}} stanowisk współzarządzania.",
       "openClient": "Skonfiguruj współzarządzane IT dla tego klienta",
-      "readOnly": "Współzarządzane IT jest w tym obszarze roboczym tylko do odczytu. Wyświetlane są istniejące relacje; nowa konfiguracja jest niedostępna."
+      "readOnly": "Współzarządzane IT jest w tym obszarze roboczym tylko do odczytu. Wyświetlane są istniejące relacje; nowa konfiguracja jest niedostępna.",
+      "slaPriorities": "Mapowanie priorytetów SLA"
     },
     "provisioning": {
       "administrator": "Administrator",
@@ -583,7 +599,22 @@
       "previous": "Wstecz",
       "priority": "Priorytet",
       "status": "Status",
-      "titleColumn": "Tytuł"
+      "titleColumn": "Tytuł",
+      "title": "Zgłoszenia klientów",
+      "view": "Widok",
+      "columns": "Kolumny",
+      "density": "Gęstość",
+      "filters": "Filtry",
+      "client": "Klient",
+      "allClients": "Wszyscy klienci",
+      "share": "Udostępnij",
+      "clearSignal": "Wyczyść",
+      "unavailable": "Ten widok nie jest jeszcze dostępny dla Twojego konta.",
+      "allTickets": "Wszystkie zgłoszenia",
+      "signals": {
+        "escalatedUnassigned": "Eskalowane, nieprzypisane",
+        "awaitingReply": "Czeka na Twoją odpowiedź"
+      }
     },
     "delegation": {
       "actions": "Akcje",
@@ -663,7 +694,8 @@
       "viewer": "Przeglądający",
       "viewOnly": "Tylko podgląd",
       "visibility": "Widoczność zgłoszeń",
-      "whyTitle": "Dlaczego ktoś nie może tego zobaczyć?"
+      "whyTitle": "Dlaczego ktoś nie może tego zobaczyć?",
+      "readOnly": "Możesz wyświetlić tę konfigurację, ale nie możesz jej zmienić."
     },
     "sharedTasks": {
       "link": "Udostępnione zadania",
@@ -719,7 +751,282 @@
       "reloadLatest": "Wczytaj najnowszą wersję",
       "rejected": "Nie udało się zapisać tego zadania.",
       "saved": "Zapisano.",
-      "save": "Zapisz"
+      "save": "Zapisz",
+      "projectNotFound": "Ten projekt jest niedostępny. Możliwe, że nie jest już Ci udostępniany."
+    },
+    "sla": {
+      "title": "Priorytety SLA we współzarządzaniu",
+      "description": "Wybierz, który z Twoich priorytetów, a tym samym który z Twoich celów SLA, obowiązuje, gdy klient eskaluje zgłoszenie o danym priorytecie.",
+      "missingPolicy": "Nie skonfigurowano polityki SLA",
+      "settings": "Zarządzaj politykami SLA",
+      "mappingFor": "Priorytet klienta {{name}} odpowiada",
+      "unmapped": "Nieprzypisany"
+    },
+    "portableExport": {
+      "title": "Eksportuj obszar roboczy",
+      "description": "Pobierz zaszyfrowane, przenośne archiwum rekordów i plików z obszaru roboczego.",
+      "recovery": "Przechowuj hasło odzyskiwania w bezpiecznym miejscu. Bez niego archiwum nie da się otworzyć.",
+      "connections": "Archiwum zawiera rekordy obszaru roboczego oraz zapisane w nim pliki. Rekordy i powiązania dokumentów oraz historia czasu pracy, harmonogramu, spotkań i rozmów nie są jeszcze uwzględnione i pojawią się w późniejszej wersji. Dane rozliczeniowe, prywatne dane MSP i sekrety integracji nie są uwzględnione.",
+      "passphrase": "Hasło odzyskiwania",
+      "confirmPassphrase": "Potwierdź hasło odzyskiwania",
+      "download": "Przygotuj i pobierz archiwum",
+      "requested": "Żądanie otworzy się w nowej karcie. Przygotowanie może potrwać kilka minut; przeglądarka pobierze plik, gdy będzie gotowy.",
+      "loadError": "Nie możesz wyeksportować tego obszaru roboczego przy obecnych uprawnieniach.",
+      "lengthError": "Użyj hasła o długości od 16 do 1024 bajtów UTF-8.",
+      "matchError": "Hasła odzyskiwania muszą być identyczne.",
+      "unavailable": "Eksport obszaru roboczego nie jest dostępny w tej edycji.",
+      "loading": "Ładowanie…"
+    },
+    "section": {
+      "title": "Współzarządzanie",
+      "viewHistory": "Wyświetl historię przekazań",
+      "responsible": "Odpowiedzialny",
+      "change": "Zmień",
+      "privateTo": "Prywatne dla {{organization}}"
+    },
+    "ticket": {
+      "title": "Zgłoszenie współzarządzane",
+      "escalate": "Eskaluj do MSP",
+      "handback": "Przekaż klientowi",
+      "takeBack": "Przejmij z powrotem",
+      "revoke": "Cofnij dostęp do zgłoszenia",
+      "escalateHelp": "MSP natychmiast przejmuje odpowiedzialność. Dodaj informacje potrzebne do kontynuowania pracy.",
+      "handbackHelp": "Odpowiedzialność wraca do klienta. MSP zachowuje zatwierdzony dostęp do zgłoszenia.",
+      "revokeHelp": "Indywidualny dostęp do zgłoszenia zostanie cofnięty, a odpowiedzialność wróci do klienta. Osobno zatwierdzony dostęp do tablicy nadal obowiązuje.",
+      "note": "Notatka przekazania",
+      "noteAudience": "Widoczna dla uprawnionego personelu IT obu organizacji. Ta notatka nie jest wysyłana do zgłaszających.",
+      "uncertain": "Nie udało się potwierdzić wyniku. Ponów to samo żądanie lub wczytaj aktualny stan przed kolejną zmianą.",
+      "saving": "Zapisywanie…",
+      "retry": "Ponów",
+      "reload": "Wczytaj aktualny stan",
+      "cancel": "Anuluj",
+      "loadError": "Nie udało się wczytać zgłoszenia lub listy dostępów. Twoje uprawnienia mogły się zmienić.",
+      "loading": "Wczytywanie…",
+      "restricted": "Zgłoszenie z ograniczonym dostępem",
+      "responsibility": "Odpowiedzialna organizacja: {{organization}}",
+      "formerSponsor": "Poprzedni MSP",
+      "readOnly": "Ten obszar jest tylko do odczytu. Administratorzy klienta nadal mogą cofać dostęp.",
+      "history": "Wspólna historia przekazań IT",
+      "noHistory": "Brak widocznych przekazań.",
+      "historyError": "Nie udało się wczytać historii przekazań.",
+      "older": "Wczytaj starsze",
+      "transitions": {
+        "escalated": "Eskalowano do MSP",
+        "handed_back": "Przekazano klientowi",
+        "access_revoked": "Cofnięto indywidualny dostęp do zgłoszenia"
+      },
+      "assignment": {
+        "needsHandoff": "Eskaluj to zgłoszenie przed przypisaniem pracowników MSP.",
+        "unavailable": "Przypisany współpracownik MSP nie jest już dostępny."
+      },
+      "refusal": {
+        "invalidHandoff": "Podaj prawidłowe przekazanie ze wspólną notatką IT.",
+        "handoffChanged": "To przekazanie zmieniło się od chwili jego otwarcia. Wczytaj zgłoszenie ponownie i spróbuj jeszcze raz.",
+        "alreadyResponsible": "Odpowiedzialność za to zgłoszenie jest już taka, jak zażądano. Wczytaj ponownie, aby zobaczyć, kto jest teraz odpowiedzialny.",
+        "alreadyRevoked": "Dostęp do tego zgłoszenia został już cofnięty.",
+        "destinationUnavailable": "Zatwierdzone miejsce docelowe MSP jest niedostępne.",
+        "capabilityUnavailable": "Ta operacja jest obecnie niedostępna dla Twojej przestrzeni roboczej.",
+        "notAvailable": "To zgłoszenie nie jest już udostępniane lub nie jest już dla Ciebie dostępne.",
+        "readOnly": "To zgłoszenie jest obecnie tylko do odczytu, więc nie można wprowadzić tej zmiany."
+      }
+    },
+    "callout": {
+      "title": "Zgłoszenia klientów wymagają Twojej uwagi",
+      "escalatedUnassigned_one": "{{count}} eskalowane zgłoszenie, nieprzypisane",
+      "escalatedUnassigned_few": "{{count}} eskalowane zgłoszenia, nieprzypisane",
+      "escalatedUnassigned_many": "{{count}} eskalowanych zgłoszeń, nieprzypisanych",
+      "escalatedUnassigned_other": "{{count}} eskalowanego zgłoszenia, nieprzypisanego",
+      "awaitingReply_one": "{{count}} zgłoszenie czeka na Twoją odpowiedź",
+      "awaitingReply_few": "{{count}} zgłoszenia czekają na Twoją odpowiedź",
+      "awaitingReply_many": "{{count}} zgłoszeń czeka na Twoją odpowiedź",
+      "awaitingReply_other": "{{count}} zgłoszenia czeka na Twoją odpowiedź",
+      "dismiss": "Zamknij"
+    },
+    "queue": {
+      "title": "Kolejki współzarządzanych zgłoszeń",
+      "workingDescription": "Wspólne zgłoszenia, za które odpowiada lub do których jest przypisany Twój zespół.",
+      "oversightDescription": "Zgłoszenia klientów w zatwierdzonym zakresie dostępu, także obsługiwane przez ich zespoły IT.",
+      "view": "Widok",
+      "working": "Kolejka pracy",
+      "oversight": "Nadzór nad klientami",
+      "workspace": "Obszar roboczy",
+      "allWorkspaces": "Wszystkie obszary",
+      "state": "Status",
+      "open": "Otwarte",
+      "closed": "Zamknięte",
+      "all": "Wszystkie statusy",
+      "sort": "Sortuj według",
+      "direction": "Kolejność",
+      "asc": "Rosnąco",
+      "desc": "Malejąco",
+      "search": "Szukaj zgłoszeń",
+      "loadError": "Nie udało się wczytać zgłoszeń. Odśwież, aby sprawdzić dostęp.",
+      "counts_one": "{{count}} zgłoszenie · {{open}} otwarte · {{closed}} zamknięte",
+      "counts_few": "{{count}} zgłoszenia · {{open}} otwartych · {{closed}} zamkniętych",
+      "counts_many": "{{count}} zgłoszeń · {{open}} otwartych · {{closed}} zamkniętych",
+      "counts_other": "{{count}} zgłoszenia · {{open}} otwartych · {{closed}} zamkniętych",
+      "empty": "Brak dostępnych zgłoszeń pasujących do tych filtrów.",
+      "emptyUnfiltered": "Nie ma jeszcze zgłoszeń klientów do wyświetlenia.",
+      "retry": "Spróbuj ponownie",
+      "page": "Strona {{page}}",
+      "sortFields": {
+        "updated": "Ostatnia aktualizacja",
+        "created": "Utworzenie",
+        "title": "Tytuł",
+        "number": "Numer zgłoszenia"
+      },
+      "columns": {
+        "ticket": "Zgłoszenie",
+        "workspace": "Obszar roboczy",
+        "state": "Status",
+        "status": "Status",
+        "priority": "Priorytet",
+        "responsibility": "Odpowiedzialna organizacja",
+        "updated": "Aktualizacja",
+        "title": "Tytuł"
+      },
+      "organizations": {
+        "msp": "MSP",
+        "customer": "IT klienta"
+      },
+      "export": "Eksportuj CSV",
+      "exporting": "Eksportowanie…",
+      "exportError": "Nie udało się wyeksportować zgłoszeń. Odśwież kolejkę i spróbuj ponownie.",
+      "bulkHandback": {
+        "title": "Zwróć zgłoszenia do zespołu IT klienta",
+        "select": "Wybierz zgłoszenia z tej strony. Do każdego wybranego zgłoszenia zostanie dodana ta sama wspólna notatka IT.",
+        "returned": "Zwrócono do zespołu IT klienta",
+        "forbidden": "Odmowa dostępu",
+        "changed": "Zgłoszenie uległo zmianie. Odśwież przed ponowną próbą.",
+        "invalid": "Nieprawidłowy wybór",
+        "selected": "{{count}} wybranych zgłoszeń zostanie zwróconych.",
+        "resume": "Zwrot do działu IT klienta został przerwany. Wznów, aby potwierdzić wynik.",
+        "noReloadRecovery": "Odzyskiwanie po odświeżeniu jest niedostępne w tej przeglądarce; nadal możesz ponowić próbę w tej sesji.",
+        "done": "Gotowe",
+        "selectAll": "Zaznacz wszystkie zgłoszenia do przekazania klientowi",
+        "selectRow": "Zaznacz zgłoszenie",
+        "readOnly": "Dostęp tylko do odczytu"
+      },
+      "scopeUnavailable": "Otwieranie listy zgłoszeń…",
+      "searchPlaceholder": "Szukaj według numeru lub tytułu",
+      "mspAlsoAssigned": "MSP również przypisany",
+      "unavailableWorkspace": "Niedostępny obszar roboczy",
+      "reset": "Resetuj"
+    },
+    "projects": {
+      "assignment": {
+        "title": "Przypisanie do MSP",
+        "unassigned": "Nieprzypisane do MSP",
+        "kind": "Przypisz do",
+        "user": "Technik",
+        "team": "Zespół",
+        "assignee": "Osoba przypisana",
+        "more": "Więcej osób",
+        "assign": "Przypisz",
+        "clear": "Usuń przypisanie do MSP"
+      }
+    },
+    "editor": {
+      "errors": {
+        "invalid": "Niektóre wartości są nieprawidłowe. Sprawdź zmiany i spróbuj ponownie.",
+        "conflict": "To zgłoszenie zostało zmienione. Odśwież je przed zapisaniem zmian.",
+        "operationConflict": "To żądanie zapisu zostało już użyte do innej zmiany. Odśwież zgłoszenie.",
+        "forbidden": "Twój dostęp do tego zgłoszenia uległ zmianie. Odśwież, aby kontynuować.",
+        "readOnly": "Ten obszar jest tylko do odczytu. Odśwież, aby zobaczyć jego obecny stan.",
+        "closeRules": "Przed zamknięciem zgłoszenie musi spełnić wymagania zamknięcia określone na jego tablicy.",
+        "unknownOutcome": "Nie udało się potwierdzić zapisu. Ponów to samo żądanie albo odrzuć zmiany i odśwież.",
+        "slaSetupRequired": "Twój MSP musi skonfigurować zasady SLA i mapowanie priorytetów, zanim zgłoszenie będzie można ponownie otworzyć pod odpowiedzialnością MSP."
+      }
+    },
+    "attachments": {
+      "title": "Załączniki",
+      "add": "Dołącz plik",
+      "choose": "Wybierz plik",
+      "help": "Pliki dziedziczą widoczność tej wiadomości. Maksymalnie {{size}} MiB.",
+      "uploading": "Przesyłanie…",
+      "upload": "Prześlij",
+      "invalid": "Wybierz dozwolony plik mieszczący się w limicie rozmiaru.",
+      "loadError": "Załączniki są niedostępne. Odśwież, aby sprawdzić dostęp.",
+      "unknownOutcome": "Nie udało się potwierdzić przesłania. Spróbuj ponownie z tym samym plikiem.",
+      "remove": "Usuń",
+      "removeTitle": "Usuń załącznik",
+      "removeHelp": "Usunąć {{name}} z tej wiadomości? Osoby przeglądające wiadomość nie będą już mogły pobrać tego pliku.",
+      "removeUnknownOutcome": "Nie można potwierdzić usunięcia. Spróbuj ponownie, aby sprawdzić ten sam plik.",
+      "removing": "Usuwanie…",
+      "removeNamed": "Usuń {{name}}"
+    },
+    "disclosure": {
+      "title": "Zmień widoczność wątku",
+      "review": "Sprawdź ponownie",
+      "confirm": "Potwierdź zmianę",
+      "scope": "To zmienia widoczność całego wątku: {{comments}} wiadomości i {{attachments}} załączników.",
+      "current": "Obecna widoczność: {{audience}}",
+      "help": "Odpowiedzi i załączniki dziedziczą tę widoczność. Ograniczenie dostępu nie cofa informacji już przeczytanych lub pobranych.",
+      "pending": "Przesyłanie załącznika oczekuje na zakończenie. Zakończ je przed zmianą widoczności.",
+      "unknownOutcome": "Wynik jest nieznany. Ponów próbę, aby sprawdzić tę samą zmianę.",
+      "transferHelp": "Udostępnienie przenosi ten wątek i jego załączniki do obszaru roboczego klienta. Oryginalny prywatny wątek MSP pozostaje historią tylko do odczytu.",
+      "open": "Zmień, kto widzi ten wątek"
+    },
+    "conversation": {
+      "audience": "Widoczne dla",
+      "audiences": {
+        "requester": "Zgłaszający i zespoły IT",
+        "shared_it": "Wspólne zespoły IT",
+        "organization_private": "Tylko moja organizacja"
+      },
+      "audienceHelp": {
+        "requester": "Widoczne dla uprawnionych zgłaszających i pracowników IT obu organizacji.",
+        "shared_it": "Widoczne dla uprawnionych pracowników IT obu organizacji, bez dostępu dla zgłaszającego.",
+        "organization_private": "Widoczne tylko dla uprawnionych pracowników Twojej organizacji."
+      },
+      "drafts": {
+        "title": "Niewysłane wiadomości",
+        "help": "Te wiadomości zostały rozpoczęte, ale nie wysłane. Sprawdź jedną, ponownie wybierz brakujące pliki, a następnie wyślij ją lub odrzuć.",
+        "fileReady": "Przesłano",
+        "fileMissing": "Wymaga ponownego wybrania",
+        "choose": "Wybierz brakujące pliki",
+        "resume": "Wyślij",
+        "discard": "Odrzuć",
+        "missing": "Przed wysłaniem wybierz każdy brakujący plik o tej samej nazwie.",
+        "unsent": "Nie udało się potwierdzić wysłania wiadomości i plików. Są zapisane i pojawią się w sekcji „Niewysłane wiadomości” — wznów je lub odrzuć tam."
+      },
+      "files": {
+        "choose": "Dołącz pliki",
+        "help": "Maksymalnie {{count}} plików, każdy do {{size}} MiB. Pliki są udostępniane odbiorcom tej wiadomości.",
+        "remove": "Usuń",
+        "removeNamed": "Usuń {{name}}",
+        "invalid": "Przed wysłaniem usuń pliki przekraczające limit rozmiaru lub liczby plików.",
+        "preparing": "Przygotowywanie plików…",
+        "uploading": "Przesłano {{completed}} z {{total}} plików…",
+        "publishing": "Publikowanie wiadomości i plików…",
+        "notReady": "Niektóre pliki nie są gotowe. Spróbuj ponownie, aby dokończyć przesyłanie i wysłać tę samą wiadomość.",
+        "preparationFailed": "Nie można odczytać wybranych plików. Wybierz je ponownie lub usuń przed ponowną próbą.",
+        "abandoned": "Ten szkic został odrzucony. Zapisz ponownie, aby utworzyć nową wiadomość z wybranymi plikami.",
+        "audienceUnavailable": "Do wiadomości dla tych odbiorców nie można dołączać plików. Usuń pliki lub wybierz innych odbiorców.",
+        "cancelUnknownOutcome": "Nie można potwierdzić anulowania. Spróbuj ponownie, aby sprawdzić to samo żądanie anulowania.",
+        "canceling": "Anulowanie…"
+      },
+      "title": "Rozmowa",
+      "reload": "Odśwież",
+      "loadError": "Nie udało się wczytać rozmowy.",
+      "readOnly": "Możesz czytać tę rozmowę, ale nie możesz nic dodać.",
+      "new": "Nowy komentarz",
+      "empty": "Brak komentarzy.",
+      "restrictedAuthor": "Autor ukryty",
+      "replyMarker": "Odpowiedź",
+      "deleted": "Ten komentarz został usunięty.",
+      "reply": "Odpowiedz",
+      "edit": "Edytuj",
+      "delete": "Usuń",
+      "newer": "Nowsze",
+      "older": "Starsze",
+      "message": "Wiadomość",
+      "deleteHelp": "Komentarz zostanie zastąpiony znacznikiem usunięcia. Odpowiedzi pozostaną w wątku.",
+      "conflict": "Ten komentarz zmienił się od czasu otwarcia. Anuluj i odśwież, aby kontynuować.",
+      "unknownOutcome": "Nie udało się potwierdzić zapisu. Spróbuj ponownie; nie zostanie zastosowany dwukrotnie.",
+      "invalid": "Nie udało się zapisać tego komentarza.",
+      "send": "Wyślij",
+      "cancel": "Anuluj"
     }
   },
   "common": {

@@ -528,4 +528,113 @@ describe('sharedAssetIngestionService', () => {
       expect(state.assets[0].status).toBe(expected);
     }
   });
+
+  // alga-2026-0003109: Datto reports a warranty date the asset never showed,
+  // because ingestion only ever stashed it in the extension's system_info.
+  describe('warranty_end_date', () => {
+    const mappedScope = {
+      tenant: 'tenant_1',
+      integration_id: 'integration_1',
+      external_organization_id: 'scope_1',
+      client_id: 'client_1',
+    };
+
+    const existingAssetState = (warrantyEndDate: string | null): DbState => ({
+      assets: [
+        {
+          tenant: 'tenant_1',
+          asset_id: 'asset_existing',
+          asset_type: 'workstation',
+          client_id: 'client_1',
+          name: 'Old Name',
+          serial_number: 'OLD',
+          status: 'active',
+          location: 'Old',
+          rmm_provider: 'tanium',
+          rmm_device_id: 'device_1',
+          warranty_end_date: warrantyEndDate,
+        },
+      ],
+      workstation_assets: [],
+      server_assets: [],
+      tenant_external_entity_mappings: [
+        {
+          id: 'map_existing',
+          tenant: 'tenant_1',
+          integration_type: 'tanium',
+          alga_entity_type: 'asset',
+          alga_entity_id: 'asset_existing',
+          external_entity_id: 'device_1',
+          external_realm_id: 'scope_1',
+          sync_status: 'pending',
+        },
+      ],
+      rmm_organization_mappings: [mappedScope],
+    });
+
+    it('writes the warranty date the snapshot reports on create', async () => {
+      const state: DbState = {
+        assets: [],
+        workstation_assets: [],
+        server_assets: [],
+        tenant_external_entity_mappings: [],
+        rmm_organization_mappings: [mappedScope],
+      };
+
+      const result = await ingestNormalizedRmmDeviceSnapshot({
+        tenant: 'tenant_1',
+        snapshot: buildSnapshot({ warrantyEndDate: '2028-01-01' }),
+        knex: createFakeKnex(state),
+      });
+
+      expect(result.action).toBe('created');
+      expect(state.assets[0].warranty_end_date).toEqual(new Date('2028-01-01T00:00:00.000Z'));
+    });
+
+    it('overwrites a stale warranty date on update when the provider reports one', async () => {
+      const state = existingAssetState('2026-05-05T00:00:00.000Z');
+
+      const result = await ingestNormalizedRmmDeviceSnapshot({
+        tenant: 'tenant_1',
+        snapshot: buildSnapshot({ warrantyEndDate: '2028-01-01' }),
+        knex: createFakeKnex(state),
+      });
+
+      expect(result.action).toBe('updated');
+      expect(state.assets[0].warranty_end_date).toEqual(new Date('2028-01-01T00:00:00.000Z'));
+    });
+
+    it('leaves a manually entered warranty date alone when the snapshot has none', async () => {
+      for (const warrantyEndDate of [undefined, null, '']) {
+        const state = existingAssetState('2027-03-09T00:00:00.000Z');
+
+        const result = await ingestNormalizedRmmDeviceSnapshot({
+          tenant: 'tenant_1',
+          snapshot: buildSnapshot({ warrantyEndDate }),
+          knex: createFakeKnex(state),
+        });
+
+        expect(result.action).toBe('updated');
+        expect(state.assets[0].warranty_end_date).toBe('2027-03-09T00:00:00.000Z');
+      }
+    });
+
+    it('leaves the column unset on create when the snapshot has no warranty date', async () => {
+      const state: DbState = {
+        assets: [],
+        workstation_assets: [],
+        server_assets: [],
+        tenant_external_entity_mappings: [],
+        rmm_organization_mappings: [mappedScope],
+      };
+
+      await ingestNormalizedRmmDeviceSnapshot({
+        tenant: 'tenant_1',
+        snapshot: buildSnapshot(),
+        knex: createFakeKnex(state),
+      });
+
+      expect('warranty_end_date' in state.assets[0]).toBe(false);
+    });
+  });
 });

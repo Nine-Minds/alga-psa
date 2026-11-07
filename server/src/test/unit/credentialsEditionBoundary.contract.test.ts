@@ -22,7 +22,6 @@ const ALLOWED_PREFIXES = ['ee/', 'packages/ee/'];
 const ALLOWED_FILES = new Set<string>([
   // This guard itself (contains the patterns).
   'server/src/test/unit/credentialsEditionBoundary.contract.test.ts',
-
   // CE no-op placeholders for migrations whose real files live in ee/server/migrations.
   'server/migrations/20260811100000_create_credentials_tables.cjs',
   'server/migrations/20260811110000_add_credential_permissions.cjs',
@@ -32,9 +31,8 @@ const ALLOWED_FILES = new Set<string>([
 
   // Shared metadata / RBAC catalog (data, not logic).
   'packages/db/src/lib/tenantTableMetadata.ts',
-  // Tenant lifecycle catalogs: declarative per-table entries (EE tenant deletion
-  // ordering, FK snapshot, co-managed write admission) that must cover every
-  // tenant table in either edition.
+  // Tenant table registries list every tenant table that can exist (EE tables included) for
+  // deletion ordering, FK topology and operational-write classification; they hold names only.
   'packages/db/src/lib/tenantTableManifest.ts',
   'packages/db/src/lib/tenantTableForeignKeys.ts',
   'packages/db/src/lib/operationalWriteTables.ts',
@@ -57,6 +55,11 @@ const ALLOWED_FILES = new Set<string>([
   // Client merge: edition-optional table list (skipped when the table is absent in CE).
   'packages/clients/src/lib/clientMergePlan.ts',
   'packages/clients/src/lib/clientMergeEngine.test.ts',
+
+  // Behavioral test for the EE-only portable vault implementation. Its
+  // fixtures intentionally reference EE credential APIs, outside the CE scan.
+  'ee/server/src/lib/credentials/__tests__/portableVault.test.ts',
+  'server/src/test/unit/product/coManagedPortableWorkspaceRestoreVault.test.ts',
 ]);
 
 const TABLES = 'credentials|credential_associations|credential_access_grants';
