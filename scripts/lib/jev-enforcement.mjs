@@ -7,14 +7,18 @@ import { readFileSync } from 'node:fs';
 
 export const DEFAULT_PRUNE_THRESHOLD = 0.2;
 
+// `missing: true` marks an artifact that is absent or unreadable, which is a
+// producer or download regression and not a recorded reason to run everything;
+// consumers surface that case as a CI warning so the fallback never passes
+// silently.
 export function loadJevSelection({ file, revision, mode = 'enforce' }) {
   let selection;
   try {
     selection = JSON.parse(readFileSync(file, 'utf8'));
   } catch (error) {
-    return { status: 'unavailable', reason: error.code === 'ENOENT' ? 'No jev-selection artifact' : `Unreadable jev-selection artifact: ${error.message}` };
+    return { status: 'unavailable', missing: true, reason: error.code === 'ENOENT' ? 'No jev-selection artifact' : `Unreadable jev-selection artifact: ${error.message}` };
   }
-  if (selection?.schemaVersion !== 1) return { status: 'unavailable', reason: 'Unsupported jev-selection schema' };
+  if (selection?.schemaVersion !== 1) return { status: 'unavailable', missing: true, reason: 'Unsupported jev-selection schema' };
   if (selection.status !== 'judged') return { status: 'unavailable', reason: `Judgment status ${selection.status}: ${selection.reason ?? ''}`.trim() };
   if (selection.mode !== mode) return { status: 'unavailable', reason: `Judgment recorded in ${selection.mode} mode` };
   if (selection.head !== revision) return { status: 'unavailable', reason: `Judgment is for ${String(selection.head).slice(0, 10)}, not ${String(revision).slice(0, 10)}` };

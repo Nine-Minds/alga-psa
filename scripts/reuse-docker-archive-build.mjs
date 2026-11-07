@@ -44,3 +44,6 @@ try {
 }
 log(result.reused ? `reused=true` : `reused=false (${result.reason})`);
 output('reused', result.reused ? 'true' : 'false');
+// One line per image on the job summary, so a reused candidate is visible
+// without opening the step log.
+if (env.GITHUB_STEP_SUMMARY) appendFileSync(env.GITHUB_STEP_SUMMARY, `Image ${env.BUILD_SERVICE}: ${result.reused ? 'reused a verified earlier build' : `built (${result.reason})`}\n`);

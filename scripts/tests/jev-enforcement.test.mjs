@@ -13,10 +13,13 @@ test('a judgment applies only when judged, in enforce mode, for the exact revisi
   const file = path.join(dir, 'jev-selection.json');
   const write = data => writeFileSync(file, JSON.stringify(data));
   assert.match(loadJevSelection({ file, revision }).reason, /No jev-selection artifact/);
+  assert.equal(loadJevSelection({ file, revision }).missing, true, 'an absent artifact is a regression, not a decision');
   writeFileSync(file, '{');
   assert.match(loadJevSelection({ file, revision }).reason, /Unreadable/);
+  assert.equal(loadJevSelection({ file, revision }).missing, true);
   write({ schemaVersion: 1, status: 'unavailable', reason: 'no key', mode: 'enforce', head: revision });
   assert.match(loadJevSelection({ file, revision }).reason, /unavailable: no key/);
+  assert.equal(loadJevSelection({ file, revision }).missing, undefined, 'a recorded reason is not a missing artifact');
   write({ schemaVersion: 1, status: 'judged', mode: 'shadow', head: revision });
   assert.match(loadJevSelection({ file, revision }).reason, /shadow mode/);
   write({ schemaVersion: 1, status: 'judged', mode: 'enforce', head: 'b'.repeat(40) });

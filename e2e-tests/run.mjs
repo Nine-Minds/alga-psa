@@ -75,6 +75,9 @@ try {
     for (const entry of policy.deferred) console.log(`  deferred (p=${entry.probability.toFixed(2)}): ${entry.identity[0]} › ${entry.identity[3].at(-1)}`);
   } else {
     console.log(`browser gate: full run; Jev ${jev.reason}`);
+    // An absent or unreadable artifact is a producer or download regression,
+    // not a recorded decision; make it visible in the checks UI.
+    if (jev.missing) console.warn(process.env.GITHUB_ACTIONS ? `::warning::Jev judgment artifact unavailable (${jev.reason}); every browser journey runs` : `WARNING: Jev judgment artifact unavailable (${jev.reason})`);
   }
   // The journey files this run covers: every discovered file, or under a
   // judgment only the files with a selected journey. A shard takes its share

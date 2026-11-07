@@ -137,6 +137,7 @@ if (forceFull) {
   } else {
     const jevPath = process.env.JEV_SELECTION_PATH;
     jev = jevPath ? loadJevSelection({ file: jevPath, revision: before.revision, mode: 'enforce' }) : { status: 'unavailable', reason: 'JEV_SELECTION_PATH is not set' };
+    if (jev.missing) warn(`Jev judgment artifact unavailable (${jev.reason}); the integration lane runs without it`);
     if (jev.status === 'applied') {
       // Floor and the import graph's direct answer stay; Jev prunes graph
       // suites it is confidently unrelated to and adds suites the graph missed.
