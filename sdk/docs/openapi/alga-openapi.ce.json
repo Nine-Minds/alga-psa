@@ -224,6 +224,9 @@
       "name": "calendar"
     },
     {
+      "name": "capabilities"
+    },
+    {
       "name": "chat"
     },
     {
@@ -231,6 +234,9 @@
     },
     {
       "name": "clients"
+    },
+    {
+      "name": "co-management"
     },
     {
       "name": "documents"
@@ -266,6 +272,9 @@
       "name": "inventory"
     },
     {
+      "name": "labels"
+    },
+    {
       "name": "marketing"
     },
     {
@@ -281,6 +290,9 @@
       "name": "mobile"
     },
     {
+      "name": "notifications"
+    },
+    {
       "name": "online-meetings"
     },
     {
@@ -291,6 +303,12 @@
     },
     {
       "name": "platform-reports"
+    },
+    {
+      "name": "portal-domain"
+    },
+    {
+      "name": "projects"
     },
     {
       "name": "public"
@@ -324,6 +342,9 @@
     },
     {
       "name": "tickets"
+    },
+    {
+      "name": "time-entries"
     },
     {
       "name": "webhooks"
@@ -27378,24 +27399,233 @@
         "properties": {
           "client_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "REQUIRED. Owning client (owner_client_id is accepted as an alias). A contract is always client-owned; creating without a client is rejected with 400 so no unassigned, UI-invisible contract can be created."
           },
           "contract_name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "contract_description": {
             "type": "string"
+          },
+          "billing_frequency": {
+            "type": "string",
+            "description": "monthly | quarterly | semi-annually | annually."
+          },
+          "start_date": {
+            "type": "string",
+            "description": "YYYY-MM-DD (or ISO datetime). Required: it is the assignment start date."
+          },
+          "end_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "draft",
+              "terminated",
+              "expired",
+              "published",
+              "archived"
+            ],
+            "description": "Defaults to draft semantics: a draft contract gets an inactive assignment."
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "billing_profile_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "po_required": {
+            "type": "boolean"
+          },
+          "po_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "po_amount": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "contract_line_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "custom_rate": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "contract_line_id"
+              ]
+            },
+            "description": "Optional contract lines attached in the same transaction. Any invalid line rolls back the header, the assignment and all lines."
+          }
+        },
+        "required": [
+          "client_id",
+          "contract_name",
+          "billing_frequency",
+          "start_date"
+        ]
+      },
+      "UpdateContractBodyV1": {
+        "type": "object",
+        "properties": {
+          "contract_name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "contract_description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "billing_frequency": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "draft",
+              "terminated",
+              "expired",
+              "published",
+              "archived"
+            ]
+          },
+          "is_active": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ContractAssignmentParamsV1": {
+        "type": "object",
+        "properties": {
+          "contractId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Contract UUID from contracts.contract_id."
+          },
+          "clientContractId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Assignment UUID from client_contracts.client_contract_id."
+          }
+        },
+        "required": [
+          "contractId",
+          "clientContractId"
+        ]
+      },
+      "CreateContractAssignmentBodyV1": {
+        "type": "object",
+        "properties": {
+          "client_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Defaults to the contract owner; must equal it when supplied."
           },
           "start_date": {
             "type": "string"
           },
           "end_date": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
-          "billing_frequency": {
-            "type": "string"
+          "is_active": {
+            "type": "boolean",
+            "description": "Defaults to true only when the contract header is active and not draft."
+          },
+          "billing_profile_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "po_required": {
+            "type": "boolean"
+          },
+          "po_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "po_amount": {
+            "type": [
+              "number",
+              "null"
+            ]
           }
         },
         "required": [
-          "client_id"
+          "start_date"
         ]
+      },
+      "UpdateContractAssignmentBodyV1": {
+        "type": "object",
+        "properties": {
+          "start_date": {
+            "type": "string"
+          },
+          "end_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "is_active": {
+            "type": "boolean",
+            "description": "true activates the assignment and its contract header (UI \"Set to Active\")."
+          },
+          "billing_profile_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "po_required": {
+            "type": "boolean"
+          },
+          "po_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "po_amount": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        }
       },
       "QuotesContractsApiErrorV1": {
         "type": "object",
@@ -112339,7 +112569,7 @@
       },
       "post": {
         "summary": "Create contract",
-        "description": "Creates contract via ApiContractLineController.createContract() (v2 controller mounted under v1 route).",
+        "description": "Creates a client-owned contract the way the UI wizard does: header + client_contracts assignment (+ optional lines) in ONE transaction, so the contract appears in the product. client_id is required (400 otherwise). Responds 201.",
         "tags": [
           "Quotes & Contracts v1"
         ],
@@ -112498,6 +112728,1262 @@
               }
             }
           },
+          "409": {
+            "description": "Conflicts with current state (invoices exist, already assigned, mixed currency).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by business rule (system-managed contract).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/contracts/{contractId}": {
+      "get": {
+        "summary": "Get contract",
+        "description": "Gets a contract with its assignments and contract lines.",
+        "tags": [
+          "Quotes & Contracts v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate() or route middleware before handler",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "contract_line",
+          "x-controller-origin": "ApiContractLineController (v2) mounted under v1 routes",
+          "x-request-context-wiring-gap": "Controller requires req.context via requireRequestContext(req); v1 route lacks explicit withApiKeyAuth wrapper."
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Contract UUID from contracts.contract_id."
+            },
+            "required": true,
+            "description": "Contract UUID from contracts.contract_id.",
+            "name": "contractId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or associated user missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for contract resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Target record not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update contract",
+        "description": "Updates contract header fields with the UI rules (system-managed contracts: 422; invoiced/expired restrictions: 409).",
+        "tags": [
+          "Quotes & Contracts v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate() or route middleware before handler",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "contract_line",
+          "x-controller-origin": "ApiContractLineController (v2) mounted under v1 routes",
+          "x-request-context-wiring-gap": "Controller requires req.context via requireRequestContext(req); v1 route lacks explicit withApiKeyAuth wrapper."
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Contract UUID from contracts.contract_id."
+            },
+            "required": true,
+            "description": "Contract UUID from contracts.contract_id.",
+            "name": "contractId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateContractBodyV1"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or associated user missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for contract resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Target record not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with current state (invoices exist, already assigned, mixed currency).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by business rule (system-managed contract).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Patch contract",
+        "description": "Alias of PUT (partial header update).",
+        "tags": [
+          "Quotes & Contracts v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate() or route middleware before handler",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "contract_line",
+          "x-controller-origin": "ApiContractLineController (v2) mounted under v1 routes",
+          "x-request-context-wiring-gap": "Controller requires req.context via requireRequestContext(req); v1 route lacks explicit withApiKeyAuth wrapper."
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Contract UUID from contracts.contract_id."
+            },
+            "required": true,
+            "description": "Contract UUID from contracts.contract_id.",
+            "name": "contractId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateContractBodyV1"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or associated user missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for contract resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Target record not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with current state (invoices exist, already assigned, mixed currency).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by business rule (system-managed contract).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete contract",
+        "description": "Deletes a contract with the UI rules: 404 not found, 422 system-managed, 409 has invoices. 204 on success.",
+        "tags": [
+          "Quotes & Contracts v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate() or route middleware before handler",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "contract_line",
+          "x-controller-origin": "ApiContractLineController (v2) mounted under v1 routes",
+          "x-request-context-wiring-gap": "Controller requires req.context via requireRequestContext(req); v1 route lacks explicit withApiKeyAuth wrapper."
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Contract UUID from contracts.contract_id."
+            },
+            "required": true,
+            "description": "Contract UUID from contracts.contract_id.",
+            "name": "contractId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiSuccessV1"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "Delete-like operation can return no content."
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or associated user missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for contract resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Target record not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with current state (invoices exist, already assigned, mixed currency).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by business rule (system-managed contract).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/contracts/{contractId}/assignments": {
+      "get": {
+        "summary": "List contract assignments",
+        "description": "Lists client_contracts rows for the contract.",
+        "tags": [
+          "Quotes & Contracts v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate() or route middleware before handler",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "contract_line",
+          "x-controller-origin": "ApiContractLineController (v2) mounted under v1 routes",
+          "x-request-context-wiring-gap": "Controller requires req.context via requireRequestContext(req); v1 route lacks explicit withApiKeyAuth wrapper."
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Contract UUID from contracts.contract_id."
+            },
+            "required": true,
+            "description": "Contract UUID from contracts.contract_id.",
+            "name": "contractId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or associated user missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for contract resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Target record not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create contract assignment",
+        "description": "Assigns an existing contract to its owning client (e.g. repairs a contract with no client_contracts row). 409 if already assigned, 422 if system-managed or client is not the owner.",
+        "tags": [
+          "Quotes & Contracts v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate() or route middleware before handler",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "contract_line",
+          "x-controller-origin": "ApiContractLineController (v2) mounted under v1 routes",
+          "x-request-context-wiring-gap": "Controller requires req.context via requireRequestContext(req); v1 route lacks explicit withApiKeyAuth wrapper."
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Contract UUID from contracts.contract_id."
+            },
+            "required": true,
+            "description": "Contract UUID from contracts.contract_id.",
+            "name": "contractId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateContractAssignmentBodyV1"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiSuccessV1"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Create-like operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or associated user missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for contract resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Target record not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with current state (invoices exist, already assigned, mixed currency).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by business rule (system-managed contract).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/contracts/{contractId}/assignments/{clientContractId}": {
+      "get": {
+        "summary": "Get contract assignment",
+        "description": "Gets one assignment.",
+        "tags": [
+          "Quotes & Contracts v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate() or route middleware before handler",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "contract_line",
+          "x-controller-origin": "ApiContractLineController (v2) mounted under v1 routes",
+          "x-request-context-wiring-gap": "Controller requires req.context via requireRequestContext(req); v1 route lacks explicit withApiKeyAuth wrapper."
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Contract UUID from contracts.contract_id."
+            },
+            "required": true,
+            "description": "Contract UUID from contracts.contract_id.",
+            "name": "contractId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Assignment UUID from client_contracts.client_contract_id."
+            },
+            "required": true,
+            "description": "Assignment UUID from client_contracts.client_contract_id.",
+            "name": "clientContractId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or associated user missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for contract resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Target record not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update contract assignment",
+        "description": "Updates dates/terms; is_active:true activates the assignment and contract.",
+        "tags": [
+          "Quotes & Contracts v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate() or route middleware before handler",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "contract_line",
+          "x-controller-origin": "ApiContractLineController (v2) mounted under v1 routes",
+          "x-request-context-wiring-gap": "Controller requires req.context via requireRequestContext(req); v1 route lacks explicit withApiKeyAuth wrapper."
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Contract UUID from contracts.contract_id."
+            },
+            "required": true,
+            "description": "Contract UUID from contracts.contract_id.",
+            "name": "contractId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Assignment UUID from client_contracts.client_contract_id."
+            },
+            "required": true,
+            "description": "Assignment UUID from client_contracts.client_contract_id.",
+            "name": "clientContractId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateContractAssignmentBodyV1"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or associated user missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for contract resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Target record not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with current state (invoices exist, already assigned, mixed currency).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by business rule (system-managed contract).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Patch contract assignment",
+        "description": "Alias of PUT.",
+        "tags": [
+          "Quotes & Contracts v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate() or route middleware before handler",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "contract_line",
+          "x-controller-origin": "ApiContractLineController (v2) mounted under v1 routes",
+          "x-request-context-wiring-gap": "Controller requires req.context via requireRequestContext(req); v1 route lacks explicit withApiKeyAuth wrapper."
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Contract UUID from contracts.contract_id."
+            },
+            "required": true,
+            "description": "Contract UUID from contracts.contract_id.",
+            "name": "contractId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Assignment UUID from client_contracts.client_contract_id."
+            },
+            "required": true,
+            "description": "Assignment UUID from client_contracts.client_contract_id.",
+            "name": "clientContractId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateContractAssignmentBodyV1"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or associated user missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for contract resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Target record not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with current state (invoices exist, already assigned, mixed currency).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by business rule (system-managed contract).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete contract assignment",
+        "description": "Removes an assignment unless invoices reference it (409; end it with an update instead). 204 on success.",
+        "tags": [
+          "Quotes & Contracts v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate() or route middleware before handler",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "contract_line",
+          "x-controller-origin": "ApiContractLineController (v2) mounted under v1 routes",
+          "x-request-context-wiring-gap": "Controller requires req.context via requireRequestContext(req); v1 route lacks explicit withApiKeyAuth wrapper."
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Contract UUID from contracts.contract_id."
+            },
+            "required": true,
+            "description": "Contract UUID from contracts.contract_id.",
+            "name": "contractId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Assignment UUID from client_contracts.client_contract_id."
+            },
+            "required": true,
+            "description": "Assignment UUID from client_contracts.client_contract_id.",
+            "name": "clientContractId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiSuccessV1"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "Delete-like operation can return no content."
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or associated user missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for contract resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Target record not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with current state (invoices exist, already assigned, mixed currency).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by business rule (system-managed contract).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Unexpected controller/service failure.",
             "content": {
@@ -112630,6 +114116,26 @@
               }
             }
           },
+          "409": {
+            "description": "Conflicts with current state (invoices exist, already assigned, mixed currency).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by business rule (system-managed contract).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Unexpected controller/service failure.",
             "content": {
@@ -112676,6 +114182,17 @@
             "required": true,
             "description": "Contract UUID from contracts.contract_id.",
             "name": "contractId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Contract line UUID from contract_lines.contract_line_id."
+            },
+            "required": true,
+            "description": "Contract line UUID from contract_lines.contract_line_id.",
+            "name": "contractLineId",
             "in": "path"
           }
         ],
@@ -112725,6 +114242,26 @@
           },
           "404": {
             "description": "Target record not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with current state (invoices exist, already assigned, mixed currency).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by business rule (system-managed contract).",
             "content": {
               "application/json": {
                 "schema": {
@@ -128213,6 +129750,54 @@
         }
       }
     },
+    "/api/client-portal/conversation-attachments/{attachmentId}": {
+      "get": {
+        "summary": "GET client-portal",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "client-portal"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/client-portal/documents/{documentId}/export": {
       "get": {
         "summary": "GET client-portal",
@@ -128431,6 +130016,156 @@
         ],
         "responses": {
           "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/co-management/archive-files/{archiveFileId}": {
+      "get": {
+        "summary": "GET co-management",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "co-management"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/co-management/attachments/{attachmentId}": {
+      "get": {
+        "summary": "GET co-management",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "co-management"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/co-management/export": {
+      "post": {
+        "summary": "POST co-management",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "co-management"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [],
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "description": "Placeholder request body",
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
             "description": "Placeholder success response",
             "content": {
               "application/json": {
@@ -132073,6 +133808,54 @@
         }
       }
     },
+    "/api/inventory/rma/{id}/document": {
+      "get": {
+        "summary": "GET inventory",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "inventory"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/inventory/sales-orders/{id}/document": {
       "get": {
         "summary": "GET inventory",
@@ -132149,6 +133932,156 @@
         },
         "responses": {
           "201": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/labels/linked-assets": {
+      "get": {
+        "summary": "GET labels",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "labels"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/labels/pdf": {
+      "post": {
+        "summary": "POST labels",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "labels"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [],
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "description": "Placeholder request body",
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/labels/templates": {
+      "get": {
+        "summary": "GET labels",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "labels"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [],
+        "responses": {
+          "200": {
             "description": "Placeholder success response",
             "content": {
               "application/json": {
@@ -132973,12 +134906,202 @@
         }
       }
     },
+    "/api/notifications/live-token": {
+      "get": {
+        "summary": "GET notifications",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "notifications"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/online-meetings/artifacts/{artifactId}": {
+      "get": {
+        "summary": "GET online-meetings",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "online-meetings"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/online-meetings/recordings/{artifactId}": {
       "get": {
         "summary": "GET online-meetings",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
           "online-meetings"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/portal-domain/surface": {
+      "get": {
+        "summary": "GET portal-domain",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "portal-domain"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/staging/containers/{id}/manifest": {
+      "get": {
+        "summary": "GET projects",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "projects"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -135859,6 +137982,54 @@
         }
       }
     },
+    "/api/tickets/{id}/email-html": {
+      "get": {
+        "summary": "GET tickets",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "tickets"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/tickets/{id}/live-token": {
       "get": {
         "summary": "GET tickets",
@@ -136167,6 +138338,52 @@
         "x-alga-products": [
           "psa"
         ],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/capabilities/co-managed": {
+      "get": {
+        "summary": "GET v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "capabilities"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [],
         "responses": {
           "200": {
             "description": "Placeholder success response",
@@ -141503,6 +143720,66 @@
         }
       }
     },
+    "/api/v1/time-entries/cancel-tracking/{sessionId}": {
+      "post": {
+        "summary": "POST v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "time-entries"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "description": "Placeholder request body",
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/webhooks/ai-gateway": {
       "options": {
         "summary": "OPTIONS webhooks",
@@ -141612,6 +143889,112 @@
     "/api/webhooks/alternative-payments": {
       "get": {
         "summary": "GET webhooks",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "webhooks"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "POST webhooks",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "webhooks"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "description": "Placeholder request body",
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/webhooks/datto": {
+      "options": {
+        "summary": "OPTIONS webhooks",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
           "webhooks"
