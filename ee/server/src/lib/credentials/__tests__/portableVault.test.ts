@@ -7,10 +7,10 @@ vi.mock('@alga-psa/core/logger', () => ({ default: { error: vi.fn() } }));
 
 import {
   encryptCredentialValues, resetCredentialAesKeyCache,
-} from '../../../../../ee/server/src/lib/credentials/encryption';
+} from '../encryption';
 import {
   PORTABLE_VAULT_KDF, sealPortableCredentialVault,
-} from '../../../../../ee/server/src/lib/credentials/portable';
+} from '../portable';
 
 const passphrase = 'customer-held portable recovery phrase';
 const originalEnvironment = { ...process.env };

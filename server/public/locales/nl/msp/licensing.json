@@ -364,6 +364,21 @@
     "accountManagementRead": "Toestemming geweigerd: leesrechten voor accountbeheer vereist"
   },
   "coManaged": {
+    "portableExport": {
+      "title": "Werkruimte exporteren",
+      "description": "Download een versleuteld, draagbaar archief van de records en bestanden in uw werkruimte.",
+      "recovery": "Bewaar de herstelwachtzin op een veilige plek. Zonder deze wachtzin kan het archief niet worden geopend.",
+      "connections": "Het archief bevat de records van uw werkruimte en de bestanden die in uw werkruimte zijn opgeslagen. Documentrecords en -koppelingen en de geschiedenis van tijd, planning, vergaderingen en gesprekken zijn nog niet inbegrepen en volgen in een latere release. Factureringsgegevens, MSP-privégegevens en integratiegeheimen zijn niet inbegrepen.",
+      "passphrase": "Herstelwachtzin",
+      "confirmPassphrase": "Herstelwachtzin bevestigen",
+      "download": "Archief voorbereiden en downloaden",
+      "requested": "Uw verzoek wordt geopend in een nieuw tabblad. Het voorbereiden kan enkele minuten duren; uw browser downloadt het bestand zodra het klaar is.",
+      "loadError": "U kunt deze werkruimte niet exporteren met uw huidige toegang.",
+      "lengthError": "Gebruik een wachtzin van 16 tot 1024 UTF-8-bytes.",
+      "matchError": "De herstelwachtzinnen moeten overeenkomen.",
+      "unavailable": "Het exporteren van werkruimten is niet beschikbaar in deze editie.",
+      "loading": "Laden…"
+    },
     "acceptance": {
       "accept": "Accepteren en werkruimte activeren",
       "administratorRequired": "Een lokale beheerder van de werkruimte moet deze samenwerking accepteren voordat uw team kan beginnen.",

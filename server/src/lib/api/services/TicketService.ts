@@ -1,5 +1,7 @@
 import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
+import { HumanWorkOwnerRequiredError } from '@alga-psa/shared/lib/humanWork/HumanWorkOwnerRequiredError';
 import { publishStoredWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { publishTicketTransitionsAfterCommit, ticketCreatedPublishedByCaller } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import {
@@ -22,7 +24,7 @@ import { applyCommentResponseState, publishResponseStateChange, resolveCommentAu
 import { reconcileCommentAttachments, canReadCommentAttachment, filterReadableCommentAttachments, canAccessAttachmentTicket, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import {
-  BaseService, ServiceContext, ListResult, withTransaction, tenantDb, registerAfterCommit } from '@alga-psa/db';
+  BaseService, ServiceContext, ListResult, withTransaction, tenantDb, registerAfterCommit, withViaPrincipal, stampViaPrincipalRow } from '@alga-psa/db';
 import { scheduleJobAt as scheduleBackgroundJobAt, cancelScheduledJob } from '@alga-psa/core';
 import { runAuthorizedTicketWatcherWrite, TicketWatcherPermissionError } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
 import { buildAuthorizationPrincipalSubject } from 'server/src/lib/api/controllers/authorizationKernel';
@@ -82,7 +84,6 @@ import {
 import { NotFoundError, ValidationError, ConflictError, ForbiddenError, UnprocessableEntityError } from '../middleware/apiMiddleware';
 import { locationAddressSql } from './locationAddressSql';
 import { inboundSenderLabel } from './ticketCommentAuthor';
-import { hasPermission } from '../../auth/rbac';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
 import { preserveStoredWatchList } from '@shared/lib/tickets/watchList';
 import {
@@ -382,6 +383,11 @@ function resolveScheduledCommentPublication(
 function isPreviewableMime(mimeType: string | null | undefined): boolean {
   const mime = (mimeType ?? '').toLowerCase();
   return mime.startsWith('image/') || mime === 'application/pdf' || mime.startsWith('video/');
+}
+
+/** The request is made as a service principal itself (not acting as a human). */
+function isBareServicePrincipal(context: ServiceContext): boolean {
+  return (context.user as { user_type?: string } | undefined)?.user_type === 'service' && !context.viaPrincipalUserId;
 }
 
 export class TicketService extends BaseService<ITicket> {
@@ -1404,6 +1410,7 @@ export class TicketService extends BaseService<ITicket> {
       knex,
       tenant: context.tenant,
       actorUserId: context.userId,
+      viaPrincipalUserId: context.viaPrincipalUserId,
       target: { entityType: 'ticket', entityId: ticketId },
       file: {
         fileName: file.name,
@@ -1571,7 +1578,7 @@ export class TicketService extends BaseService<ITicket> {
         entityId: documentId,
         actor: {
           actorType: TICKET_ACTIVITY_ACTOR.USER,
-          userId: context.userId,
+          userId: context.userId, viaPrincipalUserId: context.viaPrincipalUserId ?? null,
         },
         source: TICKET_ACTIVITY_SOURCE.API,
         details: {
@@ -1867,6 +1874,8 @@ export class TicketService extends BaseService<ITicket> {
           context.userId,
         );
 
+        await stampViaPrincipalRow(trx, context, 'tickets', { ticket_id: ticketResult.ticket_id }, 'entered_via_principal_id');
+
         // Get the full ticket data for return
         const fullTicket = await tenantScopedTable(trx, 'tickets', context.tenant)
           .where({ ticket_id: ticketResult.ticket_id })
@@ -1891,6 +1900,7 @@ export class TicketService extends BaseService<ITicket> {
           actor: {
             actorType: TICKET_ACTIVITY_ACTOR.API,
             userId: context.userId,
+            viaPrincipalUserId: context.viaPrincipalUserId ?? null,
           },
           source: TICKET_ACTIVITY_SOURCE.API,
           details: {
@@ -2095,7 +2105,7 @@ export class TicketService extends BaseService<ITicket> {
                     user: { user_id: context.userId, user_type: 'internal', tenant: context.tenant },
                   }
                 : undefined,
-              actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: context.userId },
+              actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: context.userId, viaPrincipalUserId: context.viaPrincipalUserId ?? null },
               source: TICKET_ACTIVITY_SOURCE.API,
             });
           } catch (error) {
@@ -2361,7 +2371,7 @@ export class TicketService extends BaseService<ITicket> {
           entityId: id,
           actor: {
             actorType: TICKET_ACTIVITY_ACTOR.USER,
-            userId: context.userId,
+            userId: context.userId, viaPrincipalUserId: context.viaPrincipalUserId ?? null,
           },
           source: TICKET_ACTIVITY_SOURCE.API,
           changes: curated,
@@ -2735,7 +2745,8 @@ export class TicketService extends BaseService<ITicket> {
 
         apiCommentId = apiGeneratedIds.comment_id;
         apiThreadId = apiGeneratedIds.thread_id;
-        apiIsInternal = data.is_internal || false;
+        // A bare service principal's comment defaults to internal: public text speaks for a human.
+        apiIsInternal = data.is_internal ?? isBareServicePrincipal(context);
         // `{}` with zero SQL natively; fails closed for requester-visible staff comments in co-managed.
         // LEVERAGE: pattern thread-audience-insert — nativeThreadAudience + spread into the comment_threads insert + label the publication payload is repeated at 5 sites (ticketModel, Comment.insert, optimizedTicketActions, ticketActions, TicketService); a single 'insertCommentThread' write path below would own it
         apiThreadAudience = await nativeThreadAudience(trx, context.tenant, {
@@ -2785,6 +2796,9 @@ export class TicketService extends BaseService<ITicket> {
       if (apiIsInternal && apiAuthor.authorType !== 'internal') {
         throw new ForbiddenError('Only MSP users can create internal comments');
       }
+      if (!apiIsInternal && isBareServicePrincipal(context)) {
+        throw new HumanWorkOwnerRequiredError('is_internal');
+      }
 
       const commentData = {
         comment_id: apiCommentId,
@@ -2812,7 +2826,9 @@ export class TicketService extends BaseService<ITicket> {
           : {}),
       };
 
-      const [comment] = await tenantScopedTable(trx, 'comments', context.tenant).insert(commentData).returning('*');
+      const [comment] = await tenantScopedTable(trx, 'comments', context.tenant)
+        .insert(withViaPrincipal(context, commentData, 'created_via_principal_id'))
+        .returning('*');
 
       await reconcileCommentAttachments(trx, context.tenant, comment.comment_id, context.userId);
 
@@ -2977,7 +2993,7 @@ export class TicketService extends BaseService<ITicket> {
         eventType: 'TICKET_COMMENT_SCHEDULE_CANCELED',
         entityType: TICKET_ACTIVITY_ENTITY.COMMENT,
         entityId: commentId,
-        actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: context.userId },
+        actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: context.userId, viaPrincipalUserId: context.viaPrincipalUserId ?? null },
         source: TICKET_ACTIVITY_SOURCE.API,
         details: { canceled: true },
       });
@@ -3026,7 +3042,7 @@ export class TicketService extends BaseService<ITicket> {
         const canOperatorRepair =
           comment.user_id == null &&
           context.user != null &&
-          (await hasPermission(context.user, 'ticket', 'update', trx));
+          (await hasApiContextPermission(context, 'ticket', 'update', trx));
         if (!canOperatorRepair) {
           throw new ValidationError('You can only edit your own comments');
         }
@@ -3684,12 +3700,12 @@ export class TicketService extends BaseService<ITicket> {
           childTicketIds: uniqueChildIds,
           mode: params.mode,
           choice: params.onClosedMaster ?? null,
-          actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: context.userId },
+          actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: context.userId, viaPrincipalUserId: context.viaPrincipalUserId ?? null },
           source: TICKET_ACTIVITY_SOURCE.API,
           occurredAt,
           mergedReason: `bundle:${params.mode}`,
         });
-        if (!attached.ok) {
+        if (attached.ok === false) {
           this.throwBundleAttachFailure(attached, {
             masterIsChildMessage: 'Cannot select a child ticket as the master.',
           });
@@ -3730,12 +3746,12 @@ export class TicketService extends BaseService<ITicket> {
           masterTicketId: params.masterTicketId,
           childTicketIds: childIds,
           choice: params.onClosedMaster ?? null,
-          actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: context.userId },
+          actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: context.userId, viaPrincipalUserId: context.viaPrincipalUserId ?? null },
           source: TICKET_ACTIVITY_SOURCE.API,
           occurredAt,
           mergedReason: 'bundle:added_children',
         });
-        if (!attached.ok) {
+        if (attached.ok === false) {
           this.throwBundleAttachFailure(attached, {
             masterIsChildMessage: 'Cannot add children to a bundled child ticket.',
           });
@@ -3845,11 +3861,11 @@ export class TicketService extends BaseService<ITicket> {
         mode: params.mode,
         reopenOnChildReply: params.reopenOnChildReply,
         choice: params.onClosedMaster ?? null,
-        actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: context.userId },
+        actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: context.userId, viaPrincipalUserId: context.viaPrincipalUserId ?? null },
         source: TICKET_ACTIVITY_SOURCE.API,
         occurredAt,
       });
-      if (!changed.ok) {
+      if (changed.ok === false) {
         if (changed.code === 'settings_not_found') throw new NotFoundError('Bundle settings not found');
         this.throwBundleAttachFailure(changed);
       }

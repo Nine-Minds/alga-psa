@@ -20,6 +20,7 @@ import { reconcileExecution } from './lib/test-execution-evidence.mjs';
 import { reconcileDiscovery, repositoryTestFiles } from './lib/test-discovery.mjs';
 import { partitionTestFiles } from './lib/test-sharding.mjs';
 import { collectedTestsFromJournal } from './lib/vitest-progress-reporter.mjs';
+import { readShardDurations } from './lib/server-unit-durations.mjs';
 import { testRevision } from './lib/test-revision.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -145,7 +146,8 @@ try {
   const discovery = reconcileDiscovery({ root: repoRoot, candidates, collections: [{ runner: 'integration', status: 'passed', files: complete }] });
   save('discovery', discovery);
   if (discovery.status !== 'passed') throw new Error(discovery.failures.join('\n'));
-  const assigned = partitionTestFiles(allFiles, index, total);
+  // Balanced by the committed main-run durations; the gate reads the same file.
+  const assigned = partitionTestFiles(allFiles, index, total, readShardDurations(repoRoot, 'integration')?.durationsMs ?? null);
   const filters = assigned.map(file => path.join(repoRoot, file));
   const collected = collectIntegrationFiles(filters).map(file => ({ file: path.join(serverDir, file) }));
   const actual = collected.map(entry => path.relative(repoRoot, entry.file).split(path.sep).join('/')).sort();

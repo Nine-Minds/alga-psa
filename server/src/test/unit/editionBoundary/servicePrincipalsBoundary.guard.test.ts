@@ -17,6 +17,11 @@ describe('T038: service-principal edition-boundary guard', () => {
     expect(guard.formatViolations(violations)).toBe('');
   }, 120_000);
 
+  it('does not scan generated Next build output', () => {
+    const paths = guard.collectRepoFiles(REPO_ROOT).map((file: { path: string }) => file.path);
+    expect(paths.some((path: string) => /(^|\/)\.next(?:-[^/]+)?\//.test(path))).toBe(false);
+  });
+
   it.each([
     ['service_principals table', 'await knex("service_principals").select()'],
     ['X-Alga-Act-As header', "const h = req.headers.get('x-alga-act-as');"],
