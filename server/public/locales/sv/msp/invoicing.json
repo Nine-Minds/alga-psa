@@ -2882,8 +2882,7 @@
         "labelClass": "Etikettklass",
         "labelFields": "Fält som visas på etiketten",
         "labelFieldsHint": "Postlänken (QR-kod) och identifieraren visas alltid.",
-        "worksheetMode": "Kundblad i Letter-format",
-        "worksheetModeHint": "Tillåter fullständigt serienummer och ärendebeskrivning. Välj Letter som sidstorlek i designern.",
+        "worksheetPageHint": "En ticketetikett med fullstor stående sida (A4 eller Letter) skrivs ut som ett kundarbetsblad på full sida, vilket lägger till fälten fullt serienummer och ticketbeskrivning. Mindre sidor skrivs ut som etiketter.",
         "worksheetFieldsHint": "Om serienumrets slut döljs döljs även hela serienumret; om detaljen döljs döljs även ärendebeskrivningen."
       },
       "placeholders": {
@@ -2947,6 +2946,7 @@
       "tenantName": "Företagsnamn"
     },
     "standardNames": {
+      "standard-ticket-customer-worksheet-a4": "Standard kundarbetsblad (A4)",
       "standard-ticket-customer-worksheet": "Standardkundblad"
     }
   },

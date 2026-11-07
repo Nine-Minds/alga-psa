@@ -160,7 +160,7 @@ describe('LabelPrintDialog', () => {
     render(<LabelPrintDialog isOpen onClose={vi.fn()} labelClass="ticket-work-tag" ids={[A]} />);
     fireEvent.click(screen.getByText('Print'));
     await waitFor(() => expect(screen.getByText(
-      /The worksheet must use Letter or larger portrait paper/,
+      /The worksheet does not fit the selected print layout/,
     )).toBeTruthy());
     expect(screen.queryByText('server fallback')).toBeNull();
     expect(screen.queryByText(/server detail/)).toBeNull();

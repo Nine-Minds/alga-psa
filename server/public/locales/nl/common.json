@@ -1687,6 +1687,7 @@
       "adjacentCopies": "De exemplaren van elke asset worden samen afgedrukt.",
       "templatePaperWarning": "Deze sjabloon wordt op een volledig vel afgedrukt. Kies \"Sjabloonpapier\" (of een lay-out voor een volledig vel), anders past de inhoud niet op het etiket.",
       "worksheetPageSizeError": "Het werkblad moet zowel in de ontwerper als in de afdrukindeling staand Letter-papier of groter gebruiken.",
+      "paperMismatchWarning": "Deze sjabloon is ontworpen voor {{template}}-papier, maar de geselecteerde indeling print op {{layout}}. Kies „Sjabloonpapier“ of de passende indeling voor volle vellen, anders past de inhoud niet.",
       "worksheetTextOverflowError": "Werkblad {{numbers}} bevat tekst die niet past. Pas de indeling aan of verkort de inhoud voordat u afdrukt."
     },
     "layout": {
@@ -1694,9 +1695,16 @@
       "roll-4x2": "Eén per etiket (rol van 4 × 2 in)",
       "letter-2x5": "Letter-vel, 2 × 5 (Avery 5163-stijl)",
       "a4-2x7": "A4-vel, 2 × 7 (99,1 × 38,1 mm-stijl)",
+      "a4-full": "A4-vel, één per pagina",
       "letter-full": "Letter-vel, één per pagina"
     },
+    "paper": {
+      "a4": "A4",
+      "letter": "Letter",
+      "legal": "Legal"
+    },
     "standardTemplates": {
+      "standard-ticket-customer-worksheet-a4": "Standaard klantenwerkvel (A4)",
       "standard-ticket-customer-worksheet": "Standaard klantwerkblad"
     }
   },

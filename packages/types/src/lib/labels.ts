@@ -37,13 +37,10 @@ export type LabelHideableField = (typeof LABEL_HIDEABLE_FIELDS)[number];
 
 export interface TemplateLabelSettings {
   hiddenFields?: LabelHideableField[];
-  /**
-   * `letter` marks a full-page worksheet template (the customer work sheet): it prints on Letter
-   * paper, so the label line-budget rules that trim fields to fit a 4 x 2 in tag (the custody
-   * lines replacing the detail/serial lines) do not apply, and the print dialog defaults to the
-   * paper the template asks for instead of the 4 x 2 in roll.
-   */
-  worksheetMode?: 'letter';
+  // A `ticket-work-tag` template whose declared page (printSettings.paperPreset / customPageSize)
+  // is Letter- or A4-sized portrait paper prints as a full-page customer worksheet: the label
+  // line-budget rules that trim fields to a 4 x 2 in tag do not apply, and the print dialog
+  // defaults to the paper the template asks for. The page size is the only gate.
 }
 
 /** The record type each label class prints. */

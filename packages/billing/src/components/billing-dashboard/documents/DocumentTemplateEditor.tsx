@@ -7,7 +7,6 @@ import { toast } from 'react-hot-toast';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
-import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Input } from '@alga-psa/ui/components/Input';
 import { AsyncSearchableSelect } from '@alga-psa/ui/components/AsyncSearchableSelect';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
@@ -42,7 +41,8 @@ import {
 } from '../../../lib/document-templates/registry';
 import { DesignerShell } from '../../invoice-designer/DesignerShell';
 import TransformsWorkspace from '../../invoice-designer/transforms/TransformsWorkspace';
-import { useInvoiceDesignerStore } from '../../invoice-designer/state/designerStore';
+import { resolveCurrentWorkspacePrintSettings, useInvoiceDesignerStore } from '../../invoice-designer/state/designerStore';
+import { isWorksheetLabelMetadata } from '../../../lib/label-batch/layout';
 import {
   exportWorkspaceToTemplateAst,
   importTemplateAstToWorkspace,
@@ -145,9 +145,6 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
   const [hiddenFields, setHiddenFields] = useState<LabelHideableField[]>(
     () => initialTemplate.templateAst?.metadata?.labelSettings?.hiddenFields ?? [],
   );
-  const [worksheetMode, setWorksheetMode] = useState(
-    () => initialTemplate.templateAst?.metadata?.labelSettings?.worksheetMode === 'letter',
-  );
   const withLabelMetadata = useCallback((ast: TemplateAst): TemplateAst =>
     !isLabelTemplate
       ? ast
@@ -159,10 +156,9 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
             labelSettings: {
               ...ast.metadata?.labelSettings,
               hiddenFields,
-              worksheetMode: labelClass === 'ticket-work-tag' && worksheetMode ? 'letter' : undefined,
             },
           },
-        }, [isLabelTemplate, labelClass, hiddenFields, worksheetMode]);
+        }, [isLabelTemplate, labelClass, hiddenFields]);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editorTab, setEditorTab] = useState<EditorTab>('visual');
@@ -182,6 +178,20 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
   const designerCanvasScale = useInvoiceDesignerStore((state) => state.canvasScale);
   const designerTransforms = useInvoiceDesignerStore((state) => state.transforms);
   const [designerHydrated, setDesignerHydrated] = useState(false);
+
+  // A ticket-work-tag template is a full-page customer worksheet when the page the author has set in
+  // the designer is worksheet paper (portrait, at least A4 wide). The page size is the only gate;
+  // worksheets print on whatever paper the template declares (A4, Letter, ...).
+  const isWorksheetPage = useMemo(() => {
+    if (!isLabelTemplate || labelClass !== 'ticket-work-tag') return false;
+    const printSettings = resolveCurrentWorkspacePrintSettings(designerNodes);
+    return isWorksheetLabelMetadata({
+      printSettings: {
+        paperPreset: printSettings.paperPreset,
+        ...(printSettings.customPageSize ? { customPageSize: printSettings.customPageSize } : {}),
+      },
+    });
+  }, [isLabelTemplate, labelClass, designerNodes]);
 
   // Transforms workspace shares the quote editor's preview-session reducer for its source/sample
   // controls. The generic preview itself is driven by the server action, not these scenarios — the
@@ -482,20 +492,12 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
                 />
               </div>
               {labelClass === 'ticket-work-tag' && (
-                <div className="flex flex-col gap-1 text-sm md:col-span-2">
-                  <Checkbox
-                    id="document-template-letter-worksheet-mode"
-                    checked={worksheetMode}
-                    onChange={(event) => setWorksheetMode(event.target.checked)}
-                    aria-describedby="document-template-letter-worksheet-mode-hint"
-                    label={t('documentTemplates.editor.fields.worksheetMode', { defaultValue: 'Letter customer worksheet' })}
-                  />
-                  <p id="document-template-letter-worksheet-mode-hint" className="text-xs text-muted-foreground">
-                    {t('documentTemplates.editor.fields.worksheetModeHint', {
-                      defaultValue: 'Allows the full asset serial and ticket description. Set the page size to Letter in the designer.',
-                    })}
-                  </p>
-                </div>
+                <p className="text-xs text-muted-foreground md:col-span-2">
+                  {t('documentTemplates.editor.fields.worksheetPageHint', {
+                    defaultValue:
+                      'A ticket tag whose page is full-size portrait paper (A4 or Letter) prints as a full-page customer worksheet, which adds the full asset serial and ticket description fields. Smaller pages print as tags.',
+                  })}
+                </p>
               )}
               <fieldset className="flex flex-col gap-2 text-sm md:col-span-2">
                 <legend className="font-medium text-foreground">
@@ -506,7 +508,7 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
                     defaultValue: 'The record link (QR code) and the identifier are always shown.',
                   })}
                 </p>
-                {labelClass === 'ticket-work-tag' && worksheetMode && (
+                {labelClass === 'ticket-work-tag' && isWorksheetPage && (
                   <p className="text-xs text-muted-foreground">
                     {t('documentTemplates.editor.fields.worksheetFieldsHint', {
                       defaultValue: 'Hiding the serial suffix also hides the full serial; hiding detail also hides the ticket description.',
@@ -517,7 +519,7 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
                   {LABEL_HIDEABLE_FIELDS.filter(
                     (field) =>
                       (field !== 'assetSerialNumber' && field !== 'ticketDescription') ||
-                      (labelClass === 'ticket-work-tag' && worksheetMode),
+                      (labelClass === 'ticket-work-tag' && isWorksheetPage),
                   ).map((field) => (
                     <label key={field} className="flex items-center gap-2">
                       <input

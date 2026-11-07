@@ -83,7 +83,7 @@ export function buildLabelModel(
   viewModel: LabelViewModel,
   tenantClient: LabelTenantClient | null | undefined,
   hiddenFields: readonly LabelHideableField[] = [],
-  options: { worksheetMode?: 'letter' } = {}
+  options: { worksheet?: boolean } = {}
 ): LabelViewModel {
   const hidden = new Set<LabelHideableField>(hiddenFields);
   const base = tenantClient ?? viewModel.tenantClient ?? null;
@@ -94,13 +94,13 @@ export function buildLabelModel(
   const custodyLocation = hidden.has('custodyLocation') ? null : viewModel.custodyLocation ?? null;
   const nextAction = hidden.has('nextAction') ? null : viewModel.nextAction ?? null;
   // Line budget: the two held-equipment lines take the work-reason and serial lines' place (the 4x2 in tag
-  // has no spare height). The asset line still names the held device; its serial suffix yields. A Letter
-  // worksheet (`metadata.labelSettings.worksheetMode`) has room for every line, so the budget never applies.
+  // has no spare height). The asset line still names the held device; its serial suffix yields. A full-page
+  // worksheet (the template's own page is worksheet paper) has room for every line, so the budget never applies.
   const custodyPrints =
-    options.worksheetMode !== 'letter' &&
+    options.worksheet !== true &&
     viewModel.labelClass === 'ticket-work-tag' &&
     Boolean(custodyLocation || nextAction);
-  const worksheet = options.worksheetMode === 'letter' && viewModel.labelClass === 'ticket-work-tag';
+  const worksheet = options.worksheet === true && viewModel.labelClass === 'ticket-work-tag';
   return {
     ...viewModel,
     title: hidden.has('title') ? null : viewModel.title,
@@ -175,13 +175,13 @@ export async function renderLabelBatchHtml(
           worksheetSize.widthMm > cellSize.widthMm + 0.05 ||
           worksheetSize.heightMm > cellSize.heightMm + 0.05
         ) {
-          throw new LabelLayoutError('The selected print layout is too small for this Letter worksheet.', {
+          throw new LabelLayoutError('The selected print layout is too small for this worksheet.', {
             errorCode: 'worksheetPageSize',
           });
         }
       }
       const model = buildLabelModel(item.viewModel, options.tenantClient, labelSettings?.hiddenFields, {
-        worksheetMode: labelSettings?.worksheetMode,
+        worksheet: Boolean(worksheetSize),
       });
       const evaluation = evaluateTemplateAst(ast, model as unknown as Record<string, unknown>);
       const { html, css } = await renderTemplateAstFragment(ast, evaluation, { locale: options.locale });

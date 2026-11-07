@@ -70,11 +70,12 @@ async function measure(html: string, media: 'screen' | 'print', frameSelector: s
 
 /**
  * Per-code print page and printable-area guide: thermal tags print on the 4 x 2 in roll with the
- * 3 mm margin (round(3 mm to px) = 11 px); the customer worksheet prints on Letter paper with its
- * 15 mm margin (round(15 mm to px) = 57 px).
+ * 3 mm margin (round(3 mm to px) = 11 px); the customer worksheets print on their own paper
+ * (Letter or A4) with their 15 mm margin (round(15 mm to px) = 57 px).
  */
-const GEOMETRY_BY_CODE: Record<string, { width: number; height: number; unit: 'in'; frame: number; marginPx: number }> = {
+const GEOMETRY_BY_CODE: Record<string, { width: number; height: number; unit: 'in' | 'mm'; frame: number; marginPx: number }> = {
   'standard-ticket-customer-worksheet': { width: 8.5, height: 11, unit: 'in', frame: 816, marginPx: 57 },
+  'standard-ticket-customer-worksheet-a4': { width: 210, height: 297, unit: 'mm', frame: 794, marginPx: 57 },
 };
 const TAG_GEOMETRY = { width: 4, height: 2, unit: 'in' as const, frame: 384, marginPx: 11 };
 const geometryFor = (code: string) => GEOMETRY_BY_CODE[code] ?? TAG_GEOMETRY;

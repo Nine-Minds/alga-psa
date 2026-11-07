@@ -6,7 +6,12 @@ import { StorageService } from '@alga-psa/storage/StorageService';
 
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { renderLabelBatchHtml, type LabelPrintItem } from '../lib/label-batch/renderLabelBatchHtml';
-import { LabelLayoutError, labelMetadataPrefersPaperPage, type LabelBatchLayout } from '../lib/label-batch/layout';
+import {
+  LabelLayoutError,
+  labelMetadataPrefersPaperPage,
+  resolveTemplateDeclaredPageSizeMm,
+  type LabelBatchLayout,
+} from '../lib/label-batch/layout';
 import { listDocumentTemplates } from '../lib/document-templates/storage';
 import { labelClassOfCustomTemplate } from '../lib/label-template-ast/labelTemplates';
 import {
@@ -115,13 +120,24 @@ export async function resolveLabelTemplateForTenant(
   return resolveLabelTemplate(knex, tenant, labelClass, templateId);
 }
 
+/** The layout helper's mm pair in the flatter shape the print dialog consumes. */
+const toDialogPaperSize = (size: { widthMm: number; heightMm: number } | null): { width: number; height: number } | null =>
+  size ? { width: size.widthMm, height: size.heightMm } : null;
+
 /** The templates a tenant can print a label class with, for the print dialog. Read-only. */
 export async function listLabelTemplatesForTenant(
   tenant: string,
   labelClass: LabelClass
 ): Promise<{
   defaultTemplateId: string;
-  templates: Array<{ id: string; name: string; source: 'standard' | 'custom'; prefersPaperPage: boolean }>;
+  templates: Array<{
+    id: string;
+    name: string;
+    source: 'standard' | 'custom';
+    prefersPaperPage: boolean;
+    /** The page the template declares in mm, when it declares one. */
+    paperSizeMm?: { width: number; height: number } | null;
+  }>;
 }> {
   const { knex } = await createTenantKnex();
   const items = await listDocumentTemplates(knex, tenant, 'work-tag');
@@ -135,7 +151,7 @@ export async function listLabelTemplatesForTenant(
       id: item.template_id,
       name: item.name,
       source: item.source,
-      // True when the template asks for a full sheet (a Letter worksheet): the dialog offers
+      // True when the template asks for a full sheet (an A4 or Letter worksheet): the dialog offers
       // "template paper" as the layout default for it. Standard ASTs carry the page size, so the
       // catalog answers for both sources.
       prefersPaperPage:
@@ -143,6 +159,10 @@ export async function listLabelTemplatesForTenant(
         (item.source === 'standard'
           ? labelMetadataPrefersPaperPage(getStandardLabelTemplateAstByCode(item.template_id)?.metadata)
           : false),
+      paperSizeMm: toDialogPaperSize(resolveTemplateDeclaredPageSizeMm(item.templateAst?.metadata))
+        ?? (item.source === 'standard'
+          ? toDialogPaperSize(resolveTemplateDeclaredPageSizeMm(getStandardLabelTemplateAstByCode(item.template_id)?.metadata))
+          : null),
     }));
   const resolved = await resolveLabelTemplate(knex, tenant, labelClass);
   return { defaultTemplateId: resolved.ok ? resolved.templateCode : LABEL_STANDARD_CODE_BY_CLASS[labelClass], templates };

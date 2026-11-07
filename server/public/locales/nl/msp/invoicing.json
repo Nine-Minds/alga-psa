@@ -2882,8 +2882,7 @@
         "labelClass": "Labelklasse",
         "labelFields": "Velden die op het label worden getoond",
         "labelFieldsHint": "De recordlink (QR-code) en de identificatie worden altijd getoond.",
-        "worksheetMode": "Klantwerkblad in Letter-formaat",
-        "worksheetModeHint": "Hiermee zijn het volledige serienummer en de ticketbeschrijving beschikbaar. Stel het paginaformaat in de ontwerper in op Letter.",
+        "worksheetPageHint": "Een ticketlabel waarvan de pagina volledig formaat staand is (A4 of Letter) wordt als klantenwerkvel op een.vol vel gedrukt; er komen dan velden voor volledig serienummer en ticketbeschrijving bij. Kleinere pagina’s worden als label gedrukt.",
         "worksheetFieldsHint": "Als u het einde van het serienummer verbergt, wordt ook het volledige serienummer verborgen; als u het detail verbergt, ook de ticketbeschrijving."
       },
       "placeholders": {
@@ -2947,6 +2946,7 @@
       "tenantName": "Bedrijfsnaam"
     },
     "standardNames": {
+      "standard-ticket-customer-worksheet-a4": "Standaard klantenwerkvel (A4)",
       "standard-ticket-customer-worksheet": "Standaard klantwerkblad"
     }
   },

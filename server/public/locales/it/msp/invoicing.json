@@ -2882,8 +2882,7 @@
         "labelClass": "Classe di etichetta",
         "labelFields": "Campi mostrati sull'etichetta",
         "labelFieldsHint": "Il collegamento al record (codice QR) e l'identificativo sono sempre mostrati.",
-        "worksheetMode": "Foglio cliente in formato Letter",
-        "worksheetModeHint": "Consente di includere il numero di serie completo e la descrizione del ticket. Imposta il formato Letter nel designer.",
+        "worksheetPageHint": "Un’etichetta ticket la cui pagina è a piena pagina verticale (A4 o Letter) viene stampata come foglio di lavoro cliente a pagina completa, che aggiunge i campi numero di serie completo e descrizione del ticket. Le pagine più piccole vengono stampate come etichette.",
         "worksheetFieldsHint": "Nascondere la parte finale della serie nasconde anche il numero completo; nascondere il dettaglio nasconde anche la descrizione del ticket."
       },
       "placeholders": {
@@ -2947,6 +2946,7 @@
       "tenantName": "Nome dell'azienda"
     },
     "standardNames": {
+      "standard-ticket-customer-worksheet-a4": "Foglio di lavoro cliente standard (A4)",
       "standard-ticket-customer-worksheet": "Foglio cliente standard"
     }
   },

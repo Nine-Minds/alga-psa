@@ -153,6 +153,43 @@ export function LabelPrintDialog({
       : tpl.name,
   }));
 
+  // Human-readable page size for a template or layout preset, used by the paper-mismatch warning.
+  const formatPaper = (size?: { width: number; height: number } | null): string | null => {
+    if (!size) return null;
+    const near = (w: number, h: number) => Math.abs(size.width - w) < 1 && Math.abs(size.height - h) < 1;
+    if (near(210, 297)) return t('labels.paper.a4', { defaultValue: 'A4' });
+    if (near(215.9, 279.4)) return t('labels.paper.letter', { defaultValue: 'Letter' });
+    if (near(215.9, 355.6)) return t('labels.paper.legal', { defaultValue: 'Legal' });
+    return `${Math.round(size.width)} × ${Math.round(size.height)} mm`;
+  };
+  const mmFromLayout = (layout: unknown): { width: number; height: number } | null => {
+    if (!layout || typeof layout !== 'object') return null;
+    const l = layout as {
+      kind?: string;
+      pageSize?: { width: number; height: number; unit: string };
+      labelWidth?: number;
+      labelHeight?: number;
+      unit?: string;
+    };
+    const source = l.kind === 'grid' ? { width: l.labelWidth, height: l.labelHeight, unit: l.unit } : l.pageSize;
+    if (!source || typeof source.width !== 'number' || typeof source.height !== 'number') return null;
+    const factor = source.unit === 'in' ? 25.4 : 1;
+    return { width: source.width * factor, height: source.height * factor };
+  };
+  // True when the chosen layout prints on a different paper than the template declares (e.g. an A4
+  // template sent through the Letter layout), which the server rejects with a paper-size error.
+  const paperMismatch = (() => {
+    if (preset === 'template-preferred') return null;
+    const tpl = (templates?.templates ?? []).find((candidate) => candidate.id === templateId);
+    if (!tpl?.prefersPaperPage) return null;
+    const templatePaper = tpl.paperSizeMm ?? null;
+    const layoutPaper = mmFromLayout(LABEL_LAYOUT_PRESETS[preset].layout);
+    if (!templatePaper || !layoutPaper) return null;
+    const same = Math.abs(templatePaper.width - layoutPaper.width) < 1 && Math.abs(templatePaper.height - layoutPaper.height) < 1;
+    if (same) return null;
+    return { template: formatPaper(templatePaper), layout: formatPaper(layoutPaper) };
+  })();
+
   const run = useCallback(
     async (skipRecordIds: Set<string>, overrideTemplateCode?: string) => {
       const selectedLabels: LabelSubject[] = isSingleTicket
@@ -211,7 +248,7 @@ export function LabelPrintDialog({
   const localizedWorksheetError = (code?: LabelPrintErrorCode, worksheetNumbers?: number[]): string | null => {
     if (code === 'worksheetPageSize') {
       return t('labels.dialog.worksheetPageSizeError', {
-        defaultValue: 'The worksheet must use Letter or larger portrait paper, both in the designer and the print layout.',
+        defaultValue: 'The worksheet does not fit the selected print layout. Use "Template paper" or a layout on the same paper as the template.',
       });
     }
     if (code === 'worksheetTextOverflow' && worksheetNumbers?.length) {
@@ -317,21 +354,20 @@ export function LabelPrintDialog({
             />
           </div>
 
-          {/* A worksheet template declares a full-sheet page; the tag layouts cannot hold it, so say so
-              before the print fails with "does not fit on the label". */}
-          {templateOptions.length > 0 &&
-            (templates?.templates ?? []).find((tpl) => tpl.id === templateId)?.prefersPaperPage &&
-            preset !== 'template-preferred' &&
-            preset !== 'letter-full' && (
-              <Alert variant="warning">
-                <AlertDescription>
-                  {t('labels.dialog.templatePaperWarning', {
-                    defaultValue:
-                      'This template prints on a full sheet. Choose "Template paper" (or a full-sheet layout), or the content will not fit the label.',
-                  })}
-                </AlertDescription>
-              </Alert>
-            )}
+          {/* A worksheet template declares a full-sheet page; a different paper cannot hold it, so say
+              so before the print fails with "does not fit on the label". */}
+          {paperMismatch && (
+            <Alert variant="warning">
+              <AlertDescription>
+                {t('labels.dialog.paperMismatchWarning', {
+                  defaultValue:
+                    'This template is designed for {{template}} paper, but the selected layout prints on {{layout}}. Choose "Template paper" or the matching full-sheet layout, or the content will not fit.',
+                  template: paperMismatch.template,
+                  layout: paperMismatch.layout,
+                })}
+              </AlertDescription>
+            </Alert>
+          )}
 
           {isSingleTicket && (
             <>

@@ -7,8 +7,10 @@ export interface LabelTemplateChoice {
   id: string;
   name: string;
   source: 'standard' | 'custom';
-  /** True when the template declares a full-sheet page (a Letter worksheet), so "template paper" printing applies. */
+  /** True when the template declares a full-sheet page (an A4 or Letter worksheet), so "template paper" printing applies. */
   prefersPaperPage?: boolean;
+  /** The page the template declares in millimetres, when it declares one. */
+  paperSizeMm?: { width: number; height: number } | null;
 }
 
 export interface LabelTemplateList {

@@ -1687,6 +1687,7 @@
       "adjacentCopies": "As cópias de cada ativo são impressas juntas.",
       "templatePaperWarning": "Este modelo é impresso em uma folha inteira. Escolha \"Papel do modelo\" (ou um layout de folha inteira), caso contrário o conteúdo não caberá na etiqueta.",
       "worksheetPageSizeError": "A folha tem de usar papel Letter ou maior na vertical, tanto no editor como na disposição de impressão.",
+      "paperMismatchWarning": "Este modelo foi projetado para papel {{template}}, mas o layout selecionado imprime em {{layout}}. Escolha „Papel do modelo“ ou o layout de página inteira correspondente, ou o conteúdo não caberá.",
       "worksheetTextOverflowError": "A folha {{numbers}} contém texto que não cabe. Ajuste a disposição ou encurte o conteúdo antes de imprimir."
     },
     "layout": {
@@ -1694,9 +1695,16 @@
       "roll-4x2": "Uma por etiqueta (rolo de 4 × 2 pol.)",
       "letter-2x5": "Folha Letter, 2 × 5 (estilo Avery 5163)",
       "a4-2x7": "Folha A4, 2 × 7 (estilo 99,1 × 38,1 mm)",
+      "a4-full": "Folha A4, uma por página",
       "letter-full": "Folha Letter, uma por página"
     },
+    "paper": {
+      "a4": "A4",
+      "letter": "Letter",
+      "legal": "Legal"
+    },
     "standardTemplates": {
+      "standard-ticket-customer-worksheet-a4": "Folha de trabalho padrão do cliente (A4)",
       "standard-ticket-customer-worksheet": "Folha de cliente padrão"
     }
   },

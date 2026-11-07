@@ -10,6 +10,7 @@ import { buildLabelTemplateBindings } from './bindings';
  */
 export const STANDARD_LABEL_TICKET_WORK_TAG_CODE = 'standard-ticket-work-tag';
 export const STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_CODE = 'standard-ticket-customer-worksheet';
+export const STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_A4_CODE = 'standard-ticket-customer-worksheet-a4';
 export const STANDARD_LABEL_ASSET_CODE = 'standard-asset-label';
 export const STANDARD_LABEL_ASSET_CODE128_CODE = 'standard-asset-label-code128';
 export const STANDARD_LABEL_STOCK_UNIT_CODE = 'standard-stock-unit-label';
@@ -28,6 +29,7 @@ export const LABEL_STANDARD_CODE_BY_CLASS: Record<LabelClass, string> = {
 export const LABEL_CLASS_BY_STANDARD_CODE: Record<string, LabelClass> = {
   [STANDARD_LABEL_TICKET_WORK_TAG_CODE]: 'ticket-work-tag',
   [STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_CODE]: 'ticket-work-tag',
+  [STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_A4_CODE]: 'ticket-work-tag',
   [STANDARD_LABEL_ASSET_CODE]: 'asset-identity',
   [STANDARD_LABEL_ASSET_CODE128_CODE]: 'asset-identity',
   [STANDARD_LABEL_STOCK_UNIT_CODE]: 'stock-unit-identity',
@@ -166,13 +168,13 @@ const identifier = (id: string, fontPx: number): Node =>
   text(id, 'identifier', { fontSize: `${fontPx}px`, fontWeight: 800, fontFamily: '"JetBrains Mono", monospace', lineHeight: 1.1 });
 
 /**
- * The full-page customer worksheet (`worksheetMode: 'letter'`): the ticket work tag printed on Letter
- * paper instead of the 4 x 2 in roll. Ported from the tenant-authored template the MSP runs today, with
- * two changes: the logo binds `tenantLogo` (a hardcoded `/api/documents/view/...` source only resolves
- * server-side, never in the print path), and an "Asset Specifications" block prints the linked asset's
- * name, make/model, OS, CPU, RAM and storage. Field labels remain visible when values are missing,
- * so a technician can fill in the blanks. The line-budget trims that shrink fields to a 4 x 2 in tag
- * do not apply in worksheet mode.
+ * The full-page customer worksheet: the ticket work tag printed on a full sheet instead of the 4 x 2 in
+ * roll, in two paper variants (Letter and A4 — the page size is what makes a tag a worksheet). Ported
+ * from the tenant-authored template the MSP runs today, with two changes: the logo binds `tenantLogo`
+ * (a hardcoded `/api/documents/view/...` source only resolves server-side, never in the print path),
+ * and an "Asset Specifications" block prints the linked asset's name, make/model, OS, CPU, RAM and
+ * storage. Field labels remain visible when values are missing, so a technician can fill in the blanks.
+ * The line-budget trims that shrink fields to a 4 x 2 in tag do not apply on a worksheet.
  */
 const WORKSHEET_FIELD_STYLE: Record<string, unknown> = {
   width: 'auto',
@@ -193,19 +195,23 @@ const worksheetField = (id: string, bindingId: string, labelText: TemplateI18nRe
   style: { inline: { ...WORKSHEET_FIELD_STYLE } },
 });
 
-const buildTicketCustomerWorksheet = (): TemplateAst => ({
+const buildTicketCustomerWorksheet = (paper: 'letter' | 'a4'): TemplateAst => ({
   kind: 'invoice-template-ast',
   version: TEMPLATE_AST_VERSION,
   metadata: {
-    templateName: 'Standard Customer Worksheet',
-    labelSettings: { hiddenFields: [], worksheetMode: 'letter' },
-    printSettings: { paperPreset: 'Letter', marginMm: 15, customPageSize: { width: 8.5, height: 11, unit: 'in' } },
+    templateName: paper === 'a4' ? 'Standard Customer Worksheet (A4)' : 'Standard Customer Worksheet',
+    labelSettings: { hiddenFields: [] },
+    printSettings: paper === 'a4'
+      ? { paperPreset: 'A4', marginMm: 15, customPageSize: { width: 210, height: 297, unit: 'mm' } }
+      : { paperPreset: 'Letter', marginMm: 15, customPageSize: { width: 8.5, height: 11, unit: 'in' } },
   },
   bindings: buildLabelTemplateBindings(),
   layout: {
     id: 'root',
     type: 'document',
-    style: { inline: { width: '816px', height: '1056px' } },
+    // A4 is 210 x 297 mm (794 x 1123 px at 96 dpi); the layout below is sized for Letter and the
+    // content flows from the top, so the taller A4 page simply leaves more room at the bottom.
+    style: { inline: { width: paper === 'a4' ? '794px' : '816px', height: paper === 'a4' ? '1123px' : '1056px' } },
     children: [
       {
         id: 'header',
@@ -425,7 +431,8 @@ const buildRmaLabel = (): TemplateAst =>
 
 export const STANDARD_LABEL_TEMPLATE_ASTS: Record<string, TemplateAst> = {
   [STANDARD_LABEL_TICKET_WORK_TAG_CODE]: buildTicketWorkTag(),
-  [STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_CODE]: buildTicketCustomerWorksheet(),
+  [STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_CODE]: buildTicketCustomerWorksheet('letter'),
+  [STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_A4_CODE]: buildTicketCustomerWorksheet('a4'),
   [STANDARD_LABEL_ASSET_CODE]: buildAssetLabel('Standard Asset Label', false),
   [STANDARD_LABEL_ASSET_CODE128_CODE]: buildAssetLabel('Standard Asset Label with Code 128', true),
   [STANDARD_LABEL_STOCK_UNIT_CODE]: buildStockUnitLabel(),

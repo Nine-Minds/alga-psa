@@ -2882,8 +2882,7 @@
         "labelClass": "Clase de etiqueta",
         "labelFields": "Campos que se muestran en la etiqueta",
         "labelFieldsHint": "El enlace del registro (código QR) y el identificador siempre se muestran.",
-        "worksheetMode": "Hoja de cliente tamaño carta",
-        "worksheetModeHint": "Permite incluir el número de serie completo y la descripción del ticket. Seleccione el tamaño carta en el diseñador.",
+        "worksheetPageHint": "Una etiqueta de ticket cuya página es de tamaño completo en vertical (A4 o Letter) se imprime como un cuaderno de trabajo para cliente a página completa, lo que añade los campos de número de serie completo y descripción del ticket. Las páginas más pequeñas se imprimen como etiquetas.",
         "worksheetFieldsHint": "Ocultar la terminación de serie también oculta el número completo; ocultar el detalle también oculta la descripción del ticket."
       },
       "placeholders": {
@@ -2947,6 +2946,7 @@
       "tenantName": "Nombre de la empresa"
     },
     "standardNames": {
+      "standard-ticket-customer-worksheet-a4": "Cuaderno de trabajo estándar para cliente (A4)",
       "standard-ticket-customer-worksheet": "Hoja de cliente estándar"
     }
   },

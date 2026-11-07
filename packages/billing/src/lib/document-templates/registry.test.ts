@@ -82,11 +82,14 @@ describe('document type registry', () => {
     const entry = getDocumentTypeRegistryEntry('work-tag');
     for (const code of entry.standardCodes) {
       const ast = entry.getStandardTemplateAstByCode(code)!;
-      // Thermal tags print on the 4 x 2 in roll cell; the customer worksheet prints on Letter paper.
+      // Thermal tags print on the 4 x 2 in roll cell; the customer worksheets print on full-sheet
+      // paper (Letter and A4 variants).
       expect(ast.metadata?.printSettings?.customPageSize).toEqual(
         code === 'standard-ticket-customer-worksheet'
           ? { width: 8.5, height: 11, unit: 'in' }
-          : { width: 4, height: 2, unit: 'in' },
+          : code === 'standard-ticket-customer-worksheet-a4'
+            ? { width: 210, height: 297, unit: 'mm' }
+            : { width: 4, height: 2, unit: 'in' },
       );
       const evaluation = evaluateTemplateAst(ast, entry.buildSampleViewModel() as never);
       const html = await renderTemplateAstHtmlDocument(ast, evaluation, { locale: 'en' });

@@ -1687,6 +1687,7 @@
       "adjacentCopies": "Copies print together for each asset.",
       "templatePaperWarning": "This template prints on a full sheet. Choose \"Template paper\" (or a full-sheet layout), or the content will not fit the label.",
       "worksheetPageSizeError": "The worksheet must use Letter or larger portrait paper, both in the designer and the print layout.",
+      "paperMismatchWarning": "This template is designed for {{template}} paper, but the selected layout prints on {{layout}}. Choose \"Template paper\" or the matching full-sheet layout, or the content will not fit.",
       "worksheetTextOverflowError": "Worksheet {{numbers}} contains text that will not fit. Adjust the layout or shorten the content before printing."
     },
     "layout": {
@@ -1694,10 +1695,17 @@
       "roll-4x2": "One per label (4 × 2 in roll)",
       "letter-2x5": "Letter sheet, 2 × 5 (Avery 5163-style)",
       "a4-2x7": "A4 sheet, 2 × 7 (99.1 × 38.1 mm style)",
-      "letter-full": "Letter sheet, one per page"
+      "letter-full": "Letter sheet, one per page",
+      "a4-full": "A4 sheet, one per page"
+    },
+    "paper": {
+      "a4": "A4",
+      "letter": "Letter",
+      "legal": "Legal"
     },
     "standardTemplates": {
-      "standard-ticket-customer-worksheet": "Standard Customer Worksheet"
+      "standard-ticket-customer-worksheet": "Standard Customer Worksheet",
+      "standard-ticket-customer-worksheet-a4": "Standard Customer Worksheet (A4)"
     }
   },
   "deleteEntity": {

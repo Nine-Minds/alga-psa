@@ -56,15 +56,15 @@ describe('buildLabelModel', () => {
     expect(paths.some((p) => /recordId|email|phone/i.test(p))).toBe(false);
   });
 
-  it('provides the full serial and description only to Letter ticket worksheets before evaluation', () => {
+  it('provides the full serial and description only to full-page ticket worksheets before evaluation', () => {
     const withDetails = { ...vm, assetSerialNumber: '1234567', ticketDescription: 'First line\nSecond line' };
     expect(buildLabelModel(withDetails, tenant)).toMatchObject({ assetSerialNumber: null, ticketDescription: null });
-    expect(buildLabelModel(withDetails, tenant, [], { worksheetMode: 'letter' })).toMatchObject({
+    expect(buildLabelModel(withDetails, tenant, [], { worksheet: true })).toMatchObject({
       assetSerialNumber: '1234567',
       ticketDescription: 'First line\nSecond line',
       url: vm.url,
     });
-    expect(buildLabelModel({ ...withDetails, labelClass: 'asset-identity' }, tenant, [], { worksheetMode: 'letter' }))
+    expect(buildLabelModel({ ...withDetails, labelClass: 'asset-identity' }, tenant, [], { worksheet: true }))
       .toMatchObject({ assetSerialNumber: null, ticketDescription: null });
   });
 
@@ -78,7 +78,7 @@ describe('buildLabelModel', () => {
       { ...vm, assetSerialNumber: '1234567', ticketDescription: 'Description' },
       tenant,
       hidden,
-      { worksheetMode: 'letter' },
+      { worksheet: true },
     );
     expect(model.assetSerialNumber).toBe(serial);
     expect(model.ticketDescription).toBe(description);

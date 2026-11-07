@@ -29,13 +29,13 @@ const FIELD_DEFINITIONS: Record<string, TemplateFieldDefinition> = {
     path: 'label.assetSerialNumber',
     label: 'Full asset serial number',
     category: 'Work Tag',
-    description: 'Full serial of the selected asset, available on Letter customer worksheets.',
+    description: 'Full serial of the selected asset, available on full-page customer worksheets.',
   },
   'label.ticketDescription': {
     path: 'label.ticketDescription',
     label: 'Ticket description',
     category: 'Work Tag',
-    description: 'Ticket description as plain text, available on Letter customer worksheets.',
+    description: 'Ticket description as plain text, available on full-page customer worksheets.',
   },
   'invoice.number': {
     path: 'invoice.number',

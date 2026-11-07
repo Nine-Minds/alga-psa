@@ -2934,8 +2934,7 @@
         "labelClass": "Klasa etykiety",
         "labelFields": "Pola wyświetlane na etykiecie",
         "labelFieldsHint": "Link do rekordu (kod QR) i identyfikator są zawsze wyświetlane.",
-        "worksheetMode": "Karta klienta w formacie Letter",
-        "worksheetModeHint": "Umożliwia użycie pełnego numeru seryjnego i opisu zgłoszenia. Ustaw format Letter w projektancie.",
+        "worksheetPageHint": "Etykieta biletu z pełnoformatową stroną pionową (A4 lub Letter) jest drukowana jako pełnostronicowa karta pracy klienta, co dodaje pola pełnego numeru seryjnego i opisu biletu. Mniejsze strony drukują się jako etykiety.",
         "worksheetFieldsHint": "Ukrycie końcówki numeru seryjnego ukrywa też pełny numer; ukrycie szczegółów ukrywa też opis zgłoszenia."
       },
       "placeholders": {
@@ -2999,6 +2998,7 @@
       "tenantName": "Nazwa firmy"
     },
     "standardNames": {
+      "standard-ticket-customer-worksheet-a4": "Standardowa karta pracy klienta (A4)",
       "standard-ticket-customer-worksheet": "Standardowa karta klienta"
     }
   },

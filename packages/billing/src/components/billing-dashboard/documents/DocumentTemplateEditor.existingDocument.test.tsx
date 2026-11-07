@@ -50,6 +50,7 @@ import DocumentTemplateEditor from './DocumentTemplateEditor';
 import { getDocumentTypeStandardAst } from '../../../lib/document-templates/registry';
 import {
   getStandardLabelTemplateAstByCode,
+  STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_A4_CODE,
   STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_CODE,
   STANDARD_LABEL_TICKET_WORK_TAG_CODE,
 } from '../../../lib/label-template-ast/standardTemplates';
@@ -151,10 +152,14 @@ describe('DocumentTemplateEditor existing-document preview', () => {
         onCancel={vi.fn()}
       />,
     );
-    const serial = screen.getByLabelText('Full asset serial number') as HTMLInputElement;
-    const description = screen.getByLabelText('Ticket description') as HTMLInputElement;
+    // The Letter page the template declares makes it a worksheet, so the worksheet-only fields render.
+    const serial = await waitFor(() => {
+      const element = screen.getByLabelText('Full asset serial number') as HTMLInputElement;
+      expect(element.disabled).toBe(true);
+      return element;
+    });
     expect(serial.checked).toBe(false);
-    expect(serial.disabled).toBe(true);
+    const description = screen.getByLabelText('Ticket description') as HTMLInputElement;
     expect(description.checked).toBe(false);
     expect(description.disabled).toBe(true);
 
@@ -163,7 +168,7 @@ describe('DocumentTemplateEditor existing-document preview', () => {
     const previewAst = runAuthoritativeTemplatePreviewMock.mock.calls.at(-1)?.[1];
     expect(previewAst.metadata).toMatchObject({
       labelClass: 'ticket-work-tag',
-      labelSettings: { worksheetMode: 'letter', hiddenFields: ['serialSuffix', 'detail'] },
+      labelSettings: { hiddenFields: ['serialSuffix', 'detail'] },
       printSettings: { customPageSize: { width: 8.5, height: 11, unit: 'in' } },
     });
 
@@ -172,7 +177,7 @@ describe('DocumentTemplateEditor existing-document preview', () => {
     expect(saveDocumentTemplateMock.mock.calls.at(-1)?.[1].templateAst.metadata).toMatchObject(previewAst.metadata);
   });
 
-  it('turns worksheet-only fields on or off in subsequent preview and save exports', async () => {
+  it('keeps worksheet-only fields off a tag-sized template and carries field visibility through export', async () => {
     const ast = getStandardLabelTemplateAstByCode(STANDARD_LABEL_TICKET_WORK_TAG_CODE)!;
     render(
       <DocumentTemplateEditor
@@ -182,21 +187,38 @@ describe('DocumentTemplateEditor existing-document preview', () => {
         onCancel={vi.fn()}
       />,
     );
+    // A 4 x 2 in page is a tag, so the worksheet-only fields never appear.
     expect(screen.queryByLabelText('Full asset serial number')).toBeNull();
-    fireEvent.click(screen.getByLabelText('Letter customer worksheet'));
+    await openPreviewTab();
+    await waitFor(() => expect(runAuthoritativeTemplatePreviewMock).toHaveBeenCalled());
+    expect(runAuthoritativeTemplatePreviewMock.mock.calls.at(-1)?.[1].metadata.labelSettings).toMatchObject({
+      hiddenFields: [],
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save Layout' }));
+    await waitFor(() => expect(saveDocumentTemplateMock).toHaveBeenCalled());
+    expect(saveDocumentTemplateMock.mock.calls.at(-1)?.[1].templateAst.metadata.labelSettings).toEqual({
+      hiddenFields: [],
+    });
+  });
+
+  it('shows worksheet-only fields when the author sets a worksheet page size', async () => {
+    const ast = getStandardLabelTemplateAstByCode(STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_A4_CODE)!;
+    render(
+      <DocumentTemplateEditor
+        documentType="work-tag"
+        template={{ name: 'A4 worksheet', version: 1, templateAst: ast }}
+        onSave={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+    // The A4 page the template declares is worksheet paper: the fields render and can be toggled.
+    await waitFor(() => expect(screen.getByLabelText('Full asset serial number')).toBeTruthy());
     fireEvent.click(screen.getByLabelText('Full asset serial number'));
     await openPreviewTab();
     await waitFor(() => expect(runAuthoritativeTemplatePreviewMock).toHaveBeenCalled());
     expect(runAuthoritativeTemplatePreviewMock.mock.calls.at(-1)?.[1].metadata.labelSettings).toMatchObject({
-      worksheetMode: 'letter',
       hiddenFields: ['assetSerialNumber'],
     });
-
-    fireEvent.click(screen.getByLabelText('Letter customer worksheet'));
-    expect(screen.queryByLabelText('Full asset serial number')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Save Layout' }));
-    await waitFor(() => expect(saveDocumentTemplateMock).toHaveBeenCalled());
-    expect(saveDocumentTemplateMock.mock.calls.at(-1)?.[1].templateAst.metadata.labelSettings.worksheetMode)
-      .toBeUndefined();
   });
 });

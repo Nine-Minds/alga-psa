@@ -221,53 +221,55 @@ export const LABEL_SHEET_MIN_MM = CUSTOM_PAGE_SIZE_MM_RANGE.min;
 export const LABEL_TEMPLATE_FIT_PAGE_MM_RANGE = { min: 60, max: 1200 } as const;
 
 type LabelTemplatePageMetadata = {
-  labelSettings?: { worksheetMode?: 'letter' };
   printSettings?: { customPageSize?: CustomPageSize; paperPreset?: InvoicePaperPresetId };
 };
 
-/** Worksheet details require a portrait Letter-size or larger design, even for custom templates. */
+/**
+ * The narrowest portrait paper a full-page worksheet may use. A4 (210 mm) is the narrower of the two
+ * standard office papers — Letter (215.9 mm) is wider — so one width floor admits both, and neither
+ * dimension is compared against a specific sheet (an A4 worksheet is 5.9 mm narrower than Letter and
+ * still fits A4 paper). Anything narrower than A4 is a tag or slip, not worksheet paper.
+ */
+export const WORKSHEET_MIN_WIDTH_MM = 210;
+
+/** The page a template declares for itself in mm: an explicit custom size, else its paper preset. */
+export function resolveTemplateDeclaredPageSizeMm(
+  metadata?: LabelTemplatePageMetadata | null
+): { widthMm: number; heightMm: number } | null {
+  const custom = metadata?.printSettings?.customPageSize;
+  if (custom) {
+    if (validateCustomPageSize(custom)) return null;
+    return customPageSizeToMm(custom);
+  }
+  const preset = metadata?.printSettings?.paperPreset
+    ? INVOICE_PAPER_PRESET_REGISTRY[metadata.printSettings.paperPreset]
+    : null;
+  return preset ? { widthMm: preset.widthMm, heightMm: preset.heightMm } : null;
+}
+
+/**
+ * True when a ticket-work-tag template's own page makes it a full-page customer worksheet rather
+ * than a 4 x 2 in tag: portrait paper at least A4-wide (Letter, A4, Legal, A3, ...). The declared
+ * page size is the only gate — there is no separate worksheet flag.
+ */
+export function isWorksheetLabelMetadata(metadata?: LabelTemplatePageMetadata | null): boolean {
+  const size = resolveTemplateDeclaredPageSizeMm(metadata);
+  if (!size) return false;
+  return size.heightMm > size.widthMm && size.widthMm + 0.05 >= WORKSHEET_MIN_WIDTH_MM;
+}
+
+/** The worksheet design size a template asks for, or null when its page is not worksheet paper. */
 export function resolveWorksheetDesignSizeMm(
   metadata?: LabelTemplatePageMetadata | null
 ): { widthMm: number; heightMm: number } | null {
-  if (metadata?.labelSettings?.worksheetMode !== 'letter') return null;
-  const settings = metadata.printSettings;
-  let size: { widthMm: number; heightMm: number };
-  if (settings?.customPageSize) {
-    const problem = validateCustomPageSize(settings.customPageSize);
-    if (problem) throw new LabelLayoutError(problem, { errorCode: 'worksheetPageSize' });
-    size = customPageSizeToMm(settings.customPageSize);
-  } else {
-    const preset = settings?.paperPreset && INVOICE_PAPER_PRESET_REGISTRY[settings.paperPreset];
-    if (!preset) {
-      throw new LabelLayoutError('A Letter worksheet must specify Letter or a larger portrait page size in the designer.', {
-        errorCode: 'worksheetPageSize',
-      });
-    }
-    size = { widthMm: preset.widthMm, heightMm: preset.heightMm };
-  }
-  const letter = INVOICE_PAPER_PRESET_REGISTRY.Letter;
-  if (
-    size.widthMm >= size.heightMm ||
-    size.widthMm + 0.05 < letter.widthMm ||
-    size.heightMm + 0.05 < letter.heightMm
-  ) {
-    throw new LabelLayoutError('A Letter worksheet must be designed for Letter or a larger portrait page size.', {
-      errorCode: 'worksheetPageSize',
-    });
-  }
-  return size;
+  return isWorksheetLabelMetadata(metadata) ? resolveTemplateDeclaredPageSizeMm(metadata) : null;
 }
 
 /** True when a template's own page size is paper an ordinary printer holds (a worksheet, not a tag). */
 export function labelMetadataPrefersPaperPage(
   metadata?: LabelTemplatePageMetadata | null
 ): boolean {
-  const pageSize = metadata?.printSettings?.customPageSize;
-  const preset = metadata?.labelSettings?.worksheetMode === 'letter' && metadata.printSettings?.paperPreset
-    ? INVOICE_PAPER_PRESET_REGISTRY[metadata.printSettings.paperPreset]
-    : null;
-  if (pageSize && validateCustomPageSize(pageSize)) return false;
-  const size = pageSize ? customPageSizeToMm(pageSize) : preset;
+  const size = resolveTemplateDeclaredPageSizeMm(metadata);
   if (!size) return false;
   const { widthMm, heightMm } = size;
   const { min, max } = LABEL_TEMPLATE_FIT_PAGE_MM_RANGE;

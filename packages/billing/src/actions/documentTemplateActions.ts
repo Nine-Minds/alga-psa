@@ -30,6 +30,7 @@ import {
 } from '../lib/document-templates/storage';
 import { labelClassOfCustomTemplate, labelClassOfStandardCode } from '../lib/label-template-ast/labelTemplates';
 import { buildLabelModel } from '../lib/label-batch/renderLabelBatchHtml';
+import { isWorksheetLabelMetadata } from '../lib/label-batch/layout';
 import { evaluateTemplateAst } from '../lib/invoice-template-ast/evaluator';
 import { INVOICE_TEMPLATE_BINDING_ALIASES } from '../lib/invoice-template-ast/bindingAliases';
 import { renderTemplateAstHtmlDocument } from '../lib/invoice-template-ast/server-render';
@@ -358,13 +359,14 @@ export const runAuthoritativeTemplatePreview = withAuth(
 
     if (type === 'work-tag') {
       // The preview shows what the printed label shows: hidden fields nulled, display lines derived,
-      // and the same worksheet-mode line-budget rules as the print path (`renderLabelBatchHtml`).
+      // and the same worksheet line-budget rules as the print path (`renderLabelBatchHtml`), keyed
+      // on the page size the template declares.
       const sampleLabel = previewModel as unknown as LabelViewModel;
       previewModel = buildLabelModel(
         sampleLabel,
         sampleLabel.tenantClient,
         templateAst.metadata?.labelSettings?.hiddenFields,
-        { worksheetMode: templateAst.metadata?.labelSettings?.worksheetMode }
+        { worksheet: isWorksheetLabelMetadata(templateAst.metadata) }
       ) as unknown as Record<string, unknown>;
     }
 

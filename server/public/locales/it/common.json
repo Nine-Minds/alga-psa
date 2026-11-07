@@ -1687,6 +1687,7 @@
       "adjacentCopies": "Le copie di ciascun asset vengono stampate insieme.",
       "templatePaperWarning": "Questo modello viene stampato su un foglio intero. Scegli \"Carta del modello\" (o un layout a foglio intero), altrimenti il contenuto non entrerà nell'etichetta.",
       "worksheetPageSizeError": "Il foglio deve usare carta Letter o più grande in verticale, sia nel designer sia nel layout di stampa.",
+      "paperMismatchWarning": "Questo modello è progettato per carta {{template}}, ma il layout selezionato stampa su {{layout}}. Scegli „Carta del modello“ o il layout a foglio intero corrispondente, altrimenti il contenuto non starà.",
       "worksheetTextOverflowError": "Il foglio {{numbers}} contiene testo che non entra. Modifica il layout o riduci il contenuto prima di stampare."
     },
     "layout": {
@@ -1694,9 +1695,16 @@
       "roll-4x2": "Una per etichetta (rotolo 4 × 2 in)",
       "letter-2x5": "Foglio Letter, 2 × 5 (stile Avery 5163)",
       "a4-2x7": "Foglio A4, 2 × 7 (stile 99,1 × 38,1 mm)",
+      "a4-full": "Foglio A4, uno per pagina",
       "letter-full": "Foglio Letter, uno per pagina"
     },
+    "paper": {
+      "a4": "A4",
+      "letter": "Letter",
+      "legal": "Legal"
+    },
     "standardTemplates": {
+      "standard-ticket-customer-worksheet-a4": "Foglio di lavoro cliente standard (A4)",
       "standard-ticket-customer-worksheet": "Foglio cliente standard"
     }
   },

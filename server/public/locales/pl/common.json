@@ -1697,6 +1697,7 @@
       "adjacentCopies": "Kopie każdego zasobu są drukowane razem.",
       "templatePaperWarning": "Ten szablon drukuje się na całym arkuszu. Wybierz „Papier szablonu” (lub układ pełnoarkuszowy), w przeciwnym razie zawartość nie zmieści się na etykiecie.",
       "worksheetPageSizeError": "Karta musi używać papieru Letter lub większego w orientacji pionowej zarówno w projektancie, jak i w układzie wydruku.",
+      "paperMismatchWarning": "Ten szablon jest zaprojektowany dla papieru {{template}}, ale wybrany układ drukuje na {{layout}}. Wybierz „Papier szablonu” lub pasujący układ pełnostronicowy, inaczej treść się nie zmieści.",
       "worksheetTextOverflowError": "Karta {{numbers}} zawiera tekst, który się nie mieści. Przed drukowaniem zmień układ lub skróć treść."
     },
     "layout": {
@@ -1704,9 +1705,16 @@
       "roll-4x2": "Jedna na etykietę (rolka 4 × 2 cale)",
       "letter-2x5": "Arkusz Letter, 2 × 5 (styl Avery 5163)",
       "a4-2x7": "Arkusz A4, 2 × 7 (styl 99,1 × 38,1 mm)",
+      "a4-full": "Arkusz A4, jeden na stronę",
       "letter-full": "Arkusz Letter, jedna na stronę"
     },
+    "paper": {
+      "a4": "A4",
+      "letter": "Letter",
+      "legal": "Legal"
+    },
     "standardTemplates": {
+      "standard-ticket-customer-worksheet-a4": "Standardowa karta pracy klienta (A4)",
       "standard-ticket-customer-worksheet": "Standardowa karta klienta"
     }
   },

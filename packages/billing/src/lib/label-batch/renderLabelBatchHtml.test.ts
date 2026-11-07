@@ -6,6 +6,7 @@ import { LabelRenderError, renderLabelBatchHtml, type LabelPrintItem } from './r
 import {
   STANDARD_LABEL_ASSET_CODE,
   STANDARD_LABEL_ASSET_CODE128_CODE,
+  STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_A4_CODE,
   STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_CODE,
   STANDARD_LABEL_TICKET_WORK_TAG_CODE,
   getStandardLabelTemplateAstByCode,
@@ -174,16 +175,34 @@ describe('renderLabelBatchHtml failures', () => {
       expect(html).not.toContain('First paragraph');
     });
 
-    it('refuses worksheet mode with a 4 x 2 design or a 4 x 2 output layout', async () => {
+    it('treats a worksheet template resized to a tag page as a tag, and refuses a 4 x 2 output layout', async () => {
       const ast = getStandardLabelTemplateAstByCode(STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_CODE)!;
       ast.metadata!.printSettings!.customPageSize = { width: 4, height: 2, unit: 'in' };
-      await expect(renderLabelBatchHtml([{ templateAst: ast, viewModel }], ONE_PER_PAGE))
-        .rejects.toThrow(/Letter or a larger portrait page/);
+      // The page size is the only worksheet gate: on a tag page the template prints as a tag, and the
+      // worksheet-only bindings render nothing (the model nulls them outside worksheet mode).
+      const { html } = await renderLabelBatchHtml([{ templateAst: ast, viewModel }], ONE_PER_PAGE);
+      expect(html).not.toContain('1234567');
       const letterAst = getStandardLabelTemplateAstByCode(STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_CODE)!;
       await expect(renderLabelBatchHtml([{ templateAst: letterAst, viewModel }], ONE_PER_PAGE))
         .rejects.toMatchObject({
           failures: [expect.objectContaining({ errorCode: 'worksheetPageSize' })],
         });
+    });
+
+    it('prints an A4 worksheet on A4 paper and refuses it on Letter', async () => {
+      const a4Layout = { kind: 'one-per-page', pageSize: { width: 210, height: 297, unit: 'mm' } } as const;
+      const { html } = await renderLabelBatchHtml(
+        [{ templateCode: STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_A4_CODE, viewModel }],
+        a4Layout,
+      );
+      expect(html).toContain('1234567');
+      expect(html).toContain('Ticket Details');
+      await expect(renderLabelBatchHtml(
+        [{ templateCode: STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_A4_CODE, viewModel }],
+        letter,
+      )).rejects.toMatchObject({
+        failures: [expect.objectContaining({ errorCode: 'worksheetPageSize' })],
+      });
     });
 
     it('rejects a landscape or square output cell even when it is large enough', async () => {

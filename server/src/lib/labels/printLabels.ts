@@ -13,7 +13,7 @@ import {
   type LabelViewModelProvider,
 } from '@alga-psa/types';
 import type { LabelBatchLayout, LabelPrintItem, ResolvedLabelTemplate } from '@alga-psa/billing/services';
-import { resolveTemplatePreferredPageSizes } from '@alga-psa/billing/lib/label-batch/layout';
+import { isWorksheetLabelMetadata, resolveTemplatePreferredPageSizes } from '@alga-psa/billing/lib/label-batch/layout';
 import { getStandardLabelTemplateAstByCode } from '@alga-psa/billing/lib/label-template-ast/standardTemplates';
 
 /**
@@ -264,7 +264,7 @@ export async function printLabels(
     tenant: caller.tenant,
     user: caller.user,
     baseUrl: caller.baseUrl,
-    includeWorksheetDetails: ticketAst?.metadata?.labelSettings?.worksheetMode === 'letter',
+    includeWorksheetDetails: isWorksheetLabelMetadata(ticketAst?.metadata),
   };
   // One provider call per class (unique ids), then the results are put back in request order per subject.
   const byRecord = new Map<string, LabelViewModel>();

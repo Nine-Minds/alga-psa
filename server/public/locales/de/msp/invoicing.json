@@ -2882,8 +2882,7 @@
         "labelClass": "Etikettenklasse",
         "labelFields": "Auf dem Etikett angezeigte Felder",
         "labelFieldsHint": "Der Datensatzlink (QR-Code) und die Kennung werden immer angezeigt.",
-        "worksheetMode": "Kundenarbeitsblatt im Letter-Format",
-        "worksheetModeHint": "Ermöglicht die vollständige Seriennummer und die Ticketbeschreibung. Stellen Sie im Designer das Letter-Format ein.",
+        "worksheetPageHint": "Ein Ticket-Etikett mit Hochformat-Seite in voller Größe (A4 oder Letter) wird als kundenbezogenes Arbeitsblatt auf vollem Blatt gedruckt; dadurch kommen die Felder für vollständige Seriennummer und Ticketbeschreibung hinzu. Kleinere Seiten werden als Etiketten gedruckt.",
         "worksheetFieldsHint": "Das Ausblenden der Seriennummern-Endung blendet auch die vollständige Nummer aus; das Ausblenden des Details auch die Ticketbeschreibung."
       },
       "placeholders": {
@@ -2947,6 +2946,7 @@
       "tenantName": "Firmenname"
     },
     "standardNames": {
+      "standard-ticket-customer-worksheet-a4": "Standard-Kundenarbeitsblatt (A4)",
       "standard-ticket-customer-worksheet": "Standard-Kundenarbeitsblatt"
     }
   },
