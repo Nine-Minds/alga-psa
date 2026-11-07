@@ -50,6 +50,10 @@
       "import": "./src/lib/documentPreviewGenerator.ts",
       "types": "./src/lib/documentPreviewGenerator.ts"
     },
+    "./lib/renderHtmlToPng": {
+      "import": "./src/lib/renderHtmlToPng.ts",
+      "types": "./src/lib/renderHtmlToPng.ts"
+    },
     "./lib/documentMarkdownExport": {
       "import": "./src/lib/documentMarkdownExport.ts",
       "types": "./src/lib/documentMarkdownExport.ts"
@@ -107,6 +111,9 @@
     "@alga-psa/user-composition": "*",
     "@alga-psa/validation": "*",
     "@alga-psa/workflow-streams": "*",
+    "jsdom": "^25.0.1",
+    "postcss": "^8.5.23",
+    "postcss-value-parser": "^4.2.0",
     "zod": "^4.6.7"
   },
   "peerDependencies": {
