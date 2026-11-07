@@ -79,6 +79,7 @@ async function saveCustomer(trx: Knex.Transaction, purchase: CoManagedUpgradePur
   await own.table('stripe_customers').insert({ tenant: purchase.tenant, stripe_customer_external_id: customer.id,
     email: customer.email ?? '', name: customer.name, metadata: customer.metadata,
     billing_tenant: process.env.MASTER_BILLING_TENANT_ID || null }).onConflict(['tenant', 'stripe_customer_external_id']).ignore();
+  // write-admission: exempt — purchase state-machine receipt, updated under authenticated purchase admission or payment reconciliation and the tenant lock
   await own.table('co_managed_upgrade_purchases').where('operation_id', purchase.operation_id).update({ customer_id: customer.id, updated_at: trx.fn.now() });
 }
 
@@ -156,6 +157,7 @@ export async function reconcileCoManagedUpgradeCheckout(db: Knex, stripe: Stripe
     if (current.state === 'paid') return;
     if (current.customer_id !== purchase.customer_id || (current.checkout_session_id && current.checkout_session_id !== sessionId)) throw new Error('Purchase changed during provider verification');
     if (subscription && (paid || failed || terminal)) await storeUpgradeSubscription(trx, purchase, subscription, paid?.validUntil);
+    // write-admission: exempt — purchase state-machine receipt, updated under authenticated purchase admission or payment reconciliation and the tenant lock
     await own.table('co_managed_upgrade_purchases').where('operation_id', operationId).update({ checkout_session_id: sessionId,
       subscription_id: paid?.reference ?? id(session.subscription) ?? current.subscription_id, state: kind === 'processing' ? 'checkout' : kind,
       updated_at: trx.fn.now() });
@@ -245,6 +247,7 @@ export async function handleCoManagedUpgradePaymentEvent(db: Knex, stripe: Strip
       const retained = await retainOperation(trx, tenant, purchase.operation_id), owner = tenantDb(trx, tenant);
       if ((await owner.table('tenants').first('product_code'))?.product_code !== 'co_managed') return false;
       await storeUpgradeSubscription(trx, retained, current);
+      // write-admission: exempt — purchase state-machine receipt, updated under authenticated purchase admission or payment reconciliation and the tenant lock
       await owner.table('co_managed_upgrade_purchases').where('operation_id', purchase.operation_id).update({
         checkout_session_id: sessionId, subscription_id: current.id, state: retained.state === 'paid' ? 'paid' : 'expired', updated_at: trx.fn.now() });
       return true;
@@ -303,6 +306,7 @@ export async function retryCoManagedIndependentPayment(db: Knex, inputActor: CoM
     if (current.state === 'paid' || current.customer_id !== purchase.customer_id || current.subscription_id !== purchase.subscription_id)
       throw new Error('Payment state changed during recovery');
     await storeUpgradeSubscription(trx, current, subscription);
+    // write-admission: exempt — purchase state-machine receipt, updated under authenticated purchase admission or payment reconciliation and the tenant lock
     await tenantDb(trx, actor.tenant).table('co_managed_upgrade_purchases').where('operation_id', operationId)
       .update({ state: 'expired', updated_at: trx.fn.now() });
     return { kind: 'expired' as const };

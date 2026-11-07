@@ -1,9 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const m = vi.hoisted(() => ({ access: vi.fn(), screen: vi.fn(), prepare: vi.fn(), requireCap: vi.fn(async () => undefined), Unavailable: class extends Error {} }));
+const m = vi.hoisted(() => ({ db: vi.fn(async () => ({ knex: {} })), access: vi.fn(), screen: vi.fn(), prepare: vi.fn(), requireCap: vi.fn(async () => undefined), Unavailable: class extends Error {} }));
 const Unavailable = m.Unavailable;
 vi.mock('@alga-psa/auth', () => ({ withAuth: (fn: any) => (...args: any[]) => fn({ user_id: 'u' }, { tenant: 't1' }, ...args) }));
-vi.mock('@alga-psa/db', () => ({ createTenantKnex: async () => ({ knex: {} }) }));
+vi.mock('@alga-psa/db', () => ({ createTenantKnex: m.db }));
 vi.mock('@alga-psa/core/capability/server', () => ({ requireCapabilityForAction: m.requireCap, CapabilityUnavailableError: m.Unavailable }));
 vi.mock('@alga-psa/co-managed', () => ({ resolveCoManagedUpgradeAccess: m.access, getCoManagedIndependentUpgradeScreen: m.screen,
   prepareCoManagedIndependentUpgrade: m.prepare }));
@@ -13,9 +13,17 @@ vi.mock('../../lib/tenant-management/workflowClient', () => ({ startTenantProduc
 import { getCoManagedUpgradeScreenAction, startCoManagedUpgradeAction, purchaseCoManagedUpgradeAction,
   retryCoManagedUpgradePaymentAction, manageCoManagedUpgradeBillingAction } from '../../lib/actions/coManagedUpgradeActions';
 
-beforeEach(() => { m.access.mockReset(); m.screen.mockReset(); m.prepare.mockReset(); m.requireCap.mockReset(); m.requireCap.mockResolvedValue(undefined); });
+afterEach(() => vi.unstubAllEnvs());
+beforeEach(() => { m.db.mockClear(); m.access.mockReset(); m.screen.mockReset(); m.prepare.mockReset(); m.requireCap.mockReset(); m.requireCap.mockResolvedValue(undefined); });
 
 describe('getCoManagedUpgradeScreenAction', () => {
+  it.each(['co-managed:off', 'co-managed:invalid'])('fails closed before acquiring a database connection when forced %s', async forced => {
+    vi.stubEnv('FORCE_CAPABILITIES', forced);
+    m.access.mockResolvedValue('customer');
+    await expect((getCoManagedUpgradeScreenAction as any)()).rejects.toBeInstanceOf(Unavailable);
+    expect(m.db).not.toHaveBeenCalled();
+    expect(m.screen).not.toHaveBeenCalled();
+  });
   it('returns completed for a former customer without consulting the serves gate', async () => {
     m.access.mockResolvedValue('former');
     m.screen.mockResolvedValue({ state: 'completed', operationId: 'op' });

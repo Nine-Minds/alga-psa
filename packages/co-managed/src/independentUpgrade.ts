@@ -126,6 +126,7 @@ export async function upgradeCoManagedRelationship(db: Knex, inputActor: CoManag
       sponsor_tenant: found.sponsor_tenant, closure_operation_id: closureOperationId, actor_user_id: actor.userId,
       request_fingerprint: fingerprint, entitlement_source: paid.source, entitlement_reference: paid.reference, seats: paid.seats,
       entitlement_valid_until: paid.validUntil, upgraded_at: now };
+    // write-admission: exempt — append-only conversion receipt in the same transaction as trust closure and the product transition
     await customer.table('co_managed_independent_upgrades').insert(row);
     await assertCoManagedSessionUnexpired(trx, actor);
     if (!await trx.select(trx.raw('1')).whereRaw('?::timestamptz > clock_timestamp()', [paid.validUntil]).first())

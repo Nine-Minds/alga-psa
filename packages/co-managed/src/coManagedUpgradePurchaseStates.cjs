@@ -1,6 +1,6 @@
 /**
- * Shared independent-upgrade purchase states for the domain and its database migration.
- * Keep this dependency-free so migration startup does not load the application package graph.
+ * Independent-upgrade purchase states used by the domain and worker runtime.
+ * Database integration tests verify these states against the migrated schema.
  */
 const CO_MANAGED_UPGRADE_PURCHASE_STATES = ['preparing', 'checkout', 'paid', 'expired', 'payment_failed'];
 const CO_MANAGED_UPGRADE_PENDING_STATES = ['preparing', 'checkout', 'payment_failed'];

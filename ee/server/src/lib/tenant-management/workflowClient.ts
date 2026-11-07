@@ -524,7 +524,7 @@ export async function startTenantProductUpgradeWorkflow(
     const workflowId = `tenant-product-upgrade-${input.tenantId}`;
 
     try {
-      const handle = await client.workflow.start('tenantProductUpgradeWorkflow', {
+      const handle = await client.workflow.start(input.coManaged ? 'coManagedIndependentUpgradeWorkflow' : 'tenantProductUpgradeWorkflow', {
         args: [input],
         taskQueue,
         workflowId,

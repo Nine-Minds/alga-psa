@@ -5,7 +5,10 @@
  */
 import http from 'node:http';
 import { randomUUID } from 'node:crypto';
-import knexFactory, { type Knex } from 'knex';
+import type { Knex } from 'knex';
+import { rm } from 'node:fs/promises';
+import { createTestDbConnection } from '../../../../../server/test-utils/dbConfig';
+import { buildMergedEeMigrationsDir } from '../../../../../server/test-utils/eeMigrations';
 import Stripe from 'stripe';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
@@ -28,13 +31,13 @@ import { coManagedArchiveManifestHash } from '@alga-psa/co-managed';
 import { upgradeCoManagedWorkspaceWithHostedSubscription } from '../../db/co-managed-hosted-upgrade.js';
 import { seedBoundaryFixture } from '../../../../../server/src/test/integration/coManagedArchiveBoundaryCases';
 
-const url = process.env.L8B_TEST_DATABASE_URL;
+let migrationsDir: string;
 const SECRET = 'sk_test_l8b_composed';
 const WEBHOOK_SECRET = 'whsec_l8b_composed';
 const PRICE_ID = 'price_l8b_composed_month';
 const uuid = () => randomUUID();
 
-describe.skipIf(!url)('independent upgrade composed real-path integration (CE+EE overlay)', () => {
+describe('independent upgrade composed real-path integration (CE+EE overlay)', () => {
   let db: Knex, host: EmulatorHost, sink: http.Server, base: string, control: string, core: any;
   let previousBase: string | undefined;
   let fixture: Awaited<ReturnType<typeof seedBoundaryFixture>>;
@@ -84,8 +87,8 @@ describe.skipIf(!url)('independent upgrade composed real-path integration (CE+EE
   };
 
   beforeAll(async () => {
-    if (!url) return;
-    db = knexFactory({ client: 'pg', connection: url });
+    migrationsDir = buildMergedEeMigrationsDir();
+    db = await createTestDbConnection({ migrationsDir });
     for (const table of ['tenant_workflow_schedule', 'stripe_subscriptions', 'portable_workspace_activations']) {
       if (!await db.schema.hasTable(table)) throw new Error(`CM L8b full fixture is incomplete: missing ${table}`);
     }
@@ -108,7 +111,7 @@ describe.skipIf(!url)('independent upgrade composed real-path integration (CE+EE
     await control$('/control/stripe/seed/price', { id: PRICE_ID, unitAmount: 2900, currency: 'eur', interval: 'month', product: 'prod_l8b_composed' });
     previousBase = process.env.STRIPE_API_BASE_URL;
     process.env.STRIPE_API_BASE_URL = base;
-  }, 60_000);
+  }, 600_000);
 
   afterAll(async () => {
     process.env.STRIPE_API_BASE_URL = previousBase;
@@ -116,6 +119,7 @@ describe.skipIf(!url)('independent upgrade composed real-path integration (CE+EE
     await host?.stop();
     if (sink) await new Promise(resolve => sink.close(resolve));
     await db?.destroy();
+    if (migrationsDir) await rm(migrationsDir, { recursive: true, force: true });
   });
 
   it('keeps a failed checkout quarantined, retries with a new checkout, then converts once with real L7a and PSA initialization', async () => {

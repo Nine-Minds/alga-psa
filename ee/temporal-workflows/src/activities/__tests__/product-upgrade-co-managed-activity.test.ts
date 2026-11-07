@@ -24,7 +24,7 @@ vi.mock('../../db/co-managed-upgrade-operations.js', () => ({ upgradeCoManagedWo
 vi.mock('../../db/co-managed-hosted-upgrade.js', () => ({ upgradeCoManagedWorkspaceWithHostedSubscription: mocks.hosted }));
 
 import { ApplicationFailure } from '@temporalio/activity';
-import { product_upgrade_co_managed } from '../product-upgrade-activities.js';
+import { product_upgrade_co_managed } from '../co-managed-upgrade-activities.js';
 
 const command = { actor: { kind: 'session', tenant: 't', userId: 'u', sessionId: 's' },
   target: { customerTenant: 't', relationshipId: 'r' }, request: { operationId: 'o', expectedRevision: 1 } } as any;

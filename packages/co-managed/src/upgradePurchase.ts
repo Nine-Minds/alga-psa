@@ -13,7 +13,7 @@ const purchaseStates = require('./coManagedUpgradePurchaseStates.cjs') as {
   CO_MANAGED_UPGRADE_PENDING_STATES: readonly ['preparing', 'checkout', 'payment_failed'];
 };
 
-/** The ONE state list. The migration's CHECK is built from the same list (server/migrations/utils/coManagedUpgradePurchaseStates.cjs). */
+/** Runtime state vocabulary. The database integration test checks compatibility with the migrated CHECK. */
 export const CO_MANAGED_UPGRADE_PURCHASE_STATES = purchaseStates.CO_MANAGED_UPGRADE_PURCHASE_STATES;
 export type CoManagedUpgradePurchaseState = typeof CO_MANAGED_UPGRADE_PURCHASE_STATES[number];
 /** Purchases that block a second one: the user resumes (or retries) instead. */
@@ -64,6 +64,7 @@ export function prepareCoManagedUpgradePurchase(db: Knex, actor: CoManagedSessio
     if (await own.table('stripe_subscriptions').whereNotIn('status', ['canceled', 'incomplete_expired'])
       .whereRaw("COALESCE(metadata->>'addon_key', '') = ''").first('stripe_subscription_id')) throw new Error('This workspace already has a PSA subscription');
     if (request.quantity < await countCoManagedCommittedSeats(trx, current.tenant)) throw new Error('Purchase enough seats for current technicians and invitations');
+    // write-admission: exempt — purchase reservation under customer-admin admission and the tenant lock
     const [operation] = await own.table<CoManagedUpgradePurchase>('co_managed_upgrade_purchases').insert({ tenant: current.tenant,
       operation_id: request.operationId, requested_by: current.userId, quantity: request.quantity, billing_interval: request.interval, price_id: price, state: 'preparing' }).returning('*');
     return operation;

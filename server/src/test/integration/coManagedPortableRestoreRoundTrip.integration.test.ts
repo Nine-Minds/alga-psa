@@ -22,6 +22,7 @@ import { join, resolve } from 'node:path';
 import type { Knex } from 'knex';
 import Stripe from 'stripe';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
+import { buildMergedEeMigrationsDir } from '../../../test-utils/eeMigrations';
 import { createTenant, createUser } from '../../../test-utils/testDataFactory';
 import { EmulatorHost } from '../../../../packages/emulators/host/src/index';
 import stripeEmulator from '../../../../packages/emulators/stripe/src/index';
@@ -56,6 +57,7 @@ const activationMigration = require('../../../migrations/20261106000200_create_p
 const PASSPHRASE = 'round trip passphrase 2026 correct horse';
 const FILE_BYTES = Buffer.from('portable restore integration bytes\n'.repeat(64));
 const FILE_SHA = createHash('sha256').update(FILE_BYTES).digest('hex');
+let migrationsDir: string;
 let db: Knex, root: string, archivePath: string, storageRoot: string;
 let source: string, third: string, thirdClientId: string, sourceAdmin: string, sourceAuthor: string, ticketId: string, sourceContact: string, sourceFileId: string;
 const destination = randomUUID();
@@ -122,7 +124,7 @@ beforeAll(async () => {
   const fixtureDatabase = process.env.CM_L8B_RESTORE_FIXTURE_DB;
   db = await createTestDbConnection(fixtureDatabase
     ? { databaseName: fixtureDatabase, recreate: false, runSeeds: false }
-    : {});
+    : { migrationsDir: migrationsDir = buildMergedEeMigrationsDir() });
   root = await mkdtemp(join(tmpdir(), 'alga-l7b2-roundtrip-'));
   storageRoot = join(root, 'storage');
   process.env.STORAGE_DEFAULT_PROVIDER = 'local'; process.env.STORAGE_LOCAL_BASE_PATH = storageRoot;
@@ -203,7 +205,7 @@ beforeAll(async () => {
   await sealed.dispose(); await capture.collected.dispose();
 }, 600_000);
 
-afterAll(async () => { await db?.destroy(); if (root) await rm(root, { recursive: true, force: true }); });
+afterAll(async () => { await db?.destroy(); if (migrationsDir) await rm(migrationsDir, { recursive: true, force: true }); if (root) await rm(root, { recursive: true, force: true }); });
 
 // vitest.config.ts shuffles test order. The restore is one stateful scenario (receipt state machine, idempotency and
 // freshness all depend on what ran before), so it is a single ordered test made of named steps.

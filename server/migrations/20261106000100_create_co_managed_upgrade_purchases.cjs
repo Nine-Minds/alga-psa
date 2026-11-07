@@ -5,14 +5,13 @@
  * contacted and keyed by `operation_id`, so a lost response resumes the same purchase instead of
  * creating a second charge. Owned by the CUSTOMER tenant.
  *
- * The state CHECK and the one-pending index are built from ONE shared list
- * (utils/coManagedUpgradePurchaseStates.cjs). The reference's CHECK omitted `payment_failed`, which
- * the domain writes, so a failed payment violated the constraint; that defect is fixed here.
+ * The constraints are a historical schema snapshot. They must load with the standalone
+ * migration payload, without application packages. The purchase-state integration tests
+ * verify that this schema accepts every state written by the current domain.
  *
  * CREATE only; idempotent; distributed on `tenant`.
  */
 const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
-const { CO_MANAGED_UPGRADE_PURCHASE_STATES, CO_MANAGED_UPGRADE_PENDING_STATES, sqlList } = require('./utils/coManagedUpgradePurchaseStates.cjs');
 
 const TABLE = 'co_managed_upgrade_purchases';
 const FK = 'co_upgrade_purchase_owner_fk';
@@ -35,7 +34,7 @@ exports.up = async function up(knex) {
       table.primary(['tenant', 'operation_id']);
       table.check('quantity >= 1 AND quantity <= 100000');
       table.check("billing_interval IN ('month', 'year') AND length(price_id) > 0");
-      table.check(`state IN (${sqlList(CO_MANAGED_UPGRADE_PURCHASE_STATES)})`, [], 'co_upgrade_purchase_state_check');
+      table.check("state IN ('preparing', 'checkout', 'paid', 'expired', 'payment_failed')", [], 'co_upgrade_purchase_state_check');
     });
   }
   await ensureTenantDistribution(knex, TABLE);
@@ -43,7 +42,7 @@ exports.up = async function up(knex) {
     await knex.schema.alterTable(TABLE, (table) => table.foreign(['tenant'], FK).references(['tenant']).inTable('tenants'));
   }
   await knex.raw(`CREATE UNIQUE INDEX IF NOT EXISTS co_upgrade_one_pending_purchase
-    ON ${TABLE} (tenant) WHERE state IN (${sqlList(CO_MANAGED_UPGRADE_PENDING_STATES)})`);
+    ON ${TABLE} (tenant) WHERE state IN ('preparing', 'checkout', 'payment_failed')`);
 };
 
 exports.down = async function down(knex) {

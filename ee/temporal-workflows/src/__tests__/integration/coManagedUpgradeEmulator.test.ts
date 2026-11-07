@@ -1,21 +1,14 @@
 /**
  * CM L8b — the independent-upgrade flow against the real Stripe emulator and a real, migrated Postgres.
  *
- * Needs L8B_TEST_DATABASE_URL: a disposable database with the L8b migrations applied and one
- * `co_managed` customer tenant that has an internal user holding co_management:manage and a
- * relationship row (any CM L7a test database qualifies). The EE stripe_* tables are created on demand.
- *
- * Real here: the Stripe SDK talking HTTP to `@alga-psa/emulator-stripe` (routed through
- * `stripeApiOverride`), the emulator's signed webhook deliveries, `createCoManagedPaymentHandlers` +
- * `dispatchPaymentEvent`, every table, CHECK and index, and the whole purchase/upgrade domain.
- * Faked (and why): the L7a closure — a recording `CoManagedUpgradeClosure` keeps this emulator test focused on payment dispatch; PSA seed
- * initialisation (`initializeIndependentPsa`, needs the full seed catalogue); the `co-managed`
- * capability gate (`serves` open, `admits` closed: a customer has no sponsor entitlement). `sessionShape` below adapts three
- * response-shape gaps in the emulator, listed on that function.
+ * Bootstraps a disposable CE+EE database using the server integration harness.
  */
 import http from 'node:http';
 import { createRequire } from 'node:module';
-import knexFactory, { type Knex } from 'knex';
+import type { Knex } from 'knex';
+import { rm } from 'node:fs/promises';
+import { createTestDbConnection } from '../../../../../server/test-utils/dbConfig';
+import { buildMergedEeMigrationsDir } from '../../../../../server/test-utils/eeMigrations';
 import Stripe from 'stripe';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
@@ -42,13 +35,13 @@ import { coManagedUpgradeClosure } from '@alga-psa/co-managed';
 import { upgradeCoManagedWorkspaceWithHostedSubscription } from '../../db/co-managed-hosted-upgrade.js';
 import { seedBoundaryFixture } from '../../../../../server/src/test/integration/coManagedArchiveBoundaryCases';
 
-const url = process.env.L8B_TEST_DATABASE_URL;
+let migrationsDir: string;
 const SECRET = 'sk_test_l8b_emulator';
 const WEBHOOK_SECRET = 'whsec_l8b';
 const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const root = createRequire(import.meta.url);
 
-describe.skipIf(!url)('independent upgrade against the Stripe emulator and a real database', () => {
+describe('independent upgrade against the Stripe emulator and a real database', () => {
   let db: Knex, host: EmulatorHost, sink: http.Server, core: any, base: string, control: string;
   let tenant: string, userId: string, relationship: any, customerEmail: string;
   let priceId: string, previousBase: string | undefined;
@@ -103,7 +96,8 @@ describe.skipIf(!url)('independent upgrade against the Stripe emulator and a rea
   let closureWired: ReturnType<typeof vi.spyOn> | undefined;
   beforeAll(async () => {
     closureWired = vi.spyOn(coManagedUpgradeClosure, 'available', 'get').mockReturnValue(true);
-    db = knexFactory({ client: 'pg', connection: url });
+    migrationsDir = buildMergedEeMigrationsDir();
+    db = await createTestDbConnection({ migrationsDir });
     if (!await db.schema.hasTable('stripe_customers')) {
       for (const f of ['ee/server/migrations/20251014120000_create_stripe_integration_tables.cjs', 'ee/server/migrations/20260305200000_add_base_item_to_stripe_subscriptions.cjs',
         'ee/server/migrations/20260309200000_add_billing_interval_to_stripe_subscriptions.cjs', 'ee/server/migrations/20260309100000_add_fk_stripe_base_price_id.cjs',
@@ -145,7 +139,7 @@ describe.skipIf(!url)('independent upgrade against the Stripe emulator and a rea
     previousBase = process.env.STRIPE_API_BASE_URL;
     process.env.STRIPE_API_BASE_URL = base;   // the ONLY thing routing the SDK to the emulator
     await db('sessions').insert({ tenant, session_id: sessionId, user_id: userId, expires_at: new Date(Date.now() + 3600_000) });
-  });
+  }, 600_000);
 
   const reset = async () => {
     await db('co_managed_independent_upgrades').where('tenant', tenant).delete();
@@ -165,6 +159,7 @@ describe.skipIf(!url)('independent upgrade against the Stripe emulator and a rea
     await db('co_management_relationships').where({ tenant, relationship_id: relationship.relationship_id })
       .update({ state: relationship.state, ended_at: relationship.ended_at, revision: relationship.revision });
     await host.stop(); await new Promise(r => sink.close(r)); await db.destroy();
+    if (migrationsDir) await rm(migrationsDir, { recursive: true, force: true });
   });
 
   /** Customer created in the emulator with our ownership metadata, and recorded locally (the "existing customer" path). */

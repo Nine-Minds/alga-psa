@@ -3,7 +3,7 @@ import base from './vitest.no-docker.config';
 
 // The independent-upgrade workflow branch is exercised with mocked workflow/activity
 // proxies: no Temporal test server, Docker socket or database is needed. The emulator
-// integration test additionally needs L8B_TEST_DATABASE_URL (it is skipped without it).
+// integration tests additionally bootstrap disposable CE+EE PostgreSQL databases.
 const emulators = path.resolve(__dirname, '../../packages/emulators');
 export default {
   ...base,
