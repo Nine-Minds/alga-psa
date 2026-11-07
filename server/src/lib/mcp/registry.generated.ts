@@ -16554,12 +16554,23 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contract-lines/bulk",
     "displayName": "Bulk delete contract lines",
     "summary": "Bulk delete contract lines",
-    "description": "Alias route to bulkDeleteContractLines; deletes multiple contract lines by ID list.",
+    "description": "Alias route to bulkDeleteContractLines; deletes multiple contract lines by ID list. The ids may come from the request body or, for clients that cannot send a body on DELETE, from the `contract_line_ids` query parameter.",
     "tags": [
       "Contract Lines"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "contract_line_ids",
+        "in": "query",
+        "required": false,
+        "description": "Comma-separated contract line UUIDs. DELETE-only alternative to the request body, for clients that cannot send a body on DELETE.",
+        "schema": {
+          "type": "string",
+          "description": "Comma-separated contract line UUIDs. DELETE-only alternative to the request body, for clients that cannot send a body on DELETE."
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {
@@ -16791,17 +16802,105 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
-    "id": "delete-_api_v1_contractlines_bulk_delete",
-    "method": "delete",
+    "id": "post-_api_v1_contractlines_bulk_delete",
+    "method": "post",
     "path": "/api/v1/contract-lines/bulk/delete",
-    "displayName": "Bulk delete contract lines (explicit route)",
-    "summary": "Bulk delete contract lines (explicit route)",
-    "description": "Same controller behavior as DELETE /api/v1/contract-lines/bulk.",
+    "displayName": "Bulk delete contract lines (POST alias)",
+    "summary": "Bulk delete contract lines (POST alias)",
+    "description": "Same controller behavior as DELETE /api/v1/contract-lines/bulk/delete, for clients that cannot send a body on DELETE.",
     "tags": [
       "Contract Lines"
     ],
     "approvalRequired": false,
     "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "contract_line_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "minItems": 1,
+          "maxItems": 50
+        }
+      },
+      "required": [
+        "contract_line_ids"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "properties": {
+            "timestamp": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "version": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "timestamp",
+            "version"
+          ],
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_contractlines_bulk_delete",
+    "method": "delete",
+    "path": "/api/v1/contract-lines/bulk/delete",
+    "displayName": "Bulk delete contract lines (explicit route)",
+    "summary": "Bulk delete contract lines (explicit route)",
+    "description": "Same controller behavior as DELETE /api/v1/contract-lines/bulk. The ids may come from the request body or from the `contract_line_ids` query parameter.",
+    "tags": [
+      "Contract Lines"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "contract_line_ids",
+        "in": "query",
+        "required": false,
+        "description": "Comma-separated contract line UUIDs. DELETE-only alternative to the request body, for clients that cannot send a body on DELETE.",
+        "schema": {
+          "type": "string",
+          "description": "Comma-separated contract line UUIDs. DELETE-only alternative to the request body, for clients that cannot send a body on DELETE."
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {
@@ -16949,17 +17048,121 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
-    "id": "delete-_api_v1_contractlines_bulk_removeservices",
-    "method": "delete",
+    "id": "post-_api_v1_contractlines_bulk_removeservices",
+    "method": "post",
     "path": "/api/v1/contract-lines/bulk/remove-services",
-    "displayName": "Bulk remove services from contract line",
-    "summary": "Bulk remove services from contract line",
-    "description": "Removes multiple services from one contract_line_id and returns per-service success/failure results.",
+    "displayName": "Bulk remove services from contract line (POST alias)",
+    "summary": "Bulk remove services from contract line (POST alias)",
+    "description": "Same controller behavior as DELETE /api/v1/contract-lines/bulk/remove-services, for clients that cannot send a body on DELETE.",
     "tags": [
       "Contract Lines"
     ],
     "approvalRequired": false,
     "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "contract_line_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "service_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "minItems": 1,
+          "maxItems": 20
+        }
+      },
+      "required": [
+        "contract_line_id",
+        "service_ids"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "properties": {
+            "timestamp": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "version": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "timestamp",
+            "version"
+          ],
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_contractlines_bulk_removeservices",
+    "method": "delete",
+    "path": "/api/v1/contract-lines/bulk/remove-services",
+    "displayName": "Bulk remove services from contract line",
+    "summary": "Bulk remove services from contract line",
+    "description": "Removes multiple services from one contract_line_id and returns per-service success/failure results. The ids may come from the request body or, for clients that cannot send a body on DELETE, from the `contract_line_id` + `service_ids` query parameters.",
+    "tags": [
+      "Contract Lines"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "contract_line_id",
+        "in": "query",
+        "required": false,
+        "description": "Contract line UUID. DELETE-only alternative to the request body.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Contract line UUID. DELETE-only alternative to the request body."
+        }
+      },
+      {
+        "name": "service_ids",
+        "in": "query",
+        "required": false,
+        "description": "Comma-separated service UUIDs. DELETE-only alternative to the request body, for clients that cannot send a body on DELETE.",
+        "schema": {
+          "type": "string",
+          "description": "Comma-separated service UUIDs. DELETE-only alternative to the request body, for clients that cannot send a body on DELETE."
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {
@@ -65269,6 +65472,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 },
                 "contactsUpdate": {
                   "type": "boolean"
+                },
+                "dontNotifyCustomerDefault": {
+                  "type": "boolean",
+                  "description": "Tenant setting: every \"Don't notify the customer\" checkbox starts ticked."
                 }
               },
               "required": [
@@ -65281,7 +65488,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "clientsCreate",
                 "clientsUpdate",
                 "contactsCreate",
-                "contactsUpdate"
+                "contactsUpdate",
+                "dontNotifyCustomerDefault"
               ]
             },
             "formatting": {

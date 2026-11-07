@@ -1858,10 +1858,15 @@
         "label": "Abilita notifiche",
         "description": "Attiva o disattiva tutte le notifiche per questo tenant"
       },
+      "defaultDontNotifyCustomer": {
+        "label": "Avviare i ticket con \"Non notificare il cliente\" selezionato",
+        "description": "Commenti, cambi di stato e di contatto e chiusure dei ticket partono senza notifiche al cliente. Gli agenti possono deselezionare la casella per notificare il cliente in una singola azione."
+      },
       "loading": "Caricamento impostazioni di notifica...",
       "loadError": "Impossibile caricare le impostazioni",
       "save": "Salva modifiche",
-      "saving": "Salvataggio..."
+      "saving": "Salvataggio...",
+      "saveError": "Impossibile salvare le impostazioni di notifica"
     },
     "emailTemplatesUi": {
       "preview": {

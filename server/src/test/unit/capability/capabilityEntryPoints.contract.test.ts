@@ -87,7 +87,7 @@ export const EXPECTED_FAMILY_FILE_COUNTS: Readonly<Record<string, { glob: string
   'temporal-workflows-kebab': { glob: 'ee/temporal-workflows/src/workflows/co-managed*', files: 2 },
   'ee-server-actions': { glob: 'ee/server/src/lib/actions/coManaged*', files: 3 },
   'shared-services': { glob: 'shared/services/**/coManaged*', files: 0 },
-  'server-ui': { glob: 'server/src/components/co-managed/**', files: 76 },
+  'server-ui': { glob: 'server/src/components/co-managed/**', files: 77 },
   'package-ui': { glob: 'packages/co-managed/src/components/**', files: 0 },
 };
 

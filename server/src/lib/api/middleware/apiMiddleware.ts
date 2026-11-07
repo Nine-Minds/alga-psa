@@ -543,6 +543,17 @@ export function handleApiError(rawError: any): NextResponse {
     }, { status: 400 });
   }
 
+  // A missing or garbled request body is the caller's mistake: `req.json()`
+  // throws SyntaxError, which used to fall through to a 500.
+  if (error instanceof SyntaxError) {
+    return NextResponse.json({
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Request body must be valid JSON'
+      }
+    }, { status: 400 });
+  }
+
   // Handle database errors
   if (error.code === '23505') { // PostgreSQL unique violation
     return NextResponse.json({

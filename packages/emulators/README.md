@@ -64,6 +64,7 @@ Emulators implement the vendor protocol subsets listed in this guide and the
 | QBO | `QBO_OAUTH_AUTHORIZE_URL=http://localhost:4020/connect/oauth2`, `QBO_OAUTH_TOKEN_URL=http://localhost:4020/oauth2/v1/tokens/bearer`, `QBO_OAUTH_REVOKE_URL=http://localhost:4020/v2/oauth2/tokens/revoke`, `QBO_API_BASE_URL=http://localhost:4020/v3/company` |
 | Stripe | `STRIPE_API_BASE_URL=http://localhost:4050`, `STRIPE_SECRET_KEY=sk_test_algasim`, `STRIPE_PAYMENT_WEBHOOK_SECRET=whsec_algasim`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_algasim` |
 | Xero | `XERO_OAUTH_AUTHORIZE_URL=http://localhost:4060/identity/connect/authorize`, `XERO_OAUTH_TOKEN_URL=http://localhost:4060/connect/token`, `XERO_OAUTH_REVOKE_URL=http://localhost:4060/connect/revocation`, `XERO_REVOCATION_URL=http://localhost:4060/connect/revocation`, `XERO_CONNECTIONS_URL=http://localhost:4060/connections`, `XERO_API_BASE_URL=http://localhost:4060/api.xro/2.0` |
+| Google Calendar | `GOOGLE_CALENDAR_API_ROOT_URL=http://localhost:4100/`, `GOOGLE_OAUTH_TOKEN_URL=http://localhost:4100/token`, then connect a Google calendar provider whose refresh token is `emulated-refresh-token` (or seed your own with `seed/oauth-client`) |
 | Webhooks | Point the integration's webhook/notification URL at `http://localhost:4030/<any path>` |
 | SMTP | Configure the SMTP provider with host `localhost`, port `4040`, no TLS |
 | 3CX | `THREECX_EMULATOR_MODE=true`, then enter `http://localhost:4070` as the PBX base URL on the 3CX integration card |
@@ -258,6 +259,7 @@ checks run in the normal msgraph Vitest suite against local HTTP listeners.
 
 | Surface | Contract evidence | Remaining limitation |
 | --- | --- | --- |
+| Recurring series expansion | `calendar.test.ts` expands weekly/relative-monthly/counted/until series through `calendarView/delta`, asserts type/seriesMasterId/originalStart, `$select` projection, occurrence GET/DELETE, cancellation as `@removed` and an overridden instance as `type: 'exception'` | UTC-only expansion, synthetic occurrence ids, no Outlook-side series-split (`_R`) behaviour |
 | Calendar create/error responses | `tests/contracts/calendar.ts` and real HTTP checks in `calendar.test.ts`; malformed event/error bodies and wrong create status fail | Consumed fields only; no full event schema or live sandbox comparison |
 | OAuth token responses | `tests/contracts/oauth.ts` applied to code, refresh and client-credential responses in `smoke.test.ts`; wrong expiry type and bearer type fail | Opaque token envelope only; does not establish Entra signatures, consent, PKCE, SSO, or complete scope-dependent token issuance parity |
 | Subscription validation | `calendar.test.ts` verifies request method/content type, accepts only 200/plain-text matching token responses, and verifies rejected callbacks leave no subscription | HTTP loopback transport; real HTTPS trust and tenant registration require application/sandbox coverage |
@@ -310,6 +312,28 @@ mailbox message. Only unexpired mail subscriptions requesting `created` receive
 it. Delivery has a ten-second timeout and does not follow redirects. The existing
 `message` seeder still creates a message and sends its initial notification.
 
+A series master (an event with a Graph `recurrence` object) is expanded by
+`calendarView/delta` into the occurrences overlapping the requested window,
+each carrying `type: 'occurrence'`, its `seriesMasterId`, the `originalStart`
+slot and `recurrence: null`; the master itself is never returned from
+calendarView, and is served with its recurrence intact by
+`GET /me/events/{id}` and `GET /me/calendar/events/{id}`. Daily, weekly,
+absolute/relative monthly and absolute/relative yearly patterns are modelled
+with `noEnd`, `endDate` and `numbered` ranges; anything else answers
+`400 Request_UnsupportedQuery` rather than silently expanding wrongly. Use the
+`calendar-occurrence` control action (`action: 'cancel' | 'override'`) to
+cancel one instance — reported as an `@removed` item for that occurrence id —
+or to move/rename one, which is then expanded as `type: 'exception'`.
+
+An occurrence or exception also resolves through `GET /me/events/{id}` and
+`GET /me/calendar/events/{id}` even though nothing is stored for it, and a
+`DELETE` on that id cancels just that slot; once cancelled the id answers 404,
+which is the pair of behaviours a client needs to tell "this occurrence moved"
+from "this occurrence is gone". `$select` is honoured on `calendarView/delta`
+(projected fields plus `id`, `@removed` items untouched) and carried into the
+next/delta link, which is how a client asks for `type`/`seriesMasterId`/
+`originalStart`.
+
 Use the `calendar-change` control action to create/update/delete vendor events;
 it returns the event and each matching webhook delivery's HTTP status. Supply
 `changeType`, an `event` object for creation/update, and `eventId` for update/delete.
@@ -323,8 +347,10 @@ This delta model handles single-instance UTC and IANA-zone events. Explicit
 ISO offsets identify instants; offset-free event dates use the supplied zone,
 including its winter/summer offset. Delta responses normalize dates to UTC
 without mutating vendor state. Windows timezone names, ambiguous/nonexistent
-local times, recurrence expansion and unsupported query options remain explicit
-model limitations; refusal does not claim Graph rejects those cases. The separate
+local times and unsupported query options remain explicit model limitations;
+refusal does not claim Graph rejects those cases. Series expansion is UTC-only
+and occurrence ids are `<masterId>_<compact ISO slot>`, where real Graph uses
+opaque ids — resolve instances through `seriesMasterId`, never by parsing an id. The separate
 legacy event-list filter still models UTC values only.
 It reports deletions for previously tracked events; it does not reproduce Graph's
 optional tombstones for unrelated changes outside the window. Tokens are bound
@@ -335,6 +361,40 @@ instead of disabling that check. Browser configuration, callback persistence and
 worker synchronization require their own full application journey.
 
 Protocol references: [Graph dateTimeTimeZone](https://learn.microsoft.com/en-us/graph/api/resources/datetimetimezone?view=graph-rest-1.0) and [Microsoft calendar-view delta](https://learn.microsoft.com/en-us/graph/api/event-delta?view=graph-rest-1.0).
+
+### Google Calendar synchronization
+
+The Google adapter honours `GOOGLE_CALENDAR_API_ROOT_URL` (and
+`GOOGLE_OAUTH_TOKEN_URL`), so no adapter change is needed to point it here. The
+emulator serves `calendar/v3` as the googleapis client calls it: calendar
+metadata and `calendarList`, `events.list`, `events.get/insert/patch/put/delete`,
+`events.instances`, `events.watch` and `channels.stop`, plus the OAuth token
+refresh on `/token` (JSON or form-encoded).
+
+`events.list` models the parts incremental sync depends on: `singleEvents`
+true/false, `timeMin`/`timeMax`, `showDeleted`, `maxResults` with
+`pageToken`/`nextPageToken`, and `nextSyncToken` — an incremental round returns
+only the events whose version changed plus cancelled tombstones, and an expired
+token answers `410 fullSyncRequired` (arm it with the `expire-sync-tokens`
+action). With `singleEvents=true` a series master is expanded into instances
+with ids `<masterId>_<YYYYMMDDTHHMMSSZ>` (`<masterId>_<YYYYMMDD>` for an all-day
+series), each carrying `recurringEventId` and `originalStartTime` and no
+`recurrence`; the master itself only appears with `singleEvents=false`. Series
+are expanded in the master's own `start.timeZone`, so a 10:15 America/New_York
+series alternates 14:15Z and 15:15Z across DST, exactly as production did.
+
+An unbounded series is capped by instance count — default 730, Google's observed
+answer for the production case — and `seed/expansion-cap` changes it. Deleting
+or `seed/cancel-occurrence`-ing one instance cancels that occurrence (it then
+lists only with `showDeleted=true`, as a tombstone); patching one materializes it
+as a stored exception that keeps its original slot; `EXDATE` lines in the
+master's `recurrence[]` are honoured; and a `<base>_R<timestamp>` split master is
+an ordinary separate master whose instances point at it.
+
+Contract checks live in `google-calendar/tests/contracts/events.ts` and run
+against the real HTTP responses in `google-calendar/tests/calendar.test.ts`.
+Limits: one primary calendar, no push-notification delivery (channels are
+recorded, not called back), no attendee/ACL semantics, and no reminders.
 
 ### Teams meetings and recordings
 

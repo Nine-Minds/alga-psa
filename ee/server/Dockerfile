@@ -79,8 +79,8 @@ COPY ./server/next.config.mjs ./server/
 COPY ./server/knexfile.cjs ./server/
 COPY ./server/tsconfig.json ./server/
 COPY ./server/index.ts ./server/
-COPY ./server/migrations/ ./server/migrations/
-COPY ./server/seeds/ ./server/seeds/
+COPY --chown=1000:1000 ./server/migrations/ ./server/migrations/
+COPY --chown=1000:1000 ./server/seeds/ ./server/seeds/
 COPY ./server/src/ ./server/src/
 # server/scripts holds runtime entrypoints invoked at boot, notably
 # create-tenant.ts which the appliance bootstrap runs to seed the initial
@@ -89,9 +89,9 @@ COPY ./server/scripts/ ./server/scripts/
 
 # Copy EE-specific files
 COPY ./ee/server/src /app/ee/server/src
-COPY ./ee/server/migrations/ ./server/migrations/
-COPY ./ee/server/seeds/ ./server/seeds/
-COPY ./ee/server/seeds/ /app/ee/server/seeds/
+COPY --chown=1000:1000 ./ee/server/migrations/ ./server/migrations/
+COPY --chown=1000:1000 ./ee/server/seeds/ ./server/seeds/
+COPY --chown=1000:1000 ./ee/server/seeds/ /app/ee/server/seeds/
 
 # Copy core package.json for version info
 COPY packages/core/package.json /app/packages/core/package.json

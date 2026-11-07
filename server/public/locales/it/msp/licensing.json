@@ -747,7 +747,8 @@
       "reloadLatest": "Ricarica l'ultima versione",
       "rejected": "Impossibile salvare questa attività.",
       "saved": "Salvato.",
-      "save": "Salva"
+      "save": "Salva",
+      "projectNotFound": "Questo progetto non è disponibile. Potrebbe non essere più condiviso con te."
     },
     "sla": {
       "title": "Priorità SLA in co-gestione",

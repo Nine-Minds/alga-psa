@@ -11381,6 +11381,15 @@
           "contract_line_ids"
         ]
       },
+      "BulkDeleteContractLinesQuery": {
+        "type": "object",
+        "properties": {
+          "contract_line_ids": {
+            "type": "string",
+            "description": "Comma-separated contract line UUIDs. DELETE-only alternative to the request body, for clients that cannot send a body on DELETE."
+          }
+        }
+      },
       "BulkAddServicesBody": {
         "type": "object",
         "properties": {
@@ -11423,6 +11432,20 @@
           "contract_line_id",
           "service_ids"
         ]
+      },
+      "BulkRemoveServicesQuery": {
+        "type": "object",
+        "properties": {
+          "contract_line_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Contract line UUID. DELETE-only alternative to the request body."
+          },
+          "service_ids": {
+            "type": "string",
+            "description": "Comma-separated service UUIDs. DELETE-only alternative to the request body, for clients that cannot send a body on DELETE."
+          }
+        }
       },
       "CreateContractLineTemplateBody": {
         "type": "object",
@@ -30220,6 +30243,10 @@
                   },
                   "contactsUpdate": {
                     "type": "boolean"
+                  },
+                  "dontNotifyCustomerDefault": {
+                    "type": "boolean",
+                    "description": "Tenant setting: every \"Don't notify the customer\" checkbox starts ticked."
                   }
                 },
                 "required": [
@@ -30232,7 +30259,8 @@
                   "clientsCreate",
                   "clientsUpdate",
                   "contactsCreate",
-                  "contactsUpdate"
+                  "contactsUpdate",
+                  "dontNotifyCustomerDefault"
                 ]
               },
               "formatting": {
@@ -59660,7 +59688,7 @@
       },
       "delete": {
         "summary": "Bulk delete contract lines",
-        "description": "Alias route to bulkDeleteContractLines; deletes multiple contract lines by ID list.",
+        "description": "Alias route to bulkDeleteContractLines; deletes multiple contract lines by ID list. The ids may come from the request body or, for clients that cannot send a body on DELETE, from the `contract_line_ids` query parameter.",
         "tags": [
           "Contract Lines"
         ],
@@ -59682,6 +59710,16 @@
           {
             "schema": {
               "type": "string",
+              "description": "Comma-separated contract line UUIDs. DELETE-only alternative to the request body, for clients that cannot send a body on DELETE."
+            },
+            "required": false,
+            "description": "Comma-separated contract line UUIDs. DELETE-only alternative to the request body, for clients that cannot send a body on DELETE.",
+            "name": "contract_line_ids",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
               "format": "uuid",
               "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
             },
@@ -59692,7 +59730,7 @@
           }
         ],
         "requestBody": {
-          "required": true,
+          "required": false,
           "content": {
             "application/json": {
               "schema": {
@@ -59713,7 +59751,7 @@
             }
           },
           "400": {
-            "description": "Invalid request payload. ACT_AS_NOT_SUPPORTED: the act-as header was sent with a key that cannot act as another user.",
+            "description": "Invalid, unparseable or missing request payload (no body and no `contract_line_ids` query parameter). ACT_AS_NOT_SUPPORTED: the act-as header was sent with a key that cannot act as another user.",
             "content": {
               "application/json": {
                 "schema": {
@@ -60110,7 +60148,165 @@
     "/api/v1/contract-lines/bulk/delete": {
       "delete": {
         "summary": "Bulk delete contract lines (explicit route)",
-        "description": "Same controller behavior as DELETE /api/v1/contract-lines/bulk.",
+        "description": "Same controller behavior as DELETE /api/v1/contract-lines/bulk. The ids may come from the request body or from the `contract_line_ids` query parameter.",
+        "tags": [
+          "Contract Lines"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-source": "middleware API-key presence + request context requirement in controller",
+          "x-request-context-required": true,
+          "x-request-context-wiring-gap": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated contract line UUIDs. DELETE-only alternative to the request body, for clients that cannot send a body on DELETE."
+            },
+            "required": false,
+            "description": "Comma-separated contract line UUIDs. DELETE-only alternative to the request body, for clients that cannot send a body on DELETE.",
+            "name": "contract_line_ids",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+            },
+            "required": false,
+            "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+            "name": "X-Alga-Act-As",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkDeleteContractLinesBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Bulk delete completed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid, unparseable or missing request payload (no body and no `contract_line_ids` query parameter). ACT_AS_NOT_SUPPORTED: the act-as header was sent with a key that cannot act as another user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ACT_AS_NOT_ALLOWED: the service principal is not allowed to act as users.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "ACT_AS_REQUIRED: a service principal performed human work without the act-as header; ACT_AS_INVALID_TARGET: the act-as user is missing, inactive, client or service; HUMAN_WORK_ASSIGNEE_INVALID: a service user was given as assignee/resource.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Request context missing or delete blocked by dependency rules.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Bulk delete contract lines (POST alias)",
+        "description": "Same controller behavior as DELETE /api/v1/contract-lines/bulk/delete, for clients that cannot send a body on DELETE.",
         "tags": [
           "Contract Lines"
         ],
@@ -60163,7 +60359,7 @@
             }
           },
           "400": {
-            "description": "Invalid request payload. ACT_AS_NOT_SUPPORTED: the act-as header was sent with a key that cannot act as another user.",
+            "description": "Invalid, unparseable or missing request payload. ACT_AS_NOT_SUPPORTED: the act-as header was sent with a key that cannot act as another user.",
             "content": {
               "application/json": {
                 "schema": {
@@ -60411,7 +60607,177 @@
     "/api/v1/contract-lines/bulk/remove-services": {
       "delete": {
         "summary": "Bulk remove services from contract line",
-        "description": "Removes multiple services from one contract_line_id and returns per-service success/failure results.",
+        "description": "Removes multiple services from one contract_line_id and returns per-service success/failure results. The ids may come from the request body or, for clients that cannot send a body on DELETE, from the `contract_line_id` + `service_ids` query parameters.",
+        "tags": [
+          "Contract Lines"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-source": "middleware API-key presence + request context requirement in controller",
+          "x-request-context-required": true,
+          "x-request-context-wiring-gap": true,
+          "x-partial-failures-in-response": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Contract line UUID. DELETE-only alternative to the request body."
+            },
+            "required": false,
+            "description": "Contract line UUID. DELETE-only alternative to the request body.",
+            "name": "contract_line_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated service UUIDs. DELETE-only alternative to the request body, for clients that cannot send a body on DELETE."
+            },
+            "required": false,
+            "description": "Comma-separated service UUIDs. DELETE-only alternative to the request body, for clients that cannot send a body on DELETE.",
+            "name": "service_ids",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+            },
+            "required": false,
+            "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+            "name": "X-Alga-Act-As",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkRemoveServicesBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Bulk service removal completed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid, unparseable or missing request payload (no body and no `contract_line_id` + `service_ids` query parameters). ACT_AS_NOT_SUPPORTED: the act-as header was sent with a key that cannot act as another user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ACT_AS_NOT_ALLOWED: the service principal is not allowed to act as users.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "ACT_AS_REQUIRED: a service principal performed human work without the act-as header; ACT_AS_INVALID_TARGET: the act-as user is missing, inactive, client or service; HUMAN_WORK_ASSIGNEE_INVALID: a service user was given as assignee/resource.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Request context missing or unhandled service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Bulk remove services from contract line (POST alias)",
+        "description": "Same controller behavior as DELETE /api/v1/contract-lines/bulk/remove-services, for clients that cannot send a body on DELETE.",
         "tags": [
           "Contract Lines"
         ],
@@ -60465,7 +60831,7 @@
             }
           },
           "400": {
-            "description": "Invalid request payload. ACT_AS_NOT_SUPPORTED: the act-as header was sent with a key that cannot act as another user.",
+            "description": "Invalid, unparseable or missing request payload. ACT_AS_NOT_SUPPORTED: the act-as header was sent with a key that cannot act as another user.",
             "content": {
               "application/json": {
                 "schema": {
