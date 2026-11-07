@@ -9,6 +9,7 @@ import { getCoManagedTicketScreenAction, type CoManagedTicketScreenTarget } from
 import CoManagedAssignmentField from './CoManagedAssignmentField';
 import CoManagedHandoffDialog, { type HandoffAction } from './CoManagedHandoffDialog';
 import CoManagedHandoffHistoryDrawer from './CoManagedHandoffHistoryDrawer';
+import CoManagedTicketSlaStatus from './CoManagedTicketSlaStatus';
 
 type Screen = Awaited<ReturnType<typeof getCoManagedTicketScreenAction>>;
 
@@ -90,6 +91,7 @@ function Section({ target, onChanged, layout }: { target: CoManagedTicketScreenT
       </div>}
       {!screen.canWrite && <p id="co-ticket-read-only" role="status" className="rounded-md border border-[rgb(var(--color-border-200))] px-3 py-2 text-xs text-[rgb(var(--color-text-500))]">{t('coManaged.ticket.readOnly')}</p>}
       <CoManagedAssignmentField resource={resource} refreshKey={refresh} onSaved={saved} onUnavailable={unavailable} />
+      <CoManagedTicketSlaStatus resource={resource} />
       {canAct && (screen.canEscalate || screen.canHandBack || screen.canRevoke) && <div id="co-ticket-handoff-actions" className="flex flex-wrap gap-2">
         {screen.canEscalate && <Button id="co-ticket-escalate" size="sm" onClick={() => setAction('escalate')}>{t('coManaged.ticket.escalate')}</Button>}
         {screen.canHandBack && <Button id="co-ticket-handback" size="sm" onClick={() => setAction('handback')}>{t(`coManaged.ticket.${screen.side === 'customer' ? 'takeBack' : 'handback'}`)}</Button>}

@@ -44,6 +44,9 @@ describe('T037: CE service-principal boundary (oss entry) — API context', () =
     await expect(
       ossEntry.servicePrincipalKeyGate({ user_id: 'owner-1', tenant: 'tenant-1', user_type: 'service' })
     ).resolves.toBe(false);
+    await expect(ossEntry.stampTimeEntryAttribution({
+      table: () => { throw new Error('CE attribution hook must not query EE-only columns'); },
+    }, 'tenant-1', 'entry-1', 'update', undefined)).resolves.toEqual({});
     const error = new Error('x');
     expect(ossEntry.mapServicePrincipalError(error)).toBe(error);
   });

@@ -632,33 +632,40 @@ export class ContractLineService extends BaseService<IContractLine> {
 
 
   /**
-   * Delete contract line with cascade checks
+   * Delete contract line with cascade checks.
+   * Pass `trx` to enlist in a caller's transaction (bulk delete) instead of
+   * opening a new one per line.
    */
-  async delete(id: string, context: ServiceContext): Promise<void> {
-    const { knex } = await this.getKnex();
-    
-    return withTransaction(knex, async (trx) => {
+  async delete(id: string, context: ServiceContext, trx?: Knex.Transaction): Promise<void> {
+    const deleteInTransaction = async (conn: Knex.Transaction) => {
       // Check if plan is in use
-      const isInUse = await this.isPlanInUse(id, context, trx);
+      const isInUse = await this.isPlanInUse(id, context, conn);
       if (isInUse.inUse) {
         throw new ConflictError(`Cannot delete plan: ${isInUse.reason}`);
       }
-      
+
       // Remove associated services first
-      await this.removeAllServicesFromPlan(id, context, trx);
-      
+      await this.removeAllServicesFromPlan(id, context, conn);
+
       // Remove from any contracts
-      await this.removeContractLineFromAllContracts(id, context, trx);
-      
+      await this.removeContractLineFromAllContracts(id, context, conn);
+
       // Delete the plan
-      const deletedCount = await tenantDb(trx, context.tenant).table('contract_lines')
+      const deletedCount = await tenantDb(conn, context.tenant).table('contract_lines')
         .where('contract_line_id', id)
         .delete();
-      
+
       if (deletedCount === 0) {
         throw new NotFoundError('Plan not found');
       }
-    });
+    };
+
+    if (trx) {
+      return deleteInTransaction(trx);
+    }
+
+    const { knex } = await this.getKnex();
+    return withTransaction(knex, deleteInTransaction);
   }
 
   // ============================================================================
@@ -1776,7 +1783,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       
       return withTransaction(knex, async (trx) => {
         for (const planId of data.contract_line_ids) {
-          await this.delete(planId, context);
+          await this.delete(planId, context, trx);
         }
       });
     }

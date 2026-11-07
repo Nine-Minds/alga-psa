@@ -576,7 +576,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               onTimeEntryLogged={onTimeEntryLogged}
             />
           )}
-          <Button
+          {dataSource.capabilities.timeEntryCreate && <Button
             {...withDataAutomationId({ id: `${id}-add-time-entry-btn` })}
             type="button"
             className={`w-full mt-4 flex items-center justify-center`}
@@ -591,7 +591,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
               </svg>
             )}
-          </Button>
+          </Button>}
 
           {ticket.ticket_id && userId && (
             <TicketTimeEntries
@@ -915,7 +915,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                     size="sm"
                     onClick={() => setShowLocationPicker(!showLocationPicker)}
                     className="p-1 h-auto"
-                    disabled={isFieldFrozen('location_id')}
+                    disabled={isFieldFrozen('location_id') || !dataSource.capabilities.locationEdit}
                   >
                     <Edit2 className="h-3 w-3" />
                   </Button>

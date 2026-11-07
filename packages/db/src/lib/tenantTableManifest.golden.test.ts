@@ -13,26 +13,14 @@ import { TENANT_TABLE_FOREIGN_KEYS, type TenantTableForeignKey } from './tenantT
 
 const ACTIVITY = path.resolve(__dirname, '../../../../ee/temporal-workflows/src/activities/tenant-deletion-activities.ts');
 
-function parseActivityLiteral(): string[] {
-  const content = readFileSync(ACTIVITY, 'utf-8');
-  const match = content.match(/const\s+TENANT_TABLES_DELETION_ORDER\s*:\s*string\[\]\s*=\s*\[([\s\S]*?)\n\];/);
-  if (!match) throw new Error('TENANT_TABLES_DELETION_ORDER not found');
-  return [...match[1].replace(/\/\/.*$/gm, '').matchAll(/'([a-z_0-9]+)'/g)].map(m => m[1]);
-}
-
-describe('tenant table manifest golden order', () => {
-  it('computed order equals the activity literal element for element, with zero violations', () => {
-    const literal = parseActivityLiteral();
-    const computed = computeTenantDeletionOrder();
-    expect(computed.violations).toEqual([]);
-    expect(computed.order).toEqual(literal);
-    expect(tenantDeletionOrder()).toEqual(literal);
-  });
-
-  it('has 591 unique ordered names', () => {
+describe('shared tenant table manifest', () => {
+  it('preserves the declared deletion order with no restrictive FK violations', () => {
     const order = tenantDeletionOrder();
-    expect(order).toHaveLength(591);
-    expect(new Set(order).size).toBe(591);
+    const computed = computeTenantDeletionOrder(TENANT_TABLE_MANIFEST);
+    expect(computed.violations).toEqual([]);
+    expect(computed.order).toEqual(order);
+    expect(order).toHaveLength(601);
+    expect(new Set(order).size).toBe(order.length);
   });
 
   it('deletes client-keyed fixed-fee entries before their ordered foreign-key parents', () => {

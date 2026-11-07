@@ -364,6 +364,21 @@
     "accountManagementRead": "Permiso denegado: se requiere permiso de lectura de la gestión de cuentas"
   },
   "coManaged": {
+    "portableExport": {
+      "title": "Exportar espacio de trabajo",
+      "description": "Descargue un archivo portátil y cifrado con los registros y archivos de su espacio de trabajo.",
+      "recovery": "Guarde la frase de contraseña de recuperación en un lugar seguro. Sin ella, no se puede abrir el archivo.",
+      "connections": "El archivo contiene los registros de su espacio de trabajo y los archivos almacenados en él. Los registros y asociaciones de documentos, así como el historial de tiempo, programación, reuniones y conversaciones, aún no se incluyen y llegarán en una versión posterior. No se incluyen datos de facturación, datos privados del MSP ni secretos de integración.",
+      "passphrase": "Frase de contraseña de recuperación",
+      "confirmPassphrase": "Confirmar frase de contraseña de recuperación",
+      "download": "Preparar y descargar archivo",
+      "requested": "Su solicitud se abre en una pestaña nueva. La preparación puede tardar unos minutos; el navegador descargará el archivo cuando esté listo.",
+      "loadError": "No puede exportar este espacio de trabajo con su acceso actual.",
+      "lengthError": "Use una frase de contraseña de entre 16 y 1024 bytes UTF-8.",
+      "matchError": "Las frases de contraseña de recuperación deben coincidir.",
+      "unavailable": "La exportación del espacio de trabajo no está disponible en esta edición.",
+      "loading": "Cargando…"
+    },
     "acceptance": {
       "accept": "Aceptar y activar el espacio de trabajo",
       "administratorRequired": "Un administrador local del espacio de trabajo debe aceptar esta relación antes de que su equipo pueda empezar.",
@@ -436,7 +451,8 @@
       "workspace": "Espacio de trabajo",
       "capacity": "{{allocated}} de {{count}} puestos cogestionados asignados.",
       "openClient": "Configurar TI cogestionada para este cliente",
-      "readOnly": "La TI cogestionada es de solo lectura para este espacio de trabajo. Se muestran las relaciones existentes; la configuración nueva no está disponible."
+      "readOnly": "La TI cogestionada es de solo lectura para este espacio de trabajo. Se muestran las relaciones existentes; la configuración nueva no está disponible.",
+      "slaPriorities": "Asignaciones de prioridad de SLA"
     },
     "provisioning": {
       "administrator": "Administrador",
@@ -674,7 +690,8 @@
       "viewer": "Lector",
       "viewOnly": "Solo lectura",
       "visibility": "Visibilidad de tickets",
-      "whyTitle": "¿Por qué alguien no puede ver esto?"
+      "whyTitle": "¿Por qué alguien no puede ver esto?",
+      "readOnly": "Puede ver esta configuración, pero no cambiarla."
     },
     "sharedTasks": {
       "link": "Tareas compartidas",
@@ -730,7 +747,16 @@
       "reloadLatest": "Recargar la última versión",
       "rejected": "No se pudo guardar esta tarea.",
       "saved": "Guardado.",
-      "save": "Guardar"
+      "save": "Guardar",
+      "projectNotFound": "Este proyecto no está disponible. Es posible que ya no se comparta con usted."
+    },
+    "sla": {
+      "title": "Prioridades de SLA en cogestión",
+      "description": "Elija cuál de sus prioridades, y por tanto cuál de sus objetivos de SLA, se aplica cuando un cliente escala un ticket de cada prioridad.",
+      "missingPolicy": "No hay ninguna política de SLA configurada",
+      "settings": "Gestionar políticas de SLA",
+      "mappingFor": "La prioridad del cliente {{name}} corresponde a",
+      "unmapped": "Sin asignar"
     },
     "portableExport": {
       "title": "Exportar espacio de trabajo",
@@ -901,6 +927,96 @@
         "unknownOutcome": "No pudimos confirmar si se guardó la modificación. Reintente el mismo guardado o descarte los cambios y vuelva a cargar.",
         "slaSetupRequired": "Su MSP debe configurar su política de SLA y la asignación de prioridades antes de reabrir este ticket bajo su responsabilidad."
       }
+    },
+    "attachments": {
+      "title": "Archivos adjuntos",
+      "add": "Adjuntar archivo",
+      "choose": "Elegir archivo",
+      "help": "Los archivos heredan la visibilidad de este mensaje. Máximo {{size}} MiB.",
+      "uploading": "Subiendo…",
+      "upload": "Subir",
+      "invalid": "Elija un archivo permitido que no supere el límite de tamaño.",
+      "loadError": "Los archivos adjuntos no están disponibles. Actualice para comprobar su acceso.",
+      "unknownOutcome": "No pudimos confirmar la subida. Reintente con el mismo archivo.",
+      "remove": "Quitar",
+      "removeTitle": "Quitar archivo adjunto",
+      "removeHelp": "¿Quitar {{name}} de este mensaje? Quienes vean el mensaje ya no podrán descargar este archivo.",
+      "removeUnknownOutcome": "No pudimos confirmar la eliminación. Reintente para comprobar el mismo archivo.",
+      "removing": "Quitando…",
+      "removeNamed": "Quitar {{name}}"
+    },
+    "disclosure": {
+      "title": "Cambiar la audiencia del hilo",
+      "review": "Revisar de nuevo",
+      "confirm": "Confirmar cambio de audiencia",
+      "scope": "Esto cambia la audiencia de todo el hilo: {{comments}} mensajes y {{attachments}} archivos adjuntos.",
+      "current": "Audiencia actual: {{audience}}",
+      "help": "Las respuestas y los adjuntos heredan esta audiencia. Restringir el acceso no recupera la información ya leída o descargada.",
+      "pending": "Hay una carga de adjunto pendiente. Complétela antes de cambiar la audiencia.",
+      "unknownOutcome": "Se desconoce el resultado. Reintente para comprobar el mismo cambio de audiencia.",
+      "transferHelp": "Al compartir, este hilo y sus adjuntos se transfieren al espacio de trabajo del cliente. El hilo privado original del MSP se conserva como historial de solo lectura.",
+      "open": "Cambiar quién puede ver este hilo"
+    },
+    "conversation": {
+      "audience": "Visible para",
+      "audiences": {
+        "requester": "Solicitante y equipos de TI",
+        "shared_it": "Equipos de TI compartidos",
+        "organization_private": "Solo mi organización"
+      },
+      "audienceHelp": {
+        "requester": "Visible para solicitantes autorizados y personal de TI de ambas organizaciones.",
+        "shared_it": "Visible para el personal de TI autorizado de ambas organizaciones, sin acceso para el solicitante.",
+        "organization_private": "Visible solo para el personal autorizado de su organización."
+      },
+      "drafts": {
+        "title": "Mensajes sin enviar",
+        "help": "Estos mensajes se empezaron pero no se enviaron. Revise uno, vuelva a seleccionar los archivos que falten y envíelo o descártelo.",
+        "fileReady": "Subido",
+        "fileMissing": "Debe seleccionarse de nuevo",
+        "choose": "Seleccionar los archivos que faltan",
+        "resume": "Enviar",
+        "discard": "Descartar",
+        "missing": "Seleccione cada archivo que falta con el mismo nombre antes de enviar.",
+        "unsent": "No pudimos confirmar que su mensaje y los archivos se enviaron. Están guardados y aparecerán en «Mensajes sin enviar»; reanúdelos o descártelos allí."
+      },
+      "files": {
+        "choose": "Adjuntar archivos",
+        "help": "Hasta {{count}} archivos de {{size}} MiB cada uno. Los archivos se comparten con los destinatarios de este mensaje.",
+        "remove": "Quitar",
+        "removeNamed": "Quitar {{name}}",
+        "invalid": "Quite los archivos que superen el límite de tamaño o cantidad antes de enviar.",
+        "preparing": "Preparando archivos…",
+        "uploading": "Se han subido {{completed}} de {{total}} archivos…",
+        "publishing": "Publicando el mensaje y los archivos…",
+        "notReady": "Algunos archivos no están listos. Reintente para terminar la carga y enviar el mismo mensaje.",
+        "preparationFailed": "No se pudieron leer los archivos seleccionados. Selecciónelos de nuevo o quítelos antes de reintentar.",
+        "abandoned": "Se descartó este borrador. Guarde de nuevo para crear un mensaje nuevo con los archivos seleccionados.",
+        "audienceUnavailable": "No se pueden adjuntar archivos a los mensajes de esta audiencia. Quite los archivos o elija otra audiencia.",
+        "cancelUnknownOutcome": "No pudimos confirmar la cancelación. Reintente para comprobar la misma solicitud de cancelación.",
+        "canceling": "Cancelando…"
+      },
+      "title": "Conversación",
+      "reload": "Recargar",
+      "loadError": "No se pudo cargar la conversación.",
+      "readOnly": "Puede leer esta conversación, pero no añadir mensajes.",
+      "new": "Nuevo comentario",
+      "empty": "Aún no hay comentarios.",
+      "restrictedAuthor": "Autor oculto",
+      "replyMarker": "Respuesta",
+      "deleted": "Este comentario se eliminó.",
+      "reply": "Responder",
+      "edit": "Editar",
+      "delete": "Eliminar",
+      "newer": "Más recientes",
+      "older": "Más antiguos",
+      "message": "Mensaje",
+      "deleteHelp": "El comentario se sustituye por una marca de eliminado. Las respuestas permanecen en el hilo.",
+      "conflict": "Este comentario cambió desde que lo abrió. Cancele y recargue para continuar.",
+      "unknownOutcome": "No pudimos confirmar el guardado. Inténtelo de nuevo; no se aplicará dos veces.",
+      "invalid": "No se pudo guardar este comentario.",
+      "send": "Enviar",
+      "cancel": "Cancelar"
     }
   },
   "common": {

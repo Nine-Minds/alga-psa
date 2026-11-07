@@ -132,7 +132,10 @@ export function createDraftQuoteItemFromService(item: CatalogPickerItem, quoteCu
     discount_percentage: null,
     applies_to_item_id: null,
     applies_to_service_id: null,
-    is_taxable: true,
+    // A catalog service with no tax rate is non-taxable, matching how the
+    // invoice side reads the same catalog field. The server re-derives this on
+    // persistence; the draft value keeps the editor's preview honest.
+    is_taxable: item.tax_rate_id != null,
     tax_region: null,
     tax_rate: null,
     location_id: null,
@@ -230,9 +233,20 @@ export function calculateDraftQuoteTotals(items: DraftQuoteItem[]): DraftQuoteTo
 
   // Draft rows carry the persisted rate, so the editor derives tax the same
   // way the adapter does for pending add-ons (ceil to the cent).
+  // Tax follows the persisted recalculation: each included row is taxed on its
+  // amount minus the discount share it absorbed (discounts apply before tax).
+  const shareById = new Map<string, number>();
+  for (const result of allocation.discounts) {
+    for (const line of result.allocations) {
+      shareById.set(line.baseItemId, (shareById.get(line.baseItemId) ?? 0) + line.amount);
+    }
+  }
   return summarizeQuoteTotals(items, {
     amountOf: (item) => item.quantity * item.unit_price,
-    taxOf: (item) => hypotheticalTaxAmount({ ...item, total_price: item.quantity * item.unit_price }),
+    taxOf: (item) => hypotheticalTaxAmount({
+      ...item,
+      total_price: Math.max(0, item.quantity * item.unit_price - (shareById.get(draftBaseItemId(item)) ?? 0)),
+    }),
     discountTotal: allocation.totalDiscount,
   });
 }

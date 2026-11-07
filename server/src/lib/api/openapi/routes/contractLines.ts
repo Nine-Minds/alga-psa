@@ -177,6 +177,13 @@ export function registerContractLineRoutes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  const BulkDeleteContractLinesQuery = registry.registerSchema(
+    'BulkDeleteContractLinesQuery',
+    zOpenApi.object({
+      contract_line_ids: zOpenApi.string().optional().describe('Comma-separated contract line UUIDs. DELETE-only alternative to the request body, for clients that cannot send a body on DELETE.'),
+    }),
+  );
+
   const BulkAddServicesBody = registry.registerSchema(
     'BulkAddServicesBody',
     zOpenApi.object({
@@ -190,6 +197,14 @@ export function registerContractLineRoutes(registry: ApiOpenApiRegistry) {
     zOpenApi.object({
       contract_line_id: zOpenApi.string().guid(),
       service_ids: zOpenApi.array(zOpenApi.string().guid()).min(1).max(20),
+    }),
+  );
+
+  const BulkRemoveServicesQuery = registry.registerSchema(
+    'BulkRemoveServicesQuery',
+    zOpenApi.object({
+      contract_line_id: zOpenApi.string().guid().optional().describe('Contract line UUID. DELETE-only alternative to the request body.'),
+      service_ids: zOpenApi.string().optional().describe('Comma-separated service UUIDs. DELETE-only alternative to the request body, for clients that cannot send a body on DELETE.'),
     }),
   );
 
@@ -417,13 +432,13 @@ export function registerContractLineRoutes(registry: ApiOpenApiRegistry) {
     method: 'delete',
     path: '/api/v1/contract-lines/bulk',
     summary: 'Bulk delete contract lines',
-    description: 'Alias route to bulkDeleteContractLines; deletes multiple contract lines by ID list.',
+    description: 'Alias route to bulkDeleteContractLines; deletes multiple contract lines by ID list. The ids may come from the request body or, for clients that cannot send a body on DELETE, from the `contract_line_ids` query parameter.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
-    request: { body: { schema: BulkDeleteContractLinesBody } },
+    request: { query: BulkDeleteContractLinesQuery, body: { schema: BulkDeleteContractLinesBody, required: false } },
     responses: {
       200: { description: 'Bulk delete completed.', schema: ContractLineApiSuccess },
-      400: { description: 'Invalid request payload.', schema: ContractLineApiError },
+      400: { description: 'Invalid, unparseable or missing request payload (no body and no `contract_line_ids` query parameter).', schema: ContractLineApiError },
       401: { description: 'x-api-key missing at middleware.', schema: ContractLineApiError },
       500: { description: 'Request context missing or delete blocked by dependency rules.', schema: ContractLineApiError },
     },
@@ -471,13 +486,31 @@ export function registerContractLineRoutes(registry: ApiOpenApiRegistry) {
     method: 'delete',
     path: '/api/v1/contract-lines/bulk/delete',
     summary: 'Bulk delete contract lines (explicit route)',
-    description: 'Same controller behavior as DELETE /api/v1/contract-lines/bulk.',
+    description: 'Same controller behavior as DELETE /api/v1/contract-lines/bulk. The ids may come from the request body or from the `contract_line_ids` query parameter.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { query: BulkDeleteContractLinesQuery, body: { schema: BulkDeleteContractLinesBody, required: false } },
+    responses: {
+      200: { description: 'Bulk delete completed.', schema: ContractLineApiSuccess },
+      400: { description: 'Invalid, unparseable or missing request payload (no body and no `contract_line_ids` query parameter).', schema: ContractLineApiError },
+      401: { description: 'x-api-key missing at middleware.', schema: ContractLineApiError },
+      500: { description: 'Request context missing or delete blocked by dependency rules.', schema: ContractLineApiError },
+    },
+    extensions: commonExtensions,
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/contract-lines/bulk/delete',
+    summary: 'Bulk delete contract lines (POST alias)',
+    description: 'Same controller behavior as DELETE /api/v1/contract-lines/bulk/delete, for clients that cannot send a body on DELETE.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: { body: { schema: BulkDeleteContractLinesBody } },
     responses: {
       200: { description: 'Bulk delete completed.', schema: ContractLineApiSuccess },
-      400: { description: 'Invalid request payload.', schema: ContractLineApiError },
+      400: { description: 'Invalid, unparseable or missing request payload.', schema: ContractLineApiError },
       401: { description: 'x-api-key missing at middleware.', schema: ContractLineApiError },
       500: { description: 'Request context missing or delete blocked by dependency rules.', schema: ContractLineApiError },
     },
@@ -510,13 +543,34 @@ export function registerContractLineRoutes(registry: ApiOpenApiRegistry) {
     method: 'delete',
     path: '/api/v1/contract-lines/bulk/remove-services',
     summary: 'Bulk remove services from contract line',
-    description: 'Removes multiple services from one contract_line_id and returns per-service success/failure results.',
+    description: 'Removes multiple services from one contract_line_id and returns per-service success/failure results. The ids may come from the request body or, for clients that cannot send a body on DELETE, from the `contract_line_id` + `service_ids` query parameters.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { query: BulkRemoveServicesQuery, body: { schema: BulkRemoveServicesBody, required: false } },
+    responses: {
+      200: { description: 'Bulk service removal completed.', schema: ContractLineApiSuccess },
+      400: { description: 'Invalid, unparseable or missing request payload (no body and no `contract_line_id` + `service_ids` query parameters).', schema: ContractLineApiError },
+      401: { description: 'x-api-key missing at middleware.', schema: ContractLineApiError },
+      500: { description: 'Request context missing or unhandled service failure.', schema: ContractLineApiError },
+    },
+    extensions: {
+      ...commonExtensions,
+      'x-partial-failures-in-response': true,
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/contract-lines/bulk/remove-services',
+    summary: 'Bulk remove services from contract line (POST alias)',
+    description: 'Same controller behavior as DELETE /api/v1/contract-lines/bulk/remove-services, for clients that cannot send a body on DELETE.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: { body: { schema: BulkRemoveServicesBody } },
     responses: {
       200: { description: 'Bulk service removal completed.', schema: ContractLineApiSuccess },
-      400: { description: 'Invalid request payload.', schema: ContractLineApiError },
+      400: { description: 'Invalid, unparseable or missing request payload.', schema: ContractLineApiError },
       401: { description: 'x-api-key missing at middleware.', schema: ContractLineApiError },
       500: { description: 'Request context missing or unhandled service failure.', schema: ContractLineApiError },
     },

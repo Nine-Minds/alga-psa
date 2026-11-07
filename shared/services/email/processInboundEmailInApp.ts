@@ -42,6 +42,7 @@ import { withTenantAdminTransaction } from './tenantAdminTransaction';
 import { associateAssetWithTicket } from '../assets/assetTicketAssociation';
 import {
   detectOutboundNotificationLoop,
+  detectThreadHeaderSelfAutomatedLoop,
   type NotificationLoopDetectionResult,
 } from './notificationLoopDetection';
 import {
@@ -966,7 +967,7 @@ export async function processInboundEmailInApp(
   const senderAuthResults = verifySenderAuthentication(authenticationResultsHeader, senderEmail);
   const isVerifiedListRewrite = Boolean(emailData.headers?.['x-resolved-original-sender']);
   // Same-M365-tenant mail has no Authentication-Results; Exchange's internal-auth stamp
-  // stands in for aligned SPF/DKIM for contact (never internal-user) attribution.
+  // stands in for aligned SPF/DKIM for both contact and internal-user attribution.
   const isTrustedIntraOrgSender = isMicrosoftIntraOrgSender(emailData.provider, emailData.headers);
   const contactSenderTrusted = allowsContactSenderAttribution(senderAuthResults) || isVerifiedListRewrite || isTrustedIntraOrgSender;
   const durableExecution = options.durableExecution ?? null;
@@ -1060,9 +1061,10 @@ export async function processInboundEmailInApp(
     if (!matched) return null;
 
     if (matched.user_type === 'internal') {
-      if (allowsInternalSenderAttribution(senderAuthResults)) return matched;
-      // A list rewrite may be trusted for contact matching, but never grants an
-      // internal identity: only authentication aligned to the original From can.
+      if (allowsInternalSenderAttribution(senderAuthResults) || isTrustedIntraOrgSender) return matched;
+      // A list rewrite may be trusted for contact matching, but never grants an internal
+      // identity: only authentication aligned to the original From, or Exchange's
+      // intra-org stamp on a Microsoft provider, can.
       console.warn('SECURITY_EVENT inbound_email_internal_sender_auth_failed', {
         tenantId, providerId, emailId: emailData.id, senderEmail,
         authResults: senderAuthResults,
@@ -1389,6 +1391,31 @@ export async function processInboundEmailInApp(
     }
 
     if (params.matchedBy === 'thread_headers') {
+      // LEVERAGE: pattern principal-address-classification — sender classification (contact / internal user / watcher / ours) is re-derived here, in the board audience resolver and in the save-time guards.
+      // Redelivery of our own automated notification through a DL that expands
+      // into a connected mailbox: skip before the sender check so it is neither
+      // quarantined as an unknown sender nor turned into a comment/watcher.
+      const selfLoop = await detectThreadHeaderSelfAutomatedLoop({
+        tenantId,
+        ticketId: params.ticketId,
+        emailData,
+        senderEmail,
+      });
+      if (selfLoop.isLoop) {
+        console.info('processInboundEmailInApp: skipping thread-header redelivery of our own notification', {
+          tenantId,
+          providerId,
+          emailId: emailData.id,
+          ticketId: params.ticketId,
+          matchedLogId: selfLoop.matchedLogId,
+        });
+        if (diagnostics) {
+          diagnostics.notificationLoop = selfLoop;
+          diagnostics.threading.failureReason = 'notification_loop';
+        }
+        return withDiagnostics({ outcome: 'skipped', reason: 'notification_loop' }, diagnostics);
+      }
+
       const senderIsTicketClientContact = Boolean(
         senderContact
         && !matchedSenderIsInternalUser

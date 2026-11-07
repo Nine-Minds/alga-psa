@@ -578,6 +578,8 @@ export interface AssetQueryParams {
   contact_name_id?: string;
   /** Built-in slug or tenant asset_type_registry slug (custom type). */
   asset_type?: string;
+  /** Match any of these slugs (multi-select type filter). Mutually exclusive with `asset_type`. */
+  asset_types?: string[];
   status?: string;
   /** Filter by who owns the device. */
   ownership?: 'client' | 'msp';

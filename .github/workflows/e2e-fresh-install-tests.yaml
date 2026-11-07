@@ -244,8 +244,8 @@ jobs:
       # the recipe of the Dockerfile.build artifact builders) and packaged by
       # the production Dockerfiles from the context, the same way the Argo
       # build packages them for deployment, so the candidate under test is the
-      # image that ships. Outside the image the webpack filesystem cache and the
-      # Nx cache can be carried between runs: a snapshot of both travels through
+      # image that ships. Outside the image the Nx package cache can be carried
+      # between runs: its snapshot travels through
       # the registry like the candidate images do, under one moving tag per
       # edition. Only runs of main write it, because a cache shapes build
       # output; pull requests only read it. A missing or unreadable snapshot
@@ -265,31 +265,37 @@ jobs:
         if: matrix.prebuild
         run: npm install --include=optional
 
-      # The snapshot tag carries a generation. `-v2` started cold on 2026-11-04:
-      # the first-generation packs had grown to ~18 GB on disk (next.config.mjs
-      # now bounds a pack to entries used within a day) and every build that
-      # restored one outgrew the runner, so no build could write a smaller one.
+      # v3 contains only Nx artifacts. Webpack packs reached 16 GB in v2 and
+      # exhausted the runner while being restored/rewritten during compilation.
       - name: Restore the build-cache snapshot
         if: matrix.prebuild
         id: build_cache
         env:
-          BUILD_CACHE_REFERENCE: ${{ needs.changes.outputs.registry_namespace }}/build-cache:${{ matrix.edition }}-v2
-        run: node scripts/build-cache-snapshot.mjs restore --reference "$BUILD_CACHE_REFERENCE" --path server/node_modules/.cache/webpack --path .nx/cache
+          BUILD_CACHE_REFERENCE: ${{ needs.changes.outputs.registry_namespace }}/build-cache:${{ matrix.edition }}-v3
+        run: node scripts/build-cache-snapshot.mjs restore --reference "$BUILD_CACHE_REFERENCE" --path .nx/cache
 
+      # Each worker inherits the 14 GB heap allowance. Two workers exhausted
+      # the 16 GB runner and its swap on both attempts of run 42159685683.
+      # Use the single-worker recipe validated by the enterprise build guard
+      # for both candidate editions, including the compilation/minifier phase.
       - name: Build the production application on the runner
         if: matrix.prebuild
         env:
-          NEXT_BUILD_MAX_OLD_SPACE_SIZE: '12288'
+          NEXT_BUILD_CPUS: '1'
+          NEXT_BUILD_MAX_OLD_SPACE_SIZE: '14336'
           EDITION_NAME: ${{ matrix.edition }}
-          # Next folds this key into the webpack cache version and generates a
-          # new one per build when it is unset, which would make every restored
-          # snapshot a miss. The candidates are test images that never serve
-          # traffic, so a fixed, public, test-only key is right for them; the
-          # deployment build (nm-kube-config) must use a secret of its own.
+          # Fixed, public encryption key for test-only server actions. Deployment
+          # builds (nm-kube-config) must use a secret of their own.
           NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: OpTnSkDAbqi/eI+2i8Tg20NhJwnUrrgPdz4I4p/3N+0=
         run: |
+          free -h
+          df -h /
+          # Keep memory, swap and I/O samples even if the runner shuts down.
+          vmstat -w 15 &
+          resource_monitor_pid=$!
+          trap 'kill "$resource_monitor_pid" 2>/dev/null || true' EXIT
           scripts/build-production-server.sh "$EDITION_NAME"
-          du -sh server/.next server/node_modules/.cache/webpack .nx/cache 2>/dev/null || true
+          du -sh server/.next .nx/cache 2>/dev/null || true
 
       - name: Build and export ${{ matrix.service }}
         id: export_image
@@ -377,8 +383,8 @@ jobs:
         if: matrix.prebuild && github.event_name == 'push' && github.ref == 'refs/heads/main' && env.IMAGE_TRANSPORT == 'registry'
         continue-on-error: true
         env:
-          BUILD_CACHE_REFERENCE: ${{ needs.changes.outputs.registry_namespace }}/build-cache:${{ matrix.edition }}-v2
-        run: node scripts/build-cache-snapshot.mjs save --reference "$BUILD_CACHE_REFERENCE" --path server/node_modules/.cache/webpack --path .nx/cache
+          BUILD_CACHE_REFERENCE: ${{ needs.changes.outputs.registry_namespace }}/build-cache:${{ matrix.edition }}-v3
+        run: node scripts/build-cache-snapshot.mjs save --reference "$BUILD_CACHE_REFERENCE" --path .nx/cache
 
       - name: Upload image build record
         uses: actions/upload-artifact@v4
@@ -598,9 +604,10 @@ jobs:
           printf "placeholder-secret" > secrets/google_oauth_client_secret
 
           # These files contain only the synthetic values above. Compose mounts
-          # file secrets with host ownership; permit the non-root Temporal image
-          # to read them without changing its production user.
-          chmod 444 secrets/*
+          # file secrets with host ownership. The `runtime-permissions` init
+          # service hands them to uid 1000 (the user the application containers
+          # and the Temporal image run as), so no world-readable bit is needed.
+          chmod 600 secrets/*
 
           # Copy and configure environment file
           cp .env.example .env
@@ -662,8 +669,9 @@ jobs:
 
           echo "Downloading Docker Compose from ${COMPOSE_URL} to ${DEST_PATH}"
           sudo rm -f "${DEST_PATH}" # Remove existing to avoid conflicts
-          # Use curl with -fS (fail silently on server errors, show client errors) and -L (follow redirects)
-          sudo curl -fSL "${COMPOSE_URL}" -o "${DEST_PATH}"
+          # GitHub's release CDN answers an occasional 5xx; curl exit 22 on one of
+          # those failed the whole browser shard on main (run 41942836677).
+          sudo curl -fSL --retry 5 --retry-delay 5 --retry-all-errors "${COMPOSE_URL}" -o "${DEST_PATH}"
           
           # Verify download was successful and file is not empty and is executable
           if [ ! -s "${DEST_PATH}" ]; then
@@ -791,10 +799,10 @@ jobs:
           # Resolve explicit and Compose-generated tags so a configuration change cannot
           # accidentally run an old/pulled image instead of this run's build.
           docker-compose -p alga-e2e-test --profile enterprise config --format json > "$RUNNER_TEMP/fresh-install-compose.json"
-          for service in server setup email-service hocuspocus redis pgbouncer algasim worker-test-state $worker_images; do
+          for service in server runtime-permissions setup email-service hocuspocus redis pgbouncer algasim worker-test-state $worker_images; do
             image=$(jq -r --arg service "$service" '.services[$service].image // (.name + "-" + $service)' "$RUNNER_TEMP/fresh-install-compose.json")
             record_service="$service"
-            if [ "$service" = server ]; then record_service="$SERVER_ARCHIVE"; fi
+            if [ "$service" = server ] || [ "$service" = runtime-permissions ]; then record_service="$SERVER_ARCHIVE"; fi
             if [ "$service" = worker-test-state ]; then record_service=algasim; fi
             inspection="$RUNNER_TEMP/loaded-$service.json"
             docker image inspect "$image" > "$inspection"
@@ -821,7 +829,7 @@ jobs:
           docker-compose -p alga-e2e-test up --no-build --wait --wait-timeout 90 -d algasim test-ingress
           docker-compose -p alga-e2e-test exec -T algasim node --input-type=module -e 'const r = await fetch("https://calendar-callback:3443/probe", { signal: AbortSignal.timeout(5000) }); if (r.status !== 404) throw new Error("Calendar callback TLS routing failed")'
           curl --fail --silent http://127.0.0.1:9500/control/catalog > "$RUNNER_TEMP/algasim-catalog.json"
-          jq -e '[.result.emulators[].id] | sort == ["huntress", "levelio", "msgraph", "qbo", "smtp-sink", "stripe", "threecx", "webhook-sink", "xero"]' "$RUNNER_TEMP/algasim-catalog.json"
+          jq -e '[.result.emulators[].id] | sort == ["google-calendar", "huntress", "levelio", "msgraph", "qbo", "smtp-sink", "stripe", "threecx", "webhook-sink", "xero"]' "$RUNNER_TEMP/algasim-catalog.json"
           docker image inspect alga-e2e-test-algasim:latest --format '{{.Id}}' > "$RUNNER_TEMP/algasim-image-id.txt"
 
       - name: Initialize isolated shared worker state
@@ -830,6 +838,25 @@ jobs:
           # Only this fresh job's empty named volumes are initialized. All
           # application secret writers use UID1000; production checks stay on.
           docker-compose -p alga-e2e-test run --rm --no-deps worker-test-state
+
+      - name: Test runtime-permissions in the candidate production image
+        if: steps.install_docker_compose.outcome == 'success'
+        run: |
+          docker-compose -p alga-e2e-test run --rm --no-deps \
+            -v "$PWD/scripts/tests:/runtime-permissions-tests:ro" \
+            -e RUNTIME_PERMISSIONS_SCRIPT=/usr/local/bin/alga-runtime-permissions \
+            --entrypoint /bin/bash runtime-permissions \
+            /runtime-permissions-tests/runtime-permissions.test.sh
+
+      - name: Run runtime-permissions init
+        if: steps.install_docker_compose.outcome == 'success'
+        run: |
+          # Same one-shot init the documented installs run on every `up`: it
+          # chowns the files volume and secrets/* to uid 1000 and fails if a
+          # secret is still unreadable by that uid.
+          docker-compose -p alga-e2e-test up --no-build --no-deps --exit-code-from runtime-permissions runtime-permissions
+          [ "$(stat -c %u secrets/db_password_server)" = 1000 ]
+        shell: bash
 
       - name: Start foundational services (postgres and redis)
         if: steps.install_docker_compose.outcome == 'success'
@@ -1000,46 +1027,12 @@ jobs:
         # Runs after setup: app_user is created by setup's create_database.js, so it does
         # not exist in a fresh Postgres before then. Before any app or worker starts.
         run: |
-          # Runs psql from a throwaway container on the compose network, using the
-          # image the postgres service already runs. A rejected login must fail
-          # with an authentication error (not, say, a connection error).
-          PSQL_IMAGE="$(docker inspect -f '{{.Config.Image}}' "$(docker-compose -p alga-e2e-test ps -q postgres)")"
-          APP_PASSWORD="$(cat secrets/db_password_server)"
-
-          pooler_psql() {
-            # pooler_psql <user> <password|""> <db>; an empty password sends none.
-            local user="$1" password="$2" db="$3" env_args=(-e PGCONNECT_TIMEOUT=10)
-            [ -n "$password" ] && env_args+=(-e "PGPASSWORD=$password")
-            docker run --rm --network alga-e2e-test_app-network "${env_args[@]}" \
-              --entrypoint psql "$PSQL_IMAGE" -X -w -h pgbouncer -p 6432 -U "$user" -d "$db" -tAc 'select current_user' 2>&1
-          }
-
-          expect_rejected() {
-            local description="$1" output rc
-            shift
-            output="$(pooler_psql "$@")" && rc=0 || rc=$?
-            if [ "$rc" -ne 0 ] && grep -qi 'no password supplied\|authentication failed\|no such user' <<<"$output"; then
-              echo "ok   - rejected: $description"
-            else
-              echo "FAIL - expected an authentication failure for: $description (rc=$rc)"
-              echo "$output"
-              exit 1
-            fi
-          }
-
-          for user in app_user postgres; do
-            expect_rejected "$user without a password" "$user" "" server
-            expect_rejected "$user with a wrong password" "$user" "not-the-password-$$" server
-          done
-          # The superuser is not served through PgBouncer, even with its real secret.
-          expect_rejected "postgres with its real secret" postgres "$(cat secrets/postgres_password)" server
-
-          output="$(pooler_psql app_user "$APP_PASSWORD" server)" || { echo "FAIL - app_user could not log in through PgBouncer"; echo "$output"; exit 1; }
-          if [ "$output" != "app_user" ]; then
-            echo "FAIL - unexpected result for app_user: $output"
-            exit 1
-          fi
-          echo "ok   - app_user authenticates with secrets/db_password_server"
+          # Read the mounted secrets as the application's uid; the host runner
+          # may have a different uid and cannot read them after permission init.
+          # Supply this CI probe from the checkout: production images need not
+          # package the repository's scripts directory (the EE image does not).
+          docker-compose -p alga-e2e-test run --rm --no-deps -T \
+            --entrypoint /bin/bash server -s < scripts/check-pgbouncer-auth.sh
         shell: bash
 
       - name: Start remaining services after setup completion
@@ -1164,6 +1157,19 @@ jobs:
             ATTEMPT_NUM=$((ATTEMPT_NUM+1))
           done
           echo "Server service is healthy at $HEALTH_CHECK_URL."
+        shell: bash
+
+      - name: Verify application containers run as uid 1000
+        if: steps.server_ready.outcome == 'success'
+        run: |
+          for service in server workflow-worker email-service redis; do
+            uid=$(docker-compose -p alga-e2e-test exec -T "$service" id -u)
+            echo "$service runs as uid $uid"
+            if [ "$uid" != 1000 ]; then
+              echo "Expected $service to run as uid 1000"
+              exit 1
+            fi
+          done
         shell: bash
 
       - name: Verify provider routing from running Alga processes
@@ -1678,6 +1684,11 @@ jobs:
           name: supported-citus-upgrade-diagnostics
           path: e2e-tests/test-results/
           retention-days: 7
+
+      - name: Verify development runtime file permissions
+        if: ${{ !cancelled() && (steps.shard.outputs.teams == 'true' || steps.shard.outputs.microsoft == 'true') && steps.capture_creds.outcome == 'success' }}
+        timeout-minutes: 3
+        run: node --test scripts/tests/development-runtime-permissions.test.mjs
 
       # The setup chain shares the owned, expiring quarantine (scripts/lib/quarantine.json)
       # and must not fail the job carrying other browser gates. Readiness records a missing
