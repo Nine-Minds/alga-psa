@@ -53,9 +53,36 @@ export function normalizeOutboundHostname(rawHost: string): string {
   return rawHost.replace(/^\[/, '').replace(/\]$/, '').replace(/\.$/, '').toLowerCase();
 }
 
+/** Exact host/IP exceptions for controlled email fixtures; never active in production. */
+function developmentDestinations(): Map<string, Set<string>> {
+  const destinations = new Map<string, Set<string>>();
+  if (process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'test') return destinations;
+  const raw = process.env.ALGA_EMAIL_DEV_DESTINATIONS;
+  if (!raw) return destinations;
+
+  const invalid = () => new UnsafeOutboundAddressError('ALGA_EMAIL_DEV_DESTINATIONS must map exact hostnames to nonempty arrays of literal IP addresses');
+  let entries: unknown;
+  try { entries = JSON.parse(raw); } catch { throw invalid(); }
+  if (!entries || typeof entries !== 'object' || Array.isArray(entries)) throw invalid();
+  for (const [rawHost, addresses] of Object.entries(entries)) {
+    const host = normalizeOutboundHostname(rawHost);
+    if (!host || host.includes('%') || rawHost !== rawHost.trim() || (!isIP(host) && !/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/i.test(host))
+      || !Array.isArray(addresses) || addresses.length === 0
+      || addresses.some((address) => typeof address !== 'string' || !isIP(address) || address.includes('%'))) throw invalid();
+    if (destinations.has(host)) throw invalid();
+    destinations.set(host, new Set(addresses.map((address: string) => canonicalAddress(address))));
+  }
+  return destinations;
+}
+
+function canonicalAddress(address: string): string {
+  return isIP(address) === 6 ? new URL(`http://[${address}]`).hostname : address;
+}
+
 export async function assertSafeOutboundHost(rawHost: string): Promise<void> {
   const host = normalizeOutboundHostname(rawHost.trim());
-  if (!host || host === 'localhost' || host.endsWith('.localhost')) {
+  const allowedAddresses = developmentDestinations().get(host);
+  if (!host || (!allowedAddresses && (host === 'localhost' || host.endsWith('.localhost')))) {
     throw new UnsafeOutboundAddressError('Host is not permitted');
   }
   let addresses: string[];
@@ -69,7 +96,8 @@ export async function assertSafeOutboundHost(rawHost: string): Promise<void> {
     }
   }
   if (addresses.length === 0) throw new UnsafeOutboundAddressError(`Host ${host} could not be resolved`);
-  if (addresses.some(isBlockedOutboundAddress)) {
+  if (addresses.some(isBlockedOutboundAddress)
+    && !addresses.every((address) => allowedAddresses?.has(canonicalAddress(address)))) {
     throw new UnsafeOutboundAddressError('Host resolves to a non-public address');
   }
 }
