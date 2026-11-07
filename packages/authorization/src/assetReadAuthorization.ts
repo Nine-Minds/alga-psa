@@ -183,6 +183,18 @@ export function isAssetReadAllowed(
   return isAssetActionAllowed(trx, tenant, context, asset, 'read');
 }
 
+/** Mutations require both visibility of the asset and permission for the requested operation. */
+export async function isAssetMutationAllowed(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  context: AssetReadAuthorizationContext,
+  asset: AssetAuthorizationInput,
+  action: 'update' | 'delete'
+): Promise<boolean> {
+  return await isAssetReadAllowed(trx, tenant, context, asset) &&
+    await isAssetActionAllowed(trx, tenant, context, asset, action);
+}
+
 /**
  * Batch form of {@link isAssetReadAllowed}: the subset of `assets` the caller may read, resolved with ONE
  * association query. Used by the custody queue and label enrichment, where an unreadable asset must be
