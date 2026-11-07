@@ -150,7 +150,11 @@
       "title": "Atribuição do cliente",
       "useTenantRenewalDefaults": "Use padrões de renovação de locatário",
       "usingCustomSettings": "Usando configurações de atribuição personalizadas",
-      "usingTenantDefaults": "Usando padrões de locatário"
+      "usingTenantDefaults": "Usando padrões de locatário",
+      "billingProfileUseDefault": "Usar {{name}} (predefinição do cliente)",
+      "billingProfileAssigned": "Perfil de faturação atribuído",
+      "billingProfileUnavailable": "Sem perfil — atribuição pendente",
+      "billingProfileLoading": "A carregar perfil de faturação…"
     },
     "clientOwnership": {
       "assignmentStatus": "Status da Atribuição",
@@ -375,6 +379,82 @@
         "failed": "Não foi possível alterar a forma como este serviço é medido."
       },
       "effectiveFrom": "Alteração de medição em vigor a partir de"
+    },
+    "billing": {
+      "title": "Perfil de faturação e condições de pagamento",
+      "asOf": "a {{date}}",
+      "profileLabel": "Perfil de faturação",
+      "inactive": "Inativo",
+      "lineCountOne": "{{count}} linha",
+      "lineCountOther": "{{count}} linhas",
+      "termsLabel": "Condições de pagamento",
+      "terms": {
+        "net_30": "Líquido 30",
+        "net_15": "Líquido 15",
+        "net_14": "Líquido 14",
+        "net_7": "Líquido 7",
+        "due_on_receipt": "Devido no recebimento"
+      },
+      "termsSource": {
+        "profile": "do perfil de faturação",
+        "client": "do cliente",
+        "tenant": "do padrão do inquilino",
+        "default": "predefinição: sem condições definidas"
+      },
+      "profileSource": {
+        "client_default": "predefinição do cliente",
+        "contract": "atribuído ao contrato",
+        "contract_line": "definido na linha",
+        "work_item": "definido no ticket ou projeto"
+      },
+      "valueSource": {
+        "profile": "Perfil",
+        "client": "Cliente",
+        "contract": "Contrato",
+        "default": "Predefinição"
+      },
+      "dueSentence": "Uma fatura de {{invoiceDate}} vence em {{dueDate}} — {{terms}} {{source}}",
+      "detailsToggle": "Outros detalhes de faturação",
+      "fieldNone": "Nenhum",
+      "taxRegionChain": "Região do serviço, depois localização da linha de contrato, depois predefinição do cliente",
+      "taxExempt": "Isento de impostos",
+      "taxable": "Tributável",
+      "templateCustom": "Modelo personalizado",
+      "templateDefault": "Modelo predefinido",
+      "paymentMethod": {
+        "credit_card": "Cartão de crédito",
+        "bank_transfer": "Transferência bancária",
+        "check": "Cheque"
+      },
+      "fieldLabel": {
+        "bill_to": "Faturar a",
+        "payment_method": "Método de pagamento",
+        "tax_exemption": "Isenção de impostos",
+        "tax_region": "Região fiscal",
+        "delivery": "Entrega de faturas",
+        "template": "Modelo de fatura",
+        "po_number": "Número do pedido de compra",
+        "currency": "Moeda",
+        "cadence": "Periodicidade de faturação",
+        "profile_billing_cycle": "Ciclo de faturação do perfil",
+        "profile_billing_cycle_unapplied": "Ciclo de faturação do perfil (ainda não aplicado)"
+      },
+      "warnings": {
+        "inactiveProfile": "{{name}} está inativo. Os encargos continuam atribuídos a ele, mas são faturados no perfil predefinido, com as respetivas condições de pagamento.",
+        "mixedProfiles": "Este contrato fatura por {{count}} perfis diferentes, portanto nenhum perfil único o cobre. Cada fatura usa as condições de pagamento do perfil em que é emitida.",
+        "lineOverride": "A linha \"{{line}}\" fatura em {{name}} em vez do perfil do contrato.",
+        "workItemOverride": "O tempo registrado em um ticket ou projeto é faturado pelo perfil desse item de trabalho, se ele tiver um. Sem perfil, vale o perfil padrão do cliente.",
+        "workItemOverrideWithProfiles": "O tempo registrado em um ticket ou projeto é faturado pelo perfil desse item de trabalho, se ele tiver um ({{names}}). Sem perfil, vale o perfil padrão do cliente.",
+        "mixedProfilesSameInvoice": "As cobranças deste contrato são atribuídas a {{count}} perfis diferentes, mas todas aparecem na fatura de {{invoice}}, portanto aplica-se um único conjunto de condições de pagamento.",
+        "bucketCoverageNote": "Em linhas com pacote pré-pago ou bloco de horas, o tempo coberto pelo pacote ou bloco não acompanha o item de trabalho; apenas o tempo por hora restante o acompanha."
+      },
+      "simulationNote": "Os preços simulados usam a isenção de impostos ao nível do cliente. A isenção própria de um perfil não é aplicada nesta simulação.",
+      "dueSentenceWorkItem": "Uma fatura de {{invoiceDate}} vence em {{dueDate}} — {{terms}} {{source}}, a menos que o ticket ou projeto seja faturado por outro perfil",
+      "workItemProfileLine": "Se o ticket ou projeto for faturado por {{name}}:",
+      "invoiceLanding": {
+        "notBilledSeparately": "Atribuído a {{attributed}}; faturado em {{invoice}} ({{attributed}} não fatura separadamente) — {{terms}}, vencimento {{dueDate}}",
+        "inactiveProfile": "Atribuído a {{attributed}}; faturado em {{invoice}} ({{attributed}} está inativo, por isso não tem fatura própria) — {{terms}}, vence a {{dueDate}}"
+      }
     }
   },
   "contractDialog": {
@@ -588,7 +668,8 @@
       "failedToResetRate": "Falha ao redefinir o preço da linha",
       "protectedStartDate": "A data de início deve ser {{boundary}} ou anterior para incluir o histórico protegido.",
       "protectedEndDate": "A data de término deve ser {{boundary}} ou posterior para incluir o histórico protegido.",
-      "cannotEditWithInvoices": "Não é possível editar a linha de contrato: este contrato tem faturas associadas. As linhas de contrato não podem ser editadas depois que as faturas forem geradas."
+      "cannotEditWithInvoices": "Não é possível editar a linha de contrato: este contrato tem faturas associadas. As linhas de contrato não podem ser editadas depois que as faturas forem geradas.",
+      "reloadLatest": "Recarregar a versão mais recente"
     },
     "loading": {
       "contractLines": "Carregando linhas de contrato",
@@ -1702,6 +1783,9 @@
       "label": "Perfil de faturação",
       "none": "Utilizar o perfil predefinido do cliente",
       "hint": "Os encargos deste contrato são faturados neste perfil, salvo se uma linha o substituir."
+    },
+    "billingTiming": {
+      "label": "Momento de faturamento"
     }
   },
   "wizardFixed": {
@@ -1751,7 +1835,8 @@
       "recurringQuantityLabel": "Quantidade recorrente",
       "allocationQuantityLabel": "Quantidade de alocação",
       "noCurrencyPrice": "Sem preço em {{currency}} no catálogo. Informe uma tarifa unitária."
-    }
+    },
+    "billingTimingLabel": "Momento de faturamento"
   },
   "wizardProducts": {
     "actions": {
@@ -1774,7 +1859,8 @@
       "productMissingPrice": "Este produto não tem preço padrão nem substituição. Ele não pode ser cobrado até que você insira um preço unitário.",
       "noCurrencyPriceEnterUnitPrice": "Nenhum preço {{currency}} no catálogo. Insira um preço unitário.",
       "noCurrencyPriceWithLegacyHint": "Nenhum preço {{currency}} no catálogo. Taxa padrão herdada: {{rate}}. Insira um preço unitário em {{currency}}."
-    }
+    },
+    "billingTimingLabel": "Momento de faturamento"
   },
   "wizardHourly": {
     "actions": {
@@ -1832,7 +1918,8 @@
         "rolloverDisabled": "Desabilitado",
         "rolloverEnabled": "Habilitado"
       }
-    }
+    },
+    "billingTimingLabel": "Momento de faturamento"
   },
   "wizardUsage": {
     "actions": {
@@ -1870,7 +1957,8 @@
     },
     "values": {
       "defaultUnit": "unidade"
-    }
+    },
+    "billingTimingLabel": "Momento de faturamento"
   },
   "wizardReview": {
     "heading": "Revise o contrato",
@@ -2028,6 +2116,13 @@
       "neverExpires": "nunca expira",
       "cadenceSummary": "{{hours}} h por período de faturação por {{price}}",
       "overageRate": "excedente {{rate}}/h"
+    },
+    "billingTiming": {
+      "label": "Momento de faturamento:",
+      "advance": "Antecipado",
+      "arrears": "Pós-pago",
+      "advanceInherited": "Antecipado (padrão do contrato)",
+      "arrearsInherited": "Pós-pago (padrão do contrato)"
     }
   },
   "wizardTemplateLines": {
@@ -2773,6 +2868,7 @@
   "wizardFirstInvoice": {
     "loading": "Verificando o calendário de faturamento do cliente…",
     "arrearsPreviewNote": "Até lá, uma prévia de faturas deste cliente não tem nada a faturar para esta linha.",
+    "arrearsPreviewNoteMany": "Até lá, uma prévia de faturas deste cliente não tem nada a faturar para estas linhas.",
     "unavailable": {
       "missingStartDate": "Escolha uma data de início para ver quando este contrato será faturado pela primeira vez.",
       "unsupportedFrequency": "Nenhuma data da primeira fatura é exibida porque o faturamento pelo ciclo do contrato não oferece suporte a essa frequência. Escolha uma frequência compatível ou fature pelo calendário do cliente.",
@@ -2809,7 +2905,11 @@
     "options": {
       "advance": "Antecipado (faturar no início do período)",
       "arrears": "Após o período (faturar no fim do período)"
-    }
+    },
+    "inheritWithValue": "Usar o padrão do contrato — {{timing}}",
+    "inheritedAdvance": "antecipado",
+    "inheritedArrears": "pós-pago",
+    "contractDefaultHelp": "Padrão para linhas fixas, que podem ser faturadas antecipadamente. Linhas por hora e de uso são sempre faturadas após o período, independentemente do que escolher aqui."
   },
   "contractDiscounts": {
     "title": "Descontos",

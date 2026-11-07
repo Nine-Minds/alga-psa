@@ -4,6 +4,7 @@ import { Knex } from 'knex';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { IClientContractLine } from '@alga-psa/types';
 import { formatISO } from 'date-fns';
+import { delegateToTimeSource } from './timeSource';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import {
   resolveDeterministicContractLineSelection,
@@ -334,6 +335,10 @@ export async function getClientIdForWorkItem(workItemId: string, workItemType: s
       const result = await db.table('interactions').where({ interaction_id: workItemId }).first('client_id');
       return result?.client_id || null;
     }
+    // Time-source seam: a registered provider answers for the work item types native does not know; native misses.
+    const delegated = await delegateToTimeSource({ tenant, userId: currentUser.user_id, workItemType, workItemId },
+      (source, ctx) => source.work.billingContext(ctx, db, workItemType, workItemId));
+    if (delegated.handled) return delegated.value.clientId;
     return null;
   } catch (error) {
     console.error('Error getting client ID for work item:', error);

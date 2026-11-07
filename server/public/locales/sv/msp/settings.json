@@ -851,11 +851,15 @@
           "notificationsRecipients": "Avisera",
           "notificationsRecipientsPlaceholder": "Välj användare och team...",
           "notificationsRecipientsHelp": "Teammedlemmar slås upp varje gång en avisering skickas.",
+          "notificationsEmails": "E-postadresser",
+          "notificationsEmailsPlaceholder": "Lägg till en distributionslista eller delad brevlåda...",
+          "notificationsEmailsHelp": "Dessa adresser får alla ärendeuppgifter för varje matchande ärende på den här tavlan, trots att de inte är Alga-användare och ingen behörighetskontroll sker. Använd för distributionslistor som du kontrollerar. Om du vill avisera en person med Alga-konto, välj personen ovan i stället.",
+          "notificationsEmailInvalid": "Åtgärda eller ta bort de ogiltiga e-postadresserna i aviseringsreglerna.",
           "notificationsDefaultWatchers": "Standardbevakare",
           "notificationsDefaultWatchersPlaceholder": "Välj användare...",
           "notificationsDefaultWatchersHelp": "Läggs till i bevakarlistan för varje nytt ärende på den här tavlan och aviseras om alla senare uppdateringar.",
           "notificationsTriggerRequired": "Varje aviseringsregel behöver minst en utlösare: att ett ärende skapas eller en status.",
-          "notificationsRecipientRequired": "Varje aviseringsregel behöver minst en användare eller ett team att avisera.",
+          "notificationsRecipientRequired": "Varje aviseringsregel måste ha minst en användare, ett team eller en e-postadress att avisera.",
           "notificationsFetchFailed": "Det gick inte att läsa in aviseringsinställningarna",
           "notificationsStatusRemapFailed": "Tavlan skapades, men statusen för en aviseringsregel kunde inte matchas mot den nya tavlan. Lägg till aviseringsreglerna igen.",
           "inbound": "E-post och inkommande svar",
@@ -1171,6 +1175,8 @@
           "client_id": "Kund",
           "client_tags": "Kundtaggar",
           "contact_tags": "Kontakttaggar",
+          "location_id": "Plats",
+          "contact_locations": "Beställarens plats",
           "ticket_origin": "Ärendekälla",
           "title_folded": "Rubrik",
           "description_folded": "Beskrivning",
@@ -1185,6 +1191,9 @@
           "contains": "Innehåller",
           "starts_with": "Börjar med",
           "ends_with": "Slutar med",
+          "not_contains": "Innehåller inte",
+          "not_starts_with": "Börjar inte med",
+          "not_ends_with": "Slutar inte med",
           "is_empty": "Är tomt",
           "is_not_empty": "Är inte tomt"
         },
@@ -1849,10 +1858,15 @@
         "label": "Aktivera aviseringar",
         "description": "Slå på eller av alla aviseringar för organisationen"
       },
+      "defaultDontNotifyCustomer": {
+        "label": "Börja ärenden med \"Meddela inte kunden\" ikryssad",
+        "description": "Ärendekommentarer, status- och kontaktändringar samt avslutningar börjar utan kundaviseringar. Handläggare kan ta bort krysset för att meddela kunden vid en enskild åtgärd."
+      },
       "loading": "Läser in aviseringsinställningar…",
       "loadError": "Det gick inte att läsa in inställningarna",
       "save": "Spara ändringar",
-      "saving": "Sparar…"
+      "saving": "Sparar…",
+      "saveError": "Det gick inte att spara aviseringsinställningarna"
     },
     "emailTemplatesUi": {
       "preview": {
@@ -3534,7 +3548,7 @@
       "platformManaged": "Hanteras av AlgaPSA – ingen konfiguration behövs. Anslut en agent till en i steg 2.",
       "addAnother": "Lägg till en annan identitetsleverantör",
       "advancedOptions": "Avancerade alternativ",
-      "googleNoSetup": "Google kräver ingen konfiguration. Agenter loggar in med ID:t för sitt Google-tjänstkonto.",
+      "googleSetup": "Agenterna loggar in med en ID-token för ett Google-tjänstkonto. Endast målgruppen nedan behöver matcha hur de begär den.",
       "kinds": {
         "microsoft": "Microsoft Entra",
         "google": "Google",
@@ -3548,9 +3562,14 @@
       "fields": {
         "provider": "Identitetsleverantör",
         "entraTenantId": "Entra-klientorganisations-ID",
-        "audienceOptional": "Målgrupp (valfritt)",
         "audience": "Målgrupp",
         "subjectClaim": "Identifiera agenter med",
+        "audienceHelp": {
+          "microsoft": "Program-ID (klient-ID) för Entra-appregistreringen som dina agenter begär token för. Agenterna begär omfånget api://<det ID:t>/.default.",
+          "google": "Agenterna måste begära sin Google-ID-token med exakt den här målgruppen. Vi har fyllt i den här serverns MCP-URL, som är det vanliga valet.",
+          "custom": "API- eller resursidentifieraren som har konfigurerats hos din leverantör (till exempel en Auth0-API-identifierare). Den måste exakt matcha aud-anspråket i agenternas token. Den här serverns MCP-URL är ett bra val."
+        },
+        "audienceWhy": "Token som din leverantör har utfärdat till andra appar godkänns inte här.",
         "subjectClaimHelp": "Lämna tomt om inte identitetsleverantören anger något annat.",
         "issuer": "Utfärdare",
         "jwksUri": "URL för signeringsnycklar"
@@ -3663,6 +3682,36 @@
         "message": "Koppla från ”{{name}}”? Den förlorar åtkomsten omedelbart och måste godkännas på nytt för att ansluta igen.",
         "confirm": "Koppla från",
         "cancel": "Avbryt"
+      }
+    },
+    "loading": "Läser in…",
+    "downloadHosts": {
+      "title": "Tillåtna nedladdningsvärdar",
+      "intro": "När ett dokument bifogas via URL hämtar AlgaPSA det bara från värdarna som listas här. Det gäller alla som bifogar dokument, inklusive AI-agenter, API-klienter och REST-API:t. Föredra bucket-specifika värdar som acme-uploads.s3.us-east-1.amazonaws.com framför breda.",
+      "readOnly": "Du kan visa listan. För att ändra den krävs behörigheten ”Hantera nedladdningsvärdar”.",
+      "builtIn": "Inbyggd",
+      "empty": "Inga anpassade värdar ännu.",
+      "add": "Lägg till värd",
+      "addTitle": "Lägg till tillåten nedladdningsvärd",
+      "remove": "Ta bort",
+      "removeTitle": "Ta bort värd?",
+      "removeMessage": "Nedladdningar från {{host}} slutar fungera tills värden läggs till igen.",
+      "fields": {
+        "host": "Värd",
+        "hostHelp": "Ett värdnamn, eller *.example.com för att tillåta alla underdomäner.",
+        "note": "Anteckning (valfritt)"
+      },
+      "table": {
+        "host": "Värd",
+        "used": "Används för",
+        "allowed": "Tillåten",
+        "note": "Anteckning",
+        "addedBy": "Tillagd av",
+        "addedOn": "Tillagd"
+      },
+      "errors": {
+        "load": "Det gick inte att läsa in tillåtna nedladdningsvärdar.",
+        "save": "Det gick inte att spara ändringen."
       }
     }
   },
@@ -3843,7 +3892,8 @@
     }
   },
   "common": {
-    "saving": "Sparar…"
+    "saving": "Sparar…",
+    "cancel": "Avbryt"
   },
   "featureFlags": {
     "categories": {

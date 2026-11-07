@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getUserTimeZone } from '@alga-psa/core';
 import { deriveWorkReason } from '../../lib/deriveWorkReason';
+import { useDefaultNotificationSuppression } from '../../lib/notificationSuppressionDefaults';
 import { formatTicketDateTime, formatTicketRelativeToNow } from '../../lib/ticketDateTimeFormat';
 import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
 import { DeleteEntityDialog } from "@alga-psa/ui/components/DeleteEntityDialog";
@@ -38,6 +39,7 @@ import { TicketExternalLinksSection } from "./TicketExternalLinksSection";
 import TicketEmailNotifications from "./TicketEmailNotifications";
 import TicketConversation from "./TicketConversation";
 import type { CommentEmailRecipientsPayload } from "./CommentEmailRecipientsControl";
+import type { ComposerAudience, NativeComposerAudience } from "./CommentAudienceControl";
 import { TicketActivityTimeline } from "./TicketActivityTimeline";
 import { useInboundEmailViewPreference } from "../../hooks/useInboundEmailViewPreference";
 import { useSession } from 'next-auth/react';
@@ -115,6 +117,7 @@ import {
     type CommentImageDocumentReference,
 } from '../../lib/commentImageDocuments';
 import { isBoardLiveTicketTimerEnabled } from '../../lib/boardLiveTicketTimer';
+import { pickCloseRulePendingFields } from '../../lib/closeRuleConstants';
 import { hasAdminSettingsViewAccess } from './commentMetadataDebug';
 import { hasWorkflowManageAccess, type TicketScreenBootstrap } from '../../lib/ticketScreenBootstrap';
 import { normalizeTicketLiveField, type TicketLiveConflictState } from './ticketLiveFields';
@@ -131,11 +134,6 @@ const LIVE_UPDATE_HIGHLIGHT_MS = 600;
 
 const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
     isActionMessageError(value) || isActionPermissionError(value);
-
-const emptyNotificationSuppression = (): TicketNotificationSuppressionValue => ({
-    suppressContactNotifications: false,
-    suppressInternalNotifications: false,
-});
 
 const handleTicketActionError = (error: unknown, fallback: string) => {
     if (isReturnedActionError(error)) {
@@ -168,12 +166,14 @@ interface TicketDetailsProps {
     initialAvailableAgents?: IUserWithRoles[];
     initialUserMap?: Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>;
     initialContactMap?: Record<string, { contact_id: string; full_name: string; email?: string; avatarUrl: string | null }>;
+    /** Updated alongside a live conversation snapshot; omitted for native screens. */
+    liveUserMap?: Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>;
+    liveContactMap?: Record<string, { contact_id: string; full_name: string; email?: string; avatarUrl: string | null }>;
     statusOptions?: { value: string; label: string; is_closed?: boolean; className?: string; board_id?: string | null }[];
     agentOptions?: { value: string; label: string }[];
     boardOptions?: { value: string; label: string }[];
     priorityOptions?: { value: string; label: string; color?: string | null; is_from_itil_standard?: boolean }[];
     initialCategories?: ITicketCategory[];
-    initialClients?: IClient[];
     initialLocations?: IClientLocation[];
     initialAgentSchedules?: { userId: string; minutes: number }[];
 
@@ -190,7 +190,7 @@ interface TicketDetailsProps {
         changes: Record<string, unknown>,
         options?: Partial<TicketNotificationSuppressionValue> & { propagateToChildren?: boolean }
     ) => Promise<boolean>;
-    onAddComment?: (content: string, isInternal: boolean, isResolution: boolean, closesTicket?: boolean, schedule?: { publishAt: string; timeZone: string } | null, emailRecipients?: CommentEmailRecipientsPayload) => Promise<boolean>;
+    onAddComment?: (content: string, isInternal: boolean, isResolution: boolean, closesTicket?: boolean, schedule?: { publishAt: string; timeZone: string } | null, emailRecipients?: CommentEmailRecipientsPayload, audienceId?: ComposerAudience | null) => Promise<boolean>;
     onUpdateDescription?: (content: string) => Promise<boolean>;
     /**
      * Additive notification fired after a user edit was saved successfully (field change,
@@ -308,12 +308,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     initialAvailableAgents = [],
     initialUserMap = {},
     initialContactMap = {},
+    liveUserMap,
+    liveContactMap,
     statusOptions = [],
     agentOptions = [],
     boardOptions = [],
     priorityOptions = [],
     initialCategories = [],
-    initialClients = [],
     initialLocations = [],
     initialAgentSchedules = [],
     // Current user (for drawer usage)
@@ -362,7 +363,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         findCommentsByTicketId, findCommentById, createComment, updateComment, deleteComment,
         addTicketCommentWithCache, deleteDraftClipboardImages,
     } = dataSource.comments;
-    const { getAllActiveContacts, getContactByContactNameId, getContactsByClient, getClientById, getClientLocations } = dataSource.people;
+    const { getAllActiveContacts, getContactByContactNameId, getContactsByClient, getClientById, getClientLocations, getContactEffectiveLocation } = dataSource.people;
     const { addTicketResource, getTicketResources, removeTicketResource, assignTeamToTicket, removeTeamFromTicket, getTeamById, getTeams } = dataSource.resources;
     const { addTicketWatchers, setTicketWatcherActive, removeTicketWatcher } = dataSource.watchers;
     const { checkTicketClosure, getTicketAutoCloseState } = dataSource.closeRules;
@@ -475,11 +476,12 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // Flagging an existing comment as the resolution while editing it offers the
     // close the composer's resolution toggle would have done inline. Declining
     // leaves the comment flagged and the status untouched.
+    const defaultNotificationSuppression = useDefaultNotificationSuppression();
     const [resolutionClosePrompt, setResolutionClosePrompt] = useState<{
         isOpen: boolean;
         statusId: string | null;
         suppression: TicketNotificationSuppressionValue;
-    }>({ isOpen: false, statusId: null, suppression: emptyNotificationSuppression() });
+    }>({ isOpen: false, statusId: null, suppression: defaultNotificationSuppression() });
     const [isSubmittingResolutionClosePrompt, setIsSubmittingResolutionClosePrompt] = useState(false);
 
     // Bundle status propagation confirmation. The preview is fetched first; when
@@ -701,6 +703,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         suppression: TicketNotificationSuppressionValue,
         isInternal: boolean = false,
         emailRecipients?: CommentEmailRecipientsPayload,
+        audienceId?: NativeComposerAudience | null,
     ): Promise<boolean> => {
         const ticketId = ticket.ticket_id;
         if (!ticketId) {
@@ -722,6 +725,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         // The close email carries these; see the email
                         // subscriber's closes_ticket handling.
                         emailRecipients,
+                        audienceId,
                     );
                     if (isReturnedActionError(result)) {
                         throw result;
@@ -748,10 +752,34 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }
     }, [t, ticket.ticket_id]);
 
+    // An app layer may signal that comments changed outside this screen's composer; re-read through the same path.
+    // Native sources provide no signal, so nothing subscribes.
+    const subscribeCommentsChanged = dataSource.screen.subscribeCommentsChanged;
+    useEffect(() => {
+        const ticketId = ticket.ticket_id;
+        if (!subscribeCommentsChanged || !ticketId) return undefined;
+        return subscribeCommentsChanged(() => {
+            void (async () => {
+                try {
+                    const updatedComments = await findCommentsByTicketId(ticketId);
+                    if (isReturnedActionError(updatedComments)) {
+                        handleTicketActionError(updatedComments, t('messages.loadCommentsFailed', 'Failed to load comments'));
+                    } else {
+                        setConversations(updatedComments);
+                    }
+                } catch (e) {
+                    console.error('Failed to refresh comments after a comments-changed signal:', e);
+                }
+            })();
+        });
+        // Deliberately omits `t` / `handleTicketActionError`: they change identity per render and would tear down and
+        // re-subscribe on every render; they are only used to word a load-failure toast, so the ones captured at subscribe time are adequate.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [subscribeCommentsChanged, ticket.ticket_id]);
+
     const [board, setBoard] = useState<any>(initialBoard);
     const [savedBoardId, setSavedBoardId] = useState<string | null>(initialBoard?.board_id ?? initialTicket.board_id ?? null);
     const isLiveTicketTimerEnabled = useMemo(() => isBoardLiveTicketTimerEnabled(board), [board]);
-    const [clients, setClients] = useState<IClient[]>(initialClients);
     const [contacts, setContacts] = useState<IContact[]>(initialContacts);
     const [locations, setLocations] = useState<IClientLocation[]>(initialLocations);
     const [showWeekday, setShowWeekday] = useState<boolean>(bootstrap?.displaySettings?.showWeekday ?? false);
@@ -1369,6 +1397,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     // Use pre-fetched options directly
     const [userMap, setUserMap] = useState<Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>>(initialUserMap);
+    const conversationUserMap = liveUserMap ?? userMap;
 
     // Identity stamped into the "Updated … by" header after a local save. The drawer passes a
     // full currentUser; full-page callers do not, so derive one from the session (resolving the
@@ -1377,7 +1406,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         if (currentUser) return currentUser;
         const sessionUserId = session?.user?.id;
         if (!sessionUserId) return null;
-        const mapped = userMap?.[sessionUserId];
+        const mapped = conversationUserMap?.[sessionUserId];
         const sessionName = (session?.user?.name ?? '').trim();
         const [sessionFirst, ...sessionRest] = sessionName.split(/\s+/).filter(Boolean);
         return {
@@ -1387,8 +1416,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             email: mapped?.email ?? session?.user?.email ?? '',
             user_type: mapped?.user_type ?? 'internal',
         } as unknown as IUser;
-    }, [currentUser, session?.user?.id, session?.user?.name, session?.user?.email, userMap]);
+    }, [currentUser, session?.user?.id, session?.user?.name, session?.user?.email, conversationUserMap]);
     const [contactMap] = useState<Record<string, { contact_id: string; full_name: string; email?: string; avatarUrl: string | null }>>(initialContactMap);
+    const conversationContactMap = liveContactMap ?? contactMap;
 
     const [availableAgents, setAvailableAgents] = useState<IUserWithRoles[]>(initialAvailableAgents);
     const [additionalAgents, setAdditionalAgents] = useState<ITicketResource[]>(initialAdditionalAgents);
@@ -1714,8 +1744,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 return;
             }
 
-            const minimalClients =
-                clients.length > 0 ? clients : client ? [client] : [];
+            const minimalClients = client ? [client] : [];
 
             replaceDrawer(
                 renderContactDetails
@@ -2045,6 +2074,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         options?: TicketNotificationSuppressionValue,
         schedule?: { publishAt: string; timeZone: string } | null,
         emailRecipients?: CommentEmailRecipientsPayload,
+        audienceId?: ComposerAudience | null,
     ): Promise<boolean> => {
         // Check if content is empty
         const contentStr = JSON.stringify(newCommentContent);
@@ -2095,6 +2125,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     willCloseTicket,
                     schedule,
                     emailRecipients,
+                    audienceId,
                 );
                 // An unconfirmed publish (rejected or unknown outcome) has already been
                 // reported by the handler; keep the composer and its draft intact.
@@ -2169,7 +2200,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                             scheduled_publish_tz: schedule.timeZone,
                         } : {}),
                         // See email-subscriber suppression note above.
-                        ...(willCloseTicket ? { metadata: { closes_ticket: true } } : {})
+                        ...(willCloseTicket ? { metadata: { closes_ticket: true } } : {}),
+                        ...(audienceId ? { collaboration_audience: audienceId } : {})
                     }, emailRecipients);
                     if (isReturnedActionError(newComment)) {
                         handleTicketActionError(newComment, t('messages.addCommentFailed', 'Failed to add comment'));
@@ -2370,7 +2402,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 setResolutionClosePrompt({
                     isOpen: true,
                     statusId: closedStatusOptions.length === 1 ? closedStatusOptions[0].value : null,
-                    suppression: emptyNotificationSuppression(),
+                    suppression: defaultNotificationSuppression(),
                 });
             }
         } catch (error) {
@@ -2379,7 +2411,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     };
 
     const closeResolutionClosePrompt = () => {
-        setResolutionClosePrompt({ isOpen: false, statusId: null, suppression: emptyNotificationSuppression() });
+        setResolutionClosePrompt({ isOpen: false, statusId: null, suppression: defaultNotificationSuppression() });
     };
 
     const confirmResolutionClosePrompt = async () => {
@@ -2420,6 +2452,7 @@ const handleClose = () => {
             onSaved?.();
         } catch (error) {
             console.error("Error deleting comment:", error);
+            handleTicketActionError(error, t('messages.deleteCommentFailed', 'Failed to delete comment'));
         }
     };
 
@@ -2694,7 +2727,7 @@ const handleClose = () => {
         isOpen: boolean;
         contactId: string | null;
         suppression: TicketNotificationSuppressionValue;
-    }>({ isOpen: false, contactId: null, suppression: emptyNotificationSuppression() });
+    }>({ isOpen: false, contactId: null, suppression: defaultNotificationSuppression() });
     const [isSubmittingContactChange, setIsSubmittingContactChange] = useState(false);
 
     const handleContactChange = async (newContactId: string | null) => {
@@ -2702,7 +2735,7 @@ const handleClose = () => {
             setIsChangeContactDialogOpen(false);
             return;
         }
-        setContactChangePrompt({ isOpen: true, contactId: newContactId, suppression: emptyNotificationSuppression() });
+        setContactChangePrompt({ isOpen: true, contactId: newContactId, suppression: defaultNotificationSuppression() });
     };
 
     const applyContactChange = async (
@@ -2730,6 +2763,18 @@ const handleClose = () => {
             if (newContactId) {
                 const contactData = await getContactByContactNameId(newContactId);
                 setContactInfo(contactData);
+
+                // An empty location is a question nobody answered, so the new requester's own site
+                // answers it — and the write goes through the normal location path, so it lands in
+                // the ticket history like any other change. A location already on the ticket is
+                // never re-pointed here; the tile offers "Use contact's location" for that, which
+                // takes a click.
+                if (!ticket.location_id) {
+                    const effective = await getContactEffectiveLocation(newContactId);
+                    if (effective.locationId) {
+                        await handleLocationChange(effective.locationId);
+                    }
+                }
             } else {
                 setContactInfo(null);
             }
@@ -2742,7 +2787,7 @@ const handleClose = () => {
     };
 
     const closeContactChangePrompt = () => {
-        setContactChangePrompt({ isOpen: false, contactId: null, suppression: emptyNotificationSuppression() });
+        setContactChangePrompt({ isOpen: false, contactId: null, suppression: defaultNotificationSuppression() });
     };
 
     const confirmContactChangePrompt = async () => {
@@ -2823,7 +2868,13 @@ const handleClose = () => {
 
         if (targetStatusId && ticket.ticket_id) {
             try {
-                const check = await checkTicketClosure(ticket.ticket_id, targetStatusId);
+                // This batch is written in one update, so the gates must see the
+                // classification it carries — not the row as it stands.
+                const check = await checkTicketClosure(
+                    ticket.ticket_id,
+                    targetStatusId,
+                    pickCloseRulePendingFields(changes),
+                );
                 if (check.wouldClose && !check.allowed) {
                     setCloseOverrideReason('');
                     setCloseBlockedDialog({
@@ -2976,6 +3027,7 @@ const handleClose = () => {
         suppression: TicketNotificationSuppressionValue,
         isInternal: boolean = false,
         emailRecipients?: CommentEmailRecipientsPayload,
+        audienceId?: NativeComposerAudience | null,
     ) => {
         if (!ticket.ticket_id || !closedStatusOptions.some((option) => option.value === statusId)) {
             toast.error(t('messages.closeFailed', 'Failed to close ticket'));
@@ -2996,6 +3048,7 @@ const handleClose = () => {
                     suppression,
                     isInternal,
                     emailRecipients,
+                    audienceId,
                 );
                 if (!resolutionAdded) {
                     return false;
@@ -4540,8 +4593,8 @@ const handleClose = () => {
                     onAgentClick={handleAgentClick}
                     locations={locations}
                     conversations={conversations}
-                    userMap={userMap}
-                    contactMap={contactMap}
+                    userMap={conversationUserMap}
+                    contactMap={conversationContactMap}
                     timelineRefreshKey={`${conversations.length}-${activityLogRefreshKey}-${timeEntriesRefreshKey}`}
                     timelineInitialOrder={timelinePrefOrder}
                     editorKey={editorKey}
@@ -4579,7 +4632,6 @@ const handleClose = () => {
                     client={client}
                     onContactClick={handleContactClick}
                     onClientClick={handleClientClick}
-                    clients={clients}
                     onChangeContact={handleContactChange}
                     onChangeClient={handleClientChange}
                     onChangeLocation={handleLocationChange}
@@ -4702,8 +4754,8 @@ const handleClose = () => {
                                     ticket={ticket}
                                     conversations={conversations}
                                     documents={documents}
-                                    userMap={userMap}
-                                    contactMap={contactMap}
+                                    userMap={conversationUserMap}
+                                    contactMap={conversationContactMap}
                                     currentUser={currentUser ? {
                                         id: currentUser.user_id,
                                         name: `${currentUser.first_name} ${currentUser.last_name}`,
@@ -4820,7 +4872,6 @@ const handleClose = () => {
                                 userId={userId || ''}
                                 tenant={tenant}
                                 contacts={contacts}
-                                clients={clients}
                                 locations={locations}
                                 clientFilterState={clientFilterState}
                                 clientTypeFilter={clientTypeFilter}

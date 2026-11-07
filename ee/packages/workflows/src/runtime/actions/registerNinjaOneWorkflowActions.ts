@@ -9,7 +9,7 @@ const loadNinjaOneRuntimeSupport = () => import('./ninjaOneWorkflowRuntimeSuppor
 
 const deviceSchema = z.object({
   external_device_id: z.string(),
-  asset_id: z.string().uuid().nullable(),
+  asset_id: z.string().guid().nullable(),
   organization_id: z.string().nullable(),
   hostname: z.string().nullable(),
   display_name: z.string().nullable(),
@@ -30,7 +30,7 @@ const alertSchema = z.object({
   title: z.string().nullable(),
   message: z.string().nullable(),
   device_id: z.string().nullable(),
-  asset_id: z.string().uuid().nullable(),
+  asset_id: z.string().guid().nullable(),
   source_type: z.string().nullable(),
   created_at: z.string().nullable(),
   updated_at: z.string().nullable(),
@@ -148,7 +148,7 @@ export function registerNinjaOneWorkflowActionsV2(): void {
     idempotency: { mode: 'engineProvided' },
     inputSchema: z.object({
       device_id: ninjaOneDeviceIdSchema.optional(),
-      asset_id: z.string().uuid().optional(),
+      asset_id: z.string().guid().optional(),
       query: z.string().trim().min(1).optional(),
       live: z.boolean().default(false),
       limit: z.number().int().min(1).max(200).default(50)
@@ -210,7 +210,7 @@ export function registerNinjaOneWorkflowActionsV2(): void {
     outputSchema: z.object({
       synced: z.boolean(),
       external_device_id: z.string(),
-      asset_id: z.string().uuid().nullable()
+      asset_id: z.string().guid().nullable()
     }),
     ui: {
       label: 'Sync device',
@@ -303,7 +303,7 @@ export function registerNinjaOneWorkflowActionsV2(): void {
       device_id: ninjaOneDeviceIdSchema,
       type: z.enum(['SCRIPT', 'ACTION']).default('SCRIPT'),
       script_id: z.coerce.number().int().positive().optional(),
-      action_uid: z.string().uuid().optional(),
+      action_uid: z.string().guid().optional(),
       parameters: z.string().optional(),
       run_as: z.string().optional()
     }).superRefine((value, ctx2) => {
@@ -317,7 +317,7 @@ export function registerNinjaOneWorkflowActionsV2(): void {
     outputSchema: z.object({
       run_requested: z.boolean(),
       external_device_id: z.string(),
-      vendor_response: z.unknown().nullable()
+      vendor_response: z.unknown().optional().nullable()
     }),
     ui: {
       label: 'Run script',

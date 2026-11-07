@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 
 import {
+  assertInstallationAiCredentialAllowed,
   getLicenseStateRow,
   isSelfHostLicensing,
 } from '@alga-psa/licensing';
@@ -108,6 +109,7 @@ export async function resolveGatewayAuthToken(tenantId: string): Promise<string>
     return mintGatewayToken(tenantId);
   }
 
+  await assertInstallationAiCredentialAllowed(tenantId);
   const licenseState = await getLicenseStateRow();
   const applianceCredential = licenseState?.appliance_credential?.trim();
   if (!applianceCredential) {

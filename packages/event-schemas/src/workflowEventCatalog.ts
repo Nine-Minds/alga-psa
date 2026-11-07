@@ -183,6 +183,7 @@ export const WORKFLOW_EVENT_CATALOG = {
   INVENTORY_PO_RECEIVED: { schemaRef: 'payload.InventoryPoReceived.v1' },
   INVENTORY_SO_FULFILLED: { schemaRef: 'payload.InventorySoFulfilled.v1' },
   INVENTORY_RMA_CREATED: { schemaRef: 'payload.InventoryRmaCreated.v1' },
+  INVENTORY_RMA_UPDATED: { schemaRef: 'payload.InventoryRmaUpdated.v1' },
   OPPORTUNITY_CREATED: { schemaRef: 'payload.OpportunityCreated.v1' },
   OPPORTUNITY_STAGE_CHANGED: { schemaRef: 'payload.OpportunityStageChanged.v1' },
   OPPORTUNITY_STATUS_CHANGED: { schemaRef: 'payload.OpportunityStatusChanged.v1' },

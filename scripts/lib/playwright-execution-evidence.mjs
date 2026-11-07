@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { normalizeTestFile } from './test-execution-evidence.mjs';
+import { flakyError } from './flaky-error.mjs';
 
 /** Keep project and nested title identity when Playwright merges JSON suites. */
 export function playwrightTests(report, root) {
@@ -41,8 +42,11 @@ export function flakyPlaywrightTests(report, root) {
     const retries = results.filter(result => result.retry > 0);
     if (entry.status !== 'flaky' && !(retries.length && results.some(result => result.status === 'passed'))) return [];
     const name = entry.titles.join(' > ');
+    const failed = results.find(result => result.retry === 0 && result.status !== 'passed');
+    const error = flakyError(failed?.errors?.[0] ?? failed?.error);
     return [{ testId: `${entry.file} > ${name} [${entry.projectName}]`, file: entry.file, name,
-      projectId: entry.projectId, projectName: entry.projectName, titles: entry.titles, retryCount: retries.length }];
+      projectId: entry.projectId, projectName: entry.projectName, titles: entry.titles, retryCount: retries.length,
+      ...(error ? { error } : {}) }];
   });
 }
 

@@ -279,9 +279,11 @@ const addQuoteItemInputSchema = z.object({
   discount_percentage: z.number().int().min(0).max(100).optional().nullable(),
   applies_to_item_id: uuidSchema.optional().nullable(),
   applies_to_service_id: uuidSchema.optional().nullable(),
-  is_taxable: z.boolean().default(true),
+  // Omitted rather than defaulted to true, so an unset value reaches the DAL
+  // undefined and is derived from the service's tax configuration.
+  is_taxable: z.boolean().optional(),
   tax_region: z.string().trim().optional().nullable(),
-  tax_rate: z.number().int().min(0).optional().nullable(),
+  tax_rate: z.number().min(0).optional().nullable(),
   location_id: uuidSchema.optional().nullable(),
   cost: z.number().int().min(0).optional().nullable(),
   cost_currency: z.string().trim().length(3).optional().nullable(),
@@ -2194,7 +2196,7 @@ export function registerCrmActions(): void {
       created_at: isoDateTimeSchema,
       target_type: z.string(),
       target_id: uuidSchema,
-      target_summary: z.record(z.unknown()).nullable()
+      target_summary: z.record(z.string(), z.unknown()).nullable()
     }),
     sideEffectful: true,
     idempotency: { mode: 'engineProvided' },
@@ -2296,7 +2298,7 @@ export function registerCrmActions(): void {
     outputSchema: z.object({
       activities: z.array(activitySummarySchema),
       count: z.number().int(),
-      matched_filters: z.record(z.unknown()),
+      matched_filters: z.record(z.string(), z.unknown()),
     }),
     sideEffectful: false,
     idempotency: { mode: 'engineProvided' },

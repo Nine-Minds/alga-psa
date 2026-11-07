@@ -116,6 +116,8 @@ export interface Asset {
 export interface AssetClientInfo {
   client_id: string;
   client_name: string;
+  /** Attached per page by listAssets (D5); undefined on other read paths. */
+  client_logo_url?: string | null;
 }
 
 // Extension table interfaces
@@ -576,6 +578,8 @@ export interface AssetQueryParams {
   contact_name_id?: string;
   /** Built-in slug or tenant asset_type_registry slug (custom type). */
   asset_type?: string;
+  /** Match any of these slugs (multi-select type filter). Mutually exclusive with `asset_type`. */
+  asset_types?: string[];
   status?: string;
   /** Filter by who owns the device. */
   ownership?: 'client' | 'msp';
@@ -608,6 +612,8 @@ export interface AssetListResponse {
   total: number;
   page: number;
   limit: number;
+  /** Readable asset counts for the active filters, excluding asset_type and pagination. */
+  asset_type_counts: Record<string, number>;
   client_summary?: ClientSummary;
 }
 

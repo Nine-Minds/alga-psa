@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
 export const projectBillingModelSchema = z.enum(['fixed_price', 'time_and_materials']);
 export const projectBillingInvoiceModeSchema = z.enum(['recurring', 'standalone']);
@@ -51,12 +52,12 @@ const capNotifyThresholdsSchema = z.array(
 });
 
 const projectBillingConfigBaseSchema = z.object({
-  project_id: z.string().uuid(),
+  project_id: z.string().guid(),
   billing_model: projectBillingModelSchema,
   total_price: z.number().int().nonnegative().optional().nullable(),
   currency: currencySchema.optional().nullable(),
   invoice_mode: projectBillingInvoiceModeSchema.default('recurring'),
-  contract_id: z.string().uuid().optional().nullable(),
+  contract_id: z.string().guid().optional().nullable(),
   cap_amount: z.number().int().nonnegative().optional().nullable(),
   cap_behavior: projectBillingCapBehaviorSchema.optional().nullable(),
   cap_notify_thresholds: capNotifyThresholdsSchema.default([75, 90, 100]),
@@ -66,16 +67,16 @@ const projectBillingConfigBaseSchema = z.object({
 });
 
 export const createProjectBillingConfigSchema = projectBillingConfigBaseSchema;
-export const updateProjectBillingConfigSchema = projectBillingConfigBaseSchema.partial();
+export const updateProjectBillingConfigSchema = partialWithoutDefaults(projectBillingConfigBaseSchema);
 
 const projectBillingScheduleEntryBaseSchema = z.object({
-  config_id: z.string().uuid(),
+  config_id: z.string().guid(),
   entry_type: projectBillingScheduleEntryTypeSchema,
   description: z.string().trim().min(1),
   amount: z.number().int().nonnegative().optional().nullable(),
   percentage: z.number().positive().max(100).optional().nullable(),
   trigger_type: projectBillingTriggerTypeSchema,
-  phase_id: z.string().uuid().optional().nullable(),
+  phase_id: z.string().guid().optional().nullable(),
   trigger_date: dateOnlySchema.optional().nullable(),
   status: projectBillingScheduleStatusSchema.default('pending'),
   requires_payment_before_work: z.boolean().default(false),
@@ -126,8 +127,7 @@ export const createProjectBillingScheduleEntrySchema = projectBillingScheduleEnt
   }
 );
 
-export const updateProjectBillingScheduleEntrySchema = projectBillingScheduleEntryBaseSchema
-  .partial()
+export const updateProjectBillingScheduleEntrySchema = partialWithoutDefaults(projectBillingScheduleEntryBaseSchema)
   .superRefine((value, ctx) => {
     const includesAmount = Object.prototype.hasOwnProperty.call(value, 'amount');
     const includesPercentage = Object.prototype.hasOwnProperty.call(value, 'percentage');

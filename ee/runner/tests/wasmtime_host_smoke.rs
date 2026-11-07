@@ -420,7 +420,7 @@ async fn ui_proxy_capability_denied() -> anyhow::Result<()> {
 struct ProxyServerState {
     tenant: String,
     extension: String,
-    auth: String,
+    api_key: String,
 }
 
 async fn proxy_handler(
@@ -447,10 +447,10 @@ async fn proxy_handler(
     );
     assert_eq!(
         headers
-            .get("x-runner-auth")
+            .get("x-api-key")
             .and_then(|v| v.to_str().ok())
             .unwrap_or_default(),
-        state.auth
+        state.api_key
     );
     assert_eq!(
         headers
@@ -494,7 +494,7 @@ async fn ui_proxy_forwards_request() -> anyhow::Result<()> {
     let state = Arc::new(ProxyServerState {
         tenant: "tenant-ok".to_string(),
         extension: "ext-ok".to_string(),
-        auth: "proxy-secret".to_string(),
+        api_key: "sk_ui_proxy_key".to_string(),
     });
 
     let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
@@ -514,7 +514,6 @@ async fn ui_proxy_forwards_request() -> anyhow::Result<()> {
     let base_url = format!("http://127.0.0.1:{}/api/ui-proxy", addr.port());
     let _env = EnvGuard::set(&[
         ("UI_PROXY_BASE_URL", base_url.as_str()),
-        ("UI_PROXY_AUTH_KEY", state.auth.as_str()),
         ("UI_PROXY_TIMEOUT_MS", "2000"),
     ]);
 
@@ -562,7 +561,12 @@ async fn ui_proxy_forwards_request() -> anyhow::Result<()> {
         version_id: request.context.version_id.clone(),
         config: request.context.config.clone(),
         providers,
-        secrets: None,
+        // The runner authenticates UI proxy calls with x-api-key from the
+        // extension's own api_key secret (see 6919425ba9); the mock asserts it.
+        secrets: Some(SecretMaterial {
+            values: HashMap::from([("api_key".to_string(), state.api_key.clone())]),
+            version: Some("v1".to_string()),
+        }),
         user: request.user.clone(),
     };
 
@@ -717,5 +721,135 @@ async fn ui_proxy_route_not_found_without_backend() -> anyhow::Result<()> {
     );
     shutdown_tx.send(()).ok();
     server.await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn concurrent_executions_isolate_context_secrets_and_capabilities() -> anyhow::Result<()> {
+    // Exercise one shared loader with several in-flight executions carrying different
+    // tenants, secrets, and capability grants. Guards against the shared ModuleLoader /
+    // compiled-component cache bleeding host state across concurrent requests: a task
+    // must only ever observe its own secret, and a task without cap:secrets.get must be
+    // denied even while sibling tasks holding the capability execute at the same time.
+    let loader = Arc::new(ModuleLoader::new()?);
+
+    let mut handles = Vec::new();
+    for i in 0..8u32 {
+        let loader = loader.clone();
+        handles.push(tokio::spawn(async move {
+            let tenant = format!("tenant-conc-{i}");
+            let secret_value = format!("sk_secret_{i}");
+            let granted = i % 2 == 0;
+
+            let request = ExecuteRequest {
+                context: ExecuteContext {
+                    request_id: Some(format!("conc-{i}")),
+                    tenant_id: tenant.clone(),
+                    extension_id: "ext-conc".to_string(),
+                    install_id: Some(format!("install-{i}")),
+                    content_hash: "sha256:fixture".to_string(),
+                    version_id: Some("v1".to_string()),
+                    config: HashMap::new(),
+                },
+                http: HttpPayload {
+                    method: "GET".to_string(),
+                    path: "/dynamic/secrets".to_string(),
+                    query: HashMap::new(),
+                    headers: HashMap::new(),
+                    body_b64: None,
+                },
+                limits: Limits {
+                    // Generous window: eight concurrent instantiations share CPU, and the
+                    // first task pays component parse/compile before the cache warms up.
+                    timeout_ms: Some(10_000),
+                    memory_mb: Some(64),
+                    fuel: None,
+                },
+                secret_envelope: None,
+                providers: Vec::new(),
+                user: None,
+            };
+
+            let mut providers: HashSet<String> = providers::default_capabilities()
+                .into_iter()
+                .map(|cap| cap.to_string())
+                .collect();
+            if granted {
+                providers.insert("cap:secrets.get".to_string());
+            }
+
+            let host_ctx = HostExecutionContext {
+                request_id: request.context.request_id.clone(),
+                tenant_id: Some(tenant.clone()),
+                extension_id: Some("ext-conc".to_string()),
+                install_id: request.context.install_id.clone(),
+                version_id: request.context.version_id.clone(),
+                config: HashMap::new(),
+                providers,
+                secrets: Some(SecretMaterial {
+                    values: HashMap::from([(
+                        "ALGA_API_KEY".to_string(),
+                        secret_value.clone(),
+                    )]),
+                    version: Some("v1".to_string()),
+                }),
+                user: None,
+            };
+
+            let response = loader
+                .execute_handler(
+                    DYNAMIC_COMPONENT_WASM,
+                    request.limits.timeout_ms,
+                    request.limits.memory_mb,
+                    &request,
+                    host_ctx,
+                )
+                .await
+                .unwrap_or_else(|err| panic!("execution {i} failed: {err}"));
+
+            let body_json = decode_body(
+                response
+                    .body_b64
+                    .as_ref()
+                    .expect("execution {i} returned body_b64"),
+            )
+            .expect("secrets response is valid json");
+            let secrets = body_json
+                .get("secrets")
+                .and_then(|v| v.as_object())
+                .expect("secrets object present");
+
+            if granted {
+                assert_eq!(
+                    secrets.get("value").and_then(|v| v.as_str()),
+                    Some(secret_value.as_str()),
+                    "tenant {tenant} observed a foreign or missing secret"
+                );
+                assert!(
+                    secrets.get("error").and_then(|v| v.as_str()).is_none(),
+                    "granted execution {i} reported an error: {secrets:?}"
+                );
+            } else {
+                assert_eq!(
+                    body_json.get("ok").and_then(|v| v.as_bool()),
+                    Some(false),
+                    "unganted execution {i} unexpectedly succeeded"
+                );
+                let err = secrets
+                    .get("error")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_default()
+                    .to_ascii_lowercase();
+                assert!(
+                    err.contains("denied"),
+                    "execution {i} expected denial, got {err:?}"
+                );
+            }
+        }));
+    }
+
+    for handle in handles {
+        handle.await?;
+    }
     Ok(())
 }

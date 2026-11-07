@@ -51,7 +51,9 @@
       "replaced": "Ersatt",
       "credited": "Krediterat",
       "charged": "Debiterat",
-      "closed": "Stängt"
+      "closed": "Stängt",
+      "warranty_review": "Garantigranskning",
+      "repaired": "Reparerad"
     }
   },
   "assetAlertsSection": {
@@ -2124,6 +2126,25 @@
     "photos": {
       "limit": "Upp till 20 foton, totalt 10 MB. Foton är dolda för kunder.",
       "tooLarge": "Välj högst 20 foton på sammanlagt högst 10 MB."
+    }
+  },
+  "warranty": {
+    "card": {
+      "title": "Garanti",
+      "warrantyEnd": "Garantin upphör",
+      "expired": "Utgången",
+      "expiringSoon": "Upphör snart",
+      "vendor": "Leverantör",
+      "ownership": "Ägande",
+      "ownershipMsp": "Ägs av MSP",
+      "ownershipClient": "Ägs av kunden",
+      "claims": "Garantiärenden",
+      "noClaims": "Inga garantiärenden ännu.",
+      "openRma": "Öppna RMA",
+      "startClaim": "Starta garantiärende"
+    },
+    "badge": {
+      "label": "RMA {{number}} · {{status}}"
     }
   }
 }

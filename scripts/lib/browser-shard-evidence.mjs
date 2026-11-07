@@ -120,13 +120,19 @@ export function mergeBrowserShardEvidence({ edition, shards, root, revision, run
       stats };
   }
 
-  // Every shard pulled the same images by digest, so their manifests must be
-  // one manifest; anything else is a candidate identity problem, not noise.
+  // Every shard pulled the same images by digest, so their manifests must
+  // describe one candidate; anything else is a candidate identity problem, not
+  // noise. A partial "re-run failed jobs" leaves some shards' artifacts on an
+  // earlier attempt, whose manifests and receipts carry that attempt number,
+  // so the comparison is on what names the candidate (the verified build
+  // records), never on the attempt that verified it.
   const manifests = described.filter(shard => object(shard.manifest));
+  const candidateIdentity = value => ({ kind: value.kind, scope: value.scope, revision: value.revision, edition: value.edition,
+    runId: value.runId, components: Array.isArray(value.components) ? value.components.map(component => component?.record) : value.components });
   let manifest = manifests[0]?.manifest ?? null;
   if (!manifest) failures.push('No browser shard published a candidate manifest');
   for (const shard of manifests.slice(1)) {
-    if (!equal(shard.manifest, manifest)) { failures.push(`shard ${shard.lane}: verified a different candidate`); manifest = null; }
+    if (!equal(candidateIdentity(shard.manifest), candidateIdentity(manifest))) { failures.push(`shard ${shard.lane}: verified a different candidate`); manifest = null; }
   }
   if (manifest) {
     try { validateBrowserArtifactManifest(manifest, { revision, edition, runId, runAttempt }); }
@@ -169,7 +175,8 @@ export function mergeBrowserShardEvidence({ edition, shards, root, revision, run
     revision: revision ?? null, runId: runId ?? null, runAttempt: Number.isSafeInteger(attempt) && attempt > 0 ? attempt : null,
     eventName: env.GITHUB_EVENT_NAME || null, branch: env.GITHUB_HEAD_REF || env.GITHUB_REF_NAME || null,
     shards: evidence.selection.shards.map(({ lane, index, total }) => ({ lane, index, total })),
-    tests: flaky.map(({ testId, file, name, projectName, retryCount }) => ({ testId, file, name, project: projectName, retryCount })),
+    tests: flaky.map(({ testId, file, name, projectName, retryCount, error }) =>
+      ({ testId, file, name, project: projectName, retryCount, ...(error ? { error } : {}) })),
   };
   return { complete, collected, report, evidence, metrics, flakyDocument, manifest };
 }

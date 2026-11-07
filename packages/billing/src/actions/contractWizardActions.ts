@@ -23,7 +23,7 @@ import {
   DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
   resolveRecurringAuthoringPolicy,
 } from '@shared/billingClients/recurringAuthoringPolicy';
-import { createClientContractAssignment } from '@alga-psa/shared/billingClients';
+import { createClientContractAssignment, resolveClientContractCurrency } from '@alga-psa/shared/billingClients';
 import {
   listTemplateCurrencies,
   resolveTemplateAmounts,
@@ -431,6 +431,8 @@ export type ClientContractWizardSubmission = {
    */
   recurring_change_ack?: { baseline_monthly_cents: number };
   product_services?: ClientProductServiceInput[];
+  /** The products line's own timing; unset inherits `billing_timing` (same rule as a fixed line's `billing_timing`). */
+  product_billing_timing?: 'arrears' | 'advance';
   hourly_services?: ClientHourlyServiceInput[];
   hourly_billing_frequency?: string;
   usage_services?: ClientUsageServiceInput[];
@@ -1256,30 +1258,6 @@ export const createContractTemplateFromWizard = withAuth(async (
 // ---------------------------------------------------------------------------
 
 /**
- * Currency a new contract for `clientId` is billed in: the client's configured
- * default, then the tenant default (default_billing_settings), then 'USD' as the
- * last-resort default the contract record has always used. Shared by contract
- * creation and the template preview so both resolve the same currency.
- */
-const resolveClientContractCurrency = async (
-  knex: Knex | Knex.Transaction,
-  tenant: string,
-  clientId: string
-): Promise<string> => {
-  const clientRow = await tenantDb(knex, tenant).table('clients')
-    .where({ client_id: clientId })
-    .select('default_currency_code')
-    .first();
-  if (clientRow?.default_currency_code) {
-    return clientRow.default_currency_code;
-  }
-  const billingSettings = await tenantDb(knex, tenant).table('default_billing_settings')
-    .select('default_currency_code')
-    .first();
-  return billingSettings?.default_currency_code || 'USD';
-};
-
-/**
  * Writes the wizard's contract-wide discounts as definitions owned by the new
  * client contract. Validation is the authoring module's, so a wizard draft and
  * the contract's Discounts tab accept exactly the same discounts.
@@ -1862,11 +1840,12 @@ export const createClientContractFromWizard = withAuth(async (
     const usageGroups = groupBySourceLine(filteredUsageServices);
     let nextDisplayOrder = 0;
   const planServiceConfigService = new ContractLineServiceConfigurationService(trx, tenant);
-  // Products allow advance, so the contract-wide value applies to them.
+  // Products allow advance: the products line's own timing, else the contract-wide value.
   const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
     lineType: 'Product',
     cadenceOwner: submission.cadence_owner,
     defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+    billingTiming: submission.product_billing_timing,
     contractWideBillingTiming: submission.billing_timing,
     enableProration: submission.enable_proration,
   });
@@ -2148,6 +2127,7 @@ export const createClientContractFromWizard = withAuth(async (
           await upsertBucketOverlayInTransaction(
             trx,
             tenant,
+            user,
             hourlyPlanId,
             service.service_id,
             service.bucket_overlay,
@@ -2205,6 +2185,7 @@ export const createClientContractFromWizard = withAuth(async (
           await upsertBucketOverlayInTransaction(
             trx,
             tenant,
+            user,
             usagePlanId,
             service.service_id,
             service.bucket_overlay,
@@ -2709,6 +2690,8 @@ export type DraftContractWizardData = {
   po_amount?: number;
   po_required?: boolean;
   fixed_lines: ContractWizardFixedLine[];
+  /** Set only when the stored products line's timing differs from the contract default; unset = inherit. */
+  product_billing_timing?: 'arrears' | 'advance';
   product_services: Array<{
     service_id: string;
     service_name?: string;
@@ -2800,6 +2783,7 @@ export const getDraftContractForResume = withAuth(async (
   let usageBillingFrequency: string | undefined;
   let cadenceOwner: CadenceOwner = 'client';
   let billingTiming: 'arrears' | 'advance' = 'arrears';
+  let storedProductsTiming: 'arrears' | 'advance' | undefined;
   const servicesByLineId = new Map<
     string,
     Awaited<ReturnType<typeof getContractLineServicesWithConfigurations>>
@@ -2946,6 +2930,9 @@ export const getDraftContractForResume = withAuth(async (
         { missingUnitRate: undefined, includeLocation: true },
       );
       productServices.push(...mapped.products);
+      if (mapped.products.length > 0 && line.billing_timing) {
+        storedProductsTiming = line.billing_timing as 'arrears' | 'advance';
+      }
       if (mapped.fixedLine) {
         fixedLines.push(mapped.fixedLine);
         enableProration = enableProration || mapped.fixedLine.enable_proration;
@@ -3192,6 +3179,9 @@ export const getDraftContractForResume = withAuth(async (
     po_amount: clientContract.po_amount != null ? Number(clientContract.po_amount) : undefined,
     po_required: Boolean(clientContract.po_required),
     fixed_lines: fixedLines,
+    // Explicit only when it differs from the contract default, so an inheriting products line stays inheriting.
+    product_billing_timing:
+      storedProductsTiming && storedProductsTiming !== billingTiming ? storedProductsTiming : undefined,
     product_services: productServices,
     enable_proration: enableProration,
     recurring_baseline: {

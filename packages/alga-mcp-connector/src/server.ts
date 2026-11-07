@@ -2,6 +2,8 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import {
   buildMetaToolDefinitions,
+  ATTACH_FILE_TOOL,
+  MCP_SERVER_INSTRUCTIONS,
   CALL_API_ENDPOINT_TOOL,
   SEARCH_API_REGISTRY_TOOL,
   SEARCH_BUSINESS_DATA_TOOL,
@@ -9,6 +11,7 @@ import {
 } from '@alga-psa/agent-tooling';
 import type { InstanceClient } from './instanceClient.js';
 import {
+  handleAttachFile,
   handleCallApiEndpoint,
   handleSearchApiRegistry,
   handleSearchBusinessData,
@@ -23,14 +26,14 @@ export interface CreateServerOptions {
 }
 
 /**
- * Build the MCP server exposing the 3 constant meta-tools. The local connector
+ * Build the MCP server exposing the constant meta-tools (search, call, attach_file). The local connector
  * is always user-scoped (CE edition templating — no approval step), regardless
  * of the instance edition that served the registry.
  */
 export function createServer(opts: CreateServerOptions): Server {
   const server = new Server(
     { name: opts.name ?? 'alga-psa', version: opts.version ?? '0.1.0' },
-    { capabilities: { tools: {} } },
+    { capabilities: { tools: {} }, instructions: MCP_SERVER_INSTRUCTIONS },
   );
 
   const tools = buildMetaToolDefinitions({ edition: 'ce' });
@@ -49,6 +52,8 @@ export function createServer(opts: CreateServerOptions): Server {
         outcome = await handleSearchBusinessData(opts.client, args);
       } else if (name === CALL_API_ENDPOINT_TOOL) {
         outcome = await handleCallApiEndpoint(opts.registry, opts.client, args);
+      } else if (name === ATTACH_FILE_TOOL) {
+        outcome = await handleAttachFile(opts.client, args);
       } else {
         outcome = { data: { error: `Unknown tool: ${name}` }, isError: true };
       }

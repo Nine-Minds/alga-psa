@@ -16,6 +16,8 @@
  */
 
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 
 const PRODUCTS = ['algadesk', 'psa', 'co_managed'];
 
@@ -66,6 +68,9 @@ const ACTIVE_PERMISSIONS = [
   { resource: 'ticket_attachment', action: 'create', msp: false, client: true, description: 'Upload client ticket attachments', products: ['co_managed'], defaultGrants: { co_managed: ['client:Admin', 'client:User'] } },
   { resource: 'knowledge_base', action: 'read', msp: true, client: false, description: 'Read knowledge base articles', products: ['co_managed'], defaultGrants: { co_managed: ['msp:Admin', 'msp:Technician', 'msp:Project Manager', 'msp:Dispatcher'] } },
   { resource: 'knowledge_base', action: 'read', msp: false, client: true, description: 'Read published client knowledge base articles', products: ['co_managed'], defaultGrants: { co_managed: ['client:Admin', 'client:User'] } },
+  // CM L4c: a customer portal contact replies on a shared task's requester thread. co_managed only: the
+  // psa catalog must never gain it (DO-NOT-PORT #27), so there is deliberately no psa entry.
+  { resource: 'project_task_comment', action: 'create', msp: false, client: true, description: 'Reply on shared project task requester threads in client portal', products: ['co_managed'], defaultGrants: { co_managed: ['client:Admin', 'client:User'] } },
   { resource: 'account_management', action: 'delete', msp: true, client: false, description: 'Delete account and subscription', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
   { resource: 'account_management', action: 'read', msp: true, client: false, description: 'Read account and subscription', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
   { resource: 'account_management', action: 'update', msp: true, client: false, description: 'Update account and subscription', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
@@ -149,6 +154,8 @@ const ACTIVE_PERMISSIONS = [
   { resource: 'document', action: 'create', msp: true, client: false, description: 'Create documents', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin', 'msp:Agent'], psa: ['msp:Admin', 'msp:Finance', 'msp:Manager', 'msp:Project Manager', 'msp:Technician'] } },
   { resource: 'document', action: 'create', msp: false, client: true, description: 'Create documents', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['client:Admin', 'client:User'], psa: ['client:Admin', 'client:Finance', 'client:User'] } },
   { resource: 'document', action: 'delete', msp: true, client: false, description: 'Delete documents from the system', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin', 'msp:Finance'] } },
+  // Governs the tenant's allowed download hosts for URL document sources. `document:create` does NOT imply it.
+  { resource: 'document', action: 'manage_fetch_hosts', msp: true, client: false, description: 'Manage allowed download hosts for document URL downloads', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
   { resource: 'document', action: 'read', msp: true, client: false, description: 'Read documents', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin', 'msp:Agent'], psa: ['msp:Admin', 'msp:Dispatcher', 'msp:Finance', 'msp:Manager', 'msp:Project Manager', 'msp:Technician'] } },
   { resource: 'document', action: 'read', msp: false, client: true, description: 'Read documents', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['client:Admin', 'client:User'], psa: ['client:Admin', 'client:Finance', 'client:User'] } },
   { resource: 'document', action: 'update', msp: true, client: false, description: 'Update documents', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin', 'msp:Agent'], psa: ['msp:Admin', 'msp:Finance', 'msp:Manager', 'msp:Project Manager', 'msp:Technician'] } },
@@ -219,7 +226,7 @@ const ACTIVE_PERMISSIONS = [
   { resource: 'project', action: 'delete', msp: true, client: false, description: 'Delete projects and associated data', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Project Manager'] } },
   { resource: 'project', action: 'delete', msp: false, client: true, description: 'Delete projects in client portal', products: ['psa'], defaultGrants: { psa: ['client:Admin'] } },
   { resource: 'project', action: 'read', msp: true, client: false, description: 'View projects', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Dispatcher', 'msp:Finance', 'msp:Manager', 'msp:Project Manager', 'msp:Technician'] } },
-  { resource: 'project', action: 'read', msp: false, client: true, description: 'View projects in client portal', products: ['psa'], defaultGrants: { psa: ['client:Admin', 'client:Finance', 'client:User'] } },
+  { resource: 'project', action: 'read', msp: false, client: true, description: 'View projects in client portal', products: ['psa', 'co_managed'], defaultGrants: { psa: ['client:Admin', 'client:Finance', 'client:User'], co_managed: ['client:Admin', 'client:User'] } },
   { resource: 'project', action: 'update', msp: true, client: false, description: 'Modify project information and timeline', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Finance', 'msp:Project Manager'] } },
   { resource: 'project', action: 'update', msp: false, client: true, description: 'Update projects in client portal', products: ['psa'], defaultGrants: { psa: ['client:Admin'] } },
 
@@ -389,12 +396,53 @@ const ACTIVE_PERMISSIONS = [
   { resource: 'vendor_bill', action: 'read', msp: true, client: false, description: 'View vendor bills', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
   { resource: 'vendor_bill', action: 'update', msp: true, client: false, description: 'Update vendor bills', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
 
+  { resource: 'warranty', action: 'create', msp: true, client: false, description: 'Open warranty claims on client equipment', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Manager', 'msp:Technician'] } },
+  { resource: 'warranty', action: 'read', msp: true, client: false, description: 'View warranty claims and RMA cases', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Manager', 'msp:Technician'] } },
+  { resource: 'warranty', action: 'update', msp: true, client: false, description: 'Decide, ship, receive and close warranty claims', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Manager', 'msp:Technician'] } },
+
   { resource: 'workflow', action: 'admin', msp: true, client: false, description: 'Administer workflows', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
   { resource: 'workflow', action: 'manage', msp: true, client: false, description: 'Manage workflows', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
   { resource: 'workflow', action: 'publish', msp: true, client: false, description: 'Publish workflows', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
   { resource: 'workflow', action: 'read', msp: true, client: false, description: 'Read workflows', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
   { resource: 'workflow', action: 'view', msp: true, client: false, description: 'View workflows', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
 ];
+
+/**
+ * Edition contributions.
+ *
+ * Features that exist in only one edition contribute their permission entries
+ * from a directory of `*.cjs` modules (each exporting an array of entries in the
+ * shape above) instead of a literal in this file. Two layouts are searched: the
+ * source checkout (`ee/server/permission-catalog`) and the packaged Temporal
+ * worker image (`./contributions`, copied by ee/temporal-workflows/Dockerfile).
+ * A directory that does not exist contributes nothing, so a CE checkout is
+ * unchanged. Contributions join ACTIVE_PERMISSIONS before anything reads it, so
+ * onboarding, seeds, reconciliation and `catalogVersion` all see them.
+ */
+const CONTRIBUTION_DIRECTORIES = [
+  path.resolve(__dirname, '../../../../ee/server/permission-catalog'),
+  path.resolve(__dirname, 'contributions'),
+];
+
+function loadContributions(directories = CONTRIBUTION_DIRECTORIES) {
+  const loaded = [];
+  const seen = new Set();
+  for (const directory of directories) {
+    if (!fs.existsSync(directory)) continue;
+    for (const file of fs.readdirSync(directory).filter((name) => name.endsWith('.cjs')).sort()) {
+      if (seen.has(file)) continue;
+      seen.add(file);
+      const entries = require(path.join(directory, file));
+      if (!Array.isArray(entries)) {
+        throw new Error(`Permission catalog contribution ${file} must export an array of entries`);
+      }
+      loaded.push(...entries);
+    }
+  }
+  return loaded;
+}
+
+ACTIVE_PERMISSIONS.push(...loadContributions());
 
 function scopeKeys(entry) {
   const keys = [];
@@ -478,6 +526,7 @@ module.exports = {
   RENAMED_RESOURCES,
   canonicalResource,
   catalogVersion,
+  loadContributions,
   getProductPermissions,
   isEntryAvailable,
   isProductPermission,

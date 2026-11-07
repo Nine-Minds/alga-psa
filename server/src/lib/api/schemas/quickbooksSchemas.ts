@@ -185,7 +185,7 @@ const customerMappingSchema = z.object({
   sync_status: z.enum(['synced', 'pending', 'error', 'conflict']),
   last_synced_at: z.string().datetime().optional(),
   sync_error: z.string().optional(),
-  field_mappings: z.record(z.any()).optional()
+  field_mappings: z.record(z.string(), z.any()).optional()
 });
 
 // ============================================================================
@@ -507,8 +507,8 @@ const syncStatusRecordSchema = z.object({
   records_successful: z.number().min(0).default(0),
   records_failed: z.number().min(0).default(0),
   error_message: z.string().optional(),
-  error_details: z.record(z.any()).optional(),
-  metadata: z.record(z.any()).optional()
+  error_details: z.record(z.string(), z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional()
 }).merge(baseEntitySchema);
 
 // Sync status query schema
@@ -583,7 +583,7 @@ const bulkSyncRequestSchema = z.object({
       start_date: qboDateSchema,
       end_date: qboDateSchema
     }).optional(),
-    parameters: z.record(z.any()).optional()
+    parameters: z.record(z.string(), z.any()).optional()
   })).min(1).max(10),
   execution_mode: z.enum(['sequential', 'parallel']).default('sequential'),
   stop_on_error: z.boolean().default(false),
@@ -639,7 +639,7 @@ const healthCheckResultSchema = z.object({
   check_type: healthCheckTypeSchema,
   status: healthStatusSchema,
   message: z.string(),
-  details: z.record(z.any()).optional(),
+  details: z.record(z.string(), z.any()).optional(),
   checked_at: z.string().datetime(),
   response_time_ms: z.number().min(0).optional()
 });
