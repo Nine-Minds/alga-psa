@@ -780,9 +780,9 @@
       "locations": "Standorte",
       "primaryLocation": "Primär",
       "remote": "Im Homeoffice",
-      "thisUser": "dieser Benutzer",
+      "thisUser": "diesen Benutzer",
       "deactivate": {
-        "title": "Benutzer deaktivieren und offene Arbeit verwalten",
+        "title": "Benutzer deaktivieren und offene Arbeit regeln",
         "confirm": "Benutzer deaktivieren",
         "deactivating": "Wird deaktiviert…",
         "thisUserCapitalized": "Dieser Benutzer",
@@ -795,7 +795,7 @@
           "tickets": "Tickets",
           "tasks": "Projektaufgaben"
         },
-        "openCount": "{{label}}: {{count}} offen",
+        "openCount": "{{count}} offene {{label}}",
         "actions": {
           "reassign": "Neu zuweisen",
           "unassign": "Zuweisung aufheben",
@@ -1088,11 +1088,11 @@
     "sharedWorkspaceLabel": "Gemeinsamer Arbeitsplatz",
     "details": {
       "notProvided": "Nicht angegeben",
-      "notAvailable": "Nicht verfügbar",
-      "cpuWithModel": "{{model}} (Kerne: {{count}})",
-      "cpuCores": "Kerne: {{count}}",
-      "workstationTitle": "Arbeitsplatzdetails",
-      "networkDeviceTitle": "Netzwerkgerätedetails",
+      "notAvailable": "N/V",
+      "cpuWithModel": "{{model}} ({{count}} Kerne)",
+      "cpuCores": "{{count}} Kerne",
+      "workstationTitle": "Details zur Workstation",
+      "networkDeviceTitle": "Details zum Netzwerkgerät",
       "serverTitle": "Serverdetails",
       "basicInformation": "Grundlegende Informationen",
       "os": "Betriebssystem",
