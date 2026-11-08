@@ -12948,6 +12948,7 @@ components:
           type: boolean
       required:
         - board_name
+      additionalProperties: false
       description: Payload for creating a new board.
     BoardUpdateRequest:
       type: object
@@ -12989,6 +12990,7 @@ components:
             already running keeps running. Defaults to true.
         client_portal_visible:
           type: boolean
+      additionalProperties: false
       description: Payload for updating a board. All fields are optional.
     StatusIdParams:
       type: object
