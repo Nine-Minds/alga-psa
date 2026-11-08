@@ -32,7 +32,8 @@ import type {
   SendQuoteApi,
   ConvertQuoteApi,
 } from '../schemas/quoteSchemas';
-import { onQuoteAccepted, onQuoteSent } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
+import { decideQuote } from '@alga-psa/billing/services';
+import { onQuoteSent } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
 import { QUOTE_ACTIVITY_TYPES, buildApprovalChangesRequestedActivity } from '@alga-psa/billing/lib/quoteActivityTypes';
 import { SELF_APPROVAL_AUDIT_METADATA } from '@alga-psa/authorization/quoteSelfApproval';
 
@@ -266,10 +267,31 @@ export class QuoteService extends BaseService<IQuote> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      if (data.status === 'accepted') {
+        // Acceptance goes through the decision service (see updateQuote in quoteActions).
+        const { status: _status, accepted_at: _acceptedAt, accepted_by: _acceptedBy, ...rest } = data as Record<string, unknown>;
+        const result = await decideQuote({
+          tenantId: context.tenant,
+          quoteId: id,
+          action: 'accept',
+          actor: { kind: 'msp_user', userId: context.userId ?? null },
+        }, trx);
+        if (result.status === 'not_found') {
+          throw new Error(`Quote ${id} not found in tenant ${context.tenant}`);
+        }
+        if (result.status !== 'decided') {
+          const current = result.status === 'not_pending' ? result.currentStatus : 'accepted';
+          throw new Error(`Invalid quote status transition from ${current} to accepted`);
+        }
+        if (Object.keys(rest).some((key) => rest[key] !== undefined)) {
+          return Quote.update(trx, context.tenant, id, { ...rest, updated_by: context.userId } as Partial<IQuote>);
+        }
+        return result.quote;
+      }
+
       const lifecycleData = {
         ...data,
         ...(data.status === 'sent' ? { sent_at: new Date().toISOString() } : {}),
-        ...(data.status === 'accepted' ? { accepted_at: new Date().toISOString() } : {}),
       };
       const updated = await Quote.update(trx, context.tenant, id, {
         ...lifecycleData,
@@ -277,7 +299,6 @@ export class QuoteService extends BaseService<IQuote> {
       } as Partial<IQuote>);
 
       if (updated.status === 'sent') await onQuoteSent(trx, updated);
-      if (updated.status === 'accepted') await onQuoteAccepted(trx, updated);
 
       return updated;
     }).catch(throwQuoteApiError);
