@@ -1,4 +1,5 @@
 import type {
+  TemplateDynamicTableNode,
   TemplateAst,
   TemplateFieldBorderStyle,
   TemplateImageNode,
@@ -334,7 +335,7 @@ const resolveFieldBindingPath = (node: WorkspaceNode, documentKind: DesignerDocu
     case 'tax':
       return 'tax';
     case 'discount':
-      return 'discount';
+      return 'discountTotal';
     case 'custom-total':
       return 'total';
     default:
@@ -1324,6 +1325,12 @@ const mapDesignerNodeToAstNode = (
           typeof metadata.emptyStateText === 'string'
             ? exportI18nText(metadata.emptyStateText.trim(), metadata.__astEmptyStateTextI18n)
             : undefined,
+        // Bundle component rows are authored as one structure (see the
+        // "Bundle component rows" inspector section); the workspace carries it
+        // verbatim so opening and saving a template never drops it.
+        ...(isRecord(metadata.bundleChildRows)
+          ? { childRows: cloneJson(metadata.bundleChildRows) as unknown as TemplateDynamicTableNode['childRows'] }
+          : {}),
       };
     }
     case 'totals':
@@ -1355,6 +1362,9 @@ const mapDesignerNodeToAstNode = (
               }
               if (row.emphasize === true) {
                 mappedRow.emphasize = true;
+              }
+              if (row.hideWhenZero === true) {
+                mappedRow.hideWhenZero = true;
               }
               const labelStyle = mapTemplateNodeStyleRef(row.labelStyle);
               if (labelStyle) {
@@ -2157,6 +2167,9 @@ export const importTemplateAstToWorkspace = (
             if (hs.backgroundColor) metadata.headerBackgroundColor = hs.backgroundColor;
             if (hs.color) metadata.headerColor = hs.color;
           }
+          if (inputNode.type === 'dynamic-table' && inputNode.childRows) {
+            metadata.bundleChildRows = cloneJson(inputNode.childRows);
+          }
         } else if (inputNode.type === 'totals') {
           const sourcePath = resolveImportedCollectionBindingPath(
             astInput,
@@ -2176,6 +2189,7 @@ export const importTemplateAstToWorkspace = (
               type: row.format,
               format: row.format,
               emphasize: row.emphasize === true,
+              ...(row.hideWhenZero === true ? { hideWhenZero: true } : {}),
               ...(row.style ? { style: cloneJson(row.style) } : {}),
               ...(row.labelStyle ? { labelStyle: cloneJson(row.labelStyle) } : {}),
             };

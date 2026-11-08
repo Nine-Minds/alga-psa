@@ -15,7 +15,7 @@ import {
 } from '@alga-psa/shared/lib/ticketActivity';
 import type { IDocument } from 'server/src/interfaces/document.interface';
 import { ATTACHABLE_ENTITY_TYPES } from '../../schemas/documentAttach';
-import { hasPermission } from '../../../auth/rbac';
+import { hasApiContextPermission } from '../../middleware/apiContextPermission';
 import { authorizeApiResourceRead } from '../../controllers/authorizationKernel';
 import { assertAssetRecordAccess } from '../../controllers/assetReadGuard';
 import { AssetService } from '../AssetService';
@@ -44,6 +44,7 @@ export interface InTransactionArgs {
   trx: Knex.Transaction;
   tenant: string;
   actorUserId: string;
+  viaPrincipalUserId?: string | null;
   entityId: string;
   document: IDocument;
   options: AttachHookOptions;
@@ -88,7 +89,7 @@ async function assertRbacUpdate(
   resource: string,
   knex: Knex,
 ): Promise<void> {
-  const allowed = await hasPermission(apiRequest.context.user, resource, 'update', knex);
+  const allowed = await hasApiContextPermission(apiRequest.context, resource, 'update', knex);
   if (!allowed) {
     throw new ForbiddenError(`Permission denied: Cannot update ${resource}`);
   }
@@ -178,7 +179,7 @@ const ticketAdapter: EntityAdapter = {
     return folder?.folder_path ?? undefined;
   },
   documentOverrides: (options) => (options.commentAttachmentDraft ? { is_client_visible: true } : {}),
-  async inTransaction({ trx, tenant, actorUserId, entityId, document, options }) {
+  async inTransaction({ trx, tenant, actorUserId, viaPrincipalUserId, entityId, document, options }) {
     if (options.commentAttachmentDraft) {
       await tenantDb(trx, tenant).table('ticket_comment_attachments').insert({
         tenant,
@@ -197,7 +198,7 @@ const ticketAdapter: EntityAdapter = {
       eventType: TICKET_ACTIVITY_EVENT.DOCUMENT_ATTACHED,
       entityType: TICKET_ACTIVITY_ENTITY.DOCUMENT,
       entityId: document.document_id,
-      actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: actorUserId },
+      actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: actorUserId, viaPrincipalUserId },
       source: TICKET_ACTIVITY_SOURCE.API,
       details: {
         document_name: document.document_name,

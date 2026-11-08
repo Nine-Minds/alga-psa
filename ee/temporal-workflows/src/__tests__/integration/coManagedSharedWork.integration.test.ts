@@ -205,6 +205,60 @@ describe.sequential('L2 access matrix against real rows', () => {
   });
 });
 
+describe.sequential('Customer Tickets keyset paging against real rows', () => {
+  it('pages by opaque cursor with bounded queries, ties across page boundaries, and per-row filtering', async () => {
+    const w = await world();
+    const status = await w.customer.table('statuses').where('item_type', 'ticket').first();
+    const clientId = (await w.customer.table('clients').first()).client_id;
+    const otherBoard = randomUUID();
+    await w.customer.table('boards').insert({ tenant: w.customerTenant, board_id: otherBoard, board_name: 'Unshared', is_inactive: false });
+    const ticket = (board: string, entered: string, title: string) => ({ tenant: w.customerTenant, ticket_id: randomUUID(), title, ticket_number: `K-${randomUUID().slice(0, 8)}`,
+      client_id: clientId, board_id: board, status_id: status.status_id, entered_by: w.customerAdmin.userId, entered_at: entered });
+    // Three ties of 4 (spanning page boundaries of 5) plus sub-millisecond neighbours that a Date round-trip would collapse.
+    const shared = [0, 1, 2].flatMap(slot => [0, 1, 2, 3].map(() => ticket(w.boardId, `2026-02-0${slot + 1}T00:00:00Z`, 'tie')));
+    shared.push(ticket(w.boardId, '2026-03-01T00:00:00.000100Z', 'micro-a'), ticket(w.boardId, '2026-03-01T00:00:00.000900Z', 'micro-b'));
+    const nullEntered = { ...ticket(w.boardId, '2026-01-01T00:00:00Z', 'no entered_at'), entered_at: null };
+    shared.push(nullEntered as any);
+    const hidden = [ticket(otherBoard, '2026-03-05T00:00:00Z', 'unscoped'), ticket(otherBoard, '2026-01-15T00:00:00Z', 'unscoped')];
+    await w.customer.table('tickets').insert([...shared, ...hidden]);
+    // Oracle: the database's own ordering of the readable corpus (fixture ticket included), NULLs last.
+    const expected = (await w.customer.table('tickets').where('board_id', w.boardId).orderByRaw('entered_at DESC NULLS LAST').orderBy('ticket_id')).map(t => t.ticket_id);
+    expect(expected).toHaveLength(shared.length + 1);
+    expect(expected[expected.length - 1]).toBe(nullEntered.ticket_id);
+    expect(expected.indexOf(shared[13].ticket_id)).toBeLessThan(expected.indexOf(shared[12].ticket_id)); // micro-b before micro-a: ms rounding would tie them
+    // Every ticket SELECT's actual LIMIT binding.
+    const limits: number[] = [];
+    const watch = (query: { sql: string; bindings: unknown[] }) => {
+      if (!/from "tickets"/i.test(query.sql)) return;
+      const match = /\blimit \$(\d+)/i.exec(query.sql);
+      expect(match, `ticket query without a LIMIT: ${query.sql}`).not.toBeNull();
+      limits.push(Number(query.bindings[Number(match![1]) - 1]));
+    };
+    db.on('query', watch);
+    const seen: string[] = [];
+    try {
+      let cursor: string | undefined;
+      for (let guard = 0; guard < 20; guard++) {
+        const page = await listCoManagedCustomerTickets(db, w.MT.actor, { cursor, pageSize: 5 });
+        if (page.hasMore) expect(page.rows).toHaveLength(5);
+        seen.push(...page.rows.map(r => r.resource.id));
+        if (!page.hasMore) { expect(page.nextCursor).toBeNull(); break; }
+        cursor = page.nextCursor!;
+      }
+    } finally { db.removeListener('query', watch); }
+    expect(new Set(seen).size).toBe(seen.length);
+    expect(seen).toEqual(expected);
+    expect(seen.some(id => hidden.some(h => h.ticket_id === id))).toBe(false);
+    expect(limits.length).toBeGreaterThanOrEqual(3);
+    expect(limits.every(limit => limit === 6)).toBe(true);
+    // Legacy page is served by cursor walking and agrees with it; abusive values are refused.
+    const legacy = await listCoManagedCustomerTickets(db, w.MT.actor, { page: 1, pageSize: 5 });
+    expect(legacy.rows.map(r => r.resource.id)).toEqual(seen.slice(5, 10));
+    for (const page of [1e9, Number.NaN, Infinity, -1, 1.5]) await denied(listCoManagedCustomerTickets(db, w.MT.actor, { page, pageSize: 5 }));
+    await denied(listCoManagedCustomerTickets(db, w.MT.actor, { cursor: 'garbage' }));
+  });
+});
+
 describe.sequential('sponsor administration: read vs manage', () => {
   it('lists the live sponsored relationship for read or manage, independent of delegated grants; policy reads need read, writes need manage', async () => {
     const w = await world();

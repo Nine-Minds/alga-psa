@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
-import { buildAuthorizationPrincipalSubject, authorizeApiResourceRead } from 'server/src/lib/api/controllers/authorizationKernel';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { buildAuthorizationPrincipalSubject, authorizeApiResourceRead, authorizeApiResource } from 'server/src/lib/api/controllers/authorizationKernel';
 
 const authorizeResourceMock = vi.fn();
+const resolveSubjectMock = vi.hoisted(() => vi.fn());
 
 vi.mock('server/src/lib/authorization/kernel', () => ({
   getAuthorizationKernel: vi.fn(async () => ({
@@ -9,7 +10,25 @@ vi.mock('server/src/lib/authorization/kernel', () => ({
   })),
 }));
 
+vi.mock('@alga-psa/authorization/assetReadAuthorization', async (original) => ({
+  ...await original<typeof import('@alga-psa/authorization/assetReadAuthorization')>(),
+  resolveAuthorizationSubjectForUser: (...args: unknown[]) => resolveSubjectMock(...args),
+}));
+
 describe('api authorization kernel helper', () => {
+  beforeEach(() => {
+    resolveSubjectMock.mockImplementation(async (_knex, tenant, user, apiKeyId) => ({
+      tenant,
+      userId: user.user_id,
+      userType: 'internal',
+      roleIds: [],
+      teamIds: [],
+      managedUserIds: [],
+      portfolioClientIds: [],
+      ...(apiKeyId ? { apiKeyId } : {}),
+    }));
+  });
+
   it('normalizes user roles, teams, and api key into authorization subject', () => {
     const subject = buildAuthorizationPrincipalSubject(
       {
@@ -110,5 +129,38 @@ describe('api authorization kernel helper', () => {
     });
 
     expect(allowed).toEqual({ allowed: true, redactedFields: ['description'] });
+  });
+
+  it('evaluates independent action decisions without turning writes into reads', async () => {
+    authorizeResourceMock.mockReset();
+    authorizeResourceMock.mockImplementation(async ({ resource }: { resource: { action: string } }) => ({
+      allowed: resource.action === 'update',
+    }));
+    const base = { knex: {} as any, tenant: 't1', user: { user_id: 'u1' }, resource: 'ticket', recordContext: { id: 'r1' } };
+
+    const updateAllowed = await authorizeApiResource({ ...base, action: 'update' });
+    const deleteAllowed = await authorizeApiResource({ ...base, action: 'delete' });
+    const readAllowed = await authorizeApiResourceRead(base);
+
+    expect(updateAllowed).toBe(true);
+    expect(deleteAllowed).toBe(false);
+    expect(readAllowed).toBe(false);
+    const actions = authorizeResourceMock.mock.calls.map((c) => c[0].resource.action);
+    expect(actions).toEqual(['update', 'delete', 'read']);
+  });
+
+  it('API-key and session principals reach the kernel with the same resource/action', async () => {
+    authorizeResourceMock.mockReset();
+    authorizeResourceMock.mockResolvedValue({ allowed: false });
+    const base = { knex: {} as any, tenant: 't1', user: { user_id: 'u1' }, resource: 'ticket', action: 'update', recordContext: { id: 'r1' } };
+
+    const viaKey = await authorizeApiResource({ ...base, apiKeyId: 'k1' });
+    const viaSession = await authorizeApiResource(base);
+
+    expect(viaKey).toBe(viaSession);
+    const [a, b] = authorizeResourceMock.mock.calls.map((c) => c[0]);
+    expect(a.resource).toEqual(b.resource);
+    expect(a.subject.apiKeyId).toBe('k1');
+    expect(b.subject.apiKeyId).toBeUndefined();
   });
 });

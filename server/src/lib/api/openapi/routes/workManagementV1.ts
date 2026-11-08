@@ -24,6 +24,11 @@ import {
   stopwatchSessionResponseSchema,
   updateStopwatchSchema,
 } from '../../schemas/stopwatch';
+import {
+  createTimePeriodSettingsSchema,
+  timePeriodSettingsResponseSchema,
+  updateTimePeriodSettingsSchema,
+} from '../../schemas/timeSheet';
 
 export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   const tag = 'Work Management v1';
@@ -207,6 +212,18 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
         actor: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).nullable().optional(),
         external_status: zOpenApi.string().nullable().optional(),
       })).optional().describe('Ticket-level external references written in the same transaction as the ticket. A conflicting link rolls back the create.'),
+      entered_at: zOpenApi.string().datetime({ offset: true }).optional().describe(
+        'Historical import. ISO 8601 datetime with an offset, not in the future. Supplying it stores the ticket with this open date and marks it a historical record: created silently with source=api_import, no SLA clock, no TICKET_CREATED, and no notifications, webhooks or workflows. Requires an internal MSP user with ticket:create permission.',
+      ),
+      closed_at: zOpenApi.string().datetime({ offset: true }).optional().describe(
+        'Historical import only (requires entered_at). Required for a closed status, rejected for an open status, and must satisfy entered_at <= closed_at <= now. The ticket is stored closed without firing TICKET_CLOSED.',
+      ),
+      closed_by: zOpenApi.string().guid().optional().describe(
+        'Historical import only (requires closed_at). User recorded as the closer; defaults to the API user.',
+      ),
+      asset_ids: zOpenApi.array(zOpenApi.string().uuid()).max(50).optional().describe(
+        'Assets the ticket is raised against, linked in the same transaction as the ticket; an unknown asset rejects the whole create. The first asset also makes the ticket inherit that asset\'s billing profile when billing_profile_id is omitted, as POST /tickets/from-asset and the web create do.',
+      ),
       ...ticketNotificationSuppressionProperties,
     }).describe('Ticket fields to create. Notification suppression applies only to this operation.'),
   );
@@ -215,14 +232,17 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'WorkV1TicketUpdateBody',
     zOpenApi.object({
       title: zOpenApi.string().min(1).max(255).optional(),
+      entered_at: zOpenApi.string().datetime({ offset: true }).optional().describe(
+        'Correct the ticket open date. Requires an internal MSP user with ticket:update permission. Must not be in the future or after the ticket closure or earliest comment. A date-only correction does not publish TICKET_UPDATED or start SLA timers.',
+      ),
       url: zOpenApi.string().url().optional(),
       board_id: zOpenApi.string().guid().optional(),
       client_id: zOpenApi.string().guid().optional(),
       location_id: zOpenApi.string().guid().optional(),
       contact_name_id: zOpenApi.string().guid().nullable().optional(),
       status_id: zOpenApi.string().guid().optional(),
-      category_id: zOpenApi.string().guid().optional(),
-      subcategory_id: zOpenApi.string().guid().optional(),
+      category_id: zOpenApi.string().guid().nullable().optional().describe('Parent category, or null to clear the classification.'),
+      subcategory_id: zOpenApi.string().guid().nullable().optional().describe('Child of category_id, or null when the selected category has no subcategory.'),
       assigned_to: zOpenApi.string().guid().nullable().optional(),
       priority_id: zOpenApi.string().guid().optional(),
       attributes: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).nullable().optional(),
@@ -240,8 +260,8 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'WorkV1TicketStatusUpdateBody',
     zOpenApi.object({
       status_id: zOpenApi.string().guid(),
-      closed_at: zOpenApi.string().datetime().optional(),
-      closed_by: zOpenApi.string().guid().optional(),
+      closed_at: zOpenApi.string().datetime().optional().describe('Honored when this update closes the ticket (open to closed): stored as the close time instead of now. Must not be in the future or before entered_at. TICKET_CLOSED still fires; use suppression flags to silence notifications. Use historical create fields to import an already-closed ticket silently.'),
+      closed_by: zOpenApi.string().guid().optional().describe('Honored with closed_at when this update closes the ticket; defaults to the API user.'),
       override_close_rules: zOpenApi.boolean().optional(),
       override_close_rules_reason: zOpenApi.string().nullable().optional(),
       propagateToChildren: zOpenApi.boolean().optional().describe(
@@ -272,6 +292,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       scheduled_publish_tz: zOpenApi.string().max(64).optional().describe('IANA time zone the author scheduled in, e.g. America/New_York.'),
       cc: zOpenApi.array(zOpenApi.string().email()).max(20).optional().describe('One-off Cc recipients for this comment\'s email only. They are never added to the ticket watch list and receive no later comments. Not allowed with is_internal. Max 20 cc + bcc combined.'),
       bcc: zOpenApi.array(zOpenApi.string().email()).max(20).optional().describe('One-off Bcc recipients for this comment\'s email only. Never returned to client-portal callers. Not allowed with is_internal. Max 20 cc + bcc combined.'),
+      created_at: zOpenApi.string().datetime({ offset: true }).optional().describe(
+        'Historical import. Requires an internal MSP user with ticket:update permission. ISO 8601 datetime with an offset (date-only is rejected), not in the future and not before the ticket\'s entered_at (a reply: not before its parent comment). The comment is stored with this timestamp and is silent: no TICKET_COMMENT_ADDED, no notifications, webhooks, workflows, SLA first response or response-state change. Cannot be combined with scheduled_publish_at, scheduled_publish_tz, cc or bcc.',
+      ),
       ...ticketNotificationSuppressionProperties,
     }).describe('Comment to add. Silent flags suppress the comment notification while preserving the comment and audit history. Set scheduled_publish_at + scheduled_publish_tz to schedule a client-visible comment: it is stored with publish_state=scheduled, hidden from client-portal callers, and published by a background job. cc/bcc add one-off recipients to this comment\'s email without touching the watch list.'),
   );
@@ -463,10 +486,10 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'post', path: '/api/v1/time-periods/{id}/reopen', summary: 'Reopen time period', description: 'Sets is_closed false (idempotent). A closed period rejects edits and deletion until reopened; time entry is not affected.', family: 'time_sheet' },
 
     { method: 'get', path: '/api/v1/time-sheets', summary: 'List time sheets', description: 'Lists time sheets via ApiTimeSheetController.list().', family: 'time_sheet' },
-    { method: 'post', path: '/api/v1/time-sheets', summary: 'Create time sheet', description: 'Creates time sheet via create() path.', family: 'time_sheet' },
+    { method: 'post', path: '/api/v1/time-sheets', summary: 'Create time sheet', description: 'Creates a time sheet. A time sheet is unique per tenant, effective owner (`user_id`, defaulting to the caller) and `period_id`, in every approval status. The first request returns 201 with a DRAFT sheet; a request for a user and period that already has a sheet returns 409 CONFLICT ("A time sheet already exists for this user and period") and changes nothing. To recover, GET /api/v1/time-sheets filtered by `user_id` and `period_id`.', family: 'time_sheet' },
     { method: 'post', path: '/api/v1/time-sheets/bulk', summary: 'Bulk time sheet operation', description: 'Current route delegates to ApiTimeSheetController.list() (read path) instead of bulk approval/update logic.', family: 'time_sheet' },
-    { method: 'get', path: '/api/v1/time-sheets/export', summary: 'Export time sheets', description: 'Exports time sheets using ApiTimeSheetController.export().', family: 'time_sheet' },
-    { method: 'get', path: '/api/v1/time-sheets/search', summary: 'Search time sheets', description: 'Searches time sheets via ApiTimeSheetController.search(). `query` is required and is matched as a case-insensitive substring against the sheet owner\'s full name (first name + space + last name). `user_name` is the only searchable field and the default. Optional filters narrow by approval status, user, period and period date range. Array params (`fields`, `approval_statuses`, `user_ids`, `period_ids`) accept repeated params or comma-separated values. `include_entries=true` adds each sheet\'s `time_entries`. Returns at most `limit` sheets (default 25, max 100).', family: 'time_sheet' },
+    { method: 'get', path: '/api/v1/time-sheets/export', summary: 'Export time sheets', description: 'Exports every time sheet matching the filters (not one page) using ApiTimeSheetController.export(). Array filters approval_statuses, user_ids, period_ids and fields accept repeated keys or comma-separated values.', family: 'time_sheet' },
+    { method: 'get', path: '/api/v1/time-sheets/search', summary: 'Search time sheets', description: 'Searches time sheets via ApiTimeSheetController.search(). `query` is required and is matched against the owner name and time_sheet_notes text. Array filters accept repeated keys or comma-separated values.', family: 'time_sheet' },
     { method: 'delete', path: '/api/v1/time-sheets/{id}', summary: 'Delete time sheet', description: 'Deletes time sheet UUID via ApiBase delete path.', family: 'time_sheet' },
     { method: 'get', path: '/api/v1/time-sheets/{id}', summary: 'Get time sheet', description: 'Gets time sheet UUID with details via getWithDetails().', family: 'time_sheet' },
     { method: 'put', path: '/api/v1/time-sheets/{id}', summary: 'Update time sheet', description: 'Updates time sheet UUID.', family: 'time_sheet' },
@@ -509,6 +532,8 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'put /api/v1/tickets/{id}',
     'put /api/v1/tickets/{id}/status',
   ]);
+
+  const TIME_SHEET_DUPLICATE_CONFLICT_OPS = new Set(['post /api/v1/time-sheets']);
 
   const TIME_PERIOD_CONFLICT_OPS = new Set([
     'post /api/v1/time-periods',
@@ -688,6 +713,13 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     if (BUNDLE_PROPAGATION_CONFLICT_OPS.has(`${def.method} ${def.path}`)) {
       responses[409] = {
         description: 'Confirmation required: the status change would close or reopen child tickets of a sync-mode bundle master. Retry with propagateToChildren=true or false. The error details carry crossesBoundary and the affected/unaffected children.',
+        schema: ApiError,
+      };
+    }
+
+    if (TIME_SHEET_DUPLICATE_CONFLICT_OPS.has(`${def.method} ${def.path}`)) {
+      responses[409] = {
+        description: 'Conflict: a time sheet already exists for this user and period (any approval status). Body: {"error":{"code":"CONFLICT","message":"A time sheet already exists for this user and period"}}. The existing sheet is unchanged.',
         schema: ApiError,
       };
     }
@@ -991,6 +1023,10 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'WorkV1TicketStatusesQuery',
     zOpenApi.object({ board_id: zOpenApi.string().guid().optional().describe('Filter statuses to this board.') }),
   );
+  const TicketCategoriesQuery = registry.registerSchema(
+    'WorkV1TicketCategoriesQuery',
+    zOpenApi.object({ board_id: zOpenApi.string().uuid().optional().describe('Filter categories to this board.') }),
+  );
   const TicketCommentUpdateBody = registry.registerSchema(
     'WorkV1TicketCommentUpdateBody',
     zOpenApi.object({ comment_text: zOpenApi.string().min(1).max(5000).describe('Updated comment text (1–5000 visible chars).') }),
@@ -1125,6 +1161,16 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   });
 
   registry.registerRoute({
+    method: 'get', path: '/api/v1/tickets/categories',
+    summary: 'List ticket categories',
+    description: 'Returns the tenant ticket categories (parents and children via parent_category), optionally filtered by board_id, sorted by display_order then name. Read surface for classifying a ticket; configuring categories stays on /api/v1/categories/ticket.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { query: TicketCategoriesQuery },
+    responses: ticketStdResponses({ code: 200, description: 'Ticket categories.' }, false),
+    extensions: ticketExt('read'), edition: 'both',
+  });
+
+  registry.registerRoute({
     method: 'put', path: '/api/v1/tickets/{id}/comments/{commentId}',
     summary: 'Update a ticket comment',
     description: 'Updates the text of a comment on a ticket. Comment text must be 1–5000 visible characters.',
@@ -1192,6 +1238,180 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     request: { params: TicketChecklistItemParams, body: { schema: TicketChecklistCompletionBody } },
     responses: ticketStdResponses({ code: 200, description: 'Checklist item completion updated.' }),
     extensions: ticketExt('update'), edition: 'both',
+  });
+
+  // ==========================================================================
+  // Ticket templates (reusable ticket + checklist starting points)
+  // ==========================================================================
+  const TicketTemplateParams = registry.registerSchema(
+    'WorkV1TicketTemplateParams',
+    zOpenApi.object({
+      templateId: zOpenApi.string().guid().describe('Ticket template UUID from ticket_templates.template_id.'),
+    }),
+  );
+  const TicketTemplateListQuery = registry.registerSchema(
+    'WorkV1TicketTemplateListQuery',
+    zOpenApi.object({
+      page: zOpenApi.string().optional().describe('1-based page number. Default 1.'),
+      limit: zOpenApi.string().optional().describe('Page size, 1-100. Default 25.'),
+      client_id: zOpenApi.string().guid().optional().describe('Templates this client can use: the ones bound to it plus every tenant-wide template. Resolve the UUID with GET /api/v1/clients first.'),
+      is_active: zOpenApi.enum(['true', 'false']).optional().describe("Omitted or 'true': active templates only (the default). 'false': the inactive ones."),
+      search: zOpenApi.string().optional().describe('Case-insensitive substring of the template name or of the ticket title it produces.'),
+    }),
+  );
+  const TicketTemplateChecklistItem = zOpenApi.object({
+    item_name: zOpenApi.string().min(1).max(500).describe('Checklist item text.'),
+    description: zOpenApi.string().nullable().optional(),
+    is_required: zOpenApi.boolean().describe('Whether the item gates ticket closure.'),
+    checklist_template_id: zOpenApi.string().guid().nullable().optional().describe('Checklist template the item came from; leave null for a plain item.'),
+  });
+  const ticketTemplateBodyShape = {
+    name: zOpenApi.string().min(1).max(200).describe('Template name, unique among active templates in the tenant.'),
+    notes: zOpenApi.string().max(2000).nullable().optional().describe('Note for your team; never copied onto tickets.'),
+    title: zOpenApi.string().min(1).max(500).describe('Title the created ticket gets. May contain {{client}}, {{contact}}, {{due_date}}, {{month}} and {{year}}, which are filled in per ticket; any other {{token}} is rejected.'),
+    description: zOpenApi.string().nullable().optional().describe('Ticket description (plain text or serialized BlockNote JSON).'),
+    client_id: zOpenApi.string().guid().nullable().optional().describe('Client the template belongs to. Omit or null to offer it for every client; set it to offer the template only on that client\u2019s tickets. Resolve the UUID with GET /api/v1/clients first.'),
+    board_id: zOpenApi.string().guid().nullable().optional().describe('Board the created ticket lands on. Resolve with GET /api/v1/boards first.'),
+    category_id: zOpenApi.string().guid().nullable().optional().describe('Category on that board; a subcategory requires its parent category.'),
+    subcategory_id: zOpenApi.string().guid().nullable().optional(),
+    priority_id: zOpenApi.string().guid().nullable().optional().describe('Priority. Resolve with GET /api/v1/tickets/priorities first.'),
+    itil_impact: zOpenApi.number().int().min(1).max(5).nullable().optional(),
+    itil_urgency: zOpenApi.number().int().min(1).max(5).nullable().optional(),
+    tags: zOpenApi.array(zOpenApi.string().min(1).max(100)).max(50).optional().describe('Tag text applied to the created ticket (tag definitions are created as needed).'),
+    custom_fields: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional().describe('Custom field values copied onto the ticket.'),
+    offer_for_manual_use: zOpenApi.boolean().optional().describe('Whether the template is offered for manual ticket creation. Defaults to true; turn it off for templates only recurring schedules use.'),
+    checklist: zOpenApi.array(TicketTemplateChecklistItem).max(200).optional().describe('The whole checklist, in order. On update this list replaces the stored items.'),
+  };
+  const TicketTemplateCreateBody = registry.registerSchema(
+    'WorkV1TicketTemplateCreateBody',
+    zOpenApi.object(ticketTemplateBodyShape),
+  );
+  const TicketTemplateUpdateBody = registry.registerSchema(
+    'WorkV1TicketTemplateUpdateBody',
+    zOpenApi.object({
+      ...ticketTemplateBodyShape,
+      is_active: zOpenApi.boolean().optional().describe('Activate or deactivate the template. Deactivating only hides it from manual use; recurring schedules keep running.'),
+    }),
+  );
+  const TicketTemplateInstantiateBody = registry.registerSchema(
+    'WorkV1TicketTemplateInstantiateBody',
+    zOpenApi.object({
+      client_id: zOpenApi.string().guid().describe('Client the ticket is for. A template bound to another client is refused with 400.'),
+      contact_name_id: zOpenApi.string().guid().nullable().optional().describe('Requester contact; must belong to client_id. Also fills the {{contact}} title token.'),
+      location_id: zOpenApi.string().guid().nullable().optional().describe('Client location; must belong to client_id.'),
+      asset_ids: zOpenApi.array(zOpenApi.string().guid()).max(50).optional().describe('Assets to link to the ticket; each must belong to client_id.'),
+      assigned_to: zOpenApi.string().guid().nullable().optional().describe('Primary assignee. Defaults to unassigned.'),
+      status_id: zOpenApi.string().guid().nullable().optional().describe("Status for the new ticket; must belong to the template's board. Defaults to that board's default status."),
+      due_date: zOpenApi.string().nullable().optional().describe('Due date, ISO date (YYYY-MM-DD) or date-time. Also fills the {{due_date}}, {{month}} and {{year}} title tokens.'),
+      suppressContactNotifications: zOpenApi.boolean().optional().describe('Create the ticket without notifying the customer.'),
+      suppressInternalNotifications: zOpenApi.boolean().optional().describe('Also skip internal notifications. Requires suppressContactNotifications=true.'),
+    }),
+  );
+
+  const templateExt = (action: string) => ({ 'x-tenant-scoped': true, 'x-rbac-resource': 'ticket_template', 'x-rbac-action': action });
+
+  registry.registerRoute({
+    method: 'get', path: '/api/v1/tickets/templates',
+    summary: 'List ticket templates',
+    description: 'Returns the tenant ticket templates: the ticket fields, tags, custom fields and checklist each one produces, with how many recurring schedules and tickets use it. Filter with client_id to see what one client can use (its own templates plus the tenant-wide ones). Use a template with POST /api/v1/tickets/templates/{templateId}/instantiate instead of creating a ticket and then adding its checklist item by item.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { query: TicketTemplateListQuery },
+    responses: {
+      200: { description: 'Ticket templates.', schema: ApiPaginated },
+      400: { description: 'Query validation failure.', schema: ApiError },
+      401: { description: 'API key missing/invalid.', schema: ApiError },
+      403: { description: 'RBAC denied for ticket_template read.', schema: ApiError },
+      500: { description: 'Unexpected controller/service failure.', schema: ApiError },
+    },
+    extensions: templateExt('read'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post', path: '/api/v1/tickets/templates',
+    summary: 'Create a ticket template',
+    description: 'Creates a reusable ticket template with its whole checklist in one request. Resolve client_id, board_id, category_id and priority_id to UUIDs first (GET /api/v1/clients, /api/v1/boards, /api/v1/categories, /api/v1/tickets/priorities); a reference that does not exist is refused with 400. Leave client_id out for a template every client can use. A second active template with the same name returns 409.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { body: { schema: TicketTemplateCreateBody } },
+    responses: {
+      201: { description: 'Ticket template created, with its checklist.', schema: ApiSuccess },
+      400: { description: 'Validation failure or a field that points at something that does not exist.', schema: ApiError },
+      401: { description: 'API key missing/invalid.', schema: ApiError },
+      403: { description: 'RBAC denied for ticket_template create.', schema: ApiError },
+      409: { description: 'Another active template already has this name.', schema: ApiError },
+      500: { description: 'Unexpected controller/service failure.', schema: ApiError },
+    },
+    extensions: templateExt('create'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get', path: '/api/v1/tickets/templates/{templateId}',
+    summary: 'Get a ticket template',
+    description: 'Returns one ticket template with its checklist items in order, its client scope, usage counts, and referenceProblems: fields pointing at a board, category or priority that no longer exists (they are left blank when the template is applied).',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: TicketTemplateParams },
+    responses: {
+      200: { description: 'The ticket template.', schema: ApiSuccess },
+      400: { description: 'Invalid template id.', schema: ApiError },
+      401: { description: 'API key missing/invalid.', schema: ApiError },
+      403: { description: 'RBAC denied for ticket_template read.', schema: ApiError },
+      404: { description: 'Ticket template not found.', schema: ApiError },
+      500: { description: 'Unexpected controller/service failure.', schema: ApiError },
+    },
+    extensions: templateExt('read'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'put', path: '/api/v1/tickets/templates/{templateId}',
+    summary: 'Update a ticket template',
+    description: 'Replaces the template wholesale: omitted fields are reset and the checklist you send replaces the stored items, so GET the template first and send it back edited. `is_active` activates or deactivates it (deactivating only hides it from manual use; recurring schedules keep running). Changes apply to every schedule that uses the template, from the next ticket each one creates.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: TicketTemplateParams, body: { schema: TicketTemplateUpdateBody } },
+    responses: {
+      200: { description: 'The updated ticket template.', schema: ApiSuccess },
+      400: { description: 'Validation failure or a field that points at something that does not exist.', schema: ApiError },
+      401: { description: 'API key missing/invalid.', schema: ApiError },
+      403: { description: 'RBAC denied for ticket_template update.', schema: ApiError },
+      404: { description: 'Ticket template not found.', schema: ApiError },
+      409: { description: 'Another active template already has this name.', schema: ApiError },
+      500: { description: 'Unexpected controller/service failure.', schema: ApiError },
+    },
+    extensions: { ...templateExt('update'), 'x-chat-approval-required': true }, edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'delete', path: '/api/v1/tickets/templates/{templateId}',
+    summary: 'Delete a ticket template',
+    description: 'Deletes the template and its checklist items. Tickets already created from it are not changed. Refused with 409 while any non-archived recurring schedule still uses it; point those schedules at another template or archive them first, or deactivate the template instead (PUT with is_active=false).',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: TicketTemplateParams },
+    responses: {
+      204: { description: 'Ticket template deleted; no content.', emptyBody: true },
+      400: { description: 'Invalid template id.', schema: ApiError },
+      401: { description: 'API key missing/invalid.', schema: ApiError },
+      403: { description: 'RBAC denied for ticket_template delete.', schema: ApiError },
+      404: { description: 'Ticket template not found.', schema: ApiError },
+      409: { description: 'Recurring schedules still use the template.', schema: ApiError },
+      500: { description: 'Unexpected controller/service failure.', schema: ApiError },
+    },
+    extensions: { ...templateExt('delete'), 'x-chat-approval-required': true }, edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post', path: '/api/v1/tickets/templates/{templateId}/instantiate',
+    summary: 'Create a ticket from a ticket template',
+    description: 'Creates one ticket from the template and returns it, exactly as POST /api/v1/tickets does. The template supplies the title (with its {{client}}/{{contact}}/{{due_date}} tokens filled in), description, board, category, priority, ITIL values, tags, custom fields and every checklist item, and the ticket records created_from_template_id. Prefer this over POST /api/v1/tickets followed by one POST /api/v1/tickets/{id}/checklist per item whenever a template exists. Requires ticket:create as well as ticket_template:read. Resolve client_id (and contact_name_id, location_id, assigned_to) to UUIDs first; a contact, location or asset that does not belong to client_id, a status that is not on the template\u2019s board, or a template bound to a different client are all refused with 400.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: TicketTemplateParams, body: { schema: TicketTemplateInstantiateBody } },
+    responses: {
+      201: { description: 'The created ticket.', schema: ApiSuccess },
+      400: { description: 'Validation failure, a reference that does not belong to the client, or a template bound to another client.', schema: ApiError },
+      401: { description: 'API key missing/invalid.', schema: ApiError },
+      403: { description: 'RBAC denied for ticket create or ticket_template read.', schema: ApiError },
+      404: { description: 'Ticket template or client not found.', schema: ApiError },
+      500: { description: 'Unexpected controller/service failure.', schema: ApiError },
+    },
+    extensions: { ...templateExt('read'), 'x-rbac-additional-required': 'ticket:create', 'x-chat-approval-required': true },
+    edition: 'both',
   });
 
   registry.registerRoute({
@@ -1492,5 +1712,124 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     request: { params: IdParam, body: { schema: TicketMaterialBody } },
     responses: ticketStdResponses({ code: 201, description: 'Material added.' }),
     extensions: ticketExt('update'), edition: 'both',
+  });
+
+  // ==========================================================================
+  // Time period settings - /api/v1/time-period-settings
+  // ==========================================================================
+  const TimePeriodSettingsSchema = registry.registerSchema('WorkV1TimePeriodSettings', timePeriodSettingsResponseSchema);
+  const TimePeriodSettingsResponse = registry.registerSchema(
+    'WorkV1TimePeriodSettingsResponse',
+    zOpenApi.object({ data: TimePeriodSettingsSchema }),
+  );
+  const TimePeriodSettingsListResponse = registry.registerSchema(
+    'WorkV1TimePeriodSettingsListResponse',
+    zOpenApi.object({ data: zOpenApi.array(TimePeriodSettingsSchema) }),
+  );
+  const TimePeriodSettingsCreateBody = registry.registerSchema('WorkV1TimePeriodSettingsCreateBody', createTimePeriodSettingsSchema);
+  const TimePeriodSettingsUpdateBody = registry.registerSchema('WorkV1TimePeriodSettingsUpdateBody', updateTimePeriodSettingsSchema);
+
+  const timePeriodSettingsExtensions = (action: 'read' | 'manage') => ({
+    'x-tenant-scoped': true,
+    'x-auth-mechanism': 'x-api-key validated in ApiTimeSheetController',
+    'x-tenant-header': 'x-tenant-id (optional; inferred from API key when omitted)',
+    'x-rbac-resource': 'time_period',
+    'x-rbac-action': action,
+  });
+  const timePeriodSettingsCommonErrors = {
+    401: { description: 'API key missing/invalid or associated user missing.', schema: ApiError },
+    403: { description: 'Permission denied (time_period:manage for writes, time_period:read for reads).', schema: ApiError },
+    500: { description: 'Unexpected failure.', schema: ApiError },
+  };
+  const timePeriodSettingsNotFound = { description: 'Time period settings not found.', schema: ApiError };
+  const timePeriodSettingsOverlap = {
+    description: 'The setting overlaps an active setting (same or conflicting period cells over intersecting effective dates). Nothing is written; explicit dates are never adjusted.',
+    schema: ApiError,
+  };
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/time-period-settings',
+    summary: 'List time period settings',
+    description: 'Returns every time period setting for the tenant, active or not, newest effective_from first. Settings drive time period generation.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    responses: {
+      200: { description: 'Time period settings.', schema: TimePeriodSettingsListResponse },
+      ...timePeriodSettingsCommonErrors,
+    },
+    extensions: timePeriodSettingsExtensions('read'),
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/time-period-settings',
+    summary: 'Create time period settings',
+    description: 'Creates an active time period setting. When effective_from is omitted it defaults to the start of the period containing today in the caller\'s timezone; if an earlier setting ended on or after that day, the new setting starts the day after it ended (the default may then be in the future). An explicit effective_from is used as given. Returns 409 when the setting overlaps an active setting.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { body: { schema: TimePeriodSettingsCreateBody } },
+    responses: {
+      201: { description: 'Setting created.', schema: TimePeriodSettingsResponse },
+      400: { description: 'Validation failure (field ranges, effective_to before effective_from).', schema: ApiError },
+      409: timePeriodSettingsOverlap,
+      ...timePeriodSettingsCommonErrors,
+    },
+    extensions: timePeriodSettingsExtensions('manage'),
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/time-period-settings/{id}',
+    summary: 'Get time period settings',
+    description: 'Gets one time period setting by time_period_settings_id.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam },
+    responses: {
+      200: { description: 'Time period setting.', schema: TimePeriodSettingsResponse },
+      404: timePeriodSettingsNotFound,
+      ...timePeriodSettingsCommonErrors,
+    },
+    extensions: timePeriodSettingsExtensions('read'),
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'put',
+    path: '/api/v1/time-period-settings/{id}',
+    summary: 'Update time period settings',
+    description: 'Applies a partial update. The merged setting is validated like a create and returns 409 when it overlaps another active setting. effective_to: null clears the end date; is_active: false takes the setting out of period generation and overlap checks.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam, body: { schema: TimePeriodSettingsUpdateBody } },
+    responses: {
+      200: { description: 'Updated setting.', schema: TimePeriodSettingsResponse },
+      400: { description: 'Validation failure.', schema: ApiError },
+      404: timePeriodSettingsNotFound,
+      409: timePeriodSettingsOverlap,
+      ...timePeriodSettingsCommonErrors,
+    },
+    extensions: timePeriodSettingsExtensions('manage'),
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'delete',
+    path: '/api/v1/time-period-settings/{id}',
+    summary: 'Delete time period settings',
+    description: 'Deletes a time period setting. Time periods it already generated are kept.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam },
+    responses: {
+      204: { description: 'Deleted.', emptyBody: true },
+      404: timePeriodSettingsNotFound,
+      ...timePeriodSettingsCommonErrors,
+    },
+    extensions: timePeriodSettingsExtensions('manage'),
+    edition: 'both',
   });
 }
