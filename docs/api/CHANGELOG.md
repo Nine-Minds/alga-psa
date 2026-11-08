@@ -2,6 +2,23 @@
 
 Notable, externally visible changes to the Alga PSA REST API, newest first.
 
+## 2026-11-07 — Contracts API: client assignment on create, full CRUD, and assignment routes
+
+**Affected endpoints:** `POST /api/v1/contracts`; new `GET|PUT|PATCH|DELETE /api/v1/contracts/{contractId}`; new `GET|POST /api/v1/contracts/{contractId}/assignments` and `GET|PUT|PATCH|DELETE /api/v1/contracts/{contractId}/assignments/{clientContractId}`
+
+A contract only shows up in **Billing > Client Contracts** when it has a client assignment (a `client_contracts` row). The old `POST /contracts` wrote the contract header alone, so contracts created over REST existed but were invisible in the product. The contracts API now creates contracts the way the UI wizard does and exposes the assignment as its own sub-resource.
+
+**Changes:**
+
+- `POST /contracts` now **requires** `client_id` and `start_date` (missing either returns `400`). In one transaction it writes the contract header, the client assignment, and any contract lines passed in the optional `lines` array (`contract_line_id`, optional `custom_rate`, `display_order`; up to 100). If any line is invalid, nothing is written. The body also accepts the assignment terms the wizard stores: `billing_profile_id`, `renewal_mode` (`none`/`manual`/`auto`), `notice_period_days`, `renewal_term_months`, `use_tenant_renewal_defaults`, the `renewal_ticket_*` and `renewal_due_date_action_policy` settings, and `po_required`/`po_number`/`po_amount`. `start_date` and `end_date` accept a full ISO datetime or a plain `YYYY-MM-DD`.
+- `GET /contracts/{contractId}` returns the contract with its assignments and contract lines (`404` if unknown).
+- `PUT /contracts/{contractId}` (and its alias `PATCH`) updates header fields only: `contract_name`, `contract_description`, `billing_frequency`, `status`, `is_active`. The body is strict, so sending `client_id` or `owner_client_id` returns `400`; ownership is not editable, matching the UI. The UI's rules apply: a system-managed contract returns `422`, and invoiced or expired restrictions return `409`.
+- `DELETE /contracts/{contractId}` returns `204`, or `409` when invoices reference the contract, `422` for a system-managed default contract, and `404` when it does not exist.
+- **Assignments:** `POST /contracts/{contractId}/assignments` assigns an existing contract to its owning client (`client_id` defaults to, and must equal, the owner). A second assignment returns `409` with the existing `client_contract_id`. `PUT`/`PATCH` on an assignment updates dates, renewal and PO terms; `is_active: true` activates a draft assignment **and** its contract header, like **Set to Active** in the UI. `DELETE` on an assignment returns `204`, or `409` when invoices reference it (end it with an update instead).
+- **HATEOAS links** in contract responses now point at real routes. Links no longer double the path (`/contracts/contracts/{id}`), and no `patch` link is advertised where no PATCH route exists. `/contract-lines` item links also resolve.
+
+**Migration note:** Contracts created through the old API without a client assignment are still invisible in the UI. Repair each one with `POST /api/v1/contracts/{contractId}/assignments` (with a `start_date`); it then appears under **Billing > Client Contracts**. Update any client that relied on `client_id` being the only required field to also send `start_date`.
+
 ## 2026-11-03 — Ticket templates over REST (and MCP)
 
 **New endpoints:** `GET|POST /api/v1/tickets/templates`, `GET|PUT|DELETE /api/v1/tickets/templates/{templateId}`, `POST /api/v1/tickets/templates/{templateId}/instantiate`
