@@ -2534,7 +2534,7 @@
       },
       "preflight": {
         "title": "Vérification préalable",
-        "description": "Une simulation qui valide chaque enregistrement préparé pour ce locataire et votre configuration. La vérification préalable ne crée rien.",
+        "description": "Une simulation qui valide chaque enregistrement préparé par rapport à ce locataire et à votre configuration. La vérification préalable ne crée rien.",
         "errors": {
           "loadReport": "Impossible de charger le rapport de vérification préalable.",
           "runFailed": "Impossible d’exécuter la vérification préalable.",
@@ -2563,7 +2563,7 @@
         "blockedWithIssues_one": "La migration ne peut pas être exécutée : {{count}} problème bloquant doit d’abord être résolu.",
         "blockedWithIssues_other": "La migration ne peut pas être exécutée : {{count}} problèmes bloquants doivent d’abord être résolus.",
         "blockedNoPreflight": "La migration ne peut pas être exécutée tant qu’une vérification préalable n’a pas réussi sans problème bloquant.",
-        "needsConfiguration": "La migration pourra être exécutée une fois la vérification préalable de la configuration enregistrée réussie.",
+        "needsConfiguration": "La migration pourra être exécutée dès qu’une vérification préalable de la configuration enregistrée aura réussi.",
         "starting": "Démarrage…",
         "runMigration": "Exécuter la migration",
         "recordsAffected_one": "{{count}} enregistrement concerné",
@@ -2637,7 +2637,7 @@
           "ticketComments": "Commentaires des tickets"
         },
         "productsHint": "Les prix et coûts sont lus comme des montants décimaux (par exemple 1,299.50) avec la colonne de devise si elle existe, sinon avec la devise du locataire. Les montants négatifs, non numériques ou trop précis sont supprimés et signalés ; la ligne est tout de même importée. Les produits sont associés aux produits existants par SKU ; les lignes de la liste fournisseur référencent un produit par SKU et créent ou associent le fournisseur par son nom.",
-        "headersHint": "Les en-têtes canoniques sont reconnus automatiquement. Les autres colonnes peuvent être associées à des champs personnalisés de type d’actif lors de la configuration. Les contacts acceptent les libellés usuels de nom, prénom, nom de famille, e-mail, téléphone, titre et client ; les anciens libellés d’actifs, comme le nom de l’actif, le type d’actif et le numéro de série, sont conservés dans le processus AMP."
+        "headersHint": "Les en-têtes canoniques sont reconnus automatiquement. Les autres colonnes peuvent être associées à des champs personnalisés de type d’actif lors de l’étape de configuration. Les contacts acceptent les graphies anglaises courantes, par exemple name, first_name, last_name, email, phone, title et client ; les anciens noms de colonnes d’actifs comme asset_name, asset_type et serial_number sont conservés dans le processus AMP."
       },
       "configure": {
         "products": {
@@ -2687,7 +2687,7 @@
           "defaultClient": "Client par défaut pour les enregistrements orphelins",
           "defaultClientHelp": "Les contacts et actifs dont l’organisation ne peut pas être identifiée sont rattachés à ce client."
         },
-        "saved": "Configuration enregistrée. Exécutez la vérification préalable pour la valider avec les enregistrements préparés.",
+        "saved": "Configuration enregistrée. Exécutez la vérification préalable pour la valider par rapport aux enregistrements préparés.",
         "saving": "Enregistrement…",
         "save": "Enregistrer la configuration"
       },
@@ -2713,7 +2713,7 @@
         "tooLarge": "La taille des paquets de migration ne doit pas dépasser {{megabytes}} Mo.",
         "fileLabel": "Paquet ou feuille de calcul",
         "fileHint": "AMP (.amp) ou CSV/XLSX, jusqu’à {{megabytes}} Mo. Les feuilles de calcul sont converties en paquet AMP avant la préparation ; rien n’est importé tant que vous n’exécutez pas la migration.",
-        "entityLabel": "Les enregistrements de la feuille de calcul représentent",
+        "entityLabel": "Type d’enregistrements de la feuille de calcul",
         "rejected": "Le paquet a été rejeté et aucun enregistrement n’a été préparé. Corrigez ces problèmes dans le paquet source et téléversez-le à nouveau :",
         "stagedWithDiagnostics": "Le paquet a été préparé, mais certaines données sources nécessitent votre attention avant l’exécution de l’import :",
         "continueToConfigure": "Passer à la configuration",
@@ -3307,11 +3307,11 @@
       "adminLocked": "Les autorisations du rôle administrateur ne peuvent pas être modifiées",
       "permissionsUpdated": "Autorisations mises à jour avec succès"
     },
-    "title": "Gérer les permissions",
-    "description": "Configurer les permissions d’accès pour les différents rôles et ressources",
-    "selectPrompt": "Veuillez sélectionner un rôle ou une ressource pour gérer les permissions",
+    "title": "Gérer les autorisations",
+    "description": "Configurez les autorisations d’accès pour les différents rôles et ressources",
+    "selectPrompt": "Veuillez sélectionner un rôle ou une ressource pour gérer les autorisations",
     "unsavedChanges": "Vous avez des modifications non enregistrées",
-    "adminLockedTooltip": "Les permissions du rôle administrateur sont définies par le système et ne peuvent pas être modifiées",
+    "adminLockedTooltip": "Les autorisations du rôle administrateur sont définies par le système et ne peuvent pas être modifiées",
     "none": "Aucune",
     "actionCount_one": "{{count}} action",
     "actionCount_other": "{{count}} actions",
@@ -3339,21 +3339,21 @@
       "saving": "Enregistrement..."
     },
     "confirm": {
-      "title": "Confirmer les modifications des permissions",
-      "message": "Voulez-vous vraiment enregistrer ces modifications des permissions ?",
+      "title": "Confirmer les modifications d’autorisations",
+      "message": "Voulez-vous vraiment enregistrer ces modifications d’autorisations ?",
       "confirmLabel": "Enregistrer les modifications"
     },
     "stats": {
-      "empty": "Sélectionnez un rôle ou une ressource pour consulter les permissions",
+      "empty": "Sélectionnez un rôle ou une ressource pour consulter les autorisations",
       "rolesForResource_one": "{{count}} rôle pour {{resource}}",
       "rolesForResource_other": "{{count}} rôles pour {{resource}}",
-      "resourcesAndPermissions": "{{count}} ressources • {{assigned}}/{{total}} permissions"
+      "resourcesAndPermissions": "{{count}} ressources • {{assigned}}/{{total}} autorisations"
     },
     "errors": {
-      "fetchPermissions": "Impossible de récupérer les permissions",
+      "fetchPermissions": "Impossible de récupérer les autorisations",
       "fetchRoles": "Impossible de récupérer les rôles",
-      "fetchRolePermissions": "Impossible de récupérer les permissions du rôle",
-      "savePermissions": "Impossible d’enregistrer les permissions"
+      "fetchRolePermissions": "Impossible de récupérer les autorisations du rôle",
+      "savePermissions": "Impossible d’enregistrer les autorisations"
     }
   },
   "sla": {
@@ -3645,7 +3645,7 @@
     },
     "businessHours": {
       "title": "Plannings des heures ouvrées",
-      "description": "Définir les horaires de disponibilité de votre équipe d’assistance pour le calcul des SLA",
+      "description": "Définissez les horaires de disponibilité de votre équipe d’assistance pour le calcul des SLA",
       "loading": "Chargement des plannings des heures ouvrées...",
       "default": "Par défaut",
       "recurring": "Récurrent",
@@ -3698,7 +3698,7 @@
       },
       "fields": {
         "scheduleName": "Nom du planning *",
-        "scheduleNamePlaceholder": "Ex. : heures ouvrées habituelles",
+        "scheduleNamePlaceholder": "Ex. : Heures ouvrées standard",
         "timezone": "Fuseau horaire *",
         "is24x7": "Planning 24 h/24, 7 j/7 (toujours disponible)",
         "isDefault": "Définir comme planning par défaut",
