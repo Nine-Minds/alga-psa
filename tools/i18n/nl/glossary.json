@@ -2218,6 +2218,9 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "Urgent",
+      "Ticket {{number}}",
+      "Project {{number}}",
       "Items",
       "Stopwatch",
       "{{field}}: {{from}} → {{to}}",
