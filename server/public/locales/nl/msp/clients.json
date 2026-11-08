@@ -1629,11 +1629,11 @@
         },
         "durationHours": {
           "label": "Duur in uren",
-          "helper": "Aantal uren van de interactieduur"
+          "helper": "Duur van de interactie in uren"
         },
         "durationMinutes": {
           "label": "Duur in minuten",
-          "helper": "Aantal minuten van de interactieduur"
+          "helper": "Duur van de interactie in minuten"
         },
         "duration": "Duur",
         "hours": "uur",
