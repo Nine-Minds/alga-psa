@@ -16,6 +16,9 @@ const h = vi.hoisted(() => {
       whereIn(_column: string, _values: unknown[]) {
         return query;
       },
+      orderBy(_column: string, _direction?: 'asc' | 'desc') {
+        return query;
+      },
       select<T>(...columns: string[]): Promise<T> {
         const rows = (dbState[table] ?? []).filter((row) =>
           filters.every((where) => Object.entries(where).every(([key, value]) => row[key] === value))
@@ -136,6 +139,7 @@ describe('isAssetActionAllowed', () => {
 
   it('does not narrow an action the bundle has no rule for', async () => {
     h.dbState.asset_associations = [];
-    expect(await isAssetActionAllowed({} as any, 'tenant-a', context(), { asset_id: 'asset-3', client_id: 'client-z' }, 'delete')).toBe(true);
+    // The missing delete rule leaves that action unrestricted, but the asset must still be readable.
+    expect(await isAssetActionAllowed({} as any, 'tenant-a', context(), { asset_id: 'asset-3', client_id: 'client-a' }, 'delete')).toBe(true);
   });
 });

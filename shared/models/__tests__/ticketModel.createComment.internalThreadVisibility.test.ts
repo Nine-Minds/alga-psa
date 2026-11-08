@@ -4,7 +4,10 @@ import { TicketModel } from '../ticketModel';
 // alga-2026-0002798: a client/contact author can never create an internal comment,
 // whatever the parent thread is, and response_state keys off the stored visibility.
 
+const registerAfterCommitMock = vi.hoisted(() => vi.fn());
+
 vi.mock('@alga-psa/db', () => ({
+  registerAfterCommit: registerAfterCommitMock,
   tenantDb: (conn: any, _tenant: string) => ({
     table: (name: string) => conn(name),
     tenantJoin: (query: any, table: string, left: string, right: string) => query.join?.(table, left, right) ?? query,
@@ -41,6 +44,7 @@ function harness(parentThreadIsInternal: boolean) {
     if (table === 'ticket_comment_attachments') return { where: () => ({ orderBy: () => ({ forUpdate: async () => [] }) }) };
     if (table === 'tickets') {
       return {
+        select: () => ({ where: () => ({ first: async () => ({ response_state: null }) }) }),
         where: vi.fn(() => ({
           first: vi.fn().mockResolvedValue({ ticket_id: ticketId }),
           update: vi.fn(async (data: any) => { ticketUpdates.push(data); return 1; }),

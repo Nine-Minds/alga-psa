@@ -6,7 +6,8 @@
  */
 
 // Provider types
-export type RmmProvider = 'ninjaone' | 'tacticalrmm' | 'tanium' | 'levelio' | 'datto' | 'connectwise_automate' | 'huntress';
+// LEVERAGE: pattern rmm-provider-union — RmmProvider is duplicated in three files; every new provider edits all of them
+export type RmmProvider = 'ninjaone' | 'tacticalrmm' | 'tanium' | 'levelio' | 'unifi' | 'datto' | 'connectwise_automate' | 'huntress';
 export type RmmSyncStatus = 'pending' | 'syncing' | 'completed' | 'error';
 export type RmmAlertSeverity = 'critical' | 'major' | 'moderate' | 'minor' | 'none';
 export type RmmAlertStatus = 'active' | 'acknowledged' | 'resolved' | 'auto_resolved';

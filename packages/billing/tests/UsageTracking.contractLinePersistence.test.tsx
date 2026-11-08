@@ -22,7 +22,6 @@ const actionMocks = vi.hoisted(() => ({
   deleteUsageRecord: vi.fn(),
   getUsageRecords: vi.fn(),
   getEligibleContractLinesForUI: vi.fn(),
-  getAllClientsForBilling: vi.fn(),
   getRemainingBucketUnits: vi.fn(),
 }));
 
@@ -36,7 +35,6 @@ vi.mock('../src/actions/usageActions', () => ({
 }));
 
 vi.mock('@alga-psa/billing/actions/billingClientsActions', () => ({
-  getAllClientsForBilling: actionMocks.getAllClientsForBilling,
 }));
 
 vi.mock('@alga-psa/reporting/actions/report-actions/getRemainingBucketUnits', () => ({
@@ -129,8 +127,9 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
-  ClientPicker: ({ onSelect }: any) => (
-    <button type="button" data-testid="pick-client" onClick={() => onSelect('client-1')}>
+  ClientPicker: ({ id, onSelect }: any) => (
+    // The list filter and the Add Usage dialog each render a picker; only the dialog's is `pick-client`.
+    <button type="button" data-testid={id === 'client-filter' ? 'pick-client-filter' : 'pick-client'} onClick={() => onSelect('client-1')}>
       pick client
     </button>
   ),
@@ -202,9 +201,6 @@ const sameNamedLines = [
 describe('UsageTracking add-usage: contract-line persistence and default date', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    actionMocks.getAllClientsForBilling.mockResolvedValue([
-      { client_id: 'client-1', client_name: 'Solutions by Swift' },
-    ]);
     actionMocks.getUsageRecords.mockResolvedValue([]);
     actionMocks.getRemainingBucketUnits.mockResolvedValue([]);
     actionMocks.getEligibleContractLinesForUI.mockResolvedValue(sameNamedLines);

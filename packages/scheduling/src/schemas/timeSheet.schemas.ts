@@ -111,3 +111,9 @@ export const timeEntrySchema = tenantSchema.extend({
   latest_change_request: timeEntryChangeRequestSchema.optional(),
   change_request_state: timeEntryChangeRequestStateSchema.nullable().optional(),
 });
+
+/**
+ * Read-side only: a stored row may carry a work item type a registered time source owns. Writes keep the strict
+ * `timeEntrySchema`, so a type no source admitted is still rejected on save.
+ */
+export const timeEntryReadSchema = timeEntrySchema.extend({ work_item_type: z.string() });

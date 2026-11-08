@@ -22,7 +22,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({ t: (_k: string, o: any) => o?.defaultValue ?? _k }),
 }));
 vi.mock('@alga-psa/user-composition/hooks', () => ({
-  useUserPreference: (_k: string, opts: any) => ({ value: opts.defaultValue, setValue: mocks.setSaved, hasLoadedInitial: true }),
+  useUserPreference: (_k: string, opts: any) => ({ value: opts.defaultValue, setValue: mocks.setSaved, hasLoadedInitial: true, hasResolved: true }),
 }));
 vi.mock('@alga-psa/ui/components/Card', () => ({
   Card: ({ children }: any) => <div>{children}</div>,

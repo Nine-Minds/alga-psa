@@ -1,6 +1,7 @@
 import logger from '@alga-psa/core/logger';
 import { CO_MANAGED_LEDGER, finishDelivery, claimDelivery } from '@shared/lib/deliveryLedger';
 import type { CoManagedDeliveryProvider, RoutingDelivery } from '@shared/lib/coManagedDelivery';
+import { projectCoManagedNotificationSnapshot } from '@alga-psa/co-managed/sharedWorkProjection';
 import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions';
 import { getConnection } from '../db/db';
 import { sendEventEmail } from './sendEventEmail';
@@ -17,7 +18,8 @@ const HEADLINE: Record<RoutingDelivery['event'], (d: RoutingDelivery) => string>
 };
 
 const baseUrl = () => (process.env.NEXTAUTH_URL || 'http://localhost:3000').replace(/\/$/, '');
-const ledgerKey = (d: RoutingDelivery) => ({ delivery_kind: d.deliveryKind, source_id: d.sourceId, recipient: (d.recipient.email ?? d.recipient.principalId) });
+// Keyed on the stored row (`ledgerRecipient`), not the current send address, so claim/finish match the pending row.
+const ledgerKey = (d: RoutingDelivery) => ({ delivery_kind: d.deliveryKind, source_id: d.sourceId, recipient: (d.ledgerRecipient ?? d.recipient.email ?? d.recipient.principalId) });
 
 /**
  * Deliver ONE owed routing row. Safe to call any number of times, concurrently or after a crash:
@@ -29,12 +31,20 @@ export async function deliverRoutingRow(d: RoutingDelivery): Promise<'sent' | 's
   const key = ledgerKey(d);
   if (!d.allowed) {
     // The recipient's current policy no longer admits them: a completed (skipped) delivery, not a retry.
-    if (await claimDelivery(await getConnection(d.tenant), CO_MANAGED_LEDGER, d.tenant, key)) {
+    if (await claimDelivery(await getConnection(d.tenant), CO_MANAGED_LEDGER, d.tenant, key, { recipient_kind: d.recipient.kind })) {
+      // (recipient_kind is NOT NULL: the claim INSERT is evaluated before the conflict on the stored pending row.)
       await finishDelivery(await getConnection(d.tenant), CO_MANAGED_LEDGER, d.tenant, key, 'sent', { errorCode: 'recipient_not_permitted' });
     }
     return 'skipped';
   }
-  const data = { actorName: d.actorName, actorOrganization: d.actorOrganization, ticketNumber: d.ticketNumber, ticketTitle: d.ticketTitle };
+  const projection = projectCoManagedNotificationSnapshot(d.recipient.redactedFields ?? [], {
+    ticketTitle: d.ticketTitle, ticketNumber: d.ticketNumber, actorName: d.actorName, actorOrganization: d.actorOrganization,
+  });
+  const ticketTitle = projection.ticketTitle ?? 'Shared ticket';
+  const ticketNumber = projection.ticketNumber ?? 'Shared ticket';
+  const actorName = projection.actorName ?? 'A team member';
+  const actorOrganization = projection.actorOrganization ?? '';
+  const data = { actorName, actorOrganization, ticketNumber, ticketTitle };
   const sponsorSide = d.recipient.kind === 'msp_user' || d.recipient.kind === 'team';
   const link = sponsorSide ? '/msp/co-managed' : `/msp/tickets/${d.ticketId}`;
   try {
@@ -47,9 +57,10 @@ export async function deliverRoutingRow(d: RoutingDelivery): Promise<'sent' | 's
     }
     await sendEventEmail({
       mailClass: 'ticket', tenantId: d.recipientTenant, to: d.recipient.email!, recipientUserId: d.recipient.principalId,
-      subject: HEADLINE[d.event](d), template: 'co-managed-routing', entityType: 'ticket', entityId: d.ticketId,
-      context: { routing: { headline: HEADLINE[d.event](d), body: `${d.actorName} (${d.actorOrganization}): ${d.ticketTitle}` },
-        ticket: { url: `${baseUrl()}${link}`, id: d.ticketNumber } },
+      subject: HEADLINE[d.event]({ ...d, actorName, ticketTitle, ticketNumber }), template: 'co-managed-routing', entityType: 'ticket', entityId: d.ticketId,
+      context: { routing: { headline: HEADLINE[d.event]({ ...d, actorName, ticketTitle, ticketNumber }), body: `${actorName}${actorOrganization ? ` (${actorOrganization})` : ''}: ${ticketTitle}` },
+        ticket: { url: `${baseUrl()}${link}`, id: ticketNumber } },
+      coManagedRouting: true,
       delivery: { ledger: CO_MANAGED_LEDGER, key, extra: { recipient_kind: d.recipient.kind }, ledgerTenant: d.tenant },
     });
     return 'sent';

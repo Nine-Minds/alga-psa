@@ -37,6 +37,12 @@ const common = {
 export const WARRANTY_TRACKS = ['standard', 'advance_replacement'] as const;
 export const warrantyTrackSchema = z.enum(WARRANTY_TRACKS);
 
+/**
+ * What a browser may send to open a claim. There is deliberately no `ticket_id`: zod strips unknown keys, so a
+ * supplied one is dropped before the core sees it. Only the open custody episode can link a ticket here, and the
+ * core authorizes that ticket. Linking a caller-chosen ticket is `openWarrantyClaimForTicketSchema`, used only
+ * through the composition layer's `openWarrantyClaimFromTicket`.
+ */
 export const openWarrantyClaimSchema = z.object({
   asset_id: uuid,
   reason: requiredText(RMA_NOTE_MAX, 'Describe what is wrong with the device'),
@@ -44,10 +50,15 @@ export const openWarrantyClaimSchema = z.object({
   rma_reference: optionalText(RMA_TEXT_MAX),
   /** Provisional until approval, which writes the final track. */
   rma_type: warrantyTrackSchema.default('standard'),
-  /** Optional ticket the claim belongs to; the composition layer verifies access. When absent, the open custody episode's ticket is used. */
-  ticket_id: uuid.nullish().transform((v) => v ?? null),
 });
-export type OpenWarrantyClaimInput = z.infer<typeof openWarrantyClaimSchema>;
+
+/** The ticket-aware variant: the caller names the ticket. The core still authorizes it. */
+export const openWarrantyClaimForTicketSchema = openWarrantyClaimSchema.extend({
+  ticket_id: uuid,
+});
+
+/** The core's input: `ticket_id` is only ever present when it came through the ticket-aware schema. */
+export type OpenWarrantyClaimInput = z.infer<typeof openWarrantyClaimSchema> & { ticket_id?: string | null };
 
 export const approveWarrantyClaimSchema = z.object({
   track: warrantyTrackSchema,
@@ -86,6 +97,22 @@ export const shipToVendorSchema = z.object({
 });
 export type ShipToVendorInput = z.infer<typeof shipToVendorSchema>;
 
+/**
+ * Advance-replacement dead-unit shipment. The vendor is the one already on the case, so there is no vendor field;
+ * `return_by` is the vendor's deadline for the dead unit and is optional (it falls back to the one set at approval).
+ */
+export const shipDeadUnitToVendorSchema = z.object({
+  carrier: requiredText(RMA_TEXT_MAX, 'Enter the carrier'),
+  tracking_number: requiredText(RMA_TEXT_MAX, 'Enter the tracking number'),
+  return_by: calendarDate.nullish().transform((v) => v ?? undefined),
+  ...common,
+});
+export type ShipDeadUnitToVendorInput = z.infer<typeof shipDeadUnitToVendorSchema>;
+
+/** `occurred_at` is when the vendor received the dead unit. */
+export const confirmVendorReceiptSchema = z.object({ ...common });
+export type ConfirmVendorReceiptInput = z.infer<typeof confirmVendorReceiptSchema>;
+
 const inboundShipping = {
   inbound_carrier: optionalText(RMA_TEXT_MAX),
   inbound_tracking_number: optionalText(RMA_TEXT_MAX),
@@ -99,6 +126,12 @@ export const receiveVendorReplacementSchema = z.object({
   model: optionalText(RMA_TEXT_MAX),
   manufacturer: optionalText(RMA_TEXT_MAX),
   warranty_end_date: calendarDate.nullish().transform((v) => v ?? null),
+  /**
+   * Advance track only: the vendor's ship-by date for the dead unit, counted from delivery of this replacement.
+   * Optional; omitted keeps the one set at approval. Ignored on the standard track, like the other fields that
+   * track does not use (the dead-unit leg does not exist there).
+   */
+  return_by: calendarDate.nullish().transform((v) => v ?? undefined),
   ...inboundShipping,
   ...common,
 });

@@ -35,6 +35,12 @@ vi.mock('@alga-psa/db', async () => {
   };
 });
 
+// The chip-tag hydration runs a real tag_mappings join the fake query builders here cannot serve.
+vi.mock('@alga-psa/tags/lib/loadDisplayTags', () => ({
+  loadDisplayTagsForEntities: vi.fn(async () => new Map()),
+  displayTagKey: (taggedType: string, id: string) => `${taggedType}:${id}`,
+}));
+
 vi.mock('@alga-psa/formatting/avatarUtils', () => ({
   getClientLogoUrl: vi.fn().mockResolvedValue('https://logo.example/acme.png'),
 }));
@@ -66,6 +72,7 @@ describe('ClientService.list response rows', () => {
       client_since: '2021-05-17',
       properties: { industry: 'IT' },
       logoUrl: 'https://logo.example/acme.png',
+      display_tags: [],
     }]);
   });
 });

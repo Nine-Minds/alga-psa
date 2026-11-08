@@ -1,3 +1,4 @@
+import { generateInvoiceForCycle } from '../../../test-utils/billingTestHelpers';
 import { beforeAll, afterAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -20,7 +21,6 @@ let db: Knex;
 let tenantId: string;
 let convertQuoteToDraftContract: typeof import('../../../../packages/billing/src/services/quoteConversionService').convertQuoteToDraftContract;
 let buildQuoteConversionPreview: typeof import('../../../../packages/billing/src/services/quoteConversionService').buildQuoteConversionPreview;
-let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoice;
 let activateClientContractForBilling: typeof import('@alga-psa/billing/actions/billingClientsActions').activateClientContractForBilling;
 let Quote: any;
 let QuoteItem: any;
@@ -155,7 +155,6 @@ describe('quote conversion: per-seat recurring services', () => {
     ({ convertQuoteToDraftContract, buildQuoteConversionPreview } = await import('../../../../packages/billing/src/services/quoteConversionService'));
     Quote = (await import('../../../../packages/billing/src/models/quote')).default;
     QuoteItem = (await import('../../../../packages/billing/src/models/quoteItem')).default;
-    ({ generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
     ({ activateClientContractForBilling } = await import('@alga-psa/billing/actions/billingClientsActions'));
   }, HOOK_TIMEOUT);
 
@@ -207,7 +206,7 @@ describe('quote conversion: per-seat recurring services', () => {
     expect(assignment.is_active).toBe(false);
     const activated: any = await activateClientContractForBilling(assignment.client_contract_id);
     expect(activated.actionError).toBeUndefined();
-    const invoice: any = await generateInvoice(januaryCycle);
+    const invoice: any = await generateInvoiceForCycle(januaryCycle);
     expect(invoice).toBeTruthy();
     // 20 x $100 + 30 x $50 + 2 x $200
     expect(Number(invoice.subtotal)).toBe(390000);

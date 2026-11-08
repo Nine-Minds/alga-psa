@@ -62,7 +62,27 @@ describe('nx workspace', () => {
     expect(stat.size).toBeGreaterThan(0);
   });
 
+  it('plans standalone database builds without application or worker tasks', { timeout: 180_000 }, async () => {
+    // LEVERAGE: pattern nx-build-plan-fixture — task graph fixtures repeat across build boundary checks
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-nx-db-build-'));
+    try {
+      const outFile = path.join(tmpDir, 'tasks.json');
+      await runNx(['run', '@alga-psa/db:build', '--graph', outFile]);
+      const graph = JSON.parse(fs.readFileSync(outFile, 'utf8'));
+      const targets = Object.values(graph.tasks.tasks).map((task: any) => task.target);
+      // Even test imports contribute Nx project edges. DB tests must not pull
+      // their application consumers back into the database build plan.
+      expect(targets).toContainEqual(expect.objectContaining({
+        project: '@alga-psa/db', target: 'build',
+      }));
+      expect(targets.some(target => ['server', 'sebastian-ee', 'temporal-workflows'].includes(target.project))).toBe(false);
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
   it('plans dependency builds without prematurely building the server', { timeout: 180_000 }, async () => {
+    // LEVERAGE: pattern nx-build-plan-fixture — task graph fixtures repeat across build boundary checks
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-nx-build-deps-'));
     try {
       const outFile = path.join(tmpDir, 'tasks.json');
@@ -87,6 +107,7 @@ describe('nx workspace', () => {
   });
 
   it('plans standalone integrations builds without pulling in the server', { timeout: 180_000 }, async () => {
+    // LEVERAGE: pattern nx-build-plan-fixture — task graph fixtures repeat across build boundary checks
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-nx-integrations-build-'));
     try {
       const outFile = path.join(tmpDir, 'tasks.json');

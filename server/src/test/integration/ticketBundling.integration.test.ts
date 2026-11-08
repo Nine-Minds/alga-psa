@@ -273,6 +273,45 @@ describe('Ticket bundling integration', () => {
     await db?.destroy().catch(() => undefined);
   });
 
+  it('getConsolidatedTicketData returns only the ticket client, never the tenant client list', async () => {
+    const tag = uuidv4().slice(0, 6);
+    const ticketClientName = `Only Client ${tag}`;
+    const ticketClientId = await createClient(db, tenantId, ticketClientName);
+    const otherClients: Array<{ id: string; name: string }> = [];
+    for (let i = 0; i < 4; i += 1) {
+      const name = `Unrelated Client ${tag} ${i}`;
+      otherClients.push({ id: await createClient(db, tenantId, name), name });
+    }
+
+    const ticketId = uuidv4();
+    await insertTicket(db, {
+      tenant: tenantId,
+      ticketId,
+      ticketNumber: `CLN-${tag}`,
+      title: 'Client list probe',
+      clientId: ticketClientId,
+      contactId: null as any,
+      statusId: statusOpenId,
+      priorityId,
+      boardId,
+    });
+
+    const data = await runWithTenant(tenantId, async () =>
+      getConsolidatedTicketData(ticketId, internalUser as any)
+    );
+
+    expect(data).not.toHaveProperty('clients');
+    expect(data.client?.client_id).toBe(ticketClientId);
+    expect(data.client?.client_name).toBe(ticketClientName);
+
+    // None of the other seeded clients may appear anywhere in the payload.
+    const payload = JSON.stringify(data);
+    for (const other of otherClients) {
+      expect(payload).not.toContain(other.id);
+      expect(payload).not.toContain(other.name);
+    }
+  });
+
   it('enforces permissions for bundle operations', async () => {
     const clientA = await createClient(db, tenantId, `Perm Client ${uuidv4().slice(0, 6)}`);
     const contactA = await createContact(db, tenantId, clientA, `perm-${uuidv4().slice(0, 6)}@example.com`);
