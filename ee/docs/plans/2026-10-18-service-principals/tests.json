@@ -335,8 +335,8 @@
   },
   {
     "id": "T035",
-    "description": "DB integration (EE): on an essentials tenant createServicePrincipal (api) and createAgent both fail with TIER_ACCESS_DENIED and insert nothing; a pre-existing principal's key still authenticates while reactivation and new key issuance are refused",
-    "implemented": true,
+    "description": "DB integration (EE): below Pro, createServicePrincipal/createAgent, reactivation and key issuance are refused; pre-existing and newly migrated API/MCP principals cannot authenticate, mint session keys or dispatch. Exercise Pro to Essentials downgrade with previously valid API keys, IdP tokens and minted MCP session keys (including act-as): the next authentication/dispatch is denied without a grace period, records/attribution remain, tier lookup errors deny access, and returning to Pro permits otherwise valid credentials but never revives revoked/expired keys or inactive/archived principals. Verify hosted/appliance parity and unaffected human-owned API/MCP access",
+    "implemented": false,
     "featureIds": [
       "F092",
       "F093",
@@ -345,8 +345,8 @@
   },
   {
     "id": "T036",
-    "description": "Component: below Pro the Service principals tab and MCP agent create show the upgrade notice, grandfathered principals list with deactivate/delete only, and the license page row reads 'Available on Pro'",
-    "implemented": true,
+    "description": "Component: below Pro the Service principals tab and MCP agent create show the standard upgrade notice; existing principals/agents remain visible for deactivate/delete cleanup with explicit API/MCP access-blocked copy and no grandfathering/continued-use claim; account and license rows read 'Available on Pro', retain seat-use copy/settings link, and any existing count is labeled blocked by plan; Pro usage/capacity behavior is unchanged",
+    "implemented": false,
     "featureIds": [
       "F095"
     ]
