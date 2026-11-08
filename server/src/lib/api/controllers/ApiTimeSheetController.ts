@@ -1593,7 +1593,7 @@ export class ApiTimeSheetController extends ApiBaseController {
       try {
         // Authenticate
         const apiKey = req.headers.get('x-api-key');
-        
+
         if (!apiKey) {
           throw new UnauthorizedError('API key required');
         }
@@ -1610,7 +1610,7 @@ export class ApiTimeSheetController extends ApiBaseController {
             tenantId = keyRecord.tenant;
           }
         }
-        
+
         if (!keyRecord) {
           throw new UnauthorizedError('Invalid API key');
         }
@@ -1703,7 +1703,6 @@ export class ApiTimeSheetController extends ApiBaseController {
           throw new ForbiddenError('Permission denied: Cannot read time period settings');
         }
 
-        // Get settings within tenant context
         const settings = await runWithTenant(tenantId!, async () => {
           return await this.timeSheetService.getTimePeriodSettings({
             userId: user.user_id,
@@ -1720,7 +1719,74 @@ export class ApiTimeSheetController extends ApiBaseController {
   }
 
   /**
-   * Create time period settings
+   * Get time period settings by ID
+   */
+  getTimePeriodSettingsById() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiKey = req.headers.get('x-api-key');
+
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        // Extract tenant ID
+        let tenantId = req.headers.get('x-tenant-id');
+        let keyRecord;
+
+        if (tenantId) {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+        } else {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) {
+            tenantId = keyRecord.tenant;
+          }
+        }
+
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+
+        // Build the same API context used by the other controller handlers.
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+        const user = apiAuthContext.user;
+
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
+
+        // Check permissions
+        const db = await getConnection(tenantId!);
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
+          'time_period',
+          'read',
+          db
+        );
+
+        if (!hasReadPermission) {
+          throw new ForbiddenError('Permission denied: Cannot read time period settings');
+        }
+
+        // Extract ID from path
+        const id = new URL(req.url).pathname.split('/').pop()!;
+
+        const settings = await runWithTenant(tenantId!, async () => {
+          return await this.timeSheetService.getTimePeriodSettingsById(id, {
+            userId: user.user_id,
+            user,
+            tenant: tenantId!,
+          });
+        });
+
+        return createSuccessResponse(settings);
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Create time period settings (409 when it overlaps an active setting)
    */
   createTimePeriodSettings() {
     return async (req: NextRequest): Promise<NextResponse> => {
@@ -1797,7 +1863,7 @@ export class ApiTimeSheetController extends ApiBaseController {
   }
 
   /**
-   * Update time period settings
+   * Update time period settings (409 when the result overlaps an active setting)
    */
   updateTimePeriodSettings() {
     return async (req: NextRequest): Promise<NextResponse> => {
@@ -1846,8 +1912,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Extract ID from path
-        const pathParts = req.url.split('/');
-        const id = pathParts[pathParts.length - 1];
+        const id = new URL(req.url).pathname.split('/').pop()!;
 
         // Parse and validate request body
         const body = await req.json();
@@ -1877,7 +1942,72 @@ export class ApiTimeSheetController extends ApiBaseController {
     };
   }
 
-  // Schedule Management
+  /**
+   * Delete time period settings
+   */
+  deleteTimePeriodSettings() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiKey = req.headers.get('x-api-key');
+
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        // Extract tenant ID
+        let tenantId = req.headers.get('x-tenant-id');
+        let keyRecord;
+
+        if (tenantId) {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+        } else {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) {
+            tenantId = keyRecord.tenant;
+          }
+        }
+
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+
+        // Build the same API context used by the other controller handlers.
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+        const user = apiAuthContext.user;
+
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
+
+        // Check permissions
+        const db = await getConnection(tenantId!);
+        const hasManagePermission = await hasApiContextPermission(
+          apiAuthContext,
+          'time_period',
+          'manage',
+          db
+        );
+
+        if (!hasManagePermission) {
+          throw new ForbiddenError('Permission denied: Cannot manage time period settings');
+        }
+
+        // Extract ID from path
+        const id = new URL(req.url).pathname.split('/').pop()!;
+
+        await runWithTenant(tenantId!, async () => {
+          return await this.timeSheetService.deleteTimePeriodSettings(id, {
+            userId: user.user_id,
+            user,
+            tenant: tenantId!,
+          });
+        });
+
+        return new NextResponse(null, { status: 204 });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
 
   /**
    * Search schedule entries (GET /api/v1/schedules/search): same auth,
