@@ -97,6 +97,35 @@ const MANAGER_USER_ID = 'manager-789';
 const SLA_POLICY_ID = 'sla-policy-001';
 const PRIORITY_ID = 'priority-001';
 
+const configureEligibilityRows = (
+  mockTrx: ReturnType<typeof createMockTransaction>,
+  ticketData: Record<string, unknown>,
+  targetData: Record<string, unknown>,
+) => {
+  mockTrx.tableBuilders['tickets'] = {
+    where: vi.fn().mockReturnThis(),
+    select: vi.fn().mockReturnThis(),
+    leftJoin: vi.fn().mockReturnThis(),
+    first: vi.fn().mockResolvedValue(ticketData),
+    insert: vi.fn().mockResolvedValue([]),
+    update: vi.fn().mockResolvedValue(1),
+    fn: { now: vi.fn().mockReturnValue('NOW()') },
+    raw: vi.fn((sql) => sql),
+    andWhere: vi.fn().mockReturnThis(),
+  };
+  mockTrx.tableBuilders['sla_policy_targets'] = {
+    where: vi.fn().mockReturnThis(),
+    select: vi.fn().mockReturnThis(),
+    leftJoin: vi.fn().mockReturnThis(),
+    first: vi.fn().mockResolvedValue(targetData),
+    insert: vi.fn().mockResolvedValue([]),
+    update: vi.fn().mockResolvedValue(1),
+    fn: { now: vi.fn().mockReturnValue('NOW()') },
+    raw: vi.fn((sql) => sql),
+    andWhere: vi.fn().mockReturnThis(),
+  };
+};
+
 // =============================================================================
 // escalateTicket Tests
 // =============================================================================
@@ -114,6 +143,86 @@ describe('escalateTicket', () => {
   });
 
   describe('escalation flow', () => {
+    it('treats a retry after the escalation level is committed as a no-op', async () => {
+      const ticketData: Record<string, any> = {
+        ticket_id: TICKET_ID,
+        ticket_number: 'T-001',
+        title: 'Test Ticket',
+        board_id: BOARD_ID,
+        assigned_to: 'assignee-123',
+        escalation_level: null,
+        escalated: false,
+      };
+      const resourceInsert = vi.fn().mockResolvedValue([]);
+      mockTrx.tableBuilders['tickets'] = {
+        where: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        leftJoin: vi.fn().mockReturnThis(),
+        first: vi.fn().mockResolvedValue(ticketData),
+        insert: vi.fn().mockResolvedValue([]),
+        update: vi.fn((updates: Record<string, unknown>) => {
+          Object.assign(ticketData, updates);
+          return Promise.resolve(1);
+        }),
+        fn: { now: vi.fn().mockReturnValue('NOW()') },
+        raw: vi.fn((sql) => sql),
+        andWhere: vi.fn().mockReturnThis(),
+      };
+      mockTrx.tableBuilders['escalation_managers as em'] = {
+        where: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        leftJoin: vi.fn().mockReturnThis(),
+        first: vi.fn().mockResolvedValue({
+          config_id: 'config-123',
+          board_id: BOARD_ID,
+          escalation_level: 1,
+          manager_user_id: MANAGER_USER_ID,
+          notify_via: ['in_app'],
+          manager_first_name: 'Test',
+          manager_last_name: 'Manager',
+        }),
+        insert: vi.fn().mockResolvedValue([]),
+        update: vi.fn().mockResolvedValue(1),
+        fn: { now: vi.fn().mockReturnValue('NOW()') },
+        raw: vi.fn((sql) => sql),
+        andWhere: vi.fn().mockReturnThis(),
+      };
+      mockTrx.tableBuilders['ticket_resources'] = {
+        where: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        leftJoin: vi.fn().mockReturnThis(),
+        first: vi.fn().mockResolvedValue(null),
+        insert: resourceInsert,
+        update: vi.fn().mockResolvedValue(1),
+        fn: { now: vi.fn().mockReturnValue('NOW()') },
+        raw: vi.fn((sql) => sql),
+        andWhere: vi.fn().mockReturnThis(),
+      };
+      mockTrx.tableBuilders['sla_audit_log'] = {
+        where: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        leftJoin: vi.fn().mockReturnThis(),
+        first: vi.fn().mockResolvedValue(null),
+        insert: vi.fn().mockResolvedValue([]),
+        update: vi.fn().mockResolvedValue(1),
+        fn: { now: vi.fn().mockReturnValue('NOW()') },
+        raw: vi.fn((sql) => sql),
+        andWhere: vi.fn().mockReturnThis(),
+      };
+
+      const committedAttempt = await escalateTicket(mockTrx.trx, TENANT, TICKET_ID, 1);
+      // Temporal can retry after the DB transaction committed but before its
+      // completion was acknowledged. The second service call reads persisted L1.
+      const retriedAttempt = await escalateTicket(mockTrx.trx, TENANT, TICKET_ID, 1);
+
+      expect(committedAttempt.success).toBe(true);
+      expect(retriedAttempt.success).toBe(true);
+      expect(retriedAttempt.error).toBe('Ticket already at or above this escalation level');
+      expect(ticketData.escalation_level).toBe(1);
+      expect(resourceInsert).toHaveBeenCalledTimes(1);
+      expect(createNotificationFromTemplateInternal).toHaveBeenCalledTimes(1);
+    });
+
     it('should escalate ticket to level 1', async () => {
       // Setup mock ticket data
       const ticketData = {
@@ -877,6 +986,41 @@ describe('checkEscalationNeeded', () => {
   });
 
   describe('escalation threshold checks', () => {
+    it('checks each requested coincident level at its own configured threshold', async () => {
+      const ticketData = {
+        sla_policy_id: SLA_POLICY_ID,
+        priority_id: PRIORITY_ID,
+        escalation_level: null,
+      };
+      const targetData = {
+        escalation_1_percent: 80,
+        escalation_2_percent: 80,
+        escalation_3_percent: 80,
+      };
+      configureEligibilityRows(mockTrx, ticketData, targetData);
+
+      expect(await checkEscalationNeeded(mockTrx.trx, TENANT, TICKET_ID, 79, 1)).toBeNull();
+      expect(await checkEscalationNeeded(mockTrx.trx, TENANT, TICKET_ID, 80, 1)).toBe(1);
+      expect(await checkEscalationNeeded(mockTrx.trx, TENANT, TICKET_ID, 80, 2)).toBe(2);
+      expect(await checkEscalationNeeded(mockTrx.trx, TENANT, TICKET_ID, 80, 3)).toBe(3);
+    });
+
+    it('does not return a requested level already persisted on the ticket', async () => {
+      configureEligibilityRows(mockTrx, {
+        sla_policy_id: SLA_POLICY_ID,
+        priority_id: PRIORITY_ID,
+        escalation_level: 2,
+      }, {
+        escalation_1_percent: 80,
+        escalation_2_percent: 80,
+        escalation_3_percent: 80,
+      });
+
+      expect(await checkEscalationNeeded(mockTrx.trx, TENANT, TICKET_ID, 80, 1)).toBeNull();
+      expect(await checkEscalationNeeded(mockTrx.trx, TENANT, TICKET_ID, 80, 2)).toBeNull();
+      expect(await checkEscalationNeeded(mockTrx.trx, TENANT, TICKET_ID, 80, 3)).toBe(3);
+    });
+
     it('should return level 1 when elapsed percentage exceeds escalation_1_percent', async () => {
       const ticketData = {
         sla_policy_id: SLA_POLICY_ID,
