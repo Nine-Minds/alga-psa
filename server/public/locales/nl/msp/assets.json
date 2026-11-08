@@ -69,7 +69,7 @@
     "assetAuditMethod": {
       "scan": "Scan",
       "manual": "Handmatig",
-      "register": "Ter plaatse geregistreerd"
+      "register": "Op locatie geregistreerd"
     }
   },
   "assetAlertsSection": {
@@ -2241,14 +2241,14 @@
       "startedBy": "Gestart door",
       "started": "Gestart",
       "completed": "Voltooid",
-      "scopeStatuses": "Te controleren statussen",
+      "scopeStatuses": "Statussen in deze controle",
       "allStatuses": "Alle statussen",
       "notes": "Notities",
       "exportCsv": "CSV exporteren",
       "exportStarted": "CSV-export gestart.",
       "exportEmpty": "Er is niets te exporteren in deze weergave.",
       "addUnexpected": "Onverwachte asset toevoegen",
-      "addUnexpectedHint": "Een apparaat dat op locatie wordt gevonden maar buiten deze controleselectie valt, wordt als onverwacht geregistreerd, nooit als verwacht.",
+      "addUnexpectedHint": "Een apparaat dat op locatie wordt gevonden maar buiten de selectie van deze controle valt, wordt als onverwacht geregistreerd, nooit als verwacht.",
       "addUnexpectedPlaceholder": "Zoek een asset…",
       "addUnexpectedEmpty": "Geen andere assets voor deze klant.",
       "complete": "Controle voltooien",
@@ -2274,7 +2274,7 @@
       "markPresent": "Als aanwezig markeren",
       "undoMark": "Ongedaan maken",
       "createTicket": "Ticket aanmaken",
-      "ticketTitle": "Ontbrekend bij controle op locatie: {{asset}}",
+      "ticketTitle": "Ontbreekt bij controle op locatie: {{asset}}",
       "ticketDescription": "Niet gevonden tijdens de controle op locatie die op {{date}} is gestart."
     }
   }
