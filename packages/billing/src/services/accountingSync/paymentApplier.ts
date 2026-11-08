@@ -229,6 +229,7 @@ async function applyAllocations(
       amount: allocation.amountCents,
       provider,
       referenceNumber: reference,
+      source: 'accounting_sync',
       currency,
       paymentDate: currencyOrDateLessTxn,
       notes: creditApplication

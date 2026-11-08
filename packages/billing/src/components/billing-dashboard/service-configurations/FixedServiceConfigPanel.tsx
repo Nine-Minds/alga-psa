@@ -30,6 +30,12 @@ interface FixedServiceConfigPanelProps {
    * wizard) hides the per-member copy instead of showing a duplicate switch.
    */
   hideProration?: boolean;
+  /**
+   * The member is a catalog product. The engine bills a product as quantity x
+   * rate whatever its stored basis, so the "bundle price" option (whose copy
+   * says quantities are not billable seats) is never offered for it.
+   */
+  isProduct?: boolean;
 }
 
 export function FixedServiceConfigPanel(props: FixedServiceConfigPanelProps) {
@@ -44,6 +50,7 @@ export function FixedServiceConfigPanel(props: FixedServiceConfigPanelProps) {
     className = '',
     disabled = false,
     hideProration = false,
+    isProduct = false,
   } = props;
   const { t } = useTranslation('msp/service-catalog');
   const { money } = useCurrencyFormat();
@@ -55,7 +62,7 @@ export function FixedServiceConfigPanel(props: FixedServiceConfigPanelProps) {
   // authoritative and member quantities are FMV allocations. Only an explicit
   // author choice opts a member into recurring seat pricing.
   const [pricingBasis, setPricingBasis] = useState<FixedPricingBasis>(
-    configuration.pricing_basis === 'unit' ? 'unit' : 'bundle'
+    configuration.pricing_basis === 'unit' || isProduct ? 'unit' : 'bundle'
   );
   const [unitRateInput, setUnitRateInput] = useState<string>(
     configuration.base_rate == null ? '' : (Number(configuration.base_rate) / 100).toFixed(2)
@@ -150,14 +157,14 @@ export function FixedServiceConfigPanel(props: FixedServiceConfigPanelProps) {
             onChange={handlePricingBasisChange}
             disabled={disabled}
             options={[
-              {
-                value: 'bundle',
+              ...(isProduct ? [] : [{
+                value: 'bundle' as const,
                 label: t('fixedConfig.pricingBasis.bundle.label', { defaultValue: 'Bundle price' }),
                 description: t('fixedConfig.pricingBasis.bundle.description', {
                   defaultValue:
                     "The contract line's fixed total is what bills. Quantities on this service only allocate a share of that total for reporting — they are not billable seats, and changing one does not change the amount billed.",
                 }),
-              },
+              }]),
               {
                 value: 'unit',
                 label: t('fixedConfig.pricingBasis.unit.label', {

@@ -544,6 +544,7 @@
       "recurring": "Terugkerend",
       "service": "dienst",
       "setPrice": "Prijs instellen",
+      "taxable": "Belastbaar",
       "ungroupedItems": "Niet-gegroepeerde items"
     },
     "placeholders": {
@@ -637,6 +638,7 @@
       }
     },
     "sections": {
+      "carriedDiscounts": "Kortingen overgenomen op contractregels",
       "contractItems": "Contractartikelen",
       "conversionMode": "Conversiemodus",
       "excludedFromConversion": "Uitgesloten van conversie",
@@ -662,6 +664,7 @@
       "converted": "Geconverteerd",
       "discount": "Korting",
       "fixed": "vast",
+      "monthlyTotal": "Maandtotaal na kortingen",
       "notConverted": "Niet omgezet"
     },
     "partial": {

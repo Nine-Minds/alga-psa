@@ -17,6 +17,7 @@ export * from './email-webhook-maintenance-activities';
 export * from './calendar-webhook-maintenance-activities';
 export * from './ninjaone-sync-activities';
 export * from './levelio-sync-activities';
+export * from './unifi-sync-activities';
 export * from './ninjaone-token-refresh-activities';
 export * from './entra-discovery-activities';
 export * from './entra-sync-activities';
@@ -41,3 +42,5 @@ export {
   logAuditEvent,
   type AuditEventInput,
 } from './resend-welcome-email-activities';
+export * from './co-managed-provisioning-activities';
+export * from './co-managed-tenant-deletion-activities';

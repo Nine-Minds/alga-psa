@@ -1,7 +1,5 @@
-export interface TicketLiveUpdateActor {
-  userId: string;
-  displayName: string;
-}
+import { parseTicketLiveUpdateActor, type TicketLiveUpdateActor } from './ticketLiveUpdateActor';
+export type { TicketLiveUpdateActor } from './ticketLiveUpdateActor';
 
 export interface PublishTicketUpdateParams {
   tenantId: string;
@@ -121,13 +119,21 @@ export async function publishTicketUpdate(params: PublishTicketUpdateParams): Pr
     return;
   }
 
+  // Only a qualified (co-managed) actor is validated; a local actor passes through unchanged.
+  let updatedBy: TicketLiveUpdateActor = params.updatedBy;
+  if (params.updatedBy && (params.updatedBy as { actorReference?: unknown }).actorReference !== undefined) {
+    const parsed = parseTicketLiveUpdateActor(params.updatedBy, params.tenantId);
+    if (!parsed) throw new Error('Invalid ticket live update actor');
+    updatedBy = parsed;
+  }
+
   try {
     const client = await getTicketUpdatePublisherClient();
     await client.publish(
       getTicketUpdateChannel(params.tenantId, params.ticketId),
       JSON.stringify({
         updatedFields: params.updatedFields,
-        updatedBy: params.updatedBy,
+        updatedBy,
         updatedAt: params.updatedAt,
       })
     );

@@ -17,8 +17,9 @@ import type {
 } from '@alga-psa/types';
 import { Temporal } from '@js-temporal/polyfill';
 import { blockNoteToPlainText } from '@alga-psa/formatting/blocknoteUtils';
-import { displayAddressField, displayCountry, toISODate, toPlainDate } from '@alga-psa/core';
+import { displayAddressField, displayCountry, formatPostalAddress, toISODate, toPlainDate } from '@alga-psa/core';
 import { paymentMethodDisplayLabel } from '@alga-psa/shared/billingClients/paymentPreferences';
+import { buildBundleComponents } from '../invoiceBundleComponents/components';
 // toPlainDate is likely not needed here as we format to string for Wasm
 
 // Helper function to convert DateValue (Date or ISO string or Temporal) to ISO string for Wasm
@@ -250,21 +251,24 @@ const buildLineServicePeriodLabel = (
   return buildRecurringServicePeriodLabel(start, end, locale);
 };
 
-const buildLocationAddressBlock = (location: WasmInvoiceLineItemLocation | null): string | null => {
+export const buildLocationAddressBlock = (location: WasmInvoiceLineItemLocation | null): string | null => {
   if (!location) return null;
-  const lines: string[] = [];
-  for (const field of [location.address_line1, location.address_line2, location.address_line3]) {
-    const trimmed = displayAddressField(field);
-    if (trimmed) lines.push(trimmed);
-  }
-  const cityLine = [location.city, location.state_province, location.postal_code]
-    .map(displayAddressField)
-    .filter((value) => value.length > 0)
-    .join(', ');
-  if (cityLine) lines.push(cityLine);
-  const country = displayCountry(location.country_name, location.country_code);
-  if (country) lines.push(country);
-  return lines.length > 0 ? lines.join('\n') : null;
+  const cityLine = formatPostalAddress([
+    displayAddressField(location.city),
+    displayAddressField(location.state_province),
+    displayAddressField(location.postal_code),
+  ]);
+  const block = formatPostalAddress(
+    [
+      displayAddressField(location.address_line1),
+      displayAddressField(location.address_line2),
+      displayAddressField(location.address_line3),
+      cityLine,
+      displayCountry(location.country_name, location.country_code),
+    ],
+    { separator: '\n' },
+  );
+  return block || null;
 };
 
 const UNASSIGNED_LOCATION_GROUP_KEY = '__unassigned__';
@@ -573,11 +577,31 @@ function attachTicketPresentation(
 }
 
 /**
+ * Derives `discountTotal` (positive magnitude of all `isDiscount` lines, minor units)
+ * and `grossSubtotal` (`subtotal + discountTotal`) on the view model. `subtotal` is
+ * left untouched (net, before tax), so `grossSubtotal - discountTotal === subtotal`
+ * always holds. Idempotent, and safe on legacy payloads: with no `isDiscount` item the
+ * result is `discountTotal = 0` and `grossSubtotal = subtotal`.
+ */
+export function applyInvoiceDiscountSummary(vm: WasmInvoiceViewModel): WasmInvoiceViewModel {
+  const discountSum = (vm.items ?? []).reduce(
+    (sum, item) => (item.isDiscount === true ? sum + toFiniteNumber(item.total) : sum),
+    0
+  );
+  // `0 - 0` normalises -0 to 0.
+  const discountTotal = 0 - discountSum;
+  vm.discountTotal = discountTotal;
+  vm.grossSubtotal = toFiniteNumber(vm.subtotal) + discountTotal;
+  return vm;
+}
+
+/**
  * Enriches a WasmInvoiceViewModel with recurring/one-time grouped item
  * collections and their separate subtotals, tax, and totals.
  * Derives grouping from existing timing fields — no database migration needed.
  */
 export function enrichWithGroupedItems(vm: WasmInvoiceViewModel): WasmInvoiceViewModel {
+  applyInvoiceDiscountSummary(vm);
   if (!vm.ticketPresentationRows) attachTicketPresentation(vm, []);
   const recurringItems = vm.items.filter(isRecurringItem);
   const onetimeItems = vm.items.filter((item) => !isRecurringItem(item));
@@ -687,6 +711,25 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
             return timings.length === 1 ? timings[0] ?? null : null;
           })();
 
+        // Bundle rows keep qty 1 / rate = total; component rows ride alongside.
+        // Prices are present only when the loader was asked for amounts, which
+        // callers do only for templates that bind a component price.
+        const rawAmounts = item.bundle_component_amounts ?? null;
+        const bundle = buildBundleComponents(item.bundle_presentation ?? null, {
+          includePricing: rawAmounts !== null,
+          amounts: rawAmounts
+            ? Object.fromEntries(
+                Object.entries(rawAmounts).map(([detailId, amount]) => [
+                  detailId,
+                  {
+                    allocated_amount: toMinorUnits(amount.allocated_amount),
+                    rate: toMinorUnits(amount.rate),
+                  },
+                ]),
+              )
+            : null,
+        });
+
         return {
           id: String(item.item_id ?? ''),
           unit_code: item.unit_code ?? null,
@@ -716,6 +759,9 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
           adjustmentScope: item.adjustment_scope ?? null,
           adjustmentReason: item.adjustment_reason ?? null,
           manualLineMetadata: item.manual_line_metadata ?? null,
+          ...(bundle
+            ? { subtitle: bundle.subtitle, hasComponents: bundle.hasComponents, components: bundle.components }
+            : {}),
         };
       });
       const computedSubtotal = normalizedItems.reduce((sum, item) => sum + item.total, 0);

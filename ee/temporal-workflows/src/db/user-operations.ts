@@ -1,4 +1,5 @@
 import { Context } from '@temporalio/activity';
+import { assertCoManagedSeatAdmission } from '@alga-psa/licensing';
 import { tenantDb } from '@alga-psa/db';
 import { withAdminTransactionRetryReadOnly } from '@alga-psa/db/admin.js';
 import type { Knex } from 'knex';
@@ -25,6 +26,7 @@ export async function createAdminUserInDB(
   try {
     const result = await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction) => {
       const db = tenantDb(trx, input.tenantId);
+      await assertCoManagedSeatAdmission(trx, input.tenantId, { email: input.email });
       // Check if an internal user with this email already exists in ANY tenant
       // This prevents duplicate MSP users across tenants which causes SSO issues
       const existingInternalUser = await db.unscoped(

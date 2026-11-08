@@ -17,6 +17,20 @@ import {
   getStandardPackingSlipTemplateAstByCode,
   getStandardPickListTemplateAstByCode,
 } from '../sales-order-template-ast/otherDocuments';
+import { buildStagingManifestTemplateBindings } from '../staging-manifest-template-ast/bindings';
+import { buildSampleStagingManifestViewModel } from '../staging-manifest-template-ast/sampleData';
+import {
+  STANDARD_STAGING_MANIFEST_CODE,
+  STANDARD_STAGING_MANIFEST_TEMPLATE_ASTS,
+  getStandardStagingManifestTemplateAstByCode,
+} from '../staging-manifest-template-ast/standardTemplates';
+import { buildRmaReturnSlipTemplateBindings } from '../rma-return-slip-template-ast/bindings';
+import { buildSampleRmaReturnSlipViewModel } from '../rma-return-slip-template-ast/sampleData';
+import {
+  STANDARD_RMA_RETURN_SLIP_CODE,
+  STANDARD_RMA_RETURN_SLIP_TEMPLATE_ASTS,
+  getStandardRmaReturnSlipTemplateAstByCode,
+} from '../rma-return-slip-template-ast/standardTemplates';
 import { buildLabelTemplateBindings } from '../label-template-ast/bindings';
 import { buildSampleLabelViewModel } from '../label-template-ast/sampleData';
 import {
@@ -34,7 +48,7 @@ import {
  * Sales Order is the first registered type. Invoice and quote keep their existing dedicated stacks
  * for now; the registry is shaped so they could migrate onto it later.
  */
-export type DocumentType = 'sales-order' | 'packing-slip' | 'pick-list' | 'work-tag';
+export type DocumentType = 'sales-order' | 'packing-slip' | 'pick-list' | 'work-tag' | 'staging-manifest' | 'rma-return-slip';
 
 export interface DocumentTypeRegistryEntry {
   /** Human label for menus / the management route. */
@@ -95,6 +109,27 @@ export const DOCUMENT_TYPE_REGISTRY: Record<DocumentType, DocumentTypeRegistryEn
     buildSampleViewModel: () => buildSampleLabelViewModel() as unknown as Record<string, unknown>,
     // Printed by the label batch path: one clipped cell per label, never the single-document PDF path.
     printGeometry: 'label-cell',
+  },
+  // What is in one project staging box (alga-2026-0002683 C6). Rendered on demand and never filed.
+  'staging-manifest': {
+    label: 'Packing Manifest',
+    defaultStandardCode: STANDARD_STAGING_MANIFEST_CODE,
+    standardCodes: Object.keys(STANDARD_STAGING_MANIFEST_TEMPLATE_ASTS),
+    getStandardTemplateAstByCode: getStandardStagingManifestTemplateAstByCode,
+    buildBindings: buildStagingManifestTemplateBindings,
+    buildSampleViewModel: () => buildSampleStagingManifestViewModel() as unknown as Record<string, unknown>,
+    printGeometry: 'document',
+  },
+  // The paper that travels with a client device returned to a vendor (alga-2026-0002683 C5). Rendered on
+  // demand from the RMA and never filed.
+  'rma-return-slip': {
+    label: 'RMA Return Slip',
+    defaultStandardCode: STANDARD_RMA_RETURN_SLIP_CODE,
+    standardCodes: Object.keys(STANDARD_RMA_RETURN_SLIP_TEMPLATE_ASTS),
+    getStandardTemplateAstByCode: getStandardRmaReturnSlipTemplateAstByCode,
+    buildBindings: buildRmaReturnSlipTemplateBindings,
+    buildSampleViewModel: () => buildSampleRmaReturnSlipViewModel() as unknown as Record<string, unknown>,
+    printGeometry: 'document',
   },
 };
 

@@ -24,7 +24,7 @@ export interface IUser {
   is_google_user?: boolean;
   is_inactive: boolean;
   tenant: string;
-  user_type: 'internal' | 'client';
+  user_type: 'internal' | 'client' | 'service';
   reports_to?: string | null;
   contact_id?: string;
   phone?: string;

@@ -1,0 +1,37 @@
+[
+  {
+    "id": "F001",
+    "description": "Validate intake document authorization and ownership; safely clean only uploads belonging to the failed attempt",
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "description": "Associate intake documents with the asset atomically with receive and preserve ticket associations",
+    "implemented": true
+  },
+  {
+    "id": "F003",
+    "description": "Expose authorized custody event photos and open their shared media viewer in card and history",
+    "implemented": true
+  },
+  {
+    "id": "F004",
+    "description": "Provide a shared photo field for move, hand off, ship and return with failure cleanup",
+    "implemented": true
+  },
+  {
+    "id": "F005",
+    "description": "Backfill justified asset associations from custody event document IDs idempotently",
+    "implemented": true
+  },
+  {
+    "id": "F006",
+    "description": "Enforce asset and document read authorization and client-hidden visibility",
+    "implemented": true
+  },
+  {
+    "id": "F007",
+    "description": "Enforce and explain the aggregate upload size limit on client and server",
+    "implemented": true
+  }
+]

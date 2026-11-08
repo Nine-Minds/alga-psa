@@ -1,6 +1,8 @@
+import { coManagedAcceptancePendingError, isCoManagedAwaitingAcceptanceLazily, isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle';
 import { createTenantKnex, isTenantSuspended, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import crypto from 'crypto';
+import { isLicensedUserType } from '@alga-psa/types';
 
 interface ApiKey {
   api_key_id: string;
@@ -13,10 +15,11 @@ interface ApiKey {
   updated_at: Date;
   last_used_at: Date | null;
   expires_at: Date | null;
-  purpose: string;
+  purpose: string | null;
   metadata: Record<string, unknown> | null;
   usage_limit: number | null;
   usage_count: number;
+  agent_id?: string | null;
 }
 
 /** Writing last_used_at on every request made each API call a DB write; once a minute is plenty for the admin UI. */
@@ -43,13 +46,23 @@ export class ApiKeyService {
     knex: Knex,
     tenant: string,
     userId: string
-  ): Promise<'user_inactive' | 'client_owner' | 'tenant_suspended' | null> {
+  ): Promise<'user_inactive' | 'client_owner' | 'owner_type_rejected' | 'tenant_suspended' | null> {
     const user = await tenantDb(knex, tenant)
       .table('users')
       .where({ user_id: userId })
       .first('is_inactive', 'user_type');
     if (!user || user.is_inactive) return 'user_inactive';
     if (user.user_type === 'client') return 'client_owner';
+    // Allow-list: an active internal owner passes. Any other owner type is
+    // admitted only if the edition boundary approves it (the CE stub never does).
+    if (user.user_type !== 'internal') {
+      // Lazy on purpose: a static import makes the auth barrel load the EE
+      // service-principals boundary (-> @alga-psa/users/actions -> withAuth from
+      // a half-loaded @alga-psa/auth), which breaks the production build.
+      const { servicePrincipalKeyGate } = await import('@product/service-principals/entry');
+      const approved = await servicePrincipalKeyGate({ ...user, user_id: userId, tenant });
+      if (!approved) return 'owner_type_rejected';
+    }
     if (await isTenantSuspended(knex, tenant)) return 'tenant_suspended';
     return null;
   }
@@ -120,11 +133,16 @@ export class ApiKeyService {
     // a tenant API key. Client-portal identities are denied here even when a
     // caller bypasses the server-action guard. Internal mobile-session and
     // temporary AI keys are backed by internal users, so they continue to work.
+    //
+    // This stays internal-owner-only for EVERY purpose (mobile_session, mcp_user, general).
+    // It must never be widened to non-interactive (service) owners and never issues service
+    // keys: those are written directly by the EE issuer, not through this method. Widening
+    // it would also silently open mobile OTT exchange/refresh, which rely on this check.
     const owner = await tenantDb(knex, tenant)
       .table('users')
       .where({ user_id: userId })
       .first('is_inactive', 'user_type');
-    if (!owner || owner.is_inactive || owner.user_type !== 'internal') {
+    if (!owner || owner.is_inactive || !isLicensedUserType(owner.user_type)) {
       throw new Error(`Failed to create API key for user ${userId} in tenant ${tenant}`);
     }
 
@@ -194,6 +212,10 @@ export class ApiKeyService {
         return null;
       }
 
+      if (await isCoManagedAwaitingAcceptanceLazily(async () => knex, tenant)) {
+        throw coManagedAcceptancePendingError();
+      }
+
       // A deactivated owner, a client-portal owner, or a suspended tenant
       // (cancelled, pending deletion) must not authenticate. Reversible:
       // reactivation restores the same keys untouched. A client-owned key is
@@ -237,6 +259,7 @@ export class ApiKeyService {
 
       return record;
     } catch (error) {
+      if (isCoManagedLifecycleError(error)) throw error;
       console.error(`Error validating API key in tenant ${tenant}:`, error);
       return null;
     }
@@ -325,7 +348,7 @@ export class ApiKeyService {
   /**
    * List all API keys across users (admin only)
    */
-  static async listAllApiKeys(tenantId?: string): Promise<(ApiKey & { username: string; first_name: string | null; last_name: string | null })[]> {
+  static async listAllApiKeys(tenantId?: string): Promise<(ApiKey & { username: string; first_name: string | null; last_name: string | null; user_type: string | null })[]> {
     const { knex, tenant } = await createTenantKnex(tenantId);
 
     if (!tenant) {
@@ -338,7 +361,12 @@ export class ApiKeyService {
       db.tenantJoin(query, 'users', 'api_keys.user_id', 'users.user_id');
 
       return await query
-        .select('api_keys.*', 'users.username', 'users.first_name', 'users.last_name')
+        .select('api_keys.*', 'users.username', 'users.first_name', 'users.last_name', 'users.user_type')
+        // MCP session keys are short-lived runtime credentials, not keys an admin can manage.
+        // Keep legacy NULL-purpose rows visible while excluding only the modeled session purpose.
+        .where(function () {
+          this.whereNull('api_keys.purpose').orWhereNot('api_keys.purpose', 'mcp_agent');
+        })
         .orderBy('api_keys.created_at', 'desc');
     } catch (error) {
       console.error(`Error listing API keys in tenant ${tenant}:`, error);

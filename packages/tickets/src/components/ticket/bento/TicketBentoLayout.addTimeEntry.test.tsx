@@ -34,7 +34,8 @@ vi.mock('@alga-psa/ui/components', () => ({
   ContentCardVariantProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-vi.mock('@alga-psa/ui/ui-reflection/withDataAutomationId', () => ({
+vi.mock('@alga-psa/ui/ui-reflection/withDataAutomationId', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/ui/ui-reflection/withDataAutomationId')>()),
   withDataAutomationId: ({ id }: { id: string }) => ({ 'data-testid': id }),
   withUIReflectionId: (Component: unknown) => Component,
 }));
@@ -62,8 +63,14 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   }),
 }));
 
-vi.mock('@alga-psa/ui/components/bento/BentoTile', () => ({
-  BentoTile: ({ children }: { children?: React.ReactNode }) => <div data-testid="bento-tile">{children}</div>,
+vi.mock('@alga-psa/ui/components/bento/BentoTile', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/ui/components/bento/BentoTile')>()),
+  BentoTile: ({ children, action }: { children?: React.ReactNode; action?: React.ReactNode }) => (
+    <div data-testid="bento-tile">
+      {action}
+      {children}
+    </div>
+  ),
   BentoTileEmpty: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
   BentoTileSkeleton: () => <div />,
 }));
@@ -76,6 +83,7 @@ vi.mock('./dataTiles', () => ({
   AppointmentRequestsTile: () => null,
   CallsEmailsTile: () => null,
   BillingTile: () => null,
+  BillingSummary: () => null,
 }));
 vi.mock('./TimeLoggedSummary', () => ({ TimeLoggedSummary: () => null }));
 vi.mock('./useTeamAvatarUrl', () => ({ useTeamAvatarUrl: () => null }));
@@ -144,16 +152,17 @@ describe('TicketBentoLayout add time entry button', () => {
   it('disables the button and shows the spinner while a launch is pending', () => {
     render(<TicketBentoLayout {...baseProps({ isLaunchingTimeEntry: true })} />);
 
-    const button = screen.getByTestId('bento-add-time-entry');
+    // The Time tile's header "+" is the add-time-entry entry point.
+    const button = document.getElementById('bento-add-time-entry')!;
+    expect(button).toHaveAttribute('aria-label', 'Add time entry');
     expect(button).toBeDisabled();
     expect(button.querySelector('[role="status"]')).not.toBeNull();
-    expect(button).toHaveTextContent('Add time entry');
   });
 
   it('keeps the button enabled without a spinner when no launch is pending', () => {
     render(<TicketBentoLayout {...baseProps({ isLaunchingTimeEntry: false })} />);
 
-    const button = screen.getByTestId('bento-add-time-entry');
+    const button = document.getElementById('bento-add-time-entry')!;
     expect(button).not.toBeDisabled();
     expect(button.querySelector('[role="status"]')).toBeNull();
   });

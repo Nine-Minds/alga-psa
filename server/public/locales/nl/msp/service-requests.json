@@ -93,6 +93,36 @@
         "checkbox": "checkbox",
         "date": "date",
         "file-upload": "file-upload"
+      },
+      "visibility": {
+        "title": "Tonen wanneer…",
+        "none": "Altijd zichtbaar",
+        "addRule": "Voorwaarde toevoegen",
+        "removeRule": "Voorwaarde verwijderen",
+        "source": "Veld",
+        "selectSource": "Selecteer een veld",
+        "operator": "Voorwaarde",
+        "value": "Waarde",
+        "valueTrue": "Aangevinkt",
+        "valueFalse": "Niet aangevinkt",
+        "selectValue": "Selecteer een waarde",
+        "legacyBooleanWarning": "Deze regel vergelijkt met tekst, maar een selectievakje bevat waar/onwaar en komt dus nooit overeen. Selecteer de waarde opnieuw om dit op te lossen.",
+        "saveFailed": "De zichtbaarheidsregels konden niet worden opgeslagen.",
+        "contextSources": {
+          "requesterUserId": "Aanvragende gebruiker",
+          "clientId": "Aanvragende klant",
+          "contactId": "Aanvragend contact"
+        },
+        "operators": {
+          "equals": "is gelijk aan",
+          "not-equals": "is niet gelijk aan",
+          "is-true": "is aangevinkt / waar",
+          "is-false": "is niet aangevinkt / onwaar",
+          "has-value": "heeft een waarde",
+          "is-empty": "is leeg"
+        },
+        "advancedJson": "Geavanceerd (JSON)",
+        "advancedJsonHelp": "De volledige opgeslagen configuratie, inclusief contextstandaarden. Zichtbaarheidsregels wijzigt u makkelijker met „Tonen wanneer…” bij elk veld. Niet-opgeslagen wijzigingen hier worden verworpen als daar een regel wordt gewijzigd."
       }
     },
     "execution": {
@@ -144,7 +174,50 @@
       "visibility": {
         "title": "Zichtbaarheidsconfiguratie",
         "config": "Zichtbaarheidsconfiguratie (JSON-object)",
-        "save": "Zichtbaarheidsconfiguratie opslaan"
+        "save": "Zichtbaarheidsconfiguratie opslaan",
+        "audience": {
+          "removedReferences": "Niet-beschikbare doelgroepselecties zijn verwijderd. Controleer en sla de doelgroep op.",
+          "reference_client_id": "Klant",
+          "reference_client_tags": "Klanttag",
+          "reference_contact_id": "Contact",
+          "reference_contact_tags": "Contacttag",
+          "reference_contact_group_id": "Klantgroep",
+          "chooseTags": "Tags kiezen",
+          "loadError": "Doelgroepopties konden niet worden geladen.",
+          "saveError": "Doelgroep kon niet worden opgeslagen.",
+          "saved": "Doelgroep opgeslagen",
+          "convertedReadOnly": "Deze gemigreerde doelgroep is alleen-lezen.",
+          "replace": "Vervangen door een nieuwe doelgroep",
+          "clientTags": "Klanttags",
+          "contactTags": "Contacttags",
+          "allUsers": "Alle gebruikers van deze klant",
+          "missingClient": "Klant niet beschikbaar",
+          "missingContact": "Contact niet beschikbaar",
+          "narrowTags": "Alleen contacten met tag",
+          "remove": "Verwijderen",
+          "allPortalUsers": "Alle gebruikers van het klantenportaal",
+          "reach": "Zichtbaar voor {{count}} contacten bij {{clients}} klanten",
+          "reachUnavailable": "Bereik niet beschikbaar",
+          "title": "Wie dit formulier kan zien",
+          "everyone": "Iedereen",
+          "everyoneHelp": "Alle geauthenticeerde klantgebruikers kunnen dit formulier zien en indienen.",
+          "scoped": "Geselecteerde klanten en contactpersonen",
+          "scopedHelp": "Alleen gebruikers van de geselecteerde klanten, of leden van de geselecteerde groepen, kunnen dit formulier zien en indienen.",
+          "addClient": "Klant toevoegen",
+          "clientPlaceholder": "Klanten zoeken...",
+          "noClients": "Nog geen klanten geselecteerd.",
+          "selectedClients": "Geselecteerde klanten",
+          "removeClient": "{{name}} verwijderen",
+          "groupsOf": "Klantgebruikersgroepen van {{name}}",
+          "groupLabel": "{{group}} ({{client}})",
+          "loadingGroups": "Groepen laden...",
+          "noGroups": "Deze klant heeft geen klantgebruikersgroepen.",
+          "groupsHelp": "Elke klant geldt voor al zijn gebruikers of alleen voor de leden van geselecteerde groepen. Een groep geeft alleen toegang aan leden van de eigen klant. Een klant kan niet op alle gebruikers staan en tegelijk geselecteerde groepen hebben.",
+          "emptyWarning": "Niemand kan dit formulier zien totdat u een doelgroep toevoegt.",
+          "save": "Doelgroep opslaan",
+          "allUsersOf": "Alle gebruikers van {{name}}",
+          "onlyGroups": "Alleen leden van geselecteerde groepen"
+        }
       },
       "fields": {
         "executionProvider": "Uitvoeringsprovider",
@@ -387,7 +460,8 @@
       "ticketRoutingUpdated": "Configuratie ticketrouting bijgewerkt",
       "workflowConfigurationUpdated": "Workflowconfiguratie bijgewerkt",
       "formBehaviorConfigUpdated": "Configuratie formuliergedrag bijgewerkt",
-      "visibilityConfigUpdated": "Zichtbaarheidsconfiguratie bijgewerkt"
+      "visibilityConfigUpdated": "Zichtbaarheidsconfiguratie bijgewerkt",
+      "audienceUpdated": "Doelgroep bijgewerkt"
     },
     "error": {
       "loadFailed": "Serviceaanvragen konden niet worden geladen",
@@ -410,7 +484,8 @@
       "formBehaviorInvalid": "Ongeldige JSON voor formuliergedrag",
       "visibilityNotObject": "Zichtbaarheidsconfiguratie moet een JSON-object zijn",
       "visibilityInvalid": "Ongeldige JSON voor zichtbaarheid",
-      "saveAllPartial": "Sommige secties konden niet worden opgeslagen: {{sections}}"
+      "saveAllPartial": "Sommige secties konden niet worden opgeslagen: {{sections}}",
+      "audienceSaveFailed": "Doelgroep bijwerken mislukt"
     }
   }
 }

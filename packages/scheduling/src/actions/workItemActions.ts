@@ -155,12 +155,12 @@ export const searchDispatchWorkItems = withAuth(async (
       .whereNotIn('t.ticket_id', options.availableWorkItemIds || [])
       .leftJoin(
         tenantScopedDb.table('ticket_resources')
-          .select('ticket_id')
+          .select('tenant', 'ticket_id')
           .select(db.raw('array_agg(distinct additional_user_id) as additional_user_ids'))
           .groupBy('ticket_id', 'tenant')
           .as('tr'),
         function() {
-          this.on('t.ticket_id', '=', 'tr.ticket_id');
+          this.on('t.ticket_id', '=', 'tr.ticket_id').andOn('tr.tenant', '=', 't.tenant');
         }
       )
        .whereILike('t.title', db.raw('?', [`%${searchTerm}%`]))
@@ -386,12 +386,12 @@ export const searchPickerWorkItems = withAuth(async (
       .whereNotIn('t.ticket_id', availableWorkItemIds)
       .leftJoin(
         tenantScopedDb.table('ticket_resources')
-          .select('ticket_id')
+          .select('tenant', 'ticket_id')
           .select(db.raw('array_agg(distinct additional_user_id) as additional_user_ids'))
           .groupBy('ticket_id', 'tenant')
           .as('tr'),
         function() {
-          this.on('t.ticket_id', '=', 'tr.ticket_id');
+          this.on('t.ticket_id', '=', 'tr.ticket_id').andOn('tr.tenant', '=', 't.tenant');
         }
       )
        .where(function () {
@@ -470,12 +470,12 @@ export const searchPickerWorkItems = withAuth(async (
       .whereNotIn('pt.task_id', availableWorkItemIds)
       .leftJoin(
         tenantScopedDb.table('task_resources')
-          .select('task_id')
+          .select('tenant', 'task_id')
           .select(db.raw('array_agg(distinct additional_user_id) as additional_user_ids'))
           .groupBy('task_id', 'tenant')
           .as('tr'),
         function() {
-          this.on('pt.task_id', '=', 'tr.task_id');
+          this.on('pt.task_id', '=', 'tr.task_id').andOn('tr.tenant', '=', 'pt.tenant');
         }
       )
        .whereILike('pt.task_name', db.raw('?', [`%${searchTerm}%`]))
@@ -591,13 +591,13 @@ export const searchPickerWorkItems = withAuth(async (
         .whereILike('title', db.raw('?', [`%${searchTerm}%`]))
         .leftJoin(
           tenantScopedDb.table('schedule_entry_assignees')
-            .select('entry_id')
+            .select('tenant', 'entry_id')
             .select(db.raw('array_agg(distinct user_id ORDER BY user_id) as assigned_user_ids'))
             .select(db.raw('(array_agg(distinct user_id ORDER BY user_id))[1] as first_assigned_user_id'))
             .groupBy('entry_id', 'tenant')
             .as('sea'),
           function() {
-            this.on('se.entry_id', '=', 'sea.entry_id');
+            this.on('se.entry_id', '=', 'sea.entry_id').andOn('sea.tenant', '=', 'se.tenant');
           }
         )
         .distinctOn('se.entry_id')
@@ -886,12 +886,12 @@ export const getWorkItemById = withAuth(async (
         })
         .leftJoin(
           tenantScopedDb.table('ticket_resources')
-            .select('ticket_id')
+            .select('tenant', 'ticket_id')
             .select(db.raw('array_agg(distinct additional_user_id) as additional_user_ids'))
             .groupBy('ticket_id', 'tenant')
             .as('tr'),
           function() {
-            this.on('t.ticket_id', '=', 'tr.ticket_id');
+            this.on('t.ticket_id', '=', 'tr.ticket_id').andOn('tr.tenant', '=', 't.tenant');
           }
         )
         .select(
@@ -926,12 +926,12 @@ export const getWorkItemById = withAuth(async (
         })
         .leftJoin(
           tenantScopedDb.table('task_resources')
-            .select('task_id')
+            .select('tenant', 'task_id')
             .select(db.raw('array_agg(distinct additional_user_id) as additional_user_ids'))
             .groupBy('task_id', 'tenant')
             .as('tr'),
           function() {
-            this.on('pt.task_id', '=', 'tr.task_id');
+            this.on('pt.task_id', '=', 'tr.task_id').andOn('tr.tenant', '=', 'pt.tenant');
           }
         )
         // Removed groupBy for project tasks as well
@@ -965,12 +965,12 @@ export const getWorkItemById = withAuth(async (
         })
         .leftJoin(
           tenantScopedDb.table('schedule_entry_assignees')
-            .select('entry_id')
+            .select('tenant', 'entry_id')
             .select(db.raw('array_agg(distinct user_id) as assigned_user_ids'))
             .groupBy('entry_id', 'tenant')
             .as('sea'),
           function() {
-            this.on('se.entry_id', '=', 'sea.entry_id');
+            this.on('se.entry_id', '=', 'sea.entry_id').andOn('sea.tenant', '=', 'se.tenant');
           }
         )
         .groupBy('se.entry_id', 'se.title', 'se.notes', 'se.scheduled_start', 'se.scheduled_end', 'sea.assigned_user_ids', 'se.tenant')

@@ -133,10 +133,12 @@
       "notes": "Notatki",
       "deleteTimeEntry": "Usuń wpis czasu",
       "unsavedChanges": "Niezapisane zmiany",
-      "contractLine": "Pozycja kontraktu"
+      "contractLine": "Pozycja kontraktu",
+      "operational": "Operacyjny – nie rozliczany"
     },
     "placeholders": {
       "selectService": "Wybierz usługę",
+      "searchServices": "Wyszukaj usługi...",
       "selectDate": "Wybierz datę",
       "addNotes": "Dodaj notatki",
       "selectContractLine": "Wybierz pozycję kontraktu"
@@ -159,7 +161,8 @@
       "project": "Domyślnie z projektu"
     },
     "options": {
-      "resolveContractLineLater": "Brak pozycji - rozstrzygnij później"
+      "resolveContractLineLater": "Brak pozycji - rozstrzygnij później",
+      "noServicesFound": "Nie znaleziono usług"
     }
   },
   "workItemPicker": {

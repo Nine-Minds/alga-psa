@@ -22,7 +22,7 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 vi.mock('@alga-psa/tenancy/server', () => ({
-  getPortalDomainStatusForTenant: vi.fn(async () => ({ status: 'inactive', domain: null })),
+  getTenantPortalBaseUrl: vi.fn(async () => 'https://portal.test'),
 }), { virtual: true });
 
 vi.mock('../../../../../packages/portal-shared/src/services/PortalInvitationService', () => ({

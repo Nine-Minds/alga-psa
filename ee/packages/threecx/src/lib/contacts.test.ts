@@ -137,7 +137,7 @@ const hoisted = vi.hoisted(() => {
 
   const knexMock: any = () => createQuery('contacts');
   knexMock.fn = { now: () => 'NOW()' };
-  const trx: any = { commit() {}, rollback() {} };
+  const trx: any = { commit() {}, rollback() {}, fn: { now: () => 'NOW()' } };
 
   const createContact = vi.fn(async (input: any, tenant: string, _trx?: any) => {
     const email = String(input.email ?? '').trim().toLowerCase();
@@ -182,7 +182,11 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 vi.mock('@alga-psa/shared/models/contactModel', () => ({
-  ContactModel: { createContact: hoisted.createContact },
+  ContactModel: {
+    createContact: hoisted.createContact,
+    // trackContactUpdates reads before/after rows through the model (it hydrates phone_numbers).
+    getContactById: vi.fn(async (id: string) => ({ contact_name_id: id, client_id: 'client-1', is_inactive: false })),
+  },
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
@@ -420,7 +424,11 @@ describe('createContactFromThreecx', () => {
     expect(result.kind).toBe('created');
     expect(result.contact.companyName).toBe('Acme');
     expect(hoisted.createContact.mock.calls[0][0].client_id).toBeUndefined();
-    expect(hoisted.publishWorkflowEvent).not.toHaveBeenCalled();
+    // The contact is still created, so CONTACT_CREATED fires (with no client yet).
+    expect(hoisted.publishWorkflowEvent).toHaveBeenCalledTimes(1);
+    const [createdEvent] = hoisted.publishWorkflowEvent.mock.calls[0] as any[];
+    expect(createdEvent.eventType).toBe('CONTACT_CREATED');
+    expect(createdEvent.payload.clientId ?? null).toBeNull();
 
     expect(mappingRows()).toHaveLength(1);
     const row = mappingRows()[0];

@@ -92,6 +92,7 @@
     "button": "Filters",
     "unassigned": "Unassigned",
     "category": "Filter by category",
+    "removeFilterChip": "Remove filter: {{label}}",
     "assignee": "Assignee",
     "allAssignees": "All Assignees",
     "responseState": "Response State",
@@ -118,7 +119,15 @@
     "allResponseStatuses": "All Response Statuses",
     "responseStatus": "Response Status",
     "board": "Filter by board",
-    "searchSmart": "Search tickets and comments… Enter for smart search"
+    "searchSmart": "Search tickets and comments… Enter for smart search",
+    "requesterTags": "Requester tags",
+    "clientTags": "Client tags",
+    "tagModeAny": "Any of",
+    "tagModeNone": "None of",
+    "droppedFromLink": "Some filters in this link are not valid and were ignored.",
+    "clearFilters": "Clear filters",
+    "location": "Location",
+    "requesterLocation": "Requester location"
   },
   "create": {
     "title": "Create Support Ticket",
@@ -256,7 +265,11 @@
     "openMenu": "Open menu",
     "moreActions": "More actions",
     "createTemplate": "Create template from ticket",
-    "createWorkflowFromTicket": "Create workflow from ticket"
+    "createWorkflowFromTicket": "Create workflow from ticket",
+    "printWorkTag": "Print work tag",
+    "retry": "Retry",
+    "duplicateMultiple": "Duplicate multiple…",
+    "duplicateOptions": "More duplicate options"
   },
   "messages": {
     "noTickets": "No tickets found",
@@ -366,7 +379,8 @@
     "pastedImagesDeleteFailed_many": "Could not delete {{count}} pasted images.",
     "pastedImagesDeleted_few": "Deleted {{count}} pasted images.",
     "pastedImagesDeleted_many": "Deleted {{count}} pasted images.",
-    "sharedWorkspaceReadOnly": "You can see this ticket because it is about a device in a workspace you share. Only the person who raised it can add to it."
+    "sharedWorkspaceReadOnly": "You can see this ticket because it is about a device in a workspace you share. Only the person who raised it can add to it.",
+    "loadPartyTagsFailed": "Failed to load requester and client tags"
   },
   "conversation": {
     "comments": "Comments",
@@ -438,7 +452,29 @@
     "bcc": "Bcc",
     "ccBccInvalid": "Fix the highlighted addresses before sending.",
     "ccBccTooMany": "At most {{max}} Cc and Bcc recipients can be copied on one comment.",
-    "ccBccNotSentOnInternal": "Cc and Bcc are not sent with an internal note. Turn Internal off to use them."
+    "ccBccNotSentOnInternal": "Cc and Bcc are not sent with an internal note. Turn Internal off to use them.",
+    "audience": {
+      "requester": "Requester",
+      "sharedIt": "Shared IT",
+      "organizationPrivate": "Organization private",
+      "placeholder": "Who can see this?",
+      "required": "Choose who can see this comment before posting it."
+    },
+    "shared": {
+      "loading": "Loading the shared conversation...",
+      "loadError": "The shared conversation could not be loaded.",
+      "reload": "Reload",
+      "errors": {
+        "forbidden": "You are not allowed to post to this audience.",
+        "invalid": "This comment cannot be posted.",
+        "readOnly": "This workspace is read-only right now.",
+        "operationConflict": "This comment conflicts with an earlier attempt. Reload and try again.",
+        "audienceUnresolved": "Choose who can see this comment before posting it.",
+        "unknownOutcome": "We could not confirm the comment was posted. Check the conversation before sending it again."
+      },
+      "unavailable": "This ticket is not available.",
+      "back": "Back to Customer Tickets"
+    }
   },
   "responseState": {
     "awaitingYourResponse": "Awaiting Your Response",
@@ -518,6 +554,7 @@
     },
     "filters": {
       "allAssignees": "All Assignees",
+      "allContacts": "All Contacts",
       "selectStatus": "Select Status",
       "responseState": "Response State",
       "allResponseStates": "All Response States",
@@ -662,7 +699,9 @@
       "more": "More",
       "bundleNeedsOne": "Select at least 1 ticket to bundle",
       "selectedCount_few": "{{count}} selected",
-      "selectedCount_many": "{{count}} selected"
+      "selectedCount_many": "{{count}} selected",
+      "printLabels": "Print labels",
+      "printLabelsLimit": "You can print at most {{max}} labels at a time"
     },
     "moveDialogTitle": "Move Selected Tickets",
     "moveDialogDescription": "Select a destination board and status, then confirm moving the selected tickets.",
@@ -695,7 +734,7 @@
     "bundleMasterLabel": "Select Master Ticket",
     "bundleMasterPlaceholder": "Select master ticket...",
     "bundleSyncUpdates": "Sync updates from master to children (public replies + workflow changes)",
-    "bundleSyncUpdatesHelp": "Children keep their current status when bundled. Afterwards, closing or reopening the master closes or reopens all children, and status, assignee and priority changes on the master apply to children. Workflow fields are locked on children. Internal notes stay on the master.",
+    "bundleSyncUpdatesHelp": "Children keep their current status when bundled. With sync updates on, closing or reopening the master closes or reopens all children, status, assignee and priority changes on the master apply to them, and their workflow fields are locked. With it off, children manage their own status, assignee and priority. Internal notes stay on the master.",
     "bundleSelectAtLeastTwo": "Select at least two tickets to bundle.",
     "bundleSelectMaster": "Select a master ticket.",
     "bundleSuccess": "Tickets bundled",
@@ -768,8 +807,8 @@
       "masterTicket": "Select Master Ticket",
       "selectMasterTicket": "Select master ticket...",
       "syncUpdates": "Sync updates from master to children (public replies + workflow changes)",
-      "syncUpdatesHelp": "Children keep their current status when bundled. Afterwards, closing or reopening the master closes or reopens all children, and status, assignee and priority changes on the master apply to children. Workflow fields are locked on children. Internal notes stay on the master.",
-      "childrenDescription": "Children keep their current status; workflow fields are locked on children. Inbound child replies are surfaced below as view-only.",
+      "syncUpdatesHelp": "Children keep their current status when bundled. With sync updates on, closing or reopening the master closes or reopens all children, status, assignee and priority changes on the master apply to them, and their workflow fields are locked. With it off, children manage their own status, assignee and priority. Internal notes stay on the master.",
+      "childrenDescription": "Children keep their current status. Workflow fields are locked on children only in Sync Updates mode. Inbound child replies are surfaced below as view-only.",
       "checkingMasters": "Checking existing bundles...",
       "existingMasterSuffix": "(existing master)",
       "existingMasterLocked": "One selected ticket is already a bundle master. It will be used as the master; the others will be added as children.",
@@ -984,7 +1023,24 @@
     "tagCreatePartialFailure_few": "{{count}} tags could not be created",
     "tagCreatePartialFailure_many": "{{count}} tags could not be created",
     "tagCreationFailed_few": "{{count}} tags could not be created",
-    "tagCreationFailed_many": "{{count}} tags could not be created"
+    "tagCreationFailed_many": "{{count}} tags could not be created",
+    "assets": {
+      "heading": "Assets",
+      "selectClientFirst": "Select a client to link assets.",
+      "unavailable": "Assets can be linked from the ticket after it is created."
+    },
+    "attachments": {
+      "heading": "Attachments",
+      "add": "Add files",
+      "remove": "Remove {{name}}"
+    },
+    "watchers": {
+      "heading": "Watchers",
+      "placeholder": "Add watchers..."
+    },
+    "attachmentsPartialFailure": "Ticket created, but these files could not be attached: {{files}}. Add them from the ticket.",
+    "contactLocationSuffix": "(contact's location)",
+    "contactPrimaryLocationSuffix": "(contact's primary)"
   },
   "itil": {
     "calculatedPriority": "Priority (Calculated)",
@@ -1279,6 +1335,9 @@
     },
     "display": {
       "responseStateTrackingTitle": "Response State Tracking",
+      "defaultReplyInternalTitle": "Default reply visibility",
+      "defaultReplyInternalDescription": "Start new ticket replies as Internal for all team members. Users can still switch a reply to Client. Client portal replies and replies within existing threads are unchanged.",
+      "defaultReplyInternalLabel": "Default ticket replies to Internal",
       "responseStateTrackingDescription": "When enabled, tickets automatically track who needs to respond next (awaiting client or awaiting internal response). Disabling this hides response state badges, filters, and related SLA pause options.",
       "responseStateTrackingEnabled": "Response state tracking enabled",
       "responseStateTrackingDisabled": "Response state tracking disabled",
@@ -1413,7 +1472,15 @@
     "selectUnit": "Select a unit to deliver...",
     "onHandByLocation": "On hand by location",
     "catalogUnitCost": "Catalog unit cost",
-    "costNotConfigured": "Not configured"
+    "costNotConfigured": "Not configured",
+    "availableBadge": "Available: {{available}}",
+    "availableByLocation": "Free stock by location",
+    "freeOfOnHand": "{{free}} free of {{onHand}}",
+    "stockHeld": "Only {{free}} available. {{held}} on hand is on hard hold for sales orders or projects and can't be used here.",
+    "stockInsufficient": "Only {{onHand}} on hand, {{requested}} requested.",
+    "reservedStockTitle": "Stock is reserved for a sales order or project",
+    "reservedStockMessage": "Only {{free}} of this product is free. {{reserved}} on hand is reserved for sales orders or projects, and you asked for {{requested}}. Adding it anyway takes stock a sales order or project is counting on and may leave it short.",
+    "reservedStockConfirm": "Add anyway"
   },
   "watchList": {
     "title": "Watch List",
@@ -1595,7 +1662,9 @@
       "agentAlreadyAssigned": "This user is already assigned as an additional agent.",
       "teamNotFound": "Team not found. It may have been deleted. Please refresh and try again.",
       "teamLeadNotFound": "The selected team does not have a team lead. Choose another team or assign a lead first.",
-      "commentNotFound": "Comment not found. It may have been deleted. Please refresh and try again."
+      "commentNotFound": "Comment not found. It may have been deleted. Please refresh and try again.",
+      "boardNotFound": "Board not found. It may have been deleted. Please refresh and try again.",
+      "boardInactive": "The destination board is inactive. Choose an active board."
     },
     "bundle": {
       "masterAlreadyBundleMaster": "Ticket {{tickets}} is already a bundle master and cannot be added as children. Unbundle them first, or use one of them as the master.",
@@ -1622,7 +1691,9 @@
       "missingFieldNamed": "Missing required ticket field: {{field}}.",
       "referenceMissing": "One of the selected ticket records no longer exists. Please refresh and try again.",
       "conflict": "This ticket change conflicts with an existing record. Please refresh and try again.",
-      "valueNotAllowed": "One of the ticket values is not allowed. Please review the form and try again."
+      "valueNotAllowed": "One of the ticket values is not allowed. Please review the form and try again.",
+      "priorityItilBoardCustom": "Priority ‘{{priority}}’ is an ITIL priority but board ‘{{board}}’ uses custom priorities.",
+      "priorityCustomBoardItil": "Priority ‘{{priority}}’ is a custom priority but board ‘{{board}}’ uses ITIL priorities."
     },
     "board": {
       "invalidReference": "The selected board, status, or rule is invalid. Please refresh and try again.",
@@ -1631,7 +1702,14 @@
       "referenceInvalid": "The selected board, status, priority, assignee, team, or SLA policy is no longer valid. Please refresh and try again.",
       "duplicateName": "A board with this name already exists.",
       "duplicate": "A board or status with the same settings already exists.",
-      "invalidValue": "One of the board or status values is invalid. Please refresh and try again."
+      "invalidValue": "One of the board or status values is invalid. Please refresh and try again.",
+      "notificationEmailInvalid": "Notification rule {{rule}} has an invalid email address (up to {{max}} characters)",
+      "notificationEmailLimit": "Notification rule {{rule}} can have at most {{max}} email addresses",
+      "notificationRecipientRequired": "Notification rule {{rule}} must notify at least one user, team or email address",
+      "notificationEmailIsUser": "Notification rule {{rule}}: {{address}} is an Alga user's email address. Choose the user instead.",
+      "notificationEmailIsContact": "Notification rule {{rule}}: {{address}} belongs to a client contact or location and cannot be a recipient.",
+      "notificationEmailClientDomain": "Notification rule {{rule}}: {{address}} is on a client's email domain and cannot be a recipient.",
+      "notificationEmailInboundMailbox": "Notification rule {{rule}}: {{address}} is a connected inbound mailbox and cannot be a recipient."
     },
     "material": {
       "invalidValue": "One of the selected material values is invalid. Please refresh and try again.",
@@ -1642,7 +1720,9 @@
       "valueNotAllowed": "One of the material values is not allowed. Please review the form and try again."
     },
     "settings": {
-      "updateDenied": "Permission denied: Cannot update ticket settings"
+      "createDenied": "Permission denied: Cannot create boards",
+      "updateDenied": "Permission denied: Cannot update ticket settings",
+      "deleteDenied": "Permission denied: Cannot delete boards"
     },
     "list": {
       "filtersInvalid": "Ticket list filters are no longer valid. Refresh the page and try again."
@@ -1686,7 +1766,16 @@
       "ruleSubcategoryRequiresCategory": "Select a category before choosing a subcategory.",
       "ruleTooManyKeywords": "Use at most {{max}} keywords per rule.",
       "ruleKeywordTooLong": "Keep each keyword to {{max}} characters or fewer.",
-      "ruleOriginInvalid": "One of the selected ticket sources is not valid."
+      "ruleOriginInvalid": "One of the selected ticket sources is not valid.",
+      "templateClientMismatch": "This checklist template is limited to a different client than this ticket's client.",
+      "templateClientInvalid": "The selected client was not found.",
+      "ruleClientOutsideTemplateScope": "This template belongs to one client, so its rules cannot target other clients.",
+      "templateRulesTargetOtherClients": "Some of this template's auto-apply rules target other clients. Remove those clients from the rules before assigning the template to one client.",
+      "predicateClientOutsideScope": "Client {{client}} is outside this template’s ownership.",
+      "predicateInvalid": "Invalid checklist rule: {{detail}}"
+    },
+    "comment": {
+      "audienceRequired": "Choose who can see this comment before posting it."
     }
   },
   "ticketSection": {
@@ -1715,9 +1804,11 @@
   },
   "details": {
     "bundle": {
-      "childrenDescription": "Children keep their current status when bundled. Afterwards, closing or reopening the master closes or reopens all children, and status, assignee and priority changes on the master apply to children. Workflow fields are locked on children. Internal notes stay on the master.",
+      "childrenDescription": "Children keep their current status when bundled. In Sync Updates mode, closing or reopening the master closes or reopens all children, status, assignee and priority changes on the master apply to them, and their workflow fields are locked. In Link Only mode, children manage their own status, assignee and priority. Internal notes stay on the master.",
       "title": "Bundle",
       "masterBanner": "This ticket is the master of a bundle ({{count}} children). Mode: {{mode}}.",
+      "childLockedNotice": "Workflow fields are locked; work from the master ticket.",
+      "childLinkedNotice": "It is linked to the master and managed on its own.",
       "multipleClients": "Multiple clients",
       "mode": "Mode: {{mode}}",
       "unbundle": "Unbundle",
@@ -1753,7 +1844,15 @@
       "applyResolutionHelpNoComment": "Closes the child with status {{status}}. The master has no public resolution comment to post.",
       "reopenMasterLabel": "Add and reopen master",
       "reopenMasterHelp": "Reopens only the master. Already-closed children in this bundle stay closed; reopen notifications and SLA apply to the master.",
-      "closedMasterGating": "The board's close rules do not allow open children under a closed master, so keeping the master closed is not an option."
+      "closedMasterGating": "The board's close rules do not allow open children under a closed master, so keeping the master closed is not an option.",
+      "modeSwitchDialogIntro": "The master is closed. Choose what should happen to the open children when the bundle switches to Sync Updates.",
+      "modeSwitchConfirm": "Switch to Sync Updates",
+      "keepClosedSwitchLabel": "Switch and keep master closed",
+      "keepClosedSwitchHelp": "Open children stay open with their own SLA clocks. The bundle will show as inconsistent until they are resolved.",
+      "applyResolutionSwitchLabel": "Switch and apply the master's resolution to open children",
+      "applyResolutionSwitchHelp": "Closes each open child with status {{status}} and posts the master's resolution to it as a public comment.",
+      "applyResolutionSwitchHelpNoComment": "Closes each open child with status {{status}}. The master has no public resolution comment to post.",
+      "reopenMasterSwitchLabel": "Switch and reopen master"
     },
     "autoClose": "Will close automatically on {{date}} unless there's new activity.",
     "autoCloseWarned": "The customer has been warned.",
@@ -1802,7 +1901,8 @@
     "remoteFieldUpdated": "{{name}} updated {{field}}",
     "connection": {
       "reconnecting": "Live updates offline - reconnecting...",
-      "unavailable": "Live updates unavailable"
+      "unavailable": "Live updates unavailable",
+      "offlineShort": "Offline"
     }
   },
   "delete": {
@@ -1984,7 +2084,12 @@
       "openScheduleEntry": "Open schedule entry",
       "acrossEntries_few": "across {{count}} entries",
       "acrossEntries_many": "across {{count}} entries",
-      "changeLocation": "Change location"
+      "changeLocation": "Change location",
+      "addDescriptionPrompt": "Add a description — what is the problem, and what does the customer need?",
+      "projectTasks": "Project tasks",
+      "timeAndBilling": "Time & billing",
+      "useContactLocation": "Use contact's location",
+      "remote": "Remote"
     },
     "timeline": {
       "subtitle": "Replies, time, and system changes in one place",
@@ -2080,6 +2185,17 @@
       "collapseActivity": "Collapse older activity",
       "replyingToComment": "Replying to {{name}}",
       "createdFromTemplate": "{{actor}} created this ticket from template \"{{name}}\""
+    },
+    "board": {
+      "conversation": "Conversation",
+      "details": "Details"
+    },
+    "groups": {
+      "customer": "Customer",
+      "work": "Work",
+      "who": "People",
+      "linked": "Linked items",
+      "empty": "Nothing here yet"
     }
   },
   "externalLinks": {
@@ -2503,7 +2619,9 @@
     "discard": "Discard stopwatch",
     "pausedHint": "Paused. Resume to keep tracking, or stop to log the time.",
     "workDescription": "Work description",
-    "whatAreYouWorkingOn": "What are you working on?"
+    "whatAreYouWorkingOn": "What are you working on?",
+    "chipElsewhere": "Timer on {{label}}",
+    "title": "Stopwatch"
   },
   "templates": {
     "loading": "Loading…",
@@ -2518,12 +2636,15 @@
       "columns": {
         "name": "Name",
         "title": "Ticket title",
+        "client": "Client",
         "board": "Board",
         "checklist": "Checklist items",
         "status": "Status",
         "schedules": "Schedules"
       },
-      "deleteBlocked": "Used by {{count}} recurring schedule(s). Point them at another template or archive them first."
+      "deleteBlocked": "Used by {{count}} recurring schedule(s). Point them at another template or archive them first.",
+      "allClients": "All clients",
+      "clientFilter": "All clients"
     },
     "status": {
       "active": "Active",
@@ -2551,6 +2672,9 @@
       "title": "Ticket title",
       "description": "Description",
       "descriptionPlaceholder": "Description",
+      "client": "Client",
+      "clientPlaceholder": "All clients",
+      "clientHelp": "Leave empty to offer the template for every client. Pick one to offer it only on that client’s tickets.",
       "offerForManualUse": "Offer in the new ticket picker",
       "offerForManualUseHelp": "Turn off for templates that only recurring schedules use.",
       "titleTokens": "You can use {{tokens}} in the title; they are filled in per ticket."
@@ -2581,15 +2705,17 @@
       "fromTicket": "Prefilled from ticket #{{number}}. Nothing is saved until you click Save.",
       "inlineImages": "The description contains images that belong to the source ticket. They may stop displaying if that ticket is deleted. Remove them or re-upload them if the template should outlive the ticket.",
       "viewOnly": "You can view this template but not change it.",
-      "referenceProblems": "Some fields in this template point at things that no longer exist. They are left blank when the template is used. Fix them and save:",
+      "referenceProblems": "Some fields in this template are not valid: they refer to something that no longer exists, or do not fit together (for example a priority that does not match the board). Fix them and save:",
       "inactiveWarning": "Inactive: hidden from the template picker; still used by {{count}} schedules.",
       "sharedWarning": "Changes here apply to every recurring schedule that uses this template, from the next ticket each one creates.",
-      "boardChangeWarning": "Changing the board clears priority and category, and can make the status of schedules that use this template invalid. Those schedules fail until you edit them. Affected schedules: {{schedules}}."
+      "boardChangeWarning": "Changing the board clears priority and category, and can make the status of schedules that use this template invalid. Those schedules fail until you edit them. Affected schedules: {{schedules}}.",
+      "priorityTypeMismatchItil": "Priority ‘{{priority}}’ is an ITIL priority but board ‘{{board}}’ uses custom priorities. Saving is refused until you change the priority or the board.",
+      "priorityTypeMismatchCustom": "Priority ‘{{priority}}’ is a custom priority but board ‘{{board}}’ uses ITIL priorities. Saving is refused until you change the priority or the board."
     },
     "errors": {
       "notFound": "Ticket template not found",
       "duplicateName": "A template named {{name}} already exists",
-      "invalidReferences": "The template refers to a board, category or priority that is not available",
+      "invalidReferences": "{{problems}}",
       "notAvailable": "Ticket templates are not available",
       "subcategoryNeedsCategory": "A subcategory requires a category",
       "inUseBySchedules": "Used by {{count}} recurring schedule(s): {{schedules}}. Point them at another template or archive them first."
@@ -2628,5 +2754,214 @@
       "daysHours": "{{days}}d {{hours}}h",
       "days": "{{days}}d"
     }
+  },
+  "cannedResponses": {
+    "picker": {
+      "button": "Canned responses",
+      "buttonTooltip": "Insert a canned response (Ctrl/Cmd+J, or type /)",
+      "title": "Insert a canned response",
+      "searchPlaceholder": "Search canned responses…",
+      "searchLabel": "Search canned responses",
+      "loading": "Loading canned responses…",
+      "empty": "No canned responses are available yet.",
+      "noResults": "No canned responses match your search.",
+      "loadFailed": "Canned responses could not be loaded.",
+      "insertFailed": "The canned response could not be inserted.",
+      "favorites": "Favorites",
+      "recent": "Recently used",
+      "uncategorized": "Uncategorized",
+      "slashGroup": "Canned responses",
+      "slashBrowse": "Canned responses…",
+      "slashBrowseHint": "Browse and insert a saved reply"
+    },
+    "scope": {
+      "personal": "Personal",
+      "team": "Team",
+      "board": "Board",
+      "clientPortal": "Client portal",
+      "personalHelp": "Only you can use this response.",
+      "teamHelp": "Members of the chosen team can use this response.",
+      "boardHelp": "Anyone replying to tickets on the chosen board can use this response.",
+      "clientPortalHelp": "Reserved for client portal replies. It is not offered when replying from the MSP portal."
+    },
+    "list": {
+      "title": "Canned responses",
+      "new": "New canned response",
+      "showInactive": "Show inactive",
+      "searchPlaceholder": "Search name, category or text…",
+      "searchLabel": "Search canned responses",
+      "allCategories": "All categories",
+      "noResults": "No canned responses match your filters.",
+      "empty": "No canned responses yet. Create one to reuse it in ticket replies.",
+      "deleteTitle": "Delete canned response",
+      "deleteMessage": "Delete \"{{name}}\"? Replies that already used it are not changed.",
+      "deleted": "Canned response deleted",
+      "favorite": "Favorite",
+      "columns": {
+        "name": "Name",
+        "category": "Category",
+        "scope": "Available to",
+        "preview": "Preview",
+        "status": "Status"
+      }
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "actions": {
+      "favorite": "Add to favorites",
+      "unfavorite": "Remove from favorites",
+      "edit": "Edit",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "delete": "Delete",
+      "cancel": "Cancel"
+    },
+    "loading": "Loading…",
+    "editor": {
+      "back": "Canned responses",
+      "newTitle": "New canned response",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Canned response saved",
+      "created": "Canned response created",
+      "viewOnly": "You can view this canned response but not change it."
+    },
+    "sections": {
+      "details": "Details",
+      "body": "Response"
+    },
+    "fields": {
+      "name": "Name",
+      "category": "Category",
+      "categoryHelp": "Groups responses in the picker. Optional.",
+      "scope": "Available to",
+      "team": "Team",
+      "teamPlaceholder": "Select a team",
+      "board": "Board",
+      "boardPlaceholder": "Select a board",
+      "body": "Response text",
+      "bodyPlaceholder": "Write the reply…"
+    },
+    "mergeFields": {
+      "title": "Merge fields",
+      "help": "Filled in when the response is inserted into a reply. A field with no value becomes empty; an unrecognized field is left as written.",
+      "descriptions": {
+        "contact_first_name": "The contact's first name",
+        "contact_last_name": "The contact's last name",
+        "contact_name": "The contact's full name",
+        "ticket_number": "The ticket number",
+        "ticket_title": "The ticket title",
+        "agent_name": "Your name (the agent replying)",
+        "client_name": "The client's name"
+      }
+    },
+    "errors": {
+      "notFound": "Canned response not found.",
+      "duplicateName": "A canned response named \"{{name}}\" already exists here.",
+      "invalidReferences": "The selected team or board no longer exists.",
+      "notAvailable": "This canned response is not available for this ticket.",
+      "notATeamMember": "You can only manage team responses for teams you belong to."
+    }
+  },
+  "batchDuplicate": {
+    "title": "Duplicate #{{number}} for contacts",
+    "titleLoading": "Duplicate for contacts",
+    "loading": "Loading…",
+    "loadFailed": "The ticket to duplicate could not be loaded. Please try again.",
+    "createFailed": "The copies could not be created. Please try again.",
+    "templateLabel": "Title template",
+    "insertToken": "Insert:",
+    "nameHint": "Replace \"{{name}}\" with {{token}} to personalise each copy.",
+    "replace": "Replace",
+    "contactsLabel": "Contacts",
+    "contactsPlaceholder": "Select contacts…",
+    "addBlankRow": "Add copy without contact",
+    "count": "{{count}} of {{max}}",
+    "capReached": "Maximum of {{max}} copies per batch.",
+    "columns": {
+      "contact": "Contact",
+      "title": "Title"
+    },
+    "resetRow": "Reset to template",
+    "removeRow": "Remove copy",
+    "copyChecklist": "Copy checklist items (unchecked)",
+    "cancel": "Cancel",
+    "review": "Review",
+    "back": "Back",
+    "create_one": "Create {{count}} ticket",
+    "create_other": "Create {{count}} tickets",
+    "creating_one": "Creating {{count}} ticket…",
+    "creating_other": "Creating {{count}} tickets…",
+    "done": "Done",
+    "retryFailed_one": "Retry failed ({{count}})",
+    "retryFailed_other": "Retry failed ({{count}})",
+    "errors": {
+      "contactRequired": "This title uses {{token}} but the copy has no contact.",
+      "unknownToken": "Unknown token: {{tokens}}",
+      "empty": "The title cannot be empty.",
+      "unresolvedToken": "The title still contains a {{placeholder}} placeholder."
+    },
+    "summary": {
+      "client": "Client",
+      "board": "Board",
+      "category": "Category",
+      "priority": "Priority",
+      "assignee": "Assignee",
+      "team": "Team",
+      "additionalAgents": "Additional agents",
+      "tags": "Tags",
+      "checklist": "Checklist",
+      "checklistCopy_one": "Copy {{count}} item (unchecked)",
+      "checklistCopy_other": "Copy {{count}} items (unchecked)",
+      "checklistSkip": "Not copied",
+      "customFields": "Custom fields",
+      "status": "Status",
+      "statusBoardDefault": "Board default",
+      "none": "None",
+      "notCopied": "Comments, time entries, attachments and due date are not copied.",
+      "unresolved": "Name unavailable"
+    },
+    "results": {
+      "created_one": "{{count}} ticket created",
+      "created_other": "{{count}} tickets created",
+      "failed_one": "{{count}} copy failed",
+      "failed_other": "{{count}} copies failed"
+    },
+    "discardTitle": "Discard these copies?",
+    "discardMessage": "The copies you set up have not been created yet. Discard them and close?",
+    "discardConfirm": "Discard",
+    "discardKeep": "Keep editing"
+  },
+  "sharedSla": {
+    "title": "Service level",
+    "msp": "MSP service level",
+    "customer": "Customer service level",
+    "state": {
+      "running": "Running",
+      "paused": "Paused",
+      "met": "Met",
+      "breached": "Breached"
+    },
+    "target": {
+      "response": "First response",
+      "resolution": "Resolution"
+    },
+    "elapsed": "Elapsed {{time}}",
+    "dueAt": "Due {{date}}",
+    "completedAt": "Met {{date}}",
+    "breached": "Breached",
+    "targetPaused": "Paused",
+    "noTarget": "No target",
+    "duration": {
+      "hoursMinutes": "{{hours}}h {{minutes}}m",
+      "minutes": "{{minutes}}m"
+    },
+    "notStarted": "The clock starts when the ticket is escalated.",
+    "unavailable": "This service level is no longer available.",
+    "notConfigured": "No service level applies.",
+    "empty": "No service level is being tracked for this ticket yet.",
+    "loadError": "The service level could not be loaded."
   }
 }

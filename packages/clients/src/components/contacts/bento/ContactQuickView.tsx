@@ -12,7 +12,10 @@ import type {
 interface ContactQuickViewProps {
   id?: string;
   contact: IContact;
-  clients: IClient[];
+  /** @deprecated Ignored; see ContactBentoLayout. */
+  clients?: IClient[];
+  /** Name of the contact's client when the caller has it. */
+  clientName?: string | null;
   documents?: IDocument[];
   interactions?: IInteraction[];
   tags?: ITag[];

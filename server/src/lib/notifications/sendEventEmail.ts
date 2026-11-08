@@ -1,7 +1,8 @@
-import { prepareCommentAttachmentEmail, claimCommentEmailDelivery, finishCommentEmailDelivery, recipientCanReceiveCommentFiles } from './ticketCommentAttachmentEmail';
+import { prepareCommentAttachmentEmail, recipientCanReceiveCommentFiles } from './ticketCommentAttachmentEmail';
+import { claimDelivery, finishDelivery, COMMENT_EMAIL_LEDGER, type DeliveryLedger, type DeliveryKey, type DeliveryFinishState } from '@shared/lib/deliveryLedger';
 import { isPublicAttachmentComment } from '@shared/lib/ticketCommentAttachments';
 import { randomUUID } from 'node:crypto';
-import { tenantDb } from '@alga-psa/db';
+import { type TenantDb, tenantDb } from '@alga-psa/db';
 import { getConnection } from '../db/db';
 // Note: Email sending is routed through TenantEmailService
 import logger from '@alga-psa/core/logger';
@@ -15,9 +16,18 @@ import Handlebars from 'handlebars';
 import { EmailAddress, EmailAttachment } from '../../types/email.types';
 import { normalizeTicketSubject } from './ticketSubject';
 import { AUTO_GENERATED_MAIL_HEADERS } from '@shared/lib/email/automatedMessage';
+import { coManagedDeliverySeam } from '@shared/lib/coManagedDelivery';
+import { projectCoManagedNotificationSnapshot } from '@alga-psa/co-managed/sharedWorkProjection';
+import { persistReplyToken } from './replyTokenPersistence';
 
 const REPLY_BANNER_TEXT = '--- Please reply above this line ---';
 const EMAIL_SERVICE_DISABLED_MESSAGE = 'Email service is disabled or not configured';
+const DEFAULT_REPLY_TOKEN_LIFETIME_DAYS = 30;
+
+function getReplyTokenExpiry(now = Date.now()): Date {
+  const configuredDays = Number(process.env.EMAIL_REPLY_TOKEN_LIFETIME_DAYS ?? DEFAULT_REPLY_TOKEN_LIFETIME_DAYS);
+  return new Date(now + configuredDays * 24 * 60 * 60 * 1000);
+}
 
 function isEmailServiceDisabledErrorMessage(message: unknown): boolean {
   if (typeof message !== 'string') return false;
@@ -51,6 +61,7 @@ interface ReplyMarkerPayload {
   projectId?: string;
   commentId?: string;
   threadId?: string;
+  extraMetadata?: Record<string, unknown>;
 }
 
 export interface SendEmailParams {
@@ -83,7 +94,26 @@ export interface SendEmailParams {
     commentId?: string;
     threadId?: string;
     conversationToken?: string;
+    /**
+     * Default true. When false, no reply token is minted, no reply markers are added to the
+     * body and no `email_reply_tokens` row is persisted. The `[Ticket #N]` subject and the
+     * thread headers are kept, so a reply is matched by thread headers (which check the
+     * sender) rather than by a token (which does not).
+     */
+    issueReplyToken?: boolean;
+    /** Extra `email_reply_tokens.metadata` (co-managed `cm2:` tokens). Absent for native mail. */
+    tokenMetadata?: Record<string, unknown>;
   };
+  /**
+   * Optional delivery-ledger claim for this single send (co-managed deliveries). When set, the
+   * send claims `key` in `ledger` before the provider call and finishes it after, with the same
+   * protocol base uses for comment attachments. Native sends never set it.
+   */
+  delivery?: { ledger: DeliveryLedger; key: DeliveryKey; extra?: Record<string, unknown>; ledgerTenant?: string };
+  /** Serializable identity used to reauthorize a sponsor recipient on every immediate or delayed send. */
+  coManagedRecipient?: { tenant: string; ticketId: string; commentId: string; relationshipId: string; sponsorTenant: string; principalId: string };
+  /** Routing delivery is retried from its ledger by routing recovery, never as rendered mail. */
+  coManagedRouting?: true;
   from?: EmailAddress;
   /**
    * Optional: explicitly specify recipient's locale
@@ -122,6 +152,38 @@ export interface SendEmailParams {
    */
   cc?: EmailAddress[];
   bcc?: EmailAddress[];
+}
+
+function projectSponsorEmailContext(context: Record<string, unknown>, redactions: readonly string[]): Record<string, unknown> {
+  const ticket = (context.ticket && typeof context.ticket === 'object' ? context.ticket : {}) as Record<string, unknown>;
+  const comment = (context.comment && typeof context.comment === 'object' ? context.comment : {}) as Record<string, unknown>;
+  const projected = projectCoManagedNotificationSnapshot(redactions, {
+    ticketTitle: ticket.title, ticketNumber: ticket.id, requesterName: ticket.requesterName,
+    requesterEmail: ticket.requesterEmail, requesterPhone: ticket.requesterPhone,
+    requesterContact: ticket.requesterContact, requesterDetails: ticket.requesterDetails,
+    assignedToName: ticket.assignedToName, assignedToEmail: ticket.assignedToEmail,
+    assignedDetails: ticket.assignedDetails, clientName: ticket.clientName, locationSummary: ticket.locationSummary,
+    priority: ticket.priority, priorityColor: ticket.priorityColor, status: ticket.status,
+    board: ticket.board, categoryDetails: ticket.categoryDetails, category: ticket.category, subcategory: ticket.subcategory,
+    ticketUrl: ticket.url, description: ticket.description,
+    metaLine: ticket.metaLine, authorName: comment.author, commentContent: comment.content,
+    commentHtml: comment.html, commentPreview: comment.text, commentRawContent: comment.rawContent,
+  });
+  const safeTicket = { title: projected.ticketTitle ?? 'Shared ticket', id: projected.ticketNumber ?? 'Shared ticket',
+    url: projected.ticketUrl,
+    requesterName: projected.requesterName, requesterEmail: projected.requesterEmail, requesterPhone: projected.requesterPhone,
+    requesterContact: projected.requesterContact, requesterDetails: projected.requesterDetails,
+    assignedToName: projected.assignedToName, assignedToEmail: projected.assignedToEmail, assignedDetails: projected.assignedDetails,
+    clientName: projected.clientName, locationSummary: projected.locationSummary, priority: projected.priority,
+    priorityColor: projected.priorityColor, status: projected.status, board: projected.board,
+    categoryDetails: projected.categoryDetails, category: projected.category, subcategory: projected.subcategory,
+    description: projected.description, metaLine: projected.metaLine };
+  const safeComment = projected.conversationSuppressed
+    ? { content: '', html: '', text: '', plainText: '', rawContent: null, author: 'A team member' }
+    : { content: projected.commentContent, html: projected.commentHtml, text: projected.commentPreview,
+      plainText: projected.commentPreview, rawContent: projected.commentRawContent,
+      author: projected.authorName ?? 'A team member', isInternal: comment.isInternal };
+  return { ticket: safeTicket, comment: safeComment };
 }
 
 function applyReplyMarkers(
@@ -169,44 +231,6 @@ function applyReplyMarkers(
   };
 }
 
-async function persistReplyToken(
-  knex: any,
-  tenantId: string,
-  payload: ReplyMarkerPayload,
-  metadata: { template: string; subject: string; recipient: string }
-): Promise<void> {
-  try {
-    const tableExists = await knex.schema.hasTable('email_reply_tokens');
-    if (!tableExists) {
-      return;
-    }
-
-    const record: Record<string, any> = {
-      tenant: tenantId,
-      token: payload.token,
-      ticket_id: payload.ticketId || null,
-      project_id: payload.projectId || null,
-      comment_id: payload.commentId || null,
-      metadata: JSON.stringify({ ...metadata, threadId: payload.threadId }),
-      template: metadata.template,
-      recipient_email: metadata.recipient,
-      entity_type: payload.projectId ? 'project' : 'ticket',
-    };
-
-    await tenantDb(knex, tenantId).table('email_reply_tokens')
-      .insert(record)
-      .onConflict(['tenant', 'token'])
-      .ignore();
-  } catch (error) {
-    logger.warn('[SendEventEmail] Failed to persist email reply token', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      tenantId,
-      ticketId: payload.ticketId,
-      projectId: payload.projectId,
-      commentId: payload.commentId
-    });
-  }
-}
 
 //
 // Template lookup and sending are handled below using DatabaseTemplateProcessor
@@ -219,7 +243,7 @@ async function persistReplyToken(
  * previous editor for activity (e.g. a public comment) that this write follows.
  */
 export async function appendOutboundMessageIdReference(
-  db: { table: (name: string) => any },
+  db: TenantDb,
   knex: { raw: (sql: string, bindings?: any[]) => any },
   ticketId: string,
   rfcMessageId: string
@@ -239,8 +263,40 @@ export async function appendOutboundMessageIdReference(
     });
 }
 
+/**
+ * Which delivery-ledger row (if any) a single send claims. A co-managed caller names its own
+ * ledger via `params.delivery`; otherwise a managed comment-attachment send claims the comment's
+ * row keyed on the `To` recipient alone — Cc/Bcc addresses never claim a comment's delivery.
+ * Returns null when the send is not ledgered.
+ */
+export function resolveDeliveryClaim(
+  params: Pick<SendEmailParams, 'to' | 'tenantId' | 'delivery'>,
+  managedCommentId: string | undefined,
+): { ledger: DeliveryLedger; tenant: string; key: DeliveryKey } | null {
+  if (params.delivery) {
+    return { ledger: params.delivery.ledger, tenant: params.delivery.ledgerTenant ?? params.tenantId, key: params.delivery.key };
+  }
+  if (managedCommentId) {
+    return { ledger: COMMENT_EMAIL_LEDGER, tenant: params.tenantId, key: { comment_id: managedCommentId, recipient: params.to } };
+  }
+  return null;
+}
+
 export async function sendEventEmail(params: SendEmailParams): Promise<void> {
   try {
+    let sponsorRedactions: readonly string[] | null = null;
+    if (params.coManagedRecipient) {
+      const provider = await coManagedDeliverySeam.resolve(params.coManagedRecipient.tenant);
+      const current = provider?.reauthorizeCommentRecipient
+        ? await provider.reauthorizeCommentRecipient(params.coManagedRecipient)
+        : null;
+      if (!current?.email) return;
+      params = { ...params, to: current.email, recipientUserId: current.principalId };
+      sponsorRedactions = current.redactedFields ?? [];
+      params = { ...params, context: projectSponsorEmailContext(params.context, sponsorRedactions) };
+      const projectedTicket = params.context.ticket as Record<string, unknown> | undefined;
+      if (params.template === 'ticket-comment-added' && projectedTicket?.title) params = { ...params, subject: `New Comment on Ticket: ${projectedTicket.title}` };
+    }
     logger.info('[SendEventEmail] 🚀 NEW EMAIL PROVIDER MANAGER VERSION - Preparing to send email:', {
       to: params.to,
       subject: params.subject,
@@ -483,6 +539,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
           supportsAttachments: capabilities.supportsAttachments,
           blockedAttachmentExtensions: capabilities.blockedAttachmentExtensions,
           maxAttachmentBytes: capabilities.maxAttachmentSize || 0,
+          // LEVERAGE: pattern tenant-link-context — hand-built tenant-facing base URL; recipient may be MSP or client, so surface is not known here (left canonical).
           baseUrl: process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || '',
         });
         if (prepared.downloadLinks.length) attachmentDownloadText = '\nDownload attachments within one hour (verify the recipient email; no portal account required):\n' + prepared.downloadLinks.join('\n');
@@ -494,8 +551,31 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       }
     }
 
+    // Attachment preparation reconstructs persisted content and download links. Reauthorize and
+    // reproject after reconstruction so neither queued content nor those derived links bypass policy.
+    if (params.coManagedRecipient) {
+      const provider = await coManagedDeliverySeam.resolve(params.coManagedRecipient.tenant);
+      const current = provider?.reauthorizeCommentRecipient
+        ? await provider.reauthorizeCommentRecipient(params.coManagedRecipient)
+        : null;
+      if (!current?.email) return;
+      params = { ...params, to: current.email, recipientUserId: current.principalId };
+      sponsorRedactions = current.redactedFields ?? [];
+      params = { ...params, context: projectSponsorEmailContext(params.context, sponsorRedactions) };
+      const projectedTicket = params.context.ticket as Record<string, unknown> | undefined;
+      if (params.template === 'ticket-comment-added' && projectedTicket?.title) params = { ...params, subject: `New Comment on Ticket: ${projectedTicket.title}` };
+      if (projectCoManagedNotificationSnapshot(sponsorRedactions, { commentContent: '', commentPreview: '' }).conversationSuppressed) {
+        params = { ...params, attachments: [], context: { ...params.context, comment: { content: '', html: '', text: '', plainText: '', rawContent: null, author: 'A team member' } } };
+        attachmentDownloadText = '';
+      }
+    }
+
     let html = htmlTemplate(params.context);
     let subject = subjectTemplate(params.context).replace(/[\r\n]+/g, ' ').trim();
+    if (params.coManagedRecipient && params.template === 'ticket-comment-added') {
+      const title = (params.context.ticket as Record<string, unknown> | undefined)?.title;
+      subject = `New Comment on Ticket: ${typeof title === 'string' ? title : 'Shared ticket'}`;
+    }
 
     // For ticket emails, prepend a stable [Ticket #N] token (idempotent) so all
     // event types present consistently and clients have a subject grouping signal.
@@ -530,17 +610,20 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     text += attachmentDownloadText;
 
     let replyPayload: ReplyMarkerPayload | null = null;
-    let effectiveReplyContext = params.replyContext;
-    if (params.replyContext?.ticketId || params.replyContext?.projectId) {
+    // `issueReplyToken` is an sendEventEmail-only option; it never reaches the email service.
+    const { issueReplyToken, ...replyContextForService } = params.replyContext ?? {};
+    let effectiveReplyContext = params.replyContext ? replyContextForService : undefined;
+    if (issueReplyToken !== false && (params.replyContext?.ticketId || params.replyContext?.projectId)) {
       replyPayload = {
         token: params.replyContext.conversationToken || randomUUID(),
         ticketId: params.replyContext.ticketId,
         projectId: params.replyContext.projectId,
         commentId: params.replyContext.commentId,
         threadId: params.replyContext.threadId,
+        extraMetadata: params.replyContext.tokenMetadata,
       };
       effectiveReplyContext = {
-        ...params.replyContext,
+        ...replyContextForService,
         conversationToken: replyPayload.token,
       };
 
@@ -552,9 +635,16 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     // Send via TenantEmailService (handles tenant provider and EE fallback)
     const service = TenantEmailService.getInstance(params.tenantId);
     const processor = new StaticTemplateProcessor(subject, html, text);
-    if (managedCommentDelivery && !await claimCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to)) {
-      const delivery = await tenantDb(knex, params.tenantId).table('ticket_comment_email_deliveries')
-        .where({ comment_id: attachmentCommentId!, recipient: params.to.trim().toLowerCase() }).first();
+    // One claim protocol, two ledgers: base's comment-attachment ledger, or the ledger a co-managed
+    // caller named in `params.delivery`.
+    const claim = resolveDeliveryClaim(params, managedCommentDelivery ? attachmentCommentId : undefined);
+    const ledgered = claim !== null;
+    const finishLedger = (state: DeliveryFinishState, outcome?: { error?: string; errorCode?: string }) =>
+      finishDelivery(knex, claim!.ledger, claim!.tenant, claim!.key, state, outcome);
+    if (claim && !await claimDelivery(knex, claim.ledger, claim.tenant, claim.key, params.delivery?.extra)) {
+      const { ledger, key } = claim;
+      const normalizedKey = Object.fromEntries(Object.entries(key).map(([k, v]) => [k, ledger.normalized?.includes(k) ? v.trim().toLowerCase() : v]));
+      const delivery = await tenantDb(knex, claim.tenant).table(ledger.table).where(normalizedKey).first();
       if (delivery?.state === 'sent') return;
       throw new EmailProviderError('Comment email has an unresolved provider outcome; reconcile before retrying.',
         'unknown', 'unknown', false, 'COMMENT_DELIVERY_RECONCILIATION_REQUIRED', { requiresReconciliation: true });
@@ -563,7 +653,9 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       mailClass: params.mailClass,
       boardId: params.boardId,
       senderId: params.senderId,
-      revalidateCommentOnRetry: managedCommentDelivery,
+      // Sponsor deliveries must return through EventEmailRetryQueue (or routing recovery)
+      // so persisted rendered messages cannot bypass current authorization on rate-limit retry.
+      revalidateCommentOnRetry: managedCommentDelivery || Boolean(params.coManagedRecipient) || Boolean(params.coManagedRouting),
       to: params.to,
       ...(params.cc?.length ? { cc: params.cc } : {}),
       ...(params.bcc?.length ? { bcc: params.bcc } : {}),
@@ -582,10 +674,10 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       from: params.from,
       userId: params.recipientUserId  // For rate limiting
     }).catch(async (error: unknown) => {
-      if (!managedCommentDelivery) throw error;
+      if (!ledgered) throw error;
       const providerError = error as { message?: string; errorCode?: string; metadata?: Record<string, unknown>; isRetryable?: boolean };
       const notSent = providerError.metadata?.definitelyNotSent === true;
-      await finishCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to, notSent ? 'failed' : 'sending', {
+      await finishLedger(notSent ? 'failed' : 'sending', {
         error: providerError.message || 'Email service failed with an unknown outcome', errorCode: providerError.errorCode || 'OUTCOME_UNKNOWN',
       });
       throw new EmailProviderError(providerError.message || 'Email delivery requires reconciliation', 'unknown', 'unknown',
@@ -593,15 +685,15 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
         { ...providerError.metadata, requiresReconciliation: !notSent });
     });
 
-    if (managedCommentDelivery) {
+    if (ledgered) {
       if (result.success && !result.queued) {
         // Record success before ancillary reply-token/log writes can fail.
-        await finishCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to, 'sent');
+        await finishLedger('sent');
       } else if (result.metadata?.definitelyNotSent === true ||
         Number(result.metadata?.status) === 429) {
-        await finishCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to, 'failed', { error: result.error, errorCode: String(result.metadata?.errorCode || 'NOT_SENT') });
+        await finishLedger('failed', { error: result.error, errorCode: String(result.metadata?.errorCode || 'NOT_SENT') });
       } else {
-        await finishCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to, 'sending', { error: result.error || 'Provider outcome is unknown', errorCode: String(result.metadata?.errorCode || 'OUTCOME_UNKNOWN') });
+        await finishLedger('sending', { error: result.error || 'Provider outcome is unknown', errorCode: String(result.metadata?.errorCode || 'OUTCOME_UNKNOWN') });
       }
     }
 
@@ -620,7 +712,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
 
       const providerId = result.providerId || params.providerId || 'unknown';
       const providerType = result.providerType || 'unknown';
-      const isRetryable = result.metadata?.retryable === true && (!managedCommentDelivery ||
+      const isRetryable = result.metadata?.retryable === true && (!ledgered ||
         result.metadata?.definitelyNotSent === true || Number(result.metadata?.status) === 429);
       const errorCode = typeof result.metadata?.errorCode === 'string' ? result.metadata.errorCode : undefined;
 
@@ -639,7 +731,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
         template: params.template,
         subject,
         recipient: params.to,
-      });
+      }, getReplyTokenExpiry());
     }
 
     // Store the outbound RFC Message-ID in the ticket's email_metadata references.

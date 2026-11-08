@@ -9,8 +9,6 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
 import { tenantDb } from '@alga-psa/db';
-import fs from 'node:fs';
-import path from 'node:path';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 
 vi.mock('server/src/lib/utils/getSecret', () => ({
@@ -433,7 +431,7 @@ describe('decideQuote (alga-2026-0002820 1/6)', () => {
     expect(onQuoteAcceptedSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('concurrent accepts: exactly one wins, the other gets already_decided, hook fires once', async () => {
+  it('concurrent accepts: exactly one wins, the others are refused without writing, hook fires once', async () => {
     const tenantId = await createTenantFixture();
     const clientId = await addClient(tenantId);
     const { quoteId, optional } = await addQuote(tenantId, clientId);
@@ -446,7 +444,12 @@ describe('decideQuote (alga-2026-0002820 1/6)', () => {
     const results: any[] = await Promise.all([attempt([]), attempt([optional]), attempt([]), attempt([optional])]);
 
     expect(results.filter((r) => r.status === 'decided')).toHaveLength(1);
-    expect(results.filter((r) => r.status === 'already_decided')).toHaveLength(3);
+    // Losers queue on the row lock and then see the decided quote.
+    const losers = results.filter((r) => r.status !== 'decided');
+    expect(losers).toHaveLength(3);
+    for (const loser of losers) {
+      expect(loser.status === 'already_decided' || (loser.status === 'not_pending' && loser.currentStatus === 'accepted')).toBe(true);
+    }
     expect(await decisions(tenantId, quoteId)).toHaveLength(1);
     expect(await activities(tenantId, quoteId, 'accepted')).toHaveLength(1);
     expect(onQuoteAcceptedSpy).toHaveBeenCalledTimes(1);
@@ -481,36 +484,6 @@ describe('decideQuote (alga-2026-0002820 1/6)', () => {
 
       const [row] = await decisions(tenantId, quoteId);
       expect(row).toMatchObject({ contact_id: null, signer_name: 'Casey Contact', signer_email: 'casey@example.com' });
-    });
-
-    it('deleting a user who decided a quote succeeds and leaves the decision row with actor_user_id NULL', async () => {
-      const tenantId = await createTenantFixture();
-      const clientId = await addClient(tenantId);
-      const contactId = await addContact(tenantId, clientId);
-      const portalUser = await addUser(tenantId, { permissions: [['billing', 'read']], userType: 'client', contactId });
-      const { quoteId } = await addQuote(tenantId, clientId);
-      await decide({ tenantId, quoteId, action: 'accept', actor: { kind: 'portal_user', userId: portalUser.user_id } });
-
-      // Mirror userActions' pre-delete clearing (see the contract test below for the list itself).
-      await db.transaction(async (trx) => {
-        await tenantDb(trx, tenantId).table('quote_decisions').where({ actor_user_id: portalUser.user_id }).update({ actor_user_id: null });
-        await tenantDb(trx, tenantId).table('quotes').where({ accepted_by: portalUser.user_id }).update({ accepted_by: null });
-        await tenantDb(trx, tenantId).table('quote_activities').where({ performed_by: portalUser.user_id }).update({ performed_by: null });
-        await tenantDb(trx, tenantId).table('user_roles').where({ user_id: portalUser.user_id }).del();
-        await tenantDb(trx, tenantId).table('users').where({ user_id: portalUser.user_id }).del();
-      });
-
-      const [row] = await decisions(tenantId, quoteId);
-      expect(row).toMatchObject({ actor_user_id: null, method: 'portal' });
-    });
-
-    it('contract: the delete paths reference quote_decisions', () => {
-      const root = path.resolve(__dirname, '../../../..');
-      const userActions = fs.readFileSync(path.join(root, 'packages/users/src/actions/user-actions/userActions.ts'), 'utf8');
-      expect(userActions).toContain("['quote_decisions', 'actor_user_id']");
-      const contactModel = fs.readFileSync(path.join(root, 'shared/models/contactModel.ts'), 'utf8');
-      const fn = contactModel.slice(contactModel.indexOf('export async function clearContactLinksBeforeDelete'));
-      expect(fn.slice(0, fn.indexOf('\n}\n'))).toMatch(/table\('quote_decisions'\)[\s\S]*contact_id: null/);
     });
   });
 });

@@ -36,6 +36,15 @@
         "suggested": "Suggéré",
         "toSave": "{{total}} à enregistrer"
       },
+      "customerMapping": {
+        "unlink": "Dissocier",
+        "unlinkConfirm": {
+          "title": "Dissocier {{client}} de QuickBooks ?",
+          "body": "{{client}} cesse d’être exporté vers le client QuickBooks {{customer}}. Rien ne change dans QuickBooks et vous pouvez l’associer de nouveau depuis cette liste à tout moment.",
+          "confirm": "Dissocier",
+          "cancel": "Conserver l’association"
+        }
+      },
       "dialog": {
         "cancel": "Annuler",
         "enterPlaceholder": "Saisir {{field}}...",
@@ -425,26 +434,75 @@
           "test": "Tester la connexion",
           "testing": "Test en cours…"
         },
-        "description": "Saisissez l'URL de votre instance CIPP et un jeton API pour permettre à Alga de découvrir et de synchroniser les données Entra.",
-        "encryptionNote": "La clé d'API est chiffrée au repos et n'est plus jamais affichée après l'enregistrement.",
+        "description": "Saisissez les informations d'un client API CIPP pour permettre à Alga de découvrir et de synchroniser les données Entra.",
+        "encryptionNote": "Le secret client est chiffré au repos et n'est plus jamais affiché après l'enregistrement.",
         "errors": {
           "missingFields": "L'URL de base et le jeton API sont requis.",
           "testFirst": "Testez la connexion avant d'enregistrer.",
-          "unknown": "Une erreur inconnue s'est produite."
+          "unknown": "Une erreur inconnue s'est produite.",
+          "missingApiClientFields": "L'URL de l'API, l'ID d'application (client), le secret client et l'ID de locataire sont tous requis."
         },
         "fields": {
           "apiToken": "Jeton API",
-          "apiTokenHelp": "Dans CIPP : Paramètres → CIPP → Accès API. Copiez la clé d'API, pas un secret client Azure.",
+          "apiTokenHelp": "La clé d'API statique d'une ancienne version de CIPP. CIPP n'en émet plus ; privilégiez un client API.",
           "apiTokenPlaceholder": "Saisir le jeton...",
-          "baseUrl": "URL de base CIPP",
-          "baseUrlHelp": "Il s'agit de l'hôte de la function app CIPP-API (par exemple my-cipp-api.azurewebsites.net), pas du frontend CIPP où vous vous connectez.",
-          "baseUrlPlaceholder": "https://cipp.yourdomain.com"
+          "baseUrl": "URL de l'API CIPP",
+          "baseUrlHelp": "L'URL de l'API CIPP, avec ou sans /api final.",
+          "baseUrlPlaceholder": "https://cipp.yourdomain.com",
+          "apiUrl": "URL de l'API",
+          "apiUrlPlaceholder": "https://your-cipp-api.azurewebsites.net/api",
+          "apiUrlHelp": "Collez l'URL de l'API affichée dans CIPP. Elle se termine par /api ; elle fonctionne avec ou sans ce suffixe.",
+          "clientId": "ID d'application (client)",
+          "clientIdPlaceholder": "00000000-0000-0000-0000-000000000000",
+          "clientSecret": "Secret client",
+          "clientSecretPlaceholder": "Saisir le secret client...",
+          "clientSecretHelp": "CIPP n'affiche le secret qu'une seule fois, lorsque vous enregistrez le client avec Save to Azure. Si vous ne l'avez plus, créez un nouveau secret et saisissez-le ici.",
+          "tenantId": "ID de locataire",
+          "tenantIdPlaceholder": "00000000-0000-0000-0000-000000000000",
+          "tenantIdHelp": "L'ID de locataire affiché sur la page CIPP-API, à côté du client."
         },
         "test": {
           "passed": "CIPP a répondu. {{count}} locataires visibles.",
           "required": "Testez la connexion avant d'enregistrer."
         },
-        "title": "Connecter CIPP"
+        "title": "Connecter CIPP",
+        "reconnectTitle": "Reconnecter CIPP",
+        "legacyDescription": "Saisissez l'URL de votre API CIPP et une clé d'API statique héritée. CIPP n'émet plus ces clés ; utilisez un client API si possible.",
+        "reconnectNote": "L'URL de l'API, l'ID d'application (client) et l'ID de locataire sont préremplis à partir de la connexion actuelle. Saisissez à nouveau le secret client. La connexion actuelle continue de fonctionner jusqu'à ce que les nouvelles informations réussissent un test et que vous enregistriez.",
+        "reconnectNoteLegacy": "L'URL de l'API est préremplie à partir de la connexion actuelle. Saisissez l'ID d'application (client), le secret client et l'ID de locataire depuis CIPP > Integrations > CIPP-API. La connexion actuelle continue de fonctionner jusqu'à ce que les nouvelles informations réussissent un test et que vous enregistriez.",
+        "legacyNote": "Les clés d'API héritées sont réservées aux connexions créées avant que CIPP n'introduise les clients API. Les connexions existantes continuent de fonctionner.",
+        "legacyEncryptionNote": "La clé d'API est chiffrée au repos et n'est plus jamais affichée après l'enregistrement.",
+        "help": {
+          "title": "Où trouver ces informations dans CIPP",
+          "steps": {
+            "openIntegration": "Dans CIPP, accédez à Integrations > CIPP-API.",
+            "createClient": "Choisissez Create New Client.",
+            "enable": "Activez le client.",
+            "saveToAzure": "Choisissez Save to Azure.",
+            "copySecret": "Copiez le secret client. CIPP ne l'affiche qu'une seule fois.",
+            "copyDetails": "Copiez l'ID de locataire et l'URL de l'API depuis cette même page, ainsi que l'ID d'application (client)."
+          },
+          "tenantIdDelay": "L'ID de locataire peut mettre de 5 à 15 minutes à apparaître après le premier enregistrement. S'il n'est pas encore là, patientez et actualisez la page CIPP.",
+          "restrictions": "Si le client utilise Allowed IP Ranges, ajoutez-y les adresses IP de sortie d'Alga. S'il utilise un Custom Role, le rôle doit autoriser listtenants, listusers, listgroups, listusergroups et ListMailboxes."
+        },
+        "shape": {
+          "useLegacy": "Utiliser plutôt une clé d'API héritée",
+          "useApiClient": "Utiliser plutôt un client API CIPP (recommandé)"
+        },
+        "failure": {
+          "unreachable": "Impossible de joindre CIPP à cette URL",
+          "tokenRejected": "Microsoft a rejeté la connexion du client API",
+          "apiRefused": "CIPP a refusé le jeton d'accès",
+          "legacyRejected": "CIPP a rejeté la clé d'API",
+          "roleBlocked": "Le rôle personnalisé CIPP bloque une autorisation nécessaire à la synchronisation",
+          "transport": {
+            "dns": "Impossible de joindre {{host}} : le nom d'hôte ne se résout pas. Vérifiez l'URL de l'API ; copiez-la depuis CIPP > Integrations > CIPP-API.",
+            "refused": "Impossible de joindre {{host}} : la connexion a été refusée. L'hôte existe mais n'accepte aucune connexion. Vérifiez l'URL de l'API et que l'application de fonctions CIPP-API est en cours d'exécution.",
+            "timeout": "Impossible de joindre {{host}} : la requête a expiré. L'hôte est peut-être indisponible, ou un pare-feu bloque notre trafic. Vérifiez l'URL de l'API et réessayez.",
+            "tls": "Impossible de joindre {{host}} : son certificat TLS n'a pas été accepté. Utilisez l'URL https de l'API affichée dans CIPP > Integrations > CIPP-API.",
+            "network": "Impossible de joindre {{host}} : la requête réseau a échoué avant que CIPP ne réponde. Vérifiez l'URL de l'API et réessayez."
+          }
+        }
       },
       "console": {
         "actions": {
@@ -795,9 +853,14 @@
             "expired": "La tentative de connexion a expiré avant de se terminer. Rien n'a été enregistré — relancez la connexion.",
             "generic": "Microsoft Entra n'a pas été connecté et rien n'a été enregistré. Veuillez réessayer.",
             "validationFailed": "Microsoft vous a connecté, mais la liste des locataires gérés n'a pas pu être lue ; rien n'a été enregistré. Vos autorisations ont été acceptées — en général, le locataire partenaire n'est pas intégré à Microsoft 365 Lighthouse ou n'a aucune relation GDAP active.",
-            "tokenRejected": "Microsoft a rejeté le jeton d'accès de la connexion ; rien n'a été enregistré. Relancez la connexion."
+            "tokenRejected": "Microsoft a rejeté le jeton d'accès de la connexion ; rien n'a été enregistré. Relancez la connexion.",
+            "singleTenantApp": "Microsoft a refusé la connexion car cet enregistrement d'application est mono-locataire. Entra nécessite une application multilocataire : ouvrez l'enregistrement de l'application, accédez à Authentification, définissez Types de comptes pris en charge sur « Comptes dans un annuaire organisationnel quelconque », puis reconnectez-vous. Rien n'a été enregistré.",
+            "appNotInDirectory": "Microsoft n'a pas trouvé cette application dans l'annuaire indiqué par l'ID de locataire du profil Microsoft. Vérifiez que l'ID de locataire est l'ID d'annuaire (locataire) où l'application est enregistrée. Rien n'a été enregistré.",
+            "wrongDirectory": "Le compte avec lequel vous vous êtes connecté appartient à un autre annuaire que cette application mono-locataire. Rendez l'application multilocataire (Comptes dans un annuaire organisationnel quelconque), puis reconnectez-vous. Rien n'a été enregistré.",
+            "redirectUriMismatch": "Microsoft a refusé l'URI de redirection car il n'est pas enregistré sur l'application. Ajoutez cet URI exact sous Authentification > URI de redirection web, puis reconnectez-vous : {{redirectUri}}",
+            "invalidClientSecret": "Microsoft a refusé la clé secrète client du profil Microsoft. Vérifiez que vous avez enregistré la Valeur de la clé secrète, et non son ID de clé secrète.",
+            "expiredClientSecret": "La clé secrète client du profil Microsoft a expiré. Créez une nouvelle clé secrète dans Azure, puis mettez à jour le profil."
           },
-          "cippServerLabel": "Serveur CIPP",
           "connectingSuffix": " (Connexion...)",
           "details": "Détails de la connexion",
           "directCredentialSourceLabel": "Source des identifiants :",
@@ -810,7 +873,17 @@
           "types": {
             "cipp": "CIPP",
             "direct": "Microsoft Entra Direct"
-          }
+          },
+          "authTypeLabel": "Authentification",
+          "authTypes": {
+            "api_client": "Client API",
+            "legacy_api_token": "Clé d'API héritée"
+          },
+          "apiUrlLabel": "URL de l'API",
+          "clientIdLabel": "ID d'application (client)",
+          "cippTenantIdLabel": "ID de locataire",
+          "legacyNotice": "Cette connexion utilise une clé d'API CIPP héritée. Elle continue de se synchroniser sans changement. Reconnectez-vous pour passer à un client API CIPP.",
+          "reconnectCipp": "Reconnecter"
         },
         "currentStep": {
           "connect": {
@@ -1009,8 +1082,8 @@
             "description": "Alga lit les locataires via l'instance CIPP que vous exploitez déjà.",
             "label": "CIPP (CyberDrain Improved Partner Portal)",
             "prerequisites": {
-              "apiHost": "L'hôte de la function app CIPP-API, pas le frontend CIPP.",
-              "apiKey": "Une clé d'API CIPP avec accès à la liste des locataires.",
+              "apiHost": "L'URL de l'API, l'ID d'application (client) et l'ID de locataire depuis CIPP > Integrations > CIPP-API.",
+              "apiKey": "Le secret du client API, que CIPP n'affiche qu'une seule fois.",
               "instance": "Une instance CIPP en fonctionnement."
             }
           },
@@ -1861,8 +1934,12 @@
           "calendarRedirect": "Redirect URI de synchronisation du calendrier",
           "calendarTitle": "Guide du calendrier",
           "clientId": "ID client",
+          "copied": "Copié",
+          "copy": "Copier",
+          "copyFailed": "Copie impossible",
           "currentProfileTitle": "Valeurs du profil actuel",
           "emailRedirect": "Redirect URI de l'e-mail entrant",
+          "emailSetupRedirect": "URI de redirection de la configuration e-mail",
           "emailTitle": "Guide de l'e-mail",
           "entraConsent": "Exigence",
           "entraConsentValue": "Inscrivez cette application en multilocataire et accordez le consentement administrateur dans le locataire partenaire.",
@@ -2016,11 +2093,18 @@
         "environment": "Environnement Intuit",
         "environmentProduction": "Production",
         "environmentSandbox": "Bac à sable",
+        "environmentHint": "La production se connecte à de vraies entreprises QuickBooks. Le bac à sable se connecte à une entreprise de test Intuit, ce qui permet d’essayer les exports sans toucher à une comptabilité réelle.",
+        "environmentLockedHint": "Déconnectez QuickBooks avant de changer d’environnement. L’entreprise connectée et ses jetons n’existent que dans l’environnement où ils ont été autorisés.",
+        "environmentSandboxKeysTitle": "Le bac à sable exige votre propre application Intuit",
+        "environmentSandboxKeysDescription": "Les entreprises du bac à sable Intuit n’acceptent que les clés Development d’une application Intuit que vous contrôlez. L’application partagée de ce déploiement utilise des clés Production : enregistrez votre propre application et saisissez ses clés Development ci-dessous avant de vous connecter.",
+        "environmentSavedSandbox": "QuickBooks se connectera désormais à une entreprise du bac à sable Intuit. Connectez-vous avec les clés Development de votre propre application Intuit.",
+        "environmentSavedProduction": "QuickBooks se connectera désormais à de vraies entreprises QuickBooks.",
         "errors": {
           "automatedSalesTax": "Impossible de mettre à jour le mode Automated Sales Tax.",
           "disconnect": "Échec de la déconnexion de QuickBooks.",
           "load": "Échec du chargement des paramètres QuickBooks.",
-          "saveCredentials": "Échec de l'enregistrement des identifiants QuickBooks."
+          "saveCredentials": "Échec de l'enregistrement des identifiants QuickBooks.",
+          "environment": "Échec du changement d’environnement Intuit."
         },
         "howItWorksDescription": "Connectez votre entreprise QuickBooks en vous connectant à Intuit ; AlgaPSA l'utilisera comme contexte en direct par défaut pour les exports et les correspondances. La carte « Application Intuit » ci-dessous indique si votre déploiement fournit déjà l'application utilisée pour cette connexion ou si vous devez d'abord en enregistrer une.",
         "howItWorksTitle": "Comment fonctionne QuickBooks live dans cette version",
@@ -2052,6 +2136,7 @@
         "credentialSource": {
           "app": "Ce déploiement fournit une application Intuit partagée : vous pouvez donc connecter QuickBooks sans en enregistrer une. Ignorez cette carte et cliquez sur « Connecter QuickBooks » ci-dessous.",
           "none": "Aucune application Intuit n'est encore disponible. Enregistrez-en une auprès d'Intuit avant de pouvoir vous connecter.",
+          "noneSandbox": "Le bac à sable exige votre propre application Intuit. Enregistrez-en une et saisissez ses clés Development avant de pouvoir vous connecter.",
           "tenant": "Ce tenant se connecte via sa propre application Intuit, avec les identifiants enregistrés ci-dessous. Pour renouveler une clé, collez la nouvelle valeur et enregistrez.",
           "appTitle": "Aucun identifiant nécessaire"
         },
@@ -2350,6 +2435,42 @@
           "title": "Fenêtres de maintenance",
           "description": "Les alertes reçues pendant une fenêtre active sont supprimées et ne créent pas de tickets.",
           "empty": "Aucune fenêtre de maintenance configurée."
+        },
+        "predicate": {
+          "matchAll": "Correspondance",
+          "all": "Toutes les conditions",
+          "any": "N’importe quelle condition",
+          "add": "Ajouter une condition",
+          "remove": "Supprimer",
+          "value": "Valeur",
+          "nestedGroup": "Groupe imbriqué",
+          "legacyRegex": "Expression régulière héritée du message",
+          "and": "et",
+          "or": "ou",
+          "fields": {
+            "severity": "Gravité",
+            "alertClass": "Classe d’alerte",
+            "activityType": "Type d’activité",
+            "sourceType": "Type de source",
+            "organizationId": "ID de l’organisation",
+            "text": "Message et détails",
+            "deviceName": "Nom de l’appareil",
+            "externalDeviceId": "ID externe de l’appareil",
+            "message": "Message",
+            "details": "Détails"
+          },
+          "operators": {
+            "equals": "est",
+            "not_equals": "n’est pas",
+            "in": "est une valeur parmi",
+            "not_in": "n’est aucune des valeurs",
+            "contains": "contient",
+            "not_contains": "ne contient pas",
+            "contains_ci": "contient, sans tenir compte de la casse",
+            "not_contains_ci": "ne contient pas, sans tenir compte de la casse"
+          },
+          "addGroup": "Ajouter un groupe",
+          "removeGroup": "Supprimer le groupe"
         }
       },
       "ninjaOne": {
@@ -2999,6 +3120,93 @@
           "showSecret": "Afficher le secret",
           "title": "Webhook d'alertes",
           "url": "URL du webhook"
+        }
+      },
+      "unifi": {
+        "proFeature": {
+          "description": "L’intégration UniFi est disponible dans AlgaPSA Pro."
+        },
+        "actions": {
+          "saveConfiguration": "Enregistrer la configuration",
+          "testConnection": "Tester la connexion",
+          "disconnect": "Déconnecter",
+          "discoverSites": "Découvrir les sites",
+          "runDeviceSync": "Lancer la synchronisation des appareils",
+          "checkOfflineNow": "Vérifier les appareils hors ligne maintenant",
+          "saveAlerting": "Enregistrer les paramètres d'alerte"
+        },
+        "alerting": {
+          "title": "Alertes hors ligne",
+          "description": "Un appareil qui reste hors ligne plus longtemps que le délai de grâce déclenche une alerte et, si vos règles d'alerte le prévoient, un ticket. L'alerte est résolue lorsque l'appareil revient en ligne.",
+          "graceMinutes": "Délai de grâce hors ligne (minutes)",
+          "graceHelp": "Durée pendant laquelle un appareil doit rester hors ligne en continu avant qu'une alerte ne soit déclenchée. Utilisez 0 pour alerter immédiatement.",
+          "rulesNote": "La création de tickets, les priorités et la résolution automatique se configurent dans les règles d'alerte ci-dessous."
+        },
+        "connection": {
+          "title": "Connexion UniFi",
+          "description": "Connectez-vous avec une clé d'API UniFi. Utilisez Site Manager pour accéder à toutes les consoles de votre compte, ou Contrôleur local pour un contrôleur directement accessible. Les passerelles, commutateurs et points d'accès adoptés sont synchronisés.",
+          "syncLabel": "Synchronisation : {{status}}",
+          "syncLabelWithError": "Synchronisation : {{status}} ({{error}})",
+          "connectedAt": "Connecté : {{time}}",
+          "never": "jamais"
+        },
+        "errors": {
+          "loadSettings": "Échec du chargement des paramètres UniFi",
+          "loadMappings": "Échec du chargement des correspondances de sites UniFi",
+          "loadSummary": "Échec du chargement du résumé de connexion UniFi",
+          "loadState": "Échec du chargement de l'état de l'intégration UniFi",
+          "saveConfiguration": "Échec de l'enregistrement de la configuration UniFi",
+          "testConnectionFailed": "Échec du test de connexion",
+          "disconnectFailed": "Échec de la déconnexion de l'intégration UniFi",
+          "siteSyncFailed": "Échec de la découverte des sites",
+          "deviceSyncFailed": "Échec de la synchronisation des appareils",
+          "updateMappingFailed": "Échec de la mise à jour de la correspondance",
+          "reconnectRequired": "UniFi a rejeté la clé d'API enregistrée. Collez une nouvelle clé et enregistrez pour reprendre la synchronisation.",
+          "alertCheckFailed": "Échec de la vérification hors ligne",
+          "saveAlertingFailed": "Échec de l'enregistrement des paramètres d'alerte",
+          "invalidGraceMinutes": "Saisissez un nombre entier de minutes compris entre 0 et 1440."
+        },
+        "fields": {
+          "apiKey": "Clé d'API ({{state}})",
+          "apiKeyStateSaved": "enregistrée",
+          "apiKeyStateRequired": "obligatoire",
+          "apiKeyPlaceholderExisting": "Clé enregistrée. Saisissez une nouvelle clé pour la remplacer",
+          "apiKeyPlaceholderNew": "Collez votre clé d'API UniFi",
+          "connectionMode": "Mode de connexion",
+          "modeSiteManager": "Site Manager (dans le cloud)",
+          "modeLocal": "Contrôleur local",
+          "localBaseUrl": "URL du contrôleur",
+          "localBaseUrlPlaceholder": "https://unifi.example.com"
+        },
+        "mappings": {
+          "site": "Site UniFi",
+          "siteIdLabel": "ID : {{id}}",
+          "mappedClient": "Client associé",
+          "defaultContact": "Contact par défaut",
+          "selectContact": "Sélectionner un contact",
+          "autoSync": "Synchronisation automatique",
+          "autoSyncEnabled": "Activée",
+          "autoSyncDisabled": "Désactivée"
+        },
+        "status": {
+          "label": "Statut : ",
+          "connected": "Connecté",
+          "disconnected": "Non connecté",
+          "reconnectRequired": "Reconnexion requise"
+        },
+        "success": {
+          "configurationSaved": "Configuration UniFi enregistrée",
+          "connectionTestSucceeded": "Connexion à UniFi réussie",
+          "disconnected": "Intégration UniFi déconnectée",
+          "siteSyncCompleted": "Découverte des sites terminée : {{processed}} traités, {{created}} créés, {{updated}} mis à jour",
+          "deviceSyncCompleted": "Synchronisation des appareils terminée : {{processed}} traités, {{created}} créés, {{updated}} mis à jour",
+          "alertCheckCompleted": "Vérification hors ligne terminée",
+          "alertingSaved": "Paramètres d'alerte enregistrés"
+        },
+        "sync": {
+          "title": "Synchronisation et correspondances de sites",
+          "description": "Découvrez les sites UniFi et associez chacun à un client. Les appareils des sites non associés sont ignorés.",
+          "summary": "{{mappedSites}} sites associés · {{devices}} appareils · {{activeAlerts}} alertes actives"
         }
       },
       "huntress": {
@@ -4167,13 +4375,16 @@
             "callControl": "Contrôle d'appel",
             "xapi": "API de configuration",
             "lastChecked": "Dernière vérification",
-            "notConnectedHint": "Connectez l'API du PBX ci-dessus pour utiliser cette fonction."
+            "notConnectedHint": "Connectez l'API du PBX ci-dessus pour utiliser cette fonction.",
+            "usersBlocked": "Le rôle de l'application API 3CX ne peut pas lire les utilisateurs. Accordez-lui les droits nécessaires dans 3CX Admin Console > Integrations > API > (app) > Role.",
+            "contactsBlocked": "Le rôle de l'application API 3CX ne peut pas gérer les contacts. Accordez-lui les droits nécessaires dans 3CX Admin Console > Integrations > API > (app) > Role."
           },
           "extensions": {
             "title": "Extensions",
             "sync": "Synchroniser depuis le PBX",
             "lastSync": "Dernière synchronisation",
             "empty": "Aucune extension synchronisée pour le moment.",
+            "emptyAfterSync": "3CX n'a renvoyé aucun utilisateur activé ; vérifiez les autorisations de l'application API",
             "dn": "Extension",
             "pbxUser": "Utilisateur PBX",
             "algaUser": "Utilisateur AlgaPSA",

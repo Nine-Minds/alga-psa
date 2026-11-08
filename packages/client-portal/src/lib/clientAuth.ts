@@ -2,6 +2,7 @@ import { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import type { ContactVisibilityContext } from '@alga-psa/authorization/portal/visibility';
 import { getClientContactVisibilityContext } from '@alga-psa/authorization/portal/visibility.server';
+import { isClientUserType } from '@alga-psa/types';
 
 /**
  * Resolves the authenticated client user's client_id.
@@ -51,7 +52,7 @@ export async function getPortalVisibilityForUser(
   user: { user_type?: string | null; contact_id?: string | null },
   tenant: string
 ): Promise<ContactVisibilityContext | null> {
-  if (user.user_type !== 'client' || !user.contact_id) return null;
+  if (!isClientUserType(user.user_type) || !user.contact_id) return null;
   try {
     return await getClientContactVisibilityContext(trx, tenant, user.contact_id);
   } catch (error) {

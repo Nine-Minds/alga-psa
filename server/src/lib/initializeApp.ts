@@ -14,6 +14,7 @@ import { initializeScheduler } from 'server/src/lib/jobs';
 import { validateEmailConfiguration, logEmailConfigWarnings } from './validation/emailConfigValidation';
 import { initializeNotificationAccumulator, shutdownNotificationAccumulator } from './eventBus/subscribers/ticketEmailSubscriber';
 import { DelayedEmailQueue, TenantEmailService, StaticTemplateProcessor, EmailProviderManager, sendPasswordResetEmail, getSystemEmailService } from '@alga-psa/email';
+import { buildTenantPortalUrl } from '@alga-psa/tenancy/server';
 import { TokenBucketRateLimiter, type BucketConfig } from '@alga-psa/core/rateLimit';
 import { EventEmailRetryQueue } from './notifications/EventEmailRetryQueue';
 import { registerAuthEmailProvider } from '@alga-psa/auth';
@@ -47,7 +48,7 @@ export async function initializeApp() {
     // packages (@alga-psa/integrations, @alga-psa/clients, etc.) can check
     // feature flags via @alga-psa/core without importing from server.
     const { featureFlags } = await import('./feature-flags/featureFlags');
-    registerFeatureFlagChecker((flag, ctx) => featureFlags.isEnabled(flag, ctx));
+    registerFeatureFlagChecker((flag, ctx) => featureFlags.evaluate(flag, ctx));
 
     await bootstrapInboundWebhookActions();
     logger.info('Inbound webhook actions bootstrapped');
@@ -141,6 +142,7 @@ export async function initializeApp() {
       TenantEmailService: Object.assign(TenantEmailService, { resolveOutboundSenderForTenant: TenantEmailService.resolveOutboundSenderForTenant }) as any,
       StaticTemplateProcessor: StaticTemplateProcessor as any,
       EmailProviderManager: EmailProviderManager as any,
+      buildTenantPortalUrl,
     });
     registerWorkflowScheduleJobRunner(async () => initializeJobRunner());
     // Let vertical packages (billing, client-portal, documents) enqueue jobs

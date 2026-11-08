@@ -133,10 +133,12 @@
       "notes": "Notas",
       "deleteTimeEntry": "Eliminar entrada de tiempo",
       "unsavedChanges": "Cambios no guardados",
-      "contractLine": "Línea de contrato"
+      "contractLine": "Línea de contrato",
+      "operational": "Operativo: no facturado"
     },
     "placeholders": {
       "selectService": "Seleccione un servicio",
+      "searchServices": "Buscar servicios...",
       "selectDate": "Seleccionar fecha",
       "addNotes": "Agregar notas",
       "selectContractLine": "Seleccionar una línea de contrato"
@@ -159,7 +161,8 @@
       "project": "Predeterminado del proyecto"
     },
     "options": {
-      "resolveContractLineLater": "Sin línea - resolver más tarde"
+      "resolveContractLineLater": "Sin línea - resolver más tarde",
+      "noServicesFound": "No se encontraron servicios"
     }
   },
   "workItemPicker": {

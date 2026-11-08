@@ -65,6 +65,7 @@ interface ParsedAlert {
   explicitGroupId: string | null;
   name: string;
   description: string | null;
+  details: string | null;
   hostname: string | null;
   severity: unknown;
   occurredAt: string;
@@ -255,6 +256,7 @@ export async function POST(req: Request) {
         sourceType: 'levelio_webhook',
         severity: mapLevelIoSeverity(alert.severity),
         message,
+        details: alert.details,
         deviceName: alert.hostname,
         externalOrganizationId,
         occurredAt: alert.occurredAt,
@@ -314,6 +316,7 @@ function parseNativeEnvelope(body: any): Parsed {
       explicitGroupId: null,
       name,
       description: cleanString(data.description),
+      details: typeof data.payload === 'string' ? data.payload : null,
       hostname: cleanString(data.device_hostname),
       severity: data.severity,
       occurredAt,
@@ -364,6 +367,7 @@ function parseAutomationPayload(body: any): Parsed {
       explicitGroupId: cleanAutomationValue(body.group_id),
       name,
       description,
+      details: typeof body.payload === 'string' ? body.payload : null,
       hostname: cleanAutomationValue(body.hostname),
       severity: cleanAutomationValue(body.severity),
       occurredAt: parseOccurredAt(cleanAutomationValue(body.alert_time) ?? ''),

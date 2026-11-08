@@ -84,7 +84,7 @@ describe('QuickBooks Desktop mapping modules', () => {
     const clients = await createQuickBooksDesktopMappingModule('client').load({ realmId: null });
     expect(clients.algaEntities).toEqual([{ id: 'client-1', name: 'Acme Corp' }]);
     const terms = await createQuickBooksDesktopMappingModule('payment_term').load({ realmId: null });
-    expect(terms.algaEntities.map((term) => term.id)).toEqual(['net_30', 'net_15', 'due_on_receipt']);
+    expect(terms.algaEntities.map((term) => term.id)).toEqual(['net_30', 'net_15', 'net_14', 'net_7', 'due_on_receipt']);
     expect(actions.getExternalEntityMappings).toHaveBeenCalledWith({
       integrationType: 'quickbooks_desktop', algaEntityType: 'payment_term', externalRealmId: null
     });

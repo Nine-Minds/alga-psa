@@ -28,6 +28,12 @@ test('a retry-only pass warns on a pull request and fails every other event', ()
     assert.deepEqual(flakyPolicy({ tests: [{}, { testId: '' }, 7], eventName }), { warnings: [], failures: [] });
   }
   assert.deepEqual(flakyPolicy(), { warnings: [], failures: [] });
+  // A recorded first-attempt error rides on the line, so the log says why.
+  const explained = [{ testId: 'src/test/unit/a.test.ts > recovers', error: 'Test timed out in 5000ms' }];
+  assert.deepEqual(flakyPolicy({ tests: explained, eventName: 'pull_request' }), {
+    warnings: ['::warning::Flaky test passed only on retry: src/test/unit/a.test.ts > recovers — Test timed out in 5000ms'], failures: [] });
+  assert.deepEqual(flakyPolicy({ tests: explained, eventName: 'push' }), {
+    warnings: [], failures: ['retry-only pass on push run: src/test/unit/a.test.ts > recovers — Test timed out in 5000ms'] });
 });
 
 test('only a run that retried something fills the upload directory', t => {

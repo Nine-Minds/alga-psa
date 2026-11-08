@@ -62,7 +62,10 @@
         "invoiceLineDescriptionLabel": "Fakturaradens beskrivning",
         "invoiceLineDescriptionPlaceholder": "T.ex. månatligt underhåll av telefonsystem enligt avtal från 2019",
         "nameLabel": "Avtalsradsnamn *",
-        "namePlaceholder": "T.ex. Drift och support – Guld"
+        "namePlaceholder": "T.ex. Drift och support – Guld",
+        "invoiceLineSubtitleLabel": "Undertitel för fakturarad",
+        "invoiceLineSubtitlePlaceholder": "t.ex. Hanterade slutpunkter och säkerhetskopiering",
+        "invoiceLineSubtitleHelp": "Visas som en dämpad andra rad under titeln när den här fasta raden visas på en faktura."
       },
       "cardTitle": "Redigera avtalsrad: {{name}} (fast)",
       "errors": {
@@ -135,7 +138,6 @@
         "overtime": {
           "enableLabel": "Aktivera övertidstaxor",
           "rateHelp": "Taxa som tillämpas när gränsen överskrids.",
-          "rateLabel": "Övertidstaxa ($/h)",
           "thresholdHelp": "Antal timmar innan övertidstaxan börjar gälla.",
           "thresholdLabel": "Övertidsgräns (h/period)",
           "thresholdPlaceholder": "40",
@@ -375,7 +377,6 @@
     },
     "hourlyConfig": {
       "labels": {
-        "hourlyRate": "Timtaxa ($)",
         "minimumBillableTime": "Minsta debiterbara tid (minuter)",
         "roundUpToNearest": "Avrunda uppåt till närmaste (minuter)"
       },
@@ -398,7 +399,6 @@
           "technician": "Tekniker"
         },
         "perHourSuffix": "/h",
-        "rateSrLabel": "Taxa ($/h)",
         "selectTypePlaceholder": "Välj typ",
         "tooltip": "Ange olika timtaxor för specifika användartyper som arbetar med denna tjänst. Dessa åsidosätter tjänstens standardtimtaxa.",
         "userTypeSrLabel": "Användartyp",
@@ -822,7 +822,8 @@
       "notAllowed": "Ett av avtalsradens värden är inte tillåtet. Granska formuläret och försök igen.",
       "missingField": "Ett obligatoriskt fält för avtalsraden saknas.",
       "missingFieldNamed": "Ett obligatoriskt fält för avtalsraden saknas: {{field}}.",
-      "advanceTimingNotAllowed": "Fakturering i förskott är bara tillgänglig för fasta avtalsrader. Timbaserade rader och användningsrader faktureras alltid i efterskott, efter att arbetet har utförts."
+      "advanceTimingNotAllowed": "Fakturering i förskott är bara tillgänglig för fasta avtalsrader. Timbaserade rader och användningsrader faktureras alltid i efterskott, efter att arbetet har utförts.",
+      "versionConflict": "Den här avtalsraden har ändrats av någon annan sedan du började redigera. Ladda om den och gör om din ändring."
     },
     "templateLine": {
       "unavailable": "Den valda mallraden är inte längre tillgänglig. Ladda om sidan och försök igen."

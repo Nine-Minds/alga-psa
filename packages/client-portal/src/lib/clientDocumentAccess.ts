@@ -1,5 +1,6 @@
 import { applyPublicCommentAttachmentFilter } from '@alga-psa/shared/lib/ticketCommentAttachments';
 import type { IDocument, IUser } from '@alga-psa/types';
+import { isClientUserType } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { hasPermission } from '@alga-psa/auth';
 import { tenantDb, type TenantDb } from '@alga-psa/db';
@@ -86,7 +87,7 @@ export async function resolveClientPortalDocument(
   user: IUser,
   documentId: string
 ): Promise<IDocument | null> {
-  if (user.user_type !== 'client') throw new Error('Access denied: Client portal actions are restricted to client users');
+  if (!isClientUserType(user.user_type)) throw new Error('Access denied: Client portal actions are restricted to client users');
   if (!documentId) throw new Error('documentId is required');
 
   const scopedDb = tenantDb(trx, tenant);
@@ -94,7 +95,7 @@ export async function resolveClientPortalDocument(
     .select('user_id', 'email', 'user_type', 'is_inactive')
     .where({ user_id: user.user_id })
     .first();
-  if (!userRecord || userRecord.user_type !== 'client' || userRecord.is_inactive) {
+  if (!userRecord || !isClientUserType(userRecord.user_type) || userRecord.is_inactive) {
     throw new Error('Access denied: Client portal user is unavailable');
   }
   const permissionUser = { ...userRecord, tenant } as IUser;

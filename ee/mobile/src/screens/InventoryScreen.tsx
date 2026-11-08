@@ -1,5 +1,5 @@
 import React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../ui/ThemeContext";
@@ -11,11 +11,21 @@ import { CountsView } from "../features/inventory/components/CountsView";
 import { PosView } from "../features/inventory/components/PosView";
 import { TransfersView } from "../features/inventory/components/TransfersView";
 import type { InventorySegment } from "../features/inventory/segments";
+import type { DrawerScreenProps } from "@react-navigation/drawer";
+import type { DrawerParamList } from "../navigation/types";
 
-export function InventoryScreen() {
+type Props = Partial<DrawerScreenProps<DrawerParamList, "InventoryTab">>;
+
+export function InventoryScreen({ route }: Props = {}) {
   const theme = useTheme();
   const { t } = useTranslation("inventory");
-  const [segment, setSegment] = useState<InventorySegment>("home");
+  const requestedSegment = route?.params?.segment;
+  const [segment, setSegment] = useState<InventorySegment>(requestedSegment ?? "home");
+
+  // Assets ▸ Scan navigates here with the segment it wants.
+  useEffect(() => {
+    if (requestedSegment) setSegment(requestedSegment);
+  }, [requestedSegment]);
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>

@@ -383,6 +383,26 @@ describe('Manual Invoice Generation', () => {
       expect(result.total_amount).toBe(1089);
     });
 
+    it('stamps due_date from the tenant default payment term when the client has none (alga-2026-0002607)', async () => {
+      const serviceId = await createTestService();
+      await setupTaxConfiguration();
+      await tenantTable(context, 'default_billing_settings').update({ default_payment_terms: 'net_14' });
+      await tenantTable(context, 'clients')
+        .where({ client_id: context.clientId })
+        .update({ payment_terms: '' });
+
+      const result = await generateManualInvoiceOrThrow({
+        clientId: context.clientId,
+        items: [{ service_id: serviceId, quantity: 1, description: 'Tenant default terms', rate: 1000 }]
+      });
+
+      const row = await tenantTable(context, 'invoices').where({ invoice_id: result.invoice_id }).first('invoice_date', 'due_date');
+      const day = (v: unknown) => new Date(v as string).toISOString().slice(0, 10);
+      const expected = new Date(row.invoice_date);
+      expected.setUTCDate(expected.getUTCDate() + 14);
+      expect(day(row.due_date)).toBe(day(expected));
+    });
+
     it('preserves a manual invoice number and rejects its retry without another invoice or ledger entry', async () => {
       const serviceId = await createTestService();
       await setupTaxConfiguration();
@@ -476,11 +496,12 @@ describe('Manual Invoice Generation', () => {
       // Total: 1000 - 200 + 1000 - 300 = 1500
       expect(result.subtotal).toBe(1500);
       
-      // Discounts (marked with is_discount) do not reduce the taxable base; credits do.
-      // Taxable base: (1000 - 200 + 1000) = 1800 → credit reduces by 300 → 1500.
-      // Proportional allocation over the positive lines yields 178 cents of tax.
-      expect(result.tax).toBe(178);
-      expect(result.total_amount).toBe(1678);
+      // Discounts and manual credits both reduce the taxable base before tax.
+      // Taxable base: 1000 + 1000 = 2000, less the 200 discount and the 300
+      // refund = 1500; 8.875% of 1500 = 133.125, rounded up to 134. (The old
+      // 178 was 8.875% of the undiscounted 2000.)
+      expect(result.tax).toBe(134);
+      expect(result.total_amount).toBe(1634);
     });
   });
 
@@ -832,11 +853,10 @@ describe('Manual Invoice Generation', () => {
       // Total: 1000 + 1000 - 300 = 1700
       expect(updatedInvoice.subtotal).toBe(1700);
       
-      // Tax should be calculated on pre-discount amount
-      // for positive items only: 1000 + 1000 = 2000
-      // Tax: 8.875% of 2000 = 177.5, rounded to 178
-      expect(updatedInvoice.tax).toBe(178);
-      expect(updatedInvoice.total_amount).toBe(1878); // 1700 + 178
+      // Tax is calculated on the discounted base: 2000 - 300 = 1700.
+      // Tax: 8.875% of 1700 = 150.875, rounded to 151
+      expect(updatedInvoice.tax).toBe(151);
+      expect(updatedInvoice.total_amount).toBe(1851); // 1700 + 151
       expect(updatedInvoice.invoice_charges).toHaveLength(3);
     });
 
@@ -1325,7 +1345,7 @@ describe('Manual Invoice Generation', () => {
             description: 'Taxable Item',
             rate: 1000 // Double the rate
           },
-          // Add a discount (which should not reduce the taxable base)
+          // Add a discount (which reduces the taxable base before tax)
           {
             service_id: '',
             quantity: 1,
@@ -1341,10 +1361,10 @@ describe('Manual Invoice Generation', () => {
       // Subtotal: (2 * 1000) + (-500) = 1500
       expect(discountAdjustmentInvoice.subtotal).toBe(1500);
       
-      // Tax should be calculated on the full pre-discount amount: 8.875% of 2000 = 177.5, rounded up to 178
-      // This is because discounts don't reduce the taxable base per the tax allocation strategy
-      expect(discountAdjustmentInvoice.tax).toBe(178);
-      expect(discountAdjustmentInvoice.total_amount).toBe(1678);
+      // Tax is calculated on the discounted base: 2000 - 500 = 1500, and
+      // 8.875% of 1500 = 133.125, rounded up to 134.
+      expect(discountAdjustmentInvoice.tax).toBe(134);
+      expect(discountAdjustmentInvoice.total_amount).toBe(1634);
       
       // Verify discount doesn't have tax
       const discountItem = discountAdjustmentInvoice.invoice_charges.find(i =>
@@ -1365,11 +1385,11 @@ describe('Manual Invoice Generation', () => {
       
       // Find the adjustment transaction for the final discount update by the expected amount
       const discountAdjustment = transactions.find((transaction: ITransaction) =>
-        transaction.type === 'invoice_adjustment' && Number(transaction.amount) === 133);
+        transaction.type === 'invoice_adjustment' && Number(transaction.amount) === 89);
       expect(discountAdjustment).toBeDefined();
       expect((discountAdjustment as ITransaction).type).toBe('invoice_adjustment');
-      expect(Number((discountAdjustment as ITransaction).amount)).toBe(133);
-      expect(transactions.reduce((sum, row) => sum + Number(row.amount), 0)).toBe(1678);
+      expect(Number((discountAdjustment as ITransaction).amount)).toBe(89); // 1634 - 1545
+      expect(transactions.reduce((sum, row) => sum + Number(row.amount), 0)).toBe(1634);
     });    
   });
 });

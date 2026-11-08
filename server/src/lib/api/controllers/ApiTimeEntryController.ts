@@ -23,27 +23,14 @@ import {
 import { 
   ApiKeyServiceForApi 
 } from '../../services/apiKeyServiceForApi';
-import { findUserByIdForApi } from '@alga-psa/users/actions';
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { 
   runWithTenant 
 } from '../../db';
 import { 
   getConnection 
 } from '../../db/db';
-import { 
-  hasPermission 
-} from '../../auth/rbac';
-import {
-  assertInternalApiUser,
-  AuthenticatedApiRequest,
-  UnauthorizedError,
-  ForbiddenError,
-  NotFoundError,
-  ValidationError,
-  createSuccessResponse,
-  createPaginatedResponse,
-  handleApiError
-} from '../middleware/apiMiddleware';
+import { AuthenticatedApiRequest, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError, buildAuthenticatedApiContext, createPaginatedResponse, createSuccessResponse, handleApiError } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
 
 export class ApiTimeEntryController extends ApiBaseController {
@@ -53,10 +40,12 @@ export class ApiTimeEntryController extends ApiBaseController {
     req: NextRequest,
     keyRecord: { user_id: string; tenant: string; api_key_id?: string },
     user: AuthenticatedApiRequest['context']['user'],
+    apiAuthContext: { userId: string; viaPrincipalUserId?: string | null },
   ): Promise<AuthenticatedApiRequest> {
     const apiRequest = req as AuthenticatedApiRequest;
     apiRequest.context = {
-      userId: keyRecord.user_id,
+      userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
       tenant: keyRecord.tenant,
       user,
       apiKeyId: keyRecord.api_key_id,
@@ -116,16 +105,15 @@ export class ApiTimeEntryController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_entry',
           'read',
           db
@@ -144,7 +132,7 @@ export class ApiTimeEntryController extends ApiBaseController {
           searchParams = timeEntrySearchSchema.parse(queryParams);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid search parameters', error.errors);
+            throw new ValidationError('Invalid search parameters', error.issues);
           }
           throw error;
         }
@@ -203,16 +191,15 @@ export class ApiTimeEntryController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_entry',
           'read',
           db
@@ -273,16 +260,15 @@ export class ApiTimeEntryController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_entry',
           'read',
           db
@@ -301,7 +287,7 @@ export class ApiTimeEntryController extends ApiBaseController {
           exportParams = timeEntryExportQuerySchema.parse(queryParams);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid export parameters', error.errors);
+            throw new ValidationError('Invalid export parameters', error.issues);
           }
           throw error;
         }
@@ -363,16 +349,15 @@ export class ApiTimeEntryController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasCreatePermission = await hasPermission(
-          user,
+        const hasCreatePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_entry',
           'create',
           db
@@ -389,7 +374,7 @@ export class ApiTimeEntryController extends ApiBaseController {
           trackingData = startTimeTrackingSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid tracking data', error.errors);
+            throw new ValidationError('Invalid tracking data', error.issues);
           }
           throw error;
         }
@@ -441,11 +426,10 @@ export class ApiTimeEntryController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Extract session ID from path
         const pathParts = req.url.split('/');
@@ -454,8 +438,8 @@ export class ApiTimeEntryController extends ApiBaseController {
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasUpdatePermission = await hasPermission(
-          user,
+        const hasUpdatePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_entry',
           'update',
           db
@@ -472,7 +456,7 @@ export class ApiTimeEntryController extends ApiBaseController {
           stopData = stopTimeTrackingSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid stop data', error.errors);
+            throw new ValidationError('Invalid stop data', error.issues);
           }
           throw error;
         }
@@ -487,6 +471,62 @@ export class ApiTimeEntryController extends ApiBaseController {
         });
 
         return createSuccessResponse(timeEntry, 201);
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Cancel (abandon) the caller's own tracking session without writing a time entry.
+   * Requires `time_entry:update`, like stop-tracking.
+   */
+  cancelTracking() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiKey = req.headers.get('x-api-key');
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        let tenantId = req.headers.get('x-tenant-id');
+        let keyRecord;
+        if (tenantId) {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+        } else {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) {
+            tenantId = keyRecord.tenant;
+          }
+        }
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+        const user = apiAuthContext.user;
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
+
+        const pathParts = new URL(req.url).pathname.split('/');
+        const sessionId = pathParts[pathParts.indexOf('cancel-tracking') + 1];
+
+        // RBAC: cancelling a timer mutates the caller's time tracking, so it needs time_entry:update.
+        const db = await getConnection(tenantId!);
+        const hasUpdatePermission = await hasApiContextPermission(apiAuthContext, 'time_entry', 'update', db);
+        if (!hasUpdatePermission) {
+          throw new ForbiddenError('Permission denied: Cannot update time entries');
+        }
+
+        const result = await runWithTenant(tenantId!, async () => {
+          return await this.timeEntryService.cancelTimeTracking(sessionId, {
+            userId: apiAuthContext.userId,
+            viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
+            user,
+            tenant: tenantId!,
+          });
+        });
+
+        return createSuccessResponse(result);
       } catch (error) {
         return handleApiError(error);
       }
@@ -524,11 +564,10 @@ export class ApiTimeEntryController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Get active session within tenant context
         const session = await runWithTenant(tenantId!, async () => {
@@ -577,16 +616,15 @@ export class ApiTimeEntryController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasApprovePermission = await hasPermission(
-          user,
+        const hasApprovePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_entry',
           'approve',
           db
@@ -603,7 +641,7 @@ export class ApiTimeEntryController extends ApiBaseController {
           approvalData = approveTimeEntriesSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid approval data', error.errors);
+            throw new ValidationError('Invalid approval data', error.issues);
           }
           throw error;
         }
@@ -655,16 +693,15 @@ export class ApiTimeEntryController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasApprovePermission = await hasPermission(
-          user,
+        const hasApprovePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_entry',
           'approve',
           db
@@ -681,7 +718,7 @@ export class ApiTimeEntryController extends ApiBaseController {
           changeData = requestTimeEntryChangesSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid change request data', error.errors);
+            throw new ValidationError('Invalid change request data', error.issues);
           }
           throw error;
         }
@@ -733,11 +770,10 @@ export class ApiTimeEntryController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Get templates within tenant context
         const templates = await runWithTenant(tenantId!, async () => {
@@ -786,16 +822,15 @@ export class ApiTimeEntryController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasCreatePermission = await hasPermission(
-          user,
+        const hasCreatePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_entry',
           'create',
           db
@@ -812,7 +847,7 @@ export class ApiTimeEntryController extends ApiBaseController {
           bulkData = bulkTimeEntrySchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid bulk data', error.errors);
+            throw new ValidationError('Invalid bulk data', error.issues);
           }
           throw error;
         }
@@ -864,16 +899,15 @@ export class ApiTimeEntryController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasUpdatePermission = await hasPermission(
-          user,
+        const hasUpdatePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_entry',
           'update',
           db
@@ -890,7 +924,7 @@ export class ApiTimeEntryController extends ApiBaseController {
           bulkData = bulkUpdateTimeEntrySchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid bulk data', error.errors);
+            throw new ValidationError('Invalid bulk data', error.issues);
           }
           throw error;
         }
@@ -942,16 +976,15 @@ export class ApiTimeEntryController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasDeletePermission = await hasPermission(
-          user,
+        const hasDeletePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_entry',
           'delete',
           db
@@ -968,7 +1001,7 @@ export class ApiTimeEntryController extends ApiBaseController {
           bulkData = bulkDeleteTimeEntrySchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid bulk data', error.errors);
+            throw new ValidationError('Invalid bulk data', error.issues);
           }
           throw error;
         }

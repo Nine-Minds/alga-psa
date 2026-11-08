@@ -45,7 +45,7 @@ export async function POST(
         agreementVersion: body?.agreementVersion,
         agreementTextHash: body?.agreementTextHash,
         quoteFingerprint: body?.quoteFingerprint,
-        selectedOptionalQuoteItemIds: body?.selectedOptionalQuoteItemIds,
+        selectedOptionalQuoteItemRefs: body?.selectedOptionalQuoteItemRefs,
         comment: body?.comment,
       },
       { ip: clientIp(request), userAgent: request.headers.get('user-agent') },

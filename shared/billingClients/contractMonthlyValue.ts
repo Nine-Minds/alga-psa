@@ -3,9 +3,16 @@ import { tenantDb } from '@alga-psa/db';
 import { fixedMemberContributionCents, fixedRateBasisOf } from './fixedMemberRate';
 import {
   resolveMemberRate,
+  selectEffectiveServicePrice,
   type UnitPricingRevisionRateRow,
   type ServicePriceRateRow,
 } from './resolveFixedLineRate';
+import {
+  normalizeToMonthlyCents,
+  productMembersRecurringTotalCents,
+  resolveEffectiveLineRate,
+  type FixedLineMemberInput,
+} from './recurringMemberRate';
 import {
   selectLatestApplicableRevision,
   toRecurringUnitRevisionCandidate,
@@ -33,27 +40,9 @@ export interface CurrencyAmount {
   totalCents: number;
 }
 
-/**
- * Cadence normalization used by every recurring-value read path. Mirrors the
- * contract-overview normalization so overview, reports, and summaries cannot
- * disagree about what a non-monthly line is worth per month.
- */
-export function normalizeToMonthlyCents(amountCents: number, billingFrequency: string | null | undefined): number {
-  switch (billingFrequency) {
-    case 'weekly':
-      return Math.round(amountCents * 4.33);
-    case 'quarterly':
-      return Math.round(amountCents / 3);
-    case 'semi-annually':
-    case 'semi_annually':
-      return Math.round(amountCents / 6);
-    case 'annually':
-      return Math.round(amountCents / 12);
-    default:
-      // monthly (and unknown cadences, which are stored monthly by default)
-      return Math.round(amountCents);
-  }
-}
+// Cadence normalization is shared with the client-side wizard total; it lives
+// in the pure recurringMemberRate module and is re-exported for existing callers.
+export { normalizeToMonthlyCents };
 
 /**
  * Currency-safe aggregation: minor units are summed per currency and never
@@ -115,6 +104,17 @@ export interface ContractFixedMonthlyValue {
   monthlyValueCents: number;
   /** True when the contract has usage-billed lines with variable, record-driven revenue. */
   hasVariableUsage: boolean;
+  /**
+   * True when a line carries a cadence-mode Prepaid Block, whose block fee is
+   * part of `monthlyValueCents` (an advance fee every billing period).
+   */
+  hasCadencePrepaidBlock: boolean;
+  /**
+   * Recurring amount of one billing period of each non-Usage line, in the
+   * line's own cadence (what a line header printed next to its frequency
+   * should show). Same numbers the monthly value is built from.
+   */
+  linePeriodCentsByLine: Map<string, number>;
 }
 
 /**
@@ -336,7 +336,26 @@ export async function getContractMonthlyFixedValuesByContract(
     }
   }
 
-  const lineMonthlyCents = (line: (typeof lines)[number]): number => {
+  // A cadence-mode Prepaid Block bills its block fee in advance every billing
+  // period of its line, on top of whatever the line itself bills.
+  const cadenceBlockFeeByLine = new Map<string, number>();
+  if (lines.length > 0) {
+    const blockRows = (await db.table('contract_line_prepaid_blocks')
+      .where('issue_mode', 'cadence')
+      .whereIn('contract_line_id', lines.map((line) => line.contract_line_id))
+      .select('contract_line_id', 'block_price')) as Array<{
+      contract_line_id: string;
+      block_price: number | string | null;
+    }>;
+    for (const row of blockRows) {
+      cadenceBlockFeeByLine.set(row.contract_line_id, toCents(row.block_price) ?? 0);
+    }
+  }
+
+  // Recurring amount of ONE billing period of the line (its own cadence, not monthly).
+  const linePeriodCents = (line: (typeof lines)[number]): number =>
+    ownLinePeriodCents(line) + (cadenceBlockFeeByLine.get(line.contract_line_id) ?? 0);
+  const ownLinePeriodCents = (line: (typeof lines)[number]): number => {
     if (line.contract_line_type === 'Usage') return 0;
     if (line.contract_line_type === 'Fixed') {
       const members = membersByLine.get(line.contract_line_id) ?? [];
@@ -356,6 +375,16 @@ export async function getContractMonthlyFixedValuesByContract(
         `${line.contract_line_id}:${member.service_id}:${member.config_id}`;
       const hasApplicableRevision = (member: FixedMemberValuationRow) =>
         (candidatesByKey.get(revisionKey(member)) ?? []).length > 0;
+      // Engine inputs for a product member: contract-currency catalog price
+      // (never the tenant default), then the legacy default rate.
+      const toRateInput = (member: FixedMemberValuationRow): FixedLineMemberInput => ({
+        item_kind: member.item_kind,
+        quantity: member.quantity,
+        configuration_custom_rate: member.custom_rate,
+        service_line_custom_rate: member.service_line_custom_rate,
+        price_rate: selectEffectiveServicePrice(catalogPrices, member.service_id, currency, asOf)?.rateCents ?? null,
+        default_rate: member.default_rate,
+      });
       // A member is unit-valued when it is explicitly unit-priced, when it
       // carries an applicable scheduled revision, or — once the line is
       // actively revision-managed — when it is a catalog product (products share
@@ -364,7 +393,10 @@ export async function getContractMonthlyFixedValuesByContract(
       // their legacy valuation path so existing contracts are unchanged.
       const lineHasEffectiveRevision = members.some(hasApplicableRevision);
       const isEffectiveUnitMember = (member: FixedMemberValuationRow) =>
-        isUnitPricedMember(member) ||
+        // A product stays on the product path whatever its stored pricing_basis
+        // (the wizard persists 'unit' for display); only a scheduled revision
+        // moves it to the revision-aware unit valuation.
+        (isUnitPricedMember(member) && member.item_kind !== 'product') ||
         hasApplicableRevision(member) ||
         (lineHasEffectiveRevision && member.item_kind === 'product');
       const unitMembers = members.filter(isEffectiveUnitMember);
@@ -403,19 +435,30 @@ export async function getContractMonthlyFixedValuesByContract(
         totalCents += Math.round(quantity * rateCents);
       }
 
-      // Bundle members: the line-level rate is authoritative when present.
-      // When it is absent the engine derives the fee from the members
-      // (base rates, then catalog rates) — mirror that instead of valuing an
-      // invoiceable bundle at zero.
+      // Bundle members: the line-level rate is authoritative when it is a real
+      // override. A zero is not a price: on a line with priced product members
+      // the wizard's placeholder `0.00` never wins over the member rates.
+      // When there is no effective line rate the engine derives the fee from
+      // the members — mirror that instead of valuing an invoiceable bundle at
+      // zero. Product members resolve through the engine's own chain
+      // (config/service override, then the contract-currency catalog price);
+      // other members derive from base rates, then catalog rates.
       if (bundleMembers.length > 0) {
-        const lineRateCents = toCents(line.custom_rate);
+        const productMembers = members.filter((member) => member.item_kind === 'product');
+        const lineRateCents = resolveEffectiveLineRate(
+          line.custom_rate,
+          productMembers.map(toRateInput),
+        );
         if (lineRateCents !== null) {
           totalCents += lineRateCents;
         } else {
+          const bundleProducts = bundleMembers.filter((member) => member.item_kind === 'product');
+          const bundleOthers = bundleMembers.filter((member) => member.item_kind !== 'product');
+          totalCents += productMembersRecurringTotalCents(bundleProducts.map(toRateInput));
           const deriveFrom = (contributionOf: (member: FixedMemberValuationRow, quantity: number) => number | null): number | null => {
             let derived = 0;
             let hasRate = false;
-            for (const member of bundleMembers) {
+            for (const member of bundleOthers) {
               const quantity = Number(member.quantity ?? 1) || 1;
               const contribution = contributionOf(member, quantity);
               if (contribution !== null) {
@@ -444,22 +487,28 @@ export async function getContractMonthlyFixedValuesByContract(
         // No members at all: the line-level rate stands alone.
         totalCents += toCents(line.custom_rate) ?? 0;
       }
-      return normalizeToMonthlyCents(totalCents, line.billing_frequency);
+      return totalCents;
     }
     // Other non-Usage line types keep the existing line-level custom_rate
     // valuation (minor units).
-    return normalizeToMonthlyCents(toCents(line.custom_rate) ?? 0, line.billing_frequency);
+    return toCents(line.custom_rate) ?? 0;
   };
+  const lineMonthlyCents = (line: (typeof lines)[number]): number =>
+    normalizeToMonthlyCents(linePeriodCents(line), line.billing_frequency);
 
   const valueByContract = new Map<string, ContractFixedMonthlyValue>();
   for (const line of lines) {
     const existing = valueByContract.get(line.contract_id)
-      ?? { contractId: line.contract_id, monthlyValueCents: 0, hasVariableUsage: false };
+      ?? { contractId: line.contract_id, monthlyValueCents: 0, hasVariableUsage: false, hasCadencePrepaidBlock: false, linePeriodCentsByLine: new Map<string, number>() };
     if (line.contract_line_type === 'Usage' || lineIdsWithUsageConfigs.has(line.contract_line_id)) {
       existing.hasVariableUsage = true;
     }
+    if (cadenceBlockFeeByLine.has(line.contract_line_id)) {
+      existing.hasCadencePrepaidBlock = true;
+    }
     if (line.contract_line_type !== 'Usage') {
       existing.monthlyValueCents += lineMonthlyCents(line);
+      existing.linePeriodCentsByLine.set(line.contract_line_id, linePeriodCents(line));
     }
     valueByContract.set(line.contract_id, existing);
   }

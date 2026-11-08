@@ -288,6 +288,7 @@ describe('route title metadata coverage', () => {
       ['server/src/app/client-portal/billing/invoices/[invoiceId]/payment-success/page.tsx', 'Payment Success'],
       ['server/src/app/client-portal/billing/payment-methods/setup-complete/page.tsx', 'Card Setup'],
       ['server/src/app/payment-methods/setup-complete/page.tsx', 'Card Setup'],
+      ['server/src/app/pay/[token]/page.tsx', 'Pay Invoice'],
     ] as const;
 
     for (const [relativePath, title] of staticDynamicRoutes) {

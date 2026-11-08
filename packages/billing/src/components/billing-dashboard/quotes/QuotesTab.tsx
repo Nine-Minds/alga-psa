@@ -81,7 +81,7 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
   onDelete,
 }) => {
   const { t } = useTranslation('msp/quotes');
-  const { formatCurrency, formatDate } = useFormatters();
+  const { formatCurrency, formatCalendarDate } = useFormatters();
   const [clientFilter, setClientFilter] = useState('all');
   const [tableKey, setTableKey] = useState(0);
 
@@ -129,7 +129,7 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
     {
       title: t('common.columns.date', { defaultValue: 'Date' }),
       dataIndex: 'quote_date',
-      render: (value: string | null | undefined) => value ? formatDate(value) : '—',
+      render: (value: string | null | undefined) => value ? formatCalendarDate(value) : '—',
     },
     {
       title: t('common.columns.actions', { defaultValue: 'Actions' }),
@@ -232,7 +232,7 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
         );
       },
     },
-  ], [formatCurrency, formatDate, onDelete, onDownloadPdf, onDuplicate, onEdit, onResend, onRevise, onSend, onSendReminder, t]);
+  ], [formatCurrency, formatCalendarDate, onDelete, onDownloadPdf, onDuplicate, onEdit, onResend, onRevise, onSend, onSendReminder, t]);
 
   if (filteredByStatus.length === 0) {
     return (
@@ -538,6 +538,12 @@ const QuotesTab: React.FC = () => {
       const result = await deleteQuote(quoteId);
       if (isReturnedActionError(result)) {
         setError(getErrorMessage(result));
+      } else if (!result.deleted) {
+        // Validation refusals come back as a result, not an error; don't swallow them.
+        setError(
+          result.message
+            || t('quoteDetail.errors.deleteUnavailable', { defaultValue: 'Quote could not be deleted' }),
+        );
       } else {
         void loadData();
       }

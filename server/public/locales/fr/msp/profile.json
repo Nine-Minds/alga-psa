@@ -96,7 +96,8 @@
       "policies": "Politiques",
       "apiKeys": "Clés API",
       "webhooks": "Webhooks",
-      "userProvisioning": "Provisionnement des utilisateurs"
+      "userProvisioning": "Provisionnement des utilisateurs",
+      "servicePrincipals": "Principaux de service"
     },
     "loading": {
       "roles": "Chargement de la configuration des rôles...",
@@ -107,7 +108,8 @@
       "webhooks": "Chargement de la configuration des webhooks...",
       "sso": "Chargement des outils de gestion SSO...",
       "sessions": "Chargement des sessions actives...",
-      "userProvisioning": "Chargement du provisionnement SCIM…"
+      "userProvisioning": "Chargement du provisionnement SCIM…",
+      "servicePrincipals": "Chargement des principaux de service..."
     },
     "sso": {
       "advanced": {
@@ -447,6 +449,43 @@
         "close": "Fermer",
         "download": "Télécharger en .txt"
       },
+      "quotePayload": {
+        "entity": "Devis",
+        "fields": {
+          "client_id": "ID du client",
+          "quote_number": "Numéro du devis",
+          "version": "Version",
+          "contact_id": "ID du contact",
+          "opportunity_id": "ID de l’opportunité",
+          "previous_status": "Statut précédent",
+          "new_status": "Nouveau statut",
+          "currency_code": "Code de devise",
+          "total_amount": "Montant total",
+          "performed_by_type": "Type d’auteur",
+          "performed_by_id": "ID de l’auteur",
+          "sent_at": "Envoyé le",
+          "viewed_at": "Consulté le",
+          "approved_at": "Approuvé le",
+          "accepted_at": "Accepté le",
+          "rejected_at": "Refusé le",
+          "expired_at": "Expiré le",
+          "converted_at": "Converti le",
+          "conversion_reverted_at": "Conversion annulée le",
+          "superseded_at": "Remplacé le",
+          "cancelled_at": "Annulé le",
+          "accepted_by_name": "Accepté par",
+          "accepted_on_behalf": "Accepté pour le compte du client",
+          "selected_optional_item_ids": "IDs des lignes facultatives sélectionnées",
+          "rejection_reason": "Motif du refus",
+          "conversion_targets": "Destinations de conversion",
+          "contract_id": "ID du contrat",
+          "invoice_id": "ID de la facture",
+          "sales_order_id": "ID de la commande",
+          "released_invoice_id": "ID de la facture dissociée",
+          "superseded_by_quote_id": "ID du devis de remplacement",
+          "next_version": "Version suivante"
+        }
+      },
       "form": {
         "createTitle": "Créer un webhook",
         "editTitle": "Modifier le webhook",
@@ -460,6 +499,8 @@
         "customHeadersPlaceholder": "Authorization: Bearer abc123\nX-Source: alga-psa",
         "ticketFilter": "Filtre de tickets",
         "ticketFilterPlaceholder": "Un UUID de ticket par ligne. Laissez vide pour recevoir tous les événements de ticket correspondants.",
+        "legacyEventsHelp": "Ces types d'événements ne sont plus pris en charge. Ils sont conservés sur ce webhook mais ne sont jamais livrés. Décochez-en un pour le supprimer.",
+        "legacyEventLabel": "non pris en charge",
         "retryConfig": "Configuration des nouvelles tentatives (JSON)",
         "verifySsl": "Vérifier les certificats SSL",
         "webhookActive": "Le webhook est actif",
@@ -763,6 +804,8 @@
       "title": "Connecter un fournisseur",
       "description": "Choisissez un fournisseur pour finaliser la liaison SSO. Vous serez redirigé vers le flux de connexion du fournisseur.",
       "noneConfigured": "Aucun fournisseur SSO n'est configuré pour cet environnement. Demandez à votre administrateur de configurer les identifiants Google ou Microsoft.",
+      "noneConfiguredAdmin": "Aucun fournisseur SSO n'est encore configuré. Configurez d'abord l'application Google ou Microsoft de votre organisation.",
+      "openProviderSetup": "Configurer un fournisseur SSO",
       "notConfigured": "Non configuré",
       "branding": {
         "google": "Continuer avec Google",
@@ -801,7 +844,11 @@
       "deliveryNotFound": "Livraison introuvable.",
       "testNotRetryable": "Les livraisons de test ne peuvent pas être relancées.",
       "payloadInvalid": "Cette livraison ne peut pas être relancée car la charge utile enregistrée n'est pas valide.",
-      "validation": { "unknownEntity": "Entité de webhook inconnue « {{entity}} ».", "unknownField": "Champ « {{field}} » inconnu pour l’entité de webhook « {{entity}} »." }
+      "unsupportedEventType": "Type d'événement non pris en charge : {{eventTypes}}",
+      "validation": {
+        "unknownEntity": "Entité de webhook inconnue « {{entity}} ».",
+        "unknownField": "Champ « {{field}} » inconnu pour l’entité de webhook « {{entity}} »."
+      }
     },
     "inboundWebhooks": {
       "permissions": {
@@ -820,7 +867,11 @@
       "deliveryNotFound": "Livraison entrante introuvable.",
       "replayMissingConfig": "Impossible de rejouer une livraison entrante sans configuration de webhook.",
       "notFoundOrInactive": "Webhook entrant introuvable ou inactif.",
-      "validation": { "slugReserved": "Cet identifiant est réservé à une intégration incluse.", "authTypeMismatch": "Le type de configuration d’authentification doit correspondre au type d’authentification sélectionné.", "handlerTypeMismatch": "Le type de configuration du gestionnaire doit correspondre au type de gestionnaire sélectionné." }
+      "validation": {
+        "slugReserved": "Cet identifiant est réservé à une intégration incluse.",
+        "authTypeMismatch": "Le type de configuration d’authentification doit correspondre au type d’authentification sélectionné.",
+        "handlerTypeMismatch": "Le type de configuration du gestionnaire doit correspondre au type de gestionnaire sélectionné."
+      }
     }
   }
 }

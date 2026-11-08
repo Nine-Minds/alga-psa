@@ -24,6 +24,16 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
     </select>
   ),
 }));
+vi.mock('./contracts/ServicePicker', () => ({
+  ServicePicker: ({ id, options, value, onChange }: any) => (
+    <select id={id} value={value} onChange={(event) => onChange(event.target.value)}>
+      <option value="">Select Service</option>
+      {options.map((option: any) => (
+        <option key={option.value} value={option.value}>{option.label}</option>
+      ))}
+    </select>
+  ),
+}));
 vi.mock('@alga-psa/ui/components/Button', () => ({
   Button: ({ children, variant: _variant, size: _size, ...rest }: any) => <button {...rest}>{children}</button>,
 }));

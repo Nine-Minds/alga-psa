@@ -6,13 +6,14 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import type { PartialBlock } from '@blocknote/core';
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import type { ITicketTemplate, PendingTag, TicketTemplateReferenceProblem, TicketTemplateUsage } from '@alga-psa/types';
+import type { IClient, ITicketTemplate, PendingTag, TicketTemplateReferenceProblem, TicketTemplateUsage } from '@alga-psa/types';
 import { QuickAddTagPicker } from '@alga-psa/tags/components/QuickAddTagPicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -31,7 +32,9 @@ import {
   listSchedulesForTemplate,
   updateTicketTemplate,
 } from '../../actions/ticketTemplateActions';
+import { getAllPriorities } from '@alga-psa/reference-data/actions/priorityActions';
 import { getTicketTemplateDraftFromTicket } from '../../actions/ticketActions';
+import { getAllClients } from '../../actions/clientLookupActions';
 import { TICKET_TITLE_TOKENS } from '../../lib/ticketTitleTokens';
 import { ticketTemplateInputSchema } from '../../lib/ticketTemplateSchema';
 import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../../lib/ticketRichText';
@@ -67,6 +70,8 @@ interface FormState {
   title: string;
   offer_for_manual_use: boolean;
   description: PartialBlock[] | null;
+  /** null = available to every client. */
+  client_id: string | null;
   board_id: string;
   category_id: string | null;
   subcategory_id: string | null;
@@ -83,7 +88,7 @@ const nextKey = () => `row-${(rowCounter += 1)}`;
 
 function emptyForm(): FormState {
   return {
-    name: '', notes: '', title: '', offer_for_manual_use: true, description: null, board_id: '', category_id: null, subcategory_id: null,
+    name: '', notes: '', title: '', offer_for_manual_use: true, description: null, client_id: null, board_id: '', category_id: null, subcategory_id: null,
     priority_id: '', itil_impact: null, itil_urgency: null, tags: [], checklist: [], customFields: [],
   };
 }
@@ -94,6 +99,8 @@ interface TemplateLike {
   notes: string | null;
   title: string;
   description: string | null;
+  /** Absent on a draft prefilled from a ticket: that starts tenant-wide. */
+  client_id?: string | null;
   board_id: string | null;
   category_id: string | null;
   subcategory_id: string | null;
@@ -112,6 +119,7 @@ function formFromTemplate(template: TemplateLike): FormState {
     title: template.title,
     offer_for_manual_use: template.offer_for_manual_use ?? true,
     description: template.description ? parseTicketRichTextContent(template.description) : null,
+    client_id: template.client_id ?? null,
     board_id: template.board_id ?? '',
     category_id: template.category_id,
     subcategory_id: template.subcategory_id,
@@ -151,6 +159,7 @@ function toInput(form: FormState) {
     description: isBlankDocument(form.description as Record<string, unknown>[] | null)
       ? null
       : serializeTicketRichTextContent(form.description as PartialBlock[]),
+    client_id: form.client_id,
     board_id: form.board_id || null,
     category_id: form.category_id,
     subcategory_id: form.subcategory_id,
@@ -207,11 +216,44 @@ function TicketTemplateEditorBody({ templateId, fromTicketId }: TicketTemplateEd
   const [form, setForm] = useState<FormState>(emptyForm);
   const [baseline, setBaseline] = useState<string>(() => snapshot(emptyForm()));
   const [fromTicket, setFromTicket] = useState<{ number: string; hasInlineImages: boolean } | null>(null);
+  const [clients, setClients] = useState<IClient[]>([]);
+  const [clientFilterState, setClientFilterState] = useState<'active' | 'inactive' | 'all'>('active');
+  const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [loading, setLoading] = useState(!isNew || Boolean(fromTicketId));
   const [loadError, setLoadError] = useState<string | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [editorKey, setEditorKey] = useState(0);
+
+  // The stored priority's family and the board's priority_type. A mismatch is shown, never auto-cleared:
+  // the picker only lists the board's own family, so a stored priority of the other family would
+  // otherwise look like a blank picker, and the server refuses the save with its own message.
+  const [allPriorities, setAllPriorities] = useState<Array<{ priority_id: string; priority_name: string; is_from_itil_standard?: boolean | null }>>([]);
+  // The lookup returns the full ticket priority list; an absent stored ID is a completed lookup too.
+  const [priorityLookupComplete, setPriorityLookupComplete] = useState(false);
+  useEffect(() => {
+    if (!form.priority_id || priorityLookupComplete || allPriorities.some((priority) => priority.priority_id === form.priority_id)) return;
+    let cancelled = false;
+    void getAllPriorities('ticket')
+      .then((rows) => {
+        if (cancelled) return;
+        if (Array.isArray(rows)) setAllPriorities(rows);
+        setPriorityLookupComplete(true);
+      })
+      .catch(() => {
+        if (!cancelled) setPriorityLookupComplete(true);
+      });
+    return () => { cancelled = true; };
+  }, [form.priority_id, allPriorities, priorityLookupComplete]);
+  const priorityTypeMismatch = useMemo(() => {
+    const board = reference.boards.find((candidate) => candidate.board_id === form.board_id);
+    const priority = allPriorities.find((candidate) => candidate.priority_id === form.priority_id);
+    if (!board || !priority) return null;
+    const boardIsItil = (board.priority_type ?? 'custom') === 'itil';
+    const priorityIsItil = Boolean(priority.is_from_itil_standard);
+    if (boardIsItil === priorityIsItil) return null;
+    return { priorityName: priority.priority_name, boardName: board.board_name, priorityIsItil };
+  }, [reference.boards, allPriorities, form.board_id, form.priority_id]);
 
   // Until the permission check resolves nothing is locked, so a permitted user never sees a flash of
   // disabled fields; the server actions enforce the permission either way.
@@ -257,6 +299,15 @@ function TicketTemplateEditorBody({ templateId, fromTicketId }: TicketTemplateEd
     return () => { cancelled = true; };
   }, [templateId, fromTicketId, isNew, seed]);
 
+  // The scope picker's options. A failure only costs the names, so the editor still loads.
+  useEffect(() => {
+    let cancelled = false;
+    getAllClients(true)
+      .then((all) => { if (!cancelled) setClients(all); })
+      .catch(() => { if (!cancelled) setClients([]); });
+    return () => { cancelled = true; };
+  }, []);
+
   const dirty = useMemo(() => !loading && snapshot(form) !== baseline, [form, baseline, loading]);
 
   // Feeds the provider above: in-app navigation (back button, sidebar links) asks for confirmation and
@@ -276,7 +327,7 @@ function TicketTemplateEditorBody({ templateId, fromTicketId }: TicketTemplateEd
   const patchCustomField = (key: string, changes: Partial<CustomFieldRow>) =>
     patch({ customFields: form.customFields.map((row) => (row.key === key ? { ...row, ...changes } : row)) });
 
-  const issueMessages = (error: { issues: Array<{ message: string; path: (string | number)[]; params?: Record<string, unknown> }> }) =>
+  const issueMessages = (error: { issues: Array<{ message: string; path: ReadonlyArray<PropertyKey>; params?: Record<string, unknown> }> }) =>
     error.issues.map((issue) => {
       const params = (issue as { params?: { messageKey?: string; messageParams?: Record<string, unknown> } }).params;
       if (params?.messageKey) {
@@ -390,7 +441,7 @@ function TicketTemplateEditorBody({ templateId, fromTicketId }: TicketTemplateEd
       {referenceProblems.length > 0 && (
         <Alert id={`${ID}-reference-problems`} variant="warning">
           <AlertDescription>
-            <p className="font-medium">{t('templates.editor.referenceProblems', 'Some fields in this template point at things that no longer exist. They are left blank when the template is used. Fix them and save:')}</p>
+            <p className="font-medium">{t('templates.editor.referenceProblems', 'Some fields in this template are not valid: they refer to something that no longer exists, or do not fit together (for example a priority that does not match the board). Fix them and save:')}</p>
             <ul className="list-disc pl-5">{referenceProblems.map((problem) => <li key={problem.field}>{problem.message}</li>)}</ul>
           </AlertDescription>
         </Alert>
@@ -430,6 +481,32 @@ function TicketTemplateEditorBody({ templateId, fromTicketId }: TicketTemplateEd
               {t('templates.fields.offerForManualUseHelp', 'Turn off for templates that only recurring schedules use.')}
             </p>
           </div>
+        </div>
+        <div className="md:max-w-md">
+          <Label htmlFor={`${ID}-client`}>{t('templates.fields.client', 'Client')}</Label>
+          <div className="flex items-center gap-2">
+            <ClientPicker
+              id={`${ID}-client`}
+              clients={clients}
+              selectedClientId={form.client_id}
+              onSelect={(clientId) => patch({ client_id: clientId })}
+              filterState={clientFilterState}
+              onFilterStateChange={setClientFilterState}
+              clientTypeFilter={clientTypeFilter}
+              onClientTypeFilterChange={setClientTypeFilter}
+              placeholder={t('templates.fields.clientPlaceholder', 'All clients')}
+              disabled={readOnly}
+            />
+            {/* The picker has no empty entry, so widening the template back to every client needs its own control. */}
+            {form.client_id && !readOnly && (
+              <Button id={`${ID}-client-clear`} type="button" variant="outline" size="sm" onClick={() => patch({ client_id: null })}>
+                {t('templates.fields.clientPlaceholder', 'All clients')}
+              </Button>
+            )}
+          </div>
+          <p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">
+            {t('templates.fields.clientHelp', 'Leave empty to offer the template for every client. Pick one to offer it only on that client\u2019s tickets.')}
+          </p>
         </div>
         {template && (
           <div id={`${ID}-usage`} className="space-y-1 rounded-md border border-[rgb(var(--color-border-200))] p-3 text-sm">
@@ -515,6 +592,15 @@ function TicketTemplateEditorBody({ templateId, fromTicketId }: TicketTemplateEd
             value={form.priority_id || null}
             onChange={(priorityId) => patch({ priority_id: priorityId })}
           />
+          {priorityTypeMismatch && (
+            <Alert id={`${ID}-priority-type-warning`} variant="warning" className="md:col-span-2">
+              <AlertDescription>
+                {priorityTypeMismatch.priorityIsItil
+                  ? t('templates.editor.priorityTypeMismatchItil', 'Priority ‘{{priority}}’ is an ITIL priority but board ‘{{board}}’ uses custom priorities. Saving is refused until you change the priority or the board.', { priority: priorityTypeMismatch.priorityName, board: priorityTypeMismatch.boardName })
+                  : t('templates.editor.priorityTypeMismatchCustom', 'Priority ‘{{priority}}’ is a custom priority but board ‘{{board}}’ uses ITIL priorities. Saving is refused until you change the priority or the board.', { priority: priorityTypeMismatch.priorityName, board: priorityTypeMismatch.boardName })}
+              </AlertDescription>
+            </Alert>
+          )}
           <CategoryField
             idPrefix={`${ID}-category-field`}
             reference={reference}

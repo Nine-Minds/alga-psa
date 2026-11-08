@@ -20,6 +20,11 @@
       "types": "./src/actions/interactionCreateHelper.ts",
       "import": "./src/actions/interactionCreateHelper.ts"
     },
+    "./actions/interactionActions": {
+      "types": "./src/actions/interactionActions.ts",
+      "import": "./dist/actions/interactionActions.js",
+      "require": "./dist/actions/interactionActions.js"
+    },
     "./actions/clientNoteActions": {
       "types": "./src/actions/clientNoteActions.ts",
       "import": "./src/actions/clientNoteActions.ts"
@@ -29,6 +34,11 @@
       "import": "./dist/components/index.js",
       "require": "./dist/components/index.js"
     },
+    "./components/interactions/InteractionDetails": {
+      "types": "./src/components/interactions/InteractionDetails.tsx",
+      "import": "./dist/components/interactions/InteractionDetails.js",
+      "require": "./dist/components/interactions/InteractionDetails.js"
+    },
     "./models": {
       "types": "./src/models/index.ts",
       "import": "./dist/models/index.js",
@@ -37,6 +47,14 @@
     "./lib/onlineMeetingArtifactCapture": {
       "types": "./src/lib/onlineMeetingArtifactCapture.ts",
       "import": "./src/lib/onlineMeetingArtifactCapture.ts"
+    },
+    "./lib/contactEvents": {
+      "types": "./src/lib/contactEvents.ts",
+      "import": "./src/lib/contactEvents.ts"
+    },
+    "./lib/clientLocationEvents": {
+      "types": "./src/lib/clientLocationEvents.ts",
+      "import": "./src/lib/clientLocationEvents.ts"
     },
     "./lib/clientMergeEngine": {
       "types": "./src/lib/clientMergeEngine.ts",
@@ -100,7 +118,7 @@
     "@alga-psa/validation": "*",
     "@alga-psa/workflow-streams": "*",
     "@alga-psa/workflows": "*",
-    "zod": "^3.22.4"
+    "zod": "^4.6.7"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",

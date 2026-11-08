@@ -17,6 +17,7 @@
 const TABLE = 'client_billing_profiles';
 
 exports.up = async function up(knex) {
+  // migration-lint: allow 5 - retroactive: insert-select of one default billing profile per client lacking one; idempotent, merged before the lint existed
   await knex.raw(`
     INSERT INTO ${TABLE} (
       tenant, billing_profile_id, client_id, name,

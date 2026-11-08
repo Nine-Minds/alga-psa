@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardContent } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Clock, ArrowRight } from 'lucide-react';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import {
   checkClientPortalPermissions,
   getClientBucketUsage,
@@ -29,6 +30,7 @@ import {
  */
 export function PrepaidHoursCard() {
   const { t } = useTranslation('features/billing');
+  const { locale } = useFormatters();
   const [buckets, setBuckets] = useState<ClientBucketUsageResult[] | null>(null);
   const [hourBlocks, setHourBlocks] = useState<ClientPortalHourBlock[]>([]);
 
@@ -168,6 +170,15 @@ export function PrepaidHoursCard() {
                     {t('hourBlocks.contractLabel', {
                       contract: block.contract_name,
                       defaultValue: 'Contract: {{contract}}',
+                    })}
+                  </p>
+                )}
+                {block.remaining_value > 0 && block.currency_code && (
+                  <p id={`prepaid-hour-block-remaining-${block.block_id}`} className="text-xs text-gray-500">
+                    {t('hourBlocks.hoursLeftValue', {
+                      hours: remainingHours.toFixed(1),
+                      value: formatCurrencyFromMinorUnits(block.remaining_value, locale, block.currency_code),
+                      defaultValue: '{{hours}}h left · {{value}}',
                     })}
                   </p>
                 )}

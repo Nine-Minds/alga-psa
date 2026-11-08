@@ -25,7 +25,7 @@ export function registerMobileCapabilitiesV1Routes(registry: ApiOpenApiRegistry)
     zOpenApi.object(
       Object.fromEntries(
         SeedTokenKeys.map((key) => [key, zOpenApi.string().describe('6-digit hex color, e.g. #8a4dea')]),
-      ) as Record<(typeof SeedTokenKeys)[number], ReturnType<typeof zOpenApi.string>>,
+      ) as unknown as Record<(typeof SeedTokenKeys)[number], ReturnType<typeof zOpenApi.string>>,
     ),
   );
   const CapabilitiesSuccess = registry.registerSchema(
@@ -37,10 +37,13 @@ export function registerMobileCapabilitiesV1Routes(registry: ApiOpenApiRegistry)
           opportunities: zOpenApi.boolean(),
           opportunitiesCreate: zOpenApi.boolean(),
           projects: zOpenApi.boolean().describe('Project tasks on mobile (project:read; PSA product only).'),
+          assets: zOpenApi.boolean().describe('Asset browsing on mobile (asset:read; PSA product only).'),
+          assetAudit: zOpenApi.boolean().describe('Site audits on mobile (asset:read AND asset:update; PSA product only).'),
           clientsCreate: zOpenApi.boolean(),
           clientsUpdate: zOpenApi.boolean(),
           contactsCreate: zOpenApi.boolean(),
           contactsUpdate: zOpenApi.boolean(),
+          dontNotifyCustomerDefault: zOpenApi.boolean().describe('Tenant setting: every "Don\'t notify the customer" checkbox starts ticked.'),
         }),
         // Date shape resolved from the user's country, so the device locale
         // never decides how a tenant's dates read.
@@ -88,7 +91,7 @@ export function registerMobileCapabilitiesV1Routes(registry: ApiOpenApiRegistry)
     extensions: {
       'x-tenant-scoped': true,
       'x-auth-mechanism': 'x-api-key validated in ApiBaseController.authenticate()',
-      'x-rbac-resource': 'inventory/read and opportunities/read/create',
+      'x-rbac-resource': 'inventory/read, opportunities/read/create, project/read and asset/read/update',
     },
     edition: 'both',
   });

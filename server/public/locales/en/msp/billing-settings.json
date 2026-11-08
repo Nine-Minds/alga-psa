@@ -202,6 +202,27 @@
         "save": "Failed to save settings",
         "range": "Enter a whole number from 1 to 365."
       }
+    },
+    "paymentTerms": {
+      "title": "Default payment terms",
+      "description": "Set the payment terms new invoices use when neither the client nor its billing profile sets any.",
+      "fields": {
+        "terms": {
+          "label": "Payment terms",
+          "help": "Applies to new invoices only. Existing invoices and clients that already have their own terms keep them."
+        }
+      },
+      "actions": {
+        "save": "Save"
+      },
+      "toast": {
+        "updated": "Default payment terms have been updated."
+      },
+      "errors": {
+        "load": "Failed to load settings",
+        "save": "Failed to save settings",
+        "invalid": "Choose a valid payment term."
+      }
     }
   },
   "quoting": {
@@ -222,11 +243,20 @@
       "loading": "Loading default tax rate...",
       "empty": "Create an active tax rate before choosing a default.",
       "invalid": "The configured default is no longer active or valid. Choose another rate.",
-      "field": { "label": "Default tax rate" },
-      "options": { "none": "No tenant default" },
+      "field": {
+        "label": "Default tax rate"
+      },
+      "options": {
+        "none": "No tenant default"
+      },
       "help": "When unset, new catalog items remain non-taxable and new clients use the oldest active rate when one exists.",
-      "actions": { "save": "Save default", "saving": "Saving..." },
-      "toast": { "saved": "Default tax rate saved." },
+      "actions": {
+        "save": "Save default",
+        "saving": "Saving..."
+      },
+      "toast": {
+        "saved": "Default tax rate saved."
+      },
       "errors": {
         "load": "Failed to load the default tax rate.",
         "save": "Failed to save the default tax rate."
@@ -240,9 +270,17 @@
       "empty": "No eligible products or services found.",
       "target": "Target rate: {{rate}}",
       "count": "{{count}} eligible item(s)",
-      "dialog": { "title": "Apply default tax rate" },
-      "actions": { "preview": "Preview existing items", "apply": "Apply selected", "applying": "Applying..." },
-      "toast": { "applied": "Default tax rate applied to selected items." },
+      "dialog": {
+        "title": "Apply default tax rate"
+      },
+      "actions": {
+        "preview": "Preview existing items",
+        "apply": "Apply selected",
+        "applying": "Applying..."
+      },
+      "toast": {
+        "applied": "Default tax rate applied to selected items."
+      },
       "errors": {
         "preview": "Failed to preview catalog items.",
         "apply": "Failed to apply the default tax rate."
@@ -1457,6 +1495,103 @@
     }
   },
   "payment": {
+    "import": {
+      "title": "Import existing Stripe customers",
+      "description": "Bring over Stripe customers and saved cards from another system. Importing never enrolls a client in auto-pay; you confirm that per row.",
+      "open": "Start import",
+      "preview": "Preview",
+      "execute": "Import",
+      "reset": "Start over",
+      "default": "default",
+      "done": "Import finished",
+      "attest": "The client has authorized recurring charges to this card",
+      "alreadyEnrolled": "Already enrolled",
+      "scaRisk": "SCA risk: no proof it was saved for off-session use",
+      "cardsImported": "{{count}} card(s) imported",
+      "csv": {
+        "label": "Rows (client, billing profile, Stripe customer id)",
+        "upload": "Upload CSV"
+      },
+      "assisted": {
+        "run": "Match by email, then name",
+        "summary": "{{matched}} proposed, {{ambiguous}} ambiguous (not proposed){{truncated}}",
+        "truncated": "; list truncated",
+        "ambiguousTitle": "Ambiguous matches (not proposed)",
+        "addRow": "Add as row",
+        "matchedBy": "Matched by {{by}}",
+        "by": {
+          "email": "email",
+          "name": "name"
+        },
+        "ambiguousReasons": {
+          "multiple-profiles": "Matches several billing profiles",
+          "multiple-customers": "Matches several Stripe customers"
+        }
+      },
+      "errors": {
+        "preview": "Preview failed",
+        "noRows": "Add at least one row",
+        "match": "Matching failed",
+        "execute": "Import failed"
+      },
+      "table": {
+        "customer": "Stripe customer",
+        "plan": "Plan",
+        "cards": "Cards",
+        "enroll": "Enroll in auto-pay",
+        "clientProfile": "Client / billing profile",
+        "include": "Include"
+      },
+      "actions": {
+        "adopt": "Adopt",
+        "already-imported": "Already imported",
+        "conflict": "Conflict",
+        "skip": "Skip"
+      },
+      "cardActions": {
+        "import": "Import",
+        "already-imported": "Already imported",
+        "conflict": "Conflict",
+        "skip": "Skip"
+      },
+      "cardReasons": {
+        "unsupported-method": "unsupported method",
+        "expired-card": "expired card",
+        "card-claimed-elsewhere": "card belongs to another client"
+      },
+      "reasons": {
+        "invalid-customer-id": "Not a valid Stripe customer id",
+        "customer-not-found": "Customer not found in Stripe",
+        "customer-deleted": "Customer is deleted in Stripe",
+        "profile-not-found": "Client or billing profile not found",
+        "profile-inactive": "Billing profile is inactive",
+        "currency-not-configured": "No billing currency configured for this client",
+        "currency-unsupported": "Billing currency is not supported by Stripe auto-pay",
+        "duplicate-customer-in-input": "The same Stripe customer appears on more than one row",
+        "duplicate-profile-in-input": "The same billing profile appears with more than one Stripe customer",
+        "customer-claimed-by-other": "Stripe customer is already mapped to another client or billing profile",
+        "customer-metadata-owned-by-other": "Stripe customer metadata names a different tenant, client or billing profile",
+        "profile-mapped-to-other-customer": "This billing profile already uses a different Stripe customer"
+      },
+      "warnings": {
+        "no-cards": "Customer has no payment methods",
+        "customer-currency-mismatch": "Stripe customer currency differs from the billing currency",
+        "no-importable-card": "No card can be imported"
+      },
+      "resultStatus": {
+        "imported": "Imported",
+        "unchanged": "Nothing to do",
+        "skipped": "Skipped",
+        "conflict": "Conflict",
+        "failed": "Failed"
+      },
+      "enrollment": {
+        "enrolled": "enrolled in auto-pay",
+        "not-eligible": "not eligible for enrollment",
+        "already-enrolled": "already enrolled",
+        "failed": "enrollment failed"
+      }
+    },
     "messages": {
       "loadConfigFailed": "Failed to load payment configuration",
       "keysRequired": "Please enter both secret key and publishable key",
@@ -1483,7 +1618,7 @@
       "daysPlural": "{{count}} days",
       "daysDecimal": "{{count}} days",
       "hoursUnit": "hours ({{formatted}})",
-      "willExpireAfter": "Payment links will expire after {{duration}}"
+      "willExpireAfter": "The emailed payment link will work for {{duration}}"
     },
     "notConnected": {
       "title": "Stripe Not Connected",
@@ -1501,7 +1636,7 @@
       },
       "paymentLinkExpiration": {
         "label": "Payment Link Expiration",
-        "description": "How long payment links remain valid before expiring"
+        "description": "How long the payment link in invoice emails keeps working (1 hour to 30 days). Each click opens a fresh secure checkout while the invoice is unpaid."
       },
       "actions": {
         "save": "Save Settings",

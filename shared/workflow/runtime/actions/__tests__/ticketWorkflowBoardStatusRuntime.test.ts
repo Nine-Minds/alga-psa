@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useNativeCoManagedVerdict } from './helpers/nativeCoManagedVerdict';
 
 type RegisteredAction = {
   id: string;
@@ -495,6 +496,7 @@ function createFindComments(): TableRow[] {
 }
 
 describe('ticket workflow runtime board-scoped statuses', () => {
+  useNativeCoManagedVerdict();
   beforeEach(() => {
     runtimeState.registeredActions.length = 0;
     runtimeState.currentTenantTx = null;

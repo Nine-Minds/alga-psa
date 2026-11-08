@@ -544,6 +544,7 @@
       "recurring": "Wiederkehrend",
       "service": "Service",
       "setPrice": "Preis festlegen",
+      "taxable": "Steuerpflichtig",
       "ungroupedItems": "Nicht gruppierte Elemente"
     },
     "placeholders": {
@@ -637,6 +638,7 @@
       }
     },
     "sections": {
+      "carriedDiscounts": "Auf Vertragslinien übertragene Rabatte",
       "contractItems": "Vertragsgegenstände",
       "conversionMode": "Konvertierungsmodus",
       "excludedFromConversion": "Von der Konvertierung ausgeschlossen",
@@ -662,6 +664,7 @@
       "converted": "Konvertiert",
       "discount": "Rabatt",
       "fixed": "behoben",
+      "monthlyTotal": "Monatssumme nach Rabatten",
       "notConverted": "Nicht konvertiert"
     },
     "partial": {

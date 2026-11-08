@@ -12,7 +12,8 @@
  * Note: the authenticated portal action (getClientQuoteById) returns the whole
  * Quote.getById() row, so there is no existing client-facing projection to
  * reuse; this module is that projection, written as an allow-list so a new
- * column never leaks by default.
+ * column never leaks by default. Item and location joins use page-local opaque
+ * references, never database identifiers.
  */
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
@@ -25,7 +26,6 @@ import { QUOTE_ACTIVITY_TYPES } from '../lib/quoteActivityTypes';
 import { resolveQuoteItemTaxesIfIncluded } from './quoteCalculationService';
 
 export const PUBLIC_QUOTE_FIELDS = [
-  'quote_id',
   'quote_number',
   'title',
   'description',
@@ -44,7 +44,6 @@ export const PUBLIC_QUOTE_FIELDS = [
 ] as const satisfies ReadonlyArray<keyof IQuote>;
 
 export const PUBLIC_QUOTE_ITEM_FIELDS = [
-  'quote_item_id',
   'description',
   'quantity',
   'unit_price',
@@ -53,13 +52,11 @@ export const PUBLIC_QUOTE_ITEM_FIELDS = [
   'is_optional',
   'is_selected',
   'is_discount',
-  'location_id',
   // Server-resolved per-row tax input for the live optional-item preview (a number, no tenant data).
   'tax_amount_if_included',
 ] as const satisfies ReadonlyArray<keyof IQuoteItem>;
 
 export const PUBLIC_QUOTE_LOCATION_FIELDS = [
-  'location_id',
   'location_name',
   'address_line1',
   'address_line2',
@@ -72,10 +69,13 @@ export const PUBLIC_QUOTE_LOCATION_FIELDS = [
 ] as const;
 
 export type PublicQuote = Pick<IQuote, (typeof PUBLIC_QUOTE_FIELDS)[number]>;
-export type PublicQuoteItem = Pick<IQuoteItem, (typeof PUBLIC_QUOTE_ITEM_FIELDS)[number]>;
+export type PublicQuoteItem = Pick<IQuoteItem, (typeof PUBLIC_QUOTE_ITEM_FIELDS)[number]> & {
+  publicRef: string;
+  locationRef: string | null;
+};
 export type PublicQuoteLocation = {
   [K in (typeof PUBLIC_QUOTE_LOCATION_FIELDS)[number]]?: string | null;
-} & { location_id: string };
+} & { publicRef: string };
 
 export interface PublicQuoteView {
   quote: PublicQuote;
@@ -104,7 +104,38 @@ export function projectPublicQuote(quote: IQuote): PublicQuote {
 }
 
 export function projectPublicQuoteItems(items: ReadonlyArray<IQuoteItem>): PublicQuoteItem[] {
-  return items.map((item) => pick(item, PUBLIC_QUOTE_ITEM_FIELDS));
+  return items.map((item, index) => ({
+    ...pick(item, PUBLIC_QUOTE_ITEM_FIELDS),
+    publicRef: `item-${index}`,
+    locationRef: null,
+  }));
+}
+
+/** Projects the complete browser-bound payload without exposing database identifiers. */
+export function projectPublicQuoteView(
+  quote: IQuote,
+  locationRows: ReadonlyArray<Record<string, unknown>> = [],
+): PublicQuoteView {
+  const sourceItems = quote.quote_items ?? [];
+  const sourceLocationIds = Array.from(new Set(sourceItems
+    .map((item) => item.location_id)
+    .filter((id): id is string => Boolean(id && id.trim()))));
+  const publicRefByLocationId = new Map(sourceLocationIds.map((id, index) => [id, `location-${index}`]));
+  const locationById = new Map(locationRows.map((row) => [String(row.location_id), row]));
+  const items = sourceItems.map((item, index): PublicQuoteItem => ({
+    ...pick(item, PUBLIC_QUOTE_ITEM_FIELDS),
+    publicRef: `item-${index}`,
+    locationRef: item.location_id ? publicRefByLocationId.get(item.location_id) ?? null : null,
+  }));
+  const locations = sourceLocationIds.flatMap((id): PublicQuoteLocation[] => {
+    const location = locationById.get(id);
+    if (!location) return [];
+    return [{
+      ...pick(location, PUBLIC_QUOTE_LOCATION_FIELDS as ReadonlyArray<keyof typeof location>),
+      publicRef: publicRefByLocationId.get(id)!,
+    } as PublicQuoteLocation];
+  });
+  return { quote: projectPublicQuote(quote), items, locations };
 }
 
 /** Loads the quote the way the portal does (Quote.getById) and returns only the allow-listed view. */
@@ -121,33 +152,40 @@ export async function loadPublicQuoteView(
 
   // Server-resolved per-row tax for the live optional-item preview (not a DB column), same as
   // getClientQuoteById. Runs on the caller's knex/trx, so the submit path computes it inside its
-  // locked transaction. Values are plain numbers (Map<string, number>), safe for canonicalJson.
+  // locked transaction. Project the resolver's taxAmount as a plain number, safe for canonicalJson.
   // The item tax is part of the hashed view (see fingerprintPublicQuoteView): the signature binds
   // to the tax inputs the signer saw, and a tax-rate change between render and submit yields `changed`.
   let sourceItems: IQuoteItem[] = quote.quote_items ?? [];
   if (quote.status === 'sent' && sourceItems.length > 0) {
     const taxByItemId = await resolveQuoteItemTaxesIfIncluded(knex, tenant, quoteId);
-    sourceItems = sourceItems.map((item) =>
-      taxByItemId.has(item.quote_item_id)
-        ? { ...item, tax_amount_if_included: Number(taxByItemId.get(item.quote_item_id)) }
-        : item,
-    );
+    sourceItems = sourceItems.map((item) => {
+      const rowTax = taxByItemId.get(item.quote_item_id);
+      return rowTax ? { ...item, tax_amount_if_included: rowTax.taxAmount } : item;
+    });
   }
-  const items = projectPublicQuoteItems(sourceItems);
-
-  const locationIds = Array.from(
-    new Set(items.map((i) => i.location_id).filter((id): id is string => Boolean(id && id.trim()))),
-  );
-  let locations: PublicQuoteLocation[] = [];
+  const locationIds = Array.from(new Set(sourceItems
+    .map((item) => item.location_id)
+    .filter((id): id is string => Boolean(id && id.trim()))));
+  let locations: Record<string, unknown>[] = [];
   if (quote.client_id && locationIds.length > 0) {
     locations = await tenantDb(knex, tenant)
       .table('client_locations')
-      .select(...PUBLIC_QUOTE_LOCATION_FIELDS)
+      .select('location_id', ...PUBLIC_QUOTE_LOCATION_FIELDS)
       .where({ client_id: quote.client_id })
       .whereIn('location_id', locationIds);
   }
 
-  return { quote: projectPublicQuote(quote), items, locations };
+  return projectPublicQuoteView({ ...quote, quote_items: sourceItems }, locations);
+}
+
+/** Resolves opaque public item references inside the decision transaction only. */
+export async function loadPublicQuoteItemReferenceMap(
+  knex: Knex | Knex.Transaction,
+  tenant: string,
+  quoteId: string,
+): Promise<Map<string, string>> {
+  const quote = await Quote.getById(knex, tenant, quoteId);
+  return new Map((quote?.quote_items ?? []).map((item, index) => [`item-${index}`, item.quote_item_id]));
 }
 
 /**
@@ -185,10 +223,10 @@ export function fingerprintPublicQuoteView(view: Pick<PublicQuoteView, 'quote' |
   const items = [...view.items].sort(
     (a, b) =>
       (Number(a.display_order) || 0) - (Number(b.display_order) || 0) ||
-      String(a.quote_item_id).localeCompare(String(b.quote_item_id)),
+      String(a.publicRef).localeCompare(String(b.publicRef)),
   );
   const locations = [...(view.locations ?? [])].sort((a, b) =>
-    String(a.location_id).localeCompare(String(b.location_id)),
+    String(a.publicRef).localeCompare(String(b.publicRef)),
   );
   return createHash('sha256').update(canonicalJson({ quote: view.quote, items, locations }), 'utf8').digest('hex');
 }

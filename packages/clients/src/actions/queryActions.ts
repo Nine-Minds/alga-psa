@@ -1,5 +1,6 @@
 'use server'
 
+import { queueContactCreated } from '../lib/contactEvents';
 import type { IClient, IClientWithLocation, IContact, IInteraction } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
@@ -13,6 +14,9 @@ import {
 } from '@alga-psa/formatting/avatarUtils';
 import { hasPermissionAsync } from '../lib/authHelpers';
 import { withClientSinceDateString } from '../lib/clientSince';
+import { attachDisplayTags } from '../lib/displayTags';
+import { attachContactLocations } from '../lib/contactLocations';
+import { contactLocationSortKey } from '../lib/contactLocationDisplay';
 import InteractionModel from '../models/interactions';
 import {
   actionError,
@@ -271,7 +275,7 @@ export const getAllClients = withAuth(async (user, { tenant }, includeInactive: 
     logoUrl: logoUrlsMap.get(client.client_id) || null,
   }));
 
-  return clientsWithLogos as IClient[];
+  return (await attachDisplayTags(db, tenant, user, 'client', clientsWithLogos, (client: any) => client.client_id)) as unknown as IClient[];
 });
 
 // --- Contact query actions ---
@@ -297,17 +301,17 @@ function getDefaultPhoneNumber(contact: Pick<IContact, 'default_phone_number' | 
     || '';
 }
 
+/** Sorts in TypeScript, for the columns whose value is not a column of `contacts`. */
+const CONTACT_SORT_VALUE: Record<string, (contact: IContact) => string> = {
+  phone_number: getDefaultPhoneNumber,
+  // The Location column: primary location name, then 'Remote', with the unlinked last.
+  primaryLocation: contactLocationSortKey,
+};
+
 function sortContacts(contacts: IContact[], sortBy: string, sortDirection: 'asc' | 'desc'): IContact[] {
   const direction = sortDirection === 'desc' ? -1 : 1;
-  return [...contacts].sort((left, right) => {
-    const leftValue = sortBy === 'phone_number'
-      ? getDefaultPhoneNumber(left)
-      : String((left as any)[sortBy] ?? '');
-    const rightValue = sortBy === 'phone_number'
-      ? getDefaultPhoneNumber(right)
-      : String((right as any)[sortBy] ?? '');
-    return leftValue.localeCompare(rightValue) * direction;
-  });
+  const valueOf = CONTACT_SORT_VALUE[sortBy] ?? ((contact: IContact) => String((contact as any)[sortBy] ?? ''));
+  return [...contacts].sort((left, right) => valueOf(left).localeCompare(valueOf(right)) * direction);
 }
 
 export type ContactFilterStatus = 'active' | 'inactive' | 'all';
@@ -329,7 +333,7 @@ export const getContactsByClient = withAuth(async (
       throw new Error('VALIDATION_ERROR: Client ID is required');
     }
 
-    const allowedSortBy = ['full_name', 'created_at', 'email', 'client_name', 'phone_number'];
+    const allowedSortBy = ['full_name', 'created_at', 'email', 'client_name', 'phone_number', 'primaryLocation'];
     const safeSortBy = allowedSortBy.includes(sortBy) ? sortBy : 'full_name';
     const safeSortDirection = sortDirection === 'desc' ? 'desc' : 'asc';
 
@@ -366,12 +370,19 @@ export const getContactsByClient = withAuth(async (
     const contactIds = contacts.map((c: IContact) => c.contact_name_id);
     const avatarUrlsMap = await getContactAvatarUrlsBatch(contactIds, tenant);
 
+    // Every row shares one client; resolve its logo once (D5).
+    const clientLogoUrl = (await getClientLogoUrlsBatch([clientId], tenant)).get(clientId) ?? null;
+
     const contactsWithAvatars = contacts.map((contact: IContact) => ({
       ...contact,
       avatarUrl: avatarUrlsMap.get(contact.contact_name_id) || null,
+      client_logo_url: clientLogoUrl,
     }));
 
-    return contactsWithAvatars;
+    const tagged = await attachDisplayTags(db, tenant, user, 'contact', contactsWithAvatars, (contact: IContact) => contact.contact_name_id);
+    const withLocations = (await attachContactLocations(db, tenant, tagged, (contact) => contact.contact_name_id)) as IContact[];
+    // The links only exist once they are attached, so that one column is ordered here.
+    return safeSortBy === 'primaryLocation' ? sortContacts(withLocations, safeSortBy, safeSortDirection) : withLocations;
   } catch (err) {
     console.error('Error fetching contacts for client:', err);
 
@@ -435,7 +446,7 @@ export const getAllContacts = withAuth(async (
       throw new Error('VALIDATION_ERROR: Invalid status filter provided');
     }
 
-    const allowedSortBy = ['full_name', 'created_at', 'email', 'client_name', 'phone_number'];
+    const allowedSortBy = ['full_name', 'created_at', 'email', 'client_name', 'phone_number', 'primaryLocation'];
     const safeSortBy = allowedSortBy.includes(sortBy) ? sortBy : 'full_name';
     const safeSortDirection = sortDirection === 'desc' ? 'desc' : 'asc';
 
@@ -504,12 +515,29 @@ export const getAllContacts = withAuth(async (
       console.warn('[getAllContacts] Failed to fetch avatars in batch:', avatarErr);
     }
 
+    // Logos only for the distinct clients referenced by these contacts (D5).
+    let clientLogoMap: Map<string, string | null> = new Map();
+    try {
+      const distinctClientIds = Array.from(
+        new Set(contacts.map((c) => c.client_id).filter(Boolean))
+      ) as string[];
+      if (distinctClientIds.length > 0) {
+        clientLogoMap = await getClientLogoUrlsBatch(distinctClientIds, tenant);
+      }
+    } catch (logoErr) {
+      console.warn('[getAllContacts] Failed to fetch client logos in batch:', logoErr);
+    }
+
     const contactsWithAvatars = contacts.map((contact: IContact) => ({
       ...contact,
       avatarUrl: avatarUrlsMap.get(contact.contact_name_id) || null,
+      client_logo_url: contact.client_id ? clientLogoMap.get(contact.client_id) ?? null : null,
     }));
 
-    return contactsWithAvatars;
+    const tagged = await attachDisplayTags(db, tenant, user, 'contact', contactsWithAvatars, (contact: IContact) => contact.contact_name_id);
+    const withLocations = (await attachContactLocations(db, tenant, tagged, (contact) => contact.contact_name_id)) as IContact[];
+    // The links only exist once they are attached, so that one column is ordered here.
+    return safeSortBy === 'primaryLocation' ? sortContacts(withLocations, safeSortBy, safeSortDirection) : withLocations;
   } catch (err) {
     console.error('Error fetching all contacts:', err);
 
@@ -608,6 +636,7 @@ export const createOrFindContactByEmail = withAuth(async (
         role: title,
         is_inactive: false,
       }, tenant, trx);
+      queueContactCreated(trx, tenant, newContact as any, { actorUserId: user?.user_id });
 
       const client = await tenantScopedTable(trx, 'clients', tenant)
         .select('client_name')

@@ -11,10 +11,12 @@ import {
   baseFilterSchema,
   booleanTransform,
   dateSchema,
+  isoDateSchema,
   numberTransform,
   bulkDeleteSchema,
   bulkUpdateSchema
 } from './common';
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
 // ============================================================================
 // ENUMS AND CONSTANTS
@@ -34,7 +36,12 @@ export const contractStatusSchema = z.enum(['active', 'draft', 'terminated', 'ex
 
 // Prepaid Block config overlay for Hourly lines (contract_line_prepaid_blocks).
 // block_price is in minor units of the contract's currency.
+// issue_mode 'cadence' bills one block per service period, in advance; rollover_periods (0..12)
+// is how many further periods unused hours stay valid and applies to cadence only. The
+// consumption triggers and expiry_months cannot be combined with cadence.
 export const prepaidBlockConfigSchema = z.object({
+  issue_mode: z.enum(['consumption', 'cadence']).optional(),
+  rollover_periods: z.number().int().min(0).max(12).optional(),
   block_minutes: z.number().int().min(1),
   block_price: z.number().int().min(0),
   sold_as_service_id: uuidSchema.nullable().optional(),
@@ -44,6 +51,27 @@ export const prepaidBlockConfigSchema = z.object({
   trigger_on_expiry: z.boolean().optional(),
   trigger_on_renewal: z.boolean().optional(),
   replenishment_tier: z.enum(['draft', 'auto_issue']).optional(),
+}).superRefine((block, ctx) => {
+  if (block.issue_mode === 'cadence') {
+    const conflicting = block.trigger_on_exhaustion === true
+      || block.trigger_on_expiry === true
+      || block.trigger_on_renewal === true
+      || block.trigger_threshold_percent != null
+      || block.expiry_months != null;
+    if (conflicting) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Blocks issued every billing period cannot use the exhaustion, threshold, expiry or renewal triggers or expiry_months; use rollover_periods',
+        path: ['issue_mode'],
+      });
+    }
+  } else if ((block.rollover_periods ?? 0) !== 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'rollover_periods applies only when issue_mode is cadence',
+      path: ['rollover_periods'],
+    });
+  }
 });
 
 // Base contract line schema (without refinements)
@@ -57,6 +85,10 @@ const baseContractLineSchema = z.object({
   // Advance is only valid for Fixed lines; the service rejects it for Hourly/Usage with a 400
   // (ContractLineTimingNotAllowedError). Without this key zod would silently drop the field.
   billing_timing: z.enum(['arrears', 'advance']).optional(),
+
+  // Invoice text for a Fixed bundle row: title (blank = line name) and a muted subtitle.
+  invoice_line_description: z.string().max(500).nullable().optional(),
+  invoice_line_subtitle: z.string().max(500).nullable().optional(),
   
   // Hourly plan specific fields (deprecated for Hourly type)
   hourly_rate: z.number().min(0).optional(),
@@ -106,6 +138,8 @@ export const contractLineResponseSchema = z.object({
   service_category: z.string().nullable(),
   contract_line_type: planTypeSchema,
   cadence_owner: cadenceOwnerSchema,
+  invoice_line_description: z.string().nullable().optional(),
+  invoice_line_subtitle: z.string().nullable().optional(),
   hourly_rate: z.number().nullable(),
   minimum_billable_time: z.number().nullable(),
   round_up_to_nearest: z.number().nullable(),
@@ -328,10 +362,10 @@ export const updatePlanServiceSchema = z.object({
   quantity: z.number().min(0).optional(),
   custom_rate: z.number().min(0).optional(),
   type_config: z.union([
-    createPlanServiceFixedConfigSchema.partial(),
-    createPlanServiceHourlyConfigSchema.partial(),
-    createPlanServiceUsageConfigSchema.partial(),
-    createPlanServiceBucketConfigSchema.partial()
+    partialWithoutDefaults(createPlanServiceFixedConfigSchema),
+    partialWithoutDefaults(createPlanServiceHourlyConfigSchema),
+    partialWithoutDefaults(createPlanServiceUsageConfigSchema),
+    partialWithoutDefaults(createPlanServiceBucketConfigSchema)
   ]).and(
     // The partial branches above strip unknown keys and the hourly/usage/bucket
     // partials accept an empty object, so an invalid base_rate_basis would be
@@ -372,19 +406,54 @@ export const planServiceWithConfigResponseSchema = z.object({
 
 // Contract
 // `client_id` is the owning client per the public v1 contract; `owner_client_id`
-// remains accepted as an internal alias. At least one must be supplied. The
-// create/update shape is strict so unsupported fields are rejected, not silently
-// stripped (which would hide caller data loss).
+// remains accepted as an internal alias. At least one must be supplied. A contract
+// without a client assignment (client_contracts row) is invisible in the product UI,
+// so create REQUIRES the client and writes the assignment in the same transaction
+// (there is deliberately no unassigned-contract create path). The create/update shape
+// is strict so unsupported fields are rejected, not silently stripped (which would
+// hide caller data loss).
+
+// Dates on the assignment accept a full ISO datetime or a plain YYYY-MM-DD, like the UI.
+const contractDateInputSchema = z.union([z.string().datetime(), isoDateSchema]);
+
+// Terms the UI wizard stores on the client assignment (client_contracts row).
+const clientContractAssignmentTermsShape = {
+  billing_profile_id: uuidSchema.nullable().optional(),
+  renewal_mode: z.enum(['none', 'manual', 'auto']).optional(),
+  notice_period_days: z.number().int().min(0).optional(),
+  renewal_term_months: z.number().int().min(1).optional(),
+  use_tenant_renewal_defaults: z.boolean().optional(),
+  renewal_due_date_action_policy: z.enum(['queue_only', 'create_ticket']).nullable().optional(),
+  renewal_ticket_board_id: uuidSchema.nullable().optional(),
+  renewal_ticket_status_id: uuidSchema.nullable().optional(),
+  renewal_ticket_priority: z.string().nullable().optional(),
+  renewal_ticket_assignee_id: uuidSchema.nullable().optional(),
+  po_required: z.boolean().optional(),
+  po_number: z.string().max(255).nullable().optional(),
+  po_amount: z.number().min(0).nullable().optional(),
+};
+
+// Associate contract line to contract
+export const addContractLineSchema = z.object({
+  contract_line_id: uuidSchema,
+  custom_rate: z.number().min(0).optional(),
+  display_order: z.number().min(0).optional()
+});
+
 const contractCreateShape = {
   client_id: uuidSchema.optional(),
   contract_name: z.string().min(1, 'Contract name is required').max(255),
   contract_description: z.string().optional(),
   owner_client_id: uuidSchema.optional(),
   billing_frequency: billingFrequencySchema,
-  start_date: dateSchema,
-  end_date: dateSchema.nullable().optional(),
+  start_date: contractDateInputSchema,
+  end_date: contractDateInputSchema.nullable().optional(),
   status: contractStatusSchema.optional(),
-  is_active: z.boolean().optional().default(true)
+  is_active: z.boolean().optional().default(true),
+  ...clientContractAssignmentTermsShape,
+  // Contract lines attached in the same transaction as the header and assignment, using the
+  // same operation as POST /contracts/{id}/contract-lines. Any invalid line rolls back everything.
+  lines: z.array(addContractLineSchema).max(100).optional(),
 };
 
 const contractCreateObject = z.object(contractCreateShape).strict();
@@ -401,7 +470,39 @@ export const createContractSchema = contractCreateObject.superRefine((data, ctx)
   }
 });
 
-export const updateContractSchema = createUpdateSchema(contractCreateObject);
+// Header-only update. Ownership (client_id / owner_client_id) is not editable, matching the
+// UI; assignment terms are managed through /contracts/{contractId}/assignments.
+export const updateContractSchema = z.object({
+  contract_name: z.string().min(1).max(255).optional(),
+  contract_description: z.string().nullable().optional(),
+  billing_frequency: billingFrequencySchema.optional(),
+  status: contractStatusSchema.optional(),
+  is_active: z.boolean().optional(),
+}).strict();
+
+// Assignment (client_contracts row) management
+export const createContractAssignmentSchema = z.object({
+  // Defaults to the contract's owning client; must equal it when supplied.
+  client_id: uuidSchema.optional(),
+  start_date: contractDateInputSchema,
+  end_date: contractDateInputSchema.nullable().optional(),
+  // Defaults to whether the contract header itself is live (active and not draft).
+  is_active: z.boolean().optional(),
+  ...clientContractAssignmentTermsShape,
+}).strict();
+
+export const updateContractAssignmentSchema = z.object({
+  start_date: contractDateInputSchema.optional(),
+  end_date: contractDateInputSchema.nullable().optional(),
+  // `true` promotes a draft assignment AND its contract header (same as the UI "Set to Active").
+  is_active: z.boolean().optional(),
+  ...clientContractAssignmentTermsShape,
+}).strict();
+
+export const CONTRACT_START_DATE_DESCRIPTION =
+  "Earliest start_date across the contract's client assignments (client_contracts); MIN ignores assignments with a null start_date. Falls back to the contract's own stored start_date only when the contract has no assignments.";
+export const CONTRACT_END_DATE_DESCRIPTION =
+  "Latest end_date across the contract's client assignments (client_contracts); MAX ignores assignments with a null (open-ended) end_date. Falls back to the contract's own stored end_date only when the contract has no assignments.";
 
 export const contractResponseSchema = z.object({
   contract_id: uuidSchema,
@@ -415,8 +516,8 @@ export const contractResponseSchema = z.object({
   is_active: z.boolean(),
   is_system_managed_default: z.boolean().optional(),
   is_template: z.boolean().optional(),
-  start_date: z.string().datetime().nullable().optional(),
-  end_date: z.string().datetime().nullable().optional(),
+  start_date: z.string().datetime().nullable().optional().describe(CONTRACT_START_DATE_DESCRIPTION),
+  end_date: z.string().datetime().nullable().optional().describe(CONTRACT_END_DATE_DESCRIPTION),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   tenant: uuidSchema,
@@ -440,13 +541,6 @@ export const contractLineMappingResponseSchema = z.object({
   billing_frequency: billingFrequencySchema.optional(),
   is_custom: z.boolean().optional(),
   contract_line_type: planTypeSchema.optional()
-});
-
-// Associate contract line to contract
-export const addContractLineSchema = z.object({
-  contract_line_id: uuidSchema,
-  custom_rate: z.number().min(0).optional(),
-  display_order: z.number().min(0).optional()
 });
 
 // Update contract line relationship
@@ -557,8 +651,8 @@ export const usageMetricsResponseSchema = z.object({
   total_usage: z.number(),
   billable_usage: z.number(),
   overage_usage: z.number(),
-  usage_by_service: z.record(z.number()),
-  usage_by_user: z.record(z.number()),
+  usage_by_service: z.record(z.string(), z.number()),
+  usage_by_user: z.record(z.string(), z.number()),
   cost_breakdown: z.object({
     base_cost: z.number(),
     overage_cost: z.number(),
@@ -672,7 +766,7 @@ export const billingOverviewAnalyticsSchema = z.object({
   total_plans: z.number(),
   total_contracts: z.number(),
   total_assignments: z.number(),
-  plans_by_type: z.record(z.number()),
+  plans_by_type: z.record(z.string(), z.number()),
   revenue_summary: z.object({
     total_monthly_revenue: z.number(),
     average_revenue_per_plan: z.number(),
@@ -688,7 +782,7 @@ export const billingOverviewAnalyticsSchema = z.object({
       count: z.number(),
       percentage: z.number()
     })),
-    billing_frequency_distribution: z.record(z.number())
+    billing_frequency_distribution: z.record(z.string(), z.number())
   })
 });
 
@@ -855,6 +949,8 @@ export type UserTypeRateResponse = z.infer<typeof userTypeRateSchema>;
 
 export type CreateContractData = z.infer<typeof createContractSchema>;
 export type UpdateContractData = z.infer<typeof updateContractSchema>;
+export type CreateContractAssignmentData = z.infer<typeof createContractAssignmentSchema>;
+export type UpdateContractAssignmentData = z.infer<typeof updateContractAssignmentSchema>;
 export type ContractResponse = z.infer<typeof contractResponseSchema>;
 export type ContractLineMappingResponse = z.infer<typeof contractLineMappingResponseSchema>;
 export type AddContractLineData = z.infer<typeof addContractLineSchema>;

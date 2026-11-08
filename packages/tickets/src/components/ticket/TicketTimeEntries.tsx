@@ -9,6 +9,8 @@ import { useContentCardVariant } from '@alga-psa/ui/components';
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { formatMinutesAsHoursAndMinutes, getUserTimeZone, workedMinutes } from '@alga-psa/core';
 import { formatTicketDateTime } from '../../lib/ticketDateTimeFormat';
+import { ViaPrincipalLabel } from '@enterprise/components/service-principals/ViaPrincipalLabel';
+import { useTicketDataSource } from './TicketDataSourceContext';
 import type {
   TicketTimeEntriesSummary,
   TicketTimeEntrySummaryEntry,
@@ -70,7 +72,8 @@ const TicketTimeEntries: React.FC<TicketTimeEntriesProps> = ({
   // Inside the Grid layout's "Time logged" tile the tile header already names
   // the section, so this panel renders as quiet rows instead of a second header.
   const isBento = useContentCardVariant() === 'bento';
-  const { fetchTimeEntriesForTicket } = useSchedulingCallbacks();
+  const { fetchTimeEntriesForTicket: fetchNativeTimeEntries } = useSchedulingCallbacks();
+  const fetchTimeEntriesForTicket = useTicketDataSource().time.fetchTimeEntries ?? fetchNativeTimeEntries;
   const initialData = initialSummary ? use(initialSummary) : null;
   const [summary, setSummary] = useState<TicketTimeEntriesSummary | null>(initialData);
   const [loading, setLoading] = useState(!initialSummary);
@@ -359,6 +362,12 @@ const TimeEntryRow: React.FC<TimeEntryRowProps> = ({
           {showUserName
             ? entry.user_name || t('timeEntries.unknownUser', 'Unknown user')
             : startLabel}
+          {entry.via_principal_name && (
+            <>
+              {' '}
+              <ViaPrincipalLabel principalName={entry.via_principal_name} />
+            </>
+          )}
         </span>
         <div className="flex items-center gap-2">
           {canEdit && (

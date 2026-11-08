@@ -544,6 +544,7 @@
       "recurring": "Återkommande",
       "service": "tjänst",
       "setPrice": "Ange pris",
+      "taxable": "Skattepliktig",
       "ungroupedItems": "Ogrupperade rader"
     },
     "placeholders": {
@@ -637,6 +638,7 @@
       }
     },
     "sections": {
+      "carriedDiscounts": "Rabatter som förs över till avtalsrader",
       "contractItems": "Avtalsrader",
       "conversionMode": "Konverteringsläge",
       "excludedFromConversion": "Undantagna från konvertering",
@@ -662,6 +664,7 @@
       "converted": "Konverterad",
       "discount": "Rabatt",
       "fixed": "fast",
+      "monthlyTotal": "Månadssumma efter rabatter",
       "notConverted": "Inte konverterad"
     },
     "partial": {

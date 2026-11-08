@@ -28,6 +28,8 @@ export * from "./appliance-console-stripe-activities";
 export * from "./appliance-emails";
 export * from "./workflow-runtime-v2-activities";
 export * from "./product-upgrade-activities";
+export * from "./co-managed-provisioning-activities";
+export * from "./co-managed-tenant-deletion-activities";
 export * from "./trial-payment-reminder-activities";
 export * from "./threecx-call-control-activities";
 // Exclude generateTemporaryPassword and sendWelcomeEmail to avoid duplicates with email-activities
@@ -39,3 +41,4 @@ export {
   logAuditEvent,
   type AuditEventInput,
 } from "./resend-welcome-email-activities";
+export * from "./co-managed-upgrade-activities";

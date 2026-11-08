@@ -23,6 +23,8 @@ export const QUOTE_ACTIVITY_TYPES = {
   signerConfirmationSent: 'signer_confirmation_sent',
   /** The claimed send did not go out; releases the claim so a later run may try again. */
   signerConfirmationFailed: 'signer_confirmation_failed',
+  /** The draft invoice a quote was converted to was deleted; the link was released. */
+  convertedInvoiceDeleted: 'converted_invoice_deleted',
 } as const;
 
 export type QuoteActivityType = (typeof QUOTE_ACTIVITY_TYPES)[keyof typeof QUOTE_ACTIVITY_TYPES];

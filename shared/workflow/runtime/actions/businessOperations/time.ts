@@ -225,7 +225,7 @@ export function registerTimeActions(): void {
         invoiced_count: z.number().int(),
       }),
       groups: z.array(z.object({
-        key: z.record(z.union([z.string(), z.boolean(), z.null()])),
+        key: z.record(z.string(), z.union([z.string(), z.boolean(), z.null()])),
         entry_count: z.number().int(),
         total_minutes: z.number(),
         billable_minutes: z.number(),

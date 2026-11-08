@@ -58,6 +58,12 @@ export interface SearchQueryOptions {
   sort?: 'relevance' | 'recent';
   includeSnippets?: boolean;
   acl?: SearchAclPrincipal;
+  /**
+   * Admitted, redacted relation standing in for the tenant's raw `app_search_index`.
+   * Ranking, pagination, counts and typeahead all read this one relation, so a masked
+   * term can never leak through any of them. Produced by `projectSearchAccess`.
+   */
+  searchIndex?: { sql: string; bindings: Knex.RawBinding[] };
 }
 
 export interface SearchIndexHit {
@@ -94,7 +100,8 @@ interface SearchCursorPayload {
   objectId: string;
 }
 
-function scopedSearchIndexSql(knex: Knex, tenant: string): { sql: string; bindings: Knex.RawBinding[] } {
+function scopedSearchIndexSql(knex: Knex, tenant: string, override?: SearchQueryOptions['searchIndex']): { sql: string; bindings: Knex.RawBinding[] } {
+  if (override) return { sql: override.sql, bindings: [...override.bindings] };
   const scoped = tenantDb(knex, tenant)
     .table('app_search_index')
     .select('*')
@@ -281,7 +288,7 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
   const aclPredicate = options.acl
     ? aclPredicateSql(options.acl)
     : { sql: 'TRUE', bindings: [] };
-  const searchIndex = scopedSearchIndexSql(options.knex, options.tenant);
+  const searchIndex = scopedSearchIndexSql(options.knex, options.tenant, options.searchIndex);
   const cursorPredicateSql = sort === 'recent'
     ? `
         ?::timestamptz IS NULL
@@ -446,7 +453,7 @@ export async function countSearchMatchesByType(
   const aclPredicate = options.acl
     ? aclPredicateSql(options.acl)
     : { sql: 'TRUE', bindings: [] };
-  const searchIndex = scopedSearchIndexSql(options.knex, options.tenant);
+  const searchIndex = scopedSearchIndexSql(options.knex, options.tenant, options.searchIndex);
 
   const result = await options.knex.raw<{ rows: Array<{ object_type: SearchObjectType; total: string | number }> }>(
     `
@@ -511,7 +518,7 @@ export async function countSearchMatches(
   const aclPredicate = options.acl
     ? aclPredicateSql(options.acl)
     : { sql: 'TRUE', bindings: [] };
-  const searchIndex = scopedSearchIndexSql(options.knex, options.tenant);
+  const searchIndex = scopedSearchIndexSql(options.knex, options.tenant, options.searchIndex);
 
   const result = await options.knex.raw<{ rows: Array<{ total: string | number }> }>(
     `

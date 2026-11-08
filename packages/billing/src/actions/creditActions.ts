@@ -103,7 +103,8 @@ async function resolveCreditSyncEnqueueDecision(
     trx: Knex.Transaction,
     tenant: string,
     user: IUser,
-    collectedOps: boolean
+    collectedOps: boolean,
+    systemPolicy: boolean = false
 ): Promise<{ shouldEnqueue: boolean; realm: string | null; adapterType: string | null }> {
     if (!collectedOps) {
         return { shouldEnqueue: false, realm: null, adapterType: null };
@@ -122,7 +123,9 @@ async function resolveCreditSyncEnqueueDecision(
     if (!integration) {
         return { shouldEnqueue: false, realm: null, adapterType: null };
     }
-    if (!(await hasPermission(user, 'accounting_integrations', 'remote_mutate', trx))) {
+    // System-policy applications (finalize auto-apply) are driven by the tenant's
+    // own auto-sync configuration, not by the finalizing user's permissions.
+    if (!systemPolicy && !(await hasPermission(user, 'accounting_integrations', 'remote_mutate', trx))) {
         // Generic denial: never hint whether the integration exists.
         throw new Error('Permission denied: applying credits that sync to the accounting integration requires the accounting remote-mutate permission.');
     }
@@ -841,7 +844,16 @@ export async function applyCreditToInvoiceInternal(
     user: IUser,
     clientId: string,
     invoiceId: string,
-    requestedAmount: number
+    requestedAmount: number,
+    options: {
+        /**
+         * Automatic (system) policy path, e.g. finalize auto-apply. Skips the
+         * actor-specific accounting remote_mutate gate; `user` then only supplies
+         * the attribution id (may be null for system callers). The caller is
+         * responsible for any credit:update check on the user-driven path.
+         */
+        systemPolicy?: boolean;
+    } = {}
 ): Promise<{ appliedAmount: number }> {
     const { knex } = await createTenantKnex();
     let appliedAmountResult = 0;
@@ -852,7 +864,7 @@ export async function applyCreditToInvoiceInternal(
         amountApplied: number;
         currency: string;
         appliedAt: string;
-        appliedByUserId: string;
+        appliedByUserId: string | null;
         idempotencyKey: string;
         appliedInvoiceNumber: string | null;
         appliedInvoiceStatus: string | null;
@@ -1260,7 +1272,7 @@ export async function applyCreditToInvoiceInternal(
             amountApplied: appliedCredit.amount,
             currency: invoiceCurrency,
             appliedAt: now,
-            appliedByUserId: user.user_id,
+            appliedByUserId: user?.user_id ?? null,
             idempotencyKey: `credit_note_applied:${creditTransaction.transaction_id}:${appliedCredit.creditId}`,
             appliedInvoiceNumber: appliedInvoice.invoice?.invoice_number ?? null,
             appliedInvoiceStatus: appliedInvoice.invoice?.status ?? null,
@@ -1309,7 +1321,8 @@ export async function applyCreditToInvoiceInternal(
             trx,
             tenant,
             user,
-            creditSyncOps.length > 0
+            creditSyncOps.length > 0,
+            options.systemPolicy === true
         );
     });
 
@@ -1319,7 +1332,7 @@ export async function applyCreditToInvoiceInternal(
             payload: buildCreditNoteAppliedPayload({
                 creditNoteId: event.creditNoteId,
                 invoiceId: event.invoiceId,
-                appliedByUserId: event.appliedByUserId,
+                appliedByUserId: event.appliedByUserId ?? undefined,
                 appliedAt: event.appliedAt,
                 amountApplied: event.amountApplied,
                 currency: event.currency,
@@ -1332,7 +1345,9 @@ export async function applyCreditToInvoiceInternal(
             ctx: {
                 tenantId: tenant,
                 occurredAt: event.appliedAt,
-                actor: { actorType: 'USER', actorUserId: event.appliedByUserId },
+                actor: event.appliedByUserId
+                    ? { actorType: 'USER', actorUserId: event.appliedByUserId }
+                    : { actorType: 'SYSTEM' },
             },
             idempotencyKey: event.idempotencyKey,
         });
@@ -1350,6 +1365,13 @@ export async function applyCreditToInvoiceInternal(
             const { knex: syncKnex } = await createTenantKnex();
             void enqueueCreditApplication(syncKnex, tenant, op, creditSyncDecision);
         }
+    }
+
+    // System-policy callers (finalize auto-apply) have no UI wrapper to do this:
+    // retire active Checkout links so a customer cannot pay the pre-credit
+    // amount through an old link. Best-effort; the helper never throws.
+    if (options.systemPolicy && appliedAmountResult > 0) {
+        await reconcileInvoicePaymentLinksAfterCredit(tenant, invoiceId);
     }
 
     return { appliedAmount: appliedAmountResult };

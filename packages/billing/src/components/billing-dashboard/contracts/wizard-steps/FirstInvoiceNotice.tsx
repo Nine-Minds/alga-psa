@@ -1,16 +1,14 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { parse } from 'date-fns';
-import { getClientBillingCycleAnchor } from '@alga-psa/billing/actions/billingCycleAnchorActions';
-import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { useMemo } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatYmd } from '@alga-psa/ui/lib/i18n/useFormatYmd';
+import { useClientBillingSchedule } from '../../../../hooks/useClientBillingSchedule';
 import {
   resolveFirstInvoiceDate,
-  type FirstInvoiceClientSchedule,
   type FirstInvoiceDate,
   type FirstInvoiceDateInput,
-} from './firstInvoiceDate';
+} from '../../../../lib/firstInvoiceDate';
 
 interface FirstInvoiceNoticeProps {
   id: string;
@@ -19,13 +17,10 @@ interface FirstInvoiceNoticeProps {
   billingFrequency?: string;
   startDate?: string;
   clientId?: string;
+  /** Names of the lines this sentence covers; shown above it when more than one line could be meant. */
+  lineNames?: string[];
   className?: string;
 }
-
-type ClientScheduleState =
-  | { status: 'idle' }
-  | { status: 'loading'; clientId: string }
-  | { status: 'ready'; clientId: string; schedule: FirstInvoiceClientSchedule | null };
 
 /**
  * Client cadence follows the client's own billing cycle, so it needs that cycle
@@ -34,42 +29,7 @@ type ClientScheduleState =
  */
 function useFirstInvoiceDate(input: FirstInvoiceDateInput, clientId?: string) {
   const needsClientSchedule = input.cadenceOwner !== 'contract';
-  const [scheduleState, setScheduleState] = useState<ClientScheduleState>({ status: 'idle' });
-
-  useEffect(() => {
-    if (!needsClientSchedule || !clientId) {
-      setScheduleState({ status: 'idle' });
-      return;
-    }
-
-    let cancelled = false;
-    setScheduleState({ status: 'loading', clientId });
-    getClientBillingCycleAnchor(clientId)
-      .then((config) => {
-        if (cancelled) return;
-        const usable = !isActionMessageError(config) && !isActionPermissionError(config);
-        setScheduleState({
-          status: 'ready',
-          clientId,
-          schedule: usable ? { billingCycle: config.billingCycle, anchor: config.anchor } : null,
-        });
-      })
-      .catch((error) => {
-        console.error('Failed to load client billing schedule for first invoice timing', error);
-        if (!cancelled) {
-          setScheduleState({ status: 'ready', clientId, schedule: null });
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [needsClientSchedule, clientId]);
-
-  const isLoading =
-    needsClientSchedule && !!clientId && (scheduleState.status !== 'ready' || scheduleState.clientId !== clientId);
-  const clientSchedule =
-    scheduleState.status === 'ready' && scheduleState.clientId === clientId ? scheduleState.schedule : null;
+  const { isLoading, schedule: clientSchedule } = useClientBillingSchedule(clientId, needsClientSchedule);
 
   const result = useMemo(
     () => resolveFirstInvoiceDate({ ...input, clientSchedule }),
@@ -81,8 +41,9 @@ function useFirstInvoiceDate(input: FirstInvoiceDateInput, clientId?: string) {
 }
 
 /**
- * One plain sentence saying when the fixed-fee line first invoices, for the
- * wizard review step and the post-creation confirmation.
+ * One plain sentence saying when a recurring line (or a group of lines sharing
+ * timing and frequency) first invoices, for the wizard review step and the
+ * post-creation confirmation.
  */
 export function FirstInvoiceNotice({
   id,
@@ -91,20 +52,15 @@ export function FirstInvoiceNotice({
   billingFrequency,
   startDate,
   clientId,
+  lineNames,
   className,
 }: FirstInvoiceNoticeProps) {
   const { t } = useTranslation('msp/contracts');
-  const { formatDate } = useFormatters();
+  const formatYmd = useFormatYmd();
   const { result, isLoading } = useFirstInvoiceDate(
     { cadenceOwner, billingTiming, billingFrequency, startDate },
     clientId,
   );
-
-  // LEVERAGE: pattern ymd-local-format — parse a YYYY-MM-DD string as a local date, then format it in the user's locale (also in ReviewContractStep)
-  const formatYmd = (ymd: string) => {
-    const local = parse(ymd, 'yyyy-MM-dd', new Date());
-    return isNaN(local.getTime()) ? ymd : formatDate(local);
-  };
 
   if (isLoading) {
     return (
@@ -116,15 +72,25 @@ export function FirstInvoiceNotice({
     );
   }
 
+  const coversSeveralLines = (lineNames?.length ?? 0) > 1;
+
   return (
     <div id={id} className={className}>
+      {lineNames && lineNames.length > 0 && (
+        <p className="font-medium text-[rgb(var(--color-text-700))]">{lineNames.join(', ')}</p>
+      )}
       <p>{describeFirstInvoice(result, t, formatYmd)}</p>
       {result.status === 'date' && result.scenario.endsWith('arrears') && (
         <p>
-          {t('wizardFirstInvoice.arrearsPreviewNote', {
-            defaultValue:
-              'Until then, an invoice preview for this client has nothing to bill for this line.',
-          })}
+          {coversSeveralLines
+            ? t('wizardFirstInvoice.arrearsPreviewNoteMany', {
+                defaultValue:
+                  'Until then, an invoice preview for this client has nothing to bill for these lines.',
+              })
+            : t('wizardFirstInvoice.arrearsPreviewNote', {
+                defaultValue:
+                  'Until then, an invoice preview for this client has nothing to bill for this line.',
+              })}
         </p>
       )}
     </div>
@@ -170,10 +136,19 @@ function describeFirstInvoice(
           "Billed in advance on the contract's cadence: the first invoice is available from {{date}}, the contract start date.",
       });
     case 'client_arrears':
+      if (result.startsMidPeriod) {
+        return t('wizardFirstInvoice.client.arrearsPartial', {
+          date,
+          periodStart: formatYmd(result.servicePeriodStart),
+          periodEnd: formatYmd(result.servicePeriodEndInclusive),
+          defaultValue:
+            "Billed in arrears on the client's billing schedule: the first invoice becomes available on {{date}}, when the client's billing period containing the start date ends. Because the start date falls partway through that period, it covers {{periodStart}} – {{periodEnd}}.",
+        });
+      }
       return t('wizardFirstInvoice.client.arrears', {
         date,
         defaultValue:
-          "Billed in arrears on the client's billing schedule: the first invoice becomes available on {{date}}, when the client's current billing period ends.",
+          "Billed in arrears on the client's billing schedule: the first invoice becomes available on {{date}}, when the client's billing period containing the start date ends.",
       });
     case 'client_advance':
       return t('wizardFirstInvoice.client.advance', {

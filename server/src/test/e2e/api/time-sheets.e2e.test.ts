@@ -13,6 +13,7 @@ const API_BASE = '/api/v1/time-sheets';
  */
 describe('Time Sheets API E2E (list read path)', () => {
   let env: E2ETestEnvironment;
+  let sheetId: string;
   const tenantTable = (table: string) => tenantDb(env.db, env.tenant).table(table);
 
   beforeEach(async () => {
@@ -26,8 +27,9 @@ describe('Time Sheets API E2E (list read path)', () => {
       start_date: '2031-06-01',
       end_date: '2031-06-08',
     });
+    sheetId = uuidv4();
     await tenantTable('time_sheets').insert({
-      id: uuidv4(),
+      id: sheetId,
       tenant: env.tenant,
       period_id: periodId,
       user_id: env.userId,
@@ -55,8 +57,30 @@ describe('Time Sheets API E2E (list read path)', () => {
     assertError(res, 400, 'VALIDATION_ERROR');
   });
 
-  it('GET /search returns 200', async () => {
-    assertSuccess(await env.apiClient.get(`${API_BASE}/search`));
+  // /search is the real search (not a list alias): `query` is required and is
+  // matched against the sheet owner's full name.
+  it('GET /search with a query matching the owner name returns that sheet', async () => {
+    const owner = await tenantTable('users')
+      .where({ user_id: env.userId })
+      .first('first_name', 'last_name');
+    const fullName = `${owner.first_name} ${owner.last_name}`;
+    const res = await env.apiClient.get(
+      `${API_BASE}/search?query=${encodeURIComponent(fullName.toUpperCase())}`
+    );
+    assertSuccess(res);
+    expect(res.data.data.map((row: any) => row.id)).toContain(sheetId);
+    expect(res.data.data.every((row: any) => row.user_name === fullName)).toBe(true);
+  });
+
+  it('GET /search with a non-matching query returns no sheets', async () => {
+    const res = await env.apiClient.get(`${API_BASE}/search?query=${uuidv4()}`);
+    assertSuccess(res);
+    expect(res.data.data).toEqual([]);
+  });
+
+  it('GET /search without a query returns 400 VALIDATION_ERROR', async () => {
+    const res = await env.apiClient.get(`${API_BASE}/search`);
+    assertError(res, 400, 'VALIDATION_ERROR');
   });
 
   it('GET /export returns 200', async () => {

@@ -12,6 +12,7 @@ import { integrationContracts } from './contracts/integrations';
 import { inventoryContracts } from './contracts/inventory';
 import { assetContracts } from './contracts/assets';
 import { opportunityContracts } from './contracts/opportunities';
+import { quoteContracts } from './contracts/quotes';
 import { workerSchemaContracts } from './contracts/workerSchemaEvents';
 import { projectBillingContracts } from './contracts/projectBilling';
 
@@ -48,5 +49,6 @@ export const emitterContracts: EmitterContracts = {
   ...inventoryContracts,
   ...projectBillingContracts,
   ...opportunityContracts,
+  ...quoteContracts,
   ...workerSchemaContracts,
 };

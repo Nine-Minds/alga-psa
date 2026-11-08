@@ -1,14 +1,14 @@
 'use server'
 
-import { canAccessAttachmentTicket, expireCommentAttachmentDrafts } from '@shared/lib/ticketCommentAttachments';
+import { canWriteAttachmentTicket, expireCommentAttachmentDrafts } from '@shared/lib/ticketCommentAttachments';
+import { applyDocumentProductReadScope, canReadDocument, canReadTicketDocuments, canUploadDocument } from '../lib/documentPermissions';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
-import { withAuth, hasPermission } from '@alga-psa/auth';
+import { withAuth, hasPermission, checkMultiplePermissions } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { marked } from 'marked';
 import { PDFDocument } from 'pdf-lib';
 import { fromPath } from 'pdf2pic';
-import puppeteer from 'puppeteer';
 import { writeFile, unlink, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { CacheFactory } from '../cache/CacheFactory';
@@ -57,7 +57,9 @@ import {
   type DocumentActionError,
 } from './documentActionErrors';
 import { authorizeAndRedactDocuments as authorizeDocumentRows } from '@shared/lib/documentAuthorization';
+import { admitMeetingDocumentsForBrowser } from '../lib/meetingDocumentAdmission';
 import { getClientLogoUrlsBatch, getContactAvatarUrlsBatch } from '@alga-psa/formatting/avatarUtils';
+import { authorizeAssetAssociationWrite } from '../lib/assetAssociationAuthorization';
 
 async function loadSharp() {
   try {
@@ -288,7 +290,16 @@ async function ensureEntityFoldersInitializedInternal(
   }
 }
 
-// Preserve the existing server-action entry point for document consumers.
+/**
+ * Preserve the existing server-action entry point for document consumers.
+ *
+ * Authorization itself lives in the shared engine (`@shared/lib/documentAuthorization`), so the
+ * ticket list, the Documents browser and the byte-serving routes make the same decision. This
+ * wrapper only narrows the candidate set first through the deny-only meeting-document admission
+ * (a no-op for tenants the co-managed capability does not serve); it never widens access.
+ *
+ * Must stay `async`: this module is a `'use server'` boundary and Next rejects non-async exports.
+ */
 export async function authorizeAndRedactDocuments<T extends IDocument>(
   trx: Knex.Transaction,
   tenant: string,
@@ -296,7 +307,10 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
   documents: T[],
   verifiedRecipientLifecycleAccess?: (documentId: string) => Promise<boolean>
 ): Promise<T[]> {
-  return authorizeDocumentRows(trx, tenant, user, documents, verifiedRecipientLifecycleAccess);
+  const admitted = await admitMeetingDocumentsForBrowser(trx, tenant, user, documents);
+  const authorized = await authorizeDocumentRows(trx, tenant, user, admitted.documents, verifiedRecipientLifecycleAccess);
+  await admitted.assertCurrent?.();
+  return authorized;
 }
 
 export async function getAuthorizedDocumentByFileId(
@@ -306,6 +320,7 @@ export async function getAuthorizedDocumentByFileId(
   fileId: string
 ): Promise<IDocument | null> {
   const document = await tenantScopedTable(trx, 'documents', tenant)
+    .modify(query => applyDocumentProductReadScope(query, trx, user))
     .where('file_id', fileId)
     .first();
 
@@ -324,6 +339,7 @@ export async function getAuthorizedDocumentById(
   documentId: string
 ): Promise<IDocument | null> {
   const document = await tenantScopedTable(trx, 'documents', tenant)
+    .modify(query => applyDocumentProductReadScope(query, trx, user))
     .where('document_id', documentId)
     .first();
 
@@ -515,13 +531,67 @@ export const addDocument = withAuth(async (user, { tenant }, data: DocumentInput
   }
 });
 
-// Update document
-export const updateDocument = withAuth(async (user, { tenant }, documentId: string, data: Partial<IDocument>) => {
+/**
+ * The only document columns a caller may change through `updateDocument`.
+ *
+ * Bytes (`file_id`, `storage_path`, `mime_type`, `file_size`), derived artifacts
+ * (`preview_file_id`, `thumbnail_file_id`, `preview_generated_at`), tenancy/ownership,
+ * render provenance and timestamps are deliberately absent: changing them is either
+ * server-derived or goes through a dedicated, separately authorized action
+ * (`replaceDocumentFile`, `generateDocumentPreviews`).
+ */
+export interface UpdateDocumentCommand {
+  /** Display name only. */
+  document_name?: string;
+  /** Document type (metadata; not an authorization input). */
+  type_id?: string | null;
+  /** Folder organization. */
+  folder_path?: string;
+  /** Visibility of the document inside the folder model. */
+  is_client_visible?: boolean;
+  /** Shared-type metadata. */
+  shared_type_id?: string;
+}
+
+const ALLOWED_UPDATE_KEYS = [
+  'document_name',
+  'type_id',
+  'folder_path',
+  'is_client_visible',
+  'shared_type_id',
+] as const satisfies ReadonlyArray<keyof UpdateDocumentCommand>;
+
+/**
+ * Runtime allowlist. The action is reachable from untyped and client callers, so the type alone
+ * is not a guarantee. Never spread caller input into a row update; pick through this instead.
+ * Only own, defined properties are kept.
+ */
+function pickUpdateDocumentCommand(input: unknown): UpdateDocumentCommand {
+  const picked: Record<string, unknown> = {};
+  if (!input || typeof input !== 'object') {
+    return picked as UpdateDocumentCommand;
+  }
+  for (const key of ALLOWED_UPDATE_KEYS) {
+    if (Object.prototype.hasOwnProperty.call(input, key)) {
+      const value = (input as Record<string, unknown>)[key];
+      if (value !== undefined) {
+        picked[key] = value;
+      }
+    }
+  }
+  return picked as UpdateDocumentCommand;
+}
+
+// Update document metadata. File bytes and preview artifacts are NOT updatable here; see replaceDocumentFile.
+export const updateDocument = withAuth(async (user, { tenant }, documentId: string, command: UpdateDocumentCommand) => {
   try {
     // Check permission for document updates
     if (!await hasPermission(user, 'document', 'update')) {
       return permissionError('Permission denied: Cannot update documents', 'documents:errors.permissions.update');
     }
+
+    const picked = pickUpdateDocumentCommand(command);
+    const changedFields = Object.keys(picked);
 
     const { knex } = await createTenantKnex();
 
@@ -531,10 +601,16 @@ export const updateDocument = withAuth(async (user, { tenant }, documentId: stri
         return permissionError('Permission denied: Cannot update documents', 'documents:errors.permissions.update');
       }
 
+      // Empty command: issue no UPDATE at all (not even the audit stamp).
+      if (changedFields.length === 0) {
+        return null;
+      }
+
       await tenantScopedTable(trx, 'documents', tenant)
         .where('document_id', documentId)
         .update({
-          ...data,
+          ...picked, // already allowlisted by pickUpdateDocumentCommand
+          edited_by: user.user_id, // server-derived; never caller-supplied
           updated_at: new Date()
         });
 
@@ -543,6 +619,10 @@ export const updateDocument = withAuth(async (user, { tenant }, documentId: stri
 
     if (isActionPermissionErrorResult(authorizationResult)) {
       return authorizationResult;
+    }
+
+    if (changedFields.length === 0) {
+      return;
     }
 
     // Invalidate the preview cache for this document if it exists
@@ -554,7 +634,7 @@ export const updateDocument = withAuth(async (user, { tenant }, documentId: stri
       tenant,
       documentId,
       user.user_id,
-      Object.keys(data),
+      changedFields,
       'updateDocument',
     );
   } catch (error) {
@@ -566,6 +646,197 @@ export const updateDocument = withAuth(async (user, { tenant }, documentId: stri
     throw error;
   }
 });
+
+/**
+ * Point a document at different bytes. The caller must be allowed to update the target document
+ * AND to read the document that owns the source file, so this cannot be used to exfiltrate a file
+ * the caller cannot see. Previews are regenerated by the existing generator flow, which is the
+ * only writer of the preview/thumbnail columns.
+ */
+export const replaceDocumentFile = withAuth(async (user, { tenant }, documentId: string, fileId: string) => {
+  // New copy uploaded but not yet claimed by the documents row; removed again if the update fails.
+  let unclaimedStorageFileId: string | undefined;
+  try {
+    if (!await hasPermission(user, 'document', 'update')) {
+      return permissionError('Permission denied: Cannot update documents', 'documents:errors.permissions.update');
+    }
+
+    if (typeof fileId !== 'string' || fileId.length === 0) {
+      return permissionError('Permission denied: Cannot update documents', 'documents:errors.permissions.update');
+    }
+
+    const { knex } = await createTenantKnex();
+
+    const outcome = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const target = await getAuthorizedDocumentById(trx, tenant, user, documentId);
+      if (!target) {
+        return permissionError('Permission denied: Cannot update documents', 'documents:errors.permissions.update');
+      }
+
+      const source = await getAuthorizedDocumentByFileId(trx, tenant, user, fileId);
+      if (!source) {
+        return permissionError('Permission denied: Cannot update documents', 'documents:errors.permissions.update');
+      }
+
+      if (target.file_id === fileId) {
+        return { changed: false as const };
+      }
+
+      // Copy the bytes into a file of the target's own. Sharing one external_files row between two
+      // documents lets deleting either of them destroy the other's bytes.
+      const sourceFile = await StorageService.downloadFile(fileId);
+      const newFile = await StorageService.uploadFile(
+        tenant,
+        sourceFile.buffer,
+        sourceFile.metadata.original_name ?? source.document_name,
+        {
+          mime_type: source.mime_type ?? sourceFile.metadata.mime_type,
+          uploaded_by_id: user.user_id,
+        },
+      );
+      unclaimedStorageFileId = newFile.file_id;
+
+      const previous = {
+        file_id: target.file_id,
+        preview_file_id: target.preview_file_id,
+        thumbnail_file_id: target.thumbnail_file_id,
+      };
+      const columns = {
+        file_id: newFile.file_id,
+        storage_path: newFile.storage_path,
+        file_size: newFile.file_size,
+        mime_type: newFile.mime_type,
+      };
+      await tenantScopedTable(trx, 'documents', tenant)
+        .where('document_id', documentId)
+        .update({
+          ...columns,
+          updated_at: new Date(),
+        });
+
+      return {
+        changed: true as const,
+        columns,
+        buffer: sourceFile.buffer,
+        previous,
+        document: { ...target, ...columns } as IDocument,
+      };
+    });
+
+    if (isActionPermissionErrorResult(outcome)) {
+      return outcome;
+    }
+
+    if (!outcome.changed) {
+      return;
+    }
+
+    unclaimedStorageFileId = undefined; // The update committed; the new file now belongs to the document.
+
+    const changedFields = Object.keys(outcome.columns);
+    const cache = CacheFactory.getPreviewCache(tenant);
+    await cache.delete(documentId);
+
+    // Regenerate derived artifacts from the new file. Same single-writer discipline as
+    // uploadDocument: preview/thumbnail columns are written only from the generator result.
+    let previewColumnsWritten = false;
+    try {
+      const previewResult = await generateDocumentPreviews(outcome.document, outcome.buffer);
+      await tenantScopedTable(knex, 'documents', tenant)
+        .where({ document_id: documentId })
+        .update({
+          thumbnail_file_id: previewResult.thumbnail_file_id ?? null,
+          preview_file_id: previewResult.preview_file_id ?? null,
+          preview_generated_at: previewResult.preview_generated_at ?? null,
+          updated_at: new Date(),
+        });
+      previewColumnsWritten = true;
+      changedFields.push('thumbnail_file_id', 'preview_file_id', 'preview_generated_at');
+      outcome.document.thumbnail_file_id = previewResult.thumbnail_file_id ?? undefined;
+      outcome.document.preview_file_id = previewResult.preview_file_id ?? undefined;
+    } catch (error) {
+      console.error(`[replaceDocumentFile] Preview generation failed for document ${documentId}:`, error);
+    }
+
+    await publishDocumentUpdatedSearchEvent(
+      tenant,
+      documentId,
+      user.user_id,
+      changedFields,
+      'replaceDocumentFile',
+    );
+
+    // The previous file (and its derived preview/thumbnail, once replaced) is no longer used by this
+    // document. Remove it unless another document still references it.
+    const stale = [outcome.previous.file_id];
+    if (previewColumnsWritten) {
+      stale.push(outcome.previous.preview_file_id, outcome.previous.thumbnail_file_id);
+    }
+    await deleteUnreferencedFiles(
+      knex,
+      tenant,
+      stale.filter((id) => id !== outcome.document.preview_file_id && id !== outcome.document.thumbnail_file_id),
+      documentId,
+      user.user_id,
+      'replaceDocumentFile',
+    );
+  } catch (error) {
+    console.error(error);
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
+  } finally {
+    if (unclaimedStorageFileId) {
+      try { await StorageService.deleteFile(unclaimedStorageFileId, user.user_id); }
+      catch (cleanupError) { console.error('[replaceDocumentFile] Failed to remove unclaimed replacement storage', cleanupError); }
+    }
+  }
+});
+
+/**
+ * Delete stored files that no live document still references. A file counts as referenced when any
+ * document in the tenant other than `excludeDocumentId` names it in file_id, preview_file_id or
+ * thumbnail_file_id. `excludeDocumentId` makes the check correct whether or not that document's row
+ * has already been removed. StorageService.deleteFile itself is unguarded, so every document-driven
+ * deletion must go through here.
+ */
+// LEVERAGE: pattern unguarded-file-delete — StorageService.deleteFile has no reference check; other callers (e.g. server attachDocument, importActions, interactionActions) may need the same guard.
+async function deleteUnreferencedFiles(
+  knex: Knex,
+  tenant: string,
+  fileIds: Array<string | null | undefined>,
+  excludeDocumentId: string,
+  deletedById: string,
+  logPrefix: string,
+): Promise<void> {
+  const candidates = [...new Set(fileIds.filter((id): id is string => typeof id === 'string' && id.length > 0))];
+
+  await Promise.all(candidates.map(async (candidate) => {
+    try {
+      const stillReferenced = await tenantScopedTable(knex, 'documents', tenant)
+        .whereNot('document_id', excludeDocumentId)
+        .where((builder) => {
+          builder
+            .where('file_id', candidate)
+            .orWhere('preview_file_id', candidate)
+            .orWhere('thumbnail_file_id', candidate);
+        })
+        .first('document_id');
+      if (stillReferenced) {
+        console.log(`[${logPrefix}] Keeping file ${candidate}: still referenced by another document`);
+        return;
+      }
+      const deleteResult = await deleteFile(candidate, deletedById);
+      if (!deleteResult.success) {
+        console.error(`[${logPrefix}] Failed to delete file ${candidate}:`, deleteResult.error);
+      }
+    } catch (error) {
+      console.error(`[${logPrefix}] Error deleting file ${candidate}:`, error);
+    }
+  }));
+}
 
 // Delete document
 export const deleteDocument = withAuth(async (
@@ -700,35 +971,16 @@ export const deleteDocument = withAuth(async (
 
     await publishDocumentDeletedSearchEvent(tenant, documentId, user.user_id, 'deleteDocument');
 
-    const filesToDelete: string[] = [];
-
-    if (deletedDocument.file_id) {
-      filesToDelete.push(deletedDocument.file_id);
-    }
-
-    if (deletedDocument.thumbnail_file_id) {
-      filesToDelete.push(deletedDocument.thumbnail_file_id);
-    }
-
-    if (deletedDocument.preview_file_id) {
-      filesToDelete.push(deletedDocument.preview_file_id);
-    }
+    const filesToDelete = [
+      deletedDocument.file_id,
+      deletedDocument.thumbnail_file_id,
+      deletedDocument.preview_file_id,
+    ].filter(Boolean);
 
     if (filesToDelete.length > 0) {
-      console.log(`[deleteDocument] Deleting ${filesToDelete.length} files for document ${documentId}`);
+      console.log(`[deleteDocument] Deleting up to ${filesToDelete.length} files for document ${documentId}`);
 
-      const deletePromises = filesToDelete.map(async (fileId) => {
-        try {
-          const deleteResult = await deleteFile(fileId, userId);
-          if (!deleteResult.success) {
-            console.error(`[deleteDocument] Failed to delete file ${fileId}:`, deleteResult.error);
-          }
-        } catch (error) {
-          console.error(`[deleteDocument] Error deleting file ${fileId}:`, error);
-        }
-      });
-
-      await Promise.all(deletePromises);
+      await deleteUnreferencedFiles(knex, tenant, filesToDelete, documentId, userId, 'deleteDocument');
 
       const cache = CacheFactory.getPreviewCache(tenant);
       await cache.delete(deletedDocument.file_id);
@@ -764,7 +1016,7 @@ export const deleteDocument = withAuth(async (
 export const getDocument = withAuth(async (user, { tenant }, documentId: string) => {
   try {
     // Check permission for document reading
-    if (!await hasPermission(user, 'document', 'read')) {
+    if (!await canReadDocument(user, documentId)) {
       return permissionError('Permission denied: Cannot read documents', 'documents:errors.permissions.read');
     }
 
@@ -843,7 +1095,7 @@ export const getDocument = withAuth(async (user, { tenant }, documentId: string)
 export const getDocumentByTicketId = withAuth(async (user, { tenant }, ticketId: string) => {
   try {
     // Check permission for document reading
-    if (!await hasPermission(user, 'document', 'read')) {
+    if (!await canReadTicketDocuments(user, ticketId)) {
       return permissionError('Permission denied: Cannot read documents', 'documents:errors.permissions.read');
     }
 
@@ -1226,44 +1478,6 @@ export const removeDocumentFromContract = withAuth(async (user, { tenant }, asso
   }
 });
 
-// Get document preview
-async function renderHtmlToPng(htmlContent: string, width: number = 400, height: number = 300): Promise<Buffer> {
-  let browser;
-  try {
-    browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-    });
-    const page = await browser.newPage();
-    await page.setViewport({ width, height });
-    const styledHtml = `
-      <style>
-        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji"; font-size: 14px; line-height: 1.4; padding: 15px; border: 1px solid #e0e0e0; box-sizing: border-box; overflow: hidden; height: ${height}px; background-color: #ffffff; }
-        pre { white-space: pre-wrap; word-wrap: break-word; font-family: monospace; }
-        h1, h2, h3, h4, h5, h6 { margin-top: 0; margin-bottom: 0.5em; }
-        p { margin-top: 0; margin-bottom: 1em; }
-        table { border-collapse: collapse; width: 100%; margin-bottom: 1em; }
-        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-        ul, ol { padding-left: 20px; margin-top: 0; margin-bottom: 1em; }
-        img { max-width: 100%; height: auto; }
-        /* Basic styling for BlockNote generated HTML */
-        .bn-editor table { width: 100%; border-collapse: collapse; }
-        .bn-editor th, .bn-editor td { border: 1px solid #ddd; padding: 8px; }
-      </style>
-      <div>${htmlContent}</div>
-    `;
-    await page.setContent(styledHtml, { waitUntil: 'domcontentloaded' });
-    const imageBuffer = await page.screenshot({ type: 'png' });
-
-    
-    return Buffer.from(imageBuffer);
-  } finally {
-    if (browser) {
-      await browser.close();
-    }
-  }
-}
-
 const IN_APP_TEXT_TYPE_NAMES = ['text', 'text document', 'plain text'];
 const IN_APP_MARKDOWN_TYPE_NAMES = ['markdown', 'markdown document'];
 const IN_APP_BLOCKNOTE_TYPE_NAMES = ['blocknote', 'block note', 'blocknote document', 'application/vnd.blocknote+json'];
@@ -1285,7 +1499,7 @@ export const getDocumentPreview = withAuth(async (
   console.log(`[getDocumentPreview] Received identifier: ${identifier}`);
   try {
     // Check permission for document reading
-    if (!await hasPermission(user, 'document', 'read')) {
+    if (!await canReadDocument(user, identifier)) {
       return permissionError('Permission denied: Cannot read documents', 'documents:errors.permissions.read');
     }
 
@@ -1390,7 +1604,7 @@ export const getDocumentPreview = withAuth(async (
 // Get document download URL
 export const getDocumentDownloadUrl = withAuth(async (user, { tenant }, documentIdOrFileId: string): Promise<string | ActionPermissionError> => {
     // Check permission for document reading/download
-    if (!await hasPermission(user, 'document', 'read')) {
+    if (!await canReadDocument(user, documentIdOrFileId)) {
       return permissionError('Permission denied: Cannot read documents', 'documents:errors.permissions.read');
     }
 
@@ -1417,7 +1631,7 @@ export const getDocumentDownloadUrl = withAuth(async (user, { tenant }, document
 export const getDocumentThumbnailUrl = withAuth(async (user, { tenant }, documentId: string): Promise<string | null | ActionPermissionError> => {
   try {
     // Check permission for document reading
-    if (!await hasPermission(user, 'document', 'read')) {
+    if (!await canReadDocument(user, documentId)) {
       return permissionError('Permission denied: Cannot read documents', 'documents:errors.permissions.read');
     }
 
@@ -1434,7 +1648,7 @@ export const getDocumentThumbnailUrl = withAuth(async (user, { tenant }, documen
 
     // Check if thumbnail exists
     if (document.thumbnail_file_id) {
-      return `/api/documents/thumbnail/${documentId}`;
+      return `/api/documents/${documentId}/thumbnail`;
     }
 
     // Fallback: For images without thumbnails, return original file
@@ -1460,7 +1674,7 @@ export const getDocumentThumbnailUrl = withAuth(async (user, { tenant }, documen
 export const getDocumentPreviewUrl = withAuth(async (user, { tenant }, documentId: string): Promise<string | null | ActionPermissionError> => {
   try {
     // Check permission for document reading
-    if (!await hasPermission(user, 'document', 'read')) {
+    if (!await canReadDocument(user, documentId)) {
       return permissionError('Permission denied: Cannot read documents', 'documents:errors.permissions.read');
     }
 
@@ -1477,7 +1691,7 @@ export const getDocumentPreviewUrl = withAuth(async (user, { tenant }, documentI
 
     // Check if preview exists
     if (document.preview_file_id) {
-      return `/api/documents/preview/${documentId}`;
+      return `/api/documents/${documentId}/preview`;
     }
 
     // Fallback: Return original file if available
@@ -1497,7 +1711,7 @@ export const getDocumentPreviewUrl = withAuth(async (user, { tenant }, documentI
 export const downloadDocument = withAuth(async (user, { tenant }, documentIdOrFileId: string) => {
     try {
         // Check permission for document reading/download
-        if (!await hasPermission(user, 'document', 'read')) {
+        if (!await canReadDocument(user, documentIdOrFileId)) {
           return permissionError('Permission denied: Cannot read documents', 'documents:errors.permissions.read');
         }
 
@@ -2141,6 +2355,9 @@ export const createDocumentAssociations = withAuth(async (
     if (!await hasPermission(user, 'document', 'update')) {
       return permissionError('Permission denied: Cannot update document associations', 'documents:errors.permissions.updateAssociations');
     }
+    if (entity_type === 'asset' && !await hasPermission(user, 'asset', 'update')) {
+      return permissionError('Permission denied: Cannot update assets');
+    }
 
     const { knex: db } = await createTenantKnex();
 
@@ -2153,6 +2370,10 @@ export const createDocumentAssociations = withAuth(async (
     }));
 
     const created = await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (entity_type === 'asset') {
+        const assetAuthorization = await authorizeAssetAssociationWrite(trx, tenant, user, entity_id);
+        if (assetAuthorization) return assetAuthorization;
+      }
       const authorizationResult = await assertAuthorizedDocumentSetForMutation(
         trx,
         tenant,
@@ -2234,10 +2455,17 @@ export const removeDocumentAssociations = withAuth(async (
     if (!await hasPermission(user, 'document', 'update')) {
       return permissionError('Permission denied: Cannot update document associations', 'documents:errors.permissions.updateAssociations');
     }
+    if (entity_type === 'asset' && !await hasPermission(user, 'asset', 'update')) {
+      return permissionError('Permission denied: Cannot update assets');
+    }
 
     const { knex } = await createTenantKnex();
 
     const removed = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (entity_type === 'asset') {
+        const assetAuthorization = await authorizeAssetAssociationWrite(trx, tenant, user, entity_id);
+        if (assetAuthorization) return assetAuthorization;
+      }
       let query = tenantScopedTable(trx, 'document_associations', tenant)
         .where('entity_id', entity_id)
         .andWhere('entity_type', entity_type);
@@ -2345,8 +2573,11 @@ export const uploadDocument = withAuth(async (
   try {
     options = { ...options, commentAttachmentDraft: options.commentAttachmentDraft === true || file.get('commentAttachmentDraft') === 'true' };
     // Check permission for document creation/upload
-    if (!await hasPermission(user, 'document', 'create')) {
+    if (!await canUploadDocument(user, options)) {
       return permissionError('Permission denied: Cannot create documents', 'documents:errors.permissions.create');
+    }
+    if (options.assetId && !await hasPermission(user, 'asset', 'update')) {
+      return permissionError('Permission denied: Cannot update assets');
     }
 
     const { knex } = await createTenantKnex();
@@ -2371,7 +2602,7 @@ export const uploadDocument = withAuth(async (
 
       if (options.commentAttachmentDraft) {
         if (!options.ticketId || !await hasPermission(user, 'ticket', 'update') ||
-            !await canAccessAttachmentTicket(knex, tenant, authenticatedUserId, options.ticketId)) {
+            !await canWriteAttachmentTicket(knex, tenant, authenticatedUserId, options.ticketId)) {
           throw new Error('Permission denied: Cannot attach files to this ticket');
         }
         await expireCommentAttachmentDrafts(knex, tenant);
@@ -2394,7 +2625,7 @@ export const uploadDocument = withAuth(async (
         uploaded_by_id: authenticatedUserId
       });
 
-      if (options.commentAttachmentDraft) unclaimedStorageFileId = uploadResult.file_id;
+      unclaimedStorageFileId = uploadResult.file_id;
 
       // Get document type based on mime type
       const typeResult = await getDocumentTypeId(fileData.type);
@@ -2472,7 +2703,7 @@ export const uploadDocument = withAuth(async (
       // Documents uploaded by client users are automatically client-visible.
       // For internal users, inherit visibility from the target folder.
       let isClientVisible = options.isClientVisible === true || user.user_type === 'client';
-      if (!isClientVisible && resolvedFolderPath) {
+      if (!isClientVisible && options.isClientVisible !== false && resolvedFolderPath) {
         try {
           const folderVisibilityQuery = tenantScopedTable(knex, 'document_folders', tenant)
             .select('is_client_visible')
@@ -2518,7 +2749,11 @@ export const uploadDocument = withAuth(async (
       };
 
       // Use transaction for document creation and associations
-      const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const result: { success: true; document: IDocument } | ActionPermissionError = await withTransaction(knex, async (trx: Knex.Transaction): Promise<{ success: true; document: IDocument } | ActionPermissionError> => {
+        if (options.assetId) {
+          const assetAuthorization = await authorizeAssetAssociationWrite(trx, tenant, user, options.assetId);
+          if (assetAuthorization) return assetAuthorization;
+        }
         await tenantScopedTable(trx, 'documents', tenant).insert(document);
         if (options.commentAttachmentDraft) {
           await tenantDb(trx, tenant).table('ticket_comment_attachments').insert({
@@ -2539,6 +2774,7 @@ export const uploadDocument = withAuth(async (
         entity_type: 'ticket',
         tenant
       });
+
     }
 
     if (options.clientId) {
@@ -2625,6 +2861,8 @@ export const uploadDocument = withAuth(async (
         };
       });
 
+      if (isActionPermissionErrorResult(result)) return result;
+
       unclaimedStorageFileId = undefined; // The document transaction committed; never remove shared storage.
 
       if (createdAssociations.length > 0) {
@@ -2655,13 +2893,17 @@ export const uploadDocument = withAuth(async (
         );
       }
 
-      await publishDocumentUpdatedSearchEvent(
-        tenant,
-        document.document_id,
-        user.user_id,
-        ['document_name', 'file_id', 'storage_path'],
-        'uploadDocument',
-      );
+      try {
+        await publishDocumentUpdatedSearchEvent(
+          tenant,
+          document.document_id,
+          user.user_id,
+          ['document_name', 'file_id', 'storage_path'],
+          'uploadDocument',
+        );
+      } catch (error) {
+        console.error('[uploadDocument] Failed to publish search update:', error);
+      }
 
       // Generate previews after the transaction completes.
       // Awaited so the preview is ready before the response reaches the client.
@@ -2723,7 +2965,8 @@ async function validateDocumentUpload(file: File): Promise<void> {
 // Get document type ID
 export const getDocumentTypeId = withAuth(async (user, { tenant }, mimeType: string): Promise<{ typeId: string, isShared: boolean } | ActionPermissionError> => {
   // Check permission for document reading
-  if (!await hasPermission(user, 'document', 'read')) {
+  if (!(await checkMultiplePermissions(user, [{ resource: 'document', action: 'read' },
+    { resource: 'ticket_attachment', action: 'create' }])).some(permission => permission.granted)) {
     return permissionError('Permission denied: Cannot read document types', 'documents:errors.permissions.readTypes');
   }
 

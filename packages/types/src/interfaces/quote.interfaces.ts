@@ -64,6 +64,8 @@ export interface IQuoteItem extends TenantEntity {
   tax_rate?: number | null;
   /** Read-only, client-portal payload only: tax this row carries when included (server-resolved, minor units). Used for the local optional-item preview; never persisted. */
   tax_amount_if_included?: number | null;
+  /** Read-only, client-portal payload only: exact percentage behind `tax_amount_if_included`, so the preview can re-tax the row on its discounted base. Never persisted. */
+  tax_rate_if_included?: number | null;
   location_id?: string | null;
   created_by?: string | null;
   updated_by?: string | null;
@@ -182,6 +184,21 @@ export interface QuoteConversionPreviewItem {
   location_name?: string | null;
 }
 
+/** A quote discount's recurring share as it lands on one converted contract line. */
+export interface QuoteConversionPreviewDiscount {
+  quote_item_id: string;
+  /** quote_item_id of the recurring row whose contract line the discount reduces. */
+  line_quote_item_id: string;
+  description: string;
+  line_description: string;
+  discount_type: 'percentage' | 'fixed';
+  /** Percent units (e.g. 10) when `discount_type` is percentage, else null. */
+  percentage: number | null;
+  /** Reduction per billing period of the line, minor units (positive). */
+  amount: number;
+  billing_frequency: string | null;
+}
+
 export interface QuoteConversionPreview {
   quote_id: string;
   available_actions: Array<'contract' | 'invoice' | 'both'>;
@@ -192,6 +209,12 @@ export interface QuoteConversionPreview {
   /** Description of the service-less recurring item behind `contract_blocked_reason`, for localized display. */
   contract_blocked_item_description?: string | null;
   contract_items: QuoteConversionPreviewItem[];
+  /** Recurring discount shares a contract conversion writes as line discounts. */
+  contract_discounts: QuoteConversionPreviewDiscount[];
+  /** Recurring charge per month (cadences normalized) before carried discounts, minor units. */
+  contract_monthly_before_discounts: number;
+  /** Recurring charge per month after carried discounts, minor units. */
+  contract_monthly_total: number;
   /** One-time items an invoice conversion would bill right now — mirrors the
    *  runtime exclusion of product lines already claimed by a sales order. */
   invoice_items: QuoteConversionPreviewItem[];

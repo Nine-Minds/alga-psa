@@ -830,7 +830,8 @@
           "groups_read": "Leer grupos del directorio",
           "entitlement_group_resolves": "Resolver grupo de derechos",
           "user_yield_preview": "Vista previa de usuarios incluidos",
-          "per_tenant_users": "Usuarios por inquilino de CIPP"
+          "per_tenant_users": "Usuarios por inquilino de CIPP",
+          "cipp_token_mint": "Obtención del token de la API de CIPP"
         },
         "readiness": {
           "authenticated": "Sesión iniciada",
@@ -911,8 +912,8 @@
           "noManagedTenants": "No se devolvieron inquilinos administrados. El socio debe estar incorporado a Microsoft 365 Lighthouse con relaciones GDAP activas.",
           "mappedTenantMissing": "La detección no devolvió el inquilino asignado «{{client}}». Es posible que GDAP haya caducado o se haya terminado.",
           "mappingsLookupFailed": "No se pudieron leer las asignaciones de inquilinos confirmadas. Vuelva a ejecutar el diagnóstico; si el problema persiste, revise las asignaciones.",
-          "cippCredentialsMissing": "Se requieren la URL base de CIPP y un token de API. Configúrelos en la pestaña Conexión.",
-          "cippAuthRejected": "CIPP rechazó la credencial de API. Renueve la clave de API de CIPP desde Configuración > CIPP > Acceso a la API; no es un secreto de cliente de Azure.",
+          "cippCredentialsMissing": "Se requieren la URL de la API de CIPP y las credenciales. Configúrelas en la pestaña Conexión.",
+          "cippAuthRejected": "CIPP rechazó la clave de API heredada. Reconecte con un cliente de API de CIPP desde la pestaña Conexión (cree uno en CIPP > Integrations > CIPP-API).",
           "cippEmptyTenantList": "CIPP no devolvió inquilinos. Compruebe la visibilidad de los clientes y la configuración de CIPP.",
           "cippUnreachable": "No se pudo acceder a CIPP. Compruebe la URL base, DNS/TLS y la conectividad saliente.",
           "cippPerTenantFailed": "CIPP no pudo leer el directorio de este inquilino.",

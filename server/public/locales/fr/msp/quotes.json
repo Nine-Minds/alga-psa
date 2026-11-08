@@ -544,6 +544,7 @@
       "recurring": "Récurrent",
       "service": "service",
       "setPrice": "Fixer le prix",
+      "taxable": "Imposable",
       "ungroupedItems": "Éléments non regroupés"
     },
     "placeholders": {
@@ -637,6 +638,7 @@
       }
     },
     "sections": {
+      "carriedDiscounts": "Rabais reportés sur les lignes contractuelles",
       "contractItems": "Articles du contrat",
       "conversionMode": "Mode de conversion",
       "excludedFromConversion": "Exclus de la conversion",
@@ -662,6 +664,7 @@
       "converted": "Converti",
       "discount": "Rabais",
       "fixed": "fixé",
+      "monthlyTotal": "Total mensuel après rabais",
       "notConverted": "Non converti"
     },
     "partial": {

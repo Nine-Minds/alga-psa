@@ -41,6 +41,9 @@
     "errors": {
       "saveClientInfo": "Kundeninfo konnte nicht gespeichert werden",
       "addTeamMembers": "Teammitglieder konnten nicht hinzugefügt werden",
+      "unsentInvites": "Senden Sie die Einladung für jedes hinzugefügte Teammitglied oder entfernen Sie es, bevor Sie fortfahren.",
+      "teamMembersNotCreated": "Diese Teammitglieder wurden nicht angelegt. Korrigieren oder entfernen Sie jedes, bevor Sie fortfahren:",
+      "teamProgressNotSaved": "Diese Teammitglieder wurden angelegt, aber die Einrichtung konnte ihren Fortschritt nicht speichern: {{users}}. Wenn Sie die Einrichtung verlassen und zurückkehren, werden sie möglicherweise nicht als hinzugefügt angezeigt; ihre Konten existieren bereits, fügen Sie sie also nicht erneut hinzu. Wählen Sie „Weiter“, um fortzufahren.",
       "saveClient": "Kunde konnte nicht gespeichert werden",
       "addContact": "Kontakt konnte nicht hinzugefügt werden",
       "setupBilling": "Abrechnung konnte nicht eingerichtet werden",
@@ -414,6 +417,7 @@
       "invalidEmail": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
       "passwordLength": "Das Passwort muss mindestens 8 Zeichen lang sein",
       "saveFailed": "Teammitglied konnte nicht gespeichert werden",
+      "progressNotSaved": "{{email}} wurde angelegt, aber die Einrichtung konnte ihren Fortschritt nicht speichern. Wenn Sie die Einrichtung verlassen und zurückkehren, wird dieses Mitglied möglicherweise nicht als hinzugefügt angezeigt; das Konto existiert bereits, fügen Sie es also nicht erneut hinzu.",
       "inviteFailed": "Einladung konnte nicht gesendet werden",
       "roleRequired": "Bitte wählen Sie eine Rolle aus",
       "generic": "Es ist ein Fehler aufgetreten"

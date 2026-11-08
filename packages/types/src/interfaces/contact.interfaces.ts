@@ -1,5 +1,5 @@
 import type { TenantEntity } from '.';
-import type { ITaggable } from './tag.interfaces';
+import type { IDisplayTag, ITaggable } from './tag.interfaces';
 
 export const CONTACT_PHONE_CANONICAL_TYPES = ['work', 'mobile', 'home', 'fax', 'other'] as const;
 
@@ -8,6 +8,37 @@ export type ContactPhoneCanonicalType = typeof CONTACT_PHONE_CANONICAL_TYPES[num
 export const CONTACT_EMAIL_CANONICAL_TYPES = ['work', 'personal', 'billing', 'other'] as const;
 
 export type ContactEmailCanonicalType = typeof CONTACT_EMAIL_CANONICAL_TYPES[number];
+
+export const CONTACT_WORK_ARRANGEMENTS = ['on_site', 'hybrid', 'remote'] as const;
+
+/** Where a person normally works. Null/undefined means unset. */
+export type ContactWorkArrangement = typeof CONTACT_WORK_ARRANGEMENTS[number];
+
+/**
+ * A contact's link to one of its client's locations. The address fields are a read-through of
+ * `client_locations`, never stored on the contact, so editing the client's address updates every
+ * linked contact.
+ */
+export interface IContactLocation {
+  location_id: string;
+  location_name: string | null;
+  is_primary: boolean;
+  is_active: boolean;
+  address_line1?: string | null;
+  address_line2?: string | null;
+  address_line3?: string | null;
+  city?: string | null;
+  state_province?: string | null;
+  postal_code?: string | null;
+  country_code?: string | null;
+  country_name?: string | null;
+}
+
+/** What a caller may write: the set of links, with at most one primary. */
+export interface ContactLocationInput {
+  location_id: string;
+  is_primary?: boolean;
+}
 
 export interface IContactPhoneNumber {
   contact_phone_number_id: string;
@@ -56,6 +87,8 @@ export interface ContactPhoneNumberInput {
 }
 
 export interface IContact extends TenantEntity, ITaggable {
+  /** Chip tags for the viewer (display rules); set by picker/list loaders, not stored. */
+  displayTags?: IDisplayTag[];
   contact_name_id: string;
   contact_kind?: 'person' | 'shared_mailbox';
   full_name: string;
@@ -76,10 +109,17 @@ export interface IContact extends TenantEntity, ITaggable {
   updated_at: string;
 
   avatarUrl?: string | null;
+  /** Logo of the contact's client; attached per page by list actions (getAllContacts / getContactsByClient). */
+  client_logo_url?: string | null;
   is_client_admin?: boolean;
   portal_visibility_group_id?: string | null;
   /** Reports-to: the contact whose staff this contact is (same client, acyclic). */
   manager_contact_id?: string | null;
+  work_arrangement?: ContactWorkArrangement | null;
+  /** Links to the client's locations, primary first; set by the loaders, one batched read per page. */
+  locations?: IContactLocation[];
+  /** The primary link (or the only one), for list columns and picker rows. */
+  primaryLocation?: Pick<IContactLocation, 'location_id' | 'location_name'> | null;
 
   [key: string]: any;
 }
@@ -132,7 +172,10 @@ export type MappableField =
   | 'client'
   | 'role'
   | 'notes'
-  | 'tags';
+  | 'tags'
+  | 'work_arrangement'
+  | 'locations'
+  | 'primary_location';
 
 /**
  * Input type for creating a new contact.
@@ -150,6 +193,9 @@ export interface CreateContactInput {
   role?: string;
   notes?: string;
   is_inactive?: boolean;
+  work_arrangement?: ContactWorkArrangement | null;
+  /** Omitted leaves links untouched; [] removes them all. */
+  locations?: ContactLocationInput[];
 }
 
 /**
@@ -167,4 +213,7 @@ export interface UpdateContactInput {
   role?: string;
   notes?: string;
   is_inactive?: boolean;
+  work_arrangement?: ContactWorkArrangement | null;
+  /** Omitted leaves links untouched; [] removes them all. */
+  locations?: ContactLocationInput[];
 }

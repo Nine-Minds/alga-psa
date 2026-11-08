@@ -11,6 +11,7 @@ import type {
 } from './contracts';
 import { rmmAlertRuleActionsSchema } from './contracts';
 import { computeDedupKey } from './dedupKey';
+import { persistRmmAlertMetadata } from './metadata';
 import { evaluateAlertRules } from './ruleEvaluator';
 import { findMatchingWindow } from './windowMatcher';
 import { addAlertInternalNote, createTicketForAlert, providerLabel } from './ticketCreator';
@@ -22,6 +23,7 @@ import {
   publishTicketTransitionsAfterCommit,
 } from '../../lib/tickets/ticketLifecycleEvents';
 import { ticketUpdateStamp } from '../../lib/tickets/ticketUpdateStamp';
+import { conditionTriggerDisposition } from './conditionLifecycle';
 import { buildTicketClosedPayload } from '../../lib/tickets/ticketWorkflowEventPayloads';
 
 /**
@@ -119,12 +121,29 @@ async function processTriggered(
 ): Promise<RmmAlertProcessingResult> {
   const { knex, deps } = ctx;
   const warnings: string[] = [];
-  const context = await resolveAlertContext(knex, event);
+  let resolvedAssetId: string | null = null;
   const dedupKey = computeDedupKey(event);
 
   const result = await withTransaction(knex, async (trx): Promise<RmmAlertProcessingResult> => {
     const db = tenantDb(trx, event.tenantId);
 
+    if (event.raw.__alga_condition_lifecycle === true) {
+      // Lock the durable condition row in the same transaction as alert/ticket
+      // writes. A recovery transition either wins first (and suppresses this
+      // stale trigger) or waits until this trigger commits, preserving order.
+      const current = await db.table('rmm_condition_states').where({
+        integration_id: event.integrationId,
+        scope_key: String(event.raw.scopeKey ?? ''),
+        subject_key: String(event.raw.subjectKey ?? ''),
+        condition_key: String(event.raw.conditionKey ?? ''),
+      }).forUpdate().first('state', 'current_outage_id');
+      const disposition = conditionTriggerDisposition(event, current);
+      if (disposition === 'defer') return { outcome: 'deferred', ticketId: null, warnings };
+      if (disposition === 'obsolete') return { outcome: 'skipped', ticketId: null, warnings };
+    }
+
+    const context = await resolveAlertContext(trx, event);
+    resolvedAssetId = context.assetId;
     const existing = await db.table('rmm_alerts')
       .where({
         integration_id: event.integrationId,
@@ -176,7 +195,7 @@ async function processTriggered(
       dedup_key: dedupKey,
       triggered_at: event.occurredAt,
       last_occurrence_at: event.occurredAt,
-      metadata: JSON.stringify(event.raw),
+      metadata: JSON.stringify(persistRmmAlertMetadata(event)),
       updated_at: new Date().toISOString(),
     };
 
@@ -307,8 +326,8 @@ async function processTriggered(
     };
   });
 
-  if (result.outcome !== 'suppressed' && result.outcome !== 'skipped') {
-    await publishSafely(ctx, 'RMM_ALERT_TRIGGERED', event, result, context.assetId);
+  if (result.outcome !== 'suppressed' && result.outcome !== 'skipped' && result.outcome !== 'deferred') {
+    await publishSafely(ctx, 'RMM_ALERT_TRIGGERED', event, result, resolvedAssetId);
     if (result.outcome === 'ticket_created' && result.ticketId) {
       await publishRmmTicketCreated({
         tenantId: event.tenantId,
@@ -317,7 +336,7 @@ async function processTriggered(
       });
     }
     if (result.outcome === 'ticket_created' && result.matchedRuleId) {
-      await notifySafely(ctx, event, result, context.assetId);
+      await notifySafely(ctx, event, result, resolvedAssetId);
     }
   }
 
@@ -341,6 +360,7 @@ async function processReset(
         integration_id: event.integrationId,
         external_alert_id: event.externalAlertId,
       })
+      .forUpdate()
       .first('alert_id', 'status', 'ticket_id', 'matched_rule_id', 'asset_id');
 
     if (!existing || existing.status === 'resolved' || existing.status === 'auto_resolved') {

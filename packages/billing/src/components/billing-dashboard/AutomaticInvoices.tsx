@@ -20,6 +20,7 @@ import type {
   IRecurringDueSelectionInput,
   IRecurringDueWorkInvoiceCandidate,
   IRecurringDueWorkMaterializationGap,
+  ILateHourlyTimeNotice,
 } from '@alga-psa/types';
 import {
   getPurchaseOrderOverageForSelectionInput,
@@ -43,8 +44,10 @@ import {
 } from '@alga-psa/billing/actions/billingCycleActions';
 import {
   getAvailableRecurringDueWork,
+  getLateApprovedHourlyTime,
   type BillingPeriodDateRange,
 } from '@alga-psa/billing/actions/billingAndTax';
+import { LateHourlyTimeNotices } from './LateHourlyTimeNotices';
 import { Dialog, DialogContent, DialogDescription } from '@alga-psa/ui/components/Dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@alga-psa/ui/components/Popover';
 import { Switch } from '@alga-psa/ui/components/Switch';
@@ -159,7 +162,8 @@ type AutomaticInvoiceIncompatibilityReasonKey =
   | 'poScopeDiffers'
   | 'currencyDiffers'
   | 'taxTreatmentDiffers'
-  | 'exportShapeDiffers';
+  | 'exportShapeDiffers'
+  | 'billingProfileDiffers';
 
 type ReadyPeriod = IRecurringDueWorkInvoiceCandidate;
 
@@ -487,6 +491,7 @@ const AUTOMATIC_INVOICE_INCOMPATIBILITY_LABELS: Record<AutomaticInvoiceIncompati
   currencyDiffers: 'Currency differs',
   taxTreatmentDiffers: 'Tax treatment differs',
   exportShapeDiffers: 'Export shape differs',
+  billingProfileDiffers: 'Invoice profile differs',
 };
 
 const resolveIncompatibilityReasons = (candidate: ReadyPeriod): AutomaticInvoiceIncompatibilityReasonKey[] => {
@@ -507,6 +512,11 @@ const resolveIncompatibilityReasons = (candidate: ReadyPeriod): AutomaticInvoice
   const uniquePoScopes = new Set(members.map((member) => normalizeScopeValue(member.purchaseOrderScopeKey)));
   const uniqueTaxSources = new Set(members.map((member) => normalizeScopeValue(member.taxSource)));
   const uniqueExportShapes = new Set(members.map((member) => normalizeScopeValue(member.exportShapeKey)));
+  // Lines that land on different invoice profiles (a bills-separately profile
+  // vs. the default one) are different invoices with different payment terms.
+  const uniqueInvoiceProfiles = new Set(
+    members.flatMap((member) => (member.invoiceBillingProfileId ? [member.invoiceBillingProfileId] : [])),
+  );
 
   if (uniqueWindows.size > 1) {
     reasons.push('invoiceWindowDiffers');
@@ -525,6 +535,9 @@ const resolveIncompatibilityReasons = (candidate: ReadyPeriod): AutomaticInvoice
   }
   if (uniqueExportShapes.size > 1) {
     reasons.push('exportShapeDiffers');
+  }
+  if (uniqueInvoiceProfiles.size > 1) {
+    reasons.push('billingProfileDiffers');
   }
 
   return reasons;
@@ -913,6 +926,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   // Server-side pagination state for "Ready to Invoice"
   const [periods, setPeriods] = useState<ReadyPeriod[]>([]);
   const [materializationGaps, setMaterializationGaps] = useState<IRecurringDueWorkMaterializationGap[]>([]);
+  const [lateHourlyTime, setLateHourlyTime] = useState<ILateHourlyTimeNotice[]>([]);
   const [totalPeriods, setTotalPeriods] = useState(0);
   const [pageSize, setPageSize] = useState(10);
 
@@ -1049,6 +1063,19 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     };
   }, [currentReadyPage, pageSize, appliedDateRange, debouncedClientFilter, refreshTrigger]);
 
+  // Late-time notices are tenant-wide and independent of paging and filters: load on mount and
+  // after a generation refreshes the list (refreshTrigger), so the panel clears once the time has billed.
+  // Advisory: a failure here must not block the ready list.
+  useEffect(() => {
+    let isMounted = true;
+    getLateApprovedHourlyTime({})
+      .then((late) => { if (isMounted) setLateHourlyTime(Array.isArray(late) ? late : []); })
+      .catch(() => { if (isMounted) setLateHourlyTime([]); });
+    return () => {
+      isMounted = false;
+    };
+  }, [refreshTrigger]);
+
   // Rebuild every drifted client-cadence schedule in the tenant in one pass, so
   // the user does not have to repair each one by hand. Refreshes on success so
   // the gap panel reflects the healed state.
@@ -1134,7 +1161,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     // Prepaid Block issuances never carry a billing cycle (see prepaidBlockDueWork.ts);
     // they must not veto the cycle shared by the window's other members.
     const cycleMembers = members.filter(
-      (member) => (member as { chargeType?: string | null }).chargeType !== 'PrepaidBlock',
+      (member) => (member as { chargeType?: string | null }).chargeType !== 'PrepaidBlock' || Boolean(member.billingCycleId),
     );
     const billingCycleIds = new Set(
       cycleMembers
@@ -1456,6 +1483,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         normalizeScopeValue(member.purchaseOrderScopeKey),
         normalizeScopeValue(member.taxSource),
         normalizeScopeValue(member.exportShapeKey),
+        normalizeScopeValue(member.invoiceBillingProfileId),
       ].join('|')),
     );
     return Math.max(buckets.size, 1);
@@ -1686,6 +1714,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         previewGroupKey: group.groupKey,
         selectorInputs: group.selectorInputs,
       })),
+      // Operator dialog keeps its per-service layout; template-rendered previews consolidate.
+      { consolidateFixedBundles: false },
     );
     if (response.success) {
       setPreviewState({
@@ -2625,6 +2655,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               </AlertDescription>
             </Alert>
           )}
+
+          <LateHourlyTimeNotices notices={lateHourlyTime} />
 
           {materializationGaps.length > 0 ? (
             <Alert className="mb-4 border-warning/40 bg-warning/5" data-testid="recurring-materialization-gap-panel">

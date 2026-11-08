@@ -36,6 +36,7 @@ exports.up = async function up(knex) {
       if (!ast) continue;
       const next = applyServicePeriodAndCurrency(ast);
       if (canonicalJson(next) === canonicalJson(ast)) continue;
+      // migration-lint: allow 5 - retroactive: rewrites only changed rows of standard_invoice_templates, a small system table keyed by template_id; merged before the lint existed
       await knex(STANDARD_TABLE)
         .where({ template_id: row.template_id })
         .update({ templateAst: knex.raw('?::jsonb', [JSON.stringify(next)]), updated_at: knex.fn.now() });

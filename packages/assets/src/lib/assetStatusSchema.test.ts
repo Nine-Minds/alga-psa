@@ -39,13 +39,14 @@ describe('generateAssetStatusSlug', () => {
 });
 
 describe('BUILTIN_ASSET_STATUSES', () => {
-  it('matches the five slugs the migration seeds, with their kinds', () => {
+  it('matches the six slugs the migration seeds, with their kinds', () => {
     expect(BUILTIN_ASSET_STATUSES.map((s) => [s.slug, s.kind])).toEqual([
       ['active', 'deployable'],
       ['in_stock', 'deployable'],
       ['maintenance', 'pending'],
       ['inactive', 'undeployable'],
       ['retired', 'archived'],
+      ['held_by_msp', 'pending'],
     ]);
   });
 

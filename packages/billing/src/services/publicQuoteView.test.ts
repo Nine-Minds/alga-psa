@@ -35,6 +35,7 @@ import {
   PUBLIC_QUOTE_FIELDS,
   projectPublicQuote,
   projectPublicQuoteItems,
+  projectPublicQuoteView,
   recordQuoteViewedViaEmailLink,
 } from './publicQuoteView';
 import { QUOTE_ACTIVITY_TYPES } from '../lib/quoteActivityTypes';
@@ -76,6 +77,84 @@ describe('public quote projection', () => {
     expect(item).not.toHaveProperty('service_id');
     expect(item).not.toHaveProperty('tenant');
     expect(item.description).toBe('x');
+  });
+
+  it('keeps the rendered quote data and location grouping while removing every internal UUID', () => {
+    const internalIds = [
+      '11111111-1111-4111-8111-111111111111',
+      '22222222-2222-4222-8222-222222222222',
+      '33333333-3333-4333-8333-333333333333',
+      '44444444-4444-4444-8444-444444444444',
+      '55555555-5555-4555-8555-555555555555',
+      '66666666-6666-4666-8666-666666666666',
+    ];
+    const projected = projectPublicQuoteView({
+      quote_id: internalIds[0],
+      quote_number: 'Q-2026-14',
+      title: 'Office network refresh',
+      description: 'Replace the switching and wireless equipment.',
+      quote_date: new Date('2026-04-02T00:00:00Z'),
+      valid_until: new Date('2026-05-02T00:00:00Z'),
+      status: 'sent',
+      currency_code: 'EUR',
+      subtotal: 30000,
+      discount_total: 0,
+      tax: 6000,
+      total_amount: 36000,
+      client_notes: 'Please schedule after closing.',
+      terms_and_conditions: 'Payment due in 30 days.',
+      terms_and_conditions_block: null,
+      quote_items: [
+        {
+          quote_item_id: internalIds[1], quote_id: internalIds[0], location_id: internalIds[2],
+          description: 'Switches', quantity: 2, unit_price: 10000, total_price: 20000,
+          display_order: 0, is_optional: false, is_selected: true, is_discount: false, cost: 5,
+        },
+        {
+          quote_item_id: internalIds[3], quote_id: internalIds[0], location_id: internalIds[2],
+          description: 'Wireless access points', quantity: 2, unit_price: 5000, total_price: 10000,
+          display_order: 1, is_optional: true, is_selected: false, is_discount: false, cost: 5,
+        },
+        {
+          quote_item_id: internalIds[4], quote_id: internalIds[0], location_id: internalIds[5],
+          description: 'Reception access point', quantity: 1, unit_price: 5000, total_price: 5000,
+          display_order: 2, is_optional: false, is_selected: true, is_discount: false, cost: 5,
+        },
+      ],
+    } as any, [
+      {
+        location_id: internalIds[2], location_name: 'Main office', address_line1: '10 Market Street',
+        city: 'Boston', state_province: 'MA', postal_code: '02110', country_code: 'US', country_name: 'United States',
+      },
+      {
+        location_id: internalIds[5], location_name: 'Reception', address_line1: '20 Market Street',
+        city: 'Boston', state_province: 'MA', postal_code: '02110', country_code: 'US', country_name: 'United States',
+      },
+    ]);
+
+    const serialized = JSON.stringify(projected);
+    for (const internalId of internalIds) expect(serialized).not.toContain(internalId);
+    expect(projected.quote).not.toHaveProperty('quote_id');
+    expect(projected.items.map(({ description, publicRef, locationRef, is_optional, is_selected }) => ({
+      description, publicRef, locationRef, is_optional, is_selected,
+    }))).toEqual([
+      { description: 'Switches', publicRef: 'item-0', locationRef: 'location-0', is_optional: false, is_selected: true },
+      { description: 'Wireless access points', publicRef: 'item-1', locationRef: 'location-0', is_optional: true, is_selected: false },
+      { description: 'Reception access point', publicRef: 'item-2', locationRef: 'location-1', is_optional: false, is_selected: true },
+    ]);
+    expect(projected.locations).toEqual([{
+      publicRef: 'location-0', location_name: 'Main office', address_line1: '10 Market Street',
+      address_line2: null, address_line3: null, city: 'Boston', state_province: 'MA', postal_code: '02110',
+      country_code: 'US', country_name: 'United States',
+    }, {
+      publicRef: 'location-1', location_name: 'Reception', address_line1: '20 Market Street',
+      address_line2: null, address_line3: null, city: 'Boston', state_province: 'MA', postal_code: '02110',
+      country_code: 'US', country_name: 'United States',
+    }]);
+    expect(projected.quote).toMatchObject({
+      quote_number: 'Q-2026-14', title: 'Office network refresh', currency_code: 'EUR',
+      total_amount: 36000, client_notes: 'Please schedule after closing.',
+    });
   });
 });
 
