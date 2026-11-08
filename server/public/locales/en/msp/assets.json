@@ -2245,6 +2245,8 @@
       "allStatuses": "Every status",
       "notes": "Notes",
       "exportCsv": "Export CSV",
+      "exportStarted": "CSV export started.",
+      "exportEmpty": "There is nothing to export in this view.",
       "addUnexpected": "Add unexpected asset",
       "addUnexpectedHint": "A device found on site but outside this audit scope is recorded as unexpected, never as expected.",
       "addUnexpectedPlaceholder": "Find an asset…",

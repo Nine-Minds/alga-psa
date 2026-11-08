@@ -3,6 +3,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ClipboardCheck, Download, Search } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import type {
   AssetAuditItemRecord,
   AssetAuditItemResult,
@@ -39,6 +40,8 @@ import { unwrapAssetActionResult } from '../../actions/assetActionErrors';
 import { getAssetTypes } from '../../actions/assetTypeRegistryActions';
 import { fallbackAssetTypeLabel, resolveAssetTypeLabel } from '../../lib/assetTypeDisplay';
 import { isBuiltinAssetTypeSlug } from '../../lib/assetTypeAttributes';
+import { useAssetStatusLabel } from '../../lib/assetStatus';
+import { useAssetStatusRegistry } from '../shared/useAssetStatusOptions';
 import { useAssetCrossFeature } from '../../context/AssetCrossFeatureContext';
 import {
   auditMethodLabel,
@@ -56,6 +59,9 @@ import {
 type Segment = 'remaining' | 'present' | 'missing' | 'unexpected' | 'all';
 
 const SEGMENTS: Segment[] = ['remaining', 'present', 'missing', 'unexpected', 'all'];
+
+/** A site walk is a long list, so the items table starts wider than the table default of 10. */
+const DEFAULT_ITEMS_PER_PAGE = 25;
 
 /** Which results a segment shows. `remaining` is the walk's to-do list. */
 const SEGMENT_RESULTS: Record<Segment, AssetAuditItemResult[] | null> = {
@@ -95,6 +101,8 @@ export function AssetAuditDetail({ auditId, id = 'asset-audit' }: AssetAuditDeta
 
   const [segment, setSegment] = useState<Segment>('remaining');
   const [search, setSearch] = useState('');
+  const [itemsPage, setItemsPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(DEFAULT_ITEMS_PER_PAGE);
   const [busyAssetId, setBusyAssetId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [confirmComplete, setConfirmComplete] = useState(false);
@@ -107,6 +115,12 @@ export function AssetAuditDetail({ auditId, id = 'asset-audit' }: AssetAuditDeta
     const entries = await getAssetTypes();
     return isActionPermissionError(entries) ? [] : entries;
   });
+
+  // The scope is stored as status slugs; the header reads them the way every
+  // other asset surface does — the tenant's own label, or the translated
+  // builtin — so `held_by_msp` never reaches the screen.
+  const { statuses: assetStatuses } = useAssetStatusRegistry();
+  const statusLabel = useAssetStatusLabel(assetStatuses);
 
   const items = audit?.items ?? [];
   const isOpenRun = audit?.status === 'in_progress';
@@ -177,6 +191,10 @@ export function AssetAuditDetail({ auditId, id = 'asset-audit' }: AssetAuditDeta
   );
 
   const exportCsv = useCallback(() => {
+    if (visibleItems.length === 0) {
+      toast(t('assetAudits.detail.exportEmpty', { defaultValue: 'There is nothing to export in this view.' }));
+      return;
+    }
     const header = [
       t('assetAudits.items.columns.asset', { defaultValue: 'Asset' }),
       t('assetAudits.items.columns.type', { defaultValue: 'Type' }),
@@ -200,8 +218,15 @@ export function AssetAuditDetail({ auditId, id = 'asset-audit' }: AssetAuditDeta
     const link = document.createElement('a');
     link.href = url;
     link.download = `site-audit-${auditId}.csv`;
+    // The anchor has to be in the document for the click to be honoured, and
+    // the blob URL has to outlive it: revoking in the same tick cancels the
+    // download the browser was only just handed, which is how this button came
+    // to do nothing at all.
+    document.body.appendChild(link);
     link.click();
-    URL.revokeObjectURL(url);
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    toast.success(t('assetAudits.detail.exportStarted', { defaultValue: 'CSV export started.' }));
   }, [visibleItems, assetTypeLabel, t, i18n?.language, auditId]);
 
   const loadAssetOptions = useCallback(
@@ -456,7 +481,7 @@ export function AssetAuditDetail({ auditId, id = 'asset-audit' }: AssetAuditDeta
             label={t('assetAudits.detail.scopeStatuses', { defaultValue: 'Statuses in scope' })}
             value={
               scopeStatuses.length > 0
-                ? scopeStatuses.join(', ')
+                ? scopeStatuses.map((slug) => statusLabel(slug)).join(', ')
                 : t('assetAudits.detail.allStatuses', { defaultValue: 'Every status' })
             }
           />
@@ -483,7 +508,10 @@ export function AssetAuditDetail({ auditId, id = 'asset-audit' }: AssetAuditDeta
       <CustomTabs
         idPrefix={`${id}-segments`}
         value={segment}
-        onTabChange={(value) => setSegment(value as Segment)}
+        onTabChange={(value) => {
+          setSegment(value as Segment);
+          setItemsPage(1);
+        }}
         tabs={SEGMENTS.map((key) => ({
           id: key,
           label: (
@@ -513,7 +541,10 @@ export function AssetAuditDetail({ auditId, id = 'asset-audit' }: AssetAuditDeta
           id={`${id}-item-search`}
           className="h-9 pl-9"
           value={search}
-          onChange={(event) => setSearch(event.target.value)}
+          onChange={(event) => {
+            setSearch(event.target.value);
+            setItemsPage(1);
+          }}
           placeholder={t('assetAudits.items.searchPlaceholder', {
             defaultValue: 'Search by name, tag or serial',
           })}
@@ -525,7 +556,23 @@ export function AssetAuditDetail({ auditId, id = 'asset-audit' }: AssetAuditDeta
           {t('assetAudits.items.empty', { defaultValue: 'No assets in this view.' })}
         </BentoTileEmpty>
       ) : (
-        <DataTable id={`${id}-items-table`} data={visibleItems} columns={columns} pagination={false} />
+        // Every item of the run is already in hand, so the table pages over
+        // them client-side. It has to be asked for: the table slices to its
+        // page size whether or not the pager is shown, so `pagination={false}`
+        // would quietly hide every asset past the first page.
+        <DataTable
+          id={`${id}-items-table`}
+          data={visibleItems}
+          columns={columns}
+          pagination
+          currentPage={itemsPage}
+          pageSize={itemsPerPage}
+          onPageChange={setItemsPage}
+          onItemsPerPageChange={(size) => {
+            setItemsPerPage(size);
+            setItemsPage(1);
+          }}
+        />
       )}
 
       <Dialog

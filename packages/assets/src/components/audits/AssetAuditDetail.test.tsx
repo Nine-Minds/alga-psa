@@ -17,6 +17,8 @@ const h = vi.hoisted(() => ({
   getAssetTypes: vi.fn(),
   renderQuickAddTicket: vi.fn(),
   push: vi.fn(),
+  toastSuccess: vi.fn(),
+  toastPlain: vi.fn(),
 }));
 
 vi.mock('../../actions/assetAuditActions', () => ({
@@ -32,6 +34,12 @@ vi.mock('../../actions/assetAuditActions', () => ({
 vi.mock('../../actions/assetActions', () => ({ listAssets: h.listAssets }));
 vi.mock('../../actions/assetActionErrors', () => ({ unwrapAssetActionResult: (value: unknown) => value }));
 vi.mock('../../actions/assetTypeRegistryActions', () => ({ getAssetTypes: h.getAssetTypes }));
+// The scope statuses are read through the registry, as every other asset
+// surface does; the hook itself is a server round trip.
+vi.mock('../shared/useAssetStatusOptions', () => ({ useAssetStatusRegistry: () => ({ statuses: null }) }));
+vi.mock('react-hot-toast', () => ({
+  toast: Object.assign((message: string) => h.toastPlain(message), { success: h.toastSuccess }),
+}));
 vi.mock('../../context/AssetCrossFeatureContext', () => ({
   useAssetCrossFeature: () => ({ renderQuickAddTicket: h.renderQuickAddTicket }),
 }));
@@ -96,20 +104,33 @@ vi.mock('@alga-psa/ui/components/Dialog', () => ({
   DialogContent: ({ children }: any) => <div>{children}</div>,
   DialogFooter: ({ children }: any) => <div>{children}</div>,
 }));
+// A stand-in for the real table's paging: it slices to the page it was given,
+// which is what the real one does whether or not the pager is on screen. A
+// table asked not to paginate would therefore hide everything past row 10.
 vi.mock('@alga-psa/ui/components/DataTable', () => ({
-  DataTable: ({ id, data, columns }: any) => (
-    <div id={id}>
-      {data.map((row: any) => (
-        <div key={row.asset_id} id={`${id}-row-${row.asset_id}`}>
-          {columns.map((column: any, index: number) => (
-            <span key={index}>
-              {column.render ? column.render(row[column.dataIndex], row) : String(row[column.dataIndex] ?? '')}
-            </span>
-          ))}
-        </div>
-      ))}
-    </div>
-  ),
+  DataTable: ({ id, data, columns, pagination, currentPage, pageSize, onPageChange }: any) => {
+    const size = pagination === false ? 10 : (pageSize ?? 10);
+    const page = pagination === false ? 1 : (currentPage ?? 1);
+    const visible = data.slice((page - 1) * size, page * size);
+    return (
+      <div id={id} data-page={page} data-page-size={size} data-total={data.length}>
+        {visible.map((row: any) => (
+          <div key={row.asset_id} id={`${id}-row-${row.asset_id}`}>
+            {columns.map((column: any, index: number) => (
+              <span key={index}>
+                {column.render ? column.render(row[column.dataIndex], row) : String(row[column.dataIndex] ?? '')}
+              </span>
+            ))}
+          </div>
+        ))}
+        {pagination !== false && data.length > page * size ? (
+          <button id={`${id}-next-page`} type="button" onClick={() => onPageChange?.(page + 1)}>
+            next
+          </button>
+        ) : null}
+      </div>
+    );
+  },
 }));
 vi.mock('@alga-psa/ui/components/bento', () => ({
   BentoChip: ({ children }: any) => <span>{children}</span>,
@@ -251,6 +272,50 @@ describe('AssetAuditDetail', () => {
     expect(document.getElementById('asset-audit-items-table-row-as-1')).toBeNull();
   });
 
+  it('pages over every item instead of stopping at the table default', async () => {
+    // 26 devices in one scope: more than the table's default page of 10, and
+    // more than one page of the audit's own size.
+    const many = Array.from({ length: 26 }, (_value, index) =>
+      item({ asset_id: `as-${index + 1}`, asset_name: `Device ${String(index + 1).padStart(2, '0')}` }),
+    );
+    h.getAssetAudit.mockResolvedValue({ success: true, data: auditPayload({ items: many, expected_count: 26 }) });
+    renderDetail();
+
+    const table = async () => {
+      await waitFor(() => expect(document.getElementById('asset-audit-items-table')).not.toBeNull());
+      return document.getElementById('asset-audit-items-table')!;
+    };
+
+    // Row 11 is past the table default but inside the audit's page size.
+    await waitFor(() => expect(document.getElementById('asset-audit-items-table-row-as-11')).not.toBeNull());
+    expect((await table()).getAttribute('data-page-size')).toBe('25');
+    expect(document.getElementById('asset-audit-items-table-row-as-26')).toBeNull();
+
+    fireEvent.click(document.getElementById('asset-audit-items-table-next-page')!);
+
+    await waitFor(() => expect(document.getElementById('asset-audit-items-table-row-as-26')).not.toBeNull());
+  });
+
+  it('returns to the first page when the segment changes', async () => {
+    const many = Array.from({ length: 30 }, (_value, index) =>
+      item({ asset_id: `as-${index + 1}`, asset_name: `Device ${index + 1}` }),
+    );
+    h.getAssetAudit.mockResolvedValue({ success: true, data: auditPayload({ items: many }) });
+    renderDetail();
+
+    await waitFor(() => expect(document.getElementById('asset-audit-items-table-next-page')).not.toBeNull());
+    fireEvent.click(document.getElementById('asset-audit-items-table-next-page')!);
+    await waitFor(() =>
+      expect(document.getElementById('asset-audit-items-table')?.getAttribute('data-page')).toBe('2'),
+    );
+
+    fireEvent.click(document.getElementById('asset-audit-segments-all')!);
+
+    await waitFor(() =>
+      expect(document.getElementById('asset-audit-items-table')?.getAttribute('data-page')).toBe('1'),
+    );
+  });
+
   it('searches the items by name, tag or serial', async () => {
     renderDetail();
     await waitFor(() => expect(document.getElementById('asset-audit-segments-all')).not.toBeNull());
@@ -383,6 +448,62 @@ describe('AssetAuditDetail', () => {
 
     await waitFor(() => expect(document.getElementById('asset-audit-create-ticket-button-as-3')).not.toBeNull());
     expect(document.getElementById('asset-audit-create-ticket-button-as-2')).toBeNull();
+  });
+
+  it('reads the scope statuses, never their slugs', async () => {
+    h.getAssetAudit.mockResolvedValue({
+      success: true,
+      data: auditPayload({ statuses: ['active', 'held_by_msp'] }),
+    });
+    renderDetail();
+
+    await waitFor(() =>
+      expect(document.getElementById('asset-audit-scope-statuses')).toHaveTextContent('Active, Held by MSP'),
+    );
+    expect(document.getElementById('asset-audit-scope-statuses')).not.toHaveTextContent('held_by_msp');
+  });
+
+  it('hands the CSV to the browser and says so', async () => {
+    const createObjectURL = vi.fn(() => 'blob:audit');
+    const revokeObjectURL = vi.fn();
+    (URL as any).createObjectURL = createObjectURL;
+    (URL as any).revokeObjectURL = revokeObjectURL;
+    const clicks: Array<{ download: string; inDocument: boolean }> = [];
+    const clickSpy = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(function (this: HTMLAnchorElement) {
+        // The anchor has to be in the document when it is clicked, and its blob
+        // URL must still be alive — revoking in the same tick is what made this
+        // button do nothing at all.
+        clicks.push({ download: this.download, inDocument: document.body.contains(this) });
+        expect(revokeObjectURL).not.toHaveBeenCalled();
+      });
+
+    try {
+      renderDetail();
+      await waitFor(() => expect(document.getElementById('asset-audit-export-button')).not.toBeNull());
+
+      fireEvent.click(document.getElementById('asset-audit-export-button')!);
+
+      expect(clicks).toEqual([{ download: 'site-audit-au-1.csv', inDocument: true }]);
+      expect(createObjectURL).toHaveBeenCalledTimes(1);
+      expect(h.toastSuccess).toHaveBeenCalledWith('CSV export started.');
+    } finally {
+      clickSpy.mockRestore();
+    }
+  });
+
+  it('says there is nothing to export instead of downloading an empty file', async () => {
+    const createObjectURL = vi.fn(() => 'blob:audit');
+    (URL as any).createObjectURL = createObjectURL;
+    renderDetail();
+    await waitFor(() => expect(document.getElementById('asset-audit-segments-all')).not.toBeNull());
+    fireEvent.change(document.getElementById('asset-audit-item-search')!, { target: { value: 'nothing here' } });
+
+    fireEvent.click(document.getElementById('asset-audit-export-button')!);
+
+    expect(createObjectURL).not.toHaveBeenCalled();
+    expect(h.toastPlain).toHaveBeenCalledWith('There is nothing to export in this view.');
   });
 
   it('goes back to the client Audits tab', async () => {

@@ -13,6 +13,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { startAssetAudit } from '../../actions/assetAuditActions';
 import { getClientLocationsForAssets } from '../../actions/clientLookupActions';
+import { useAssetStatusLabel } from '../../lib/assetStatus';
 import { useAssetStatusRegistry } from '../shared/useAssetStatusOptions';
 import { auditOutcome, useAssetAuditScopePreview } from './auditClient';
 
@@ -53,6 +54,9 @@ export function StartAuditDialog({
 }: StartAuditDialogProps) {
   const { t } = useTranslation('msp/assets');
   const { statuses } = useAssetStatusRegistry(open);
+  // A builtin that still carries its shipped label is translated; a renamed or
+  // tenant-defined status keeps the registry's own wording.
+  const statusLabel = useAssetStatusLabel(statuses);
   const [clientId, setClientId] = useState<string | null>(initialClientId ?? null);
   const [locationValue, setLocationValue] = useState<string>(NO_LOCATION_VALUE);
   const [selectedStatuses, setSelectedStatuses] = useState<string[] | null>(null);
@@ -197,7 +201,7 @@ export function StartAuditDialog({
                   <Checkbox
                     key={status.slug}
                     id={`${id}-status-${status.slug}`}
-                    label={status.label}
+                    label={statusLabel(status.slug)}
                     checked={chosenStatuses.includes(status.slug)}
                     onChange={() => toggleStatus(status.slug)}
                   />
