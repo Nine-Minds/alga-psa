@@ -130,6 +130,10 @@ describe('MCP OAuth grant lifecycle – DB integration', () => {
     expect(rejected[0].reason).toBeInstanceOf(OAuthGrantError);
     expect(await isGrantActive(grantId)).toBe(false);
 
+    // Replay revocation must commit before the OAuth error reaches the caller.
+    const remainingRefreshTokens = await db('mcp_oauth_refresh_tokens').where({ grant_id: grantId });
+    expect(remainingRefreshTokens).toHaveLength(0);
+
     // The winner's successor is unusable after the competing replay revokes
     // the grant and removes its refresh tokens.
     await expect(rotateRefreshToken(successful[0].value.refreshToken)).rejects.toBeInstanceOf(OAuthGrantError);
