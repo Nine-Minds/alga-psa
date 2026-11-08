@@ -6,6 +6,7 @@ import type { MentionSuggestionItem } from "../features/ticketRichText/MentionSu
 
 vi.mock("../capabilities/CapabilitiesContext", () => ({
   useCapabilities: () => ({ features: { clientsCreate: false, clientsUpdate: false, contactsCreate: false, contactsUpdate: false }, defaultCountry: null, loaded: true, refresh: () => Promise.resolve() }),
+  useDontNotifyCustomerDefault: () => false,
 }));
 vi.mock("../features/contacts/components/ContactFormModal", () => ({ ContactFormModal: () => null }));
 vi.mock("../auth/AuthContext", () => ({

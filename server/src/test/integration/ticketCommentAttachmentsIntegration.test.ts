@@ -22,7 +22,7 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 vi.mock('@/lib/auth/rbac', () => ({ hasPermission: async () => routeSession.permitted }));
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import {
-  canReadCommentAttachment, reconcileCommentAttachments, expireCommentAttachmentDrafts,
+  canReadCommentAttachment, canWriteAttachmentTicket, canAccessAttachmentTicket, reconcileCommentAttachments, expireCommentAttachmentDrafts,
   listPublishedCommentAttachments, filterReadableCommentAttachments, dispatchCommentPublication, persistCommentPublication,
 } from '@shared/lib/ticketCommentAttachments';
 import { signAttachmentLink, verifyAttachmentLink } from '@shared/lib/ticketCommentAttachmentToken';
@@ -776,6 +776,345 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
     } finally { await queue.shutdown(); connection.mockRestore();tenantConnection.mockRestore();storage.mockRestore();snapshot.mockRestore(); }
   });
 
+  it('rechecks sponsor policy after persisted attachment reconstruction on delayed email retry', async () => {
+    const { TenantEmailService } = await import('@alga-psa/email');
+    const { SMTPEmailProvider } = await import('@alga-psa/email/providers/SMTPEmailProvider');
+    const { coManagedDeliverySeam } = await import('@shared/lib/coManagedDelivery');
+    const { CO_MANAGED_LEDGER } = await import('@shared/lib/deliveryLedger');
+    const { sendEventEmail } = await import('@/lib/notifications/sendEventEmail');
+    const pdf = await upload('sponsor-private.pdf'); await attach(pdf.file);
+    await table('comments').where({ comment_id: comment }).update({ note: JSON.stringify([
+      { type: 'paragraph', content: [{ type: 'text', text: 'Sponsor secret comment body' }] },
+      ...JSON.parse(note(pdf.file)),
+    ]) });
+    await table('tenant_email_templates').insert({ tenant, name: 'ticket-comment-added', language_code: 'en',
+      subject: 'Update {{ticket.id}}', html_content: '{{{comment.content}}} {{ticket.metaLine}} {{ticket.requesterContact}} {{ticket.requesterDetails}} {{ticket.assignedDetails}} {{ticket.categoryDetails}} {{ticket.subcategory}}',
+      text_content: '{{comment.text}} {{ticket.metaLine}} {{ticket.requesterContact}} {{ticket.requesterDetails}} {{ticket.assignedDetails}} {{ticket.categoryDetails}} {{ticket.subcategory}}' });
+    const messages: any[] = [];
+    const stream = nodemailer.createTransport({ streamTransport: true, buffer: true });
+    const provider = new SMTPEmailProvider('sponsor-retry');
+    (provider as any).initialized = true; (provider as any).config = { from: 'agent@example.test' };
+    (provider as any).transporter = { sendMail: async (mail: any) => {
+      const sent = await stream.sendMail(mail); messages.push(await simpleParser(sent.message as Buffer)); return sent;
+    } };
+    const service = TenantEmailService.getInstance(tenant);
+    const smtp = vi.spyOn(service as any, 'refreshProviderState').mockResolvedValue({ emailProvider: provider, providerInitError: null, fromAddress: 'agent@example.test' });
+    const connection = vi.spyOn(dbModule, 'getConnection').mockResolvedValue(trx);
+    const tenantConnection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: trx, tenant } as any);
+    vi.spyOn(StorageService, 'downloadFile').mockResolvedValue({ buffer: Buffer.from('%PDF-private') } as any);
+    let redactedFields: string[] = [];
+    let currentEmail = 'sponsor-current@example.test';
+    let revoked = false;
+    const sponsorTenant = randomUUID();
+    await tenantDb(trx, sponsorTenant).unscoped('tenants', 'create isolated sponsor tenant').insert({ tenant: sponsorTenant, client_name: 'Sponsor', email: 'sponsor@example.test', product_code: 'psa' });
+    process.env.FORCE_CAPABILITIES = 'co-managed:on';
+    coManagedDeliverySeam.reset();
+    coManagedDeliverySeam.register(() => ({ reauthorizeCommentRecipient: async () => revoked ? null : ({ kind: 'msp_user', principalId: actor, email: currentEmail, redactedFields }) }) as any);
+    const pending = { mailClass: 'ticket' as const, tenantId: tenant, to: currentEmail, subject: 'Update', template: 'ticket-comment-added', locale: 'en' as const,
+      context: { ticket: { id: 'ATT-1', title: 'Attachment tests', priority: 'Urgent', status: 'Open', metaLine: 'Ticket #ATT-1 · Urgent Priority · Open',
+        requesterEmail: 'request@example.test', requesterContact: 'request@example.test', requesterDetails: 'Hidden Requester · request@example.test',
+        assignedToName: 'Hidden Assignee', assignedDetails: 'Hidden Assignee (assignee@example.test)',
+        categoryDetails: 'Hardware / Hidden Subcategory', subcategory: 'Hidden Subcategory' },
+        comment: { content: 'Sponsor secret comment body', text: 'Sponsor secret comment body', author: 'Agent' } },
+      replyContext: { ticketId: ticket, commentId: comment },
+      delivery: { ledger: CO_MANAGED_LEDGER, ledgerTenant: sponsorTenant,
+        key: { delivery_kind: 'ticket_comment_email', source_id: comment, recipient: 'sponsor-original@example.test' }, extra: { recipient_kind: 'msp_user' } },
+      coManagedRecipient: { tenant, ticketId: ticket, commentId: comment, relationshipId: randomUUID(), sponsorTenant, principalId: actor } };
+    const { EventEmailRetryQueue } = await import('@/lib/notifications/EventEmailRetryQueue');
+    const { DelayedEmailQueue } = await import('@alga-psa/email');
+    (EventEmailRetryQueue as any).instance = null;
+    const data = new Map<string, string>(), scores = new Map<string, Map<string, number>>();
+    const redis = { get: async (key: string) => data.get(key) ?? null, set: async (key: string, value: string) => { data.set(key, value); },
+      del: async (key: string) => Number(data.delete(key)), zAdd: async (key: string, item: any) => { const z = scores.get(key) ?? new Map(); z.set(item.value, item.score); scores.set(key, z); return 1; },
+      zRem: async (key: string, id: string) => Number(scores.get(key)?.delete(id)), zRangeByScore: async (key: string, min: number, max: number) => [...(scores.get(key) ?? new Map()).entries()].filter(([, score]) => score >= min && score <= max).map(([id]) => id),
+      eval: async (script: string, args: any) => { const [source, processing] = args.keys, [id, expires] = args.arguments;
+        if (script.startsWith('local ids')) return 0;
+        if (scores.get(source)?.delete(id)) { const z = scores.get(processing) ?? new Map(); z.set(id, Number(expires)); scores.set(processing, z); return 1; } return 0; } };
+    const retryQueue = EventEmailRetryQueue.getInstance({ checkIntervalMs: 3600000 });
+    await retryQueue.initialize(async () => redis as any);
+    (DelayedEmailQueue as any).instance = null;
+    const delayedQueue = DelayedEmailQueue.getInstance({ checkIntervalMs: 3600000 });
+    await delayedQueue.initialize(async () => redis as any);
+    const rateLimit = vi.spyOn(service as any, 'checkRateLimits').mockResolvedValue({ allowed: false, retryAfterMs: 1, reason: 'test' });
+    try {
+      await expect(sendEventEmail(pending)).rejects.toMatchObject({ isRetryable: true });
+      expect([...scores.entries()].some(([key, z]) => key.includes('ratelimit') && z.size > 0)).toBe(false);
+      rateLimit.mockRestore();
+      redactedFields = ['note', 'ticket_number', 'contact_email', 'values.assignee_name', 'subcategory_name'];
+      currentEmail = 'sponsor-renamed@example.test';
+      await retryQueue.enqueue(pending, { retryAfterMs: 1 });
+      await new Promise(resolve => setTimeout(resolve, 5));
+      await (retryQueue as any).processReady();
+      expect(messages).toHaveLength(1);
+      expect(messages[0].to.value[0].address).toBe(currentEmail);
+      expect(messages[0].text).not.toContain('Sponsor secret comment body');
+      expect(messages[0].text).not.toContain('ATT-1');
+      expect(messages[0].text).not.toContain('Hidden Requester');
+      expect(messages[0].text).not.toContain('request@example.test');
+      expect(messages[0].text).not.toContain('Hidden Assignee');
+      expect(messages[0].text).not.toContain('Hidden Subcategory');
+      expect(messages[0].html).not.toContain('Hidden Requester');
+      expect(messages[0].html).not.toContain('request@example.test');
+      expect(messages[0].html).not.toContain('Hidden Assignee');
+      expect(messages[0].html).not.toContain('Hidden Subcategory');
+      expect(messages[0].attachments).toEqual([]);
+      expect(await tenantDb(trx, sponsorTenant).table('co_management_deliveries')
+        .where({ delivery_kind: 'ticket_comment_email', source_id: comment, recipient: 'sponsor-original@example.test' }).first()).toMatchObject({ state: 'sent' });
+      const attachmentFreeComment = await makeComment({ note: JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'Attachment-free source body' }] }]) });
+      const attachmentFreePending = { ...pending, context: { ...pending.context, comment: { content: 'Attachment-free source body', text: 'Attachment-free source body', author: 'Agent' } },
+        replyContext: { ticketId: ticket, commentId: attachmentFreeComment },
+        coManagedRecipient: { ...pending.coManagedRecipient, commentId: attachmentFreeComment },
+        delivery: { ...pending.delivery, key: { ...pending.delivery.key, source_id: attachmentFreeComment } } };
+      redactedFields = [];
+      currentEmail = 'sponsor-before-rate@example.test';
+      const attachmentFreeRateLimit = vi.spyOn(service as any, 'checkRateLimits').mockResolvedValue({ allowed: false, retryAfterMs: 1, reason: 'test' });
+      await expect(sendEventEmail(attachmentFreePending)).rejects.toMatchObject({ isRetryable: true });
+      attachmentFreeRateLimit.mockRestore();
+      redactedFields = ['note']; currentEmail = 'sponsor-after-rate@example.test';
+      await retryQueue.enqueue(attachmentFreePending, { retryAfterMs: 1 });
+      await new Promise(resolve => setTimeout(resolve, 5));
+      await (retryQueue as any).processReady();
+      expect(messages).toHaveLength(2);
+      expect(messages[1].to.value[0].address).toBe(currentEmail);
+      expect(messages[1].text).not.toContain('Attachment-free source body');
+      expect(messages[1].attachments).toEqual([]);
+      expect(await tenantDb(trx, sponsorTenant).table('co_management_deliveries')
+        .where({ delivery_kind: 'ticket_comment_email', source_id: attachmentFreeComment, recipient: 'sponsor-original@example.test' }).first()).toMatchObject({ state: 'sent' });
+      const revokedComment = await makeComment();
+      const revokedPending = { ...pending, replyContext: { ticketId: ticket, commentId: revokedComment }, coManagedRecipient: { ...pending.coManagedRecipient, commentId: revokedComment },
+        delivery: { ...pending.delivery, key: { ...pending.delivery.key, source_id: revokedComment } } };
+      const revokedFail = vi.spyOn(service, 'sendEmail').mockResolvedValueOnce({ success: false, error: 'Rate limited', providerId: 'sponsor-retry', providerType: 'smtp',
+        metadata: { retryable: true, definitelyNotSent: true, status: 429 } } as any);
+      try { await expect(sendEventEmail(revokedPending)).rejects.toMatchObject({ isRetryable: true }); } finally { revokedFail.mockRestore(); }
+      await retryQueue.enqueue(revokedPending, { retryAfterMs: 1 });
+      revoked = true;
+      await new Promise(resolve => setTimeout(resolve, 5));
+      await (retryQueue as any).processReady();
+      expect(messages).toHaveLength(2);
+    } finally {
+      await retryQueue.shutdown(); await delayedQueue.shutdown(); rateLimit.mockRestore(); smtp.mockRestore(); connection.mockRestore(); tenantConnection.mockRestore();
+      coManagedDeliverySeam.reset(); delete process.env.FORCE_CAPABILITIES;
+    }
+  });
+
+  it.each([false, true])('renders independent sponsor comment content from the ticket email subscriber (reverse=%s)', async reverse => {
+    const { EmulatorHost } = await import('@alga-psa/emulator-host');
+    const { default: smtpSink } = await import('@alga-psa/emulator-smtp-sink');
+    const { coManagedDeliverySeam } = await import('@shared/lib/coManagedDelivery');
+    const { ticketEmailSubscriberTestHarness } = await import('@/lib/eventBus/subscribers/ticketEmailSubscriber');
+    const ids = { hidden: randomUUID(), visible: randomUUID() };
+    const addresses = { [ids.hidden]: 'hidden-sponsor@example.test', [ids.visible]: 'visible-sponsor@example.test' };
+    const policies: Record<string, string[]> = { [ids.hidden]: ['note', 'actor_display_name'], [ids.visible]: [] };
+    const principals = reverse ? [ids.visible, ids.hidden] : [ids.hidden, ids.visible];
+    const redactedFields = [{ kind: 'msp_user', principalId: ids.hidden, email: addresses[ids.hidden], redactedFields: policies[ids.hidden] },
+      { kind: 'msp_user', principalId: ids.visible, email: addresses[ids.visible], redactedFields: policies[ids.visible] }];
+    const sponsorTenant = randomUUID();
+    await tenantDb(trx, sponsorTenant).unscoped('tenants', 'create isolated comment SMTP sponsor').insert({
+      tenant: sponsorTenant, client_name: 'Comment SMTP Sponsor', email: 'sponsor@example.test', product_code: 'psa' });
+    const plan = { audience: 'shared_it', threadId: randomUUID(), relationshipId: randomUUID(), sponsorTenant,
+      sponsorRecipients: principals.map(id => redactedFields.find(r => r.principalId === id)),
+      replyTokenMetadata: { namespace: 'cm', version: 2, relationshipId: randomUUID(), grantGeneration: 0, threadId: null } };
+    await table('tenant_email_templates').insert({ tenant, name: 'ticket-comment-added', language_code: 'en', subject: 'Update {{ticket.id}}',
+      html_content: '{{{comment.html}}}|{{comment.author}}|{{ticket.requesterDetails}}|{{ticket.assignedDetails}}|{{ticket.categoryDetails}}',
+      text_content: '{{comment.text}}|{{comment.author}}|{{ticket.requesterDetails}}|{{ticket.assignedDetails}}|{{ticket.categoryDetails}}' });
+    const customerMail = new EmulatorHost({ emulators: [smtpSink], controlPort: 0, ports: { 'smtp-sink': 0 } });
+    const sponsorMail = new EmulatorHost({ emulators: [smtpSink], controlPort: 0, ports: { 'smtp-sink': 0 } });
+    const customerPorts = await customerMail.start();
+    const sponsorPorts = await sponsorMail.start();
+    const settings = (port: number, providerId: string) => ({ tenant: providerId === 'customer' ? tenant : sponsorTenant,
+      email_provider: 'smtp', default_from_domain: 'example.test', ticketing_from_email: 'agent@example.test',
+      provider_configs: JSON.stringify([{ providerId, providerType: 'smtp', isEnabled: true,
+        config: { host: '127.0.0.1', port, secure: false, rejectUnauthorized: false, from: 'agent@example.test' } }]) });
+    await trx('tenant_email_settings').insert([
+      settings(customerPorts.ports['smtp-sink'], 'customer'), settings(sponsorPorts.ports['smtp-sink'], 'sponsor'),
+    ]);
+    const connection = vi.spyOn(dbModule, 'getConnection').mockResolvedValue(trx);
+    const tenantConnection = vi.spyOn(dbModule, 'createTenantKnex').mockImplementation(async (requestedTenant: string) => ({ knex: trx, tenant: requestedTenant } as any));
+    const { getSecretProviderInstance } = await import('@alga-psa/core/secrets');
+    const secretProvider = await getSecretProviderInstance();
+    const getSecret = secretProvider.getAppSecret.bind(secretProvider);
+    const secret = vi.spyOn(secretProvider, 'getAppSecret').mockImplementation(async name =>
+      name.toLowerCase() === 'nextauth_secret' ? 'co-managed-comment-smtp-test-secret' : getSecret(name));
+    process.env.FORCE_CAPABILITIES = 'co-managed:on';
+    coManagedDeliverySeam.reset();
+    coManagedDeliverySeam.register(() => ({ planTicketComment: async () => plan,
+      reauthorizeCommentRecipient: async (input: any) => redactedFields.find(r => r.principalId === input.principalId) ?? null }) as any);
+    try {
+      await ticketEmailSubscriberTestHarness.handleTicketCommentAdded({ id: randomUUID(), eventType: 'TICKET_COMMENT_ADDED', payload: {
+        tenantId: tenant, ticketId: ticket, actorUserId: actor,
+        comment: { id: comment, content: JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'One recipient secret body' }] }]), author: 'Hidden Author', isInternal: false },
+      } } as any);
+      const customerMessages = await (await fetch(`http://127.0.0.1:${customerPorts.controlPort}/control/smtp-sink/state/emails`)).json() as any;
+      const sponsorMessages = await (await fetch(`http://127.0.0.1:${sponsorPorts.controlPort}/control/smtp-sink/state/emails`)).json() as any;
+      const messages = customerMessages.result.map((message: any) => ({ ...message, text: message.text ?? '', html: message.html ?? '' }));
+      expect(messages).toHaveLength(2);
+      expect(sponsorMessages.result).toHaveLength(0);
+      expect(messages.map((message: any) => message.to.join(',')).sort()).toEqual(Object.values(addresses).sort());
+      const hidden = messages.find((m: any) => m.to.includes(addresses[ids.hidden]));
+      const visible = messages.find((m: any) => m.to.includes(addresses[ids.visible]));
+      expect(hidden.text).not.toContain('One recipient secret body');
+      expect(hidden.text).not.toContain('Hidden Author');
+      expect(visible.text).toContain('One recipient secret body');
+      expect(visible.text).toContain('Hidden Author');
+    } finally {
+      secret.mockRestore(); connection.mockRestore(); tenantConnection.mockRestore();
+      coManagedDeliverySeam.reset(); delete process.env.FORCE_CAPABILITIES;
+      await customerMail.stop(); await sponsorMail.stop();
+    }
+  });
+
+  it('routes a rate-limited sponsor routing email through ledger recovery with current recipient content', async () => {
+    const { TenantEmailService, DelayedEmailQueue } = await import('@alga-psa/email');
+    const { SMTPEmailProvider } = await import('@alga-psa/email/providers/SMTPEmailProvider');
+    const { deliverRoutingRow } = await import('@/lib/notifications/coManagedRoutingDelivery');
+    const sourceId = randomUUID(), originalEmail = 'routing-original@example.test', currentEmail = 'routing-current@example.test';
+    await table('co_management_deliveries').insert({ tenant, delivery_kind: 'routing_email', source_id: sourceId, recipient: originalEmail,
+      recipient_kind: 'msp_user', state: 'pending', attempts: 0 });
+    await table('tenant_email_templates').insert({ tenant, name: 'co-managed-routing', language_code: 'en', subject: '{{routing.headline}}',
+      html_content: '{{routing.body}} {{ticket.id}}', text_content: '{{routing.body}} {{ticket.id}}' });
+    const messages: any[] = [], stream = nodemailer.createTransport({ streamTransport: true, buffer: true });
+    const provider = new SMTPEmailProvider('routing-retry');
+    (provider as any).initialized = true; (provider as any).config = { from: 'agent@example.test' };
+    (provider as any).transporter = { sendMail: async (mail: any) => { const sent = await stream.sendMail(mail); messages.push(await simpleParser(sent.message as Buffer)); return sent; } };
+    const service = TenantEmailService.getInstance(tenant);
+    const refresh = vi.spyOn(service as any, 'refreshProviderState').mockResolvedValue({ emailProvider: provider, providerInitError: null, fromAddress: 'agent@example.test' });
+    const rate = vi.spyOn(service as any, 'checkRateLimits').mockResolvedValueOnce({ allowed: false, retryAfterMs: 1, reason: 'test' })
+      .mockResolvedValue({ allowed: true });
+    const connection = vi.spyOn(dbModule, 'getConnection').mockResolvedValue(trx);
+    const tenantConnection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: trx, tenant } as any);
+    (DelayedEmailQueue as any).instance = null;
+    const data = new Map<string, string>(), scores = new Map<string, Map<string, number>>();
+    const redis = { get: async (key: string) => data.get(key) ?? null, set: async (key: string, value: string) => { data.set(key, value); },
+      del: async (key: string) => Number(data.delete(key)), zAdd: async (key: string, item: any) => { const z = scores.get(key) ?? new Map(); z.set(item.value, item.score); scores.set(key, z); return 1; },
+      zRem: async (key: string, id: string) => Number(scores.get(key)?.delete(id)), zRangeByScore: async (key: string, min: number, max: number) => [...(scores.get(key) ?? new Map()).entries()].filter(([, score]) => score >= min && score <= max).map(([id]) => id),
+      eval: async (script: string, args: any) => { if (script.startsWith('local ids')) return 0; return 0; } };
+    const delayed = DelayedEmailQueue.getInstance({ checkIntervalMs: 3600000 }); await delayed.initialize(async () => redis as any);
+    const route = (email: string, redactedFields: string[]) => ({ tenant, deliveryKind: 'routing_email', sourceId, event: 'escalation_received' as const,
+      recipient: { kind: 'msp_user' as const, principalId: actor, email, redactedFields }, ledgerRecipient: originalEmail,
+      recipientTenant: tenant, ticketId: ticket, ticketNumber: 'R-41', ticketTitle: 'Restricted routing title', actorName: 'Routing actor', actorOrganization: 'Sponsor Org', allowed: true });
+    try {
+      expect(await deliverRoutingRow(route(originalEmail, []))).toBe('failed');
+      expect((await table('co_management_deliveries').where({ delivery_kind: 'routing_email', source_id: sourceId }).first()).state).toBe('failed');
+      expect([...scores.entries()].some(([key, z]) => key.includes('ratelimit') && z.size > 0)).toBe(false);
+      expect(await deliverRoutingRow(route(currentEmail, ['ticket_number', 'tickets.title', 'actor_organization_name']))).toBe('sent');
+      expect(messages).toHaveLength(1);
+      expect(messages[0].to.value[0].address).toBe(currentEmail);
+      expect(messages[0].text).not.toContain('R-41');
+      expect(messages[0].text).not.toContain('Restricted routing title');
+      expect(messages[0].text).not.toContain('Routing actor');
+      expect(messages[0].text).not.toContain('Sponsor Org');
+      expect(messages[0].html).not.toContain('Routing actor');
+      expect(messages[0].html).not.toContain('Sponsor Org');
+      expect((await table('co_management_deliveries').where({ delivery_kind: 'routing_email', source_id: sourceId }).first())
+        .recipient).toBe(originalEmail);
+      expect((await table('co_management_deliveries').where({ delivery_kind: 'routing_email', source_id: sourceId }).first()).state).toBe('sent');
+      const revokedSource = randomUUID();
+      await table('co_management_deliveries').insert({ tenant, delivery_kind: 'routing_email', source_id: revokedSource, recipient: originalEmail,
+        recipient_kind: 'msp_user', state: 'pending', attempts: 0 });
+      expect(await deliverRoutingRow({ ...route(currentEmail, []), sourceId: revokedSource, allowed: false })).toBe('skipped');
+      expect(messages).toHaveLength(1);
+      expect((await table('co_management_deliveries').where({ delivery_kind: 'routing_email', source_id: revokedSource }).first())
+        .error_code).toBe('recipient_not_permitted');
+    } finally {
+      await delayed.shutdown(); rate.mockRestore(); refresh.mockRestore(); connection.mockRestore(); tenantConnection.mockRestore();
+    }
+  });
+
+  it('production routing recovery reauthorizes changed sponsor identity and policy against the captured ledger row', async () => {
+    const { TenantEmailService } = await import('@alga-psa/email');
+    const { SMTPEmailProvider } = await import('@alga-psa/email/providers/SMTPEmailProvider');
+    const { createCoManagedDeliveryProvider } = await import('../../../../packages/co-managed/src/deliveryProvider');
+    const sponsor = tenant, customer = randomUUID(), sponsorUser = randomUUID(), customerUser = randomUUID();
+    const sponsorClient = randomUUID(), customerClient = randomUUID(), sponsorBoard = randomUUID(), customerBoard = randomUUID();
+    const relationship = randomUUID(), sourceId = randomUUID(), ticketId = randomUUID(), workId = randomUUID();
+    const roleId = randomUUID(), permissionId = randomUUID(), originalEmail = 'captured-route@example.test';
+    const currentEmail = 'current-sponsor-route@example.test';
+    await tenantDb(trx, customer).unscoped('tenants', 'create isolated routing-recovery fixture customer').insert({
+      tenant: customer, client_name: 'Routing Recovery Customer', email: 'customer@routing-recovery.test', product_code: 'co_managed' });
+    await tenantDb(trx, sponsor).table('clients').insert({ tenant: sponsor, client_id: sponsorClient, client_name: 'Routing Recovery Customer', client_type: 'company' });
+    await tenantDb(trx, customer).table('clients').insert({ tenant: customer, client_id: customerClient, client_name: 'Routing Recovery Customer', client_type: 'company' });
+    await tenantDb(trx, sponsor).table('boards').insert({ tenant: sponsor, board_id: sponsorBoard, board_name: 'Routing Recovery', is_inactive: false });
+    await tenantDb(trx, customer).table('boards').insert({ tenant: customer, board_id: customerBoard, board_name: 'Customer Routing', is_inactive: false });
+    await tenantDb(trx, sponsor).table('users').insert({ tenant: sponsor, user_id: sponsorUser, username: 'routing-recovery-sponsor',
+      email: originalEmail, hashed_password: 'unused', first_name: 'Fixture', last_name: 'Sponsor', user_type: 'internal', is_inactive: false });
+    await tenantDb(trx, customer).table('users').insert({ tenant: customer, user_id: customerUser, username: 'routing-recovery-customer',
+      email: 'customer@routing-recovery.test', hashed_password: 'unused', first_name: 'Fixture', last_name: 'Customer', user_type: 'internal', is_inactive: false });
+    await tenantDb(trx, sponsor).table('roles').insert({ tenant: sponsor, role_id: roleId, role_name: 'Routing recovery ticket reader', msp: true, client: false });
+    await tenantDb(trx, sponsor).table('permissions').insert({ tenant: sponsor, permission_id: permissionId, resource: 'ticket', action: 'read', msp: true, client: false });
+    await tenantDb(trx, sponsor).table('role_permissions').insert({ tenant: sponsor, role_id: roleId, permission_id: permissionId });
+    await tenantDb(trx, sponsor).table('user_roles').insert({ tenant: sponsor, user_id: sponsorUser, role_id: roleId });
+    const bundleId = randomUUID(), revisionId = randomUUID(), ruleId = randomUUID(), assignmentId = randomUUID();
+    await tenantDb(trx, sponsor).table('authorization_bundles').insert({ tenant: sponsor, bundle_id: bundleId, name: 'Routing recovery recipient policy',
+      status: 'active', published_revision_id: null });
+    await tenantDb(trx, sponsor).table('authorization_bundle_revisions').insert({ tenant: sponsor, revision_id: revisionId, bundle_id: bundleId,
+      revision_number: 1, lifecycle_state: 'published', published_at: new Date() });
+    await tenantDb(trx, sponsor).table('authorization_bundles').where({ bundle_id: bundleId }).update({ published_revision_id: revisionId });
+    await tenantDb(trx, sponsor).table('authorization_bundle_rules').insert({ tenant: sponsor, rule_id: ruleId, bundle_id: bundleId, revision_id: revisionId,
+      resource_type: 'ticket', action: 'read', template_key: 'selected_clients', constraint_key: null, effect: 'narrow',
+      config: { selectedClientIds: [sponsorClient], redactedFields: [] } });
+    await tenantDb(trx, sponsor).table('authorization_bundle_assignments').insert({ tenant: sponsor, assignment_id: assignmentId, bundle_id: bundleId,
+      target_type: 'user', target_id: sponsorUser, status: 'active' });
+    await tenantDb(trx, customer).table('co_management_relationships').insert({ tenant: customer, relationship_id: relationship, sponsor_tenant: sponsor,
+      sponsor_client_id: sponsorClient, state: 'active', visibility_mode: 'escalation_only', accepted_by: customerUser, accepted_at: new Date(),
+      redacted_fields: ['ticket_number', 'actor_display_name'] });
+    await tenantDb(trx, sponsor).table('co_management_staff_assignments').insert({ tenant: sponsor, customer_tenant: customer, relationship_id: relationship,
+      principal_type: 'user', principal_id: sponsorUser, relationship_role: 'technician' });
+    await tenantDb(trx, customer).table('tickets').insert({ tenant: customer, ticket_id: ticketId, ticket_number: 'RECOVERY-41', title: 'Recovery private title',
+      client_id: customerClient, board_id: customerBoard, entered_by: customerUser, entered_at: new Date(), updated_at: new Date(), is_closed: false });
+    await tenantDb(trx, customer).table('co_management_ticket_work').insert({ tenant: customer, relationship_id: relationship, ticket_id: ticketId, work_id: workId,
+      revision: 1, responsibility: 'msp', can_collaborate: true, first_escalated_at: new Date(), last_transition_at: new Date() });
+    await tenantDb(trx, sponsor).table('co_managed_ticket_references').insert({ tenant: sponsor, reference_id: randomUUID(), customer_tenant: customer,
+      relationship_id: relationship, ticket_id: ticketId, work_id: workId, client_id: sponsorClient, board_id: sponsorBoard, assigned_to: sponsorUser,
+      created_at: new Date(), updated_at: new Date() });
+    const payload = { ticketId, principalId: sponsorUser, event: 'escalation_received', actorName: 'Policy Hidden Actor', actorOrganization: 'Policy Hidden Org',
+      sponsorTenant: sponsor, relationshipId: relationship };
+    await tenantDb(trx, customer).table('co_management_deliveries').insert({ tenant: customer, delivery_kind: 'routing_email', source_id: sourceId,
+      recipient: originalEmail, recipient_kind: 'msp_user', state: 'pending', attempts: 0, payload });
+    await table('tenant_email_templates').insert({ tenant: sponsor, name: 'co-managed-routing', language_code: 'en', subject: '{{routing.headline}}',
+      html_content: '{{routing.body}} {{ticket.id}}', text_content: '{{routing.body}} {{ticket.id}}' });
+
+    const messages: any[] = [], stream = nodemailer.createTransport({ streamTransport: true, buffer: true });
+    const emailProvider = new SMTPEmailProvider('production-routing-recovery');
+    (emailProvider as any).initialized = true; (emailProvider as any).config = { from: 'agent@example.test' };
+    (emailProvider as any).transporter = { sendMail: async (mail: any) => {
+      const sent = await stream.sendMail(mail); messages.push(await simpleParser(sent.message as Buffer)); return sent;
+    } };
+    const service = TenantEmailService.getInstance(sponsor);
+    const refresh = vi.spyOn(service as any, 'refreshProviderState').mockResolvedValue({ emailProvider, providerInitError: null, fromAddress: 'agent@example.test' });
+    const rate = vi.spyOn(service as any, 'checkRateLimits').mockResolvedValueOnce({ allowed: false, retryAfterMs: 1, reason: 'test initial failure' }).mockResolvedValue({ allowed: true });
+    const dbWrapper = vi.spyOn(dbModule, 'withAdminTransaction').mockImplementation(async (callback: any) => callback(trx));
+    const connection = vi.spyOn(dbModule, 'getConnection').mockResolvedValue(trx);
+    const tenantConnection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: trx, tenant: sponsor } as any);
+    const deliveryProvider = createCoManagedDeliveryProvider();
+    try {
+      const initial = await deliveryProvider.pendingRouting(customer);
+      expect(initial).toHaveLength(1);
+      expect(initial[0]).toMatchObject({ allowed: true, ledgerRecipient: originalEmail, recipient: { email: originalEmail } });
+      expect(await (await import('@/lib/notifications/coManagedRoutingDelivery')).deliverRouting(deliveryProvider, customer)).toMatchObject({ failed: 1 });
+      expect((await tenantDb(trx, customer).table('co_management_deliveries').where({ delivery_kind: 'routing_email', source_id: sourceId }).first()).state).toBe('failed');
+
+      await tenantDb(trx, sponsor).table('users').where({ user_id: sponsorUser }).update({ email: ` ${currentEmail.toUpperCase()} ` });
+      await tenantDb(trx, sponsor).table('authorization_bundle_rules').where({ rule_id: ruleId }).update({
+        config: { selectedClientIds: [sponsorClient], redactedFields: ['tickets.title', 'actor_organization_name'] },
+      });
+      const retried = await deliveryProvider.pendingRouting(customer);
+      expect(retried[0]).toMatchObject({ allowed: true, ledgerRecipient: originalEmail, recipient: {
+        email: currentEmail, principalId: sponsorUser, redactedFields: ['tickets.title', 'actor_organization_name', 'ticket_number', 'actor_display_name'],
+      } });
+      expect(await (await import('@/lib/notifications/coManagedRoutingDelivery')).deliverRouting(deliveryProvider, customer)).toMatchObject({ sent: 1 });
+      expect(messages).toHaveLength(1);
+      expect(messages[0].to.value[0].address).toBe(currentEmail);
+      expect(messages[0].text).not.toContain('RECOVERY-41');
+      expect(messages[0].text).not.toContain('Recovery private title');
+      expect(messages[0].text).not.toContain('Policy Hidden Actor');
+      expect(messages[0].text).not.toContain('Policy Hidden Org');
+      const completed = await tenantDb(trx, customer).table('co_management_deliveries').where({ delivery_kind: 'routing_email', source_id: sourceId }).first();
+      expect(completed).toMatchObject({ recipient: originalEmail, state: 'sent', attempts: 2 });
+    } finally {
+      dbWrapper.mockRestore(); rate.mockRestore(); refresh.mockRestore(); connection.mockRestore(); tenantConnection.mockRestore();
+    }
+  });
+
   it('live PgBoss discovery reuses workers and recovers a committed publication to SMTP once', async () => {
     const { default: PgBoss } = await import('pg-boss');
     const { EmulatorHost } = await import('@alga-psa/emulator-host');
@@ -931,6 +1270,133 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
       await table('documents').where({document_id:pdf.document}).update({is_client_visible:false});
       expect((await POST(post('send'))).status).toBe(403);expect(send).toHaveBeenCalledOnce();
     } finally {connection.mockRestore();storage.mockRestore();send.mockRestore();}
+  });
+
+  describe('record-scoped ticket authorization', () => {
+    let board: string, ownContact: string, siblingContact: string, group: string, ownTicket: string, siblingTicket: string;
+    let ownUser: string;
+    const mkUser = async (contactId: string | null, type = 'client') => {
+      const id = randomUUID();
+      await table('users').insert({tenant,user_id:id,username:id,email:`${id}@example.test`,hashed_password:'unused',user_type:type,contact_id:contactId,is_inactive:false});
+      return id;
+    };
+    const mkTicket = async (contact: string | null, extra: Record<string, unknown> = {}) => {
+      const id = randomUUID();
+      await table('tickets').insert({tenant,ticket_id:id,ticket_number:`SC-${id.slice(0,6)}`,client_id:client,board_id:board,contact_name_id:contact,title:'scoped',entered_by:actor,...extra});
+      return id;
+    };
+    /** A published public comment with one attached file on the given ticket. */
+    const publicAttachment = async (ticketId: string) => {
+      const comment = randomUUID(), thread = randomUUID(), document = randomUUID(), file = randomUUID();
+      await table('comment_threads').insert({tenant,thread_id:thread,ticket_id:ticketId,root_comment_id:comment,is_internal:false,created_by:actor});
+      await table('comments').insert({tenant,comment_id:comment,thread_id:thread,ticket_id:ticketId,user_id:actor,author_type:'internal',note:'[]',is_internal:false,is_resolution:false});
+      await table('external_files').insert({tenant,file_id:file,file_name:'a.pdf',original_name:'a.pdf',mime_type:'application/pdf',file_size:12,storage_path:`/test/${file}`,uploaded_by_id:actor});
+      await table('documents').insert({tenant,document_id:document,file_id:file,document_name:'a.pdf',mime_type:'application/pdf',file_size:12,user_id:actor,created_by:actor,is_client_visible:true});
+      await table('document_associations').insert({tenant,document_id:document,entity_type:'ticket',entity_id:ticketId});
+      await table('ticket_comment_attachments').insert({tenant,document_id:document,ticket_id:ticketId,comment_id:comment,state:'attached',created_by:actor,expires_at:new Date(Date.now()+86400000)});
+      return {document,file,comment};
+    };
+    const asClient = async (userId: string) => ({ ...await table('users').where({user_id:userId}).first(), clientId:client });
+    beforeEach(async () => {
+      board = randomUUID(); ownContact = randomUUID(); siblingContact = randomUUID(); group = randomUUID();
+      await table('boards').insert({tenant,board_id:board,board_name:'Support'});
+      await table('contacts').insert([
+        {tenant,contact_name_id:ownContact,client_id:client,full_name:'Own',email:'own@example.test'},
+        {tenant,contact_name_id:siblingContact,client_id:client,full_name:'Sibling',email:'sib@example.test'},
+      ]);
+      await table('client_portal_visibility_groups').insert({tenant,group_id:group,client_id:client,name:'Own tickets',ticket_scope:'contact'});
+      await table('client_portal_visibility_group_boards').insert({tenant,group_id:group,board_id:board});
+      await table('contacts').where({contact_name_id:ownContact}).update({portal_visibility_group_id:group});
+      ownUser = await mkUser(ownContact);
+      ownTicket = await mkTicket(ownContact); siblingTicket = await mkTicket(siblingContact);
+    });
+
+    it('denies a contact-scoped client a sibling contact ticket attachment, through both the attachment and document paths', async () => {
+      const sibling = await publicAttachment(siblingTicket), own = await publicAttachment(ownTicket);
+      expect(await canReadCommentAttachment(trx,tenant,ownUser,sibling.document)).toBe(false);
+      const user = await asClient(ownUser);
+      expect(await getAuthorizedDocumentByFileId(trx,tenant,user,sibling.file)).toBeNull();
+      expect(await getAuthorizedDocumentById(trx,tenant,user,sibling.document)).toBeNull();
+      expect(await filterReadableCommentAttachments(trx,tenant,ownUser,[{document_id:sibling.document},{document_id:own.document}]))
+        .toEqual([{document_id:own.document}]);
+      // Their own ticket is still readable.
+      expect(await canReadCommentAttachment(trx,tenant,ownUser,own.document)).toBe(true);
+      expect(await getAuthorizedDocumentByFileId(trx,tenant,user,own.file)).toMatchObject({ document_id: own.document });
+    });
+
+    it('allows client scope, manager, watcher and billing-profile grants where the visibility predicate does', async () => {
+      const sibling = await publicAttachment(siblingTicket);
+      // client-scoped contact sees the sibling ticket
+      const clientScopedContact = randomUUID();
+      await table('client_portal_visibility_groups').where({group_id:group}).update({ticket_scope:'client'});
+      await table('contacts').insert({tenant,contact_name_id:clientScopedContact,client_id:client,full_name:'CS',email:'cs@example.test',portal_visibility_group_id:group});
+      const csUser = await mkUser(clientScopedContact);
+      expect(await canReadCommentAttachment(trx,tenant,csUser,sibling.document)).toBe(true);
+      await table('client_portal_visibility_groups').where({group_id:group}).update({ticket_scope:'contact'});
+      expect(await canReadCommentAttachment(trx,tenant,csUser,sibling.document)).toBe(false);
+      // manager grant: the sibling reports to the own contact
+      await table('contacts').where({contact_name_id:siblingContact}).update({manager_contact_id:clientScopedContact});
+      expect(await canReadCommentAttachment(trx,tenant,csUser,sibling.document)).toBe(true);
+      await table('contacts').where({contact_name_id:siblingContact}).update({manager_contact_id:null});
+      // watcher grant
+      await table('tickets').where({ticket_id:siblingTicket}).update({attributes:JSON.stringify({watch_list:[{entity_type:'contact',entity_id:clientScopedContact,active:true}]})});
+      expect(await canReadCommentAttachment(trx,tenant,csUser,sibling.document)).toBe(true);
+      await table('tickets').where({ticket_id:siblingTicket}).update({attributes:JSON.stringify({watch_list:[{entity_type:'contact',entity_id:clientScopedContact,active:false}]})});
+      expect(await canReadCommentAttachment(trx,tenant,csUser,sibling.document)).toBe(false);
+    });
+
+    it('denies a client a ticket on a board outside its visibility group', async () => {
+      const other = randomUUID();
+      await table('boards').insert({tenant,board_id:other,board_name:'Hidden'});
+      const hidden = await mkTicket(ownContact, { board_id: other });
+      expect(await canAccessAttachmentTicket(trx,tenant,ownUser,hidden)).toBe(false);
+      expect(await canWriteAttachmentTicket(trx,tenant,ownUser,hidden)).toBe(false);
+      expect(await canAccessAttachmentTicket(trx,tenant,ownUser,ownTicket)).toBe(true);
+    });
+
+    it('record-restricted MSP users are denied; unrestricted internal users are allowed', async () => {
+      const sibling = await publicAttachment(siblingTicket);
+      const restricted = await mkUser(null, 'internal');
+      expect(await canReadCommentAttachment(trx,tenant,restricted,sibling.document)).toBe(true);
+      const otherClient = randomUUID();
+      await table('clients').insert({tenant,client_id:otherClient,client_name:'Allowed only'});
+      const bundle = randomUUID(), revision = randomUUID();
+      await table('authorization_bundles').insert({tenant,bundle_id:bundle,bundle_key:`att-${bundle.slice(0,8)}`,name:'Other client only',is_system:false,status:'active'});
+      await table('authorization_bundle_revisions').insert({tenant,revision_id:revision,bundle_id:bundle,revision_number:1,lifecycle_state:'published'});
+      await table('authorization_bundles').where({bundle_id:bundle}).update({published_revision_id:revision});
+      for (const action of ['read','update']) {
+        await table('authorization_bundle_rules').insert({tenant,bundle_id:bundle,revision_id:revision,resource_type:'ticket',action,template_key:'selected_clients',
+          effect:'narrow',config:JSON.stringify({selectedClientIds:[otherClient]}),position:action==='read'?0:1});
+      }
+      await table('authorization_bundle_assignments').insert({tenant,bundle_id:bundle,target_type:'user',target_id:restricted,status:'active'});
+      expect(await canReadCommentAttachment(trx,tenant,restricted,sibling.document)).toBe(false);
+      expect(await canAccessAttachmentTicket(trx,tenant,restricted,siblingTicket)).toBe(false);
+      expect(await canWriteAttachmentTicket(trx,tenant,restricted,siblingTicket)).toBe(false);
+      const internalUser = { ...await table('users').where({user_id:restricted}).first() };
+      expect(await getAuthorizedDocumentByFileId(trx,tenant,internalUser,sibling.file)).toBeNull();
+      expect(await canReadCommentAttachment(trx,tenant,actor,sibling.document)).toBe(true);
+      expect(await canWriteAttachmentTicket(trx,tenant,actor,siblingTicket)).toBe(true);
+    });
+
+    it('write gate follows the same record scope; draft rows stay creator-only', async () => {
+      // Client write == visibility predicate (the portal comment gate evaluates the same template).
+      expect(await canWriteAttachmentTicket(trx,tenant,ownUser,siblingTicket)).toBe(false);
+      expect(await canWriteAttachmentTicket(trx,tenant,ownUser,ownTicket)).toBe(true);
+      // Reconcile must refuse an actor outside the ticket's record scope.
+      const draft = randomUUID(), file = randomUUID(), cid = randomUUID(), thread = randomUUID();
+      await table('comment_threads').insert({tenant,thread_id:thread,ticket_id:siblingTicket,root_comment_id:cid,is_internal:false,created_by:actor});
+      await table('external_files').insert({tenant,file_id:file,file_name:'d.pdf',original_name:'d.pdf',mime_type:'application/pdf',file_size:1,storage_path:`/test/${file}`,uploaded_by_id:actor});
+      await table('documents').insert({tenant,document_id:draft,file_id:file,document_name:'d.pdf',mime_type:'application/pdf',file_size:1,user_id:ownUser,created_by:ownUser,is_client_visible:true});
+      await table('ticket_comment_attachments').insert({tenant,document_id:draft,ticket_id:siblingTicket,created_by:ownUser,expires_at:new Date(Date.now()+86400000)});
+      await table('comments').insert({tenant,comment_id:cid,thread_id:thread,ticket_id:siblingTicket,user_id:ownUser,author_type:'client',note:note(file),is_internal:false,is_resolution:false});
+      await expect(reconcileCommentAttachments(trx,tenant,cid,ownUser)).rejects.toThrow('Attachment ticket access denied');
+      // Drafts on an accessible ticket remain visible to the creator only.
+      const mine = await upload();
+      await table('ticket_comment_attachments').where({document_id:mine.document}).update({created_by:actor});
+      expect(await canReadCommentAttachment(trx,tenant,actor,mine.document)).toBe(true);
+      const second = await mkUser(null, 'internal');
+      expect(await canReadCommentAttachment(trx,tenant,second,mine.document)).toBe(false);
+    });
   });
 
 });

@@ -16,13 +16,14 @@ import { fileURLToPath } from 'node:url';
 import knexFactory, { type Knex } from 'knex';
 import { baseModule, FLAG_EXPECTATIONS } from './base';
 import { l1aModule } from './L1a';
+import { notificationModule } from './notification';
 import { l9Module } from './L9';
 import { resolveModules, type FixtureEngines, type FixtureModule } from './shared';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 
 /** Layers in order; later cards append theirs here. */
-export const REGISTRY: FixtureModule[] = [baseModule, l1aModule, l9Module];
+export const REGISTRY: FixtureModule[] = [baseModule, l1aModule, notificationModule, l9Module];
 
 // LEVERAGE: pattern co-managed-env-local — hand-rolled line-by-line reader of
 // server/.env.local, as in scripts/dev shell loaders; a shared loader belongs below this.
@@ -43,12 +44,14 @@ export function parseEnvFile(text: string): Record<string, string> {
   return out;
 }
 
-export interface Options { through: string; mode: 'apply' | 'verify' | 'reset' }
+export interface Options { through: string; only?: string; mode: 'apply' | 'verify' | 'reset' }
 
 export function parseArgs(argv: readonly string[]): Options {
   const through = argv.includes('--through') ? argv[argv.indexOf('--through') + 1] : REGISTRY[REGISTRY.length - 1].name;
   if (!through || through.startsWith('--')) throw new Error('--through needs a layer name');
-  return { through, mode: argv.includes('--reset') ? 'reset' : argv.includes('--verify') ? 'verify' : 'apply' };
+  const only = argv.includes('--only') ? argv[argv.indexOf('--only') + 1] : undefined;
+  if (only?.startsWith('--')) throw new Error('--only needs a layer name');
+  return { through, ...(only ? { only } : {}), mode: argv.includes('--reset') ? 'reset' : argv.includes('--verify') ? 'verify' : 'apply' };
 }
 
 function required(key: string): string {
@@ -60,11 +63,38 @@ function required(key: string): string {
 /** Run the layers for `options`; exported so the composition is testable with a fake db. */
 export async function run(db: Knex, options: Options, engines: () => Promise<FixtureEngines>,
   registry: readonly FixtureModule[] = REGISTRY): Promise<boolean> {
+  if (options.only) {
+    const target = registry.find(module => module.name === options.only);
+    if (!target) throw new Error(`Unknown fixture module '${options.only}'`);
+    const prerequisites = resolveModules(registry, target.name).slice(0, -1);
+    if (options.mode === 'apply') {
+      for (const module of prerequisites) {
+        for (const report of await module.verify(db)) {
+          if (!report.ok) throw new Error(`Cannot apply ${target.name}: prerequisite ${module.name} is not ready: ${report.detail}`);
+        }
+      }
+    }
+    if (options.mode === 'verify') {
+      let ok = true;
+      const verifyEngines = target.name === 'notification' ? await engines() : undefined;
+      for (const report of await target.verify(db, verifyEngines)) {
+        ok &&= report.ok;
+        console.log(`${(report.ok ? 'present' : 'MISMATCH').padEnd(8)} ${target.name.padEnd(13)} ${report.detail}`);
+      }
+      return ok;
+    }
+    await db.transaction(async trx => {
+      if (options.mode === 'reset') await target.reset(trx);
+      else await target.apply(trx, await engines());
+    });
+    return true;
+  }
   const modules = resolveModules(registry, options.through);
   if (options.mode === 'verify') {
     let ok = true;
+    const verifyEngines = modules.some(module => module.name === 'notification') ? await engines() : undefined;
     for (const module of modules) {
-      for (const report of await module.verify(db)) {
+      for (const report of await module.verify(db, module.name === 'notification' ? verifyEngines : undefined)) {
         ok &&= report.ok;
         console.log(`${(report.ok ? 'present' : 'MISMATCH').padEnd(8)} ${module.name.padEnd(6)} ${report.detail}`);
       }
@@ -94,14 +124,14 @@ async function main(): Promise<void> {
   });
   try {
     const ok = await run(db, options, async () => {
-      const [{ runOnboardingSeeds }, { verifyPassword }] = await Promise.all([
+      const [{ runOnboardingSeeds }, { verifyPassword, hashPassword }] = await Promise.all([
         import(`${REPO_ROOT}/ee/temporal-workflows/src/db/onboarding-seeds-operations.js`),
         import(`${REPO_ROOT}/shared/utils/encryption.js`),
       ]);
-      return { runOnboardingSeeds, verifyPassword, secret: required('NEXTAUTH_SECRET') };
+      return { runOnboardingSeeds, verifyPassword, hashPassword, secret: required('NEXTAUTH_SECRET') };
     });
     if (!ok) process.exitCode = 1;
-    if (options.mode !== 'verify') console.log(`Co-managed fixtures ${options.mode === 'apply' ? 'applied' : 'removed'} through ${options.through}.`);
+    if (options.mode !== 'verify') console.log(`Co-managed fixtures ${options.mode === 'apply' ? 'applied' : 'removed'} ${options.only ? `layer ${options.only}` : `through ${options.through}`}.`);
     console.log('Release flag (release-v2-0-feature) must be configured per tenant; it is not database state:');
     for (const [tenant, state] of Object.entries(FLAG_EXPECTATIONS)) console.log(`  ${tenant}: ${state}`);
   } finally {

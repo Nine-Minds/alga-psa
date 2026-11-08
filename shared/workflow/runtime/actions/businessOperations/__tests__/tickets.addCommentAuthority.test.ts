@@ -56,7 +56,7 @@ describe('tickets.add_comment co-managed authority', () => {
     const action = await getAddCommentAction();
 
     await expect(action.handler(action.inputSchema.parse({ ticket_id: 'd410d992-4e99-43e7-9390-f6b0ff744509', body: 'hello', visibility: 'public' }), ctx))
-      .rejects.toMatchObject({ code: 'AUTHORIZATION_UNAVAILABLE' });
+      .rejects.toMatchObject({ code: 'WORKFLOW_TICKET_AUTHORITY_UNAVAILABLE' });
     expect(createCommentMock).not.toHaveBeenCalled();
   });
 

@@ -79,6 +79,7 @@ vi.mock('@alga-psa/notifications/notifications/email', () => ({
 }));
 
 let escalateTicket: typeof import('@alga-psa/sla/services').escalateTicket;
+let ensureEscalationManagerOnTicket: typeof import('@alga-psa/sla/services/escalationService').ensureEscalationManagerOnTicket;
 
 const tenantTable = (dbOrTrx: Knex | Knex.Transaction, tenant: string, tableName: string) =>
   tenantDb(dbOrTrx, tenant).table(tableName);
@@ -100,7 +101,7 @@ describe('SLA Escalation Service Integration Tests', () => {
   const runCommitted = <T>(fn: (trx: Knex.Transaction) => Promise<T>): Promise<T> =>
     withTransaction(db, fn);
 
-  async function newTicket(boardForTicket: string = boardId): Promise<string> {
+  async function newTicket(boardForTicket: string = boardId, assignedTo = assigneeUserId): Promise<string> {
     const ticketId = uuidv4();
     await insertTicket(db, {
       tenant: tenantId,
@@ -112,7 +113,7 @@ describe('SLA Escalation Service Integration Tests', () => {
       statusId: statusOpenId,
       priorityId: priorityHighId,
       boardId: boardForTicket,
-      assignedTo: assigneeUserId,
+      assignedTo,
     });
     return ticketId;
   }
@@ -122,6 +123,7 @@ describe('SLA Escalation Service Integration Tests', () => {
     db = await createTestDbConnection();
 
     ({ escalateTicket } = await import('@alga-psa/sla/services'));
+    ({ ensureEscalationManagerOnTicket } = await import('@alga-psa/sla/services/escalationService'));
 
     tenantId = await createTenant(db, 'SLA Escalation Test Tenant');
     assigneeUserId = await createUser(db, tenantId, {
@@ -205,6 +207,83 @@ describe('SLA Escalation Service Integration Tests', () => {
       userId: managerL1Id,
       templateName: 'sla-escalation',
     });
+  });
+
+  it('escalates when the L1 manager is the assignee, notifies once, and retries idempotently', async () => {
+    const ticketId = await newTicket(boardId, managerL1Id);
+
+    const result = await runCommitted((trx) => escalateTicket(trx, tenantId, ticketId, 1));
+
+    expect(result).toMatchObject({
+      success: true,
+      managerId: managerL1Id,
+      resourceAdded: false,
+      notificationsSent: { inApp: true },
+    });
+    const after = await tenantTable(db, tenantId, 'tickets').where({ ticket_id: ticketId }).first();
+    expect(after).toMatchObject({ escalated: true, escalation_level: 1, assigned_to: managerL1Id });
+    expect(await tenantTable(db, tenantId, 'ticket_resources').where({ ticket_id: ticketId })).toHaveLength(0);
+    expect(await tenantTable(db, tenantId, 'sla_audit_log')
+      .where({ ticket_id: ticketId, event_type: 'ticket_escalated' })).toHaveLength(1);
+    expect(await tenantTable(db, tenantId, 'internal_notifications')
+      .where({ user_id: managerL1Id }).whereRaw("metadata->>'ticket_id' = ?", [ticketId])).toHaveLength(1);
+
+    sendNotification.mockClear();
+    const again = await runCommitted((trx) => escalateTicket(trx, tenantId, ticketId, 1));
+    expect(again.success).toBe(true);
+    expect(again.error).toMatch(/already at or above/i);
+    expect(await tenantTable(db, tenantId, 'ticket_resources').where({ ticket_id: ticketId })).toHaveLength(0);
+    expect(await tenantTable(db, tenantId, 'sla_audit_log')
+      .where({ ticket_id: ticketId, event_type: 'ticket_escalated' })).toHaveLength(1);
+    expect(await tenantTable(db, tenantId, 'internal_notifications')
+      .where({ user_id: managerL1Id }).whereRaw("metadata->>'ticket_id' = ?", [ticketId])).toHaveLength(1);
+    expect(sendNotification).not.toHaveBeenCalled();
+  });
+
+  it('recognizes an existing additional resource without creating a duplicate', async () => {
+    const ticketId = await newTicket();
+    await tenantTable(db, tenantId, 'ticket_resources').insert({
+      assignment_id: uuidv4(), tenant: tenantId, ticket_id: ticketId,
+      assigned_to: assigneeUserId, additional_user_id: managerL1Id,
+      role: 'observer', assigned_at: db.fn.now(),
+    });
+
+    const status = await runCommitted((trx) =>
+      ensureEscalationManagerOnTicket(trx, tenantId, ticketId, managerL1Id, 1));
+
+    expect(status).toBe('existing_resource');
+    const resources = await tenantTable(db, tenantId, 'ticket_resources').where({ ticket_id: ticketId });
+    expect(resources).toHaveLength(1);
+    expect(resources[0].role).toBe('escalation_manager_L1');
+  });
+
+  it('keeps escalation, audit, and notification when a real resource insert fails', async () => {
+    const ticketId = await newTicket();
+    const triggerName = `reject_resource_${ticketId.replace(/-/g, '')}`;
+    const functionName = `reject_resource_fn_${ticketId.replace(/-/g, '')}`;
+    await db.raw(`CREATE FUNCTION ${functionName}() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN
+        IF NEW.ticket_id = '${ticketId}'::uuid THEN RAISE EXCEPTION 'simulated resource attachment failure'; END IF;
+        RETURN NEW;
+      END;
+    $$`);
+    await db.raw(`CREATE TRIGGER ${triggerName} BEFORE INSERT ON ticket_resources FOR EACH ROW EXECUTE FUNCTION ${functionName}()`);
+
+    try {
+      const result = await runCommitted((trx) => escalateTicket(trx, tenantId, ticketId, 1));
+      expect(result.success).toBe(true);
+      expect(result.notificationsSent.inApp).toBe(true);
+      expect(await tenantTable(db, tenantId, 'tickets').where({ ticket_id: ticketId })
+        .first()).toMatchObject({ escalated: true, escalation_level: 1 });
+      expect(await tenantTable(db, tenantId, 'ticket_resources').where({ ticket_id: ticketId })).toHaveLength(0);
+      expect(await tenantTable(db, tenantId, 'sla_audit_log')
+        .where({ ticket_id: ticketId, event_type: 'ticket_escalated' })).toHaveLength(1);
+      expect(await tenantTable(db, tenantId, 'internal_notifications')
+        .where({ user_id: managerL1Id }).whereRaw("metadata->>'ticket_id' = ?", [ticketId])).toHaveLength(1);
+    } finally {
+      await db.raw(`DROP TRIGGER IF EXISTS ${triggerName} ON ticket_resources`);
+      await db.raw(`DROP FUNCTION IF EXISTS ${functionName}()`);
+    }
   });
 
   it('does not create duplicates when escalating to the same level again', async () => {

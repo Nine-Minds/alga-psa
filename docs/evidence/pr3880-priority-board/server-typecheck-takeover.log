@@ -1,0 +1,5 @@
+
+> server@1.6.17 typecheck
+> tsc --noEmit -p tsconfig.json
+
+EXIT_CODE=0
