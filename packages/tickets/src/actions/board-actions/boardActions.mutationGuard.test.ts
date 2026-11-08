@@ -109,6 +109,28 @@ describe('board mutation guard', () => {
     publishEventMock.mockResolvedValue(undefined);
   });
 
+  it.each([
+    { action: 'create', userType: 'internal', code: PERMISSION },
+    { action: 'create', userType: 'client', code: PRINCIPAL },
+    { action: 'update', userType: 'internal', code: PERMISSION },
+    { action: 'update', userType: 'client', code: PRINCIPAL },
+  ] as const)('denies malformed $action input for $userType before validation or database access', async ({ action, userType, code }) => {
+    currentUser.user_type = userType;
+    if (userType === 'client') granted.add(`ticket_settings:${action}`);
+    const { createBoard, updateBoard } = await import('./boardActions');
+
+    const result = action === 'create'
+      ? await createBoard(null as any)
+      : await updateBoard('board-a', null as any);
+
+    expect(result).toMatchObject(denied);
+    expect(result).not.toHaveProperty('actionError');
+    expect(refusedBy()).toEqual([code]);
+    expect(withTransactionMock).not.toHaveBeenCalled();
+    expect(reads).toHaveLength(0);
+    expect(writes).toHaveLength(0);
+  });
+
   describe('createBoard', () => {
     it('denies without ticket_settings:create and touches nothing (existing default stays default)', async () => {
       granted.add('ticket_settings:update');
