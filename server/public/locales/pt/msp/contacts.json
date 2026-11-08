@@ -71,6 +71,7 @@
       "message_other": "Os seguintes tipos de telefone personalizados não são mais usados ​​por nenhum contato: {{labels}}. Excluir as definições de tipo ou mantê-las para uso futuro?",
       "deleteType": "Excluir tipo",
       "keepType": "Mantenha o tipo",
+      "message_few": "Os seguintes tipos de telefone personalizados não são mais usados por nenhum contato: {{labels}}. Excluir as definições de tipo ou mantê-las para uso futuro?",
       "message_many": "Os seguintes tipos de telefone personalizados não são mais usados ​​por nenhum contato: {{labels}}. Excluir as definições de tipo ou mantê-las para uso futuro?"
     },
     "print": {
@@ -465,6 +466,7 @@
       "userNotFound": "Usuário do cliente não encontrado",
       "validationErrorTitle": "Erro de validação"
     },
+    "boardCount_few": "{{count}} quadros",
     "boardCount_many": "Quadros {{count}}"
   },
   "quickAddContact": {
@@ -783,11 +785,11 @@
       "title": "Acesso ao portal",
       "manage": "Gerenciar",
       "status": "Status",
-      "role": "Papel",
+      "role": "Função",
       "clientAdmin": "Administrador do cliente",
       "standard": "Padrão",
       "lastSignIn": "Último acesso",
-      "invited": "Convidado",
+      "invited": "Convidado em",
       "noClientAssigned": "Nenhum cliente atribuído",
       "deactivated": "Desativado",
       "activeAccount": "Conta ativa",
@@ -827,7 +829,7 @@
       "noStatusLower": "sem status",
       "projectFallback": "Projeto {{number}}",
       "quoteFallback": "Cotação",
-      "empty": "Nenhum projeto ou cotação relacionado"
+      "empty": "Nenhum projeto ou cotação relacionada"
     },
     "notes": {
       "title": "Notas",
@@ -948,6 +950,7 @@
       "scopeSummaryOwn": "Próprios",
       "managerScopeNote_one": "A visão dele também inclui os registros de {{count}} pessoa que se reporta a ele.",
       "managerScopeNote_other": "A visão dele também inclui os registros de {{count}} pessoas que se reportam a ele.",
+      "managerScopeNote_few": "A visão dele também inclui os registros de {{count}} pessoas que se reportam a ele.",
       "managerScopeNote_many": "A visão dele também inclui os registros de {{count}} de pessoas que se reportam a ele.",
       "assignmentLabel": "Grupo de visibilidade de tickets",
       "assignmentPlaceholder": "Selecione a atribuição de visibilidade",
