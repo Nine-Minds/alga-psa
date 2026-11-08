@@ -2,6 +2,7 @@
 
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
+import { isClientUserType } from '@alga-psa/types';
 import { Knex } from 'knex';
 import { z } from 'zod';
 import { predicateGroupSchema } from '@alga-psa/predicates';
@@ -9,6 +10,7 @@ import type { PredicateGroup } from '@alga-psa/predicates';
 import { readChecklistWhere, checklistWhereForOwner, checklistWhereTagIds, CHECKLIST_RULE_WHERE_VERSION } from '@alga-psa/shared/lib/ticketChecklists';
 import { replaceTagReferences, deleteTagReferences } from '@alga-psa/tags/lib/tagReferences';
 import { TEMPLATE_CLIENT_INVALID, checklistActionErrorFrom, type ChecklistActionError } from './checklistActionErrors';
+import { authorizeTicketRecordAccess } from '../../lib/ticketRecordAuthorization';
 
 /**
  * Admin-managed checklist templates, their items, and auto-apply predicate
@@ -129,21 +131,40 @@ export interface GetChecklistTemplatesOptions {
 }
 
 export const getChecklistTemplates = withAuth(
-  async (_user, { tenant }, opts?: GetChecklistTemplatesOptions): Promise<IChecklistTemplate[]> => {
+  async (user, { tenant }, opts?: GetChecklistTemplatesOptions): Promise<IChecklistTemplate[]> => {
+    if (!(await hasPermission(user, 'ticket', 'read'))) {
+      throw new Error('Permission denied: Cannot read checklist templates');
+    }
+    if (opts?.includeInactive) {
+      await requireSettingsPermission(user);
+    }
+
     const { knex: db } = await createTenantKnex();
 
     let ticketClientId: string | null | undefined;
-    if (opts?.forTicketId) {
-      const ticket = await tenantScopedTable(db, 'tickets', tenant)
-        .where({ ticket_id: opts.forTicketId })
-        .first('client_id');
-      if (!ticket) throw new Error('Ticket not found');
-      ticketClientId = ticket.client_id;
+    const requestedTicketId = opts?.forTicketId;
+    if (requestedTicketId) {
+      ticketClientId = await withTransaction(db, async (trx) => {
+        const ticket = await authorizeTicketRecordAccess({
+          trx,
+          tenant,
+          user,
+          ticketId: requestedTicketId,
+          action: 'read',
+        });
+        return ticket.client_id ?? null;
+      });
     }
 
     const templates = await tenantScopedTable(db, 'checklist_templates', tenant)
       .modify((qb) => {
         if (!opts?.includeInactive) qb.where('is_active', true);
+        if (isClientUserType(user.user_type)) {
+          qb.where((scope) => {
+            scope.whereNull('client_id');
+            if (user.clientId) scope.orWhere('client_id', user.clientId);
+          });
+        }
         if (opts?.forTicketId) {
           qb.where((scope) => {
             scope.whereNull('client_id');
