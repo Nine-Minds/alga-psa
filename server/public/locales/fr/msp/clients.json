@@ -385,7 +385,7 @@
       "warrantyExpiring_one": "1 expire sous ≤90 j",
       "warrantyExpiring_other": "{{count}} expirent sous ≤90 j",
       "warrantyTracked": " (sur {{count}} suivis)",
-      "auditsLink": "Audits des sites",
+      "auditsLink": "Audits sur site",
       "lastAudit": "Dernier audit : {{date}}",
       "lastAuditMissing_one": "1 manquant",
       "lastAuditMissing_other": "{{count}} manquants",
@@ -399,7 +399,7 @@
       "more": "+{{count}} de plus",
       "none": "Aucun site pour l’instant.",
       "shipping": "Livraison",
-      "lastAudit": "Audité : {{date}}",
+      "lastAudit": "Audité le {{date}}",
       "neverAudited": "Jamais audité"
     },
     "money": {
