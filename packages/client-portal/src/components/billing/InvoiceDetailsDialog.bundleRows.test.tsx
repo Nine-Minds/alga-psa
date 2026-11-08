@@ -12,7 +12,7 @@ import InvoiceDetailsDialog from './InvoiceDetailsDialog';
 
 const snapshot = {
   version: 1,
-  subtitle: null,
+  subtitle: 'Endpoint management and support',
   components: [
     { serviceId: 'ws', name: 'Workstations', quantity: 48, pricingBasis: 'unit', order: 0, servicePeriodStart: '2026-01-01', servicePeriodEnd: '2026-02-01', detailItemIds: ['d1'], previousQuantity: 46, comparison: 'compared' },
   ],
@@ -91,6 +91,7 @@ describe('InvoiceDetailsDialog bundle component rows follow the template', () =>
   it('quantities preset: name, +2 change and quantity; no prices; quantity and unit price blank on the bundle row', async () => {
     currentInvoice = invoiceWith({ columnIds: DEFAULT_BUNDLE_COLUMN_IDS, childRows: buildBundleChildRowsPreset({ prices: false, showChange: true }) });
     const { parent, childCells } = await renderDialog();
+    expect(within(parent).getByText('Endpoint management and support')).toBeInTheDocument();
     expect(childCells).toEqual(['\u2022 Workstations', '+248', '', '']);
     const parentCells = Array.from(parent.querySelectorAll('td')).map((td) => td.textContent);
     expect(parentCells.slice(1)).toEqual(['', '', '$600.00']);
@@ -111,5 +112,6 @@ describe('InvoiceDetailsDialog bundle component rows follow the template', () =>
     currentInvoice = invoiceWith(null);
     const { child } = await renderDialog();
     expect(child).toBeNull();
+    expect(screen.queryByText('Endpoint management and support')).not.toBeInTheDocument();
   });
 });

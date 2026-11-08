@@ -334,7 +334,9 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
 
     // One consistent row renderer so both the flat layout and the per-location
     // tables agree on column formatting / service-period badging.
-    const renderChargeRow = (item: IInvoiceCharge, idx: number, keyPrefix: string) => (
+    const renderChargeRow = (item: IInvoiceCharge, idx: number, keyPrefix: string) => {
+      const bundle = bundleOf(item);
+      return (
       <tr key={`${keyPrefix}-${idx}`} data-automation-id={`invoice-line-item-${keyPrefix}-${idx}`}>
         <td className="px-3 py-2">
           <div className="space-y-1">
@@ -354,6 +356,9 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
                 <span className="text-xs text-muted-foreground">{item.service_sku}</span>
               ) : null}
             </div>
+            {bundle?.subtitle ? (
+              <div className="text-xs text-muted-foreground">{bundle.subtitle}</div>
+            ) : null}
             {item.recurring_detail_periods && item.recurring_detail_periods.length > 0
               ? renderRecurringDetailPeriods(item.recurring_detail_periods)
               : formatServicePeriodRange(item.service_period_start, item.service_period_end) ? (
@@ -367,7 +372,8 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
         <td className="px-3 py-2">{parentBlank(item, 'unitPrice') ? null : formatCurrency(item.unit_price, invoice.currencyCode)}</td>
         <td className="px-3 py-2">{parentBlank(item, 'total') ? null : formatCurrency(item.net_amount ?? item.total_price, invoice.currencyCode)}</td>
       </tr>
-    );
+      );
+    };
 
     const renderChargesTable = (rows: IInvoiceCharge[], keyPrefix: string) => (
       <table className="min-w-full divide-y divide-gray-200 mt-2">
