@@ -38,11 +38,16 @@ test('renewed email and invoice reviews collect real cases after the previous de
     assert.throws(() => collectVitestInventory({ root, output,
       runner: { ...runner, expires: '2026-11-08' } }), /unexpired review/);
 
-    const collection = collectVitestInventory({ root, runner, output });
+    const collection = collectVitestInventory({ root, runner, output,
+      env: { ...process.env, DB_HOST: '127.0.0.1', DB_PORT: '0', REQUIRE_DB: '' } });
     assert.equal(collection.status, 'passed', collection.failures.join('\n'));
     assert.equal(collection.mandatory, false);
     assert.deepEqual([...collection.files].sort(), runner.filters.map(file => `${runner.cwd}/${file}`).sort());
     assert.ok(collection.collectedTests >= collection.files.length);
+    if (name === 'invoice-visual-review') {
+      const cases = JSON.parse(readFileSync(path.join(collection.collectionDirectory, 'collected-tests.json'), 'utf8'));
+      assert.ok(cases.every(entry => entry.skipped), 'Unavailable DB must remain visible as skipped cases');
+    }
     const discovery = reconcileDiscovery({ root, candidates: collection.files, collections: [collection] });
     assert.equal(discovery.status, 'passed', discovery.failures.join('\n'));
   }
@@ -94,7 +99,7 @@ test('real Vitest inventory loads cases without executing bodies and rejects emp
     runner: { ...runner, mandatory: false, reason: 'Manual fixture', issue: 'fixture-1', expires: '2000-01-01' } }), /unexpired review/);
   const reviewedRunner = { ...runner, mandatory: false, reason: 'Manual fixture', issue: 'fixture-1', expires: '2026-11-08' };
   writeFileSync(path.join(root, 'base.test.js'),
-    'test("must only collect", () => { throw new Error("body must not execute") });');
+    'beforeAll(() => { throw new Error("hook must not execute") }); test("must only collect", () => { throw new Error("body must not execute") });');
   assert.doesNotThrow(() => collectVitestInventory({ root, output: path.join(root, 'reports'), runner: reviewedRunner,
     now: new Date('2026-11-08T00:00:00Z') }));
   assert.doesNotThrow(() => collectVitestInventory({ root, output: path.join(root, 'reports'),
@@ -120,6 +125,17 @@ test('real Vitest inventory loads cases without executing bodies and rejects emp
   const artifact = { runner: 'fixture', format: 'vitest', sourceRoot: root,
     collectionFile: 'reports/fixture/collected.json', casesFile: 'reports/fixture/collected-tests.json' };
   assert.deepEqual(readRunnerCollection(artifact, root).files, ['base.test.js']);
+  writeFileSync(path.join(root, 'skipped.test.js'),
+    'describe.skip("unavailable service", () => { test("registered case", () => { throw new Error("body must not execute") }); });');
+  const skipped = collect();
+  assert.equal(skipped.status, 'passed', skipped.failures.join('\n'));
+  assert.deepEqual([...skipped.files].sort(), ['base.test.js', 'skipped.test.js']);
+  assert.equal(skipped.collectedTests, 2);
+  assert.deepEqual([...readRunnerCollection(artifact, root).files].sort(), ['base.test.js', 'skipped.test.js']);
+  const cases = JSON.parse(readFileSync(path.join(root, artifact.casesFile), 'utf8'));
+  assert.equal(cases.find(entry => entry.file.endsWith('/skipped.test.js')).skipped, true);
+  assert.equal(cases.find(entry => entry.file.endsWith('/base.test.js')).skipped, false);
+  rmSync(path.join(root, 'skipped.test.js'));
   writeFileSync(path.join(root, 'empty.test.js'), 'export const noCases = true;');
   const empty = collect();
   assert.equal(empty.status, 'failed');
