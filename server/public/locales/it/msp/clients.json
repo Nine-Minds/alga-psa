@@ -386,7 +386,7 @@
       "warrantyExpiring_other": "{{count}} in scadenza entro ≤90 gg",
       "warrantyTracked": " (su {{count}} tracciati)",
       "auditsLink": "Audit delle sedi",
-      "lastAudit": "Ultimo audit {{date}}",
+      "lastAudit": "Ultimo audit: {{date}}",
       "lastAuditMissing_one": "1 mancante",
       "lastAuditMissing_other": "{{count}} mancanti",
       "neverAudited": "Nessun audit effettuato"
@@ -399,7 +399,7 @@
       "more": "+{{count}} altre",
       "none": "Ancora nessuna sede.",
       "shipping": "Spedizione",
-      "lastAudit": "Audit effettuato {{date}}",
+      "lastAudit": "Audit: {{date}}",
       "neverAudited": "Nessun audit effettuato"
     },
     "money": {
