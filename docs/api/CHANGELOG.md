@@ -2,6 +2,19 @@
 
 Notable, externally visible changes to the Alga PSA REST API, newest first.
 
+## 2026-11-08 — Opportunity stage evidence can cite an interaction or document
+
+**Affected endpoint:** `POST /api/v1/opportunities/{id}/evidence`
+
+A qualification declaration can now point at the record that supports it, such as the call where the budget was confirmed or the proposal that was sent, so reviewers can see why a stage was reached.
+
+**Changes:**
+
+- The request body accepts optional `refType` (`interaction` or `document`) and `refId` (UUID). Send both or neither; sending only one returns `400`.
+- The cited source must belong to the opportunity: an interaction linked to the deal, or a document attached to it. A source from another deal or tenant returns `400`.
+- A citation is context only. It does not advance the opportunity's stage, and omitting it keeps the previous request shape.
+- A new declaration replaces the active user declaration for the same checkpoint. If the cited interaction or document is later deleted, the evidence entry stays and is shown as **Source removed** in the app.
+
 ## 2026-11-07 — Contracts API: client assignment on create, full CRUD, and assignment routes
 
 **Affected endpoints:** `POST /api/v1/contracts`; new `GET|PUT|PATCH|DELETE /api/v1/contracts/{contractId}`; new `GET|POST /api/v1/contracts/{contractId}/assignments` and `GET|PUT|PATCH|DELETE /api/v1/contracts/{contractId}/assignments/{clientContractId}`
