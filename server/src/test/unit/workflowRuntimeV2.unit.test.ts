@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, vi } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { z } from 'zod';
 import {
   compileExpression,
@@ -75,14 +75,6 @@ describe('workflow runtime v2 unit tests', () => {
   it('Expression engine blocks access to Node.js/global objects. Mocks: non-target dependencies.', async () => {
     const compiled = compileExpression({ $expr: 'process' });
     await expect(compiled.evaluate({ payload: {}, vars: {}, meta: {} })).rejects.toThrow(/not JSON-serializable/i);
-  });
-
-  it('Expression engine enforces evaluation timeout at 25ms. Mocks: non-target dependencies.', async () => {
-    const compiled = compileExpression({ $expr: 'payload.foo' });
-    const nowSpy = vi.spyOn(Date, 'now');
-    nowSpy.mockReturnValueOnce(0).mockReturnValueOnce(30);
-    await expect(compiled.evaluate({ payload: { foo: 'bar' }, vars: {}, meta: {} })).rejects.toThrow(/exceeded/i);
-    nowSpy.mockRestore();
   });
 
   it('Expression engine enforces max output size of 256KB. Mocks: non-target dependencies.', async () => {

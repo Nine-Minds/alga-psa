@@ -62,6 +62,8 @@ async function startServices() {
 
     // Workflow ticket mutations must go through the co-managed record-scope / field-redaction authority.
     // Reuse the shared registration (delivery seam + workflow-ticket seam); do not register by hand.
+    // Keep this import inside startup so an unavailable provider leaves health reporting not-ready.
+    // It also installs capability classification before the workflow runtime initializes.
     try {
       await import('@alga-psa/co-managed/deliveryRegistration');
     } catch (error) {
