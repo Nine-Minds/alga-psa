@@ -266,11 +266,21 @@ async function resolveAuth(
     // negative narrowing of a boolean-discriminated union doesn't narrow there.
     if (res.ok === false) return { ok: false, status: res.status, error: res.error };
     const { resolved } = res.ctx;
-    const sessionKey = await mintAgentSessionKey({
-      tenant: resolved.tenant,
-      agentId: resolved.agent.agent_id,
-      backingUserId: resolved.backingUserId as string,
-    });
+    let sessionKey: string;
+    try {
+      sessionKey = await mintAgentSessionKey({
+        tenant: resolved.tenant,
+        agentId: resolved.agent.agent_id,
+        backingUserId: resolved.backingUserId as string,
+      });
+    } catch (error) {
+      // A valid IdP token can outlive the tenant's Pro entitlement. Report the
+      // expected denial at the authentication boundary, before any dispatch.
+      if (error instanceof Error && 'code' in error && error.code === 'TIER_ACCESS_DENIED') {
+        return { ok: false, status: 403, error: error.message };
+      }
+      throw error;
+    }
     return { ok: true, auth: { apiKey: sessionKey, agentId: resolved.agent.agent_id, tenant: resolved.tenant } };
   }
 
