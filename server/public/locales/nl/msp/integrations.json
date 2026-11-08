@@ -2435,6 +2435,42 @@
           "title": "Onderhoudsvensters",
           "description": "Waarschuwingen die tijdens een actief venster binnenkomen, worden onderdrukt en maken geen tickets aan.",
           "empty": "Geen onderhoudsvensters geconfigureerd."
+        },
+        "predicate": {
+          "matchAll": "Overeenkomst",
+          "all": "Alle voorwaarden",
+          "any": "Een van de voorwaarden",
+          "add": "Voorwaarde toevoegen",
+          "remove": "Verwijderen",
+          "value": "Waarde",
+          "nestedGroup": "Geneste groep",
+          "legacyRegex": "Verouderde reguliere expressie voor bericht",
+          "and": "en",
+          "or": "of",
+          "fields": {
+            "severity": "Ernst",
+            "alertClass": "Waarschuwingsklasse",
+            "activityType": "Activiteitstype",
+            "sourceType": "Brontype",
+            "organizationId": "Organisatie-ID",
+            "text": "Bericht en details",
+            "deviceName": "Apparaatnaam",
+            "externalDeviceId": "Externe apparaat-ID",
+            "message": "Bericht",
+            "details": "Details"
+          },
+          "operators": {
+            "equals": "is",
+            "not_equals": "is niet",
+            "in": "is een van",
+            "not_in": "is geen van",
+            "contains": "bevat",
+            "not_contains": "bevat niet",
+            "contains_ci": "bevat, hoofdletterongevoelig",
+            "not_contains_ci": "bevat niet, hoofdletterongevoelig"
+          },
+          "addGroup": "Groep toevoegen",
+          "removeGroup": "Groep verwijderen"
         }
       },
       "ninjaOne": {

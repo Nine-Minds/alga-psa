@@ -2435,6 +2435,42 @@
           "title": "Janelas de manutenção",
           "description": "Os alertas recebidos durante uma janela ativa são suprimidos e não criam tickets.",
           "empty": "Nenhuma janela de manutenção configurada."
+        },
+        "predicate": {
+          "matchAll": "Correspondência",
+          "all": "Todas as condições",
+          "any": "Qualquer condição",
+          "add": "Adicionar condição",
+          "remove": "Remover",
+          "value": "Valor",
+          "nestedGroup": "Grupo aninhado",
+          "legacyRegex": "Expressão regular legada da mensagem",
+          "and": "e",
+          "or": "ou",
+          "fields": {
+            "severity": "Gravidade",
+            "alertClass": "Classe do alerta",
+            "activityType": "Tipo de atividade",
+            "sourceType": "Tipo de origem",
+            "organizationId": "ID da organização",
+            "text": "Mensagem e detalhes",
+            "deviceName": "Nome do dispositivo",
+            "externalDeviceId": "ID externo do dispositivo",
+            "message": "Mensagem",
+            "details": "Detalhes"
+          },
+          "operators": {
+            "equals": "é",
+            "not_equals": "não é",
+            "in": "é um de",
+            "not_in": "não é nenhum de",
+            "contains": "contém",
+            "not_contains": "não contém",
+            "contains_ci": "contém, ignorando maiúsculas e minúsculas",
+            "not_contains_ci": "não contém, ignorando maiúsculas e minúsculas"
+          },
+          "addGroup": "Adicionar grupo",
+          "removeGroup": "Remover grupo"
         }
       },
       "ninjaOne": {

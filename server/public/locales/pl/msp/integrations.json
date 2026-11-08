@@ -2435,6 +2435,42 @@
           "title": "Okna konserwacyjne",
           "description": "Alerty odebrane podczas aktywnego okna są wyciszane i nie powodują utworzenia zgłoszeń.",
           "empty": "Nie skonfigurowano okien konserwacyjnych."
+        },
+        "predicate": {
+          "matchAll": "Dopasowanie",
+          "all": "Wszystkie warunki",
+          "any": "Dowolny warunek",
+          "add": "Dodaj warunek",
+          "remove": "Usuń",
+          "value": "Wartość",
+          "nestedGroup": "Grupa zagnieżdżona",
+          "legacyRegex": "Starsze wyrażenie regularne wiadomości",
+          "and": "i",
+          "or": "lub",
+          "fields": {
+            "severity": "Ważność",
+            "alertClass": "Klasa alertu",
+            "activityType": "Typ aktywności",
+            "sourceType": "Typ źródła",
+            "organizationId": "Identyfikator organizacji",
+            "text": "Wiadomość i szczegóły",
+            "deviceName": "Nazwa urządzenia",
+            "externalDeviceId": "Zewnętrzny identyfikator urządzenia",
+            "message": "Wiadomość",
+            "details": "Szczegóły"
+          },
+          "operators": {
+            "equals": "jest",
+            "not_equals": "nie jest",
+            "in": "jest jednym z",
+            "not_in": "nie jest żadnym z",
+            "contains": "zawiera",
+            "not_contains": "nie zawiera",
+            "contains_ci": "zawiera, bez uwzględniania wielkości liter",
+            "not_contains_ci": "nie zawiera, bez uwzględniania wielkości liter"
+          },
+          "addGroup": "Dodaj grupę",
+          "removeGroup": "Usuń grupę"
         }
       },
       "ninjaOne": {

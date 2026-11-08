@@ -2435,6 +2435,42 @@
           "title": "Fenêtres de maintenance",
           "description": "Les alertes reçues pendant une fenêtre active sont supprimées et ne créent pas de tickets.",
           "empty": "Aucune fenêtre de maintenance configurée."
+        },
+        "predicate": {
+          "matchAll": "Correspondance",
+          "all": "Toutes les conditions",
+          "any": "N’importe quelle condition",
+          "add": "Ajouter une condition",
+          "remove": "Supprimer",
+          "value": "Valeur",
+          "nestedGroup": "Groupe imbriqué",
+          "legacyRegex": "Expression régulière héritée du message",
+          "and": "et",
+          "or": "ou",
+          "fields": {
+            "severity": "Gravité",
+            "alertClass": "Classe d’alerte",
+            "activityType": "Type d’activité",
+            "sourceType": "Type de source",
+            "organizationId": "ID de l’organisation",
+            "text": "Message et détails",
+            "deviceName": "Nom de l’appareil",
+            "externalDeviceId": "ID externe de l’appareil",
+            "message": "Message",
+            "details": "Détails"
+          },
+          "operators": {
+            "equals": "est",
+            "not_equals": "n’est pas",
+            "in": "est une valeur parmi",
+            "not_in": "n’est aucune des valeurs",
+            "contains": "contient",
+            "not_contains": "ne contient pas",
+            "contains_ci": "contient, sans tenir compte de la casse",
+            "not_contains_ci": "ne contient pas, sans tenir compte de la casse"
+          },
+          "addGroup": "Ajouter un groupe",
+          "removeGroup": "Supprimer le groupe"
         }
       },
       "ninjaOne": {

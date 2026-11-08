@@ -2435,6 +2435,42 @@
           "title": "Finestre di manutenzione",
           "description": "Gli avvisi ricevuti durante una finestra attiva vengono ignorati e non creano ticket.",
           "empty": "Nessuna finestra di manutenzione configurata."
+        },
+        "predicate": {
+          "matchAll": "Corrispondenza",
+          "all": "Tutte le condizioni",
+          "any": "Qualsiasi condizione",
+          "add": "Aggiungi condizione",
+          "remove": "Rimuovi",
+          "value": "Valore",
+          "nestedGroup": "Gruppo annidato",
+          "legacyRegex": "Espressione regolare legacy del messaggio",
+          "and": "e",
+          "or": "o",
+          "fields": {
+            "severity": "Gravità",
+            "alertClass": "Classe dell’avviso",
+            "activityType": "Tipo di attività",
+            "sourceType": "Tipo di origine",
+            "organizationId": "ID organizzazione",
+            "text": "Messaggio e dettagli",
+            "deviceName": "Nome dispositivo",
+            "externalDeviceId": "ID dispositivo esterno",
+            "message": "Messaggio",
+            "details": "Dettagli"
+          },
+          "operators": {
+            "equals": "è",
+            "not_equals": "non è",
+            "in": "è uno tra",
+            "not_in": "non è nessuno tra",
+            "contains": "contiene",
+            "not_contains": "non contiene",
+            "contains_ci": "contiene, ignorando maiuscole e minuscole",
+            "not_contains_ci": "non contiene, ignorando maiuscole e minuscole"
+          },
+          "addGroup": "Aggiungi gruppo",
+          "removeGroup": "Rimuovi gruppo"
         }
       },
       "ninjaOne": {

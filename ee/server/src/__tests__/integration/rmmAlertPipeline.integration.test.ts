@@ -7,12 +7,14 @@ import { createUniFiAlertFetcher } from '../../lib/integrations/unifi/alerts/rec
 import {
   createTicketForAlert,
   createTicketForAlertId,
+  evaluateAlertRules,
   processRmmAlertEvent,
   reconcileConditionObservations,
   acknowledgeConditionTransition,
   registerRmmAlertFetcher,
   runRmmAlertReconciliation,
   type NormalizedRmmAlertEvent,
+  type RmmAlertRuleRow,
   type RmmAlertRuleActions,
 } from '@alga-psa/shared/rmm/alerts';
 
@@ -513,6 +515,79 @@ describe('processRmmAlertEvent (DB integration)', { shuffle: false }, () => {
     );
     expect(result.outcome).toBe('recorded_only');
     expect(await ticketCount()).toBe(before);
+  });
+
+  it('records the Level Sentinel service only and lets unrelated alerts reach the ticket catch-all', async () => {
+    const targetedRuleId = uuidv4();
+    await tenantTable('rmm_integrations').where({ tenant: tenantId, integration_id: integrationId }).update({ provider: 'levelio' });
+    try {
+      await tenantTable('rmm_alert_rules').insert({
+      tenant: tenantId, rule_id: targetedRuleId, integration_id: integrationId,
+      name: 'Record Sentinel Service Crash', is_active: true, priority_order: -1,
+      conditions: JSON.stringify({ join: 'and', clauses: [
+        { path: 'alertClass', operator: 'equals', value: 'Critical Service Crashed' },
+        { path: 'text', operator: 'contains_ci', value: 'Sentinel Agent service terminated' },
+        { path: 'deviceName', operator: 'equals', value: 'GLICK-PC7' },
+      ] }),
+      actions: JSON.stringify({ createTicket: false }),
+      });
+      const before = await ticketCount();
+      const sentinelEvent = event({
+        provider: 'levelio', externalAlertId: 'level-sentinel-service-crash', externalDeviceId: 'level-device-7',
+        alertClass: 'Critical Service Crashed', deviceName: 'GLICK-PC7',
+        message: 'Critical Service Crashed: Event ID 7031 occured 5 times within 1 hour',
+        details: 'The Sentinel Agent service terminated unexpectedly. It has done this 532 time(s)',
+      });
+      const orderedRules = await tenantTable('rmm_alert_rules').where({ tenant: tenantId, integration_id: integrationId, is_active: true }).orderBy('priority_order', 'asc') as unknown as RmmAlertRuleRow[];
+      const directEvaluation = evaluateAlertRules(orderedRules, sentinelEvent);
+      expect(directEvaluation.rule?.rule_id, JSON.stringify({
+        warnings: directEvaluation.warnings,
+        orderedRules: orderedRules.map(({ rule_id, priority_order, conditions }) => ({ rule_id, priority_order, conditions })),
+      })).toBe(targetedRuleId);
+      const sentinel = await processRmmAlertEvent({ knex: db }, sentinelEvent);
+      expect(sentinel.outcome).toBe('recorded_only');
+      expect(sentinel.matchedRuleId).toBe(targetedRuleId);
+      expect(await ticketCount()).toBe(before);
+      const recordedSentinel = await tenantTable('rmm_alerts').where({ tenant: tenantId, alert_id: sentinel.alertId }).first();
+      const recordedMetadata = typeof recordedSentinel.metadata === 'string' ? JSON.parse(recordedSentinel.metadata) : recordedSentinel.metadata;
+      expect(recordedMetadata._algaNormalized.details).toBe('The Sentinel Agent service terminated unexpectedly. It has done this 532 time(s)');
+
+      // Reconciliation exercises a real Tactical provider mapper from a raw
+      // provider response; it must not inject a pre-normalized details field.
+      const { mapTacticalAlertToEvent } = await import('../../../../../packages/integrations/src/lib/rmm/tacticalrmm/alertFetcher');
+      await tenantTable('rmm_integrations').where({ tenant: tenantId, integration_id: integrationId }).update({ provider: 'tacticalrmm' });
+      registerRmmAlertFetcher('tacticalrmm', { fetchActiveAlerts: async () => [mapTacticalAlertToEvent({
+        id: 'tactical-reconciliation-sentinel', agent_id: 'level-device-7', alert_type: 'Critical Service Crashed',
+        hostname: 'GLICK-PC7', message: 'Critical Service Crashed: Event ID 7031 occured 5 times within 1 hour',
+        description: 'The Sentinel Agent service terminated unexpectedly. It has done this 532 time(s)',
+      }, tenantId, integrationId)!] });
+      const reconciliation = await runRmmAlertReconciliation({ knex: db }, { tenantId, integrationId, provider: 'tacticalrmm' });
+      expect(reconciliation.ingested).toBe(1);
+      const reconciledSentinel = await tenantTable('rmm_alerts').where({ tenant: tenantId, external_alert_id: 'tactical-reconciliation-sentinel' }).first();
+      expect(reconciledSentinel.matched_rule_id).toBe(targetedRuleId);
+      const reconciledMetadata = typeof reconciledSentinel.metadata === 'string' ? JSON.parse(reconciledSentinel.metadata) : reconciledSentinel.metadata;
+      expect(reconciledMetadata._algaNormalized.details).toBe('The Sentinel Agent service terminated unexpectedly. It has done this 532 time(s)');
+      await tenantTable('rmm_integrations').where({ tenant: tenantId, integration_id: integrationId }).update({ provider: 'levelio' });
+
+      const otherService = await processRmmAlertEvent({ knex: db }, event({
+        provider: 'levelio', externalAlertId: 'level-other-service-crash', externalDeviceId: 'level-device-7',
+        alertClass: 'Critical Service Crashed', deviceName: 'GLICK-PC7',
+        message: 'Critical Service Crashed: Event ID 7031 occured 5 times within 1 hour',
+        details: 'Other Service terminated unexpectedly.',
+      }));
+      expect(otherService.outcome).toBe('ticket_created');
+
+      const otherDevice = await processRmmAlertEvent({ knex: db }, event({
+        provider: 'levelio', externalAlertId: 'level-sentinel-other-device', externalDeviceId: 'level-device-8',
+        alertClass: 'Critical Service Crashed', deviceName: 'OTHER-PC',
+        message: 'Critical Service Crashed: Event ID 7031 occured 5 times within 1 hour',
+        details: 'The Sentinel Agent service terminated unexpectedly.',
+      }));
+      expect(otherDevice.outcome).toBe('ticket_created');
+    } finally {
+      await tenantTable('rmm_alert_rules').where({ tenant: tenantId, rule_id: targetedRuleId }).del();
+      await tenantTable('rmm_integrations').where({ tenant: tenantId, integration_id: integrationId }).update({ provider: 'ninjaone' });
+    }
   });
 
   it('reset resolves the alert, comments, and auto-closes the untouched ticket', async () => {

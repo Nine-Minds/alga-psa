@@ -2458,6 +2458,42 @@
           "title": "Maintenance Windows",
           "description": "Alerts arriving during an active window are suppressed and will not create tickets.",
           "empty": "No maintenance windows configured."
+        },
+        "predicate": {
+          "matchAll": "Match",
+          "all": "All conditions",
+          "any": "Any condition",
+          "add": "Add condition",
+          "remove": "Remove",
+          "value": "Value",
+          "nestedGroup": "Nested group",
+          "legacyRegex": "Legacy message regex",
+          "and": "and",
+          "or": "or",
+          "fields": {
+            "severity": "Severity",
+            "alertClass": "Alert class",
+            "activityType": "Activity type",
+            "sourceType": "Source type",
+            "organizationId": "Organization ID",
+            "text": "Message and details",
+            "deviceName": "Device name",
+            "externalDeviceId": "External device ID",
+            "message": "Message",
+            "details": "Details"
+          },
+          "operators": {
+            "equals": "is",
+            "not_equals": "is not",
+            "in": "is one of",
+            "not_in": "is none of",
+            "contains": "contains",
+            "not_contains": "does not contain",
+            "contains_ci": "contains, ignoring case",
+            "not_contains_ci": "does not contain, ignoring case"
+          },
+          "addGroup": "Add group",
+          "removeGroup": "Remove group"
         }
       },
       "ninjaOne": {

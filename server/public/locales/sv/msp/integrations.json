@@ -2458,6 +2458,42 @@
           "title": "Underhållsfönster",
           "description": "Larm som kommer under ett aktivt tidsfönster undertrycks och skapar inga ärenden.",
           "empty": "Inga underhållsfönster har konfigurerats."
+        },
+        "predicate": {
+          "matchAll": "Matchning",
+          "all": "Alla villkor",
+          "any": "Valfritt villkor",
+          "add": "Lägg till villkor",
+          "remove": "Ta bort",
+          "value": "Värde",
+          "nestedGroup": "Nästlad grupp",
+          "legacyRegex": "Äldre reguljärt uttryck för meddelande",
+          "and": "och",
+          "or": "eller",
+          "fields": {
+            "severity": "Allvarlighetsgrad",
+            "alertClass": "Larmklass",
+            "activityType": "Aktivitetstyp",
+            "sourceType": "Källtyp",
+            "organizationId": "Organisations-ID",
+            "text": "Meddelande och detaljer",
+            "deviceName": "Enhetsnamn",
+            "externalDeviceId": "Externt enhets-ID",
+            "message": "Meddelande",
+            "details": "Detaljer"
+          },
+          "operators": {
+            "equals": "är",
+            "not_equals": "är inte",
+            "in": "är ett av",
+            "not_in": "är inget av",
+            "contains": "innehåller",
+            "not_contains": "innehåller inte",
+            "contains_ci": "innehåller, utan hänsyn till skiftläge",
+            "not_contains_ci": "innehåller inte, utan hänsyn till skiftläge"
+          },
+          "addGroup": "Lägg till grupp",
+          "removeGroup": "Ta bort grupp"
         }
       },
       "ninjaOne": {

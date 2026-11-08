@@ -2435,6 +2435,42 @@
           "title": "Wartungsfenster",
           "description": "Alarme, die während eines aktiven Fensters eingehen, werden unterdrückt und erstellen keine Tickets.",
           "empty": "Keine Wartungsfenster konfiguriert."
+        },
+        "predicate": {
+          "matchAll": "Abgleich",
+          "all": "Alle Bedingungen",
+          "any": "Eine beliebige Bedingung",
+          "add": "Bedingung hinzufügen",
+          "remove": "Entfernen",
+          "value": "Wert",
+          "nestedGroup": "Verschachtelte Gruppe",
+          "legacyRegex": "Veralteter Nachrichtenregulärausdruck",
+          "and": "und",
+          "or": "oder",
+          "fields": {
+            "severity": "Schweregrad",
+            "alertClass": "Alarmklasse",
+            "activityType": "Aktivitätstyp",
+            "sourceType": "Quelltyp",
+            "organizationId": "Organisations-ID",
+            "text": "Nachricht und Details",
+            "deviceName": "Gerätename",
+            "externalDeviceId": "Externe Geräte-ID",
+            "message": "Nachricht",
+            "details": "Details"
+          },
+          "operators": {
+            "equals": "ist",
+            "not_equals": "ist nicht",
+            "in": "ist einer von",
+            "not_in": "ist keiner von",
+            "contains": "enthält",
+            "not_contains": "enthält nicht",
+            "contains_ci": "enthält, Groß- und Kleinschreibung ignorieren",
+            "not_contains_ci": "enthält nicht, Groß- und Kleinschreibung ignorieren"
+          },
+          "addGroup": "Gruppe hinzufügen",
+          "removeGroup": "Gruppe entfernen"
         }
       },
       "ninjaOne": {

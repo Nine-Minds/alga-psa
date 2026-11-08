@@ -2435,6 +2435,42 @@
           "title": "Ventanas de mantenimiento",
           "description": "Las alertas que llegan durante una ventana activa se suprimen y no crean tickets.",
           "empty": "No hay ventanas de mantenimiento configuradas."
+        },
+        "predicate": {
+          "matchAll": "Coincidencia",
+          "all": "Todas las condiciones",
+          "any": "Cualquier condición",
+          "add": "Agregar condición",
+          "remove": "Quitar",
+          "value": "Valor",
+          "nestedGroup": "Grupo anidado",
+          "legacyRegex": "Expresión regular heredada del mensaje",
+          "and": "y",
+          "or": "o",
+          "fields": {
+            "severity": "Gravedad",
+            "alertClass": "Clase de alerta",
+            "activityType": "Tipo de actividad",
+            "sourceType": "Tipo de origen",
+            "organizationId": "ID de la organización",
+            "text": "Mensaje y detalles",
+            "deviceName": "Nombre del dispositivo",
+            "externalDeviceId": "ID externo del dispositivo",
+            "message": "Mensaje",
+            "details": "Detalles"
+          },
+          "operators": {
+            "equals": "es",
+            "not_equals": "no es",
+            "in": "es uno de",
+            "not_in": "no es ninguno de",
+            "contains": "contiene",
+            "not_contains": "no contiene",
+            "contains_ci": "contiene, sin distinguir mayúsculas y minúsculas",
+            "not_contains_ci": "no contiene, sin distinguir mayúsculas y minúsculas"
+          },
+          "addGroup": "Añadir grupo",
+          "removeGroup": "Eliminar grupo"
         }
       },
       "ninjaOne": {
