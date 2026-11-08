@@ -47,6 +47,16 @@ vi.mock('@alga-psa/ui/components/Dialog', () => ({
   DialogContent: ({ children }: any) => <div>{children}</div>,
   DialogFooter: ({ children }: any) => <div>{children}</div>,
 }));
+vi.mock('@alga-psa/ui/components/DropdownMenu', () => ({
+  DropdownMenu: ({ children }: any) => <div>{children}</div>,
+  DropdownMenuTrigger: ({ children }: any) => <div>{children}</div>,
+  DropdownMenuContent: ({ children }: any) => <div>{children}</div>,
+  DropdownMenuItem: ({ children, id, onClick, className: _c }: any) => (
+    <button id={id} onClick={onClick}>
+      {children}
+    </button>
+  ),
+}));
 vi.mock('@alga-psa/ui/components/Input', () => ({ Input: (props: any) => <input {...props} /> }));
 vi.mock('@alga-psa/ui/components/DataTable', () => ({
   DataTable: ({ data, columns }: any) => (

@@ -8,7 +8,7 @@ import { UniFiApiClient, UniFiApiError } from '../../../lib/integrations/unifi/u
 import { ROUTE_TRUST_MS, UniFiConsoleUnreachableError } from '../../../lib/integrations/unifi/fleetClient';
 import { nextLocalHostId } from '../../../lib/integrations/unifi/credentials/credentialStore';
 import { UNREACHABLE_CONSOLE_ACTION } from '../../../lib/integrations/unifi/credentials/types';
-import { buildUniFiScopeKey, parseUniFiScopeKey } from '../../../lib/integrations/unifi/sync/syncEngine';
+import { buildUniFiScopeKey, mappedSiteFromRow, parseUniFiScopeKey } from '../../../lib/integrations/unifi/sync/syncEngine';
 import { createFabricSimulator, makeCredential, type SimConsole } from './unifiFabricKeySimulator';
 
 const INDEPENDENT: SimConsole = {
@@ -315,5 +315,59 @@ describe('UniFiFleetClient: local controllers (T008)', () => {
     expect(consoles.map((c) => c.hostId).sort()).toEqual(['local', 'local-2']);
     // The migrated credential keeps today's console name.
     expect(consoles.find((c) => c.hostId === 'local')?.name).toBe('Local controller');
+  });
+});
+
+describe('UniFiFleetClient: console names survive a cleared route', () => {
+  it('names a re-probed console from the mapped site, not "Unnamed console", after its route was cleared', async () => {
+    const sim = twoKeySim();
+    const { fleet, store } = sim.createFleet({
+      credentials: [makeCredential('A', 'key-a'), makeCredential('B', 'key-b')],
+    });
+    // No route rows: what replaceCredentialKey / removeCredential leave behind.
+    expect(store.routes.size).toBe(0);
+
+    await fleet.listDevices({ hostId: FABRIC.hostId, siteId: 'site-fab', hostName: FABRIC.name });
+
+    const route = store.routes.get(FABRIC.hostId);
+    expect(route?.state).toBe('routed');
+    expect(route?.consoleName).toBe(FABRIC.name);
+    expect(store.credentials.find((c) => c.credentialId === route?.credentialId)?.label).toBe('B');
+  });
+
+  it('reads the console name of a mapping row from its discovery metadata', () => {
+    const site = mappedSiteFromRow({
+      external_organization_id: buildUniFiScopeKey('host-fab', 'site-fab'),
+      external_organization_name: 'Fabric Branch / Default',
+      client_id: 'client-1',
+      metadata: { kind: 'site', hostId: 'host-fab', hostName: 'Fabric Branch', siteId: 'site-fab' },
+    });
+    expect(site).toMatchObject({ hostId: 'host-fab', siteId: 'site-fab', hostName: 'Fabric Branch' });
+    expect(mappedSiteFromRow({ external_organization_id: 'local:s1', client_id: 'c', metadata: null })?.hostName).toBeNull();
+  });
+});
+
+describe('UniFiFleetClient: a stale unreachable route is re-probed, not trusted', () => {
+  it('routes a console whose unreachable row was marked stale once a reaching key exists', async () => {
+    const sim = twoKeySim();
+    const a = makeCredential('A', 'key-a');
+    const b = makeCredential('B', 'key-b');
+    const { fleet, store } = sim.createFleet({
+      credentials: [a, b],
+      routes: [
+        {
+          hostId: FABRIC.hostId,
+          credentialId: null,
+          consoleName: FABRIC.name,
+          state: 'unreachable',
+          lastError: 'unreachable',
+          firstSeenAt: new Date(0),
+          lastVerifiedAt: new Date(0), // markRoutesStale
+        },
+      ],
+    });
+    const sites = await fleet.listSitesForHost({ hostId: FABRIC.hostId, name: FABRIC.name });
+    expect(sites.map((site) => site.siteId)).toEqual(['site-fab']);
+    expect(store.routes.get(FABRIC.hostId)).toMatchObject({ state: 'routed', credentialId: b.credentialId, consoleName: FABRIC.name });
   });
 });

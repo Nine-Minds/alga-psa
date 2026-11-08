@@ -68,7 +68,7 @@
   {
     "id": "T012",
     "description": "Smoke (dev stack + simulator): two keys, one independent and one fabric site mapped, device sync and alert cycle produce assets and an offline-alert ticket for both",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019", "F011", "F018"]
   },
   {

@@ -3264,6 +3264,7 @@
           "rename": "Rename",
           "renameTitle": "Rename key",
           "remove": "Remove",
+          "actionsMenu": "Actions for {{label}}",
           "removeTitle": "Remove key: {{label}}",
           "removeWarning": "These mapped sites use this key. They keep their client mapping and assets, but they stop syncing until another key can reach their console.",
           "added": "API key added",

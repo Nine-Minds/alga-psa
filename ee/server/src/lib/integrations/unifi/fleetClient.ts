@@ -49,6 +49,9 @@ import {
 
 export const ROUTE_TRUST_MS = 24 * 60 * 60 * 1000;
 
+/** A site as consumers pass it; `hostName` is the console name they recorded, when they have one. */
+type SiteRef = Pick<UniFiSite, 'hostId' | 'siteId'> & { hostName?: string | null };
+
 export type UniFiChildClient = Pick<
   UniFiApiClient,
   'testConnection' | 'listConsoles' | 'listSitesForHost' | 'listDevices' | 'getDevice'
@@ -506,18 +509,27 @@ export class UniFiFleetClient implements UniFiClientSurface {
     return sites.map((site) => ({ ...site, hostId: console.hostId, hostName: console.name }));
   }
 
-  async listDevices(site: Pick<UniFiSite, 'hostId' | 'siteId'>): Promise<UniFiDevice[]> {
+  /**
+   * Console name for a site-level call. The route may have been cleared (key
+   * replaced or removed), so the caller's own record of the console wins; the
+   * cached route name is the fallback. Never an id.
+   */
+  private consoleFor(state: FleetState, site: SiteRef): Pick<UniFiConsole, 'hostId' | 'name'> {
+    return { hostId: site.hostId, name: site.hostName || state.routes.get(site.hostId)?.consoleName || '' };
+  }
+
+  async listDevices(site: SiteRef): Promise<UniFiDevice[]> {
     const state = await this.getState();
     return this.runOnConsole(
-      { hostId: site.hostId, name: state.routes.get(site.hostId)?.consoleName ?? '' },
+      this.consoleFor(state, site),
       (child, childHostId) => child.listDevices({ hostId: childHostId, siteId: site.siteId })
     );
   }
 
-  async getDevice(site: Pick<UniFiSite, 'hostId' | 'siteId'>, deviceId: string): Promise<UniFiDevice> {
+  async getDevice(site: SiteRef, deviceId: string): Promise<UniFiDevice> {
     const state = await this.getState();
     return this.runOnConsole(
-      { hostId: site.hostId, name: state.routes.get(site.hostId)?.consoleName ?? '' },
+      this.consoleFor(state, site),
       (child, childHostId) => child.getDevice({ hostId: childHostId, siteId: site.siteId }, deviceId)
     );
   }

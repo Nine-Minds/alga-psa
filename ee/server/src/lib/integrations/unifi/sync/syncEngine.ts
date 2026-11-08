@@ -226,7 +226,27 @@ export interface MappedSite {
   hostId: string;
   siteId: string;
   siteName: string | null;
+  /** Console name recorded at site discovery; names the console when its route is re-probed. */
+  hostName: string | null;
   clientId: string;
+}
+
+/** Columns `mappedSiteFromRow` reads from rmm_organization_mappings. */
+export const MAPPED_SITE_COLUMNS = ['external_organization_id', 'external_organization_name', 'client_id', 'metadata'];
+
+/** One mapped rmm_organization_mappings row as a site, or null when its scope key is not a UniFi one. */
+export function mappedSiteFromRow(row: Record<string, any>): MappedSite | null {
+  const parsed = parseUniFiScopeKey(String(row.external_organization_id));
+  if (!parsed) return null;
+  const metadata = typeof row.metadata === 'string' ? safeJson(row.metadata) : row.metadata;
+  const hostName = typeof metadata?.hostName === 'string' && metadata.hostName ? metadata.hostName : null;
+  return {
+    scopeKey: String(row.external_organization_id),
+    ...parsed,
+    siteName: row.external_organization_name ?? null,
+    hostName,
+    clientId: String(row.client_id),
+  };
 }
 
 export async function loadMappedSites(deps: UniFiSyncDeps, tenant: string, integrationId: string): Promise<MappedSite[]> {
@@ -235,18 +255,12 @@ export async function loadMappedSites(deps: UniFiSyncDeps, tenant: string, integ
     .where({ integration_id: integrationId })
     .whereNotNull('client_id')
     .andWhere('auto_sync_assets', true)
-    .select(['external_organization_id', 'external_organization_name', 'client_id']);
+    .select(MAPPED_SITE_COLUMNS);
 
   const sites: MappedSite[] = [];
   for (const row of rows as any[]) {
-    const parsed = parseUniFiScopeKey(String(row.external_organization_id));
-    if (!parsed) continue;
-    sites.push({
-      scopeKey: String(row.external_organization_id),
-      ...parsed,
-      siteName: row.external_organization_name ?? null,
-      clientId: String(row.client_id),
-    });
+    const site = mappedSiteFromRow(row);
+    if (site) sites.push(site);
   }
   return sites;
 }

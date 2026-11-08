@@ -3264,6 +3264,7 @@
           "rename": "Byt namn",
           "renameTitle": "Byt namn på nyckel",
           "remove": "Ta bort",
+          "actionsMenu": "Åtgärder för {{label}}",
           "removeTitle": "Ta bort nyckel: {{label}}",
           "removeWarning": "Dessa mappade platser använder nyckeln. De behåller sin kundmappning och sina tillgångar, men slutar synkronisera tills en annan nyckel når deras konsol.",
           "added": "API-nyckel tillagd",

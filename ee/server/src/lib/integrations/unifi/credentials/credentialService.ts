@@ -16,12 +16,12 @@ import { tenantDb } from '@alga-psa/db';
 import { UniFiApiClient, UniFiApiError, type UniFiConnectionMode } from '../unifiApiClient';
 import { decideDestination, type BoundDestination } from './destinationBinding';
 import {
-  clearRoutes,
   deleteCredentialRow,
   deleteCredentialSecrets,
   insertCredential,
   listCredentialRecords,
   listRouteRecords,
+  markRoutesStale,
   nextLocalHostId,
   readCredentialSecrets,
   updateCredentialRow,
@@ -146,7 +146,7 @@ export async function addCredential(
   }
 
   // A new key may reach consoles that were unreachable: let the next sync try them.
-  await clearRoutes(knex, tenant, input.integrationId, { onlyUnreachable: true });
+  await markRoutesStale(knex, tenant, input.integrationId, { state: 'unreachable' });
   logger.info('[UniFi] Credential added', { credentialId: credential.credentialId, label, mode: credential.mode });
   return credential;
 }
@@ -191,8 +191,8 @@ export async function replaceCredentialKey(
     lastCheckedAt: new Date(),
   });
   // Routes this key owned, and any console nobody reached, are re-probed.
-  await clearRoutes(knex, tenant, input.integrationId, { credentialId: credential.credentialId });
-  await clearRoutes(knex, tenant, input.integrationId, { onlyUnreachable: true });
+  await markRoutesStale(knex, tenant, input.integrationId, { credentialId: credential.credentialId });
+  await markRoutesStale(knex, tenant, input.integrationId, { state: 'unreachable' });
   logger.info('[UniFi] Credential key replaced', { credentialId: credential.credentialId, label: credential.label });
   return { ...credential, status: 'active', lastError: null };
 }
@@ -243,7 +243,7 @@ export async function updateCredential(
         localBaseUrl: decision.destination.localBaseUrl,
       });
       await updateCredentialRow(knex, tenant, credential.credentialId, { status: 'active', lastError: null });
-      await clearRoutes(knex, tenant, input.integrationId, { credentialId: credential.credentialId });
+      await markRoutesStale(knex, tenant, input.integrationId, { credentialId: credential.credentialId });
     }
   }
 
@@ -301,7 +301,7 @@ export async function removeCredential(
   await deleteCredentialRow(knex, tenant, credential.credentialId);
   await deleteCredentialSecrets(tenant, credential.credentialId);
   // Consoles other keys may now own, and ones nobody reached, are re-probed.
-  await clearRoutes(knex, tenant, input.integrationId, { onlyUnreachable: true });
+  await markRoutesStale(knex, tenant, input.integrationId, { state: 'unreachable' });
   logger.info('[UniFi] Credential removed', {
     credentialId: credential.credentialId,
     label: credential.label,

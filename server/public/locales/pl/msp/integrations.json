@@ -3241,6 +3241,7 @@
           "rename": "Zmień nazwę",
           "renameTitle": "Zmień nazwę klucza",
           "remove": "Usuń",
+          "actionsMenu": "Akcje dla {{label}}",
           "removeTitle": "Usuń klucz: {{label}}",
           "removeWarning": "Te zmapowane lokalizacje używają tego klucza. Zachowują przypisanie klienta i zasoby, ale przestaną się synchronizować, dopóki inny klucz nie uzyska dostępu do ich konsoli.",
           "added": "Dodano klucz API",

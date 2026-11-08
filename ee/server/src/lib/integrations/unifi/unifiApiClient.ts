@@ -22,6 +22,17 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 export const UNIFI_API_KEY_SECRET = 'unifi_api_key';
 export const UNIFI_LOCAL_BASE_URL_SECRET = 'unifi_local_base_url';
 export const UNIFI_CLOUD_BASE_URL = 'https://api.ui.com';
+
+/**
+ * Site Manager origin. `UNIFI_SITE_MANAGER_BASE_URL` points Site Manager mode at a
+ * simulator for smoke tests (tools/smoke-sim/unifi-sim/unifi-site-manager-sim.mjs),
+ * the same deployment-level override Huntress and Level offer. It is server
+ * configuration only: no tenant input can change it.
+ */
+export function unifiSiteManagerBaseUrl(): string {
+  const override = process.env.UNIFI_SITE_MANAGER_BASE_URL?.trim();
+  return override ? override.replace(/\/+$/, '') : UNIFI_CLOUD_BASE_URL;
+}
 /** `hostId` used for every site in local mode (there is exactly one controller). */
 export const UNIFI_LOCAL_HOST_ID = 'local';
 
@@ -278,7 +289,7 @@ export class UniFiApiClient {
   // ── URL construction (endpoint assumptions) ──────────────────────────────
 
   private cloudUrl(path: string, params: Record<string, string | undefined> = {}): URL {
-    return this.withParams(new URL(`${UNIFI_CLOUD_BASE_URL}${path}`), params);
+    return this.withParams(new URL(`${unifiSiteManagerBaseUrl()}${path}`), params);
   }
 
   private withParams(url: URL, params: Record<string, string | undefined>): URL {
@@ -295,7 +306,7 @@ export class UniFiApiClient {
     }
     return this.withParams(
       new URL(
-        `${UNIFI_CLOUD_BASE_URL}/v1/connector/consoles/${encodeURIComponent(hostId)}/proxy/network/integration/v1${path}`
+        `${unifiSiteManagerBaseUrl()}/v1/connector/consoles/${encodeURIComponent(hostId)}/proxy/network/integration/v1${path}`
       ),
       params
     );

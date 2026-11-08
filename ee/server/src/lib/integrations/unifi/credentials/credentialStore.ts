@@ -248,17 +248,30 @@ export async function deleteCredentialRow(knex: Knex, tenant: string, credential
   await db.table('unifi_credentials').where({ credential_id: credentialId }).delete();
 }
 
-/** Drops persisted routes so the next sync re-probes (manual re-check, key added or replaced). */
-export async function clearRoutes(
+/** Drops every persisted route of the integration (manual "Re-check all keys", which re-discovers at once). */
+export async function clearRoutes(knex: Knex, tenant: string, integrationId: string): Promise<void> {
+  await tenantDb(knex, tenant).table('unifi_console_routes').where({ integration_id: integrationId }).delete();
+}
+
+/** The epoch: a route verified "then" is never inside the trust window, so the next call re-probes it. */
+const STALE_VERIFIED_AT = new Date(0);
+
+/**
+ * Withdraws trust from routes without forgetting them (key added, replaced or
+ * removed). The next call per console re-probes, but until a probe settles it the
+ * row keeps its console name, and an unreachable console keeps its "add a key
+ * created under its fabric" warning instead of silently disappearing.
+ */
+export async function markRoutesStale(
   knex: Knex,
   tenant: string,
   integrationId: string,
-  scope: { credentialId?: string; onlyUnreachable?: boolean } = {}
+  scope: { credentialId: string } | { state: 'unreachable' }
 ): Promise<void> {
   const query = tenantDb(knex, tenant).table('unifi_console_routes').where({ integration_id: integrationId });
-  if (scope.credentialId) query.andWhere({ credential_id: scope.credentialId });
-  if (scope.onlyUnreachable) query.andWhere({ state: 'unreachable' });
-  await query.delete();
+  if ('credentialId' in scope) query.andWhere({ credential_id: scope.credentialId });
+  else query.andWhere({ state: scope.state });
+  await query.update({ last_verified_at: STALE_VERIFIED_AT });
 }
 
 /**

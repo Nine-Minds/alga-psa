@@ -9,12 +9,19 @@
  */
 
 import React, { useState, useTransition } from 'react';
+import { MoreVertical } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@alga-psa/ui/components/DropdownMenu';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -226,43 +233,54 @@ export default function UniFiCredentialsPanel({ items, unreachableConsoles, disa
       title: t('integrations.rmm.unifi.credentials.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'credentialId',
       sortable: false,
+      width: '1%',
       render: (_v, item) => (
-        <div className="flex flex-wrap gap-2">
-          <Button
-            id={`unifi-replace-key-${item.credentialId}`}
-            size="sm"
-            variant="outline"
-            disabled={disabled || isWorking}
-            onClick={() => {
-              setReplacing(item);
-              setReplaceKey('');
-              setReplaceUrl('');
-            }}
-          >
-            {t('integrations.rmm.unifi.credentials.replaceKey', { defaultValue: 'Replace key' })}
-          </Button>
-          <Button
-            id={`unifi-rename-key-${item.credentialId}`}
-            size="sm"
-            variant="outline"
-            disabled={disabled || isWorking}
-            onClick={() => {
-              setRenaming(item);
-              setRenameValue(item.label);
-            }}
-          >
-            {t('integrations.rmm.unifi.credentials.rename', { defaultValue: 'Rename' })}
-          </Button>
-          <Button
-            id={`unifi-remove-key-${item.credentialId}`}
-            size="sm"
-            variant="outline"
-            disabled={disabled || isWorking}
-            onClick={() => requestRemove(item)}
-          >
-            {t('integrations.rmm.unifi.credentials.remove', { defaultValue: 'Remove' })}
-          </Button>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              id={`unifi-key-actions-${item.credentialId}`}
+              variant="ghost"
+              className="h-8 w-8 p-0"
+              disabled={disabled || isWorking}
+            >
+              <span className="sr-only">
+                {t('integrations.rmm.unifi.credentials.actionsMenu', {
+                  defaultValue: 'Actions for {{label}}',
+                  label: item.label,
+                })}
+              </span>
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              id={`unifi-replace-key-${item.credentialId}`}
+              onClick={() => {
+                setReplacing(item);
+                setReplaceKey('');
+                setReplaceUrl('');
+              }}
+            >
+              {t('integrations.rmm.unifi.credentials.replaceKey', { defaultValue: 'Replace key' })}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              id={`unifi-rename-key-${item.credentialId}`}
+              onClick={() => {
+                setRenaming(item);
+                setRenameValue(item.label);
+              }}
+            >
+              {t('integrations.rmm.unifi.credentials.rename', { defaultValue: 'Rename' })}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              id={`unifi-remove-key-${item.credentialId}`}
+              className="text-red-600 focus:text-red-600"
+              onClick={() => requestRemove(item)}
+            >
+              {t('integrations.rmm.unifi.credentials.remove', { defaultValue: 'Remove' })}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
     },
   ];
