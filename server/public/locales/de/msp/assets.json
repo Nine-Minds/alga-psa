@@ -222,7 +222,7 @@
         "notInCustody": "Nicht in MSP-Verwahrung"
       },
       "audit": {
-        "any": "Alle Inventurergebnisse",
+        "any": "Beliebiges Inventurergebnis",
         "present": "Letzte Inventur: vorhanden",
         "missing": "Letzte Inventur: fehlend",
         "never": "Noch nie inventarisiert",
@@ -1713,7 +1713,7 @@
       "audit": "Inventur",
       "auditPresent": "Inventur: vorhanden",
       "auditMissing": "Inventur: fehlend",
-      "auditMethod": "Erfasst mit Methode: {{method}}"
+      "auditMethod": "Markierungsmethode: {{method}}"
     },
     "changeTypes": {
       "created": "Erstellt",
@@ -2229,8 +2229,8 @@
       "pickClient": "Wählen Sie einen Kunden aus, um den Umfang der Inventur zu sehen.",
       "counting": "Einbezogene Geräte werden gezählt…",
       "countUnavailable": "Die Geräteanzahl ist derzeit nicht verfügbar.",
-      "expected_one": "1 Gerät in diesem Umfang erwartet",
-      "expected_other": "{{count}} Geräte in diesem Umfang erwartet",
+      "expected_one": "In diesem Umfang wird 1 Gerät erwartet",
+      "expected_other": "In diesem Umfang werden {{count}} Geräte erwartet",
       "submit": "Inventur starten",
       "starting": "Wird gestartet…"
     },
@@ -2272,7 +2272,7 @@
       "searchPlaceholder": "Nach Name, Tag oder Seriennummer suchen",
       "empty": "Keine Assets in dieser Ansicht.",
       "markPresent": "Als vorhanden markieren",
-      "undoMark": "Rückgängig machen",
+      "undoMark": "Rückgängig",
       "createTicket": "Ticket erstellen",
       "ticketTitle": "Bei Standortinventur fehlend: {{asset}}",
       "ticketDescription": "Bei der am {{date}} gestarteten Standortinventur nicht gefunden."
