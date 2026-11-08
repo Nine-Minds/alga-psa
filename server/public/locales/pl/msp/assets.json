@@ -1488,7 +1488,7 @@
       "refresh": "Odśwież",
       "newPlan": "Nowy plan konserwacji",
       "skip": "Pomiń",
-      "skipTooltip": "Pomiń, podając wymagany powód — plan przejdzie do kolejnego zadania",
+      "skipTooltip": "Pomiń, podając wymagany powód — plan przejdzie do następnego wystąpienia",
       "complete": "Zakończ konserwację",
       "createTicket": "Utwórz zgłoszenie",
       "openTicket": "Otwórz zgłoszenie ↗",
@@ -1500,18 +1500,18 @@
       "loading": "Ładowanie zasobów…",
       "loadFailed": "Nie udało się załadować zasobów.",
       "empty": "Nie znaleziono zasobów.",
-      "showingFirst": "Wyświetlono pierwsze {{shown}} z {{total}} — zawęź wyszukiwanie."
+      "showingFirst": "Wyświetlono pierwszych {{shown}} z {{total}} — zawęź wyszukiwanie."
     },
     "kpi": {
       "overdue": "Po terminie",
       "dueToday": "Termin dzisiaj",
       "upcoming7d": "Najbliższe 7 dni",
       "openTickets": "Otwarte zgłoszenia",
-      "compliance90d": "Terminowość w ciągu 90 dni",
+      "compliance90d": "Zgodność (90 dni)",
       "clickToFilter": "kliknij, aby filtrować",
       "allClear": "brak zaległości",
       "quietWeek": "spokojny tydzień przed nami",
-      "linkedToOccurrences": "powiązane z zadaniami konserwacyjnymi",
+      "linkedToOccurrences": "powiązane z wystąpieniami konserwacji",
       "onTimeCompletion": "ukończone w terminie"
     },
     "tabs": {
@@ -1539,14 +1539,14 @@
       "calendar": "Kalendarz"
     },
     "queue": {
-      "actionableTitle": "Zadania konserwacyjne do wykonania",
-      "plansTitle": "Kolejka aktywnych planów (według zadań konserwacyjnych)",
-      "loading": "Ładowanie zadań konserwacyjnych…",
-      "empty": "Żadne zadania konserwacyjne nie pasują do tych filtrów.",
-      "emptyFiltered": "Żadne zadania konserwacyjne nie pasują do tych filtrów. Usuń filtr lub poszerz zakres terminów.",
-      "emptyHistory": "Ukończone i pominięte zadania pojawią się tutaj po zamknięciu konserwacji.",
-      "emptyPlans": "Otwarte zadania z planów pojawią się tutaj, gdy zostaną wygenerowane zgodnie z harmonogramami.",
-      "clearBeyond": "Poza widocznymi zadaniami ({{count}}) kolejka jest pusta — poszerz zakres terminów lub sprawdź kolejkę planów.",
+      "actionableTitle": "Wystąpienia do wykonania",
+      "plansTitle": "Kolejka aktywnych planów (na podstawie wystąpień)",
+      "loading": "Ładowanie konserwacji…",
+      "empty": "Żadne wystąpienia konserwacji nie pasują do tych filtrów.",
+      "emptyFiltered": "Żadne wystąpienia konserwacji nie pasują do tych filtrów. Usuń filtr lub poszerz zakres terminów.",
+      "emptyHistory": "Ukończone i pominięte wystąpienia pojawią się tutaj po zamknięciu konserwacji.",
+      "emptyPlans": "Otwarte wystąpienia planów pojawią się tutaj, gdy harmonogramy wygenerują pracę.",
+      "clearBeyond": "Poza widocznymi wystąpieniami ({{count}}) kolejka jest pusta — poszerz zakres terminów lub sprawdź kolejkę planów.",
       "allCaughtUp": "Wszystko na bieżąco",
       "nextDueIn": "— następny termin za {{count}} dn.",
       "shownCount": "Wyświetlono: {{shown}} · Otwarte: {{open}} ·",
@@ -1582,8 +1582,8 @@
       "linkedTicket": "Powiązane zgłoszenie"
     },
     "detail": {
-      "noSelection": "Nie wybrano zadania konserwacyjnego",
-      "noSelectionHint": "Wybierz zadanie konserwacyjne z kolejki, aby zobaczyć zasób, plan, powiązane zgłoszenie i dostępne akcje — lub wyczyść filtry, aby zobaczyć więcej zadań.",
+      "noSelection": "Nie wybrano wystąpienia",
+      "noSelectionHint": "Wybierz wystąpienie z kolejki, aby zobaczyć jego zasób, plan, powiązane zgłoszenie i dostępne akcje — lub wyczyść filtry, aby zobaczyć więcej zadań.",
       "unassignedClient": "Nieprzypisany klient",
       "dueSuffix": "· termin {{date}}",
       "nextDueTooltip": "Następny termin jest obliczany na podstawie rzeczywistej daty ukończenia.",
@@ -1600,7 +1600,7 @@
       "timeline": "Oś czasu"
     },
     "timeline": {
-      "created": "Utworzono zadanie konserwacyjne",
+      "created": "Utworzono wystąpienie",
       "ticketLinked": "Powiązano zgłoszenie — {{ticket}}",
       "dueRepeats": "Termin — powtarzanie: {{cadence}}",
       "completedBy": "Ukończone przez {{name}}{{notes}}",
@@ -1623,7 +1623,7 @@
     },
     "ticket": {
       "title": "Konserwacja: {{plan}}",
-      "description": "Typ konserwacji: {{type}}, termin: {{date}}. Zadanie konserwacyjne: {{occurrenceId}}"
+      "description": "Typ konserwacji: {{type}}, termin: {{date}}. Wystąpienie: {{occurrenceId}}"
     }
   },
   "maintenanceCompletionDialog": {
