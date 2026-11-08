@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { compileExpression, evaluateExpressionSource, validateExpressionSource } from '../expressionEngine';
+import { compileExpression, evaluateExpressionSource, validateExpressionSource, verifyBudgetHooksActive } from '../expressionEngine';
 
 describe('expressionEngine guardrails', () => {
   it('accepts runtime-allowlisted helper calls', () => {
@@ -99,6 +99,41 @@ describe('expressionEngine guardrails', () => {
     expect(results[1]).toMatchObject({ status: 'rejected', reason: expect.objectContaining({ message: expect.stringMatching(/range exceeded/) }) });
     expect(results[2]).toMatchObject({ status: 'fulfilled', value: expect.arrayContaining([1, 2000]) });
     expect(results[3]).toMatchObject({ status: 'fulfilled', value: expect.arrayContaining([1, 3000]) });
+  });
+
+  it('self-check passes against the real jsonata, proving the budget hooks fire', async () => {
+    await expect(verifyBudgetHooksActive()).resolves.toBeUndefined();
+    // The guard is also exercised transitively by every other evaluation test,
+    // which route through evaluate() -> ensureBudgetHooksActive().
+    await expect(evaluateExpressionSource('1 + 1', {})).resolves.toBe(2);
+  });
+
+  it('fails closed when jsonata stops invoking the evaluate hooks', async () => {
+    // Simulate a future jsonata whose assign() no longer wires the hooks and
+    // whose evaluate() never calls them. The real counters would be silent, so
+    // the self-check must refuse rather than report healthy.
+    const silentFactory = (() => ({
+      assign: () => {},
+      evaluate: async () => 2,
+    })) as unknown as Parameters<typeof verifyBudgetHooksActive>[0];
+    await expect(verifyBudgetHooksActive(silentFactory)).rejects.toThrow(/budget enforcement is inactive/i);
+  });
+
+  it('fails closed when jsonata stops exposing the base execution frame', async () => {
+    // Hooks fire, but with no `base` frame the per-invocation budget cannot be
+    // keyed or shared across frames; treat that as a broken contract too.
+    const framelessFactory = (() => ({
+      assign(_name: unknown, fn: (...a: unknown[]) => void) {
+        this._hooks = this._hooks ?? [];
+        this._hooks.push(fn);
+      },
+      async evaluate() {
+        for (const fn of this._hooks ?? []) fn(null, null, {} /* no base */, 2);
+        return 2;
+      },
+      _hooks: [] as Array<(...a: unknown[]) => void>,
+    })) as unknown as Parameters<typeof verifyBudgetHooksActive>[0];
+    await expect(verifyBudgetHooksActive(framelessFactory)).rejects.toThrow(/budget enforcement is inactive/i);
   });
 
   it('accepts repeated object and array references in serializable output', async () => {

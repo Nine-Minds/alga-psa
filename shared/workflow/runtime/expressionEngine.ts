@@ -150,6 +150,10 @@ export function compileExpression(expr: Expr): CompiledExpression {
   return {
     source: expr.$expr,
     evaluate: async (ctx: ExpressionContext) => {
+      // Fail closed: the budget counters only fire if JSONata still invokes the
+      // evaluate hooks and exposes the `base` frame. If that contract broke
+      // (e.g. a jsonata upgrade), refuse to evaluate rather than run unbounded.
+      await ensureBudgetHooksActive();
       measureValueBytes(ctx, MAX_INPUT_BYTES, MAX_INPUT_NODES);
       // Passing bindings creates a fresh JSONata execution frame. Its `base` is
       // inherited by every nested frame, so a cached compiled expression has
@@ -365,6 +369,53 @@ function getExecutionRoot(environment: JsonataEnvironment): object {
   const root = (environment as JsonataEnvironment & { base?: object }).base;
   if (!root || typeof root !== 'object') throw new Error('JSONata execution budget support is unavailable');
   return root;
+}
+
+function hasExecutionRoot(environment: JsonataEnvironment): boolean {
+  const root = (environment as JsonataEnvironment & { base?: object }).base;
+  return Boolean(root) && typeof root === 'object';
+}
+
+// The entire DoS defense rests on two JSONata internals: that it invokes the
+// EVALUATE_ENTRY_HOOK / EVALUATE_EXIT_HOOK symbols on every node, and that it
+// exposes a stable `base` execution frame (getExecutionRoot) the per-invocation
+// budget is keyed on. A jsonata upgrade that renamed those symbols or
+// restructured frames would leave the counters silent — the original unbounded
+// DoS, but with a green test suite. Verify that contract against a trivial probe
+// and fail closed if it ever stops holding. The probe is pure (`1 + 1`, no I/O,
+// clock, or randomness), so it is safe to run inside Temporal's deterministic
+// workflow sandbox.
+export async function verifyBudgetHooksActive(jsonataFactory: typeof jsonata = jsonata): Promise<void> {
+  const probe = jsonataFactory('1 + 1') as ReturnType<typeof jsonata> & {
+    assign: (name: string | symbol, value: unknown) => void;
+  };
+  let entryFrameResolved = false;
+  let exitFrameResolved = false;
+  probe.assign(EVALUATE_ENTRY_HOOK, (_node: unknown, _input: unknown, environment: JsonataEnvironment) => {
+    if (hasExecutionRoot(environment)) entryFrameResolved = true;
+  });
+  probe.assign(EVALUATE_EXIT_HOOK, (_node: unknown, _input: unknown, environment: JsonataEnvironment) => {
+    if (hasExecutionRoot(environment)) exitFrameResolved = true;
+  });
+
+  const result = await probe.evaluate({});
+  if (result !== 2 || !entryFrameResolved || !exitFrameResolved) {
+    throw new Error(
+      'Expression budget enforcement is inactive: the JSONata evaluate-hook contract changed ' +
+        '(entry/exit hook or base execution frame). Refusing to evaluate workflow expressions until it is restored.'
+    );
+  }
+}
+
+let budgetHookVerification: Promise<void> | null = null;
+
+// Run the self-check once per process and reuse the result. A rejection is
+// sticky on purpose: if the contract is broken, every evaluation stays refused.
+function ensureBudgetHooksActive(): Promise<void> {
+  if (!budgetHookVerification) {
+    budgetHookVerification = verifyBudgetHooksActive();
+  }
+  return budgetHookVerification;
 }
 
 function getEvaluationBudget(environment: JsonataEnvironment): EvaluationBudget {
