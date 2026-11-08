@@ -9,7 +9,6 @@ import { Knex } from 'knex';
 import { marked } from 'marked';
 import { PDFDocument } from 'pdf-lib';
 import { fromPath } from 'pdf2pic';
-import puppeteer from 'puppeteer';
 import { writeFile, unlink, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { CacheFactory } from '../cache/CacheFactory';
@@ -60,6 +59,7 @@ import {
 import { authorizeAndRedactDocuments as authorizeDocumentRows } from '@shared/lib/documentAuthorization';
 import { admitMeetingDocumentsForBrowser } from '../lib/meetingDocumentAdmission';
 import { getClientLogoUrlsBatch, getContactAvatarUrlsBatch } from '@alga-psa/formatting/avatarUtils';
+import { authorizeAssetAssociationWrite } from '../lib/assetAssociationAuthorization';
 
 async function loadSharp() {
   try {
@@ -1242,44 +1242,6 @@ export const removeDocumentFromContract = withAuth(async (user, { tenant }, asso
   }
 });
 
-// Get document preview
-async function renderHtmlToPng(htmlContent: string, width: number = 400, height: number = 300): Promise<Buffer> {
-  let browser;
-  try {
-    browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-    });
-    const page = await browser.newPage();
-    await page.setViewport({ width, height });
-    const styledHtml = `
-      <style>
-        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji"; font-size: 14px; line-height: 1.4; padding: 15px; border: 1px solid #e0e0e0; box-sizing: border-box; overflow: hidden; height: ${height}px; background-color: #ffffff; }
-        pre { white-space: pre-wrap; word-wrap: break-word; font-family: monospace; }
-        h1, h2, h3, h4, h5, h6 { margin-top: 0; margin-bottom: 0.5em; }
-        p { margin-top: 0; margin-bottom: 1em; }
-        table { border-collapse: collapse; width: 100%; margin-bottom: 1em; }
-        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-        ul, ol { padding-left: 20px; margin-top: 0; margin-bottom: 1em; }
-        img { max-width: 100%; height: auto; }
-        /* Basic styling for BlockNote generated HTML */
-        .bn-editor table { width: 100%; border-collapse: collapse; }
-        .bn-editor th, .bn-editor td { border: 1px solid #ddd; padding: 8px; }
-      </style>
-      <div>${htmlContent}</div>
-    `;
-    await page.setContent(styledHtml, { waitUntil: 'domcontentloaded' });
-    const imageBuffer = await page.screenshot({ type: 'png' });
-
-    
-    return Buffer.from(imageBuffer);
-  } finally {
-    if (browser) {
-      await browser.close();
-    }
-  }
-}
-
 const IN_APP_TEXT_TYPE_NAMES = ['text', 'text document', 'plain text'];
 const IN_APP_MARKDOWN_TYPE_NAMES = ['markdown', 'markdown document'];
 const IN_APP_BLOCKNOTE_TYPE_NAMES = ['blocknote', 'block note', 'blocknote document', 'application/vnd.blocknote+json'];
@@ -2157,6 +2119,9 @@ export const createDocumentAssociations = withAuth(async (
     if (!await hasPermission(user, 'document', 'update')) {
       return permissionError('Permission denied: Cannot update document associations', 'documents:errors.permissions.updateAssociations');
     }
+    if (entity_type === 'asset' && !await hasPermission(user, 'asset', 'update')) {
+      return permissionError('Permission denied: Cannot update assets');
+    }
 
     const { knex: db } = await createTenantKnex();
 
@@ -2169,6 +2134,10 @@ export const createDocumentAssociations = withAuth(async (
     }));
 
     const created = await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (entity_type === 'asset') {
+        const assetAuthorization = await authorizeAssetAssociationWrite(trx, tenant, user, entity_id);
+        if (assetAuthorization) return assetAuthorization;
+      }
       const authorizationResult = await assertAuthorizedDocumentSetForMutation(
         trx,
         tenant,
@@ -2250,10 +2219,17 @@ export const removeDocumentAssociations = withAuth(async (
     if (!await hasPermission(user, 'document', 'update')) {
       return permissionError('Permission denied: Cannot update document associations', 'documents:errors.permissions.updateAssociations');
     }
+    if (entity_type === 'asset' && !await hasPermission(user, 'asset', 'update')) {
+      return permissionError('Permission denied: Cannot update assets');
+    }
 
     const { knex } = await createTenantKnex();
 
     const removed = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (entity_type === 'asset') {
+        const assetAuthorization = await authorizeAssetAssociationWrite(trx, tenant, user, entity_id);
+        if (assetAuthorization) return assetAuthorization;
+      }
       let query = tenantScopedTable(trx, 'document_associations', tenant)
         .where('entity_id', entity_id)
         .andWhere('entity_type', entity_type);
@@ -2363,6 +2339,9 @@ export const uploadDocument = withAuth(async (
     // Check permission for document creation/upload
     if (!await canUploadDocument(user, options)) {
       return permissionError('Permission denied: Cannot create documents', 'documents:errors.permissions.create');
+    }
+    if (options.assetId && !await hasPermission(user, 'asset', 'update')) {
+      return permissionError('Permission denied: Cannot update assets');
     }
 
     const { knex } = await createTenantKnex();
@@ -2534,7 +2513,11 @@ export const uploadDocument = withAuth(async (
       };
 
       // Use transaction for document creation and associations
-      const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const result: { success: true; document: IDocument } | ActionPermissionError = await withTransaction(knex, async (trx: Knex.Transaction): Promise<{ success: true; document: IDocument } | ActionPermissionError> => {
+        if (options.assetId) {
+          const assetAuthorization = await authorizeAssetAssociationWrite(trx, tenant, user, options.assetId);
+          if (assetAuthorization) return assetAuthorization;
+        }
         await tenantScopedTable(trx, 'documents', tenant).insert(document);
         if (options.commentAttachmentDraft) {
           await tenantDb(trx, tenant).table('ticket_comment_attachments').insert({
@@ -2555,6 +2538,7 @@ export const uploadDocument = withAuth(async (
         entity_type: 'ticket',
         tenant
       });
+
     }
 
     if (options.clientId) {
@@ -2640,6 +2624,8 @@ export const uploadDocument = withAuth(async (
           document: documentWithId
         };
       });
+
+      if (isActionPermissionErrorResult(result)) return result;
 
       unclaimedStorageFileId = undefined; // The document transaction committed; never remove shared storage.
 

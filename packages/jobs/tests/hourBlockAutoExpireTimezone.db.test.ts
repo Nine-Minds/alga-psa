@@ -55,14 +55,13 @@ vi.mock('@alga-psa/db', async () => {
   };
 });
 
-// Probe the offset at a fixed summer instant (the scenarios below are Aug/Sep 2026), not "now":
-// Europe/Berlin and America/New_York change offset at DST transitions, so a wall-clock probe
-// fails whenever the suite runs outside summer time.
-const TZ_PROBE_INSTANT = new Date('2026-08-31T12:00:00.000Z');
 
-function assertWorkerTz(zone: string, expectedOffsetMinutes: number) {
+function assertWorkerTz(zone: string, expectedOffsetMinutes: number, at?: string | Date) {
   process.env.TZ = zone;
-  expect(TZ_PROBE_INSTANT.getTimezoneOffset(), `worker TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
+  // DST offsets belong to the scenario instant, not the date the suite runs.
+  const probe = at instanceof Date ? at : new Date(at ?? '2026-08-31T12:00:00.000Z');
+  expect(probe.getTimezoneOffset(), `worker TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
+
 }
 
 async function seedBase(timezone: string | null) {
@@ -169,7 +168,7 @@ describe.runIf(enabled)('hour-block auto-expiration "today" is the tenant calend
   });
 
   it('expires a Berlin block on tenant 2026-09-01 while a UTC worker still reads 2026-08-31 (the reviewer\'s exact scenario)', async () => {
-    assertWorkerTz('UTC', 0);
+    assertWorkerTz('UTC', 0, '2026-08-31T22:00:00.000Z');
     const { clientId, serviceId } = await seedBase('Europe/Berlin');
 
     // Freeze "now" at 2026-08-31T22:00Z = 2026-09-01T00:00+02:00 Berlin: tenant
@@ -193,7 +192,7 @@ describe.runIf(enabled)('hour-block auto-expiration "today" is the tenant calend
   });
 
   it('expires a Kiritimati block on tenant 2026-08-31 while a UTC worker still reads 2026-08-30', async () => {
-    assertWorkerTz('UTC', 0);
+    assertWorkerTz('UTC', 0, '2026-08-30T10:00:00.000Z');
     const { clientId, serviceId } = await seedBase('Pacific/Kiritimati');
 
     // Freeze "now" at 2026-08-30T10:00Z = 2026-08-31T00:00+14:00 Kiritimati.
@@ -215,7 +214,7 @@ describe.runIf(enabled)('hour-block auto-expiration "today" is the tenant calend
   });
 
   it('produces the identical Berlin result when the worker runs in America/New_York (worker-independence)', async () => {
-    assertWorkerTz('America/New_York', 240);
+    assertWorkerTz('America/New_York', 240, '2026-08-31T22:00:00.000Z');
     const { clientId, serviceId } = await seedBase('Europe/Berlin');
 
     // Freeze "now" at 2026-08-31T22:00Z = 2026-09-01T00:00+02:00 Berlin; the New
@@ -238,7 +237,7 @@ describe.runIf(enabled)('hour-block auto-expiration "today" is the tenant calend
   });
 
   it('falls back to UTC-today when the tenant has no timezone configured (documented, worker-independent)', async () => {
-    assertWorkerTz('UTC', 0);
+    assertWorkerTz('UTC', 0, '2026-08-31T22:00:00.000Z');
     const { clientId, serviceId } = await seedBase(null);
 
     // No tenant timezone => the boundary is UTC-today. At 2026-08-31T22:00Z
@@ -261,7 +260,7 @@ describe.runIf(enabled)('hour-block auto-expiration "today" is the tenant calend
   });
 
   it('treats an invalid stored tenant timezone as unset (UTC fallback)', async () => {
-    assertWorkerTz('UTC', 0);
+    assertWorkerTz('UTC', 0, '2026-08-31T22:00:00.000Z');
     const { clientId, serviceId } = await seedBase('Not/AZone');
 
     vi.useFakeTimers({ toFake: ['Date'] });

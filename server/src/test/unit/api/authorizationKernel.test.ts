@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { buildAuthorizationPrincipalSubject, authorizeApiResourceRead } from 'server/src/lib/api/controllers/authorizationKernel';
+import { buildAuthorizationPrincipalSubject, authorizeApiResourceRead, authorizeApiResource } from 'server/src/lib/api/controllers/authorizationKernel';
 
 const authorizeResourceMock = vi.fn();
 
@@ -110,5 +110,33 @@ describe('api authorization kernel helper', () => {
     });
 
     expect(allowed).toBe(true);
+  });
+
+  it('authorizeApiResource passes the given action through; the read wrapper sends read', async () => {
+    authorizeResourceMock.mockReset();
+    authorizeResourceMock.mockResolvedValue({ allowed: true });
+    const base = { knex: {} as any, tenant: 't1', user: { user_id: 'u1' }, resource: 'ticket', recordContext: { id: 'r1' } };
+
+    await authorizeApiResource({ ...base, action: 'update' });
+    await authorizeApiResource({ ...base, action: 'delete' });
+    await authorizeApiResourceRead(base);
+
+    const actions = authorizeResourceMock.mock.calls.map((c) => c[0].resource.action);
+    expect(actions).toEqual(['update', 'delete', 'read']);
+  });
+
+  it('API-key and session principals reach the kernel with the same resource/action', async () => {
+    authorizeResourceMock.mockReset();
+    authorizeResourceMock.mockResolvedValue({ allowed: false });
+    const base = { knex: {} as any, tenant: 't1', user: { user_id: 'u1' }, resource: 'ticket', action: 'update', recordContext: { id: 'r1' } };
+
+    const viaKey = await authorizeApiResource({ ...base, apiKeyId: 'k1' });
+    const viaSession = await authorizeApiResource(base);
+
+    expect(viaKey).toBe(viaSession);
+    const [a, b] = authorizeResourceMock.mock.calls.map((c) => c[0]);
+    expect(a.resource).toEqual(b.resource);
+    expect(a.subject.apiKeyId).toBe('k1');
+    expect(b.subject.apiKeyId).toBeUndefined();
   });
 });

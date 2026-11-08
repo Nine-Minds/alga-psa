@@ -229,7 +229,6 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
           boardOptions={ticketData.options.board}
           priorityOptions={ticketData.options.priority}
           initialCategories={ticketData.categories}
-          initialClients={ticketData.clients}
           initialLocations={ticketData.locations}
           currentUser={currentUser}
         />

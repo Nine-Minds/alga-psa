@@ -7,7 +7,7 @@ vi.mock('@alga-psa/core/capability/server', () => ({ requireCapabilityEitherMode
 vi.mock('@alga-psa/db', () => ({ createTenantKnex: mocks.db }));
 vi.mock('@alga-psa/licensing/lifecycle-error', () => ({ CoManagedLifecycleError: mocks.Lifecycle }));
 vi.mock('@alga-psa/co-managed', () => ({ CoManagedSharedWorkError: mocks.Forbidden, CoManagedCommentCreateError: mocks.Command }));
-vi.mock('../../../lib/co-managed/createTicketComment', () => ({ createSharedTicketComment: mocks.create }));
+vi.mock('@alga-psa/co-managed/sharedTicketCommentWriter', () => ({ createSharedTicketComment: mocks.create }));
 import { createCoManagedTicketCommentAction } from '../../../lib/actions/coManagedTicketCommentActions';
 const resource = { tenant: 'customer', relationshipId: 'relationship', kind: 'ticket' as const, id: 'ticket' };
 const request = { audience: 'shared_it' as const, operationId: 'operation', text: 'IT note' };

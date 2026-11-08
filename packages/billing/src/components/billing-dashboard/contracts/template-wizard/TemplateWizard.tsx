@@ -48,6 +48,9 @@ export interface TemplateWizardData {
   /** Base currency of the template; empty until the tenant default has loaded. */
   currency_code: string;
   enable_proration?: boolean;
+  /** Invoice title/subtitle for the Fixed bundle line (optional). */
+  invoice_line_description?: string;
+  invoice_line_subtitle?: string;
   fixed_services: Array<{
     service_id: string;
     service_name?: string;
@@ -172,6 +175,8 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
     billing_timing: wizardData.billing_timing ?? 'arrears',
     enable_proration: wizardData.enable_proration ?? false,
     fixed_services: wizardData.fixed_services ?? [],
+    invoice_line_description: wizardData.invoice_line_description?.trim() || null,
+    invoice_line_subtitle: wizardData.invoice_line_subtitle?.trim() || null,
     product_services: wizardData.product_services ?? [],
     hourly_services: wizardData.hourly_services ?? [],
     usage_services: wizardData.usage_services ?? [],

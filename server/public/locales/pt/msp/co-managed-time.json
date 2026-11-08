@@ -1,0 +1,25 @@
+{
+  "loading": "Carregando…",
+  "reload": "Recarregar",
+  "effort": {
+    "title": "Esforço",
+    "description": "Tempo registrado pela equipe do cliente, pela sua equipe e pelos dois combinados. Cada lançamento é contado uma só vez.",
+    "error": "Não foi possível carregar o esforço.",
+    "unavailable": "Oculto",
+    "hours": "{{value}} h",
+    "customerMinutes": "Equipe do cliente",
+    "mspMinutes": "Sua equipe",
+    "combinedMinutes": "Combinado",
+    "customerView": {
+      "customerMinutes": "Sua equipe",
+      "mspMinutes": "MSP"
+    }
+  },
+  "time": {
+    "log": "Registrar tempo",
+    "unavailable": "O registro de tempo não está disponível para este trabalho."
+  },
+  "ticket": {
+    "restricted": "Item de trabalho restrito"
+  }
+}

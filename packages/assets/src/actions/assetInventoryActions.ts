@@ -3,6 +3,7 @@
 import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createAssetReadContext, isAssetReadAllowed } from '../lib/assetReadAuthorization';
 
 /**
  * Inventory provenance for a managed asset (F024/F025).
@@ -64,7 +65,10 @@ const EMPTY_PROVENANCE: AssetInventoryProvenance = {
 /**
  * Product/SKU, the delivered serial unit, its origin sales order, and RMA history
  * for a managed asset. Returns an all-null shape (plus any asset-only warranty claims) when the
- * asset carries neither a service_id nor a stock_unit_id. Requires asset:read.
+ * asset carries neither a service_id nor a stock_unit_id. Requires asset:read, plus a record-level
+ * asset read decision (the caller's asset authorization bundle must include this asset). A denied asset
+ * returns exactly the same all-null shape as a non-existent asset id (no existence oracle), and no
+ * inventory, sales-order or RMA query runs for it.
  */
 export const getAssetInventoryProvenance = withAuth(async (
   user,
@@ -76,9 +80,15 @@ export const getAssetInventoryProvenance = withAuth(async (
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const asset = await trx('assets')
       .where({ tenant, asset_id: assetId })
-      .select('service_id', 'stock_unit_id')
+      .select('asset_id', 'client_id', 'service_id', 'stock_unit_id')
       .first();
     if (!asset) return { ...EMPTY_PROVENANCE };
+    // Record-level authorization BEFORE any linked inventory/SO/RMA query. Deliberately non-throwing
+    // (not assertAssetReadAllowedById) so denied and missing assets are indistinguishable.
+    const readContext = await createAssetReadContext(trx, tenant, user as any);
+    if (!(await isAssetReadAllowed(trx, tenant, readContext, { asset_id: asset.asset_id, client_id: asset.client_id }))) {
+      return { ...EMPTY_PROVENANCE };
+    }
     // An asset with no inventory links can still carry asset-only warranty claims (C5): fall through to
     // the RMA history instead of returning early.
     if (!asset.service_id && !asset.stock_unit_id) {

@@ -80,7 +80,7 @@ docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.c
   -f docker-compose.expose-infra.yaml up -d
 ```
 
-`docker-compose.prod.yaml` clears the ports with `ports: !reset []`, which requires Docker Compose 2.24 or later. Older versions stop with a parse error instead of publishing the ports. The prebuilt files do not use `!reset`, so they keep the v2.20 minimum. See [Network Exposure](setup_guide.md#network-exposure) for remote access and firewall guidance.
+`docker-compose.prod.yaml` clears the ports with `ports: !reset []`, which requires Docker Compose 2.24 or later. Older versions stop with a parse error instead of publishing the ports. Use Docker Compose 2.39.4 or later for source-built and prebuilt stacks. Their hardening policy uses `security_opt: !override` to prevent duplicate options when combining files and resolving `extends`. See [Network Exposure](setup_guide.md#network-exposure) for remote access and firewall guidance.
 
 ## Service Configuration
 
@@ -152,6 +152,12 @@ secrets:
 2. Update edition-specific configurations as needed
 3. Test changes in both CE and EE environments
 4. Update documentation if the structure changes
+
+## Container user
+
+The server, setup, workflow-worker and email-service containers, and compose Redis, run as uid 1000 with `no-new-privileges`. A one-shot `runtime-permissions` service runs as root first, with only the capabilities it needs, and fixes ownership of `files_data`, `./secrets/*` (`1000:1000`, `0600`) and `secrets/tenants`. Every application service lists it under `depends_on` with `service_completed_successfully`.
+
+Set `ALGA_NO_NEW_PRIVILEGES=false` on hosts that use snap-installed Docker (`snap list docker`); leave it unset elsewhere. Upgrade steps, the manual `chown` alternative and the effect on host users other than uid 1000 are in the [setup guide](setup_guide.md#container-user).
 
 ## Troubleshooting
 
