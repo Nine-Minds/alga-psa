@@ -2733,6 +2733,7 @@
       "Code 128",
       "Ticket: {{number}}",
       "RMA {{number}} · {{status}}",
+      "Ticket {{number}}",
       "Tickets",
       "ticket",
       "tickets",
