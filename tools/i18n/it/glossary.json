@@ -2378,7 +2378,9 @@
       "Firmware",
       "No",
       "team",
-      "{{actor}} • {{eventType}}"
+      "{{actor}} • {{eventType}}",
+      "Standard",
+      "Ticket {{number}}"
     ],
     "caseInsensitive": [
       "account",
