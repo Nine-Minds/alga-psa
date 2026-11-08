@@ -387,6 +387,8 @@
     },
     "locations": {
       "billing": "Facturation",
+      "contactCount_one": "1 contact",
+      "contactCount_other": "{{count}} contacts",
       "manage": "Gérer",
       "more": "+{{count}} de plus",
       "none": "Aucun site pour l’instant.",
@@ -1354,7 +1356,10 @@
         "phoneLabel": "Téléphone",
         "setDefault": "Définir par défaut",
         "shippingTag": "Expédition",
-        "unnamed": "Emplacement sans nom"
+        "unnamed": "Emplacement sans nom",
+        "contactCount_one": "1 contact",
+        "contactCount_other": "{{count}} contacts",
+        "contactPrimary": "Principal"
       },
       "dialog": {
         "addTitle": "Ajouter un nouvel emplacement",
@@ -1951,7 +1956,8 @@
       "sourceIsTenantDefault": "La fiche de votre propre organisation ne peut pas être fusionnée dans un client.",
       "sourceHasCoManagement": "Ce client dispose d’un espace de travail d’informatique cogérée. Annulez sa configuration ou mettez fin à la cogestion avant de le fusionner.",
       "parentLinkCycle": "Ce client est enregistré comme enfant de celui que vous fusionnez ; la fusion inverserait la hiérarchie.",
-      "invalidContractCutover": "L'une des dates de bascule se situe en dehors de la durée de son contrat."
+      "invalidContractCutover": "L'une des dates de bascule se situe en dehors de la durée de son contrat.",
+      "invalidContactLocation": "Un site choisi n'appartient à aucun des clients fusionnés."
     },
     "profileContacts": {
       "duplicateManager": "Un profil de facturation ne peut avoir qu'un seul responsable.",
@@ -2033,7 +2039,16 @@
     "billingStrategyHeading": "Facturer le travail et les appareils fusionnés sous",
     "billingStrategySource": "Profil de facturation de {{source}}, conservé comme profil distinct chez {{target}}",
     "billingStrategyTarget": "Profil de facturation par défaut de {{target}}",
-    "billingStrategyHelp": "S'applique à {{tickets}} ticket(s), {{projects}} projet(s), {{assets}} actif(s) et {{mappings}} groupe(s) d'appareils RMM sans profil de facturation propre. Les lignes avec un profil explicite le conservent, et les factures, cycles de facturation, paiements et crédits restent toujours sur le profil fusionné."
+    "billingStrategyHelp": "S'applique à {{tickets}} ticket(s), {{projects}} projet(s), {{assets}} actif(s) et {{mappings}} groupe(s) d'appareils RMM sans profil de facturation propre. Les lignes avec un profil explicite le conservent, et les factures, cycles de facturation, paiements et crédits restent toujours sur le profil fusionné.",
+    "locationsColumn": "Sites",
+    "remoteBadge": "À distance",
+    "noLocationsAfterMerge": "Aucun site",
+    "unnamedLocation": "Site",
+    "movingFrom": "provient de {{client}}",
+    "primaryLocation": "Principal",
+    "targetAlsoHas": "{{client}} possède aussi « {{location}} »",
+    "useIt": "Utiliser celui-ci",
+    "contactLocationSummary": "{{count}} liens de site de contacts, {{repointed}} redirigés"
   },
   "billingProfileContacts": {
     "title": "Contacts du profil",

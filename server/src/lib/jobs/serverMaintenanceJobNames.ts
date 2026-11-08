@@ -15,6 +15,8 @@ export const SERVER_MAINTENANCE_JOBS = {
   createClientContractLineCycles: 'create-client-contract-line-cycles',
   rmmPollingReconcile: 'rmm-polling-reconcile',
   generateRecurringTickets: 'generate-recurring-tickets',
+  // Registered by registerCoManagedUploadCleanup (gated on the `co-managed` capability); inert when it is off.
+  coManagedUploadCleanup: 'co-managed-upload-cleanup',
 } as const;
 
 // CE-only fan-out definitions (registerCeMaintenanceJobs.ts). Kept apart from

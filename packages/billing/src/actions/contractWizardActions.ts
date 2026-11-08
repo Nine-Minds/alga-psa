@@ -23,7 +23,7 @@ import {
   DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
   resolveRecurringAuthoringPolicy,
 } from '@shared/billingClients/recurringAuthoringPolicy';
-import { createClientContractAssignment } from '@alga-psa/shared/billingClients';
+import { createClientContractAssignment, resolveClientContractCurrency } from '@alga-psa/shared/billingClients';
 import {
   listTemplateCurrencies,
   resolveTemplateAmounts,
@@ -1256,30 +1256,6 @@ export const createContractTemplateFromWizard = withAuth(async (
 // ---------------------------------------------------------------------------
 // Client wizard
 // ---------------------------------------------------------------------------
-
-/**
- * Currency a new contract for `clientId` is billed in: the client's configured
- * default, then the tenant default (default_billing_settings), then 'USD' as the
- * last-resort default the contract record has always used. Shared by contract
- * creation and the template preview so both resolve the same currency.
- */
-const resolveClientContractCurrency = async (
-  knex: Knex | Knex.Transaction,
-  tenant: string,
-  clientId: string
-): Promise<string> => {
-  const clientRow = await tenantDb(knex, tenant).table('clients')
-    .where({ client_id: clientId })
-    .select('default_currency_code')
-    .first();
-  if (clientRow?.default_currency_code) {
-    return clientRow.default_currency_code;
-  }
-  const billingSettings = await tenantDb(knex, tenant).table('default_billing_settings')
-    .select('default_currency_code')
-    .first();
-  return billingSettings?.default_currency_code || 'USD';
-};
 
 /**
  * Writes the wizard's contract-wide discounts as definitions owned by the new

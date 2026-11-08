@@ -165,6 +165,7 @@ import {
   getQboClasses,
   getQboDepartments,
   getQboTaxCodes,
+  getQboItems,
   getQboAutomatedSalesTaxMode,
   setQboAutomatedSalesTaxMode,
   setQboEnvironment,
@@ -683,6 +684,40 @@ describe('QBO integration actions', () => {
     expect(Array.isArray(result)).toBe(true);
     if (!Array.isArray(result)) return;
     expect(result[0].description).toBe('Goods and services');
+  });
+
+  // --- Item catalog ---
+
+  it('getQboItems: pages past the 100-row default and returns every item', async () => {
+    seedRealm('realm-items-1');
+    // 1200 forces a second page at the 1000-row MAXRESULTS ceiling.
+    const items = Array.from({ length: 1200 }, (_unused, index) => ({
+      Id: `item-${index}`,
+      Name: `Service ${index}`
+    }));
+    const queryMock = vi.fn(async (query: string) => {
+      const page = /STARTPOSITION (\d+) MAXRESULTS (\d+)/.exec(query);
+      const start = page ? Number(page[1]) : 1;
+      const max = page ? Number(page[2]) : 100;
+      return items.slice(start - 1, start - 1 + max);
+    });
+    qboClientCreateMock.mockResolvedValue({ query: queryMock });
+
+    const result = await getQboItems({ realmId: 'realm-items-1' });
+
+    expect(Array.isArray(result)).toBe(true);
+    if (!Array.isArray(result)) return;
+    expect(result).toHaveLength(1200);
+    expect(result[0]).toEqual({ id: 'item-0', name: 'Service 0' });
+    expect(result[1199]).toEqual({ id: 'item-1199', name: 'Service 1199' });
+
+    const itemPages = queryMock.mock.calls
+      .map((call) => String(call[0]))
+      .filter((query) => /FROM Item/i.test(query));
+    expect(itemPages).toEqual([
+      'SELECT Id, Name FROM Item STARTPOSITION 1 MAXRESULTS 1000',
+      'SELECT Id, Name FROM Item STARTPOSITION 1001 MAXRESULTS 1000'
+    ]);
   });
 
   // --- Automated Sales Tax mode ---

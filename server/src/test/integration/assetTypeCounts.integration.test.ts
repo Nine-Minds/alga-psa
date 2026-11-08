@@ -375,6 +375,22 @@ describe('listAssets filtered type counts', () => {
     expect(secondPage.asset_type_counts).toEqual(result.asset_type_counts);
   });
 
+  it('unions multiple selected types in one request and keeps every bubble count', async () => {
+    const before = actionAuth.transactions;
+    const result = await list({
+      client_id: fixture.clientA,
+      asset_types: ['workstation', 'network_device'],
+      limit: 10,
+    });
+
+    expect(actionAuth.transactions - before).toBe(1);
+    expect(result.total).toBe(4);
+    expect(new Set(result.assets.map((asset) => asset.asset_type))).toEqual(
+      new Set(['workstation', 'network_device'])
+    );
+    expect(result.asset_type_counts).toEqual({ workstation: 2, server: 1, network_device: 2 });
+  });
+
   it('fetches the page and counts through one transaction', async () => {
     const before = actionAuth.transactions;
     const result = await list({ client_id: fixture.clientB, limit: 1 });
@@ -433,6 +449,12 @@ describe('listAssets filtered type counts', () => {
       expect(result.asset_type_counts).toEqual({ workstation: 2, server: 1, network_device: 2 });
       expect(await getCounts({ client_id: fixture.clientB })).toEqual({});
       expect(await getCounts({ search: 'Globex' })).toEqual({});
+
+      const multi = await list({ asset_types: ['server', 'network_device'], limit: 10 });
+      expect(multi.total).toBe(3);
+      expect(multi.assets.every((asset) => asset.client_id === fixture.clientA)).toBe(true);
+      expect(new Set(multi.assets.map((asset) => asset.asset_type))).toEqual(new Set(['server', 'network_device']));
+      expect(multi.asset_type_counts).toEqual({ workstation: 2, server: 1, network_device: 2 });
     } finally {
       actionAuth.userId = fixture.userId;
     }
@@ -631,5 +653,6 @@ describe('listAssets filtered type counts', () => {
   it('rejects invalid filter values instead of silently ignoring them', async () => {
     await expect(getCounts({ client_id: 'not-a-uuid' })).rejects.toThrow();
     await expect(getCounts({ rmm_managed: 'yes' } as never)).rejects.toThrow();
+    await expect(list({ asset_type: 'server', asset_types: ['workstation'] })).rejects.toThrow();
   });
 });
