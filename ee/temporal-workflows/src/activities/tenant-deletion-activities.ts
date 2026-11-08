@@ -319,6 +319,8 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'asset_audit_items',
   'asset_audits',
   'software_catalog',
+  'rmm_condition_transitions',
+  'rmm_condition_states',
   'rmm_webhook_events',
   'rmm_maintenance_windows',
   'rmm_alert_rules',

@@ -4,14 +4,29 @@ import { mkdtempSync, readFileSync, writeFileSync, rmSync, realpathSync } from '
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { collectVitestInventory } from '../lib/vitest-inventory-collection.mjs';
+import { collectVitestInventory, hasCurrentManualRunnerReview } from '../lib/vitest-inventory-collection.mjs';
 import { readRunnerCollection } from '../lib/read-runner-collection.mjs';
 import { isAdditionalWorkspaceTest, reconcileDiscovery } from '../lib/test-discovery.mjs';
+
+test('manual Vitest runner reviews remain valid through their stated expiry date', t => {
+  const root = fileURLToPath(new URL('../../', import.meta.url));
+  const runners = JSON.parse(readFileSync(path.join(root, 'scripts/manual-vitest-runners.json'), 'utf8'));
+  const today = new Date('2026-11-08T00:00:00Z');
+  const manualRunners = runners.filter(runner => runner.mandatory === false);
+
+  assert.ok(manualRunners.length > 0);
+  for (const runner of manualRunners) {
+    assert.equal(hasCurrentManualRunnerReview(runner, today), true, `${runner.runner} review must be current`);
+  }
+  assert.equal(hasCurrentManualRunnerReview({ reason: 'reviewed', issue: 'issue', expires: '2026-11-07' }, today), false);
+  assert.equal(hasCurrentManualRunnerReview({ reason: 'reviewed', issue: 'issue', expires: '2026-11-08' }, today), true);
+  assert.equal(hasCurrentManualRunnerReview({ reason: 'reviewed', issue: 'issue', expires: '2026-11-09' }, today), true);
+});
 
 test('renewed email and invoice reviews collect real cases after the previous deadline', t => {
   // The workspace DB job passed all test bodies, then failed manual collection
   // when these reviews reached their deadline at midnight UTC on November 8.
-  t.mock.timers.enable({ apis: ['Date'], now: Date.parse('2026-11-08T01:54:56Z') });
+  t.mock.timers.enable({ apis: ['Date'], now: Date.parse('2026-11-09T01:54:56Z') });
   const root = fileURLToPath(new URL('../../', import.meta.url));
   const output = mkdtempSync(path.join(tmpdir(), 'renewed-manual-inventory-'));
   t.after(() => rmSync(output, { recursive: true, force: true }));
@@ -77,8 +92,27 @@ test('real Vitest inventory loads cases without executing bodies and rejects emp
     runner: { ...runner, mandatory: false } }), /unexpired review/);
   assert.throws(() => collectVitestInventory({ root, output: path.join(root, 'reports'),
     runner: { ...runner, mandatory: false, reason: 'Manual fixture', issue: 'fixture-1', expires: '2000-01-01' } }), /unexpired review/);
+  const reviewedRunner = { ...runner, mandatory: false, reason: 'Manual fixture', issue: 'fixture-1', expires: '2026-11-08' };
   writeFileSync(path.join(root, 'base.test.js'),
     'test("must only collect", () => { throw new Error("body must not execute") });');
+  assert.doesNotThrow(() => collectVitestInventory({ root, output: path.join(root, 'reports'), runner: reviewedRunner,
+    now: new Date('2026-11-08T00:00:00Z') }));
+  assert.doesNotThrow(() => collectVitestInventory({ root, output: path.join(root, 'reports'),
+    runner: { ...reviewedRunner, expires: '2026-11-09' }, now: new Date('2026-11-08T23:59:59Z') }));
+  const OriginalDate = globalThis.Date;
+  globalThis.Date = class extends OriginalDate {
+    constructor(...args) { super(...(args.length ? args : ['2026-11-08T12:00:00Z'])); }
+    static now() { return OriginalDate.parse('2026-11-08T12:00:00Z'); }
+  };
+  try {
+    const expiresToday = collectVitestInventory({ root, output: path.join(root, 'reports'),
+      runner: { ...runner, mandatory: false, reason: 'Manual fixture', issue: 'fixture-1', expires: '2026-11-08' } });
+    assert.equal(expiresToday.status, 'passed');
+    assert.throws(() => collectVitestInventory({ root, output: path.join(root, 'reports'),
+      runner: { ...runner, mandatory: false, reason: 'Manual fixture', issue: 'fixture-1', expires: '2026-11-07' } }), /unexpired review/);
+  } finally {
+    globalThis.Date = OriginalDate;
+  }
   const valid = collect();
   assert.equal(valid.status, 'passed');
   assert.deepEqual(valid.files, ['base.test.js']);

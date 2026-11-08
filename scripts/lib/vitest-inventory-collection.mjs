@@ -3,19 +3,22 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { normalizeTestFile } from './test-execution-evidence.mjs';
 
+export function hasCurrentManualRunnerReview(runner, now = new Date()) {
+  const expiry = runner.expires;
+  return Boolean(runner.reason?.trim() && runner.issue?.trim()
+    && /^\d{4}-\d{2}-\d{2}$/.test(expiry ?? '')
+    && Number.isFinite(Date.parse(`${expiry}T00:00:00Z`))
+    && new Date(`${expiry}T00:00:00Z`).toISOString().slice(0, 10) === expiry
+    && expiry >= now.toISOString().slice(0, 10));
+}
+
 // Collection must execute the runner's module loading, not just duplicate its
 // include globs. Compare file discovery with registered cases to catch empty
 // files and collection errors without running test bodies or starting services.
-export function collectVitestInventory({ root, runner, output, env = process.env }) {
+export function collectVitestInventory({ root, runner, output, env = process.env, now = new Date() }) {
   if (!runner.owner?.trim() || !runner.runtime?.trim()) throw new Error(`Missing runner ownership/runtime: ${runner.runner}`);
-  if (runner.mandatory === false) {
-    const expiry = runner.expires;
-    if (!runner.reason?.trim() || !runner.issue?.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(expiry ?? '')
-      || !Number.isFinite(Date.parse(`${expiry}T00:00:00Z`))
-      || new Date(`${expiry}T00:00:00Z`).toISOString().slice(0, 10) !== expiry
-      || expiry <= new Date().toISOString().slice(0, 10)) {
-      throw new Error(`Manual runner requires a reason, tracking issue and unexpired review: ${runner.runner}`);
-    }
+  if (runner.mandatory === false && !hasCurrentManualRunnerReview(runner, now)) {
+    throw new Error(`Manual runner requires a reason, tracking issue and unexpired review: ${runner.runner}`);
   }
   const directory = path.join(output, runner.runner);
   mkdirSync(directory, { recursive: true });

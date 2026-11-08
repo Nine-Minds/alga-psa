@@ -40,6 +40,8 @@ import { publishUnregisteredEventType } from 'server/src/lib/eventBus/publishers
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildScheduleEntryCreatedPayload, buildScheduleEntryDeletedPayload, buildScheduleEntryUpdatedPayload } from '@alga-psa/workflow-streams';
 import { TimePeriod } from '@alga-psa/scheduling/models/timePeriod';
+import type { ITimePeriodSettings } from '@alga-psa/types';
+import { TimePeriodSettings, TimePeriodSettingsRuleError } from '@alga-psa/scheduling/models/timePeriodSettings';
 import { ensureTimePeriodCoversDate } from '@alga-psa/scheduling/lib/timePeriodMaterialization';
 import { Temporal } from '@js-temporal/polyfill';
 import {
@@ -103,6 +105,12 @@ function todayUtc(): string {
 const CLOSED_TIME_PERIOD_MESSAGE = 'Time period is closed; reopen it first';
 
 function throwTimePeriodSettingsApiError(error: unknown): never {
+  if (error instanceof TimePeriodSettingsRuleError) {
+    if (error.kind === 'overlap') throw new ConflictError(error.message);
+    if (error.kind === 'not_found') throw new NotFoundError(error.message);
+    throw new BadRequestError(error.message);
+  }
+
   const dbError = error as { code?: string; column?: string };
 
   if (dbError?.code === '22P02') {
@@ -119,6 +127,15 @@ function throwTimePeriodSettingsApiError(error: unknown): never {
   }
 
   throw error;
+}
+
+/** The REST contract carries effective dates as calendar dates (YYYY-MM-DD); the model returns midnight-UTC ISO strings. */
+function toTimePeriodSettingsResponse(settings: ITimePeriodSettings): ITimePeriodSettings {
+  return {
+    ...settings,
+    effective_from: settings.effective_from.slice(0, 10),
+    effective_to: settings.effective_to ? settings.effective_to.slice(0, 10) : undefined,
+  };
 }
 
 type TimeSheetSortSpec = { column: string; nullable?: boolean };
@@ -1049,104 +1066,63 @@ export class TimeSheetService extends BaseService<any> {
 
 
   // Time period settings
-  async getTimePeriodSettings(context: ServiceContext): Promise<any[]> {
-    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  // Business rules (effective_from default and hand-off, overlap rejection) live in the scheduling
+  // TimePeriodSettings model, shared with the settings UI's server actions.
+  async getTimePeriodSettings(context: ServiceContext): Promise<ITimePeriodSettings[]> {
+    // A registered time source owns delegated calls; native settings use the shared rules model.
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'getTimePeriodSettings', [context]);
     if (delegated.handled) return delegated.value;
-      const { knex } = await this.getKnex();
-      
-      return tenantDb(knex, context.tenant).table('time_period_settings')
-        .orderBy('effective_from', 'desc');
+    const { knex } = await this.getKnex();
+    return (await TimePeriodSettings.list(knex, context.tenant)).map(toTimePeriodSettingsResponse);
+  }
+
+  async getTimePeriodSettingsById(id: string, context: ServiceContext): Promise<ITimePeriodSettings> {
+    // A registered time source owns delegated calls; native settings use the shared rules model.
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'getTimePeriodSettingsById', [id, context]);
+    if (delegated.handled) return delegated.value;
+    const { knex } = await this.getKnex();
+    try {
+      return toTimePeriodSettingsResponse(await TimePeriodSettings.getById(knex, context.tenant, id));
+    } catch (error) {
+      throwTimePeriodSettingsApiError(error);
     }
+  }
 
-
-  async createTimePeriodSettings(data: CreateTimePeriodSettingsData, context: ServiceContext): Promise<any> {
-    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  async createTimePeriodSettings(data: CreateTimePeriodSettingsData, context: ServiceContext): Promise<ITimePeriodSettings> {
+    // A registered time source owns delegated calls; native settings use the shared rules model.
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'createTimePeriodSettings', [data, context]);
     if (delegated.handled) return delegated.value;
-      const { knex } = await this.getKnex();
-
-      try {
-        return await withTransaction(knex, async (trx) => {
-          // Deactivate previous settings if new one is active
-          if (data.is_active) {
-            await tenantDb(trx, context.tenant).table('time_period_settings')
-              .where({ is_active: true })
-              .update({ is_active: false, updated_at: new Date() });
-          }
-
-          const settingsData = {
-            ...data,
-            tenant: context.tenant,
-            created_at: new Date(),
-            updated_at: new Date()
-          };
-
-          const [settings] = await tenantDb(trx, context.tenant).table('time_period_settings')
-            .insert(settingsData)
-            .returning('*');
-
-          return settings;
-        });
-      } catch (error) {
-        throwTimePeriodSettingsApiError(error);
-      }
+    const { knex } = await this.getKnex();
+    try {
+      return toTimePeriodSettingsResponse(await TimePeriodSettings.create(knex, context.tenant, data, { userId: context.userId }));
+    } catch (error) {
+      throwTimePeriodSettingsApiError(error);
     }
+  }
 
-
-  async updateTimePeriodSettings(id: string, data: UpdateTimePeriodSettingsData, context: ServiceContext): Promise<any> {
-    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  async updateTimePeriodSettings(id: string, data: UpdateTimePeriodSettingsData, context: ServiceContext): Promise<ITimePeriodSettings> {
+    // A registered time source owns delegated calls; native settings use the shared rules model.
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'updateTimePeriodSettings', [id, data, context]);
     if (delegated.handled) return delegated.value;
-      const { knex } = await this.getKnex();
-
-      try {
-        return await withTransaction(knex, async (trx) => {
-          const existing = await tenantDb(trx, context.tenant).table('time_period_settings')
-            .where({ time_period_settings_id: id })
-            .first();
-
-          if (!existing) {
-            throw new NotFoundError('Time period settings not found');
-          }
-
-          // Deactivate other settings if this one is being activated
-          if (data.is_active) {
-            await tenantDb(trx, context.tenant).table('time_period_settings')
-              .where({ is_active: true })
-              .whereNot('time_period_settings_id', id)
-              .update({ is_active: false, updated_at: new Date() });
-          }
-
-          const updateData = {
-            ...data,
-            updated_at: new Date()
-          };
-
-          const updatedCount = await tenantDb(trx, context.tenant).table('time_period_settings')
-            .where({ time_period_settings_id: id })
-            .update(updateData);
-
-          if (updatedCount === 0) {
-            throw new NotFoundError('Time period settings not found');
-          }
-
-          const settings = await tenantDb(trx, context.tenant).table('time_period_settings')
-            .where({ time_period_settings_id: id })
-            .first();
-
-          if (!settings) {
-            throw new NotFoundError('Time period settings not found');
-          }
-
-          return settings;
-        });
-      } catch (error) {
-        throwTimePeriodSettingsApiError(error);
-      }
+    const { knex } = await this.getKnex();
+    try {
+      return toTimePeriodSettingsResponse(await TimePeriodSettings.update(knex, context.tenant, id, data));
+    } catch (error) {
+      throwTimePeriodSettingsApiError(error);
     }
+  }
 
-
+  async deleteTimePeriodSettings(id: string, context: ServiceContext): Promise<void> {
+    // A registered time source owns delegated calls; native settings use the shared rules model.
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'deleteTimePeriodSettings', [id, context]);
+    if (delegated.handled) return delegated.value;
+    const { knex } = await this.getKnex();
+    try {
+      await TimePeriodSettings.delete(knex, context.tenant, id);
+    } catch (error) {
+      throwTimePeriodSettingsApiError(error);
+    }
+  }
 
   // Schedule entries
   async getScheduleEntries(context: ServiceContext, filters?: ScheduleEntryFilters): Promise<any[]> {

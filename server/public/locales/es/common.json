@@ -56,12 +56,27 @@
     "manageLicense": "Administrar licencia",
     "ariaLabel": "Estado de la licencia",
     "dismiss": "Descartar",
-    "licenseExpiresIn_few": "La licencia vence en {{count}} días. Renueve para evitar interrupciones del servicio.",
+
+    "subscriptionEnding": "Su suscripción Pro se ha cancelado. Pro finaliza el {{date}}. Vuelva a suscribirse para conservar Pro.",
+    "subscriptionEndingNoDate": "Su suscripción Pro se ha cancelado. Vuelva a suscribirse para conservar Pro.",
+    "subscriptionLapsed": "Ahora usa la edición gratuita. Vuelva a suscribirse para restaurar Pro.",
+    "resubscribe": "Volver a suscribirse",
+    "termEnds": "Su acceso a Pro termina el {{date}}. Renueve para conservar Pro.",
+    "termEndsNoDate": "Su periodo de Pro está por terminar. Renueve para conservar Pro.",
+    "paymentFailed": "Pago fallido — lo reintentaremos el {{date}}. Actualice su método de pago para conservar Pro.",
+    "paymentFailedNoRetry": "Pago fallido. Actualice su método de pago para conservar Pro.",
+    "paymentFailedEndsOn": "Pro finaliza el {{date}} si el pago sigue fallando.",
+    "paymentFailedEnded": "Pro ha finalizado — pago fallido. Su appliance funciona con Essentials.",
+    "paymentFailedEndedEnding": "Su suscripción Pro ha finalizado — pago fallido. Pro seguirá activo hasta el {{date}}. Vuelva a suscribirse para conservar Pro.",
+    "paymentFailedEndedEndingNoDate": "Su suscripción Pro ha finalizado — pago fallido. Vuelva a suscribirse para conservar Pro.",
+    "updatePaymentMethod": "Actualizar método de pago",
+"licenseExpiresIn_few": "La licencia vence en {{count}} días. Renueve para evitar interrupciones del servicio.",
     "licenseExpiresIn_many": "La licencia vence en {{count}} días. Renueve para evitar interrupciones del servicio.",
     "trialDaysRemaining_few": "Prueba Pro activa: quedan {{count}} días.",
     "trialDaysRemaining_many": "Prueba Pro activa: quedan {{count}} días.",
     "trialExpiresIn_few": "La prueba Pro vence en {{count}} días. Introduzca una clave de licencia para conservar las funciones Pro.",
     "trialExpiresIn_many": "La prueba Pro vence en {{count}} días. Introduzca una clave de licencia para conservar las funciones Pro."
+
   },
   "nav": {
     "dashboard": "Panel",
