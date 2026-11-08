@@ -284,9 +284,9 @@ export const addServiceToContractLine = withAuth(async (
   rateTiers?: IContractLineServiceRateTier[]
 ): Promise<string | ContractLineServiceActionError> => {
   try {
-    if (!await hasPermission(user, 'billing', 'create')) {
-      return permissionError('Permission denied: billing create required', 'msp/billing:errors.permissions.billingCreate');
-    }
+    // No declared permission check here: the required permission depends on the rows the
+    // write creates or changes, which addServiceToContractLineInTransaction classifies
+    // under a line lock (authorizeMembershipWrite). One authority.
     const { knex: db } = await createTenantKnex();
     if (!tenant) {
       throw new Error('tenant context not found');

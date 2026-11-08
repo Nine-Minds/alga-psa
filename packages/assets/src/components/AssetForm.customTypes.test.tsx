@@ -26,11 +26,12 @@ vi.mock('../actions/assetActions', () => ({
   updateAsset: (...args: unknown[]) => mockUpdateAsset(...args),
 }));
 
+vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
+  ClientPicker: () => <div data-testid="client-picker" />,
+}));
+
 vi.mock('../actions/clientLookupActions', () => ({
   getVendorOptionsForAssets: vi.fn(async () => []),
-  getAllClientsForAssets: vi.fn(async () => [
-    { client_id: 'b0000000-0000-4000-8000-00000000000b', client_name: 'Acme Inc' },
-  ]),
   getClientLocationsForAssets: vi.fn(async () => []),
   getClientContactsForAssets: vi.fn(async () => [
     { contact_name_id: '11000000-0000-4000-8000-000000000001', client_id: 'b0000000-0000-4000-8000-00000000000b', full_name: 'Pat Person', email: null },

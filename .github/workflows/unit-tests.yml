@@ -184,7 +184,9 @@ jobs:
     # remapping. 45 left under a minute of headroom, and shard 1 of PR 4015 was
     # cancelled at 45m27s twice in a row, again with every one of its 1036
     # files green. scripts/tests/server-unit-shard-timeout.test.mjs keeps this
-    # ceiling above the measured peak.
+    # ceiling above the measured peak. Part of those silent minutes was the
+    # untested-file crawl, which every shard ran over the whole include tree;
+    # scripts/lib/vitest-coverage-provider.mjs now leaves it to the merge job.
     timeout-minutes: 60
     strategy:
       fail-fast: false
@@ -337,14 +339,16 @@ jobs:
         id: shards
         if: always()
         run: node scripts/merge-server-unit-shards.mjs
+      # The custom provider is the one the shards ran: it adds the four maps
+      # and crawls the files no shard loaded once, here, before rendering.
       - name: Merge shard reports and render coverage
         id: merge
         if: always()
         working-directory: ./server
-        run: npx vitest run --merge-reports ../test-results/server-unit-blobs --coverage.enabled=true --coverage.reporter=text-summary --coverage.reporter=lcov --coverage.reporter=json-summary --reporter=default --reporter=json --outputFile.json=./test-results.json
+        run: npx vitest run --merge-reports ../test-results/server-unit-blobs --coverage.enabled=true --coverage.provider=custom --coverage.customProviderModule=../scripts/lib/vitest-coverage-provider.mjs --coverage.reporter=text-summary --coverage.reporter=lcov --coverage.reporter=json-summary --reporter=default --reporter=json --outputFile.json=./test-results.json
         env:
-          # AST-aware remapping of the merged package/shared/server map still
-          # needs the headroom the single full run had.
+          # AST-aware remapping of the merged package/shared/server map and the
+          # untested-file crawl still need the headroom the single full run had.
           NODE_OPTIONS: '--max-old-space-size=14336'
           SKIP_DB_TESTS: '1'
           DB_USER_ADMIN: ''

@@ -36,6 +36,15 @@
         "suggested": "Voorgesteld",
         "toSave": "{{total}} op te slaan"
       },
+      "customerMapping": {
+        "unlink": "Ontkoppelen",
+        "unlinkConfirm": {
+          "title": "{{client}} ontkoppelen van QuickBooks?",
+          "body": "{{client}} wordt niet meer geëxporteerd naar QuickBooks-klant {{customer}}. In QuickBooks verandert niets en u kunt de klant op elk moment opnieuw koppelen via deze lijst.",
+          "confirm": "Ontkoppelen",
+          "cancel": "Koppeling behouden"
+        }
+      },
       "dialog": {
         "cancel": "Annuleren",
         "enterPlaceholder": "{{field}} invoeren...",
@@ -2084,11 +2093,18 @@
         "environment": "Intuit-omgeving",
         "environmentProduction": "Productie",
         "environmentSandbox": "Sandbox",
+        "environmentHint": "Productie maakt verbinding met echte QuickBooks-bedrijven. Sandbox maakt verbinding met een testbedrijf van Intuit, zodat u exports kunt uitproberen zonder echte boekhouding te raken.",
+        "environmentLockedHint": "Ontkoppel QuickBooks voordat u van omgeving wisselt. Het gekoppelde bedrijf en zijn tokens bestaan alleen in de omgeving waarin ze zijn geautoriseerd.",
+        "environmentSandboxKeysTitle": "Sandbox vereist uw eigen Intuit-app",
+        "environmentSandboxKeysDescription": "Sandbox-bedrijven van Intuit accepteren alleen de Development-sleutels van een Intuit-app die u zelf beheert. De gedeelde app van deze omgeving gebruikt Production-sleutels. Registreer daarom uw eigen app en sla hieronder de Development-sleutels op voordat u verbinding maakt.",
+        "environmentSavedSandbox": "QuickBooks maakt nu verbinding met een sandbox-bedrijf van Intuit. Maak verbinding met de Development-sleutels van uw eigen Intuit-app.",
+        "environmentSavedProduction": "QuickBooks maakt nu verbinding met echte QuickBooks-bedrijven.",
         "errors": {
           "automatedSalesTax": "Bijwerken van de Automated Sales Tax-modus is mislukt.",
           "disconnect": "QuickBooks ontkoppelen mislukt.",
           "load": "QuickBooks-instellingen laden mislukt.",
-          "saveCredentials": "QuickBooks-inloggegevens opslaan mislukt."
+          "saveCredentials": "QuickBooks-inloggegevens opslaan mislukt.",
+          "environment": "Wijzigen van de Intuit-omgeving is mislukt."
         },
         "howItWorksDescription": "Koppel uw QuickBooks-bedrijf door in te loggen bij Intuit; AlgaPSA gebruikt het dan als standaard live-context voor exports en toewijzingen. De kaart „Intuit-app” hieronder laat zien of uw installatie de app voor die aanmelding al levert of dat u er eerst een moet registreren.",
         "howItWorksTitle": "Hoe live QuickBooks werkt in deze release",
@@ -2120,6 +2136,7 @@
         "credentialSource": {
           "app": "Deze installatie levert een gedeelde Intuit-app, dus u kunt QuickBooks koppelen zonder er zelf een te registreren. Sla deze kaart over en klik hieronder op „QuickBooks koppelen”.",
           "none": "Er is nog geen Intuit-app beschikbaar. Registreer er een bij Intuit voordat u kunt koppelen.",
+          "noneSandbox": "Sandbox vereist een eigen Intuit-app. Registreer er een en sla de Development-sleutels op voordat u kunt koppelen.",
           "tenant": "Deze tenant maakt verbinding via een eigen Intuit-app met de hieronder opgeslagen inloggegevens. Plak een nieuwe waarde en sla op om een sleutel te roteren.",
           "appTitle": "Geen inloggegevens nodig"
         },
@@ -2418,6 +2435,42 @@
           "title": "Onderhoudsvensters",
           "description": "Waarschuwingen die tijdens een actief venster binnenkomen, worden onderdrukt en maken geen tickets aan.",
           "empty": "Geen onderhoudsvensters geconfigureerd."
+        },
+        "predicate": {
+          "matchAll": "Overeenkomst",
+          "all": "Alle voorwaarden",
+          "any": "Een van de voorwaarden",
+          "add": "Voorwaarde toevoegen",
+          "remove": "Verwijderen",
+          "value": "Waarde",
+          "nestedGroup": "Geneste groep",
+          "legacyRegex": "Verouderde reguliere expressie voor bericht",
+          "and": "en",
+          "or": "of",
+          "fields": {
+            "severity": "Ernst",
+            "alertClass": "Waarschuwingsklasse",
+            "activityType": "Activiteitstype",
+            "sourceType": "Brontype",
+            "organizationId": "Organisatie-ID",
+            "text": "Bericht en details",
+            "deviceName": "Apparaatnaam",
+            "externalDeviceId": "Externe apparaat-ID",
+            "message": "Bericht",
+            "details": "Details"
+          },
+          "operators": {
+            "equals": "is",
+            "not_equals": "is niet",
+            "in": "is een van",
+            "not_in": "is geen van",
+            "contains": "bevat",
+            "not_contains": "bevat niet",
+            "contains_ci": "bevat, hoofdletterongevoelig",
+            "not_contains_ci": "bevat niet, hoofdletterongevoelig"
+          },
+          "addGroup": "Groep toevoegen",
+          "removeGroup": "Groep verwijderen"
         }
       },
       "ninjaOne": {
@@ -3067,6 +3120,93 @@
           "showSecret": "Geheim tonen",
           "title": "Waarschuwingswebhook",
           "url": "Webhook-URL"
+        }
+      },
+      "unifi": {
+        "proFeature": {
+          "description": "De UniFi-integratie is beschikbaar in AlgaPSA Pro."
+        },
+        "actions": {
+          "saveConfiguration": "Configuratie opslaan",
+          "testConnection": "Verbinding testen",
+          "disconnect": "Verbinding verbreken",
+          "discoverSites": "Sites ontdekken",
+          "runDeviceSync": "Apparaatsynchronisatie uitvoeren",
+          "checkOfflineNow": "Offline apparaten nu controleren",
+          "saveAlerting": "Meldingsinstellingen opslaan"
+        },
+        "alerting": {
+          "title": "Offline-meldingen",
+          "description": "Een apparaat dat langer offline blijft dan de respijtperiode genereert een melding en, als uw meldingsregels dat bepalen, een ticket. De melding wordt opgelost zodra het apparaat weer online is.",
+          "graceMinutes": "Offline-respijtperiode (minuten)",
+          "graceHelp": "Hoe lang een apparaat onafgebroken offline moet zijn voordat een melding wordt gegenereerd. Gebruik 0 om direct te melden.",
+          "rulesNote": "Ticketaanmaak, prioriteiten en automatisch oplossen stelt u in bij de meldingsregels hieronder."
+        },
+        "connection": {
+          "title": "UniFi-verbinding",
+          "description": "Maak verbinding met een UniFi-API-sleutel. Gebruik Site Manager om alle consoles van uw account te bereiken, of Lokale controller voor een controller die u rechtstreeks kunt bereiken. Geadopteerde gateways, switches en access points worden gesynchroniseerd.",
+          "syncLabel": "Synchronisatie: {{status}}",
+          "syncLabelWithError": "Synchronisatie: {{status}} ({{error}})",
+          "connectedAt": "Verbonden: {{time}}",
+          "never": "nooit"
+        },
+        "errors": {
+          "loadSettings": "UniFi-instellingen laden mislukt",
+          "loadMappings": "UniFi-sitekoppelingen laden mislukt",
+          "loadSummary": "UniFi-verbindingsoverzicht laden mislukt",
+          "loadState": "UniFi-integratiestatus laden mislukt",
+          "saveConfiguration": "UniFi-configuratie opslaan mislukt",
+          "testConnectionFailed": "Verbindingstest mislukt",
+          "disconnectFailed": "UniFi-integratie verbreken mislukt",
+          "siteSyncFailed": "Sites ontdekken mislukt",
+          "deviceSyncFailed": "Apparaatsynchronisatie mislukt",
+          "updateMappingFailed": "Koppeling bijwerken mislukt",
+          "reconnectRequired": "UniFi heeft de opgeslagen API-sleutel geweigerd. Plak een nieuwe sleutel en sla op om de synchronisatie te hervatten.",
+          "alertCheckFailed": "Offline-controle mislukt",
+          "saveAlertingFailed": "Meldingsinstellingen opslaan mislukt",
+          "invalidGraceMinutes": "Voer een geheel aantal minuten in tussen 0 en 1440."
+        },
+        "fields": {
+          "apiKey": "API-sleutel ({{state}})",
+          "apiKeyStateSaved": "opgeslagen",
+          "apiKeyStateRequired": "vereist",
+          "apiKeyPlaceholderExisting": "Sleutel opgeslagen. Voer een nieuwe sleutel in om deze te vervangen",
+          "apiKeyPlaceholderNew": "Plak uw UniFi-API-sleutel",
+          "connectionMode": "Verbindingsmodus",
+          "modeSiteManager": "Site Manager (in de cloud)",
+          "modeLocal": "Lokale controller",
+          "localBaseUrl": "Controller-URL",
+          "localBaseUrlPlaceholder": "https://unifi.example.com"
+        },
+        "mappings": {
+          "site": "UniFi-site",
+          "siteIdLabel": "ID: {{id}}",
+          "mappedClient": "Gekoppelde klant",
+          "defaultContact": "Standaardcontact",
+          "selectContact": "Contact selecteren",
+          "autoSync": "Automatisch synchroniseren",
+          "autoSyncEnabled": "Ingeschakeld",
+          "autoSyncDisabled": "Uitgeschakeld"
+        },
+        "status": {
+          "label": "Status: ",
+          "connected": "Verbonden",
+          "disconnected": "Niet verbonden",
+          "reconnectRequired": "Opnieuw verbinden vereist"
+        },
+        "success": {
+          "configurationSaved": "UniFi-configuratie opgeslagen",
+          "connectionTestSucceeded": "Verbinding met UniFi geslaagd",
+          "disconnected": "UniFi-integratie losgekoppeld",
+          "siteSyncCompleted": "Sites ontdekken voltooid: {{processed}} verwerkt, {{created}} aangemaakt, {{updated}} bijgewerkt",
+          "deviceSyncCompleted": "Apparaatsynchronisatie voltooid: {{processed}} verwerkt, {{created}} aangemaakt, {{updated}} bijgewerkt",
+          "alertCheckCompleted": "Offline-controle voltooid",
+          "alertingSaved": "Meldingsinstellingen opgeslagen"
+        },
+        "sync": {
+          "title": "Synchronisatie en sitekoppelingen",
+          "description": "Ontdek UniFi-sites en koppel elke site aan een klant. Apparaten op niet-gekoppelde sites worden overgeslagen.",
+          "summary": "{{mappedSites}} gekoppelde sites · {{devices}} apparaten · {{activeAlerts}} actieve meldingen"
         }
       },
       "huntress": {

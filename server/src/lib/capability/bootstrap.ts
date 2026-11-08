@@ -1,5 +1,5 @@
 import { cache } from 'react';
-import { isFeatureFlagEnabled } from '@alga-psa/core/features';
+import { evaluateFeatureFlag } from '@alga-psa/core/features';
 import {
   capabilityAdmitBootstrapKey,
   capabilityFeatureFlag,
@@ -17,8 +17,8 @@ const CAPABILITIES: readonly CapabilityKey[] = ['co-managed'];
  *
  * - The rollout flag itself (`release-v2-0-feature`), evaluated tenant-only, so
  *   its existing consumer (the projects Timeline) renders from the server value
- *   even when posthog-js is blocked. A flag evaluation that throws is omitted,
- *   leaving that consumer exactly where it was before: on posthog-js.
+ *   even when posthog-js is blocked. Unavailable evaluations are omitted so
+ *   that consumer can still resolve the flag through posthog-js.
  * - `capability:<key>` (served) and `capability:<key>:admit` (admitted), which
  *   `useCapability` reads. The browser never decides a capability itself.
  *
@@ -32,7 +32,8 @@ export const resolveCapabilityBootstrap = cache(async (tenantId: string | null):
   await Promise.all(
     [...flagKeys].map(async (flag) => {
       try {
-        out[flag] = await isFeatureFlagEnabled(flag, { tenantId });
+        const evaluation = await evaluateFeatureFlag(flag, { tenantId });
+        if (evaluation.status === 'evaluated') out[flag] = evaluation.enabled;
       } catch (error) {
         console.error(`capability bootstrap: flag ${flag} unavailable`, error);
       }

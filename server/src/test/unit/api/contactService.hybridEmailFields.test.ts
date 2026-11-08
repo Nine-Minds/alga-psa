@@ -38,6 +38,12 @@ vi.mock('@alga-psa/shared/workflow/streams/domainEventBuilders/contactEventBuild
   buildContactArchivedPayload: vi.fn(() => ({ event: 'archived' })),
 }));
 
+// A new collaborator of the service: this suite is about email-field forwarding, and the fake
+// transaction here is not a knex connection.
+vi.mock('@alga-psa/shared/models/contactLocation', () => ({
+  getContactLocationsForContacts: vi.fn(async () => new Map()),
+}));
+
 vi.mock('@alga-psa/shared/models/contactModel', () => ({
   ContactModel: {
     createContact: (...args: any[]) => createContactMock(...args),

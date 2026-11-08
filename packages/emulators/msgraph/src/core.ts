@@ -196,6 +196,12 @@ export interface GraphCalendarEvent {
   lastModifiedDateTime?: string;
   recurrence?: unknown;
   categories?: string[];
+  /** Graph event type; expanded instances carry occurrence/exception. */
+  type?: 'singleInstance' | 'occurrence' | 'exception' | 'seriesMaster';
+  /** Set on an expanded instance: the id of the series master it came from. */
+  seriesMasterId?: string | null;
+  /** Set on an expanded instance: the slot it was generated for. */
+  originalStart?: string;
 }
 
 type CalendarDeltaItem = GraphCalendarEvent | { id: string; '@removed': { reason: 'deleted' } };
@@ -516,6 +522,10 @@ export class MsGraphCore implements EmulatorCore {
   readonly calendarEvents = new Map<string, GraphCalendarEvent>();
   private readonly calendarDeltaSnapshots = new Map<string, CalendarDeltaSnapshot>();
   private readonly calendarDeltaPages = new Map<string, CalendarDeltaPage>();
+  /** masterId -> cancelled occurrence slots (ISO instants of originalStart). */
+  private readonly calendarSeriesCancellations = new Map<string, Set<string>>();
+  /** masterId -> slot -> the override fields Outlook stores for that instance. */
+  private readonly calendarSeriesOverrides = new Map<string, Map<string, Record<string, unknown>>>();
   readonly onlineMeetings = new Map<string, GraphOnlineMeeting>();
   /** Keyed by meeting id; holds both recordings and transcripts. */
   readonly meetingArtifacts = new Map<string, GraphMeetingArtifact[]>();
@@ -1268,6 +1278,8 @@ export class MsGraphCore implements EmulatorCore {
       singleValueExtendedProperties: body.singleValueExtendedProperties,
       ...(transactionId ? { transactionId } : {}),
       recurrence: body.recurrence,
+      type: body.recurrence ? 'seriesMaster' : 'singleInstance',
+      seriesMasterId: null,
       categories: Array.isArray(body.categories) ? body.categories.map(String) : [],
       lastModifiedDateTime: this.env.clock.now().toISOString(),
       createdDateTime: this.env.clock.now().toISOString(),
@@ -1277,11 +1289,31 @@ export class MsGraphCore implements EmulatorCore {
   }
 
   getCalendarEvent(eventId: string): GraphCalendarEvent {
-    const event = this.calendarEvents.get(eventId);
+    const event = this.calendarEvents.get(eventId) ?? this.resolveCalendarOccurrence(eventId);
     if (!event) {
       throw new GraphApiError(404, { error: { code: 'ErrorItemNotFound' } });
     }
     return event;
+  }
+
+  /**
+   * Resolve one expanded occurrence by id. Graph serves an occurrence or an
+   * exception through GET even though no item is stored for it, and answers 404
+   * once that occurrence is cancelled — the pair of behaviours a client has to
+   * tell apart to turn a removal into a series exception.
+   */
+  private resolveCalendarOccurrence(eventId: string): GraphCalendarEvent | undefined {
+    const match = /^(.+)_(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/.exec(eventId);
+    const master = match ? this.calendarEvents.get(match[1]) : undefined;
+    if (!master?.recurrence) return undefined;
+    const [, , year, month, day, hour, minute, second] = match!;
+    const slot = Date.parse(`${year}-${month}-${day}T${hour}:${minute}:${second}Z`);
+    if (!Number.isFinite(slot)) return undefined;
+    // An exception may sit well away from its slot, so expand around it and
+    // match on the id rather than on the instance's own times.
+    const year_ms = 370 * 24 * 60 * 60 * 1000;
+    return this.expandCalendarSeries(master, slot - year_ms, slot + year_ms)
+      .find((instance) => instance.id === eventId);
   }
 
   updateCalendarEvent(eventId: string, patch: Record<string, unknown>): GraphCalendarEvent {
@@ -1296,6 +1328,7 @@ export class MsGraphCore implements EmulatorCore {
     for (const key of ['location', 'showAs', 'sensitivity', 'isAllDay', 'singleValueExtendedProperties', 'recurrence'] as const) {
       if (patch[key] !== undefined) event[key] = patch[key];
     }
+    if (patch.recurrence !== undefined) event.type = patch.recurrence ? 'seriesMaster' : 'singleInstance';
     event.lastModifiedDateTime = this.env.clock.now().toISOString();
     return event;
   }
@@ -1317,11 +1350,90 @@ export class MsGraphCore implements EmulatorCore {
 
   deleteCalendarEvent(eventId: string): void {
     const event = this.getCalendarEvent(eventId);
+    // Deleting one expanded occurrence cancels that slot, as Outlook's
+    // "this occurrence" does; the series master stays.
+    if (event.seriesMasterId && !this.calendarEvents.has(eventId)) {
+      this.cancelCalendarOccurrence(event.seriesMasterId, String(event.originalStart));
+      return;
+    }
     this.calendarEvents.delete(eventId);
     if (event.onlineMeetingId) {
       this.onlineMeetings.delete(event.onlineMeetingId);
       this.meetingArtifacts.delete(event.onlineMeetingId);
     }
+  }
+
+  /**
+   * Cancel one occurrence of a series. Graph reports it as an @removed delta
+   * item for the occurrence id and stops expanding that slot.
+   */
+  cancelCalendarOccurrence(masterId: string, originalStart: string): void {
+    this.getCalendarEvent(masterId);
+    const slot = normalizeSeriesSlot(originalStart);
+    const cancellations = this.calendarSeriesCancellations.get(masterId) ?? new Set<string>();
+    cancellations.add(slot);
+    this.calendarSeriesCancellations.set(masterId, cancellations);
+    this.touchCalendarEvent(masterId);
+  }
+
+  /**
+   * Override one occurrence of a series (moved or renamed). Graph then expands
+   * that slot as `type: 'exception'` carrying the override's own fields.
+   */
+  overrideCalendarOccurrence(masterId: string, originalStart: string, patch: Record<string, unknown>): void {
+    this.getCalendarEvent(masterId);
+    const slot = normalizeSeriesSlot(originalStart);
+    const overrides = this.calendarSeriesOverrides.get(masterId) ?? new Map<string, Record<string, unknown>>();
+    overrides.set(slot, { ...(overrides.get(slot) ?? {}), ...patch });
+    this.calendarSeriesOverrides.set(masterId, overrides);
+    this.touchCalendarEvent(masterId);
+  }
+
+  private touchCalendarEvent(eventId: string): void {
+    const event = this.calendarEvents.get(eventId);
+    if (event) event.lastModifiedDateTime = this.env.clock.now().toISOString();
+  }
+
+  /**
+   * Expand a series master into the occurrences overlapping [start, end), the
+   * way calendarView/delta does. Instances are synthetic: Graph never returns
+   * the master itself from calendarView.
+   */
+  private expandCalendarSeries(master: GraphCalendarEvent, start: number, end: number): GraphCalendarEvent[] {
+    const rule = graphRecurrenceToRule(master.recurrence);
+    if (!rule) {
+      throw new GraphApiError(400, {
+        error: { code: 'Request_UnsupportedQuery', message: 'Recurrence pattern is not modeled' },
+      });
+    }
+    const masterStart = instantOfGraphDate(master.start);
+    const masterEnd = instantOfGraphDate(master.end);
+    if (masterStart === null || masterEnd === null) return [];
+    const duration = masterEnd - masterStart;
+    const cancellations = this.calendarSeriesCancellations.get(master.id) ?? new Set<string>();
+    const overrides = this.calendarSeriesOverrides.get(master.id) ?? new Map<string, Record<string, unknown>>();
+
+    const instances: GraphCalendarEvent[] = [];
+    for (const slotStart of expandSeriesSlots(rule, masterStart, start, end, duration)) {
+      const slot = new Date(slotStart).toISOString();
+      if (cancellations.has(slot)) continue;
+      const override = overrides.get(slot);
+      const instanceStart = override?.start ? instantOfGraphDate(override.start) ?? slotStart : slotStart;
+      const instanceEnd = override?.end ? instantOfGraphDate(override.end) ?? instanceStart + duration : instanceStart + duration;
+      if (instanceStart >= end || instanceEnd <= start) continue;
+      instances.push({
+        ...structuredClone(master),
+        ...(override ?? {}),
+        id: `${master.id}_${slot.replace(/[-:]/g, '').replace(/\.\d{3}/, '')}`,
+        type: override ? 'exception' : 'occurrence',
+        seriesMasterId: master.id,
+        originalStart: slot,
+        recurrence: null,
+        start: { dateTime: new Date(instanceStart).toISOString(), timeZone: 'UTC' },
+        end: { dateTime: new Date(instanceEnd).toISOString(), timeZone: 'UTC' },
+      });
+    }
+    return instances;
   }
 
   /** Primary-calendar, single-instance UTC delta model. Tokens are per-run and
@@ -1378,7 +1490,15 @@ export class MsGraphCore implements EmulatorCore {
     const items: CalendarDeltaItem[] = [];
     for (const event of this.calendarEvents.values()) {
       if (event.organizerUserId !== organizerUserId) continue;
-      if (event.recurrence) throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery', message: 'Recurring calendar delta is not modeled' } });
+      // calendarView returns expanded occurrences of a series, never the master.
+      if (event.recurrence) {
+        for (const instance of this.expandCalendarSeries(event, start, end)) {
+          const fingerprint = JSON.stringify(instance);
+          fingerprints.set(instance.id, fingerprint);
+          if (previous?.fingerprints.get(instance.id) !== fingerprint) items.push(structuredClone(instance));
+        }
+        continue;
+      }
       // calendarView includes events overlapping its window, not only those
       // entirely contained in it.
       const eventStart = eventTime(event.start);
@@ -1392,6 +1512,8 @@ export class MsGraphCore implements EmulatorCore {
         // vendor state intact so token comparisons track actual source edits.
         start: { dateTime: new Date(eventStart).toISOString(), timeZone: 'UTC' },
         end: { dateTime: new Date(eventEnd).toISOString(), timeZone: 'UTC' },
+        type: 'singleInstance',
+        seriesMasterId: null,
       });
     }
     for (const id of previous?.fingerprints.keys() ?? []) {
@@ -1823,4 +1945,160 @@ export function publicEvent(event: GraphCalendarEvent): Omit<GraphCalendarEvent,
 export function publicOnlineMeeting(meeting: GraphOnlineMeeting): Omit<GraphOnlineMeeting, 'organizerUserId'> {
   const { organizerUserId: _organizer, ...rest } = meeting;
   return rest;
+}
+
+/** The ISO instant form used as a series slot key. */
+function normalizeSeriesSlot(value: string): string {
+  const instant = Date.parse(/(?:Z|[+-]\d{2}:\d{2})$/i.test(value) ? value : `${value}Z`);
+  if (!Number.isFinite(instant)) {
+    throw new GraphApiError(400, { error: { code: 'InvalidArgument', message: 'Invalid occurrence start' } });
+  }
+  return new Date(instant).toISOString();
+}
+
+function instantOfGraphDate(value: unknown): number | null {
+  const date = value as { dateTime?: string; timeZone?: string } | null | undefined;
+  const text = date?.dateTime;
+  if (!text) return null;
+  const instant = Date.parse(/(?:Z|[+-]\d{2}:\d{2})$/i.test(text) ? text : `${text}Z`);
+  return Number.isFinite(instant) ? instant : null;
+}
+
+const GRAPH_WEEKDAY_INDEX: Record<string, number> = {
+  sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6,
+};
+const GRAPH_INDEX_ORDINAL: Record<string, number> = { first: 1, second: 2, third: 3, fourth: 4, last: -1 };
+
+interface SeriesRule {
+  type: string;
+  interval: number;
+  weekdays: number[];
+  dayOfMonth?: number;
+  month?: number;
+  ordinal?: number;
+  until?: number;
+  count?: number;
+}
+
+/**
+ * Normalize a Graph recurrence object into the subset the emulator expands.
+ * Returns null for a pattern it does not model, so callers can answer 400.
+ */
+function graphRecurrenceToRule(recurrence: unknown): SeriesRule | null {
+  const value = recurrence as { pattern?: any; range?: any } | null | undefined;
+  const pattern = value?.pattern;
+  if (!pattern?.type) return null;
+  const type = String(pattern.type).toLowerCase();
+  const interval = Number.isInteger(pattern.interval) && pattern.interval > 0 ? Number(pattern.interval) : 1;
+  const weekdays = (Array.isArray(pattern.daysOfWeek) ? pattern.daysOfWeek : [])
+    .map((day: unknown) => GRAPH_WEEKDAY_INDEX[String(day).toLowerCase()])
+    .filter((day: number | undefined) => day !== undefined) as number[];
+  const ordinal = pattern.index ? GRAPH_INDEX_ORDINAL[String(pattern.index).toLowerCase()] : undefined;
+
+  if (!['daily', 'weekly', 'absolutemonthly', 'relativemonthly', 'absoluteyearly', 'relativeyearly'].includes(type)) return null;
+  if (type === 'weekly' && weekdays.length === 0) return null;
+  if (type.startsWith('relative') && (weekdays.length === 0 || ordinal === undefined)) return null;
+
+  const range = value?.range ?? {};
+  const rangeType = range.type ? String(range.type).toLowerCase() : 'noend';
+  const until = rangeType === 'enddate' && range.endDate
+    ? Date.parse(`${range.endDate}T23:59:59Z`)
+    : undefined;
+  const count = rangeType === 'numbered' && Number.isInteger(range.numberOfOccurrences)
+    ? Number(range.numberOfOccurrences)
+    : undefined;
+
+  return {
+    type,
+    interval,
+    weekdays,
+    ...(Number.isInteger(pattern.dayOfMonth) ? { dayOfMonth: Number(pattern.dayOfMonth) } : {}),
+    ...(Number.isInteger(pattern.month) ? { month: Number(pattern.month) } : {}),
+    ...(ordinal === undefined ? {} : { ordinal }),
+    ...(until === undefined || !Number.isFinite(until) ? {} : { until }),
+    ...(count === undefined ? {} : { count }),
+  };
+}
+
+/** Nth (or last) weekday of a month, in UTC. */
+function nthWeekdayOfMonth(year: number, month: number, weekday: number, ordinal: number): number | null {
+  if (ordinal === -1) {
+    const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+    for (let day = lastDay; day >= 1; day -= 1) {
+      if (new Date(Date.UTC(year, month, day)).getUTCDay() === weekday) return day;
+    }
+    return null;
+  }
+  const firstWeekday = new Date(Date.UTC(year, month, 1)).getUTCDay();
+  const day = 1 + ((weekday - firstWeekday + 7) % 7) + (ordinal - 1) * 7;
+  return day <= new Date(Date.UTC(year, month + 1, 0)).getUTCDate() ? day : null;
+}
+
+/**
+ * Occurrence starts of a series overlapping [windowStart, windowEnd), expanded
+ * from the master's own start (UTC wall clock, like the rest of the model).
+ */
+function expandSeriesSlots(
+  rule: SeriesRule,
+  masterStart: number,
+  windowStart: number,
+  windowEnd: number,
+  duration: number,
+): number[] {
+  const anchor = new Date(masterStart);
+  const timeOfDay = masterStart - Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), anchor.getUTCDate());
+  const slots: number[] = [];
+  const horizon = Math.min(windowEnd, rule.until ?? windowEnd);
+  const pushDay = (year: number, month: number, day: number) => {
+    const slot = Date.UTC(year, month, day) + timeOfDay;
+    if (slot < masterStart) return;
+    if (rule.until !== undefined && slot > rule.until) return;
+    if (rule.count !== undefined && slots.length >= rule.count) return;
+    if (slot + duration <= windowStart || slot >= horizon) return;
+    slots.push(slot);
+  };
+  // Hard ceiling: an unbounded series must never spin, even for a wide window.
+  const MAX_SLOTS = 2000;
+
+  if (rule.type === 'daily' || rule.type === 'weekly') {
+    const stepDays = rule.type === 'daily' ? rule.interval : 1;
+    const weekMs = 7 * 24 * 60 * 60 * 1000;
+    const dayMs = 24 * 60 * 60 * 1000;
+    let cursor = Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), anchor.getUTCDate());
+    const weekAnchor = cursor - ((new Date(cursor).getUTCDay() + 6) % 7) * dayMs;
+    for (let guard = 0; guard < MAX_SLOTS && cursor + timeOfDay < horizon; guard += 1) {
+      const date = new Date(cursor);
+      const inInterval = rule.type === 'daily'
+        ? true
+        : rule.weekdays.includes(date.getUTCDay())
+          && Math.round((cursor - ((date.getUTCDay() + 6) % 7) * dayMs - weekAnchor) / weekMs) % rule.interval === 0;
+      if (inInterval) pushDay(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+      if (rule.count !== undefined && slots.length >= rule.count) break;
+      cursor += stepDays * dayMs;
+    }
+    return slots;
+  }
+
+  const monthlyStep = rule.type.endsWith('yearly') ? 12 * rule.interval : rule.interval;
+  let year = anchor.getUTCFullYear();
+  let month = rule.type.endsWith('yearly') && rule.month ? rule.month - 1 : anchor.getUTCMonth();
+  if (rule.type.endsWith('yearly') && rule.month && month < anchor.getUTCMonth()) year += 1;
+  for (let guard = 0; guard < MAX_SLOTS; guard += 1) {
+    const monthStart = Date.UTC(year, month, 1);
+    if (monthStart >= horizon) break;
+    if (rule.type === 'absolutemonthly' || rule.type === 'absoluteyearly') {
+      const day = rule.dayOfMonth ?? anchor.getUTCDate();
+      if (day <= new Date(Date.UTC(year, month + 1, 0)).getUTCDate()) pushDay(year, month, day);
+    } else {
+      for (const weekday of rule.weekdays) {
+        const day = nthWeekdayOfMonth(year, month, weekday, rule.ordinal!);
+        if (day !== null) pushDay(year, month, day);
+      }
+    }
+    if (rule.count !== undefined && slots.length >= rule.count) break;
+    month += monthlyStep;
+    year += Math.floor(month / 12);
+    month = ((month % 12) + 12) % 12;
+  }
+  return slots.sort((left, right) => left - right);
 }

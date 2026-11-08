@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
-import { generateInvoice, createInvoiceFromBillingResult } from '@alga-psa/billing/actions/invoiceGeneration';
+import { createInvoiceFromBillingResult } from '@alga-psa/billing/actions/invoiceGeneration';
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { TestContext } from '../../../../../test-utils/testContext';
@@ -14,7 +14,8 @@ import {
   createFixedPlanAssignment,
   setupClientTaxConfiguration,
   assignServiceTaxRate,
-  ensureClientPlanBundlesTable
+  ensureClientPlanBundlesTable,
+  generateInvoiceForCycle,
 } from '../../../../../test-utils/billingTestHelpers';
 import type { IBillingCharge, IBillingResult } from 'server/src/interfaces/billing.interfaces';
 
@@ -186,7 +187,7 @@ describe('Billing Invoice Generation – Error Handling', () => {
 
   it('should handle invalid billing period dates', async () => {
     await expectNotFound(
-      () => generateInvoice('123e4567-e89b-12d3-a456-426614174000'),
+      () => generateInvoiceForCycle('123e4567-e89b-12d3-a456-426614174000'),
       'Billing cycle'
     );
   });
@@ -213,13 +214,13 @@ describe('Billing Invoice Generation – Error Handling', () => {
       period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
 
-    // A client with no contract lines now fails earlier than the billing
-    // engine's "No active contract lines" guard: the client-cadence selection
-    // input has no materialized recurring service period to resolve.
+    // A client with no contract lines has no unbilled recurring work due, so
+    // the Automatic Invoices selection (generateInvoiceForCycle) finds nothing
+    // to bill before the billing engine's "No active contract lines" guard.
     await expectError(
-      () => generateInvoice(billingCycleId),
+      () => generateInvoiceForCycle(billingCycleId),
       {
-        messagePattern: /^Service periods haven't been generated for this billing window yet\./
+        messagePattern: /^No unbilled recurring work is due for billing cycle /
       }
     );
   });
@@ -273,7 +274,7 @@ describe('Billing Invoice Generation – Error Handling', () => {
       startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
     });
 
-    await expectError(() => generateInvoice(billingCycleId));
+    await expectError(() => generateInvoiceForCycle(billingCycleId));
   });
 
   it('should throw error when regenerating for same period', async () => {
@@ -353,13 +354,13 @@ describe('Billing Invoice Generation – Error Handling', () => {
 
     // The first invoice was written straight through createInvoiceFromBillingResult,
     // so no recurring execution window exists and this client has no contract
-    // lines — generateInvoice therefore fails at period resolution rather than
-    // on the duplicate guard. Real duplicate-window coverage lives in
+    // lines — generateInvoiceForCycle therefore finds no due work rather than
+    // reaching the duplicate guard. Real duplicate-window coverage lives in
     // src/test/unit/billing/invoiceGeneration.duplicate.test.ts.
     await expectError(
-      () => generateInvoice(billingCycleId),
+      () => generateInvoiceForCycle(billingCycleId),
       {
-        message: "Service periods haven't been generated for this billing window yet. Use Fix all on the Automatic Invoices page, or check Billing > Service Periods, then preview again."
+        messagePattern: /^No unbilled recurring work is due for billing cycle /
       }
     );
   });

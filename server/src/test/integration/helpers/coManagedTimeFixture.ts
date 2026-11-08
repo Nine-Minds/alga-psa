@@ -159,9 +159,9 @@ export async function buildTimeFixture(db: Knex, base: TimeWorldBase, hooks: Tim
     /** Approval is the state the billing engine reads; the timesheet workflow is native and out of scope here. */
     approve: async (entryId: string) => { await sponsor.table('time_entries').where('entry_id', entryId).update({ approval_status: 'APPROVED' }); },
     generateInvoice: async () => {
-      const { generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration');
+      const { generateInvoiceForCycle } = await import('../../../../test-utils/billingTestHelpers');
       await as(principal);
-      const result: any = await generateInvoice(cycleId);
+      const result: any = await generateInvoiceForCycle(cycleId);
       return result?.invoice_id ? result : null;
     },
     effort: async () => {

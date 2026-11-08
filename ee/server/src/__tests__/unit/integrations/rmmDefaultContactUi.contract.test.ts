@@ -96,10 +96,11 @@ describe('RMM default contact mapping UI contracts', () => {
     expect(source).toContain('className="max-w-xl" footer={footer} allowOverflow');
     expect(source).toContain('className="max-w-2xl"');
 
-    // T048: the rule dialog checkbox groups use the custom Checkbox and drop the
-    // default mb-4 spacing (severities, organizations, notify-users).
+    // T048: the maintenance-window checkbox uses the custom Checkbox and drops
+    // its default mb-4 spacing. Alert-rule matching is now edited by the
+    // predicate editor, so there is only one spacing override in this dialog.
     expect(source).toContain("import { Checkbox } from '@alga-psa/ui/components/Checkbox'");
     const containerOverrides = (source.match(/containerClassName=""/g) ?? []).length;
-    expect(containerOverrides).toBeGreaterThanOrEqual(3);
+    expect(containerOverrides).toBe(1);
   });
 });
