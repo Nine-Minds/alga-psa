@@ -2,6 +2,18 @@
 
 Notable, externally visible changes to the Alga PSA REST API, newest first.
 
+## 2026-11-08 — Ticket priority must match the board's priority type
+
+**Affected endpoints:** `POST /api/v1/tickets`, `PUT /api/v1/tickets/{id}`, `POST /api/v1/tickets/from-asset`
+
+Each board uses either ITIL priorities or custom priorities (its `priority_type`). The API previously accepted any priority on any board, so integrations could create tickets whose priority the board's UI could not display or edit. Ticket writes now validate the priority against the effective board.
+
+**Changes:**
+
+- Creating a ticket with an ITIL priority on a custom-priority board, or a custom priority on an ITIL board, returns `400 VALIDATION_ERROR` on `priority_id`. The message names both, in the form "Priority ‘<priority>’ is an ITIL priority but board ‘<board>’ uses custom priorities" (or the reverse).
+- On update, the check runs whenever `board_id` or `priority_id` changes, including an explicit `null`. Moving a ticket to a board of the other type while it keeps an incompatible priority is refused, so send a compatible `priority_id` in the same request. An update that changes neither field, or re-sends the stored values, still succeeds on an older ticket whose pair already mismatches.
+- Ticket templates and recurring schedules apply the same rule. A template or schedule whose priority no longer matches its effective board is refused on save, and a recurring occurrence that would generate a mismatched ticket fails instead of creating it.
+
 ## 2026-11-08 — Opportunity stage evidence can cite an interaction or document
 
 **Affected endpoint:** `POST /api/v1/opportunities/{id}/evidence`
