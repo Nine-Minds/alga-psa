@@ -105,6 +105,8 @@
     "bulkInactiveFailed_other": "{{count}} Kunden konnten nicht als inaktiv markiert werden.",
     "bulkInactiveWithContactsSuccess": "{{clientCount}} {{clientsLabel}} und {{contactCount}} {{contactsLabel}} wurden erfolgreich als inaktiv markiert.",
     "singleInactiveSuccess": "{{name}} wurde erfolgreich als inaktiv markiert.",
+    "singleInactiveWithContactsSuccess_one": "{{name}} und {{count}} Kontakt wurden erfolgreich deaktiviert.",
+    "singleInactiveWithContactsSuccess_other": "{{name}} und {{count}} Kontakte wurden erfolgreich deaktiviert.",
     "bulkInactiveSuccess_one": "{{count}} Kunde wurde erfolgreich als inaktiv markiert.",
     "bulkInactiveSuccess_other": "{{count}} Kunden wurden erfolgreich als inaktiv markiert.",
     "bulkInactiveShortSuccess_one": "{{count}} Kunde wurde als inaktiv markiert.",
@@ -155,8 +157,6 @@
     },
     "deleteSelectedPrompt_one": "Sind Sie sicher, dass Sie {{count}} ausgewählten Kunden löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
     "deleteSelectedPrompt_other": "Sind Sie sicher, dass Sie {{count}} ausgewählte Kunden löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
-    "singleInactiveWithContactsSuccess_one": "{{name}} und {{count}} Kontakt wurden erfolgreich deaktiviert.",
-    "singleInactiveWithContactsSuccess_other": "{{name}} und {{count}} Kontakte wurden erfolgreich deaktiviert.",
     "clientTypes": {
       "company": "Unternehmen",
       "individual": "Einzelperson"
@@ -221,6 +221,7 @@
     "clientOnly": "Nur für Kunden",
     "accountManager": "Account-Manager",
     "clientName": "Kundenname",
+    "clientNameRequired": "Der Name des Kunden ist erforderlich",
     "clientType": "Clienttyp",
     "industry": "Branche",
     "companySize": "Unternehmensgröße",
@@ -252,6 +253,12 @@
     "markInactiveError": "Beim Markieren des Clients als inaktiv ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
     "reactivateError": "Beim Reaktivieren des Clients ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
     "entraSyncError": "Entra-Synchronisierung konnte nicht gestartet werden.",
+    "entraSyncStarted": "Entra-Synchronisierung gestartet. Lauf-ID: {{runId}}",
+    "entraSyncStatusUnknown": "Synchronisierungsstatus nicht verfügbar",
+    "inboundDomainAdded": "Eingehende E-Mail-Domäne hinzugefügt",
+    "inboundDomainAddFailed": "Domäne konnte nicht hinzugefügt werden",
+    "inboundDomainRemoved": "Eingehende E-Mail-Domäne entfernt",
+    "inboundDomainRemoveFailed": "Domäne konnte nicht entfernt werden",
     "deleteError": "Client konnte nicht gelöscht werden. Bitte versuchen Sie es erneut.",
     "deactivateWithContactsSuccess_one": "Der Kunde und {{count}} Kontakt wurden erfolgreich deaktiviert.",
     "deactivateWithContactsSuccess_other": "Der Kunde und {{count}} Kontakte wurden erfolgreich deaktiviert.",
@@ -273,6 +280,8 @@
     "syncEntraNow": "Entra jetzt synchronisieren",
     "deactivateClient": "Client deaktivieren",
     "reactivateClient": "Client reaktivieren",
+    "deactivateClientAndContacts": "Client und Kontakte deaktivieren",
+    "reactivateClientAndContacts": "Client und Kontakte reaktivieren",
     "deactivatePrompt": "Dieser Kunde hat {{count}} aktive(n) Kontakt(e). Möchten Sie diese auch deaktivieren?",
     "reactivatePrompt": "Dieser Kunde hat {{count}} inaktive(n) Kontakt(e). Möchten Sie diese auch reaktivieren?",
     "deactivatePortalWarning": "Deaktivierte Benutzer können sich nicht am Kundenportal anmelden.",
@@ -283,15 +292,6 @@
       "label": "Status",
       "helper": "Legen Sie den Clientstatus als aktiv oder inaktiv fest"
     },
-    "entraSyncStarted": "Entra-Synchronisierung gestartet. Lauf-ID: {{runId}}",
-    "entraSyncStatusUnknown": "Synchronisierungsstatus nicht verfügbar",
-    "clientNameRequired": "Der Name des Kunden ist erforderlich",
-    "deactivateClientAndContacts": "Client und Kontakte deaktivieren",
-    "reactivateClientAndContacts": "Client und Kontakte reaktivieren",
-    "inboundDomainAdded": "Eingehende E-Mail-Domäne hinzugefügt",
-    "inboundDomainAddFailed": "Domäne konnte nicht hinzugefügt werden",
-    "inboundDomainRemoved": "Eingehende E-Mail-Domäne entfernt",
-    "inboundDomainRemoveFailed": "Domäne konnte nicht entfernt werden",
     "fields": {
       "accountManager": "Kundenbetreuer",
       "url": "URL",
@@ -1099,6 +1099,15 @@
     "taxRateOption": "{{regionLabel}} - {{percentage}}% ({{description}})",
     "unknownRegion": "Unbekannte Region"
   },
+  "clientDefaultTimeEntryServiceSettings": {
+    "title": "Standarddienst für Zeiteinträge",
+    "label": "Standarddienst für Zeiteinträge",
+    "placeholder": "Standard des Mandanten verwenden",
+    "help": "Wird für neue Zeiteinträge in Tickets dieses Kunden verwendet. Auswahl aufheben, um den Standard des Mandanten zu verwenden.",
+    "updatedSuccess": "Standarddienst für Zeiteinträge aktualisiert.",
+    "saveError": "Standarddienst für Zeiteinträge konnte nicht gespeichert werden",
+    "loadError": "Standarddienst für Zeiteinträge konnte nicht geladen werden"
+  },
   "clientZeroDollarInvoiceSettings": {
     "title": "Einstellungen für Null-Dollar-Rechnungen",
     "invoiceHandling": "Rechnungsbearbeitung",
@@ -1329,6 +1338,24 @@
     "loadErrorTitle": "Notizen konnten nicht geladen werden",
     "loadErrorDescription": "Notizen konnten nicht geladen werden. Versuchen Sie es erneut."
   },
+  "clientAutopay": {
+    "setupLinkTitle": "Link zur Karteneinrichtung",
+    "setupLinkFallback": "Kopieren Sie diesen Link, um ihn mit Ihrem Kunden zu teilen.",
+    "unknownUser": "Unbekannter Benutzer",
+    "changeCard": "Diese Karte für die automatische Zahlung verwenden",
+    "title": "Automatische Zahlung · {{profile}}",
+    "active": "Aktiviert",
+    "authorization": "Autorisiert von {{user}} am {{date}} ({{source}})",
+    "attestation": "Der Kunde hat wiederkehrende Belastungen autorisiert",
+    "enable": "Automatische Zahlung aktivieren",
+    "disable": "Automatische Zahlung deaktivieren",
+    "copySetupLink": "Einrichtungslink kopieren",
+    "enabled": "Automatische Zahlung aktiviert",
+    "disabled": "Automatische Zahlung deaktiviert",
+    "linkCopied": "Link zur Karteneinrichtung kopiert",
+    "recentAttempts": "Letzte Versuche",
+    "noAttempts": "Noch keine Versuche"
+  },
   "actions": {
     "cancel": "Abbrechen",
     "delete": "Löschen",
@@ -1465,7 +1492,14 @@
       "refreshRecordings": "Aufzeichnungen aktualisieren",
       "sectionTitle": "Online-Besprechung",
       "transcriptArtifact": "Transkript",
-      "viewTranscript": "Transkript anzeigen"
+      "viewTranscript": "Transkript anzeigen",
+      "status": {
+        "noRecording": "Keine Aufzeichnung",
+        "recordingReady": "Aufzeichnung bereit",
+        "cancelled": "Abgesagt",
+        "failed": "Aufzeichnung nicht verfügbar",
+        "recordingPending": "Aufzeichnung ausstehend"
+      }
     },
     "quickAdd": {
       "clientRequired": "Wählen Sie einen Kunden für diese Interaktion aus",
@@ -1524,6 +1558,86 @@
       "assignedTo": {
         "label": "Zugewiesen an",
         "placeholder": "Benutzer auswählen"
+      },
+      "endBeforeStart": "Die Endzeit darf nicht vor der Startzeit liegen.",
+      "endBeforeStartShort": "Die Endzeit darf nicht vor der Startzeit liegen",
+      "rangeTooLong": "Interaktionen dürfen nicht länger als 24 Stunden dauern.",
+      "reflectionLabel": "Interaktion schnell hinzufügen",
+      "validationIntro": "Bitte beheben Sie die folgenden Fehler:",
+      "loadingEditor": "Editor wird geladen...",
+      "dialog": {
+        "createTitle": "Neue Interaktion hinzufügen",
+        "editTitle": "Interaktion bearbeiten"
+      },
+      "actions": {
+        "cancel": "Abbrechen",
+        "cancelHelper": "Erstellen oder Bearbeiten dieser Interaktion abbrechen",
+        "save": "Interaktion speichern",
+        "saveHelper": "Diese neue Interaktion erstellen",
+        "update": "Interaktion aktualisieren",
+        "updateHelper": "Änderungen an dieser Interaktion speichern",
+        "close": "Dialog schließen",
+        "closeHelper": "Interaktionsdialog schließen"
+      },
+      "fields": {
+        "type": {
+          "label": "Interaktionstyp",
+          "helper": "Wählen Sie den Interaktionstyp aus (Telefonat, E-Mail, Besprechung usw.)",
+          "placeholder": "Interaktionstyp auswählen"
+        },
+        "title": {
+          "label": "Titel der Interaktion",
+          "helper": "Geben Sie einen aussagekräftigen Titel für diese Interaktion ein",
+          "placeholder": "Titel"
+        },
+        "notes": {
+          "label": "Notizen zur Interaktion",
+          "helper": "Fügen Sie detaillierte Notizen zu dieser Interaktion hinzu"
+        },
+        "notesShort": "Notizen",
+        "status": {
+          "label": "Interaktionsstatus",
+          "helper": "Legen Sie den aktuellen Status dieser Interaktion fest",
+          "placeholder": "Status auswählen"
+        },
+        "user": {
+          "label": "Zugewiesener Benutzer",
+          "helper": "Wählen Sie den für diese Interaktion verantwortlichen Benutzer aus",
+          "placeholder": "Benutzer auswählen"
+        },
+        "userShort": "Benutzer",
+        "client": {
+          "label": "Zugeordneter Kunde",
+          "helper": "Wählen Sie den Kunden aus, auf den sich diese Interaktion bezieht"
+        },
+        "clientShort": "Kunde",
+        "contact": {
+          "label": "Zugeordneter Kontakt",
+          "helper": "Wählen Sie den Kontakt aus, mit dem diese Interaktion stattfindet",
+          "placeholder": "Kontakt auswählen"
+        },
+        "contactShort": "Kontakt",
+        "startTime": {
+          "label": "Startzeit",
+          "helper": "Wann hat diese Interaktion begonnen?",
+          "placeholder": "Startzeit auswählen"
+        },
+        "endTime": {
+          "label": "Endzeit",
+          "helper": "Wann hat diese Interaktion geendet?",
+          "placeholder": "Endzeit auswählen"
+        },
+        "durationHours": {
+          "label": "Dauer in Stunden",
+          "helper": "Stundenanteil der Interaktionsdauer"
+        },
+        "durationMinutes": {
+          "label": "Dauer in Minuten",
+          "helper": "Minutenanteil der Interaktionsdauer"
+        },
+        "duration": "Dauer",
+        "hours": "Stunden",
+        "minutes": "Minuten"
       }
     },
     "feed": {
@@ -1581,6 +1695,51 @@
       "transcriptTitle": "Anruftranskript",
       "loading": "Transkript wird geladen …",
       "loadFailed": "Das Transkript konnte nicht geladen werden."
+    },
+    "details": {
+      "title": "Interaktionsdetails",
+      "noTitle": "Kein Titel",
+      "unknownUser": "Unbekannt",
+      "noContact": "Kein Kontakt zugeordnet",
+      "noClient": "Kein Kunde zugeordnet",
+      "deleteConfirm": "Möchten Sie diese Interaktion wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "timeEntryFailed": "Der Zeiteintrag konnte nicht vorbereitet werden. Bitte versuchen Sie es erneut.",
+      "fields": {
+        "title": "Titel:",
+        "notes": "Notizen",
+        "status": "Status:",
+        "startTime": "Startzeit:",
+        "endTime": "Endzeit:",
+        "duration": "Dauer:",
+        "user": "Benutzer:",
+        "contact": "Kontakt:",
+        "client": "Kunde:"
+      },
+      "actions": {
+        "cancel": "Abbrechen",
+        "editShort": "Bearbeiten",
+        "deleteShort": "Löschen",
+        "edit": {
+          "label": "Interaktion bearbeiten",
+          "helper": "Details dieser Interaktion bearbeiten"
+        },
+        "delete": {
+          "label": "Interaktion löschen",
+          "helper": "Diese Interaktion dauerhaft löschen"
+        },
+        "back": {
+          "label": "Zurück",
+          "helper": "Zur vorherigen Ansicht zurückkehren"
+        },
+        "addTicket": {
+          "label": "Ticket hinzufügen",
+          "helper": "Ein neues Ticket zu dieser Interaktion erstellen"
+        },
+        "addTimeEntry": {
+          "label": "Zeiteintrag hinzufügen",
+          "helper": "Einen Zeiteintrag für diese Interaktion hinzufügen"
+        }
+      }
     }
   },
   "clientDrawer": {
@@ -1963,33 +2122,6 @@
       "duplicateManager": "Ein Abrechnungsprofil kann nur eine Leitung haben.",
       "notThisClient": "Einer der ausgewählten Kontakte gehört nicht zum Kunden dieses Abrechnungsprofils."
     }
-  },
-  "clientDefaultTimeEntryServiceSettings": {
-    "title": "Standarddienst für Zeiteinträge",
-    "label": "Standarddienst für Zeiteinträge",
-    "placeholder": "Standard des Mandanten verwenden",
-    "help": "Wird für neue Zeiteinträge in Tickets dieses Kunden verwendet. Auswahl aufheben, um den Standard des Mandanten zu verwenden.",
-    "updatedSuccess": "Standarddienst für Zeiteinträge aktualisiert.",
-    "saveError": "Standarddienst für Zeiteinträge konnte nicht gespeichert werden",
-    "loadError": "Standarddienst für Zeiteinträge konnte nicht geladen werden"
-  },
-  "clientAutopay": {
-    "setupLinkTitle": "Link zur Karteneinrichtung",
-    "setupLinkFallback": "Kopieren Sie diesen Link, um ihn mit Ihrem Kunden zu teilen.",
-    "unknownUser": "Unbekannter Benutzer",
-    "changeCard": "Diese Karte für die automatische Zahlung verwenden",
-    "title": "Automatische Zahlung · {{profile}}",
-    "active": "Aktiviert",
-    "authorization": "Autorisiert von {{user}} am {{date}} ({{source}})",
-    "attestation": "Der Kunde hat wiederkehrende Belastungen autorisiert",
-    "enable": "Automatische Zahlung aktivieren",
-    "disable": "Automatische Zahlung deaktivieren",
-    "copySetupLink": "Einrichtungslink kopieren",
-    "enabled": "Automatische Zahlung aktiviert",
-    "disabled": "Automatische Zahlung deaktiviert",
-    "linkCopied": "Link zur Karteneinrichtung kopiert",
-    "recentAttempts": "Letzte Versuche",
-    "noAttempts": "Noch keine Versuche"
   },
   "mergeClients": {
     "title": "Einen Kunden in diesen Kunden zusammenführen",
