@@ -11,6 +11,7 @@ export default defineConfig({
     'services/index': 'src/services/index.ts',
     'lib/catalog/serviceCatalogPricing': 'src/lib/catalog/serviceCatalogPricing.ts',
     'lib/catalog/productCatalogCore': 'src/lib/catalog/productCatalogCore.ts',
+    'lib/billing/timeEntryWorkContext': 'src/lib/billing/timeEntryWorkContext.ts',
     'lib/payments/invoicePaymentUrls': 'src/lib/payments/invoicePaymentUrls.ts',
   },
   format: ['esm'],

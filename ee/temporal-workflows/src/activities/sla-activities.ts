@@ -90,6 +90,7 @@ export async function checkAndEscalate(input: {
   ticketId: string;
   phase: 'response' | 'resolution';
   thresholdPercent: number;
+  escalationLevel?: 1 | 2 | 3;
 }): Promise<void> {
   const log = logger();
 
@@ -99,7 +100,8 @@ export async function checkAndEscalate(input: {
         trx,
         input.tenantId,
         input.ticketId,
-        input.thresholdPercent
+        input.thresholdPercent,
+        input.escalationLevel
       );
 
       if (!escalationLevel) {

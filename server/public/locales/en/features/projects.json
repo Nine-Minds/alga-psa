@@ -1473,6 +1473,7 @@
     "notFoundOrNoAccess": "Project not found or you do not have access to this project."
   },
   "backToProjects": "Back to Projects",
+  "backToSharedTasks": "← Back to Shared Tasks",
   "invalidProjectData": "Invalid project data",
   "viewDetails": "View Details →",
   "details": "Details",

@@ -16,6 +16,9 @@ const h = vi.hoisted(() => {
       whereIn(_column: string, _values: unknown[]) {
         return query;
       },
+      orderBy(_column: string, _direction?: 'asc' | 'desc') {
+        return query;
+      },
       select<T>(...columns: string[]): Promise<T> {
         const rows = (dbState[table] ?? []).filter((row) =>
           filters.every((where) => Object.entries(where).every(([key, value]) => row[key] === value))
@@ -105,14 +108,14 @@ describe('isAssetActionAllowed', () => {
     { id: 'r2', resource: 'asset', action: 'update', templateKey: 'same_team' as const },
     { id: 'r3', resource: 'asset', action: 'delete', templateKey: 'same_team' as const },
   ];
-  const context = () => ({
+  const context = (ruleSet = rules) => ({
     subject: {
       tenant: 'tenant-a', userId: 'user-1', userType: 'internal' as const, roleIds: [], teamIds: ['team-ops'],
       managedUserIds: [], clientId: null, portfolioClientIds: [],
     },
     authorizationKernel: createAuthorizationKernel({
       builtinProvider: new BuiltinAuthorizationKernelProvider(),
-      bundleProvider: new BundleAuthorizationKernelProvider({ resolveRules: async () => rules }),
+      bundleProvider: new BundleAuthorizationKernelProvider({ resolveRules: async () => ruleSet }),
       rbacEvaluator: async () => true,
     }),
     requestCache: new RequestLocalAuthorizationCache(),
@@ -139,6 +142,12 @@ describe('isAssetActionAllowed', () => {
 
   it('applies the explicit delete scope to restricted asset operators', async () => {
     h.dbState.asset_associations = [{ asset_id: 'asset-3', entity_type: 'team', entity_id: 'team-ops' }];
-    expect(await isAssetActionAllowed({} as any, 'tenant-a', context(), { asset_id: 'asset-3', client_id: 'client-z' }, 'delete')).toBe(true);
+    expect(await isAssetActionAllowed({} as any, 'tenant-a', context(), { asset_id: 'asset-3', client_id: 'client-a' }, 'delete')).toBe(true);
+  });
+
+  it('does not narrow an action the bundle has no rule for', async () => {
+    h.dbState.asset_associations = [];
+    // The missing delete rule leaves that action unrestricted, but the asset must still be readable.
+    expect(await isAssetActionAllowed({} as any, 'tenant-a', context(rules.filter((rule) => rule.action !== 'delete')), { asset_id: 'asset-3', client_id: 'client-a' }, 'delete')).toBe(true);
   });
 });
