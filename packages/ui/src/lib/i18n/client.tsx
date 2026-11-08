@@ -19,6 +19,7 @@ import {
 import { formatDateValue } from './formatDateValue';
 import { useDateFormat } from '../dateFormat/useDateFormat';
 import { interpolateFallback } from './interpolateFallback';
+import { formatCurrencyWithSymbol } from '@alga-psa/core/formatters';
 
 /**
  * Initialize i18next on the client side.
@@ -557,16 +558,14 @@ export function useFormatters() {
       return new Intl.NumberFormat(locale, options).format(value);
     },
 
+    // Shows the product's own symbol ("ZAR (R)" → "R"), not Intl's ISO wording,
+    // so every screen agrees with the picker that offered the currency.
     formatCurrency: (
       value: number,
       currency: string,
       options?: Intl.NumberFormatOptions
     ) => {
-      return new Intl.NumberFormat(locale, {
-        style: 'currency',
-        currency,
-        ...options,
-      }).format(value);
+      return formatCurrencyWithSymbol(value, locale, currency, options);
     },
 
     formatRelativeTime: (date: Date | string) => {

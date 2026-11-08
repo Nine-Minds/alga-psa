@@ -202,6 +202,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
 
   const [assets, setAssets] = useState<Asset[]>(initialAssets.assets);
   const [totalAssets, setTotalAssets] = useState(initialAssets.total);
+  const [assetTypeCounts, setAssetTypeCounts] = useState(initialAssets.asset_type_counts);
   const [pageSize, setPageSize] = useState(initialAssets.limit || 10);
   const [currentPage, setCurrentPage] = useState(initialAssets.page || 1);
   const [maintenanceSummaries, setMaintenanceSummaries] = useState<Record<string, ClientMaintenanceSummary>>({});
@@ -507,7 +508,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     return {
       search: debouncedSearchTerm || undefined,
       status: statusFilters.length > 0 ? statusFilters[0] : undefined,
-      asset_type: typeFilters.length > 0 ? typeFilters[0] : undefined,
+      asset_types: typeFilters.length > 0 ? typeFilters : undefined,
       client_id: clientFilters.length > 0 ? clientFilters[0] : undefined,
       agent_status: agentStatusFilters.length > 0 ? (agentStatusFilters[0] as AssetQueryParams['agent_status']) : undefined,
       rmm_managed: rmmManaged,
@@ -599,6 +600,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
 
         setAssets(response.assets);
         setTotalAssets(response.total);
+        setAssetTypeCounts(response.asset_type_counts);
       } catch (error) {
         if (lastAssetsRequestIdRef.current !== requestId) {
           return;
@@ -1878,7 +1880,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
 
             <AssetTypeBreakdownCard
               getTypeLabel={getAssetTypeLabel}
-              refreshToken={refreshCounter}
+              counts={assetTypeCounts}
               activeTypes={typeFilters}
               onSelectType={(slug) => toggleFilterValue(typeFilters, slug, setTypeFilters)}
             />

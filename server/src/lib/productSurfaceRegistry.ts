@@ -39,6 +39,14 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
     behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' },
   },
   {
+    // Sponsor-only Customer Tickets queue. Rules resolve first-match, and '/msp/tickets' (core helpdesk, allowed
+    // for every product) would otherwise capture this path, so this rule must stay ABOVE msp_core_helpdesk.
+    // Exact-segment matching keeps /msp/tickets and /msp/tickets/<id> on the helpdesk rule.
+    group: 'msp_co_managed_customer_tickets_queue',
+    staticPrefixes: ['/msp/tickets/customer'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' },
+  },
+  {
     group: 'msp_core_helpdesk',
     staticPrefixes: ['/msp/tickets', '/msp/create-ticket', '/msp/clients', '/msp/contacts', '/msp/interactions', '/msp/knowledge-base', '/msp/reports', '/msp/settings', '/msp/profile', '/msp/security-settings', '/msp/account', '/msp/add-ons'],
     behaviorByProduct: { psa: 'allowed', algadesk: 'allowed', co_managed: 'allowed' },
@@ -77,10 +85,18 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
     behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'allowed' },
   },
   {
+    // The customer's own upgrade-to-PSA screen. psa stays allowed so the post-upgrade "completed" screen and its
+    // "Open AlgaPSA" button still render after the tenant flips to psa; the page's
+    // requireCapabilityForPage('co-managed', …, 'serves') keeps flag-off / no-entitlement tenants at 404.
+    group: 'msp_co_managed_upgrade',
+    staticPrefixes: ['/msp/co-management/upgrade'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'allowed' },
+  },
+  {
     // Sponsor-only queue of tickets customers shared with the sponsor, and its shared-ticket screen. Only a PSA
     // sponsor has them; the capability gate in the route layout decides whether a PSA tenant sees them.
     group: 'msp_co_managed_customer_tickets',
-    staticPrefixes: ['/msp/co-management/customer-tickets'],
+    staticPrefixes: ['/msp/co-management/customer-tickets', '/msp/co-management/tickets'],
     behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' },
   },
   {
@@ -91,6 +107,13 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
     behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' },
   },
   {
+    // Sponsor-only SLA priority mappings for tickets customers escalate to the sponsor. The page is gated by the
+    // co-managed capability ('admits'); a co_managed customer has no such configuration.
+    group: 'msp_co_managed_sla',
+    staticPrefixes: ['/msp/co-management/sla'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' },
+  },
+  {
     // Customer-owned Google / Microsoft provider setup. The page itself is
     // gated by the co-managed capability ('serves'), so a co_managed workspace
     // reaches this one capability-scoped page without the wider integrations
@@ -98,6 +121,20 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
     group: 'msp_co_management_providers',
     staticPrefixes: ['/msp/co-management/providers'],
     behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'allowed' },
+  },
+  {
+    // Ending a relationship is available to both sides (a customer ends its own MSP; a sponsor ends a client).
+    // The page and its actions decide, per side, what the caller may do.
+    group: 'msp_co_management_departure',
+    staticPrefixes: ['/msp/co-management/departure'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'allowed' },
+  },
+  {
+    // The MSP's read-only archive of ended relationships. Sponsor-only: a co_managed customer has none.
+    // Must precede the shared /msp/co-managed root, which allows both sides (first match wins).
+    group: 'msp_co_managed_archive',
+    staticPrefixes: ['/msp/co-managed/archive'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' },
   },
   {
     // Customer-admin workspace export (records). A co_managed customer exports its own workspace, so
@@ -134,10 +171,17 @@ export const PORTAL_ROUTE_RULES: readonly RouteRule[] = [
     behaviorByProduct: { psa: 'allowed', algadesk: 'allowed', co_managed: 'allowed' },
   },
   {
+    // CM L4c (cross-card touch, owner to confirm): only /client-portal/projects is opened to co_managed, for
+    // the shared-project requester task thread. psa and algadesk are unchanged from portal_upgrade_or_not_found;
+    // the capability gate and permissions inside the route still decide what a co_managed contact sees.
+    group: 'portal_projects',
+    staticPrefixes: ['/client-portal/projects'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'upgrade_boundary', co_managed: 'allowed' },
+  },
+  {
     group: 'portal_upgrade_or_not_found',
     staticPrefixes: [
       '/client-portal/billing',
-      '/client-portal/projects',
       '/client-portal/devices',
       '/client-portal/documents',
       '/client-portal/appointments',
@@ -172,6 +216,22 @@ export const API_RULES: readonly ApiRule[] = [
     // the public v1 metadata surface.
     group: 'api_capability_probes',
     staticPrefixes: ['/api/v1/capabilities'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'allowed', co_managed: 'allowed' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false, co_managed: false },
+  },
+  {
+    // Retained co-managed archive file bytes. The MSP (psa) reads its own sealed archive; the route
+    // is also capability-gated and 404s by default. A co_managed customer has no archive.
+    group: 'api_co_management_archive_files',
+    staticPrefixes: ['/api/co-management/archive-files'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied', co_managed: 'denied' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false, co_managed: false },
+  },
+  {
+    // Session-authenticated co-managed conversation file download. Every product
+    // may reach it; capabilityRouteGuard inside the route decides (closed => 404).
+    group: 'api_co_management_attachments',
+    staticPrefixes: ['/api/co-management'],
     behaviorByProduct: { psa: 'allowed', algadesk: 'allowed', co_managed: 'allowed' },
     visibleInMetadataByProduct: { psa: false, algadesk: false, co_managed: false },
   },
@@ -251,10 +311,12 @@ export const API_RULES: readonly ApiRule[] = [
       '/api/v1/invoices',
       '/api/v1/projects',
       '/api/v1/assets',
+      '/api/v1/asset-audits',
       '/api/v1/asset-groups',
       '/api/v1/asset-statuses',
       '/api/v1/asset-custody',
       '/api/v1/time-entries',
+      '/api/v1/time-period-settings',
       '/api/v1/stopwatch',
       '/api/v1/workflows',
       '/api/v1/extensions',

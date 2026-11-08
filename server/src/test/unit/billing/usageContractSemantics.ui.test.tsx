@@ -338,8 +338,9 @@ describe('contract reports variable usage labeling', () => {
 
     const mrrTile = await screen.findByTestId('fixed-mrr-by-currency');
     // CAD minor units formatted in CAD — never re-labeled in tenant currency.
-    expect(mrrTile.textContent).toMatch(/CA\$500(\.00)?|500(\.|,)00\s*\$?\s*CA/);
+    // The glyph is the product's own ("CAD (C$)"), not Intl's "CA$".
+    expect(mrrTile.textContent).toMatch(/C\$500(\.00)?|500(\.|,)00\s*C\s*\$/);
     const ytdTile = screen.getByTestId('ytd-revenue-by-currency');
-    expect(ytdTile.textContent).toMatch(/CA\$1,?000(\.00)?|1[.,\s]?000(\.|,)00/);
+    expect(ytdTile.textContent).toMatch(/C\$1,?000(\.00)?|1[.,\s]?000(\.|,)00/);
   });
 });

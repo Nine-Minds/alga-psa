@@ -42,6 +42,7 @@ const CODE_MESSAGES: Record<string, [string, string]> = {
   location_required: ['Choose where the device is now so it can be received back.', 'features/inventory:errors.rma.warrantyLocationRequired'],
   invalid_transition: ['That step is not available in the RMA’s current status. Refresh and try again.', 'features/inventory:errors.rma.warrantyInvalidTransition'],
   warranty_review_close: ['Approve or deny the claim before closing it.', 'features/inventory:errors.rma.warrantyReviewClose'],
+  wrong_track: ['This step is only for advance-replacement claims.', 'features/inventory:errors.rma.warrantyWrongTrack'],
 };
 
 /**
@@ -121,6 +122,7 @@ export async function runWarrantyTransition(
 }
 
 export async function publishAfterCommit(tenant: string, actorUserId: string, result: WarrantyTransitionResult): Promise<void> {
+  if (result.noop) return;
   await publishRmaUpdated(tenant, result.rma, result.previousStatus, result.changedFields, actorUserId);
   for (const effect of result.custodyEffects) {
     await publishCustodyChanged({ tenant, actorUserId, custody: effect.custody, eventType: effect.eventType as any, occurredAt: effect.occurredAt });

@@ -1,3 +1,4 @@
+import { generateInvoiceForCycle } from '../../../test-utils/billingTestHelpers';
 import { beforeAll, afterAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -21,7 +22,6 @@ import {
 let db: Knex;
 let tenantId: string;
 let createClientContractFromWizard: typeof import('@alga-psa/billing/actions/contractWizardActions').createClientContractFromWizard;
-let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoice;
 let syncRecurringServicePeriodsForContractLine: typeof import('@alga-psa/billing/actions/recurringServicePeriodSync').syncRecurringServicePeriodsForContractLine;
 let scheduleUnitPricingRevision: typeof import('@alga-psa/billing/actions/contractLineUnitPricingActions').scheduleUnitPricingRevision;
 let getContractOverview: typeof import('@alga-psa/billing/actions/contractActions').getContractOverview;
@@ -146,7 +146,6 @@ describe('per-seat recurring services: overview and monthly value agree with bil
     tenantId = await ensureFixtureTenant(db);
     setupCommonMocks({ tenantId, userId: 'per-seat-test-user', permissionCheck: () => true });
     ({ createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions'));
-    ({ generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
     ({ syncRecurringServicePeriodsForContractLine } = await import('@alga-psa/billing/actions/recurringServicePeriodSync'));
     ({ scheduleUnitPricingRevision } = await import('@alga-psa/billing/actions/contractLineUnitPricingActions'));
     ({ getContractOverview } = await import('@alga-psa/billing/actions/contractActions'));
@@ -176,7 +175,7 @@ describe('per-seat recurring services: overview and monthly value agree with bil
     expect(services.get(catalog.location.serviceId)).toMatchObject({ pricing_basis: 'unit', quantity: 2, unit_rate: 20000 });
     expect(overview.totalEstimatedMonthlyValue).toBe(390000);
 
-    const invoice = invoiceOf(await generateInvoice(januaryCycle));
+    const invoice = invoiceOf(await generateInvoiceForCycle(januaryCycle));
     expect(Number(invoice.subtotal)).toBe(390000);
   }, HOOK_TIMEOUT);
 
@@ -202,7 +201,7 @@ describe('per-seat recurring services: overview and monthly value agree with bil
     // Bundle members are allocations of the $400, never seats.
     expect(services.get(catalog.location.serviceId).pricing_basis ?? 'bundle').not.toBe('unit');
 
-    const invoice = invoiceOf(await generateInvoice(januaryCycle));
+    const invoice = invoiceOf(await generateInvoiceForCycle(januaryCycle));
     expect(Number(invoice.subtotal)).toBe(90000);
   }, HOOK_TIMEOUT);
 
@@ -262,7 +261,7 @@ describe('per-seat recurring services: overview and monthly value agree with bil
     expect(services.get(catalog.location.serviceId)).toMatchObject({ quantity: 2, unit_rate: 18000 });
     expect(overview.totalEstimatedMonthlyValue).toBe(expected);
 
-    const invoice = invoiceOf(await generateInvoice(januaryCycle));
+    const invoice = invoiceOf(await generateInvoiceForCycle(januaryCycle));
     expect(Number(invoice.subtotal)).toBe(expected);
   }, HOOK_TIMEOUT);
 });

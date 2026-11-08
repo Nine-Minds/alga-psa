@@ -3,6 +3,7 @@
  * Handles HTTP requests for asset-related operations
  */
 
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { NextRequest, NextResponse } from 'next/server';
 import { AssetService } from '../services/AssetService';
 import {
@@ -25,7 +26,6 @@ import { requireRequestContext } from '../utils/requestContext';
 import { ApiContext } from '../middleware/apiMiddleware';
 import { ProductAccessError, getTenantProduct } from '@/lib/productAccess';
 import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
-import { hasPermission } from '../../auth/rbac';
 import { getConnection } from '../../db/db';
 import { authorizeApiResource } from './authorizationKernel';
 import type { AuthorizationRecord } from '@alga-psa/authorization/kernel';
@@ -66,7 +66,7 @@ export class ApiAssetController {
     const resolved = resolveBeforeAuthorization ? await resolveBeforeAuthorization(context) : undefined;
     const knex = await getConnection(context.tenant);
     for (const { resource, action } of checks) {
-      if (!await hasPermission(context.user, resource, action, knex)) {
+      if (!await hasApiContextPermission(context, resource, action, knex)) {
         return { context, denied: createErrorResponse(`Permission denied: Cannot ${action} ${resource}`, 403, 'FORBIDDEN'), resolved };
       }
     }

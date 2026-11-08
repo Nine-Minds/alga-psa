@@ -201,16 +201,22 @@ export async function filterReadableAssets<T extends AssetAuthorizationInput>(
   trx: Knex | Knex.Transaction,
   tenant: string,
   context: AssetReadAuthorizationContext,
-  assets: readonly T[]
+  assets: readonly T[],
+  options?: { resolveMultiUserOwnersIndividually?: boolean }
 ): Promise<T[]> {
   if (assets.length === 0) return [];
   const records = await resolveAssetAuthorizationRecords(trx, tenant, [...assets]);
   const allowed = await Promise.all(
     assets.map(async (asset) => {
+      const record = records.get(asset.asset_id);
+      // The association query has no ordering, so batching can change which user is treated as the owner.
+      if (options?.resolveMultiUserOwnersIndividually && (record?.assignedUserIds?.length ?? 0) > 1) {
+        return isAssetReadAllowed(trx, tenant, context, asset);
+      }
       const decision = await context.authorizationKernel.authorizeResource({
         subject: context.subject,
         resource: { type: 'asset', action: 'read', id: asset.asset_id },
-        record: records.get(asset.asset_id),
+        record,
         requestCache: context.requestCache,
         knex: trx as Knex,
       });

@@ -71,6 +71,7 @@ import {
 } from '@alga-psa/shared/services/assets/maintenanceLifecycle';
 import { advanceMaintenanceDate, parseCustomRecurrence } from '../lib/maintenanceRecurrence';
 import { orderEntityAssetIds, type EntityAssociationRow } from '../lib/entityAssetOrder';
+import { applyAssetListFilters, applyAssetTypeFilter, joinAssetListRelations, selectedAssetTypes } from '../lib/assetListFilters';
 import { localizeActionError, withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { resolveEffectiveTimeZone } from '@alga-psa/db';
@@ -93,6 +94,7 @@ import {
     createAuthorizationKernel,
     type AuthorizationRecord,
     type AuthorizationSubject,
+    type BundleNarrowingRule,
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
@@ -109,6 +111,7 @@ import {
     resolveAssetAuthorizationRecords as resolveSharedAssetAuthorizationRecords,
     isAssetActionAllowed as isSharedAssetActionAllowed,
     isAssetReadAllowed as isSharedAssetReadAllowed,
+    filterReadableAssets,
     type AssetAuthUser as SharedAssetAuthUser,
 } from '../lib/assetReadAuthorization';
 import { isAssetAssigneeError, setAssetAssignee } from '../lib/assetAssignment';
@@ -529,11 +532,14 @@ type AssetReadAuthorizationContext = {
     requestCache: RequestLocalAuthorizationCache;
 };
 
-function createAssetReadAuthorizationKernel(trx: Knex.Transaction) {
+function createAssetReadAuthorizationKernel(trx: Knex.Transaction, assetReadRules?: BundleNarrowingRule[]) {
     return createAuthorizationKernel({
         builtinProvider: new BuiltinAuthorizationKernelProvider(),
         bundleProvider: new BundleAuthorizationKernelProvider({
             resolveRules: async (input) => {
+                if (assetReadRules && input.resource.type === 'asset' && input.resource.action === 'read') {
+                    return assetReadRules;
+                }
                 try {
                     return await resolveBundleNarrowingRulesForEvaluation(trx, input);
                 // write-admission: exempt — authorization-rule read, never a write
@@ -2277,79 +2283,6 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 return allowed[sortBy] ?? null;
             };
 
-            const applyFilters = (query: Knex.QueryBuilder) => {
-                if (validatedParams.client_id) {
-                    query.where('assets.client_id', validatedParams.client_id);
-                }
-                if (validatedParams.location_id) {
-                    query.where('assets.location_id', validatedParams.location_id);
-                }
-                if (validatedParams.contact_name_id) {
-                    query.where('assets.contact_name_id', validatedParams.contact_name_id);
-                }
-                if (validatedParams.asset_type) {
-                    query.where('assets.asset_type', validatedParams.asset_type);
-                }
-                if (validatedParams.status) {
-                    query.where('assets.status', validatedParams.status);
-                }
-                if (validatedParams.ownership) {
-                    query.where('assets.ownership', validatedParams.ownership);
-                }
-                if (validatedParams.in_custody !== undefined) {
-                    // Keyed off the open custody episode, never off assets.status.
-                    const openCustody = tenantScopedTable(trx, 'asset_custody', tenant)
-                        .whereNull('closed_at')
-                        .select('asset_id');
-                    if (validatedParams.in_custody) {
-                        query.whereIn('assets.asset_id', openCustody);
-                    } else {
-                        query.whereNotIn('assets.asset_id', openCustody);
-                    }
-                }
-                if (validatedParams.vendor_id) {
-                    query.where('assets.vendor_id', validatedParams.vendor_id);
-                }
-                if (validatedParams.group_id) {
-                    query.whereIn(
-                        'assets.asset_id',
-                        tenantScopedTable(trx, 'asset_group_members', tenant)
-                            .where({ group_id: validatedParams.group_id })
-                            .select('asset_id')
-                    );
-                }
-                if (validatedParams.ungrouped_only) {
-                    query.whereNotIn(
-                        'assets.asset_id',
-                        tenantScopedTable(trx, 'asset_group_members', tenant).select('asset_id')
-                    );
-                }
-                if (validatedParams.search) {
-                    const searchTerm = `%${validatedParams.search}%`;
-                    query.where(function () {
-                        this.whereILike('assets.name', searchTerm)
-                            .orWhereILike('assets.asset_tag', searchTerm)
-                            .orWhereILike('assets.serial_number', searchTerm)
-                            .orWhereILike('assets.location', searchTerm)
-                            .orWhereILike('assets.manufacturer', searchTerm)
-                            .orWhereILike('assets.model', searchTerm)
-                            .orWhereILike('clients.client_name', searchTerm);
-                    });
-                }
-                if (validatedParams.agent_status) {
-                    query.where('assets.agent_status', validatedParams.agent_status);
-                }
-                if (validatedParams.rmm_managed !== undefined) {
-                    if (validatedParams.rmm_managed) {
-                        query.whereNotNull('assets.rmm_provider').whereNotNull('assets.rmm_device_id');
-                    } else {
-                        query.where(function () {
-                            this.whereNull('assets.rmm_provider').orWhereNull('assets.rmm_device_id');
-                        });
-                    }
-                }
-            };
-
             const applySort = (query: Knex.QueryBuilder) => {
                 const sortColumn = resolveSortColumn(validatedParams.sort_by);
                 const sortDirection = validatedParams.sort_direction ?? 'desc';
@@ -2366,63 +2299,104 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 query.orderBy('assets.created_at', 'desc');
             };
 
-            const buildAssetListQuery = () => {
-                const query = tenantScopedTable(trx, 'assets', tenant);
-                tenantDb(trx, tenant).tenantJoin(query, 'clients', 'clients.client_id', 'assets.client_id', { type: 'left' });
-                tenantDb(trx, tenant).tenantJoin(query, 'contacts', 'contacts.contact_name_id', 'assets.contact_name_id', { type: 'left' });
-                tenantDb(trx, tenant).tenantJoin(query, 'vendors', 'vendors.vendor_id', 'assets.vendor_id', { type: 'left' });
-
-                applyFilters(query);
-                return query;
+            // Type counts remain a facet over every filter except the selected type.
+            const facetQuery = joinAssetListRelations(trx, tenant);
+            applyAssetListFilters(facetQuery, { trx, tenant, params: validatedParams, exclude: 'asset_type' });
+            const baseContext = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
+            // Use one rule snapshot for both the page and its facet.
+            const assetReadRules = await resolveBundleNarrowingRulesForEvaluation(trx, {
+                subject: baseContext.subject,
+                resource: { type: 'asset', action: 'read' },
+                requestCache: baseContext.requestCache,
+                knex: trx,
+            });
+            const context: AssetReadAuthorizationContext = {
+                ...baseContext,
+                authorizationKernel: createAssetReadAuthorizationKernel(trx, assetReadRules),
             };
+            const requiresRecordAuthorization = context.subject.userType === 'client'
+                || assetReadRules.some((rule) => rule.resource === 'asset' && rule.action === 'read');
+            const requiresIndividualOwnerResolution = assetReadRules.some((rule) =>
+                rule.resource === 'asset' && rule.action === 'read'
+                && (rule.templateKey === 'own' || rule.templateKey === 'own_or_assigned' || rule.templateKey === 'own_or_managed')
+            );
+            // Restricted users must authorize every matching type before counting.
+            const assetTypeFilter = selectedAssetTypes(validatedParams);
+            const listQuery = requiresRecordAuthorization
+                ? facetQuery.clone()
+                : applyAssetTypeFilter(facetQuery.clone(), assetTypeFilter);
+            const assetTypeCounts = new Map<string, number>();
 
+            if (!requiresRecordAuthorization) {
+                const typeCountRows = await facetQuery.clone()
+                    .select('assets.asset_type')
+                    .groupBy('assets.asset_type')
+                    .count<Array<{ asset_type: string | null; count: string | number }>>('assets.asset_id as count');
+                for (const row of typeCountRows) {
+                    assetTypeCounts.set(row.asset_type ?? 'unknown', Number(row.count));
+                }
+            }
+
+            type AssetListQueryRow = Asset & { client_name: string | null };
+            type AssetListScanRow = { asset: AssetListQueryRow; readable: boolean };
             const fetchPage = async (sourcePage: number, sourceLimit: number) => {
                 const offset = (sourcePage - 1) * sourceLimit;
-                const countRow = await buildAssetListQuery()
+                const countRow = await listQuery.clone()
                     .count<{ count: string }>('assets.asset_id as count')
                     .first();
-                const rows = await buildAssetListQuery()
-                    .select('assets.*', 'clients.client_name', 'contacts.full_name as contact_name', 'vendors.vendor_name')
+                if (!countRow || countRow.count === null || countRow.count === undefined) {
+                    throw new Error('Asset list count query returned no count');
+                }
+                const sourceTotal = Number(countRow.count);
+                if (!Number.isSafeInteger(sourceTotal) || sourceTotal < 0) {
+                    throw new Error('Asset list count query returned an invalid count');
+                }
+                const rows: AssetListQueryRow[] = await listQuery.clone()
+                    .select<AssetListQueryRow[]>('assets.*', 'clients.client_name', 'contacts.full_name as contact_name', 'vendors.vendor_name')
                     .modify(applySort)
                     .limit(sourceLimit)
                     .offset(offset);
+                const readableAssets = await filterReadableAssets(trx, tenant, context, rows, {
+                    resolveMultiUserOwnersIndividually: requiresIndividualOwnerResolution,
+                });
+                const readableAssetIds = new Set(readableAssets.map((asset) => asset.asset_id));
 
                 return {
-                    data: rows,
-                    total: Number(countRow?.count || 0),
+                    data: rows.map((asset) => ({ asset, readable: readableAssetIds.has(asset.asset_id) })),
+                    total: sourceTotal,
                 };
             };
 
             const page = validatedParams.page || 1;
             const limit = validatedParams.limit || 10;
-            const context = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
-            const authorizedPage = await buildAuthorizationAwarePage<any>({
+            const authorizedPage = await buildAuthorizationAwarePage<AssetListScanRow>({
                 page,
                 limit,
                 fetchPage,
-                authorizeRecord: async (asset) => {
-                    const decision = await authorizeAssetReadDecision(
-                        trx,
-                        tenant,
-                        context,
-                        { asset_id: asset.asset_id, client_id: asset.client_id }
-                    );
-                    return decision.allowed;
+                authorizeRecord: async ({ asset, readable }) => {
+                    if (!readable) return false;
+                    if (requiresRecordAuthorization) {
+                        const assetType = asset.asset_type ?? 'unknown';
+                        assetTypeCounts.set(assetType, (assetTypeCounts.get(assetType) ?? 0) + 1);
+                        return assetTypeFilter.length === 0 || assetTypeFilter.includes(asset.asset_type);
+                    }
+                    return true;
                 },
                 scanLimit: Math.max(limit, 100),
             });
+            const pageAssets = authorizedPage.data.map(({ asset }) => asset);
 
         // F075: the Group column reads `asset.group`, so the page's summaries
         // are fetched in one batch rather than per row.
         const groupSummaries = await getAssetGroupSummariesForAssets(
             trx,
             tenant,
-            authorizedPage.data.map((asset: any) => asset.asset_id)
+            pageAssets.map((asset) => asset.asset_id)
         );
 
         // Logos only for the distinct clients on this page (one batched lookup).
         const pageClientIds = Array.from(new Set(
-            authorizedPage.data.map((asset: any) => asset.client_id).filter(Boolean)
+            pageAssets.map((asset) => asset.client_id).filter(Boolean)
         )) as string[];
         const clientLogoUrls = pageClientIds.length > 0
             ? await getClientLogoUrlsBatch(pageClientIds, tenant)
@@ -2430,7 +2404,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
 
         // Get extension data for each asset if requested
         const assetsWithExtensions = await Promise.all(
-            authorizedPage.data.map(async (asset: any): Promise<Asset> => {
+            pageAssets.map(async (asset): Promise<Asset> => {
                 const extensionData = validatedParams.include_extension_data
                     ? await getExtensionData(trx, tenant, asset.asset_id, asset.asset_type)
                     : null;
@@ -2455,7 +2429,8 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 assets: assetsWithExtensions,
                 total: authorizedPage.total,
                 page,
-                limit
+                limit,
+                asset_type_counts: Object.fromEntries(assetTypeCounts)
             };
 
             return response;

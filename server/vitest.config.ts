@@ -384,6 +384,7 @@ export default defineConfig({
       // Emulator packages live under packages/emulators/* and are not linked
       // into node_modules; their smoke tests import each other by name.
       { find: /^@alga-psa\/emulator-host$/, replacement: path.resolve(__dirname, '../packages/emulators/host/src/index.ts') },
+      { find: /^@alga-psa\/emulator-google-calendar$/, replacement: path.resolve(__dirname, '../packages/emulators/google-calendar/src/index.ts') },
       { find: /^@alga-psa\/emulator-msgraph$/, replacement: path.resolve(__dirname, '../packages/emulators/msgraph/src/index.ts') },
       { find: /^@alga-psa\/emulator-qbo$/, replacement: path.resolve(__dirname, '../packages/emulators/qbo/src/index.ts') },
       { find: /^@alga-psa\/emulator-smtp-sink$/, replacement: path.resolve(__dirname, '../packages/emulators/smtp-sink/src/index.ts') },

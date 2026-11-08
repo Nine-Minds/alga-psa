@@ -1,5 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
+import type { TestWorkflowEnvironment } from '@temporalio/testing';
+import type { WorkflowBundleWithSourceMap } from '@temporalio/worker';
 import { createTestDbConnection } from '../../../../../server/test-utils/dbConfig';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
@@ -302,9 +304,28 @@ it.each(['unavailable', 'throws'])('sanitizes HTML even when the reply parser %s
 });
 
 
+// One time-skipping test server and one webpack workflow bundle serve all six
+// scenarios. Starting a server and bundling per scenario cost a loaded
+// integration shard tens of seconds each, and the failure scenarios twice
+// passed only on retry (runs 39975806876 and 40629781085); every scenario still
+// gets its own task queue, worker and workflow id.
+const temporal: { environment?: TestWorkflowEnvironment; bundle?: WorkflowBundleWithSourceMap } = {};
+afterAll(async () => { await temporal.environment?.teardown(); });
+async function temporalFixture(root: string) {
+  const { TestWorkflowEnvironment } = await import('@temporalio/testing');
+  const { bundleWorkflowCode } = await import('@temporalio/worker');
+  const path = await import('node:path');
+  temporal.environment ??= await TestWorkflowEnvironment.createTimeSkipping();
+  temporal.bundle ??= await bundleWorkflowCode({
+    workflowsPath: path.join(root, 'ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts'),
+    webpackConfigHook: config => ({ ...config, resolve: { ...config.resolve,
+      alias: { ...config.resolve?.alias, '@alga-psa/workflows': path.join(root, 'ee/packages/workflows/src') } } }),
+  });
+  return { environment: temporal.environment, bundle: temporal.bundle };
+}
+
 it.each(['new', 'reply', 'no-defaults', 'ack-failure', 'attachment-failure', 'resolution-failure'])('persists the shipped email workflow through Temporal and real activities: %s', async scenario => {
   const { Worker } = await import('@temporalio/worker');
-  const { TestWorkflowEnvironment } = await import('@temporalio/testing');
   const { readFileSync } = await import('node:fs');
   const path = await import('node:path');
   const root = path.resolve(__dirname, '../../../../..');
@@ -331,17 +352,13 @@ it.each(['new', 'reply', 'no-defaults', 'ack-failure', 'attachment-failure', 're
     : scenario === 'attachment-failure' ? 'process_email_attachments_batch'
     : scenario === 'resolution-failure' ? 'resolve_existing_ticket_from_email' : null;
   if (failedAction) handlers[failedAction].mockRejectedValue(new Error(`synthetic ${scenario}`));
-  let environment: Awaited<ReturnType<typeof TestWorkflowEnvironment.createTimeSkipping>> | undefined;
   try {
-    environment = await TestWorkflowEnvironment.createTimeSkipping();
+    const { environment, bundle } = await temporalFixture(root);
     const taskQueue = `email-persistence-${randomUUID()}`;
     const payload = { tenantId: f.tenant, providerId: 'provider-email', emailData: { id: 'message-email', subject: 'Help with printer',
       from: { email: 'sender@example.invalid' }, body: { text: 'Please help with the printer.', html: '<p>Please help with the printer.</p>' },
       attachments: [{ id: 'attachment-email', name: 'example.txt', contentType: 'text/plain', size: 10 }] } };
-    const worker = await Worker.create({ connection: environment.nativeConnection, taskQueue,
-      workflowsPath: path.join(root, 'ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts'),
-      bundlerOptions: { webpackConfigHook: config => ({ ...config, resolve: { ...config.resolve,
-        alias: { ...config.resolve?.alias, '@alga-psa/workflows': path.join(root, 'ee/packages/workflows/src') } } }) },
+    const worker = await Worker.create({ connection: environment.nativeConnection, taskQueue, workflowBundle: bundle,
       activities: {
         loadWorkflowRuntimeV2PinnedDefinition: async () => ({ definition, initialScopes: {
           payload, workflow: {}, lexical: [], meta: {}, error: null,
@@ -356,8 +373,10 @@ it.each(['new', 'reply', 'no-defaults', 'ack-failure', 'attachment-failure', 're
         },
         projectWorkflowRuntimeV2StepCompletion, executeWorkflowRuntimeV2NodeStep, executeWorkflowRuntimeV2ActionStep, completeWorkflowRuntimeV2Run,
       } });
-    await worker.runUntil(() => environment!.client.workflow.execute('workflowRuntimeV2RunWorkflow', {
-      taskQueue, workflowId: randomUUID(), workflowExecutionTimeout: '30s',
+    // The execution timeout bounds a hung workflow, not a slow runner: the
+    // shard's wall clock is what a loaded CI box stretches.
+    await worker.runUntil(() => environment.client.workflow.execute('workflowRuntimeV2RunWorkflow', {
+      taskQueue, workflowId: randomUUID(), workflowExecutionTimeout: '5m',
       args: [{ runId: f.runId, tenantId: f.tenant, workflowId: definition.id, workflowVersion: definition.version }],
     }));
     expect(await state.trx!('workflow_runs').where({ run_id: f.runId }).first()).toMatchObject({ status: 'SUCCEEDED' });
@@ -410,9 +429,9 @@ it.each(['new', 'reply', 'no-defaults', 'ack-failure', 'attachment-failure', 're
         .toBe(`${f.tenant}:provider-email:message-email`);
     }
   } finally {
-    try { await environment?.teardown(); } finally { Object.values(handlers).forEach(handler => handler.mockRestore()); }
+    Object.values(handlers).forEach(handler => handler.mockRestore());
   }
-}, 60_000);
+}, 120_000);
 
 
 it.each(['threadId', 'inReplyTo', 'references', 'unmatched-token'])('resolves email threading with real tenant-scoped queries: %s', async lookup => {

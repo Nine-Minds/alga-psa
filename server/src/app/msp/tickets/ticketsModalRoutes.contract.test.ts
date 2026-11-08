@@ -232,8 +232,9 @@ describe('tickets modal route infrastructure', () => {
       const dialog = read(dialogPath);
 
       expect(dialog).toContain('TicketNotificationSuppressionControl');
-      expect(dialog).toContain('suppressContactNotifications: false');
-      expect(dialog).toContain('setNotificationSuppression');
+      expect(dialog).toContain('useState<TicketNotificationSuppressionValue>(defaultNotificationSuppression)');
+      expect(dialog).toContain('const defaultNotificationSuppression = useDefaultNotificationSuppression();');
+      expect(dialog).toContain('setNotificationSuppression(defaultNotificationSuppression())');
     }
 
     const dashboard = read('packages/tickets/src/components/TicketingDashboard.tsx');

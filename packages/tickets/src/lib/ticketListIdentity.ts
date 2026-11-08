@@ -73,10 +73,10 @@ export function ticketListDetailHref(identity: TicketListIdentity): string {
   return `/msp/tickets/${encodeURIComponent(identity.ticketId)}`;
 }
 
-/** True when a qualified row may enter the shared handback flow. */
 /**
- * Whether a qualified row may be handed back: it is shared work, the MSP holds
- * it, and we know the revision to write against.
+ * Whether a qualified row may be handed back: it is shared work, the viewer may
+ * write it (`canHandBack`, decided server-side by the same rule the command
+ * enforces), the MSP holds it, and we know the revision to write against.
  *
  * `responsibility` and `work_revision` are read from `fields`, which is where
  * `CoManagedTicketQueueItem` actually carries them. This predicate previously
@@ -92,9 +92,11 @@ export function ticketListDetailHref(identity: TicketListIdentity): string {
  */
 export function isQualifiedHandbackEligible(item: {
   relationshipId?: string | null;
+  canHandBack: boolean;
   fields?: { responsibility?: string | null; work_revision?: number | null } | null;
 }): boolean {
   return Boolean(item.relationshipId)
+    && item.canHandBack === true
     && item.fields?.responsibility === 'msp'
     && typeof item.fields?.work_revision === 'number';
 }
