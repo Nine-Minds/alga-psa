@@ -812,7 +812,7 @@
         "summary": {
           "archived": "Do archiwizacji: {{label}} ({{count}})",
           "unassigned": "Do usunięcia przypisania: {{label}} ({{count}})",
-          "reassigned": "Do ponownego przypisania: {{label}} ({{count}}), nowy użytkownik: {{name}}"
+          "reassigned": "Do ponownego przypisania: {{label}} ({{count}}), nowa osoba przypisana: {{name}}"
         }
       }
     },
@@ -1092,7 +1092,7 @@
     "sharedWorkspaceLabel": "Współdzielone stanowisko",
     "details": {
       "notProvided": "Nie podano",
-      "notAvailable": "Brak danych",
+      "notAvailable": "Brak",
       "cpuWithModel": "{{model}} (liczba rdzeni: {{count}})",
       "cpuCores": "Liczba rdzeni: {{count}}",
       "workstationTitle": "Szczegóły stacji roboczej",
@@ -1115,7 +1115,7 @@
       "status": "Status",
       "location": "Lokalizacja",
       "purchaseDate": "Data zakupu",
-      "warrantyEndDate": "Data końca gwarancji"
+      "warrantyEndDate": "Data zakończenia gwarancji"
     }
   },
   "errors": {
