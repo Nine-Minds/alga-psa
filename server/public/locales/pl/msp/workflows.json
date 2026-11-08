@@ -1450,7 +1450,7 @@
       "edit": "Edytuj",
       "clear": "Wyczyść",
       "hideFields": "Ukryj pola",
-      "previewFields": "Podejrzyj pola",
+      "previewFields": "Podgląd pól",
       "viewJsonSchema": "Zobacz schemat JSON",
       "viewPublished": "Zobacz opublikowany schemat",
       "noTopLevelProperties": "Brak właściwości najwyższego poziomu.",
@@ -1663,7 +1663,7 @@
       "endsWith": "kończy się na"
     },
     "schemaPolicy": {
-      "dateTriggerMismatch": "Schemat ładunku wyzwalacza opartego na dacie musi być zgodny z wybranym źródłem.",
+      "dateTriggerMismatch": "Schemat ładunku wyzwalacza daty musi być zgodny z wybranym źródłem.",
       "eventCatalogLoadFailed": "Nie udało się załadować katalogu zdarzeń. Publikowanie i uruchamianie są wyłączone do czasu załadowania katalogu.",
       "triggerEventMissing": "Zdarzenie wyzwalające „{{eventName}}” nie występuje w katalogu zdarzeń.",
       "eventSchemaInvalid": "{{sourceLabel}} „{{eventName}}” {{schemaLabel}}. Przed opublikowaniem lub uruchomieniem popraw wpis w katalogu zdarzeń, aby zawierał prawidłowy schemat.",
