@@ -71,6 +71,8 @@ interface DrawerContextType {
    * this and fall back explicitly.
    */
   hasOutlet?: () => boolean;
+  /** Number of outlets registered beneath this provider. */
+  outletCount?: number;
   /** Called by DrawerOutlet on mount; returns the unregister function. */
   registerOutlet?: () => () => void;
   canGoBack: boolean;
@@ -258,9 +260,14 @@ const DrawerContext = createContext<DrawerContextType | undefined>(undefined);
 export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(drawerReducer, initialState);
   const outletCountRef = useRef(0);
+  const [outletCount, setOutletCount] = useState(0);
   const registerOutlet = useCallback(() => {
     outletCountRef.current += 1;
-    return () => { outletCountRef.current -= 1; };
+    setOutletCount(outletCountRef.current);
+    return () => {
+      outletCountRef.current = Math.max(0, outletCountRef.current - 1);
+      setOutletCount(outletCountRef.current);
+    };
   }, []);
   const hasOutlet = useCallback(() => outletCountRef.current > 0, []);
   
@@ -355,6 +362,7 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       goForward,
       hasOutlet,
       registerOutlet,
+      outletCount,
       canGoBack,
       canGoForward,
       currentEntry,
@@ -369,10 +377,14 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
  * Renders the managed drawer UI for DrawerProvider.
  * Place this inside all context providers so drawer content inherits the full provider tree.
  */
-export const DrawerOutlet: React.FC = () => {
+export const DrawerOutlet: React.FC<{ fallbackOnly?: boolean }> = ({ fallbackOnly = false }) => {
   const { t } = useTranslation('common');
-  const { closeDrawer, goBack, goForward, canGoBack, canGoForward, currentEntry, history, registerOutlet } = useDrawer();
+  const { closeDrawer, goBack, goForward, canGoBack, canGoForward, currentEntry, history, registerOutlet, outletCount } = useDrawer();
   useEffect(() => registerOutlet?.(), [registerOutlet]);
+  // A shell fallback serves routes without a closer, provider-complete outlet.
+  // When a workspace outlet is mounted, it owns this shared drawer state and
+  // renders its content beneath the workspace's feature providers.
+  if (fallbackOnly && (outletCount ?? 0) > 1) return null;
   const isOpen = history.length > 0 && currentEntry !== null;
   const title = currentEntry?.type === 'form' && !currentEntry.title
     ? t('drawer.formTitle', { title: currentEntry.metadata?.activity.title, defaultValue: `${currentEntry.metadata?.activity.title} - Form` })
