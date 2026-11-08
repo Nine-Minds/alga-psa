@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import migration from '../../server/migrations/20261101130000_move_time_sheet_notes_to_history.cjs';
+import migration from '../../server/migrations/20261107100000_move_time_sheet_notes_to_history.cjs';
 
 test('time sheet notes are retained in history before the legacy column is dropped', async () => {
   const rows = [
