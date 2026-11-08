@@ -12,6 +12,8 @@ const create = load('20261103120000_create_rmm_condition_lifecycle');
 const order = load('20261103130000_order_rmm_condition_delivery');
 const ownership = load('20261103140000_index_rmm_condition_alert_ownership');
 const schema = `rmm_migration_${randomUUID().replaceAll('-', '')}`;
+const shadowSchema = `${schema}_shadow`;
+const indexNames = ['idx_rmm_condition_transition_order', 'idx_rmm_condition_states_alert_owner'];
 let db: Knex;
 
 beforeAll(async () => {
@@ -25,9 +27,16 @@ beforeAll(async () => {
       user: process.env.DB_USER_ADMIN, password: process.env.DB_PASSWORD_ADMIN,
       database: process.env.TEST_DB_NAME || 'test_database',
     },
-    searchPath: [schema, 'public'], pool: { min: 0, max: 1 },
+    searchPath: [schema, shadowSchema, 'public'], pool: { min: 0, max: 1 },
   });
   await db.raw('CREATE SCHEMA ??', [schema]);
+  await db.raw('CREATE SCHEMA ??', [shadowSchema]);
+  await db.schema.withSchema(shadowSchema).createTable('unrelated', table => table.integer('id'));
+  // A later search-path schema must neither satisfy the validity probe nor
+  // become the target of a concurrent index rollback.
+  for (const name of indexNames) {
+    await db.raw('CREATE INDEX ?? ON ??.unrelated (id)', [name, shadowSchema]);
+  }
   await db.schema.createTable('rmm_integrations', table => {
     table.uuid('tenant').notNullable();
     table.uuid('integration_id').notNullable();
@@ -37,12 +46,20 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (db) {
-    try { await db.raw('DROP SCHEMA IF EXISTS ?? CASCADE', [schema]); }
+    try {
+      await db.raw('DROP SCHEMA IF EXISTS ?? CASCADE', [schema]);
+      await db.raw('DROP SCHEMA IF EXISTS ?? CASCADE', [shadowSchema]);
+    }
     finally { await db.destroy(); }
   }
 });
 
 it('preserves tenant-isolated outbox order across batches, reruns, and index rollback', async () => {
+  const shadowIndexes = () => db.raw(`SELECT c.oid, c.relname, i.indisvalid FROM pg_index i
+    JOIN pg_class c ON c.oid = i.indexrelid JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = ? ORDER BY c.relname`, [shadowSchema]);
+  const beforeShadow = await shadowIndexes();
+  expect(beforeShadow.rows.map((row: { relname: string }) => row.relname)).toEqual([...indexNames].sort());
   await db.transaction(trx => create.up(trx));
   // The first migration must also be safe to resume after it created the tables.
   await db.transaction(trx => create.up(trx));
@@ -104,6 +121,7 @@ it('preserves tenant-isolated outbox order across batches, reruns, and index rol
   await order.down(db);
   await order.up(db);
   expect(Number((await db('rmm_condition_states').where({ tenant: tenants[0] }).first()).transition_sequence)).toBe(505);
+  expect((await shadowIndexes()).rows).toEqual(beforeShadow.rows);
 
   // The deletion loop must explicitly clean both tables before the integration,
   // while preserving the other tenant's lifecycle rows.

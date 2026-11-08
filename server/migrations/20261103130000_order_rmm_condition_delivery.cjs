@@ -1,5 +1,6 @@
 /** Serialize lifecycle outbox delivery by condition, including databases that
  * already applied the initial lifecycle migration. */
+const { ensureConcurrentIndex, dropConcurrentIndex } = require('./utils/concurrentIndex.cjs');
 exports.config = { transaction: false };
 
 exports.up = async function up(knex) {
@@ -60,21 +61,12 @@ exports.up = async function up(knex) {
     await trx.raw('ALTER TABLE rmm_condition_transitions ALTER COLUMN condition_sequence DROP DEFAULT');
   });
 
-  // LEVERAGE: pattern concurrent-index-recovery — probe validity before retrying Citus concurrent DDL.
-  const index = await knex.raw(`SELECT i.indisvalid FROM pg_index i
-    WHERE i.indexrelid = to_regclass('idx_rmm_condition_transition_order')`);
-  // Citus 12.1 invalidates an existing coordinator index when a concurrent
-  // IF NOT EXISTS statement is repeated. Skip valid indexes before issuing DDL.
-  if (!index.rows[0]?.indisvalid) {
-    await knex.raw('DROP INDEX CONCURRENTLY IF EXISTS idx_rmm_condition_transition_order');
-    await knex.raw(`CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_rmm_condition_transition_order
-      ON rmm_condition_transitions
-      (tenant, integration_id, scope_key, subject_key, condition_key, status, condition_sequence)`);
-  }
+  await ensureConcurrentIndex(knex, 'rmm_condition_transitions', 'idx_rmm_condition_transition_order',
+    ['tenant', 'integration_id', 'scope_key', 'subject_key', 'condition_key', 'status', 'condition_sequence']);
 };
 
 exports.down = async function down(knex) {
-  await knex.raw('DROP INDEX CONCURRENTLY IF EXISTS idx_rmm_condition_transition_order');
+  await dropConcurrentIndex(knex, 'rmm_condition_transitions', 'idx_rmm_condition_transition_order');
   await knex.raw('ALTER TABLE rmm_condition_transitions DROP COLUMN IF EXISTS condition_sequence');
   await knex.raw('ALTER TABLE rmm_condition_states DROP COLUMN IF EXISTS transition_sequence');
 };
