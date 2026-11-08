@@ -197,8 +197,8 @@ export const API_RULES: readonly ApiRule[] = [
     // Bearer-link quote review belongs to billing, outside the public v1 API.
     group: 'api_public_quote',
     staticPrefixes: ['/api/quote'],
-    behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
-    visibleInMetadataByProduct: { psa: false, algadesk: false },
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied', co_managed: 'denied' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false, co_managed: false },
   },
   {
     // Session-authenticated workspace export download (POST streams the archive). Not part of the public v1

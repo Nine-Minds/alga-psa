@@ -11,8 +11,10 @@ describe('public quote API product boundary', () => {
 
     expect(resolveProductApiBehavior('psa', route)).toBe('allowed');
     expect(resolveProductApiBehavior('algadesk', route)).toBe('denied');
+    expect(resolveProductApiBehavior('co_managed', route)).toBe('denied');
     expect(isApiVisibleInMetadata('psa', route)).toBe(false);
     expect(isApiVisibleInMetadata('algadesk', route)).toBe(false);
+    expect(isApiVisibleInMetadata('co_managed', route)).toBe(false);
     expect(getApiMetadataProducts(route)).toEqual([]);
   });
 });
