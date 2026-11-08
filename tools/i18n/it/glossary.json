@@ -2371,7 +2371,8 @@
       "Code 128",
       "Asset: {{name}}",
       "Ticket: {{number}}",
-      "RMA {{number}} · {{status}}"
+      "RMA {{number}} · {{status}}",
+      "Markdown"
     ],
     "caseInsensitive": [
       "account",
