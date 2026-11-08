@@ -162,7 +162,39 @@
       "noneCreated": "Er zijn geen tickets aangemaakt.",
       "allSkipped_one": "{{count}} ticket is overgeslagen vanwege fouten.",
       "allSkipped_other": "Alle {{count}} tickets zijn overgeslagen vanwege fouten."
-    }
+    },
+    "createdSuccess_few": "{{count}} tickets succesvol aangemaakt.",
+    "createdSuccess_many": "{{count}} tickets succesvol aangemaakt.",
+    "errorCount_few": "{{count}} fouten:",
+    "errorCount_many": "{{count}} fouten:",
+    "importTickets_few": "{{count}} tickets importeren",
+    "importTickets_many": "{{count}} tickets importeren",
+    "skipDropped_few": "Overslaan ({{count}} tickets vervallen)",
+    "skipDropped_many": "Overslaan ({{count}} tickets vervallen)",
+    "skippedCount_few": "{{count}} tickets zijn overgeslagen.",
+    "skippedCount_many": "{{count}} tickets zijn overgeslagen.",
+    "ticketCount_few": "({{count}} tickets)",
+    "ticketCount_many": "({{count}} tickets)",
+    "unmatchedAgents_few": "{{count}} medewerkers",
+    "unmatchedAgents_many": "{{count}} medewerkers",
+    "unmatchedCategories_few": "{{count}} categorieën",
+    "unmatchedCategories_many": "{{count}} categorieën",
+    "unmatchedClients_few": "{{count}} klanten",
+    "unmatchedClients_many": "{{count}} klanten",
+    "unmatchedContacts_few": "{{count}} contacten",
+    "unmatchedContacts_many": "{{count}} contacten",
+    "unmatchedDateFormats_few": "{{count}} datumnotaties",
+    "unmatchedDateFormats_many": "{{count}} datumnotaties",
+    "unmatchedPriorities_few": "{{count}} prioriteiten",
+    "unmatchedPriorities_many": "{{count}} prioriteiten",
+    "unmatchedStatuses_few": "{{count}} statussen",
+    "unmatchedStatuses_many": "{{count}} statussen",
+    "unmatchedTeams_few": "{{count}} teams",
+    "unmatchedTeams_many": "{{count}} teams",
+    "unmatchedValuesIntro_few": "{{count}} waarden uit uw CSV konden niet automatisch worden gekoppeld.",
+    "unmatchedValuesIntro_many": "{{count}} waarden uit uw CSV konden niet automatisch worden gekoppeld.",
+    "warningCount_few": "{{count}} waarschuwingen:",
+    "warningCount_many": "{{count}} waarschuwingen:"
   },
   "title": "Supporttickets",
   "subtitle": "Bekijk en beheer uw supporttickets",
@@ -471,7 +503,17 @@
     "updateBillingProfileFailed": "Bijwerken van facturatieprofiel mislukt",
     "scheduleOpenFailed": "De planner kon niet worden geopend",
     "sharedWorkspaceReadOnly": "U ziet dit ticket omdat het over een apparaat in een gedeelde werkplek gaat. Alleen degene die het heeft gemeld, kan er iets aan toevoegen.",
-    "loadPartyTagsFailed": "Kon de tags van aanvrager en klant niet laden"
+    "loadPartyTagsFailed": "Kon de tags van aanvrager en klant niet laden",
+    "commentWithImagesDeleted_few": "Opmerking en {{count}} geplakte afbeeldingen succesvol verwijderd.",
+    "commentWithImagesDeleted_many": "Opmerking en {{count}} geplakte afbeeldingen succesvol verwijderd.",
+    "deleteCommentWithImages_few": "Deze opmerking bevat {{count}} geplakte afbeeldingen die als ticketdocumenten zijn geüpload. Alleen de opmerking verwijderen, of ook de geplakte afbeeldingen definitief verwijderen?",
+    "deleteCommentWithImages_many": "Deze opmerking bevat {{count}} geplakte afbeeldingen die als ticketdocumenten zijn geüpload. Alleen de opmerking verwijderen, of ook de geplakte afbeeldingen definitief verwijderen?",
+    "pastedImageDeleteFailed_few": "Opmerking verwijderd, maar {{count}} geplakte afbeeldingen konden niet worden verwijderd.",
+    "pastedImageDeleteFailed_many": "Opmerking verwijderd, maar {{count}} geplakte afbeeldingen konden niet worden verwijderd.",
+    "pastedImagesDeleteFailed_few": "{{count}} geplakte afbeeldingen konden niet worden verwijderd.",
+    "pastedImagesDeleteFailed_many": "{{count}} geplakte afbeeldingen konden niet worden verwijderd.",
+    "pastedImagesDeleted_few": "{{count}} geplakte afbeeldingen verwijderd.",
+    "pastedImagesDeleted_many": "{{count}} geplakte afbeeldingen verwijderd."
   },
   "conversation": {
     "comments": "Reacties",
@@ -680,7 +722,13 @@
       "allMatchingSelected_other": "Alle {{count}} tickets die aan uw filters voldoen zijn geselecteerd.",
       "clear": "Selectie wissen",
       "selectAllMatching_one": "Selecteer alle {{count}} ticket die aan uw filters voldoen",
-      "selectAllMatching_other": "Selecteer alle {{count}} tickets die aan uw filters voldoen"
+      "selectAllMatching_other": "Selecteer alle {{count}} tickets die aan uw filters voldoen",
+      "allMatchingSelected_few": "Alle {{count}} tickets die aan uw filters voldoen zijn geselecteerd.",
+      "allMatchingSelected_many": "Alle {{count}} tickets die aan uw filters voldoen zijn geselecteerd.",
+      "pageSelected_few": "Alle {{count}} tickets op deze pagina zijn geselecteerd.",
+      "pageSelected_many": "Alle {{count}} tickets op deze pagina zijn geselecteerd.",
+      "selectAllMatching_few": "Selecteer alle {{count}} tickets die aan uw filters voldoen",
+      "selectAllMatching_many": "Selecteer alle {{count}} tickets die aan uw filters voldoen"
     },
     "spacing": {
       "compact": "Compact",
@@ -720,7 +768,13 @@
       },
       "selectedAction": "Geselecteerde afdrukken ({{count}})",
       "selectedTitle": "Geselecteerde tickets ({{count}})",
-      "subtitle": "{{count}} tickets"
+      "subtitle": "{{count}} tickets",
+      "selectedAction_few": "Geselecteerde afdrukken ({{count}})",
+      "selectedAction_many": "Geselecteerde afdrukken ({{count}})",
+      "selectedTitle_few": "Geselecteerde tickets ({{count}})",
+      "selectedTitle_many": "Geselecteerde tickets ({{count}})",
+      "subtitle_few": "{{count}} tickets",
+      "subtitle_many": "{{count}} tickets"
     },
     "exportSelectedAction": "Geselecteerde exporteren ({{count}})",
     "exportAction": "CSV exporteren",
@@ -748,7 +802,15 @@
       "saveFailed": "Opslaan van de standaardweergave is mislukt",
       "reset": "Terugzetten naar de tenantstandaard",
       "resetFailed": "Terugzetten van de weergave is mislukt"
-    }
+    },
+    "allMatchingSelected_few": "Alle {{count}} tickets die aan uw filters voldoen zijn geselecteerd.",
+    "allMatchingSelected_many": "Alle {{count}} tickets die aan uw filters voldoen zijn geselecteerd.",
+    "allPageSelected_few": "Alle {{count}} tickets op deze pagina zijn geselecteerd.",
+    "allPageSelected_many": "Alle {{count}} tickets op deze pagina zijn geselecteerd.",
+    "exportSelectedTooltip_few": "Exporteer {{count}} geselecteerde tickets naar CSV",
+    "exportSelectedTooltip_many": "Exporteer {{count}} geselecteerde tickets naar CSV",
+    "selectAllMatching_few": "Selecteer alle {{count}} tickets die aan uw filters voldoen",
+    "selectAllMatching_many": "Selecteer alle {{count}} tickets die aan uw filters voldoen"
   },
   "bulk": {
     "bundleTickets": "Tickets bundelen",
@@ -770,7 +832,9 @@
       "more": "Meer",
       "bundleNeedsOne": "Selecteer minstens 1 ticket om te bundelen",
       "printLabels": "Labels afdrukken",
-      "printLabelsLimit": "U kunt maximaal {{max}} labels tegelijk afdrukken"
+      "printLabelsLimit": "U kunt maximaal {{max}} labels tegelijk afdrukken",
+      "selectedCount_few": "{{count}} geselecteerd",
+      "selectedCount_many": "{{count}} geselecteerd"
     },
     "moveDialogTitle": "Geselecteerde tickets verplaatsen",
     "moveDialogDescription": "Selecteer een bestemmingsbord en status en bevestig het verplaatsen van de geselecteerde tickets.",
@@ -834,7 +898,11 @@
       "partialFailure": "Sommige tickets konden niet worden verplaatst",
       "failure": "Verplaatsen van geselecteerde tickets is mislukt",
       "confirm": "{{count}} tickets verplaatsen",
-      "success": "{{count}} tickets verplaatst"
+      "success": "{{count}} tickets verplaatst",
+      "confirm_few": "Verplaats {{count}} tickets",
+      "confirm_many": "Verplaats {{count}} tickets",
+      "success_few": "{{count}} tickets verplaatst",
+      "success_many": "{{count}} tickets verplaatst"
     },
     "delete": {
       "dialogTitle": "Geselecteerde tickets verwijderen",
@@ -851,7 +919,13 @@
       "partialFailure": "Sommige tickets konden niet worden verwijderd",
       "failure": "Verwijderen van geselecteerde tickets is mislukt",
       "confirm": "Weet u zeker dat u deze {{count}} tickets wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
-      "success": "{{count}} tickets verwijderd"
+      "success": "{{count}} tickets verwijderd",
+      "button_few": "Verwijder {{count}} tickets",
+      "button_many": "Verwijder {{count}} tickets",
+      "confirm_few": "Weet u zeker dat u deze {{count}} tickets wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+      "confirm_many": "Weet u zeker dat u deze {{count}} tickets wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+      "success_few": "{{count}} tickets verwijderd",
+      "success_many": "{{count}} tickets verwijderd"
     },
     "bundle": {
       "dialogTitle": "Tickets bundelen",
@@ -887,7 +961,9 @@
       "needMoreTickets": "Voeg minstens één ticket toe aan de bundel.",
       "unresolvedSelectedTickets_one": "Kon {{count}} geselecteerd ticket niet laden.",
       "unresolvedSelectedTickets_other": "Kon {{count}} geselecteerde tickets niet laden.",
-      "badgeClosed": "Gesloten"
+      "badgeClosed": "Gesloten",
+      "unresolvedSelectedTickets_few": "Kon {{count}} geselecteerde tickets niet laden.",
+      "unresolvedSelectedTickets_many": "Kon {{count}} geselecteerde tickets niet laden."
     },
     "auth": {
       "moveRequired": "U moet zijn ingelogd om tickets te verplaatsen",
@@ -910,7 +986,11 @@
       "success_other": "{{count}} tickets toegewezen",
       "partialFailure": "Sommige tickets konden niet worden toegewezen",
       "failure": "Toewijzen van geselecteerde tickets is mislukt",
-      "failedHeading": "De volgende tickets konden niet worden toegewezen:"
+      "failedHeading": "De volgende tickets konden niet worden toegewezen:",
+      "confirm_few": "{{count}} tickets toewijzen",
+      "confirm_many": "{{count}} tickets toewijzen",
+      "success_few": "{{count}} tickets toegewezen",
+      "success_many": "{{count}} tickets toegewezen"
     },
     "tags": {
       "dialogTitle": "Tags toevoegen aan geselecteerde tickets",
@@ -923,7 +1003,11 @@
       "success_other": "Tags toegevoegd aan {{count}} tickets",
       "partialFailure": "Tags konden niet bij alle tickets worden toegevoegd",
       "failure": "Toevoegen van tags is mislukt",
-      "failedHeading": "Tags konden niet worden toegevoegd aan de volgende tickets:"
+      "failedHeading": "Tags konden niet worden toegevoegd aan de volgende tickets:",
+      "confirm_few": "Tags toevoegen aan {{count}} tickets",
+      "confirm_many": "Tags toevoegen aan {{count}} tickets",
+      "success_few": "Tags toegevoegd aan {{count}} tickets",
+      "success_many": "Tags toegevoegd aan {{count}} tickets"
     },
     "dueDate": {
       "dialogTitle": "Vervaldatum instellen voor geselecteerde tickets",
@@ -938,7 +1022,11 @@
       "success_other": "Vervaldatum bijgewerkt op {{count}} tickets",
       "partialFailure": "Vervaldatum kon niet bij alle tickets worden bijgewerkt",
       "failure": "Bijwerken van vervaldatum is mislukt",
-      "failedHeading": "Vervaldatum kon niet worden bijgewerkt bij de volgende tickets:"
+      "failedHeading": "Vervaldatum kon niet worden bijgewerkt bij de volgende tickets:",
+      "confirm_few": "{{count}} tickets bijwerken",
+      "confirm_many": "{{count}} tickets bijwerken",
+      "success_few": "Vervaldatum bijgewerkt op {{count}} tickets",
+      "success_many": "Vervaldatum bijgewerkt op {{count}} tickets"
     },
     "status": {
       "dialogTitle": "Status wijzigen voor geselecteerde tickets",
@@ -957,7 +1045,11 @@
       "resolutionLabelRequired": "Oplossingscommentaar",
       "resolutionRequiredHint": "Dit bord vereist een oplossingscommentaar voordat tickets kunnen worden gesloten.",
       "resolutionPlaceholder": "Beschrijf hoe deze tickets zijn opgelost",
-      "resolutionHelper": "Wordt opgeslagen als de oplossing op elk geselecteerd ticket en voldoet aan borden die er een vereisen voordat ze sluiten."
+      "resolutionHelper": "Wordt opgeslagen als de oplossing op elk geselecteerd ticket en voldoet aan borden die er een vereisen voordat ze sluiten.",
+      "confirm_few": "{{count}} tickets bijwerken",
+      "confirm_many": "{{count}} tickets bijwerken",
+      "success_few": "Status bijgewerkt op {{count}} tickets",
+      "success_many": "Status bijgewerkt op {{count}} tickets"
     },
     "priority": {
       "dialogTitle": "Prioriteit wijzigen voor geselecteerde tickets",
@@ -970,8 +1062,24 @@
       "success_other": "Prioriteit bijgewerkt op {{count}} tickets",
       "partialFailure": "Prioriteit kon niet bij alle tickets worden bijgewerkt",
       "failure": "Bijwerken van prioriteit is mislukt",
-      "failedHeading": "Prioriteit kon niet worden bijgewerkt bij de volgende tickets:"
-    }
+      "failedHeading": "Prioriteit kon niet worden bijgewerkt bij de volgende tickets:",
+      "confirm_few": "{{count}} tickets bijwerken",
+      "confirm_many": "{{count}} tickets bijwerken",
+      "success_few": "Prioriteit bijgewerkt op {{count}} tickets",
+      "success_many": "Prioriteit bijgewerkt op {{count}} tickets"
+    },
+    "deleteConfirm_few": "Verwijder {{count}} tickets",
+    "deleteConfirm_many": "Verwijder {{count}} tickets",
+    "deleteDialogDescription_few": "Weet u zeker dat u deze {{count}} tickets wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+    "deleteDialogDescription_many": "Weet u zeker dat u deze {{count}} tickets wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+    "deleteSuccess_few": "{{count}} tickets verwijderd",
+    "deleteSuccess_many": "{{count}} tickets verwijderd",
+    "exportSelectedTooltip_few": "Exporteer {{count}} geselecteerde tickets naar CSV",
+    "exportSelectedTooltip_many": "Exporteer {{count}} geselecteerde tickets naar CSV",
+    "moveConfirm_few": "Verplaats {{count}} tickets",
+    "moveConfirm_many": "Verplaats {{count}} tickets",
+    "moveSuccess_few": "{{count}} tickets verplaatst",
+    "moveSuccess_many": "{{count}} tickets verplaatst"
   },
   "quickAdd": {
     "dialogTitle": "Ticket toevoegen",
@@ -1061,7 +1169,11 @@
     },
     "attachmentsPartialFailure": "Ticket aangemaakt, maar deze bestanden konden niet worden bijgevoegd: {{files}}. Voeg ze toe vanuit het ticket.",
     "contactLocationSuffix": "(locatie van contactpersoon)",
-    "contactPrimaryLocationSuffix": "(primaire locatie van contactpersoon)"
+    "contactPrimaryLocationSuffix": "(primaire locatie van contactpersoon)",
+    "tagCreatePartialFailure_few": "{{count}} tags konden niet worden aangemaakt",
+    "tagCreatePartialFailure_many": "{{count}} tags konden niet worden aangemaakt",
+    "tagCreationFailed_few": "{{count}} tags konden niet worden aangemaakt",
+    "tagCreationFailed_many": "{{count}} tags konden niet worden aangemaakt"
   },
   "itil": {
     "calculatedPriority": "Prioriteit (berekend)",
@@ -1350,7 +1462,9 @@
       "copying": "Kopiëren…",
       "copyBoardTypeMismatch": "Ticketcategorieën kunnen alleen worden gekopieerd tussen borden met hetzelfde categorietype.",
       "copyConflicts_one": "{{count}} overgeslagen categorie heeft een andere bovenliggende categorie op het doelbord.",
-      "copyConflicts_other": "{{count}} overgeslagen categorieën hebben een andere bovenliggende categorie op het doelbord."
+      "copyConflicts_other": "{{count}} overgeslagen categorieën hebben een andere bovenliggende categorie op het doelbord.",
+      "copyConflicts_few": "{{count}} overgeslagen categorieën hebben een andere bovenliggende categorie op het doelbord.",
+      "copyConflicts_many": "{{count}} overgeslagen categorieën hebben een andere bovenliggende categorie op het doelbord."
     },
     "display": {
       "responseStateTrackingTitle": "Reactiestatusbewaking",
@@ -1431,7 +1545,23 @@
     "appliedFiltersSummary": "(van {{count}} ticket dat aan de toegepaste filters voldoet)",
     "completeMessage": "{{count}} ticket succesvol geëxporteerd naar CSV.",
     "confirm": "{{count}} ticket exporteren",
-    "selectedTicketsSummary": "{{count}} geselecteerd ticket wordt geëxporteerd"
+    "selectedTicketsSummary": "{{count}} geselecteerd ticket wordt geëxporteerd",
+    "appliedFiltersSummary_few": "(van {{count}} tickets die aan de toegepaste filters voldoen)",
+    "appliedFiltersSummary_many": "(van {{count}} tickets die aan de toegepaste filters voldoen)",
+    "completeDescription_few": "{{count}} tickets succesvol geëxporteerd naar CSV.",
+    "completeDescription_many": "{{count}} tickets succesvol geëxporteerd naar CSV.",
+    "completeMessage_few": "{{count}} tickets succesvol geëxporteerd naar CSV.",
+    "completeMessage_many": "{{count}} tickets succesvol geëxporteerd naar CSV.",
+    "confirm_few": "Exporteer {{count}} tickets",
+    "confirm_many": "Exporteer {{count}} tickets",
+    "selectedFields_few": "{{count}} van {{total}} velden geselecteerd",
+    "selectedFields_many": "{{count}} van {{total}} velden geselecteerd",
+    "selectedTicketsSummary_few": "Bezig met exporteren van {{count}} geselecteerde tickets",
+    "selectedTicketsSummary_many": "Bezig met exporteren van {{count}} geselecteerde tickets",
+    "summaryMatching_few": "(van {{total}} tickets die aan de toegepaste filters voldoen)",
+    "summaryMatching_many": "(van {{total}} tickets die aan de toegepaste filters voldoen)",
+    "summary_few": "Bezig met exporteren van {{selected}} geselecteerde tickets",
+    "summary_many": "Bezig met exporteren van {{selected}} geselecteerde tickets"
   },
   "materials": {
     "title": "Materialen",
@@ -1562,7 +1692,15 @@
     "excludingCount_other": "exclusief {{count}} categorieën",
     "excludingPrefix": "exclusief {{name}}",
     "excludingCount": "exclusief {{count}} categorie",
-    "selectedCount": "{{count}} categorieën"
+    "selectedCount": "{{count}} categorieën",
+    "categoriesCount_few": "{{count}} categorieën",
+    "categoriesCount_many": "{{count}} categorieën",
+    "excludingCategoriesCount_few": "exclusief {{count}} categorieën",
+    "excludingCategoriesCount_many": "exclusief {{count}} categorieën",
+    "excludingCount_few": "exclusief {{count}} categorieën",
+    "excludingCount_many": "exclusief {{count}} categorieën",
+    "selectedCount_few": "{{count}} categorieën",
+    "selectedCount_many": "{{count}} categorieën"
   },
   "navigation": {
     "previousTicket": "Vorige ticket",
@@ -1885,7 +2023,9 @@
     "editing": {
       "single": "{{name}} is aan het bewerken",
       "multiple_one": "{{name}} en {{count}} andere persoon zijn aan het bewerken",
-      "multiple_other": "{{name}} en {{count}} andere personen zijn aan het bewerken"
+      "multiple_other": "{{name}} en {{count}} andere personen zijn aan het bewerken",
+      "multiple_few": "{{name}} en {{count}} andere personen zijn aan het bewerken",
+      "multiple_many": "{{name}} en {{count}} andere personen zijn aan het bewerken"
     },
     "remoteFieldUpdated": "{{name}} heeft {{field}} bijgewerkt",
     "connection": {
@@ -1914,7 +2054,11 @@
     "selectedCount": "{{count}} borden",
     "statusActive": "Actief",
     "statusAll": "Alle",
-    "statusInactive": "Inactief"
+    "statusInactive": "Inactief",
+    "excludingCount_few": "met uitzondering van {{count}} borden",
+    "excludingCount_many": "met uitzondering van {{count}} borden",
+    "selectedCount_few": "{{count}} borden",
+    "selectedCount_many": "{{count}} borden"
   },
   "checklist": {
     "addFailed": "Kan checklistitem niet toevoegen",
@@ -2072,7 +2216,9 @@
       "projectTasks": "Projecttaken",
       "timeAndBilling": "Tijd en facturatie",
       "useContactLocation": "Locatie van contactpersoon gebruiken",
-      "remote": "Op afstand"
+      "remote": "Op afstand",
+      "acrossEntries_few": "over {{count}} registraties",
+      "acrossEntries_many": "over {{count}} registraties"
     },
     "timeline": {
       "subtitle": "Reacties, tijd en systeemwijzigingen op één plek",
@@ -2738,7 +2884,7 @@
     "cell": {
       "breached": "SLA overschreden",
       "paused": "SLA gepauzeerd",
-      "atRisk": "Risico op overschrijding",
+      "atRisk": "SLA-risico",
       "onTrack": "Op schema",
       "remaining": "{{magnitude}} resterend"
     }
@@ -2972,7 +3118,7 @@
         "reopened": "Heropend",
         "priorityChanged": "Prioriteit gewijzigd",
         "assigned": "Toegewezen",
-        "unassigned": "Niet toegewezen",
+        "unassigned": "Toewijzing opgeheven",
         "boardMoved": "Naar ander bord verplaatst",
         "responseState": "Antwoordstatus",
         "messageAdded": "Opmerking toegevoegd",
@@ -2984,7 +3130,7 @@
         "documentRemoved": "Document verwijderd",
         "inboundEmail": "Binnenkomende e-mail",
         "createdFromTemplate": "Aangemaakt op basis van sjabloon",
-        "duplicatedFrom": "Gedupliceerd van",
+        "duplicatedFrom": "Gedupliceerd vanuit",
         "duplicatedTo": "Gedupliceerd naar",
         "bundleReopened": "Bundel heropend",
         "bundleStatusPropagated": "Bundelstatus doorgevoerd"
@@ -3006,7 +3152,7 @@
         "system": "Systeem"
       },
       "entries": {
-        "all": "Alle vermeldingen",
+        "all": "Alle items",
         "activity": "Alleen activiteit",
         "comments": "Alleen opmerkingen"
       },
@@ -3014,7 +3160,7 @@
       "eventType": "Gebeurtenis",
       "source": "Bron",
       "actorType": "Uitvoerder",
-      "reset": "Filters herstellen"
+      "reset": "Filters wissen"
     },
     "columns": {
       "when": "Wanneer",
@@ -3032,7 +3178,7 @@
     },
     "empty": {
       "noActivity": "Nog geen activiteit. Nieuwe gebeurtenissen verschijnen hier wanneer het ticket verandert.",
-      "noMatches": "Geen vermeldingen komen overeen met de huidige filters."
+      "noMatches": "Er zijn geen items die overeenkomen met de huidige filters."
     }
   },
   "bundle": {
