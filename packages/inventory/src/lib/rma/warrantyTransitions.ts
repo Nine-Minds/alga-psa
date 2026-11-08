@@ -579,7 +579,7 @@ export async function shipDeadUnitToVendorCore(
   const serial = await deadUnitSerial(trx, tenant, rma.rma_id);
   const occurredAt = input.occurred_at ?? new Date().toISOString();
   const custodyNote = [deadUnitLabel(serial), `${input.carrier} ${input.tracking_number}`, `RMA ${rma.rma_number}`, input.note].filter(Boolean).join(' · ');
-  const shipped = await recordCustodyEvent(trx, tenant, actor, custody.custody_id, {
+  const shipped = await recordCustodyEventWithAuthorization(trx, tenant, { user_id: actor, user_type: 'internal' }, custody.custody_id, {
     event_type: 'shipped',
     counterparty: name ?? 'Vendor',
     occurred_at: occurredAt,
@@ -625,7 +625,7 @@ export async function confirmVendorReceiptCore(
   const recorded = shipped?.payload && typeof shipped.payload === 'object' ? (shipped.payload as { dead_unit_serial_number?: unknown }).dead_unit_serial_number : undefined;
   const serial = typeof recorded === 'string' && recorded ? recorded : null;
   // Closed as returned to the VENDOR. The C4 `returned` event is never used here: it always means returned_to_client.
-  const closed = await closeCustodyEpisode(trx, tenant, actor, custody.custody_id, 'returned_to_vendor', {
+  const closed = await closeCustodyEpisodeWithAuthorization(trx, tenant, { user_id: actor, user_type: 'internal' }, custody.custody_id, 'returned_to_vendor', {
     note: [deadUnitLabel(serial), 'received by vendor', input.note].filter(Boolean).join(' · '),
     rmaId: rma.rma_id,
     rmaNumber: rma.rma_number,
