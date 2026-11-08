@@ -2590,6 +2590,7 @@
       "Test",
       "Text",
       "Ticket",
+      "Ticket {{number}}",
       "Tickets",
       "token",
       "Try/Catch",
