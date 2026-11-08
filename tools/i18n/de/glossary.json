@@ -2642,7 +2642,8 @@
       "Barcode",
       "Asset: {{name}}",
       "Ticket: {{number}}",
-      "RMA {{number}} · {{status}}"
+      "RMA {{number}} · {{status}}",
+      "{{actor}} • {{eventType}}"
     ],
     "caseInsensitive": [
       "api",
