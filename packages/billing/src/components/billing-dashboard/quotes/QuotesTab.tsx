@@ -538,6 +538,12 @@ const QuotesTab: React.FC = () => {
       const result = await deleteQuote(quoteId);
       if (isReturnedActionError(result)) {
         setError(getErrorMessage(result));
+      } else if (!result.deleted) {
+        // Validation refusals come back as a result, not an error; don't swallow them.
+        setError(
+          result.message
+            || t('quoteDetail.errors.deleteUnavailable', { defaultValue: 'Quote could not be deleted' }),
+        );
       } else {
         void loadData();
       }

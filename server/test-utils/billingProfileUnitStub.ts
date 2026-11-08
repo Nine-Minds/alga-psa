@@ -70,7 +70,8 @@ export async function billingProfileSettingsModuleStub(
       invoiceDeliveryMethod: null,
       invoiceTemplateId: null,
       billingCycle: null,
-      paymentTerms: null,
+      paymentTerms: 'net_30',
+      paymentTermsSource: 'system',
       preferredPaymentMethod: null,
       billsSeparately: false,
       // Nothing overridden: the profile inherits the client wholesale, which is

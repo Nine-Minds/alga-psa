@@ -495,7 +495,7 @@ export const getEventSchemaByRefAction = withAuth(async (user, { tenant }, input
 export const simulateWorkflowEventAction = withAuth(async (user, { tenant }, input: unknown) => {
   const parsed = z.object({
     eventName: z.string().min(1),
-    payload: z.record(z.any()).optional().default({}),
+    payload: z.record(z.string(), z.any()).optional().default({}),
     correlationKey: z.string().optional(),
     payloadSchemaRef: z.string().optional()
   }).parse(input);
@@ -620,7 +620,7 @@ export const createWorkflowFromEventAction = withAuth(async (user, { tenant }, i
 
 export const detachWorkflowTriggerFromEventAction = withAuth(async (user, { tenant }, input: unknown) => {
   const parsed = z.object({
-    workflowId: z.string().uuid(),
+    workflowId: z.string().guid(),
     eventType: z.string().min(1)
   }).parse(input);
 
@@ -675,7 +675,7 @@ export const createCustomEventAction = withAuth(async (user, { tenant }, input: 
     description: z.string().optional(),
     category: z.string().optional(),
     payloadSchemaRef: z.string().trim().optional(),
-    payloadSchemaJson: z.record(z.any()).optional()
+    payloadSchemaJson: z.record(z.string(), z.any()).optional()
   }).parse(input);
 
   const { knex } = await createTenantKnex();

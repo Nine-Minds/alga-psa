@@ -11,9 +11,10 @@ import type { StepProps } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
-import { getOnboardingLicenseUsage, getAvailableRoles, addSingleTeamMember } from '@alga-psa/onboarding/actions';
+import { getOnboardingLicenseUsage, getAvailableRoles, addSingleTeamMember } from '@alga-psa/onboarding/actions/onboarding-actions/onboardingActions';
 import { sendUserInvitation } from '@alga-psa/users/actions/user-actions/userInvitationActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { hasTeamMemberEmail } from '../../lib/teamMemberEmails';
 
 export function TeamMembersStep({ data, updateData }: StepProps) {
   const { t } = useTranslation('msp/onboarding');
@@ -28,6 +29,8 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
   const [isLoadingRoles, setIsLoadingRoles] = useState(true);
   const [savingMemberIndex, setSavingMemberIndex] = useState<number | null>(null);
   const [saveErrors, setSaveErrors] = useState<Record<number, string>>({});
+  // Non-blocking: the member was created but saved progress does not name them.
+  const [saveWarnings, setSaveWarnings] = useState<Record<number, string>>({});
   const [hasUnsavedForm, setHasUnsavedForm] = useState(false);
   const [showPasswords, setShowPasswords] = useState<Record<number, boolean>>({});
 
@@ -46,7 +49,7 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
       !m.firstName || !m.lastName || !m.email
     );
     const isHandled = (email: string) =>
-      data.createdTeamMemberEmails?.includes(email) || data.invitedTeamMemberEmails?.includes(email);
+      hasTeamMemberEmail(data.createdTeamMemberEmails, email) || hasTeamMemberEmail(data.invitedTeamMemberEmails, email);
     const hasUnsaved = data.teamMembers.some(m =>
       m.firstName && m.lastName && m.email && !isHandled(m.email)
     );
@@ -178,6 +181,7 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
 
     setSavingMemberIndex(index);
     setSaveErrors(prev => ({ ...prev, [index]: '' }));
+    setSaveWarnings(prev => ({ ...prev, [index]: '' }));
 
     try {
       if (inviteMode === 'email') {
@@ -212,8 +216,14 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
         if (result.success) {
           const currentCreated = data.createdTeamMemberEmails || [];
           updateData({
-            createdTeamMemberEmails: [...currentCreated, member.email]
+            createdTeamMemberEmails: [...currentCreated, result.data?.created ?? member.email]
           });
+          if (result.data?.progressError) {
+            setSaveWarnings(prev => ({ ...prev, [index]: t('teamMembersStep.errors.progressNotSaved', {
+              defaultValue: '{{email}} was created, but setup could not save its progress. If you leave setup and come back this member may not show as added; the account already exists, so do not add it again.',
+              email: result.data?.created ?? member.email
+            }) }));
+          }
 
           await checkLicenseStatus();
         } else {
@@ -361,8 +371,8 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
 
       {data.teamMembers.map((member, index) => {
         const inviteMode = member.inviteMode || 'email';
-        const isCreated = data.createdTeamMemberEmails?.includes(member.email);
-        const isInvited = data.invitedTeamMemberEmails?.includes(member.email);
+        const isCreated = hasTeamMemberEmail(data.createdTeamMemberEmails, member.email);
+        const isInvited = hasTeamMemberEmail(data.invitedTeamMemberEmails, member.email);
         const isAlreadyHandled = isCreated || isInvited;
         const isSaving = savingMemberIndex === index;
         const hasError = !!saveErrors[index];
@@ -586,6 +596,12 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
           {hasError && (
             <Alert variant="destructive">
               <AlertDescription>{saveErrors[index]}</AlertDescription>
+            </Alert>
+          )}
+
+          {saveWarnings[index] && (
+            <Alert variant="warning">
+              <AlertDescription>{saveWarnings[index]}</AlertDescription>
             </Alert>
           )}
         </div>

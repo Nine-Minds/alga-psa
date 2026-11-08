@@ -3,8 +3,13 @@
 import React, { useMemo, useState } from 'react';
 import useSWR from 'swr';
 import {
+  ArrowRightLeft,
   Boxes,
   History,
+  PackageCheck,
+  PackageOpen,
+  Truck,
+  UserRoundCog,
   Pencil,
   Power,
   ShieldCheck,
@@ -31,6 +36,7 @@ import type {
 import { getAssetHistory, getAssetLinkedTickets, getAssetMaintenanceReport } from '../actions/assetActions';
 import { unwrapAssetActionResult } from '../actions/assetActionErrors';
 import { calendarDateToLocalDate } from '../lib/calendarDate';
+import { describeCustodyHistory } from '../lib/custodyDisplay';
 
 type Lane = 'all' | 'service' | 'changes' | 'maintenance' | 'system';
 
@@ -101,6 +107,20 @@ export function describeAssetHistoryEntry(
   const contactName = typeof changes.contact_name === 'string' ? changes.contact_name : undefined;
   const note = typeof changes.note === 'string' && changes.note ? changes.note : undefined;
   const groupName = typeof changes.group_name === 'string' ? changes.group_name : undefined;
+
+  // Equipment custody (C4): one sentence per step; names are denormalised into `changes`.
+  const custody = describeCustodyHistory(entry, t);
+  if (custody) {
+    const icon: Record<typeof custody.kind, LucideIcon> = {
+      received: PackageOpen,
+      moved: ArrowRightLeft,
+      handed_off: UserRoundCog,
+      shipped: Truck,
+      returned: PackageCheck,
+      updated: Pencil,
+    };
+    return { title: custody.title, detail: custody.detail, icon: icon[custody.kind], tone: custody.tone };
+  }
 
   if (entry.change_type === 'assignee_changed') {
     if (!changes.contact_name_id) {

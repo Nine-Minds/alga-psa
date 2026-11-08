@@ -15,6 +15,12 @@ vi.mock('@alga-psa/formatting/avatarUtils', async () => {
   };
 });
 
+// The chip-tag hydration runs a real tag_mappings join the fake query builders here cannot serve.
+vi.mock('@alga-psa/tags/lib/loadDisplayTags', () => ({
+  loadDisplayTagsForEntities: vi.fn(async () => new Map()),
+  displayTagKey: (taggedType: string, id: string) => `${taggedType}:${id}`,
+}));
+
 function createQueryChain(ticket: Record<string, unknown> | null) {
   const chain = {
     leftJoin: vi.fn(() => chain),
@@ -65,6 +71,7 @@ describe('TicketService avatar enrichment', () => {
     const result = await service.getById('123e4567-e89b-12d3-a456-426614174000', {
       tenant: 'tenant-1',
       userId: 'user-1',
+      user: { user_type: 'internal' },
     } as any);
 
     expect(getContactAvatarUrl).toHaveBeenCalledWith('contact-1', 'tenant-1');
@@ -96,6 +103,7 @@ describe('TicketService avatar enrichment', () => {
     const result = await service.getById('123e4567-e89b-12d3-a456-426614174000', {
       tenant: 'tenant-1',
       userId: 'user-1',
+      user: { user_type: 'internal' },
     } as any);
 
     expect(result).toMatchObject({
@@ -123,6 +131,7 @@ describe('TicketService avatar enrichment', () => {
     const result = await service.getById('123e4567-e89b-12d3-a456-426614174000', {
       tenant: 'tenant-1',
       userId: 'user-1',
+      user: { user_type: 'internal' },
     } as any);
 
     expect(getContactAvatarUrl).not.toHaveBeenCalled();

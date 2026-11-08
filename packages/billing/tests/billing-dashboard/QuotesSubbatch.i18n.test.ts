@@ -751,8 +751,10 @@ describe('Quotes i18n wiring contract', () => {
     expect(quoteForm).not.toContain('.toLocaleDateString(');
     expect(lineItemsEditor).toContain('useFormatters');
     expect(lineItemsEditor).not.toContain('formatDraftQuoteMoney(');
-    expect(draftMoney).toContain('new Intl.NumberFormat(undefined,');
-    expect(draftMoney).not.toContain("Intl.NumberFormat('en-US'");
+    // Draft money now goes through the shared symbol-aware formatter; the
+    // locale stays unpinned (undefined → the runtime's own).
+    expect(draftMoney).toContain('formatCurrencyWithSymbol((minorUnits || 0) / 100, undefined,');
+    expect(draftMoney).not.toContain("'en-US'");
   });
 
   it('T029: shared billing-frequency enums expose weekly across constants and all locale files', () => {

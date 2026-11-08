@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { getClientDocumentLogoUrl } from '@alga-psa/formatting/avatarUtils';
-import { displayAddressField, displayCountry } from '@alga-psa/core';
+import { displayAddressField, displayCountry, formatPostalAddress } from '@alga-psa/core';
 
 const asTrimmedString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
@@ -23,7 +23,7 @@ const buildAddress = (record: Record<string, unknown> | null | undefined): strin
   ]
     .filter((value, index, collection) => value.length > 0 && collection.indexOf(value) === index);
 
-  return parts.length > 0 ? parts.join(', ') : null;
+  return formatPostalAddress(parts) || null;
 };
 
 export interface TenantParty {

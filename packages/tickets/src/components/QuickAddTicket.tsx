@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
-import { HelpCircle } from 'lucide-react';
+import { HelpCircle, Paperclip, X } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Link2, Copy, LayoutTemplate } from 'lucide-react';
@@ -17,22 +17,24 @@ import { addTicketResource } from '../actions/ticketResourceActions';
 import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import { searchUsersForMentions } from '@alga-psa/user-composition/actions/searchUsersForMentions';
-import { getContactsByClient, getClientLocations } from '../actions/clientLookupActions';
+import { getContactsByClient, getClientLocations, getContactEffectiveLocation, getClientById } from '../actions/clientLookupActions';
 import { getTicketFormData } from '../actions/ticketFormActions';
 import { getTicketDuplicateSource } from '../actions/ticketActions';
 import { getTicketTemplateForCreate, listTicketTemplatesForCreate } from '../actions/ticketTemplateActions';
 import type { TicketDuplicateSource } from '../lib/ticketDuplicate';
 import { getTicketCategoriesByBoard, BoardCategoryData } from '../actions/ticketCategoryActions';
 import type { TicketTemplateForCreate, TicketTemplateOption } from '@alga-psa/types';
-import { IUser, IBoard, ITicketStatus, IPriority, IStandardPriority, IClient, IClientLocation, IContact, ITicket, ITicketCategory } from '@alga-psa/types';
+import { IUser, IBoard, ITicketStatus, IPriority, IStandardPriority, IClientLocation, IContact, ITicket, ITicketCategory } from '@alga-psa/types';
 import { IUserWithRoles } from '@alga-psa/types';
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { searchClientsForPicker } from '../actions/clientLookupActions';
 import { CategoryPicker } from './CategoryPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
+import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextEditor } from '@alga-psa/ui/editor';
@@ -76,6 +78,15 @@ import { useQuickAddRichTextUploadSession } from './useQuickAddRichTextUploadSes
 import { getTicketStatuses } from '@alga-psa/reference-data/actions/status-actions/statusActions';
 import { useDialogSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import { toCalendarDisplayDate } from '@alga-psa/core';
+
+export interface QuickAddAssetPickerProps {
+  id: string;
+  clientId: string;
+  value: string[];
+  onChange: (assetIds: string[]) => void;
+  label: string;
+  disabled?: boolean;
+}
 
 /** Renders a <form> normally, or a plain <div> when embedded to avoid nested form tags. */
 function FormOrDiv({ isEmbedded, onSubmit, children }: { isEmbedded: boolean; onSubmit: (e: React.FormEvent) => void; children: React.ReactNode }) {
@@ -209,6 +220,12 @@ interface QuickAddTicketProps {
    * Ignored when `duplicateFromTicketId` is set; a request names a duplicate source or a template, never both.
    */
   templateId?: string;
+  /**
+   * Multi-select of the chosen client's assets. The assets package owns the picker and the tickets package
+   * cannot import it, so the composition layer injects it; without it the Assets section is not shown
+   * beyond the asset the form was opened from.
+   */
+  renderAssetPicker?: (props: QuickAddAssetPickerProps) => React.ReactNode;
 }
 
 export function QuickAddTicket({
@@ -231,6 +248,7 @@ export function QuickAddTicket({
   isAlgaDeskMode = false,
   duplicateFromTicketId,
   templateId,
+  renderAssetPicker,
 }: QuickAddTicketProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -279,9 +297,12 @@ export function QuickAddTicket({
   const [statusId, setStatusId] = useState('');
   const [priorityId, setPriorityId] = useState('');
   const [clientId, setClientId] = useState(prefilledClient?.id || '');
+  // Name of the selected client, used for the {{client}} template title token (no full client list is loaded).
+  const [selectedClientName, setSelectedClientName] = useState<string | null>(prefilledClient?.name ?? null);
   const [contactId, setContactId] = useState(prefilledContact?.id || null);
   const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('all');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
+  const latestClientSelectionRef = useRef<string | null>(null);
   const [selectedClientType, setSelectedClientType] = useState<'company' | 'individual' | null>(null);
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
   const [boardConfig, setBoardConfig] = useState<BoardCategoryData['boardConfig']>({
@@ -296,10 +317,21 @@ export function QuickAddTicket({
   const [statuses, setStatuses] = useState<ITicketStatus[]>([]);
   const [isLoadingStatuses, setIsLoadingStatuses] = useState(false);
   const [priorities, setPriorities] = useState<IPriority[]>([]);
-  const [clients, setClients] = useState<IClient[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [locations, setLocations] = useState<IClientLocation[]>([]);
   const [locationId, setLocationId] = useState<string | null>(null);
+  // Who put the location there. A location the dispatcher chose by hand is never replaced when the
+  // contact changes; one the contact filled is replaced, or cleared when the contact is cleared.
+  // A ref, not state: the duplicate/prefill sequence reads it in the same pass that writes it, and
+  // a state value would still be the pre-render one there (the bug that left a prefilled contact's
+  // location unresolved). Nothing renders from it.
+  const locationSourceRef = useRef<'user' | 'contact' | null>(null);
+  const applyLocation = (nextLocationId: string | null, source: 'user' | 'contact' | null) => {
+    locationSourceRef.current = source;
+    setLocationId(nextLocationId);
+  };
+  const [contactLocationIds, setContactLocationIds] = useState<string[]>([]);
+  const [contactPrimaryLocationId, setContactPrimaryLocationId] = useState<string | null>(null);
   const [isPrefilledClient, setIsPrefilledClient] = useState(false);
   const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
   const [isQuickAddCategoryOpen, setIsQuickAddCategoryOpen] = useState(false);
@@ -327,6 +359,11 @@ export function QuickAddTicket({
   const lastRenderedTitleRef = useRef<string | null>(null);
   const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
   const effectiveAssetId = isAlgaDeskMode ? undefined : assetId;
+  // Create extras (all optional; assets and watchers go in the same addTicket call, attachments after).
+  const [extraAssetIds, setExtraAssetIds] = useState<string[]>([]);
+  const [watcherIds, setWatcherIds] = useState<string[]>([]);
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const attachmentInputRef = useRef<HTMLInputElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
 
   // Calculate ITIL priority when impact and urgency are set
@@ -400,7 +437,7 @@ export function QuickAddTicket({
         const [formData, duplicateResult, templateResult, optionsResult] = await Promise.all([
           getTicketFormData(prefilledClient?.id),
           duplicateFromTicketId ? getTicketDuplicateSource(duplicateFromTicketId) : Promise.resolve(null),
-          preloadTemplateId ? getTicketTemplateForCreate(preloadTemplateId) : Promise.resolve(null),
+          preloadTemplateId ? getTicketTemplateForCreate(preloadTemplateId, prefilledClient?.id ?? null) : Promise.resolve(null),
           duplicateFromTicketId ? Promise.resolve(null) : listTicketTemplatesForCreate().catch(() => null),
         ]);
         setTemplateOptions(Array.isArray(optionsResult) ? optionsResult : []);
@@ -408,7 +445,6 @@ export function QuickAddTicket({
         setUsers(formData.users);
         setBoards(formData.boards);
         setPriorities(formData.priorities);
-        setClients(formData.clients);
 
         const availableBoards = formData.boards || [];
         const availablePriorities = formData.priorities || [];
@@ -416,6 +452,7 @@ export function QuickAddTicket({
         if (formData.selectedClient) {
           setIsPrefilledClient(true);
           setClientId(formData.selectedClient.client_id);
+          setSelectedClientName(formData.selectedClient.client_name ?? null);
           setSelectedClientType(formData.selectedClient.client_type as 'company' | 'individual');
           if (formData.contacts) {
             setContacts(formData.contacts);
@@ -457,6 +494,15 @@ export function QuickAddTicket({
           } else {
             applyTemplateSource(templateResult);
           }
+        }
+
+        // Last, so a duplicate's own location (hand-picked) still wins: a contact that arrived
+        // prefilled fills the Location select exactly as picking that contact here would.
+        const effectiveContactId = duplicateResult && !isReturnedActionError(duplicateResult)
+          ? duplicateResult.contact?.id ?? null
+          : prefilledContact?.id ?? null;
+        if (effectiveContactId) {
+          await loadContactLocations(effectiveContactId);
         }
       } catch (error) {
         console.error('Error fetching form data:', error);
@@ -688,24 +734,36 @@ export function QuickAddTicket({
       setIsPrefilledClient(false);
     }
 
+    latestClientSelectionRef.current = newClientId;
     setClientId(newClientId || '');
+    setSelectedClientName(null);
+    // Assets are picked from the client's own list, so the previous client's selection no longer applies.
+    setExtraAssetIds([]);
     setContactId(null);
     // The location belongs to the client that was selected before.
-    setLocationId(null);
+    applyLocation(null, null);
+    setContactLocationIds([]);
+    setContactPrimaryLocationId(null);
     clearErrorIfSubmitted();
 
+    setSelectedClientType(null);
     if (newClientId !== null) {
-      const selectedClient = clients.find(client => client.client_id === newClientId);
-
-      if (selectedClient?.client_type === 'company') {
-        setSelectedClientType('company');
-      } else if (selectedClient?.client_type === 'individual') {
-        setSelectedClientType('individual');
-      } else {
-        setSelectedClientType(null);
+      // The async picker only hands back an id, so resolve client_type with a single-client fetch.
+      // LEVERAGE: pattern fetch-selected-client-by-id — single-client lookup for a picker's selected value
+      const requestedId = newClientId;
+      try {
+        const selectedClient = await getClientById(requestedId);
+        // Ignore stale responses if the user picked another client meanwhile.
+        if (latestClientSelectionRef.current !== requestedId) return;
+        setSelectedClientName(selectedClient?.client_name ?? null);
+        setSelectedClientType(
+          selectedClient?.client_type === 'company' || selectedClient?.client_type === 'individual'
+            ? selectedClient.client_type
+            : null
+        );
+      } catch (error) {
+        console.error('Error fetching selected client:', error);
       }
-    } else {
-      setSelectedClientType(null);
     }
   };
 
@@ -800,9 +858,11 @@ export function QuickAddTicket({
       })),
     });
     setClientId(source.client.id);
+    setSelectedClientName(source.client.name || null);
     setSelectedClientType((source.client.type as 'company' | 'individual' | null) ?? null);
     setContactId(source.contact?.id ?? null);
-    setLocationId(source.location_id ?? null);
+    // A duplicate carries the original's location deliberately; treat it as a hand-picked value.
+    applyLocation(source.location_id ?? null, source.location_id ? 'user' : null);
     setAssignedTo(source.assigned_to ?? '');
     setAssignedTeamId(source.assigned_team_id ?? null);
     setTempAdditionalAgents(
@@ -814,6 +874,69 @@ export function QuickAddTicket({
       }))
     );
   }
+
+  /**
+   * Where this person works, marked in the select and filled in when the field is empty or the
+   * previous contact filled it — the same rule the model applies on save. Used both when the
+   * dispatcher picks a contact and when one arrives prefilled (the contact page's Create Ticket,
+   * an interaction), because to the operator those are the same thing.
+   */
+  const loadContactLocations = async (contactIdToLoad: string) => {
+    try {
+      const effective = await getContactEffectiveLocation(contactIdToLoad);
+      setContactLocationIds(effective.locations.map((location) => location.location_id));
+      setContactPrimaryLocationId(
+        effective.locations.find((location) => location.is_primary)?.location_id ?? null,
+      );
+      if (locationSourceRef.current !== 'user') {
+        applyLocation(effective.locationId, effective.locationId ? 'contact' : null);
+      }
+    } catch (error) {
+      console.error('Error resolving the contact effective location:', error);
+    }
+  };
+
+  /** Clearing the contact clears a contact-filled location and leaves a hand-picked one alone. */
+  const handleContactSelect = async (nextContactId: string | null) => {
+    setContactId(nextContactId);
+
+    if (!nextContactId) {
+      setContactLocationIds([]);
+      setContactPrimaryLocationId(null);
+      if (locationSourceRef.current === 'contact') {
+        applyLocation(null, null);
+      }
+      return;
+    }
+
+    await loadContactLocations(nextContactId);
+  };
+
+  // The contact's own sites first and marked, then everything else the client has.
+  const contactLocationIdSet = useMemo(() => new Set(contactLocationIds), [contactLocationIds]);
+  const locationOptions = useMemo(() => {
+    const label = (location: IClientLocation) =>
+      formatLocationDisplay(location, t('quickAdd.unnamedLocation', 'Unnamed Location'))
+      + (location.location_id === contactPrimaryLocationId
+        ? ` ${t('quickAdd.contactPrimaryLocationSuffix', "(contact's primary)")}`
+        : contactLocationIdSet.has(location.location_id)
+          ? ` ${t('quickAdd.contactLocationSuffix', "(contact's location)")}`
+          : '')
+      + (location.is_default ? ` ${t('quickAdd.defaultSuffix', '(Default)')}` : '');
+
+    const contactLocations = locations.filter((location) => contactLocationIdSet.has(location.location_id));
+    const contactsFirst = [
+      // Primary ahead of the contact's other sites, so the row the model would pick reads first.
+      ...contactLocations.filter((location) => location.location_id === contactPrimaryLocationId),
+      ...contactLocations.filter((location) => location.location_id !== contactPrimaryLocationId),
+      ...locations.filter((location) => !contactLocationIdSet.has(location.location_id)),
+    ];
+
+    return [
+      ...(locations.length > 0 ? [{ value: 'none', label: t('quickAdd.none', 'None') }] : []),
+      ...contactsFirst.map((location) => ({ value: location.location_id, label: label(location) })),
+    ];
+  }, [locations, contactLocationIdSet, contactPrimaryLocationId, t]);
 
   // The ticket fields a duplicate and a template have in common. Same rule as above: state is set
   // directly, never through handleBoardChange, so the copied priority / category survive and the
@@ -846,7 +969,7 @@ export function QuickAddTicket({
   // Tokens are filled from the client, contact and due date picked so far; a missing one renders empty.
   // The due date is a calendar date taken from the picked Date's local parts (not toISOString).
   function templateTitleContext(): TitleTokenContext {
-    const clientName = clients.find((candidate) => candidate.client_id === clientId)?.client_name ?? null;
+    const clientName = clientId ? selectedClientName : null;
     const contactName = contacts.find((candidate) => candidate.contact_name_id === contactId)?.full_name ?? null;
     return { clientName, contactName, dueDate: dueDate ? toCalendarDate(dueDate) : null };
   }
@@ -882,7 +1005,7 @@ export function QuickAddTicket({
 
   async function loadAndApplyTemplate(nextTemplateId: string) {
     try {
-      const result = await getTicketTemplateForCreate(nextTemplateId);
+      const result = await getTicketTemplateForCreate(nextTemplateId, clientId || null);
       if (isReturnedActionError(result)) {
         setTemplateLoadError(getErrorMessage(result));
       } else {
@@ -935,18 +1058,18 @@ export function QuickAddTicket({
     setStatusId('');
     setPriorityId('');
     setClientId(prefilledClient?.id || '');
+    setSelectedClientName(prefilledClient?.name ?? null);
     setContactId(prefilledContact?.id || null);
-    setLocationId(null);
+    // Nobody has said anything about the location yet, so the next contact may fill it again.
+    applyLocation(null, null);
+    setContactLocationIds([]);
+    setContactPrimaryLocationId(null);
     setLocations([]);
     setContacts([]);
     // Reset isPrefilledClient - it will be set to true again if there's a prefilled client
     setIsPrefilledClient(false);
-    if (prefilledClient?.id) {
-      const client = clients.find(c => c.client_id === prefilledClient.id);
-      setSelectedClientType(client?.client_type as 'company' | 'individual' || null);
-    } else {
-      setSelectedClientType(null);
-    }
+    // client_type for a prefilled client is resolved by getTicketFormData (selectedClient) on load.
+    setSelectedClientType(null);
     setSelectedCategories([]);
     // Reset ITIL fields
     setItilImpact(undefined);
@@ -960,6 +1083,9 @@ export function QuickAddTicket({
     setTemplateLoadError(null);
     setCopyTemplateChecklist(true);
     setPendingTemplateId(null);
+    setExtraAssetIds([]);
+    setWatcherIds([]);
+    setAttachments([]);
     setIsQuickAddContactOpen(false);
     if (prefilledDueDate) {
       setDueDate(toPrefilledDueDate(prefilledDueDate));
@@ -998,7 +1124,23 @@ export function QuickAddTicket({
     if (next !== title) setTitle(next);
     // Only a client, contact or due date change re-renders; title edits must not loop back through here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clientId, contactId, dueDate, templateSource, clients, contacts]);
+  }, [clientId, contactId, dueDate, templateSource, selectedClientName, contacts]);
+
+  // Templates offered for the chosen client: the tenant-wide ones plus that client's. Before a
+  // client is picked only the tenant-wide ones can apply.
+  const availableTemplateOptions = useMemo(
+    () => templateOptions.filter((option) => !option.client_id || option.client_id === clientId),
+    [templateOptions, clientId]
+  );
+
+  // Changing the client away from a client-bound template's client detaches it: the fields it
+  // already filled in stay, exactly like picking "None" (addTicket would refuse it otherwise).
+  useEffect(() => {
+    if (!templateSource?.client_id) return;
+    if (templateSource.client_id === clientId) return;
+    setTemplateSource(null);
+    setTemplateLoadError(null);
+  }, [clientId, templateSource]);
 
   // A template prefill is a baseline too: an untouched template-filled draft is not dirty.
   const draftBaselineTitle = duplicateSource ? duplicateSource.title : templateSource ? lastRenderedTitleRef.current ?? templateSource.title : prefilledTitle;
@@ -1015,6 +1157,14 @@ export function QuickAddTicket({
       extractTicketRichTextPlainText(descriptionContent).trim() !==
         extractTicketRichTextPlainText(draftBaselineDescription || '').trim());
 
+
+  // Chosen-but-unsent extras count as unsaved work for the leave guard, with the same saved/in-flight exemptions.
+  const hasUnsavedExtras =
+    open &&
+    !isSubmitting &&
+    !isNavigatingToTicket &&
+    !ticketCreated &&
+    (attachments.length > 0 || watcherIds.length > 0 || extraAssetIds.length > 0);
 
   const validateForm = () => {
     const validationErrors: string[] = [];
@@ -1100,6 +1250,35 @@ export function QuickAddTicket({
     return serializedDescription;
   };
 
+  // Returns the names of files that failed to upload. Never throws.
+  const uploadAttachmentsForTicket = async (ticketId: string): Promise<string[]> => {
+    const failed: string[] = [];
+    let effectiveUserId: string | undefined;
+    try {
+      effectiveUserId = session?.user?.id || (await getCurrentUser())?.user_id;
+    } catch (userError) {
+      console.error('Failed to resolve user for attachment upload:', userError);
+    }
+    if (!effectiveUserId) {
+      return attachments.map((file) => file.name);
+    }
+    const { uploadDocument } = await import('@alga-psa/documents/actions/documentActions');
+    for (const file of attachments) {
+      try {
+        const fileFormData = new FormData();
+        fileFormData.append('file', file);
+        const uploadResult = await uploadDocument(fileFormData, { userId: effectiveUserId, ticketId });
+        if (isActionPermissionError(uploadResult) || !uploadResult.success) {
+          failed.push(file.name);
+        }
+      } catch (uploadError) {
+        console.error(`Failed to upload attachment ${file.name}:`, uploadError);
+        failed.push(file.name);
+      }
+    }
+    return failed;
+  };
+
   const handleCreateTicket = async ({ openAfterCreate = false }: { openAfterCreate?: boolean } = {}) => {
     // Refs, not button state: two quick triggers (click + Cmd+Enter) must not both reach addTicket.
     if (createInFlightRef.current || ticketCreatedRef.current) {
@@ -1143,6 +1322,9 @@ export function QuickAddTicket({
 
       if (locationId) {
         formData.append('location_id', locationId);
+      } else if (locationSourceRef.current === 'user') {
+        // An explicit None, not an untouched field: the model must keep null rather than resolve.
+        formData.append('location_id', 'none');
       }
 
       if (selectedCategories.length > 0) {
@@ -1161,6 +1343,15 @@ export function QuickAddTicket({
 
       if (effectiveAssetId) {
         formData.append('asset_id', effectiveAssetId);
+      }
+      // Extra linked assets and watchers travel in the same addTicket call, so the server
+      // writes them in the ticket's transaction. Omitted when empty so the legacy payload is unchanged.
+      const additionalAssetIds = extraAssetIds.filter((assetIdValue) => assetIdValue !== effectiveAssetId);
+      if (additionalAssetIds.length > 0) {
+        formData.append('asset_ids', JSON.stringify(additionalAssetIds));
+      }
+      if (watcherIds.length > 0) {
+        formData.append('watcher_ids', JSON.stringify(watcherIds));
       }
 
       // Add ITIL Impact and Urgency for calculation (if provided)
@@ -1210,6 +1401,18 @@ export function QuickAddTicket({
       } catch (descriptionFinalizeError) {
         console.error('Failed to finalize quick add description:', descriptionFinalizeError);
         toast.error(t('quickAdd.clipboardUploadPartialFailure', 'Ticket created, but pasted images could not be attached to the description.'));
+      }
+
+      // Attachments are uploaded after the ticket exists, outside its transaction, one file at a time.
+      // A failed file never affects the ticket or the other files; the user is told which ones failed.
+      if (attachments.length > 0 && newTicket.ticket_id) {
+        const failedFiles = await uploadAttachmentsForTicket(newTicket.ticket_id);
+        if (failedFiles.length > 0) {
+          toast.error(t('quickAdd.attachmentsPartialFailure', {
+            defaultValue: 'Ticket created, but these files could not be attached: {{files}}. Add them from the ticket.',
+            files: failedFiles.join(', '),
+          }), { duration: 10000 });
+        }
       }
 
       // Assign team if selected
@@ -1311,13 +1514,6 @@ export function QuickAddTicket({
     { active: open && !isEmbedded, enabled: !isSubmitting && !isLoading && !ticketCreated && !isNavigatingToTicket },
   );
 
-  const filteredClients = clients.filter(client => {
-    if (clientFilterState === 'all') return true;
-    if (clientFilterState === 'active') return !client.is_inactive;
-    if (clientFilterState === 'inactive') return client.is_inactive;
-    return true;
-  });
-
   const hasRequiredFieldErrors = !title.trim() || !boardId || !statusId ||
     (boardConfig.priority_type === 'custom' && !priorityId) ||
     (boardConfig.priority_type === 'itil' && (!itilImpact || !itilUrgency)) ||
@@ -1409,7 +1605,7 @@ export function QuickAddTicket({
         id={`${id}-dialog`}
         isOpen={open}
         onClose={handleClose}
-        hasUnsavedChanges={hasUnsavedDraftText}
+        hasUnsavedChanges={hasUnsavedDraftText || hasUnsavedExtras}
         className="w-full max-w-2xl max-h-[90vh]"
         title={duplicateSource
           ? t('quickAdd.duplicateDialogTitle', {
@@ -1495,7 +1691,7 @@ export function QuickAddTicket({
                 </Alert>
               )}
 
-              {!duplicateSource && templateOptions.length > 0 && (
+              {!duplicateSource && availableTemplateOptions.length > 0 && (
                 <div className="mb-4">
                   <label htmlFor={`${id}-template-select`} className="block text-sm font-medium text-gray-700 mb-1">
                     {t('quickAdd.templateLabel', 'Template')}
@@ -1507,7 +1703,7 @@ export function QuickAddTicket({
                     disabled={isSubmitting}
                     options={[
                       { value: '', label: t('quickAdd.templateNone', 'None') },
-                      ...templateOptions.map((option) => ({ value: option.template_id, label: option.name })),
+                      ...availableTemplateOptions.map((option) => ({ value: option.template_id, label: option.name })),
                     ]}
                   />
                   {templateSource && titleHasTokens(templateSource.title) && (
@@ -1575,7 +1771,7 @@ export function QuickAddTicket({
                   <div className={hasAttemptedSubmit && !clientId ? 'ring-1 ring-red-500 rounded-lg' : ''}>
                     <ClientPicker
                       id={`${id}-client`}
-                      clients={filteredClients}
+                      searchClients={searchClientsForPicker}
                       onSelect={handleClientChange}
                       selectedClientId={clientId}
                       filterState={clientFilterState}
@@ -1593,7 +1789,7 @@ export function QuickAddTicket({
                       contacts={contacts}
                       value={contactId || ''}
                       onValueChange={(value) => {
-                        setContactId(value || null);
+                        handleContactSelect(value || null);
                         clearErrorIfSubmitted();
                       }}
                       clientId={clientId}
@@ -1611,17 +1807,11 @@ export function QuickAddTicket({
                       id={`${id}-location`}
                       value={locationId || ''}
                       onValueChange={(value) => {
-                        setLocationId(value === 'none' ? null : value || null);
+                        // Including an explicit None: the dispatcher said it, so nothing overwrites it.
+                        applyLocation(value === 'none' ? null : value || null, 'user');
                         clearErrorIfSubmitted();
                       }}
-                      options={[
-                        ...(locations.length > 0 ? [{ value: 'none', label: t('quickAdd.none', 'None') }] : []),
-                        ...locations.map(location => ({
-                          value: location.location_id,
-                          label: formatLocationDisplay(location, t('quickAdd.unnamedLocation', 'Unnamed Location')) +
-                            (location.is_default ? ` ${t('quickAdd.defaultSuffix', '(Default)')}` : '')
-                        }))
-                      ]}
+                      options={locationOptions}
                       placeholder={locations.length === 0
                         ? t('quickAdd.noLocationsForClient', 'No locations for selected client')
                         : t('quickAdd.selectLocation', 'Select location')}
@@ -2038,6 +2228,92 @@ export function QuickAddTicket({
                     </p>
                   )}
 
+                  <div className="space-y-4" data-testid="quick-add-ticket-extras">
+                    {!isAlgaDeskMode && (
+                      <div id={`${id}-assets-section`} className="space-y-2" data-testid="quick-add-ticket-assets">
+                        <div className="text-sm font-medium text-gray-700">{t('quickAdd.assets.heading', 'Assets')}</div>
+                        {renderAssetPicker && clientId ? (
+                          renderAssetPicker({
+                            id: `${id}-assets`,
+                            clientId,
+                            value: extraAssetIds,
+                            onChange: setExtraAssetIds,
+                            label: '',
+                            disabled: isSubmitting,
+                          })
+                        ) : (
+                          <p className="text-xs text-gray-500">
+                            {renderAssetPicker
+                              ? t('quickAdd.assets.selectClientFirst', 'Select a client to link assets.')
+                              : t('quickAdd.assets.unavailable', 'Assets can be linked from the ticket after it is created.')}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    <div id={`${id}-attachments-section`} className="space-y-2" data-testid="quick-add-ticket-attachments">
+                      <div className="text-sm font-medium text-gray-700">{t('quickAdd.attachments.heading', 'Attachments')}</div>
+                      <input
+                        ref={attachmentInputRef}
+                        id={`${id}-attachments-input`}
+                        type="file"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => {
+                          const picked = Array.from(e.target.files ?? []);
+                          if (picked.length > 0) setAttachments((current) => [...current, ...picked]);
+                          e.target.value = '';
+                        }}
+                      />
+                      <Button
+                        id={`${id}-attachments-add`}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => attachmentInputRef.current?.click()}
+                        disabled={isSubmitting}
+                      >
+                        <Paperclip className="h-4 w-4 mr-1" />
+                        {t('quickAdd.attachments.add', 'Add files')}
+                      </Button>
+                      {attachments.length > 0 && (
+                        <ul className="space-y-1" id={`${id}-attachments-list`}>
+                          {attachments.map((file, index) => (
+                            <li key={`${index}-${file.name}-${file.size}`} className="flex items-center gap-2 text-sm text-gray-700">
+                              <span className="truncate">{file.name}</span>
+                              <Button
+                                id={`${id}-attachment-remove-${index}`}
+                                type="button"
+                                variant="icon"
+                                size="icon"
+                                aria-label={t('quickAdd.attachments.remove', { defaultValue: 'Remove {{name}}', name: file.name })}
+                                onClick={() => setAttachments((current) => current.filter((_, candidate) => candidate !== index))}
+                                disabled={isSubmitting}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+
+                    {(
+                      <div id={`${id}-watchers-section`} className="space-y-2" data-testid="quick-add-ticket-watchers">
+                        <div className="text-sm font-medium text-gray-700">{t('quickAdd.watchers.heading', 'Watchers')}</div>
+                        <MultiUserPicker
+                          id={`${id}-watchers`}
+                          values={watcherIds}
+                          onValuesChange={setWatcherIds}
+                          users={users}
+                          getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                          disabled={isSubmitting}
+                          placeholder={t('quickAdd.watchers.placeholder', 'Add watchers...')}
+                        />
+                      </div>
+                    )}
+                  </div>
+
                   <QuickAddTagPicker
                     id="quick-add-ticket-tags"
                     entityType="ticket"
@@ -2066,17 +2342,15 @@ export function QuickAddTicket({
             }
             return [...prevContacts, newContact];
           });
-          setContactId(newContact.contact_name_id);
+          void handleContactSelect(newContact.contact_name_id);
           setIsQuickAddContactOpen(false);
         },
-        clients,
         selectedClientId: clientId,
       })}
       {renderQuickAddClient({
         open: isQuickAddClientOpen,
         onOpenChange: setIsQuickAddClientOpen,
         onClientAdded: (newClient) => {
-          setClients(prev => [...prev, newClient]);
           handleClientChange(newClient.client_id);
         },
         skipSuccessDialog: true,

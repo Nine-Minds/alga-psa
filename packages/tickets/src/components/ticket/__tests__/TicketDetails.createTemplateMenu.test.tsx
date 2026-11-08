@@ -8,6 +8,15 @@ import userEvent from '@testing-library/user-event';
 import TicketDetails from '../TicketDetails';
 import { entryLayoutBootstrap } from './entryLayoutBootstrap';
 
+vi.mock('../BatchDuplicateTicketDialog', () => ({
+  default: ({ sourceTicketId, onClose }: { sourceTicketId: string; onClose: () => void }) => (
+    <div role="dialog" aria-label="Batch duplicate">
+      <span>{sourceTicketId}</span>
+      <button onClick={onClose}>Close batch</button>
+    </div>
+  ),
+}));
+
 const checkTicketClosureMock = vi.fn();
 const updateCommentMock = vi.fn();
 const findCommentByIdMock = vi.fn();
@@ -455,14 +464,34 @@ describe('TicketDetails "Create template from ticket" menu', () => {
     expect(pushMock).toHaveBeenCalledWith('/msp/tickets/templates/new?fromTicket=ticket-1');
   });
 
+  it('opens batch duplication from the shared menu while retaining template creation', async () => {
+    templatePermsRef.current = { read: true, create: true, update: true, delete: true, loaded: true };
+    const view = renderDetails();
+    await waitFor(() => expect(moreButton()).not.toBeNull());
+    await userEvent.click(moreButton() as HTMLElement);
+    const batchItem = await waitFor(() => {
+      const el = document.querySelector('[id$="-batch-duplicate-menu-item"]') as HTMLElement | null;
+      if (!el) throw new Error('batch menu item not rendered');
+      return el;
+    });
+    expect(document.querySelector('[id$="-create-template-menu-item"]')).not.toBeNull();
+    await userEvent.click(batchItem);
+    expect(view.getByRole('dialog', { name: 'Batch duplicate' })).toHaveTextContent('ticket-1');
+    expect(pushMock).not.toHaveBeenCalled();
+    await userEvent.click(view.getByText('Close batch'));
+    expect(view.queryByRole('dialog', { name: 'Batch duplicate' })).toBeNull();
+  });
+
   it.each([
     ['read only (Technician)', { read: true, create: false, update: false, delete: false, loaded: true }],
     ['not yet resolved', { read: false, create: false, update: false, delete: false, loaded: false }],
-  ])('renders no More menu when %s', async (_label, perms) => {
+  ])('leaves Create template out of the More menu when %s', async (_label, perms) => {
     templatePermsRef.current = perms;
     renderDetails();
+    // The More menu always exists: it also holds Print work tag, Duplicate and Delete.
+    await waitFor(() => expect(moreButton()).not.toBeNull());
+    await userEvent.click(moreButton() as HTMLElement);
     await waitFor(() => expect(duplicateOrDelete()).not.toBeNull());
-    expect(moreButton()).toBeNull();
     expect(document.querySelector('[id$="-create-template-menu-item"]')).toBeNull();
   });
 });

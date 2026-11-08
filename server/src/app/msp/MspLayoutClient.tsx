@@ -4,6 +4,8 @@ import React from "react";
 import { AppSessionProvider } from "@alga-psa/auth/client";
 import DefaultLayout from "@/components/layout/DefaultLayout";
 import AlgaDeskMspShell from "@/components/layout/AlgaDeskMspShell";
+import CoManagedCustomerShell from '@/components/co-managed/CoManagedCustomerShell';
+import CoManagedWorkspaceNotice, { type CoManagedWorkspaceNoticeState } from '@/components/co-managed/CoManagedWorkspaceNotice';
 import { TagProvider } from "@alga-psa/tags/context";
 import { PostHogUserIdentifier } from "@alga-psa/ui/components/analytics/PostHogUserIdentifier";
 import { ClientUIStateProvider } from "@alga-psa/ui/ui-reflection/ClientUIStateProvider";
@@ -21,6 +23,8 @@ import type { SupportedLocale } from "@alga-psa/core/i18n/config";
 import type { ProductCode } from '@alga-psa/types';
 import { resolveProductRouteBehavior } from '@/lib/productSurfaceRegistry';
 import { ProductRouteBoundary } from '@/components/product/ProductRouteBoundary';
+import { CoManagedWorkspaceBoundary } from '@/components/co-managed/CoManagedFeatureBoundary';
+import { productUsesWorkspaceOnboarding } from '@/lib/workspaceOnboardingPolicy';
 import { KeyboardShortcutsProvider } from '@alga-psa/ui/keyboard-shortcuts';
 import { MspCallLinkProvider } from '@/components/layout/MspCallLinkProvider';
 import { IncomingCallProvider } from '@/components/layout/IncomingCallProvider';
@@ -34,16 +38,23 @@ import {
   DATA_TABLE_PAGE_SIZES_PREFERENCE_KEY,
   type DataTablePageSizes,
 } from '@alga-psa/ui/components/DataTablePreferences';
+import { TicketNotificationDefaultsProvider } from '@alga-psa/tickets/lib/notificationSuppressionDefaults';
 
 interface Props {
   children: React.ReactNode;
+  /** Ended-relationship notice for a customer workspace; null for every other product. */
+  workspaceNotice?: CoManagedWorkspaceNoticeState;
   session: Session | null;
   /** Tenant default currency (default_billing_settings) for CurrencyFormatProvider. */
   currencyCode?: string;
   /** Date shape resolved from the tenant's country, for DateFormatProvider. */
   dateFormat?: CountryDateFormat | null;
+  /** notification_settings.default_dont_notify_customer, seeding ticket notification checkboxes. */
+  dontNotifyCustomerDefault?: boolean;
   productCode: ProductCode;
   needsOnboarding: boolean;
+  /** Whether this user may run workspace setup; only they are sent to it. */
+  canRunOnboarding?: boolean;
   initialSidebarCollapsed: boolean;
   initialLocale?: SupportedLocale | null;
   /** Server-embedded i18n resources for the route (skips per-namespace HTTP fetches). */
@@ -90,14 +101,17 @@ export function MspLayoutClient({
   session,
   currencyCode,
   dateFormat,
+  dontNotifyCustomerDefault = false,
   productCode,
   needsOnboarding,
+  canRunOnboarding = false,
   initialSidebarCollapsed,
   initialLocale,
   preloadedLocaleResources,
   onboardingResolvedServerSide = false,
   selfHostLicensing = false,
   mspBranding = null,
+  workspaceNotice = null,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -112,7 +126,10 @@ export function MspLayoutClient({
   });
   const [clientNeedsOnboarding, setClientNeedsOnboarding] = useState(false);
   const [clientOnboardingCheckComplete, setClientOnboardingCheckComplete] = useState(false);
-  const shouldForceOnboarding = needsOnboarding || clientNeedsOnboarding;
+  // Only a user who can complete workspace setup is ever sent to it.
+  const canRunProductOnboarding = productUsesWorkspaceOnboarding(productCode) && canRunOnboarding;
+  const shouldForceOnboarding = canRunProductOnboarding && (needsOnboarding || clientNeedsOnboarding);
+  const redirectCustomerHome = productCode === 'co_managed' && (isOnboardingPage || pathname === '/msp/dashboard' || pathname === '/msp');
   const canShowLicenseBanner =
     selfHostLicensing &&
     !isOnboardingPage &&
@@ -126,12 +143,25 @@ export function MspLayoutClient({
   }, [shouldForceOnboarding, isOnboardingPage, router]);
 
   useEffect(() => {
+    if (redirectCustomerHome) router.replace('/msp/tickets');
+  }, [redirectCustomerHome, router]);
+
+  useEffect(() => {
     let isCancelled = false;
 
     setClientNeedsOnboarding(false);
     // The server already resolved onboarding from tenant settings; trust it and
     // skip the client re-fetch (avoids a getTenantSettings round-trip on load).
     setClientOnboardingCheckComplete(onboardingResolvedServerSide);
+
+    // A user who cannot run setup is never redirected to it, so there is
+    // nothing to look up: skip the tenant settings fetch.
+    if (!canRunProductOnboarding) {
+      setClientOnboardingCheckComplete(true);
+      return () => {
+        isCancelled = true;
+      };
+    }
 
     if (onboardingResolvedServerSide || needsOnboarding || isOnboardingPage || !sessionTenant) {
       return () => {
@@ -174,20 +204,23 @@ export function MspLayoutClient({
     return () => {
       isCancelled = true;
     };
-  }, [needsOnboarding, isOnboardingPage, sessionTenant, onboardingResolvedServerSide]);
+  }, [needsOnboarding, isOnboardingPage, sessionTenant, onboardingResolvedServerSide, canRunProductOnboarding]);
 
   const isAlgaDesk = productCode === 'algadesk';
+  // Rendered by the shell inside its flex column: the shell root is `fixed inset-0`
+  // and would paint over a banner placed beside it.
+  const licenseBanner = canShowLicenseBanner ? <LicenseBanner /> : null;
 
   const content = shouldForceOnboarding && !isOnboardingPage ? (
     <OnboardingRedirectFallback />
   ) : (
     <AppSessionProvider session={session}>
+      <CoManagedWorkspaceBoundary productCode={productCode} requireAcceptance>
       <MspBrandingProvider branding={mspBranding}>
-      <ProductProvider>
+      <ProductProvider productCode={productCode}>
         <TierProvider selfHostLicensing={selfHostLicensing}>
           <MspCallLinkProvider>
           <IncomingCallProvider tenant={session?.user?.tenant} userId={session?.user?.id}>
-          {canShowLicenseBanner && <LicenseBanner />}
           <PostHogUserIdentifier />
           <TagProvider>
             <ClientUIStateProvider
@@ -202,7 +235,7 @@ export function MspLayoutClient({
                 hasLoaded={dataTablePreferences.hasLoadedInitial && !dataTablePreferences.isLoading}
                 onPageSizesChange={dataTablePreferences.setValue}
               >
-                {isOnboardingPage ? children : (
+                {redirectCustomerHome ? null : isOnboardingPage ? children : (
                 <KeyboardShortcutsProvider
                   routeKey={pathname ?? '/msp'}
                   storage={shortcutPreference.storage}
@@ -214,9 +247,11 @@ export function MspLayoutClient({
                     }
                   }}
                 >
-                  {isAlgaDesk ? (
+                  {productCode === 'co_managed' ? (
+                    <CoManagedCustomerShell><CoManagedWorkspaceNotice notice={workspaceNotice} />{routeBehavior === 'allowed' ? children : <ProductRouteBoundary behavior={routeBehavior} scope="msp" />}</CoManagedCustomerShell>
+                  ) : isAlgaDesk ? (
                     routeBehavior === 'allowed' ? (
-                      <AlgaDeskMspShell initialSidebarCollapsed={initialSidebarCollapsed}>
+                      <AlgaDeskMspShell initialSidebarCollapsed={initialSidebarCollapsed} topBanner={licenseBanner}>
                         {children}
                       </AlgaDeskMspShell>
                     ) : (
@@ -224,7 +259,7 @@ export function MspLayoutClient({
                     )
                   ) : (
                     <AIChatContextProvider>
-                      <DefaultLayout initialSidebarCollapsed={initialSidebarCollapsed}>
+                      <DefaultLayout initialSidebarCollapsed={initialSidebarCollapsed} topBanner={licenseBanner}>
                         {children}
                       </DefaultLayout>
                     </AIChatContextProvider>
@@ -240,6 +275,7 @@ export function MspLayoutClient({
         </TierProvider>
       </ProductProvider>
       </MspBrandingProvider>
+      </CoManagedWorkspaceBoundary>
     </AppSessionProvider>
   );
 
@@ -247,7 +283,9 @@ export function MspLayoutClient({
     <I18nWrapper portal="msp" initialLocale={initialLocale || undefined} preloadedResources={preloadedLocaleResources}>
       <CurrencyFormatProvider currencyCode={currencyCode || 'USD'}>
         <DateFormatProvider dateFormat={dateFormat}>
-          {content}
+          <TicketNotificationDefaultsProvider dontNotifyCustomer={dontNotifyCustomerDefault}>
+            {content}
+          </TicketNotificationDefaultsProvider>
         </DateFormatProvider>
       </CurrencyFormatProvider>
     </I18nWrapper>

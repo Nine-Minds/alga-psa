@@ -23,6 +23,10 @@ function fakeTable(name: string) {
   if (name === 'tenants') {
     return { first: () => Promise.resolve({ product_code: 'psa' }) };
   }
+  // Read by the shared creation seam to adopt the tenant's default currency.
+  if (name === 'default_billing_settings') {
+    return { select: () => ({ first: () => Promise.resolve({ default_currency_code: 'USD' }) }) };
+  }
   const query: any = {
     where: () => query,
     first: () => Promise.resolve(existingClient),
@@ -50,6 +54,14 @@ vi.mock('@alga-psa/db', async () => {
     tenantDb: () => ({ table: (name: string) => fakeTable(name) }),
   };
 });
+
+// The shared client-creation seam (shared/models/clientCreation.ts) imports
+// tenantDb from this subpath, not the barrel above, so it falls through to
+// the real tenantDb against the bare fake trx ({}) without this mock,
+// throwing "conn is not a function".
+vi.mock('@alga-psa/db/tenantDb', () => ({
+  tenantDb: () => ({ table: (name: string) => fakeTable(name) }),
+}));
 
 vi.mock('server/src/lib/eventBus/publishers', () => ({
   publishWorkflowEvent: vi.fn().mockResolvedValue(undefined),

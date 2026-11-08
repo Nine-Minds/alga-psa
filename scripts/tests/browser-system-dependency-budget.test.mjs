@@ -13,7 +13,7 @@ import yaml from 'js-yaml';
 // verdict failed. Keep the loop strictly inside the ceiling.
 const step = () => {
   const workflow = yaml.load(readFileSync('.github/workflows/e2e-fresh-install-tests.yaml', 'utf8'));
-  const job = Object.values(workflow.jobs).find(job => job.name === 'Production browser (${{ matrix.edition }})');
+  const job = workflow.jobs['production-browser'];
   const found = job.steps.find(step => step.id === 'browser_system');
   assert.ok(found, 'the production browser job still installs Playwright system dependencies');
   return found;
@@ -36,7 +36,7 @@ test('the apt retry loop fits inside the step ceiling with headroom to report it
 
 test('the step keeps a hard ceiling well inside the job budget', () => {
   const workflow = yaml.load(readFileSync('.github/workflows/e2e-fresh-install-tests.yaml', 'utf8'));
-  const job = Object.values(workflow.jobs).find(job => job.name === 'Production browser (${{ matrix.edition }})');
+  const job = workflow.jobs['production-browser'];
   const ceiling = job.steps.find(step => step.id === 'browser_system')['timeout-minutes'];
 
   assert.ok(ceiling, 'the step keeps an explicit timeout-minutes ceiling');

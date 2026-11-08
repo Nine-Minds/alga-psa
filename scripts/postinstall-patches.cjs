@@ -1,16 +1,17 @@
 // Applies patches/ via patch-package after installs.
 //
 // Skips (exit 0) when patch-package isn't installed — production images install with
-// --omit=dev (Dockerfile:32) and don't need the patches: the only patch today,
-// patches/next+16.3.8.patch, is dev-only (its writer change is gated on Turbopack's
-// dev flag; readers no-op on stock manifests). Fails loudly when patch-package IS
+// --omit=dev (Dockerfile:32) and don't need these development repairs. The
+// manifest patch's writer is gated on Turbopack's dev flag; readers no-op on
+// stock manifests. Flight ancestry pruning targets development bundles only.
+// Fails loudly when patch-package IS
 // present but a patch no longer applies — that's the tripwire on Next upgrades:
 // re-validate the patched functions and regenerate the patch, don't skip it
 // (losing it silently brings back the dev-server manifest OOM; see
 // docs/architecture/package-build-system.md "Server-action barrels & the RSC manifest").
 //
 // Note: `npm run install:ignore` (--ignore-scripts) bypasses this — run
-// `npx patch-package` manually afterwards.
+// `node scripts/postinstall-patches.cjs` manually afterwards.
 let bin;
 try {
   bin = require.resolve('patch-package/dist/index.js');
@@ -20,4 +21,7 @@ try {
 }
 const { spawnSync } = require('child_process');
 const result = spawnSync(process.execPath, [bin], { stdio: 'inherit' });
-process.exit(result.status ?? 1);
+if (result.status !== 0) process.exit(result.status ?? 1);
+const nextRoot = require('path').dirname(require.resolve('next/package.json'));
+const { patchNextFlightDebug } = require('./lib/patch-next-flight-debug.cjs');
+console.log(`[postinstall] React Flight dev ancestry repair validated in ${patchNextFlightDebug(nextRoot)} bundles.`);

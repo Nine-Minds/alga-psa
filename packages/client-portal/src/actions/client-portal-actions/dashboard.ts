@@ -7,6 +7,7 @@ import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { isClientUserType } from '@alga-psa/types';
 import {
   applyTicketVisibilityFilter,
 } from '@alga-psa/tickets/lib';
@@ -16,6 +17,7 @@ import { listDeployableStatusSlugs } from '@alga-psa/assets/lib/assetStatusRegis
 import { clientPortalActionErrorFrom, type ClientPortalActionError } from './clientPortalActionErrors';
 import { hasClientProjectReadPermission } from './clientProjectPermissions';
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
+import { formatCurrencyWithSymbol } from '@alga-psa/core/formatters';
 
 export interface DashboardMetrics {
   openTickets: number;
@@ -155,10 +157,7 @@ function formatCurrencyFromCents(
   locale: string,
   currencyCode?: string | null,
 ): string {
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency: currencyCode || 'USD',
-  }).format((Number(value ?? 0) || 0) / 100);
+  return formatCurrencyWithSymbol((Number(value ?? 0) || 0) / 100, locale, currencyCode || 'USD');
 }
 
 function formatRecentInvoiceDescription(invoice: RecentInvoiceActivityRow, locale: string): string {
@@ -181,7 +180,7 @@ export const getDashboardMetrics = withAuth(async (
   { tenant }: AuthContext
 ): Promise<DashboardMetrics | ClientPortalActionError> => {
   try {
-    if (user.user_type !== 'client') {
+    if (!isClientUserType(user.user_type)) {
       throw new Error('Unauthorized: Invalid user type for client portal');
     }
 
@@ -306,7 +305,7 @@ export const getRecentActivity = withAuth(async (
   { tenant }: AuthContext
 ): Promise<RecentActivity[] | ClientPortalActionError> => {
   try {
-    if (user.user_type !== 'client') {
+    if (!isClientUserType(user.user_type)) {
       throw new Error('Unauthorized: Invalid user type for client portal');
     }
 

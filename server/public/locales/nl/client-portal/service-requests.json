@@ -20,6 +20,7 @@
     "datePlaceholder": "Selecteer een datum",
     "optionLabel": "Optie {{index}}",
     "submit": "Aanvraag indienen",
+    "requiredField": "Dit veld is verplicht.",
     "initialValuesTitle": "Beginwaarden",
     "noInitialValues": "Geen statische standaardwaarden geconfigureerd."
   },

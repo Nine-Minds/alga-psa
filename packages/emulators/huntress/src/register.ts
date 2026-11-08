@@ -76,7 +76,7 @@ const Remediation = z
 const Entity = z.object({
   id: z.number().int().optional(),
   type: z.enum(['Agent', 'Identity']),
-  details: z.record(z.unknown()).optional(),
+  details: z.record(z.string(), z.unknown()).optional(),
 });
 
 export function register(reg: ControlRegistry, core: HuntressEmulatorCore): void {
@@ -109,9 +109,9 @@ export function register(reg: ControlRegistry, core: HuntressEmulatorCore): void
         subdomain: z.string().optional(),
         status: z.enum(HUNTRESS_ACCOUNT_STATUSES).optional(),
         support_type: z.enum(HUNTRESS_SUPPORT_TYPES).optional(),
-        neighborhood_watch: z.record(z.number()).optional(),
-        billing_address: z.record(z.unknown()).nullable().optional(),
-        shipping_address: z.record(z.unknown()).nullable().optional(),
+        neighborhood_watch: z.record(z.string(), z.number()).optional(),
+        billing_address: z.record(z.string(), z.unknown()).nullable().optional(),
+        shipping_address: z.record(z.string(), z.unknown()).nullable().optional(),
       })
       .passthrough(),
     run: (patch) => ({ account: core.setAccount(patch as Parameters<HuntressEmulatorCore['setAccount']>[0]) }),
@@ -149,7 +149,7 @@ export function register(reg: ControlRegistry, core: HuntressEmulatorCore): void
         billable_identity_count: z.number().int().optional(),
         sat_learner_count: z.number().int().optional(),
         report_recipients: z.array(z.string()).optional(),
-        actual_usages: z.record(z.unknown()).optional(),
+        actual_usages: z.record(z.string(), z.unknown()).optional(),
       })
       .passthrough(),
     run: (raw) =>
@@ -196,7 +196,7 @@ export function register(reg: ControlRegistry, core: HuntressEmulatorCore): void
   reg.action({
     name: 'update-agent',
     description: 'Patch an agent (any documented Agent field); bumps updated_at',
-    params: z.object({ agentId: z.number().int(), patch: z.record(z.unknown()) }),
+    params: z.object({ agentId: z.number().int(), patch: z.record(z.string(), z.unknown()) }),
     run: ({ agentId, patch }) => control(() => ({ agent: core.updateAgent(agentId, patch) })),
   });
 
@@ -225,7 +225,7 @@ export function register(reg: ControlRegistry, core: HuntressEmulatorCore): void
         status: IncidentStatus.optional(),
         platform: z.enum(HUNTRESS_INCIDENT_PLATFORMS).nullable().optional(),
         indicator_types: z.array(z.enum(HUNTRESS_INDICATOR_TYPES)).optional(),
-        indicator_counts: z.record(z.number()).optional(),
+        indicator_counts: z.record(z.string(), z.number()).optional(),
         psa_ticket_eids: z.array(z.string()).optional(),
         remediations: z.array(Remediation).optional(),
         sent_at: z.string().nullable().optional(),

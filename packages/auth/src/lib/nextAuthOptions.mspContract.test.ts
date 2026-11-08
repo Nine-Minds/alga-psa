@@ -59,16 +59,15 @@ describe('NextAuth MSP SSO contract', () => {
   });
 
   it('T059: Microsoft OAuth issuer defaults tenant to common when tenant ID is empty', () => {
-    // Both option copies pass the authority through buildAzureADProvider, which
+    // The authority is passed through buildAzureADProvider, which
     // builds the production issuer from it unless the simulator gate is on.
     expect(source).toContain("authority: secrets.microsoftTenantId || 'common',");
-    expect(source).toContain("authority: process.env.MICROSOFT_OAUTH_TENANT_ID || 'common',");
     expect(source).toContain('issuer: `https://login.microsoftonline.com/${config.authority}/v2.0`');
   });
 
   it('Microsoft sign-in only leaves the production authority behind the simulator gate', () => {
     expect(source).toContain('if (isMicrosoftSsoEmulatorEnabled()) {');
-    expect(source).toContain('getMicrosoftSsoEmulatorEndpoints(config.authority)');
+    expect(source).toContain('buildMicrosoftSsoEmulatorProvider(config)');
     // The gate is the only branch; nothing else may read a base-URL override.
     expect(source).not.toContain('process.env.MICROSOFT_LOGIN_BASE_URL');
     expect(source).not.toContain('process.env.MICROSOFT_GRAPH_BASE_URL');

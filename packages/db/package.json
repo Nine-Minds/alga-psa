@@ -6,9 +6,21 @@
   "main": "./dist/index.js",
   "types": "./src/index.ts",
   "exports": {
+    "./commentEventRegistry": {
+      "import": "./dist/lib/commentEventRegistry.js",
+      "types": "./src/lib/commentEventRegistry.ts"
+    },
+    "./tenantTableManifest": {
+      "import": "./dist/lib/tenantTableManifest.js",
+      "types": "./src/lib/tenantTableManifest.ts"
+    },
     "./tenantDb": {
       "import": "./dist/lib/tenantDb.js",
       "types": "./src/lib/tenantDb.ts"
+    },
+    "./writeAdmission": {
+      "import": "./dist/writeAdmission.js",
+      "types": "./src/writeAdmission.ts"
     },
     ".": {
       "import": "./dist/index.js",
@@ -53,6 +65,11 @@
     "./reassignTicketResources": {
       "import": "./dist/lib/reassignTicketResources.js",
       "types": "./src/lib/reassignTicketResources.ts"
+    },
+    "./testing": {
+      "types": "./src/testing/index.ts",
+      "import": "./src/testing/index.ts",
+      "require": "./src/testing/index.ts"
     }
   },
   "scripts": {

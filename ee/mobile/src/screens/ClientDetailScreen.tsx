@@ -11,6 +11,7 @@ import { ErrorState, LoadingState } from "../ui/states";
 import { PrimaryButton } from "../ui/components/PrimaryButton";
 import { Avatar } from "../ui/components/Avatar";
 import { Badge } from "../ui/components/Badge";
+import { DisplayTagBadges } from "../ui/components/DisplayTagBadges";
 import { Card } from "../ui/components/Card";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { useAuth } from "../auth/AuthContext";
@@ -337,6 +338,7 @@ export function ClientDetailScreen({ navigation, route }: Props) {
         <Avatar name={detail.client_name} imageUri={logoUri} authToken={session.accessToken} size="lg" />
         <View style={{ flex: 1, marginLeft: theme.spacing.md }}>
           <Text style={{ ...theme.typography.title, color: theme.colors.text }}>{detail.client_name}</Text>
+          <DisplayTagBadges tags={detail.display_tags} maxBadges={4} style={{ marginTop: theme.spacing.xs }} />
           {detail.client_type ? (
             <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: 2 }}>
               {detail.client_type}

@@ -389,12 +389,14 @@ describe('Canonical recurring-value valuation (R7 / T011)', () => {
     await updateCatalogPrice(context, users.serviceId, { rateCents: 11000, currency: 'CAD' });
     await updateCatalogPrice(context, endpoints.serviceId, { rateCents: 6000, currency: 'CAD' });
 
-    // Before any revision applies the line keeps its legacy untouched value
-    // (the wizard's placeholder bundle rate derives to zero).
+    // Before any revision applies: a line custom_rate of 0 on a line with priced
+    // product members is ignored, so the members are valued from the
+    // contract-currency catalog even before any revision applies (alga-2026-0002714).
     const baseline = await getContractMonthlyValuesByAssignment(
       context.db, context.tenantId, [clientContractId], '2023-01-15',
     );
-    expect(baseline.get(clientContractId)!.monthlyValueCents).toBe(0);
+    // 20 × 11000 + 30 × 6000 (CAD catalog)
+    expect(baseline.get(clientContractId)!.monthlyValueCents).toBe(400000);
 
     // Users schedule a catalog-policy increase for February. Once one member of
     // the line is revision-managed, every product member is valued with the

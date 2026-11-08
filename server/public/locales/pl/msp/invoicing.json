@@ -90,7 +90,8 @@
       "poScopeDiffers": "Zakres PO jest inny",
       "currencyDiffers": "Waluta jest inna",
       "taxTreatmentDiffers": "Traktowanie podatkowe jest różne",
-      "exportShapeDiffers": "Kształt eksportu jest inny"
+      "exportShapeDiffers": "Kształt eksportu jest inny",
+      "billingProfileDiffers": "Profil fakturowania jest inny"
     },
     "executionRows": {
       "labels": {
@@ -343,6 +344,21 @@
       "any": "dowolne",
       "clear": "Wyczyść",
       "countSummary": "{{groups}} grup(y) · {{obligations}} pozycj(e)"
+    },
+    "lateTime": {
+      "title": "Późno zatwierdzony czas godzinowy",
+      "description": "Ten czas został zatwierdzony po wystawieniu faktury za jego okres usługi. Wpisy oczekujące na rozliczenie są jednorazowo dodawane do następnej faktury i oznaczane jako czas z opóźnieniem. Wpisy spoza okresu wstecznego nie są rozliczane.",
+      "columns": {
+        "client": "Klient",
+        "technician": "Technik",
+        "service": "Usługa",
+        "workDate": "Data pracy",
+        "hours": "Godziny",
+        "closedPeriod": "Zamknięty okres usługi",
+        "status": "Status"
+      },
+      "nextInvoice": "Zostanie rozliczony na następnej fakturze",
+      "outsideLookback": "Poza okresem wstecznym — nie rozliczono"
     }
   },
   "manualInvoices": {
@@ -585,6 +601,17 @@
         "selectedCount": "Zaznaczono {{count}}",
         "clear": "Wyczyść zaznaczenie"
       }
+    },
+    "warnings": {
+      "finalizedWithWarnings": "Faktura sfinalizowana, ale krok następczy nie został ukończony: {{steps}}. Faktura jest sfinalizowana; można ponowić ten krok.",
+      "steps": {
+        "credit_auto_apply": "automatyczne zastosowanie kredytu",
+        "project_deposit_credits": "kredyty z zaliczek projektowych",
+        "workflow_events": "zdarzenia workflow",
+        "accounting_export": "eksport księgowy",
+        "replenishment_status": "status uzupełnienia przedpłaty",
+        "autopay": "płatność automatyczna"
+      }
     }
   },
   "finalizedTab": {
@@ -623,7 +650,9 @@
       "bulkPdfFailed": "Nie udało się wygenerować plików PDF. Spróbuj ponownie.",
       "unfinalizeFailed": "Nie udało się cofnąć finalizacji faktury. Spróbuj ponownie.",
       "bulkUnfinalizeFailed": "Nie udało się cofnąć finalizacji faktur. Spróbuj ponownie.",
-      "bulkUnfinalizeInvoiceFailed": "Nie można ponownie otworzyć {{invoiceNumber}}: {{reason}}"
+      "bulkUnfinalizeInvoiceFailed": "Nie można ponownie otworzyć {{invoiceNumber}}: {{reason}}",
+      "explainThis": "Pokaż wyjaśnienie",
+      "usedHourBlockExplanation": "Sfinalizowanie tej faktury udostępniło opłacone z góry godziny do ewidencji czasu. Od tego momentu do bloku przypisano czas. Ponowne otwarcie faktury spowodowałoby wycofanie bloku, chociaż te przypisania i późniejsze opłaty mogłyby nadal od niego zależeć. Aby zachować spójność rozliczeń, nie można cofnąć finalizacji faktur za bloki, które zostały już użyte, nawet jeśli czas został później wycofany. Rozważ osobną korektę lub notę kredytową, aby poprawić fakturę."
     },
     "bulk": {
       "actionBar": {
@@ -856,6 +885,7 @@
       "syncNow": "Synchronizuj z QuickBooks",
       "viewInQbo": "Zobacz w QuickBooks",
       "voidInvoice": "Anuluj fakturę",
+      "delegateTax": "Użyj podatku z systemu księgowego",
       "viewInXero": "Wyświetl w Xero"
     },
     "loading": "Ładowanie podglądu...",
@@ -878,6 +908,13 @@
     "applyCreditDialog": {
       "title": "Zastosuj kredyt"
     },
+    "delegateTaxDialog": {
+      "title": "Użyj podatku z systemu księgowego",
+      "description": "System księgowy obliczy podatek dla tej faktury przy następnym eksporcie, a AlgaPSA zastąpi następnie podatek i sumę tym wynikiem. Numery, pozycje, ceny i zarejestrowane płatności pozostają bez zmian.",
+      "cancel": "Anuluj",
+      "confirm": "Przełącz na podatek z systemu księgowego",
+      "switching": "Przełączanie..."
+    },
     "voidDialog": {
       "title": "Anuluj fakturę",
       "description": "Anulowanie tej faktury jest nieodwracalne. Podaj powód.",
@@ -885,6 +922,19 @@
       "cancel": "Anuluj",
       "confirm": "Anuluj fakturę",
       "voiding": "Anulowanie…"
+    },
+    "history": {
+      "title": "Historia",
+      "empty": "Brak zapisanej historii.",
+      "loadFailed": "Nie udało się wczytać historii faktury.",
+      "system": "System",
+      "ops": {
+        "invoice_finalized": "Sfinalizowana",
+        "invoice_unfinalized": "Otwarta ponownie",
+        "invoice_deleted": "Usunięta"
+      },
+      "change": "{{from}} → {{to}}",
+      "none": "brak"
     }
   },
   "templateEditor": {
@@ -1429,7 +1479,7 @@
       "mediaSource": "Źródło obrazu",
       "mediaSourceLogo": "Logotyp firmy",
       "mediaSourceCustom": "Własny obraz",
-      "mediaSourceLogoHint": "Wyświetla na każdym dokumencie logotyp z ustawień marki Twojej firmy.",
+      "mediaSourceLogoHint": "Wyświetla na każdym dokumencie logotyp z rekordu klienta Twojej własnej firmy.",
       "mediaSourceUrl": "Adres URL źródła",
       "renameInner": "Zmienić też nazwy {{count}} warstw wewnętrznych ({{from}} → {{to}}…)?",
       "renameInnerApply": "Zmień nazwy",
@@ -1985,15 +2035,19 @@
       },
       "invoice_subtotal": {
         "label": "Suma częściowa",
-        "description": "Suma częściowa przed podatkiem i rabatem."
+        "description": "Suma częściowa faktury po rabatach i kredytach, przed podatkiem."
+      },
+      "invoice_grossSubtotal": {
+        "label": "Suma częściowa przed rabatami",
+        "description": "Suma częściowa faktury przed rabatami i kredytami oraz przed podatkiem."
+      },
+      "invoice_discountTotal": {
+        "label": "Rabaty",
+        "description": "Suma pozycji rabatów i kredytów, wyświetlana jako kwota dodatnia."
       },
       "invoice_tax": {
         "label": "Podatek",
         "description": "Kwota podatku faktury."
-      },
-      "invoice_discount": {
-        "label": "Rabat",
-        "description": "Kwota rabatu."
       },
       "invoice_total": {
         "label": "Razem",
@@ -2132,6 +2186,26 @@
     "resize": {
       "handleHint": "Przeciągnij, aby zmienić rozmiar · kliknij dwukrotnie, aby dopasować do zawartości",
       "autoValue": "Automatycznie ({{value}})"
+    },
+    "bundleRows": {
+      "off": "Wyłączone",
+      "quantities": "Tylko ilości",
+      "quantitiesAndPrices": "Ilości i ceny",
+      "custom": "Niestandardowe",
+      "showChange": "Pokaż zmianę względem poprzedniego okresu (+N / −N)",
+      "pricesNote": "Ceny składników są zawarte w danych faktury tego szablonu, także dla klientów.",
+      "quantitiesNote": "Ten szablon nie udostępnia klientom cen składników.",
+      "blankOnBundle": "Puste w wierszu pakietu",
+      "componentCells": "Komórki wierszy komponentów",
+      "cellClear": "— Puste —",
+      "field": {
+        "name": "Nazwa usługi",
+        "quantity": "Ilość",
+        "period": "Okres usługi",
+        "pricingBasis": "Podstawa ceny",
+        "unitPrice": "Cena jednostkowa",
+        "total": "Kwota"
+      }
     }
   },
   "projectBilling": {
@@ -2434,7 +2508,7 @@
     },
     "imagePicker": {
       "browse": "Przeglądaj dokumenty",
-      "hiddenFromClients": "Dokument {{document}} jest ukryty przed klientami. Nie pojawi się w ofertach ani fakturach wyświetlanych przez portal klienta.",
+      "hiddenFromClients": "Dokument {{document}} jest ukryty przed klientami, więc nie mogą go otworzyć w portalu klienta. Nadal pojawia się na fakturach i w plikach PDF ofert, które go używają.",
       "updating": "Aktualizowanie...",
       "markVisible": "Oznacz jako widoczny dla klientów",
       "visibleInPortal": "Widoczny w portalu klienta",
@@ -2455,7 +2529,8 @@
       "moveDown": "Przenieś {{row}} niżej",
       "remove": "Usuń {{row}}",
       "label": "Etykieta",
-      "emphasize": "Wyróżnij (styl sumy końcowej)"
+      "emphasize": "Wyróżnij (styl sumy końcowej)",
+      "hideWhenZero": "Ukryj, gdy zero"
     }
   },
   "draftInvoiceDetails": {
@@ -2483,11 +2558,13 @@
     "description": "Projektuj układy służące do generowania plików PDF i podglądów dla dokumentów typu „{{type}}”.",
     "availableLayouts": "Dostępne układy",
     "actions": {
-      "newLayout": "Nowy układ"
+      "newLayout": "Nowy układ",
+      "setDefaultForClass": "Ustaw jako domyślny dla: {{class}}"
     },
     "columns": {
       "name": "Nazwa",
-      "source": "Źródło"
+      "source": "Źródło",
+      "labelClass": "Klasa"
     },
     "values": {
       "nameWithStandardSuffix": "{{name}} (wersja standardowa)",
@@ -2519,7 +2596,10 @@
         "details": "Szczegóły układu"
       },
       "fields": {
-        "version": "Wersja"
+        "version": "Wersja",
+        "labelClass": "Klasa etykiety",
+        "labelFields": "Pola wyświetlane na etykiecie",
+        "labelFieldsHint": "Link do rekordu (kod QR) i identyfikator są zawsze wyświetlane."
       },
       "placeholders": {
         "templateName": "Szablon dokumentu typu „{{type}}”"
@@ -2557,7 +2637,9 @@
       "salesOrder": "Zamówienie sprzedaży",
       "packingSlip": "Dokument dostawy",
       "pickList": "Lista kompletacyjna",
-      "workTag": "Etykieta robocza / Etykieta"
+      "workTag": "Etykieta robocza / Etykieta",
+      "stagingManifest": "Lista pakowa",
+      "rmaReturnSlip": "Dokument zwrotu RMA"
     }
   },
   "errors": {
@@ -2565,7 +2647,8 @@
       "invoiceUpdate": "Odmowa uprawnień: wymagane uprawnienie aktualizacji faktur",
       "invoiceDelete": "Odmowa uprawnień: wymagane uprawnienie usuwania faktur",
       "invoiceAccess": "Odmowa uprawnień: odmowa dostępu do faktury",
-      "otherClientInvoices": "Odmowa uprawnień: brak dostępu do faktur innego klienta"
+      "otherClientInvoices": "Odmowa uprawnień: brak dostępu do faktur innego klienta",
+      "invoiceRead": "Odmowa dostępu: wymagane uprawnienie do odczytu faktur"
     },
     "invoice": {
       "notFound": "Nie znaleziono faktury",
@@ -2579,6 +2662,7 @@
       "onlyDraftEditable": "Edytować można tylko faktury w wersji roboczej",
       "numberExists": "Numer faktury już istnieje. Wybierz inny numer.",
       "notFinalized": "Faktura nie została sfinalizowana",
+      "usedHourBlockUnfinalize": "Nie można cofnąć finalizacji tej faktury: blok godzin {{blockId}} został już użyty ({{usedHours}} z {{totalHours}} godz.). Rozważ osobną korektę lub notę kredytową, aby poprawić fakturę.",
       "unfinalizeFailed": "Nie udało się cofnąć finalizacji faktury z powodu nieoczekiwanego błędu danych. Odśwież stronę i spróbuj ponownie.",
       "paidOrCancelled": "Nie można modyfikować opłaconej lub anulowanej faktury",
       "syncedVoidInstead": "Ta faktura jest zsynchronizowana z systemem księgowym — anuluj ją zamiast usuwać.",
@@ -2587,7 +2671,9 @@
       "duplicate": "Istnieje już sprzeczna faktura. Odśwież stronę i spróbuj ponownie.",
       "missingField": "Brakuje wymaganego pola faktury.",
       "missingFieldNamed": "Brakuje wymaganego pola faktury: {{field}}.",
-      "billingProfileUnavailable": "Wybrany profil rozliczeniowy nie jest dostępny dla tego klienta."
+      "billingProfileUnavailable": "Wybrany profil rozliczeniowy nie jest dostępny dla tego klienta.",
+      "deleteNotDraft": "Można usuwać tylko faktury robocze; zamiast tego unieważnij fakturę.",
+      "deleteHasPayments": "Nie można usunąć faktur z zarejestrowanymi płatnościami."
     },
     "billingCycle": {
       "notFoundRefresh": "Nie znaleziono cyklu rozliczeniowego. Mógł zostać zaktualizowany lub usunięty. Odśwież stronę i spróbuj ponownie.",

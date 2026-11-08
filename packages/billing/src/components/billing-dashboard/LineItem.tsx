@@ -4,13 +4,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import type { SelectOption as SearchableSelectOption } from '@alga-psa/ui/components/SearchableSelect';
+import { ServicePicker } from './contracts/ServicePicker';
 import { DiscountType } from '@alga-psa/types';
 import { formatCurrency } from '@alga-psa/core';
 import { currencyFractionDigits, fromMinorUnits, getCurrencySymbol, toMinorUnits } from '@alga-psa/core';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Extend SelectOption to include rate
-export interface ServiceOption extends SelectOption {
+export interface ServiceOption extends SearchableSelectOption {
   rate?: number; // default_rate in cents
   tax_rate_id?: string | null; // Add tax_rate_id
 }
@@ -461,13 +463,16 @@ export const LineItem: React.FC<LineItemProps> = ({
           // Regular line item fields
           <>
             <div>
-              <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+              <label
+                htmlFor={`service-select-${item.item_id ?? index}`}
+                className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1"
+              >
                 {t('lineItem.fields.service', { defaultValue: 'Service' })}
               </label>
-              <CustomSelect
+              <ServicePicker
                 id={`service-select-${item.item_id ?? index}`}
                 value={editState.service_id}
-                onValueChange={(value) => handleLocalChange('service_id', value)}
+                onChange={(value) => handleLocalChange('service_id', value)}
                 options={serviceOptions}
                 className="w-full"
                 disabled={editState.isRemoved}

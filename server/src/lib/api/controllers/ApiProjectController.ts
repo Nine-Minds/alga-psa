@@ -22,6 +22,7 @@ import {
 import { 
   ApiKeyServiceForApi 
 } from '../../services/apiKeyServiceForApi';
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { 
   runWithTenant 
@@ -33,20 +34,10 @@ import {
   hasPermission 
 } from '../../auth/rbac';
 import { authorizeApiResourceRead } from './authorizationKernel';
+import { buildProjectRecordContext, buildTicketRecordContext } from './recordContexts';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 import { tenantDb } from '@alga-psa/db';
-import {
-  assertInternalApiUser,
-  ApiRequest,
-  AuthenticatedApiRequest,
-  UnauthorizedError,
-  ForbiddenError,
-  NotFoundError,
-  ValidationError,
-  createSuccessResponse,
-  createPaginatedResponse,
-  handleApiError
-} from '../middleware/apiMiddleware';
+import { ApiRequest, AuthenticatedApiRequest, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError, buildAuthenticatedApiContext, createPaginatedResponse, createSuccessResponse, handleApiError } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
 import type { Knex } from 'knex';
 
@@ -73,15 +64,9 @@ export class ApiProjectController extends ApiBaseController {
     this.projectService = projectService;
   }
 
+  // LEVERAGE: pattern ticket-record-context — thin wrapper over the shared builder; callers should import ./recordContexts directly
   private buildProjectRecordContext(project: Record<string, any>) {
-    return {
-      id: project.project_id,
-      ownerUserId: typeof project.assigned_to === 'string' ? project.assigned_to : undefined,
-      assignedUserIds: typeof project.assigned_to === 'string' ? [project.assigned_to] : [],
-      clientId: typeof project.client_id === 'string' ? project.client_id : undefined,
-      status: project.status,
-      isClosed: project.is_closed,
-    };
+    return buildProjectRecordContext(project);
   }
 
   private async assertProjectReadAllowed(
@@ -111,16 +96,9 @@ export class ApiProjectController extends ApiBaseController {
     return project as Record<string, any>;
   }
 
+  // LEVERAGE: pattern ticket-record-context — thin wrapper over the shared builder; callers should import ./recordContexts directly
   private buildTicketRecordContext(ticket: Record<string, any>) {
-    return {
-      id: ticket.ticket_id,
-      ownerUserId: typeof ticket.entered_by === 'string' ? ticket.entered_by : undefined,
-      assignedUserIds: typeof ticket.assigned_to === 'string' ? [ticket.assigned_to] : [],
-      clientId: typeof ticket.client_id === 'string' ? ticket.client_id : undefined,
-      boardId: typeof ticket.board_id === 'string' ? ticket.board_id : undefined,
-      teamIds: typeof ticket.assigned_team_id === 'string' ? [ticket.assigned_team_id] : [],
-      statusId: ticket.status_id,
-    };
+    return buildTicketRecordContext(ticket);
   }
 
   private async filterAuthorizedProjects(
@@ -457,7 +435,7 @@ export class ApiProjectController extends ApiBaseController {
             validatedQuery = projectSearchSchema.parse(query);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Query validation failed', error.errors);
+              throw new ValidationError('Query validation failed', error.issues);
             }
             throw error;
           }
@@ -534,7 +512,7 @@ export class ApiProjectController extends ApiBaseController {
             validatedQuery = projectExportQuerySchema.parse(query);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Query validation failed', error.errors);
+              throw new ValidationError('Query validation failed', error.issues);
             }
             throw error;
           }
@@ -601,14 +579,14 @@ export class ApiProjectController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Create request with context
         const apiRequest = req as ApiRequest;
         apiRequest.context = {
-          userId: keyRecord.user_id,
+          userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
           tenant: keyRecord.tenant,
           user,
           apiKeyId: keyRecord.api_key_id,
@@ -626,7 +604,8 @@ export class ApiProjectController extends ApiBaseController {
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
           const knex = await getConnection(tenantId!);
-          const hasAccess = await hasPermission(user, 'project', 'read', knex);
+          const hasAccess = await hasApiContextPermission(
+          apiAuthContext, 'project', 'read', knex);
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot read project');
           }
@@ -674,13 +653,13 @@ export class ApiProjectController extends ApiBaseController {
           throw new UnauthorizedError('Invalid API key');
         }
 
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         const apiRequest = req as ApiRequest;
         apiRequest.context = {
-          userId: keyRecord.user_id,
+          userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
           tenant: keyRecord.tenant,
           user,
           apiKeyId: keyRecord.api_key_id,
@@ -695,7 +674,8 @@ export class ApiProjectController extends ApiBaseController {
 
         return await runWithTenant(tenantId!, async () => {
           const knex = await getConnection(tenantId!);
-          const hasAccess = await hasPermission(user, 'project', 'read', knex);
+          const hasAccess = await hasApiContextPermission(
+          apiAuthContext, 'project', 'read', knex);
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot read project');
           }
@@ -746,14 +726,14 @@ export class ApiProjectController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Create request with context
         const apiRequest = req as ApiRequest;
         apiRequest.context = {
-          userId: keyRecord.user_id,
+          userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
           tenant: keyRecord.tenant,
           user,
           apiKeyId: keyRecord.api_key_id,
@@ -771,7 +751,8 @@ export class ApiProjectController extends ApiBaseController {
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
           const knex = await getConnection(tenantId!);
-          const hasAccess = await hasPermission(user, 'project', 'read', knex);
+          const hasAccess = await hasApiContextPermission(
+          apiAuthContext, 'project', 'read', knex);
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot read project');
           }
@@ -830,7 +811,8 @@ export class ApiProjectController extends ApiBaseController {
           const { tenant, user } = apiRequest.context;
           const knex = await getConnection(tenant);
           await this.checkPermission(apiRequest, 'read');
-          if (!(await hasPermission(user, 'ticket', 'read', knex))) {
+          if (!(await hasApiContextPermission(
+          apiRequest.context, 'ticket', 'read', knex))) {
             throw new ForbiddenError('Permission denied: Cannot read ticket');
           }
 
@@ -909,14 +891,14 @@ export class ApiProjectController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Create request with context
         const apiRequest = req as ApiRequest;
         apiRequest.context = {
-          userId: keyRecord.user_id,
+          userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
           tenant: keyRecord.tenant,
           user,
           apiKeyId: keyRecord.api_key_id,
@@ -928,7 +910,8 @@ export class ApiProjectController extends ApiBaseController {
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
           const knex = await getConnection(tenantId!);
-          const hasAccess = await hasPermission(user, 'project', 'update', knex);
+          const hasAccess = await hasApiContextPermission(
+          apiAuthContext, 'project', 'update', knex);
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot update project');
           }
@@ -987,14 +970,14 @@ export class ApiProjectController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Create request with context
         const apiRequest = req as ApiRequest;
         apiRequest.context = {
-          userId: keyRecord.user_id,
+          userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
           tenant: keyRecord.tenant,
           user,
           apiKeyId: keyRecord.api_key_id,
@@ -1006,7 +989,8 @@ export class ApiProjectController extends ApiBaseController {
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
           const knex = await getConnection(tenantId!);
-          const hasAccess = await hasPermission(user, 'project', 'update', knex);
+          const hasAccess = await hasApiContextPermission(
+          apiAuthContext, 'project', 'update', knex);
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot update project');
           }
@@ -1065,14 +1049,14 @@ export class ApiProjectController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Create request with context
         const apiRequest = req as ApiRequest;
         apiRequest.context = {
-          userId: keyRecord.user_id,
+          userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
           tenant: keyRecord.tenant,
           user,
           apiKeyId: keyRecord.api_key_id,
@@ -1084,7 +1068,8 @@ export class ApiProjectController extends ApiBaseController {
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
           const knex = await getConnection(tenantId!);
-          const hasAccess = await hasPermission(user, 'project', 'update', knex);
+          const hasAccess = await hasApiContextPermission(
+          apiAuthContext, 'project', 'update', knex);
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot update project');
           }
@@ -1143,14 +1128,14 @@ export class ApiProjectController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Create request with context
         const apiRequest = req as ApiRequest;
         apiRequest.context = {
-          userId: keyRecord.user_id,
+          userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
           tenant: keyRecord.tenant,
           user,
           apiKeyId: keyRecord.api_key_id,
@@ -1168,7 +1153,8 @@ export class ApiProjectController extends ApiBaseController {
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
           const knex = await getConnection(tenantId!);
-          const hasAccess = await hasPermission(user, 'project', 'read', knex);
+          const hasAccess = await hasApiContextPermission(
+          apiAuthContext, 'project', 'read', knex);
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot read project');
           }
@@ -1219,14 +1205,14 @@ export class ApiProjectController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Create request with context
         const apiRequest = req as ApiRequest;
         apiRequest.context = {
-          userId: keyRecord.user_id,
+          userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
           tenant: keyRecord.tenant,
           user,
           apiKeyId: keyRecord.api_key_id,
@@ -1244,7 +1230,8 @@ export class ApiProjectController extends ApiBaseController {
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
           const knex = await getConnection(tenantId!);
-          const hasAccess = await hasPermission(user, 'project', 'update', knex);
+          const hasAccess = await hasApiContextPermission(
+          apiAuthContext, 'project', 'update', knex);
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot update project');
           }
@@ -1299,14 +1286,14 @@ export class ApiProjectController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Create request with context
         const apiRequest = req as ApiRequest;
         apiRequest.context = {
-          userId: keyRecord.user_id,
+          userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
           tenant: keyRecord.tenant,
           user,
           apiKeyId: keyRecord.api_key_id,
@@ -1323,7 +1310,8 @@ export class ApiProjectController extends ApiBaseController {
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
           const knex = await getConnection(tenantId!);
-          const hasAccess = await hasPermission(user, 'project', 'update', knex);
+          const hasAccess = await hasApiContextPermission(
+          apiAuthContext, 'project', 'update', knex);
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot update project');
           }
@@ -1382,14 +1370,14 @@ export class ApiProjectController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Create request with context
         const apiRequest = req as ApiRequest;
         apiRequest.context = {
-          userId: keyRecord.user_id,
+          userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
           tenant: keyRecord.tenant,
           user,
           apiKeyId: keyRecord.api_key_id,
@@ -1406,7 +1394,8 @@ export class ApiProjectController extends ApiBaseController {
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
           const knex = await getConnection(tenantId!);
-          const hasAccess = await hasPermission(user, 'project', 'delete', knex);
+          const hasAccess = await hasApiContextPermission(
+          apiAuthContext, 'project', 'delete', knex);
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot delete project');
           }
@@ -1457,14 +1446,14 @@ export class ApiProjectController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Create request with context
         const apiRequest = req as ApiRequest;
         apiRequest.context = {
-          userId: keyRecord.user_id,
+          userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
           tenant: keyRecord.tenant,
           user,
           apiKeyId: keyRecord.api_key_id,
@@ -1482,7 +1471,8 @@ export class ApiProjectController extends ApiBaseController {
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
           const knex = await getConnection(tenantId!);
-          const hasAccess = await hasPermission(user, 'project', 'read', knex);
+          const hasAccess = await hasApiContextPermission(
+          apiAuthContext, 'project', 'read', knex);
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot read project');
           }
@@ -1533,14 +1523,14 @@ export class ApiProjectController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Create request with context
         const apiRequest = req as ApiRequest;
         apiRequest.context = {
-          userId: keyRecord.user_id,
+          userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
           tenant: keyRecord.tenant,
           user,
           apiKeyId: keyRecord.api_key_id,
@@ -1560,7 +1550,8 @@ export class ApiProjectController extends ApiBaseController {
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
           const knex = await getConnection(tenantId!);
-          const hasAccess = await hasPermission(user, 'project', 'update', knex);
+          const hasAccess = await hasApiContextPermission(
+          apiAuthContext, 'project', 'update', knex);
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot update project');
           }
@@ -1625,14 +1616,14 @@ export class ApiProjectController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Create request with context
         const apiRequest = req as ApiRequest;
         apiRequest.context = {
-          userId: keyRecord.user_id,
+          userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
           tenant: keyRecord.tenant,
           user,
           apiKeyId: keyRecord.api_key_id,
@@ -1649,7 +1640,8 @@ export class ApiProjectController extends ApiBaseController {
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
           const knex = await getConnection(tenantId!);
-          const hasAccess = await hasPermission(user, 'project', 'read', knex);
+          const hasAccess = await hasApiContextPermission(
+          apiAuthContext, 'project', 'read', knex);
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot read project');
           }
@@ -1704,14 +1696,14 @@ export class ApiProjectController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Create request with context
         const apiRequest = req as ApiRequest;
         apiRequest.context = {
-          userId: keyRecord.user_id,
+          userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
           tenant: keyRecord.tenant,
           user,
           apiKeyId: keyRecord.api_key_id,
@@ -1728,7 +1720,8 @@ export class ApiProjectController extends ApiBaseController {
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
           const knex = await getConnection(tenantId!);
-          const hasAccess = await hasPermission(user, 'project', 'update', knex);
+          const hasAccess = await hasApiContextPermission(
+          apiAuthContext, 'project', 'update', knex);
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot update project');
           }
@@ -1796,14 +1789,14 @@ export class ApiProjectController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Create request with context
         const apiRequest = req as ApiRequest;
         apiRequest.context = {
-          userId: keyRecord.user_id,
+          userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
           tenant: keyRecord.tenant,
           user,
           apiKeyId: keyRecord.api_key_id,
@@ -1820,7 +1813,8 @@ export class ApiProjectController extends ApiBaseController {
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
           const knex = await getConnection(tenantId!);
-          const hasAccess = await hasPermission(user, 'project', 'delete', knex);
+          const hasAccess = await hasApiContextPermission(
+          apiAuthContext, 'project', 'delete', knex);
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot delete project');
           }
@@ -1871,14 +1865,14 @@ export class ApiProjectController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Create request with context
         const apiRequest = req as ApiRequest;
         apiRequest.context = {
-          userId: keyRecord.user_id,
+          userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
           tenant: keyRecord.tenant,
           user,
           apiKeyId: keyRecord.api_key_id,
@@ -1896,7 +1890,8 @@ export class ApiProjectController extends ApiBaseController {
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
           const knex = await getConnection(tenantId!);
-          const hasAccess = await hasPermission(user, 'project', 'read', knex);
+          const hasAccess = await hasApiContextPermission(
+          apiAuthContext, 'project', 'read', knex);
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot read project');
           }
@@ -2002,14 +1997,14 @@ export class ApiProjectController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Create request with context
         const apiRequest = req as ApiRequest;
         apiRequest.context = {
-          userId: keyRecord.user_id,
+          userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
           tenant: keyRecord.tenant,
           user,
           apiKeyId: keyRecord.api_key_id,
@@ -2027,7 +2022,8 @@ export class ApiProjectController extends ApiBaseController {
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
           const knex = await getConnection(tenantId!);
-          const hasAccess = await hasPermission(user, 'project', 'update', knex);
+          const hasAccess = await hasApiContextPermission(
+          apiAuthContext, 'project', 'update', knex);
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot update project');
           }
@@ -2040,7 +2036,7 @@ export class ApiProjectController extends ApiBaseController {
             data = createTaskChecklistItemSchema.parse(await req.json());
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Validation failed', error.errors);
+              throw new ValidationError('Validation failed', error.issues);
             }
             throw error;
           }
@@ -2089,18 +2085,20 @@ export class ApiProjectController extends ApiBaseController {
     if (!keyRecord) {
       throw new UnauthorizedError('Invalid API key');
     }
-    const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-    assertInternalApiUser(user);
+    const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
     const apiRequest = req as ApiRequest;
     apiRequest.context = {
-      userId: keyRecord.user_id,
+      userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
       tenant: keyRecord.tenant,
       user,
       apiKeyId: keyRecord.api_key_id,
     };
     await this.assertProductApiAccess(apiRequest as AuthenticatedApiRequest);
     const knex = await getConnection(tenantId!);
-    const hasAccess = await hasPermission(user, 'project', 'update', knex);
+    const hasAccess = await hasApiContextPermission(
+          apiAuthContext, 'project', 'update', knex);
     if (!hasAccess) {
       throw new ForbiddenError('Permission denied: Cannot update project');
     }
@@ -2124,7 +2122,7 @@ export class ApiProjectController extends ApiBaseController {
             data = updateTaskChecklistItemSchema.parse(await req.json());
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Validation failed', error.errors);
+              throw new ValidationError('Validation failed', error.issues);
             }
             throw error;
           }

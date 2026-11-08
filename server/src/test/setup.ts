@@ -489,6 +489,18 @@ vi.mock('server/src/app/api/auth/[...nextauth]/edge-auth', () => ({
   auth: vi.fn().mockResolvedValue(null),
 }));
 
+// The '@alga-psa/auth' facade's hasPermission is published on globalThis so that
+// suites which opt in to the allow-by-default '@alga-psa/auth/rbac' mock
+// (server/src/test/helpers/allowAllRbac.ts) share the very same vi.fn: a
+// per-test override then applies to both specifiers. '@alga-psa/auth/rbac'
+// itself is deliberately NOT mocked globally, so new denial suites hit the real
+// module and cannot silently pass.
+const sharedAuthMocks = vi.hoisted(() => {
+  const hasPermission = vi.fn().mockResolvedValue(true);
+  (globalThis as any).__algaSharedHasPermission = hasPermission;
+  return { hasPermission };
+});
+
 vi.mock('@alga-psa/auth', async () => {
   const { AsyncLocalStorage } = await import('node:async_hooks');
 
@@ -507,7 +519,16 @@ vi.mock('@alga-psa/auth', async () => {
 
   const getCurrentUser = vi.fn(async () => getApiKeyUserOverride() ?? defaultUser);
   const getCurrentUserWithRevocationCheck = vi.fn(async () => getApiKeyUserOverride() ?? defaultUser);
-  const hasPermission = vi.fn().mockResolvedValue(true);
+  const hasPermission = sharedAuthMocks.hasPermission;
+  // Mirrors packages/auth rbac: one PermissionResult per check, in order.
+  // Delegates to hasPermission so per-test permission overrides apply to both.
+  const checkMultiplePermissions = vi.fn(async (user: any, checks: Array<{ resource: string; action: string }>, knex?: any) =>
+    Promise.all(checks.map(async ({ resource, action }) => ({
+      resource,
+      action,
+      granted: Boolean(await hasPermission(user, resource, action, knex)),
+    }))),
+  );
 
   const resolveTenant = async (user: any): Promise<string> => {
     try {
@@ -576,6 +597,7 @@ vi.mock('@alga-psa/auth', async () => {
     getCurrentUser,
     getCurrentUserWithRevocationCheck,
     hasPermission,
+    checkMultiplePermissions,
     withAuth,
     withAuthCheck,
     withOptionalAuth,
@@ -584,6 +606,7 @@ vi.mock('@alga-psa/auth', async () => {
     localizeActionError: vi.fn(async (result: any) => result),
     runWithApiKeyUser,
     getApiKeyUserOverride,
+    assertActiveInternalUser: vi.fn(async () => true),
     getSessionCookieName: vi.fn(() => 'authjs.session-token'),
     getNextAuthSecret: vi.fn(async () => 'test-nextauth-secret'),
     formatRateLimitError: vi.fn(async () => 'Too many attempts. Please try again later.'),

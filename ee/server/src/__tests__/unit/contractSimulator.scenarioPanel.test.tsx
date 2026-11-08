@@ -180,7 +180,7 @@ describe("contract simulator ScenarioPanel", () => {
     fireEvent.click(screen.getByText("tiered pricing"));
     fireEvent.click(screen.getByText("+ add tier"));
     expect(screen.getByLabelText("Tier minimum")).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("Tier rate dollars"), {
+    fireEvent.change(screen.getByLabelText("Tier rate"), {
       target: { value: "4.25" },
     });
 

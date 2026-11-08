@@ -5,7 +5,7 @@ import { AMP_ENTITY_TABLES } from '@alga-psa/migration-spec';
  * Canonical content hash of a package.
  *
  * Definition (normative, mirrored in docs/reference/amp/spec.md):
- * - Only the six canonical entity tables participate; the manifest and
+ * - Only the canonical entity tables (AMP_ENTITY_TABLES) participate; the manifest and
  *   auxiliary tables are excluded so the hash is never self-referential.
  * - Tables are processed in ascending table-name order; rows in ascending
  *   `package_record_id` order (code-point comparison).

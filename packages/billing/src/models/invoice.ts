@@ -13,6 +13,7 @@ import { loadInvoiceChargeLineIds } from '../services/invoiceChargeLineage';
 
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { formatLocationAddress } from '@alga-psa/core';
 import type {
   IInvoice,
   IInvoiceCharge,
@@ -56,20 +57,28 @@ type InvoiceAnnotationRow = IInvoiceAnnotation & {
   tenant: string;
 };
 
-type InvoiceClientDetailsRow = {
+type InvoiceLocationAddressColumns = {
+  address_line1?: string | null;
+  address_line2?: string | null;
+  address_line3?: string | null;
+  city?: string | null;
+  state_province?: string | null;
+  postal_code?: string | null;
+  country_name?: string | null;
+};
+
+type InvoiceClientDetailsRow = InvoiceLocationAddressColumns & {
   client_name?: string | null;
   properties?: unknown;
-  location_address?: string | null;
 };
 
 type InvoiceContactRow = {
   full_name?: string | null;
 };
 
-type InvoiceTenantClientDetailsRow = {
+type InvoiceTenantClientDetailsRow = InvoiceLocationAddressColumns & {
   client_id?: string | null;
   client_name?: string | null;
-  location_address?: string | null;
 };
 
 type RecurringInvoiceSummaryRow = {
@@ -244,6 +253,61 @@ function attachCanonicalRecurringDetailPeriods(
  * Invoice model with tenant-explicit methods.
  * All methods require an explicit tenant parameter for multi-tenant safety.
  */
+/**
+ * Opt-in extras for {@link Invoice.getInvoiceCharges}. Defaults keep the shape
+ * REST (/api/v1/invoices/{id}/items) and MCP already return.
+ */
+export interface InvoiceChargeLoadOptions {
+  /** Select `invoice_charges.bundle_presentation` (names/quantities, no amounts). */
+  includeBundlePresentation?: boolean;
+  /**
+   * Load per-component `allocated_amount` and detail `rate`. Only request this
+   * when the resolved template binds component prices.
+   */
+  includeBundleComponentAmounts?: boolean;
+}
+
+async function attachBundleComponentAmounts(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  charges: IInvoiceCharge[],
+): Promise<IInvoiceCharge[]> {
+  const itemIds = charges.map((charge) => charge.item_id).filter(Boolean) as string[];
+  if (itemIds.length === 0) {
+    return charges;
+  }
+  const db = tenantDb(knexOrTrx, tenant);
+  const query = db.table('invoice_charge_details as icd');
+  db.tenantJoin(query, 'invoice_charge_fixed_details as icfd', 'icfd.item_detail_id', 'icd.item_detail_id');
+  const rows = (await query
+    .select(
+      'icd.item_id',
+      'icd.item_detail_id',
+      knexOrTrx.raw('CAST(icfd.allocated_amount AS BIGINT) as allocated_amount'),
+      knexOrTrx.raw('CAST(icd.rate AS BIGINT) as rate'),
+    )
+    .whereIn('icd.item_id', itemIds)) as Array<{
+    item_id: string;
+    item_detail_id: string;
+    allocated_amount: number | string | null;
+    rate: number | string | null;
+  }>;
+
+  const byItem = new Map<string, Record<string, { allocated_amount: number; rate: number }>>();
+  for (const row of rows) {
+    const bucket = byItem.get(row.item_id) ?? {};
+    bucket[row.item_detail_id] = {
+      allocated_amount: Number(row.allocated_amount ?? 0),
+      rate: Number(row.rate ?? 0),
+    };
+    byItem.set(row.item_id, bucket);
+  }
+  return charges.map((charge) => {
+    const amounts = charge.item_id ? byItem.get(charge.item_id) : undefined;
+    return amounts ? { ...charge, bundle_component_amounts: amounts } : charge;
+  });
+}
+
 const Invoice = {
   /**
    * Create a new invoice.
@@ -396,7 +460,8 @@ const Invoice = {
   getFullInvoiceById: async (
     knexOrTrx: Knex | Knex.Transaction,
     tenant: string,
-    invoiceId: string
+    invoiceId: string,
+    chargeOptions: InvoiceChargeLoadOptions = {}
   ): Promise<InvoiceViewModel> => {
     if (!tenant) {
       throw new Error('Tenant context is required for getting full invoice details');
@@ -487,19 +552,18 @@ const Invoice = {
     });
 
     const [invoiceChargesRaw, client, contact, logoUrl, tenantClientDetails, recurringInvoiceSummaryRows] = await Promise.all([
-      Invoice.getInvoiceCharges(knexOrTrx, tenant, invoiceId),
+      Invoice.getInvoiceCharges(knexOrTrx, tenant, invoiceId, chargeOptions),
       clientQuery
         .select(
           'c.client_name',
           'c.properties',
-          knexOrTrx.raw(`CONCAT_WS(', ',
-            NULLIF(cl.address_line1, 'N/A'),
-            cl.address_line2,
-            NULLIF(cl.city, 'N/A'),
-            cl.state_province,
-            cl.postal_code,
-            NULLIF(cl.country_name, 'Unknown')
-          ) as location_address`)
+          'cl.address_line1',
+          'cl.address_line2',
+          'cl.address_line3',
+          'cl.city',
+          'cl.state_province',
+          'cl.postal_code',
+          'cl.country_name'
         )
         .where({
           'c.client_id': invoice.client_id
@@ -515,14 +579,13 @@ const Invoice = {
         .select(
           'tc.client_id',
           'c.client_name',
-          knexOrTrx.raw(`CONCAT_WS(', ',
-            NULLIF(cl.address_line1, 'N/A'),
-            cl.address_line2,
-            NULLIF(cl.city, 'N/A'),
-            cl.state_province,
-            cl.postal_code,
-            NULLIF(cl.country_name, 'Unknown')
-          ) as location_address`)
+          'cl.address_line1',
+          'cl.address_line2',
+          'cl.address_line3',
+          'cl.city',
+          'cl.state_province',
+          'cl.postal_code',
+          'cl.country_name'
         )
         .where({
           'tc.is_default': true
@@ -578,16 +641,15 @@ const Invoice = {
           client_id: invoice.client_id,
         })
         .select(
-          knexOrTrx.raw(`CONCAT_WS(', ',
-            NULLIF(address_line1, 'N/A'),
-            address_line2,
-            NULLIF(city, 'N/A'),
-            state_province,
-            postal_code,
-            NULLIF(country_name, 'Unknown')
-          ) as location_address`),
+          'address_line1',
+          'address_line2',
+          'address_line3',
+          'city',
+          'state_province',
+          'postal_code',
+          'country_name',
         )
-        .first() as { location_address?: string | null } | undefined
+        .first() as InvoiceLocationAddressColumns | undefined
       : undefined;
 
     let clientProperties: { logo?: string } = {};
@@ -620,7 +682,7 @@ const Invoice = {
     if (tenantClientDetails?.client_id) {
       const tenantLogoUrl = await getClientDocumentLogoUrl(tenantClientDetails.client_id, tenant).catch(() => null);
       const tenantClientName = asTrimmedString(tenantClientDetails.client_name);
-      const tenantClientAddress = asTrimmedString(tenantClientDetails.location_address);
+      const tenantClientAddress = formatLocationAddress(tenantClientDetails);
 
       if (tenantClientName.length > 0 || tenantClientAddress.length > 0 || tenantLogoUrl) {
         tenantClient = {
@@ -690,7 +752,7 @@ const Invoice = {
         // client name, which is every unsegmented invoice.
         name: billingProfile?.bill_to_name?.trim() || client.client_name || '',
         logo: logoUrl || clientProperties.logo || '',
-        address: billToLocation?.location_address || client.location_address || ''
+        address: formatLocationAddress(billToLocation) || formatLocationAddress(client)
       },
       billing_profile_id: invoice.billing_profile_id ?? null,
       billing_profile_name: billingProfile?.name ?? null,
@@ -784,7 +846,8 @@ const Invoice = {
   getInvoiceCharges: async (
     knexOrTrx: Knex | Knex.Transaction,
     tenant: string,
-    invoiceId: string
+    invoiceId: string,
+    options: InvoiceChargeLoadOptions = {}
   ): Promise<IInvoiceCharge[]> => {
     if (!tenant) {
       throw new Error('Tenant context is required for getting invoice items');
@@ -834,6 +897,11 @@ const Invoice = {
           'ic.location_id'
         )
         .where('ic.invoice_id', invoiceId);
+      // Opt-in only: REST /invoices/{id}/items and MCP share this loader and
+      // must keep returning today's shape.
+      if (options.includeBundlePresentation) {
+        query.select('ic.bundle_presentation');
+      }
 
       const items = (await query) as InvoiceChargeDisplayRow[];
       if (items.length === 0) {
@@ -869,12 +937,15 @@ const Invoice = {
               .whereIn('item_id', itemIds)
           );
 
-      return sortInvoiceChargesForDisplay(
-        attachTimeEntrySnapshots(
-          attachCanonicalRecurringDetailPeriods(items, detailRows),
-          snapshotRows,
-        ),
+      const attached = attachTimeEntrySnapshots(
+        attachCanonicalRecurringDetailPeriods(items, detailRows),
+        snapshotRows,
       );
+      const withBundleAmounts = options.includeBundleComponentAmounts
+        ? await attachBundleComponentAmounts(knexOrTrx, tenant, attached)
+        : attached;
+
+      return sortInvoiceChargesForDisplay(withBundleAmounts);
     } catch (error) {
       console.error(`Error getting invoice items for invoice ${invoiceId} in tenant ${tenant}:`, error);
       throw new Error(`Failed to get invoice items: ${error instanceof Error ? error.message : 'Unknown error'}`);

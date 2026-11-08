@@ -7,7 +7,7 @@ const fixedConfigurationSource = readFileSync(
   'utf8',
 );
 const contractLineActionSource = readFileSync(
-  new URL('../src/actions/contractLineAction.ts', import.meta.url),
+  new URL('../src/lib/billing/contractLineUpdate.ts', import.meta.url),
   'utf8',
 );
 

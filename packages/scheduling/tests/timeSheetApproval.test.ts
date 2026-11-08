@@ -1,9 +1,7 @@
 // @vitest-environment jsdom
 import * as React from 'react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { flushSync } from 'react-dom';
-import { createRoot, Root } from 'react-dom/client';
-import { waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { fireEvent, render, waitFor } from '@testing-library/react';
 
 // useFormatters requires an I18nProvider; these tests render the component
 // standalone, so substitute locale-stable formatters.
@@ -71,17 +69,22 @@ vi.mock('../src/actions/timeEntryActions', () => ({
   updateTimeEntryApprovalStatus,
 }));
 
+const workItems = [
+  {
+    work_item_id: 'ticket-1',
+    type: 'ticket',
+    name: 'Ticket 1',
+    description: 'Ticket description',
+  },
+];
+
 const { TimeSheetApproval } = await import('../src/components/time-management/approvals/TimeSheetApproval');
 
 describe('TimeSheetApproval', () => {
-  let container: HTMLDivElement;
-  let root: Root;
+  let container: HTMLElement;
+  let view: ReturnType<typeof render>;
 
   beforeEach(() => {
-    container = document.createElement('div');
-    document.body.appendChild(container);
-    root = createRoot(container);
-
     addCommentToTimeSheet.mockReset();
     fetchTimeSheetComments.mockReset();
     fetchWorkItemsForTimeSheet.mockReset();
@@ -89,111 +92,92 @@ describe('TimeSheetApproval', () => {
     requestChangesForTimeSheet.mockReset();
 
     fetchTimeSheetComments.mockResolvedValue([]);
-    fetchWorkItemsForTimeSheet.mockResolvedValue([
-      {
-        work_item_id: 'ticket-1',
-        type: 'ticket',
-        name: 'Ticket 1',
-        description: 'Ticket description',
-      },
-    ]);
+    fetchWorkItemsForTimeSheet.mockResolvedValue(workItems);
     updateTimeEntryApprovalStatus.mockResolvedValue(undefined);
     requestChangesForTimeSheet.mockResolvedValue(undefined);
   });
 
-  afterEach(() => {
-    root.unmount();
-    container.remove();
-  });
-
-  async function flushUi() {
-    await new Promise(resolve => setTimeout(resolve, 0));
-  }
-
-  function renderApprovalDrawer(
+  async function renderApprovalDrawer(
     timeEntriesOverride?: Array<Record<string, unknown>>,
   ) {
-    flushSync(() => {
-      root.render(React.createElement(TimeSheetApproval, {
-        timeSheet: {
-          id: 'sheet-1',
+    view = render(React.createElement(TimeSheetApproval, {
+      timeSheet: {
+        id: 'sheet-1',
+        period_id: 'period-1',
+        user_id: 'user-1',
+        approval_status: 'SUBMITTED',
+        employee_name: 'Ada Lovelace',
+        employee_email: 'ada@example.com',
+        comments: [],
+        tenant: 'tenant-1',
+        time_period: {
           period_id: 'period-1',
+          start_date: '2026-03-01',
+          end_date: '2026-03-07',
+          tenant: 'tenant-1',
+        },
+      },
+      timeEntries: (timeEntriesOverride as any) ?? [
+        {
+          entry_id: 'entry-1',
+          work_item_id: 'ticket-1',
+          work_item_type: 'ticket',
+          start_time: '2026-03-02T09:00:00.000Z',
+          end_time: '2026-03-02T10:00:00.000Z',
+          created_at: '2026-03-02T10:00:00.000Z',
+          updated_at: '2026-03-02T10:00:00.000Z',
+          work_date: '2026-03-02',
+          billable_duration: 60,
+          notes: 'Needs follow-up',
           user_id: 'user-1',
+          time_sheet_id: 'sheet-1',
           approval_status: 'SUBMITTED',
-          employee_name: 'Ada Lovelace',
-          employee_email: 'ada@example.com',
-          comments: [],
           tenant: 'tenant-1',
-          time_period: {
-            period_id: 'period-1',
-            start_date: '2026-03-01',
-            end_date: '2026-03-07',
-            tenant: 'tenant-1',
-          },
         },
-        timeEntries: (timeEntriesOverride as any) ?? [
-          {
-            entry_id: 'entry-1',
-            work_item_id: 'ticket-1',
-            work_item_type: 'ticket',
-            start_time: '2026-03-02T09:00:00.000Z',
-            end_time: '2026-03-02T10:00:00.000Z',
-            created_at: '2026-03-02T10:00:00.000Z',
-            updated_at: '2026-03-02T10:00:00.000Z',
-            work_date: '2026-03-02',
-            billable_duration: 60,
-            notes: 'Needs follow-up',
-            user_id: 'user-1',
-            time_sheet_id: 'sheet-1',
-            approval_status: 'SUBMITTED',
-            tenant: 'tenant-1',
-          },
-        ],
-        currentUser: {
-          user_id: 'manager-1',
-          first_name: 'Grace',
-          last_name: 'Hopper',
-          email: 'grace@example.com',
-          username: 'ghopper',
-          is_inactive: false,
-          tenant: 'tenant-1',
-          user_type: 'internal',
-        },
-        onApprove: vi.fn(),
-        onRequestChanges: vi.fn(),
-      }));
-    });
+      ],
+      currentUser: {
+        user_id: 'manager-1',
+        first_name: 'Grace',
+        last_name: 'Hopper',
+        email: 'grace@example.com',
+        username: 'ghopper',
+        is_inactive: false,
+        tenant: 'tenant-1',
+        user_type: 'internal',
+      },
+      onApprove: vi.fn(),
+      onRequestChanges: vi.fn(),
+    }));
+    container = view.container;
+
+    // Rows appear after work items load and React commits the resulting state.
+    await waitFor(() => expect(view.getByTitle('Show Details')).toBeInTheDocument());
   }
 
   it('T001: renders a dedicated entry-level change suggestion input', async () => {
-    renderApprovalDrawer();
-
-    await flushUi();
+    await renderApprovalDrawer();
 
     const toggleButton = await waitFor(() => {
       const button = container.querySelector('button[title="Show Details"]');
       expect(button).not.toBeNull();
       return button as HTMLButtonElement;
     });
-    toggleButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    await flushUi();
+    fireEvent.click(toggleButton);
 
     expect(container.textContent).toContain('Entry Change Suggestion');
     expect(container.querySelector('textarea')?.getAttribute('placeholder')).toContain('Tell the employee exactly what to fix');
   });
 
   it('updates entry approval status without requiring service_id in the approval drawer flow', async () => {
-    renderApprovalDrawer();
+    await renderApprovalDrawer();
 
-    await flushUi();
     expect(fetchWorkItemsForTimeSheet).toHaveBeenCalledWith('sheet-1');
 
     const toggleButton = container.querySelector('button[title="Show Details"]');
     if (!toggleButton) {
       throw new Error('Show Details button not found');
     }
-    toggleButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    await flushUi();
+    fireEvent.click(toggleButton);
 
     const requestChangesButton = Array.from(container.querySelectorAll('button')).find(
       node => node.textContent?.includes('Request Changes'),
@@ -201,29 +185,25 @@ describe('TimeSheetApproval', () => {
     if (!requestChangesButton) {
       throw new Error('Request Changes button not found');
     }
-    requestChangesButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    await flushUi();
+    fireEvent.click(requestChangesButton);
 
-    expect(updateTimeEntryApprovalStatus).toHaveBeenCalledWith({
+    await waitFor(() => expect(updateTimeEntryApprovalStatus).toHaveBeenCalledWith({
       entryId: 'entry-1',
       approvalStatus: 'CHANGES_REQUESTED',
       changeRequestComment: undefined,
-    });
+    }));
     expect(requestChangesForTimeSheet).not.toHaveBeenCalled();
   });
 
   it('T002/T033: submits the entry id together with the optional suggestion and still supports an empty suggestion', async () => {
-    renderApprovalDrawer();
-
-    await flushUi();
+    await renderApprovalDrawer();
 
     const toggleButton = await waitFor(() => {
       const button = container.querySelector('button[title="Show Details"]');
       expect(button).not.toBeNull();
       return button as HTMLButtonElement;
     }, { timeout: 5_000 });
-    toggleButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    await flushUi();
+    fireEvent.click(toggleButton);
 
     const suggestionInput = await waitFor(() => {
       const input = container.querySelector('textarea');
@@ -231,15 +211,7 @@ describe('TimeSheetApproval', () => {
       return input as HTMLTextAreaElement;
     }, { timeout: 5_000 });
 
-    const valueSetter = Object.getOwnPropertyDescriptor(
-      HTMLTextAreaElement.prototype,
-      'value',
-    )?.set;
-
-    valueSetter?.call(suggestionInput, 'Please break out travel time separately.');
-    suggestionInput.dispatchEvent(new Event('input', { bubbles: true }));
-    suggestionInput.dispatchEvent(new Event('change', { bubbles: true }));
-    await flushUi();
+    fireEvent.change(suggestionInput, { target: { value: 'Please break out travel time separately.' } });
 
     let requestChangesButton = await waitFor(() => {
       const button = Array.from(container.querySelectorAll('button')).find(
@@ -248,11 +220,9 @@ describe('TimeSheetApproval', () => {
       expect(button).toBeDefined();
       return button as HTMLButtonElement;
     }, { timeout: 5_000 });
-    requestChangesButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    await flushUi();
+    fireEvent.click(requestChangesButton);
 
-    // Generous wait: under Nx parallel CI load the async click handler can
-    // outlast a single-tick flush (observed CI-only act-warning failures).
+    // The status update finishes asynchronously after the click.
     await waitFor(() => expect(updateTimeEntryApprovalStatus).toHaveBeenLastCalledWith({
       entryId: 'entry-1',
       approvalStatus: 'CHANGES_REQUESTED',
@@ -261,22 +231,15 @@ describe('TimeSheetApproval', () => {
 
     updateTimeEntryApprovalStatus.mockClear();
 
-    root.unmount();
-    container.remove();
-    container = document.createElement('div');
-    document.body.appendChild(container);
-    root = createRoot(container);
-
-    renderApprovalDrawer();
-    await flushUi();
+    view.unmount();
+    await renderApprovalDrawer();
 
     const freshToggleButton = await waitFor(() => {
       const button = container.querySelector('button[title="Show Details"]');
       expect(button).not.toBeNull();
       return button as HTMLButtonElement;
     }, { timeout: 5_000 });
-    freshToggleButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    await flushUi();
+    fireEvent.click(freshToggleButton);
 
     requestChangesButton = await waitFor(() => {
       const button = Array.from(container.querySelectorAll('button')).find(
@@ -285,8 +248,7 @@ describe('TimeSheetApproval', () => {
       expect(button).toBeDefined();
       return button as HTMLButtonElement;
     }, { timeout: 5_000 });
-    requestChangesButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    await flushUi();
+    fireEvent.click(requestChangesButton);
 
     await waitFor(() => expect(updateTimeEntryApprovalStatus).toHaveBeenLastCalledWith({
       entryId: 'entry-1',
@@ -295,8 +257,15 @@ describe('TimeSheetApproval', () => {
     }), { timeout: 5_000 });
   });
 
-  it('shows existing per-entry feedback in the manager approval drawer', async () => {
-    renderApprovalDrawer([
+  it.each([0, 50])('shows existing per-entry feedback in the manager approval drawer (work items delayed %i ms)', async (loadDelayMs) => {
+    // Cover both an already-resolved response and a real asynchronous load.
+    fetchWorkItemsForTimeSheet.mockImplementationOnce(async () => {
+      if (loadDelayMs > 0) {
+        await new Promise(resolve => setTimeout(resolve, loadDelayMs));
+      }
+      return workItems;
+    });
+    await renderApprovalDrawer([
       {
         entry_id: 'entry-1',
         work_item_id: 'ticket-1',
@@ -328,16 +297,13 @@ describe('TimeSheetApproval', () => {
       },
     ]);
 
-    await flushUi();
-
     expect(container.querySelector('[data-feedback-state="unresolved"]')).not.toBeNull();
 
     const toggleButton = container.querySelector('button[title="Show Details"]');
     if (!toggleButton) {
       throw new Error('Show Details button not found');
     }
-    toggleButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    await flushUi();
+    fireEvent.click(toggleButton);
 
     expect(container.textContent).toContain('Approver feedback');
     expect(container.textContent).toContain('Please split travel time from labor.');
@@ -345,32 +311,21 @@ describe('TimeSheetApproval', () => {
   });
 
   it('shows newly requested feedback immediately after the manager submits it', async () => {
-    renderApprovalDrawer();
-
-    await flushUi();
+    await renderApprovalDrawer();
 
     const toggleButton = await waitFor(() => {
       const button = container.querySelector('button[title="Show Details"]');
       expect(button).not.toBeNull();
       return button as HTMLButtonElement;
     });
-    toggleButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    await flushUi();
+    fireEvent.click(toggleButton);
 
     const suggestionInput = container.querySelector('textarea');
     if (!suggestionInput) {
       throw new Error('Suggestion input not found');
     }
 
-    const valueSetter = Object.getOwnPropertyDescriptor(
-      HTMLTextAreaElement.prototype,
-      'value',
-    )?.set;
-
-    valueSetter?.call(suggestionInput, 'Please correct the service classification.');
-    suggestionInput.dispatchEvent(new Event('input', { bubbles: true }));
-    suggestionInput.dispatchEvent(new Event('change', { bubbles: true }));
-    await flushUi();
+    fireEvent.change(suggestionInput, { target: { value: 'Please correct the service classification.' } });
 
     const requestChangesButton = Array.from(container.querySelectorAll('button')).find(
       node => node.textContent?.includes('Request Changes'),
@@ -378,8 +333,7 @@ describe('TimeSheetApproval', () => {
     if (!requestChangesButton) {
       throw new Error('Request Changes button not found');
     }
-    requestChangesButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    await flushUi();
+    fireEvent.click(requestChangesButton);
 
     await waitFor(() => {
       expect(container.textContent).toContain('Please correct the service classification.');

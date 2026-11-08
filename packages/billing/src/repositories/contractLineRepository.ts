@@ -30,15 +30,17 @@ import {
   type TemplateAmountSlotKind,
 } from '@alga-psa/shared/billingClients/templateAmounts';
 import { resolveClonedRate } from '../lib/billing/pricing/resolveFixedLineRate';
+import { fixedMemberRateProvenance, resolveFixedMemberRatePair } from '@alga-psa/shared/billingClients/fixedMemberRate';
 
 export type DetailedContractLine = IContractLineMapping & {
   contract_line_name?: string;
   contract_line_type?: string;
   description?: string | null;
+  invoice_line_description?: string | null;
+  invoice_line_subtitle?: string | null;
   billing_frequency?: string;
   rate?: number | null;
   enable_proration?: boolean;
-  invoice_line_description?: string | null;
   start_date?: string | null;
   end_date?: string | null;
   billing_cycle_alignment?: 'start' | 'end' | 'prorated';
@@ -143,6 +145,8 @@ export async function fetchDetailedContractLines(
         'lines.invoice_line_description',
         'lines.created_at',
         'lines.template_line_name as contract_line_name',
+        'lines.invoice_line_description',
+        'lines.invoice_line_subtitle',
         'lines.line_type as contract_line_type',
         'lines.billing_frequency',
         'fixed.base_rate as default_rate',
@@ -161,6 +165,8 @@ export async function fetchDetailedContractLines(
       ),
       contract_line_name: row.contract_line_name,
       contract_line_type: row.contract_line_type,
+      invoice_line_description: row.invoice_line_description ?? null,
+      invoice_line_subtitle: row.invoice_line_subtitle ?? null,
       billing_frequency: row.billing_frequency,
       rate:
         row.custom_rate !== undefined && row.custom_rate !== null
@@ -169,7 +175,6 @@ export async function fetchDetailedContractLines(
             ? Number(row.default_rate)
             : null,
       enable_proration: row.template_enable_proration ?? false,
-      invoice_line_description: row.invoice_line_description ?? null,
       billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
         billingCycleAlignment: row.template_billing_cycle_alignment,
         enableProration: row.template_enable_proration,
@@ -196,6 +201,8 @@ export async function fetchDetailedContractLines(
       'cl.created_at',
       'cl.contract_line_name',
       'cl.contract_line_type',
+      'cl.invoice_line_description',
+      'cl.invoice_line_subtitle',
       'cl.description',
       'cl.billing_frequency',
       'cl.enable_proration',
@@ -213,16 +220,17 @@ export async function fetchDetailedContractLines(
       contract_line_name: row.contract_line_name,
       contract_line_type: row.contract_line_type,
       description: row.description ?? null,
+      invoice_line_description: row.invoice_line_description ?? null,
+      invoice_line_subtitle: row.invoice_line_subtitle ?? null,
       billing_frequency: row.billing_frequency,
-    rate: row.custom_rate !== undefined && row.custom_rate !== null ? Number(row.custom_rate) : null,
-    enable_proration: row.enable_proration ?? false,
-    invoice_line_description: row.invoice_line_description ?? null,
-    start_date: row.start_date ?? null,
-    end_date: row.end_date ?? null,
-    billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
-      billingCycleAlignment: row.billing_cycle_alignment,
-      enableProration: row.enable_proration,
-    }),
+      rate: row.custom_rate !== undefined && row.custom_rate !== null ? Number(row.custom_rate) : null,
+      enable_proration: row.enable_proration ?? false,
+      start_date: row.start_date ?? null,
+      end_date: row.end_date ?? null,
+      billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
+        billingCycleAlignment: row.billing_cycle_alignment,
+        enableProration: row.enable_proration,
+      }),
   }));
 }
 
@@ -652,6 +660,8 @@ export async function cloneTemplateLineToContract(
     contract_id: contractId,
     contract_line_name: edits.line_name?.trim() ? edits.line_name.trim() : templateLine.template_line_name,
     description: templateLine.description ?? null,
+    invoice_line_description: templateLine.invoice_line_description ?? null,
+    invoice_line_subtitle: templateLine.invoice_line_subtitle ?? null,
     billing_frequency: edits.billing_frequency ?? templateLine.billing_frequency,
     is_custom: false,
     contract_line_type: lineType,
@@ -862,15 +872,20 @@ export async function cloneTemplateLineToContract(
       });
 
       if (configurationType === 'Fixed') {
+        const pricingBasis = serviceFixedByConfigId.get(templateConfiguration.config_id)?.pricing_basis === 'unit'
+          ? 'unit'
+          : 'bundle';
+        const rate = resolveFixedMemberRatePair({
+          base_rate: memberRate,
+          base_rate_basis: memberRateBasis,
+          pricing_basis: pricingBasis,
+        });
         await tenantScopedTable(trx, tenant, 'contract_line_service_fixed_config').insert({
           tenant,
           config_id: newConfigId,
-          base_rate: memberRate,
-          base_rate_basis: memberRate === null ? null : memberRateBasis,
-          rate_provenance: memberRate === null ? 'inherited' : 'custom',
-          pricing_basis: serviceFixedByConfigId.get(templateConfiguration.config_id)?.pricing_basis === 'unit'
-            ? 'unit'
-            : 'bundle',
+          ...rate,
+          rate_provenance: fixedMemberRateProvenance(rate),
+          pricing_basis: pricingBasis,
           created_at: now,
           updated_at: now,
         });

@@ -51,7 +51,9 @@
       "replaced": "Wymieniono",
       "credited": "Zaliczono",
       "charged": "Obciążono",
-      "closed": "Zamknięte"
+      "closed": "Zamknięte",
+      "warranty_review": "Weryfikacja gwarancji",
+      "repaired": "Naprawione"
     }
   },
   "assetAlertsSection": {
@@ -192,7 +194,17 @@
         "managed": "Zarządzane RMM",
         "unmanaged": "Nie zarządzane"
       },
-      "allGroups": "Wszystkie grupy"
+      "allGroups": "Wszystkie grupy",
+      "ownership": {
+        "any": "Dowolna własność",
+        "client": "Własność klienta",
+        "msp": "Własność MSP"
+      },
+      "custody": {
+        "any": "Dowolne przechowanie",
+        "inCustody": "W przechowaniu MSP",
+        "notInCustody": "Poza przechowaniem MSP"
+      }
     },
     "activeFilters": {
       "status": "Status: {{value}}",
@@ -246,7 +258,9 @@
         "setLocation": "Ustaw lokalizację",
         "setStatus": "Ustaw status",
         "assignContact": "Przypisz do kontaktu",
-        "addToGroup": "Dodaj do grupy"
+        "addToGroup": "Dodaj do grupy",
+        "printLabels": "Drukuj etykiety",
+        "printLabelsLimit": "Jednorazowo można wydrukować co najwyżej {{max}} etykiet"
       },
       "actions": {
         "apply": "Zastosuj",
@@ -446,7 +460,9 @@
       "rebootDevice": "Uruchom ponownie urządzenie",
       "rebooting": "Ponowne uruchamianie...",
       "editAsset": "Edytuj zasób",
-      "deleteAsset": "Usuń zasób"
+      "deleteAsset": "Usuń zasób",
+      "printLabel": "Drukuj etykietę zasobu",
+      "printPage": "Drukuj stronę"
     },
     "values": {
       "unknownClient": "Nieznany klient"
@@ -663,7 +679,8 @@
       "vendor": "Dostawca",
       "purchaseCost": "Koszt zakupu",
       "orderNumber": "Nr zamówienia",
-      "billingProfile": "Profil rozliczeniowy"
+      "billingProfile": "Profil rozliczeniowy",
+      "ownership": "Własność"
     },
     "placeholders": {
       "loadingClients": "Ładowanie klientów…",
@@ -718,6 +735,10 @@
     "additionalFields": "Pola dodatkowe",
     "help": {
       "assignedTo": "W portalu klienta osoby z ograniczoną widocznością widzą to urządzenie tylko wtedy, gdy jest przypisane do nich lub do osoby im podlegającej."
+    },
+    "ownership": {
+      "client": "Własność klienta",
+      "msp": "Własność MSP"
     }
   },
   "assetFormClient": {
@@ -930,11 +951,6 @@
       "type": "Typ",
       "status": "Status"
     },
-    "assetStatuses": {
-      "active": "Aktywny",
-      "inactive": "Nieaktywny",
-      "maintenance": "Konserwacja"
-    },
     "assetTypes": {
       "workstation": "Stacja robocza",
       "server": "Serwer",
@@ -1041,7 +1057,8 @@
       "manufacturer": "Producent",
       "vendor": "Dostawca",
       "purchaseCost": "Koszt zakupu",
-      "orderNumber": "Nr zamówienia"
+      "orderNumber": "Nr zamówienia",
+      "ownership": "Własność"
     },
     "placeholders": {
       "workstationOsType": "np. Windows, macOS, Linux",
@@ -1276,7 +1293,10 @@
       "frequency": "Częstotliwość *",
       "interval": "Interwał *",
       "nextMaintenanceDate": "Data następnej konserwacji *",
-      "active": "Aktywny"
+      "active": "Aktywny",
+      "recurrenceUnit": "Jednostka *",
+      "onWeekdays": "W dni tygodnia (opcjonalnie)",
+      "onDayOfMonth": "W dniu miesiąca (opcjonalnie)"
     },
     "placeholders": {
       "scheduleName": "np. comiesięczna konserwacja serwera",
@@ -1291,7 +1311,8 @@
       "weekly": "Co tydzień",
       "monthly": "Co miesiąc",
       "quarterly": "Kwartalnie",
-      "yearly": "Co rok"
+      "yearly": "Co rok",
+      "custom": "Niestandardowa"
     },
     "errors": {
       "scheduleNameRequired": "Nazwa harmonogramu jest wymagana",
@@ -1300,6 +1321,18 @@
       "nextMaintenanceRequired": "Wymagany jest następny termin konserwacji",
       "frequencyIntervalMin": "Przedział częstotliwości musi wynosić co najmniej 1",
       "saveFailed": "Nie udało się utworzyć harmonogramu konserwacji"
+    },
+    "recurrenceUnits": {
+      "days": "Dni",
+      "weeks": "Tygodnie",
+      "months": "Miesiące",
+      "years": "Lata"
+    },
+    "dayOfMonthOptions": {
+      "any": "Dowolny dzień"
+    },
+    "hints": {
+      "selectors": "Bez zaznaczenia powtarzanie liczy się od daty wykonania."
     }
   },
   "maintenanceSchedulesTab": {
@@ -1351,6 +1384,36 @@
         "yearly_few": "lata",
         "yearly_many": "lat",
         "yearly_other": "lat"
+      },
+      "customUnconfigured": "Niestandardowa (nieskonfigurowana)",
+      "onWeekdays": "{{cadence}} w {{days}}",
+      "onDaysOfMonth": "{{cadence}} w dniu {{days}}",
+      "weekdays": {
+        "sun": "niedz.",
+        "mon": "pon.",
+        "tue": "wt.",
+        "wed": "śr.",
+        "thu": "czw.",
+        "fri": "pt.",
+        "sat": "sob."
+      },
+      "customUnits": {
+        "days_one": "dzień",
+        "days_other": "dni",
+        "days_few": "dni",
+        "days_many": "dni",
+        "weeks_one": "tydzień",
+        "weeks_other": "tygodni",
+        "weeks_few": "tygodnie",
+        "weeks_many": "tygodni",
+        "months_one": "miesiąc",
+        "months_other": "miesięcy",
+        "months_few": "miesiące",
+        "months_many": "miesięcy",
+        "years_one": "rok",
+        "years_other": "lat",
+        "years_few": "lata",
+        "years_many": "lat"
       }
     },
     "status": {
@@ -1483,6 +1546,8 @@
       "installDate": "Data instalacji"
     },
     "empty": "Nie znaleziono oprogramowania odpowiadającego Twojemu wyszukiwaniu.",
+    "noInventory": "Dla tego urządzenia nie zebrano jeszcze inwentarza oprogramowania.",
+    "loadError": "Nie udało się wczytać inwentarza oprogramowania.",
     "totalItems": "Łączna liczba elementów: {{count}}",
     "values": {
       "unknown": "Nieznany"
@@ -1628,6 +1693,30 @@
       "rmm_linked": "Powiązano RMM",
       "hardware_upgrade": "Zmodernizowano sprzęt",
       "warranty_updated": "Zaktualizowano gwarancję"
+    },
+    "custody": {
+      "unknownPlace": "nieznana lokalizacja",
+      "ticket": "Zgłoszenie {{ticket}}",
+      "receivedBack": "Odebrano z powrotem w lokalizacji {{place}}",
+      "received": "Przyjęto na przechowanie w lokalizacji {{place}}",
+      "moved": "Przeniesiono z {{from}} do {{to}}",
+      "movedTo": "Przeniesiono do {{to}}",
+      "handedOff": "Przekazano od {{from}} do {{to}}",
+      "handedOffTo": "Przekazano do {{to}}",
+      "aColleague": "kolega",
+      "shipped": "Wysłano do {{counterparty}}",
+      "shippedVendor": "Wysłano do dostawcy",
+      "returnedTo": "Zwrócono klientowi ({{counterparty}})",
+      "returned": "Zwrócono klientowi",
+      "updated": "Zaktualizowano szczegóły przechowania",
+      "fields": {
+        "purpose": "cel",
+        "next_action_party": "następne działanie",
+        "next_action_note": "notatka do następnego działania",
+        "follow_up_on": "data kontaktu zwrotnego",
+        "condition_note": "stan",
+        "accessories": "akcesoria"
+      }
     }
   },
   "assetSignals": {
@@ -1766,7 +1855,8 @@
     "in_stock": "W magazynie",
     "maintenance": "W serwisie",
     "inactive": "Nieaktywny",
-    "retired": "Wycofany"
+    "retired": "Wycofany",
+    "held_by_msp": "W posiadaniu MSP"
   },
   "assetStatusKinds": {
     "deployable": "Do użycia",
@@ -1859,6 +1949,204 @@
     "errors": {
       "createFailed": "Nie udało się utworzyć grupy.",
       "addFailed": "Nie udało się dodać wybranych zasobów."
+    }
+  },
+  "custody": {
+    "purpose": {
+      "repair": "Naprawa",
+      "warranty_evaluation": "Ocena gwarancji",
+      "loaner_prep": "Przygotowanie sprzętu zastępczego",
+      "staging": "Konfiguracja wstępna (staging)"
+    },
+    "party": {
+      "msp": "My (MSP)",
+      "client": "Klient",
+      "vendor": "Dostawca"
+    },
+    "fields": {
+      "location": "Lokalizacja",
+      "keepLocation": "Zachowaj bieżącą lokalizację",
+      "selectLocation": "Wybierz lokalizację",
+      "bin": "Pojemnik lub półka",
+      "binPlaceholder": "np. Półka B3",
+      "purpose": "Cel",
+      "nextActionParty": "Następne działanie po stronie",
+      "followUpOn": "Kontakt zwrotny dnia",
+      "followUpPlaceholder": "Wybierz datę",
+      "nextActionNote": "Notatka do następnego działania",
+      "internalNote": "Wewnętrzna. Nigdy nie jest drukowana na etykiecie ani pokazywana klientowi.",
+      "conditionNote": "Stan",
+      "conditionPlaceholder": "Zarysowania, brakujące śruby, uszkodzenia przy przyjęciu",
+      "accessories": "Przyjęte akcesoria",
+      "accessoryPlaceholder": "np. Zasilacz",
+      "accessoryQuantity": "Ilość",
+      "removeAccessory": "Usuń akcesorium",
+      "addAccessory": "Dodaj akcesorium",
+      "note": "Notatka (opcjonalnie)"
+    },
+    "errors": {
+      "generic": "Coś poszło nie tak."
+    },
+    "actions": {
+      "cancel": "Anuluj",
+      "saving": "Zapisywanie...",
+      "move": "Przenieś",
+      "handOff": "Przekaż",
+      "ship": "Wyślij do dostawcy",
+      "receiveBack": "Odbierz",
+      "returnToClient": "Zwróć klientowi",
+      "edit": "Edytuj szczegóły",
+      "receiveIntoCustody": "Przyjmij na przechowanie"
+    },
+    "move": {
+      "title": "Przenieś sprzęt",
+      "submit": "Przenieś",
+      "toLocation": "Przenieś do"
+    },
+    "handOff": {
+      "title": "Przekaż koledze",
+      "submit": "Przekaż",
+      "newHolder": "Nowy opiekun",
+      "selectHolder": "Wybierz osobę"
+    },
+    "ship": {
+      "title": "Wyślij do dostawcy",
+      "description": "Pozycja opuszcza biuro. Pozostaje w przechowaniu i jest pokazywana jako u dostawcy.",
+      "submit": "Wyślij",
+      "counterparty": "Dostawca lub przewoźnik",
+      "counterpartyPlaceholder": "np. Magazyn RMA Dell"
+    },
+    "receiveBack": {
+      "title": "Odbierz od dostawcy",
+      "submit": "Odbierz",
+      "holder": "Opiekun (domyślnie Ty)",
+      "me": "Ja"
+    },
+    "return": {
+      "title": "Zwróć klientowi",
+      "description": "To kończy okres przechowania. Pozycja nie jest już wykazywana jako w przechowaniu.",
+      "submit": "Zwróć klientowi",
+      "collectedBy": "Odebrał(a) (opcjonalnie)"
+    },
+    "edit": {
+      "title": "Edytuj szczegóły przechowania",
+      "submit": "Zapisz"
+    },
+    "open": {
+      "title": "Przyjmij na przechowanie",
+      "description": "Zarejestruj, że MSP przechowuje teraz ten sprzęt. Nie tworzy to stanu magazynowego ani nie wpływa na rozliczenia.",
+      "submit": "Przyjmij",
+      "holder": "Opiekun (domyślnie Ty)"
+    },
+    "card": {
+      "withVendor": "U dostawcy",
+      "title": "Przechowanie",
+      "location": "Lokalizacja",
+      "holder": "Opiekun",
+      "purpose": "Cel",
+      "nextAction": "Następne działanie",
+      "followUp": "Kontakt zwrotny",
+      "overdue": "po terminie",
+      "daysHeld": "Dni w przechowaniu",
+      "ticket": "Zgłoszenie",
+      "openTicket": "Otwórz zgłoszenie",
+      "condition": "Stan",
+      "accessories": "Akcesoria",
+      "notInCustody": "Obecnie nie jest w przechowaniu MSP.",
+      "hideHistory": "Ukryj historię przechowania",
+      "showHistoryWithPast": "Historia przechowania ({{count}} wcześniejszych okresów)",
+      "showHistory": "Historia przechowania",
+      "noEvents": "Brak zarejestrowanych zdarzeń przechowania."
+    },
+    "state": {
+      "with_vendor": "U dostawcy",
+      "in_office": "W biurze"
+    },
+    "badge": {
+      "withVendor": "U dostawcy",
+      "inOfficeAt": "W biurze - {{location}}",
+      "inOffice": "W biurze"
+    },
+    "queue": {
+      "columns": {
+        "asset": "Zasób",
+        "client": "Klient",
+        "location": "Lokalizacja",
+        "holder": "Opiekun",
+        "purpose": "Cel",
+        "nextAction": "Następne działanie",
+        "followUp": "Kontakt zwrotny",
+        "daysHeld": "Dni w przechowaniu",
+        "ticket": "Zgłoszenie",
+        "actions": "Akcje"
+      },
+      "openMenu": "Otwórz menu",
+      "tabs": {
+        "all_open": "Wszystkie otwarte",
+        "in_office": "W biurze",
+        "waiting_on_vendor": "Oczekuje na dostawcę",
+        "waiting_on_client": "Oczekuje na klienta",
+        "overdue": "Po terminie"
+      },
+      "title": "Sprzęt w przechowaniu",
+      "filters": {
+        "client": "Klient",
+        "allLocations": "Wszystkie lokalizacje",
+        "holder": "Opiekun",
+        "allPurposes": "Wszystkie cele",
+        "mine": "Moje"
+      },
+      "empty": "Brak sprzętu w przechowaniu w tym widoku."
+    },
+    "receiveEquipment": {
+      "button": "Przyjmij sprzęt",
+      "title": "Przyjmij sprzęt",
+      "description": "Zarejestruj sprzęt klienta dostarczony w związku z tym zgłoszeniem. Nie tworzy to stanu magazynowego ani nie wpływa na rozliczenia i czas pracy.",
+      "submit": "Przyjmij",
+      "modeExisting": "Istniejący zasób",
+      "modeNew": "Nowa pozycja",
+      "search": "Szukaj zasobów klienta",
+      "asset": "Zasób",
+      "assetPlaceholder": "Wybierz zasób",
+      "fields": {
+        "name": "Nazwa",
+        "type": "Typ",
+        "manufacturer": "Producent",
+        "model": "Model",
+        "serial": "Numer seryjny",
+        "assetTag": "Znacznik zasobu (opcjonalnie)"
+      },
+      "photos": "Zdjęcia (opcjonalnie)",
+      "photosHint": "Zdjęcia są dołączane do tego zgłoszenia i nie są widoczne dla klienta.",
+      "doneTitle": "Sprzęt przyjęty",
+      "doneBody": "{{name}} ({{tag}}) jest teraz w przechowaniu MSP.",
+      "printLabel": "Drukuj etykietę zasobu",
+      "openAsset": "Otwórz zasób",
+      "close": "Zamknij",
+      "inCustodyOption": "{{asset}} — W przechowaniu: {{location}}"
+    },
+    "photos": {
+      "limit": "Do 20 zdjęć, łącznie 10 MB. Zdjęcia są ukryte przed klientami.",
+      "tooLarge": "Wybierz maksymalnie 20 zdjęć o łącznym rozmiarze do 10 MB."
+    }
+  },
+  "warranty": {
+    "card": {
+      "title": "Gwarancja",
+      "warrantyEnd": "Gwarancja kończy się",
+      "expired": "Wygasła",
+      "expiringSoon": "Wkrótce wygasa",
+      "vendor": "Dostawca",
+      "ownership": "Własność",
+      "ownershipMsp": "Własność MSP",
+      "ownershipClient": "Własność klienta",
+      "claims": "Roszczenia gwarancyjne",
+      "noClaims": "Brak roszczeń gwarancyjnych.",
+      "openRma": "Otwórz RMA",
+      "startClaim": "Rozpocznij roszczenie gwarancyjne"
+    },
+    "badge": {
+      "label": "RMA {{number}} · {{status}}"
     }
   }
 }

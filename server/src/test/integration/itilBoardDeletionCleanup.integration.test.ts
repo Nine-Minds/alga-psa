@@ -52,6 +52,8 @@ function tenantRows() {
 }
 
 async function cleanupTenant(tenantId: string): Promise<void> {
+  await tenantTable(tenantId, 'ticket_auto_close_state').del();
+  await tenantTable(tenantId, 'board_auto_close_rules').del();
   await tenantTable(tenantId, 'tickets').del();
   await tenantTable(tenantId, 'clients').del();
   await tenantTable(tenantId, 'categories').whereNotNull('parent_category').del();
@@ -393,6 +395,122 @@ describe('ITIL board deletion cleanup', () => {
     // The policy still targets a live priority, so it stays.
     const remainingPolicies = await tenantTable(tenantId, 'sla_policies').pluck('sla_policy_id');
     expect(remainingPolicies).toEqual([policyId]);
+  }, HOOK_TIMEOUT);
+
+  // Prod repro for alga-2026-0002884: the statuses delete tripped
+  // board_auto_close_rules_trigger_status_fkey because the rules only cascade
+  // from `boards`, and the board row is still there when the statuses go.
+  it('deletes a board whose statuses are referenced by an enabled auto-close rule', async () => {
+    const defaultBoardId = uuidv4();
+    const doomedBoardId = uuidv4();
+    const { tenantId, userId } = await createTenantFixture([
+      { boardId: defaultBoardId, name: 'General', isDefault: true },
+      { boardId: doomedBoardId, name: 'DELETE ME' },
+    ]);
+
+    const triggerStatusId = uuidv4();
+    const closedStatusId = uuidv4();
+    const survivingStatusId = uuidv4();
+    await tenantTable(tenantId, 'statuses').insert([
+      {
+        tenant: tenantId,
+        status_id: triggerStatusId,
+        board_id: doomedBoardId,
+        name: 'Waiting on client',
+        status_type: 'ticket',
+        item_type: 'ticket',
+        order_number: 1,
+        is_default: true,
+        is_closed: false,
+        created_by: userId,
+      },
+      {
+        tenant: tenantId,
+        status_id: closedStatusId,
+        board_id: doomedBoardId,
+        name: 'Closed',
+        status_type: 'ticket',
+        item_type: 'ticket',
+        order_number: 2,
+        is_default: false,
+        is_closed: true,
+        created_by: userId,
+      },
+      {
+        tenant: tenantId,
+        status_id: survivingStatusId,
+        board_id: defaultBoardId,
+        name: 'New',
+        status_type: 'ticket',
+        item_type: 'ticket',
+        order_number: 1,
+        is_default: true,
+        is_closed: false,
+        created_by: userId,
+      },
+    ]);
+
+    const ruleId = uuidv4();
+    await tenantTable(tenantId, 'board_auto_close_rules').insert({
+      tenant: tenantId,
+      rule_id: ruleId,
+      board_id: doomedBoardId,
+      trigger_status_id: triggerStatusId,
+      close_to_status_id: closedStatusId,
+      inactivity_days: 14,
+      warning_days_before: 3,
+      is_enabled: true,
+    });
+
+    // A ticket that was already counting down, since moved to the surviving
+    // board so it doesn't block the delete. Its state row must go with the rule.
+    const clientId = uuidv4();
+    await tenantTable(tenantId, 'clients').insert({
+      tenant: tenantId,
+      client_id: clientId,
+      client_name: 'Acme',
+    });
+    const ticketId = uuidv4();
+    await tenantTable(tenantId, 'tickets').insert({
+      tenant: tenantId,
+      ticket_id: ticketId,
+      ticket_number: `T-${tenantId.slice(0, 8)}`,
+      title: 'Ageing ticket moved off the doomed board',
+      client_id: clientId,
+      board_id: defaultBoardId,
+      status_id: survivingStatusId,
+      entered_by: userId,
+      entered_at: db.fn.now(),
+    });
+    await tenantTable(tenantId, 'ticket_auto_close_state').insert({
+      tenant: tenantId,
+      ticket_id: ticketId,
+      rule_id: ruleId,
+      scheduled_close_at: db.fn.now(),
+    });
+
+    // The board owns statuses, so the first pass asks for confirmation and
+    // names the auto-close rule among the things that will be removed.
+    const confirmation = await deleteBoard(doomedBoardId);
+    expect(confirmation.success).toBe(false);
+    expect(confirmation.code).toBe('BOARD_HAS_STATUSES');
+    expect(confirmation.counts).toMatchObject({ statuses: 2, auto_close_rules: 1 });
+
+    const result = await deleteBoard(doomedBoardId, true);
+
+    expect(result.success).toBe(true);
+
+    const remainingBoards = await tenantTable(tenantId, 'boards').pluck('board_id');
+    expect(remainingBoards).toEqual([defaultBoardId]);
+
+    const remainingRules = await tenantTable(tenantId, 'board_auto_close_rules').select('*');
+    expect(remainingRules).toHaveLength(0);
+
+    const remainingState = await tenantTable(tenantId, 'ticket_auto_close_state').select('*');
+    expect(remainingState).toHaveLength(0);
+
+    const remainingStatuses = await tenantTable(tenantId, 'statuses').pluck('status_id');
+    expect(remainingStatuses).toEqual([survivingStatusId]);
   }, HOOK_TIMEOUT);
 
   it('re-points ITIL categories to a remaining ITIL board when another one is left', async () => {

@@ -17,7 +17,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter', () => ({
-  MicrosoftGraphAdapter: vi.fn(() => mocks.adapter),
+  MicrosoftGraphAdapter: vi.fn(function () { return mocks.adapter; }),
 }));
 vi.mock('@alga-psa/shared/services/email/microsoftEmailProviderConfig', () => ({
   buildMicrosoftEmailProviderConfig: vi.fn(async (config) => config),

@@ -39,12 +39,33 @@ function validateTicketNotificationSuppression(
   }
 }
 
+/** ISO 8601 datetime with an explicit offset (`Z` or `+hh:mm`); date-only values are rejected. */
+const offsetDatetimeSchema = z.string().datetime({ offset: true });
+
+export const historicalTimestampSchema = offsetDatetimeSchema.refine(
+  (value) => Date.parse(value) <= Date.now(),
+  'Timestamp must not be in the future',
+);
+
+/** Historical timestamps may not be in the future; compared against the clock at parse time. */
+function addIfFuture(value: unknown, path: string, ctx: z.RefinementCtx): void {
+  if (typeof value !== 'string') return;
+  const time = Date.parse(value);
+  if (!Number.isNaN(time) && time > Date.now()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: [path],
+      message: `${path} must not be in the future`,
+    });
+  }
+}
+
 function getVisibleCommentLength(value: string): number {
   return formatBlockNoteContent(value).text.trim().length;
 }
 
 // Ticket attributes schema (flexible JSON object)
-const ticketAttributesSchema = z.record(z.unknown()).optional();
+const ticketAttributesSchema = z.record(z.string(), z.unknown()).optional();
 
 // External system links. `url` is constrained to http(s) so javascript:/data:
 // links can never be persisted; the action layer revalidates.
@@ -75,7 +96,7 @@ export const createExternalLinkSchema = z.object({
   actor: externalLinkActorSchema.nullable().optional(),
   external_status: z.string().nullable().optional(),
   external_updated_at: z.string().datetime().nullable().optional(),
-  metadata: z.record(z.unknown()).nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
 }).strict();
 
 /**
@@ -98,7 +119,7 @@ export const updateExternalLinkSchema = z.object({
   external_status: z.string().nullable().optional(),
   external_updated_at: z.string().datetime().nullable().optional(),
   last_synced_at: z.string().datetime().nullable().optional(),
-  metadata: z.record(z.unknown()).nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
 }).strict();
 
 export const externalLinkLookupQuerySchema = z.object({
@@ -113,13 +134,16 @@ export const inlineTicketExternalLinksSchema = z.array(createTicketExternalLinkS
 export type CreateExternalLinkData = z.infer<typeof createExternalLinkSchema>;
 export type UpdateExternalLinkData = z.infer<typeof updateExternalLinkSchema>;
 
-// Create ticket schema
-export const createTicketSchema = z.object({
+// Create ticket schema. The object stays addressable as `createTicketFieldsSchema`
+// because the cross-field suppression refinement below turns `createTicketSchema`
+// into an effect, and `.omit()`/`.partial()` only exist on the plain object.
+export const createTicketFieldsSchema = z.object({
   title: z.string().min(1, 'Title is required').max(255),
   url: z.string().url().optional(),
   board_id: uuidSchema,
   client_id: uuidSchema,
-  location_id: uuidSchema.optional(),
+  /** Omitted asks the contact where the ticket belongs; null is "explicitly none" and is kept. */
+  location_id: uuidSchema.nullish(),
   contact_name_id: uuidSchema.optional(),
   status_id: uuidSchema,
   category_id: uuidSchema.optional(),
@@ -133,7 +157,49 @@ export const createTicketSchema = z.object({
   attributes: ticketAttributesSchema,
   tags: z.array(z.string()).optional(),
   external_links: inlineTicketExternalLinksSchema,
+  // On creation, supplying `entered_at` marks the ticket as a
+  // historical record: created silently, no SLA, no notifications, webhooks or
+  // workflows. `closed_at` / `closed_by` describe a ticket imported already closed.
+  entered_at: historicalTimestampSchema.optional(),
+  closed_at: offsetDatetimeSchema.optional(),
+  closed_by: uuidSchema.optional(),
+  // Devices the ticket is raised against. Linked in the ticket's own
+  // transaction, so a rejected asset leaves no orphan ticket. The first asset
+  // also lends its billing profile (the from-asset rule, which the web create
+  // applies the same way).
+  asset_ids: z.array(uuidSchema).max(50).optional(),
+  // Create silently: no customer-facing ticket-created email (which otherwise
+  // falls back to the client email when the ticket has no contact) and no
+  // portal/in-app notifications. Audit, workflows and webhooks are unaffected.
+  ...ticketNotificationSuppressionSchema,
 });
+
+export const createTicketSchema = createTicketFieldsSchema
+  .superRefine(validateTicketNotificationSuppression);
+
+function validateHistoricalTicketFields(
+  value: { entered_at?: string; closed_at?: string; closed_by?: string },
+  ctx: z.RefinementCtx,
+): void {
+  addIfFuture(value.closed_at, 'closed_at', ctx);
+  if (!value.entered_at) {
+    for (const field of ['closed_at', 'closed_by'] as const) {
+      if (value[field] !== undefined) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [field], message: `${field} requires entered_at` });
+    }
+  }
+  if (value.closed_by !== undefined && value.closed_at === undefined && value.entered_at) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['closed_by'], message: 'closed_by requires closed_at' });
+  }
+  if (value.entered_at && value.closed_at) {
+    const entered = Date.parse(value.entered_at);
+    const closed = Date.parse(value.closed_at);
+    if (!Number.isNaN(entered) && !Number.isNaN(closed) && closed < entered) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['closed_at'], message: 'closed_at must not be before entered_at' });
+    }
+  }
+}
+
+export const createTicketRequestSchema = createTicketSchema.superRefine(validateHistoricalTicketFields);
 
 // Update ticket schema (all fields optional; contact_name_id is nullable so it can be cleared).
 // `external_links` is create-only: it is written through the dedicated
@@ -142,14 +208,23 @@ export const createTicketSchema = z.object({
 // references are create-only in this API surface and are omitted for the same
 // reason, preserving the existing accepted update request set.
 export const updateTicketSchema = createUpdateSchema(
-  createTicketSchema.omit({
+  createTicketFieldsSchema.omit({
     external_links: true,
     severity_id: true,
     urgency_id: true,
     impact_id: true,
+    // Closure fields remain specific to historical create and status updates.
+    closed_at: true,
+    closed_by: true,
+    // Create-only: later links go through POST /tickets/{id}/assets.
+    asset_ids: true,
   })
 ).extend({
   contact_name_id: uuidSchema.nullable().optional(),
+  // Nullable so a re-classification can clear them: picking a category with no
+  // children has to drop the old parent's subcategory in the same request.
+  category_id: uuidSchema.nullable().optional(),
+  subcategory_id: uuidSchema.nullable().optional(),
   ...ticketNotificationSuppressionSchema,
   // Close despite unmet close rules; honored only when the caller's user holds
   // ticket:close_override. Stripped before the row update.
@@ -162,6 +237,7 @@ export const updateTicketSchema = createUpdateSchema(
 // Ticket status update schema
 export const updateTicketStatusSchema = z.object({
   status_id: uuidSchema,
+  // Honored when the update closes the ticket; must not be in the future.
   closed_at: z.string().datetime().optional(),
   closed_by: uuidSchema.optional(),
   ...ticketNotificationSuppressionSchema,
@@ -169,7 +245,8 @@ export const updateTicketStatusSchema = z.object({
   override_close_rules_reason: z.string().nullable().optional(),
   // Sync-mode bundle master boundary changes require an explicit choice.
   propagateToChildren: z.boolean().optional()
-}).superRefine(validateTicketNotificationSuppression);
+}).superRefine(validateTicketNotificationSuppression)
+  .superRefine((value, ctx) => addIfFuture(value.closed_at, 'closed_at', ctx));
 
 // Ticket assignment schema
 export const updateTicketAssignmentSchema = z.object({
@@ -417,6 +494,34 @@ function validateTicketCommentEmailRecipients(
   }
 }
 
+function validateHistoricalComment(
+  value: {
+    created_at?: string;
+    scheduled_publish_at?: string;
+    scheduled_publish_tz?: string;
+    cc?: unknown[];
+    bcc?: unknown[];
+  },
+  ctx: z.RefinementCtx,
+): void {
+  if (value.created_at === undefined) return;
+  const conflicts: Array<[string, unknown]> = [
+    ['scheduled_publish_at', value.scheduled_publish_at],
+    ['scheduled_publish_tz', value.scheduled_publish_tz],
+    ['cc', value.cc],
+    ['bcc', value.bcc],
+  ];
+  for (const [field, fieldValue] of conflicts) {
+    if (fieldValue !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [field],
+        message: `${field} cannot be combined with created_at (historical comments are never delivered)`,
+      });
+    }
+  }
+}
+
 // Ticket comment schemas
 export const createTicketCommentSchema = z.object({
   comment_text: z.string()
@@ -426,21 +531,29 @@ export const createTicketCommentSchema = z.object({
       (value) => getVisibleCommentLength(value) <= MAX_TICKET_COMMENT_LENGTH,
       `Comment text is too long (max ${MAX_TICKET_COMMENT_LENGTH} characters)`
     ),
-  is_internal: z.boolean().optional().default(false),
+  // No default: an unspecified visibility is distinguishable from an explicit false
+  // (a service principal's unspecified comment is internal; an explicit public one needs act-as).
+  is_internal: z.boolean().optional(),
+  /** Audience for a co-managed workspace; ignored natively. Must agree with is_internal. */
+  collaboration_audience: z.enum(['requester', 'organization_private']).optional(),
   is_resolution: z.boolean().optional().default(false),
   time_spent: z.number().min(0).optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
   parent_comment_id: uuidSchema.optional(),
   external_links: inlineTicketExternalLinksSchema,
   scheduled_publish_at: z.string().datetime({ offset: true }).optional(),
   scheduled_publish_tz: z.string().min(1).max(64).optional(),
   cc: z.array(z.string().email()).max(MAX_TICKET_COMMENT_EMAIL_RECIPIENTS).optional(),
   bcc: z.array(z.string().email()).max(MAX_TICKET_COMMENT_EMAIL_RECIPIENTS).optional(),
+  // Historical import: stores the comment with this timestamp and publishes nothing
+  // (no notifications, webhooks, workflows or SLA first response).
+  created_at: historicalTimestampSchema.optional(),
   ...ticketNotificationSuppressionSchema,
 })
   .superRefine(validateTicketNotificationSuppression)
   .superRefine(validateScheduledCommentPublication)
-  .superRefine(validateTicketCommentEmailRecipients);
+  .superRefine(validateTicketCommentEmailRecipients)
+  .superRefine(validateHistoricalComment);
 
 export const updateTicketCommentSchema = z.object({
   comment_text: z.string()
@@ -524,10 +637,10 @@ export const ticketStatsResponseSchema = z.object({
   closed_tickets: z.number(),
   overdue_tickets: z.number(),
   unassigned_tickets: z.number(),
-  tickets_by_status: z.record(z.number()),
-  tickets_by_priority: z.record(z.number()),
-  tickets_by_category: z.record(z.number()),
-  tickets_by_board: z.record(z.number()),
+  tickets_by_status: z.record(z.string(), z.number()),
+  tickets_by_priority: z.record(z.string(), z.number()),
+  tickets_by_category: z.record(z.string(), z.number()),
+  tickets_by_board: z.record(z.string(), z.number()),
   average_resolution_time: z.number().nullable(),
   tickets_created_today: z.number(),
   tickets_created_this_week: z.number(),
@@ -557,15 +670,15 @@ export const ticketSearchSchema = z.object({
     z.array(uuidSchema),
     arrayTransform(uuidSchema)
   ]).optional(),
-  include_closed: booleanTransform.optional().default("false"),
-  limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).optional().default('25')
+  include_closed: booleanTransform.prefault("false"),
+  limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).prefault('25')
 });
 
 // Ticket export schema
 export const ticketExportQuerySchema = z.object({
   format: z.enum(['csv', 'json', 'xlsx']).optional().default('csv'),
-  include_closed: booleanTransform.optional().default("false"),
-  include_comments: booleanTransform.optional().default("false"),
+  include_closed: booleanTransform.prefault("false"),
+  include_comments: booleanTransform.prefault("false"),
   date_range: z.enum(['today', 'week', 'month', 'quarter', 'year', 'custom']).optional(),
   start_date: z.string().datetime().optional(),
   end_date: z.string().datetime().optional(),
@@ -592,8 +705,9 @@ export const createTicketFromAssetSchema = z.object({
   contact_name_id: uuidSchema.optional(),
   // FR-F2: an explicit pick wins; omitted means "inherit from the asset".
   billing_profile_id: uuidSchema.nullable().optional(),
-  category_id: uuidSchema.optional()
-});
+  category_id: uuidSchema.optional(),
+  ...ticketNotificationSuppressionSchema,
+}).superRefine(validateTicketNotificationSuppression);
 
 // Link an asset to a ticket (POST /api/v1/tickets/{id}/assets).
 export const linkTicketAssetSchema = z.object({
@@ -626,6 +740,45 @@ export const ticketAgentsResponseSchema = z.object({
     assigned_at: z.union([z.string(), z.date()]).nullable()
   }))
 });
+
+// Ticket watchers (/api/v1/tickets/{id}/watchers). Email is the public key,
+// matched case-insensitively; internal row ids are never exposed.
+const watcherEmailSchema = z.string().trim().email().max(320);
+
+export const addTicketWatcherSchema = z.object({
+  contact_id: uuidSchema.optional(),
+  user_id: uuidSchema.optional(),
+  email: watcherEmailSchema.optional(),
+  name: z.string().trim().min(1).max(255).optional(),
+  active: z.boolean().optional(),
+  // Request-scoped: suppress the notification this write would send. Never stored.
+  silent: z.boolean().optional(),
+}).refine(
+  (data) => [data.contact_id, data.user_id, data.email].filter((value) => value !== undefined).length === 1,
+  { message: 'Provide exactly one of contact_id, user_id or email' }
+);
+
+export const updateTicketWatcherSchema = z.object({
+  email: watcherEmailSchema,
+  active: z.boolean(),
+  silent: z.boolean().optional(),
+});
+
+export const removeTicketWatcherQuerySchema = z.object({
+  email: watcherEmailSchema,
+  silent: z.enum(['true', 'false']).optional().transform((value) => value === 'true'),
+});
+
+export const ticketWatcherSchema = z.object({
+  email: z.string(),
+  name: z.string().nullable(),
+  active: z.boolean(),
+  entity_type: z.enum(['user', 'contact']).nullable(),
+  entity_id: uuidSchema.nullable(),
+  source: z.string().nullable(),
+});
+
+export const ticketWatchersResponseSchema = z.array(ticketWatcherSchema);
 
 // Assign a team to a ticket (PUT /api/v1/tickets/{id}/team).
 export const assignTicketTeamSchema = z.object({
@@ -660,3 +813,5 @@ export type AddTicketAgentData = z.infer<typeof addTicketAgentSchema>;
 export type TicketAgentsResponse = z.infer<typeof ticketAgentsResponseSchema>;
 export type AssignTicketTeamData = z.infer<typeof assignTicketTeamSchema>;
 export type RemoveTicketTeamData = z.infer<typeof removeTicketTeamSchema>;
+export type AddTicketWatcherData = z.infer<typeof addTicketWatcherSchema>;
+export type UpdateTicketWatcherData = z.infer<typeof updateTicketWatcherSchema>;

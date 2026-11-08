@@ -11,6 +11,7 @@ interface EntityCredentialsSectionProps {
   entityId: string;
   defaultClientId?: string | null;
   titleKey?: string;
+  readOnly?: boolean;
 }
 
 export function EntityCredentialsSection(_props: EntityCredentialsSectionProps) {

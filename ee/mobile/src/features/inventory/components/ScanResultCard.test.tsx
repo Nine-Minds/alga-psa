@@ -138,6 +138,37 @@ describe("ScanResultCard", () => {
     expect(tree.root.findAll((node) => typeof node.type === "string" && node.props.testID === "inventory-scan-choice-0")).toHaveLength(1);
   });
 
+  // alga-2026-0002683 B2: the server now drops assets the caller cannot read, so
+  // responses may carry no asset anywhere.
+  it("renders a multi with no assets (product plus unit) and routes each row to its own handler", () => {
+    const onOpenProduct = vi.fn();
+    const onOpenUnit = vi.fn();
+    const onOpenAsset = vi.fn();
+    const tree = render(
+      { type: "multi", matches: [{ kind: "product", product }, { kind: "unit", unit }] },
+      { onOpenProduct, onOpenUnit, onOpenAsset },
+    );
+    const choices = tree.root.findAll((node) => typeof node.type === "string" && typeof node.props.testID === "string" && node.props.testID.startsWith("inventory-scan-choice-"));
+    expect(choices).toHaveLength(2);
+    act(() => choices[0].props.onPress());
+    act(() => choices[1].props.onPress());
+    expect(onOpenProduct).toHaveBeenCalledWith("svc-1", "Yealink T54W");
+    expect(onOpenUnit).toHaveBeenCalledWith("unit-1");
+    expect(onOpenAsset).not.toHaveBeenCalled();
+  });
+
+  it("renders a none with no candidates as a plain no-match card with rescue actions", () => {
+    const onManualSearch = vi.fn();
+    const onDismiss = vi.fn();
+    const tree = render({ type: "none", candidates: [] }, { onManualSearch, onDismiss });
+    expect(tree.root.findAll((node) => typeof node.type === "string" && node.props.testID === "inventory-scan-card-none")).toHaveLength(1);
+    expect(tree.root.findAll((node) => typeof node.type === "string" && typeof node.props.testID === "string" && node.props.testID.startsWith("inventory-scan-choice-"))).toHaveLength(0);
+    act(() => tree.root.findByProps({ testID: "inventory-scan-manual-search" }).props.onPress());
+    act(() => tree.root.findByProps({ testID: "inventory-scan-rescan" }).props.onPress());
+    expect(onManualSearch).toHaveBeenCalledTimes(1);
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
   it("renders the asset variant and opens the asset", () => {
     const onOpenAsset = vi.fn();
     const tree = render(

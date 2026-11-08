@@ -3,8 +3,11 @@
  * Handles all time entry-related database operations for the REST API
  */
 
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
+import { delegateRest } from '@alga-psa/scheduling/lib/timeSource';
+import { assertHumanWorkAssignee, assertHumanWorkOwner } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb, withViaPrincipal, stampViaPrincipalRow } from '@alga-psa/db';
 import {
   CreateTimeEntryData,
   UpdateTimeEntryData,
@@ -25,10 +28,10 @@ import { ConflictError, ForbiddenError, NotFoundError, NotImplementedError, Vali
 import { computeWorkDateFields, resolveUserTimeZone, truncateToMinute } from 'server/src/lib/utils/workDate';
 import { buildTimeEntryApprovedPayload, toWorkflowTimeEntryWorkItemType } from '@alga-psa/workflow-streams';
 import { buildTicketTimeEntryAddedWorkflowEvent } from './timeEntryWorkflowEvents';
-import { hasPermission } from '../../auth/rbac';
 import type { IUser } from '@alga-psa/types';
 import {
   StopwatchConflictError,
+  discardSession,
   getOpenSession,
   getSession,
   logSession,
@@ -58,6 +61,10 @@ export class TimeEntryService extends BaseService<any> {
       primaryKey: 'entry_id',
       tenantColumn: 'tenant',
       searchableFields: ['notes'],
+      viaPrincipalColumns: {
+        create: ['created_via_principal_id', 'updated_via_principal_id'],
+        update: ['updated_via_principal_id'],
+      },
       defaultSort: 'start_time',
       defaultOrder: 'desc'
     });
@@ -88,6 +95,14 @@ export class TimeEntryService extends BaseService<any> {
   // before pg hydrates it into a Date in the Node process's timezone.
   private workDateProjection(knex: Knex): Knex.Raw {
     return knex.raw("to_char(??, 'YYYY-MM-DD') as ??", [`${this.tableName}.work_date`, 'work_date']);
+  }
+
+  /** A contributed work item type (not in the native set) is rejected exactly as the schema rejected it before it became a contributed type. */
+  private assertNativeWorkItemType(workItemType: string | undefined): void {
+    if (workItemType === 'co_managed') {
+      throw new ValidationError('Validation failed', [{ code: 'invalid_enum_value', path: ['work_item_type'],
+        message: "Invalid enum value. Expected 'ticket' | 'project_task' | 'non_billable_category' | 'ad_hoc' | 'interaction'" }]);
+    }
   }
 
   private assertServiceIdPresent(serviceId: string | null | undefined): void {
@@ -167,6 +182,9 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   async list(options: ListOptions, context: ServiceContext): Promise<ListResult<any>> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'list', [options, context]);
+    if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
     const query = this.buildTenantScopedQuery(knex, context);
 
@@ -219,6 +237,9 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   async getById(id: string, context: ServiceContext): Promise<any | null> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'getById', [id, context]);
+    if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
     const scopedDb = tenantDb(knex, context.tenant);
     const query = this.buildTenantScopedQuery(knex, context);
@@ -241,6 +262,9 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   async getWithDetails(id: string, context: ServiceContext): Promise<any | null> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'getWithDetails', [id, context]);
+    if (delegated.handled) return delegated.value;
     const timeEntry = await this.getById(id, context);
     if (!timeEntry) return null;
 
@@ -263,6 +287,10 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   async create(data: CreateTimeEntryData, context: ServiceContext): Promise<any> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId, workItemType: data.work_item_type, workItemId: data.work_item_id }, 'entries', 'create', [data, context]);
+    if (delegated.handled) return delegated.value;
+    this.assertNativeWorkItemType(data.work_item_type);
     const { knex } = await this.getKnex();
 
     this.assertServiceIdPresent(data.service_id);
@@ -281,7 +309,7 @@ export class TimeEntryService extends BaseService<any> {
         throw new ForbiddenError('Permission denied: Missing user context');
       }
 
-      const canReadTickets = await hasPermission(context.user, 'ticket', 'read', knex);
+      const canReadTickets = await hasApiContextPermission(context, 'ticket', 'read', knex);
       if (!canReadTickets) {
         throw new ForbiddenError('Permission denied: Cannot read tickets');
       }
@@ -308,6 +336,9 @@ export class TimeEntryService extends BaseService<any> {
         },
       ]);
     }
+
+    // Human-work guard: the entry owner is the (effective) caller and must be a licensed user.
+    await assertHumanWorkOwner(knex, context.tenant, context.userId, 'user_id');
 
     const userTimeZone = await resolveUserTimeZone(knex, context.tenant, context.userId);
     const { work_date, work_timezone } = computeWorkDateFields(data.start_time, userTimeZone);
@@ -395,6 +426,10 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   async update(id: string, data: UpdateTimeEntryData, context: ServiceContext): Promise<any> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'update', [id, data, context]);
+    if (delegated.handled) return delegated.value;
+    this.assertNativeWorkItemType((data as { work_item_type?: string }).work_item_type);
     const { knex } = await this.getKnex();
     const existing = await this.getById(id, context);
     if (!existing) {
@@ -412,6 +447,12 @@ export class TimeEntryService extends BaseService<any> {
     }
 
     this.assertServiceIdPresent(data.service_id ?? existing.service_id);
+
+    // Human-work guard: only when this write changes the owner.
+    const requestedOwner = (data as { user_id?: string | null }).user_id;
+    if (requestedOwner && requestedOwner !== existing.user_id) {
+      await assertHumanWorkAssignee(knex, context.tenant, [requestedOwner]);
+    }
 
     // Extract is_billable from data as it's not a database column
     const { is_billable, ...dataWithoutBillable } = data;
@@ -509,6 +550,9 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   async delete(id: string, context: ServiceContext): Promise<void> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'delete', [id, context]);
+    if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
     const existing = await this.getById(id, context);
     if (!existing) {
@@ -545,6 +589,9 @@ export class TimeEntryService extends BaseService<any> {
 
   // Override bulk methods to match BaseService signature
   async bulkCreateTimeEntries(data: BulkTimeEntryData, context: ServiceContext): Promise<any[]> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'bulkCreateTimeEntries', [data, context]);
+    if (delegated.handled) return delegated.value;
     const results: { success: boolean; data?: any; error?: string }[] = [];
     
     for (const entryData of data.entries) {
@@ -561,6 +608,9 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   async bulkUpdateTimeEntries(data: BulkUpdateTimeEntryData, context: ServiceContext): Promise<any[]> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'bulkUpdateTimeEntries', [data, context]);
+    if (delegated.handled) return delegated.value;
     const results: { success: boolean; data?: any; error?: string; entry_id?: string }[] = [];
     
     for (const { entry_id, data: updateData } of data.entries) {
@@ -577,8 +627,11 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   async bulkDeleteTimeEntries(data: BulkDeleteTimeEntryData, context: ServiceContext): Promise<any[]> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'bulkDeleteTimeEntries', [data, context]);
+    if (delegated.handled) return delegated.value;
     const results: { success: boolean; error?: string; entry_id: string }[] = [];
-    
+
     for (const entryId of data.entry_ids) {
       try {
         await this.delete(entryId, context);
@@ -631,6 +684,10 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   async startTimeTracking(data: StartTimeTrackingData, context: ServiceContext): Promise<any> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId, workItemType: data.work_item_type, workItemId: data.work_item_id }, 'entries', 'startTimeTracking', [data, context]);
+    if (delegated.handled) return delegated.value;
+    this.assertNativeWorkItemType(data.work_item_type);
     const { knex } = await this.getKnex();
 
     this.assertServiceIdPresent(data.service_id);
@@ -662,6 +719,9 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   async stopTimeTracking(sessionId: string, data: StopTimeTrackingData, context: ServiceContext): Promise<any> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'stopTimeTracking', [sessionId, data, context]);
+    if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
 
     let result;
@@ -689,10 +749,28 @@ export class TimeEntryService extends BaseService<any> {
     return this.getById(result.persisted.entry.entry_id, context);
   }
 
+  /** Abandon the caller's own timer without writing effort (REST cancel-tracking). */
+  async cancelTimeTracking(sessionId: string, context: ServiceContext): Promise<any> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'cancelTimeTracking', [sessionId, context]);
+    if (delegated.handled) return delegated.value;
+    const { knex } = await this.getKnex();
+    try {
+      // discardSession scopes to the caller's own session: another user's id is simply "not found".
+      const view = await knex.transaction((trx) => discardSession(trx, context.tenant, context.userId, sessionId));
+      return { session_id: view.session_id, status: view.status };
+    } catch (error) {
+      throw mapStopwatchError(error);
+    }
+  }
+
   async getActiveSession(userId: string, context: ServiceContext): Promise<any | null> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'getActiveSession', [userId, context]);
+    if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
 
-    if (!await hasPermission(context.user, 'time_entry', 'read', knex)) {
+    if (!await hasApiContextPermission(context, 'time_entry', 'read', knex)) {
       throw new ForbiddenError('Permission denied: Cannot read time entries');
     }
 
@@ -720,6 +798,9 @@ export class TimeEntryService extends BaseService<any> {
   }
   
   async exportTimeEntries(exportQuery: TimeEntryExportQuery, context: ServiceContext): Promise<any> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'exportTimeEntries', [exportQuery, context]);
+    if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
     
     // Build query with filters
@@ -814,9 +895,16 @@ export class TimeEntryService extends BaseService<any> {
 
   // Approval operations
   async approveTimeEntries(data: ApproveTimeEntriesData, context: ServiceContext): Promise<any> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'approveTimeEntries', [data, context]);
+    if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
     const results: { success: boolean; error?: string; entry_id: string }[] = [];
-    
+
+    // Human-work guard: approval requires a human approver. Checked before the per-entry
+    // loop, whose catch would otherwise swallow the error into a per-entry failure.
+    await assertHumanWorkOwner(knex, context.tenant, context.userId, 'approved_by');
+
     for (const entryId of data.entry_ids) {
       try {
         // First check if the entry exists
@@ -837,10 +925,10 @@ export class TimeEntryService extends BaseService<any> {
         
         await this.buildTenantScopedQuery(knex, context)
           .where('entry_id', entryId)
-          .update({
+          .update(withViaPrincipal(context, {
             approval_status: 'APPROVED',
             updated_at: new Date()
-          });
+          }, 'updated_via_principal_id'));
 
         results.push({ success: true, entry_id: entryId });
 
@@ -892,6 +980,9 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   async requestChanges(data: RequestTimeEntryChangesData, context: ServiceContext): Promise<any[]> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'requestChanges', [data, context]);
+    if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
     const results: { success: boolean; error?: string; entry_id: string }[] = [];
     
@@ -900,10 +991,10 @@ export class TimeEntryService extends BaseService<any> {
         await this.buildTenantScopedQuery(knex, context)
           .where('entry_id', entryId)
           .where('approval_status', 'SUBMITTED')
-          .update({
+          .update(withViaPrincipal(context, {
             approval_status: 'CHANGES_REQUESTED',
             updated_at: new Date()
-          });
+          }, 'updated_via_principal_id'));
 
         results.push({ success: true, entry_id: entryId });
 
@@ -929,6 +1020,9 @@ export class TimeEntryService extends BaseService<any> {
 
   // Search and export
   async searchTimeEntries(searchData: TimeEntrySearchData, context: ServiceContext): Promise<{ data: any[], total: number }> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'searchTimeEntries', [searchData, context]);
+    if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
     const query = this.buildTenantScopedQuery(knex, context);
 
@@ -1060,6 +1154,9 @@ export class TimeEntryService extends BaseService<any> {
 
   // Statistics
   async getTimeEntryStatistics(filters: TimeEntryFilterData | undefined, context: ServiceContext): Promise<any> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'getTimeEntryStatistics', [filters, context]);
+    if (delegated.handled) return delegated.value;
     const stats = await this.getStatistics(context, filters);
     return {
       total_hours: stats.total_billable_hours + stats.total_non_billable_hours,
@@ -1119,6 +1216,8 @@ export class TimeEntryService extends BaseService<any> {
 
     if (!timeSheet) {
       // Create new time sheet
+      // Human-work guard (R5.3): never create a time sheet for a non-internal user.
+      await assertHumanWorkAssignee(knex, context.tenant, [userId]);
       const [newTimeSheet] = await tenantDb(knex, context.tenant).table('time_sheets')
         .insert({
           period_id: period.period_id,
@@ -1179,17 +1278,19 @@ export class TimeEntryService extends BaseService<any> {
       throw new ForbiddenError('Permission denied: Missing user context');
     }
     try {
-      return await knex.transaction((trx) =>
-        persistTimeEntry(trx, {
+      return await knex.transaction(async (trx) => {
+        const persisted = await persistTimeEntry(trx, {
           tenant: context.tenant,
           actor: context.user as IUser,
           entry,
+          viaPrincipalUserId: context.viaPrincipalUserId,
           contractLine,
           // The sheet was resolved from work_date (getOrCreateTimeSheetForWorkDate),
           // so the period is checked against the same date the bucketing used.
           sheetPeriodCheck: 'work_date',
-        }),
-      );
+        });
+        return persisted;
+      });
     } catch (error) {
       throw mapStopwatchError(error);
     }

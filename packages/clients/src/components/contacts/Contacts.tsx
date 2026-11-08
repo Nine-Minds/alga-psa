@@ -2,11 +2,10 @@
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import type { DeletionValidationResult, IContact } from '@alga-psa/types';
-import type { IClient } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import type { IDocument } from '@alga-psa/types';
 import { formatPhoneForDisplay, formatPhoneLabel } from '@alga-psa/validation';
-import { getAllContacts, getContactsByClient, getAllClients, searchContactListIds } from '@alga-psa/clients/actions';
+import { getAllContacts, getContactsByClient, searchContactListIds } from '@alga-psa/clients/actions';
 import { exportContactsToCSV, deleteContact, updateContact, getContactLastUsagePhoneTypes, deleteOrphanedPhoneTypes } from '@alga-psa/clients/actions';
 import { findTagsByEntityIds, findAllTagsByType, isTagActionError } from '@alga-psa/tags/actions';
 import { contactMatchesPhoneDigits, phoneSearchDigits } from '../../lib/contactSearchMatch';
@@ -42,6 +41,7 @@ import ClientQuickView from '../clients/ClientQuickView';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
 import { ColumnDefinition } from '@alga-psa/types';
+import { contactLocationCell } from '../../lib/contactLocationDisplay';
 import { TagFilter } from '@alga-psa/ui/components';
 import { TagManager } from '@alga-psa/tags/components';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
@@ -69,6 +69,39 @@ import {
 } from '../../lib/clientListViewAdapters';
 
 const CONTACTS_PAGE_SIZE_SETTING = 'contacts_page_size';
+
+/**
+ * Folds contacts returned by a CSV import into the list: a contact the import
+ * updated is merged over its existing row in place, and only contacts with new
+ * ids are appended.
+ *
+ * The import returns bare contact rows, without the list-only fields
+ * `getAllContacts` adds (`avatarUrl`, `client_name`). Merging rather than
+ * replacing keeps the existing avatar. The import dialog adds resolved client
+ * names so re-assigned and new contacts stay searchable by client.
+ */
+function mergeContactsById(
+  current: IContact[],
+  imported: IContact[],
+): IContact[] {
+  const importedById = new Map(imported.map((contact) => [contact.contact_name_id, contact]));
+  const merged = current.map((contact) => {
+    const replacement = importedById.get(contact.contact_name_id);
+    if (!replacement) return contact;
+    importedById.delete(contact.contact_name_id);
+    const sameClient = contact.client_id === replacement.client_id;
+    return {
+      ...contact,
+      ...replacement,
+      client_name: replacement.client_id
+        ? replacement.client_name ?? (sameClient ? contact.client_name : null)
+        : null,
+      client_logo_url: sameClient ? contact.client_logo_url : null,
+    };
+  });
+  return [...merged, ...importedById.values()];
+}
+
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
 
@@ -104,7 +137,6 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
     setContacts(initialContacts);
   }, [initialContacts]);
 
-  const [clients, setClients] = useState<IClient[]>([]);
   const [documents, setDocuments] = useState<Record<string, IDocument[]>>({});
   const [documentLoading, setDocumentLoading] = useState<Record<string, boolean>>({});
   const [currentUser, setCurrentUser] = useState<string | null>(null);
@@ -220,14 +252,10 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
           }
         }
 
-        // Only fetch clients and user data on initial load to avoid unnecessary refetches
-        if (isInitialLoad || clients.length === 0) {
-          const [allClients, userData] = await Promise.all([
-            getAllClients(),
-            getCurrentUserAsync()
-          ]);
-
-          setClients(allClients);
+        // Only fetch the user on initial load to avoid unnecessary refetches. Client names and
+        // logos arrive on the contact rows, so no client list is loaded here.
+        if (isInitialLoad || !currentUser) {
+          const userData = await getCurrentUserAsync();
           if (userData?.user_id) {
             setCurrentUser(userData.user_id);
           }
@@ -308,12 +336,11 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
     });
   };
 
-  const getClientName = useCallback((clientId: string) => {
-    const client = clients.find(c => c.client_id === clientId);
-    return client
-      ? client.client_name
-      : t('contactsPage.unknownClient', { defaultValue: 'Unknown Client' });
-  }, [clients, t]);
+  const getContactClientName = useCallback((contact: IContact) => (
+    typeof contact.client_name === 'string' && contact.client_name
+      ? contact.client_name
+      : t('contactsPage.unknownClient', { defaultValue: 'Unknown Client' })
+  ), [t]);
 
   const handleContactAdded = (newContact: IContact) => {
     // Store tags for the new contact if provided
@@ -373,7 +400,6 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
         openDrawer(
           <ContactQuickView
             contact={contact}
-            clients={clients}
             documents={documents[contact.contact_name_id] || []}
             userId={currentUser}
             onDocumentCreated={async () => {
@@ -435,7 +461,6 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
         openDrawer(
           <ContactQuickView
             contact={contact}
-            clients={clients}
             documents={documents[contact.contact_name_id] || []}
             userId={currentUser}
             onDocumentCreated={async () => {
@@ -614,7 +639,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
 
   const handleExportToCSV = async () => {
     try {
-      const csvData = await exportContactsToCSV(filteredContacts, clients, contactTagsRef.current);
+      const csvData = await exportContactsToCSV(filteredContacts, contactTagsRef.current);
 
       const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
 
@@ -633,8 +658,8 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
     }
   };
 
-  const handleImportComplete = (newContacts: IContact[]) => {
-    setContacts(prev => [...prev, ...newContacts]);
+  const handleImportComplete = (importedContacts: IContact[]) => {
+    setContacts(prev => mergeContactsById(prev, importedContacts));
     setIsImportDialogOpen(false);
   };
 
@@ -755,6 +780,30 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
       },
     },
     {
+      title: t('contactsPage.table.location', { defaultValue: 'Location' }),
+      dataIndex: 'primaryLocation',
+      width: '12%',
+      render: (value, record): React.ReactNode => {
+        const cell = contactLocationCell(record);
+        if (!cell.label) {
+          return cell.isRemote
+            ? t('contactLocations.arrangement.remote', { defaultValue: 'Remote' })
+            : t('common.states.na', { defaultValue: 'N/A' });
+        }
+        return (
+          <span className="truncate">
+            {cell.label}
+            {cell.extraCount > 0 ? (
+              <span className="text-gray-500">
+                {' '}
+                {t('contactLocations.extraCount', { defaultValue: '+{{count}}', count: cell.extraCount })}
+              </span>
+            ) : null}
+          </span>
+        );
+      },
+    },
+    {
       title: t('contactsPage.table.client', { defaultValue: 'Client' }),
       dataIndex: 'client_name',
       width: '13%',
@@ -764,19 +813,17 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
           return <ClientNameCell clientName={null} />;
         }
 
-        const client = clients.find(c => c.client_id === clientId);
-        if (!client) {
-          return <ClientNameCell clientId={clientId} clientName={getClientName(clientId)} />;
-        }
+        const clientName = getContactClientName(record);
 
         const handleClientOpen = () => {
           if (clientDrawer) {
-            clientDrawer.openClientDrawer(client.client_id);
+            clientDrawer.openClientDrawer(clientId);
             return;
           }
+          // The quick view loads the client by id when it opens; no client list is held here.
           openDrawer(
             <ClientQuickView
-              client={client}
+              clientId={clientId}
               isInDrawer={true}
               quickView={true}
             />
@@ -784,7 +831,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
         };
 
         return (
-          <ClientNameCell clientId={client.client_id} clientName={client.client_name} logoUrl={client.logoUrl ?? null}>
+          <ClientNameCell clientId={clientId} clientName={clientName} logoUrl={record.client_logo_url ?? null}>
             <div
               role="button"
               tabIndex={0}
@@ -797,7 +844,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
               }}
               className="text-blue-600 hover:underline cursor-pointer truncate"
             >
-              {client.client_name}
+              {clientName}
             </div>
           </ClientNameCell>
         );
@@ -984,7 +1031,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
       label: t('contactsPage.table.client', { defaultValue: 'Client' }),
       header: t('contactsPage.table.client', { defaultValue: 'Client' }),
       render: (contact) => contact.client_id
-        ? getClientName(contact.client_id)
+        ? getContactClientName(contact)
         : t('contactsPage.noClient', { defaultValue: 'No Client' }),
     },
     {
@@ -1006,7 +1053,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
         ? t('common.states.inactive', { defaultValue: 'Inactive' })
         : t('common.states.active', { defaultValue: 'Active' }),
     },
-  ], [t, getClientName]);
+  ], [t, getContactClientName]);
   const {
     selectedColumnKeys: selectedContactPrintColumnKeys,
     selectedColumns: selectedContactPrintColumns,
@@ -1204,7 +1251,6 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
           isOpen={isQuickAddOpen}
           onClose={() => setIsQuickAddOpen(false)}
           onContactAdded={handleContactAdded}
-          clients={clients}
           selectedClientId={preSelectedClientId}
         />
 
@@ -1212,7 +1258,6 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
           isOpen={isImportDialogOpen}
           onClose={() => setIsImportDialogOpen(false)}
           onImportComplete={handleImportComplete}
-          clients={clients}
         />
 
         {/* ConfirmationDialog for Delete */}

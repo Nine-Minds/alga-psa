@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import useSWR, { unstable_serialize, useSWRConfig } from 'swr';
 import type { Asset, AssetAssociation, AssetListResponse } from '@alga-psa/types';
 import { listEntityAssets, createAssetAssociation, removeAssetAssociation, listAssets } from '../actions/assetActions';
+import { entityAssetsCacheKey } from '../lib/assetCacheKeys';
 import { unwrapAssetActionResult } from '../actions/assetActionErrors';
 import { loadAssetDetailDrawerData } from '../actions/assetDrawerActions';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -17,10 +19,13 @@ import { RemoteAccessButton } from './RemoteAccessButton';
 import { hasRemoteAccessLinks } from '../actions/remoteAccessLinkActions';
 import { SearchInput } from '@alga-psa/ui/components/SearchInput';
 import Pagination from '@alga-psa/ui/components/Pagination';
+import { CustodyBadge, useCustodyBadges } from './custody/CustodyBadge';
+import { RmaBadge, useRmaBadges } from './warranty/RmaBadge';
 import { AssetDetailDrawerClient } from './AssetDetailDrawerClient';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Monitor, Server, Smartphone, Printer, Network, Boxes } from 'lucide-react';
 import { getIconComponent } from '@alga-psa/ui/components/IconPicker';
+import { useAssetStatusLabel } from '../lib/assetStatus';
 import { useAssetTypeRegistry } from './shared/useAssetTypeOptions';
 import { ContentCard } from '@alga-psa/ui/components';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -42,6 +47,8 @@ interface AssociatedAssetsProps {
     defaultBoardId?: string;
     /** Server-started associated-assets promise; skips the mount fetch when provided. */
     initialAssets?: Promise<Asset[]>;
+    /** List associations without add/remove (for example on an ended co-managed workspace). */
+    readOnly?: boolean;
 }
 
 interface SelectedAsset {
@@ -50,14 +57,66 @@ interface SelectedAsset {
 }
 
 export default function AssociatedAssets({ id, entityId, entityType, clientId, defaultBoardId,
-    initialAssets,
+    initialAssets, readOnly = false,
 }: AssociatedAssetsProps) {
     const { t } = useTranslation('msp/assets');
     const [hasTemplateLinks, setHasTemplateLinks] = useState(false);
     useEffect(() => { void hasRemoteAccessLinks().then((result) => setHasTemplateLinks(result === true)).catch(() => setHasTemplateLinks(false)); }, []);
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
-    const [associatedAssets, setAssociatedAssets] = useState<AssetAssociation[]>([]);
+    // Single source of truth for the linked-assets list. Other surfaces (e.g.
+    // Receive equipment) revalidate it via matchEntityAssetsCacheKeys.
+    const key = entityAssetsCacheKey(entityType, entityId);
+    const serializedKey = unstable_serialize(key);
+    const { cache } = useSWRConfig();
+    const cachedState = cache.get(serializedKey);
+    const initialized = cachedState?.data !== undefined;
+    // A remount may inherit an in-flight read even before it has cached data.
+    const bootstrap = useRef({ key: serializedKey, used: initialized || !!cachedState?.isValidating });
+    if (bootstrap.current.key !== serializedKey) bootstrap.current = { key: serializedKey, used: initialized || !!cachedState?.isValidating };
+    // An unused streamed promise can still reject after a cache-backed remount.
+    useEffect(() => { if (initialAssets) void Promise.resolve(initialAssets).catch(() => {}); }, [initialAssets]);
+    const { data: linkedAssets, error: linkedAssetsError, mutate: revalidateLinkedAssets } = useSWR<Asset[]>(
+        key,
+        async () => {
+            if (!bootstrap.current.used && initialAssets) {
+                bootstrap.current.used = true;
+                // React Flight thenables need Promise normalization.
+                return unwrapAssetActionResult(await Promise.resolve(initialAssets));
+            }
+            bootstrap.current.used = true;
+            return unwrapAssetActionResult(await listEntityAssets(entityId, entityType));
+        },
+        { revalidateOnMount: initialAssets ? !initialized : undefined, revalidateOnFocus: false, shouldRetryOnError: false }
+    );
+
+    useEffect(() => {
+        if (!linkedAssetsError) return;
+        handleError(linkedAssetsError, t('associatedAssets.errors.loadAssociatedAssets', {
+            defaultValue: 'Failed to load associated assets'
+        }));
+    }, [linkedAssetsError, t]);
+
+    const associatedAssets = useMemo<AssetAssociation[]>(
+        () => (linkedAssets ?? []).map((asset): AssetAssociation => ({
+            tenant: asset.tenant,
+            asset_id: asset.asset_id,
+            entity_id: entityId,
+            entity_type: entityType,
+            relationship_type: 'affected',
+            created_by: 'system',
+            created_at: new Date().toISOString(),
+            asset,
+        })),
+        [linkedAssets, entityId, entityType]
+    );
+    // Already-linked IDs are filtered out of the "available" list.
+    const associatedAssetIds = useMemo(
+        () => new Set((linkedAssets ?? []).map((a) => a.asset_id)),
+        [linkedAssets]
+    );
+    const isLoading = linkedAssets === undefined && !linkedAssetsError;
+    const loadAssociatedAssets = () => revalidateLinkedAssets();
+
     // The type registry only informs CUSTOM asset-type icons; builtin types
     // render local icons. Fetch it lazily, and only when a custom-typed asset
     // is actually on screen — most tickets never pay this request.
@@ -79,9 +138,6 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoadingAssets, setIsLoadingAssets] = useState(false);
 
-    // Track already-associated asset IDs to filter them out
-    const [associatedAssetIds, setAssociatedAssetIds] = useState<Set<string>>(new Set());
-
     // Asset detail drawer state
     const [drawerAssetId, setDrawerAssetId] = useState<string | null>(null);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -91,10 +147,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
     const [drawerLoading, setDrawerLoading] = useState(false);
     const lastRequestIdRef = useRef<number>(0);
 
-    const getAssetStatusLabel = (status: string) =>
-        t(`associatedAssets.assetStatuses.${status}`, {
-            defaultValue: status.charAt(0).toUpperCase() + status.slice(1)
-        });
+    const getAssetStatusLabel = useAssetStatusLabel();
 
     const getAssetTypeLabel = (type: string) =>
         t(`associatedAssets.assetTypes.${type}`, {
@@ -108,80 +161,6 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
         t(`associatedAssets.relationshipTypes.${type}`, {
             defaultValue: type.charAt(0).toUpperCase() + type.slice(1)
         });
-
-    const loadAssociatedAssets = useCallback(async () => {
-        try {
-            setIsLoading(true);
-            const assets = unwrapAssetActionResult(await listEntityAssets(entityId, entityType));
-
-            // Track associated asset IDs to filter them from available list
-            setAssociatedAssetIds(new Set(assets.map(a => a.asset_id)));
-
-            // Create associations with assets
-            const associations: AssetAssociation[] = await Promise.all(
-                assets.map(async (asset): Promise<AssetAssociation> => ({
-                    tenant: asset.tenant,
-                    asset_id: asset.asset_id,
-                    entity_id: entityId,
-                    entity_type: entityType,
-                    relationship_type: 'affected',
-                    created_by: 'system',
-                    created_at: new Date().toISOString(),
-                    asset: asset
-                }))
-            );
-
-            setAssociatedAssets(associations);
-        } catch (error) {
-            handleError(error, t('associatedAssets.errors.loadAssociatedAssets', {
-                defaultValue: 'Failed to load associated assets'
-            }));
-        } finally {
-            setIsLoading(false);
-        }
-    }, [entityId, entityType, t]);
-
-    const skipFirstAssetsFetch = useRef(Boolean(initialAssets));
-    useEffect(() => {
-        if (!initialAssets) return;
-        let cancelled = false;
-        // initialAssets may be a React Flight thenable (RSC-streamed) whose
-        // .then() returns undefined; normalize to a real, chainable Promise.
-        Promise.resolve(initialAssets).then((assets) => {
-            if (cancelled) return;
-            const expectedAssets = unwrapAssetActionResult(assets);
-            // Same shaping as loadAssociatedAssets, minus the network round-trip.
-            setAssociatedAssetIds(new Set(expectedAssets.map((a) => a.asset_id)));
-            setAssociatedAssets(expectedAssets.map((asset): AssetAssociation => ({
-                tenant: asset.tenant,
-                asset_id: asset.asset_id,
-                entity_id: entityId,
-                entity_type: entityType,
-                relationship_type: 'affected',
-                created_by: 'system',
-                created_at: new Date().toISOString(),
-                asset,
-            })));
-            setIsLoading(false);
-        }).catch((error) => {
-            if (cancelled) return;
-            handleError(error, t('associatedAssets.errors.loadAssociatedAssets', {
-                defaultValue: 'Failed to load associated assets'
-            }));
-            setAssociatedAssetIds(new Set());
-            setAssociatedAssets([]);
-            setIsLoading(false);
-        });
-        return () => { cancelled = true; };
-    }, [initialAssets, entityId, entityType]);
-
-    useEffect(() => {
-        if (skipFirstAssetsFetch.current) {
-            skipFirstAssetsFetch.current = false;
-            return;
-        }
-        void loadAssociatedAssets();
-    }, [loadAssociatedAssets]);
 
     const loadAvailableAssets = useCallback(async () => {
         try {
@@ -442,6 +421,9 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
     const INITIAL_DISPLAY_COUNT = 2;
     const [isExpanded, setIsExpanded] = useState(false);
     const visibleAssets = isExpanded ? associatedAssets : associatedAssets.slice(0, INITIAL_DISPLAY_COUNT);
+    // C4: "In office - Main Office / Shelf B3" / "With vendor" chip for equipment the MSP holds.
+    const custodyBadges = useCustodyBadges(visibleAssets.map((association) => association.asset_id));
+    const rmaBadges = useRmaBadges(visibleAssets.map((association) => association.asset_id));
     const hiddenCount = associatedAssets.length - INITIAL_DISPLAY_COUNT;
 
     const getAssetTypeIcon = (type: string) => {
@@ -475,11 +457,11 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
             <ContentCard
                 id={id}
                 collapsible
-                defaultExpanded={false}
+                defaultExpanded={associatedAssets.length > 0}
                 title={t('associatedAssets.title', { defaultValue: 'Assets' })}
                 headerIcon={<Monitor className="w-5 h-5" />}
                 count={associatedAssets.length}
-                addButton={{
+                addButton={readOnly ? undefined : {
                     id: 'add-asset-button',
                     label: t('associatedAssets.actions.addAsset', { defaultValue: 'Add Asset' }),
                     onClick: handleOpenDialog
@@ -502,8 +484,8 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                 key={`${association.asset_id}-${association.entity_id}`}
                                 className="p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                             >
-                                {/* Row 1: Name + Status + Remove */}
-                                <div className="flex items-center justify-between gap-2">
+                                {/* Row 1: Name + RMM indicator + Remove (fixed-size icon buttons only on the right) */}
+                                <div className="flex items-center justify-between gap-2" data-testid={`associated-asset-name-row-${association.asset_id}`}>
                                     <div className="flex min-w-0 flex-1 items-center gap-2">
                                 {association.asset ? (
                                     (() => {
@@ -515,14 +497,14 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                             size="sm"
                                             onClick={() => openDrawerForAsset(asset)}
                                             title={asset.name}
-                                            className="h-auto min-w-0 max-w-full p-0 text-sm font-medium truncate text-left justify-start"
+                                            className="h-auto min-w-0 flex-1 max-w-full p-0 text-sm font-medium truncate text-left justify-start"
                                         >
                                             {asset.name}
                                         </Button>
                                         );
                                     })()
                                 ) : (
-                                    <span className="text-sm font-medium text-gray-900 truncate">
+                                    <span className="min-w-0 flex-1 text-sm font-medium text-gray-900 truncate">
                                         {t('associatedAssets.empty.unknownAsset', {
                                             defaultValue: 'Unknown Asset'
                                                 })}
@@ -532,27 +514,8 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                             <RmmStatusIndicator asset={association.asset} size="sm" />
                                         )}
                                     </div>
-                                    <div className="flex flex-shrink-0 items-center gap-2">
-                                        {association.asset && (
-                                            <Badge variant={
-                                                association.asset.status === 'active' ? 'success' :
-                                                association.asset.status === 'maintenance' ? 'warning' :
-                                                'default-muted'
-                                            }>
-                                                {getAssetStatusLabel(association.asset.status)}
-                                            </Badge>
-                                        )}
-                                        {association.asset && (
-                                            <RemoteAccessButton
-                                                asset={association.asset}
-                                                variant="ghost"
-                                                size="sm"
-                                                hasTemplateLinks={hasTemplateLinks}
-                                                surface="ticket-sidebar"
-                                                iconOnly
-                                            />
-                                        )}
-                                        <Button
+                                    <div className="flex flex-shrink-0 items-center">
+                                        {!readOnly && <Button
                                             id={`remove-asset-${association.asset_id}`}
                                             variant="outline"
                                             size="sm"
@@ -562,21 +525,49 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                             className="text-gray-600 hover:text-gray-900"
                                         >
                                             <span aria-hidden="true">×</span>
-                                        </Button>
+                                        </Button>}
                                     </div>
                                 </div>
+                                {/* Meta row: status badge, custody chip and remote-access icon wrap together beneath the name so the
+                                    name keeps the full row-1 width. The panel is ~230px wide at every desktop viewport, so viewport
+                                    breakpoints cannot decide what fits; wrapping does. Collapses when it has no content. */}
+                                <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5 empty:hidden" data-testid={`associated-asset-custody-row-${association.asset_id}`}>
+                                    {association.asset && (
+                                        <Badge variant={
+                                            association.asset.status === 'active' ? 'success' :
+                                            association.asset.status === 'maintenance' ? 'warning' :
+                                            'default-muted'
+                                        }>
+                                            {getAssetStatusLabel(association.asset.status)}
+                                        </Badge>
+                                    )}
+                                    <CustodyBadge id={`associated-asset-custody-${association.asset_id}`} badge={custodyBadges.get(association.asset_id)} />
+                                    <RmaBadge id={`associated-asset-rma-${association.asset_id}`} badge={rmaBadges.get(association.asset_id)} />
+                                    {association.asset && (
+                                        <RemoteAccessButton
+                                            asset={association.asset}
+                                            variant="ghost"
+                                            size="sm"
+                                            hasTemplateLinks={hasTemplateLinks}
+                                            surface="ticket-sidebar"
+                                            iconOnly
+                                        />
+                                    )}
+                                </div>
                                 {/* Row 2: Icon + Tag + Type + Relationship */}
-                                <div className="flex items-center gap-2 mt-1.5 text-xs text-gray-500">
+                                <div className="flex min-w-0 items-center gap-2 mt-1.5 text-xs text-gray-500">
                                     {association.asset && (
                                         <span className="flex-shrink-0">{getAssetTypeIcon(association.asset.asset_type)}</span>
                                     )}
-                                    <span className="font-mono">
+                                    <span className="min-w-0 truncate font-mono" title={association.asset?.asset_tag || undefined}>
                                         {association.asset?.asset_tag || t('common.states.na', { defaultValue: 'N/A' })}
                                     </span>
-                                    <span>•</span>
-                                    <span>{association.asset ? getAssetTypeLabel(association.asset.asset_type) : ''}</span>
-                                    <span>•</span>
-                                    <span className="capitalize">
+                                    <span className="flex-shrink-0">•</span>
+                                    <span className="min-w-0 truncate" title={association.asset ? getAssetTypeLabel(association.asset.asset_type) : undefined}>
+                                        {association.asset ? getAssetTypeLabel(association.asset.asset_type) : ''}
+                                    </span>
+                                    <span className="flex-shrink-0">•</span>
+                                    <span className="min-w-0 truncate capitalize" title={getRelationshipTypeLabel(association.relationship_type)}>
                                         {getRelationshipTypeLabel(association.relationship_type)}
                                     </span>
                                 </div>

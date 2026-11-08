@@ -30,7 +30,10 @@ vi.mock('next/navigation', () => ({
 type DashboardProps = {
   onFilterChange: (update: Partial<ITicketListFilters>, options?: TicketFilterChangeOptions) => void;
   onNavigateAway?: () => void;
+  filterValues?: Partial<ITicketListFilters>;
 };
+
+const CONTACT_A = '44444444-5555-4666-8777-888888888888';
 
 let dashboardProps: DashboardProps | null = null;
 
@@ -260,5 +263,38 @@ describe('ticket list URL sync after navigating away', () => {
     });
 
     expect(fetchTicketsWithPagination).not.toHaveBeenCalled();
+  });
+
+  it('round-trips the contact filter through the address bar', () => {
+    // The contact filter is list state like any other: it has to reach the URL
+    // (so the view is shareable and survives a reload), reach the dashboard as
+    // the live filter value, and clear cleanly.
+    const { props } = renderContainer();
+
+    act(() => {
+      props.onFilterChange({ contactId: CONTACT_A });
+    });
+    expect(new URLSearchParams(window.location.search).get('contactId')).toBe(CONTACT_A);
+    expect(dashboardProps?.filterValues?.contactId).toBe(CONTACT_A);
+
+    act(() => {
+      props.onFilterChange({ contactId: undefined });
+    });
+    expect(new URLSearchParams(window.location.search).has('contactId')).toBe(false);
+    expect(dashboardProps?.filterValues?.contactId).toBeUndefined();
+  });
+
+  it('restores the contact filter from the URL on a popstate hop', async () => {
+    // Back/forward (and a reload-shaped entry) go through the same parse, so a
+    // shared ?contactId= link has to come back as the live filter.
+    renderContainer();
+
+    window.history.replaceState(null, '', `/msp/tickets?contactId=${CONTACT_A}`);
+    await act(async () => {
+      window.dispatchEvent(new PopStateEvent('popstate'));
+      await Promise.resolve();
+    });
+
+    await waitFor(() => expect(dashboardProps?.filterValues?.contactId).toBe(CONTACT_A));
   });
 });

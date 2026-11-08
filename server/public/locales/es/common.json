@@ -56,12 +56,27 @@
     "manageLicense": "Administrar licencia",
     "ariaLabel": "Estado de la licencia",
     "dismiss": "Descartar",
-    "licenseExpiresIn_few": "La licencia vence en {{count}} días. Renueve para evitar interrupciones del servicio.",
+
+    "subscriptionEnding": "Su suscripción Pro se ha cancelado. Pro finaliza el {{date}}. Vuelva a suscribirse para conservar Pro.",
+    "subscriptionEndingNoDate": "Su suscripción Pro se ha cancelado. Vuelva a suscribirse para conservar Pro.",
+    "subscriptionLapsed": "Ahora usa la edición gratuita. Vuelva a suscribirse para restaurar Pro.",
+    "resubscribe": "Volver a suscribirse",
+    "termEnds": "Su acceso a Pro termina el {{date}}. Renueve para conservar Pro.",
+    "termEndsNoDate": "Su periodo de Pro está por terminar. Renueve para conservar Pro.",
+    "paymentFailed": "Pago fallido — lo reintentaremos el {{date}}. Actualice su método de pago para conservar Pro.",
+    "paymentFailedNoRetry": "Pago fallido. Actualice su método de pago para conservar Pro.",
+    "paymentFailedEndsOn": "Pro finaliza el {{date}} si el pago sigue fallando.",
+    "paymentFailedEnded": "Pro ha finalizado — pago fallido. Su appliance funciona con Essentials.",
+    "paymentFailedEndedEnding": "Su suscripción Pro ha finalizado — pago fallido. Pro seguirá activo hasta el {{date}}. Vuelva a suscribirse para conservar Pro.",
+    "paymentFailedEndedEndingNoDate": "Su suscripción Pro ha finalizado — pago fallido. Vuelva a suscribirse para conservar Pro.",
+    "updatePaymentMethod": "Actualizar método de pago",
+"licenseExpiresIn_few": "La licencia vence en {{count}} días. Renueve para evitar interrupciones del servicio.",
     "licenseExpiresIn_many": "La licencia vence en {{count}} días. Renueve para evitar interrupciones del servicio.",
     "trialDaysRemaining_few": "Prueba Pro activa: quedan {{count}} días.",
     "trialDaysRemaining_many": "Prueba Pro activa: quedan {{count}} días.",
     "trialExpiresIn_few": "La prueba Pro vence en {{count}} días. Introduzca una clave de licencia para conservar las funciones Pro.",
     "trialExpiresIn_many": "La prueba Pro vence en {{count}} días. Introduzca una clave de licencia para conservar las funciones Pro."
+
   },
   "nav": {
     "dashboard": "Panel",
@@ -262,6 +277,10 @@
     }
   },
   "errors": {
+    "coManaged": {
+      "readOnly": "Este espacio de trabajo cogestionado es de solo lectura. Se puede iniciar sesión, leer, exportar y recuperar la licencia.",
+      "acceptancePending": "El administrador del cliente debe aceptar la cogestión antes de usar este espacio de trabajo."
+    },
     "validation": {
       "required": "{{field}} es obligatorio.",
       "invalidType": "{{field}} tiene un tipo incorrecto.",
@@ -1406,7 +1425,8 @@
     "unnamedUser": "Usuario sin nombre",
     "unnamedTeam": "Equipo sin nombre",
     "userPicker": "Selector de usuarios",
-    "noUsersFound": "No se encontraron usuarios"
+    "noUsersFound": "No se encontraron usuarios",
+    "contactRemoteLocation": "Remoto"
   },
   "serviceTypeSelect": {
     "placeholder": "Seleccione un tipo de servicio...",
@@ -1580,7 +1600,42 @@
     }
   },
   "labels": {
-    "printColumns": "Columnas de impresión"
+    "printColumns": "Columnas de impresión",
+    "dialog": {
+      "assetTitle": "Imprimir etiquetas de activos",
+      "batch_one": "Una etiqueta para el elemento retenido ({{count}})",
+      "batch_other": "Una etiqueta por elemento retenido ({{count}})",
+      "count_one": "{{count}} seleccionado",
+      "count_other": "{{count}} seleccionados",
+      "failed": "No se pudieron imprimir las etiquetas.",
+      "item": "Elemento",
+      "layout": "Diseño",
+      "linkedAsset": "Activo vinculado",
+      "noAsset": "Sin activo",
+      "notFound": "No se pudieron abrir estos registros.",
+      "openPdf": "Abrir PDF",
+      "previewBatch_one": "Imprimir {{count}} etiqueta para el elemento retenido.",
+      "previewBatch_other": "Imprimir {{count}} etiquetas, una por elemento retenido.",
+      "previewPicked": "La etiqueta mostrará la ubicación y la siguiente acción de este elemento.",
+      "previewPickedNotHeld": "Este elemento no está retenido, por lo que la etiqueta no muestra ubicación.",
+      "previewSingle": "La etiqueta mostrará {{location}}.",
+      "previewSingleNoLocation": "La etiqueta mostrará la siguiente acción de este elemento.",
+      "previewSummary_one": "{{count}} elemento retenido.",
+      "previewSummary_other": "{{count}} elementos retenidos.",
+      "printed_one": "Se imprimió {{count}} etiqueta.",
+      "printed_other": "Se imprimieron {{count}} etiquetas.",
+      "printing": "Preparando…",
+      "print": "Imprimir",
+      "reason": "Motivo",
+      "skipFailures": "Omitir estos e imprimir el resto",
+      "skipped_one": "Se omitió {{count}} registro porque no se pudo abrir.",
+      "skipped_other": "Se omitieron {{count}} registros porque no se pudieron abrir.",
+      "template": "Plantilla",
+      "ticketTitle": "Imprimir etiquetas de trabajo",
+      "tooMany": "Puede imprimir como máximo {{max}} etiquetas a la vez.",
+      "unnamedAsset": "Activo sin nombre",
+      "useTemplate": "Usar {{template}}"
+    }
   },
   "deleteEntity": {
     "checkingDependenciesTitle": "Comprobando dependencias",
@@ -2172,5 +2227,8 @@
   },
   "viewSwitcher": {
     "ariaLabel": "Cambiar vista"
+  },
+  "entityChip": {
+    "moreTags": "{{count}} etiquetas más: {{names}}"
   }
 }

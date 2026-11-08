@@ -26,7 +26,7 @@ vi.mock('@alga-psa/ui/editor', () => ({
 }));
 
 vi.mock('../../../actions/billingClientsActions', () => ({
-  getAllClientsForBilling: vi.fn(),
+  getClientByIdForBilling: vi.fn(),
 }));
 vi.mock('../../../actions/billingClientLocationActions', () => ({
   getActiveClientLocationsForBilling: vi.fn(),
@@ -94,7 +94,7 @@ vi.mock('./QuoteSendDialog', () => ({
 vi.mock('./QuoteStatusBadge', () => ({ default: () => null }));
 
 import QuoteDetail from './QuoteDetail';
-import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
+import { getClientByIdForBilling } from '../../../actions/billingClientsActions';
 import { getActiveClientLocationsForBilling } from '../../../actions/billingClientLocationActions';
 import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplates';
 import { getContactsForPicker } from '@alga-psa/user-composition/actions/contactQueryActions';
@@ -126,7 +126,7 @@ describe('QuoteDetail send dialog', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     sharedDialogProps.current = null;
-    vi.mocked(getAllClientsForBilling).mockResolvedValue([{ client_id: 'client-1', client_name: 'Acme' }] as never);
+    vi.mocked(getClientByIdForBilling).mockResolvedValue({ client_id: 'client-1', client_name: 'Acme' } as never);
     vi.mocked(getContactsForPicker).mockResolvedValue([{ contact_name_id: 'contact-1', full_name: 'Jane' }] as never);
     vi.mocked(getActiveClientLocationsForBilling).mockResolvedValue([] as never);
     vi.mocked(getSalesOrderForQuote).mockResolvedValue(null as never);

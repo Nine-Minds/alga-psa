@@ -4,6 +4,8 @@ export interface PortalDomainWorkflowInput {
   tenantId: string;
   portalDomainId: string;
   trigger?: PortalDomainWorkflowTrigger;
+  /** Informational only; the worker reads the authoritative surface from the portal_domains row. */
+  surface?: string;
 }
 
 export interface PortalDomainActivityRecord {
@@ -13,6 +15,7 @@ export interface PortalDomainActivityRecord {
   canonical_host: string;
   status: string;
   status_message: string | null;
+  surface: string;
   verification_details: Record<string, unknown> | null;
   certificate_secret_name: string | null;
   last_synced_resource_version: string | null;
@@ -35,6 +38,7 @@ export interface VerifyCnameResult {
 
 export interface MarkStatusInput {
   portalDomainId: string;
+  tenantId: string;
   status: string;
   statusMessage?: string | null;
   verificationDetails?: Record<string, unknown> | null;

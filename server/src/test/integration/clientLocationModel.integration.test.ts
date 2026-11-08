@@ -88,4 +88,72 @@ describe('client location default management (integration)', () => {
       throw testError;
     }
   });
+
+  it('stores blank and null optional fields as NULL on create and update', async () => {
+    const trx = await knex.transaction();
+    let testError: unknown;
+
+    try {
+      const tenantRow = await trx('tenants').select('tenant').first();
+      if (!tenantRow?.tenant) {
+        throw new Error('Expected the integration database to contain a seeded tenant');
+      }
+      const tenant = tenantRow.tenant;
+
+      const clientId = uuidv4();
+      await trx('clients').insert({
+        tenant,
+        client_id: clientId,
+        client_name: `Location normalization fixture ${clientId}`,
+      });
+
+      const created = await createLocation(trx, tenant, clientId, {
+        location_name: '   ',
+        address_line1: '2315 W Ayleen St',
+        address_line2: '',
+        address_line3: '  \t ',
+        city: 'Tampa',
+        state_province: '',
+        postal_code: ' ',
+        region_code: '',
+        notes: '   ',
+        country_code: 'US',
+        country_name: 'United States',
+        is_active: true,
+      });
+      const optionalColumns = [
+        'location_name', 'address_line2', 'address_line3', 'state_province',
+        'postal_code', 'region_code', 'notes',
+      ];
+      const storedAfterCreate = await trx('client_locations').where({ location_id: created.location_id }).first();
+      for (const column of optionalColumns) {
+        expect(storedAfterCreate[column], `${column} after create`).toBeNull();
+      }
+      expect(storedAfterCreate.address_line1).toBe('2315 W Ayleen St');
+
+      await updateLocation(trx, tenant, clientId, created.location_id, {
+        address_line2: 'Suite 5',
+        notes: 'keep me',
+      });
+      await expect(trx('client_locations').where({ location_id: created.location_id }).first())
+        .resolves.toMatchObject({ address_line2: 'Suite 5', notes: 'keep me' });
+
+      await updateLocation(trx, tenant, clientId, created.location_id, { address_line2: '   ', notes: '' });
+      await expect(trx('client_locations').where({ location_id: created.location_id }).first())
+        .resolves.toMatchObject({ address_line2: null, notes: null });
+
+      await updateLocation(trx, tenant, clientId, created.location_id, { address_line2: 'Unit 9', postal_code: '33607' });
+      await updateLocation(trx, tenant, clientId, created.location_id, { address_line2: null, postal_code: null });
+      await expect(trx('client_locations').where({ location_id: created.location_id }).first())
+        .resolves.toMatchObject({ address_line2: null, postal_code: null });
+    } catch (error) {
+      testError = error;
+    } finally {
+      await trx.rollback();
+    }
+
+    if (testError) {
+      throw testError;
+    }
+  });
 });
