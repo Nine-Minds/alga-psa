@@ -1056,7 +1056,34 @@
     },
     "unassigned": "Unassigned",
     "sharedWorkspace": "Shared workspace: {{name}}",
-    "sharedWorkspaceLabel": "Shared workspace"
+    "sharedWorkspaceLabel": "Shared workspace",
+    "details": {
+      "notProvided": "Not provided",
+      "notAvailable": "N/A",
+      "cpuWithModel": "{{model}} ({{count}} cores)",
+      "cpuCores": "{{count}} cores",
+      "workstationTitle": "Workstation Details",
+      "networkDeviceTitle": "Network Device Details",
+      "serverTitle": "Server Details",
+      "basicInformation": "Basic Information",
+      "os": "OS",
+      "cpu": "CPU",
+      "ram": "RAM",
+      "storage": "Storage",
+      "deviceType": "Device Type",
+      "ipAddress": "IP Address",
+      "ports": "Ports",
+      "firmware": "Firmware",
+      "type": "Type",
+      "virtual": "Virtual",
+      "physical": "Physical",
+      "assetTag": "Asset Tag",
+      "serialNumber": "Serial Number",
+      "status": "Status",
+      "location": "Location",
+      "purchaseDate": "Purchase Date",
+      "warrantyEndDate": "Warranty End Date"
+    }
   },
   "errors": {
     "account": {

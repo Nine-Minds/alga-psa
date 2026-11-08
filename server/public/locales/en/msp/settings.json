@@ -3306,6 +3306,54 @@
     "messages": {
       "adminLocked": "Admin role permissions cannot be modified",
       "permissionsUpdated": "Permissions updated successfully"
+    },
+    "title": "Manage Permissions",
+    "description": "Configure access permissions for different roles and resources",
+    "selectPrompt": "Please select a role or resource to manage permissions",
+    "unsavedChanges": "You have unsaved changes",
+    "adminLockedTooltip": "Admin role permissions are system-defined and cannot be changed",
+    "none": "None",
+    "actionCount_one": "{{count}} action",
+    "actionCount_other": "{{count}} actions",
+    "views": {
+      "clientPortal": "Client Portal"
+    },
+    "filters": {
+      "allResources": "All Resources",
+      "allRoles": "All Roles",
+      "selectRole": "Select a role",
+      "filterByResource": "Filter by resource"
+    },
+    "columns": {
+      "resource": "Resource",
+      "role": "Role",
+      "create": "Create",
+      "read": "Read",
+      "update": "Update",
+      "delete": "Delete",
+      "specialActions": "Special Actions"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "saveChanges": "Save changes",
+      "saving": "Saving..."
+    },
+    "confirm": {
+      "title": "Confirm Permission Changes",
+      "message": "Are you sure you want to save these permission changes?",
+      "confirmLabel": "Save Changes"
+    },
+    "stats": {
+      "empty": "Select a role or resource to view permissions",
+      "rolesForResource_one": "{{count}} role for {{resource}}",
+      "rolesForResource_other": "{{count}} roles for {{resource}}",
+      "resourcesAndPermissions": "{{count}} resources • {{assigned}}/{{total}} permissions"
+    },
+    "errors": {
+      "fetchPermissions": "Failed to fetch permissions",
+      "fetchRoles": "Failed to fetch roles",
+      "fetchRolePermissions": "Failed to fetch role permissions",
+      "savePermissions": "Failed to save permissions"
     }
   },
   "sla": {
