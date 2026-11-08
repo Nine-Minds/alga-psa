@@ -2610,7 +2610,7 @@
         "failedLabel": "De migratie is mislukt:",
         "cancelled": "De migratie is bij een controlepunt geannuleerd. Records die vóór de annulering zijn verwerkt, blijven behouden en worden hieronder weergegeven.",
         "noRecordsWritten": "Er zijn geen resultaatrecords voor deze achtergrondtaak vastgelegd.",
-        "noRecordsMatch": "Geen resultaatrecords komen overeen met deze filters.",
+        "noRecordsMatch": "Er zijn geen resultaatrecords die overeenkomen met deze filters.",
         "columns": {
           "entity": "Entiteit",
           "sourceRecord": "Bronrecord",
@@ -2637,7 +2637,7 @@
           "ticketComments": "Ticketopmerkingen"
         },
         "productsHint": "Prijzen en kosten worden gelezen als decimale bedragen (bijvoorbeeld 1,299.50) met de valutakolom indien aanwezig, anders met de tenantvaluta. Negatieve, niet-numerieke of te nauwkeurige bedragen worden verwijderd en gemeld; de rij wordt toch geïmporteerd. Producten worden op SKU gekoppeld aan bestaande producten; rijen van de leveranciersprijslijst verwijzen via SKU naar een product en maken de leverancier aan of koppelen die op naam.",
-        "headersHint": "Standaardkolomkoppen worden automatisch herkend. Andere kolommen kunnen tijdens de configuratie aan aangepaste velden van assettypen worden gekoppeld. Voor contacten worden gangbare Engelse kolomkoppen voor naam, voornaam, achternaam, e-mail, telefoon, titel en klant geaccepteerd; oude Engelse assetkolomkoppen voor assetnaam, assettype en serienummer blijven in het AMP-proces behouden."
+        "headersHint": "Standaardkolomkoppen worden automatisch herkend. Andere kolommen kunnen tijdens de configuratie aan aangepaste velden van assettypen worden gekoppeld. Voor contacten worden gangbare schrijfwijzen geaccepteerd, zoals Name, First Name, Last Name, E-mail, Phone, Title en Client; oude assetkolomkoppen zoals Asset Name, Asset Type en Serial Number blijven in het AMP-proces behouden."
       },
       "configure": {
         "products": {
@@ -2647,7 +2647,7 @@
           "serviceTypeHelp": "Producten waarvan de SKU al bestaat worden gekoppeld en ongewijzigd gelaten; alleen nieuwe producten worden onder dit servicetype geplaatst."
         },
         "title": "De migratie configureren",
-        "description": "Koppel de referentiegegevens van het pakket aan deze tenant. De voorcontrole controleert elke koppeling voordat er iets kan worden uitgevoerd.",
+        "description": "Koppel de referentiegegevens van het pakket aan deze tenant. De voorcontrole verifieert elke koppeling voordat er iets kan worden uitgevoerd.",
         "errors": {
           "loadOptions": "Configuratieopties konden niet worden geladen.",
           "save": "De configuratie kon niet worden opgeslagen.",
@@ -3658,13 +3658,13 @@
       "noHolidays": "Er zijn geen feestdagen ingesteld voor dit schema.",
       "timezoneLabel": "Tijdzone: {{timezone}}",
       "days": {
-        "0": "Zondag",
-        "1": "Maandag",
-        "2": "Dinsdag",
-        "3": "Woensdag",
-        "4": "Donderdag",
-        "5": "Vrijdag",
-        "6": "Zaterdag"
+        "0": "zondag",
+        "1": "maandag",
+        "2": "dinsdag",
+        "3": "woensdag",
+        "4": "donderdag",
+        "5": "vrijdag",
+        "6": "zaterdag"
       },
       "columns": {
         "name": "Naam",
@@ -3698,12 +3698,12 @@
       },
       "fields": {
         "scheduleName": "Schemanaam *",
-        "scheduleNamePlaceholder": "Bijv. standaardkantooruren",
+        "scheduleNamePlaceholder": "bijv. Standaardkantooruren",
         "timezone": "Tijdzone *",
         "is24x7": "24/7-schema (altijd beschikbaar)",
         "isDefault": "Als standaardschema instellen",
         "holidayName": "Naam van de feestdag *",
-        "holidayNamePlaceholder": "Bijv. eerste kerstdag",
+        "holidayNamePlaceholder": "bijv. eerste kerstdag",
         "holidayDate": "Datum *",
         "holidayDatePlaceholder": "Selecteer een datum",
         "isRecurring": "Wordt jaarlijks herhaald"
