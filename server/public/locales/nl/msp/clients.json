@@ -386,10 +386,10 @@
       "warrantyExpiring_other": "{{count}} verlopen binnen ≤90 d",
       "warrantyTracked": " (van {{count}} bijgehouden)",
       "auditsLink": "Locatieaudits",
-      "lastAudit": "Laatste audit op {{date}}",
+      "lastAudit": "Laatste controle op {{date}}",
       "lastAuditMissing_one": "1 ontbreekt",
       "lastAuditMissing_other": "{{count}} ontbreken",
-      "neverAudited": "Nooit geaudit"
+      "neverAudited": "Nooit gecontroleerd"
     },
     "locations": {
       "billing": "Facturatie",
@@ -399,8 +399,8 @@
       "more": "+{{count}} meer",
       "none": "Nog geen locaties.",
       "shipping": "Verzending",
-      "lastAudit": "Geaudit op {{date}}",
-      "neverAudited": "Nooit geaudit"
+      "lastAudit": "Gecontroleerd op {{date}}",
+      "neverAudited": "Nooit gecontroleerd"
     },
     "money": {
       "activeContracts": "Actieve contracten",
@@ -1680,7 +1680,7 @@
           "people": "Personen"
         }
       },
-      "startAudit": "Audit starten"
+      "startAudit": "Controle starten"
     },
     "tickets": {
       "addTicket": "Ticket toevoegen",
