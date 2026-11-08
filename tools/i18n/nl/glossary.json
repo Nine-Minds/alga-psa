@@ -2583,7 +2583,10 @@
       "status",
       "contact",
       "{{actor}} • {{eventType}}",
-      "open"
+      "open",
+      "Open tickets",
+      "· {{count}} item",
+      "· {{count}} items"
     ],
     "caseInsensitive": [
       "account",
