@@ -16,6 +16,14 @@ registerHooks({
     const consumerEntry = process.env.WORKER_EMAIL_REDIRECT_CONSUMER === 'sla-notification'
       ? '/dist/packages/sla/src/services/slaNotificationService.js'
       : '/dist/packages/sla/src/services/escalationService.js';
+    // The other notification consumer remains in the module graph during the
+    // negative check. Keep its @alga-psa/email dependency on the same fixture
+    // used by the positive build verifier so this check does not depend on the
+    // email workspace having been built in the Docker image.
+    if (specifier === '@alga-psa/email'
+      && context.parentURL?.endsWith('/dist/packages/notifications/src/notifications/email.js')) {
+      return { url: pathToFileURL(runtimeFixture).href, shortCircuit: true };
+    }
     if (context.parentURL?.endsWith(consumerEntry)
       && specifier.endsWith('/notifications/src/notifications/email.js')) {
       return {
