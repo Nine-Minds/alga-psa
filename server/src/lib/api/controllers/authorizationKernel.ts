@@ -96,14 +96,8 @@ export function buildAuthorizationPrincipalSubject(
   return subject;
 }
 
-/**
- * Action-aware authorization. Bundle rules are matched on resource + action, so
- * mutations MUST be authorized with their own action ('update' / 'delete'), not 'read'.
- * Note: kernel.authorizeMutation's built-in guards only cover `approve` mutations, so
- * ticket update/delete need only the resource-scope evaluation done here.
- */
-export async function authorizeApiResource(input: {
-  knex: Knex;
+export async function authorizeApiResourceAction(input: {
+  knex: Knex | Knex.Transaction;
   tenant: string;
   user: any;
   apiKeyId?: string;
@@ -139,8 +133,11 @@ export async function authorizeApiResource(input: {
   return decision.allowed;
 }
 
+// Keep the existing generic name for callers that already pass an explicit action.
+export const authorizeApiResource = authorizeApiResourceAction;
+
 export async function authorizeApiResourceRead(input: {
-  knex: Knex;
+  knex: Knex | Knex.Transaction;
   tenant: string;
   user: any;
   apiKeyId?: string;
