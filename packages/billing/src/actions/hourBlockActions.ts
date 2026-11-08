@@ -23,6 +23,7 @@ import {
   computeRemainingBlockValueMinor,
 } from '@alga-psa/shared/billingClients/hourBlockService';
 import { toCalendarDateString } from '@alga-psa/core';
+import { resolveManualExpirationDate } from '../lib/hourBlockExpiration';
 import { generateInvoiceNumber } from './invoiceGeneration';
 import { getDueDate } from './billingAndTax';
 import { getInitialInvoiceTaxSource } from './taxSourceActions';
@@ -592,7 +593,7 @@ export const manuallyExpireHourBlock = withAuth(async (
       const nowIso = new Date().toISOString();
       const today = toCalendarDateString(nowIso) ?? nowIso.slice(0, 10);
       const currentExpiry = block.expiration_date ? toCalendarDateString(block.expiration_date) : null;
-      const expirationDate = !currentExpiry || currentExpiry > today ? today : block.expiration_date;
+      const expirationDate = resolveManualExpirationDate(currentExpiry, today);
 
       await tenantScopedTable(trx, tenant, 'hour_blocks')
         .where({ block_id: blockId, tenant })
@@ -605,10 +606,10 @@ export const manuallyExpireHourBlock = withAuth(async (
         reason: reason.trim(),
         metadata: {
           remaining_minutes_at_expiration: Number(block.remaining_minutes),
-          // Keeps the scheduled expiry recoverable when the stamp above
-          // overwrote a future date.
+          // The stamp above can overwrite a scheduled future date; record both
+          // sides so the original schedule stays auditable and recoverable.
           previous_expiration_date: currentExpiry,
-          expiration_date: expirationDate,
+          new_expiration_date: expirationDate,
         },
       });
 
