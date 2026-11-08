@@ -1488,7 +1488,7 @@
       "refresh": "Actualizar",
       "newPlan": "Nuevo plan de mantenimiento",
       "skip": "Omitir",
-      "skipTooltip": "Omitir con un motivo obligatorio — el plan avanza a su próxima ejecución programada",
+      "skipTooltip": "Omitir con un motivo obligatorio — el plan avanza a su próxima ocurrencia",
       "complete": "Completar mantenimiento",
       "createTicket": "Crear ticket",
       "openTicket": "Abrir ticket ↗",
@@ -1511,7 +1511,7 @@
       "clickToFilter": "haga clic para filtrar",
       "allClear": "todo al día",
       "quietWeek": "semana tranquila por delante",
-      "linkedToOccurrences": "vinculados a ejecuciones programadas",
+      "linkedToOccurrences": "vinculados a ocurrencias",
       "onTimeCompletion": "finalización a tiempo"
     },
     "tabs": {
@@ -1539,25 +1539,25 @@
       "calendar": "Calendario"
     },
     "queue": {
-      "actionableTitle": "Ejecuciones programadas por atender",
-      "plansTitle": "Cola de planes activos (con ejecuciones programadas)",
+      "actionableTitle": "Ocurrencias por atender",
+      "plansTitle": "Cola de planes activos (con ocurrencias)",
       "loading": "Cargando mantenimiento…",
-      "empty": "Ninguna ejecución programada de mantenimiento coincide con estos filtros.",
-      "emptyFiltered": "Ninguna ejecución programada de mantenimiento coincide con estos filtros. Quite un filtro o amplíe el rango de fechas de vencimiento.",
-      "emptyHistory": "Las ejecuciones programadas completadas y omitidas aparecerán aquí una vez que se cierre el mantenimiento.",
-      "emptyPlans": "Las ejecuciones programadas abiertas de los planes aparecerán aquí a medida que la programación genere trabajo.",
-      "clearBeyond": "No hay más ejecuciones en la cola aparte de estas {{count}} — amplíe el rango de vencimiento o revise la cola de planes.",
+      "empty": "Ninguna ocurrencia de mantenimiento coincide con estos filtros.",
+      "emptyFiltered": "Ninguna ocurrencia de mantenimiento coincide con estos filtros. Quite un filtro o amplíe el rango de fechas de vencimiento.",
+      "emptyHistory": "Las ocurrencias completadas y omitidas aparecerán aquí una vez que se cierre el mantenimiento.",
+      "emptyPlans": "Las ocurrencias abiertas de los planes aparecerán aquí a medida que la programación genere trabajo.",
+      "clearBeyond": "No hay más ocurrencias en la cola aparte de lo que se muestra ({{count}}) — amplíe el rango de vencimiento o revise la cola de planes.",
       "allCaughtUp": "Todo al día",
       "nextDueIn": "— próximo vencimiento en {{count}} d",
-      "shownCount": "{{shown}} mostradas · {{open}} abiertas ·",
+      "shownCount": "Mostradas: {{shown}} · abiertas: {{open}} ·",
       "inHistory": "{{count}} en el historial",
       "itemCount_one": "· {{count}} elemento",
       "itemCount_other": "· {{count}} elementos",
-      "overdueCount": "{{count}} vencidas",
+      "overdueCount": "{{count}} con atraso",
       "ticketChip": "ticket"
     },
     "miniMonth": {
-      "atAGlance": "{{month}} de un vistazo",
+      "atAGlance": "{{month}} en resumen",
       "overdue": "vencidas",
       "today": "hoy",
       "upcoming": "próximas"
@@ -1580,8 +1580,8 @@
       "linkedTicket": "Ticket vinculado"
     },
     "detail": {
-      "noSelection": "Ninguna ejecución programada seleccionada",
-      "noSelectionHint": "Seleccione una ejecución programada de la cola para ver su activo, plan, ticket vinculado y acciones de ejecución — o limpie los filtros para ver más trabajo.",
+      "noSelection": "Ninguna ocurrencia seleccionada",
+      "noSelectionHint": "Seleccione una ocurrencia de la cola para ver su activo, plan, ticket vinculado y acciones de ejecución — o limpie los filtros para ver más trabajo.",
       "unassignedClient": "Cliente sin asignar",
       "dueSuffix": "· vence el {{date}}",
       "nextDueTooltip": "El próximo vencimiento se calcula a partir de la fecha real de finalización.",
@@ -1592,15 +1592,15 @@
       "ticketOpen": "Abierto",
       "noTicketYet": "Aún ninguno",
       "execution": "Ejecución",
-      "noChecklistPrefix": "Este plan no tiene una lista de comprobación —",
+      "noChecklistPrefix": "Este plan no tiene una lista de verificación —",
       "addStepsLink": "agregue pasos en el activo",
       "noChecklistSuffix": "para guiar a los técnicos.",
       "timeline": "Cronología"
     },
     "timeline": {
-      "created": "Ejecución programada creada",
+      "created": "Ocurrencia creada",
       "ticketLinked": "Ticket vinculado — {{ticket}}",
-      "dueRepeats": "Vencimiento — se repite {{cadence}}",
+      "dueRepeats": "Vencimiento — repetición {{cadence}}",
       "completedBy": "Completada por {{name}}{{notes}}",
       "skippedBy": "Omitida por {{name}}"
     },
@@ -1609,7 +1609,7 @@
       "performed": "Realizado:",
       "performedBy": "Realizado por:",
       "notes": "Notas:",
-      "checklist": "Lista de comprobación:",
+      "checklist": "Lista de verificación:",
       "skipTitle": "Evidencia de omisión",
       "reason": "Motivo:",
       "closedBy": "Cerrado por:",
@@ -1621,7 +1621,7 @@
     },
     "ticket": {
       "title": "Mantenimiento: {{plan}}",
-      "description": "Mantenimiento de tipo {{type}} con vencimiento el {{date}}. Ejecución programada: {{occurrenceId}}"
+      "description": "Mantenimiento de tipo {{type}} con vencimiento el {{date}}. Ocurrencia: {{occurrenceId}}"
     }
   },
   "maintenanceCompletionDialog": {
