@@ -176,16 +176,17 @@ interface FinancialAnalytics {
  * Comprehensive Financial Management Service
  */
 /**
- * Bulk invoice commands. Exhaustive over the schema enum (Record<...> fails to
- * compile if an operation is added to bulkInvoiceOperationSchema without an
- * entry). Each command delegates to the canonical engine and names the
- * permission the dispatcher checks once up front. `cancel` maps to
- * InvoiceService.voidInvoice, whose own invoice:update +
- * accounting_integrations:remote_mutate checks are the authoritative ones.
+ * Supported bulk invoice commands. Exhaustive over the schema enum
+ * (Record<...> fails to compile if an operation is added to
+ * bulkInvoiceOperationSchema without an entry). Each command delegates to the
+ * canonical engine and names the permission the dispatcher checks once up
+ * front. `cancel` maps to InvoiceService.voidInvoice, whose own invoice:update
+ * + accounting_integrations:remote_mutate checks are authoritative. Bulk send
+ * remains unavailable until canonical recipient delivery is implemented.
  */
 interface BulkInvoiceCommand {
   permission: string;
-  outcome: 'finalized' | 'sent' | 'voided';
+  outcome: 'finalized' | 'voided';
   run: (
     invoices: InvoiceService,
     invoiceId: string,
@@ -200,20 +201,6 @@ const BULK_INVOICE_COMMANDS: Record<BulkInvoiceOperation['operation'], BulkInvoi
     outcome: 'finalized',
     run: (invoices, invoice_id, _parameters, context) =>
       invoices.finalizeInvoice({ invoice_id } as any, context),
-  },
-  send: {
-    permission: 'send',
-    outcome: 'sent',
-    // Optional delivery parameters pass straight through to the canonical send
-    // (no addresses = mark sent only, exactly as InvoiceService.sendInvoice does).
-    run: (invoices, invoice_id, parameters, context) =>
-      invoices.sendInvoice({
-        invoice_id,
-        email_addresses: Array.isArray(parameters.email_addresses) ? parameters.email_addresses : undefined,
-        subject: typeof parameters.subject === 'string' ? parameters.subject : undefined,
-        message: typeof parameters.message === 'string' ? parameters.message : undefined,
-        include_pdf: typeof parameters.include_pdf === 'boolean' ? parameters.include_pdf : true,
-      } as any, context),
   },
   cancel: {
     permission: 'update',
@@ -1631,11 +1618,12 @@ export class FinancialService extends BaseService<ITransaction> {
   // ============================================================================
 
   /**
-   * Perform bulk lifecycle operations on invoices.
+   * Perform bulk finalize or cancel operations on invoices.
    *
    * This is a dispatcher, not an engine: each id is one independent canonical
    * command (BULK_INVOICE_COMMANDS) that owns its invariants, locking and audit
    * row. The per-operation permission is checked once, before any id is touched.
+   * Send is unsupported until canonical recipient delivery is implemented.
    * There is deliberately no outer transaction — the canonical engines own theirs,
    * so one failing id cannot roll back (or be committed by) another.
    */

@@ -28,7 +28,6 @@ function methodBody(source: string, name: string): string {
 // operation -> [permission the dispatcher checks, InvoiceService method it delegates to]
 const EXPECTED_COMMANDS: Record<string, [string, string]> = {
   finalize: ['finalize', 'finalizeInvoice'],
-  send: ['send', 'sendInvoice'],
   cancel: ['update', 'voidInvoice'],
 };
 

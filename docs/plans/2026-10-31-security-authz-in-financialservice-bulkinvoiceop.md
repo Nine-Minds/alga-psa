@@ -4,9 +4,9 @@ Card: `51a25fe9-625e-5916-a2c3-678d8ba02ec9` · PSA ticket `alga-2026-0003005`
 Finding: **authz · high** — `server/src/lib/api/services/FinancialService.ts:1583-1644`
 (`FinancialService.bulkInvoiceOperation`), reviewed on merge `dedce8256173` (PR #3985).
 
-## What is wrong (confirmed on the branch)
+## Original finding (addressed by the existing branch implementation)
 
-`POST /api/v1/financial/bulk/invoices` reaches `ApiFinancialController.bulkInvoiceOperations`
+The original review found that `POST /api/v1/financial/bulk/invoices` reached `ApiFinancialController.bulkInvoiceOperations`
 (`server/src/lib/api/controllers/ApiFinancialController.ts:607-623`), which checks only the coarse
 `update` resource permission and then hands the parsed body to
 `FinancialService.bulkInvoiceOperation`. That method:
@@ -22,13 +22,13 @@ engines own: draft-only finalize, line-item presence, tax-source and export-read
 activation, prepayment/credit issuance, row locking, the audit row, post-commit events, credit claw-back
 and hour-block release on void.
 
-Two adjacent defects in the same switch, same root cause (the handler is a second, hand-rolled engine):
+The original implementation also found a no-op `apply_credit` success; the existing branch removed it.
+The later bulk-send change in this branch introduced a separate false success:
 
-3. **`send` is advertised in the schema enum** (`financialSchemas.ts:785`) but has no branch — it falls
-   into `default` and is reported per-invoice as `success:false, error:"Unsupported operation"`.
-4. **`apply_credit` reports success without doing anything** (`:1623-1634`): it reads the invoice, does
-   not write, and returns `{ applied_amount: creditAmount }` with `success:true`. A caller gets a 200 and
-   a success count for an operation that never happened.
+- **Bulk `send` returned false success.** The schema accepted `send`, and the dispatcher delegated to
+   `InvoiceService.sendInvoice`, which marks an invoice sent but calls an empty `sendInvoiceEmail` helper
+   when recipient addresses are supplied. No email transport or durable delivery job runs. Bulk send is
+   therefore removed until canonical recipient delivery exists.
 
 ## Design
 
@@ -38,14 +38,15 @@ Two adjacent defects in the same switch, same root cause (the handler is a secon
 calls the canonical service method that already owns the permission and the invariants, and records the
 canonical outcome. No raw `UPDATE` of `invoices` remains in this method.
 
-### Command table (module-level, exhaustive)
+### Supported command table (module-level, exhaustive)
 
 ```
 finalize    → InvoiceService.finalizeInvoice({ invoice_id }, context)      permission: invoice:finalize
-send        → InvoiceService.sendInvoice({ invoice_id }, context)          permission: invoice:send
 cancel      → new InvoiceService.voidInvoice(invoice_id, context)          permission: invoice:update
                                                                           + accounting_integrations:remote_mutate
                                                                             when an export integration is connected
+send        → rejected by request validation (400) until canonical recipient delivery exists;
+              `email_addresses` must not be accepted as a successful bulk send request
 apply_credit→ removed from bulkInvoiceOperationSchema; returns 400 with
               "use /api/v1/financial/invoices/:id/credit" (canonical
               InvoiceService.applyCredit, permission invoice:credit)
@@ -53,7 +54,8 @@ apply_credit→ removed from bulkInvoiceOperationSchema; returns 400 with
 
 Deleting `apply_credit` from the enum is the honest fix: there is no canonical bulk-credit command, and
 keeping a branch that lies about success is worse than removing it. Any client that used it was receiving
-a no-op success already, so removal cannot break a working flow. `send` becomes real by delegating.
+a no-op success already, so removal cannot break a working flow. Bulk send is removed because canonical
+recipient delivery is unimplemented.
 
 ### New `InvoiceService.voidInvoice(invoiceId, context)`
 
@@ -80,8 +82,8 @@ action) so the bulk path cannot void around a connected integration's authority.
   not roll back the others (today's behaviour, kept).
 - Canonical errors map to per-id failures: `NotFoundError` → "Invoice not found", `ConflictError` → its
   message ("Only draft invoices can be finalized", "This credit note has applied credit…").
-- Keep `results[]` shape and the summary `BulkOperationResult`; add `outcome: 'finalized'|'sent'|'voided'`
-  to each success entry so the caller can tell what actually happened.
+- Keep `results[]` shape and the summary `BulkOperationResult`; successful bulk outcomes are
+  `finalized` or `voided` so the caller can tell what actually happened. `sent` is not a bulk outcome.
 - Keep the single summary audit row, but record the **canonical per-id outcomes** in it rather than only
   counts, and do not wrap the loop in one outer transaction (canonical engines own theirs).
 - The dispatcher checks the per-operation permission **before** touching any id, so a denied principal gets
@@ -104,19 +106,20 @@ authoritative per-command permission is the service's, consistent with the rest 
    - bulk finalize happy path still runs the canonical engine (asserts `finalized_at`, audit row, and the
      canonical side effects, not just status);
    - bulk cancel of a paid/exported invoice → refused with the canonical reason;
-   - `apply_credit` → 400 from schema parse; `send` → delegates and reports the canonical outcome.
+   - `apply_credit` → 400 from schema parse; bulk `send` with recipient addresses → 400 before dispatch,
+     with no delivery/lifecycle invocation and no invoice mutation or `sent` success result.
 
 ## Deliberately not doing
 
-- No new permission strings: reuse `invoice:finalize` / `invoice:send` / `invoice:update` +
+- No new permission strings: reuse `invoice:finalize` / `invoice:update` +
   `accounting_integrations:remote_mutate`, exactly as the canonical paths define them.
 - No change to the action layer or `invoiceVoidCore` internals in this card.
 - No new bulk endpoint for credit; the single-invoice credit endpoint already has the authority model.
 
 ## Risks
 
-- **Behaviour change for `send`**: it goes from "always fails" to real sends. Anything relying on the
-  failure is broken by design; the regression test pins the new contract.
+- **Bulk send removal**: callers receive a 400 until canonical recipient delivery is implemented and
+  verified. Standalone invoice send behavior is outside this repair.
 - **Behaviour change for `apply_credit`**: callers get a 400. Acceptable — it never applied credit.
 - **Transaction shape**: dropping the outer transaction means a mid-loop crash leaves earlier ids committed.
   That is already the effective behaviour (each canonical engine commits its own work), and it is the only
@@ -124,3 +127,13 @@ authoritative per-command permission is the service's, consistent with the rest 
 - **Void from the API**: the first non-action caller of `voidInvoiceLocally`. The wrapper must load the
   invoice row and pass `lockedInvoice` exactly as `voidInvoiceActions` does, or the lock order changes and
   concurrent applies can interleave — the concurrency test for credit drawdown covers the pattern.
+
+## Repair update — bulk send false success
+
+Human review and a live request confirmed that bulk `send` with `email_addresses` returned HTTP 200,
+`successful=1`, and `outcome=sent`, although `InvoiceService.sendInvoiceEmail` is empty. The earlier design
+that proposed routing bulk send through `InvoiceService.sendInvoice` is superseded. The request schema,
+dispatcher, OpenAPI contract, MCP registry and outcomes now expose only `finalize` and `cancel`. Keep
+`apply_credit` unsupported. Revisit bulk send only after canonical recipient delivery exists and its real
+delivery contract can be tested behaviorally. Finalize and cancel continue to delegate to the canonical
+engines with their authorization, tenant scoping, state/export checks, locking and accounting behavior.

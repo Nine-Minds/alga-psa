@@ -11,6 +11,7 @@
  * accounting/event side channels.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { NextRequest } from 'next/server';
 
 const state = vi.hoisted(() => ({
   granted: new Set<string>(),
@@ -116,6 +117,7 @@ vi.mock('@alga-psa/billing/services', async (importOriginal) => ({
 import { FinancialService } from '../../../lib/api/services/FinancialService';
 import { InvoiceService } from '../../../lib/api/services/InvoiceService';
 import { bulkInvoiceOperationSchema } from '../../../lib/api/schemas/financialSchemas';
+import { ApiFinancialController } from '../../../lib/api/controllers/ApiFinancialController';
 
 const TENANT = 'tenant-1';
 const DRAFT = '11111111-1111-4111-8111-111111111111';
@@ -143,7 +145,7 @@ function makeContext() {
   return { tenant: TENANT, userId: 'user-1', user: { user_id: 'user-1', user_type: 'internal' } } as any;
 }
 
-function bulk(op: 'finalize' | 'send' | 'cancel', ids: string[], parameters?: Record<string, any>) {
+function bulk(op: 'finalize' | 'cancel', ids: string[], parameters?: Record<string, any>) {
   const svc = new FinancialService();
   vi.spyOn(svc as any, 'getKnex').mockResolvedValue({ knex: {}, tenant: TENANT });
   return svc.bulkInvoiceOperation({ invoice_ids: ids, operation: op, parameters } as any, makeContext());
@@ -185,6 +187,58 @@ describe('FinancialService.bulkInvoiceOperation', () => {
     );
   });
 
+  it('rejects bulk send at the HTTP request boundary before delivery or lifecycle work', async () => {
+    const controller = new ApiFinancialController();
+    const bulkService = vi.spyOn((controller as any).financialService, 'bulkInvoiceOperation');
+    const sendInvoice = vi.spyOn(InvoiceService.prototype, 'sendInvoice');
+    const sendInvoiceEmail = vi.spyOn(InvoiceService.prototype as any, 'sendInvoiceEmail');
+    vi.spyOn(controller as any, 'authenticate').mockImplementation(async (request: NextRequest) =>
+      Object.assign(request, { context: makeContext() })
+    );
+    vi.spyOn(controller as any, 'checkPermission').mockResolvedValue(undefined);
+
+    const response = await controller.bulkInvoiceOperations()(
+      new NextRequest('http://localhost/api/v1/financial/bulk/invoices', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          invoice_ids: [DRAFT],
+          operation: 'send',
+          parameters: { email_addresses: ['recipient@example.com'], include_pdf: false },
+        }),
+      }),
+    );
+    const responseBody = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(responseBody.data?.successful).toBeUndefined();
+    expect(JSON.stringify(responseBody)).not.toContain('sent');
+    expect(bulkService).not.toHaveBeenCalled();
+    expect(sendInvoice).not.toHaveBeenCalled();
+    expect(sendInvoiceEmail).not.toHaveBeenCalled();
+    expect(mocks.finalizeEngine).not.toHaveBeenCalled();
+    expect(mocks.voidCore).not.toHaveBeenCalled();
+    expect(state.invoices[DRAFT]).toMatchObject({ status: 'draft', finalized_at: null });
+    expect(state.rawInvoiceUpdates).toEqual([]);
+    expect(state.audit).toEqual([]);
+  });
+
+  it('fails unsupported send explicitly if a caller bypasses request validation', async () => {
+    const service = new FinancialService();
+    const getKnex = vi.spyOn(service as any, 'getKnex');
+    const sendInvoice = vi.spyOn(InvoiceService.prototype, 'sendInvoice');
+
+    await expect(service.bulkInvoiceOperation(
+      { invoice_ids: [DRAFT], operation: 'send' } as any,
+      makeContext(),
+    )).rejects.toMatchObject({ statusCode: 400, message: 'Unsupported operation: send' });
+
+    expect(getKnex).not.toHaveBeenCalled();
+    expect(sendInvoice).not.toHaveBeenCalled();
+    expect(state.invoices[DRAFT]).toMatchObject({ status: 'draft', finalized_at: null });
+    expect(state.audit).toEqual([]);
+  });
+
   describe('lifecycle authority (the regression)', () => {
     it('refuses finalize for a principal with invoice:update but WITHOUT invoice:finalize; invoice stays draft', async () => {
       grant('invoice:update');
@@ -204,14 +258,6 @@ describe('FinancialService.bulkInvoiceOperation', () => {
       await expect(bulk('finalize', [DRAFT, SENT, PAID])).rejects.toMatchObject({ statusCode: 403 });
 
       expect(lookups).not.toHaveBeenCalled();
-    });
-
-    it('refuses send without invoice:send', async () => {
-      grant('invoice:update', 'invoice:finalize');
-      const send = vi.spyOn(InvoiceService.prototype, 'sendInvoice');
-
-      await expect(bulk('send', [SENT])).rejects.toMatchObject({ statusCode: 403 });
-      expect(send).not.toHaveBeenCalled();
     });
 
     it('refuses cancel without the void authority (no invoice:update); invoice is not cancelled', async () => {
@@ -293,21 +339,6 @@ describe('FinancialService.bulkInvoiceOperation', () => {
     });
   });
 
-  describe('send', () => {
-    it('delegates to InvoiceService.sendInvoice and reports outcome "sent"', async () => {
-      const send = vi.spyOn(InvoiceService.prototype, 'sendInvoice').mockResolvedValue({ status: 'sent' } as any);
-
-      const { data } = await bulk('send', [SENT], { email_addresses: ['a@example.com'] });
-
-      expect(send).toHaveBeenCalledWith(
-        expect.objectContaining({ invoice_id: SENT, email_addresses: ['a@example.com'] }),
-        expect.objectContaining({ tenant: TENANT })
-      );
-      expect(data.results[0]).toMatchObject({ id: SENT, success: true, outcome: 'sent' });
-      expect(data.results[0].error).toBeUndefined();
-    });
-  });
-
   describe('cancel', () => {
     it('voids through the canonical void core and reports outcome "voided"', async () => {
       const { data } = await bulk('cancel', [SENT], { reason: 'duplicate' });
@@ -348,6 +379,20 @@ describe('FinancialService.bulkInvoiceOperation', () => {
   });
 
   describe('schema', () => {
+    it('rejects bulk send with recipient addresses as unsupported until canonical delivery exists', () => {
+      const parsed = bulkInvoiceOperationSchema.safeParse({
+        invoice_ids: [SENT],
+        operation: 'send',
+        parameters: { email_addresses: ['recipient@example.com'] },
+      });
+
+      expect(parsed.success).toBe(false);
+      if (!parsed.success) {
+        expect(parsed.error.issues[0].message).toContain('Unsupported operation "send"');
+        expect(parsed.error.issues[0].message).toContain('canonical recipient delivery');
+      }
+    });
+
     it('rejects apply_credit with a 400-shaped parse error that points at the credit endpoint', () => {
       const parsed = bulkInvoiceOperationSchema.safeParse({ invoice_ids: [DRAFT], operation: 'apply_credit' });
 
@@ -355,7 +400,7 @@ describe('FinancialService.bulkInvoiceOperation', () => {
       expect(JSON.stringify((parsed as any).error.issues)).toContain('/api/v1/financial/invoices/:id/credit');
     });
 
-    it.each(['finalize', 'send', 'cancel'])('still accepts %s', (operation) => {
+    it.each(['finalize', 'cancel'])('still accepts %s', (operation) => {
       expect(bulkInvoiceOperationSchema.safeParse({ invoice_ids: [DRAFT], operation }).success).toBe(true);
     });
   });

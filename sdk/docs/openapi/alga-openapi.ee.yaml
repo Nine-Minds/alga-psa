@@ -9308,17 +9308,16 @@ components:
         operation:
           type: string
           enum:
-            - send
             - finalize
             - cancel
-            - mark_paid
         invoice_ids:
           type: array
           items:
             type: string
             format: uuid
           minItems: 1
-        options:
+          maxItems: 50
+        parameters:
           type: object
           additionalProperties: {}
       required:
@@ -37193,13 +37192,15 @@ paths:
   /api/v1/financial/bulk/invoices:
     post:
       summary: Run bulk invoice operation
-      description: "FinancialService.bulkInvoiceOperation() runs finalize/send/cancel
+      description: "FinancialService.bulkInvoiceOperation() runs finalize or cancel
         against the canonical invoice engines (1–50 ids). finalize requires
-        invoice:finalize, send requires invoice:send, cancel voids finalized
-        invoices (invoice:update, plus accounting_integrations:remote_mutate
+        invoice:finalize; cancel voids eligible invoices through the canonical
+        void engine (invoice:update, plus accounting_integrations:remote_mutate
         when an accounting integration is connected). Each id runs
         independently; per-id results carry success, error and outcome
-        (finalized/sent/voided). apply_credit is not supported (400): use POST
+        (finalized/voided). Bulk send is unsupported until canonical recipient
+        delivery is implemented; standalone invoice send behavior is unchanged.
+        apply_credit is unsupported: use POST
         /api/v1/financial/invoices/{id}/credit."
       tags:
         - Financial
