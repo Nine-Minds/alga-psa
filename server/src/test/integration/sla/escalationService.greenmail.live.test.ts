@@ -54,7 +54,7 @@ describe.skipIf(process.env.RUN_SLA_GREENMAIL_SMOKE !== '1')('live SMTP SLA esca
       tenant,
       default_from_domain: 'example.test',
       email_provider: 'smtp',
-      provider_configs: JSON.stringify([{ providerId: 'greenmail-sla', providerType: 'smtp', isEnabled: true, config: { host: '127.0.0.1', port: 3725, secure: false, from: 'fallback@example.test' } }]),
+      provider_configs: JSON.stringify([{ providerId: 'greenmail-sla', providerType: 'smtp', isEnabled: true, config: { host: '127.0.0.1', port: Number(process.env.COMMENT_SMTP_PORT || 3725), secure: false, from: 'fallback@example.test' } }]),
     });
     await table('notification_settings').insert({ tenant, is_enabled: true, rate_limit_per_minute: 60 });
 
@@ -86,7 +86,7 @@ describe.skipIf(process.env.RUN_SLA_GREENMAIL_SMOKE !== '1')('live SMTP SLA esca
     }
 
     const readInbox = async (email: string) => {
-      const response = await fetch(`http://127.0.0.1:8690/api/user/${encodeURIComponent(email)}/messages/INBOX`);
+      const response = await fetch(`http://127.0.0.1:${Number(process.env.COMMENT_SMTP_API_PORT || 8690)}/api/user/${encodeURIComponent(email)}/messages/INBOX`);
       if (!response.ok) throw new Error(`GreenMail inbox query failed: ${response.status}`);
       return response.json() as Promise<any[]>;
     };
