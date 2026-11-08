@@ -2300,6 +2300,7 @@
       "Offline",
       "OK",
       "Online",
+      "Operator",
       "Outlook",
       "PDF",
       "phase_name, task_description, assigned_to, estimated_hours, start_date, due_date, priority, service, task_type, status, tags",
