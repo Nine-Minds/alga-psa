@@ -1,8 +1,8 @@
 /**
  * Admin client for the alga-license service ("C4").
  *
- * Backs the Appliance Console read-proxy (list/detail) plus the two writes the
- * Stripe lifecycle webhook needs (revoke, seat sync). Operator-initiated writes
+ * Backs the Appliance Console read-proxy (list/detail) plus the writes the
+ * Stripe lifecycle webhook needs (revoke, reactivate, seat sync). Operator-initiated writes
  * do NOT go through here: they run as Temporal workflows on the worker (see
  * ee/temporal-workflows/src/activities/appliance-console-activities.ts) so
  * that retries and audit lifecycle are handled in one place.
@@ -180,14 +180,39 @@ function configFromEnv(): AlgaLicenseConfig {
   return { serviceUrl: serviceUrl.replace(/\/$/, ''), serviceSecret: loadServiceSecret() };
 }
 
-async function errorDetail(res: Response): Promise<string> {
-  try {
-    const body = (await res.json()) as { error?: string; code?: string };
-    return body.error ? ` — ${body.error}${body.code ? ` (${body.code})` : ''}` : '';
-  } catch {
-    return '';
+/**
+ * Non-2xx response from alga-license. `status` alone cannot tell a real "no
+ * such entitlement" 404 from a 404 for a route this alga-license build lacks:
+ * only the former carries a JSON body `code` (`not_found`); Fastify's default
+ * unknown-route 404 has none. Callers that tolerate a 404 must check `code`.
+ */
+export class AlgaLicenseHttpError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    /** `code` from alga-license's JSON error body, when it sent one. */
+    readonly code?: string,
+  ) {
+    super(message);
+    this.name = 'AlgaLicenseHttpError';
   }
 }
+
+/** Parse an error response body once; tolerates empty/non-JSON bodies. */
+async function readErrorBody(res: Response): Promise<{ error?: string; code?: string }> {
+  try {
+    const body = (await res.json()) as { error?: unknown; code?: unknown } | null;
+    return {
+      error: typeof body?.error === 'string' ? body.error : undefined,
+      code: typeof body?.code === 'string' ? body.code : undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
+const describeErrorBody = (body: { error?: string; code?: string }): string =>
+  body.error ? ` — ${body.error}${body.code ? ` (${body.code})` : ''}` : '';
 
 async function get<T>(path: string): Promise<{ status: number; data: T | null }> {
   const config = configFromEnv();
@@ -203,7 +228,7 @@ async function get<T>(path: string): Promise<{ status: number; data: T | null }>
 
   if (res.status === 404) return { status: 404, data: null };
   if (!res.ok) {
-    throw new Error(`alga-license GET ${path} returned HTTP ${res.status}${await errorDetail(res)}`);
+    throw new Error(`alga-license GET ${path} returned HTTP ${res.status}${describeErrorBody(await readErrorBody(res))}`);
   }
 
   return { status: res.status, data: (await res.json()) as T };
@@ -226,7 +251,12 @@ async function send<T>(method: 'POST' | 'PATCH', path: string, body: unknown): P
     throw new Error(`alga-license ${method} ${path} failed: ${err instanceof Error ? err.message : String(err)}`);
   }
   if (!res.ok) {
-    throw new Error(`alga-license ${method} ${path} returned HTTP ${res.status}${await errorDetail(res)}`);
+    const errorBody = await readErrorBody(res);
+    throw new AlgaLicenseHttpError(
+      `alga-license ${method} ${path} returned HTTP ${res.status}${describeErrorBody(errorBody)}`,
+      res.status,
+      errorBody.code,
+    );
   }
   return (await res.json()) as T;
 }
@@ -299,6 +329,15 @@ export async function getApplianceTenant(tenantId: string): Promise<ApplianceTen
 /** Soft-revoke the entitlement behind a Stripe subscription (idempotent in C4). */
 export async function revokeApplianceEntitlement(stripeSubId: string): Promise<{ revoked: boolean }> {
   return send<{ revoked: boolean }>('POST', '/revoke', { stripe_sub_id: stripeSubId });
+}
+
+/**
+ * Re-enable the entitlement behind a Stripe subscription that came back to
+ * active/trialing after a revoke (idempotent in C4; 404 `not_found` if C4 has no such sub — a 404 without that
+ * body code means the route is missing from the deployed alga-license).
+ */
+export async function reactivateApplianceEntitlement(stripeSubId: string): Promise<{ reactivated: boolean }> {
+  return send<{ reactivated: boolean }>('POST', '/reactivate', { stripe_sub_id: stripeSubId });
 }
 
 /** Mirrored Stripe subscription state; unix seconds (as Stripe sends them), null when unset. */
