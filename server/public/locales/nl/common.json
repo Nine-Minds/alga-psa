@@ -1746,12 +1746,12 @@
       "internal": "Intern"
     },
     "title": "Meldingen",
-    "reconnectingToServer": "Opnieuw verbinding maken met de server...",
+    "reconnectingToServer": "Opnieuw verbinden met de server...",
     "refresh": "Vernieuwen",
     "markAllAsRead": "Alles als gelezen markeren",
     "markAllRead": "Alles als gelezen markeren",
     "emptyTitle": "Geen meldingen",
-    "emptyDescription": "U bent helemaal bij!"
+    "emptyDescription": "U bent helemaal op de hoogte!"
   },
   "importConflicts": {
     "title": "Importconflicten oplossen",
