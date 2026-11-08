@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { TIER_FEATURES } from '@alga-psa/types';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { TierGate } from 'server/src/components/tier-gating/TierGate';
 import { useTier } from 'server/src/context/TierContext';
@@ -43,10 +44,21 @@ export function McpAgentCreateGate({ refreshKey, children }: McpAgentCreateGateP
 
   return (
     <>
+      {!hasPro && (
+        <Alert variant="info" data-testid="mcp-service-principals-blocked-notice">
+          <AlertDescription>
+            {t('servicePrincipals.mcp.blockedAccess', {
+              defaultValue: 'API and MCP access for existing service principals is blocked immediately below Pro. Existing agents remain visible for cleanup.',
+            })}
+          </AlertDescription>
+        </Alert>
+      )}
       {usage && (
         <p className="text-sm text-[rgb(var(--color-text-600))]" data-testid="mcp-shared-limit">
-          {t('servicePrincipals.mcp.sharedLimit', {
-            defaultValue: 'MCP agents count toward your service principal limit: {{used}} of {{limit}} in use.',
+          {t(hasPro ? 'servicePrincipals.mcp.sharedLimit' : 'servicePrincipals.mcp.sharedLimitBlocked', {
+            defaultValue: hasPro
+              ? 'MCP agents count toward your service principal limit: {{used}} of {{limit}} in use.'
+              : 'MCP agents count toward the shared service principal limit: {{used}} of {{limit}}; active records are blocked by the plan.',
             used: usage.used,
             limit: usage.limit,
           })}

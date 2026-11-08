@@ -16,11 +16,13 @@ import { FeatureUpgradeNotice } from '@alga-psa/ui/components/tier-gating/Featur
 import { McpAgentCreateGate } from '@enterprise/components/service-principals/McpAgentCreateGate';
 import ConnectedClientsCard from './ConnectedClientsCard';
 import type { ColumnDefinition } from '@alga-psa/types';
+import { TIER_FEATURES } from '@alga-psa/types';
 import type { TrustedIdp, Agent, Role, AuditRow, PlatformProvider, ConnectIdentity } from './mcpTypes';
 import { getMcpDemoMode, demoState, demoAuditPage, demoConnectResult } from './mcpDemoData';
 import { EditionGateError, getEditionGateResponse, isEditionGateError } from '@/lib/editionGating/client';
 import type { EditionGateResponseBody } from '@/lib/editionGating/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTier } from '@/context/TierContext';
 
 const DEFAULT_AUDIT_PAGE_SIZE = 10;
 
@@ -77,6 +79,8 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 
 export default function McpServerSettings() {
   const { t } = useTranslation('msp/settings');
+  const { hasFeature } = useTier();
+  const hasProServicePrincipals = hasFeature(TIER_FEATURES.SERVICE_PRINCIPALS);
   const [idps, setIdps] = useState<TrustedIdp[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -430,11 +434,11 @@ export default function McpServerSettings() {
                 <DropdownMenuItem id={`mcp-deactivate-${a.agent_id}`} disabled={busy} onClick={() => setAgentActive(a, false)}>
                   {t('mcpServer.agents.actions.deactivate', { defaultValue: 'Deactivate' })}
                 </DropdownMenuItem>
-              ) : (
+              ) : hasProServicePrincipals ? (
                 <DropdownMenuItem id={`mcp-reactivate-${a.agent_id}`} disabled={busy} onClick={() => setAgentActive(a, true)}>
                   {t('mcpServer.agents.actions.reactivate', { defaultValue: 'Reactivate' })}
                 </DropdownMenuItem>
-              )}
+              ) : null}
               <DropdownMenuItem id={`mcp-remove-${a.agent_id}`} className="text-destructive focus:text-destructive" disabled={busy} onClick={() => setRemoveTarget(a)}>
                 {t('mcpServer.agents.actions.remove', { defaultValue: 'Remove…' })}
               </DropdownMenuItem>
@@ -670,14 +674,6 @@ export default function McpServerSettings() {
           })}
         />
         <CardContent className="space-y-4">
-          {!canAddAgents ? (
-            <p className="text-sm text-[rgb(var(--color-text-500))]">
-              {t('mcpServer.agents.needsProvider', {
-                defaultValue: 'Add a provider in step 1 first. Then add agents that sign in through it.',
-              })}
-            </p>
-          ) : (
-            <>
           {agents.length === 0 ? (
             <p className="text-sm text-[rgb(var(--color-text-500))]">
               {t('mcpServer.agents.empty', { defaultValue: 'No agents yet.' })}
@@ -686,7 +682,13 @@ export default function McpServerSettings() {
             <DataTable data={agents} columns={agentColumns} pagination={false} />
           )}
           <McpAgentCreateGate refreshKey={usageRefreshKey}>
-            {({ disabled: createBlocked }) => (
+            {({ disabled: createBlocked }) => !canAddAgents ? (
+              <p className="text-sm text-[rgb(var(--color-text-500))]">
+                {t('mcpServer.agents.needsProvider', {
+                  defaultValue: 'Add a provider in step 1 first. Then add agents that sign in through it.',
+                })}
+              </p>
+            ) : (
               <>
                 <div className="md:w-1/2">
                   <Label htmlFor="agent-name">{t('mcpServer.agents.fields.name', { defaultValue: 'Name' })}</Label>
@@ -795,8 +797,6 @@ export default function McpServerSettings() {
               </>
             )}
           </McpAgentCreateGate>
-            </>
-          )}
         </CardContent>
       </Card>
 

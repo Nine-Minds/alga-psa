@@ -3958,19 +3958,21 @@
       "label": "Principales de servicio",
       "seatNote": "Los principales de servicio no consumen licencias de usuario.",
       "settingsLink": "Configuración de principales de servicio",
-      "grandfatheredCount": "{{used}} cuentas heredadas en uso"
+      "blockedAccess": "El acceso a API y MCP está bloqueado por debajo de Pro.",
+      "blockedCount": "{{used}} principales activos bloqueados por el plan"
     },
-    "grandfathered": "Los principales de servicio requieren el plan Pro. Se conservan sus principales existentes, pero solo puede desactivarlos o eliminarlos.",
     "limitReached": "Ha alcanzado su límite de {{limit}} principales de servicio activos. Desactive o elimine uno para añadir otro.",
     "mcp": {
       "sharedLimit": "Los agentes MCP cuentan para su límite de principales de servicio: {{used}} de {{limit}} en uso.",
-      "requiresPro": "Añadir agentes MCP requiere el plan Pro.",
-      "limitReached": "Ha alcanzado su límite de {{limit}} principales de servicio activos. Desactive o elimine uno para añadir un agente."
+      "limitReached": "Ha alcanzado su límite de {{limit}} principales de servicio activos. Desactive o elimine uno para añadir un agente.",
+      "blockedAccess": "El acceso a API y MCP de los principales de servicio se bloquea inmediatamente por debajo de Pro. Los registros existentes siguen disponibles para su limpieza.",
+      "sharedLimitBlocked": "Los agentes MCP cuentan para el límite compartido de principales de servicio: {{used}} de {{limit}}; los registros activos están bloqueados por el plan."
     },
     "kind": {
       "api": "API",
       "mcpAgent": "Agente MCP"
     },
-    "seatNote": "Los principales de servicio no consumen licencias de usuario."
+    "seatNote": "Los principales de servicio no consumen licencias de usuario.",
+    "blockedAccess": "El acceso a API y MCP de los principales de servicio se bloquea inmediatamente por debajo de Pro. Los registros existentes siguen disponibles para su limpieza."
   }
 }

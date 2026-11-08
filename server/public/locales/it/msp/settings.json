@@ -3958,19 +3958,21 @@
       "label": "Principal di servizio",
       "seatNote": "I service principal non consumano licenze utente.",
       "settingsLink": "Impostazioni dei service principal",
-      "grandfatheredCount": "{{used}} account esistenti in uso"
+      "blockedAccess": "L’accesso API e MCP è bloccato sotto Pro.",
+      "blockedCount": "{{used}} principal attivi bloccati dal piano"
     },
-    "grandfathered": "I principal di servizio richiedono il piano Pro. I principal esistenti vengono mantenuti, ma puoi solo disattivarli o eliminarli.",
     "limitReached": "Hai raggiunto il limite di {{limit}} principal di servizio attivi. Disattivane o eliminane uno per aggiungerne un altro.",
     "mcp": {
       "sharedLimit": "Gli agenti MCP contano ai fini del limite dei principal di servizio: {{used}} di {{limit}} in uso.",
-      "requiresPro": "L'aggiunta di agenti MCP richiede il piano Pro.",
-      "limitReached": "Hai raggiunto il limite di {{limit}} principal di servizio attivi. Disattivane o rimuovine uno per aggiungere un agente."
+      "limitReached": "Hai raggiunto il limite di {{limit}} principal di servizio attivi. Disattivane o rimuovine uno per aggiungere un agente.",
+      "blockedAccess": "L’accesso API e MCP ai service principal viene bloccato immediatamente sotto Pro. I record esistenti restano disponibili per la pulizia.",
+      "sharedLimitBlocked": "Gli agenti MCP rientrano nel limite condiviso dei service principal: {{used}} di {{limit}}; i record attivi sono bloccati dal piano."
     },
     "kind": {
       "api": "API",
       "mcpAgent": "Agente MCP"
     },
-    "seatNote": "I service principal non consumano licenze utente."
+    "seatNote": "I service principal non consumano licenze utente.",
+    "blockedAccess": "L’accesso API e MCP ai service principal viene bloccato immediatamente sotto Pro. I record esistenti restano disponibili per la pulizia."
   }
 }

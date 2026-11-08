@@ -3958,19 +3958,21 @@
       "label": "Service principals",
       "seatNote": "Service principals don't use seats.",
       "settingsLink": "Service principal settings",
-      "grandfatheredCount": "{{used}} grandfathered in use"
+      "blockedAccess": "API and MCP access is blocked below Pro.",
+      "blockedCount": "{{used}} active principals blocked by plan"
     },
-    "grandfathered": "Service principals require the Pro plan. Your existing principals are kept, but you can only deactivate or delete them.",
     "limitReached": "You have reached your limit of {{limit}} active service principals. Deactivate or delete one to add another.",
     "mcp": {
       "sharedLimit": "MCP agents count toward your service principal limit: {{used}} of {{limit}} in use.",
-      "requiresPro": "Adding MCP agents requires the Pro plan.",
-      "limitReached": "You have reached your limit of {{limit}} active service principals. Deactivate or remove one to add an agent."
+      "limitReached": "You have reached your limit of {{limit}} active service principals. Deactivate or remove one to add an agent.",
+      "blockedAccess": "API and MCP access for service principals is blocked immediately below Pro. Existing records remain available for cleanup.",
+      "sharedLimitBlocked": "MCP agents count toward the shared service principal limit: {{used}} of {{limit}}; active records are blocked by the plan."
     },
     "kind": {
       "api": "API",
       "mcpAgent": "MCP agent"
     },
-    "seatNote": "Service principals do not consume seats."
+    "seatNote": "Service principals do not consume seats.",
+    "blockedAccess": "API and MCP access for service principals is blocked immediately below Pro. Existing records remain available for cleanup."
   }
 }

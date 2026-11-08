@@ -3958,19 +3958,21 @@
       "label": "Principais de serviço",
       "seatNote": "As contas de serviço não consomem licenças de utilizador.",
       "settingsLink": "Definições das contas de serviço",
-      "grandfatheredCount": "{{used}} contas existentes em utilização"
+      "blockedAccess": "O acesso à API e ao MCP é bloqueado abaixo do Pro.",
+      "blockedCount": "{{used}} principais ativos bloqueados pelo plano"
     },
-    "grandfathered": "Os principais de serviço exigem o plano Pro. Seus principais existentes são mantidos, mas você só pode desativá-los ou excluí-los.",
     "limitReached": "Você atingiu o limite de {{limit}} principais de serviço ativos. Desative ou exclua um para adicionar outro.",
     "mcp": {
       "sharedLimit": "Os agentes MCP contam para o limite de principais de serviço: {{used}} de {{limit}} em uso.",
-      "requiresPro": "Adicionar agentes MCP exige o plano Pro.",
-      "limitReached": "Você atingiu o limite de {{limit}} principais de serviço ativos. Desative ou remova um para adicionar um agente."
+      "limitReached": "Você atingiu o limite de {{limit}} principais de serviço ativos. Desative ou remova um para adicionar um agente.",
+      "blockedAccess": "O acesso à API e ao MCP dos principais de serviço é bloqueado imediatamente abaixo do Pro. Os registos existentes continuam disponíveis para limpeza.",
+      "sharedLimitBlocked": "Os agentes MCP contam para o limite partilhado de principais de serviço: {{used}} de {{limit}}; os registos ativos estão bloqueados pelo plano."
     },
     "kind": {
       "api": "API",
       "mcpAgent": "Agente MCP"
     },
-    "seatNote": "As contas de serviço não consomem licenças de utilizador."
+    "seatNote": "As contas de serviço não consomem licenças de utilizador.",
+    "blockedAccess": "O acesso à API e ao MCP dos principais de serviço é bloqueado imediatamente abaixo do Pro. Os registos existentes continuam disponíveis para limpeza."
   }
 }

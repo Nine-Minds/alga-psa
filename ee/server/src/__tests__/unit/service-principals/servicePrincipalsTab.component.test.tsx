@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 /**
  * T030 (tab list, "x of y", New disabled at limit, create dialog saves roles + act-as) and
- * T032 (MCP shared limit) and T036 (below Pro: upgrade notice, grandfathered rows with deactivate/delete only, MCP create gate).
+ * T032 (MCP shared limit) and T036 (below Pro: blocked notice, cleanup-only rows, MCP create gate).
  */
 import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
@@ -144,20 +144,24 @@ describe('T030 service principals tab', () => {
 describe('T036 below Pro', () => {
   beforeEach(() => m.hasFeature.mockReturnValue(false));
 
-  it('shows the upgrade notice when nothing is grandfathered', async () => {
+  it('shows the standard upgrade notice when there are no existing principals', async () => {
     m.list.mockResolvedValue([]);
     render(<ServicePrincipalsSettingsTab />);
     expect(await screen.findByText(/requires Pro/i)).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'New service principal' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'View Plans' }).getAttribute('href')).toBe('/msp/account');
   });
 
-  it('lists grandfathered principals with only deactivate and delete', async () => {
+  it('keeps blocked principals visible with only deactivate and delete actions', async () => {
     render(<ServicePrincipalsSettingsTab />);
     await screen.findByText('Billing sync');
-    expect(screen.getByTestId('service-principal-grandfathered-notice')).toBeTruthy();
-    expect((screen.getByRole('button', { name: 'New service principal' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByTestId('service-principal-blocked-notice').textContent).toMatch(/access.*blocked immediately below Pro/i);
+    expect(screen.getByText('Service principals requires Pro')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'View Plans' }).getAttribute('href')).toBe('/msp/account');
+    expect(screen.queryByRole('button', { name: 'New service principal' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Keys' })).toBeNull();
+    expect(screen.queryByRole('switch')).toBeNull();
     expect(screen.getAllByRole('button', { name: 'Deactivate' })).toHaveLength(2);
     expect(screen.getAllByRole('button', { name: 'Delete' })).toHaveLength(2);
 
@@ -179,7 +183,9 @@ describe('T036 below Pro', () => {
     expect(screen.getByRole('link', { name: 'View Plans' }).getAttribute('href')).toBe('/msp/account');
     expect(screen.queryByRole('button', { name: 'Add agent' })).toBeNull();
     const sharedUsage = await screen.findByTestId('mcp-shared-limit');
-    expect(sharedUsage.textContent).toContain('2 of 5 in use');
+    expect(sharedUsage.textContent).toContain('2 of 5');
+    expect(sharedUsage.textContent).toContain('active records are blocked by the plan');
+    expect(screen.getByTestId('mcp-service-principals-blocked-notice').textContent).toMatch(/access.*blocked immediately below Pro/i);
     expect(m.usage).toHaveBeenCalled();
   });
 
@@ -228,5 +234,22 @@ describe('T032 MCP agent create gate on Pro (shared limit)', () => {
     expect(within(shared).getByText(/3 of 3 in use/)).toBeTruthy();
     expect((screen.getByRole('button', { name: 'Add agent' }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByTestId('mcp-limit-reached')).toBeTruthy();
+  });
+});
+
+describe('T036 tier changes', () => {
+  it('restores operational actions after returning to Pro without changing retained rows', async () => {
+    m.hasFeature.mockReturnValue(false);
+    const { rerender } = render(<ServicePrincipalsSettingsTab />);
+    expect(await screen.findByText('Billing sync')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Keys' })).toBeNull();
+
+    m.hasFeature.mockReturnValue(true);
+    rerender(<ServicePrincipalsSettingsTab />);
+    expect((await screen.findAllByRole('button', { name: 'Edit' })).length).toBe(2);
+    expect(screen.getAllByRole('button', { name: 'Keys' })).toHaveLength(2);
+    expect(screen.getByTestId('service-principal-usage').textContent).toBe('2 of 5 service principals');
+    expect(screen.getByText('Billing sync')).toBeTruthy();
   });
 });

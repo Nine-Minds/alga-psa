@@ -22,7 +22,7 @@ import { ServicePrincipalKeyRevealDialog } from './ServicePrincipalKeyRevealDial
 export interface ServicePrincipalKeysDialogProps {
   /** The principal whose keys are managed; null keeps the dialog closed. */
   principal: { user_id: string; name: string } | null;
-  /** Below Pro a grandfathered principal can no longer receive keys. */
+  /** Below Pro, key issuance and rotation are unavailable. */
   canIssue: boolean;
   onClose: () => void;
   onChanged: () => void;

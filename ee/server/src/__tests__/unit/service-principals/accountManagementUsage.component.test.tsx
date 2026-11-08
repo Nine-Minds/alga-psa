@@ -213,11 +213,12 @@ describe('T032 / T036 AccountManagement service principal usage row', () => {
     expect(mocks.spUsage).toHaveBeenCalled();
   });
 
-  it('shows Available on Pro and fetched grandfathered usage below Pro', async () => {
+  it('shows Available on Pro, blocked usage, and the blocked-access explanation below Pro', async () => {
     mocks.tier.value = 'essentials';
     const row = await openLicenseDetails();
-    await waitFor(() => expect(row.textContent).toContain('Available on Pro · 3 grandfathered in use'));
+    await waitFor(() => expect(row.textContent).toContain('Available on Pro · 3 active principals blocked by plan'));
     expect(row.textContent).toContain("Service principals don't use seats.");
+    expect(screen.getByTestId('service-principal-usage-blocked-note').textContent).toContain('API and MCP access is blocked below Pro.');
     expect(screen.getByRole('link', { name: 'Service principal settings' }).getAttribute('href'))
       .toBe('/msp/security-settings?tab=service-principals');
     expect(mocks.spUsage).toHaveBeenCalled();
@@ -228,6 +229,6 @@ describe('T032 / T036 AccountManagement service principal usage row', () => {
     const row = await openLicenseDetails();
     await waitFor(() => expect(mocks.spUsage).toHaveBeenCalled());
     expect(row.textContent).not.toContain('0 of 0');
-    expect(row.textContent).not.toContain('0 grandfathered in use');
+    expect(row.textContent).not.toContain('0 active principals blocked by plan');
   });
 });

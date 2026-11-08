@@ -3958,19 +3958,21 @@
       "label": "Dienstprinzipale",
       "seatNote": "Serviceprinzipale belegen keine Benutzerlizenzen.",
       "settingsLink": "Serviceprincipal-Einstellungen",
-      "grandfatheredCount": "{{used}} bestehende Konten in Verwendung"
+      "blockedAccess": "Der API- und MCP-Zugriff ist unter Pro gesperrt.",
+      "blockedCount": "{{used}} aktive Dienstprinzipale durch den Tarif blockiert"
     },
-    "grandfathered": "Dienstprinzipale erfordern den Pro-Tarif. Ihre vorhandenen Prinzipale bleiben erhalten, Sie können sie jedoch nur deaktivieren oder löschen.",
     "limitReached": "Sie haben Ihr Limit von {{limit}} aktiven Dienstprinzipalen erreicht. Deaktivieren oder löschen Sie einen, um einen weiteren hinzuzufügen.",
     "mcp": {
       "sharedLimit": "MCP-Agenten zählen zu Ihrem Dienstprinzipal-Limit: {{used}} von {{limit}} in Verwendung.",
-      "requiresPro": "Das Hinzufügen von MCP-Agenten erfordert den Pro-Tarif.",
-      "limitReached": "Sie haben Ihr Limit von {{limit}} aktiven Dienstprinzipalen erreicht. Deaktivieren oder entfernen Sie einen, um einen Agenten hinzuzufügen."
+      "limitReached": "Sie haben Ihr Limit von {{limit}} aktiven Dienstprinzipalen erreicht. Deaktivieren oder entfernen Sie einen, um einen Agenten hinzuzufügen.",
+      "blockedAccess": "Der API- und MCP-Zugriff auf Dienstprinzipale wird unter Pro sofort gesperrt. Vorhandene Einträge bleiben zur Bereinigung verfügbar.",
+      "sharedLimitBlocked": "MCP-Agenten zählen zum gemeinsamen Limit für Dienstprinzipale: {{used}} von {{limit}}; aktive Einträge sind durch den Tarif gesperrt."
     },
     "kind": {
       "api": "API",
       "mcpAgent": "MCP-Agent"
     },
-    "seatNote": "Serviceprinzipale belegen keine Benutzerlizenzen."
+    "seatNote": "Serviceprinzipale belegen keine Benutzerlizenzen.",
+    "blockedAccess": "Der API- und MCP-Zugriff auf Dienstprinzipale wird unter Pro sofort gesperrt. Vorhandene Einträge bleiben zur Bereinigung verfügbar."
   }
 }

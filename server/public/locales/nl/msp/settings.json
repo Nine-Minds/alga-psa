@@ -3958,19 +3958,21 @@
       "label": "Serviceprincipals",
       "seatNote": "Serviceprincipals gebruiken geen gebruikerslicenties.",
       "settingsLink": "Instellingen voor serviceprincipals",
-      "grandfatheredCount": "{{used}} bestaande accounts in gebruik"
+      "blockedAccess": "API- en MCP-toegang is geblokkeerd onder Pro.",
+      "blockedCount": "{{used}} actieve serviceprincipals geblokkeerd door het abonnement"
     },
-    "grandfathered": "Serviceprincipals vereisen het Pro-abonnement. Uw bestaande principals blijven behouden, maar u kunt ze alleen deactiveren of verwijderen.",
     "limitReached": "U hebt uw limiet van {{limit}} actieve serviceprincipals bereikt. Deactiveer of verwijder er een om een andere toe te voegen.",
     "mcp": {
       "sharedLimit": "MCP-agents tellen mee voor uw limiet voor serviceprincipals: {{used}} van {{limit}} in gebruik.",
-      "requiresPro": "Voor het toevoegen van MCP-agents is het Pro-abonnement vereist.",
-      "limitReached": "U hebt uw limiet van {{limit}} actieve serviceprincipals bereikt. Deactiveer of verwijder er een om een agent toe te voegen."
+      "limitReached": "U hebt uw limiet van {{limit}} actieve serviceprincipals bereikt. Deactiveer of verwijder er een om een agent toe te voegen.",
+      "blockedAccess": "API- en MCP-toegang voor serviceprincipals wordt direct geblokkeerd onder Pro. Bestaande records blijven beschikbaar om op te schonen.",
+      "sharedLimitBlocked": "MCP-agents tellen mee voor de gedeelde limiet voor serviceprincipals: {{used}} van {{limit}}; actieve records zijn geblokkeerd door het abonnement."
     },
     "kind": {
       "api": "API",
       "mcpAgent": "MCP-agent"
     },
-    "seatNote": "Serviceprincipals gebruiken geen gebruikerslicenties."
+    "seatNote": "Serviceprincipals gebruiken geen gebruikerslicenties.",
+    "blockedAccess": "API- en MCP-toegang voor serviceprincipals wordt direct geblokkeerd onder Pro. Bestaande records blijven beschikbaar om op te schonen."
   }
 }

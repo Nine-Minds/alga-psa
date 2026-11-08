@@ -3958,19 +3958,21 @@
       "label": "Principaux de service",
       "seatNote": "Les principaux de service ne consomment pas de licences utilisateur.",
       "settingsLink": "Paramètres des principaux de service",
-      "grandfatheredCount": "{{used}} comptes existants en service"
+      "blockedAccess": "L’accès API et MCP est bloqué en dessous de Pro.",
+      "blockedCount": "{{used}} principaux actifs bloqués par le forfait"
     },
-    "grandfathered": "Les principaux de service nécessitent le forfait Pro. Vos principaux existants sont conservés, mais vous pouvez uniquement les désactiver ou les supprimer.",
     "limitReached": "Vous avez atteint votre limite de {{limit}} principaux de service actifs. Désactivez ou supprimez-en un pour en ajouter un autre.",
     "mcp": {
       "sharedLimit": "Les agents MCP comptent dans votre limite de principaux de service : {{used}} sur {{limit}} utilisés.",
-      "requiresPro": "L'ajout d'agents MCP nécessite le forfait Pro.",
-      "limitReached": "Vous avez atteint votre limite de {{limit}} principaux de service actifs. Désactivez ou supprimez-en un pour ajouter un agent."
+      "limitReached": "Vous avez atteint votre limite de {{limit}} principaux de service actifs. Désactivez ou supprimez-en un pour ajouter un agent.",
+      "blockedAccess": "L’accès API et MCP aux principaux de service est immédiatement bloqué en dessous de Pro. Les enregistrements existants restent disponibles pour le nettoyage.",
+      "sharedLimitBlocked": "Les agents MCP comptent dans la limite partagée des principaux de service : {{used}} sur {{limit}} ; les enregistrements actifs sont bloqués par le forfait."
     },
     "kind": {
       "api": "API",
       "mcpAgent": "Agent MCP"
     },
-    "seatNote": "Les principaux de service ne consomment pas de licences utilisateur."
+    "seatNote": "Les principaux de service ne consomment pas de licences utilisateur.",
+    "blockedAccess": "L’accès API et MCP aux principaux de service est immédiatement bloqué en dessous de Pro. Les enregistrements existants restent disponibles pour le nettoyage."
   }
 }

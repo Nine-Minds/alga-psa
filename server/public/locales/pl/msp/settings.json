@@ -3958,19 +3958,21 @@
       "label": "Podmioty usług",
       "seatNote": "Konta usługowe nie zużywają licencji użytkowników.",
       "settingsLink": "Ustawienia kont usługowych",
-      "grandfatheredCount": "{{used}} istniejące konta w użyciu"
+      "blockedAccess": "Dostęp API i MCP jest blokowany poniżej planu Pro.",
+      "blockedCount": "{{used}} aktywne podmioty usług zablokowane przez plan"
     },
-    "grandfathered": "Podmioty usług wymagają planu Pro. Istniejące podmioty zostaną zachowane, ale możesz je tylko dezaktywować lub usunąć.",
     "limitReached": "Osiągnięto limit {{limit}} aktywnych podmiotów usług. Dezaktywuj lub usuń jeden, aby dodać kolejny.",
     "mcp": {
       "sharedLimit": "Agenci MCP wliczają się do limitu podmiotów usług: {{used}} z {{limit}} w użyciu.",
-      "requiresPro": "Dodawanie agentów MCP wymaga planu Pro.",
-      "limitReached": "Osiągnięto limit {{limit}} aktywnych podmiotów usług. Dezaktywuj lub usuń jeden, aby dodać agenta."
+      "limitReached": "Osiągnięto limit {{limit}} aktywnych podmiotów usług. Dezaktywuj lub usuń jeden, aby dodać agenta.",
+      "blockedAccess": "Dostęp API i MCP do podmiotów usług jest natychmiast blokowany poniżej planu Pro. Istniejące rekordy pozostają dostępne do uporządkowania.",
+      "sharedLimitBlocked": "Agenci MCP wliczają się do wspólnego limitu podmiotów usług: {{used}} z {{limit}}; aktywne rekordy są blokowane przez plan."
     },
     "kind": {
       "api": "API",
       "mcpAgent": "Agent MCP"
     },
-    "seatNote": "Konta usługowe nie zużywają licencji użytkowników."
+    "seatNote": "Konta usługowe nie zużywają licencji użytkowników.",
+    "blockedAccess": "Dostęp API i MCP do podmiotów usług jest natychmiast blokowany poniżej planu Pro. Istniejące rekordy pozostają dostępne do uporządkowania."
   }
 }

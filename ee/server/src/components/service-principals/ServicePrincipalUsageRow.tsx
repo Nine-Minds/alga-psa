@@ -38,13 +38,13 @@ export function ServicePrincipalUsageRow({ hasPro, className }: ServicePrincipal
   let value: string | null;
   if (!hasPro) {
     const availability = t('servicePrincipals.usage.availableOnPro', { defaultValue: 'Available on Pro' });
-    const grandfathered = usage
-      ? t('servicePrincipals.usage.grandfatheredCount', {
-          defaultValue: '{{used}} grandfathered in use',
+    const blockedCount = usage
+      ? t('servicePrincipals.usage.blockedCount', {
+          defaultValue: '{{used}} active principals blocked by plan',
           used: usage.used,
         })
       : null;
-    value = grandfathered ? `${availability} · ${grandfathered}` : availability;
+    value = blockedCount ? `${availability} · ${blockedCount}` : availability;
   } else if (usage) {
     value = t('servicePrincipals.usage.row', {
       defaultValue: '{{used}} of {{limit}}',
@@ -67,6 +67,11 @@ export function ServicePrincipalUsageRow({ hasPro, className }: ServicePrincipal
         <span className="text-xs text-muted-foreground">
           {t('servicePrincipals.usage.seatNote', { defaultValue: "Service principals don't use seats." })}
         </span>
+        {!hasPro && (
+          <span className="text-xs text-muted-foreground" data-testid="service-principal-usage-blocked-note">
+            {t('servicePrincipals.usage.blockedAccess', { defaultValue: 'API and MCP access is blocked below Pro.' })}
+          </span>
+        )}
       </div>
       <div className="flex flex-col items-end gap-1">
         <span className="font-medium">{value}</span>

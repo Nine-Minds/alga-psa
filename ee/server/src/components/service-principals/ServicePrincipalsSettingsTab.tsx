@@ -37,9 +37,8 @@ const EMPTY_OPTIONS: ServicePrincipalFormOptions = {
 /**
  * Settings > Security > Service principals (EE).
  *
- * Tier rules: creating, editing, and issuing keys need Pro. A tenant that dropped below Pro keeps
- * its principals (grandfathered) and may only deactivate or delete them; with none it just sees the
- * upgrade notice.
+ * Below Pro, existing principals remain visible for cleanup while the tier gate explains the
+ * upgrade path. Access is blocked immediately; only deactivation and deletion remain available.
  */
 export function ServicePrincipalsSettingsTab() {
   const { t } = useTranslation(['msp/settings', 'common']);
@@ -50,7 +49,6 @@ export function ServicePrincipalsSettingsTab() {
   const [rows, setRows] = useState<ServicePrincipalRow[]>([]);
   const [usage, setUsage] = useState<ServicePrincipalUsage | null>(null);
   const [options, setOptions] = useState<ServicePrincipalFormOptions>(EMPTY_OPTIONS);
-  const [loaded, setLoaded] = useState(false);
   const [dialog, setDialog] = useState<{ open: boolean; principal: ServicePrincipalRow | null }>({
     open: false,
     principal: null,
@@ -70,8 +68,6 @@ export function ServicePrincipalsSettingsTab() {
       setOptions(formOptions);
     } catch (error) {
       handleError(error, t('servicePrincipals.loadFailed', { defaultValue: 'Failed to load service principals' }));
-    } finally {
-      setLoaded(true);
     }
   }, [t]);
 
@@ -148,14 +144,15 @@ export function ServicePrincipalsSettingsTab() {
         dataIndex: 'is_inactive',
         render: (_: boolean, record) => (
           <div className="flex items-center gap-2">
-            <Switch
-              id={`service-principal-active-${record.user_id}`}
-              checked={!record.is_inactive}
-              onCheckedChange={(checked) => void handleToggleActive(record, checked)}
-              // Below Pro a principal can only be switched off, never back on.
-              disabled={Boolean(record.archived_at) || (!hasPro && record.is_inactive)}
-              aria-label={t('servicePrincipals.columns.active', { defaultValue: 'Active' })}
-            />
+            {hasPro && (
+              <Switch
+                id={`service-principal-active-${record.user_id}`}
+                checked={!record.is_inactive}
+                onCheckedChange={(checked) => void handleToggleActive(record, checked)}
+                disabled={Boolean(record.archived_at)}
+                aria-label={t('servicePrincipals.columns.active', { defaultValue: 'Active' })}
+              />
+            )}
             <Badge variant={record.is_inactive ? 'default-muted' : 'success'}>
               {record.is_inactive
                 ? t('servicePrincipals.status.inactive', { defaultValue: 'Inactive' })
@@ -239,18 +236,6 @@ export function ServicePrincipalsSettingsTab() {
 
   const activeRows = rows.filter((row) => !row.archived_at);
 
-  // Below Pro with nothing grandfathered: the upgrade notice is the whole tab.
-  if (!hasPro && loaded && activeRows.length === 0) {
-    return (
-      <TierGate
-        feature={TIER_FEATURES.SERVICE_PRINCIPALS}
-        featureName={t('servicePrincipals.featureName', { defaultValue: 'Service principals' })}
-      >
-        {null}
-      </TierGate>
-    );
-  }
-
   return (
     <Card className="p-6 space-y-4" id="service-principals-settings">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -266,7 +251,7 @@ export function ServicePrincipalsSettingsTab() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {usage && (
+          {hasPro && usage && (
             <span className="text-sm font-medium" data-testid="service-principal-usage">
               {t('servicePrincipals.usage.header', {
                 defaultValue: '{{used}} of {{limit}} service principals',
@@ -275,26 +260,33 @@ export function ServicePrincipalsSettingsTab() {
               })}
             </span>
           )}
-          <Button
-            id="service-principal-new"
-            disabled={!canCreate}
-            onClick={() => setDialog({ open: true, principal: null })}
-          >
-            {t('servicePrincipals.actions.new', { defaultValue: 'New service principal' })}
-          </Button>
+          {hasPro && (
+            <Button
+              id="service-principal-new"
+              disabled={!canCreate}
+              onClick={() => setDialog({ open: true, principal: null })}
+            >
+              {t('servicePrincipals.actions.new', { defaultValue: 'New service principal' })}
+            </Button>
+          )}
         </div>
       </div>
 
-      {!hasPro && (
-        <Alert variant="info" data-testid="service-principal-grandfathered-notice">
+      {!hasPro && <>
+        <TierGate
+          feature={TIER_FEATURES.SERVICE_PRINCIPALS}
+          featureName={t('servicePrincipals.featureName', { defaultValue: 'Service principals' })}
+        >
+          {null}
+        </TierGate>
+        <Alert variant="info" data-testid="service-principal-blocked-notice">
           <AlertDescription>
-            {t('servicePrincipals.grandfathered', {
-              defaultValue:
-                'Service principals require the Pro plan. Your existing principals are kept, but you can only deactivate or delete them.',
+            {t('servicePrincipals.blockedAccess', {
+              defaultValue: 'API and MCP access for service principals is blocked immediately below Pro. Existing records remain available for cleanup.',
             })}
           </AlertDescription>
         </Alert>
-      )}
+      </>}
       {hasPro && atLimit && (
         <p className="text-sm text-gray-500" data-testid="service-principal-limit-reached">
           {t('servicePrincipals.limitReached', {

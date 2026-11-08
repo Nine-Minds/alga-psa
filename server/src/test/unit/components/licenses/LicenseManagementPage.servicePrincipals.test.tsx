@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-/** T032 / T036: the appliance license page shows the service-principal usage row ("N of M" on Pro, "Available on Pro" below). */
+/** T032 / T036: the appliance license page shows Pro usage and blocked-access copy below Pro. */
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
@@ -52,13 +52,14 @@ describe("LicenseManagementPage service principal usage row", () => {
     expect(spUsage).toHaveBeenCalled();
   });
 
-  it('shows Available on Pro and fetched grandfathered usage below Pro', async () => {
+  it('shows Available on Pro, blocked usage, and blocked-access copy below Pro', async () => {
     vi.mocked(getLicenseStatus).mockResolvedValue(status("essentials"));
     spUsage.mockClear();
     render(<LicenseManagementPage />);
     const row = await screen.findByTestId("service-principal-usage-row");
-    await waitFor(() => expect(row.textContent).toContain("Available on Pro · 4 grandfathered in use"));
+    await waitFor(() => expect(row.textContent).toContain("Available on Pro · 4 active principals blocked by plan"));
     expect(row.textContent).toContain("Service principals don't use seats.");
+    expect(screen.getByTestId('service-principal-usage-blocked-note').textContent).toContain('API and MCP access is blocked below Pro.');
     expect(screen.getByRole('link', { name: 'Service principal settings' }).getAttribute('href'))
       .toBe('/msp/security-settings?tab=service-principals');
     expect(spUsage).toHaveBeenCalled();

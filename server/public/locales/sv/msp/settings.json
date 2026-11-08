@@ -3958,19 +3958,21 @@
       "label": "Tjänstehuvudmän",
       "seatNote": "Tjänsteidentiteter förbrukar inga användarlicenser.",
       "settingsLink": "Inställningar för tjänsteidentiteter",
-      "grandfatheredCount": "{{used}} befintliga konton används"
+      "blockedAccess": "API- och MCP-åtkomst blockeras under Pro.",
+      "blockedCount": "{{used}} aktiva tjänstehuvudmän blockerade av planen"
     },
-    "grandfathered": "Tjänstehuvudmän kräver Pro-planen. Dina befintliga huvudmän behålls, men du kan bara inaktivera eller ta bort dem.",
     "limitReached": "Du har nått gränsen på {{limit}} aktiva tjänstehuvudmän. Inaktivera eller ta bort en för att lägga till en ny.",
     "mcp": {
       "sharedLimit": "MCP-agenter räknas mot din gräns för tjänstehuvudmän: {{used}} av {{limit}} används.",
-      "requiresPro": "Att lägga till MCP-agenter kräver Pro-planen.",
-      "limitReached": "Du har nått gränsen på {{limit}} aktiva tjänstehuvudmän. Inaktivera eller ta bort en för att lägga till en agent."
+      "limitReached": "Du har nått gränsen på {{limit}} aktiva tjänstehuvudmän. Inaktivera eller ta bort en för att lägga till en agent.",
+      "blockedAccess": "API- och MCP-åtkomst för tjänstehuvudmän blockeras omedelbart under Pro. Befintliga poster finns kvar för rensning.",
+      "sharedLimitBlocked": "MCP-agenter räknas mot den gemensamma gränsen för tjänstehuvudmän: {{used}} av {{limit}}; aktiva poster blockeras av planen."
     },
     "kind": {
       "api": "API",
       "mcpAgent": "MCP-agent"
     },
-    "seatNote": "Tjänsteidentiteter förbrukar inga användarlicenser."
+    "seatNote": "Tjänsteidentiteter förbrukar inga användarlicenser.",
+    "blockedAccess": "API- och MCP-åtkomst för tjänstehuvudmän blockeras omedelbart under Pro. Befintliga poster finns kvar för rensning."
   }
 }

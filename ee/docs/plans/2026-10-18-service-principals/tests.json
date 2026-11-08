@@ -346,7 +346,7 @@
   {
     "id": "T036",
     "description": "Component: below Pro the Service principals tab and MCP agent create show the standard upgrade notice; existing principals/agents remain visible for deactivate/delete cleanup with explicit API/MCP access-blocked copy and no grandfathering/continued-use claim; account and license rows read 'Available on Pro', retain seat-use copy/settings link, and any existing count is labeled blocked by plan; Pro usage/capacity behavior is unchanged",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F095"
     ]

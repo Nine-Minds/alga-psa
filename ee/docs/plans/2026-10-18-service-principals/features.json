@@ -744,7 +744,7 @@
   {
     "id": "F091",
     "description": "New UI strings added to the msp settings locale files",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ]
@@ -779,7 +779,7 @@
   {
     "id": "F095",
     "description": "Below Pro the Service principals tab and MCP agent create flow render TierGate / FeatureUpgradeNotice via useTierFeature; existing principals/agents stay listed for deactivate/delete cleanup with explicit immediate API/MCP access-blocked copy; account/license rows read 'Available on Pro' plus the count of existing principals labeled blocked by plan, never grandfathered or in use; copy is translated",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R7.2",
       "R7.3"
