@@ -922,7 +922,8 @@
       "collapse": "Collapse folders",
       "allDocuments": "All Documents",
       "expand": "Show folders",
-      "deleteTitle": "Delete Folder"
+      "deleteTitle": "Delete Folder",
+      "show": "Show folders"
     },
     "folderManager": {
       "title": "Create New Folder",
@@ -984,6 +985,28 @@
     "huduTab": {
       "documentsTabLabel": "Documents",
       "tabLabel": "Hudu"
+    },
+    "fallbackUserName": "User",
+    "selectOrCreate": "Select a document or create a new one.",
+    "actions": {
+      "markdown": "Markdown",
+      "print": "Print",
+      "edit": "Edit",
+      "upload": "Upload",
+      "closePreview": "Close preview",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving..."
+    },
+    "viewMode": {
+      "grid": "Grid",
+      "list": "List"
+    },
+    "unsavedChanges": {
+      "title": "Unsaved Changes",
+      "message": "Are you sure you want to cancel? Any unsaved changes will be lost.",
+      "confirm": "Discard changes",
+      "cancel": "Continue editing"
     }
   },
   "surveys": {

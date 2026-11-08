@@ -781,7 +781,40 @@
       "reportsToHelp": "A manager can see the tickets, devices and projects of the people who report to them, when their visibility group is limited to their own records.",
       "locations": "Locations",
       "primaryLocation": "Primary",
-      "remote": "Remote"
+      "remote": "Remote",
+      "thisUser": "this user",
+      "deactivate": {
+        "title": "Deactivate user and dispose of open work",
+        "confirm": "Deactivate user",
+        "deactivating": "Deactivating…",
+        "thisUserCapitalized": "This user",
+        "openWorkPrompt": "has open work. Choose what should happen before they are deactivated.",
+        "reassignTo": "Reassign open work to",
+        "selectAssignee": "Select an active internal user",
+        "noAssignee": "No active internal user is available for reassignment.",
+        "selectedUser": "the selected user",
+        "buckets": {
+          "tickets": "Tickets",
+          "tasks": "Project tasks"
+        },
+        "openCount": "{{count}} open {{label}}",
+        "actions": {
+          "reassign": "Reassign",
+          "unassign": "Unassign",
+          "archive": "Archive"
+        },
+        "labels": {
+          "ticket": "ticket",
+          "tickets": "tickets",
+          "projectTask": "project task",
+          "projectTasks": "project tasks"
+        },
+        "summary": {
+          "archived": "{{count}} {{label}} will be archived",
+          "unassigned": "{{count}} {{label}} will be unassigned",
+          "reassigned": "{{count}} {{label}} will be reassigned to {{name}}"
+        }
+      }
     },
     "messages": {
       "saveChanges": "Save Changes",
