@@ -1469,7 +1469,7 @@
       "status": {
         "noRecording": "Nessuna registrazione",
         "recordingReady": "Registrazione pronta",
-        "cancelled": "Annullato",
+        "cancelled": "Riunione annullata",
         "failed": "Registrazione non disponibile",
         "recordingPending": "Registrazione in attesa"
       }
@@ -1675,7 +1675,7 @@
       "unknownUser": "Sconosciuto",
       "noContact": "Nessun contatto associato",
       "noClient": "Nessun cliente associato",
-      "deleteConfirm": "Vuoi davvero eliminare questa interazione? Questa azione non può essere annullata.",
+      "deleteConfirm": "Sei sicuro di voler eliminare questa interazione? Questa azione non può essere annullata.",
       "timeEntryFailed": "Impossibile preparare l'inserimento ore. Riprova.",
       "fields": {
         "title": "Titolo:",
