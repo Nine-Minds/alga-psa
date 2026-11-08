@@ -141,6 +141,9 @@ export default defineConfig({
       'src/lib/invoice-template-ast/fieldFormatting.country.test.ts',
       'src/lib/invoice-template-ast/react-renderer.country.test.tsx',
       'src/services/pdfGenerationService.renderCountry.test.ts',
+      'src/services/pdfGenerationService.printSettings.test.ts',
+      'src/services/pdfGenerationService.locale.test.ts',
+      'src/services/pdfGenerationService.documentHtml.test.ts',
       // Per-seat unit-rate rendering on the template detail page and the
       // currency-neutral template review step — listed for the same reason as above.
       'src/components/billing-dashboard/contracts/ContractTemplateDetail.unitRate.test.tsx',
@@ -190,6 +193,10 @@ export default defineConfig({
   },
   resolve: {
     alias: [
+      {
+        find: /^@alga-psa\/core\/net\/safeFetch$/,
+        replacement: path.resolve(__dirname, '../core/src/lib/net/safeFetch.ts'),
+      },
       { find: /^next\/server$/, replacement: path.resolve(__dirname, '../../node_modules/next/server.js') },
       {
         find: /^@alga-psa\/billing\/(.*)$/,

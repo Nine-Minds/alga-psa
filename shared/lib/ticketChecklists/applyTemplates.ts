@@ -165,7 +165,7 @@ export async function matchingRuleTemplateIds(
     schema, readChecklistWhere(rule.where, rule.where_version), { rootAlias: 't' }
   ));
   const row = await db.table('tickets as t').where('t.ticket_id', ticketId)
-    .select(fragments.map((fragment, index) => trx.raw(`(${fragment.sql}) AS ??`, [...fragment.bindings, `r${index}`])))
+    .select(fragments.map((fragment, index) => trx.raw(`(${fragment.sql}) AS ??`, [...fragment.bindings, `r${index}`] as Knex.RawBinding[])))
     .first() as Record<string, boolean> | undefined;
   return [...new Set(rules.filter((_rule, index) => row?.[`r${index}`] === true).map((rule) => rule.template_id))];
 }
