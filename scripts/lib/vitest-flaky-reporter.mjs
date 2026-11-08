@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { flakyError } from './flaky-error.mjs';
 
 // Flaky journal for every sharded Vitest lane: unit, integration and
 // infrastructure. Each runner passes --retry=1 and this reporter on the command
@@ -51,7 +52,11 @@ export default class VitestFlakyReporter {
     const file = path.relative(this.root, test.module.moduleId).split(path.sep).join('/');
     const testId = `${file} > ${test.fullName}`;
     const recorded = this.tests.get(testId);
-    this.tests.set(testId, { testId, file, name: test.fullName, retryCount: Math.max(retryCount, recorded?.retryCount ?? 0) });
+    // The runner keeps the failed attempts' errors on the result when the
+    // retry passes; the first one is the reason the test flaked.
+    const error = recorded?.error ?? flakyError(test.result().errors?.[0]);
+    this.tests.set(testId, { testId, file, name: test.fullName, retryCount: Math.max(retryCount, recorded?.retryCount ?? 0),
+      ...(error ? { error } : {}) });
   }
 
   onTestRunEnd() {

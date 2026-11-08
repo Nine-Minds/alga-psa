@@ -152,6 +152,17 @@ function isConnectionProperty(expression: ts.PropertyAccessExpression): boolean 
   return false;
 }
 
+function isTenantDbType(type: ts.TypeNode | undefined): boolean {
+  if (!type) return false;
+  if (type.getText() === 'TenantDb') return true;
+  // Services commonly accept the facade's inferred public return type instead of
+  // importing TenantDb directly. Treat that type as guarded just like TenantDb.
+  if (!ts.isTypeReferenceNode(type) || !ts.isIdentifier(type.typeName) || type.typeName.text !== 'ReturnType') return false;
+  const [argument] = type.typeArguments ?? [];
+  if (!argument || !ts.isTypeQueryNode(argument)) return false;
+  return ts.isIdentifier(argument.exprName) && argument.exprName.text === 'tenantDb';
+}
+
 export function findUnguardedWriteSites(source: string, file: string): Site[] {
   const tree = ts.createSourceFile(path.resolve(repositoryRoot, file), source, ts.ScriptTarget.Latest, true, file.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
   const sites: Site[] = [];
@@ -191,7 +202,7 @@ export function findUnguardedWriteSites(source: string, file: string): Site[] {
     if (!decl) return false;
     const bound = bindings.get(decl);
     if (bound) return isFacade(bound.expression, bound.bindings, seen);
-    if (ts.isParameter(decl) && decl.type?.getText() === 'TenantDb') return true;
+    if (ts.isParameter(decl) && isTenantDbType(decl.type)) return true;
     return ts.isVariableDeclaration(decl) && !!decl.initializer && isFacade(decl.initializer, bindings, seen);
   };
   const origin = (input: ts.Expression, bindings: Bindings, seen = new Set<ts.Node>()): BuilderOrigin | undefined => {
@@ -331,6 +342,7 @@ describe('write-admission coverage (A6)', () => {
     expect(findUnguardedWriteSites(`await this.knex('co_managed_relationships').update({});`, 'x.ts')).toHaveLength(1);
     expect(findUnguardedWriteSites(`const query = tenantDb(trx, t).table('tickets'); await query.update({});`, 'x.ts')).toEqual([]);
     expect(findUnguardedWriteSites(`function write(db: TenantDb) { return db.table('tickets').update({}); }`, 'x.ts')).toEqual([]);
+    expect(findUnguardedWriteSites(`function write(db: ReturnType<typeof tenantDb>) { return db.table('tickets').update({}); }`, 'x.ts')).toEqual([]);
     expect(findUnguardedWriteSites(`function write(db: any) { return db.table('tickets').update({}); }`, 'x.ts')).toHaveLength(1);
     expect(findUnguardedWriteSites(`class Model { tableName = 'tickets'; write(db) { return db(this.tableName).update({}); } }`, 'x.ts')).toHaveLength(1);
     expect(findUnguardedWriteSites(`await admitWrite(trx, {tenant: t, operation: 'relationship'}); await trx('co_managed_relationships').insert({});`, 'x.ts')).toEqual([]);

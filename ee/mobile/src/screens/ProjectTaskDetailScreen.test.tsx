@@ -13,15 +13,24 @@ const mocks = vi.hoisted(() => ({
   updateTaskChecklistItem: vi.fn(),
   listComments: vi.fn(),
   listTimeEntries: vi.fn(),
+  listPriorities: vi.fn(),
   getServices: vi.fn(),
   createTimeEntry: vi.fn(),
   showToast: vi.fn(),
   features: { projects: true },
   timer: { status: "idle", session: null, lastStopped: null as { at: number; workItemId: string | null } | null, defaultService: null, client: null, apiKey: null, starting: false, refresh: vi.fn(), start: vi.fn(), openStopModal: vi.fn() },
   authValue: { session: { accessToken: "api-key", tenantId: "tenant-1", user: { id: "user-1" } }, refreshSession: () => Promise.resolve(null) },
+  // Stable identity across renders, like production react-i18next: a fresh t()
+  // a fresh t() each render re-runs effects keyed on it (AgentPickerModal
+  // resets its state there), which spins forever under react-test-renderer.
+  translate: (key: string, defOrOpts?: string | Record<string, unknown>) => {
+    const opts = typeof defOrOpts === "object" ? defOrOpts : undefined;
+    if (opts && "estimated" in opts) return `${opts.estimated} estimated · ${opts.actual} logged`;
+    return key;
+  },
 }));
 
-vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string, opts?: Record<string, unknown>) => (opts && "estimated" in opts ? `${opts.estimated} estimated · ${opts.actual} logged` : key) }) }));
+vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: mocks.translate }) }));
 vi.mock("../ui/ThemeContext", async () => {
   const { lightTheme } = await import("../ui/themes");
   return { useTheme: () => lightTheme };
@@ -41,9 +50,10 @@ vi.mock("../features/comments/commentTarget", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../features/comments/commentTarget")>()),
   createCommentApi: () => ({ supportsVisibility: false, list: (...args: unknown[]) => mocks.listComments(...args), add: vi.fn(), update: vi.fn(), toggleReaction: vi.fn() }),
 }));
-vi.mock("../capabilities/CapabilitiesContext", () => ({ useCapabilities: () => ({ features: mocks.features, defaultCountry: "US", loaded: true }) }));
+vi.mock("../capabilities/CapabilitiesContext", () => ({ useCapabilities: () => ({ features: mocks.features, defaultCountry: "US", loaded: true }), useDontNotifyCustomerDefault: () => false }));
 vi.mock("../network/useNetworkStatus", () => ({ useNetworkStatus: () => ({ isConnected: true, isInternetReachable: true }) }));
 vi.mock("../api/users", () => ({ listUsers: vi.fn(), getUserDisplayName: () => "" }));
+vi.mock("../api/priorities", () => ({ listPriorities: (...args: unknown[]) => mocks.listPriorities(...args) }));
 vi.mock("../features/ticketDetail/components/CommentsSection", () => ({ CommentsSection: (props: Record<string, unknown>) => React.createElement("MockCommentsSection", props) }));
 vi.mock("../features/ticketDetail/components/CommentComposer", () => ({ CommentComposer: (props: Record<string, unknown>) => React.createElement("MockCommentComposer", props) }));
 vi.mock("../features/ticketDetail/hooks/useCommentDraft", () => ({
@@ -104,6 +114,12 @@ function texts(renderer: ReactTestRenderer): string[] {
   });
 }
 
+/** A DetailRow renders its label then its value. */
+function detailValue(renderer: ReactTestRenderer, testID: string): string {
+  const row = renderer.root.find((node) => node.props?.testID === testID);
+  return String(row.findAllByType(Text)[1].props.children);
+}
+
 describe("ProjectTaskDetailScreen", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -126,6 +142,10 @@ describe("ProjectTaskDetailScreen", () => {
       { entry_id: "e2", duration_hours: 0.5, start_time: "2026-10-01T09:00:00Z" },
     ], pagination: { total: 2 } } });
     mocks.getServices.mockResolvedValue({ ok: true, data: { data: [{ service_id: "svc-1", service_name: "Onsite" }] } });
+    mocks.listPriorities.mockResolvedValue({ ok: true, data: { data: [
+      { priority_id: "pri-1", priority_name: "High" },
+      { priority_id: "pri-2", priority_name: "Critical" },
+    ] } });
   });
 
   it("loads the task by id and shows project, estimate and logged time", async () => {
@@ -145,7 +165,8 @@ describe("ProjectTaskDetailScreen", () => {
     mocks.getProjectTask.mockResolvedValue({ ok: true, data: { data: { ...task, start_date: "2026-10-05" } } });
     const all = texts(await renderScreen());
     expect(all).toContain("projectTask.startDateLabel");
-    expect(all.indexOf("projectTask.startDateLabel")).toBeLessThan(all.indexOf("projectTask.dueDateLabel"));
+    // The due date moved into the editable Details card below the start date.
+    expect(all.indexOf("projectTask.startDateLabel")).toBeLessThan(all.indexOf("task.dueDate"));
   });
 
   it("times the task with its own service and opens the log-time form against the task", async () => {
@@ -223,7 +244,9 @@ describe("ProjectTaskDetailScreen", () => {
     await act(async () => renderer.root.find((n) => n.props?.testID === "project-task-status").props.onPress());
     await flush();
     expect(mocks.listTaskStatusMappings).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ projectId: "proj-1" }));
-    const picker = renderer.root.find((n) => n.type === ("MockEntityPicker" as never));
+    const picker = renderer.root
+      .findAll((n) => n.type === ("MockEntityPicker" as never))
+      .find((n) => n.props.title === "projectTask.selectStatus")!;
     expect(picker.props.visible).toBe(true);
     expect(picker.props.items.map((item: { label: string }) => item.label)).toEqual(["In Progress", "Done"]);
 
@@ -231,6 +254,53 @@ describe("ProjectTaskDetailScreen", () => {
     await flush();
     expect(mocks.updateProjectTask).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ taskId: "task-1", data: { project_status_mapping_id: "map-2" } }));
     expect(mocks.showToast).toHaveBeenCalledWith({ message: "projectTask.statusUpdated", tone: "success" });
+  });
+
+  it("T121 reloads the task after an edit, since the PUT answers with the bare row", async () => {
+    // ProjectService.updateTask returns project_tasks.* only: no project id,
+    // no project, assignee, status or priority names.
+    mocks.updateProjectTask.mockResolvedValue({
+      ok: true,
+      data: { data: { task_id: "task-1", phase_id: "phase-1", due_date: "2026-10-20" } },
+    });
+    const renderer = await renderScreen();
+    expect(mocks.getProjectTask).toHaveBeenCalledTimes(1);
+
+    const dueDateField = renderer.root.findAll((n) => Boolean(n.props?.clearable) && typeof n.props?.onChange === "function")[0];
+    await act(async () => dueDateField.props.onChange(new Date(2026, 9, 20)));
+    await flush();
+
+    expect(mocks.updateProjectTask).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ taskId: "task-1", data: { due_date: "2026-10-20" } }),
+    );
+    expect(mocks.getProjectTask).toHaveBeenCalledTimes(2);
+    // The enriched rows survive the edit.
+    expect(renderer.root.find((n) => n.props?.testID === "project-task-open-project")).toBeTruthy();
+    expect(texts(renderer)).toContain("HQ refresh • Deploy");
+    expect(texts(renderer)).toContain("Sam Lee");
+  });
+
+  it("T140 names the task's priority and keeps the label when the reload omits it", async () => {
+    const detail = { ...task, project_id: "proj-1", project_status_mapping_id: "map-1", priority_id: "pri-1", priority_name: "High" };
+    mocks.getProjectTask.mockResolvedValue({ ok: true, data: { data: detail } });
+    const renderer = await renderScreen();
+    expect(detailValue(renderer, "project-task-priority")).toBe("High");
+
+    // A server whose task join predates priority_name: the picker's own list
+    // has to carry the label, or a saved edit reads back as "none".
+    mocks.getProjectTask.mockResolvedValue({ ok: true, data: { data: { ...detail, priority_id: "pri-2", priority_name: undefined } } });
+    await act(async () => renderer.root.find((n) => n.props?.testID === "project-task-priority").props.onPress());
+    await flush();
+    const picker = renderer.root
+      .findAll((n) => n.type === ("MockEntityPicker" as never))
+      .find((n) => n.props.title === "task.selectPriority")!;
+    expect(picker.props.items.map((item: { label: string }) => item.label)).toEqual(["High", "Critical"]);
+
+    await act(async () => picker.props.onSelect("pri-2", "Critical"));
+    await flush();
+    expect(mocks.updateProjectTask).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ taskId: "task-1", data: { priority_id: "pri-2" } }));
+    expect(detailValue(renderer, "project-task-priority")).toBe("Critical");
   });
 
   it("ticks checklist items and shows progress", async () => {

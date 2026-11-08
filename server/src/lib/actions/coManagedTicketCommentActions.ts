@@ -7,7 +7,7 @@ import { CoManagedLifecycleError } from '@alga-psa/licensing/lifecycle-error';
 import { CoManagedCommentCreateError, CoManagedSharedWorkError, type CoManagedSharedResource,
   type CoManagedCommentCreateRequest, type CoManagedCommentCreateReceipt } from '@alga-psa/co-managed';
 import { coManagedBrowserActor } from '../co-managed/browserActor';
-import { createSharedTicketComment } from '../co-managed/createTicketComment';
+import { createSharedTicketComment } from '@alga-psa/co-managed/sharedTicketCommentWriter';
 
 export type CoManagedCommentCreateResult = { ok: true; receipt: CoManagedCommentCreateReceipt } |
   { ok: false; code: 'invalid' | 'operationConflict' | 'forbidden' | 'readOnly' | 'unknownOutcome' };
