@@ -142,6 +142,7 @@ import {
   shouldApplyOpenOnlyStatusFilter,
 } from '../lib/ticketStatusFilter';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
+import { addTicketResourceCore, publishTicketResourceEvent } from '@alga-psa/shared/services/tickets/ticketResourceCore';
 import { assertBoardAcceptsTickets } from './ticketBoardGuards';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 // SLA cancellation is injected by the composition layer to avoid tickets→sla cross-package violation
@@ -636,7 +637,7 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       // Optional create extras (linked assets, watchers). Parsed and validated before anything is
       // written; both are optional so callers that send none behave as before.
       const extras = parseTicketCreateExtras(data);
-      const hasCreateExtras = extras.assetIds.length > 0 || extras.watcherIds.length > 0;
+      const hasCreateExtras = extras.assetIds.length > 0 || extras.watcherIds.length > 0 || extras.additionalAgentIds.length > 0;
       if (hasCreateExtras) {
         if (user.user_type !== 'internal') {
           throw new Error('Permission denied: operation not available in client portal');
@@ -850,6 +851,16 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
           // single `asset_id` on its own keeps its old behaviour (existence only).
           clientId: extras.assetIds.length > 0 ? createTicketInput.client_id : undefined,
         });
+      }
+
+      // Additional agents are part of the authorized create operation. Validate and persist
+      // them before commit so a caller lacking later ticket-update access cannot lose staffing.
+      const creationAuthorization = { kind: 'creation' as const, ticketId: ticketResult.ticket_id };
+      for (const additionalAgentId of extras.additionalAgentIds) {
+        const { event } = await addTicketResourceCore(
+          trx, tenant, user.user_id, ticketResult.ticket_id, additionalAgentId, 'support', creationAuthorization,
+        );
+        registerAfterCommit(trx, () => publishTicketResourceEvent(event), `${event.eventType} ticket=${ticketResult.ticket_id}`);
       }
 
       // Server-specific: Handle assigned ticket event
