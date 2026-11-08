@@ -885,7 +885,7 @@
       "removeFilter": "Ta bort",
       "valuesCommaSeparated": "Värden (kommaseparerade)",
       "valueLabel": "Värde",
-      "absoluteTimestampHint": "Sparas som en absolut tidsstämpel med webbläsarens aktuella tidszon.",
+      "absoluteTimestampHint": "Sparas som en absolut tidsstämpel utifrån webbläsarens aktuella tidszon.",
       "saveAsConflict": "”{{saveAs}}” står i konflikt med en befintlig sökväg för stegutdata"
     },
     "mappingExpr": {
@@ -1545,7 +1545,7 @@
       "eventCatalogLoadFailed": "Det gick inte att läsa in händelsekatalogen. Publicering och körning är inaktiverade tills katalogen har lästs in.",
       "triggerEventMissing": "Utlösarhändelsen ”{{eventName}}” finns inte i händelsekatalogen.",
       "eventSchemaInvalid": "{{sourceLabel}} ”{{eventName}}” {{schemaLabel}}. Lägg till ett giltigt schema i händelsekatalogens post före publicering eller körning.",
-      "timeTriggerFixedContract": "Tidsutlösta arbetsflöden använder klockans fasta datakontrakt för nyttolasten och kan inte härleda eller åsidosätta det med ett annat schema.",
+      "timeTriggerFixedContract": "Tidsutlösta arbetsflöden använder det fasta datakontraktet för klocknyttolasten och kan inte härleda eller åsidosätta det med ett annat schema.",
       "manualMustPin": "Manuella arbetsflöden måste ha ett låst nyttolastschema före publicering eller körning.",
       "registryLoadFailed": "Det gick inte att läsa in schemaregistret. Publicering och körning är inaktiverade tills registret har lästs in.",
       "noSchemaForEvent": "Inget schema är tillgängligt för utlösarhändelsen ”{{eventName}}”. Publicering och körning är inaktiverade tills det har åtgärdats.",
