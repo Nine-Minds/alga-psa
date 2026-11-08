@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
+import type { IFixedPriceCharge } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 
 import { tenantDb } from '@alga-psa/db';
@@ -8,13 +9,14 @@ import {
   createTestService,
   ensureClientPlanBundlesTable,
   ensureDefaultBillingSettings,
+  generateInvoiceForCycle,
 } from '../../../../test-utils/billingTestHelpers';
 import { seedBillingCycle } from '../../../../test-utils/billingProfileTestHelpers';
 import { setupCommonMocks } from '../../../../test-utils/testMocks';
 import { AccountingExportInvoiceSelector } from '@alga-psa/billing/services/accountingExportInvoiceSelector';
 import Invoice from '@alga-psa/billing/models/invoice';
 import { loadPreviousBundlePeriods } from '@alga-psa/billing/lib/invoiceBundleComponents';
-import { buildBundleComponents } from '@alga-psa/billing/lib/invoiceBundleComponents';
+import { buildBundleComponents, buildPreviewFixedBundles } from '@alga-psa/billing/lib/invoiceBundleComponents';
 import { buildBundleChildRowsPreset } from '@alga-psa/billing/lib/invoice-template-ast/bundleChildRows';
 
 
@@ -111,7 +113,6 @@ const FEB = '2025-02-01';
 const MAR = '2025-03-01';
 
 let createClientContractFromWizard: typeof import('@alga-psa/billing/actions/contractWizardActions')['createClientContractFromWizard'];
-let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration')['generateInvoice'];
 let previewInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration')['previewInvoice'];
 let syncRecurringServicePeriodsForContractLine: typeof import('@alga-psa/billing/actions/recurringServicePeriodSync')['syncRecurringServicePeriodsForContractLine'];
 
@@ -209,7 +210,7 @@ describe('invoice bundle component rows (DB)', () => {
     tenantId = await ensureTenant(db);
     authRef.tenantId = tenantId;
     ({ createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions'));
-    ({ generateInvoice, previewInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
+    ({ previewInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
     ({ syncRecurringServicePeriodsForContractLine } = await import('@alga-psa/billing/actions/recurringServicePeriodSync'));
   }, HOOK_TIMEOUT);
 
@@ -222,7 +223,7 @@ describe('invoice bundle component rows (DB)', () => {
     await table('contract_lines').where({ contract_line_id: line.contractLineId })
       .update({ invoice_line_description: 'Managed services', invoice_line_subtitle: 'All-inclusive' });
 
-    const generated = unwrap(await generateInvoice(cycleIds[1]));
+    const generated = unwrap(await generateInvoiceForCycle(cycleIds[1]));
     const parents = await parentCharges(generated.invoice_id);
     expect(parents).toHaveLength(1);
     const parent = parents[0];
@@ -255,7 +256,7 @@ describe('invoice bundle component rows (DB)', () => {
     const { fixture, clientId, cycleIds } = await createClientWithCycles('T002 Client', [DEC, JAN, FEB, MAR]);
     const line = await createBundleLine(fixture, clientId, 'T002');
 
-    const first = unwrap(await generateInvoice(cycleIds[1]));
+    const first = unwrap(await generateInvoiceForCycle(cycleIds[1]));
     const firstSnap = (await parentCharges(first.invoice_id))[0].bundle_presentation;
     const s1 = typeof firstSnap === 'string' ? JSON.parse(firstSnap) : firstSnap;
     expect(s1.components.every((c: any) => c.comparison === 'no_prior_period')).toBe(true);
@@ -265,7 +266,7 @@ describe('invoice bundle component rows (DB)', () => {
     await table('contract_line_service_configuration')
       .where({ contract_line_id: line.contractLineId, service_id: line.av }).update({ quantity: 1 });
 
-    const second = unwrap(await generateInvoice(cycleIds[2]));
+    const second = unwrap(await generateInvoiceForCycle(cycleIds[2]));
     const secondRaw = (await parentCharges(second.invoice_id))[0].bundle_presentation;
     const s2 = typeof secondRaw === 'string' ? JSON.parse(secondRaw) : secondRaw;
     const seats2 = s2.components.find((c: any) => c.serviceId === line.seats);
@@ -287,7 +288,7 @@ describe('invoice bundle component rows (DB)', () => {
     const line = await createBundleLine(fixture, clientId, 'T003');
     await table('contract_lines').where({ contract_line_id: line.contractLineId })
       .update({ invoice_line_description: 'Original title', invoice_line_subtitle: 'Original subtitle' });
-    const generated = unwrap(await generateInvoice(cycleIds[1]));
+    const generated = unwrap(await generateInvoiceForCycle(cycleIds[1]));
     await table('invoices').where({ invoice_id: generated.invoice_id }).update({ status: 'sent', finalized_at: db.fn.now() });
     await table('contract_lines').where({ contract_line_id: line.contractLineId })
       .update({ invoice_line_description: 'Renamed', invoice_line_subtitle: 'Renamed subtitle' });
@@ -306,7 +307,7 @@ describe('invoice bundle component rows (DB)', () => {
     const { addContractLine } = await import('@alga-psa/billing/repositories/contractLineRepository');
     const { fixture, clientId, cycleIds } = await createClientWithCycles('T004 Client', [DEC, JAN, FEB]);
     const line = await createBundleLine(fixture, clientId, 'T004');
-    unwrap(await generateInvoice(cycleIds[1]));
+    unwrap(await generateInvoiceForCycle(cycleIds[1]));
     await table('contract_lines').where({ contract_line_id: line.contractLineId })
       .update({ invoice_line_description: 'After invoicing', invoice_line_subtitle: 'Still editable' });
     const row = await table('contract_lines').where({ contract_line_id: line.contractLineId }).first();
@@ -315,7 +316,7 @@ describe('invoice bundle component rows (DB)', () => {
 
     const templateId = uuidv4();
     const templateLineId = uuidv4();
-    await table('contract_templates').insert({ tenant: tenantId, template_id: templateId, template_name: `T ${templateId.slice(0, 6)}` });
+    await table('contract_templates').insert({ tenant: tenantId, template_id: templateId, template_name: `T ${templateId.slice(0, 6)}`, currency_code: 'USD' });
     await table('contract_template_lines').insert({
       tenant: tenantId, template_line_id: templateLineId, template_id: templateId,
       template_line_name: 'Tpl', billing_frequency: 'monthly', line_type: 'Fixed', custom_rate: 5000, display_order: 0,
@@ -335,7 +336,7 @@ describe('invoice bundle component rows (DB)', () => {
     setupCommonMocks({ tenantId, userId: authRef.userId, permissionCheck: () => true });
     const { fixture, clientId, cycleIds } = await createClientWithCycles('T005 Client', [DEC, JAN, FEB]);
     await createBundleLine(fixture, clientId, 'T005');
-    const generated = unwrap(await generateInvoice(cycleIds[1]));
+    const generated = unwrap(await generateInvoiceForCycle(cycleIds[1]));
     const selector = new AccountingExportInvoiceSelector(db, tenantId);
     const filters = { invoiceIds: [generated.invoice_id], adapterType: 'xero' } as any;
 
@@ -357,7 +358,7 @@ describe('invoice bundle component rows (DB)', () => {
     setupCommonMocks({ tenantId, userId: authRef.userId, permissionCheck: () => true });
     const { fixture, clientId, cycleIds } = await createClientWithCycles('T008 Client', [DEC, JAN, FEB]);
     await createBundleLine(fixture, clientId, 'T008');
-    const generated = unwrap(await generateInvoice(cycleIds[1]));
+    const generated = unwrap(await generateInvoiceForCycle(cycleIds[1]));
 
     const plain = (await Invoice.getInvoiceCharges(db, tenantId, generated.invoice_id))[0] as any;
     const presentationOnly = (await Invoice.getInvoiceCharges(db, tenantId, generated.invoice_id, { includeBundlePresentation: true }))[0] as any;
@@ -382,7 +383,7 @@ describe('invoice bundle component rows (DB)', () => {
 
     const preview = unwrap(await previewInvoice(cycleIds[1]));
     expect(preview.success, JSON.stringify(preview).slice(0, 800)).toBe(true);
-    const generated = unwrap(await generateInvoice(cycleIds[1]));
+    const generated = unwrap(await generateInvoiceForCycle(cycleIds[1]));
     const persisted = await Invoice.getInvoiceCharges(db, tenantId, generated.invoice_id, { includeBundlePresentation: true, includeBundleComponentAmounts: true });
     const persistedParent = persisted[0] as any;
     const persistedComponents = buildBundleComponents(persistedParent.bundle_presentation, { includePricing: true, amounts: persistedParent.bundle_component_amounts });
@@ -398,11 +399,50 @@ describe('invoice bundle component rows (DB)', () => {
     expect(preview.data.items.some((item: any) => String(item.description ?? '').startsWith('Contract:'))).toBe(false);
   }, HOOK_TIMEOUT);
 
+  it.each([3, -1])('keeps a quantity true-up of %i outside the preview bundle for the same service', async (delta) => {
+    setupCommonMocks({ tenantId, userId: authRef.userId, permissionCheck: () => true });
+    const { fixture, clientId } = await createClientWithCycles(`True-up ${delta} Client`, [DEC, JAN, FEB]);
+    const line = await createBundleLine(fixture, clientId, `True-up ${delta}`);
+    const configs = await table('contract_line_service_configuration').where({ contract_line_id: line.contractLineId });
+    const charges: IFixedPriceCharge[] = configs.map((config: any) => ({
+      tenant: tenantId, type: 'fixed', serviceId: config.service_id,
+      serviceName: config.service_id === line.seats ? 'Seats' : 'Antivirus',
+      config_id: config.config_id, client_contract_line_id: line.contractLineId,
+      client_contract_id: line.contractId, quantity: Number(config.quantity),
+      raw_quantity: Number(config.quantity), pricing_basis: 'bundle',
+      rate: 10000, total: 50000, allocated_amount: 50000, tax_amount: 0, tax_rate: 0,
+      servicePeriodStart: JAN, servicePeriodEnd: '2025-01-31',
+    }));
+    const seats = charges.find((charge) => charge.serviceId === line.seats)!;
+    const amount = delta > 0 ? 15484 : -5162;
+    const adjustment: IFixedPriceCharge = {
+      ...seats, serviceName: 'Mid-period quantity change: Seats',
+      quantity: Math.abs(delta), raw_quantity: undefined, allocated_amount: undefined, total: amount,
+      contractChangeAdjustment: {
+        adjustmentId: uuidv4(), sourceKind: 'contract_change', revisionId: uuidv4(), revisionVersion: 1,
+        periodStart: JAN, periodEnd: FEB, amountCents: amount, reason: 'Quantity change',
+        newQuantity: seats.quantity + delta, previousQuantity: seats.quantity, quantityDelta: delta,
+        unitRateCents: 10000, coveredDays: 16, fullPeriodDays: 31,
+      },
+    };
+
+    const expected = await buildPreviewFixedBundles(db, tenantId, charges);
+    const mixed = [adjustment, ...charges];
+    const bundles = await buildPreviewFixedBundles(db, tenantId, mixed);
+    // A true-up must not change the bundle's quantities, names, detail ids or money.
+    expect(bundles).toEqual(expected);
+    expect(bundles).toHaveLength(1);
+    expect(bundles[0].total).toBe(line.FEE);
+    const bundled = new Set(bundles.flatMap((bundle) => bundle.charges));
+    expect(mixed.filter((charge) => !bundled.has(charge))).toEqual([adjustment]);
+    expect(await buildPreviewFixedBundles(db, tenantId, [adjustment])).toEqual([]);
+  }, HOOK_TIMEOUT);
+
   describe('T010/T017: client price gate on the real read path', () => {
     async function seedIssuedBundleInvoice(prefix: string) {
       const { fixture, clientId, cycleIds } = await createClientWithCycles(`${prefix} Client`, [DEC, JAN, FEB]);
       await createBundleLine(fixture, clientId, prefix);
-      const generated = unwrap(await generateInvoice(cycleIds[1]));
+      const generated = unwrap(await generateInvoiceForCycle(cycleIds[1]));
       await table('invoices').where({ invoice_id: generated.invoice_id }).update({ status: 'sent', finalized_at: db.fn.now() });
       return { clientId, invoiceId: generated.invoice_id as string };
     }

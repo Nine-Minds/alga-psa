@@ -17,7 +17,11 @@ export interface PreviewFixedBundle {
 }
 
 const isBundleable = (charge: any): charge is IFixedPriceCharge & { client_contract_line_id: string } =>
-  charge?.type === 'fixed' && Boolean(charge.serviceId) && Boolean(charge.config_id) && Boolean(charge.client_contract_line_id);
+  charge?.type === 'fixed'
+  // Generation persists ledger-backed true-ups separately from fixed bundles.
+  // Keep their descriptions and signed amounts on separate preview items too.
+  && !charge.contractChangeAdjustment
+  && Boolean(charge.serviceId) && Boolean(charge.config_id) && Boolean(charge.client_contract_line_id);
 
 /**
  * Group a draft's Fixed charges by their contract line and build the same
