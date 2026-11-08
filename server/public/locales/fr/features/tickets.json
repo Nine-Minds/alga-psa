@@ -108,8 +108,8 @@
       "heading": "Aperçu de l’importation",
       "totalRows": "Nombre total de lignes :",
       "valid": "Valides :",
-      "invalid": "Invalides :",
-      "skipInvalidRows": "Ignorer les lignes invalides",
+      "invalid": "Non valides :",
+      "skipInvalidRows": "Ignorer les lignes non valides",
       "skipInvalidRowsHelp": "Poursuivre l’importation même si certaines lignes contiennent des erreurs de validation",
       "yes": "Oui",
       "no": "Non",
@@ -120,10 +120,10 @@
         "issues": "Problèmes"
       },
       "unmatchedCount": "{{count}} valeur(s)",
-      "unmatchedIntro": "de votre CSV ne correspondent à aucune donnée existante.",
+      "unmatchedIntro": "de votre CSV ne correspondent à aucune donnée existante",
       "unmatchedNextStep": "Vous résoudrez ces cas à l’étape suivante.",
       "invalidRowCount": "{{count}} ligne(s)",
-      "invalidRowsHelp": "contiennent des erreurs de validation. Activez « Ignorer les lignes invalides » pour continuer, ou revenez en arrière et corrigez votre CSV."
+      "invalidRowsHelp": "contiennent des erreurs de validation. Activez « Ignorer les lignes non valides » pour continuer, ou revenez en arrière et corrigez votre CSV."
     },
     "confirmLargeImport": "Confirmer l’importation volumineuse ({{count}} tickets)",
     "confirmLargeImportHelp": "Je comprends que cette opération créera {{count}} ticket(s). Cela peut prendre du temps.",
@@ -138,7 +138,7 @@
         "agents": "Agents ({{count}} sans correspondance)",
         "teams": "Équipes ({{count}} sans correspondance)",
         "contacts": "Contacts ({{count}} sans correspondance)",
-        "dateFormats": "Formats de date ({{count}} non reconnus)"
+        "dateFormats": "Formats de date ({{count}} non reconnu(s))"
       },
       "required": "Obligatoire",
       "itilCreateDisabled": "Tableau ITIL — création désactivée",
@@ -189,7 +189,7 @@
     "complete": {
       "heading": "Importation terminée",
       "ticketNumbers": "Numéros des tickets :",
-      "andMore": "... et {{count}} de plus",
+      "andMore": "... et {{count}} autre(s)",
       "failedHeading": "Échec de l’importation",
       "noneCreated": "Aucun ticket n’a été créé.",
       "allSkipped_one": "{{count}} ticket a été ignoré en raison d’erreurs.",
@@ -2886,7 +2886,7 @@
       "paused": "SLA en pause",
       "atRisk": "À risque",
       "onTrack": "Dans les délais",
-      "remaining": "{{magnitude}} restant"
+      "remaining": "Reste {{magnitude}}"
     }
   },
   "cannedResponses": {
@@ -3033,9 +3033,9 @@
     "actor": {
       "user": "Un utilisateur",
       "contact": "Un contact",
-      "apiClient": "Client API",
-      "workflow": "Workflow",
-      "system": "Système"
+      "apiClient": "Un client API",
+      "workflow": "Un workflow",
+      "system": "Le système"
     },
     "fields": {
       "status": "statut",
@@ -3096,7 +3096,7 @@
       "documentRemoved": "{{actor}} a retiré un document",
       "inboundEmailReceived": "E-mail entrant reçu",
       "updated": "{{actor}} a mis à jour le ticket",
-      "externalLinkAdded": "{{actor}} a lié {{reference}}",
+      "externalLinkAdded": "{{actor}} a ajouté un lien vers {{reference}}",
       "externalLinkUpdated": "{{actor}} a mis à jour le lien vers {{reference}}",
       "externalLinkRemoved": "{{actor}} a supprimé le lien vers {{reference}}",
       "fallback": "{{actor}} • {{eventType}}"
@@ -3185,7 +3185,7 @@
     "toggleChildren": "Afficher ou masquer les tickets enfants du groupe",
     "bundledTo": "Regroupé → {{ticketNumber}}",
     "master": "Principal",
-    "openChildrenShort": "ouverts"
+    "openChildrenShort": "ouvert(s)"
   },
   "statusChange": {
     "title": "Mettre à jour le statut du ticket",
