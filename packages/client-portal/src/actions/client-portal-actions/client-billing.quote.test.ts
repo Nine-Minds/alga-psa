@@ -461,6 +461,7 @@ describe('client quote billing actions', () => {
         metadata: {
           selected_optional_quote_item_ids: [],
           deselected_optional_quote_item_ids: ['item-optional'],
+          decision_id: 'decision-1',
         },
       })
     );
@@ -481,6 +482,7 @@ describe('client quote billing actions', () => {
         metadata: {
           selected_optional_quote_item_ids: ['item-optional'],
           deselected_optional_quote_item_ids: [],
+          decision_id: 'decision-1',
         },
       })
     );
@@ -505,7 +507,7 @@ describe('client quote billing actions', () => {
       expect.objectContaining({
         quote_id: 'quote-1',
         activity_type: 'rejected',
-        metadata: { rejection_reason: 'Budget is not approved yet.' },
+        metadata: { rejection_reason: 'Budget is not approved yet.', decision_id: 'decision-1' },
       })
     );
   });
@@ -524,6 +526,7 @@ describe('client quote billing actions', () => {
         metadata: {
           selected_optional_quote_item_ids: ['item-optional'],
           deselected_optional_quote_item_ids: [],
+          decision_id: 'decision-1',
         },
       },
     ]);
@@ -554,7 +557,7 @@ describe('client quote billing actions', () => {
         activity_type: 'rejected',
         description: 'Quote rejected by client',
         performed_by: 'portal-user-1',
-        metadata: { rejection_reason: 'Budget is not approved yet.' },
+        metadata: { rejection_reason: 'Budget is not approved yet.', decision_id: 'decision-1' },
       },
     ]);
     expect(updateIfStatusMock).toHaveBeenCalledWith(

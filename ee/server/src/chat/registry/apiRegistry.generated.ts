@@ -6537,7 +6537,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/documents/{associationId}",
     "displayName": "Remove asset document association",
     "summary": "Remove asset document association",
-    "description": "Removes a document association row by document_associations.association_id for the authenticated tenant. The service deletes rows where association_id and tenant match and does not verify entity_type in this method. The controller intends to return an empty success response after deletion, but currently calls createApiResponse(null, 204) inside NextResponse.json, which can throw because JSON responses cannot use status 204 with a body.",
+    "description": "Removes a document association by its API association ID within the authenticated tenant and verifies it belongs to an asset before authorization. The asset is resolved within the tenant before the caller’s update permission and record-level scope are checked; foreign-tenant IDs return 404. The generic document link and any asset-specific notes record are deleted together.",
     "tags": [
       "Assets"
     ],
@@ -6547,11 +6547,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "associationId",
         "in": "path",
         "required": true,
-        "description": "Document association UUID from document_associations.association_id.",
+        "description": "Asset document association UUID returned by the API; new API associations use document_associations.association_id and may also resolve asset_document_associations IDs.",
         "schema": {
           "type": "string",
           "format": "uuid",
-          "description": "Document association UUID from document_associations.association_id."
+          "description": "Asset document association UUID returned by the API; new API associations use document_associations.association_id and may also resolve asset_document_associations IDs."
         }
       },
       {
@@ -6895,11 +6895,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "relationshipId",
         "in": "path",
         "required": true,
-        "description": "Asset relationship UUID from asset_relationships.relationship_id.",
+        "description": "Composite asset relationship identity: parent_asset_id:child_asset_id.",
         "schema": {
           "type": "string",
-          "format": "uuid",
-          "description": "Asset relationship UUID from asset_relationships.relationship_id."
+          "description": "Composite asset relationship identity: parent_asset_id:child_asset_id."
         }
       },
       {
@@ -7403,7 +7402,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/{id}/documents",
     "displayName": "List asset document associations",
     "summary": "List asset document associations",
-    "description": "Returns document_associations rows for an asset in the authenticated tenant where entity_type is asset and entity_id is the path asset ID. The service joins documents to add original_filename, file_size, mime_type, and uploaded_at. It does not check whether the asset exists first, so nonexistent or cross-tenant asset IDs return 200 with an empty array. Response links currently point at /api/v2/assets paths.",
+    "description": "Returns document associations for the asset in the authenticated tenant. Controller authorization resolves and authorizes the asset first; nonexistent or cross-tenant asset IDs return 404, while in-tenant permission denials return 403. Document details are joined from documents/external_files, legacy filename, size, MIME type, and upload-time fields remain at the response top level, and optional association notes come from asset_document_associations. Response links currently point at /api/v2/assets paths.",
     "tags": [
       "Assets"
     ],
@@ -7474,7 +7473,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/{id}/documents",
     "displayName": "Associate document with asset",
     "summary": "Associate document with asset",
-    "description": "Creates a document_associations row that links the path asset ID to the supplied document_id. The body is validated with createAssetDocumentSchema; document_id is required and notes is optional. The service inserts entity_type=asset, entity_id from the path, document_id, notes, tenant from context, and created_at, then returns the inserted row. It does not verify that the asset or document belongs to the same tenant before insert, does not set created_by, and publishes no event. Foreign-key or unique constraint errors surface through handleApiError.",
+    "description": "Creates the tenant-scoped document link for the path asset and supplied document_id, while storing optional notes and authenticated created_by in asset_document_associations. The body is validated with createAssetDocumentSchema; document_id is required and notes is optional. Both association records are written transactionally so document workflows and the asset API stay consistent. Tenant-scoped asset and document checks run before insert; database persistence errors are surfaced through handleApiError.",
     "tags": [
       "Assets"
     ],
@@ -7513,7 +7512,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "notes": {
           "type": "string",
-          "description": "Optional notes stored on document_associations.notes."
+          "description": "Optional notes stored on asset_document_associations.notes."
         }
       },
       "required": [

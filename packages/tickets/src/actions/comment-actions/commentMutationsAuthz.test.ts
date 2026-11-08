@@ -90,7 +90,7 @@ vi.mock('../../lib/ticketRecordAuthorization', async (importActual) => {
   return { ...actual, authorizeTicketRecordAccessConcealed: vi.fn(actual.authorizeTicketRecordAccessConcealed) };
 });
 vi.mock('../../lib/liveUpdates', () => ({ publishTicketUpdate: vi.fn(async () => undefined) }));
-vi.mock('../../lib/clientPortalVisibility.server', () => ({
+vi.mock('@alga-psa/authorization/portal/visibility.server', () => ({
   getClientContactVisibilityContext: async () => ({
     effectiveTicketScope: 'contact', ticketScope: 'contact', contactId: 'contact-1', clientId: 'client-1',
     visibleBoardIds: ['board-1'], grantedTicketProfileIds: [], isClientAdmin: false, visibilityGroupId: 'g',

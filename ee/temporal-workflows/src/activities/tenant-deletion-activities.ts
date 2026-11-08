@@ -122,6 +122,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'marketing_suppressions',
   'marketing_channels',
   'marketing_campaigns',
+  // Interactions reference opportunities and must be removed before the sales chain.
   'interactions',
   'interaction_types',
   'task_checklist_items',
@@ -139,6 +140,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'project_template_tasks',
   'project_template_phases',
   'project_templates',
+  // Quote decisions and email access links are children of quotes.
   'quote_activities',
   'quote_access_links',
   'quote_decisions',
@@ -147,6 +149,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'quote_document_templates',
   'standard_quote_document_templates',
   'quotes',
+  // Opportunity details precede their parents.
   'opportunity_meeting_reviews',
   'opportunity_commitments',
   'opportunity_steps',

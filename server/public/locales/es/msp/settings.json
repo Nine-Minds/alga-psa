@@ -4075,7 +4075,126 @@
       "importSelected": "Importar seleccionados ({{count}})"
     }
   },
-  "tagDisplay": {
+  "servicePrincipals": {
+    "via": {
+      "label": "vía {{principal}}"
+    },
+    "badge": {
+      "service": "Servicio"
+    },
+    "keyReveal": {
+      "copySuccess": "¡Clave API copiada al portapapeles!",
+      "copyFailed": "Error al copiar la clave API al portapapeles",
+      "downloadFailed": "Error al descargar la clave API",
+      "title": "Clave API generada",
+      "warning": "Copie su clave API ahora. Por motivos de seguridad, no se mostrará de nuevo.",
+      "rotationNote": "La clave anterior seguirá funcionando 5 minutos más para que pueda cambiar.",
+      "copy": "Copiar al portapapeles",
+      "download": "Descargar como .txt",
+      "done": "Listo"
+    },
+    "dialog": {
+      "nameRequired": "Se requiere un nombre",
+      "rateLimitInvalid": "Introduzca ambos valores de límite de tasa, dentro de los máximos indicados, o deje ambos vacíos.",
+      "saveFailed": "Error al guardar el principal de servicio",
+      "editTitle": "Editar principal de servicio",
+      "createTitle": "Nuevo principal de servicio",
+      "cancel": "Cancelar",
+      "save": "Guardar",
+      "name": "Nombre",
+      "description": "Descripción",
+      "roles": "Roles",
+      "allowActAs": "Permitir actuar en nombre de un usuario",
+      "rateLimit": "Anulación del límite de tasa (opcional)",
+      "rateLimitBurst": "Tamaño de ráfaga (máx. {{max}})",
+      "rateLimitRefill": "Solicitudes por minuto (máx. {{max}})",
+      "allowActAsHelp": "Al activarse, las solicitudes pueden actuar como un usuario interno activo. Tanto el principal como ese usuario deben tener permiso para cada acción."
+    },
+    "keys": {
+      "loadFailed": "Error al cargar las claves",
+      "issueFailed": "Error al crear la clave API",
+      "revokeFailed": "Error al revocar la clave API",
+      "columns": {
+        "description": "Descripción",
+        "status": "Estado",
+        "lastUsed": "Último uso",
+        "expires": "Caduca"
+      },
+      "noDescription": "Sin descripción",
+      "status": {
+        "active": "Activa",
+        "inactive": "Inactiva"
+      },
+      "never": "Nunca",
+      "noExpiry": "Sin caducidad",
+      "rotate": "Rotar",
+      "revoke": "Revocar",
+      "title": "Claves API de {{name}}",
+      "descriptionLabel": "Descripción de la clave",
+      "create": "Crear clave",
+      "revokeTitle": "¿Revocar la clave API?",
+      "revokeMessage": "Todo lo que use esta clave dejará de funcionar de inmediato."
+    },
+    "columns": {
+      "actions": "Acciones",
+      "name": "Nombre",
+      "status": "Estado",
+      "active": "Activo",
+      "roles": "Roles",
+      "keys": "Claves activas",
+      "lastUsed": "Último uso",
+      "createdBy": "Creado por",
+      "kind": "Tipo",
+      "allowActAs": "Actuar como"
+    },
+    "loadFailed": "Error al cargar los principales de servicio",
+    "toggleFailed": "Error al actualizar el principal de servicio",
+    "delete": {
+      "archived": "Principal de servicio archivado. Se conserva su historial para que la actividad pasada siga mostrando su nombre.",
+      "deleted": "Principal de servicio eliminado.",
+      "failed": "Error al eliminar el principal de servicio",
+      "title": "¿Eliminar el principal de servicio?",
+      "message": "Sus claves API dejarán de funcionar. Si tiene historial, se archiva en lugar de eliminarse."
+    },
+    "status": {
+      "inactive": "Inactivo",
+      "active": "Activo"
+    },
+    "actions": {
+      "edit": "Editar",
+      "keys": "Claves",
+      "deactivate": "Desactivar",
+      "delete": "Eliminar",
+      "new": "Nuevo principal de servicio"
+    },
+    "featureName": "Principales de servicio",
+    "title": "Principales de servicio",
+    "description": "Identidades no humanas con sus propios roles y claves API para integraciones y agentes.",
+    "usage": {
+      "header": "{{used}} de {{limit}} principales de servicio",
+      "availableOnPro": "Disponible en Pro",
+      "row": "{{used}} de {{limit}}",
+      "label": "Principales de servicio",
+      "seatNote": "Los principales de servicio no consumen licencias de usuario.",
+      "settingsLink": "Configuración de principales de servicio",
+      "blockedAccess": "El acceso a API y MCP está bloqueado por debajo de Pro.",
+      "blockedCount": "{{used}} principales activos bloqueados por el plan"
+    },
+    "limitReached": "Ha alcanzado su límite de {{limit}} principales de servicio activos. Desactive o elimine uno para añadir otro.",
+    "mcp": {
+      "sharedLimit": "Los agentes MCP cuentan para su límite de principales de servicio: {{used}} de {{limit}} en uso.",
+      "limitReached": "Ha alcanzado su límite de {{limit}} principales de servicio activos. Desactive o elimine uno para añadir un agente.",
+      "blockedAccess": "El acceso a API y MCP de los principales de servicio se bloquea inmediatamente por debajo de Pro. Los registros existentes siguen disponibles para su limpieza.",
+      "sharedLimitBlocked": "Los agentes MCP cuentan para el límite compartido de principales de servicio: {{used}} de {{limit}}; los registros activos están bloqueados por el plan."
+    },
+    "kind": {
+      "api": "API",
+      "mcpAgent": "Agente MCP"
+    },
+    "seatNote": "Los principales de servicio no consumen licencias de usuario.",
+    "blockedAccess": "El acceso a API y MCP de los principales de servicio se bloquea inmediatamente por debajo de Pro. Los registros existentes siguen disponibles para su limpieza."
+  },
+"tagDisplay": {
     "title": "Mostrar en chips",
     "subtitle": "Etiquetas que se muestran junto a contactos y clientes en listas de tickets, encabezados de tickets y selectores.",
     "loading": "Cargando…",

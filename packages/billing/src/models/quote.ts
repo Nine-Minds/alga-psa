@@ -6,6 +6,7 @@ import { SharedNumberingService } from '@shared/services/numberingService';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import QuoteItem from './quoteItem';
 import QuoteActivity from './quoteActivity';
+import { canTransitionQuoteStatus } from '../schemas/quoteSchemas';
 import { recalculateQuoteFinancials } from '../services/quoteCalculationService';
 import { prepareQuoteTermsForDb } from '../lib/quoteTermsContent';
 import { revoke as revokeQuoteAccessLinks } from '../services/quoteAccessLinks';
@@ -87,6 +88,7 @@ async function expireQuoteIfNeeded(
     });
 
     await recordQuoteLifecycleTransition(trx, tenant, candidate, expiredQuote as IQuote, activity, { actor: { actorType: 'SYSTEM' } });
+    await revokeQuoteAccessLinks(trx, tenant, { quoteId: candidate.quote_id }, 'cancelled');
     return expiredQuote;
   });
 }
@@ -321,6 +323,9 @@ const Quote = {
       if (!updatedQuote.is_template) await recalculateQuoteFinancials(trx, tenant, quoteId);
       const finalQuote = (await quoteTable<IQuote>(trx, tenant, 'quotes').where({ quote_id: quoteId }).first() ?? updatedQuote) as IQuote;
       await recordQuoteLifecycleTransition(trx, tenant, existingQuote as IQuote, finalQuote, activity, options);
+      if (changed && (finalQuote.status === 'cancelled' || finalQuote.status === 'expired')) {
+        await revokeQuoteAccessLinks(trx, tenant, { quoteId }, 'cancelled');
+      }
       return finalQuote;
     });
   },
@@ -360,6 +365,9 @@ const Quote = {
         performed_by: updateData.updated_by ?? null,
         metadata: { previous_status: expectedStatus, next_status: updateData.status },
       });
+      if (updateData.status === 'cancelled' || updateData.status === 'expired') {
+        await revokeQuoteAccessLinks(trx, tenant, { quoteId }, 'cancelled');
+      }
       await recalculateQuoteFinancials(trx, tenant, quoteId);
       const finalQuote = (await quoteTable<IQuote>(trx, tenant, 'quotes').where({ quote_id: quoteId }).first() ?? updatedQuote) as IQuote;
       await recordQuoteLifecycleTransition(trx, tenant, existingQuote as IQuote, finalQuote, activity, options);
@@ -501,6 +509,7 @@ const Quote = {
         details: { supersededByQuoteId: revisedQuote.quote_id, nextVersion },
         patch: { updated_by: performedBy ?? null },
     });
+      await revokeQuoteAccessLinks(trx, tenant, { quoteId: sourceQuote.quote_id }, 'superseded');
 
     await QuoteActivity.create(trx, tenant, {
       quote_id: revisedQuote.quote_id,

@@ -4,7 +4,16 @@
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@alga-psa/db', () => ({
-  tenantDb: () => ({ table: () => ({ whereIn: () => ({ select: async () => [] }) }) }),
+  tenantDb: () => ({
+    table: () => {
+      const query = {
+        whereIn: () => query,
+        orderBy: () => query,
+        select: async () => [],
+      };
+      return query;
+    },
+  }),
 }));
 vi.mock('@alga-psa/authorization/bundles/service', () => ({
   resolveBundleNarrowingRulesForEvaluation: vi.fn(async () => []),

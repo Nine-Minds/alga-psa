@@ -21,12 +21,16 @@ import { applyCommentResponseState, publishResponseStateChange, resolveCommentAu
  * Business logic for ticket-related operations
  */
 
-import { reconcileCommentAttachments, canReadCommentAttachment, filterReadableCommentAttachments, canAccessAttachmentTicket, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
+import { reconcileCommentAttachments, canReadCommentAttachment, filterReadableCommentAttachments, canWriteAttachmentTicket, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import {
   BaseService, ServiceContext, ListResult, withTransaction, tenantDb, registerAfterCommit, withViaPrincipal, stampViaPrincipalRow } from '@alga-psa/db';
 import { scheduleJobAt as scheduleBackgroundJobAt, cancelScheduledJob } from '@alga-psa/core';
-import { runAuthorizedTicketWatcherWrite, TicketWatcherPermissionError } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
+import {
+  runAuthorizedTicketWatcherWrite,
+  TicketWatcherPermissionError,
+  TicketWatcherTicketNotFoundError,
+} from '@alga-psa/tickets/lib/ticketRecordAuthorization';
 import { buildAuthorizationPrincipalSubject } from 'server/src/lib/api/controllers/authorizationKernel';
 import { getAuthorizationKernel } from 'server/src/lib/authorization/kernel';
 import { applyTicketVisibilityFilter, type ContactVisibilityContext } from '@alga-psa/tickets/lib';
@@ -1273,6 +1277,9 @@ export class TicketService extends BaseService<ITicket> {
     if (error instanceof TicketWatcherPermissionError) {
       return new ForbiddenError(error.message);
     }
+    if (error instanceof TicketWatcherTicketNotFoundError) {
+      return new NotFoundError(error.message);
+    }
     if (!(error instanceof TicketWatcherError)) {
       return error;
     }
@@ -1452,7 +1459,7 @@ export class TicketService extends BaseService<ITicket> {
       ]);
     }
 
-    if (commentAttachmentDraft && !await canAccessAttachmentTicket(knex, context.tenant, context.userId, ticketId)) throw new NotFoundError('Ticket not found');
+    if (commentAttachmentDraft && !await canWriteAttachmentTicket(knex, context.tenant, context.userId, ticketId)) throw new NotFoundError('Ticket not found');
 
     // Validation, storage, the transaction, rollback cleanup, previews and events all
     // live in the shared upload core; the draft branch is a ticket-adapter option.
