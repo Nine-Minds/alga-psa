@@ -2,6 +2,22 @@
 
 Notable, externally visible changes to the Alga PSA REST API, newest first.
 
+## 2026-11-08 — Ticket API: historical `entered_at` and comment `created_at` for imports
+
+**Affected endpoints:** `POST /api/v1/tickets`, `PUT /api/v1/tickets/{id}`, `POST /api/v1/tickets/{id}/comments`
+
+Migrating ticket history from another PSA used to stamp every imported ticket and comment with the time of the import, and fire the same SLA timers, notifications, webhooks and workflows as live work. The ticket API now accepts the original timestamps and records the data silently as history.
+
+**Changes:**
+
+- `POST /tickets` accepts `entered_at`, an ISO 8601 datetime with an explicit offset (`Z` or `+hh:mm`; date-only values are rejected) that is not in the future. Supplying it marks the ticket as a **historical import**: it is stored with that open date and `source=api_import`, no SLA clock starts, and `TICKET_CREATED` is not published, so no notifications, webhooks or workflows run.
+- A historical ticket can be imported already closed with `closed_at` and optional `closed_by` (defaults to the API user). Both require `entered_at`. `closed_at` is required for a closed status, rejected for an open one, and must satisfy `entered_at <= closed_at <= now`. The ticket is stored closed without firing `TICKET_CLOSED`.
+- `POST /tickets/{id}/comments` accepts a historical `created_at` (same format rules, not before the ticket's `entered_at`, and for a reply not before its parent comment). The comment keeps that timestamp and publishes nothing: no `TICKET_COMMENT_ADDED`, notifications, webhooks, workflows, SLA first response or response-state change. It cannot be combined with `scheduled_publish_at`, `scheduled_publish_tz`, `cc` or `bcc` (`400`).
+- `PUT /tickets/{id}` accepts `entered_at` to correct an existing ticket's open date. The value must not be in the future or later than the ticket's closure or earliest comment. A correction that changes only `entered_at` does not publish `TICKET_UPDATED` or change SLA state; the original creation audit timestamp is kept.
+- `closed_at` on `PUT /tickets/{id}` is honored when that update closes the ticket and must not be in the future or before `entered_at`. Unlike a historical create, this still fires `TICKET_CLOSED`; use the notification suppression flags to silence it.
+- Historical writes require an internal MSP user with `ticket:create` (tickets) or `ticket:update` (comments and corrections). Client-portal callers get `403`.
+- The ticket CSV import uses the same path, so imported tickets get their historical dates at insert time rather than being rewritten afterwards.
+
 ## 2026-11-08 — Ticket priority must match the board's priority type
 
 **Affected endpoints:** `POST /api/v1/tickets`, `PUT /api/v1/tickets/{id}`, `POST /api/v1/tickets/from-asset`
