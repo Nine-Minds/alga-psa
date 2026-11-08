@@ -212,6 +212,15 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
         actor: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).nullable().optional(),
         external_status: zOpenApi.string().nullable().optional(),
       })).optional().describe('Ticket-level external references written in the same transaction as the ticket. A conflicting link rolls back the create.'),
+      entered_at: zOpenApi.string().datetime({ offset: true }).optional().describe(
+        'Historical import. ISO 8601 datetime with an offset, not in the future. Supplying it stores the ticket with this open date and marks it a historical record: created silently with source=api_import, no SLA clock, no TICKET_CREATED, and no notifications, webhooks or workflows. Requires an internal MSP user with ticket:create permission.',
+      ),
+      closed_at: zOpenApi.string().datetime({ offset: true }).optional().describe(
+        'Historical import only (requires entered_at). Required for a closed status, rejected for an open status, and must satisfy entered_at <= closed_at <= now. The ticket is stored closed without firing TICKET_CLOSED.',
+      ),
+      closed_by: zOpenApi.string().guid().optional().describe(
+        'Historical import only (requires closed_at). User recorded as the closer; defaults to the API user.',
+      ),
       asset_ids: zOpenApi.array(zOpenApi.string().uuid()).max(50).optional().describe(
         'Assets the ticket is raised against, linked in the same transaction as the ticket; an unknown asset rejects the whole create. The first asset also makes the ticket inherit that asset\'s billing profile when billing_profile_id is omitted, as POST /tickets/from-asset and the web create do.',
       ),
@@ -223,6 +232,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'WorkV1TicketUpdateBody',
     zOpenApi.object({
       title: zOpenApi.string().min(1).max(255).optional(),
+      entered_at: zOpenApi.string().datetime({ offset: true }).optional().describe(
+        'Correct the ticket open date. Requires an internal MSP user with ticket:update permission. Must not be in the future or after the ticket closure or earliest comment. A date-only correction does not publish TICKET_UPDATED or start SLA timers.',
+      ),
       url: zOpenApi.string().url().optional(),
       board_id: zOpenApi.string().guid().optional(),
       client_id: zOpenApi.string().guid().optional(),
@@ -248,8 +260,8 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'WorkV1TicketStatusUpdateBody',
     zOpenApi.object({
       status_id: zOpenApi.string().guid(),
-      closed_at: zOpenApi.string().datetime().optional(),
-      closed_by: zOpenApi.string().guid().optional(),
+      closed_at: zOpenApi.string().datetime().optional().describe('Honored when this update closes the ticket (open to closed): stored as the close time instead of now. Must not be in the future or before entered_at. TICKET_CLOSED still fires; use suppression flags to silence notifications. Use historical create fields to import an already-closed ticket silently.'),
+      closed_by: zOpenApi.string().guid().optional().describe('Honored with closed_at when this update closes the ticket; defaults to the API user.'),
       override_close_rules: zOpenApi.boolean().optional(),
       override_close_rules_reason: zOpenApi.string().nullable().optional(),
       propagateToChildren: zOpenApi.boolean().optional().describe(
@@ -280,6 +292,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       scheduled_publish_tz: zOpenApi.string().max(64).optional().describe('IANA time zone the author scheduled in, e.g. America/New_York.'),
       cc: zOpenApi.array(zOpenApi.string().email()).max(20).optional().describe('One-off Cc recipients for this comment\'s email only. They are never added to the ticket watch list and receive no later comments. Not allowed with is_internal. Max 20 cc + bcc combined.'),
       bcc: zOpenApi.array(zOpenApi.string().email()).max(20).optional().describe('One-off Bcc recipients for this comment\'s email only. Never returned to client-portal callers. Not allowed with is_internal. Max 20 cc + bcc combined.'),
+      created_at: zOpenApi.string().datetime({ offset: true }).optional().describe(
+        'Historical import. Requires an internal MSP user with ticket:update permission. ISO 8601 datetime with an offset (date-only is rejected), not in the future and not before the ticket\'s entered_at (a reply: not before its parent comment). The comment is stored with this timestamp and is silent: no TICKET_COMMENT_ADDED, no notifications, webhooks, workflows, SLA first response or response-state change. Cannot be combined with scheduled_publish_at, scheduled_publish_tz, cc or bcc.',
+      ),
       ...ticketNotificationSuppressionProperties,
     }).describe('Comment to add. Silent flags suppress the comment notification while preserving the comment and audit history. Set scheduled_publish_at + scheduled_publish_tz to schedule a client-visible comment: it is stored with publish_state=scheduled, hidden from client-portal callers, and published by a background job. cc/bcc add one-off recipients to this comment\'s email without touching the watch list.'),
   );

@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { normalizeTestFile } from './test-execution-evidence.mjs';
 
 export function hasCurrentManualRunnerReview(runner, now = new Date()) {
@@ -25,8 +26,12 @@ export function collectVitestInventory({ root, runner, output, env = process.env
   const collect = (name, args) => {
     const report = path.join(directory, `${name}.json`);
     writeFileSync(report, '');
-    const child = spawnSync(process.execPath, [path.resolve(root, runner.cli), 'list',
-      '--config', runner.config, ...(runner.filters ?? []), ...args, `--json=${report}`], {
+    const cli = path.resolve(root, runner.cli);
+    const command = name === 'collected-tests'
+      ? [fileURLToPath(new URL('./collect-vitest-cases.mjs', import.meta.url)), cli,
+        runner.config, report, ...(runner.filters ?? [])]
+      : [cli, 'list', '--config', runner.config, ...(runner.filters ?? []), ...args, `--json=${report}`];
+    const child = spawnSync(process.execPath, command, {
       cwd: path.resolve(root, runner.cwd), encoding: 'utf8', timeout: 300_000,
       maxBuffer: 32 * 1024 * 1024,
       env: { ...env, ...runner.env },
