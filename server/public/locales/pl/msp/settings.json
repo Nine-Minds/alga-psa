@@ -1,9 +1,9 @@
 {
   "escalationManager": {
     "unsavedChanges_one": "{{count}} niezapisana zmiana",
+    "unsavedChanges_other": "{{count}} niezapisanych zmian",
     "unsavedChanges_few": "{{count}} niezapisane zmiany",
-    "unsavedChanges_many": "{{count}} niezapisanych zmian",
-    "unsavedChanges_other": "{{count}} niezapisanych zmian"
+    "unsavedChanges_many": "{{count}} niezapisanych zmian"
   },
   "page": {
     "title": "Ustawienia administratora"
@@ -34,18 +34,18 @@
     "loadingExperimental": "Ładowanie konfiguracji funkcji eksperymentalnych...",
     "loadingInteractions": "Ładowanie ustawień interakcji...",
     "keyboardShortcuts": "Skróty klawiaturowe",
-    "mcpServer": "Serwer MCP",
     "opportunities": "Szanse sprzedaży",
+    "mcpServer": "Serwer MCP",
     "settingsFallback": "Ustawienia",
     "tags": "Tagi"
   },
   "unsavedChanges": {
     "title": "Niezapisane zmiany",
-    "message": "Mają Państwo niezapisane zmiany. Czy na pewno chcą Państwo opuścić tę stronę? Zmiany zostaną utracone."
+    "message": "Masz niezapisane zmiany. Czy na pewno chcesz opuścić tę stronę? Zmiany zostaną utracone."
   },
   "general": {
     "title": "Ustawienia ogólne",
-    "description": "Zarządzanie nazwą organizacji i wybór rekordu klienta, który reprezentuje Państwa własną firmę. Dane tego klienta pojawiają się na fakturach, ofertach oraz w komunikacji z klientami.",
+    "description": "Zarządzaj nazwą organizacji i wybierz rekord klienta, który reprezentuje twoją firmę. Dane tego klienta pojawiają się na fakturach, ofertach oraz w komunikacji z klientami.",
     "fields": {
       "organizationName": {
         "label": "Nazwa organizacji"
@@ -60,11 +60,11 @@
       "saveDefaultTimezone": "Zapisz domyślną strefę czasową"
     },
     "clients": {
-      "title": "Państwa firma",
-      "help": "Klient oznaczony jako Państwa firma reprezentuje Państwa własną organizację. Jego nazwa, adres i logo pojawiają się na fakturach, ofertach oraz w komunikacji z klientami, a kraj jego lokalizacji określa format daty i kraj wstępnie wybierany w nowych rekordach.",
-      "currentDefault": "Państwa firmą jest obecnie {{name}}.",
+      "title": "Twoja firma",
+      "help": "Klient oznaczony jako twoja firma reprezentuje twoją organizację. Jego nazwa, adres i logo pojawiają się na fakturach, ofertach oraz w komunikacji z klientami, a kraj jego lokalizacji określa format daty i kraj wstępnie wybierany w nowych rekordach.",
+      "currentDefault": "Twoją firmą jest obecnie {{name}}.",
       "defaults": {
-        "title": "Co określa Państwa firma",
+        "title": "Co określa twoja firma",
         "intro": "Kraj lokalizacji {{name}} określa poniższe ustawienia dla całej aplikacji MSP:",
         "country": "Nowi klienci, kontakty i lokalizacje mają wstępnie wybrany kraj {{country}}.",
         "countryMissing": "Nowi klienci, kontakty i lokalizacje nie mają wstępnie wybranego kraju.",
@@ -73,22 +73,22 @@
         "dateFormat": "Daty są zapisywane jako {{pattern}} — {{example}} — w formacie {{clock}}.",
         "clock12": "12-godzinnym",
         "clock24": "24-godzinnym",
-        "noCountry": "{{name}} nie ma kraju w lokalizacji, więc wszystkie trzy wracają do domyślnego formatu {{pattern}}. Aby je zmienić, proszę dodać do {{name}} lokalizację z krajem — nie ma osobnego ustawienia formatu daty.",
-        "portalNote": "W portalu klienta daty są wyświetlane w formacie właściwym dla danego klienta, wynikającym z kraju jego lokalizacji, a nie Państwa.",
+        "noCountry": "{{name}} nie ma kraju w lokalizacji, więc wszystkie trzy wracają do domyślnego formatu {{pattern}}. Aby je zmienić, dodaj do {{name}} lokalizację z krajem — nie ma osobnego ustawienia formatu daty.",
+        "portalNote": "W portalu klienta daty są wyświetlane w formacie właściwym dla danego klienta, wynikającym z kraju jego lokalizacji, a nie z kraju twojej firmy.",
         "changeIntro": "Przełączenie na {{name}} zmienia także te ustawienia domyślne:"
       },
-      "yourCompanyBadge": "Państwa firma",
+      "yourCompanyBadge": "Twoja firma",
       "table": {
         "name": "Nazwa",
-        "default": "Państwa firma (domyślny)",
+        "default": "Twoja firma (domyślna)",
         "actions": "Akcje"
       },
       "placeholder": "Wybierz klienta do dodania",
       "addClient": "Dodaj klienta",
       "confirmDialog": {
-        "title": "Zmienić Państwa firmę?",
-        "message": "Spowoduje to zmianę Państwa firmy z {{current}} na {{next}}. {{next}} będzie reprezentować Państwa własną organizację na fakturach, ofertach oraz w wiadomościach e-mail i zaproszeniach kierowanych do klientów.",
-        "messageInitial": "Spowoduje to ustawienie {{next}} jako Państwa firmy. {{next}} będzie reprezentować Państwa własną organizację na fakturach, ofertach oraz w wiadomościach e-mail i zaproszeniach kierowanych do klientów.",
+        "title": "Zmienić twoją firmę?",
+        "message": "Spowoduje to zmianę twojej firmy z {{current}} na {{next}}. {{next}} będzie reprezentować twoją organizację na fakturach, ofertach oraz w wiadomościach e-mail i zaproszeniach kierowanych do klientów.",
+        "messageInitial": "Spowoduje to ustawienie {{next}} jako twojej firmy. {{next}} będzie reprezentować twoją organizację na fakturach, ofertach oraz w wiadomościach e-mail i zaproszeniach kierowanych do klientów.",
         "confirm": "Zmień firmę",
         "cancel": "Anuluj"
       }
@@ -106,7 +106,7 @@
         "loadTenantData": "Nie udało się załadować danych organizacji",
         "updateTenantName": "Nie udało się zaktualizować nazwy organizacji",
         "updateTimezone": "Nie udało się zaktualizować strefy czasowej",
-        "selectClient": "Proszę wybrać klienta",
+        "selectClient": "Wybierz klienta",
         "clientNotFound": "Nie znaleziono klienta",
         "clientAlreadyAdded": "Ten klient już znajduje się na liście",
         "addClient": "Nie udało się dodać klienta",
@@ -118,9 +118,9 @@
   },
   "dashboardWelcome": {
     "label": "Używaj nazwy firmy w powitaniu na pulpicie",
-    "help": "Domyślnie wyłączone: pulpit MSP wyświetla „Witamy w centrum dowodzenia MSP”. Po włączeniu pojawia się nazwa klienta oznaczonego jako Państwa firma. Ten przełącznik zapisuje się natychmiast i niezależnie.",
-    "noCompany": "Żaden klient nie jest jeszcze oznaczony jako Państwa firma. Proszę wybrać go w Ustawienia → Ogólne, aby jego nazwa mogła się tu pojawić.",
-    "previewLabel": "Państwa zespół zobaczy:",
+    "help": "Domyślnie wyłączone: pulpit MSP wyświetla „Witamy w centrum dowodzenia MSP”. Po włączeniu pojawia się nazwa klienta oznaczonego jako twoja firma. Ustawienie tego przełącznika zapisuje się od razu i niezależnie.",
+    "noCompany": "Żaden klient nie jest jeszcze oznaczony jako twoja firma. Wybierz go w Ustawienia → Ogólne, aby jego nazwa mogła się tu pojawić.",
+    "previewLabel": "Twój zespół zobaczy:",
     "preview": "Witamy w centrum dowodzenia {{companyName}}",
     "previewDefault": "Witamy w centrum dowodzenia MSP",
     "messages": {
@@ -130,7 +130,7 @@
   },
   "experimentalFeatures": {
     "title": "Funkcje eksperymentalne",
-    "description": "Włączanie lub wyłączanie funkcji eksperymentalnych dla Państwa organizacji.",
+    "description": "Włącz lub wyłącz funkcje eksperymentalne dla swojej organizacji.",
     "alert": {
       "title": "Eksperymentalne",
       "description": "Funkcje eksperymentalne mogą ulec zmianie lub zostać usunięte bez uprzedzenia."
@@ -150,7 +150,7 @@
     "loading": "Ładowanie funkcji eksperymentalnych...",
     "messages": {
       "success": {
-        "saved": "Ustawienia funkcji eksperymentalnych zostały zapisane. Proszę odświeżyć stronę, aby zastosować zmiany."
+        "saved": "Ustawienia funkcji eksperymentalnych zostały zapisane. Odśwież stronę, aby zastosować zmiany."
       },
       "error": {
         "loadFailed": "Nie udało się załadować ustawień funkcji eksperymentalnych.",
@@ -271,15 +271,15 @@
         "createClientPortalUser": "Nie udało się utworzyć użytkownika portalu klienta",
         "clipboardUnavailable": "Interfejs API schowka nie jest dostępny w tej przeglądarce.",
         "copyPortalLink": "Nie udało się skopiować linku logowania do portalu",
-        "fillRequiredFields": "Proszę wypełnić wszystkie wymagane pola",
-        "fixValidationErrors": "Proszę poprawić błędy walidacji przed kontynuowaniem",
-        "fixValidationBeforeInvitation": "Proszę poprawić błędy walidacji przed wysłaniem zaproszenia",
-        "emailAlreadyInUse": "Ten adres e-mail jest już w użyciu. Proszę użyć innego adresu e-mail.",
+        "fillRequiredFields": "Wypełnij wszystkie wymagane pola",
+        "fixValidationErrors": "Popraw błędy walidacji przed kontynuowaniem",
+        "fixValidationBeforeInvitation": "Popraw błędy walidacji przed wysłaniem zaproszenia",
+        "emailAlreadyInUse": "Ten adres e-mail jest już w użyciu. Użyj innego adresu e-mail.",
         "portalUserExists": "Użytkownik portalu już istnieje dla tego kontaktu lub adresu e-mail.",
-        "portalUserExistsForContact": "Użytkownik portalu już istnieje dla tego kontaktu. Proszę użyć resetowania hasła dla istniejącego użytkownika.",
-        "selectAppropriateRole": "Proszę wybrać odpowiednią rolę dla tego typu użytkownika",
-        "contactMissingEmail": "Kontakt \"{{name}}\" nie ma adresu e-mail. Proszę zaktualizować adres e-mail kontaktu przed wysłaniem zaproszenia.",
-        "licenseLimit": "Nie można aktywować użytkownika: osiągnięto limit licencji. Proszę dezaktywować innego użytkownika lub zaktualizować licencję.",
+        "portalUserExistsForContact": "Użytkownik portalu już istnieje dla tego kontaktu. Zresetuj hasło istniejącego użytkownika.",
+        "selectAppropriateRole": "Wybierz odpowiednią rolę dla tego typu użytkownika",
+        "contactMissingEmail": "Kontakt „{{name}}” nie ma adresu e-mail. Zaktualizuj adres e-mail kontaktu przed wysłaniem zaproszenia.",
+        "licenseLimit": "Nie można aktywować użytkownika: osiągnięto limit licencji. Dezaktywuj innego użytkownika lub zaktualizuj licencję.",
         "permissionDeniedInvite": "Nie masz uprawnień do zapraszania użytkowników.",
         "permissionDeniedCreate": "Nie masz uprawnień do tworzenia użytkowników.",
         "emailNotConfigured": "Usługa e-mail jest wyłączona lub nie jest skonfigurowana.",
@@ -383,18 +383,18 @@
       },
       "error": {
         "userNotFound": "Nie znaleziono użytkownika",
-        "loadFailed": "Nie udało się załadować szczegółów użytkownika. Proszę spróbować ponownie.",
-        "addRoleFailed": "Nie udało się dodać roli. Proszę spróbować ponownie.",
-        "removeRoleFailed": "Nie udało się usunąć roli. Proszę spróbować ponownie.",
+        "loadFailed": "Nie udało się załadować szczegółów użytkownika. Spróbuj ponownie.",
+        "addRoleFailed": "Nie udało się dodać roli. Spróbuj ponownie.",
+        "removeRoleFailed": "Nie udało się usunąć roli. Spróbuj ponownie.",
         "updateUserNotFound": "Nie udało się zaktualizować użytkownika. Nie znaleziono użytkownika.",
-        "updateFailed": "Nie udało się zaktualizować użytkownika. Proszę spróbować ponownie.",
-        "passwordTooShort": "Hasło musi mieć co najmniej 8 znaków",
-        "passwordChangeFailed": "Nie udało się zmienić hasła",
-        "passwordChangeError": "Wystąpił błąd podczas zmiany hasła",
+        "updateFailed": "Nie udało się zaktualizować użytkownika. Spróbuj ponownie.",
         "emailAlreadyExists": "Użytkownik o tym adresie e-mail już istnieje",
         "reportsToSelf": "Użytkownik nie może podlegać samemu sobie",
         "reportsToCycle": "Spowodowałoby to cykliczną strukturę podległości",
         "invalidTimezone": "Wybierz strefę czasową powiązaną z miastem, np. America/New_York.",
+        "passwordTooShort": "Hasło musi mieć co najmniej 8 znaków",
+        "passwordChangeFailed": "Nie udało się zmienić hasła",
+        "passwordChangeError": "Wystąpił błąd podczas zmiany hasła",
         "permissionDenied": "Nie masz uprawnień do zmiany ról użytkowników.",
         "invalidCapacity": "Tygodniowa wydajność musi być liczbą dodatnią.",
         "invalidWorkSchedule": "Godziny pracy muszą być prawidłowymi przedziałami kończącymi się po rozpoczęciu."
@@ -406,7 +406,7 @@
     "title": "Zarządzanie zespołami",
     "description": "Tworzenie i zarządzanie zespołami, przypisywanie liderów zespołów oraz organizowanie członków w ramach organizacji",
     "loading": "Ładowanie zespołów...",
-    "emptyState": "Proszę wybrać zespół, aby zarządzać członkami",
+    "emptyState": "Wybierz zespół, aby zarządzać członkami",
     "list": {
       "title": "Zespoły",
       "addNewTeam": "Dodaj nowy zespół",
@@ -434,7 +434,7 @@
         "noTeamLead": "Nieprzypisany"
       },
       "alert": {
-        "unsavedChanges": "Mają Państwo niezapisane zmiany"
+        "unsavedChanges": "Masz niezapisane zmiany"
       },
       "actions": {
         "discard": "Odrzuć",
@@ -457,13 +457,13 @@
       },
       "leadName": "Lider: {{name}}",
       "memberCount_one": "{{count}} członek",
+      "memberCount_other": "{{count}} członka",
       "memberCount_few": "{{count}} członków",
-      "memberCount_many": "{{count}} członków",
-      "memberCount_other": "{{count}} członka"
+      "memberCount_many": "{{count}} członków"
     },
     "messages": {
       "error": {
-        "loadFailed": "Nie udało się załadować zespołów. Proszę spróbować ponownie.",
+        "loadFailed": "Nie udało się załadować zespołów. Spróbuj ponownie.",
         "fetchUsers": "Nie udało się pobrać użytkowników",
         "createFailed": "Nie udało się utworzyć zespołu: {{error}}",
         "deleteFailed": "Nie udało się usunąć zespołu",
@@ -517,13 +517,13 @@
       },
       "dialog": {
         "title": "Aktualizacja ustawień numeracji zgłoszeń",
-        "message": "Zmiana tych ustawień wpłynie na sposób generowania nowych numerów zgłoszeń. Ta zmiana nie wpłynie na istniejące zgłoszenia. Czy na pewno chcą Państwo kontynuować?",
+        "message": "Zmiana tych ustawień wpłynie na sposób generowania nowych numerów zgłoszeń. Ta zmiana nie wpłynie na istniejące zgłoszenia. Czy na pewno chcesz kontynuować?",
         "confirm": "Zaktualizuj ustawienia"
       },
       "loading": "Ładowanie...",
       "messages": {
         "error": {
-          "noSettings": "Nie znaleziono ustawień numeracji zgłoszeń. Proszę skontaktować się z administratorem.",
+          "noSettings": "Nie znaleziono ustawień numeracji zgłoszeń. Skontaktuj się z administratorem.",
           "loadFailed": "Nie udało się załadować ustawień numeracji zgłoszeń",
           "updateFailed": "Nie udało się zaktualizować ustawień",
           "updatePaddingFailed": "Nie udało się zaktualizować długości wypełnienia",
@@ -714,11 +714,11 @@
         "conflictsTitle": "Rozwiąż konflikty importu",
         "conflictsDescription": "Następujące elementy mają konflikty, które należy rozwiązać:",
         "nameConflict": "Nazwa już istnieje",
+        "orderConflict": "Kolejność {{order}} jest już zajęta",
         "skipItem": "Pomiń ten element",
         "importNewName": "Importuj z inną nazwą:",
-        "importWithResolutions": "Importuj z rozwiązaniami",
-        "orderConflict": "Kolejność {{order}} jest już zajęta",
         "importWithOrder": "Importuj z kolejnością {{order}}",
+        "importWithResolutions": "Importuj z rozwiązaniami",
         "removesIntro": "Usunięcie tej tablicy spowoduje również usunięcie:"
       },
       "importTable": {
@@ -816,6 +816,9 @@
         "inactivityDaysLabel": "Dni braku aktywności",
         "warningDaysLabel": "Dni ostrzeżenia przed zamknięciem",
         "warningDaysPlaceholder": "Bez ostrzeżenia",
+        "suppressContactNotificationsLabel": "Nie powiadamiaj klienta",
+        "suppressContactNotificationsHelp": "Pomija e-mail ostrzegawczy, e-mail o zamknięciu, zaproszenie do ankiety i powiadomienie w portalu klienta.",
+        "suppressInternalNotificationsLabel": "Nie powiadamiaj też agentów i obserwatorów",
         "ruleEnabledLabel": "Włączona",
         "removeRule": "Usuń",
         "messages": {
@@ -824,10 +827,7 @@
           "autoCloseDaysInvalid": "Liczba dni braku aktywności musi być dodatnią liczbą całkowitą",
           "autoCloseWarningInvalid": "Czas wyprzedzenia ostrzeżenia musi być mniejszy niż liczba dni braku aktywności",
           "autoCloseSuppressionInvalid": "Powiadomienia agentów i obserwatorów można pominąć tylko wtedy, gdy pomijane są powiadomienia klienta."
-        },
-        "suppressContactNotificationsLabel": "Nie powiadamiaj klienta",
-        "suppressContactNotificationsHelp": "Pomija e-mail ostrzegawczy, e-mail o zamknięciu, zaproszenie do ankiety i powiadomienie w portalu klienta.",
-        "suppressInternalNotificationsLabel": "Nie powiadamiaj też agentów i obserwatorów"
+        }
       },
       "editor": {
         "sections": {
@@ -900,14 +900,14 @@
       "empty": "Nie znaleziono tablic.",
       "searchPlaceholder": "Szukaj tablic…",
       "emailSender": {
-        "useDefault": "Użyj nadawcy domyślnego zgłoszenia",
-        "duplicateRoute": "Ta trasa nadawcy już istnieje.",
-        "saveFailed": "Nie można zapisać nadawcy zgłoszenia. Spróbuj ponownie.",
         "label": "Nadawca wiadomości wychodzących",
         "inboundWarning": "Ten nadawca jest używany do wychodzących wiadomości e-mail dotyczących zgłoszeń. Ustawienia poczty przychodzącej pozostają bez zmian.",
         "displayName": "Nazwa wyświetlana",
         "save": "Zapisz nadawcę",
-        "saved": "Zapisano nadawcę"
+        "saved": "Zapisano nadawcę",
+        "useDefault": "Użyj nadawcy domyślnego zgłoszenia",
+        "duplicateRoute": "Ta trasa nadawcy już istnieje.",
+        "saveFailed": "Nie można zapisać nadawcy zgłoszenia. Spróbuj ponownie."
       },
       "deleteDependencies": {
         "categories_one": "kategoria",
@@ -1283,7 +1283,7 @@
       "dialog": {
         "import": {
           "title": "Importuj standardowe typy interakcji",
-          "description": "Wybierz standardowe typy interakcji do zaimportowania do Państwa organizacji:",
+          "description": "Wybierz standardowe typy interakcji do zaimportowania do swojej organizacji:",
           "empty": "Brak dostępnych standardowych typów interakcji do importu."
         },
         "conflicts": {
@@ -1301,9 +1301,9 @@
         "success": {
           "deleted": "Typ interakcji został usunięty",
           "imported_one": "Zaimportowano {{count}} typ interakcji",
+          "imported_other": "Zaimportowano {{count}} typu interakcji",
           "imported_few": "Zaimportowano {{count}} typy interakcji",
-          "imported_many": "Zaimportowano {{count}} typów interakcji",
-          "imported_other": "Zaimportowano {{count}} typu interakcji"
+          "imported_many": "Zaimportowano {{count}} typów interakcji"
         },
         "error": {
           "fetchFailed": "Nie udało się pobrać typów interakcji",
@@ -1387,8 +1387,8 @@
       },
       "messages": {
         "error": {
-          "nameRequired": "Proszę wprowadzić nazwę dla typu interakcji.",
-          "saveFailed": "Nie udało się wykonać akcji {{action}} dla typu interakcji. Proszę spróbować ponownie."
+          "nameRequired": "Wprowadź nazwę dla typu interakcji.",
+          "saveFailed": "Nie udało się wykonać akcji {{action}} dla typu interakcji. Spróbuj ponownie."
         }
       }
     },
@@ -1406,7 +1406,7 @@
     },
     "branding": {
       "title": "Branding i wygląd",
-      "description": "Dostosuj wygląd portalu klienta za pomocą identyfikacji wizualnej Państwa firmy.",
+      "description": "Dostosuj wygląd portalu klienta za pomocą identyfikacji wizualnej swojej firmy.",
       "fields": {
         "companyName": "Nazwa firmy",
         "companyLogo": "Logo firmy",
@@ -1469,9 +1469,9 @@
       }
     },
     "dashboardPreview": {
-      "title": "Państwa portal klienta",
+      "title": "Twój portal klienta",
       "welcome": "Witamy ponownie!",
-      "subtitle": "Oto przegląd aktywności na Państwa koncie",
+      "subtitle": "Oto przegląd aktywności na twoim koncie",
       "openTickets": "Otwarte zgłoszenia",
       "activeProjects": "Aktywne projekty",
       "invoices": "Faktury",
@@ -1504,7 +1504,7 @@
     },
     "signInPreview": {
       "portalTitle": "Portal klienta",
-      "welcome": "Witamy w Państwa portalu klienta",
+      "welcome": "Witamy w twoim portalu klienta",
       "subtitle": "Zarządzaj zgłoszeniami pomocy technicznej i bądź na bieżąco",
       "features": {
         "submitTickets": {
@@ -1526,7 +1526,7 @@
       },
       "signIn": {
         "title": "Logowanie",
-        "description": "Proszę wprowadzić dane logowania, aby uzyskać dostęp do konta.",
+        "description": "Wprowadź dane logowania, aby uzyskać dostęp do konta.",
         "email": "E-mail",
         "emailPlaceholder": "Wprowadź adres e-mail",
         "password": "Hasło",
@@ -1800,8 +1800,8 @@
   "notifications": {
     "title": "Ustawienia powiadomień",
     "description": {
-      "email": "Konfiguracja sposobu wysyłania powiadomień e-mail przez Państwa organizację",
-      "internal": "Konfiguracja sposobu wysyłania powiadomień wewnętrznych przez Państwa organizację"
+      "email": "Skonfiguruj sposób wysyłania powiadomień e-mail przez swoją organizację",
+      "internal": "Skonfiguruj sposób wysyłania powiadomień wewnętrznych przez swoją organizację"
     },
     "viewSwitcher": {
       "email": "Powiadomienia e-mail",
@@ -1882,7 +1882,8 @@
         "loading": "Ładowanie szablonów e-mail...",
         "templateCount": "({{templateCount}} szablonów)",
         "usingCustom": "Używany szablon niestandardowy",
-        "usingStandard": "Używany szablon standardowy"
+        "usingStandard": "Używany szablon standardowy",
+        "notCurrentlySent": "Obecnie niewysyłany"
       },
       "columns": {
         "name": "Nazwa",
@@ -1906,7 +1907,8 @@
         "close": "Zamknij",
         "cancel": "Anuluj",
         "saving": "Zapisywanie...",
-        "save": "Zapisz"
+        "save": "Zapisz",
+        "variableReference": "Wykaz zmiennych"
       },
       "description": "Każdy typ zdarzenia ma standardowy szablon, który można dostosować. Możesz użyć standardowego szablonu lub utworzyć wersję niestandardową.",
       "filter": {
@@ -1929,7 +1931,8 @@
         "notAvailable": "Nd."
       },
       "edit": {
-        "title": "Edytuj szablon niestandardowy: {{name}}"
+        "title": "Edytuj szablon niestandardowy: {{name}}",
+        "variableSuggestions": "Podpowiedzi zmiennych szablonu"
       },
       "languages": {
         "en": "Angielski",
@@ -1939,7 +1942,8 @@
         "nl": "Niderlandzki",
         "it": "Włoski",
         "pl": "Polski",
-        "pt": "Portugalski"
+        "pt": "Portugalski",
+        "sv": "Szwedzki"
       }
     },
     "emailBranding": {
@@ -2001,9 +2005,9 @@
           "title": "Podgląd: {{name}}",
           "loading": "Tworzenie podglądu...",
           "captions": {
-            "create": "Ze standardowego szablonu powstanie kopia w Państwa kolorystyce.",
-            "update": "Państwa kopia zostanie zbudowana na nowo ze standardowego szablonu z zapisaną paletą.",
-            "customized": "Państwa zmiany pozostają słowo w słowo. Zamieniane są tylko kolory standardowe, które jeszcze zostały w tym szablonie.",
+            "create": "Ze standardowego szablonu powstanie kopia w twojej kolorystyce.",
+            "update": "Twoja kopia zostanie utworzona na nowo ze standardowego szablonu z zapisaną paletą.",
+            "customized": "Twoje zmiany pozostają słowo w słowo. Zamieniane są tylko kolory standardowe, które jeszcze zostały w tym szablonie.",
             "overwrite": "Twoje zmiany w tym szablonie zostaną usunięte. Szablon zostanie odtworzony na podstawie standardowego z Twoją paletą.",
             "skipped": "Nic nie zostanie zapisane — {{reason}}. Tak wygląda ten szablon dzisiaj."
           }
@@ -2381,7 +2385,7 @@
         }
       },
       "delete": {
-        "confirmation": "Czy na pewno chcą Państwo usunąć sekret {{name}}?",
+        "confirmation": "Czy na pewno chcesz usunąć sekret {{name}}?",
         "usedByWorkflows": "Ten sekret jest używany przez {{count}} workflow",
         "usedByWarning": "Usunięcie go spowoduje, że te workflow nie będą działać, gdy spróbują uzyskać dostęp do tego sekretu.",
         "cannotUndo": "Tej operacji nie można cofnąć.",
@@ -2410,7 +2414,7 @@
         "nameRequired": "Nazwa sekretu jest wymagana",
         "valueRequired": "Wartość sekretu jest wymagana",
         "noChanges": "Brak zmian do zapisania",
-        "fixValidation": "Proszę poprawić błędy walidacji"
+        "fixValidation": "Popraw błędy walidacji"
       },
       "permissionDenied": "Nie masz uprawnień do wyświetlania sekretów."
     }
@@ -2508,7 +2512,9 @@
       },
       "actions": {
         "back": "Powrót do migracji",
-        "upload": "Prześlij pakiet"
+        "upload": "Prześlij pakiet",
+        "close": "Zamknij",
+        "cancel": "Anuluj"
       },
       "errors": {
         "noImportableRecords": "Ten pakiet nie zawierał rekordów możliwych do zaimportowania.",
@@ -2521,10 +2527,52 @@
         "storageRejected": "Serwer odrzucił to przesłanie. Poproś administratora o sprawdzenie konfiguracji typów plików magazynu.",
         "spreadsheetFailed": "Nie udało się zaimportować arkusza. Spróbuj ponownie.",
         "uploadFailed": "Nie udało się przesłać pakietu. Spróbuj ponownie.",
-        "unknown": "Przesyłanie nie powiodło się. Spróbuj ponownie."
+        "unknown": "Przesyłanie nie powiodło się. Spróbuj ponownie.",
+        "loadJobs": "Nie udało się załadować zadań migracji w tle.",
+        "loadJob": "Nie udało się załadować zadania migracji w tle.",
+        "jobNotFound": "Nie znaleziono zadania migracji w tle."
       },
       "preflight": {
-        "title": "Kontrola wstępna"
+        "title": "Kontrola wstępna",
+        "description": "Próbne uruchomienie sprawdzające każdy przygotowany rekord pod kątem zgodności z tą organizacją i wybraną konfiguracją. Kontrola wstępna niczego nie tworzy.",
+        "errors": {
+          "loadReport": "Nie udało się załadować raportu kontroli wstępnej.",
+          "runFailed": "Nie udało się uruchomić kontroli wstępnej.",
+          "startMigration": "Nie udało się rozpocząć migracji.",
+          "downloadCsv": "Nie udało się pobrać pliku CSV z wynikami kontroli wstępnej.",
+          "downloadJson": "Nie udało się pobrać pliku JSON z wynikami kontroli wstępnej."
+        },
+        "running": "Trwa kontrola wstępna…",
+        "runAgain": "Uruchom ponownie kontrolę wstępną",
+        "run": "Uruchom kontrolę wstępną",
+        "empty": "Nie przeprowadzono jeszcze kontroli wstępnej dla tej konfiguracji. Uruchom ją, aby zobaczyć plan dla poszczególnych encji i ewentualne problemy.",
+        "plan": "Plan",
+        "preflightedAt": "Kontrolę wstępną przeprowadzono {{timestamp}}",
+        "downloadCsv": "Pobierz CSV",
+        "downloadJson": "Pobierz JSON",
+        "columns": {
+          "entity": "Encja",
+          "staged": "Przygotowane",
+          "toCreate": "Do utworzenia",
+          "toSkip": "Do pominięcia (już zmigrowane)",
+          "blocked": "Zablokowane"
+        },
+        "noStagedRecords": "Nie przygotowano żadnych rekordów z pakietu.",
+        "blockingIssues": "Problemy blokujące ({{count}})",
+        "warnings": "Ostrzeżenia ({{count}})",
+        "blockedWithIssues_one": "Nie można uruchomić migracji: najpierw rozwiąż {{count}} problem blokujący.",
+        "blockedWithIssues_other": "Nie można uruchomić migracji. Liczba problemów blokujących do rozwiązania: {{count}}.",
+        "blockedWithIssues_few": "Nie można uruchomić migracji: najpierw rozwiąż {{count}} problemy blokujące.",
+        "blockedWithIssues_many": "Nie można uruchomić migracji: najpierw rozwiąż {{count}} problemów blokujących.",
+        "blockedNoPreflight": "Nie można uruchomić migracji, dopóki kontrola wstępna nie zakończy się bez problemów blokujących.",
+        "needsConfiguration": "Migrację można uruchomić po pomyślnej kontroli wstępnej zapisanej konfiguracji.",
+        "starting": "Uruchamianie…",
+        "runMigration": "Uruchom migrację",
+        "recordsAffected_one": "Dotyczy {{count}} rekordu",
+        "recordsAffected_other": "Dotyczy {{count}} rekordu",
+        "recordsAffected_few": "Dotyczy {{count}} rekordów",
+        "recordsAffected_many": "Dotyczy {{count}} rekordów",
+        "sampleRecords": "Przykładowe rekordy:"
       },
       "run": {
         "queued": "Migracja w kolejce",
@@ -2542,14 +2590,58 @@
         "claimedBySamePackage": "Już zmigrowane przez ten pakiet",
         "claimedByOtherPackage": "Już zmigrowane przez {{file}}",
         "claimedByExistingEntity": "Dopasowano do istniejącej encji",
-        "matchedBySku": "Dopasowano do istniejącego produktu według SKU"
+        "matchedBySku": "Dopasowano do istniejącego produktu według SKU",
+        "title": "Wyniki",
+        "errors": {
+          "loadSummary": "Nie udało się załadować podsumowania wyników.",
+          "loadRecords": "Nie udało się załadować rekordów wynikowych.",
+          "downloadCsv": "Nie udało się pobrać pliku CSV z wynikami."
+        },
+        "actions": {
+          "created": "Utworzono",
+          "skipped": "Pominięto",
+          "failed": "Niepowodzenie"
+        },
+        "counts": {
+          "created": "utworzono",
+          "skipped": "pominięto",
+          "failed": "niepowodzenie"
+        },
+        "finishedAt": "Zakończono {{timestamp}}.",
+        "noLongerRunning": "Zadanie w tle już nie jest wykonywane.",
+        "preparing": "Przygotowywanie…",
+        "downloadCsv": "Pobierz CSV z wynikami",
+        "failedLabel": "Migracja nie powiodła się:",
+        "cancelled": "Migrację anulowano w punkcie kontrolnym. Rekordy zapisane przed anulowaniem pozostają i są wymienione poniżej.",
+        "noRecordsWritten": "Nie zapisano żadnych rekordów wynikowych dla tego zadania w tle.",
+        "noRecordsMatch": "Żadne rekordy wynikowe nie pasują do tych filtrów.",
+        "columns": {
+          "entity": "Encja",
+          "sourceRecord": "Rekord źródłowy",
+          "action": "Akcja",
+          "result": "Wynik",
+          "at": "Czas"
+        },
+        "filters": {
+          "allEntities": "Wszystkie encje",
+          "allActions": "Wszystkie akcje"
+        },
+        "unknownError": "Nieznany błąd",
+        "recordLimitNotice": "Wyświetlono pierwsze pasujące rekordy: {{count}}. Pobierz plik CSV z wynikami, aby uzyskać pełną listę."
       },
       "spreadsheet": {
         "entities": {
           "products": "Produkty (katalog / cennik)",
-          "vendorProducts": "Cennik dostawców (koszty dystrybutora)"
+          "vendorProducts": "Cennik dostawców (koszty dystrybutora)",
+          "assets": "Zasoby (starszy mechanizm importu zasobów)",
+          "organizations": "Organizacje",
+          "locations": "Lokalizacje",
+          "contacts": "Kontakty",
+          "tickets": "Zgłoszenia",
+          "ticketComments": "Komentarze do zgłoszeń"
         },
-        "productsHint": "Ceny i koszty są odczytywane jako kwoty dziesiętne (np. 1,299.50) z kolumną waluty, jeśli istnieje, w przeciwnym razie z walutą organizacji. Ujemne, nienumeryczne lub zbyt dokładne kwoty są odrzucane i zgłaszane; wiersz jest mimo to importowany. Produkty są dopasowywane do istniejących według SKU; wiersze cennika dostawców odwołują się do produktu przez SKU i tworzą lub dopasowują dostawcę według nazwy."
+        "productsHint": "Ceny i koszty są odczytywane jako kwoty dziesiętne (np. 1,299.50) z kolumną waluty, jeśli istnieje, w przeciwnym razie z walutą organizacji. Ujemne, nienumeryczne lub zbyt dokładne kwoty są odrzucane i zgłaszane; wiersz jest mimo to importowany. Produkty są dopasowywane do istniejących według SKU; wiersze cennika dostawców odwołują się do produktu przez SKU i tworzą lub dopasowują dostawcę według nazwy.",
+        "headersHint": "Standardowe nagłówki są rozpoznawane automatycznie. Pozostałe kolumny można przypisać do niestandardowych pól typów zasobów podczas konfiguracji. Dla kontaktów akceptowane są typowe angielskie nazwy kolumn oznaczające nazwę, imię, nazwisko, adres e-mail, telefon, stanowisko i klienta; starsze angielskie nazwy kolumn oznaczające nazwę zasobu, typ zasobu i numer seryjny są zachowywane podczas przetwarzania AMP."
       },
       "configure": {
         "products": {
@@ -2557,7 +2649,92 @@
           "serviceType": "Typ usługi dla nowych produktów",
           "serviceTypePlaceholder": "Wybierz typ usługi",
           "serviceTypeHelp": "Produkty, których SKU już istnieje, są dopasowywane i pozostają bez zmian; tylko nowe produkty są przypisywane do tego typu usługi."
+        },
+        "title": "Skonfiguruj migrację",
+        "description": "Zmapuj dane referencyjne pakietu na dane tej organizacji. Kontrola wstępna sprawdza każde mapowanie przed uruchomieniem migracji.",
+        "errors": {
+          "loadOptions": "Nie udało się załadować opcji konfiguracji.",
+          "save": "Nie udało się zapisać konfiguracji.",
+          "optionsUnavailable": "Opcje konfiguracji są niedostępne."
+        },
+        "clientPlaceholder": "Wybierz klienta",
+        "mappingPlaceholder": "Wybierz mapowanie",
+        "tickets": {
+          "title": "Zgłoszenia",
+          "board": "Tablica",
+          "boardPlaceholder": "Wybierz tablicę",
+          "defaultRequester": "Domyślny klient zgłaszający",
+          "defaultRequesterHelp": "Używany, gdy nie można ustalić organizacji zgłoszenia.",
+          "defaultAssignee": "Domyślny przypisany użytkownik",
+          "defaultAssigneePlaceholder": "Pozostaw zgłoszenia bez przypisania"
+        },
+        "statusMapping": {
+          "title": "Mapowanie statusów",
+          "description": "Każda nazwa statusu w pakiecie musi być przypisana do statusu zgłoszenia w tej organizacji.",
+          "empty": "Zgłoszenia w pakiecie nie zawierają nazw statusów."
+        },
+        "priorityMapping": {
+          "title": "Mapowanie priorytetów",
+          "description": "Każda nazwa priorytetu w pakiecie musi być przypisana do priorytetu w tej organizacji.",
+          "empty": "Zgłoszenia w pakiecie nie zawierają nazw priorytetów."
+        },
+        "assets": {
+          "title": "Zasoby"
+        },
+        "assetTypeMapping": {
+          "title": "Mapowanie typów zasobów",
+          "description": "Każda nazwa typu zasobu w pakiecie musi być przypisana do typu zasobu w tej organizacji.",
+          "empty": "Zasoby w pakiecie nie zawierają nazw typów zasobów."
+        },
+        "general": {
+          "title": "Ogólne",
+          "defaultClient": "Domyślny klient dla rekordów bez powiązania",
+          "defaultClientHelp": "Kontakty i zasoby, których organizacji nie można ustalić, są przypisywane do tego klienta."
+        },
+        "saved": "Zapisano konfigurację. Uruchom kontrolę wstępną, aby sprawdzić ją względem przygotowanych rekordów.",
+        "saving": "Zapisywanie…",
+        "save": "Zapisz konfigurację"
+      },
+      "home": {
+        "title": "Migracje",
+        "description": "Przenieś dane z innego systemu PSA do Alga, przesyłając pakiet AMP lub arkusz CSV/XLSX. Każdy przesłany plik jest sprawdzany, konfigurowany i poddawany kontroli wstępnej, zanim zostaną utworzone jakiekolwiek dane.",
+        "columns": {
+          "package": "Pakiet",
+          "sourceSystem": "System źródłowy",
+          "state": "Stan",
+          "progress": "Postęp",
+          "created": "Utworzono"
+        },
+        "empty": {
+          "title": "Brak migracji",
+          "descriptionPrefix": "Pakiet migracyjny Alga (",
+          "descriptionSuffix": ") to przenośne, zweryfikowane archiwum organizacji, lokalizacji, kontaktów, zgłoszeń, komentarzy i zasobów wyeksportowanych z innego systemu. Prześlij pakiet, aby sprawdzić jego zawartość, zmapować dane referencyjne na dane tej organizacji i uruchomić import poprzedzony kontrolą wstępną, który można bezpiecznie powtarzać.",
+          "docsLink": "Przeczytaj dokumentację pakietu AMP"
         }
+      },
+      "upload": {
+        "title": "Prześlij pakiet migracyjny",
+        "tooLarge": "Rozmiar pakietu migracyjnego nie może przekraczać {{megabytes}} MB.",
+        "fileLabel": "Pakiet lub arkusz",
+        "fileHint": "AMP (.amp) lub CSV/XLSX, do {{megabytes}} MB. Arkusze są przekształcane w pakiet AMP przed przygotowaniem danych; import rozpocznie się dopiero po uruchomieniu migracji.",
+        "entityLabel": "Rekordy w arkuszu reprezentują",
+        "rejected": "Pakiet został odrzucony i nie przygotowano żadnych danych. Rozwiąż poniższe problemy w pakiecie źródłowym i prześlij go ponownie:",
+        "stagedWithDiagnostics": "Dane z pakietu zostały przygotowane, ale niektóre dane źródłowe wymagają uwagi przed uruchomieniem importu:",
+        "continueToConfigure": "Przejdź do konfiguracji",
+        "uploading": "Przesyłanie…",
+        "submit": "Prześlij"
+      },
+      "detail": {
+        "source": "Źródło: {{system}}",
+        "sourceNotDeclared": "Nie określono systemu źródłowego",
+        "producer": "Twórca: {{producer}}",
+        "uploaded": "Przesłano {{timestamp}}",
+        "lifecycleAria": "Cykl życia migracji",
+        "inspecting": "Trwa sprawdzanie pakietu i przygotowywanie danych",
+        "packageSuffix": "(pakiet {{packageId}})",
+        "inspectingRefresh": ". Ten widok odświeża się automatycznie.",
+        "rejectedBody": "Ten pakiet został odrzucony podczas sprawdzania; nie przygotowano żadnych danych i nic nie zostanie z niego zaimportowane. Popraw pakiet w systemie źródłowym i prześlij nowy.",
+        "rejectionDetails": "Szczegóły odrzucenia"
       }
     },
     "jobDetails": {
@@ -2773,15 +2950,15 @@
         "client": "Klient"
       },
       "session": {
-        "yourSession": "Państwa sesja",
+        "yourSession": "Twoja sesja",
         "unknownDevice": "Nieznane urządzenie",
         "lastActive": "Ostatnia aktywność {{time}} temu",
         "logout": "Wyloguj",
         "revoke": "Unieważnij",
         "revoking": "Unieważnianie..."
       },
-      "oauthWarning": "Unieważnienie tej sesji nie spowoduje cofnięcia dostępu OAuth {{provider}}. Proszę cofnąć dostęp w ustawieniach konta {{provider}}.",
-      "confirmLogout": "Czy na pewno chcą Państwo wylogować się z tego urządzenia?",
+      "oauthWarning": "Unieważnienie tej sesji nie spowoduje cofnięcia dostępu OAuth {{provider}}. Cofnij dostęp w ustawieniach konta {{provider}}.",
+      "confirmLogout": "Czy na pewno chcesz wylogować się z tego urządzenia?",
       "messages": {
         "loggingOut": "Wylogowywanie...",
         "revoked": "Sesja została unieważniona pomyślnie"
@@ -2792,9 +2969,9 @@
         "noSessions": "Nie znaleziono aktywnych sesji"
       },
       "subtitle_one": "{{sessionCount}} aktywna sesja u {{userCount}} użytkownika",
+      "subtitle_other": "{{sessionCount}} aktywnej sesji u {{userCount}} użytkowników",
       "subtitle_few": "{{sessionCount}} aktywne sesje u {{userCount}} użytkowników",
-      "subtitle_many": "{{sessionCount}} aktywnych sesji u {{userCount}} użytkowników",
-      "subtitle_other": "{{sessionCount}} aktywnej sesji u {{userCount}} użytkowników"
+      "subtitle_many": "{{sessionCount}} aktywnych sesji u {{userCount}} użytkowników"
     }
   },
   "ssoBulk": {
@@ -2813,7 +2990,7 @@
       "clientBody": "Po włączeniu pasujący użytkownicy portalu klienta są automatycznie łączeni ze swoimi tożsamościami SSO podczas logowania.",
       "clientTitle": "Automatycznie łącz użytkowników portalu klienta",
       "clientToggleLabel": "Przełącz automatyczne łączenie klientów",
-      "description": "Włącz tę opcję, aby każde nowe konto pracownika było natychmiast udostępniane Państwa korporacyjnemu dostawcy SSO, dzięki czemu nigdy nie będzie wymagane logowanie hasłem.",
+      "description": "Włącz tę opcję, aby każde nowe konto pracownika było od razu powiązane z firmowym dostawcą SSO i nie wymagało logowania hasłem.",
       "disabledInfo": "Włącz ten przełącznik, aby nowi i obecni pracownicy mogli pominąć proces „Połącz SSO”, gdy ich Email pasuje już do skonfigurowanego dostawcy. Każde automatyczne powiązanie nadal będzie rejestrowane.",
       "internalBody": "Po włączeniu pasujący użytkownicy MSP/wewnętrzni są automatycznie łączeni ze swoimi tożsamościami SSO podczas logowania.",
       "internalTitle": "Automatycznie łącz użytkowników wewnętrznych",
@@ -2845,8 +3022,6 @@
       "searchPlaceholder": "Szukaj po Email lub nazwisku",
       "noneSelected": "Nie wybrano jeszcze żadnych użytkowników.",
       "selected_one": "Wybrano {{count}} użytkownika.",
-      "selected_few": "Wybrano {{count}} użytkowników.",
-      "selected_many": "Wybrano {{count}} użytkowników.",
       "selected_other": "Wybrano {{count}} użytkowników.",
       "clearSelection": "Wyczyść wybór",
       "loadingUsers": "Ładowanie użytkowników...",
@@ -2888,18 +3063,16 @@
         "linkedCount": "Powiązano {{count}} kont przez {{provider}}.",
         "unlinkedCount": "Odłączono {{count}} kont przez {{provider}}.",
         "previewUnlink_one": "Podgląd gotowy. Odłączymy {{count}} wybranego użytkownika.",
-        "previewUnlink_few": "Podgląd gotowy. Odłączymy {{count}} wybranych użytkowników.",
-        "previewUnlink_many": "Podgląd gotowy. Odłączymy {{count}} wybranych użytkowników.",
         "previewUnlink_other": "Podgląd gotowy. Odłączymy {{count}} wybranych użytkowników.",
-        "previewLink": "Podgląd gotowy. Przejrzyj podsumowanie przed powiązaniem kont."
+        "previewLink": "Podgląd gotowy. Przejrzyj podsumowanie przed powiązaniem kont.",
+        "previewUnlink_few": "Podgląd gotowy. Odłączymy {{count}} wybranych użytkowników.",
+        "previewUnlink_many": "Podgląd gotowy. Odłączymy {{count}} wybranych użytkowników."
       },
       "results": {
         "completeTitle": "Przypisanie zakończone",
         "previewTitle": "Wyniki podglądu",
         "noneMatched": "Żaden z wybranych użytkowników nie pasował do bieżących filtrów.",
         "processed_one": "Przetworzono {{count}} użytkownika.",
-        "processed_few": "Przetworzono {{count}} użytkowników.",
-        "processed_many": "Przetworzono {{count}} użytkowników.",
         "processed_other": "Przetworzono {{count}} użytkowników.",
         "candidatesSelected": "wybrano {{count}}",
         "unlinked": "Odłączono",
@@ -2908,12 +3081,16 @@
         "wouldLink": "Zostałoby powiązanych",
         "alreadyUnlinked": "Już odłączeni",
         "alreadyLinked": "Już powiązani",
-        "skippedInactive": "Pominięto (nieaktywny)"
+        "skippedInactive": "Pominięto (nieaktywny)",
+        "processed_few": "Przetworzono {{count}} użytkowników.",
+        "processed_many": "Przetworzono {{count}} użytkowników."
       },
       "providerNames": {
         "google": "Google Workspace",
         "microsoft": "Microsoft 365"
-      }
+      },
+      "selected_few": "Wybrano {{count}} użytkowników.",
+      "selected_many": "Wybrano {{count}} użytkowników."
     },
     "clientPortalProvisioning": {
       "deactivateBody": "Po włączeniu użytkownicy zarządzani przez inicjowanie obsługi Entra są dezaktywowani po odebraniu uprawnienia grupy dostępu.",
@@ -2936,6 +3113,7 @@
     }
   },
   "profile": {
+    "pageTitle": "Twój profil",
     "tabs": {
       "profile": "Profil",
       "security": "Bezpieczeństwo",
@@ -2981,7 +3159,7 @@
       },
       "error": {
         "userNotFound": "Nie znaleziono użytkownika",
-        "fillRequiredFields": "Proszę wypełnić wszystkie wymagane pola",
+        "fillRequiredFields": "Wypełnij wszystkie wymagane pola",
         "saveFailed": "Nie udało się zapisać profilu",
         "emailAlreadyExists": "Użytkownik o tym adresie e-mail już istnieje",
         "reportsToSelf": "Użytkownik nie może podlegać samemu sobie",
@@ -2991,8 +3169,7 @@
     "validation": {
       "firstNameRequired": "Imię jest wymagane",
       "lastNameRequired": "Nazwisko jest wymagane"
-    },
-    "pageTitle": "Twój profil"
+    }
   },
   "password": {
     "changePassword": "Zmiana hasła",
@@ -3018,7 +3195,8 @@
     "rmmEnterpriseNote": "Integracje RMM są dostępne w Pro.",
     "categoryHeading": "Integracje {{label}}",
     "loading": {
-      "payments": "Ładowanie ustawień płatności..."
+      "payments": "Ładowanie ustawień płatności...",
+      "hudu": "Ładowanie ustawień integracji z Hudu..."
     },
     "categories": {
       "accounting": {
@@ -3088,13 +3266,13 @@
       "google": {
         "name": "Google",
         "description": {
-          "ee": "Poświadczenia Google Cloud należące do dzierżawcy dla Gmail i Kalendarza",
-          "oss": "Poświadczenia Google Cloud należące do dzierżawcy dla Gmail i przepływów wsparcia MSP SSO"
+          "ee": "Poświadczenia Google Cloud należące do organizacji dla Gmail i Kalendarza",
+          "oss": "Poświadczenia Google Cloud należące do organizacji dla Gmail i przepływów wsparcia MSP SSO"
         },
         "cardTitle": "Poświadczenia dostawcy",
         "cardDescription": {
-          "ee": "Najpierw skonfiguruj Google i Microsoft, a następnie połącz konta dostawców z ekranów integracji poczty przychodzącej i kalendarza. Odkrywanie domen MSP SSO używa tych poświadczeń dostawcy z mapowaniami domen logowania dzierżawcy.",
-          "oss": "Najpierw skonfiguruj Google i Microsoft, a następnie połącz konta dostawców z ekranu integracji poczty przychodzącej. Odkrywanie domen MSP SSO używa tych poświadczeń dostawcy z mapowaniami domen logowania dzierżawcy."
+          "ee": "Najpierw skonfiguruj Google i Microsoft, a następnie połącz konta dostawców z ekranów integracji poczty przychodzącej i kalendarza. Odkrywanie domen MSP SSO używa tych poświadczeń dostawcy z mapowaniami domen logowania organizacji.",
+          "oss": "Najpierw skonfiguruj Google i Microsoft, a następnie połącz konta dostawców z ekranu integracji poczty przychodzącej. Odkrywanie domen MSP SSO używa tych poświadczeń dostawcy z mapowaniami domen logowania organizacji."
         }
       },
       "entra": {
@@ -3110,6 +3288,11 @@
         "name": "Telefonia",
         "description": "Zapisuj rozmowy jako interakcje, rozpoznawaj dzwoniących i zamieniaj rozmowę w zgłoszenie"
       }
+    },
+    "addOnRequired": {
+      "heading": "Funkcja {{featureName}} wymaga dodatku {{addOnName}}",
+      "manageAddOns": "Zarządzaj dodatkami",
+      "entraDescription": "Kup dodatek Enterprise, aby aktywować Microsoft Entra Sync, w tym wykrywanie organizacji, mapowanie klientów, synchronizację kontaktów i workflow uzgadniania danych."
     }
   },
   "orgChart": {
@@ -3127,6 +3310,58 @@
     "messages": {
       "adminLocked": "Nie można modyfikować uprawnień roli administratora",
       "permissionsUpdated": "Uprawnienia zaktualizowane pomyślnie"
+    },
+    "title": "Zarządzaj uprawnieniami",
+    "description": "Skonfiguruj uprawnienia dostępu dla różnych ról i zasobów",
+    "selectPrompt": "Wybierz rolę lub zasób, aby zarządzać uprawnieniami",
+    "unsavedChanges": "Masz niezapisane zmiany",
+    "adminLockedTooltip": "Uprawnienia roli administratora są określone przez system i nie można ich zmienić",
+    "none": "Brak",
+    "actionCount_one": "{{count}} akcja",
+    "actionCount_other": "{{count}} akcji",
+    "actionCount_few": "{{count}} akcje",
+    "actionCount_many": "{{count}} akcji",
+    "views": {
+      "clientPortal": "Portal klienta"
+    },
+    "filters": {
+      "allResources": "Wszystkie zasoby",
+      "allRoles": "Wszystkie role",
+      "selectRole": "Wybierz rolę",
+      "filterByResource": "Filtruj według zasobu"
+    },
+    "columns": {
+      "resource": "Zasób",
+      "role": "Rola",
+      "create": "Tworzenie",
+      "read": "Odczyt",
+      "update": "Aktualizacja",
+      "delete": "Usuwanie",
+      "specialActions": "Akcje specjalne"
+    },
+    "actions": {
+      "cancel": "Anuluj",
+      "saveChanges": "Zapisz zmiany",
+      "saving": "Zapisywanie..."
+    },
+    "confirm": {
+      "title": "Potwierdź zmiany uprawnień",
+      "message": "Czy na pewno chcesz zapisać te zmiany uprawnień?",
+      "confirmLabel": "Zapisz zmiany"
+    },
+    "stats": {
+      "empty": "Wybierz rolę lub zasób, aby wyświetlić uprawnienia",
+      "rolesForResource_one": "{{count}} rola dla zasobu {{resource}}",
+      "rolesForResource_other": "{{count}} roli dla zasobu {{resource}}",
+      "rolesForResource_few": "{{count}} role dla zasobu {{resource}}",
+      "rolesForResource_many": "{{count}} ról dla zasobu {{resource}}",
+      "resourcesAndPermissions": "Zasoby: {{count}} • Uprawnienia: {{assigned}}/{{total}}"
+    },
+    "errors": {
+      "fetchPermissions": "Nie udało się pobrać uprawnień",
+      "fetchRoles": "Nie udało się pobrać ról",
+      "fetchRolePermissions": "Nie udało się pobrać uprawnień roli",
+      "savePermissions": "Nie udało się zapisać uprawnień"
     }
   },
   "sla": {
@@ -3182,9 +3417,9 @@
         "overallCompliance": "Ogólna zgodność",
         "pausedSla": "zgłoszenia ze wstrzymanym SLA",
         "ticketsTracked_one": "{{count}} śledzone zgłoszenie",
+        "ticketsTracked_other": "{{count}} śledzonego zgłoszenia",
         "ticketsTracked_few": "{{count}} śledzone zgłoszenia",
-        "ticketsTracked_many": "{{count}} śledzonych zgłoszeń",
-        "ticketsTracked_other": "{{count}} śledzonego zgłoszenia"
+        "ticketsTracked_many": "{{count}} śledzonych zgłoszeń"
       },
       "recentBreaches": {
         "empty": "Brak przekroczeń SLA w wybranym okresie",
@@ -3227,23 +3462,23 @@
         "responseTrackingDisabled": "Wyłączono śledzenie stanu odpowiedzi",
         "responseTrackingEnabled": "Włączono śledzenie stanu odpowiedzi",
         "statusesUpdated_one": "Pomyślnie zaktualizowano {{count}} konfigurację statusu",
+        "statusesUpdated_other": "Pomyślnie zaktualizowano {{count}} konfiguracji statusu",
         "statusesUpdated_few": "Pomyślnie zaktualizowano {{count}} konfiguracje statusów",
-        "statusesUpdated_many": "Pomyślnie zaktualizowano {{count}} konfiguracji statusów",
-        "statusesUpdated_other": "Pomyślnie zaktualizowano {{count}} konfiguracji statusu"
+        "statusesUpdated_many": "Pomyślnie zaktualizowano {{count}} konfiguracji statusów"
       },
       "perStatus": {
         "description": "Skonfiguruj statusy zgłoszeń, które powinny wstrzymywać licznik SLA. Po przeniesieniu zgłoszenia do statusu z włączonym wstrzymywaniem licznik SLA zatrzyma się do chwili przeniesienia zgłoszenia do innego statusu.",
         "empty": "Nie znaleziono statusów zgłoszeń.",
         "modified": "Zmodyfikowano",
         "modifiedCount_one": "{{count}} zmodyfikowany status",
-        "modifiedCount_few": "{{count}} zmodyfikowane statusy",
-        "modifiedCount_many": "{{count}} zmodyfikowanych statusów",
         "modifiedCount_other": "{{count}} zmodyfikowanego statusu",
         "noUnsavedChanges": "Brak niezapisanych zmian",
         "resetChanges": "Zresetuj zmiany",
         "saveChanges": "Zapisz zmiany",
         "saving": "Zapisywanie...",
-        "title": "Konfiguracja wstrzymywania według statusu"
+        "title": "Konfiguracja wstrzymywania według statusu",
+        "modifiedCount_few": "{{count}} zmodyfikowane statusy",
+        "modifiedCount_many": "{{count}} zmodyfikowanych statusów"
       },
       "retry": "Spróbuj ponownie"
     },
@@ -3286,9 +3521,9 @@
         "selectAll": "Zaznacz wszystko",
         "selectAllVisible": "Zaznacz wszystkie widoczne elementy",
         "selectedCount_one": "Wybrano {{count}}",
+        "selectedCount_other": "Wybrano {{count}}",
         "selectedCount_few": "Wybrano {{count}}",
-        "selectedCount_many": "Wybrano {{count}}",
-        "selectedCount_other": "Wybrano {{count}}"
+        "selectedCount_many": "Wybrano {{count}}"
       },
       "targets": {
         "always": "Całodobowo (ignoruj godziny pracy)",
@@ -3377,17 +3612,17 @@
         "title": "Usuń politykę SLA",
         "unlinkNote": "Te odwołania zostaną odłączone. Istniejące dane śledzenia SLA w zgłoszeniach zostaną zachowane.",
         "usageBoards_one": "Tablica: {{names}}",
-        "usageBoards_few": "Tablice: {{names}}",
-        "usageBoards_many": "Tablice: {{names}}",
         "usageBoards_other": "Tablice: {{names}}",
         "usageClients_one": "Klient: {{names}}",
-        "usageClients_few": "Klienci: {{names}}",
-        "usageClients_many": "Klienci: {{names}}",
         "usageClients_other": "Klienci: {{names}}",
         "usageTickets_one": "{{count}} zgłoszenie",
+        "usageTickets_other": "{{count}} zgłoszenia",
+        "usageBoards_few": "Tablice: {{names}}",
+        "usageBoards_many": "Tablice: {{names}}",
+        "usageClients_few": "Klienci: {{names}}",
+        "usageClients_many": "Klienci: {{names}}",
         "usageTickets_few": "{{count}} zgłoszenia",
-        "usageTickets_many": "{{count}} zgłoszeń",
-        "usageTickets_other": "{{count}} zgłoszenia"
+        "usageTickets_many": "{{count}} zgłoszeń"
       },
       "description": "Zarządzaj politykami umów o gwarantowanym poziomie usług, które określają cele czasu odpowiedzi i rozwiązania",
       "empty": "Nie znaleziono polityk SLA. Kliknij \"Dodaj politykę\", aby utworzyć pierwszą.",
@@ -3415,6 +3650,91 @@
         "timerPaused": "Licznik SLA: wstrzymany"
       },
       "unknown": "Nieznany"
+    },
+    "businessHours": {
+      "title": "Harmonogramy godzin pracy",
+      "description": "Określ dostępność zespołu wsparcia na potrzeby obliczeń SLA",
+      "loading": "Ładowanie harmonogramów godzin pracy...",
+      "default": "Domyślny",
+      "recurring": "Cykliczny",
+      "openMenu": "Otwórz menu",
+      "workingHours": "Godziny pracy",
+      "dailyHours": "Godziny pracy w poszczególne dni",
+      "closed": "Nieczynne",
+      "alwaysOpen": "To harmonogram 24/7 — dostępność przez całą dobę, każdego dnia.",
+      "holidays": "Dni wolne",
+      "noHolidays": "Nie zdefiniowano dni wolnych dla tego harmonogramu.",
+      "timezoneLabel": "Strefa czasowa: {{timezone}}",
+      "days": {
+        "0": "Niedziela",
+        "1": "Poniedziałek",
+        "2": "Wtorek",
+        "3": "Środa",
+        "4": "Czwartek",
+        "5": "Piątek",
+        "6": "Sobota"
+      },
+      "columns": {
+        "name": "Nazwa",
+        "timezone": "Strefa czasowa",
+        "actions": "Akcje",
+        "holidayName": "Nazwa dnia wolnego",
+        "date": "Data",
+        "day": "Dzień",
+        "enabled": "Włączone",
+        "startTime": "Czas rozpoczęcia",
+        "endTime": "Czas zakończenia"
+      },
+      "empty": {
+        "title": "Brak harmonogramów godzin pracy",
+        "description": "Utwórz pierwszy harmonogram godzin pracy, aby rozpocząć obliczanie czasów SLA."
+      },
+      "actions": {
+        "edit": "Edytuj",
+        "viewDetails": "Zobacz szczegóły",
+        "delete": "Usuń",
+        "cancel": "Anuluj",
+        "close": "Zamknij",
+        "create": "Utwórz",
+        "update": "Zaktualizuj",
+        "saving": "Zapisywanie...",
+        "adding": "Dodawanie...",
+        "createDefault": "Utwórz domyślny harmonogram",
+        "createCustom": "Utwórz niestandardowy harmonogram",
+        "addSchedule": "Dodaj harmonogram",
+        "addHoliday": "Dodaj dzień wolny"
+      },
+      "fields": {
+        "scheduleName": "Nazwa harmonogramu *",
+        "scheduleNamePlaceholder": "np. Standardowe godziny pracy",
+        "timezone": "Strefa czasowa *",
+        "is24x7": "Harmonogram 24/7 (stała dostępność)",
+        "isDefault": "Ustaw jako domyślny harmonogram",
+        "holidayName": "Nazwa dnia wolnego *",
+        "holidayNamePlaceholder": "np. Boże Narodzenie",
+        "holidayDate": "Data *",
+        "holidayDatePlaceholder": "Wybierz datę",
+        "isRecurring": "Powtarza się co roku"
+      },
+      "dialog": {
+        "editTitle": "Edytuj harmonogram",
+        "createTitle": "Utwórz harmonogram",
+        "deleteScheduleTitle": "Usuń harmonogram",
+        "deleteScheduleMessage": "Czy na pewno chcesz usunąć „{{name}}”? Spowoduje to również usunięcie wszystkich powiązanych dni wolnych. Tej operacji nie można cofnąć.",
+        "deleteHolidayTitle": "Usuń dzień wolny",
+        "deleteHolidayMessage": "Czy na pewno chcesz usunąć „{{name}}”? Tej operacji nie można cofnąć."
+      },
+      "errors": {
+        "loadSchedules": "Nie udało się załadować harmonogramów godzin pracy",
+        "loadScheduleDetails": "Nie udało się załadować szczegółów harmonogramu",
+        "nameRequired": "Nazwa harmonogramu jest wymagana",
+        "invalidTimeRange": "Nieprawidłowy zakres godzin ({{day}}): czas zakończenia musi być późniejszy niż czas rozpoczęcia",
+        "saveSchedule": "Nie udało się zapisać harmonogramu",
+        "deleteSchedule": "Nie udało się usunąć harmonogramu",
+        "createDefaultSchedule": "Nie udało się utworzyć domyślnego harmonogramu",
+        "addHoliday": "Nie udało się dodać dnia wolnego",
+        "deleteHoliday": "Nie udało się usunąć dnia wolnego"
+      }
     }
   },
   "clientPortalLanguage": {
