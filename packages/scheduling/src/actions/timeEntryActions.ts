@@ -22,7 +22,8 @@ import { fetchTimeEntryChangeRequestsForTimeSheet } from './timeEntryChangeReque
 import {
   fetchWorkItemsForTimeSheet,
   addWorkItem,
-  deleteWorkItem
+  deleteWorkItem,
+  isServiceOptionalForWorkItem
 } from './timeEntryWorkItemActions';
 import {
   fetchTaxRegions,
@@ -50,6 +51,7 @@ export {
   fetchWorkItemsForTimeSheet,
   addWorkItem,
   deleteWorkItem,
+  isServiceOptionalForWorkItem,
   fetchTaxRegions,
   fetchClientTaxRateForWorkItem,
   fetchServicesForTimeEntry,

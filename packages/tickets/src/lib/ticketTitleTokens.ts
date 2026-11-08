@@ -15,12 +15,10 @@
  * Client-safe: no server imports. The Quick Add dialog uses it directly.
  */
 
+import { findUnknownTokens, hasTokens, substituteTokens } from './titleTokens';
+
 export const TICKET_TITLE_TOKENS = ['client', 'contact', 'due_date', 'month', 'year'] as const;
 export type TicketTitleToken = (typeof TICKET_TITLE_TOKENS)[number];
-
-const TOKEN_PATTERN = /\{\{\s*([^{}]*?)\s*\}\}/g;
-
-const KNOWN_TOKENS: ReadonlySet<string> = new Set(TICKET_TITLE_TOKENS);
 
 export interface TitleTokenContext {
   clientName?: string | null;
@@ -33,17 +31,12 @@ export interface TitleTokenContext {
 
 /** Tokens in `template` that are not one of {@link TICKET_TITLE_TOKENS}, in first-seen order. */
 export function findUnknownTitleTokens(template: string): string[] {
-  const unknown: string[] = [];
-  for (const match of template.matchAll(TOKEN_PATTERN)) {
-    const token = match[1];
-    if (!KNOWN_TOKENS.has(token) && !unknown.includes(token)) unknown.push(token);
-  }
-  return unknown;
+  return findUnknownTokens(template, TICKET_TITLE_TOKENS);
 }
 
 /** Whether the template uses any token (known or not). */
 export function titleHasTokens(template: string): boolean {
-  return new RegExp(TOKEN_PATTERN.source).test(template);
+  return hasTokens(template);
 }
 
 function resolveLocale(locale: string | null | undefined): string {
@@ -82,11 +75,13 @@ export function renderTitleTemplate(template: string, context: TitleTokenContext
   };
 
   let anyEmpty = false;
-  const rendered = template.replace(TOKEN_PATTERN, (_whole, token: string) => {
-    const value = values[token as TicketTitleToken]();
-    if (value === '') anyEmpty = true;
-    return value;
-  });
+  const rendered = substituteTokens(template, Object.fromEntries(
+    Object.entries(values).map(([token, resolve]) => [token, () => {
+      const value = resolve();
+      if (value === '') anyEmpty = true;
+      return value;
+    }])
+  ));
   // Only a missing token triggers the collapse, so a title without gaps is byte-identical to its template.
   return anyEmpty ? rendered.replace(/\s+/g, ' ').trim() : rendered;
 }

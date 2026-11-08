@@ -4,6 +4,7 @@ import type { NormalizedRmmAlertEvent, RmmAlertRuleActions } from './contracts';
 import { rmmAlertRuleActionsSchema } from './contracts';
 import { createTicketForAlert, type CreatedAlertTicket } from './ticketCreator';
 import { publishRmmTicketCreated } from './ticketCreatedEvent';
+import { readPersistedRmmAlertDetails } from './metadata';
 
 export interface CreateTicketForAlertIdArgs {
   tenantId: string;
@@ -108,6 +109,7 @@ export async function createTicketForAlertId(
     sourceType: alert.source_type,
     severity: alert.severity,
     message: alert.message,
+    details: readPersistedRmmAlertDetails(metadataRecord) ?? providerDetailsFallback(alert.provider, metadataRecord),
     deviceName: alert.device_name,
     externalOrganizationId: externalOrgId,
     occurredAt: toIso(alert.triggered_at) ?? new Date().toISOString(),
@@ -139,6 +141,19 @@ export async function createTicketForAlertId(
   });
 
   return created;
+}
+
+function providerDetailsFallback(provider: NormalizedRmmAlertEvent['provider'], metadata: Record<string, unknown> | null): string | null {
+  if (!metadata) return null;
+  const data = metadata.data && typeof metadata.data === 'object' ? metadata.data as Record<string, unknown> : null;
+  const candidate = provider === 'levelio'
+    ? (typeof data?.payload === 'string' ? data.payload : metadata.payload)
+    : provider === 'datto'
+      ? metadata.diagnostics
+      : provider === 'tacticalrmm'
+        ? metadata.description
+        : metadata.subject;
+  return typeof candidate === 'string' ? candidate : null;
 }
 
 function safeParse(value: string): unknown {

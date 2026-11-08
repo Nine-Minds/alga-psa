@@ -88,6 +88,11 @@ export default function CoManagedOverview({ initialClientId }: { initialClientId
       {t('coManaged.overview.capacity', { allocated: capacity.allocated, count: capacity.capacity,
         defaultValue: '{{allocated}} of {{count}} co-managed seats allocated.' })}
     </p>}
+    {admitted && <p>
+      <Link id="co-managed-overview-sla-priorities" className="text-primary underline" href="/msp/co-management/sla">
+        {t('coManaged.overview.slaPriorities', { defaultValue: 'SLA priority mappings' })}
+      </Link>
+    </p>}
     {admitted && initialClientId && <p>
       <Link id="co-managed-overview-selected-client" className="text-primary underline"
         href={`/msp/clients/${encodeURIComponent(initialClientId)}?tab=co-managed`}>

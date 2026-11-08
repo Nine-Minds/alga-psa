@@ -85,7 +85,8 @@ async function createUser(tenantId: string): Promise<string> {
 }
 
 function contextFor(tenantId: string) {
-  return { tenant: tenantId, userId: uuidv4() } as any;
+  const userId = uuidv4();
+  return { tenant: tenantId, userId, user: { user_id: userId, user_type: 'internal' } } as any;
 }
 
 function service<T>(Ctor: new () => T, tenantId: string): T {

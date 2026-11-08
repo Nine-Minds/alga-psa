@@ -1,0 +1,51 @@
+[
+  {
+    "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+    "audit_id": "701cdfd1-9a35-48f2-a6c3-1da87ae001c6",
+    "ticket_id": "de938db4-80ad-4309-a351-c96eb805e171",
+    "event_type": "TICKET_ASSIGNED",
+    "entity_type": "ticket",
+    "entity_id": "de938db4-80ad-4309-a351-c96eb805e171",
+    "actor_type": "user",
+    "actor_user_id": "20a52aa7-137c-4a42-ab3e-5b75050d54d7",
+    "actor_contact_id": null,
+    "actor_display_name": "QA Tester",
+    "source": "ui",
+    "occurred_at": "2026-11-04T20:36:44.013Z",
+    "changes": {},
+    "details": {
+      "role": "support",
+      "additional_agent_id": "20a52aa7-137c-4a42-ab3e-5b75050d54d7"
+    },
+    "created_at": "2026-11-04T20:36:44.014Z",
+    "actor_reference_id": null,
+    "actor_organization_name": null
+  },
+  {
+    "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+    "audit_id": "08e5adec-e3c1-4541-ae6f-62a679495307",
+    "ticket_id": "de938db4-80ad-4309-a351-c96eb805e171",
+    "event_type": "TICKET_CREATED",
+    "entity_type": "ticket",
+    "entity_id": "de938db4-80ad-4309-a351-c96eb805e171",
+    "actor_type": "user",
+    "actor_user_id": "20a52aa7-137c-4a42-ab3e-5b75050d54d7",
+    "actor_contact_id": null,
+    "actor_display_name": "QA Tester",
+    "source": "ui",
+    "occurred_at": "2026-11-04T20:36:43.828Z",
+    "changes": {},
+    "details": {
+      "title": "Authz Live Scoped Quick Add 20261104 2036",
+      "board_id": "6e361682-53db-448a-8dca-f44775f1afd0",
+      "client_id": "b4cc85d7-8898-48af-8191-251bcc657be8",
+      "status_id": "7b677ab8-0bce-4705-a98d-a502a04ea6ed",
+      "assigned_to": "6fb0c1d5-c732-45b2-96a1-96bbc6a639f1",
+      "priority_id": "416d38c1-bd6c-4764-b415-14faa96d01c2",
+      "ticket_origin": "internal"
+    },
+    "created_at": "2026-11-04T20:36:44.019Z",
+    "actor_reference_id": null,
+    "actor_organization_name": null
+  }
+]

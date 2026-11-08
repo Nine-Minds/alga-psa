@@ -10,11 +10,22 @@ const h = vi.hoisted(() => {
   const tableQuery = (table: string) => {
     const filters: Array<Record<string, unknown>> = [];
     const inFilters: Array<{ column: string; values: unknown[] }> = [];
+    const orderings: Array<{ column: string; direction: 'asc' | 'desc' }> = [];
     let columns: string[] = [];
-    const rows = () => (dbState[table] ?? []).filter((row) =>
-      filters.every((where) => Object.entries(where).every(([key, value]) => row[key] === value)) &&
-      inFilters.every(({ column, values }) => values.includes(row[column]))
-    );
+    const rows = () => {
+      const matchingRows = (dbState[table] ?? []).filter((row) =>
+        filters.every((where) => Object.entries(where).every(([key, value]) => row[key] === value)) &&
+        inFilters.every(({ column, values }) => values.includes(row[column]))
+      );
+      return matchingRows.sort((left, right) => {
+        for (const { column, direction } of orderings) {
+          if (left[column] === right[column]) continue;
+          const result = left[column] < right[column] ? -1 : 1;
+          return direction === 'asc' ? result : -result;
+        }
+        return 0;
+      });
+    };
     const project = (row: Row) => columns.length ? Object.fromEntries(columns.map((column) => [column, row[column]])) : row;
     const query = {
       where(where: Record<string, unknown>) {
@@ -23,6 +34,10 @@ const h = vi.hoisted(() => {
       },
       whereIn(column: string, values: unknown[]) {
         inFilters.push({ column, values });
+        return query;
+      },
+      orderBy(column: string, direction: 'asc' | 'desc' = 'asc') {
+        orderings.push({ column, direction });
         return query;
       },
       select(...selected: string[]) {
@@ -142,7 +157,7 @@ describe('isAssetActionAllowed', () => {
     expect(await isAssetReadAllowed({} as any, 'tenant-a', ctx, asset)).toBe(true);
   });
 
-  it('allows update once the asset belongs to the subject\'s team', async () => {
+  it("allows update once the asset belongs to the subject's team", async () => {
     h.dbState.asset_associations = [{ asset_id: 'asset-2', entity_type: 'team', entity_id: 'team-ops' }];
     const asset = { asset_id: 'asset-2', client_id: 'client-a' };
 
@@ -151,7 +166,8 @@ describe('isAssetActionAllowed', () => {
 
   it('does not narrow an action the bundle has no rule for', async () => {
     h.dbState.asset_associations = [];
-    expect(await isAssetActionAllowed({} as any, 'tenant-a', context(), { asset_id: 'asset-3', client_id: 'client-z' }, 'delete')).toBe(true);
+    // The missing delete rule leaves that action unrestricted, but the asset must still be readable.
+    expect(await isAssetActionAllowed({} as any, 'tenant-a', context(), { asset_id: 'asset-3', client_id: 'client-a' }, 'delete')).toBe(true);
   });
 });
 
