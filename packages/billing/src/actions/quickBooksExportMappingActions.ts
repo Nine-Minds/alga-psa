@@ -125,10 +125,12 @@ export const saveQuickBooksExportMappings = withAuth(async (
   const { knex } = await createTenantKnex();
 
   // idx_unique_external_mapping allows one Alga entity per QuickBooks name and
-  // entity type, and covers unlinked rows too; check up front for a clear error.
+  // entity type among live rows (tombstones, i.e. deleted_at set, are outside the
+  // index); check up front for a clear error.
   const existing = await tenantDb(knex, tenant).table('tenant_external_entity_mappings')
     .select('alga_entity_type', 'alga_entity_id', 'external_entity_id')
     .where({ integration_type: integrationType })
+    .whereNull('deleted_at')
     .whereIn('alga_entity_type', Array.from(new Set(decisions.map((d) => storedEntityType(d.algaEntityType)))))
     .whereIn('external_entity_id', Array.from(new Set(decisions.map((d) => d.externalName.trim()))))
     .modify((query) => {

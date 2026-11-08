@@ -23,6 +23,7 @@ export interface AttachDocumentInput {
   knex: Knex;
   tenant: string;
   actorUserId: string;
+  viaPrincipalUserId?: string | null;
   target: { entityType: AttachableEntityType; entityId: string };
   file: { fileName: string; mimeType: string; bytes: Buffer };
   /** Where the bytes came from; used only in log lines. */
@@ -213,6 +214,7 @@ export async function attachDocumentFromBytes(input: AttachDocumentInput): Promi
         trx,
         tenant,
         actorUserId,
+        viaPrincipalUserId: input.viaPrincipalUserId,
         entityId: target.entityId,
         document,
         options,

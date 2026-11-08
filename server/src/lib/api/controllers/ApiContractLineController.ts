@@ -20,6 +20,8 @@ import {
   // Contract management schemas
   createContractSchema,
   updateContractSchema,
+  createContractAssignmentSchema,
+  updateContractAssignmentSchema,
   contractListQuerySchema,
   addContractLineSchema,
   updateContractAssociationSchema,
@@ -82,12 +84,67 @@ import { z } from 'zod';
 import { createApiResponse, createErrorResponse, createPaginatedResponse } from '../utils/response';
 import { getHateoasLinks } from '../utils/hateoas';
 import { requireRequestContext } from '../utils/requestContext';
+import { hasPermission } from '../../auth/rbac';
+import { getConnection } from '../../db/db';
+import { ForbiddenError, NotFoundError, UnauthorizedError } from '../middleware/apiMiddleware';
+
+/** Reads a repeatable, comma-separated id list from the query string. */
+function idListParam(params: URLSearchParams, name: string): string[] | null {
+  const values = params
+    .getAll(name)
+    .flatMap((value) => value.split(','))
+    .map((value) => value.trim())
+    .filter(Boolean);
+  return values.length > 0 ? values : null;
+}
 
 export class ApiContractLineController {
   private contractLineService: ContractLineService;
 
   constructor() {
     this.contractLineService = new ContractLineService();
+  }
+
+  /**
+   * Reads a bulk-operation body without letting a missing one become a 500:
+   * `req.json()` throws a SyntaxError on an empty body, and plenty of clients
+   * (our own agent tooling included) never send a body on DELETE. A bodyless
+   * DELETE may instead carry the ids in the query string.
+   */
+  private async readBulkBody(
+    req: NextRequest,
+    expectedBody: string,
+    fromQuery: (params: URLSearchParams) => Record<string, unknown> | null
+  ): Promise<{ data: unknown } | { error: NextResponse }> {
+    let raw = '';
+    try {
+      raw = await req.text();
+    } catch {
+      raw = '';
+    }
+
+    if (raw.trim() !== '') {
+      try {
+        return { data: JSON.parse(raw) };
+      } catch {
+        return { error: createErrorResponse('Request body must be valid JSON', 400, 'VALIDATION_ERROR') };
+      }
+    }
+
+    if (req.method === 'DELETE') {
+      const fromQueryString = fromQuery(new URL(req.url).searchParams);
+      if (fromQueryString) {
+        return { data: fromQueryString };
+      }
+    }
+
+    return {
+      error: createErrorResponse(
+        `Request body is required: ${expectedBody}`,
+        400,
+        'VALIDATION_ERROR'
+      )
+    };
   }
 
   /**
@@ -470,6 +527,7 @@ export class ApiContractLineController {
     return async (req: NextRequest): Promise<NextResponse> => {
       const data = await req.json();
       const context = requireRequestContext(req);
+      await this.requireBillingPermission(context, 'create');
       
       // Validate request body
       const validation = createContractSchema.safeParse(data);
@@ -519,6 +577,160 @@ export class ApiContractLineController {
       
       await this.contractLineService.removeContractLine(params.contractId, params.contractLineId, requestContext);
       
+      return new NextResponse(null, { status: 204 });
+    };
+  }
+
+  /**
+   * Contract endpoints enforce the same `billing` permission as the UI contract actions.
+   */
+  private async requireBillingPermission(
+    context: ReturnType<typeof requireRequestContext>,
+    action: 'read' | 'create' | 'update' | 'delete'
+  ): Promise<void> {
+    if (!context.user) {
+      throw new UnauthorizedError('User context required');
+    }
+    const knex = await getConnection(context.tenant);
+    if (!(await hasPermission(context.user as any, 'billing', action, knex))) {
+      throw new ForbiddenError(`Permission denied: Cannot ${action} billing`);
+    }
+  }
+
+  /**
+   * GET /api/v1/contracts/{contractId}
+   */
+  getContract() {
+    return async (req: NextRequest, context: { params: Promise<{ contractId: string }> }): Promise<NextResponse> => {
+      const params = await context.params;
+      const requestContext = requireRequestContext(req);
+      await this.requireBillingPermission(requestContext, 'read');
+      const contract = await this.contractLineService.getContract(params.contractId, requestContext);
+      return createApiResponse(contract);
+    };
+  }
+
+  /**
+   * PUT|PATCH /api/v1/contracts/{contractId}
+   */
+  updateContract() {
+    return async (req: NextRequest, context: { params: Promise<{ contractId: string }> }): Promise<NextResponse> => {
+      const params = await context.params;
+      const requestContext = requireRequestContext(req);
+      await this.requireBillingPermission(requestContext, 'update');
+      const validation = updateContractSchema.safeParse(await req.json());
+      if (!validation.success) {
+        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
+      }
+      const contract = await this.contractLineService.updateContract(params.contractId, validation.data, requestContext);
+      return createApiResponse(contract);
+    };
+  }
+
+  /**
+   * DELETE /api/v1/contracts/{contractId}
+   */
+  deleteContract() {
+    return async (req: NextRequest, context: { params: Promise<{ contractId: string }> }): Promise<NextResponse> => {
+      const params = await context.params;
+      const requestContext = requireRequestContext(req);
+      await this.requireBillingPermission(requestContext, 'delete');
+      await this.contractLineService.deleteContract(params.contractId, requestContext);
+      return new NextResponse(null, { status: 204 });
+    };
+  }
+
+  /**
+   * GET /api/v1/contracts/{contractId}/assignments
+   */
+  listContractAssignments() {
+    return async (req: NextRequest, context: { params: Promise<{ contractId: string }> }): Promise<NextResponse> => {
+      const params = await context.params;
+      const requestContext = requireRequestContext(req);
+      await this.requireBillingPermission(requestContext, 'read');
+      const assignments = await this.contractLineService.listContractAssignments(params.contractId, requestContext);
+      return createApiResponse(assignments);
+    };
+  }
+
+  /**
+   * POST /api/v1/contracts/{contractId}/assignments
+   */
+  createContractAssignment() {
+    return async (req: NextRequest, context: { params: Promise<{ contractId: string }> }): Promise<NextResponse> => {
+      const params = await context.params;
+      const requestContext = requireRequestContext(req);
+      await this.requireBillingPermission(requestContext, 'create');
+      const validation = createContractAssignmentSchema.safeParse(await req.json());
+      if (!validation.success) {
+        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
+      }
+      const assignment = await this.contractLineService.createContractAssignment(
+        params.contractId,
+        validation.data,
+        requestContext
+      );
+      return createApiResponse(assignment, 201);
+    };
+  }
+
+  /**
+   * GET /api/v1/contracts/{contractId}/assignments/{clientContractId}
+   */
+  getContractAssignment() {
+    return async (
+      req: NextRequest,
+      context: { params: Promise<{ contractId: string; clientContractId: string }> }
+    ): Promise<NextResponse> => {
+      const params = await context.params;
+      const requestContext = requireRequestContext(req);
+      await this.requireBillingPermission(requestContext, 'read');
+      const assignments = await this.contractLineService.listContractAssignments(params.contractId, requestContext);
+      const assignment = assignments.find((a) => a.client_contract_id === params.clientContractId);
+      if (!assignment) {
+        throw new NotFoundError('Client contract assignment not found');
+      }
+      return createApiResponse(assignment);
+    };
+  }
+
+  /**
+   * PUT|PATCH /api/v1/contracts/{contractId}/assignments/{clientContractId}
+   */
+  updateContractAssignment() {
+    return async (
+      req: NextRequest,
+      context: { params: Promise<{ contractId: string; clientContractId: string }> }
+    ): Promise<NextResponse> => {
+      const params = await context.params;
+      const requestContext = requireRequestContext(req);
+      await this.requireBillingPermission(requestContext, 'update');
+      const validation = updateContractAssignmentSchema.safeParse(await req.json());
+      if (!validation.success) {
+        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
+      }
+      const assignment = await this.contractLineService.updateContractAssignment(
+        params.contractId,
+        params.clientContractId,
+        validation.data,
+        requestContext
+      );
+      return createApiResponse(assignment);
+    };
+  }
+
+  /**
+   * DELETE /api/v1/contracts/{contractId}/assignments/{clientContractId}
+   */
+  deleteContractAssignment() {
+    return async (
+      req: NextRequest,
+      context: { params: Promise<{ contractId: string; clientContractId: string }> }
+    ): Promise<NextResponse> => {
+      const params = await context.params;
+      const requestContext = requireRequestContext(req);
+      await this.requireBillingPermission(requestContext, 'delete');
+      await this.contractLineService.deleteContractAssignment(params.contractId, params.clientContractId, requestContext);
       return new NextResponse(null, { status: 204 });
     };
   }
@@ -695,15 +907,25 @@ export class ApiContractLineController {
   }
 
   /**
-   * DELETE /api/v2/contract-lines/bulk/delete - Bulk delete plans
+   * DELETE|POST /api/v2/contract-lines/bulk/delete - Bulk delete plans
    */
   bulkDeletePlans() {
     return async (req: NextRequest): Promise<NextResponse> => {
-      const data = await req.json();
+      const body = await this.readBulkBody(
+        req,
+        '{ "contract_line_ids": ["<uuid>", ...] } (a DELETE may instead pass ?contract_line_ids=<uuid>,<uuid>)',
+        (params) => {
+          const ids = idListParam(params, 'contract_line_ids') ?? idListParam(params, 'contract_line_id');
+          return ids ? { contract_line_ids: ids } : null;
+        }
+      );
+      if ('error' in body) {
+        return body.error;
+      }
       const context = requireRequestContext(req);
-      
+
       // Validate request body
-      const validation = bulkDeleteContractLinesSchema.safeParse(data);
+      const validation = bulkDeleteContractLinesSchema.safeParse(body.data);
       if (!validation.success) {
         return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
       }
@@ -746,15 +968,28 @@ export class ApiContractLineController {
   }
 
   /**
-   * DELETE /api/v2/contract-lines/bulk/remove-services - Bulk remove services from plan
+   * DELETE|POST /api/v2/contract-lines/bulk/remove-services - Bulk remove services from plan
    */
   bulkRemoveServicesFromPlan() {
     return async (req: NextRequest): Promise<NextResponse> => {
-      const data = await req.json();
+      const body = await this.readBulkBody(
+        req,
+        '{ "contract_line_id": "<uuid>", "service_ids": ["<uuid>", ...] } (a DELETE may instead pass ?contract_line_id=<uuid>&service_ids=<uuid>,<uuid>)',
+        (params) => {
+          const contractLineId = params.get('contract_line_id')?.trim();
+          const serviceIds = idListParam(params, 'service_ids') ?? idListParam(params, 'service_id');
+          return contractLineId && serviceIds
+            ? { contract_line_id: contractLineId, service_ids: serviceIds }
+            : null;
+        }
+      );
+      if ('error' in body) {
+        return body.error;
+      }
       const context = requireRequestContext(req);
-      
+
       // Validate request body
-      const validation = bulkRemoveServicesFromPlanSchema.safeParse(data);
+      const validation = bulkRemoveServicesFromPlanSchema.safeParse(body.data);
       if (!validation.success) {
         return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
       }

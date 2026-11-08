@@ -7,13 +7,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ApiBaseController, AuthenticatedApiRequest } from './ApiBaseController';
 import { TicketService, type TicketDocumentVariant } from '../services/TicketService';
 import { 
-  createTicketSchema, updateTicketSchema, ticketListQuerySchema, ticketSearchSchema, ticketStatsResponseSchema, createTicketMaterialSchema, createTicketCommentSchema, updateTicketCommentSchema, updateTicketStatusSchema, updateTicketAssignmentSchema, createTicketFromAssetSchema, linkTicketAssetSchema, addTicketAgentSchema, addTicketWatcherSchema, updateTicketWatcherSchema, removeTicketWatcherQuerySchema, assignTicketTeamSchema, removeTicketTeamSchema, createTicketChecklistItemSchema, updateTicketChecklistCompletionSchema,
+  createTicketRequestSchema, updateTicketSchema, ticketListQuerySchema, ticketSearchSchema, ticketStatsResponseSchema, createTicketMaterialSchema, createTicketCommentSchema, updateTicketCommentSchema, updateTicketStatusSchema, updateTicketAssignmentSchema, createTicketFromAssetSchema, linkTicketAssetSchema, addTicketAgentSchema, addTicketWatcherSchema, updateTicketWatcherSchema, removeTicketWatcherQuerySchema, assignTicketTeamSchema, removeTicketTeamSchema, createTicketChecklistItemSchema, updateTicketChecklistCompletionSchema,
   createExternalLinkSchema, updateExternalLinkSchema, externalLinkLookupQuerySchema,
 } from '../schemas/ticket';
 import { uuidSchema } from '../schemas/common';
 import { 
   ApiKeyServiceForApi 
 } from '../../services/apiKeyServiceForApi';
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { 
   runWithTenant 
@@ -21,10 +22,7 @@ import {
 import {
   getConnection
 } from '../../db/db';
-import { 
-  hasPermission 
-} from '../../auth/rbac';
-import { authorizeApiResourceRead, buildAuthorizationPrincipalSubject } from './authorizationKernel';
+import { authorizeApiResourceAction, authorizeApiResourceRead, buildAuthorizationPrincipalSubject } from './authorizationKernel';
 import { buildTicketRecordContext } from './recordContexts';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 import { compileTenantScopedResourceReadAuthorizationSql, resolveDefaultBuiltinRelationshipRules } from '@alga-psa/authorization/kernel';
@@ -33,19 +31,7 @@ import { createTicketRelationshipSqlAdapter } from '@alga-psa/tickets/lib/ticket
 import { type TenantScopedQuery, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { fetchTimeEntriesForTicketCore } from '@alga-psa/scheduling/actions/timeEntryTicketActions';
-import {
-  assertInternalApiUser,
-  ApiRequest,
-  UnauthorizedError,
-  ForbiddenError,
-  ValidationError,
-  NotFoundError,
-  createSuccessResponse,
-  createPaginatedResponse,
-  createServerActionErrorResponse,
-  isServerActionErrorResult,
-  handleApiError
-} from '../middleware/apiMiddleware';
+import { ApiRequest, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError, buildAuthenticatedApiContext, createPaginatedResponse, createServerActionErrorResponse, createSuccessResponse, handleApiError, isServerActionErrorResult } from '../middleware/apiMiddleware';
 import {
   createBundleSchema,
   addBundleChildrenSchema,
@@ -121,7 +107,7 @@ export class ApiTicketController extends ApiBaseController {
     
     super(ticketService, {
       resource: 'ticket',
-      createSchema: createTicketSchema,
+      createSchema: createTicketRequestSchema,
       updateSchema: updateTicketSchema,
       querySchema: ticketListQuerySchema,
       permissions: {
@@ -141,10 +127,38 @@ export class ApiTicketController extends ApiBaseController {
     return buildTicketRecordContext(ticket);
   }
 
-  private async assertTicketReadAllowed(
+  private async assertTicketRowAllowed(
+    apiRequest: AuthenticatedApiRequest,
+    ticketRow: Record<string, any>,
+    action: string,
+    knex: Knex | Knex.Transaction
+  ): Promise<void> {
+    const allowed = await authorizeApiResourceAction({
+      knex,
+      tenant: apiRequest.context.tenant,
+      user: apiRequest.context.user,
+      apiKeyId: apiRequest.context.apiKeyId,
+      resource: 'ticket',
+      action,
+      recordContext: this.buildTicketRecordContext(ticketRow),
+    });
+
+    if (!allowed) {
+      throw new ForbiddenError(`Permission denied: Cannot ${action} ticket`);
+    }
+  }
+
+  /**
+   * Ask the authorization kernel for `action` on the ticket (and additionally `read` when the
+   * response discloses the ticket). Read routes use assertTicketReadAllowed; mutation routes
+   * must request their own action so bundle rules narrowing that action are evaluated.
+   */
+  private async assertTicketAccess(
     apiRequest: AuthenticatedApiRequest,
     ticketId: string,
-    knex?: Awaited<ReturnType<typeof getConnection>>
+    action: string,
+    knex?: Awaited<ReturnType<typeof getConnection>>,
+    options: { alsoRequireRead?: boolean } = {}
   ): Promise<Record<string, any>> {
     const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
     const ticket = await this.ticketService.getById(ticketId, apiRequest.context);
@@ -153,20 +167,37 @@ export class ApiTicketController extends ApiBaseController {
     }
 
     const ticketRow = ticket as Record<string, any>;
-    const allowed = await authorizeApiResourceRead({
-      knex: resolvedKnex,
-      tenant: apiRequest.context.tenant,
-      user: apiRequest.context.user,
-      apiKeyId: apiRequest.context.apiKeyId,
-      resource: 'ticket',
-      recordContext: this.buildTicketRecordContext(ticketRow),
-    });
-
-    if (!allowed) {
-      throw new ForbiddenError('Permission denied: Cannot read ticket');
+    await this.assertTicketRowAllowed(apiRequest, ticketRow, action, resolvedKnex);
+    if (options.alsoRequireRead && action !== 'read') {
+      await this.assertTicketRowAllowed(apiRequest, ticketRow, 'read', resolvedKnex);
     }
 
-    return ticket as Record<string, any>;
+    return ticketRow;
+  }
+
+  private async assertTicketReadAllowed(
+    apiRequest: AuthenticatedApiRequest,
+    ticketId: string,
+    knex?: Awaited<ReturnType<typeof getConnection>>
+  ): Promise<Record<string, any>> {
+    return this.assertTicketAccess(apiRequest, ticketId, 'read', knex);
+  }
+
+  /**
+   * Hook for TicketService.update: re-evaluates the kernel decision against the row that was
+   * loaded (and locked) inside the write transaction, before any write.
+   */
+  private buildTicketAuthorizeHook(
+    apiRequest: AuthenticatedApiRequest,
+    action: string,
+    options: { alsoRequireRead?: boolean } = {}
+  ): (ticket: Record<string, any>, trx: Knex.Transaction) => Promise<void> {
+    return async (ticket, trx) => {
+      await this.assertTicketRowAllowed(apiRequest, ticket, action, trx);
+      if (options.alsoRequireRead && action !== 'read') {
+        await this.assertTicketRowAllowed(apiRequest, ticket, 'read', trx);
+      }
+    };
   }
 
   private async filterAuthorizedTickets(
@@ -450,14 +481,14 @@ export class ApiTicketController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Create request with context
         const apiRequest = req as AuthenticatedApiRequest;
         apiRequest.context = {
-          userId: keyRecord.user_id,
+          userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
           tenant: keyRecord.tenant,
           user,
           apiKeyId: keyRecord.api_key_id,
@@ -468,7 +499,8 @@ export class ApiTicketController extends ApiBaseController {
         // Run within tenant context
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
-          const hasAccess = await hasPermission(user, 'ticket', 'read');
+          const hasAccess = await hasApiContextPermission(
+          apiAuthContext, 'ticket', 'read');
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot read ticket');
           }
@@ -539,14 +571,14 @@ export class ApiTicketController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Create request with context
         const apiRequest = req as AuthenticatedApiRequest;
         apiRequest.context = {
-          userId: keyRecord.user_id,
+          userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
           tenant: keyRecord.tenant,
           user,
           apiKeyId: keyRecord.api_key_id,
@@ -557,7 +589,8 @@ export class ApiTicketController extends ApiBaseController {
         // Run within tenant context
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
-          const hasAccess = await hasPermission(user, 'ticket', 'read');
+          const hasAccess = await hasApiContextPermission(
+          apiAuthContext, 'ticket', 'read');
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot read ticket');
           }
@@ -605,14 +638,14 @@ export class ApiTicketController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Create request with context
         const apiRequest = req as AuthenticatedApiRequest;
         apiRequest.context = {
-          userId: keyRecord.user_id,
+          userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
           tenant: keyRecord.tenant,
           user,
           apiKeyId: keyRecord.api_key_id,
@@ -623,7 +656,8 @@ export class ApiTicketController extends ApiBaseController {
         // Run within tenant context
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
-          const hasAccess = await hasPermission(user, 'ticket', 'read');
+          const hasAccess = await hasApiContextPermission(
+          apiAuthContext, 'ticket', 'read');
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot read ticket');
           }
@@ -732,7 +766,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketAccess(apiRequest, ticketId, 'update', knex);
           const data = await this.validateData(apiRequest, createTicketChecklistItemSchema);
 
           const result = await addChecklistItem(ticketId, data);
@@ -769,7 +803,7 @@ export class ApiTicketController extends ApiBaseController {
           const ticketId = await this.extractIdFromPath(apiRequest);
           const itemId = this.extractChecklistItemId(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketAccess(apiRequest, ticketId, 'update', knex);
           const data = await this.validateData(apiRequest, updateTicketChecklistCompletionSchema);
 
           // Bind the item to the authorized ticket before calling the existing
@@ -838,7 +872,7 @@ export class ApiTicketController extends ApiBaseController {
           await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketAccess(apiRequest, ticketId, 'update', knex);
           const data = await this.validateData(apiRequest, createExternalLinkSchema);
 
           const result = await addExternalLink({ ticket_id: ticketId, ...data });
@@ -866,7 +900,7 @@ export class ApiTicketController extends ApiBaseController {
           const ticketId = await this.extractIdFromPath(apiRequest);
           const linkId = this.extractExternalLinkId(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketAccess(apiRequest, ticketId, 'update', knex);
           const data = await this.validateData(apiRequest, updateExternalLinkSchema);
 
           const before = await getTicketExternalLinks(ticketId);
@@ -899,7 +933,7 @@ export class ApiTicketController extends ApiBaseController {
           const ticketId = await this.extractIdFromPath(apiRequest);
           const linkId = this.extractExternalLinkId(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketAccess(apiRequest, ticketId, 'update', knex);
 
           const before = await getTicketExternalLinks(ticketId);
           if (isServerActionErrorResult(before) || !before.some((link) => link.link_id === linkId)) {
@@ -995,7 +1029,7 @@ export class ApiTicketController extends ApiBaseController {
           const knex = await getConnection(apiRequest.context!.tenant);
           await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
           // Response exposes asset records, so also require asset:read.
-          if (!(await hasPermission(apiRequest.context!.user!, 'asset', 'read', knex))) {
+          if (!(await hasApiContextPermission(apiRequest.context!, 'asset', 'read', knex))) {
             throw new ForbiddenError('Permission denied: Cannot read asset');
           }
           const assets = await this.ticketService.getTicketAssets(ticketId, apiRequest.context!);
@@ -1023,8 +1057,8 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
-          if (!(await hasPermission(apiRequest.context!.user!, 'asset', 'read', knex))) {
+          await this.assertTicketAccess(apiRequest, ticketId, 'update', knex);
+          if (!(await hasApiContextPermission(apiRequest.context!, 'asset', 'read', knex))) {
             throw new ForbiddenError('Permission denied: Cannot read asset');
           }
 
@@ -1060,8 +1094,8 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
-          if (!(await hasPermission(apiRequest.context!.user!, 'asset', 'read', knex))) {
+          await this.assertTicketAccess(apiRequest, ticketId, 'update', knex);
+          if (!(await hasApiContextPermission(apiRequest.context!, 'asset', 'read', knex))) {
             throw new ForbiddenError('Permission denied: Cannot read asset');
           }
 
@@ -1125,7 +1159,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketAccess(apiRequest, ticketId, 'update', knex, { alsoRequireRead: true });
 
           const body = await req.json();
           const validation = addTicketAgentSchema.safeParse(body);
@@ -1156,7 +1190,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketAccess(apiRequest, ticketId, 'update', knex);
 
           // userId is the path segment after "agents".
           const url = new URL(apiRequest.url || req.url);
@@ -1218,7 +1252,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketAccess(apiRequest, ticketId, 'update', knex, { alsoRequireRead: true });
 
           const body = await req.json();
           const validation = addTicketWatcherSchema.safeParse(body);
@@ -1250,7 +1284,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketAccess(apiRequest, ticketId, 'update', knex, { alsoRequireRead: true });
 
           const body = await req.json();
           const validation = updateTicketWatcherSchema.safeParse(body);
@@ -1281,7 +1315,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketAccess(apiRequest, ticketId, 'update', knex, { alsoRequireRead: true });
 
           const url = new URL(apiRequest.url || req.url);
           const validation = removeTicketWatcherQuerySchema.safeParse(
@@ -1319,7 +1353,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketAccess(apiRequest, ticketId, 'update', knex, { alsoRequireRead: true });
 
           const body = await req.json();
           const validation = assignTicketTeamSchema.safeParse(body);
@@ -1350,7 +1384,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketAccess(apiRequest, ticketId, 'update', knex, { alsoRequireRead: true });
 
           // DELETE bodies are optional; no body means remove_all.
           let body: unknown = {};
@@ -1393,7 +1427,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketAccess(apiRequest, ticketId, 'update', knex);
           const formData = await req.formData();
           const file = formData.get('file');
 
@@ -1519,7 +1553,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketAccess(apiRequest, ticketId, 'update', knex);
 
           const url = new URL(apiRequest.url || req.url);
           const segments = url.pathname.split('/');
@@ -1613,7 +1647,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketAccess(apiRequest, ticketId, 'update', knex, { alsoRequireRead: true });
           const material = await this.ticketService.addTicketMaterial(ticketId, validatedData, apiRequest.context!);
 
           return createSuccessResponse(material, 201, undefined, apiRequest);
@@ -1655,14 +1689,14 @@ export class ApiTicketController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Create request with context
         const apiRequest = req as AuthenticatedApiRequest;
         apiRequest.context = {
-          userId: keyRecord.user_id,
+          userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
           tenant: keyRecord.tenant,
           user,
           apiKeyId: keyRecord.api_key_id,
@@ -1673,7 +1707,8 @@ export class ApiTicketController extends ApiBaseController {
         // Run within tenant context
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
-          const hasAccess = await hasPermission(user, 'ticket', 'update');
+          const hasAccess = await hasApiContextPermission(
+          apiAuthContext, 'ticket', 'update');
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot update ticket');
           }
@@ -1692,7 +1727,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketAccess(apiRequest, ticketId, 'update', knex);
           const comment = await this.ticketService.addComment(
             ticketId,
             validatedData,
@@ -1720,7 +1755,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketAccess(apiRequest, ticketId, 'update', knex);
 
           const url = new URL(apiRequest.url || req.url);
           const segments = url.pathname.split('/');
@@ -1764,12 +1799,13 @@ export class ApiTicketController extends ApiBaseController {
           throw new UnauthorizedError('Invalid API key');
         }
 
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         const apiRequest = req as AuthenticatedApiRequest;
         apiRequest.context = {
-          userId: keyRecord.user_id,
+          userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
           tenant: keyRecord.tenant,
           user,
           apiKeyId: keyRecord.api_key_id,
@@ -1778,7 +1814,8 @@ export class ApiTicketController extends ApiBaseController {
         await this.assertProductApiAccess(apiRequest as AuthenticatedApiRequest);
 
         return await runWithTenant(tenantId!, async () => {
-          const hasAccess = await hasPermission(user, 'ticket', 'update');
+          const hasAccess = await hasApiContextPermission(
+          apiAuthContext, 'ticket', 'update');
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot update ticket');
           }
@@ -1796,7 +1833,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketAccess(apiRequest, ticketId, 'update', knex);
           // Extract commentId from URL: /api/v1/tickets/{id}/comments/{commentId}
           const url = new URL(req.url);
           const segments = url.pathname.split('/').filter(Boolean);
@@ -1848,14 +1885,14 @@ export class ApiTicketController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Create request with context
         const apiRequest = req as AuthenticatedApiRequest;
         apiRequest.context = {
-          userId: keyRecord.user_id,
+          userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
           tenant: keyRecord.tenant,
           user,
           apiKeyId: keyRecord.api_key_id,
@@ -1866,7 +1903,8 @@ export class ApiTicketController extends ApiBaseController {
         // Run within tenant context
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
-          const hasAccess = await hasPermission(user, 'ticket', 'update');
+          const hasAccess = await hasApiContextPermission(
+          apiAuthContext, 'ticket', 'update');
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot update ticket');
           }
@@ -1885,11 +1923,15 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketAccess(apiRequest, ticketId, 'update', knex, { alsoRequireRead: true });
           const updated = await this.ticketService.update(
             ticketId,
             validatedData,
-            apiRequest.context!
+            apiRequest.context!,
+            {
+              authorize: this.buildTicketAuthorizeHook(apiRequest, 'update', { alsoRequireRead: true }),
+              honorSuppliedClosure: true,
+            }
           );
 
           if (!updated) {
@@ -1935,14 +1977,14 @@ export class ApiTicketController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Create request with context
         const apiRequest = req as AuthenticatedApiRequest;
         apiRequest.context = {
-          userId: keyRecord.user_id,
+          userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
           tenant: keyRecord.tenant,
           user,
           apiKeyId: keyRecord.api_key_id,
@@ -1953,7 +1995,8 @@ export class ApiTicketController extends ApiBaseController {
         // Run within tenant context
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
-          const hasAccess = await hasPermission(user, 'ticket', 'update');
+          const hasAccess = await hasApiContextPermission(
+          apiAuthContext, 'ticket', 'update');
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot update ticket');
           }
@@ -1972,11 +2015,12 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketAccess(apiRequest, ticketId, 'update', knex, { alsoRequireRead: true });
           const updated = await this.ticketService.update(
             ticketId,
             validatedData,
-            apiRequest.context!
+            apiRequest.context!,
+            { authorize: this.buildTicketAuthorizeHook(apiRequest, 'update', { alsoRequireRead: true }) }
           );
 
           if (!updated) {
@@ -2001,13 +2045,15 @@ export class ApiTicketController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, id, knex);
+          await this.assertTicketAccess(apiRequest, id, 'update', knex, { alsoRequireRead: true });
 
           const data = this.options.updateSchema
             ? await this.validateData(apiRequest, this.options.updateSchema)
             : await apiRequest.json();
 
-          const updated = await this.service.update(id, data, apiRequest.context);
+          const updated = await this.ticketService.update(id, data, apiRequest.context, {
+            authorize: this.buildTicketAuthorizeHook(apiRequest, 'update', { alsoRequireRead: true }),
+          });
           if (!updated) {
             throw new NotFoundError(`${this.options.resource} not found`);
           }
@@ -2030,7 +2076,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, id, knex);
+          await this.assertTicketAccess(apiRequest, id, 'delete', knex);
 
           const resource = await this.service.getById(id, apiRequest.context);
           if (!resource) {
@@ -2077,14 +2123,14 @@ export class ApiTicketController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Create request with context
         const apiRequest = req as AuthenticatedApiRequest;
         apiRequest.context = {
-          userId: keyRecord.user_id,
+          userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
           tenant: keyRecord.tenant,
           user,
           apiKeyId: keyRecord.api_key_id,
@@ -2095,7 +2141,8 @@ export class ApiTicketController extends ApiBaseController {
         // Run within tenant context
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
-          const hasAccess = await hasPermission(user, 'ticket', 'create');
+          const hasAccess = await hasApiContextPermission(
+          apiAuthContext, 'ticket', 'create');
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot create ticket');
           }

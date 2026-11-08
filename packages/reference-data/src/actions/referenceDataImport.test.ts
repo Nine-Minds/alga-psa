@@ -12,6 +12,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const createTenantKnexMock = vi.hoisted(() => vi.fn());
 const withTransactionMock = vi.hoisted(() => vi.fn());
 const publishEventMock = vi.hoisted(() => vi.fn());
+const authState = vi.hoisted(() => ({
+  user: { user_id: 'user-1', user_type: 'internal' as string, tenant: 'tenant-1' },
+  hasPermission: vi.fn(async (..._args: any[]) => true),
+}));
 
 /** Rows each table should return, keyed by table name. */
 const tables = vi.hoisted(() => new Map<string, any[]>());
@@ -48,7 +52,8 @@ function queryFor(table: string): any {
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: any[]) =>
-    fn({ user_id: 'user-1', user_type: 'internal', tenant: 'tenant-1' }, { tenant: 'tenant-1' }, ...args),
+    fn(authState.user, { tenant: 'tenant-1' }, ...args),
+  hasPermission: (...args: any[]) => authState.hasPermission(...args),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -72,10 +77,41 @@ function makeKnex() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  authState.user = { user_id: 'user-1', user_type: 'internal', tenant: 'tenant-1' };
+  authState.hasPermission.mockResolvedValue(true);
   tables.clear();
   const knex = makeKnex();
   createTenantKnexMock.mockResolvedValue({ knex, tenant: 'tenant-1' });
   withTransactionMock.mockImplementation(async (_db: unknown, cb: any) => cb(knex));
+});
+
+describe('board import authorization', () => {
+  it('denies without ticket_settings:create before opening a database connection', async () => {
+    authState.hasPermission.mockResolvedValue(false);
+
+    const result = await importReferenceData('boards', ['board-1']);
+
+    expect(result).toMatchObject({ permissionError: expect.stringContaining('Permission denied') });
+    expect(authState.hasPermission).toHaveBeenCalledWith(
+      authState.user,
+      'ticket_settings',
+      'create',
+      undefined,
+    );
+    expect(createTenantKnexMock).not.toHaveBeenCalled();
+    expect(withTransactionMock).not.toHaveBeenCalled();
+  });
+
+  it('denies a client principal before opening a database connection', async () => {
+    authState.user.user_type = 'client';
+
+    const result = await importReferenceData('boards', ['board-1']);
+
+    expect(result).toMatchObject({ permissionError: expect.stringContaining('Permission denied') });
+    expect(authState.hasPermission).not.toHaveBeenCalled();
+    expect(createTenantKnexMock).not.toHaveBeenCalled();
+    expect(withTransactionMock).not.toHaveBeenCalled();
+  });
 });
 
 describe('required filters', () => {

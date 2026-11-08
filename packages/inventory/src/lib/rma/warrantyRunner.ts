@@ -32,6 +32,7 @@ export async function requireWarrantyPerm(user: any, action: 'create' | 'read' |
 }
 
 const CODE_MESSAGES: Record<string, [string, string]> = {
+  ticket_not_found: ['Ticket not found.', 'features/inventory:errors.rma.ticketNotFound'],
   not_found: ['RMA case not found. It may have been updated or deleted. Please refresh and try again.', 'features/inventory:errors.rma.caseNotFound'],
   unit_tracked: ['This RMA is for a stock unit. Use the stock-unit RMA actions.', 'features/inventory:errors.rma.warrantyUnitTracked'],
   stock_tracked_asset: ['This device was sold from stock. Open an RMA from its stock unit instead.', 'features/inventory:errors.rma.warrantyStockTrackedAsset'],
@@ -42,6 +43,7 @@ const CODE_MESSAGES: Record<string, [string, string]> = {
   location_required: ['Choose where the device is now so it can be received back.', 'features/inventory:errors.rma.warrantyLocationRequired'],
   invalid_transition: ['That step is not available in the RMA’s current status. Refresh and try again.', 'features/inventory:errors.rma.warrantyInvalidTransition'],
   warranty_review_close: ['Approve or deny the claim before closing it.', 'features/inventory:errors.rma.warrantyReviewClose'],
+  wrong_track: ['This step is only for advance-replacement claims.', 'features/inventory:errors.rma.warrantyWrongTrack'],
 };
 
 /**
@@ -121,6 +123,7 @@ export async function runWarrantyTransition(
 }
 
 export async function publishAfterCommit(tenant: string, actorUserId: string, result: WarrantyTransitionResult): Promise<void> {
+  if (result.noop) return;
   await publishRmaUpdated(tenant, result.rma, result.previousStatus, result.changedFields, actorUserId);
   for (const effect of result.custodyEffects) {
     await publishCustodyChanged({ tenant, actorUserId, custody: effect.custody, eventType: effect.eventType as any, occurredAt: effect.occurredAt });
