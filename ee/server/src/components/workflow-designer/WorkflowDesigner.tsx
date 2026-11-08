@@ -8614,6 +8614,7 @@ const JsonField: React.FC<{
   onChange: (value: unknown) => void;
   disabled?: boolean;
 }> = ({ idPrefix, label, value, onChange, disabled = false }) => {
+  const { t } = useTranslation('msp/workflows');
   const [text, setText] = useState(() => JSON.stringify(value ?? {}, null, 2));
   const [error, setError] = useState<string | null>(null);
 
@@ -8655,6 +8656,7 @@ const SchemaFieldRow: React.FC<{
   depth?: number;
   onCopyPath?: (path: string) => void;
 }> = ({ field, pathPrefix, depth = 0, onCopyPath }) => {
+  const { t } = useTranslation('msp/workflows');
   const [expanded, setExpanded] = useState(depth < 2);
   const [copied, setCopied] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
