@@ -637,6 +637,7 @@
       "announcements": "Annunci di sistema",
       "emailPreferences": "E-mail",
       "internalPreferences": "Interne",
+      "unreadCount_few": "{{count}} notifiche non lette",
       "unreadCount_many": "{{count}} notifiche non lette"
     },
     "actions": {
@@ -783,20 +784,20 @@
       "remote": "Remota",
       "thisUser": "questo utente",
       "deactivate": {
-        "title": "Disattiva utente e gestisci le attività in sospeso",
+        "title": "Disattiva utente e gestisci il lavoro in sospeso",
         "confirm": "Disattiva utente",
         "deactivating": "Disattivazione…",
         "thisUserCapitalized": "Questo utente",
-        "openWorkPrompt": "ha attività in sospeso. Scegli come gestirle prima di disattivare l'utente.",
-        "reassignTo": "Riassegna le attività in sospeso a",
+        "openWorkPrompt": "ha del lavoro in sospeso. Scegli come gestirlo prima di disattivare l'utente.",
+        "reassignTo": "Riassegna il lavoro in sospeso a",
         "selectAssignee": "Seleziona un utente interno attivo",
         "noAssignee": "Nessun utente interno attivo disponibile per la riassegnazione.",
-        "selectedUser": "l'utente selezionato",
+        "selectedUser": "un utente selezionato",
         "buckets": {
           "tickets": "Ticket",
           "tasks": "Attività di progetto"
         },
-        "openCount": "{{label}} in sospeso: {{count}}",
+        "openCount": "{{count}} {{label}} in sospeso",
         "actions": {
           "reassign": "Riassegna",
           "unassign": "Rimuovi assegnazione",
@@ -809,9 +810,9 @@
           "projectTasks": "attività di progetto"
         },
         "summary": {
-          "archived": "Da archiviare: {{count}} {{label}}",
-          "unassigned": "Da lasciare senza assegnatario: {{count}} {{label}}",
-          "reassigned": "Da riassegnare a {{name}}: {{count}} {{label}}"
+          "archived": "{{count}} {{label}} da archiviare",
+          "unassigned": "{{count}} {{label}} da lasciare senza assegnatario",
+          "reassigned": "{{count}} {{label}} da riassegnare a {{name}}"
         }
       }
     },
@@ -952,6 +953,7 @@
       "unread": "Non letta",
       "noMessage": "Nessun messaggio"
     },
+    "unreadCount_few": "{{count}} notifiche non lette",
     "unreadCount_many": "{{count}} notifiche non lette",
     "reconnectingToServer": "Riconnessione al server...",
     "refresh": "Aggiorna",
@@ -1090,7 +1092,7 @@
     "sharedWorkspaceLabel": "Postazione condivisa",
     "details": {
       "notProvided": "Non fornito",
-      "notAvailable": "Non disponibile",
+      "notAvailable": "N/D",
       "cpuWithModel": "{{model}} ({{count}} core)",
       "cpuCores": "{{count}} core",
       "workstationTitle": "Dettagli della stazione di lavoro",
