@@ -7,6 +7,10 @@
     "description": "Pro est requis pour {{feature}}. Veuillez effectuer une mise à niveau pour accéder à cette fonctionnalité."
   },
   "settings": {
+    "unavailable": {
+      "title": "Paramètres des extensions indisponibles",
+      "description": "La gestion des paramètres des extensions est disponible dans AlgaPSA Pro."
+    },
     "title": "Gestion des extensions",
     "description": "Installez, configurez et gérez des extensions pour étendre les fonctionnalités d'AlgaPSA.",
     "tabs": {
@@ -98,7 +102,12 @@
       "description": "Gérer les extensions"
     },
     "title": "Extensions",
-    "description": "La gestion des extensions est disponible avec Pro."
+    "description": "La gestion des extensions est disponible avec Pro.",
+    "unavailable": {
+      "metadataTitle": "Extensions (EE uniquement)",
+      "title": "Extensions indisponibles",
+      "description": "Disponible dans Pro."
+    }
   },
   "detail": {
     "metadataTitle": "Extensions - Fonctionnalité Pro",
@@ -121,7 +130,12 @@
       "description": "Afficher les détails de l'extension"
     },
     "title": "Détails de l'extension",
-    "description": "Les détails de l'extension sont disponibles avec Pro."
+    "description": "Les détails de l'extension sont disponibles avec Pro.",
+    "unavailable": {
+      "metadataTitle": "Détails de l’extension (EE uniquement)",
+      "title": "Détails de l’extension indisponibles",
+      "description": "Cette page est disponible dans Pro."
+    }
   },
   "settingsPage": {
     "metadata": {
@@ -129,7 +143,12 @@
       "description": "Configurer les paramètres des extensions"
     },
     "title": "Paramètres des extensions",
-    "description": "Les paramètres des extensions sont disponibles avec Pro."
+    "description": "Les paramètres des extensions sont disponibles avec Pro.",
+    "unavailable": {
+      "metadataTitle": "Paramètres de l’extension (EE uniquement)",
+      "title": "Paramètres de l’extension indisponibles",
+      "description": "Cette page est disponible dans Pro."
+    }
   },
   "details": {
     "label": "Détails de l'extension",
@@ -235,6 +254,10 @@
     "cancel": "Annuler"
   },
   "list": {
+    "unavailable": {
+      "title": "Extensions indisponibles",
+      "description": "La gestion des extensions est disponible dans AlgaPSA Pro."
+    },
     "label": "Gestion des extensions",
     "heading": "Extensions",
     "loading": "Chargement des extensions...",
@@ -294,7 +317,20 @@
     "installCompleteError": "Extension finalisée, mais l'installation ne s'est pas terminée",
     "installUnexpected": "Erreur inattendue lors de l'installation",
     "finalizeRequireManifest": "Veuillez coller le JSON du manifeste avant de finaliser.",
-    "finalizeProvidedFailed": "Échec de la finalisation avec le manifeste fourni"
+    "finalizeProvidedFailed": "Échec de la finalisation avec le manifeste fourni",
+    "pro": {
+      "title": "Extensions (Pro)",
+      "description": "L’installation et la gestion des extensions sont disponibles dans AlgaPSA Pro.",
+      "featureTitle": "Fonctionnalité Pro",
+      "help": "Le programme d’installation des extensions est disponible uniquement dans AlgaPSA Pro.",
+      "actions": {
+        "learnMore": "En savoir plus sur Pro"
+      }
+    },
+    "unavailable": {
+      "title": "Installation d’extensions indisponible",
+      "description": "L’installation d’extensions est disponible dans AlgaPSA Pro."
+    }
   },
   "installSimple": {
     "title": "Installer une extension",
@@ -371,5 +407,19 @@
       "medium": "Les autorisations de modification permettent à l'extension de mettre à jour des données existantes.",
       "high": "Les autorisations avancées permettent à l'extension de créer, supprimer ou exécuter des opérations."
     }
+  },
+  "iframe": {
+    "title": "Application de l’extension",
+    "starting": "Démarrage de l’extension",
+    "loadingUi": "Chargement de l’interface de l’extension…",
+    "connecting": "Connexion à l’espace de travail d’exécution…",
+    "loadFailed": "Impossible de charger cette extension.",
+    "configurationHint": "Vérifiez la configuration de l’extension et réessayez."
+  },
+  "unavailable": {
+    "metadataTitle": "Extensions (EE uniquement)",
+    "title": "Extension indisponible",
+    "description": "Le système d’extensions est disponible dans Pro et n’est pas inclus dans cette version Community Edition.",
+    "requestedId": "Identifiant demandé : {{id}}"
   }
 }

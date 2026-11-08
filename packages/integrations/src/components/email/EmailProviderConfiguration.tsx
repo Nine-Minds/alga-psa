@@ -11,6 +11,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { PROVIDER_SETUP_ENTRY_PATH } from '@alga-psa/types';
 import {
   getErrorMessage,
   handleError,
@@ -39,7 +40,7 @@ import {
 } from '../../actions/email-actions/emailProviderActions';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import {
-  EmailProvider,
+  PublicEmailProvider,
   GoogleEmailProviderConfig,
   ImapEmailProviderConfig,
   MicrosoftEmailProviderConfig,
@@ -73,8 +74,8 @@ const getImapResyncPollInterval = (elapsedMs: number) => {
 };
 
 export interface EmailProviderConfigurationProps {
-  onProviderAdded?: (provider: EmailProvider) => void;
-  onProviderUpdated?: (provider: EmailProvider) => void;
+  onProviderAdded?: (provider: PublicEmailProvider) => void;
+  onProviderUpdated?: (provider: PublicEmailProvider) => void;
   onProviderDeleted?: (providerId: string) => void;
 }
 
@@ -85,7 +86,7 @@ function EmailProviderConfigurationContent({
 }: EmailProviderConfigurationProps) {
   const { t } = useTranslation('msp/email-providers');
   const isEnterpriseEdition = isMicrosoftConsumerEnterpriseEdition();
-  const [providers, setProviders] = useState<EmailProvider[]>([]);
+  const [providers, setProviders] = useState<PublicEmailProvider[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -93,7 +94,7 @@ function EmailProviderConfigurationContent({
   const [tenant, setTenant] = useState<string>('');
   const [activeSection, setActiveSection] = useState<'providers' | 'defaults' | 'rules'>('providers');
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
-  const [diagnosticsProvider, setDiagnosticsProvider] = useState<EmailProvider | null>(null);
+  const [diagnosticsProvider, setDiagnosticsProvider] = useState<PublicEmailProvider | null>(null);
   const [microsoftEmailSetup, setMicrosoftEmailSetup] = useState<MicrosoftEmailSetupReadiness | null | undefined>(undefined);
   const [reconnectingProviderIds, setReconnectingProviderIds] = useState<Set<string>>(new Set());
   const resyncPollsRef = useRef<Map<string, ImapResyncPoll>>(new Map());
@@ -177,7 +178,7 @@ function EmailProviderConfigurationContent({
 
   // Add handled via wizard; we refresh list on completion
 
-  const handleProviderUpdated = (provider: EmailProvider) => {
+  const handleProviderUpdated = (provider: PublicEmailProvider) => {
     setProviders(prev => prev.map(p => p.id === provider.id ? provider : p));
     onProviderUpdated?.(provider);
   };
@@ -200,7 +201,7 @@ function EmailProviderConfigurationContent({
     }
   };
 
-  const handleTestConnection = async (provider: EmailProvider) => {
+  const handleTestConnection = async (provider: PublicEmailProvider) => {
     try {
       setError(null);
 
@@ -234,7 +235,7 @@ function EmailProviderConfigurationContent({
     }
   };
 
-  const handleRefreshWatchSubscription = async (provider: EmailProvider) => {
+  const handleRefreshWatchSubscription = async (provider: PublicEmailProvider) => {
     try {
       setError(null);
 
@@ -264,7 +265,7 @@ function EmailProviderConfigurationContent({
     }
   };
 
-  const handleRetryRenewal = async (provider: EmailProvider) => {
+  const handleRetryRenewal = async (provider: PublicEmailProvider) => {
     try {
       setError(null);
       const result = await retryMicrosoftSubscriptionRenewal(provider.id);
@@ -283,7 +284,7 @@ function EmailProviderConfigurationContent({
     }
   };
 
-  const handleReconnectOAuth = async (provider: EmailProvider) => {
+  const handleReconnectOAuth = async (provider: PublicEmailProvider) => {
     try {
       setError(null);
       const response = await fetch('/api/email/oauth/imap/initiate', {
@@ -334,7 +335,7 @@ function EmailProviderConfigurationContent({
       return;
     }
 
-    let refreshedProvider: EmailProvider | undefined;
+    let refreshedProvider: PublicEmailProvider | undefined;
     try {
       const data = await getEmailProviders();
       const currentPoll = resyncPollsRef.current.get(providerId);
@@ -369,7 +370,7 @@ function EmailProviderConfigurationContent({
     }, getImapResyncPollInterval(Date.now() - currentPoll.startedAt));
   };
 
-  const handleResyncProvider = async (provider: EmailProvider) => {
+  const handleResyncProvider = async (provider: PublicEmailProvider) => {
     try {
       setError(null);
       const toastId = toast.loading(t('configuration.feedback.resyncing', {
@@ -411,7 +412,7 @@ function EmailProviderConfigurationContent({
     }
   };
 
-  const handleRunDiagnostics = (provider: EmailProvider) => {
+  const handleRunDiagnostics = (provider: PublicEmailProvider) => {
     setDiagnosticsProvider(provider);
     setDiagnosticsOpen(true);
   };
@@ -421,7 +422,7 @@ function EmailProviderConfigurationContent({
   // the card: Microsoft/Google open their setup flow in the edit drawer,
   // IMAP OAuth mailboxes start the popup reconnect flow, and password IMAP
   // mailboxes open credential editing.
-  const handleReconnect = (provider: EmailProvider) => {
+  const handleReconnect = (provider: PublicEmailProvider) => {
     if (provider.providerType === 'imap' && provider.imapConfig?.auth_type === 'oauth2') {
       handleReconnectOAuth(provider);
       return;
@@ -435,7 +436,7 @@ function EmailProviderConfigurationContent({
     closeDrawer();
   };
 
-  const openEditDrawer = (provider: EmailProvider) => {
+  const openEditDrawer = (provider: PublicEmailProvider) => {
     openDrawer(
       (
         <div className="space-y-4">
@@ -585,7 +586,7 @@ function EmailProviderConfigurationContent({
                     type="button"
                     variant="link"
                     className="h-auto p-0"
-                    onClick={() => window.location.assign('/msp/settings/integrations?category=providers')}
+                    onClick={() => window.location.assign(PROVIDER_SETUP_ENTRY_PATH)}
                   >
                     {t('configuration.setup.microsoft.openProviders', { defaultValue: 'Open Providers' })}
                   </Button>

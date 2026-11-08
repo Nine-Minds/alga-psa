@@ -2,9 +2,16 @@ import type { Knex } from 'knex';
 import { describe, expect, it, vi } from 'vitest';
 import { DELETION_CONFIGS, getDeletionConfig } from './index';
 
+const capabilityServed = vi.hoisted(() => vi.fn(async () => true));
+vi.mock('../../lib/capability', () => ({
+  isCapabilityServed: (...args: unknown[]) => (capabilityServed as any)(...args),
+}));
+
 function makeTrx() {
   const builder = {
     where: vi.fn().mockReturnThis(),
+    whereNull: vi.fn().mockReturnThis(),
+    whereNotIn: vi.fn().mockReturnThis(),
     count: vi.fn().mockReturnThis(),
     first: vi.fn().mockResolvedValue({ count: '0' }),
     select: vi.fn().mockReturnThis()
@@ -128,6 +135,78 @@ describe('deletion configs', () => {
     const categoryDep = DELETION_CONFIGS.board.dependencies.find((dep) => dep.type === 'category');
     expect(categoryDep?.table).toBe('categories');
     expect(categoryDep?.foreignKey).toBe('board_id');
+  });
+
+  it('board config blocks on every reference deleteBoard refuses to cascade', () => {
+    const deps = Object.fromEntries(DELETION_CONFIGS.board.dependencies.map((dep) => [dep.type, dep]));
+
+    expect(deps.inbound_ticket_default).toMatchObject({
+      table: 'inbound_ticket_defaults',
+      foreignKey: 'board_id',
+      label: 'inbound email default'
+    });
+    expect(deps.ticket_template).toMatchObject({
+      table: 'ticket_templates',
+      foreignKey: 'board_id',
+      label: 'ticket template'
+    });
+    expect(deps.recurring_ticket_definition).toMatchObject({
+      table: 'recurring_ticket_definitions',
+      label: 'recurring ticket schedule'
+    });
+    expect(deps.checklist_apply_rule).toMatchObject({
+      table: 'checklist_template_apply_rules',
+      countQuery: expect.any(Function),
+      label: 'checklist apply rule'
+    });
+    // A board-scoped canned response cannot give up its board_id (the
+    // scope_target_check requires it), so it has to block too.
+    expect(deps.canned_response).toMatchObject({
+      table: 'canned_responses',
+      foreignKey: 'board_id',
+      label: 'board canned response'
+    });
+    // None of them opt out of blocking.
+    for (const dep of DELETION_CONFIGS.board.dependencies) {
+      expect(dep.blocking).not.toBe(false);
+    }
+  });
+
+  it('board email_sender_route dependency counts only the board route type', async () => {
+    const routeDep = DELETION_CONFIGS.board.dependencies.find((dep) => dep.type === 'email_sender_route');
+    expect(routeDep?.table).toBe('email_sender_routes');
+    expect(routeDep?.label).toBe('outbound sender route');
+    expect(routeDep?.countQuery).toBeDefined();
+
+    const { trx, builder } = makeTrx();
+    await routeDep?.countQuery?.(trx, { tenant: 'tenant-1', entityId: 'board-1' });
+
+    expect(trx).toHaveBeenCalledWith('email_sender_routes');
+    expect(builder.where).toHaveBeenNthCalledWith(1, 'email_sender_routes.tenant', 'tenant-1');
+    expect(builder.where).toHaveBeenNthCalledWith(2, {
+      route_type: 'board',
+      board_id: 'board-1'
+    });
+  });
+
+  it('board recurring_ticket_definition dependency ignores archived schedules', async () => {
+    const recurringDep = DELETION_CONFIGS.board.dependencies.find(
+      (dep) => dep.type === 'recurring_ticket_definition'
+    );
+    expect(recurringDep?.table).toBe('recurring_ticket_definitions');
+    expect(recurringDep?.label).toBe('recurring ticket schedule');
+    // Must be a countQuery, not a plain foreignKey count: archived definitions
+    // are read-only forever, so blocking on one would strand the board.
+    expect(recurringDep?.foreignKey).toBeUndefined();
+    expect(recurringDep?.countQuery).toBeDefined();
+
+    const { trx, builder } = makeTrx();
+    await recurringDep?.countQuery?.(trx, { tenant: 'tenant-1', entityId: 'board-1' });
+
+    expect(trx).toHaveBeenCalledWith('recurring_ticket_definitions');
+    expect(builder.where).toHaveBeenNthCalledWith(1, 'recurring_ticket_definitions.tenant', 'tenant-1');
+    expect(builder.where).toHaveBeenNthCalledWith(2, { board_id: 'board-1' });
+    expect(builder.whereNull).toHaveBeenCalledWith('archived_at');
   });
 
   it('ticket config includes schedule_entry dependency with polymorphic countQuery', async () => {
@@ -257,10 +336,71 @@ describe('deletion configs', () => {
     expect(builder.where).toHaveBeenCalledWith('ctm.composite_tax_id', '!=', 'rate-a');
   });
 
+  it('blocks client deletion while a co-managed setup still holds an unreleased allocation', async () => {
+    const dep = DELETION_CONFIGS.client.dependencies.find((d) => d.type === 'co_managed_workspace');
+    const { trx, builder, joinClause } = makeJoinTrx(2);
+    (trx as any).schema = { hasTable: vi.fn().mockResolvedValue(true) };
+    builder.whereRaw = vi.fn().mockReturnValue(builder);
+    builder.whereNot = vi.fn().mockReturnValue(builder);
+
+    expect(await dep?.countQuery?.(trx, { tenant: 'tenant-1', entityId: 'client-a' })).toBe(2);
+    expect(builder.whereNot).toHaveBeenCalledWith('co_managed_allocations.state', 'released');
+    expect(joinClause.andOn).toHaveBeenCalledWith('co_managed_allocations.tenant', 'co_managed_provisioning_operations.tenant');
+  });
+
+  it('blocks board deletion while it is a live escalation queue or a live shared scope', async () => {
+    const types = DELETION_CONFIGS.board.dependencies.map((d) => d.type);
+    expect(types).toEqual(expect.arrayContaining(['co_managed_board_scope', 'co_managed_escalation']));
+
+    const dep = DELETION_CONFIGS.board.dependencies.find((d) => d.type === 'co_managed_escalation');
+    const { trx, builder } = makeJoinTrx(1);
+    (trx as any).schema = { hasTable: vi.fn().mockResolvedValue(true) };
+    builder.whereNot = vi.fn().mockReturnValue(builder);
+    expect(await dep?.countQuery?.(trx, { tenant: 'tenant-1', entityId: 'board-a' })).toBe(1);
+    expect(builder.where).toHaveBeenCalledWith('co_managed_provisioning_operations.escalation_board_id', 'board-a');
+  });
+
+  it('issues no co-managed statement for a tenant that does not participate', async () => {
+    capabilityServed.mockResolvedValueOnce(false).mockResolvedValueOnce(false);
+    const { trx } = makeJoinTrx(1);
+    (trx as any).schema = { hasTable: vi.fn().mockResolvedValue(true) };
+    for (const type of ['co_managed_escalation', 'co_managed_board_scope']) {
+      const dep = DELETION_CONFIGS.board.dependencies.find((d) => d.type === type);
+      expect(await dep?.countQuery?.(trx, { tenant: 'tenant-1', entityId: 'board-a' })).toBe(0);
+    }
+    expect((trx as any).schema.hasTable).not.toHaveBeenCalled();
+    expect(trx).not.toHaveBeenCalled();
+  });
+
+  it('allows deletion checks before the co-managed tables exist', async () => {
+    const { trx } = makeJoinTrx(0);
+    (trx as any).schema = { hasTable: vi.fn().mockResolvedValue(false) };
+    for (const [entity, type] of [['client', 'co_managed_workspace'], ['board', 'co_managed_escalation'],
+      ['board', 'co_managed_board_scope']] as const) {
+      const dep = DELETION_CONFIGS[entity].dependencies.find(d => d.type === type);
+      expect(await dep?.countQuery?.(trx, { tenant: 'tenant-1', entityId: 'entity-1' })).toBe(0);
+    }
+    expect(trx).not.toHaveBeenCalled();
+  });
+
   it('asset config has no blocking dependencies (cascaded by deleteAsset)', () => {
     // Maintenance schedules and ticket-entity links are cascaded inside
     // deleteAsset rather than blocking deletion validation.
     expect(DELETION_CONFIGS.asset.dependencies).toEqual([]);
+  });
+
+  it('quote activity dependency ignores created/updated rows so edited drafts stay deletable', async () => {
+    const dep = DELETION_CONFIGS.quote.dependencies.find((d) => d.type === 'quote_activity');
+    const { trx, builder } = makeTrx();
+
+    await dep?.countQuery?.(trx, { tenant: 'tenant-1', entityId: 'quote-1' });
+
+    // Every save writes an 'updated' activity; counting it made any edited
+    // draft permanently undeletable (silently, from the quotes list).
+    expect(trx).toHaveBeenCalledWith('quote_activities');
+    expect(builder.where).toHaveBeenNthCalledWith(1, 'quote_activities.tenant', 'tenant-1');
+    expect(builder.where).toHaveBeenNthCalledWith(2, { quote_id: 'quote-1' });
+    expect(builder.whereNotIn).toHaveBeenCalledWith('activity_type', ['created', 'updated']);
   });
 });
 

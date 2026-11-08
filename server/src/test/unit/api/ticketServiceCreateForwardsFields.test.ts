@@ -50,8 +50,16 @@ vi.mock('@alga-psa/shared/lib/ticketActivity', async (importOriginal) => {
   return { ...actual, writeTicketActivity: vi.fn(async () => undefined) };
 });
 
+// The from-asset path resolves the asset's single contact; the fake transaction
+// handle cannot answer that query, and these cases care about field forwarding.
+vi.mock('@alga-psa/shared/models/assetTicketContactModel', () => ({
+  resolveAssetTicketContactOptions: vi.fn(async () => []),
+}));
+
 import { TicketService } from '../../../lib/api/services/TicketService';
+import { createTicketSchema } from '../../../lib/api/schemas/ticket';
 import { TicketModel } from '@shared/models/ticketModel';
+import { writeTicketActivity } from '@alga-psa/shared/lib/ticketActivity';
 
 describe('TicketService.create forwards create fields', () => {
   beforeEach(() => {
@@ -112,5 +120,218 @@ describe('TicketService.create forwards create fields', () => {
       urgency_id: urgency,
       impact_id: impact,
     });
+  });
+
+  // alga-2026-0002907: a caller creating alert tickets with no contact must be
+  // able to skip the "Your Ticket Has Been Created" mail that otherwise falls
+  // back to the client's own address.
+  function arrange() {
+    const createSpy = vi
+      .spyOn(TicketModel, 'createTicketWithRetry')
+      .mockResolvedValue({ ticket_id: h.ticketId } as any);
+    const fromAssetSpy = vi
+      .spyOn(TicketModel, 'createTicketFromAsset')
+      .mockResolvedValue({ ticket_id: h.ticketId } as any);
+    vi.mocked(writeTicketActivity).mockClear();
+
+    const service = new TicketService();
+    vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: {} });
+    const publishSpy = vi.spyOn(service as any, 'safePublishEvent').mockResolvedValue(undefined);
+
+    return {
+      service,
+      createSpy,
+      fromAssetSpy,
+      publishSpy,
+      context: { tenant: h.tenant, userId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' } as any,
+      body: {
+        title: 'Silent alert',
+        client_id: h.reloadedTicket.client_id,
+        board_id: h.reloadedTicket.board_id,
+        status_id: h.reloadedTicket.status_id,
+        priority_id: h.reloadedTicket.priority_id,
+      },
+      createdPayload: () => {
+        const call = publishSpy.mock.calls.find(([eventType]) => eventType === 'TICKET_CREATED');
+        return (call as unknown as [string, unknown, Record<string, unknown>])[2];
+      },
+      activityDetails: () =>
+        (vi.mocked(writeTicketActivity).mock.calls.at(-1)?.[1] as any)?.details as Record<string, unknown>,
+    };
+  }
+
+  it('keeps the suppression flags out of the insert and publishes them on TICKET_CREATED', async () => {
+    const h2 = arrange();
+
+    await h2.service.create(
+      { ...h2.body, suppressContactNotifications: true, suppressInternalNotifications: true } as any,
+      h2.context,
+    );
+
+    const forwarded = h2.createSpy.mock.calls[0][0] as Record<string, unknown>;
+    expect(forwarded).not.toHaveProperty('suppressContactNotifications');
+    expect(forwarded).not.toHaveProperty('suppressInternalNotifications');
+
+    expect(h2.createdPayload()).toMatchObject({
+      ticketId: h.ticketId,
+      suppressContactNotifications: true,
+      suppressInternalNotifications: true,
+    });
+
+    // The silent create is still audited, and says so.
+    expect(h2.activityDetails()).toMatchObject({
+      notification_suppression: {
+        suppress_contact_notifications: true,
+        suppress_internal_notifications: true,
+      },
+    });
+  });
+
+  it('marks a contact-only silent create as such and leaves loud creates unannotated', async () => {
+    const contactOnly = arrange();
+    await contactOnly.service.create(
+      { ...contactOnly.body, suppressContactNotifications: true } as any,
+      contactOnly.context,
+    );
+    expect(contactOnly.createdPayload()).toMatchObject({
+      suppressContactNotifications: true,
+      suppressInternalNotifications: false,
+    });
+    expect(contactOnly.activityDetails().notification_suppression).toEqual({
+      suppress_contact_notifications: true,
+      suppress_internal_notifications: false,
+    });
+
+    const loud = arrange();
+    await loud.service.create({ ...loud.body } as any, loud.context);
+    expect(loud.createdPayload()).toMatchObject({
+      suppressContactNotifications: false,
+      suppressInternalNotifications: false,
+    });
+    expect(loud.activityDetails().notification_suppression).toBeUndefined();
+  });
+
+  it('rejects internal-only suppression on create before touching the database', async () => {
+    const h2 = arrange();
+
+    await expect(
+      h2.service.create({ ...h2.body, suppressInternalNotifications: true } as any, h2.context),
+    ).rejects.toThrow('Validation failed');
+
+    expect(h2.createSpy).not.toHaveBeenCalled();
+    expect(h2.publishSpy).not.toHaveBeenCalled();
+  });
+
+  it('keeps the flags out of the from-asset insert and publishes them on TICKET_CREATED', async () => {
+    const h2 = arrange();
+
+    await h2.service.createFromAsset(
+      {
+        title: 'Silent alert',
+        priority_id: h.reloadedTicket.priority_id,
+        status_id: h.reloadedTicket.status_id,
+        board_id: h.reloadedTicket.board_id,
+        client_id: h.reloadedTicket.client_id,
+        asset_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+        suppressContactNotifications: true,
+        suppressInternalNotifications: true,
+      } as any,
+      h2.context,
+    );
+
+    const forwarded = h2.fromAssetSpy.mock.calls[0][0] as Record<string, unknown>;
+    expect(forwarded).not.toHaveProperty('suppressContactNotifications');
+    expect(forwarded).not.toHaveProperty('suppressInternalNotifications');
+
+    expect(h2.createdPayload()).toMatchObject({
+      suppressContactNotifications: true,
+      suppressInternalNotifications: true,
+    });
+  });
+
+  it('rejects internal-only suppression on the from-asset create', async () => {
+    const h2 = arrange();
+
+    await expect(
+      h2.service.createFromAsset(
+        {
+          title: 'Silent alert',
+          priority_id: h.reloadedTicket.priority_id,
+          status_id: h.reloadedTicket.status_id,
+          board_id: h.reloadedTicket.board_id,
+          client_id: h.reloadedTicket.client_id,
+          asset_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+          suppressInternalNotifications: true,
+        } as any,
+        h2.context,
+      ),
+    ).rejects.toThrow('Validation failed');
+
+    expect(h2.fromAssetSpy).not.toHaveBeenCalled();
+    expect(h2.publishSpy).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * T056 — REST v1 ticket create and the location contract. The service must forward the request's
+ * `location_id` exactly as it arrived: omitted (so `TicketModel.createTicket` asks the contact) or
+ * null (so it stays none). Collapsing one into the other would either invent a location or lose
+ * the autofill for every API and mobile caller.
+ */
+describe('TicketService.create keeps the location contract', () => {
+  const contact = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  const location = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+
+  function arrangeCreate() {
+    vi.restoreAllMocks();
+    vi.spyOn(TicketModel, 'validateStatusBelongsToBoard').mockResolvedValue({ valid: true } as any);
+    const createSpy = vi
+      .spyOn(TicketModel, 'createTicketWithRetry')
+      .mockResolvedValue({ ticket_id: h.ticketId } as any);
+    const service = new TicketService();
+    vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: {} });
+    vi.spyOn(service as any, 'safePublishEvent').mockResolvedValue(undefined);
+    return { service, createSpy };
+  }
+
+  const request = (extra: Record<string, unknown>) => createTicketSchema.parse({
+    title: 'Location contract',
+    client_id: h.reloadedTicket.client_id,
+    board_id: h.reloadedTicket.board_id,
+    status_id: h.reloadedTicket.status_id,
+    priority_id: h.reloadedTicket.priority_id,
+    contact_name_id: contact,
+    ...extra,
+  });
+
+  it('T056: an omitted location stays undefined, so the contact answers', async () => {
+    const { service, createSpy } = arrangeCreate();
+
+    await service.create(request({}) as any, { tenant: h.tenant, userId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' } as any);
+
+    const forwarded = createSpy.mock.calls[0][0] as CreateTicketInput;
+    expect(forwarded.contact_id).toBe(contact);
+    expect('location_id' in forwarded ? forwarded.location_id : undefined).toBeUndefined();
+  });
+
+  it('T056: an explicit null survives the request schema and the forward', async () => {
+    const parsed = request({ location_id: null });
+    expect(parsed.location_id).toBeNull();
+
+    const { service, createSpy } = arrangeCreate();
+    await service.create(parsed as any, { tenant: h.tenant, userId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' } as any);
+
+    expect((createSpy.mock.calls[0][0] as CreateTicketInput).location_id).toBeNull();
+  });
+
+  it('T056: an explicit location is forwarded as given', async () => {
+    const { service, createSpy } = arrangeCreate();
+
+    await service.create(
+      request({ location_id: location }) as any,
+      { tenant: h.tenant, userId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' } as any,
+    );
+
+    expect((createSpy.mock.calls[0][0] as CreateTicketInput).location_id).toBe(location);
   });
 });

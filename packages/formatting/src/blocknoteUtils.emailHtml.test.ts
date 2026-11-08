@@ -98,3 +98,64 @@ describe('normalizeBlockHtmlForEmail', () => {
     expect(html).toBe('<pre><code class="language-js">const a = 1;</code></pre>');
   });
 });
+
+// Ticket alga-2026-0002751: comments stored before the editor normalizer (and
+// every inbound-email comment) can hold raw "\n" inside a link's own text. Left
+// alone, the HTML collapses the newline to a space — pulling the text that
+// follows into the anchor — and the markdown part puts newlines inside the
+// link brackets. formatBlockNoteContent normalizes before both converters.
+describe('formatBlockNoteContent with newlines inside link text', () => {
+  const LINK = 'https://example.com/x';
+
+  const linkParagraph = (href: string, text: string, trailing: string[] = []) => ({
+    type: 'paragraph',
+    props: { backgroundColor: 'default', textColor: 'default', textAlignment: 'left' },
+    content: [
+      { type: 'link', href, content: [{ type: 'text', text, styles: {} }] },
+      ...trailing.map((t) => ({ type: 'text', text: t, styles: {} })),
+    ],
+  });
+
+  it('keeps the trailing blank lines out of the anchor', () => {
+    const { html, text } = formatBlockNoteContent([
+      linkParagraph(LINK, `${LINK}\n\n`, ['next text']),
+    ]);
+
+    const anchor = html.match(/<a [^>]*>([^<]*)<\/a>/);
+    expect(anchor?.[1]).toBe(LINK);
+    expect(html).not.toMatch(/<a [^>]*>[^<]*\n/);
+    // Link in its own paragraph, the spacer for the blank line, then the text.
+    expect(html).toBe(
+      `<p style="margin:0 0 10px 0;"><a href="${LINK}" target="_blank" rel="noopener noreferrer">${LINK}</a></p>\n` +
+        `${SPACER}\n` +
+        '<p style="margin:0 0 10px 0;">next text</p>',
+    );
+
+    expect(text).toContain(`[${LINK}](${LINK})`);
+    expect(text).not.toMatch(/\[[^\]]*\n/);
+    expect(text.endsWith('next text')).toBe(true);
+  });
+
+  it('splits a signature folded into the link text into its own lines', () => {
+    const href = 'https://example.com/t/630';
+    const { html, text } = formatBlockNoteContent([
+      linkParagraph(href, 'Ticket #SR000630\n\nThanks,\nMunjal'),
+    ]);
+
+    // Each line becomes its own paragraph; the link label is just the ticket.
+    const anchors = Array.from(html.matchAll(/<a [^>]*>([^<]*)<\/a>/g)).map((m) => m[1]);
+    expect(anchors[0]).toBe('Ticket #SR000630');
+    expect(anchors.every((a) => !a.includes('\n'))).toBe(true);
+    expect(html.match(/<p[^>]*>/g)).toHaveLength(4);
+
+    expect(text).toContain(`[Ticket #SR000630](${href})`);
+    expect(text).not.toMatch(/\[[^\]]*\n/);
+    expect(text.split('\n').pop()).toBe(`[Munjal](${href})`);
+  });
+
+  it('leaves content without embedded newlines byte-for-byte unchanged', () => {
+    const blocks = [linkParagraph(LINK, 'docs', [' and more'])];
+
+    expect(formatBlockNoteContent(blocks).text).toBe(convertBlockNoteToMarkdown(blocks));
+  });
+});

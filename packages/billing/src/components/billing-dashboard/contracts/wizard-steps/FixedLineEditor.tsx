@@ -16,8 +16,11 @@ import { useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnu
 import { getServiceCatalogRatesForCurrency } from '@alga-psa/billing/actions/serviceActions';
 import type { ContractWizardData } from '../ContractWizard';
 import { QuantityInput } from '../QuantityInput';
+import { ArrearsFirstInvoiceHint } from '../ArrearsFirstInvoiceHint';
+import type { FirstInvoiceClientSchedule } from '../../../../lib/firstInvoiceDate';
 import { ServiceCatalogPicker, ServiceCatalogPickerItem } from '../ServiceCatalogPicker';
 import { BillingFrequencyOverrideSelect } from '../BillingFrequencyOverrideSelect';
+import { BillingTimingField } from '../BillingTimingField';
 import { getRecurringAuthoringPreview } from '../recurringAuthoringPreview';
 import { FixedServiceConfigPanel } from '../../service-configurations/FixedServiceConfigPanel';
 import { resolveContractAuthoringRate } from '../../../../lib/contractAuthoringRate';
@@ -35,7 +38,15 @@ export interface FixedLineEditorProps {
   line: ContractWizardFixedLine;
   index: number;
   /** Contract-level settings a line falls back to. */
-  contract: Pick<ContractWizardData, 'currency_code' | 'billing_frequency' | 'cadence_owner' | 'billing_timing'>;
+  contract: Pick<
+    ContractWizardData,
+    'currency_code' | 'billing_frequency' | 'cadence_owner' | 'billing_timing' | 'start_date' | 'client_id'
+  >;
+  /**
+   * The client's billing schedule, fetched once by the step (not per line). Without it
+   * (loading, failed, contract cadence) the first-invoice hint renders nothing.
+   */
+  clientSchedule?: FirstInvoiceClientSchedule | null;
   /** Shallow-merges into this line; the function form reads the latest line (use after an `await`). */
   updateLine: (
     patch: Partial<ContractWizardFixedLine> | ((line: ContractWizardFixedLine) => Partial<ContractWizardFixedLine>),
@@ -62,7 +73,7 @@ function computeWeightedResolvedRate(services: FixedServiceDraft[]): number {
  * cadence override. The base-rate input text and the manual/auto flag are local
  * to the line, so editing one line never disturbs another.
  */
-export function FixedLineEditor({ line, index, contract, updateLine, onRemove }: FixedLineEditorProps) {
+export function FixedLineEditor({ line, index, contract, clientSchedule, updateLine, onRemove }: FixedLineEditorProps) {
   const { t } = useTranslation('msp/contracts');
   const { money } = useCurrencyFormat();
   const formatBillingFrequency = useFormatBillingFrequency();
@@ -494,6 +505,34 @@ export function FixedLineEditor({ line, index, contract, updateLine, onRemove }:
         />
       )}
 
+      {(line.services.length > 0 || servicelessWarning) && (
+        <div className="space-y-2">
+          <Label htmlFor={`${idPrefix}-billing-timing`} className="text-sm">
+            {t('wizardFixed.billingTimingLabel', { defaultValue: 'Billing Timing' })}
+          </Label>
+          <BillingTimingField
+            id={`${idPrefix}-billing-timing`}
+            lineType="Fixed"
+            value={line.billing_timing}
+            allowInherit
+            inheritedValue={contract.billing_timing ?? 'arrears'}
+            onChange={(value) => updateLine({ billing_timing: value })}
+            onInherit={() => updateLine({ billing_timing: undefined })}
+            hideHelp
+          />
+        </div>
+      )}
+
+      <ArrearsFirstInvoiceHint
+        id={`${idPrefix}-first-invoice-hint`}
+        lineType="Fixed"
+        cadenceOwner={contract.cadence_owner}
+        billingTiming={line.billing_timing ?? contract.billing_timing}
+        startDate={contract.start_date}
+        clientSchedule={clientSchedule}
+        onBillInAdvance={() => updateLine({ billing_timing: 'advance' })}
+      />
+
       {line.services.length > 0 && (
         <Alert variant="info" className="mt-2">
           <AlertDescription>
@@ -547,7 +586,6 @@ export function FixedLineEditor({ line, index, contract, updateLine, onRemove }:
                 {recurringPreview.billingTimingLabel}
               </p>
               <p>{recurringPreview.billingTimingSummary}</p>
-              <p>{recurringPreview.firstInvoiceSummary}</p>
               <p>{recurringPreview.partialPeriodSummary}</p>
               {hasAlternateBillingFrequency && line.billing_frequency && (
                 <p>

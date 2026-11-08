@@ -1,0 +1,38 @@
+[
+  {
+    "invoice_number": "REVIEW-CONTRACT-3499",
+    "invoice_id": "5a1e0000-0000-4000-8000-202609279204",
+    "status": "draft",
+    "subtotal": 405000,
+    "tax": 0,
+    "total_amount": "405000",
+    "draft_adjustment_revision": 20,
+    "charge_count": "4",
+    "posted": "405000",
+    "postings": "15"
+  },
+  {
+    "invoice_number": "SMOKE-ADJ-1",
+    "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+    "status": "draft",
+    "subtotal": 370500,
+    "tax": 900,
+    "total_amount": "371400",
+    "draft_adjustment_revision": 63,
+    "charge_count": "5",
+    "posted": "28419002",
+    "postings": "77"
+  },
+  {
+    "invoice_number": "INV-000039",
+    "invoice_id": "d8816325-32a7-4a58-b000-ff987b99f6fe",
+    "status": "draft",
+    "subtotal": 390000,
+    "tax": 0,
+    "total_amount": "390000",
+    "draft_adjustment_revision": 0,
+    "charge_count": "3",
+    "posted": "390000",
+    "postings": "1"
+  }
+]

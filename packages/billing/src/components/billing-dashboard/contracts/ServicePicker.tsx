@@ -2,13 +2,10 @@
 
 import React from 'react';
 import { cn } from '@alga-psa/ui/lib/utils';
-import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
+import SearchableSelect, { type SelectOption } from '@alga-psa/ui/components/SearchableSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
-export interface SelectOption {
-  value: string;
-  label: string;
-}
+export type { SelectOption };
 
 interface ServicePickerProps {
   options: SelectOption[];

@@ -116,6 +116,15 @@
       "@alga-psa/email/*": [
         "../packages/email/src/*"
       ],
+      "@alga-psa/predicates": [
+        "../packages/predicates/src"
+      ],
+      "@alga-psa/predicates/sql": [
+        "../packages/predicates/src/sql/index.ts"
+      ],
+      "@alga-psa/predicates/*": [
+        "../packages/predicates/src/*"
+      ],
       "@alga-psa/formatting": [
         "../packages/formatting/src"
       ],
@@ -369,6 +378,12 @@
       "@alga-psa/licensing/*": [
         "../packages/licensing/src/*"
       ],
+      "@alga-psa/co-managed": [
+        "../packages/co-managed/src"
+      ],
+      "@alga-psa/co-managed/*": [
+        "../packages/co-managed/src/*"
+      ],
       "@alga-psa/tags": [
         "../packages/tags/src"
       ],
@@ -411,6 +426,18 @@
       ],
       "@product/mcp/ee/*": [
         "../packages/product-mcp/ee/*"
+      ],
+      "@product/service-principals/entry": [
+        "../packages/product-service-principals/oss/entry"
+      ],
+      "@product/service-principals/types": [
+        "../packages/product-service-principals/types"
+      ],
+      "@product/service-principals/ee/entry": [
+        "../packages/product-service-principals/ee/entry"
+      ],
+      "@product/service-principals/ee/*": [
+        "../packages/product-service-principals/ee/*"
       ],
       "@product/ext-proxy/handler": [
         "../packages/product-ext-proxy/oss/handler"

@@ -1,0 +1,38 @@
+[
+  {
+    "contract_name": "TAKEOVER Copy A 20260927",
+    "client_contract_id": "3c8355ba-48ec-4f76-b549-b804f6b42913",
+    "discount_id": "39e5fc5f-826e-4456-b120-5206222f3ce5",
+    "discount_name": "Takeover contract-wide 10%",
+    "discount_type": "percentage",
+    "value": "0.1500",
+    "contract_line_name": null
+  },
+  {
+    "contract_name": "TAKEOVER Copy A 20260927",
+    "client_contract_id": "3c8355ba-48ec-4f76-b549-b804f6b42913",
+    "discount_id": "f40a4e4a-3d11-4a1d-b486-762fa3027bb9",
+    "discount_name": "Takeover line A five dollars",
+    "discount_type": "fixed",
+    "value": "5.0000",
+    "contract_line_name": "TAKEOVER Copy A 20260927 - Takeover fixed A"
+  },
+  {
+    "contract_name": "TAKEOVER Copy B 20260927",
+    "client_contract_id": "725552f0-aac2-4f6e-9d69-065c04a5aca7",
+    "discount_id": "4d4adae6-f9fd-4f21-b9b9-597c37b08dca",
+    "discount_name": "Takeover contract-wide 10%",
+    "discount_type": "percentage",
+    "value": "0.1250",
+    "contract_line_name": null
+  },
+  {
+    "contract_name": "TAKEOVER Copy B 20260927",
+    "client_contract_id": "725552f0-aac2-4f6e-9d69-065c04a5aca7",
+    "discount_id": "a589ebf1-5584-4888-8171-f5cbe1ff2cc1",
+    "discount_name": "Takeover line A five dollars",
+    "discount_type": "fixed",
+    "value": "5.0000",
+    "contract_line_name": "TAKEOVER Copy B 20260927 - Takeover fixed A"
+  }
+]

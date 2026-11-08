@@ -17,6 +17,7 @@ const baseRecord: PortalDomain = {
   statusMessage: 'Active',
   lastCheckedAt: new Date(),
   verificationMethod: 'cname',
+  surface: 'client_portal',
   verificationDetails: { forward_host_header: true },
   certificateSecretName: null,
   lastSyncedResourceVersion: null,
@@ -25,6 +26,7 @@ const baseRecord: PortalDomain = {
 };
 
 let portalDomainStore: PortalDomain | null = null;
+let hostnameOwner: PortalDomain | null = null;
 
 const { upsertPortalDomain, deletePortalDomain, updatePortalDomain } = vi.hoisted(() => ({
   upsertPortalDomain: vi.fn(),
@@ -63,6 +65,7 @@ vi.mock('@/models/PortalDomainModel', async () => {
   return {
     ...actual,
     getPortalDomain: vi.fn(async () => (portalDomainStore ? { ...portalDomainStore } : null)),
+    getPortalDomainByHostname: vi.fn(async () => hostnameOwner),
     upsertPortalDomain,
     updatePortalDomain,
     deletePortalDomain,
@@ -100,6 +103,7 @@ afterAll(() => {
 
 beforeEach(() => {
   portalDomainStore = null;
+  hostnameOwner = null;
   vi.clearAllMocks();
   delete process.env.EDITION;
   delete process.env.NEXT_PUBLIC_EDITION;
@@ -150,6 +154,52 @@ describe.each([
     expect(result.status).toMatchObject({ domain: 'portal.acme.com', status: 'active', mode: 'direct', isEditable: true });
   });
 
+  it('rejects a domain already claimed by another tenant (one host, one tenant)', async () => {
+    hostnameOwner = { ...baseRecord, tenant: 'other-tenant' };
+
+    const result = await requestPortalDomainRegistrationAction({ domain: 'portal.acme.com' });
+
+    expect(result).toMatchObject({ messageKey: 'msp/settings:errors.clientPortalDomain.alreadyInUse' });
+    expect(upsertPortalDomain).not.toHaveBeenCalled();
+  });
+
+  it('rejects a host already held by another surface row of the same tenant (use "both", never a second row)', async () => {
+    portalDomainStore = { ...baseRecord, id: 'portal-domain-1', domain: 'portal.acme.com', surface: 'client_portal' };
+    hostnameOwner = { ...baseRecord, id: 'portal-domain-2', domain: 'helpdesk.acme.com', surface: 'msp' };
+
+    const result = await requestPortalDomainRegistrationAction({ domain: 'helpdesk.acme.com', surface: 'msp' });
+
+    expect(result).toMatchObject({ messageKey: 'msp/settings:errors.clientPortalDomain.usedByOtherSurface' });
+    expect(upsertPortalDomain).not.toHaveBeenCalled();
+  });
+
+  it('re-saving the tenant\'s own row for the same host (e.g. switching to "both") is allowed', async () => {
+    portalDomainStore = { ...baseRecord, id: 'portal-domain-1', domain: 'helpdesk.acme.com', surface: 'msp' };
+    hostnameOwner = { ...portalDomainStore };
+
+    const result = await requestPortalDomainRegistrationAction({ domain: 'helpdesk.acme.com', surface: 'both' });
+
+    expect(upsertPortalDomain).toHaveBeenCalledTimes(1);
+    const input = upsertPortalDomain.mock.calls[0][2];
+    expect(input).toMatchObject({ domain: 'helpdesk.acme.com', surface: 'both', matchSurface: 'msp' });
+    expect('status' in result).toBe(true);
+  });
+
+  it('rejects an unknown surface', async () => {
+    const result = await requestPortalDomainRegistrationAction({ domain: 'portal.acme.com', surface: 'nope' as any });
+
+    expect(result).toMatchObject({ messageKey: 'msp/settings:errors.clientPortalDomain.invalidSurface' });
+    expect(upsertPortalDomain).not.toHaveBeenCalled();
+  });
+
+  it('registers an msp surface and reports it in the status', async () => {
+    const result = await requestPortalDomainRegistrationAction({ domain: 'helpdesk.acme.com', surface: 'msp' });
+
+    expect(upsertPortalDomain.mock.calls[0][2].surface).toBe('msp');
+    if (!('status' in result)) throw new Error('expected success');
+    expect(result.status.surface).toBe('msp');
+  });
+
   it("rejects the server's own primary host before touching the row", async () => {
     process.env.NEXTAUTH_URL = 'https://alga.acme.com';
 
@@ -177,7 +227,7 @@ describe.each([
 
     const status = await disablePortalDomainAction();
 
-    expect(deletePortalDomain).toHaveBeenCalledWith({}, 'tenant-123');
+    expect(deletePortalDomain).toHaveBeenCalledWith({}, 'tenant-123', { id: 'portal-domain-1' });
     expect(status).toMatchObject({ domain: null, status: 'disabled', isEditable: true });
   });
 });

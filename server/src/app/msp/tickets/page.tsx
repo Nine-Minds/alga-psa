@@ -1,3 +1,4 @@
+import { decodeTicketWhere } from '@alga-psa/tickets/lib/ticketWhereUrl';
 import { getConsolidatedTicketListData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { getCurrentUser, getCurrentUserPermissions, getUserPreference } from '@alga-psa/user-composition/actions';
 import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
@@ -25,6 +26,8 @@ import {
 } from '@alga-psa/tickets/lib/ticketViewSettings';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
+import { getWorkspaceReadOnly } from '@/lib/co-managed/workspaceReadOnly';
+import { CoManagedCalloutStrip } from '@/components/co-managed/CoManagedCalloutStrip';
 import type { Metadata } from 'next';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -112,6 +115,9 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     if (params?.clientId && typeof params.clientId === 'string') {
       filtersFromURL.clientId = params.clientId;
     }
+    if (params?.contactId && typeof params.contactId === 'string') {
+      filtersFromURL.contactId = params.contactId;
+    }
     if (params?.statusId && typeof params.statusId === 'string') {
       filtersFromURL.statusId = params.statusId;
     }
@@ -152,6 +158,11 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       };
 
       filtersFromURL.tags = normalizeTags(params.tags);
+    }
+    if (params?.where && typeof params.where === 'string') {
+      // Same v1 form the container writes; malformed or unknown-version values are dropped.
+      const decoded = decodeTicketWhere(params.where);
+      if (decoded.where) filtersFromURL.where = decoded.where;
     }
     if (params?.assignedToIds && typeof params.assignedToIds === 'string') {
       // The CSV comes straight off the URL; only well-formed assignee ids may
@@ -313,6 +324,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       categoryIds: initialFilters.categoryIds || undefined,
       excludeCategoryIds: initialFilters.excludeCategoryIds || undefined,
       clientId: initialFilters.clientId || undefined,
+      contactId: initialFilters.contactId || undefined,
       searchQuery: initialFilters.searchQuery || '',
       boardFilterState: initialFilters.boardFilterState || 'active',
       showOpenOnly: isTicketStatusOpenFilter(initialFilters.statusId),
@@ -327,7 +339,8 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       slaStatusFilter: initialFilters.slaStatusFilter || undefined,
       sortBy: initialFilters.sortBy || 'entered_at',
       sortDirection: initialFilters.sortDirection || 'desc',
-      bundleView: initialFilters.bundleView || 'bundled'
+      bundleView: initialFilters.bundleView || 'bundled',
+      where: initialFilters.where || undefined,
     };
 
     // Fetch consolidated data for the ticket list with initial filters and pagination
@@ -337,7 +350,10 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       getCurrentUserPermissions().catch(() => [] as string[])
     ]);
 
-    const canUpdateTickets = userPermissions.includes('ticket:update');
+    // A lapsed or ended co-managed workspace keeps reading its tickets but loses the write controls.
+    // The product code is already in hand, so psa and algadesk tenants never reach the probe at all.
+    const workspaceReadOnly = productCode === 'co_managed' ? await getWorkspaceReadOnly() : false;
+    const canUpdateTickets = userPermissions.includes('ticket:update') && !workspaceReadOnly;
     const initialTeams = isTeamActionError(teams) ? [] : teams;
 
     if (isReturnedActionError(consolidatedData)) {
@@ -359,9 +375,11 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
           displaySettings={displaySettings}
           initialTeams={initialTeams}
           canUpdateTickets={canUpdateTickets}
+          workspaceReadOnly={workspaceReadOnly}
           allowSlaStatusFilter={allowSlaStatusFilter}
           smartSearchAvailable={smartSearchAvailable}
           useAlgaDeskQuickAddForm={useAlgaDeskQuickAddForm}
+          listCallout={productCode === 'psa' ? <CoManagedCalloutStrip /> : undefined}
         />
       </div>
     );

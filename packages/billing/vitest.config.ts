@@ -11,11 +11,23 @@ export default defineConfig({
     include: [
       'tests/**/*.test.ts',
       'tests/**/*.test.tsx',
+      'src/lib/invoice-template-ast/printSettings.test.ts',
+      'src/lib/invoice-template-ast/previewSheet.test.ts',
+      'src/components/invoice-designer/preview/previewSheetScale.test.ts',
+      'src/components/invoice-designer/ast/workspaceAst.roundtrip.nodes.test.ts',
+      'src/lib/invoice-template-ast/barcode/barcode.test.ts',
+      'src/lib/invoice-template-ast/barcode/clientBundle.test.ts',
+      'src/lib/document-templates/registry.test.ts',
+      'src/lib/label-template-ast/**/*.test.ts',
+      'src/lib/label-batch/**/*.test.ts',
+      'src/components/invoice-designer/utils/documentKind.test.ts',
+      'src/components/invoice-designer/fields/documentBindingCatalog.test.ts',
       'src/actions/projectBillingActions.contract.test.ts',
       'src/actions/invoiceEmailBrandLogo.contract.test.ts',
       'src/lib/prepaidBalanceAlerts.test.ts',
       'src/lib/contractRecurringShape.test.ts',
       'src/lib/taxRateApplicability.test.ts',
+      'src/lib/currency/rateInput.test.ts',
       'src/lib/billing/compute/**/*.test.ts',
       'src/lib/billing/pricing/**/*.test.ts',
       // Preview/generation consistency for scheduled recurring quantity/price
@@ -33,12 +45,20 @@ export default defineConfig({
       'src/actions/documentTemplateActions.existingDocument.test.ts',
       'src/components/billing-dashboard/documents/DocumentTemplateEditor.existingDocument.test.tsx',
       'src/components/billing-dashboard/LineItem.test.tsx',
+      'src/components/billing-dashboard/ManualInvoices.expandedSave.test.tsx',
+      'src/components/billing-dashboard/invoicing/DraftInvoiceAdjustmentsCard.authRecovery.test.tsx',
+      'src/components/billing-dashboard/invoicing/InvoicePreviewPanel.test.tsx',
+      'src/components/billing-dashboard/invoicing/DraftInvoiceDetailsCard.billingProfile.test.tsx',
+      // Manual invoice total arithmetic must be selected by the billing
+      // package's own test command as well as the server's monorepo glob.
+      'src/components/billing-dashboard/manualInvoiceTotals.test.ts',
       // Catalog-price rollout reachability and the effective-date serialisation
       // regression — listed explicitly so this package's own `npm test` target
       // (the `nx affected -t test` lane) selects them, not only the server
       // coverage run that globs ../packages/**.
       'src/components/settings/billing/ServiceCatalogManager.rollout.contract.test.tsx',
       'src/components/settings/billing/DefaultTimeEntryServiceSettings.test.tsx',
+      'src/components/settings/billing/DefaultPaymentTermsSettings.test.tsx',
       'src/components/settings/billing/PriceChangeRolloutDialog.contract.test.tsx',
       // Multi-select bulk actions on the catalog and product lists — listed for
       // the same reason as the suites above.
@@ -50,10 +70,27 @@ export default defineConfig({
       'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.tenantBranding.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.existingQuote.test.tsx',
       'src/components/invoice-designer/DesignerVisualWorkspace.test.tsx',
+      // Totals-row presets are selected from the active document binding catalog
+      // and export only render-model paths that catalog publishes.
+      'src/components/invoice-designer/inspector/TotalsRowsEditorWidget.integration.test.tsx',
       'src/components/invoice-designer/preview/tenantBrandingOverlay.test.ts',
+      // Tenant logo precedence on generated documents (Settings -> Branding
+      // first, own-company client record second) — listed for the same reason
+      // as the branding-seam suites above.
+      'src/lib/adapters/tenantPartyAdapter.test.ts',
+      'src/services/pdfGenerationService.tenantClientLogo.test.ts',
+      // Server PDFs must embed the bundled Inter / JetBrains Mono rather than
+      // whatever the image's fontconfig falls through to.
+      'src/services/pdfFontEmbedding.e2e.test.ts',
+      'src/lib/pdf-fonts/pdfFonts.drift.test.ts',
       // Behavioral coverage for realm-exact QBO mapping resolution — listed
       // explicitly for the same reason as the suites above.
       'src/services/accountingSync/realmScopedOperations.test.ts',
+      // Provider/organisation scoping of sync status and health, and the
+      // resolved target's realm + Intuit environment that the invoice deep
+      // link reads — listed for the same reason as the suites above.
+      'src/actions/accountingSyncActions.org.test.ts',
+      'src/actions/resolveSyncTarget.test.ts',
       // Project billing-currency drift notices and cap re-pinning — listed for
       // the same reason as the suites above.
       'src/components/project-billing/projectBillingCurrency.test.tsx',
@@ -74,6 +111,18 @@ export default defineConfig({
       // share one UTC-pinned formatter — listed for the same reason as above.
       'src/lib/invoice-template-ast/fieldFormatting.test.ts',
       'src/lib/invoice-template-ast/react-renderer.test.tsx',
+      'src/lib/invoice-template-ast/server-render.inlineImages.test.ts',
+      // Invoice discount render model (alga0002295): unformatted-field behaviour,
+      // opt-in layout + back-compat renders, the derivation helper's call sites, and
+      // the designer's catalog / Discount Row / preview-sample coverage.
+      'src/lib/invoice-template-ast/react-renderer.unformattedField.test.tsx',
+      'src/lib/invoice-template-ast/react-renderer.invoiceDiscount.test.tsx',
+      'src/components/invoice-designer/ast/workspaceAst.discountRow.test.ts',
+      'src/components/invoice-designer/fields/documentBindingCatalog.test.ts',
+      'src/components/invoice-designer/preview/previewBindings.test.ts',
+      'src/components/invoice-designer/utils/documentKind.test.ts',
+      // Designer FIELDS-panel locale copy must match the field catalog in every locale.
+      'src/components/invoice-designer/fields/fieldLocaleParity.test.ts',
       // Country-driven date shape: a document is dated the way its recipient
       // writes dates, whatever language it is written in.
       'src/lib/invoice-template-ast/fieldFormatting.country.test.ts',
@@ -82,17 +131,40 @@ export default defineConfig({
       // Per-seat unit-rate rendering on the template detail page and the
       // currency-neutral template review step — listed for the same reason as above.
       'src/components/billing-dashboard/contracts/ContractTemplateDetail.unitRate.test.tsx',
+      'src/components/billing-dashboard/contracts/ContractTemplateDetail.manageServices.test.tsx',
       'src/components/billing-dashboard/contracts/template-wizard/steps/TemplateReviewContractStep.unitRate.test.tsx',
+      // Contract-line service rates are stored in minor units; the services list
+      // must not re-scale them. Listed for the same reason as above.
+      'src/components/billing-dashboard/contract-lines/GenericContractLineServicesList.customRate.test.tsx',
+      // Live contract-line adornments (preset picker, bucket overlay) follow the contract currency.
+      'src/components/billing-dashboard/contracts/ContractLineCurrency.adornments.test.tsx',
+      'src/components/billing-dashboard/contracts/ContractLineCurrency.inputs.test.tsx',
+      'src/components/billing-dashboard/contracts/BucketPoolEditor.currency.test.tsx',
       // Wizard quantity input draft/commit behavior.
       'src/components/billing-dashboard/contracts/QuantityInput.test.tsx',
+      'src/components/billing-dashboard/contracts/BillingTimingField.test.tsx',
+      'src/components/billing-dashboard/contracts/wizard-steps/BillingTimingInheritance.test.tsx',
+      'src/components/billing-dashboard/contracts/wizard-steps/ReviewContractStep.billingTiming.test.tsx',
+      'src/components/billing-dashboard/contracts/wizard-steps/templateLineAmounts.test.ts',
+      'src/components/billing-dashboard/contracts/wizard-steps/templatePickerOption.test.ts',
+      'src/components/billing-dashboard/contracts/wizard-steps/TemplateLinesStep.fallback.test.tsx',
+      'src/components/billing-dashboard/contracts/ContractWizard.templateErrors.test.tsx',
       // Template saves must stay valid upserts on Citus distributed tables.
       'src/models/templateSaveUpsert.citus.test.ts',
+      // Client AR must stay a single-shard, co-located join on Citus.
+      'src/actions/billingProfileArActions.citus.test.ts',
+      // Shared pure balance formula used by REST invoice reads and the client portal.
+      'src/lib/balanceDue.test.ts',
+      'src/lib/creditBalance.test.ts',
+      'src/actions/contractSimulationActions.refusals.test.ts',
     ],
-    testTimeout: 20000,
+    // Above vitest.setup.ts's 20s asyncUtilTimeout, so a stalled waitFor fails
+    // as itself rather than as a test timeout.
+    testTimeout: 30000,
     // Match testTimeout. The default hookTimeout is 10s, so a beforeAll doing
     // setup work had half the budget of a test doing the same work — which is
     // how hoisting a module compile out of a test made it fail sooner.
-    hookTimeout: 20000,
+    hookTimeout: 30000,
     // Inline next-auth/@auth/core/next so vite transforms them and the next/server
     // alias below applies to next-auth's internal `import "next/server"`. Without it
     // the contract-wizard / automatic-invoices component suites render-crash on a
@@ -147,6 +219,17 @@ export default defineConfig({
         find: /^@alga-psa\/core\/logger$/,
         replacement: `${path.resolve(__dirname, '../core/src/lib/logger.ts')}`,
       },
+      // Same shape as the logger rule: `./capability` is exported from
+      // src/lib, while its server/testing subpaths live under src/capability.
+      // Reached through @alga-psa/ui's hooks barrel (useCapability).
+      {
+        find: /^@alga-psa\/core\/capability$/,
+        replacement: path.resolve(__dirname, '../core/src/lib/capability.ts'),
+      },
+      {
+        find: /^@alga-psa\/core\/capability\/(server|testing)$/,
+        replacement: `${path.resolve(__dirname, '../core/src/capability')}/$1.ts`,
+      },
       // Same shape as the logger rule: core's i18n exports sit under src/lib, so
       // the generic @alga-psa/<pkg>/<path> rule below misses them. Reached here
       // through @alga-psa/ui's date formatter.
@@ -155,7 +238,7 @@ export default defineConfig({
         replacement: `${path.resolve(__dirname, '../core/src/lib/i18n')}/$1`,
       },
       {
-        find: /^@alga-psa\/db\/(admin|connection|tenant|workDate)$/,
+        find: /^@alga-psa\/db\/(admin|connection|tenant|tenantDb|workDate|commentEventRegistry)$/,
         replacement: `${path.resolve(__dirname, '../db/src/lib')}/$1.ts`,
       },
       {

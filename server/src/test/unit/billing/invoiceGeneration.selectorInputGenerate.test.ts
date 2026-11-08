@@ -297,6 +297,7 @@ const mocks = vi.hoisted(() => {
     calculateAndDistributeTax: vi.fn(async () => 200),
     claimRecurringServicePeriodsForSelectionInputs: vi.fn(async () => undefined),
     persistInvoiceCharges: vi.fn(async () => 4200),
+    reconcileAutomaticInvoiceAdjustments: vi.fn(async () => ({ automaticDiscountAmount: 0 })),
     updateInvoiceTotalsAndRecordTransaction: vi.fn(async () => undefined),
     getNextBillingDate: vi.fn(async () => '2025-03-01T00:00:00.000Z'),
     getDueDate: vi.fn(async () => '2025-03-15'),
@@ -384,6 +385,10 @@ vi.mock('../../../../../packages/billing/src/services/invoiceService', () => ({
   claimRecurringServicePeriodsForSelectionInputs: mocks.claimRecurringServicePeriodsForSelectionInputs,
   persistInvoiceCharges: mocks.persistInvoiceCharges,
   updateInvoiceTotalsAndRecordTransaction: mocks.updateInvoiceTotalsAndRecordTransaction,
+}));
+
+vi.mock('../../../../../packages/billing/src/services/invoiceAutomaticAdjustments', () => ({
+  reconcileAutomaticInvoiceAdjustments: mocks.reconcileAutomaticInvoiceAdjustments,
 }));
 
 vi.mock('../../../../../packages/billing/src/actions/billingAndTax', () => ({
@@ -478,7 +483,7 @@ vi.mock('../../../../../packages/billing/src/lib/authHelpers', () => ({
   getAnalyticsAsync: mocks.getAnalyticsAsync,
 }));
 
-const { generateInvoice, generateInvoiceForSelectionInput } = await import(
+const { generateInvoiceForSelectionInput, generateInvoiceForSelectionInputs } = await import(
   '../../../../../packages/billing/src/actions/invoiceGeneration'
 );
 const {
@@ -658,8 +663,16 @@ describe('selector-input recurring generation', () => {
     expect(mocks.calculateBillingForExecutionWindow).not.toHaveBeenCalled();
   });
 
-  it('T047: recurring generation API accepts a compatibility billing-cycle wrapper and routes internally through the selector-input pipeline', async () => {
-    const result = await generateInvoice('cycle-1');
+  it('T047b: selector-input generation with billing-cycle bridge metadata stamps billing_cycle_id on the invoice', async () => {
+    const result = await generateInvoiceForSelectionInputs([
+      buildClientCadenceDueSelectionInput({
+        clientId: 'client-1',
+        scheduleKey: 'schedule:tenant-1:line-1:client:arrears',
+        periodKey: 'period:2025-01-01:2025-02-01',
+        windowStart: '2025-02-01',
+        windowEnd: '2025-03-01',
+      }),
+    ], {}, { billingCycleId: 'cycle-1' });
 
     expect(mocks.selectDueRecurringServicePeriodsForBillingWindow).toHaveBeenCalledWith(
       'client-1',
@@ -697,6 +710,14 @@ describe('selector-input recurring generation', () => {
       invoice_window_end: '2025-03-08',
       invoice_id: 'invoice-existing',
     });
+    // The seeded schedule row for the window is invoiced too: no row is left waiting. (A window
+    // with a still-pending sibling row is not a duplicate; see the arrears-only repair test.)
+    for (const row of mocks.rowsByTable.recurring_service_periods) {
+      if (row.record_id === 'rsp-contract-1') {
+        row.invoice_id = 'invoice-existing';
+        row.lifecycle_state = 'billed';
+      }
+    }
 
     await expect(generateInvoiceForSelectionInput(selectorInput)).resolves.toEqual({
       actionError: 'Invoice already exists for this recurring execution window',

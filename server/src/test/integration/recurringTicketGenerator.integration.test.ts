@@ -95,17 +95,26 @@ async function createDefinition(f: Fixture, options: DefinitionOptions) {
   const scoped = tenantDb(db, f.tenant);
   const definitionId = uuidv4();
   const definitionClientId = uuidv4();
+  // The ticket's content lives on a shared ticket template (R1); the definition only points at it.
+  const templateId = uuidv4();
+  await scoped.table('ticket_templates').insert({
+    tenant: f.tenant,
+    template_id: templateId,
+    name: `Template ${templateId.slice(0, 8)}`,
+    title: options.titleTemplate ?? '{{client}} patching — {{month}} {{year}}',
+    board_id: f.boardId,
+    priority_id: f.priorityId,
+    tags: JSON.stringify(options.tags ?? []),
+    offer_for_manual_use: false,
+  });
   await scoped.table('recurring_ticket_definitions').insert({
     tenant: f.tenant,
     definition_id: definitionId,
     name: 'Monthly patching',
     is_active: options.isActive ?? true,
     archived_at: options.archived ? new Date() : null,
-    title_template: options.titleTemplate ?? '{{client}} patching — {{month}} {{year}}',
-    board_id: f.boardId,
-    priority_id: f.priorityId,
+    ticket_template_id: templateId,
     additional_agent_ids: JSON.stringify(options.additionalAgentIds ?? []),
-    tags: JSON.stringify(options.tags ?? []),
     recurrence: JSON.stringify(options.recurrence ?? monthlyOn1),
     start_date: options.startDate ?? '2026-01-01',
     create_time: '08:00',
@@ -124,7 +133,7 @@ async function createDefinition(f: Fixture, options: DefinitionOptions) {
     overrides: JSON.stringify(options.overrides ?? {}),
     evaluated_through: at(options.evaluatedThrough),
   });
-  return { definitionId, definitionClientId };
+  return { definitionId, definitionClientId, templateId };
 }
 
 const sweep = (f: Fixture, now: string) =>

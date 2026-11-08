@@ -6,7 +6,7 @@ import { withAuth } from '@alga-psa/auth';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { revalidatePath } from 'next/cache';
-import { assertMspOrClientPortalOwnClientPermission } from '../lib/authHelpers';
+import { assertMspOrClientPortalOwnClientPermission, assertMspPermission } from '../lib/authHelpers';
 import {
   createLocation,
   deleteLocation,
@@ -152,6 +152,73 @@ export const getClientLocations = withAuth(async (user, { tenant }, clientId: st
   }
 });
 
+export interface ClientLocationContact {
+  contact_name_id: string;
+  full_name: string;
+  is_primary: boolean;
+}
+
+/**
+ * Who works at each of a client's locations, in one batched read for the whole Locations tab, so
+ * the count chip on every card costs a single query rather than one per card.
+ *
+ * Reading it is reading the client's contact list, so it asks for contact read on top of client
+ * read, and only an MSP user may: a portal user has no business with a roster of their colleagues'
+ * names, and the links the chip expands to are MSP pages.
+ */
+export const getClientLocationContacts = withAuth(async (
+  user,
+  { tenant },
+  clientId: string
+): Promise<Record<string, ClientLocationContact[]> | ClientLocationActionError> => {
+  const { knex } = await createTenantKnex();
+
+  try {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertMspPermission(
+        user,
+        'client',
+        'read',
+        'Permission denied: Cannot read client locations',
+        trx
+      );
+      await assertMspPermission(
+        user,
+        'contact',
+        'read',
+        'Permission denied: Cannot read contacts',
+        trx
+      );
+
+      const db = tenantDb(trx, tenant);
+      const query = db.table('contact_locations as cl');
+      db.tenantJoin(query, 'contacts as c', 'c.contact_name_id', 'cl.contact_name_id');
+      db.tenantJoin(query, 'client_locations as loc', 'loc.location_id', 'cl.location_id');
+
+      const rows = await query
+        .where('loc.client_id', clientId)
+        .select('cl.location_id', 'c.contact_name_id', 'c.full_name', 'cl.is_primary')
+        .orderBy('c.full_name', 'asc') as Array<ClientLocationContact & { location_id: string }>;
+
+      const byLocation: Record<string, ClientLocationContact[]> = {};
+      for (const row of rows) {
+        (byLocation[row.location_id] ??= []).push({
+          contact_name_id: row.contact_name_id,
+          full_name: row.full_name,
+          is_primary: Boolean(row.is_primary),
+        });
+      }
+      return byLocation;
+    });
+  } catch (error) {
+    const expected = clientLocationActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
+});
+
 export const getClientLocation = withAuth(async (user, { tenant }, locationId: string): Promise<IClientLocation | null | ClientLocationActionError> => {
   const { knex } = await createTenantKnex();
 
@@ -224,7 +291,7 @@ export const createClientLocation = withAuth(async (
         trx
       );
 
-      return createLocation(trx, tenant, clientId, validatedLocationData);
+      return createLocation(trx, tenant, clientId, validatedLocationData, { actorUserId: user.user_id });
     });
   } catch (error) {
     const expected = clientLocationActionErrorFrom(error);
@@ -289,7 +356,8 @@ export const updateClientLocation = withAuth(async (
         tenant,
         existingLocation.client_id,
         locationId,
-        structural.data
+        structural.data,
+        { actorUserId: user.user_id }
       );
     });
   } catch (error) {
@@ -335,7 +403,7 @@ export const deleteClientLocation = withAuth(async (user, { tenant }, locationId
         trx
       );
 
-      await deleteLocation(trx, tenant, location.client_id, locationId);
+      await deleteLocation(trx, tenant, location.client_id, locationId, { actorUserId: user.user_id });
 
       return location.client_id;
     });
@@ -383,7 +451,7 @@ export const setDefaultClientLocation = withAuth(async (user, { tenant }, locati
         trx
       );
 
-      await updateLocation(trx, tenant, location.client_id, locationId, { is_default: true });
+      await updateLocation(trx, tenant, location.client_id, locationId, { is_default: true }, { actorUserId: user.user_id });
 
       return location.client_id;
     });

@@ -8,6 +8,7 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { ServiceTypeModel } from '../models/serviceType'; // Import ServiceTypeModel
 import { withAuth } from '@alga-psa/auth';
+import { withSerializableAuth } from './serializableAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import {
   actionError,
@@ -201,7 +202,7 @@ export interface CatalogPickerSearchOptions {
 
 export type CatalogPickerItem = Pick<
   IService,
-  'service_id' | 'service_name' | 'billing_method' | 'unit_of_measure' | 'unit_code' | 'item_kind' | 'sku' | 'description' | 'product_category'
+  'service_id' | 'service_name' | 'billing_method' | 'unit_of_measure' | 'unit_code' | 'item_kind' | 'sku' | 'description' | 'product_category' | 'tax_rate_id'
 > & {
   default_rate: number;
   /** Rate from service_prices for the requested currency (null when no currency-specific price exists). */
@@ -274,6 +275,7 @@ export const searchServiceCatalogForPicker = withAuth(async (
         'sc.sku as sku',
         'sc.description as description',
         'sc.product_category as product_category',
+        'sc.tax_rate_id as tax_rate_id',
         trx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
         trx.raw('CAST(sc.cost AS FLOAT) as cost'),
         'sc.cost_currency as cost_currency'
@@ -341,6 +343,61 @@ export const getServiceCatalogRatesForCurrency = withAuth(async (
       result[row.service_id] = row.rate != null && row.rate > 0 ? Math.round(row.rate) : null;
     }
     return result;
+  });
+});
+
+export interface ProductCatalogCostInfo {
+  /** Legacy currency-untagged catalog default rate (minor units). */
+  default_rate: number | null;
+  /** Catalog cost (minor units). Always null unless the caller may see cost. */
+  cost: number | null;
+  /** ISO 4217 currency of `cost`. Always null unless the caller may see cost. */
+  cost_currency: string | null;
+}
+
+export interface ProductCatalogCostInfoResult {
+  /** Cost is internal data: only callers who may edit the catalog ('service','update') see it. */
+  canViewCost: boolean;
+  items: Record<string, ProductCatalogCostInfo>;
+}
+
+/**
+ * Legacy default rate plus (permission gated) cost for catalog items. Companion
+ * to getServiceCatalogRatesForCurrency; both are read by useProductCatalogRates.
+ * Cost is withheld server-side so it never reaches a caller who may not see it.
+ */
+export const getServiceCatalogCostInfo = withAuth(async (
+  user,
+  { tenant },
+  serviceIds: string[]
+): Promise<ProductCatalogCostInfoResult> => {
+  const uniqueServiceIds = Array.from(new Set(serviceIds.filter(Boolean)));
+  const canViewCost = await hasPermission(user, 'service', 'update');
+  if (uniqueServiceIds.length === 0) {
+    return { canViewCost, items: {} };
+  }
+
+  const { knex: db } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    const rows = await tenantDb(trx, tenant)
+      .table('service_catalog')
+      .whereIn('service_id', uniqueServiceIds)
+      .select(
+        'service_id',
+        trx.raw('CAST(default_rate AS FLOAT) as default_rate'),
+        trx.raw('CAST(cost AS FLOAT) as cost'),
+        'cost_currency'
+      ) as Array<{ service_id: string; default_rate: number | null; cost: number | null; cost_currency: string | null }>;
+
+    const items: Record<string, ProductCatalogCostInfo> = {};
+    for (const row of rows) {
+      items[row.service_id] = {
+        default_rate: row.default_rate != null ? Math.round(row.default_rate) : null,
+        cost: canViewCost && row.cost != null ? Math.round(row.cost) : null,
+        cost_currency: canViewCost ? row.cost_currency ?? null : null,
+      };
+    }
+    return { canViewCost, items };
   });
 });
 
@@ -524,6 +581,9 @@ export const getServices = withAuth(async (
         throw error
     }
 });
+
+/** Same catalog read for the draft adjustment loader, with JSON-safe auth recovery. */
+export const getServicesRecoverable = withSerializableAuth(getServices);
 
 export const getServiceById = withAuth(async (user, { tenant }, serviceId: string): Promise<IService | null | ServiceActionError> => {
     const { knex: db } = await createTenantKnex();

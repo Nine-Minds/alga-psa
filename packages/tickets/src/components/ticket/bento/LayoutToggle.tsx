@@ -25,6 +25,7 @@ export function LayoutToggle({ value, onChange, disabled }: LayoutToggleProps) {
       currentView={value}
       onChange={onChange}
       aria-label={t('bento.layout.ticketLayout', 'Ticket layout')}
+      size="sm"
       options={[
         { value: 'grid', label: t('bento.layout.grid', 'Grid'), icon: LayoutGrid, id: 'ticket-layout-toggle-grid', disabled },
         { value: 'entry', label: t('bento.layout.entry', 'Entry'), icon: AlignLeft, id: 'ticket-layout-toggle-entry', disabled },

@@ -15,7 +15,6 @@ const mockRecordMaintenance = vi.fn();
 const mockGetNotes = vi.fn();
 const mockSaveNotes = vi.fn();
 const mockLink = vi.fn();
-const mockCreate = vi.fn();
 vi.mock("../api/assets", () => ({
   getAsset: (...args: unknown[]) => mockGetAsset(...args),
   getAssetMaintenance: (...args: unknown[]) => mockGetMaintenance(...args),
@@ -26,7 +25,6 @@ vi.mock("../api/assets", () => ({
   getAssetNotes: (...args: unknown[]) => mockGetNotes(...args),
   saveAssetNotes: (...args: unknown[]) => mockSaveNotes(...args),
   linkAssetToTicket: (...args: unknown[]) => mockLink(...args),
-  createTicketFromAsset: (...args: unknown[]) => mockCreate(...args),
 }));
 
 const mockListTickets = vi.fn();
@@ -54,12 +52,6 @@ vi.mock("../features/inventory/hooks/useInventoryApi", () => ({
 const mockShowToast = vi.fn();
 vi.mock("../ui/toast/ToastProvider", () => ({
   useToast: () => ({ showToast: mockShowToast }),
-}));
-
-// Drive the board/status/priority pickers directly through onSelect instead of the
-// real bottom-sheet, so the create-ticket flow is host-testable.
-vi.mock("../ui/components/Select", () => ({
-  Select: (props: Record<string, unknown>) => React.createElement("MockSelect", props),
 }));
 
 import { AssetDetailScreen } from "./AssetDetailScreen";
@@ -112,13 +104,17 @@ function ok<T>(data: T) {
   return { ok: true as const, status: 200, data };
 }
 
-async function renderScreen(navigate: ReturnType<typeof vi.fn> = vi.fn()): Promise<ReactTestRenderer> {
+async function renderScreen(
+  navigate: ReturnType<typeof vi.fn> = vi.fn(),
+  goBack: ReturnType<typeof vi.fn> = vi.fn(),
+  setOptions: ReturnType<typeof vi.fn> = vi.fn(),
+): Promise<ReactTestRenderer> {
   let tree!: ReactTestRenderer;
   await act(async () => {
     tree = create(
       <AssetDetailScreen
         route={{ key: "r", name: "AssetDetail", params: { assetId: "asset-1", assetName: "Device" } } as never}
-        navigation={{ navigate } as never}
+        navigation={{ navigate, goBack, setOptions } as never}
       />,
     );
   });
@@ -130,9 +126,6 @@ const hosts = (tree: ReactTestRenderer, testID: string): ReactTestInstance[] =>
 
 const byLabel = (tree: ReactTestRenderer, label: string): ReactTestInstance[] =>
   tree.root.findAll((node) => typeof node.type === "string" && node.props.accessibilityLabel === label);
-
-const mockSelect = (tree: ReactTestRenderer, title: string): ReactTestInstance =>
-  tree.root.findAll((node) => String(node.type) === "MockSelect" && node.props.title === title)[0];
 
 function allText(tree: ReactTestRenderer): string {
   const out: string[] = [];
@@ -159,7 +152,6 @@ describe("AssetDetailScreen", () => {
     mockGetNotes.mockResolvedValue(ok({ data: { document: null, blockData: null, lastUpdated: null } }));
     mockSaveNotes.mockResolvedValue(ok({ data: {} }));
     mockLink.mockResolvedValue(ok({ data: {} }));
-    mockCreate.mockResolvedValue(ok({ data: { ticket_id: "t-100", ticket_number: "TK-100" } }));
     mockListTickets.mockResolvedValue(
       ok({
         data: [{ ticket_id: "tkt-1", ticket_number: "TKT-500", title: "Printer jam", status_name: "Open", client_name: "Acme Corp" }],
@@ -169,6 +161,20 @@ describe("AssetDetailScreen", () => {
     mockGetStatuses.mockResolvedValue(ok({ data: [{ status_id: "status-1", board_id: "board-1", name: "New", is_closed: false }] }));
     mockListBoards.mockResolvedValue(ok({ data: [{ board_id: "board-1", board_name: "Helpdesk" }], pagination }));
     mockListPriorities.mockResolvedValue(ok({ data: [{ priority_id: "prio-1", priority_name: "High" }], pagination }));
+  });
+
+  it("T072 shows Last audited only when the payload carries it", async () => {
+    expect(hosts(await renderScreen(), "asset-last-audited")).toHaveLength(0);
+
+    mockGetAsset.mockResolvedValue(
+      ok({ data: { ...asset, last_audited_at: "2026-10-16T10:00:00Z", last_audit_result: "present" } }),
+    );
+    const tree = await renderScreen();
+    expect(hosts(tree, "asset-last-audited")).toHaveLength(1);
+    // The result label comes from assets.audit.result.*; this harness's t()
+    // echoes the key's default, which is the raw slug.
+    expect(allText(tree)).toContain("Last audited");
+    expect(allText(tree)).toMatch(/Oct 16, 2026 . present/);
   });
 
   it("renders identity from the asset fixture", async () => {
@@ -234,49 +240,33 @@ describe("AssetDetailScreen", () => {
   });
 
   it("hands off from the link picker to create-a-ticket when none fits", async () => {
-    const tree = await renderScreen();
+    const navigate = vi.fn();
+    const tree = await renderScreen(navigate);
 
     await act(async () => byLabel(tree, "asset-detail-link-ticket")[0].props.onPress());
     await act(async () => {});
 
-    // The "can't find it?" escape hatch closes the picker and opens the create flow.
+    // The "can't find it?" escape hatch closes the picker and opens the create form.
     await act(async () => hosts(tree, "asset-detail-link-ticket-create-instead")[0].props.onPress());
     await act(async () => {});
 
-    expect(byLabel(tree, "asset-detail-create-ticket-title").length).toBeGreaterThan(0);
+    expect(navigate).toHaveBeenCalledWith("CreateTicket", expect.objectContaining({ clientId: "client-1" }));
   });
 
-  it("creates a ticket from the asset once title and pickers are set", async () => {
-    const tree = await renderScreen();
+  it("opens the shared create form with this asset already picked", async () => {
+    const navigate = vi.fn();
+    const tree = await renderScreen(navigate);
 
     await act(async () => byLabel(tree, "asset-detail-create-ticket")[0].props.onPress());
     await act(async () => {});
 
-    // Blocked before any input.
-    expect(byLabel(tree, "asset-detail-create-ticket-submit")[0].props.disabled).toBe(true);
-
-    act(() => byLabel(tree, "asset-detail-create-ticket-title")[0].props.onChangeText("Broken screen"));
-    await act(async () => mockSelect(tree, "Board").props.onSelect("board-1"));
-    act(() => mockSelect(tree, "Status").props.onSelect("status-1"));
-    act(() => mockSelect(tree, "Priority").props.onSelect("prio-1"));
-
-    const submit = byLabel(tree, "asset-detail-create-ticket-submit")[0];
-    expect(submit.props.disabled).toBe(false);
-    await act(async () => submit.props.onPress());
-
-    expect(mockCreate).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        data: expect.objectContaining({
-          title: "Broken screen",
-          board_id: "board-1",
-          status_id: "status-1",
-          priority_id: "prio-1",
-          asset_id: "asset-1",
-          client_id: "client-1",
-        }),
-      }),
-    );
+    // One create form for every route in: the asset seeds the device picker
+    // rather than a separate create-from-asset dialog (alga-2026-0002785).
+    expect(navigate).toHaveBeenCalledWith("CreateTicket", {
+      clientId: "client-1",
+      clientName: "Acme Corp",
+      assets: [{ asset_id: "asset-1", name: "Dell Latitude" }],
+    });
   });
 
   it("links to the stock movement trail for an inventory-sourced asset", async () => {
@@ -373,5 +363,60 @@ describe("AssetDetailScreen", () => {
     );
     // Refetches after a successful save.
     expect(mockGetNotes).toHaveBeenCalledTimes(2);
+  });
+
+  it("blocks Add note and never saves when the notes read fails", async () => {
+    mockGetNotes.mockResolvedValue({
+      ok: false,
+      status: 500,
+      error: { kind: "http", status: 500, message: "Failed to get asset notes" },
+    });
+    const tree = await renderScreen();
+
+    expect(hosts(tree, "asset-detail-add-note")).toHaveLength(0);
+    expect(allText(tree)).toContain("Couldn't load notes");
+    expect(allText(tree)).not.toContain("No notes on this device yet.");
+    expect(mockSaveNotes).not.toHaveBeenCalled();
+  });
+
+  it("keeps Add note available when the notes read succeeds", async () => {
+    const tree = await renderScreen();
+    expect(hosts(tree, "asset-detail-add-note")).toHaveLength(1);
+    expect(allText(tree)).not.toContain("Couldn't load notes");
+  });
+
+  describe.each([
+    ["403", { kind: "permission", status: 403, message: "Permission denied: Cannot read asset" }],
+    ["404", { kind: "http", status: 404, message: "Asset not found" }],
+  ])("unavailable record (%s)", (_label, error) => {
+    it("shows the unavailable state with no record content, not the route assetName, and no Retry", async () => {
+      mockGetAsset.mockResolvedValue({ ok: false, status: (error as { status: number }).status, error });
+      const goBack = vi.fn();
+      const setOptions = vi.fn();
+      const tree = await renderScreen(vi.fn(), goBack, setOptions);
+      const text = allText(tree);
+      // The header title is derived from the assetName param; it must be replaced.
+      expect(setOptions).toHaveBeenCalledWith({ title: "Asset" });
+      expect(JSON.stringify(setOptions.mock.calls)).not.toContain("Device");
+      expect(text).toContain("Not found, or you don't have access");
+      expect(text).not.toContain("Device"); // assetName route param
+      expect(text).not.toContain("Dell Latitude");
+      expect(hosts(tree, "asset-detail-retry")).toHaveLength(0);
+      act(() => hosts(tree, "record-unavailable-back")[0].props.onPress());
+      expect(goBack).toHaveBeenCalled();
+    });
+  });
+
+  it("keeps Retry for network, timeout and server errors", async () => {
+    for (const error of [
+      { kind: "network", message: "Network request failed" },
+      { kind: "timeout", message: "Request timed out" },
+      { kind: "server", status: 500, message: "boom" },
+    ]) {
+      mockGetAsset.mockResolvedValue({ ok: false, error });
+      const tree = await renderScreen();
+      expect(hosts(tree, "asset-detail-retry")).toHaveLength(1);
+      expect(allText(tree)).not.toContain("Not found, or you don't have access");
+    }
   });
 });

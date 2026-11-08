@@ -14,6 +14,14 @@ export interface ResolvedSyncTarget {
   integration: ConnectedAccountingIntegration;
   adapter: AccountingExportAdapter;
   refreshTokenExpiresAt: string | null;
+  /**
+   * The Intuit environment stamped on this QBO connection when it was
+   * authorized, or null for a connection predating the stamp (and always for
+   * Xero). Callers that need a decision fall back to the tenant setting, then
+   * the deployment default. Carried here because resolving the target already
+   * reads the stored credentials.
+   */
+  qboEnvironment: 'sandbox' | 'production' | null;
 }
 
 /**
@@ -40,13 +48,15 @@ export async function resolveSyncTarget(
   }
 
   let refreshTokenExpiresAt: string | null = null;
+  let qboEnvironment: 'sandbox' | 'production' | null = null;
   if (integration.adapterType === 'quickbooks_online') {
     const credentials = await getStoredQboCredentialsMap(tenantId).catch(() => ({} as Record<string, any>));
     refreshTokenExpiresAt = credentials[integration.targetRealm]?.refreshTokenExpiresAt ?? null;
+    qboEnvironment = credentials[integration.targetRealm]?.environment ?? null;
   } else {
     const connections = await getStoredXeroConnections(tenantId).catch(() => ({} as Record<string, any>));
     refreshTokenExpiresAt = connections[integration.targetRealm]?.refreshTokenExpiresAt ?? null;
   }
 
-  return { integration, adapter, refreshTokenExpiresAt };
+  return { integration, adapter, refreshTokenExpiresAt, qboEnvironment };
 }

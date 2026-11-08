@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } 
 import '../../../../../test-utils/nextApiMock';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { tenantDb } from '@alga-psa/db';
-import { generateInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
+
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { TestContext } from '../../../../../test-utils/testContext';
@@ -13,7 +13,8 @@ import {
   materializeRecurringServicePeriods,
   setupClientTaxConfiguration,
   assignServiceTaxRate,
-  ensureClientPlanBundlesTable
+  ensureClientPlanBundlesTable,
+  generateInvoiceForCycle,
 } from '../../../../../test-utils/billingTestHelpers';
 import { updateContract } from '@alga-psa/billing/actions';
 
@@ -254,7 +255,8 @@ describe('Multi-Currency Billing', () => {
     await tenantTable(context, 'contract_line_service_fixed_config').insert({
       config_id: configId,
       tenant: context.tenantId,
-      base_rate: 10000
+      base_rate: 10000,
+      base_rate_basis: 'share',
     });
     await tenantTable(context, 'contract_line_services').insert({
       tenant: context.tenantId,
@@ -265,7 +267,7 @@ describe('Multi-Currency Billing', () => {
     });
 
     // Materialize last: the sync reads the line's service configuration, so a
-    // line with none yet produces no periods and generateInvoice then refuses
+    // line with none yet produces no periods and generateInvoiceForCycle then refuses
     // the window.
     await materializeRecurringServicePeriods(context, contractLineId);
 
@@ -279,7 +281,7 @@ describe('Multi-Currency Billing', () => {
     }, 'billing_cycle_id');
 
     // Act
-    const result = await generateInvoice(billingCycleId);
+    const result = await generateInvoiceForCycle(billingCycleId);
 
     // Assert
     expect(result).not.toBeNull();
@@ -413,9 +415,9 @@ describe('Multi-Currency Billing', () => {
     }, 'billing_cycle_id');
 
     // Act & Assert
-    // generateInvoice reports expected failures by returning an action error
+    // generateInvoiceForCycle reports expected failures by returning an action error
     // (withInvoiceGenerationActionErrors) rather than throwing.
-    const mixedResult = await generateInvoice(billingCycleId) as unknown as { actionError?: string };
+    const mixedResult = await generateInvoiceForCycle(billingCycleId) as unknown as { actionError?: string };
     expect(mixedResult?.actionError).toMatch(/Mixed currency billing is not supported/);
   });
 
@@ -484,7 +486,8 @@ describe('Multi-Currency Billing', () => {
     await tenantTable(context, 'contract_line_service_fixed_config').insert({
       config_id: legacyConfigId,
       tenant: context.tenantId,
-      base_rate: 5000
+      base_rate: 5000,
+      base_rate_basis: 'share',
     });
     await tenantTable(context, 'contract_line_services').insert({
       tenant: context.tenantId,
@@ -507,7 +510,7 @@ describe('Multi-Currency Billing', () => {
     }, 'billing_cycle_id');
 
     // Act
-    const result = await generateInvoice(billingCycleId);
+    const result = await generateInvoiceForCycle(billingCycleId);
 
     // Assert
     expect(result).not.toBeNull();

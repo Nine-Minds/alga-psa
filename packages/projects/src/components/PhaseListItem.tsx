@@ -4,18 +4,22 @@ import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { IProjectPhase } from '@alga-psa/types';
-import { AlertTriangle, Pencil, Trash2, GripVertical, Columns3, CheckCircle2, RotateCcw } from 'lucide-react';
+import { AlertTriangle, Pencil, Trash2, GripVertical, CheckCircle2, RotateCcw } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { SearchableSelect } from '@alga-psa/ui/components/SearchableSelect';
-import { ProjectTaskStatusSettings } from './settings/projects/ProjectTaskStatusSettings';
-import { getProjectStatusMappings } from '../actions/projectTaskStatusActions';
+import {
+  ProjectTaskStatusSettings,
+  type ProjectTaskStatusSettingsHandle,
+} from './settings/projects/ProjectTaskStatusSettings';
+import { PhaseStatusScopeChip } from './status-columns';
 import { phaseBadgeClasses, timeEntryServiceChoices, type PhaseBillingBadge, type TimeEntryServiceChoice } from '@alga-psa/core';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import styles from './ProjectDetail.module.css';
+import { useProjectDataSource } from '../context/ProjectDataSourceContext';
 
 interface PhaseListItemProps {
   viewMode: 'kanban' | 'list' | 'billing';
@@ -58,6 +62,12 @@ interface PhaseListItemProps {
   allTasksClosed?: boolean;
   onMarkComplete?: (phase: IProjectPhase) => void;
   onReopen?: (phase: IProjectPhase) => void;
+  /**
+   * Phase-scoped status column count (0 = inherits project defaults). Resolved
+   * once for the whole project so the inheritance chip can show in display
+   * mode without a per-phase round trip.
+   */
+  customStatusCount?: number | null;
 }
 
 export const PhaseListItem: React.FC<PhaseListItemProps> = ({
@@ -97,8 +107,13 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
   allTasksClosed,
   onMarkComplete,
   onReopen,
+  customStatusCount,
 }) => {
   const { t } = useTranslation('features/projects');
+  const projectSource = useProjectDataSource();
+  // A non-native source admits no phase edits, deletes, completion or moves.
+  const phaseStructureLocked = projectSource.kind !== 'native' || projectSource.screen.readOnly;
+  const phaseMovesLocked = phaseStructureLocked || projectSource.screen.hidePhaseMoves;
   // toLocaleDateString() with no locale follows the browser, not the app.
   const { formatDate } = useFormatters();
   const { money, symbol } = useCurrencyFormat();
@@ -106,25 +121,36 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
   const effectiveIsEditing = isEditing && !isBillingView;
   const isCompleted = Boolean(phase.completed_at);
   const showCompletionNudge = !isBillingView && !isCompleted && Boolean(allTasksClosed) && (taskCount ?? 0) > 0;
+  const showStatusScopeChip = !isBillingView && customStatusCount !== undefined && customStatusCount !== null;
   const phaseServiceName = phase.service_id
     ? services.find((service) => service.service_id === phase.service_id)?.service_name ?? null
     : null;
   const [isDragging, setIsDragging] = useState(false);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
-  const [customStatusCount, setCustomStatusCount] = useState<number | null>(null);
+  // The status editor stages scope/order edits; this dialog's Save writes them.
+  const statusSettingsRef = useRef<ProjectTaskStatusSettingsHandle>(null);
+  const [statusChangesPending, setStatusChangesPending] = useState(false);
+  const [isSavingStatuses, setIsSavingStatuses] = useState(false);
   const itemRef = useRef<HTMLLIElement>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
   const nameInputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Load phase custom status count when entering edit mode or after dialog closes
-  useEffect(() => {
-    if (!effectiveIsEditing && !showStatusDialog) return;
-    let cancelled = false;
-    getProjectStatusMappings(projectId, phase.phase_id)
-      .then((mappings) => { if (!cancelled) setCustomStatusCount(mappings.length); })
-      .catch(() => { if (!cancelled) setCustomStatusCount(null); });
-    return () => { cancelled = true; };
-  }, [effectiveIsEditing, showStatusDialog, projectId, phase.phase_id]);
+  const closeStatusDialog = () => {
+    setShowStatusDialog(false);
+    setStatusChangesPending(false);
+    onStatusesChanged?.();
+  };
+
+  const saveStatusDialog = async () => {
+    setIsSavingStatuses(true);
+    try {
+      const committed = await statusSettingsRef.current?.commitPendingChanges();
+      if (committed === false) return;
+      closeStatusDialog();
+    } finally {
+      setIsSavingStatuses(false);
+    }
+  };
 
   // Auto-scroll the editing form into view when editing starts
   useEffect(() => {
@@ -279,7 +305,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
   return (
     <li
       ref={itemRef}
-      draggable={!isBillingView && !effectiveIsEditing}
+      draggable={!isBillingView && !effectiveIsEditing && !phaseMovesLocked}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       className={`relative flex items-center justify-between px-3 py-2.5 rounded-md cursor-pointer group
@@ -368,20 +394,10 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
             </div>
             {/* Status columns indicator */}
             <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-              <Tooltip content={`${t('phases.statusColumns')}: ${
-                customStatusCount != null && customStatusCount > 0
-                  ? t('phases.statusColumnsCustom', { count: customStatusCount })
-                  : t('phases.statusColumnsProjectDefaults')
-              }`}>
-                <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-                  <Columns3 className="w-3.5 h-3.5 shrink-0" />
-                  <span>
-                    {customStatusCount != null && customStatusCount > 0
-                      ? t('phases.statusColumnsCustom', { count: customStatusCount })
-                      : t('phases.statusColumnsProjectDefaults')}
-                  </span>
-                </div>
-              </Tooltip>
+              <PhaseStatusScopeChip
+                customStatusCount={customStatusCount}
+                id={`phase-status-scope-edit-${phase.phase_id}`}
+              />
               <button
                 type="button"
                 onClick={(e) => {
@@ -464,12 +480,21 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
                 </span>
               </div>
             </div>
+            {/* Own row: the 250px phase panel has no width to spare beside the name */}
+            {showStatusScopeChip && (
+              <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5">
+                <PhaseStatusScopeChip
+                  customStatusCount={customStatusCount}
+                  id={`phase-status-scope-${phase.phase_id}`}
+                />
+              </div>
+            )}
             {showCompletionNudge && (
               <button
                 type="button"
                 id={`phase-complete-nudge-${phase.phase_id}`}
                 onClick={(e) => { e.stopPropagation(); onMarkComplete?.(phase); }}
-                disabled={!canCompletePhase}
+                disabled={!canCompletePhase || phaseStructureLocked}
                 className="mt-1 inline-flex w-fit items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 hover:bg-amber-100 disabled:cursor-default disabled:hover:bg-amber-50 dark:bg-amber-500/10 dark:text-amber-300"
               >
                 <CheckCircle2 className="h-3 w-3" />
@@ -498,7 +523,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
             </div>
           </div>
           {/* Hover Action Buttons — absolutely positioned so they don't consume layout space */}
-          {!isBillingView && (
+          {!isBillingView && !phaseStructureLocked && (
             <div className="absolute right-2 bottom-2 flex gap-1 opacity-0 group-hover:opacity-100 bg-inherit rounded">
               {canCompletePhase && (isCompleted ? (
                 <button
@@ -547,23 +572,40 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
       {!isBillingView && showStatusDialog && (
         <Dialog
           isOpen
-          onClose={() => { setShowStatusDialog(false); onStatusesChanged?.(); }}
+          onClose={closeStatusDialog}
           title={`${t('settings.statuses.project.title')} — ${phase.phase_name}`}
         >
           <ProjectTaskStatusSettings
+            ref={statusSettingsRef}
             projectId={projectId}
             initialPhaseId={phase.phase_id}
+            onPendingChangesChange={setStatusChangesPending}
           />
-          <div className="flex justify-end pt-3 mt-3 border-t">
+          <div className="flex justify-end gap-2 pt-3 mt-3 border-t">
+            {statusChangesPending && (
+              <Button
+                id={`cancel-phase-statuses-dialog-${phase.phase_id}`}
+                variant="outline"
+                disabled={isSavingStatuses}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  closeStatusDialog();
+                }}
+              >
+                {t('common:actions.cancel', { defaultValue: 'Cancel' })}
+              </Button>
+            )}
             <Button
               id={`close-phase-statuses-dialog-${phase.phase_id}`}
+              disabled={isSavingStatuses}
               onClick={(e) => {
                 e.stopPropagation();
-                setShowStatusDialog(false);
-                onStatusesChanged?.();
+                void saveStatusDialog();
               }}
             >
-              {t('common:actions.done', { defaultValue: 'Done' })}
+              {statusChangesPending
+                ? t('common:actions.save', { defaultValue: 'Save' })
+                : t('common:actions.done', { defaultValue: 'Done' })}
             </Button>
           </div>
         </Dialog>

@@ -217,7 +217,10 @@
       "policies": {
         "title": "Asset Policies"
       },
-      "title": "Assets"
+      "title": "Assets",
+      "custody": {
+        "title": "Equipment in custody"
+      }
     },
     "billing": {
       "title": "Billing",
@@ -403,6 +406,9 @@
           "detail": {
             "title": "Project Task"
           }
+        },
+        "staging": {
+          "title": "Project Staging"
         }
       },
       "templates": {
@@ -549,6 +555,12 @@
       },
       "recurring": {
         "title": "Recurring tickets"
+      },
+      "templates": {
+        "title": "Ticket templates"
+      },
+      "cannedResponses": {
+        "title": "Canned responses"
       }
     },
     "timeEntry": {
@@ -589,6 +601,44 @@
     },
     "layout": {
       "defaultTitle": "Dashboard | AlgaPSA"
+    },
+    "coManaged": {
+      "title": "Co-Managed IT",
+      "archive": {
+        "title": "Co-Managed Archive"
+      }
+    },
+    "coManagement": {
+      "title": "Co-Managed Access",
+      "administration": {
+        "title": "Co-Managed Administration"
+      },
+      "customerTickets": {
+        "title": "Customer Tickets"
+      },
+      "sharedTicket": {
+        "title": "Shared Ticket"
+      },
+      "providers": {
+        "title": "Email and Identity Providers"
+      },
+      "sharedTasks": {
+        "title": "Shared Tasks",
+        "taskTitle": "Shared Task",
+        "projectTitle": "Shared Project"
+      },
+      "departure": {
+        "title": "End Co-Managed IT"
+      },
+      "sla": {
+        "title": "Co-Managed SLA Priorities"
+      },
+      "export": {
+        "title": "Export Workspace"
+      },
+      "upgrade": {
+        "title": "Upgrade to AlgaPSA"
+      }
     }
   },
   "share": {
@@ -627,5 +677,8 @@
     "setupComplete": {
       "title": "Card Setup"
     }
+  },
+  "pay": {
+    "title": "Pay Invoice"
   }
 }

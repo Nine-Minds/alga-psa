@@ -84,7 +84,7 @@ describe('profitability report action SQL contracts', () => {
 
   it('recovers sales-order hardware COGS through so_line_id-linked consume movements, deduped per movement', () => {
     expect(source).toContain('WITH so_cogs_movements');
-    expect(source).toContain('DISTINCT ON (sm.movement_id)');
+    expect(source).toContain('DISTINCT ON (sm.tenant, sm.movement_id)');
     expect(source).toContain('AND sol.so_line_id = ic.so_line_id');
     expect(source).toContain("AND sm.source_doc_type = 'sales_order'");
     expect(source).toContain('AND sm.source_doc_id = sol.so_id');
@@ -105,7 +105,7 @@ describe('profitability report action SQL contracts', () => {
     expect(source).toContain('FROM invoice_time_entries ite');
     expect(source).toContain('AND ic.item_id = ite.item_id');
     expect(source).toContain('AND ite.item_id IS NOT NULL');
-    expect(source).toContain('SUM(COALESCE(te.billable_duration, 0)) OVER (PARTITION BY ic.item_id)');
+    expect(source).toContain('SUM(COALESCE(te.billable_duration, 0)) OVER (PARTITION BY ic.tenant, ic.item_id)');
     expect(source).toContain('item_amount_cents::numeric * billable_minutes::numeric');
   });
 

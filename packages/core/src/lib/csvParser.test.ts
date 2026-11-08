@@ -165,11 +165,31 @@ describe('round trip', () => {
   it('reads back what it wrote for values needing escapes', () => {
     const original = [
       { name: 'Acme, Inc.', note: 'He said "hi"', city: 'Berlin' },
+      { name: 'Customer', note: 'Call\rback', city: 'Paris' },
     ];
     const fields = ['name', 'note', 'city'];
 
     const rows = parseCSV(unparseCSV(original, fields), { header: true }) as Record<string, string>[];
 
     expect(rows).toEqual(original);
+  });
+
+  it('quotes a field containing a bare CR and round-trips it', () => {
+    const out = unparseCSV([{ note: 'x\ry' }], ['note']);
+    expect(out).toContain('"x\ry"');
+    expect(parseCSV(out)[1][0]).toBe('x\ry');
+  });
+
+  it('does not leak a bare CR before the row separator for a field ending in CR', () => {
+    const out = unparseCSV([{ note: 'x\r', other: 'z' }], ['note', 'other']);
+    expect(out).toContain('"x\r",z');
+    const parsed = parseCSV(out);
+    expect(parsed[1]).toEqual(['x\r', 'z']);
+  });
+
+  it('keeps CRLF inside a field within its quotes', () => {
+    const out = unparseCSV([{ note: 'a\r\nb' }], ['note']);
+    expect(out).toContain('"a\r\nb"');
+    expect(parseCSV(out)[1][0]).toBe('a\r\nb');
   });
 });

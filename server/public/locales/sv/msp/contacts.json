@@ -62,14 +62,17 @@
       "phoneNumber": "Telefonnummer",
       "client": "Kund",
       "tags": "Taggar",
-      "actions": "Åtgärder"
+      "actions": "Åtgärder",
+      "location": "Plats"
     },
     "lastPhoneTypeUsage": {
       "title": "Sista användningen av telefontypen",
       "message_one": "Följande anpassade telefontyp används inte längre av någon kontakt: {{labels}}. Vill du radera typdefinitionen eller behålla den för framtida bruk?",
       "message_other": "Följande anpassade telefontyper används inte längre av någon kontakt: {{labels}}. Vill du radera typdefinitionerna eller behålla dem för framtida bruk?",
       "deleteType": "Radera typ",
-      "keepType": "Behåll typ"
+      "keepType": "Behåll typ",
+      "message_few": "Följande anpassade telefontyper används inte längre av någon kontakt: {{labels}}. Vill du radera typdefinitionerna eller behålla dem för framtida bruk?",
+      "message_many": "Följande anpassade telefontyper används inte längre av någon kontakt: {{labels}}. Vill du radera typdefinitionerna eller behålla dem för framtida bruk?"
     },
     "print": {
       "title": "Kontakter",
@@ -180,7 +183,10 @@
       "role": "Roll",
       "notes": "Anteckningar",
       "primaryEmailLabel": "Typ av primär e-postadress",
-      "additionalEmails": "Ytterligare e-postadresser"
+      "additionalEmails": "Ytterligare e-postadresser",
+      "workArrangement": "Arbetsform",
+      "locations": "Platser",
+      "primaryLocation": "Primär plats"
     },
     "unassigned": "Välj fält",
     "errors": {
@@ -455,7 +461,9 @@
         "invitationNotFound": "Inbjudan hittades inte eller har redan använts."
       },
       "userNotFound": "Kundanvändaren hittades inte"
-    }
+    },
+    "boardCount_few": "{{count}} tavlor",
+    "boardCount_many": "{{count}} tavlor"
   },
   "quickAddContact": {
     "title": "Lägg till ny kontakt",
@@ -626,14 +634,17 @@
       "email": "E-post",
       "phoneNumber": "Telefonnummer",
       "actions": "Åtgärder",
-      "role": "Roll"
+      "role": "Roll",
+      "location": "Plats"
     },
     "filter": {
       "show": "Visa:",
       "active": "Aktiva kontakter",
       "inactive": "Inaktiva kontakter",
       "all": "Alla kontakter",
-      "searchPlaceholder": "Sök kontakter…"
+      "searchPlaceholder": "Sök kontakter…",
+      "allLocations": "Alla platser",
+      "noLocation": "Ingen plats"
     },
     "actions": {
       "openMenu": "Öppna meny",
@@ -734,7 +745,70 @@
       "visibilityDuplicate": "En synlighetsgrupp med de här uppgifterna finns redan för den här kunden.",
       "visibilityInvalidData": "Ogiltiga uppgifter för synlighetsgruppen har angetts. Kontrollera gruppuppgifterna och de valda tavlorna.",
       "groupNameRequired": "Gruppnamn krävs",
-      "readPermission": "Åtkomst nekad: Det går inte att läsa kontakter"
+      "readPermission": "Åtkomst nekad: Det går inte att läsa kontakter",
+      "idRequired": "Kontakt-ID krävs",
+      "schemaError": "Fel i databasschemat – kontakta supporten",
+      "readFailed": "Ett oväntat fel uppstod när kontaktinformationen hämtades",
+      "deleteRecordFailed": "Kontaktposten hittades inte eller gick inte att ta bort",
+      "updateIdRequired": "Kontakt-ID krävs för uppdateringar",
+      "clientMissing": "Den valda kunden finns inte längre",
+      "destinationMissing": "Den valda destinationen för inkommande ärenden finns inte längre",
+      "updateMissing": "Kontakten som du försöker uppdatera finns inte längre",
+      "updateRecordMissing": "Kontaktuppdateringen slutfördes utan att returnera den uppdaterade kontaktposten",
+      "clientIdRequired": "Kund-ID krävs",
+      "specifiedClientMissing": "Den angivna kunden finns inte",
+      "updateDataRequired": "Inga uppdateringsdata angavs",
+      "emailInvalid": "Ange en giltig e-postadress",
+      "bulkUpdateFailed": "Uppdateringen av kundkontakter slutfördes utan att ändra några kontaktposter",
+      "updateFailed": "Ett oväntat fel uppstod när kundkontakterna uppdaterades",
+      "importMultipleMatches": "Importerade e-postadresser matchar flera befintliga kontakter",
+      "updatePermission": "Det går inte att uppdatera kontakter",
+      "importDataRequired": "Inga kontaktdata angavs",
+      "fullNameRequired": "Fullständigt namn krävs",
+      "importFailed": "Ett oväntat fel uppstod när kontakter importerades",
+      "emailsRequired": "Inga e-postadresser angavs",
+      "validEmailsRequired": "Inga giltiga e-postadresser angavs",
+      "checkEmailsFailed": "Ett oväntat fel uppstod när befintliga e-postadresser kontrollerades",
+      "portalAdminRequired": "Administratörsåtkomst till kundportalen krävs",
+      "assignedGroupInvalid": "Den tilldelade synlighetsgruppen är ogiltig för den här kontakten",
+      "groupNotFound": "Synlighetsgruppen hittades inte",
+      "boardsInvalid": "En eller flera tavlor är ogiltiga för den här organisationen",
+      "groupCreateFailed": "Synlighetsgruppen skapades utan att returnera ett grupp-ID",
+      "groupInUse": "Det går inte att ta bort synlighetsgruppen medan den är tilldelad kontakter",
+      "importEmailInvalid": "Ogiltigt e-postformat för kontakten: {{name}}",
+      "importClientMissing": "Kunden hittades inte för kontakten: {{name}}",
+      "invalidEmailValue": "Ogiltigt e-postformat: {{email}}",
+      "invalidData": "Ogiltiga kontaktdata",
+      "phoneExtensionInvalid": "Telefon {{index}}: Ange en giltig anknytning",
+      "phoneNumberInvalid": "Telefon {{index}}: Ange ett giltigt telefonnummer",
+      "phoneCountryRequired": "Telefon {{index}}: Inkludera landsnumret som börjar med +",
+      "tenantEmailExists": "En kontakts e-postadress finns redan i den här organisationen",
+      "importRowFailed": "Det gick inte att importera den här kontakten. Kontrollera obligatoriska fält och kundreferenser.",
+      "deleteMissing": "Kontakten som du försöker ta bort finns inte längre.",
+      "deleteFailed": "Det gick inte att ta bort kontakten. Försök igen.",
+      "deleteDependencies": "Det går inte att ta bort kontakten eftersom den har kopplade poster",
+      "connectionFailed": "Problem med databasanslutningen. Försök igen.",
+      "deleteUnexpected": "Ett oväntat fel uppstod när kontakten togs bort",
+      "importFileFailed": "Det gick inte att importera kontakter. Kontrollera filen och försök igen.",
+      "portalAdminUpdateFailed": "Det gick inte att uppdatera portaladministratörsstatusen. Uppdatera sidan och försök igen.",
+      "userLoadFailed": "Det gick inte att hämta användaren",
+      "sharedMailboxAdmin": "Kontakter för delade postlådor kan inte vara kundadministratörer.",
+      "createFailed": "Ett oväntat fel uppstod när kontakten skapades",
+      "importDuplicateEmail": "En kontakt med den här e-postadressen finns redan: {{value}}",
+      "importDuplicateName": "En kontakt med det här namnet finns redan: {{value}}",
+      "permissions": {
+        "readContacts": "Det går inte att läsa kontakter",
+        "deleteContacts": "Det går inte att ta bort kontakter",
+        "createContacts": "Det går inte att skapa kontakter",
+        "updateContacts": "Det går inte att uppdatera kontakter",
+        "managePhoneTypes": "Det går inte att hantera telefontyper",
+        "updateClientUsers": "Du har inte behörighet att uppdatera kundanvändare",
+        "viewClientUsers": "Du har inte behörighet att visa kundanvändare"
+      },
+      "field": "fält",
+      "locationClientMismatch": "Den platsen hör till en annan klient.",
+      "importLocationUnknown": "Kan inte importera {{name}}: platsen ”{{location}}” finns inte för den klienten",
+      "importLocationNoClient": "Kan inte importera {{name}}: platser kräver en klient på samma rad"
     }
   },
   "portal": {
@@ -759,7 +833,54 @@
       "scopeSummaryAll": "Alla",
       "scopeSummaryOwn": "Egna",
       "managerScopeNote_one": "Deras vy omfattar även poster för {{count}} person som rapporterar till dem.",
-      "managerScopeNote_other": "Deras vy omfattar även poster för {{count}} personer som rapporterar till dem."
+      "managerScopeNote_other": "Deras vy omfattar även poster för {{count}} personer som rapporterar till dem.",
+      "managerScopeNote_few": "Deras vy omfattar även poster för {{count}} personer som rapporterar till dem.",
+      "managerScopeNote_many": "Deras vy omfattar även poster för {{count}} personer som rapporterar till dem."
+    }
+  },
+  "messages": {
+    "success": {
+      "updated": "Kontakten har uppdaterats",
+      "created": "Kontakten har skapats"
+    }
+  },
+  "csvTemplate": {
+    "explorerRole": "Chefsutforskare",
+    "explorerNotes": "Föll ner i ett kaninhål och upptäckte en helt ny värld",
+    "explorerTags": "Nyfiken, Äventyrlig, Modig",
+    "teaRole": "Chefsexpert på teceremonier",
+    "teaNotes": "Vet varför en korp liknar ett skrivbord",
+    "teaTags": "Kreativ, Excentrisk, Teexpert"
+  },
+  "entraContactBadge": {
+    "lastSyncedTitle": "Microsoft Entra · senast synkroniserad {{date}}",
+    "description": "Den här kontakten synkroniseras med ett katalogkonto.",
+    "signInName": "Inloggningsnamn: {{name}}",
+    "lastSynced": "Senast synkroniserad {{date}}",
+    "deleted": "Inaktiv – Microsoft-kontot har tagits bort.",
+    "disabled": "Inaktiv – Microsoft-kontot är inaktiverat."
+  },
+  "contactLocations": {
+    "locations": "Platser",
+    "addLocation": "Lägg till plats",
+    "workArrangement": "Arbetsform",
+    "primary": "Primär",
+    "none": "Inga platser",
+    "inactiveMarker": "(inaktiv)",
+    "extraCount": "+{{count}}",
+    "chooseClientFirst": "Välj först en klient för att kunna välja dess platser.",
+    "loading": "Läser in platser…",
+    "noneForClient": "Den här klienten har inga platser än.",
+    "arrangement": {
+      "unset": "Inte angiven",
+      "on_site": "På plats",
+      "hybrid": "Hybridarbete",
+      "remote": "Distans"
+    },
+    "clientChange": {
+      "title": "Byta klient?",
+      "message": "Detta tar bort {{count}} platskoppling(ar). Platser hör till en klient och kan därför inte följa kontakten.",
+      "confirm": "Byt klient"
     }
   }
 }

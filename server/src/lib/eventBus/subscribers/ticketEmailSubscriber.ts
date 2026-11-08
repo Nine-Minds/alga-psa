@@ -11,6 +11,8 @@ import {
   TicketCommentAddedEvent
 } from '@alga-psa/event-schemas';
 import { sendEventEmail, SendEmailParams } from '../../notifications/sendEventEmail';
+import { resolveCoManagedCommentStep, audienceRecipients, coManagedSendFields } from '../../notifications/coManagedCommentDelivery';
+import { projectCoManagedNotificationSnapshot } from '@alga-psa/co-managed/sharedWorkProjection';
 import { EventEmailRetryQueue } from '../../notifications/EventEmailRetryQueue';
 import logger from '@alga-psa/core/logger';
 import { displayAddressField, displayCountry } from '@alga-psa/core';
@@ -21,9 +23,10 @@ import { formatBlockNoteContent } from '@alga-psa/formatting/blocknoteUtils';
 import { getEmailEventChannel } from '@alga-psa/notifications';
 import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
-import { getPortalDomain } from 'server/src/models/PortalDomainModel';
+import { resolveTenantAppBase } from '@alga-psa/tenancy/server';
 import {
-  resolveBoardNotificationRecipients,
+  resolveBoardNotificationAudience,
+  type AddressRecipient,
   type ResolvedRecipient,
 } from '@alga-psa/shared/lib/tickets/boardNotificationRules';
 import { getAllTicketAssignees } from '@alga-psa/shared/lib/tickets/ticketAssignees';
@@ -79,8 +82,12 @@ function normalizeHost(host: string): string {
   return host.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
 }
 
+// LEVERAGE: pattern tenant-link-context — ticketEmailSubscriber and projectEmailSubscriber each hand-build the same internal/portal link context (canonical base + vanity host + tenant slug).
 type PortalLinkContext = {
+  /** Origin for MSP (internal recipient) links: the tenant's MSP custom domain when one is active. */
   internalBase: string;
+  /** Canonical origin (NEXTAUTH_URL); used for portal links when no portal custom domain applies. */
+  canonicalBase: string;
   portalHost: string | null;
   isActiveVanityDomain: boolean;
   tenantSlug: string;
@@ -156,7 +163,7 @@ function resolveAccumulatedTicketNotificationSuppression(
 
 /**
  * Resolve the tenant-level portal-domain context once per handler invocation.
- * The DB call (getPortalDomain) doesn't depend on ticketId, so callers that
+ * The DB call (resolveTenantAppBase) doesn't depend on ticketId, so callers that
  * iterate over many tickets (bundle children, accumulator recipients) should
  * call this once and feed the result into buildTicketLinks per ticket.
  */
@@ -164,21 +171,28 @@ async function resolvePortalLinkContext(
   knex: Knex,
   tenantId: string
 ): Promise<PortalLinkContext> {
-  const internalBase = getBaseUrl();
+  const canonicalBase = getBaseUrl();
+  let internalBase = canonicalBase;
   let portalHost: string | null = null;
   let isActiveVanityDomain = false;
 
   try {
-    const portalDomain = await getPortalDomain(knex, tenantId);
     // Only use a portal-specific host when the tenant has an *active* custom
-    // (vanity) domain. The portal_domains row's canonical_host (e.g.
-    // <prefix>.portal.algapsa.com) is just a placeholder shown during DNS
-    // verification — it's not necessarily a routable URL — so falling back to
-    // it produces broken links. Leave portalHost null in every other case so
-    // buildTicketLinks emits https://<NEXTAUTH host>/client-portal/...?tenant=<slug>.
-    if (portalDomain && portalDomain.status === 'active' && portalDomain.domain) {
-      portalHost = portalDomain.domain;
+    // (vanity) domain that serves the client portal. The portal_domains row's
+    // canonical_host (e.g. <prefix>.portal.algapsa.com) is just a placeholder
+    // shown during DNS verification — it's not necessarily a routable URL — so
+    // falling back to it produces broken links. Leave portalHost null in every
+    // other case so buildTicketLinks emits https://<NEXTAUTH host>/client-portal/...?tenant=<slug>.
+    const portal = await resolveTenantAppBase(tenantId, 'client_portal', { knex });
+    if (portal.source === 'vanity') {
+      portalHost = portal.baseUrl;
       isActiveVanityDomain = true;
+    }
+    // Internal (MSP) recipients only move off the canonical host when a custom
+    // domain serves the MSP app.
+    const msp = await resolveTenantAppBase(tenantId, 'msp', { knex });
+    if (msp.source === 'vanity') {
+      internalBase = msp.baseUrl;
     }
   } catch (error) {
     logger.warn('[TicketEmailSubscriber] Failed to resolve portal domain for ticket link', {
@@ -189,6 +203,7 @@ async function resolvePortalLinkContext(
 
   return {
     internalBase,
+    canonicalBase,
     portalHost,
     isActiveVanityDomain,
     tenantSlug: buildTenantPortalSlug(tenantId),
@@ -213,7 +228,7 @@ function buildTicketLinks(
       portalUrl = `https://${sanitizedHost}${clientPortalPath}?${baseParams.toString()}`;
     }
   } else {
-    const fallbackBase = ctx.internalBase.endsWith('/') ? ctx.internalBase.slice(0, -1) : ctx.internalBase;
+    const fallbackBase = ctx.canonicalBase.endsWith('/') ? ctx.canonicalBase.slice(0, -1) : ctx.canonicalBase;
     baseParams.set('tenant', ctx.tenantSlug);
     portalUrl = `${fallbackBase}${clientPortalPath}?${baseParams.toString()}`;
   }
@@ -1236,8 +1251,12 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
     // teams. Never assigns and never touches the watch list. Skipped for the assignee and the
     // actor, and for active internal watchers (who already get the standard ticket-created email).
     let boardRuleRecipients: ResolvedRecipient[] = [];
+    // Plain addresses (e.g. a distribution list) are not Alga principals: they are never passed to
+    // the visibility filter. They skip the primary contact/client, the assignee and every active
+    // watcher, because those audiences already get their standard email.
+    let boardRuleAddresses: AddressRecipient[] = [];
     if (ticket.board_id && shouldSendInternalTicketEmail(suppression)) {
-      const resolved = await resolveBoardNotificationRecipients(
+      const { users: resolved, addresses } = await resolveBoardNotificationAudience(
         db,
         tenantId,
         { kind: 'created', boardId: ticket.board_id },
@@ -1256,9 +1275,30 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
           ? await filterRecipientsWhoCanReadTicket(db, tenantId, payload.ticketId, notWatchers)
           : [];
       }
+      if (addresses.length > 0) {
+        const alreadyAddressed = new Set<string>(
+          [
+            safeString(ticket.contact_email),
+            safeString(ticket.client_email),
+            assignedEmail || safeString(ticket.assigned_to_email),
+            ...extractActiveWatcherEmails(ticket.attributes),
+          ]
+            .filter(Boolean)
+            .map(normalizeRecipientEmail)
+        );
+        boardRuleAddresses = addresses.filter(
+          (address) => !alreadyAddressed.has(normalizeRecipientEmail(address.email))
+        );
+      }
     }
 
-    if (!primaryEmail && !assignedEmail && !hasActiveWatchers && boardRuleRecipients.length === 0) {
+    if (
+      !primaryEmail &&
+      !assignedEmail &&
+      !hasActiveWatchers &&
+      boardRuleRecipients.length === 0 &&
+      boardRuleAddresses.length === 0
+    ) {
       logger.warn('Could not send ticket created email - missing contact, client, assigned user, and watcher emails:', {
         eventId: event.id,
         ticketId: payload.ticketId
@@ -1354,6 +1394,30 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
       }, 'Board Ticket Created', recipient.userId);
     }
 
+    // Address recipients: same template and subtype as users, no recipientUserId (no principal, so
+    // no per-user preference). `issueReplyToken: false` keeps the thread headers but mints no
+    // reply token, so a reply is matched by thread headers, which check the sender.
+    for (const address of boardRuleAddresses) {
+      await sendIfUnique({
+        tenantId,
+        ...emailEntityContext,
+        to: address.email,
+        subject: `New Ticket on ${boardName} • ${ticket.title} (${priorityName})`,
+        template: 'ticket-board-created',
+        context: buildContext(internalUrl),
+        replyContext: { ...replyContext, issueReplyToken: false },
+      }, 'Board Ticket Created');
+    }
+    if (boardRuleAddresses.length > 0) {
+      // Never log the addresses themselves.
+      logger.info('[TicketEmailSubscriber] Sent board notification rule emails to address recipients (ticket created)', {
+        eventId: event.id,
+        ticketId: payload.ticketId,
+        boardId: ticket.board_id,
+        addressCount: boardRuleAddresses.length,
+      });
+    }
+
     const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails);
     await sendOneEmailPerWatcher(
       activeWatcherEmails,
@@ -1416,26 +1480,43 @@ async function handleTicketStatusChanged(event: { id?: string; payload: any }): 
 
     const enteredStatusId: string = payload.newStatusId ?? ticket.status_id;
     const assignees = await getAllTicketAssignees(db, tenantId, payload.ticketId);
-    const resolved = await resolveBoardNotificationRecipients(
+    const { users: resolved, addresses } = await resolveBoardNotificationAudience(
       db,
       tenantId,
       { kind: 'status_entered', statusId: enteredStatusId },
       { excludeUserIds: [...assignees, actorUserId] }
     );
-    if (resolved.length === 0) {
+    if (resolved.length === 0 && addresses.length === 0) {
       return;
     }
 
-    // Active internal watchers already follow the ticket and get the standard update emails.
+    // Active watchers already follow the ticket and get the standard update emails.
     const watcherEmails = extractActiveWatcherEmails(ticket.attributes);
     const internalWatchers = await resolveInternalWatcherEmails(db, tenantId, watcherEmails);
     const notWatchers = resolved.filter(
       (recipient) => !internalWatchers.has(normalizeRecipientEmail(recipient.email))
     );
+    // Only principals go through the visibility filter. Plain addresses have no principal to check.
     const recipients = notWatchers.length > 0
       ? await filterRecipientsWhoCanReadTicket(db, tenantId, payload.ticketId, notWatchers)
       : [];
-    if (recipients.length === 0) {
+
+    // Plain addresses skip any active watcher (internal or external) and the actor and assignees.
+    const excludedEmails = new Set<string>(watcherEmails.map(normalizeRecipientEmail));
+    const excludedUserIds = [...assignees, actorUserId].filter(Boolean) as string[];
+    if (addresses.length > 0 && excludedUserIds.length > 0) {
+      const excludedUsers = await tenantDb(db, tenantId)
+        .table('users')
+        .select('email')
+        .whereIn('user_id', excludedUserIds);
+      for (const row of excludedUsers) {
+        if (row.email) excludedEmails.add(normalizeRecipientEmail(row.email));
+      }
+    }
+    const recipientAddresses = addresses.filter(
+      (address) => !excludedEmails.has(normalizeRecipientEmail(address.email))
+    );
+    if (recipients.length === 0 && recipientAddresses.length === 0) {
       return;
     }
 
@@ -1461,6 +1542,7 @@ async function handleTicketStatusChanged(event: { id?: string; payload: any }): 
       },
     };
     const sentEmails = new Set<string>();
+    const statusSubject = `Ticket Entered ${enteredStatus} on ${boardName} • ${ticket.title} (${priorityName})`;
     for (const recipient of recipients) {
       const key = normalizeRecipientEmail(recipient.email);
       if (!isValidEmail(recipient.email) || sentEmails.has(key)) continue;
@@ -1470,12 +1552,47 @@ async function handleTicketStatusChanged(event: { id?: string; payload: any }): 
         entityType: 'ticket',
         entityId: ticket.ticket_id || payload.ticketId,
         to: recipient.email,
-        subject: `Ticket Entered ${enteredStatus} on ${boardName} • ${ticket.title} (${priorityName})`,
+        subject: statusSubject,
         template: 'ticket-board-status-entered',
         context,
         mailClass: 'ticket',
         boardId: ticket.board_id,
       }, 'Board Ticket Status Entered', recipient.userId);
+    }
+
+    // Address recipients: immediate, no recipientUserId (no principal, no per-user preference).
+    // Thread headers are kept so a reply is checked against the sender; no reply token is issued.
+    let addressesSent = 0;
+    for (const address of recipientAddresses) {
+      const key = normalizeRecipientEmail(address.email);
+      if (!isValidEmail(address.email) || sentEmails.has(key) || excludedEmails.has(key)) continue;
+      sentEmails.add(key);
+      await sendNotificationIfEnabled({
+        tenantId,
+        entityType: 'ticket',
+        entityId: ticket.ticket_id || payload.ticketId,
+        to: address.email,
+        subject: statusSubject,
+        template: 'ticket-board-status-entered',
+        context,
+        mailClass: 'ticket',
+        boardId: ticket.board_id,
+        replyContext: {
+          ticketId: ticket.ticket_id || payload.ticketId,
+          threadId: ticket.email_metadata?.threadId,
+          issueReplyToken: false,
+        },
+      }, 'Board Ticket Status Entered');
+      addressesSent += 1;
+    }
+    if (addressesSent > 0) {
+      // Never log the addresses themselves.
+      logger.info('[TicketEmailSubscriber] Sent board notification rule emails to address recipients (status entered)', {
+        eventId: event.id,
+        ticketId: payload.ticketId,
+        boardId: ticket.board_id,
+        addressCount: addressesSent,
+      });
     }
   } catch (error) {
     logger.error('Error handling ticket status changed email:', {
@@ -2902,7 +3019,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         ...baseTicketContext,
         url
       },
-      comment: commentContext
+      comment: { ...commentContext }
     });
 
     // Determine primary email (contact first, then client)
@@ -3004,6 +3121,89 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     const commentThreadHeaderParams = Object.keys(commentThreadHeaders).length > 0
       ? { headers: commentThreadHeaders }
       : {};
+
+    // CM L5: a comment on a shared ticket is delivered by the audience-aware co-managed step INSTEAD of
+    // the native recipient step below (one send per recipient). The served decision is made once, here,
+    // before any co_management_* SQL; an unserved tenant gets null at zero SQL and falls through untouched.
+    const coManagedStep = await resolveCoManagedCommentStep(tenantId, payload.ticketId, payload.comment?.id);
+    if (coManagedStep) {
+      const toRecipient = (kind: 'customer_user' | 'requester_contact', principalId: string | null | undefined, email: string | null | undefined) =>
+        email && isValidEmail(email) ? { kind, principalId: principalId || email, email } : null;
+      const customerUsers = [
+        toRecipient('customer_user', ticket.assigned_to, assignedEmail),
+        ...additionalResources.map((r) => toRecipient('customer_user', r.user_id, r.email)),
+      ].filter((r): r is NonNullable<typeof r> => r !== null);
+      const requester = toRecipient('requester_contact', primaryContactId, primaryEmail);
+      const recipients = audienceRecipients(coManagedStep, { customerUsers, requester });
+      const sourceId = payload.comment!.id!;
+      for (const recipient of recipients) {
+        const internal = recipient.kind !== 'requester_contact';
+        if (!shouldSendTicketCommentNotification(suppression, internal ? 'internal' : 'contact')) continue;
+        const fields = coManagedSendFields(coManagedStep, 'ticket_comment_email', sourceId, recipient);
+        const sponsorRecipient = recipient.kind === 'msp_user' || recipient.kind === 'team';
+        const projectedContext = buildContext(internal ? internalUrl : portalUrl);
+        const projection = sponsorRecipient ? projectCoManagedNotificationSnapshot(recipient.redactedFields ?? [], {
+          ticketTitle: projectedContext.ticket.title,
+          ticketNumber: projectedContext.ticket.id,
+          requesterName: projectedContext.ticket.requesterName, requesterEmail: projectedContext.ticket.requesterEmail,
+          requesterPhone: projectedContext.ticket.requesterPhone, requesterContact: projectedContext.ticket.requesterContact,
+          requesterDetails: projectedContext.ticket.requesterDetails, assignedToName: projectedContext.ticket.assignedToName,
+          assignedToEmail: projectedContext.ticket.assignedToEmail, assignedDetails: projectedContext.ticket.assignedDetails,
+          clientName: projectedContext.ticket.clientName, locationSummary: projectedContext.ticket.locationSummary,
+          commentContent: projectedContext.comment.content, commentHtml: projectedContext.comment.html,
+          commentPreview: projectedContext.comment.text, commentRawContent: projectedContext.comment.rawContent,
+          authorName: projectedContext.comment.author,
+          priority: projectedContext.ticket.priority, priorityColor: projectedContext.ticket.priorityColor,
+          status: projectedContext.ticket.status, metaLine: projectedContext.ticket.metaLine,
+          board: projectedContext.ticket.board, categoryDetails: projectedContext.ticket.categoryDetails,
+          category: projectedContext.ticket.category, subcategory: projectedContext.ticket.subcategory,
+          ticketUrl: projectedContext.ticket.url, description: projectedContext.ticket.description,
+        }) : null;
+        if (projection) {
+          Object.assign(projectedContext.ticket, {
+            title: projection.ticketTitle ?? 'Shared ticket', id: projection.ticketNumber ?? 'Shared ticket', requesterName: projection.requesterName,
+            requesterEmail: projection.requesterEmail, requesterPhone: projection.requesterPhone,
+            requesterContact: projection.requesterContact, requesterDetails: projection.requesterDetails,
+            assignedToName: projection.assignedToName, assignedToEmail: projection.assignedToEmail,
+            assignedDetails: projection.assignedDetails, clientName: projection.clientName,
+            locationSummary: projection.locationSummary, priority: projection.priority,
+            priorityColor: projection.priorityColor, status: projection.status,
+            metaLine: projection.metaLine, board: projection.board,
+            categoryDetails: projection.categoryDetails, category: projection.category,
+            subcategory: projection.subcategory, url: projection.ticketUrl, description: projection.description,
+          });
+          if (projection.authorName === null) projectedContext.comment.author = 'A team member';
+          if (projection.conversationSuppressed) Object.assign(projectedContext.comment, { content: '', html: '', text: '', plainText: '', rawContent: null });
+        }
+        await sendIfUnique({
+          tenantId,
+          ...emailEntityContext,
+          ...(recipient.kind === 'requester_contact' && primaryContactId ? { contactId: primaryContactId } : {}),
+          to: recipient.email!,
+          subject: `New Comment on Ticket: ${projectedContext.ticket.title}`,
+          template: 'ticket-comment-added',
+          // Keep canonical source content in the queued params; sendEventEmail reauthorizes and
+          // projects this context on every attempt, including after policy changes.
+          context: sponsorRecipient ? buildContext(internal ? internalUrl : portalUrl) : projectedContext,
+          replyContext: {
+            ticketId: ticket.ticket_id || payload.ticketId,
+            commentId: payload.comment?.id,
+            threadId: coManagedStep.plan.threadId ?? ticket.email_metadata?.threadId,
+            conversationToken: fields.conversationToken,
+            tokenMetadata: fields.tokenMetadata,
+          },
+          delivery: fields.delivery,
+          ...(sponsorRecipient ? { coManagedRecipient: {
+            tenant: tenantId, ticketId: payload.ticketId, commentId: sourceId,
+            relationshipId: coManagedStep.plan.relationshipId, sponsorTenant: coManagedStep.plan.sponsorTenant,
+            principalId: recipient.principalId,
+          } } : {}),
+          attachments: projection?.conversationSuppressed ? [] : inlineCommentImageAttachments,
+          ...commentThreadHeaderParams,
+        }, 'Ticket Comment Added', recipient.kind === 'customer_user' ? recipient.principalId : undefined);
+      }
+      return;
+    }
 
     // Send to primary email if available - external user, no userId
     let requesterEmailSent = false;

@@ -27,11 +27,13 @@ export const opportunityAssessmentConversionReport: ReportDefinition = {
           END AS won_rate
         FROM {{tenant_table:opportunities AS opportunity}}
         LEFT JOIN (
-          SELECT DISTINCT opportunity_id
+          SELECT DISTINCT evidence.tenant, evidence.opportunity_id
           FROM {{tenant_table:opportunity_evidence AS evidence}}
           WHERE evidence.checkpoint = 'assessment'
             AND evidence.corrected_at IS NULL
-        ) AS assessment ON assessment.opportunity_id = opportunity.opportunity_id
+        ) AS assessment
+          ON assessment.opportunity_id = opportunity.opportunity_id
+         AND assessment.tenant = opportunity.tenant
         WHERE opportunity.status IN ('won', 'lost')
         GROUP BY CASE WHEN assessment.opportunity_id IS NULL THEN 'without_assessment' ELSE 'with_assessment' END
         ORDER BY assessment_group

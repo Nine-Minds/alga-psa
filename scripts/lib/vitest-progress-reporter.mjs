@@ -36,8 +36,16 @@ export default class VitestProgressReporter {
     this.write('module-queued', { file: this.file(module) });
   }
 
+  // The registrations each file reports for itself, the moment its fork has
+  // imported it and before any of them runs. scripts/run-server-unit-shard.mjs
+  // builds collected-tests.json from these instead of a separate `vitest list`
+  // pass, which imported the whole partition a second time (about seven
+  // minutes of every shard on CI). Events reach this reporter one at a time
+  // over the coordinator's RPC channel, so the journal never interleaves.
   onTestModuleCollected(module) {
-    this.write('module-collected', { file: this.file(module) });
+    const tests = [];
+    for (const test of module.children.allTests()) tests.push({ name: test.fullName, mode: test.task?.mode ?? test.options?.mode ?? 'run' });
+    this.write('module-collected', { file: this.file(module), projectName: module.project?.name ?? null, tests });
   }
 
   onTestModuleStart(module) {
@@ -66,4 +74,29 @@ export default class VitestProgressReporter {
       modules: modules.map((module) => ({ file: this.file(module), state: module.state() })),
     });
   }
+}
+
+// The inventory `vitest list --json` used to produce, read back from the
+// journal: one entry per runnable registration, keyed by absolute file. Static
+// skip and todo registrations are left out exactly as `vitest list` left them
+// out, so the execution verifier's registered-versus-executed comparison keeps
+// its meaning. A file collected twice keeps its last report.
+export function collectedTestsFromJournal(journal, { root: fallbackRoot } = {}) {
+  const byFile = new Map();
+  // Files are journaled relative to the config root the run announced in its
+  // `initialized` event; a journal without one resolves against the caller's.
+  let root = fallbackRoot;
+  for (const line of String(journal).split('\n')) {
+    if (!line.trim()) continue;
+    const event = JSON.parse(line);
+    // A runner initialises the journal to `null`; a run that never started leaves it so.
+    if (!event || typeof event !== 'object') continue;
+    if (event.event === 'initialized' && typeof event.root === 'string' && event.root) { root = event.root; continue; }
+    if (event.event !== 'module-collected' || typeof event.file !== 'string' || !Array.isArray(event.tests)) continue;
+    if (typeof root !== 'string' || !root) throw new Error('Progress journal names no root to resolve collected files against');
+    byFile.set(event.file, event.tests
+      .filter((test) => typeof test?.name === 'string' && test.name && test.mode !== 'skip' && test.mode !== 'todo')
+      .map((test) => ({ name: test.name, file: path.resolve(root, event.file), projectName: event.projectName || undefined })));
+  }
+  return [...byFile.values()].flat();
 }

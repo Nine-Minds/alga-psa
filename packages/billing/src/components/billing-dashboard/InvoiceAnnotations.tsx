@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { IInvoiceAnnotation } from '@alga-psa/types';
 import { addInvoiceAnnotation, getInvoiceAnnotations } from '@alga-psa/billing/actions/invoiceTemplates';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface InvoiceAnnotationsProps {
   invoiceId: string;
@@ -21,7 +22,8 @@ const InvoiceAnnotations: React.FC<InvoiceAnnotationsProps> = ({ invoiceId }) =>
 
   const fetchAnnotations = async () => {
     const fetchedAnnotations = await getInvoiceAnnotations(invoiceId);
-    setAnnotations(fetchedAnnotations);
+    if ((fetchedAnnotations as any)?.code === 'UNAUTHENTICATED' || isActionPermissionError(fetchedAnnotations)) return;
+    setAnnotations(fetchedAnnotations as IInvoiceAnnotation[]);
   };
 
   const handleAddAnnotation = async () => {

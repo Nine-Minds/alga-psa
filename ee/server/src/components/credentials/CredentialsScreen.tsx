@@ -83,6 +83,11 @@ export interface CredentialsScreenProps {
    * the same-client rule (the entity's owning client for client-bound types).
    */
   defaultClientId?: string | null;
+  /**
+   * List, reveal and copy only: no create, link, edit, restrict, delete or
+   * detach (for example a ticket in an ended workspace).
+   */
+  readOnly?: boolean;
 }
 
 /**
@@ -126,7 +131,13 @@ function ListChrome({
   );
 }
 
-export function CredentialsScreen({ clientId, entityType, entityId, defaultClientId }: CredentialsScreenProps) {
+export function CredentialsScreen({
+  clientId,
+  entityType,
+  entityId,
+  defaultClientId,
+  readOnly = false,
+}: CredentialsScreenProps) {
   const { t } = useTranslation('msp/credentials');
 
   const entityScoped = Boolean(entityType && entityId);
@@ -346,6 +357,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
           </div>
         )}
         <div className="flex flex-wrap items-center gap-2">
+          {!readOnly && (
           <Button
             id="credentials-screen-new"
             size="sm"
@@ -361,7 +373,8 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
             <Plus className="mr-2 h-4 w-4" />
             {t('credentials.screen.newPassword')}
           </Button>
-          {entityScoped && (
+          )}
+          {entityScoped && !readOnly && (
             <Button
               id="credentials-screen-link"
               variant="outline"
@@ -579,7 +592,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
                           {t('credentials.table.copy')}
                         </Button>
                       )}
-                      {!entityScoped && (
+                      {!entityScoped && !readOnly && (
                         <Button
                           id={`credentials-row-edit-${id}`}
                           variant="ghost"
@@ -604,7 +617,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
                           <History className="h-3.5 w-3.5" />
                         </Button>
                       )}
-                      {!entityScoped && item.source === 'alga' && (
+                      {!entityScoped && !readOnly && item.source === 'alga' && (
                         <Button
                           id={`credentials-row-restrict-${id}`}
                           variant="ghost"
@@ -614,7 +627,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
                           <Users className="h-3.5 w-3.5" />
                         </Button>
                       )}
-                      {!entityScoped && (
+                      {!entityScoped && !readOnly && (
                         <Button
                           id={`credentials-row-delete-${id}`}
                           variant="ghost"
@@ -624,7 +637,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
                           <Trash2 className="h-3.5 w-3.5 text-red-500 dark:text-red-400" />
                         </Button>
                       )}
-                      {entityScoped && (
+                      {entityScoped && !readOnly && (
                         <Button
                           id={`credentials-row-detach-${id}`}
                           variant="ghost"
@@ -645,7 +658,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
 
       {/* Swapped-in views for entity embeds: back affordance + heading, then
           the picker/form content in place of the list. */}
-      {entityScoped && entityView !== 'list' && (
+      {entityScoped && !readOnly && entityView !== 'list' && (
         <div id="credentials-screen-subview" className="space-y-3">
           <div className="flex items-center gap-2">
             <Button
@@ -691,7 +704,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
       )}
 
       {/* Global/client-tab surfaces keep the conventional overlay dialog. */}
-      {!entityScoped && (
+      {!entityScoped && !readOnly && (
         <CredentialFormDialog
           isOpen={formOpen}
           onClose={() => {

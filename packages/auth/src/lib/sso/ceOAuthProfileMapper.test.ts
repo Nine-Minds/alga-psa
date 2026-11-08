@@ -1,12 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const findUserByEmailAndTypeMock = vi.fn();
+const findUsersByEmailAndTypeMock = vi.fn();
+const findUserByEmailTenantAndTypeMock = vi.fn();
 
 vi.mock('@alga-psa/db/models/user', () => ({
   default: {
-    findUserByEmailAndType: (...args: unknown[]) => findUserByEmailAndTypeMock(...args),
+    findUsersByEmailAndType: (...args: unknown[]) => findUsersByEmailAndTypeMock(...args),
+    findUserByEmailTenantAndType: (...args: unknown[]) => findUserByEmailTenantAndTypeMock(...args),
   },
 }));
+
+const baseUser = (overrides: Record<string, unknown>) => ({
+  hashed_password: 'hashed',
+  user_type: 'internal',
+  is_inactive: false,
+  created_at: '2025-01-01T00:00:00Z',
+  ...overrides,
+});
 
 import { mapCeOAuthProfileToExtendedUser } from './ceOAuthProfileMapper';
 
@@ -16,7 +26,7 @@ describe('CE OAuth profile mapper', () => {
   });
 
   it('T053: resolves internal user by normalized email for Microsoft profile', async () => {
-    findUserByEmailAndTypeMock.mockResolvedValue({
+    findUsersByEmailAndTypeMock.mockResolvedValue([baseUser({
       user_id: 'u-1',
       email: 'admin@example.com',
       first_name: 'Ada',
@@ -26,7 +36,7 @@ describe('CE OAuth profile mapper', () => {
       tenant: 'tenant-1',
       user_type: 'internal',
       is_inactive: false,
-    });
+    })]);
 
     const result = await mapCeOAuthProfileToExtendedUser({
       provider: 'microsoft',
@@ -35,7 +45,7 @@ describe('CE OAuth profile mapper', () => {
       image: 'https://example.com/a.png',
     } as any);
 
-    expect(findUserByEmailAndTypeMock).toHaveBeenCalledWith('admin@example.com', 'internal');
+    expect(findUsersByEmailAndTypeMock).toHaveBeenCalledWith('admin@example.com', 'internal');
     expect(result).toMatchObject({
       id: 'u-1',
       email: 'admin@example.com',
@@ -46,7 +56,7 @@ describe('CE OAuth profile mapper', () => {
   });
 
   it('T054: resolves internal user by normalized email for Google profile', async () => {
-    findUserByEmailAndTypeMock.mockResolvedValue({
+    findUsersByEmailAndTypeMock.mockResolvedValue([baseUser({
       user_id: 'u-2',
       email: 'google-user@example.com',
       username: 'googler',
@@ -54,7 +64,7 @@ describe('CE OAuth profile mapper', () => {
       tenant: 'tenant-2',
       user_type: 'internal',
       is_inactive: false,
-    });
+    })]);
 
     const result = await mapCeOAuthProfileToExtendedUser({
       provider: 'google',
@@ -62,7 +72,7 @@ describe('CE OAuth profile mapper', () => {
       profile: { sub: 'google-sub' },
     } as any);
 
-    expect(findUserByEmailAndTypeMock).toHaveBeenCalledWith('google-user@example.com', 'internal');
+    expect(findUsersByEmailAndTypeMock).toHaveBeenCalledWith('google-user@example.com', 'internal');
     expect(result).toMatchObject({
       id: 'u-2',
       email: 'google-user@example.com',
@@ -73,7 +83,7 @@ describe('CE OAuth profile mapper', () => {
   });
 
   it('resolves internal user by email for a Keycloak profile and ignores non-standard realm claims', async () => {
-    findUserByEmailAndTypeMock.mockResolvedValue({
+    findUsersByEmailAndTypeMock.mockResolvedValue([baseUser({
       user_id: 'u-kc',
       email: 'kc-user@example.com',
       username: 'kc',
@@ -81,7 +91,7 @@ describe('CE OAuth profile mapper', () => {
       tenant: 'tenant-kc',
       user_type: 'internal',
       is_inactive: false,
-    });
+    })]);
 
     const result = await mapCeOAuthProfileToExtendedUser({
       provider: 'keycloak',
@@ -89,7 +99,7 @@ describe('CE OAuth profile mapper', () => {
       profile: { sub: 'keycloak-uuid', preferred_username: 'kc', tenant: undefined, user_type: undefined },
     } as any);
 
-    expect(findUserByEmailAndTypeMock).toHaveBeenCalledWith('kc-user@example.com', 'internal');
+    expect(findUsersByEmailAndTypeMock).toHaveBeenCalledWith('kc-user@example.com', 'internal');
     expect(result).toMatchObject({
       id: 'u-kc',
       tenant: 'tenant-kc',
@@ -99,14 +109,14 @@ describe('CE OAuth profile mapper', () => {
   });
 
   it('T055: rejects inactive user accounts', async () => {
-    findUserByEmailAndTypeMock.mockResolvedValue({
+    findUsersByEmailAndTypeMock.mockResolvedValue([baseUser({
       user_id: 'u-3',
       email: 'inactive@example.com',
       username: 'inactive',
       tenant: 'tenant-3',
       user_type: 'internal',
       is_inactive: true,
-    });
+    })]);
 
     const result = await mapCeOAuthProfileToExtendedUser({
       provider: 'google',
@@ -123,14 +133,14 @@ describe('CE OAuth profile mapper', () => {
   });
 
   it('T056: rejects non-internal user types for MSP OAuth flow', async () => {
-    findUserByEmailAndTypeMock.mockResolvedValue({
+    findUsersByEmailAndTypeMock.mockResolvedValue([baseUser({
       user_id: 'u-4',
       email: 'client@example.com',
       username: 'client-user',
       tenant: 'tenant-4',
       user_type: 'client',
       is_inactive: false,
-    });
+    })]);
 
     const result = await mapCeOAuthProfileToExtendedUser({
       provider: 'microsoft',
@@ -147,7 +157,7 @@ describe('CE OAuth profile mapper', () => {
   });
 
   it('T045: unknown OAuth users report a no_matching_user sentinel instead of throwing', async () => {
-    findUserByEmailAndTypeMock.mockResolvedValueOnce(null);
+    findUsersByEmailAndTypeMock.mockResolvedValueOnce([]);
 
     const result = await mapCeOAuthProfileToExtendedUser({
       provider: 'google',
@@ -175,6 +185,58 @@ describe('CE OAuth profile mapper', () => {
       providerEmail: undefined,
       userType: 'internal',
     });
-    expect(findUserByEmailAndTypeMock).not.toHaveBeenCalled();
+    expect(findUsersByEmailAndTypeMock).not.toHaveBeenCalled();
+  });
+
+  describe('multi-tenant emails', () => {
+    const inTenant = (tenant: string, id: string) =>
+      baseUser({ user_id: id, email: 'dual@example.com', username: id, tenant });
+
+    it('reports tenant_required when the email is a live internal user in several tenants and no scope is trusted', async () => {
+      findUsersByEmailAndTypeMock.mockResolvedValue([inTenant('t-a', 'u-a'), inTenant('t-b', 'u-b')]);
+
+      const result = await mapCeOAuthProfileToExtendedUser({
+        provider: 'google',
+        email: 'dual@example.com',
+        // IdP claims must not pick a tenant for an internal user.
+        tenantHint: 't-b',
+        profile: { hd: 't-b', tid: 't-b' },
+      } as any);
+
+      expect(result.authFailure).toEqual({
+        code: 'tenant_required',
+        providerEmail: 'dual@example.com',
+        userType: 'internal',
+      });
+      expect(findUserByEmailTenantAndTypeMock).not.toHaveBeenCalled();
+    });
+
+    it('resolves inside the trusted scope when one is supplied', async () => {
+      findUserByEmailTenantAndTypeMock.mockResolvedValue(inTenant('t-b', 'u-b'));
+
+      const result = await mapCeOAuthProfileToExtendedUser({
+        provider: 'google',
+        email: 'dual@example.com',
+        scopeTenantId: 't-b',
+        profile: {},
+      } as any);
+
+      expect(findUserByEmailTenantAndTypeMock).toHaveBeenCalledWith('dual@example.com', 't-b', 'internal');
+      expect(findUsersByEmailAndTypeMock).not.toHaveBeenCalled();
+      expect(result).toMatchObject({ id: 'u-b', tenant: 't-b' });
+    });
+
+    it('reports no_matching_user when the scoped tenant has no such user, even if another tenant does', async () => {
+      findUserByEmailTenantAndTypeMock.mockResolvedValue(undefined);
+
+      const result = await mapCeOAuthProfileToExtendedUser({
+        provider: 'microsoft',
+        email: 'dual@example.com',
+        scopeTenantId: 't-c',
+        profile: {},
+      } as any);
+
+      expect(result.authFailure?.code).toBe('no_matching_user');
+    });
   });
 });

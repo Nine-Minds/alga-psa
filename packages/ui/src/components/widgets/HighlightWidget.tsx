@@ -1,5 +1,8 @@
+'use client';
+
 import React from 'react';
 import { WidgetProps } from '@rjsf/utils'; // Import WidgetProps
+import { useTranslation } from '../../lib/i18n/client';
 
 // We don't expect specific options for HighlightWidget for now, but define for consistency
 interface HighlightWidgetOptions {
@@ -11,6 +14,7 @@ interface CustomHighlightWidgetProps extends WidgetProps {
 }
 
 const HighlightWidget = ({ value, id, options }: CustomHighlightWidgetProps) => {
+  const { t } = useTranslation('common');
   // Ensure value is a string and not empty before rendering
   if (typeof value !== 'string' || !value.trim()) {
     return null;
@@ -21,7 +25,7 @@ const HighlightWidget = ({ value, id, options }: CustomHighlightWidgetProps) => 
   const highlightClasses = 'p-3 mb-4 text-sm rounded-lg border bg-accent-50 text-accent-700 border-accent-200';
 
   return (
-    <div id={id} className={highlightClasses} role="region" aria-label={options?.title || 'Highlighted Content'}>
+    <div id={id} className={highlightClasses} role="region" aria-label={options?.title || t('widgets.highlight.ariaLabel')}>
       <p>{value}</p>
     </div>
   );

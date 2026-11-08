@@ -79,7 +79,7 @@ describe('TicketService.uploadTicketDocument', () => {
     });
   });
 
-  it('T012/T013/T014: uploads the file, creates a ticket association, and returns the created document', async () => {
+  it.each([undefined, 'delegating-user'])('uploads and records activity with via attribution %s', async (viaPrincipalUserId) => {
     const service = new TicketService();
     const insertedDocuments: Record<string, unknown>[] = [];
     const insertedAssociations: Record<string, unknown>[] = [];
@@ -164,7 +164,7 @@ describe('TicketService.uploadTicketDocument', () => {
     });
 
     const file = new File([Buffer.from('hello world')], 'report.pdf', { type: 'application/pdf' });
-    const result = await service.uploadTicketDocument(ticketId, file, context);
+    const result = await service.uploadTicketDocument(ticketId, file, { ...context, viaPrincipalUserId });
 
     expect(validateFileUploadMock).toHaveBeenCalledWith('tenant-1', 'application/pdf', file.size);
     expect(uploadFileMock).toHaveBeenCalledWith(
@@ -190,9 +190,11 @@ describe('TicketService.uploadTicketDocument', () => {
         tenant: 'tenant-1',
         ticket_id: ticketId,
         entity_id: insertedDocuments[0]?.document_id,
+        actor_type: 'user',
         actor_user_id: 'user-1',
       }),
     ]);
+    expect(insertedAuditLogs[0]?.via_principal_user_id).toBe(viaPrincipalUserId);
     expect(result).toMatchObject({
       document_id: 'doc-1',
       document_name: 'report.pdf',

@@ -6,6 +6,7 @@ import { useTheme } from "../ui/ThemeContext";
 import type { Theme } from "../ui/themes";
 import { Badge, Card, PrimaryButton, Separator, TextInput } from "../ui/components";
 import { ErrorState, LoadingState } from "../ui/states";
+import { RecordUnavailableState, isRecordUnavailableError } from "../ui/components/RecordUnavailableState";
 import { formatDateShort } from "../ui/formatters/dateTime";
 import { useToast } from "../ui/toast/ToastProvider";
 import {
@@ -28,7 +29,6 @@ import { appendNoteBlock, blockDataToText } from "../features/assets/blockNote";
 import { useInventoryApi } from "../features/inventory/hooks/useInventoryApi";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { LinkTicketModal } from "../features/assets/LinkTicketModal";
-import { CreateTicketModal } from "../features/assets/CreateTicketModal";
 import type { RootStackParamList } from "../navigation/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AssetDetail">;
@@ -36,6 +36,11 @@ type Props = NativeStackScreenProps<RootStackParamList, "AssetDetail">;
 type BadgeTone = "neutral" | "info" | "success" | "warning" | "danger";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** A tenant's custom status slug reads as "In repair", not "in_repair". */
+function humanizeStatus(value: string): string {
+  return value.replace(/[_-]+/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+}
 
 function warrantyBadge(
   status: AssetWarrantyStatus | undefined,
@@ -66,10 +71,10 @@ function maintenanceDueBadge(
   return null;
 }
 
-function FieldRow({ label, value }: { label: string; value: string }) {
+function FieldRow({ label, value, testID }: { label: string; value: string; testID?: string }) {
   const theme = useTheme();
   return (
-    <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: theme.spacing.xs }}>
+    <View testID={testID} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: theme.spacing.xs }}>
       <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary }}>{label}</Text>
       <Text style={{ ...theme.typography.body, color: theme.colors.text, flexShrink: 1, textAlign: "right" }}>{value}</Text>
     </View>
@@ -92,6 +97,7 @@ export function AssetDetailScreen({ route, navigation }: Props) {
   const { assetId, assetName } = route.params;
   const theme = useTheme();
   const { t } = useTranslation("assets");
+  const { t: tInventory } = useTranslation("inventory");
   const { client, apiKey } = useInventoryApi();
   const { showToast } = useToast();
 
@@ -101,9 +107,11 @@ export function AssetDetailScreen({ route, navigation }: Props) {
   const [tickets, setTickets] = useState<AssetTicketRow[]>([]);
   const [software, setSoftware] = useState<AssetSoftwareItem[]>([]);
   const [notesBlockData, setNotesBlockData] = useState<unknown | null>(null);
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  // False when the notes GET failed: notesBlockData is then unknown (not "empty"),
+  // and saving would PUT over the whole server-side document.
+  const [notesLoaded, setNotesLoaded] = useState(false);
+  const [status, setStatus] = useState<"loading" | "ready" | "error" | "unavailable">("loading");
   const [linkOpen, setLinkOpen] = useState(false);
-  const [createOpen, setCreateOpen] = useState(false);
   const [recordSchedule, setRecordSchedule] = useState<MaintenanceSchedule | null>(null);
   const [recordNote, setRecordNote] = useState("");
   const [recording, setRecording] = useState(false);
@@ -127,7 +135,18 @@ export function AssetDetailScreen({ route, navigation }: Props) {
     ]);
     if (controller.signal.aborted) return;
     if (!assetResult.ok) {
-      if (assetResult.error.kind !== "canceled") setStatus("error");
+      if (assetResult.error.kind === "canceled") return;
+      if (isRecordUnavailableError(assetResult.error)) {
+        // 403 and 404 look identical, and nothing about the record (including
+        // the assetName route param) may be shown.
+        setAsset(null);
+        // The navigator derives the header title from the assetName route param;
+        // replace it so the denied record's name is not shown there either.
+        navigation.setOptions({ title: tInventory("asset.title", "Asset") });
+        setStatus("unavailable");
+        return;
+      }
+      setStatus("error");
       return;
     }
     setAsset(assetResult.data.data);
@@ -137,6 +156,7 @@ export function AssetDetailScreen({ route, navigation }: Props) {
     setTickets(ticketsResult.ok ? ticketsResult.data.data : []);
     setSoftware(softwareResult.ok ? softwareResult.data.data : []);
     setNotesBlockData(notesResult.ok ? notesResult.data.data.blockData : null);
+    setNotesLoaded(notesResult.ok);
     setStatus("ready");
   }, [client, apiKey, assetId]);
 
@@ -167,7 +187,8 @@ export function AssetDetailScreen({ route, navigation }: Props) {
   }, [client, apiKey, assetId, recordSchedule, recordNote, showToast, t, fetchAll]);
 
   const submitAddNote = useCallback(async () => {
-    if (!client || !apiKey) return;
+    // Never save without the current document: the PUT replaces all notes.
+    if (!client || !apiKey || !notesLoaded) return;
     const note = noteDraft.trim();
     if (!note) return;
     setSavingNote(true);
@@ -189,7 +210,7 @@ export function AssetDetailScreen({ route, navigation }: Props) {
         message: result.error.message || t("notes.saveFailed", "Couldn't save note"),
       });
     }
-  }, [client, apiKey, assetId, noteDraft, notesBlockData, showToast, t, fetchAll]);
+  }, [client, apiKey, assetId, noteDraft, notesBlockData, notesLoaded, showToast, t, fetchAll]);
 
   const refetchTickets = useCallback(async () => {
     if (!client || !apiKey) return;
@@ -205,6 +226,9 @@ export function AssetDetailScreen({ route, navigation }: Props) {
   }, [fetchAll]);
 
   if (status === "loading") return <LoadingState message={t("detail.loading", "Loading device")} />;
+  if (status === "unavailable") {
+    return <RecordUnavailableState onBack={() => navigation.goBack()} />;
+  }
   if (status === "error" || !asset) {
     return (
       <ErrorState
@@ -226,6 +250,16 @@ export function AssetDetailScreen({ route, navigation }: Props) {
   const hasClient = Boolean(asset.client_id);
   const notesText = blockDataToText(notesBlockData);
 
+  // One create form for every route in: the asset starts the ticket's device
+  // selection instead of a separate create-from-asset dialog (alga-2026-0002785).
+  const openCreateTicket = () => {
+    navigation.navigate("CreateTicket", {
+      clientId: asset.client_id,
+      clientName: asset.client_name ?? undefined,
+      assets: [{ asset_id: asset.asset_id, name: asset.name }],
+    });
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <ScrollView
@@ -238,19 +272,57 @@ export function AssetDetailScreen({ route, navigation }: Props) {
           <Text style={{ ...theme.typography.title, color: theme.colors.text }}>{asset.name ?? assetName}</Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.sm, marginTop: theme.spacing.sm }}>
             <Badge label={warranty.label} tone={warranty.tone} />
-            {asset.status ? <Badge label={asset.status} /> : null}
+            {asset.status ? <Badge label={humanizeStatus(asset.status)} /> : null}
           </View>
           <View style={{ marginTop: theme.spacing.md }}>
             {asset.asset_tag ? <FieldRow label={t("identity.tag", "Tag")} value={asset.asset_tag} /> : null}
             {asset.serial_number ? <FieldRow label={t("identity.serial", "Serial")} value={asset.serial_number} /> : null}
             {asset.asset_type ? <FieldRow label={t("identity.type", "Type")} value={asset.asset_type} /> : null}
             {asset.client_name ? <FieldRow label={t("identity.client", "Client")} value={asset.client_name} /> : null}
+            {/* FR-C6: who has the device, read-only on mobile. A shared
+                workspace has users rather than one assignee, so it shows the
+                workspace instead. */}
+            {asset.group?.kind === "shared_workspace" ? (
+              <FieldRow
+                label={t("identity.sharedWorkspace", "Shared workspace")}
+                value={asset.group.name}
+              />
+            ) : (
+              <FieldRow
+                label={t("identity.assignedTo", "Assigned to")}
+                value={asset.contact_name || t("identity.unassigned", "Unassigned")}
+              />
+            )}
+            {asset.manufacturer ? <FieldRow label={t("identity.manufacturer", "Manufacturer")} value={asset.manufacturer} /> : null}
+            {asset.model ? <FieldRow label={t("identity.model", "Model")} value={asset.model} /> : null}
+            {asset.vendor_name ? <FieldRow label={t("identity.vendor", "Vendor")} value={asset.vendor_name} /> : null}
+            {asset.group?.kind === "bundle" ? (
+              <FieldRow label={t("identity.bundle", "Bundle")} value={asset.group.name} />
+            ) : null}
             {asset.location ? <FieldRow label={t("identity.location", "Location")} value={asset.location} /> : null}
             {asset.warranty_end_date ? (
               <FieldRow label={t("identity.warrantyEnds", "Warranty ends")} value={asset.warranty_end_date.slice(0, 10)} />
             ) : null}
             {asset.purchase_date ? (
               <FieldRow label={t("identity.purchased", "Purchased")} value={formatDateShort(asset.purchase_date)} />
+            ) : null}
+            {/* Written by the site audit. The auditor is not here: `assets`
+                carries only the date and result, and the History card below is
+                maintenance history — the audit's asset_history row (with its
+                changed_by) shows on the web. */}
+            {typeof asset.last_audited_at === "string" && asset.last_audited_at ? (
+              <FieldRow
+                testID="asset-last-audited"
+                label={t("audit.lastAudited", "Last audited")}
+                value={[
+                  formatDateShort(asset.last_audited_at),
+                  typeof asset.last_audit_result === "string" && asset.last_audit_result
+                    ? t(`audit.result.${asset.last_audit_result}`, asset.last_audit_result)
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(" • ")}
+              />
             ) : null}
           </View>
         </Card>
@@ -266,7 +338,7 @@ export function AssetDetailScreen({ route, navigation }: Props) {
               </View>
               <View style={{ flex: 1 }}>
                 <PrimaryButton
-                  onPress={() => setCreateOpen(true)}
+                  onPress={openCreateTicket}
                   disabled={!hasClient}
                   accessibilityLabel="asset-detail-create-ticket"
                 >
@@ -371,15 +443,21 @@ export function AssetDetailScreen({ route, navigation }: Props) {
         <Card>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
             <SectionTitle theme={theme}>{t("notes.title", "Notes")}</SectionTitle>
-            <Text
-              onPress={() => { setNoteDraft(""); setNoteOpen(true); }}
-              testID="asset-detail-add-note"
-              style={{ ...theme.typography.body, color: theme.colors.primary }}
-            >
-              {t("notes.add", "Add note")}
-            </Text>
+            {notesLoaded ? (
+              <Text
+                onPress={() => { setNoteDraft(""); setNoteOpen(true); }}
+                testID="asset-detail-add-note"
+                style={{ ...theme.typography.body, color: theme.colors.primary }}
+              >
+                {t("notes.add", "Add note")}
+              </Text>
+            ) : null}
           </View>
-          {notesText ? (
+          {!notesLoaded ? (
+            <EmptyLine theme={theme}>
+              {t("notes.loadFailed", "Couldn't load notes, so notes can't be added right now.")}
+            </EmptyLine>
+          ) : notesText ? (
             <Text testID="asset-detail-notes-body" style={{ ...theme.typography.body, color: theme.colors.text, marginTop: theme.spacing.xs }}>
               {notesText}
             </Text>
@@ -550,18 +628,9 @@ export function AssetDetailScreen({ route, navigation }: Props) {
         clientId={asset.client_id}
         onClose={() => setLinkOpen(false)}
         onLinked={() => void refetchTickets()}
-        onCreateInstead={hasClient ? () => { setLinkOpen(false); setCreateOpen(true); } : undefined}
+        onCreateInstead={hasClient ? () => { setLinkOpen(false); openCreateTicket(); } : undefined}
       />
 
-      <CreateTicketModal
-        visible={createOpen}
-        client={client}
-        apiKey={apiKey}
-        assetId={assetId}
-        clientId={asset.client_id}
-        onClose={() => setCreateOpen(false)}
-        onCreated={() => void refetchTickets()}
-      />
     </View>
   );
 }

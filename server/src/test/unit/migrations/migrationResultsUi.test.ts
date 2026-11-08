@@ -76,7 +76,7 @@ describe('migration results UI helpers', () => {
     const foreign: MigrationSkipProvenance = {
       allSamePackage: false,
       skippedCount: 1,
-      entries: [{ migrationJobId: 'j1', sourceFileName: 'prior.amp', skippedCount: 1, samePackage: false }],
+      entries: [{ migrationJobId: 'j1', sourceFileName: 'prior.amp', skippedCount: 1, samePackage: false, matchReason: null }],
     };
     expect(migrationSkipSentence(foreign, translate)).toContain('prior.amp');
     expect(migrationSkipSentence(foreign, translate)).not.toContain('same package');
@@ -84,7 +84,7 @@ describe('migration results UI helpers', () => {
     const unknown: MigrationSkipProvenance = {
       allSamePackage: false,
       skippedCount: 1,
-      entries: [{ migrationJobId: null, sourceFileName: null, skippedCount: 1, samePackage: false }],
+      entries: [{ migrationJobId: null, sourceFileName: null, skippedCount: 1, samePackage: false, matchReason: null }],
     };
     expect(migrationSkipSentence(unknown, translate)).toContain('existing entities');
   });
@@ -92,13 +92,20 @@ describe('migration results UI helpers', () => {
   it('labels a skipped record with where it was already migrated', () => {
     expect(migrationClaimLabel(null, translate)).toBeNull();
     expect(
-      migrationClaimLabel({ migrationJobId: 'j', sourceFileName: null, samePackage: true }, translate)
+      migrationClaimLabel({ migrationJobId: 'j', sourceFileName: null, samePackage: true, matchReason: null }, translate)
     ).toContain('this package');
     expect(
-      migrationClaimLabel({ migrationJobId: 'j', sourceFileName: 'prior.amp', samePackage: false }, translate)
+      migrationClaimLabel({ migrationJobId: 'j', sourceFileName: 'prior.amp', samePackage: false, matchReason: null }, translate)
     ).toContain('prior.amp');
     expect(
-      migrationClaimLabel({ migrationJobId: 'j', sourceFileName: null, samePackage: false }, translate)
+      migrationClaimLabel({ migrationJobId: 'j', sourceFileName: null, samePackage: false, matchReason: null }, translate)
     ).toContain('existing entity');
+    // A SKU match is recorded under the current job (samePackage) but must not read as a re-run.
+    const sku = migrationClaimLabel(
+      { migrationJobId: 'j', sourceFileName: null, samePackage: true, matchReason: 'sku_match' },
+      translate
+    );
+    expect(sku).toContain('by SKU');
+    expect(sku).not.toContain('this package');
   });
 });

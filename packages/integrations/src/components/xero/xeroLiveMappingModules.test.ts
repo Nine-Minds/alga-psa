@@ -186,6 +186,17 @@ describe('service module target-kind resolution for stored rows', () => {
   });
 });
 
+describe('exclusive target kinds (mirrors the partial idx_unique_external_mapping)', () => {
+  it('holds items exclusively and shares revenue accounts, for services and discounts', () => {
+    for (const module of createXeroLiveMappingModules()) {
+      const target = module.externalTarget;
+      if (!target) continue;
+      expect(target.isExclusiveKind('item')).toBe(true);
+      expect(target.isExclusiveKind('account')).toBe(false);
+    }
+  });
+});
+
 describe('service module createMany', () => {
   it('persists item:200 and account:200 in one batch as code 200 with distinct kinds', async () => {
     actionsMock.createExternalEntityMappings.mockImplementation(async (rows: any[]) =>

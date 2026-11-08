@@ -7,6 +7,10 @@
     "description": "Korzystanie z {{feature}} wymaga Pro. Wykonaj uaktualnienie, aby uzyskać dostęp do tej funkcji."
   },
   "settings": {
+    "unavailable": {
+      "title": "Ustawienia rozszerzeń są niedostępne",
+      "description": "Zarządzanie ustawieniami rozszerzeń jest dostępne w AlgaPSA Pro."
+    },
     "title": "Zarządzanie rozszerzeniami",
     "description": "Instalowanie, konfigurowanie i zarządzanie rozszerzeniami w celu rozszerzenia funkcjonalności AlgaPSA.",
     "tabs": {
@@ -98,7 +102,12 @@
       "description": "Zarządzaj rozszerzeniami"
     },
     "title": "Rozszerzenia",
-    "description": "Zarządzanie rozszerzeniami jest dostępne w Pro."
+    "description": "Zarządzanie rozszerzeniami jest dostępne w Pro.",
+    "unavailable": {
+      "metadataTitle": "Rozszerzenia (tylko EE)",
+      "title": "Rozszerzenia są niedostępne",
+      "description": "Dostępne w wersji Pro."
+    }
   },
   "detail": {
     "metadataTitle": "Rozszerzenia - Funkcja Pro",
@@ -121,7 +130,12 @@
       "description": "Wyświetl szczegóły rozszerzenia"
     },
     "title": "Szczegóły rozszerzenia",
-    "description": "Szczegóły rozszerzenia są dostępne w Pro."
+    "description": "Szczegóły rozszerzenia są dostępne w Pro.",
+    "unavailable": {
+      "metadataTitle": "Szczegóły rozszerzenia (tylko EE)",
+      "title": "Szczegóły rozszerzenia są niedostępne",
+      "description": "Ta strona jest dostępna w wersji Pro."
+    }
   },
   "settingsPage": {
     "metadata": {
@@ -129,7 +143,12 @@
       "description": "Skonfiguruj ustawienia rozszerzeń"
     },
     "title": "Ustawienia rozszerzeń",
-    "description": "Ustawienia rozszerzeń są dostępne w Pro."
+    "description": "Ustawienia rozszerzeń są dostępne w Pro.",
+    "unavailable": {
+      "metadataTitle": "Ustawienia rozszerzenia (tylko EE)",
+      "title": "Ustawienia rozszerzenia są niedostępne",
+      "description": "Ta strona jest dostępna w wersji Pro."
+    }
   },
   "details": {
     "label": "Szczegóły rozszerzenia",
@@ -235,6 +254,10 @@
     "cancel": "Anuluj"
   },
   "list": {
+    "unavailable": {
+      "title": "Rozszerzenia są niedostępne",
+      "description": "Zarządzanie rozszerzeniami jest dostępne w AlgaPSA Pro."
+    },
     "label": "Zarządzanie rozszerzeniami",
     "heading": "Rozszerzenia",
     "loading": "Ładowanie rozszerzeń...",
@@ -294,7 +317,20 @@
     "installCompleteError": "Rozszerzenie zostało sfinalizowane, ale instalacja nie została zakończona",
     "installUnexpected": "Nieoczekiwany błąd podczas instalacji",
     "finalizeRequireManifest": "Wklej manifest JSON przed finalizacją.",
-    "finalizeProvidedFailed": "Nie udało się sfinalizować z podanym manifestem"
+    "finalizeProvidedFailed": "Nie udało się sfinalizować z podanym manifestem",
+    "pro": {
+      "title": "Rozszerzenia (Pro)",
+      "description": "Instalowanie rozszerzeń i zarządzanie nimi są dostępne w AlgaPSA Pro.",
+      "featureTitle": "Funkcja Pro",
+      "help": "Instalator rozszerzeń jest dostępny tylko w AlgaPSA Pro.",
+      "actions": {
+        "learnMore": "Dowiedz się więcej o Pro"
+      }
+    },
+    "unavailable": {
+      "title": "Instalacja rozszerzeń jest niedostępna",
+      "description": "Instalacja rozszerzeń jest dostępna w AlgaPSA Pro."
+    }
   },
   "installSimple": {
     "title": "Zainstaluj rozszerzenie",
@@ -371,5 +407,19 @@
       "medium": "Uprawnienia do modyfikacji pozwalają rozszerzeniu aktualizować istniejące dane.",
       "high": "Uprawnienia zaawansowane pozwalają rozszerzeniu tworzyć, usuwać i wykonywać operacje."
     }
+  },
+  "iframe": {
+    "title": "Aplikacja rozszerzenia",
+    "starting": "Uruchamianie rozszerzenia",
+    "loadingUi": "Ładowanie interfejsu rozszerzenia…",
+    "connecting": "Łączenie z obszarem roboczym środowiska wykonawczego…",
+    "loadFailed": "Nie udało się załadować tego rozszerzenia.",
+    "configurationHint": "Sprawdź konfigurację rozszerzenia i spróbuj ponownie."
+  },
+  "unavailable": {
+    "metadataTitle": "Rozszerzenia (tylko EE)",
+    "title": "Rozszerzenie niedostępne",
+    "description": "System rozszerzeń jest dostępny w Pro i nie jest zawarty w tej wersji Community Edition.",
+    "requestedId": "Żądany identyfikator: {{id}}"
   }
 }

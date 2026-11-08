@@ -80,7 +80,9 @@ describe('ActivityGroupControl', () => {
     const chip = await screen.findByText('My group: Ungrouped');
     expect(chip).toBeTruthy();
     expect(mocks.isActivityOnMyList).toHaveBeenCalledWith('ticket', 't1');
-    expect(mocks.store.ensureLoaded).toHaveBeenCalled();
+    // ensureLoaded fires from a passive effect after the eligible commit; the chip can be in the
+    // DOM before React flushes that effect, so wait for it rather than asserting synchronously.
+    await waitFor(() => expect(mocks.store.ensureLoaded).toHaveBeenCalledTimes(1));
     expect(document.getElementById('ticket-info-my-group-chip')).toBeTruthy();
     expect(document.getElementById('ticket-info-my-group-select')).toBeTruthy();
     expect(document.getElementById('ticket-info-my-group-link')!.getAttribute('href'))

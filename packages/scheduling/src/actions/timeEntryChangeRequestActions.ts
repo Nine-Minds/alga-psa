@@ -1,5 +1,6 @@
 'use server'
 
+import { delegateToTimeSource } from '../lib/timeSource';
 import { Knex } from 'knex';
 import { formatISO } from 'date-fns';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
@@ -134,6 +135,9 @@ export const fetchTimeEntryChangeRequestsForTimeSheet = withAuth(async (
   { tenant },
   timeSheetId: string,
 ): Promise<ITimeEntryChangeRequest[] | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.entries.listChangeRequests(ctx, timeSheetId));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex: db } = await createTenantKnex();
 

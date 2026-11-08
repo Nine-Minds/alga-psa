@@ -10,7 +10,11 @@
  * This resolver backfills the event's organization before rule evaluation using
  * the approved precedence chain:
  *
- *   (a) explicit `body.group_id` when the payload carries one;
+ *   (a) explicit `body.group_id` (from the `level_group_id` automation
+ *       variable) when the payload carries one - the device's own group, which
+ *       may be an unmapped child, so it is canonicalized to the deepest mapped
+ *       ancestor with the sync engine's `resolveDeepestMappedGroup`; if no
+ *       mapped ancestor is found, resolution continues with (b)/(c);
  *   (b) the device mapping's `external_realm_id` in
  *       `tenant_external_entity_mappings` — already canonicalized to the
  *       deepest mapped Level group by the sync engine;
@@ -61,10 +65,14 @@ export async function resolveLevelIoWebhookOrganization(
   deps: LevelIoWebhookOrganizationDeps,
   args: ResolveLevelIoWebhookOrganizationArgs,
 ): Promise<string | null> {
-  // (a) Explicit group id wins when the payload carries one. This is also the
-  // path for any future automation that includes {{group_id}}.
+  // (a) Explicit group id wins when the payload carries one - but it is the
+  // device's own group, not necessarily a mapped one, so canonicalize it the
+  // same way the sync engine scopes devices.
   if (args.explicitGroupId) {
-    return String(args.explicitGroupId);
+    const canonical = await canonicalizeExplicitGroup(deps, args, String(args.explicitGroupId));
+    if (canonical) {
+      return canonical;
+    }
   }
 
   if (!args.deviceId) {
@@ -98,6 +106,41 @@ export async function resolveLevelIoWebhookOrganization(
   }
 }
 
+async function canonicalizeExplicitGroup(
+  deps: LevelIoWebhookOrganizationDeps,
+  args: ResolveLevelIoWebhookOrganizationArgs,
+  groupId: string,
+): Promise<string | null> {
+  try {
+    const mappedGroupIds = await readMappedGroupIds(deps.knex, args);
+    if (mappedGroupIds.size === 0) {
+      return null;
+    }
+    if (mappedGroupIds.has(groupId)) {
+      return groupId;
+    }
+    if (!deps.createClient) {
+      return null;
+    }
+    const client = await deps.createClient();
+    return resolveDeepestMappedGroup(groupId, buildGroupParentMap(await client.listGroups()), mappedGroupIds);
+  } catch {
+    return null;
+  }
+}
+
+async function readMappedGroupIds(
+  knex: Knex,
+  args: ResolveLevelIoWebhookOrganizationArgs,
+): Promise<Set<string>> {
+  const rows = await tenantDb(knex, args.tenant).table('rmm_organization_mappings')
+    .where({ integration_id: args.integrationId })
+    .whereNotNull('client_id')
+    .andWhere('auto_sync_assets', true)
+    .select<Array<{ external_organization_id: string }>>('external_organization_id');
+  return new Set(rows.map((row) => String(row.external_organization_id)));
+}
+
 async function readDeviceRealmId(
   knex: Knex,
   tenant: string,
@@ -119,20 +162,11 @@ async function resolveFromLevelHierarchy(
   client: LevelIoApiClient,
   args: ResolveLevelIoWebhookOrganizationArgs,
 ): Promise<string | null> {
-  const db = tenantDb(deps.knex, args.tenant);
-  const [device, groups, mappedRows] = await Promise.all([
+  const [device, groups, mappedGroupIds] = await Promise.all([
     client.getDevice(args.deviceId),
     client.listGroups(),
-    db.table('rmm_organization_mappings')
-      .where({ integration_id: args.integrationId })
-      .whereNotNull('client_id')
-      .andWhere('auto_sync_assets', true)
-      .select<Array<{ external_organization_id: string }>>('external_organization_id'),
+    readMappedGroupIds(deps.knex, args),
   ]);
-
-  const mappedGroupIds = new Set(
-    mappedRows.map((row) => String(row.external_organization_id)),
-  );
   if (mappedGroupIds.size === 0) {
     return null;
   }

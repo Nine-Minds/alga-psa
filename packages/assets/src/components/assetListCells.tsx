@@ -2,8 +2,9 @@
 
 import React from 'react';
 import { BentoChip, BENTO_TONE_TEXT, type BentoTone } from '@alga-psa/ui/components/bento';
-import type { Asset } from '@alga-psa/types';
+import type { Asset, AssetStatus } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { assetStatusLabel } from '../lib/assetStatus';
 import {
   AGENT_TONE,
   assetExtension,
@@ -105,8 +106,22 @@ export function AssetPatchingCell({ asset, now }: { asset: Asset; now: number })
   );
 }
 
-/** Warranty state over record status. */
-export function AssetCoverageCell({ asset, now }: { asset: Asset; now: number }) {
+/**
+ * Warranty state over record status.
+ *
+ * `statuses` is the tenant's asset_statuses registry (F021): without it a
+ * custom status printed its raw slug here ("in_repair"), so the status reads
+ * through the same resolver as the Status column and the Identity tile.
+ */
+export function AssetCoverageCell({
+  asset,
+  now,
+  statuses = null,
+}: {
+  asset: Asset;
+  now: number;
+  statuses?: AssetStatus[] | null;
+}) {
   const { t } = useTranslation('msp/assets');
   return (
     <Cell
@@ -115,7 +130,7 @@ export function AssetCoverageCell({ asset, now }: { asset: Asset; now: number })
         warrantyPhrase(warrantyDaysRemaining(asset, now), t)
         ?? t('assetCells.coverage.noWarrantyDate', { defaultValue: 'no warranty date' })
       }
-      secondary={t(`assetCells.status.${asset.status}`, { defaultValue: asset.status })}
+      secondary={assetStatusLabel(t, asset.status, statuses)}
     />
   );
 }

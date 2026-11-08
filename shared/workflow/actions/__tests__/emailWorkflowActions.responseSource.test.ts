@@ -32,9 +32,8 @@ const trxMock = vi.fn((table: string) => {
   }
 
   return {
-    where: vi.fn().mockReturnValue({
-      update: updateTicketStateMock,
-    }),
+    select: () => ({ where: () => ({ first: async () => ({ response_state: null }) }) }),
+    where: vi.fn().mockReturnValue({ update: updateTicketStateMock }),
   };
 });
 
@@ -45,6 +44,7 @@ const createCommentMock = vi.fn();
 const publishWorkflowEventMock = vi.fn();
 
 vi.mock('@alga-psa/db', () => ({
+  registerAfterCommit: vi.fn(),
   withAdminTransaction: (callback: (trx: any) => Promise<any>) =>
     withAdminTransactionMock(callback),
   tenantDb: (trx: any) => ({
@@ -288,5 +288,29 @@ describe('createCommentFromEmail response source metadata', () => {
 
     const createCommentInput = createCommentMock.mock.calls[0][0];
     expect(createCommentInput.author_id).toBe('00000000-0000-0000-0000-000000000123');
+  });
+
+  it('D3: response_state follows the stored visibility — a comment stored internal never flips it', async () => {
+    createCommentMock.mockResolvedValue({ comment_id: 'comment-1', is_internal: true });
+    const { createCommentFromEmail } = await import('../emailWorkflowActions');
+
+    await createCommentFromEmail(
+      { ticket_id: 'ticket-1', content: 'reply', author_type: 'contact' },
+      'tenant-1'
+    );
+
+    expect(updateTicketStateMock).not.toHaveBeenCalled();
+  });
+
+  it('D3: a contact comment stored public sets awaiting_internal ("waiting on us")', async () => {
+    createCommentMock.mockResolvedValue({ comment_id: 'comment-1', is_internal: false });
+    const { createCommentFromEmail } = await import('../emailWorkflowActions');
+
+    await createCommentFromEmail(
+      { ticket_id: 'ticket-1', content: 'reply', author_type: 'contact' },
+      'tenant-1'
+    );
+
+    expect(updateTicketStateMock).toHaveBeenCalledWith({ response_state: 'awaiting_internal' });
   });
 });

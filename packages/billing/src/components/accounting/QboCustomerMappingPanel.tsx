@@ -4,6 +4,7 @@ import React from 'react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -20,6 +21,8 @@ import {
 } from '../../actions/qboOnboardingActions';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- billing-owned onboarding panel reads the QBO customer catalog directly (same bridge as the accounting export adapter)
 import { getQboCustomers } from '@alga-psa/integrations/actions/qboActions';
+// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- unlink goes through the same audited mapping action the settings mapping tables use
+import { deleteExternalEntityMapping } from '@alga-psa/integrations/actions/externalMappingActions';
 
 type QboCustomer = { id: string; name: string; active: boolean };
 type Candidate = Awaited<ReturnType<typeof getCustomerMatchCandidates>>['rows'][number];
@@ -33,10 +36,12 @@ interface RowActionProps {
 }
 
 function RowAction({ row, qboCustomers, onLinked }: RowActionProps) {
+  const { t } = useTranslation('msp/integrations');
   const [working, setWorking] = React.useState(false);
   const [feedback, setFeedback] = React.useState<string | null>(null);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [mode, setMode] = React.useState<'default' | 'pick'>('default');
+  const [confirmingUnlink, setConfirmingUnlink] = React.useState(false);
 
   const filtered = React.useMemo(
     () =>
@@ -68,6 +73,25 @@ function RowAction({ row, qboCustomers, onLinked }: RowActionProps) {
       }
     } catch (err) {
       setFeedback(err instanceof Error ? err.message : 'Failed to link.');
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  const doUnlink = async () => {
+    if (!row.mappingId) return;
+    setWorking(true);
+    setFeedback(null);
+    try {
+      const result = await deleteExternalEntityMapping(row.mappingId);
+      if (isReturnedActionError(result)) {
+        setFeedback(getErrorMessage(result));
+        return;
+      }
+      setConfirmingUnlink(false);
+      onLinked();
+    } catch (err) {
+      setFeedback(err instanceof Error ? err.message : 'Failed to unlink.');
     } finally {
       setWorking(false);
     }
@@ -117,6 +141,20 @@ function RowAction({ row, qboCustomers, onLinked }: RowActionProps) {
         >
           Re-link
         </Button>
+        {/* A client linked to the wrong customer must be able to go back to
+            being unmapped, not only be pointed somewhere else. */}
+        {row.mappingId && (
+          <Button
+            id={`qbo-customer-unlink-${row.billingProfileId ?? row.clientId}`}
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={working}
+            onClick={() => setConfirmingUnlink(true)}
+          >
+            {t('integrations.accounting.customerMapping.unlink', { defaultValue: 'Unlink' })}
+          </Button>
+        )}
         {mode === 'pick' && (
           <PickerInline
             filtered={filtered}
@@ -126,6 +164,29 @@ function RowAction({ row, qboCustomers, onLinked }: RowActionProps) {
             working={working}
           />
         )}
+        <ConfirmationDialog
+          id={`qbo-customer-unlink-dialog-${row.billingProfileId ?? row.clientId}`}
+          isOpen={confirmingUnlink}
+          onClose={() => setConfirmingUnlink(false)}
+          onConfirm={doUnlink}
+          isConfirming={working}
+          title={t('integrations.accounting.customerMapping.unlinkConfirm.title', {
+            defaultValue: 'Unlink {{client}} from QuickBooks?',
+            client: row.clientName,
+          })}
+          message={t('integrations.accounting.customerMapping.unlinkConfirm.body', {
+            defaultValue:
+              '{{client}} stops exporting to QuickBooks customer {{customer}}. Nothing changes in QuickBooks, and you can link it again from this list at any time.',
+            client: row.clientName,
+            customer: row.mappedExternalName ?? row.mappedExternalId ?? '',
+          })}
+          confirmLabel={t('integrations.accounting.customerMapping.unlinkConfirm.confirm', {
+            defaultValue: 'Unlink',
+          })}
+          cancelLabel={t('integrations.accounting.customerMapping.unlinkConfirm.cancel', {
+            defaultValue: 'Keep link',
+          })}
+        />
       </div>
     );
   }

@@ -159,4 +159,42 @@ describe('contractRecurringShape', () => {
       'A: location would change from loc-1 to none',
     );
   });
+
+  describe('hourly/usage timing is arrears-only on the wizard side', () => {
+    const advanceWizard = {
+      ...base,
+      billing_timing: 'advance',
+      // billing_timing undefined = the line inherits the contract default
+      fixed_lines: [wizardLine('A', { billing_timing: undefined, base_rate: 1000, services: [svc('s1')] })],
+      hourly_services: [{ service_id: 'h1', hourly_rate: 12000 }],
+      usage_services: [{ service_id: 'u1', unit_rate: 500, unit_of_measure: 'GB' }],
+    };
+    const storedHourly = (timing: string): StoredRecurringLine => ({
+      contract_line_id: 'LH',
+      contract_line_type: 'Hourly',
+      billing_frequency: 'monthly',
+      billing_timing: timing,
+      cadence_owner: 'client',
+      members: [{ ...member('h1'), resolved_rate: 12000 }],
+    });
+    const storedUsage: StoredRecurringLine = {
+      contract_line_id: 'LU',
+      contract_line_type: 'Usage',
+      billing_frequency: 'monthly',
+      billing_timing: 'arrears',
+      cadence_owner: 'client',
+      members: [{ ...member('u1'), resolved_rate: 500, unit_of_measure: 'GB' }],
+    };
+    const storedAdvanceFixed = storedFixed('A', { billing_timing: 'advance', custom_rate: 1000, members: [member('s1')] });
+
+    it('an advance default with hourly and usage stored as arrears has no difference', () => {
+      const stored = recurringShapeFromStoredLines([storedAdvanceFixed, storedHourly('arrears'), storedUsage], ctx);
+      expect(diffRecurringShapes(stored, recurringShapeFromWizard(advanceWizard))).toEqual([]);
+    });
+
+    it('a legacy hourly row stored as advance still differs', () => {
+      const stored = recurringShapeFromStoredLines([storedAdvanceFixed, storedHourly('advance'), storedUsage], ctx);
+      expect(diffRecurringShapes(stored, recurringShapeFromWizard(advanceWizard)).length).toBeGreaterThan(0);
+    });
+  });
 });

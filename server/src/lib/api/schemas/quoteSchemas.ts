@@ -8,6 +8,7 @@ import {
   uuidSchema,
   booleanTransform,
 } from './common';
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
 // ============================================================================
 // Enums
@@ -54,7 +55,9 @@ export const createQuoteItemSchema = z.object({
   discount_percentage: z.number().min(0).max(100).optional().nullable(),
   applies_to_item_id: uuidSchema.optional().nullable(),
   applies_to_service_id: uuidSchema.optional().nullable(),
-  is_taxable: z.boolean().default(true),
+  // No default: "not sent" must stay distinguishable from an explicit `true`
+  // so the model can derive the treatment from the service's tax configuration.
+  is_taxable: z.boolean().optional(),
   tax_region: z.string().max(100).optional().nullable(),
   tax_rate: z.number().min(0).optional().nullable(),
   service_name: z.string().max(255).optional().nullable(),
@@ -67,7 +70,7 @@ export const createQuoteItemSchema = z.object({
   // reaches the model.
 });
 
-export const updateQuoteItemSchema = createQuoteItemSchema.partial();
+export const updateQuoteItemSchema = partialWithoutDefaults(createQuoteItemSchema);
 
 // ============================================================================
 // Quote Schemas
@@ -81,6 +84,8 @@ export const createQuoteApiSchema = z.object({
   quote_date: quoteDateSchema.optional().nullable(),
   valid_until: quoteDateSchema.optional().nullable(),
   po_number: z.string().trim().max(255).optional().nullable(),
+  recurring_section_title: z.string().trim().max(255).optional().nullable().transform((value) => value || null),
+  onetime_section_title: z.string().trim().max(255).optional().nullable().transform((value) => value || null),
   opportunity_id: uuidSchema.optional().nullable(),
   internal_notes: z.string().optional().nullable(),
   client_notes: z.string().optional().nullable(),
@@ -97,7 +102,7 @@ export const createQuoteApiSchema = z.object({
   items: z.array(createQuoteItemSchema).optional(),
 });
 
-export const updateQuoteApiSchema = createQuoteApiSchema.partial().extend({
+export const updateQuoteApiSchema = partialWithoutDefaults(createQuoteApiSchema).extend({
   status: quoteStatusSchema.optional().nullable(),
 });
 

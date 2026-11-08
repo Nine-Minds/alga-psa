@@ -28,6 +28,7 @@ import {
 const activities = proxyActivities<{
   loadWorkflowRuntimeV2PinnedDefinition(input: {
     runId: string;
+    tenantId?: string | null;
     workflowId: string;
     workflowVersion: number;
   }): Promise<{
@@ -47,11 +48,13 @@ const activities = proxyActivities<{
   }): Promise<{ scopes: WorkflowRuntimeV2ScopeState }>;
   projectWorkflowRuntimeV2StepStart(input: {
     runId: string;
+    tenantId?: string | null;
     stepPath: string;
     definitionStepId: string;
   }): Promise<{ stepId: string | null; quotaPaused?: boolean }>;
   projectWorkflowRuntimeV2StepCompletion(input: {
     runId: string;
+    tenantId?: string | null;
     stepId: string;
     stepPath: string;
     status: 'SUCCEEDED' | 'FAILED' | 'CANCELED';
@@ -83,6 +86,7 @@ const activities = proxyActivities<{
   }>;
   projectWorkflowRuntimeV2TimeWaitStart(input: {
     runId: string;
+    tenantId?: string | null;
     stepPath: string;
     dueAt: string;
     payload: {
@@ -94,10 +98,12 @@ const activities = proxyActivities<{
   projectWorkflowRuntimeV2TimeWaitResolved(input: {
     waitId: string;
     runId: string;
+    tenantId?: string | null;
     status: 'RESOLVED' | 'CANCELED';
   }): Promise<void>;
   projectWorkflowRuntimeV2EventWaitStart(input: {
     runId: string;
+    tenantId?: string | null;
     stepPath: string;
     eventName: string;
     correlationKey: string | null;
@@ -112,6 +118,7 @@ const activities = proxyActivities<{
   projectWorkflowRuntimeV2EventWaitResolved(input: {
     waitId: string;
     runId: string;
+    tenantId?: string | null;
     status: 'RESOLVED' | 'CANCELED';
     matchedEventId?: string | null;
   }): Promise<void>;
@@ -131,6 +138,7 @@ const activities = proxyActivities<{
   resolveWorkflowRuntimeV2HumanTaskWait(input: {
     waitId: string;
     runId: string;
+    tenantId?: string | null;
     status: 'RESOLVED' | 'CANCELED';
     payload: Record<string, unknown>;
   }): Promise<void>;
@@ -140,7 +148,11 @@ const activities = proxyActivities<{
     eventName: string;
     payload: Record<string, unknown>;
   }): Promise<void>;
-  completeWorkflowRuntimeV2Run(input: { runId: string; status: 'SUCCEEDED' | 'FAILED' | 'CANCELED' }): Promise<void>;
+  completeWorkflowRuntimeV2Run(input: {
+    runId: string;
+    tenantId?: string | null;
+    status: 'SUCCEEDED' | 'FAILED' | 'CANCELED';
+  }): Promise<void>;
 }>({
   startToCloseTimeout: '10m',
   retry: {
@@ -266,6 +278,7 @@ export async function workflowRuntimeV2RunWorkflow(
   }));
 
   const pinned = await activities.loadWorkflowRuntimeV2PinnedDefinition({
+    tenantId: input.tenantId,
     runId: input.runId,
     workflowId: input.workflowId,
     workflowVersion: input.workflowVersion,
@@ -316,10 +329,10 @@ export async function workflowRuntimeV2RunWorkflow(
           `Interpreter frames remained but no current step could be resolved for run ${input.runId}`,
           { frames: state.frames }
         );
-        await activities.completeWorkflowRuntimeV2Run({ runId: input.runId, status: 'FAILED' });
+        await activities.completeWorkflowRuntimeV2Run({ runId: input.runId, tenantId: input.tenantId, status: 'FAILED' });
         throw toWorkflowApplicationFailure(corruptionError);
       }
-      await activities.completeWorkflowRuntimeV2Run({ runId: input.runId, status: 'SUCCEEDED' });
+      await activities.completeWorkflowRuntimeV2Run({ runId: input.runId, tenantId: input.tenantId, status: 'SUCCEEDED' });
       return {
         scopes: state.scopes,
       };
@@ -333,6 +346,7 @@ export async function workflowRuntimeV2RunWorkflow(
     queryFrameDepth = state.frames.length;
 
     const stepProjection = await activities.projectWorkflowRuntimeV2StepStart({
+      tenantId: input.tenantId,
       runId: input.runId,
       stepPath: current.path,
       definitionStepId: current.step.id,
@@ -358,13 +372,14 @@ export async function workflowRuntimeV2RunWorkflow(
     try {
       if (current.step.type === 'control.return') {
         await activities.projectWorkflowRuntimeV2StepCompletion({
+          tenantId: input.tenantId,
           snapshot: buildWorkflowDiagnosticSnapshot(state.scopes),
           runId: input.runId,
           stepId: stepProjection.stepId,
           stepPath: current.path,
           status: 'SUCCEEDED',
         });
-        await activities.completeWorkflowRuntimeV2Run({ runId: input.runId, status: 'SUCCEEDED' });
+        await activities.completeWorkflowRuntimeV2Run({ runId: input.runId, tenantId: input.tenantId, status: 'SUCCEEDED' });
         return {
           scopes: state.scopes,
         };
@@ -379,6 +394,7 @@ export async function workflowRuntimeV2RunWorkflow(
           totalSteps: branchSteps.length,
         });
         await activities.projectWorkflowRuntimeV2StepCompletion({
+          tenantId: input.tenantId,
           snapshot: buildWorkflowDiagnosticSnapshot(state.scopes),
           runId: input.runId,
           stepId: stepProjection.stepId,
@@ -398,6 +414,7 @@ export async function workflowRuntimeV2RunWorkflow(
           totalSteps: tryCatchStep.try.length,
         });
         await activities.projectWorkflowRuntimeV2StepCompletion({
+          tenantId: input.tenantId,
           snapshot: buildWorkflowDiagnosticSnapshot(state.scopes),
           runId: input.runId,
           stepId: stepProjection.stepId,
@@ -449,6 +466,7 @@ export async function workflowRuntimeV2RunWorkflow(
           state = advanceWorkflowRuntimeV2PastStep(state, pinned.definition);
         }
         await activities.projectWorkflowRuntimeV2StepCompletion({
+          tenantId: input.tenantId,
           snapshot: buildWorkflowDiagnosticSnapshot(state.scopes),
           runId: input.runId,
           stepId: stepProjection.stepId,
@@ -527,6 +545,7 @@ export async function workflowRuntimeV2RunWorkflow(
 
         state = advanceWorkflowRuntimeV2PastStep(state, pinned.definition);
         await activities.projectWorkflowRuntimeV2StepCompletion({
+          tenantId: input.tenantId,
           snapshot: buildWorkflowDiagnosticSnapshot(state.scopes),
           runId: input.runId,
           stepId: stepProjection.stepId,
@@ -546,6 +565,7 @@ export async function workflowRuntimeV2RunWorkflow(
         const config = parseTimeWaitConfig(timeWaitStep.config, current.path);
         const dueAt = await resolveTimeWaitDueAt(config, state.scopes, current.path);
         const waitProjection = await activities.projectWorkflowRuntimeV2TimeWaitStart({
+          tenantId: input.tenantId,
           runId: input.runId,
           stepPath: current.path,
           dueAt,
@@ -575,6 +595,7 @@ export async function workflowRuntimeV2RunWorkflow(
         }
 
         await activities.projectWorkflowRuntimeV2TimeWaitResolved({
+          tenantId: input.tenantId,
           waitId: waitProjection.waitId,
           runId: input.runId,
           status: 'RESOLVED',
@@ -592,6 +613,7 @@ export async function workflowRuntimeV2RunWorkflow(
         }
         state = advanceWorkflowRuntimeV2PastStep(state, pinned.definition);
         await activities.projectWorkflowRuntimeV2StepCompletion({
+          tenantId: input.tenantId,
           snapshot: buildWorkflowDiagnosticSnapshot(state.scopes),
           runId: input.runId,
           stepId: stepProjection.stepId,
@@ -612,6 +634,7 @@ export async function workflowRuntimeV2RunWorkflow(
         const correlationKey = await resolveEventWaitCorrelationKey(config, state.scopes);
         const timeoutAt = resolveEventWaitTimeoutAt(config);
         const waitProjection = await activities.projectWorkflowRuntimeV2EventWaitStart({
+          tenantId: input.tenantId,
           runId: input.runId,
           stepPath: current.path,
           eventName: config.eventName,
@@ -650,6 +673,7 @@ export async function workflowRuntimeV2RunWorkflow(
 
         if (!matchedSignal) {
           await activities.projectWorkflowRuntimeV2EventWaitResolved({
+            tenantId: input.tenantId,
             waitId: waitProjection.waitId,
             runId: input.runId,
             status: 'RESOLVED',
@@ -661,6 +685,7 @@ export async function workflowRuntimeV2RunWorkflow(
         }
 
         await activities.projectWorkflowRuntimeV2EventWaitResolved({
+          tenantId: input.tenantId,
           waitId: waitProjection.waitId,
           runId: input.runId,
           status: 'RESOLVED',
@@ -676,6 +701,7 @@ export async function workflowRuntimeV2RunWorkflow(
         }
         state = advanceWorkflowRuntimeV2PastStep(state, pinned.definition);
         await activities.projectWorkflowRuntimeV2StepCompletion({
+          tenantId: input.tenantId,
           snapshot: buildWorkflowDiagnosticSnapshot(state.scopes),
           runId: input.runId,
           stepId: stepProjection.stepId,
@@ -737,6 +763,7 @@ export async function workflowRuntimeV2RunWorkflow(
           payload: responsePayload,
         });
         await activities.resolveWorkflowRuntimeV2HumanTaskWait({
+          tenantId: input.tenantId,
           waitId: createdTask.waitId,
           runId: input.runId,
           status: 'RESOLVED',
@@ -756,6 +783,7 @@ export async function workflowRuntimeV2RunWorkflow(
         }
         state = advanceWorkflowRuntimeV2PastStep(state, pinned.definition);
         await activities.projectWorkflowRuntimeV2StepCompletion({
+          tenantId: input.tenantId,
           snapshot: buildWorkflowDiagnosticSnapshot(state.scopes),
           runId: input.runId,
           stepId: stepProjection.stepId,
@@ -811,6 +839,7 @@ export async function workflowRuntimeV2RunWorkflow(
                 },
               };
               await activities.projectWorkflowRuntimeV2StepCompletion({
+                tenantId: input.tenantId,
                 snapshot: buildWorkflowDiagnosticSnapshot(state.scopes),
                 runId: input.runId,
                 stepId: stepProjection.stepId,
@@ -834,6 +863,7 @@ export async function workflowRuntimeV2RunWorkflow(
         }
         state = advanceWorkflowRuntimeV2PastStep(state, pinned.definition);
         await activities.projectWorkflowRuntimeV2StepCompletion({
+          tenantId: input.tenantId,
           snapshot: buildWorkflowDiagnosticSnapshot(state.scopes),
           runId: input.runId,
           stepId: stepProjection.stepId,
@@ -863,6 +893,7 @@ export async function workflowRuntimeV2RunWorkflow(
       };
       state = advanceWorkflowRuntimeV2PastStep(state, pinned.definition);
       await activities.projectWorkflowRuntimeV2StepCompletion({
+        tenantId: input.tenantId,
         snapshot: buildWorkflowDiagnosticSnapshot(state.scopes),
         runId: input.runId,
         stepId: stepProjection.stepId,
@@ -878,12 +909,14 @@ export async function workflowRuntimeV2RunWorkflow(
       if (activeWaitProjection) {
         if (activeWaitProjection.type === 'time.wait') {
           await activities.projectWorkflowRuntimeV2TimeWaitResolved({
+            tenantId: input.tenantId,
             waitId: activeWaitProjection.waitId,
             runId: input.runId,
             status: 'CANCELED',
           });
         } else if (activeWaitProjection.type === 'event.wait') {
           await activities.projectWorkflowRuntimeV2EventWaitResolved({
+            tenantId: input.tenantId,
             waitId: activeWaitProjection.waitId,
             runId: input.runId,
             status: 'CANCELED',
@@ -891,6 +924,7 @@ export async function workflowRuntimeV2RunWorkflow(
           });
         } else {
           await activities.resolveWorkflowRuntimeV2HumanTaskWait({
+            tenantId: input.tenantId,
             waitId: activeWaitProjection.waitId,
             runId: input.runId,
             status: 'CANCELED',
@@ -901,6 +935,7 @@ export async function workflowRuntimeV2RunWorkflow(
       }
       if (isCancellationRuntimeError(runtimeError)) {
         await activities.projectWorkflowRuntimeV2StepCompletion({
+          tenantId: input.tenantId,
           snapshot: buildWorkflowDiagnosticSnapshot(state.scopes),
           runId: input.runId,
           stepId: stepProjection.stepId,
@@ -908,12 +943,13 @@ export async function workflowRuntimeV2RunWorkflow(
           status: 'CANCELED',
           errorMessage: runtimeError.message,
         });
-        await activities.completeWorkflowRuntimeV2Run({ runId: input.runId, status: 'CANCELED' });
+        await activities.completeWorkflowRuntimeV2Run({ runId: input.runId, tenantId: input.tenantId, status: 'CANCELED' });
         throw error;
       }
 
       if (isInterpreterCorruptionRuntimeError(runtimeError)) {
         await activities.projectWorkflowRuntimeV2StepCompletion({
+          tenantId: input.tenantId,
           snapshot: buildWorkflowDiagnosticSnapshot(state.scopes),
           runId: input.runId,
           stepId: stepProjection.stepId,
@@ -921,11 +957,12 @@ export async function workflowRuntimeV2RunWorkflow(
           status: 'FAILED',
           errorMessage: runtimeError.message,
         });
-        await activities.completeWorkflowRuntimeV2Run({ runId: input.runId, status: 'FAILED' });
+        await activities.completeWorkflowRuntimeV2Run({ runId: input.runId, tenantId: input.tenantId, status: 'FAILED' });
         throw toWorkflowApplicationFailure(runtimeError);
       }
 
       await activities.projectWorkflowRuntimeV2StepCompletion({
+        tenantId: input.tenantId,
         snapshot: buildWorkflowDiagnosticSnapshot(state.scopes),
         runId: input.runId,
         stepId: stepProjection.stepId,
@@ -962,7 +999,7 @@ export async function workflowRuntimeV2RunWorkflow(
         continue;
       }
 
-      await activities.completeWorkflowRuntimeV2Run({ runId: input.runId, status: 'FAILED' });
+      await activities.completeWorkflowRuntimeV2Run({ runId: input.runId, tenantId: input.tenantId, status: 'FAILED' });
       throw toWorkflowApplicationFailure(runtimeError);
     }
 

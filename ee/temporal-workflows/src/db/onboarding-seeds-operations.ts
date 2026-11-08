@@ -1,5 +1,5 @@
 import { Context } from '@temporalio/activity';
-import { withAdminTransactionRetryReadOnly } from '@alga-psa/db/admin.js';
+import { runTenantBootstrapTransaction } from './tenant-bootstrap-context.js';
 import type { Knex } from 'knex';
 import * as path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
@@ -29,7 +29,7 @@ export interface SeedRunLog {
 export async function runOnboardingSeeds(
   tenantId: string,
   productCode?: ProductCode | string | null,
-  options?: { include?: (fileName: string) => boolean; log?: SeedRunLog },
+  options?: { include?: (fileName: string) => boolean; log?: SeedRunLog; transaction?: Knex.Transaction },
 ): Promise<{ success: boolean; seedsApplied: string[] }> {
   const log = options?.log ?? logger();
   const resolvedProductCode = normalizeProductCode(productCode);
@@ -40,7 +40,7 @@ export async function runOnboardingSeeds(
     // withAdminTransactionRetryReadOnly refreshes the admin pool and retries once
     // if Citus surfaces a stale "writing to worker nodes" / read-only error.
     // Seeds are idempotent, so a retry replays them safely.
-    await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction) => {
+    await runTenantBootstrapTransaction(options?.transaction, async (trx: Knex.Transaction) => {
       // Reset accumulator so a retry doesn't double-count seeds from the
       // failed first attempt (the transaction rollback discards their effects).
       seedsApplied.length = 0;

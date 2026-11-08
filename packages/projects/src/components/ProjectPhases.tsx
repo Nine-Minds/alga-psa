@@ -9,6 +9,7 @@ import { getServices } from '../actions/serviceCatalogActions';
 import type { PhaseBillingBadge, TimeEntryServiceChoice } from '@alga-psa/core';
 import styles from './ProjectDetail.module.css';
 import { useTranslation } from 'react-i18next';
+import { useProjectDataSource } from '../context/ProjectDataSourceContext';
 
 interface ProjectPhasesProps {
   viewMode: 'kanban' | 'list' | 'billing';
@@ -52,6 +53,8 @@ interface ProjectPhasesProps {
   phaseBillingBadges?: Record<string, PhaseBillingBadge>;
   /** Per-phase "all tasks closed" flags for the completion nudge (F138). */
   phaseAllTasksClosed?: Record<string, boolean>;
+  /** Per-phase count of phase-scoped status columns; 0/absent = inherits project defaults. */
+  phaseCustomStatusCounts?: Record<string, number>;
   /** Whether the user can mark phases complete / reopen them (F137). */
   canCompletePhase?: boolean;
   onMarkPhaseComplete?: (phase: IProjectPhase) => void;
@@ -95,15 +98,20 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
   onImport,
   phaseBillingBadges,
   phaseAllTasksClosed,
+  phaseCustomStatusCounts,
   canCompletePhase,
   onMarkPhaseComplete,
   onReopenPhase,
 }) => {
   const { t } = useTranslation(['features/projects', 'common']);
+  const projectSource = useProjectDataSource();
+  const sharedMode = projectSource.kind !== 'native';
+  const screen = projectSource.screen;
+  const createHidden = sharedMode || screen.hideCreate || screen.readOnly;
   // One catalog load for the whole list — the picker in the phase editor and the
   // service name on phases that already have a default both read from it.
   const [services, setServices] = useState<TimeEntryServiceChoice[]>([]);
-  const needsServices = Boolean(editingPhaseId) || phases.some((phase) => Boolean(phase.service_id));
+  const needsServices = !sharedMode && (Boolean(editingPhaseId) || phases.some((phase) => Boolean(phase.service_id)));
   useEffect(() => {
     if (!needsServices || services.length > 0) return;
     let cancelled = false;
@@ -192,15 +200,15 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
       <div className={styles.phasesPanelHeader}>
         <h2 className="text-xl font-bold mb-2">{t('projectPhases.title', 'Project Phases')}</h2>
         <div className="flex gap-2 flex-wrap">
-          <Button
+          {!createHidden && <Button
             id="add-task-button"
             onClick={onAddTask}
             size="sm"
             disabled={!selectedPhase || isAddingTask}
           >
             {isAddingTask ? t('projectPhases.adding', 'Adding...') : t('projectPhases.addTask', '+ Add Task')}
-          </Button>
-          {viewMode !== 'billing' && (
+          </Button>}
+          {viewMode !== 'billing' && !createHidden && (
             <Button
               id="add-phase-button"
               onClick={onAddPhase}
@@ -209,7 +217,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
               {t('projectPhases.addPhase', '+ Add Phase')}
             </Button>
           )}
-          {viewMode !== 'billing' && onImport && (
+          {viewMode !== 'billing' && !createHidden && onImport && (
             <Button
               id="import-phases-tasks-button"
               onClick={onImport}
@@ -303,6 +311,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
               onStatusesChanged={onStatusesChanged}
               billingBadge={phaseBillingBadges?.[phase.phase_id]}
               allTasksClosed={phaseAllTasksClosed?.[phase.phase_id]}
+              customStatusCount={phaseCustomStatusCounts ? phaseCustomStatusCounts[phase.phase_id] ?? 0 : undefined}
               canCompletePhase={canCompletePhase}
               onMarkComplete={onMarkPhaseComplete}
               onReopen={onReopenPhase}

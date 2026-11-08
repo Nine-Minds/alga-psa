@@ -95,11 +95,16 @@ describe('DocumentUpload outcome feedback', () => {
 
     selectFiles(input, [makeFile('report.eml')]);
 
-    await waitFor(() => expect(screen.getByText('report.eml')).toBeInTheDocument());
-    expect(screen.getByText('File type not allowed')).toBeInTheDocument();
+    // The filename renders while the row is still "Uploading...", and the
+    // summary toast plus guard release follow the error row asynchronously, so
+    // wait for the batch to settle (controls re-enabled) before asserting.
+    await waitFor(() => expect(screen.getByText('File type not allowed')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Browse Files/i })).not.toBeDisabled(),
+    );
+    expect(screen.getByText('report.eml')).toBeInTheDocument();
     expect(screen.getByText('Failed')).toBeInTheDocument();
     expect(toastError).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole('button', { name: /Browse Files/i })).not.toBeDisabled();
   });
 
   it('keeps a permission error readable after processing', async () => {

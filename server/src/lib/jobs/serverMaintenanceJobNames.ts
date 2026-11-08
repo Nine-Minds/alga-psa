@@ -9,11 +9,14 @@ export const SERVER_MAINTENANCE_JOBS = {
   projectDateReadiness: 'project-date-readiness',
   accountingSyncCycle: 'accounting-sync-cycle',
   huduAutoSync: 'hudu-auto-sync',
+  recoverFileUploads: 'recover-file-uploads',
   recoverCommentPublications: 'recover-comment-publications',
   createNextTimePeriods: 'create-next-time-periods',
   createClientContractLineCycles: 'create-client-contract-line-cycles',
   rmmPollingReconcile: 'rmm-polling-reconcile',
   generateRecurringTickets: 'generate-recurring-tickets',
+  // Registered by registerCoManagedUploadCleanup (gated on the `co-managed` capability); inert when it is off.
+  coManagedUploadCleanup: 'co-managed-upload-cleanup',
 } as const;
 
 // CE-only fan-out definitions (registerCeMaintenanceJobs.ts). Kept apart from

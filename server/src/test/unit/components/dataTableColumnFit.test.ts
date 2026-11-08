@@ -162,3 +162,110 @@ describe('getColumnSizeConfig', () => {
     expect(sizeOf(columns[0], columns, 1900)).toBeLessThanOrEqual(180);
   });
 });
+
+describe('computeColumnFit shrinkable columns (minWidth)', () => {
+  const shrinkCol = (dataIndex: string, width: string, minWidth?: string): ColumnDefinition<any> => ({
+    title: dataIndex,
+    dataIndex,
+    width,
+    minWidth,
+  });
+  const total = (columns: ColumnDefinition<any>[], result: ReturnType<typeof fit>) =>
+    columns
+      .filter(c => result.visibleColumnIds.includes(c.dataIndex as string))
+      .reduce((sum, c) => sum + (result.sizeOverrides[c.dataIndex as string]
+        ?? getColumnSizeConfig(c).size), 0);
+
+  it('shrinks columns before hiding any and fills the container exactly', () => {
+    const columns = [shrinkCol('a', '300px', '100px'), shrinkCol('b', '300px', '100px'), shrinkCol('c', '200px')];
+    const result = fit(columns, 600);
+    expect(result.visibleColumnIds).toEqual(['a', 'b', 'c']);
+    expect(total(columns, result)).toBe(600);
+  });
+
+  it('shares the deficit in proportion to slack, remainder to the last shrinkable column', () => {
+    // slack a=200, b=100 (total 300); deficit 100 => a cut floor(66.67)=66, b cut 33, remainder 1 -> b
+    const columns = [shrinkCol('a', '300px', '100px'), shrinkCol('b', '200px', '100px'), shrinkCol('c', '200px')];
+    const result = fit(columns, 600);
+    expect(result.sizeOverrides).toEqual({ a: 234, b: 166 });
+    expect(total(columns, result)).toBe(600);
+  });
+
+  it('never goes below minSize and resumes hiding once the minimum total overflows', () => {
+    const columns = [shrinkCol('a', '300px', '100px'), shrinkCol('b', '300px', '100px'), shrinkCol('c', '200px')];
+    const atMin = fit(columns, 400);
+    expect(atMin.visibleColumnIds).toEqual(['a', 'b', 'c']);
+    expect(atMin.sizeOverrides).toEqual({ a: 100, b: 100 });
+    // 350: a and b sit at their minimum and the fixed column takes the leftover (existing rule).
+    expect(fit(columns, 350).sizeOverrides).toEqual({ a: 100, b: 100, c: 150 });
+    // 250: even the minimum total (400) overflows and the leftover (50) is under c's floor.
+    const tooNarrow = fit(columns, 250);
+    expect(tooNarrow.visibleColumnIds).toEqual(['a', 'b']);
+    for (const [id, size] of Object.entries(tooNarrow.sizeOverrides)) {
+      const column = columns.find(c => c.dataIndex === id)!;
+      expect(size).toBeGreaterThanOrEqual(getColumnSizeConfig(column).minSize);
+    }
+  });
+
+  it('leaves columns at their preferred size when everything fits', () => {
+    const columns = [shrinkCol('a', '300px', '100px'), shrinkCol('b', '200px')];
+    expect(fit(columns, 800)).toEqual({ visibleColumnIds: ['a', 'b'], sizeOverrides: {} });
+  });
+
+  it('lowers the 96px floor, parses rem, and holds the 40px absolute floor', () => {
+    const columns = [shrinkCol('a', '72px', '72px'), shrinkCol('b', '200px', '5rem'), shrinkCol('c', '200px', '10px')];
+    expect(getColumnSizeConfig(columns[0])).toMatchObject({ size: 72, minSize: 72 });
+    expect(getColumnSizeConfig(columns[1])).toMatchObject({ size: 200, minSize: 80 });
+    expect(getColumnSizeConfig(columns[2])).toMatchObject({ size: 200, minSize: 40 });
+  });
+
+  it('ignores percent minWidth and keeps minSize <= size', () => {
+    expect(getColumnSizeConfig(shrinkCol('a', '200px', '50%')).minSize).toBe(96);
+    // minWidth replaces the floor used to clamp the preferred size, so size is raised to it.
+    expect(getColumnSizeConfig(shrinkCol('a', '100px', '150px'))).toMatchObject({ size: 150, minSize: 150 });
+  });
+
+  it('produces the same output as before for column sets without minWidth', () => {
+    // Reference: the original greedy fit (no shrink step), reusing the exported size config.
+    const legacy = (columns: ColumnDefinition<any>[], width: number) => {
+      const layout = getColumnLayout(columns, width);
+      const order = [...columns].sort((a, b) => {
+        const aId = a.dataIndex === 'id';
+        const bId = b.dataIndex === 'id';
+        if (aId && !bId) return -1;
+        if (!aId && bId) return 1;
+        if (a.width && !b.width) return -1;
+        if (!a.width && b.width) return 1;
+        return 0;
+      });
+      const visible = new Set<string>();
+      const overrides: Record<string, number> = {};
+      let used = 0;
+      for (const c of order) {
+        const { size, minSize } = getColumnSizeConfig(c, layout);
+        const id = c.dataIndex as string;
+        if (visible.size > 0 && used + size > width) {
+          const remaining = width - used;
+          if (remaining >= minSize) {
+            overrides[id] = remaining;
+            visible.add(id);
+          }
+          break;
+        }
+        used += size;
+        visible.add(id);
+      }
+      return { visibleColumnIds: columns.map(c => c.dataIndex as string).filter(id => visible.has(id)), sizeOverrides: overrides };
+    };
+    const sets = [
+      [col('id', '280px'), col('a', '96px'), col('b', '220px'), col('c', '160px'), col('d', '520px'), col('e', '96px')],
+      [col('x', '40%', 'Name'), col('y', '30%', 'Email'), col('z'), col('w', '200px')],
+      [col('title', '30%'), col('select', '5%', ''), col('p'), col('q', '18rem')],
+    ];
+    for (const columns of sets) {
+      for (const width of [300, 500, 824, 1000, 1372, 1600, 2000]) {
+        expect(fit(columns, width)).toEqual(legacy(columns, width));
+      }
+    }
+  });
+});

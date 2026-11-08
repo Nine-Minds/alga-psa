@@ -20,8 +20,9 @@
  *   eligibility per run, so a schedule that outlives its integration between
  *   reconciliations is a harmless no-op.
  *
- * EE-only pieces (the NinjaOne fetcher, the Huntress poller) are reached via
- * dynamic @enterprise imports, which resolve to CE stubs in community builds.
+ * EE-only pieces (the NinjaOne and Datto fetchers, the Huntress poller) are
+ * reached via dynamic @enterprise imports, which resolve to CE stubs in
+ * community builds.
  */
 
 import logger from '@alga-psa/core/logger';
@@ -47,7 +48,7 @@ export const RMM_ALERT_RECONCILIATION_JOB = 'rmm-alert-reconciliation';
 export const HUNTRESS_INCIDENT_POLL_JOB = 'huntress-incident-poll';
 export const RMM_DEVICE_SYNC_JOB = 'rmm-device-sync';
 
-const RMM_ALERT_POLLING_PROVIDERS = ['ninjaone', 'tacticalrmm'];
+const RMM_ALERT_POLLING_PROVIDERS = ['ninjaone', 'tacticalrmm', 'datto'];
 
 /**
  * Which providers get a recurring device sync. Deliberately NOT the alert
@@ -60,7 +61,7 @@ const RMM_ALERT_POLLING_PROVIDERS = ['ninjaone', 'tacticalrmm'];
  * entitlement, so its engine asserts the tier itself rather than relying on the
  * action wrapper a scheduled run never passes through.
  */
-const RMM_DEVICE_SYNC_PROVIDERS = ['ninjaone', 'levelio', 'tacticalrmm', 'tanium'];
+const RMM_DEVICE_SYNC_PROVIDERS = ['ninjaone', 'levelio', 'tacticalrmm', 'datto', 'tanium'];
 
 const RMM_POLLING_RECONCILE_TENANT = '__rmm_polling_reconcile__';
 const RMM_POLLING_RECONCILE_REASON = 'RMM polling reconciler scans integration schedules across tenants';
@@ -98,6 +99,14 @@ async function ensureFetchersRegistered(): Promise<void> {
     }
   } catch {
     // CE build without the alias target — NinjaOne polling simply unavailable.
+  }
+  try {
+    const mod = await import('@enterprise/lib/integrations/datto/alertFetcher');
+    if (mod.dattoRmmAlertFetcher) {
+      registerRmmAlertFetcher('datto', mod.dattoRmmAlertFetcher);
+    }
+  } catch {
+    // CE build without the alias target — Datto polling simply unavailable.
   }
   fetchersEnsured = true;
 }
@@ -325,6 +334,14 @@ async function ensureDeviceSyncStrategiesRegistered(): Promise<void> {
     }
   } catch {
     // Subpath unavailable in this build — Tactical device sync unavailable.
+  }
+  try {
+    const mod = await import('@enterprise/lib/integrations/datto/deviceSyncStrategy');
+    if (mod.dattoRmmDeviceSyncStrategy) {
+      registerRmmDeviceSyncStrategy('datto', mod.dattoRmmDeviceSyncStrategy);
+    }
+  } catch {
+    // CE build without the alias target — Datto device sync unavailable.
   }
   try {
     const mod = await import('@enterprise/lib/integrations/tanium/sync/deviceSyncStrategy');

@@ -60,14 +60,20 @@ vi.mock('@alga-psa/auth', () => ({
 
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: hasPermissionMock }));
 
-vi.mock('@alga-psa/db', () => ({
+vi.mock('@alga-psa/db', async () => {
+  const { createAfterCommitDouble } = await import('../../../db/test-utils/afterCommitDouble');
+  const afterCommit = createAfterCommitDouble(() => trxStub);
+  return {
   createTenantKnex: createTenantKnexMock,
   tenantDb: () => ({
     table: (table: string) => stubTable(table),
     tenantJoin: (query: any) => query,
   }),
-  withTransaction: async (_db: unknown, work: (trx: any) => Promise<unknown>) => work(trxStub),
-}));
+  // Faithful after-commit contract: hooks queue, flush after the callback resolves.
+  withTransaction: afterCommit.withTransaction,
+  registerAfterCommit: afterCommit.registerAfterCommit,
+  };
+});
 
 vi.mock('../models/projectTask', () => ({
   default: {

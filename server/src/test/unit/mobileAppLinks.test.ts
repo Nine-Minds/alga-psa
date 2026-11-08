@@ -8,13 +8,17 @@ describe('mobile app link association files', () => {
     expect(buildAndroidAssetLinks({ MOBILE_APP_ANDROID_CERT_FINGERPRINTS: ' , ' })).toBeNull();
   });
 
-  it('claims only the MSP ticket path for the iOS app', () => {
+  it('claims ticket, asset and stock-unit components for the iOS app', () => {
     expect(buildAppleAppSiteAssociation({ MOBILE_APP_APPLE_TEAM_ID: 'ABCDE12345' })).toEqual({
       applinks: {
         details: [
           {
             appIDs: ['ABCDE12345.com.nineminds.algapsa'],
-            components: [{ '/': '/msp/tickets/*' }],
+            components: [
+              { '/': '/msp/tickets/*' },
+              { '/': '/msp/assets/*' },
+              { '/': '/msp/inventory/units', '?': { unitId: '*' } },
+            ],
           },
         ],
       },

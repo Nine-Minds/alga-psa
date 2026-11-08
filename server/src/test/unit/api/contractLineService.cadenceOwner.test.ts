@@ -9,14 +9,19 @@ class MockBaseService<T> {
     throw new Error('getKnex mock not provided');
   }
 
-  addCreateAuditFields(data: Record<string, unknown>, context: { tenant: string }) {
+  async addCreateAuditFields(_conn: unknown, data: Record<string, unknown>, context: { tenant: string }) {
     return {
       ...data,
       tenant: context.tenant,
     };
   }
 
-  addUpdateAuditFields(data: Record<string, unknown>) {
+  // Real BaseService drops audit columns the table lacks (contract_lines has no created_by/updated_by).
+  async filterAuditFields(_conn: unknown, data: Record<string, unknown>) {
+    return data;
+  }
+
+  async addUpdateAuditFields(_conn: unknown, data: Record<string, unknown>) {
     return { ...data };
   }
 }
@@ -223,5 +228,63 @@ describe('ContractLineService cadence owner handling', () => {
 
     expect(updatePayload?.cadence_owner).toBe('client');
     expect(updated.cadence_owner).toBe('client');
+  });
+  function updateHarness(existing: Record<string, unknown>) {
+    const captured: { payload?: Record<string, unknown> } = {};
+    const knex = { scope: 'root-knex' };
+    const trx = ((_table: string) => {
+      const builder = {
+        where() {
+          return builder;
+        },
+        // attachPrepaidBlocks reads the Prepaid Block overlay after the update.
+        whereIn() {
+          return builder;
+        },
+        select: async () => [],
+        update(payload: Record<string, unknown>) {
+          captured.payload = payload;
+          return { returning: async () => [{ ...existing, ...payload }] };
+        },
+      };
+      return builder;
+    }) as any;
+    withTransaction.mockImplementation(async (_receivedKnex, callback) => callback(trx));
+    return { knex, captured };
+  }
+
+  it('resets inherited advance timing to arrears when a Fixed advance line is changed to Hourly (REST path)', async () => {
+    const { knex, captured } = updateHarness({ contract_line_id: 'line-1', billing_frequency: 'monthly' });
+    const { ContractLineService } = await import('server/src/lib/api/services/ContractLineService');
+    const service = new ContractLineService();
+    vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex });
+    vi.spyOn(service as any, 'getExistingPlan').mockResolvedValue({
+      contract_line_id: 'line-1',
+      contract_line_type: 'Fixed',
+      billing_timing: 'advance',
+      cadence_owner: 'client',
+    });
+
+    await service.update('line-1', { contract_line_type: 'Hourly' } as any, { tenant: 'tenant-1', userId: 'user-1' } as any);
+
+    expect(captured.payload?.billing_timing).toBe('arrears');
+  });
+
+  it('rejects explicit advance on an Hourly line (REST path)', async () => {
+    const { knex, captured } = updateHarness({ contract_line_id: 'line-1' });
+    const { ContractLineService } = await import('server/src/lib/api/services/ContractLineService');
+    const service = new ContractLineService();
+    vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex });
+    vi.spyOn(service as any, 'getExistingPlan').mockResolvedValue({
+      contract_line_id: 'line-1',
+      contract_line_type: 'Hourly',
+      billing_timing: 'arrears',
+      cadence_owner: 'client',
+    });
+
+    await expect(
+      service.update('line-1', { billing_timing: 'advance' } as any, { tenant: 'tenant-1', userId: 'user-1' } as any),
+    ).rejects.toThrow(/advance/i);
+    expect(captured.payload).toBeUndefined();
   });
 });

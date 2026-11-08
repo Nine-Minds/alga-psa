@@ -17,6 +17,10 @@
     "./schemas": {
       "import": "./src/lib/schemas/index.ts",
       "types": "./src/lib/schemas/index.ts"
+    },
+    "./lib/partialWithoutDefaults": {
+      "import": "./src/lib/partialWithoutDefaults.ts",
+      "types": "./src/lib/partialWithoutDefaults.ts"
     }
   },
   "scripts": {
@@ -28,7 +32,7 @@
   "dependencies": {
     "@js-temporal/polyfill": "^0.4.4",
     "libphonenumber-js": "^1.13.11",
-    "zod": "^3.22.4"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

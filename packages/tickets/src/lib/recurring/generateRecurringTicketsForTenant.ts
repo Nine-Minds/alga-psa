@@ -6,15 +6,8 @@ import { recurrenceRuleSchema } from '@alga-psa/shared/lib/recurrence';
 import { loadTenantBusinessDayCalendar } from '@alga-psa/shared/lib/businessHours/loadBusinessDayCalendar';
 import type { BusinessDayCalendar } from '@alga-psa/shared/lib/businessHours/businessDayCalendar';
 import { listCandidateOccurrences, type Candidate } from './candidateOccurrences';
-import { createTicketWithSideEffects } from '@alga-psa/shared/services/tickets/createTicketWithSideEffects';
-import {
-  recurringTicketOverridesSchema,
-  resolveEffectiveFields,
-  type RecurringTemplateFields,
-  type RecurringTicketOverrides,
-} from './effectiveFields';
-import { renderTitleTemplate } from './titleTemplate';
-import { findRecurringReferenceProblems } from './validateReferences';
+import { recurringTicketOverridesSchema, type RecurringTicketOverrides } from './effectiveFields';
+import { instantiateTicketTemplate } from '../instantiateTicketTemplate';
 
 const DEFINITIONS = 'recurring_ticket_definitions';
 const DEFINITION_CLIENTS = 'recurring_ticket_definition_clients';
@@ -44,14 +37,16 @@ export interface GenerateRecurringTicketsSummary {
   evaluationErrors: number;
 }
 
-interface DefinitionRow extends RecurringTemplateFields {
+interface DefinitionRow {
   definition_id: string;
   name: string;
-  title_template: string;
-  description: unknown;
+  /** The shared ticket template this schedule instantiates (R1). Null only on a not-yet-migrated row. */
+  ticket_template_id: string | null;
+  overrides: unknown;
+  status_id: string | null;
+  assigned_to: string | null;
+  assigned_team_id: string | null;
   additional_agent_ids: string[];
-  tags: string[];
-  checklist_template_id: string | null;
   recurrence: unknown;
   start_date: Date | string;
   create_time: string;
@@ -398,67 +393,42 @@ async function generateOccurrence(args: {
     }
   }
 
-  // 3. Effective fields, re-validated now (their referents can change after the definition is saved).
-  const overrides = recurringTicketOverridesSchema.parse(asJson(definitionClient.overrides ?? {})) as RecurringTicketOverrides;
-  const fields = resolveEffectiveFields(
-    {
-      board_id: definition.board_id,
-      status_id: definition.status_id,
-      priority_id: definition.priority_id,
-      category_id: definition.category_id,
-      subcategory_id: definition.subcategory_id,
-      assigned_to: definition.assigned_to,
-      assigned_team_id: definition.assigned_team_id,
-      additional_agent_ids: asJson<string[]>(definition.additional_agent_ids ?? []),
-    },
-    overrides
-  );
+  // 3. The ticket, from the shared template. The cascade (template -> definition overrides -> client
+  // overrides) and the re-validation of the effective fields run inside instantiateTicketTemplate: their
+  // referents can change after the definition is saved.
+  if (!definition.ticket_template_id) throw new Error('The schedule has no ticket template; edit the schedule');
   const assetRows = await db
     .table(CLIENT_ASSETS)
     .where({ definition_client_id: definitionClient.definition_client_id })
     .select('asset_id');
-  const assetIds = assetRows.map((row) => row.asset_id as string);
 
-  const problems = await findRecurringReferenceProblems(trx, tenant, {
-    fields,
-    clientId: definitionClient.client_id,
-    contactId: definitionClient.contact_id,
-    locationId: definitionClient.location_id,
-    assetIds,
-  });
-  if (problems.length > 0) throw new Error(problems.map((problem) => problem.message).join('; '));
+  const contact = definitionClient.contact_id
+    ? await db.table('contacts').where({ contact_name_id: definitionClient.contact_id }).first('full_name')
+    : null;
 
-  const title = renderTitleTemplate(definition.title_template, {
-    clientName: client.client_name,
-    dueDate: candidate.due,
-    locale: options.locale,
-  });
-
-  // 4. The ticket, with the same side effects as one created in the UI.
-  const { ticketId } = await createTicketWithSideEffects(trx, tenant, {
-    actor: { type: 'system' },
-    ticket: {
-      title,
-      description: definition.description == null ? undefined : JSON.stringify(definition.description),
+  const { ticketId } = await instantiateTicketTemplate(trx, tenant, {
+    templateId: definition.ticket_template_id,
+    client: {
       client_id: definitionClient.client_id,
-      contact_id: definitionClient.contact_id ?? undefined,
-      location_id: definitionClient.location_id ?? undefined,
-      board_id: fields.board_id,
-      status_id: fields.status_id ?? undefined,
-      priority_id: fields.priority_id,
-      category_id: fields.category_id ?? undefined,
-      subcategory_id: fields.subcategory_id ?? undefined,
-      assigned_to: fields.assigned_to ?? undefined,
-      due_date: candidate.dueAt.toISOString(),
-      ticket_origin: 'recurring',
-      source: RECURRING_TICKET_SOURCE,
+      contact_id: definitionClient.contact_id,
+      location_id: definitionClient.location_id,
+      asset_ids: assetRows.map((row) => row.asset_id as string),
     },
-    teamId: fields.assigned_team_id,
-    additionalAgentIds: fields.additional_agent_ids,
-    tags: asJson<string[]>(definition.tags ?? []),
-    assetIds,
-    checklistTemplateId: definition.checklist_template_id,
-    notificationSuppression: { suppressContactNotifications: !definition.notify_client_on_create },
+    overrides: [
+      recurringTicketOverridesSchema.parse(asJson(definition.overrides ?? {})),
+      recurringTicketOverridesSchema.parse(asJson(definitionClient.overrides ?? {})),
+    ] as RecurringTicketOverrides[],
+    dispatch: {
+      status_id: definition.status_id,
+      assigned_to: definition.assigned_to,
+      assigned_team_id: definition.assigned_team_id,
+      additional_agent_ids: asJson<string[]>(definition.additional_agent_ids ?? []),
+    },
+    actor: { type: 'system' },
+    suppression: { suppressContactNotifications: !definition.notify_client_on_create },
+    titleContext: { clientName: client.client_name, contactName: contact?.full_name ?? null, dueDate: candidate.due, locale: options.locale },
+    origin: { ticket_origin: 'recurring', source: RECURRING_TICKET_SOURCE },
+    dueDate: candidate.dueAt,
   });
 
   // 5. Close the ledger row in the same transaction as the ticket.

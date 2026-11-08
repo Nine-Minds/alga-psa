@@ -41,6 +41,9 @@
     "errors": {
       "saveClientInfo": "Impossibile salvare le informazioni del cliente",
       "addTeamMembers": "Impossibile aggiungere i membri del team",
+      "unsentInvites": "Invia l’invito a ogni membro del team che hai aggiunto, oppure rimuovilo, prima di continuare.",
+      "teamMembersNotCreated": "Questi membri del team non sono stati creati. Correggi o rimuovi ciascuno prima di continuare:",
+      "teamProgressNotSaved": "Questi membri del team sono stati creati, ma la configurazione non è riuscita a salvare i progressi: {{users}}. Se esci dalla configurazione e torni, potrebbero non risultare aggiunti; i loro account esistono già, quindi non aggiungerli di nuovo. Seleziona Avanti per continuare.",
       "saveClient": "Impossibile salvare il cliente",
       "addContact": "Impossibile aggiungere il contatto",
       "setupBilling": "Impossibile configurare la fatturazione",
@@ -414,6 +417,7 @@
       "invalidEmail": "Inserisci un indirizzo email valido",
       "passwordLength": "La password deve essere lunga almeno 8 caratteri",
       "saveFailed": "Impossibile salvare il membro del team",
+      "progressNotSaved": "{{email}} è stato creato, ma la configurazione non è riuscita a salvare i progressi. Se esci dalla configurazione e torni, questo membro potrebbe non risultare aggiunto; l’account esiste già, quindi non aggiungerlo di nuovo.",
       "inviteFailed": "Impossibile inviare l'invito",
       "roleRequired": "Seleziona un ruolo",
       "generic": "Si è verificato un errore"

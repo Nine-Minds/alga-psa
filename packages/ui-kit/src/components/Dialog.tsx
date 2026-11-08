@@ -1,4 +1,7 @@
+'use client';
+
 import React, { useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from './Button';
 
 export interface DialogProps {
@@ -129,27 +132,28 @@ export function Dialog({ isOpen, onClose, title, children }: DialogProps) {
  */
 export function ConfirmDialog({
   isOpen,
-  title = 'Confirm Action',
+  title,
   message,
-  confirmLabel = 'Confirm',
+  confirmLabel,
   confirmText,
-  cancelLabel = 'Cancel',
+  cancelLabel,
   variant = 'default',
   confirmDisabled = false,
   onConfirm,
   onCancel,
   children,
 }: ConfirmDialogProps) {
+  const { t } = useTranslation('common');
   // Support both confirmLabel and confirmText for backward compatibility
-  const buttonLabel = confirmText || confirmLabel;
+  const buttonLabel = confirmText || (confirmLabel ?? t('actions.confirm', { defaultValue: 'Confirm' }));
 
   return (
-    <Dialog isOpen={isOpen} onClose={onCancel} title={title}>
+    <Dialog isOpen={isOpen} onClose={onCancel} title={title ?? t('dialogs.confirmAction.title', { defaultValue: 'Confirm Action' })}>
       <p style={{ ...messageStyle, whiteSpace: 'pre-line' }}>{message}</p>
       {children}
       <div style={actionsStyle}>
         <Button id="confirm-dialog-cancel" variant="secondary" onClick={onCancel}>
-          {cancelLabel}
+          {cancelLabel ?? t('actions.cancel', { defaultValue: 'Cancel' })}
         </Button>
         <Button
           id="confirm-dialog-confirm"

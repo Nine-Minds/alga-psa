@@ -168,6 +168,39 @@ export class WorkflowRuntimeV2EventStreamWorker {
     await this.redis.close().catch(() => undefined);
   }
 
+  /**
+   * Source payload for the event, with `occurredAt` guaranteed whenever the envelope can supply it.
+   *
+   * Every catalogued workflow payload schema requires `occurredAt`, and a missing one makes the worker
+   * skip every matching workflow at payload validation (alga-2026-0002379). Producers are supposed to
+   * stamp it, but the consumer is the one place no publisher can bypass, so a missing/non-string value
+   * is filled from the envelope timestamp (never from the clock: the time must be the event's own).
+   * Without an envelope timestamp the payload is left alone so validation still fails loudly.
+   * Done once here, before schema resolution and mapping, so mapped payloads see it via `event.payload`.
+   */
+  private normalizeSourcePayload(event: {
+    event_id: string;
+    event_type: string;
+    tenant: string;
+    timestamp?: string;
+    payload?: unknown;
+  }): Record<string, unknown> {
+    // A string payload cannot reach here: the stream envelope schema (payload: record) rejects it.
+    const source = (event.payload && typeof event.payload === 'object' ? event.payload : {}) as Record<string, unknown>;
+    if (typeof source.occurredAt === 'string') return source;
+    if (typeof event.timestamp !== 'string' || event.timestamp.length === 0) return source;
+
+    logger.warn('[WorkflowRuntimeV2EventStreamWorker] Event payload had no occurredAt; defaulted from envelope timestamp', {
+      workerId: this.workerId,
+      eventId: event.event_id,
+      eventType: event.event_type,
+      tenant: event.tenant,
+      payloadKeys: Object.keys(source).sort(),
+      event: 'workflow_event_occurred_at_defaulted',
+    });
+    return { ...source, occurredAt: event.timestamp };
+  }
+
   private async processEvent(raw: unknown): Promise<void> {
     const event = WorkflowEventBaseSchema.parse(raw);
 
@@ -233,7 +266,7 @@ export class WorkflowRuntimeV2EventStreamWorker {
       eventType: event.event_type,
     });
 
-    const payload = (event.payload && typeof event.payload === 'object' ? event.payload : {}) as Record<string, unknown>;
+    const payload = this.normalizeSourcePayload(event);
     const correlation = resolveWorkflowEventCorrelation({
       eventName: event.event_type,
       payload,
@@ -539,6 +572,9 @@ export class WorkflowRuntimeV2EventStreamWorker {
             issues,
             workflowPayloadSchemaRef,
             sourcePayloadSchemaRef: effectiveSourceSchemaRef,
+            // Lets a future reject be traced back to the emitting path.
+            eventId: event.event_id,
+            payloadKeys: Object.keys(payload).sort(),
           },
           errorMessageSection: 'validation',
         });
@@ -584,11 +620,15 @@ export class WorkflowRuntimeV2EventStreamWorker {
           message: selfTriggerReason === 'causation_depth_exceeded'
             ? 'Workflow causation depth limit exceeded'
             : 'Event was caused by this workflow chain (self-trigger guard)',
+          legacyMessage: selfTrigger.reason === 'self_trigger'
+            ? `Skipped ${skipLabel}: event was published by a run of this same workflow (trigger loop guard)`
+            : `Skipped ${skipLabel}: event chain is deeper than the causation limit (depth ${selfTrigger.causationDepth}, trigger loop guard)`,
           details: {
             guardReason: selfTrigger.reason,
             causationDepth: selfTrigger.causationDepth,
             originExecutionId: event.execution_id ?? null,
           },
+          errorMessageSection: 'diagnostic',
         });
         continue;
       }
@@ -704,39 +744,32 @@ export class WorkflowRuntimeV2EventStreamWorker {
       },
     });
 
-    // Legacy event-row error_message: validation messages first, then the other
-    // diagnostics, each in collection order (paused / self-trigger / launch
-    // failures never contributed here).
+    // Legacy event-row error_message, combined in a fixed order so no reason masks another:
+    //   delivery errors, then payload validation messages, then other skip diagnostics
+    //   (each in collection order; paused and launch-failure skips never contribute).
+    // Skip messages are stamped only when nothing launched or signaled: every skip is already
+    // persisted per workflow, and an event that matched another workflow must not read as an error.
     const validationMessages = skips.filter((s) => s.errorMessageSection === 'validation').map((s) => s.legacyMessage);
     const diagnosticMessages = skips.filter((s) => s.errorMessageSection === 'diagnostic').map((s) => s.legacyMessage);
 
     const matchedRunId = Array.from(signaledRuns)[0] ?? startedRuns[0] ?? null;
-    if (matchedRunId) {
-      await WorkflowRuntimeEventModelV2.update(knex, eventRecord.event_id, {
-        matched_run_id: matchedRunId,
-        processed_at: processedAt,
-      });
+    const nothingLaunchedOrSignaled = startedRuns.length === 0 && signaledRuns.size === 0;
+
+    const messageParts: string[] = [...deliveryErrors];
+    if (nothingLaunchedOrSignaled) {
+      messageParts.push(...validationMessages, ...diagnosticMessages);
+    }
+    if (messageParts.length === 0 && missingCorrelationWarning && nothingLaunchedOrSignaled) {
+      messageParts.push(missingCorrelationWarning);
     }
 
-    if (deliveryErrors.length > 0) {
+    // A single update carries matched_run_id, processed_at and error_message together.
+    if (matchedRunId || messageParts.length > 0) {
       await WorkflowRuntimeEventModelV2.update(knex, eventRecord.event_id, {
-        error_message: deliveryErrors.join('\n'),
-        processed_at: processedAt,
-      });
-    } else if (
-      (validationMessages.length > 0 || diagnosticMessages.length > 0) &&
-      startedRuns.length === 0 &&
-      signaledRuns.size === 0
-    ) {
-      await WorkflowRuntimeEventModelV2.update(knex, eventRecord.event_id, {
-        error_message: [...validationMessages, ...diagnosticMessages].join('\n'),
+        ...(matchedRunId ? { matched_run_id: matchedRunId } : {}),
+        ...(messageParts.length > 0 ? { error_message: messageParts.join('\n') } : {}),
         processed_at: processedAt,
       }, event.tenant);
-    } else if (missingCorrelationWarning && startedRuns.length === 0 && signaledRuns.size === 0) {
-      await WorkflowRuntimeEventModelV2.update(knex, eventRecord.event_id, {
-        error_message: missingCorrelationWarning,
-        processed_at: processedAt,
-      });
     }
   }
 

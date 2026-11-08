@@ -33,6 +33,7 @@ const documentInsertMock = vi.fn();
 const documentAssociationCreateMock = vi.fn();
 const fetchTenantPartyMock = vi.fn();
 const resolveEmailLocaleMock = vi.fn();
+const buildTenantPortalUrlMock = vi.fn();
 // Rows returned by the quote email template lookup, keyed by table so tests
 // can exercise the tenant-override-before-system-template precedence.
 const emailTemplateRows: Record<string, any> = {};
@@ -44,6 +45,7 @@ const makeQuery = (result: any) => {
   const chain: any = {};
   chain.select = vi.fn(() => chain);
   chain.where = vi.fn(() => chain);
+  chain.orderBy = vi.fn(() => chain);
   chain.first = vi.fn(async () => result);
   return chain;
 };
@@ -54,6 +56,7 @@ const makeListQuery = (rows: any[]) => {
   const chain: any = {};
   chain.select = vi.fn(() => chain);
   chain.where = vi.fn(() => chain);
+  chain.orderBy = vi.fn(() => chain);
   chain.first = vi.fn(async () => rows[0]);
   chain.then = (onFulfilled: any, onRejected: any) => Promise.resolve(rows).then(onFulfilled, onRejected);
   chain.catch = (onRejected: any) => Promise.resolve(rows).catch(onRejected);
@@ -74,6 +77,10 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 vi.mock('@alga-psa/auth/withAuth', () => ({
+  withOptionalAuth:
+    (fn: any) =>
+    (...args: any[]) =>
+      fn(currentUser, { tenant: TENANT_ID }, ...args),
   withAuth:
     (fn: any) =>
     (...args: any[]) =>
@@ -92,6 +99,10 @@ vi.mock('@alga-psa/email', () => ({
 
 vi.mock('../../src/lib/adapters/tenantPartyAdapter', () => ({
   fetchTenantParty: (...args: any[]) => fetchTenantPartyMock(...args),
+}));
+
+vi.mock('@alga-psa/tenancy/server', () => ({
+  buildTenantPortalUrl: (...args: any[]) => buildTenantPortalUrlMock(...args),
 }));
 
 vi.mock('@alga-psa/notifications/notifications/emailLocaleResolver', () => ({
@@ -215,6 +226,16 @@ const templateQuote = {
   ],
 };
 
+// Compiling the quoteActions module graph takes seconds, and every test below
+// reaches it through `await import(...)`. Left to the first test, that whole
+// compile is charged to one test's timeout — which is how T042 (the first one)
+// hit "Test timed out in 20000ms" on a loaded CI runner while the other fifty
+// finished in single-digit milliseconds. Warm the module cache here, during
+// file evaluation, which is not on the test clock; the per-test imports below
+// then resolve from cache. The mock factories above are already defined at
+// this point, so they still intercept the graph.
+await import('../../src/actions/quoteActions');
+
 describe('quoteActions', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -232,10 +253,13 @@ describe('quoteActions', () => {
         return chain;
       }
       if (table === 'clients') {
-        return makeQuery({ billing_email: null });
+        return makeQuery({ client_id: 'client-1', client_name: 'Acme', billing_contact_id: null, billing_email: null });
       }
       if (table === 'contacts') {
         return makeQuery({ email: null });
+      }
+      if (table === 'client_locations') {
+        return makeListQuery([]);
       }
       if (table === 'user_roles' || table === 'team_members' || table === 'users') {
         return makeListQuery([]);
@@ -248,6 +272,7 @@ describe('quoteActions', () => {
     delete emailTemplateRows.system_email_templates;
     emailTemplateLookups.length = 0;
     resolveEmailLocaleMock.mockResolvedValue('en');
+    buildTenantPortalUrlMock.mockImplementation(async (_tenant: string, path: string) => `https://helpdesk.digitalchk.com${path}`);
     fetchTenantPartyMock.mockResolvedValue({
       name: 'Acme MSP',
       address: null,
@@ -1641,5 +1666,52 @@ describe('quoteActions', () => {
       messageKey: 'msp/quotes:errors.permissions.update',
     });
     expect(generateAndStoreMock).not.toHaveBeenCalled();
+  });
+
+  describe('quote email portal links (alga-2026-0002724)', () => {
+    const portalQuote = {
+      quote_id: QUOTE_ID,
+      quote_number: 'Q-0001',
+      title: 'Quote',
+      total_amount: 5000,
+      currency_code: 'USD',
+      valid_until: '2099-03-20',
+      status: 'sent',
+      is_template: false,
+      client_id: null,
+      contact_id: null,
+    };
+    const deepLink = `https://helpdesk.digitalchk.com/client-portal/billing/quotes/${QUOTE_ID}`;
+    const emailBody = () => JSON.stringify(sendEmailMock.mock.calls[0][0]);
+
+    it.each([
+      ['sendQuote', 'draft'],
+      ['resendQuote', 'sent'],
+      ['sendQuoteReminder', 'sent'],
+    ])('%s links to the quote on the tenant portal origin', async (action, status) => {
+      vi.spyOn(Quote, 'getById').mockResolvedValue({ ...portalQuote, status } as any);
+
+      const actions = await import('../../src/actions/quoteActions');
+      await (actions as any)[action](QUOTE_ID, { email_addresses: ['client@example.com'] });
+
+      expect(buildTenantPortalUrlMock).toHaveBeenCalledWith(TENANT_ID, `/client-portal/billing/quotes/${QUOTE_ID}`);
+      expect(sendEmailMock).toHaveBeenCalledTimes(1);
+      expect(emailBody()).toContain(deepLink);
+      expect(emailBody()).not.toContain('localhost');
+    });
+
+    it.each(['sendQuote', 'resendQuote', 'sendQuoteReminder'])(
+      '%s sends without a link when no public origin exists',
+      async (action) => {
+        buildTenantPortalUrlMock.mockResolvedValue(null);
+        vi.spyOn(Quote, 'getById').mockResolvedValue({ ...portalQuote, status: action === 'sendQuote' ? 'draft' : 'sent' } as any);
+
+        const actions = await import('../../src/actions/quoteActions');
+        await (actions as any)[action](QUOTE_ID, { email_addresses: ['client@example.com'] });
+
+        expect(sendEmailMock).toHaveBeenCalledTimes(1);
+        expect(emailBody()).not.toMatch(/client-portal|localhost|href=/);
+      },
+    );
   });
 });

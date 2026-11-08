@@ -1,7 +1,5 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 
-const MODULE_PATH = '../../runner/backend';
-
 const HASH_BODY = Buffer.from('ok').toString('base64');
 
 function resetEnv() {
@@ -19,7 +17,9 @@ function mockFetch(response: Response | Promise<Response>) {
 }
 
 async function importBackendModule() {
-  return await import(MODULE_PATH);
+  // A literal specifier: vitest 4 resolves a variable-held relative path as an
+  // absolute /@fs/ URL and then skips extension resolution for it.
+  return await import('../../runner/backend');
 }
 
 describe('runner/backend', () => {
