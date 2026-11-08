@@ -17632,6 +17632,27 @@ components:
               - external_id
           description: Ticket-level external references written in the same transaction as
             the ticket. A conflicting link rolls back the create.
+        entered_at:
+          type: string
+          format: date-time
+          description: "Historical import. ISO 8601 datetime with an offset, not in the
+            future. Supplying it stores the ticket with this open date and marks
+            it a historical record: created silently with source=api_import, no
+            SLA clock, no TICKET_CREATED, and no notifications, webhooks or
+            workflows. Requires an internal MSP user with ticket:create
+            permission."
+        closed_at:
+          type: string
+          format: date-time
+          description: Historical import only (requires entered_at). Required for a closed
+            status, rejected for an open status, and must satisfy entered_at <=
+            closed_at <= now. The ticket is stored closed without firing
+            TICKET_CLOSED.
+        closed_by:
+          type: string
+          format: uuid
+          description: Historical import only (requires closed_at). User recorded as the
+            closer; defaults to the API user.
         asset_ids:
           type: array
           items:
@@ -17660,6 +17681,13 @@ components:
           type: string
           minLength: 1
           maxLength: 255
+        entered_at:
+          type: string
+          format: date-time
+          description: Correct the ticket open date. Requires an internal MSP user with
+            ticket:update permission. Must not be in the future or after the
+            ticket closure or earliest comment. A date-only correction does not
+            publish TICKET_UPDATED or start SLA timers.
         url:
           type: string
           format: uri
@@ -17741,9 +17769,16 @@ components:
         closed_at:
           type: string
           format: date-time
+          description: "Honored when this update closes the ticket (open to closed):
+            stored as the close time instead of now. Must not be in the future
+            or before entered_at. TICKET_CLOSED still fires; use suppression
+            flags to silence notifications. Use historical create fields to
+            import an already-closed ticket silently."
         closed_by:
           type: string
           format: uuid
+          description: Honored with closed_at when this update closes the ticket; defaults
+            to the API user.
         override_close_rules:
           type: boolean
         override_close_rules_reason:
@@ -17832,6 +17867,17 @@ components:
           description: One-off Bcc recipients for this comment's email only. Never
             returned to client-portal callers. Not allowed with is_internal. Max
             20 cc + bcc combined.
+        created_at:
+          type: string
+          format: date-time
+          description: "Historical import. Requires an internal MSP user with
+            ticket:update permission. ISO 8601 datetime with an offset
+            (date-only is rejected), not in the future and not before the
+            ticket's entered_at (a reply: not before its parent comment). The
+            comment is stored with this timestamp and is silent: no
+            TICKET_COMMENT_ADDED, no notifications, webhooks, workflows, SLA
+            first response or response-state change. Cannot be combined with
+            scheduled_publish_at, scheduled_publish_tz, cc or bcc."
         suppressContactNotifications:
           type: boolean
           description: When true, suppresses customer-facing email and portal
