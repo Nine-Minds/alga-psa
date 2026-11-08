@@ -336,6 +336,23 @@ describe('computeHourBlockMovement extinction', () => {
     expect(movement.closing).toBe(600000);
   });
 
+  it('writes an unallocated active block off at zero liability when viewed past its expiry', () => {
+    // The portal scenario: blocks bought in Oct 2026 expiring Oct 2027 are
+    // still active today, but a Nov 2027 report projects nothing burned
+    // after the expiry day, so the full residual is written off in Oct 2027
+    // and Nov 2027 shows zero liability.
+    const expiryMonth = computeHourBlockMovement('2027-10', block({ expirationDate: '2027-10-14' }));
+    expect(expiryMonth.opening).toBe(600000);
+    expect(expiryMonth.issued).toBe(0);
+    expect(expiryMonth.expired).toBe(-600000);
+    expect(expiryMonth.closing).toBe(0);
+    expectBalanced(expiryMonth);
+    const afterExpiry = computeHourBlockMovement('2027-11', block({ expirationDate: '2027-10-14' }));
+    expect(afterExpiry.opening).toBe(0);
+    expect(afterExpiry.closing).toBe(0);
+    expect(blockContributesToMonth(afterExpiry)).toBe(false);
+  });
+
   it('composes to the same figures once the expiry job has processed the block', () => {
     // The job flips status to expired and writes an auto_expiration audit on
     // or after the expiration date; the settled min() path must restate the
