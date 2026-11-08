@@ -71,6 +71,7 @@
       "message_other": "Les types de téléphone personnalisés suivants ne sont plus utilisés par aucun contact : {{labels}}. Supprimer les définitions de types ou les conserver pour une utilisation future ?",
       "deleteType": "Supprimer le type",
       "keepType": "Conserver le type",
+      "message_few": "Les types de téléphone personnalisés suivants ne sont plus utilisés par aucun contact : {{labels}}. Supprimer les définitions de types ou les conserver pour une utilisation future ?",
       "message_many": "Les types de téléphone personnalisés suivants ne sont plus utilisés par aucun contact : {{labels}}. Supprimer les définitions de types ou les conserver pour une utilisation future ?"
     },
     "print": {
@@ -465,6 +466,7 @@
       "userNotFound": "Utilisateur du client introuvable",
       "validationErrorTitle": "Erreur de validation"
     },
+    "boardCount_few": "{{count}} tableaux",
     "boardCount_many": "{{count}} tableaux"
   },
   "quickAddContact": {
@@ -787,7 +789,7 @@
       "clientAdmin": "Administrateur du client",
       "standard": "Standard",
       "lastSignIn": "Dernière connexion",
-      "invited": "Invité",
+      "invited": "Date d’invitation",
       "noClientAssigned": "Aucun client attribué",
       "deactivated": "Désactivé",
       "activeAccount": "Compte actif",
@@ -948,6 +950,7 @@
       "scopeSummaryOwn": "Propres",
       "managerScopeNote_one": "Sa vue inclut aussi les éléments de {{count}} personne qui lui est rattachée.",
       "managerScopeNote_other": "Sa vue inclut aussi les éléments de {{count}} personnes qui lui sont rattachées.",
+      "managerScopeNote_few": "Sa vue inclut aussi les éléments de {{count}} personnes qui lui sont rattachées.",
       "managerScopeNote_many": "Sa vue inclut aussi les éléments de {{count}} de personnes qui lui sont rattachées.",
       "assignmentLabel": "Groupe de visibilité des tickets",
       "assignmentPlaceholder": "Sélectionner une affectation de visibilité",
