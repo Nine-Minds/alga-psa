@@ -89,7 +89,7 @@ export class ApiAssetCustodyController {
       return createErrorResponse(error.message, STATUS_BY_CODE[error.code] ?? 400, error.code.toUpperCase());
     }
     if (error instanceof ZodError) {
-      return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', error.errors);
+      return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', error.issues);
     }
     throw error;
   }

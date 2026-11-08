@@ -356,7 +356,7 @@ A "Quotes" tab is added to the client portal billing overview, accessible to all
 - Client-friendly status text ("Awaiting Your Response", "Accepted", etc.)
 - Terms and conditions display
 
-### Accept / Reject
+### Accept / Reject (portal)
 
 - **Accept**: Persists client's optional item selections, sets `accepted_at` and `accepted_by` (portal user), status → `accepted`. The MSP then reviews the client's configuration choices before converting.
 - **Reject**: Opens comment field, sets `rejected_at` and `rejection_reason`, status → `rejected`
@@ -370,6 +370,44 @@ A "Quotes" tab is added to the client portal billing overview, accessible to all
 - Portal actions: `packages/client-portal/src/client-portal-actions/client-billing.ts`
 - Portal quote list: `packages/client-portal/src/components/billing/QuotesTab.tsx`
 - Portal quote detail: `packages/client-portal/src/components/billing/QuoteDetailPage.tsx`
+
+---
+
+## Public Email-Link Acceptance
+
+Quotes can also be accepted or rejected by clients who follow a tokenized link, without logging into the portal. Each link is scoped to one quote and one recipient. The public page at `/quote/[token]` resolves the token and shows the quote view before any action is taken.
+
+### Authorization model
+
+The token is the sole authorization. `POST /api/quote/[token]/decision` re-resolves the token on submit inside the transaction: the link must exist, not be revoked, not be expired, and the quote must still be in `sent` status. A link that has already been used to decide the quote returns `409 already_decided`. An expired or revoked link returns `404 invalid_link`.
+
+### Accept flow
+
+1. The client views the public quote page. Optional items can be toggled; the page shows a preview total before the client commits.
+2. To accept, the client must enter their **full name** (typed e-signature) and check an agreement checkbox. Title is optional.
+3. The agreement version and a hash of its content are stored in `quote_agreements` so the exact terms the signer saw are on record.
+4. On submit, the optional-item selection is committed, the decision is recorded, and the quote moves to `accepted`. The decision row stores the signer's full name, email (from the link), IP address, user agent, timestamp, link ID, and a content fingerprint of the quote view at decision time.
+5. The page shows the confirmed totals and selection after a successful accept.
+
+### Reject flow
+
+Rejection requires a comment. The comment is stored as `rejection_reason`; the quote moves to `rejected`.
+
+### Edge cases
+
+- **Quote changed between render and submit** ("changed since you opened it"): the page notifies the client that the quote has been updated and that they should contact the MSP. No decision is recorded.
+- **Quote already decided**: the page shows the decision date and the existing outcome instead of action buttons.
+- **Expired or revoked link**: the page shows a specific "link no longer valid" message. The submit endpoint returns a generic `404 invalid_link` to avoid leaking state.
+
+### MSP visibility
+
+After a client accepts via email link, the quote detail page and activity log show the signer: "Accepted by [Full Name] ([email]) via email link, [date]". The same `onQuoteAccepted` event fires as for a portal acceptance, unlocking the same conversion actions.
+
+### Key Files
+
+- Public page: `packages/billing/src/app/quote/[token]/page.tsx`
+- Decision service: `packages/billing/src/lib/services/quoteLinkDecisionService.ts`
+- Agreement model: `packages/billing/src/lib/models/quoteAgreement.ts`
 
 ---
 

@@ -49,6 +49,7 @@ export interface OpportunityDetailViewProps {
   onEditDetails?: (opportunityId: string) => void;
   /** Present only when the AI module is enabled for the tenant. */
   onDraftFollowUp?: (opportunityId: string) => void;
+  onDocumentsChanged?: () => void;
 }
 
 /**
@@ -73,6 +74,7 @@ export function OpportunityDetailView({
   onEditValues,
   onEditDetails,
   onDraftFollowUp,
+  onDocumentsChanged,
 }: OpportunityDetailViewProps) {
   const { t } = useTranslation('msp/opportunities');
   const clientDrawer = useClientDrawer();
@@ -258,7 +260,7 @@ export function OpportunityDetailView({
         ) : null}
       </BentoTile>
 
-      <OpportunityDocumentsTile opportunityId={detail.opportunity_id} />
+      <OpportunityDocumentsTile opportunityId={detail.opportunity_id} onDocumentsChanged={onDocumentsChanged} />
 
       {commitments}
 

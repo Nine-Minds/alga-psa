@@ -15,18 +15,23 @@ function sectionBetween(startMarker: string, endMarker: string): string {
   return source.slice(start, end);
 }
 
-describe('time sheet service period settings tenant-scoped query contract', () => {
-  it('uses structural tenant scoping for period-settings roots', () => {
+describe('time sheet service period settings contract', () => {
+  it('delegates every period-settings operation to the shared scheduling model', () => {
     const section = sectionBetween('// Time period settings', '// Schedule entries');
 
-    expect(section).toContain('tenantDb(');
-    expect(section).toContain('tenantDb(');
-    expect(section).toContain(".table('time_period_settings')");
-    expect(section).toContain("const [settings] = await tenantDb(trx, context.tenant).table('time_period_settings')");
+    // The model owns tenant scoping, the effective_from default/hand-off, and overlap validation,
+    // so the REST API and the settings UI apply the same rules.
+    for (const call of [
+      'TimePeriodSettings.list(knex, context.tenant)',
+      'TimePeriodSettings.getById(knex, context.tenant, id)',
+      'TimePeriodSettings.create(knex, context.tenant, data, { userId: context.userId })',
+      'TimePeriodSettings.update(knex, context.tenant, id, data)',
+      'TimePeriodSettings.delete(knex, context.tenant, id)',
+    ]) {
+      expect(section).toContain(call);
+    }
 
-    expect(section).not.toMatch(/knex\('time_period_settings'\)\s*\.(?:where|orderBy)/);
-    expect(section).not.toMatch(/trx\('time_period_settings'\)\s*[\r\n]+\s*\.where/);
-    expect(section).not.toMatch(/\.where\(\{\s*tenant: context\.tenant,\s*is_active: true\s*\}\)/);
-    expect(section).not.toMatch(/\.where\(\{\s*settings_id: id,\s*tenant: context\.tenant\s*\}\)/);
+    expect(section).not.toContain("table('time_period_settings')");
+    expect(section).not.toMatch(/knex\('time_period_settings'\)|trx\('time_period_settings'\)/);
   });
 });

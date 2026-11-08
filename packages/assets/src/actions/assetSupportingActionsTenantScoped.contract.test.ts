@@ -47,6 +47,7 @@ describe('asset package tenant-scoped support query contract', () => {
 
     expect(roots.map((match) => match[1])).toEqual([
       'assets',
+      'rma_cases',
       'stock_units',
       'service_catalog',
       'stock_movements',

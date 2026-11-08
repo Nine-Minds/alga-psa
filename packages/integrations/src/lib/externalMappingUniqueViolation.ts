@@ -45,16 +45,24 @@ export function duplicateMappingError(): ActionMessageError {
   );
 }
 
+const TARGET_INDEXES: ReadonlySet<string> = new Set([
+  'idx_unique_external_mapping',
+  'idx_unique_external_mapping_qbo_guard',
+]);
+
 /**
  * Maps a 23505 raised while writing a mapping row to a user-facing error.
  * Shared by create and update so the two paths cannot drift apart.
  * Returns null when the error is not a unique violation.
  *
- * idx_unique_external_mapping is a partial index on the external target:
- * item-kind rows (and every non-Xero integration) are one-to-one, while Xero
- * revenue-account rows are outside it and may be shared. Tombstoned (unlinked)
- * rows are outside both indexes and reserve nothing. Anything else
- * (idx_unique_alga_mapping) is the same Alga entity mapped twice.
+ * The external-target index (idx_unique_external_mapping, plus the temporary
+ * idx_unique_external_mapping_qbo_guard that exists only while the migration
+ * swaps it) is a partial index over LIVE rows: shareable targets (see
+ * isSharedMappingTarget) and tombstones sit outside it and reserve nothing,
+ * every other live target is one-to-one. A 23505 from it is therefore a real
+ * target conflict, or deployment/schema drift, and is never swallowed.
+ * Anything else (idx_unique_alga_mapping, which is total and also covers
+ * tombstones) is the same Alga entity mapped twice.
  */
 export function mapUniqueViolation(
   error: unknown,
@@ -63,7 +71,7 @@ export function mapUniqueViolation(
   const index = uniqueViolationIndex(error);
   if (index === null) return null;
 
-  if (index === 'idx_unique_external_mapping') {
+  if (TARGET_INDEXES.has(index)) {
     return duplicateTargetError(row);
   }
   return duplicateMappingError();

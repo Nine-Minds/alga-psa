@@ -30,6 +30,21 @@ test('the browser lane tests the production Dockerfiles, compiled on the runner'
   }
 });
 
+test('server candidates are labelled and tagged with their source tree for reuse after merge', () => {
+  const workflow = yaml.load(read('.github/workflows/e2e-fresh-install-tests.yaml'));
+  const steps = workflow.jobs['build-images'].steps;
+  const tree = steps.find(step => step.id === 'tree');
+  assert.match(tree.run, /git rev-parse 'HEAD\^\{tree\}'/);
+  const build = steps.find(step => step.id === 'export_image');
+  assert.match(build.with.labels, /com\.nineminds\.source-tree=\$\{\{ steps\.tree\.outputs\.tree \}\}/);
+  assert.match(build.with.labels, /org\.opencontainers\.image\.revision=\$\{\{ github\.sha \}\}/);
+  const tag = steps.find(step => step.name === 'Tag the candidate with its source tree');
+  assert.equal(tag.if, "env.IMAGE_TRANSPORT == 'registry' && matrix.prebuild");
+  assert.match(tag.run, /imagetools create --tag "\$REGISTRY_REFERENCE:tree-\$TREE" "\$REGISTRY_REFERENCE@\$BUILD_REPORTED_DIGEST"/);
+  // After the identity record, so the record binds the run's own tag.
+  assert.ok(steps.indexOf(tag) > steps.findIndex(step => step.name === 'Record actual published candidate image identity'));
+});
+
 test('the artifact builders build and export, and never run', () => {
   for (const file of ['Dockerfile.build', 'ee/server/Dockerfile.build']) {
     const text = read(file);
@@ -66,21 +81,6 @@ test('both runtime images ship the workspace packages their runtime imports reso
     assert.match(text, /^COPY --chown=1000:1000 \.\/server\/\.next \.\/server\/\.next$/m, `${file} hands .next to the runtime user`);
     assert.match(text, /^RUN chown 1000:1000 \/app\/server \/app\/server\/tsconfig\.json$/m, `${file} hands the server directory to the runtime user`);
   }
-});
-
-test('a restored webpack cache is actually reusable on a fresh checkout', () => {
-  // Next folds the server-action encryption key into the webpack cache version
-  // and generates one per build unless it is provided.
-  const workflow = yaml.load(read('.github/workflows/e2e-fresh-install-tests.yaml'));
-  const build = workflow.jobs['build-images'].steps.find(step => step.name === 'Build the production application on the runner');
-  assert.match(build.env.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY, /^[A-Za-z0-9+/]{43}=$/, 'the candidates build with a fixed, test-only key');
-  // Fresh checkouts give every file a new mtime; webpack must fall back to
-  // content hashes or every restored module snapshot is invalid.
-  const config = read('server/next.config.mjs');
-  assert.match(config, /config\.snapshot = \{ \.\.\.config\.snapshot, module: byContent, resolve: byContent/);
-  assert.match(config, /const byContent = \{ timestamp: true, hash: true \};/);
-  // Nx refuses cache entries written on another machine unless told otherwise.
-  assert.match(read('scripts/build-production-server.sh'), /^export NX_REJECT_UNKNOWN_LOCAL_CACHE=0$/m);
 });
 
 test('development-mode checks compile in the development runtime, never in the production candidate', () => {

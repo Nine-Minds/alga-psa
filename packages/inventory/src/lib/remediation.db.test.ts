@@ -346,9 +346,9 @@ describe('T034 constraints — vendor bill lifecycle schema', () => {
 describe('T019 schema — rma_cases no longer admits dead_unit_returned', () => {
   it('rejects the removed status and accepts live ones', async () => {
     await inTx(async (trx) => {
-      const base = { tenant: TENANT, rma_type: 'standard', service_id: SERVICE, client_id: CLIENT, opened_at: trx.fn.now() };
+      const base = { tenant: TENANT, rma_type: 'standard', rma_number: `RMA-T${Math.random().toString(36).slice(2, 10)}`, service_id: SERVICE, client_id: CLIENT, opened_at: trx.fn.now() };
       await trx('rma_cases').insert({ ...base, status: 'open' });
-      await expect(trx('rma_cases').insert({ ...base, status: 'dead_unit_returned' })).rejects.toThrow(
+      await expect(trx('rma_cases').insert({ ...base, rma_number: `${base.rma_number}-2`, status: 'dead_unit_returned' })).rejects.toThrow(
         /rma_cases_status_check/,
       );
     });

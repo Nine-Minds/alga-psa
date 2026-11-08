@@ -18,6 +18,7 @@ import {
 import { tenantDb } from '@alga-psa/db';
 import { getConnection } from '@alga-psa/db/tenant';
 import { formatDateValue } from './formatDateValue';
+import { formatCurrencyWithSymbol } from '@alga-psa/core/formatters';
 import type { CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
 
 /**
@@ -468,7 +469,8 @@ export function formatNumber(
 }
 
 /**
- * Format currency according to the locale
+ * Format currency according to the locale, showing the product's own symbol
+ * ("ZAR (R)" → "R") instead of Intl's ISO wording.
  */
 export function formatCurrency(
   value: number,
@@ -476,9 +478,5 @@ export function formatCurrency(
   currency: string,
   options?: Intl.NumberFormatOptions,
 ): string {
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency,
-    ...options,
-  }).format(value);
+  return formatCurrencyWithSymbol(value, locale, currency, options);
 }

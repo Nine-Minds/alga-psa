@@ -33,12 +33,12 @@ describe('asset billing profile reaches tickets from assets', () => {
     );
     expect(text).toContain('billing_profile_id: billingProfileId,');
     // And the field must survive the parse that precedes it.
-    expect(text).toMatch(/createTicketFromAssetSchema = z\.object\(\{[\s\S]*?billing_profile_id: z\.string\(\)\.uuid\(/);
+    expect(text).toMatch(/createTicketFromAssetSchema = z\.object\(\{[\s\S]*?billing_profile_id: z\.string\(\)\.guid\(/);
   });
 
   it('T130: the MSP and REST edge schemas carry the field through', () => {
     expect(source('packages/tickets/src/schemas/ticket.schema.ts'))
-      .toMatch(/createTicketFromAssetSchema = z\.object\(\{[\s\S]*?billing_profile_id: z\.string\(\)\.uuid\(\)\.nullable\(\)\.optional\(\)/);
+      .toMatch(/createTicketFromAssetSchema = z\.object\(\{[\s\S]*?billing_profile_id: z\.string\(\)\.guid\(\)\.nullable\(\)\.optional\(\)/);
     expect(source('server/src/lib/api/schemas/ticket.ts'))
       .toMatch(/createTicketFromAssetSchema = z\.object\(\{[\s\S]*?billing_profile_id: uuidSchema\.nullable\(\)\.optional\(\)/);
     // The REST service must forward it rather than dropping it on the floor.
@@ -55,14 +55,30 @@ describe('asset billing profile reaches tickets from assets', () => {
     expect(text).toContain(
       "import { resolveAssetBillingProfileIdForClient } from '@alga-psa/shared/models/assetBillingProfileModel';"
     );
-    expect(text).toMatch(
-      /if \(linkedAssetIds\.length > 0 && createTicketInput\.client_id && !createTicketInput\.billing_profile_id\) \{\s*\n\s*createTicketInput\.billing_profile_id =\s*\n\s*\(await resolveAssetBillingProfileIdForClient\(\s*\n\s*trx,\s*\n\s*tenant,\s*\n\s*linkedAssetIds\[0\],/
-    );
     // With several assets the profile resolves from the first linked one, and
     // the single `asset_id` ("opened from an asset") is always placed first.
     expect(text).toMatch(
-      /const linkedAssetIds = Array\.from\(\s*\n\s*new Set\(\[\.\.\.\(asset_id \? \[asset_id as string\] : \[\]\), \.\.\.extras\.assetIds\]\)/
+      /const linkedAssetIds = dedupeTicketAssetIds\(\[\s*\n\s*typeof asset_id === 'string' \? asset_id : '',\s*\n\s*\.\.\.extras\.assetIds,\s*\n\s*\]\);/
     );
+    // One rule, read from the shared model so REST and mobile cannot drift
+    // (alga-2026-0002785).
+    expect(text).toContain('const billingProfileSourceAssetId = assetIdForBillingProfileInheritance(linkedAssetIds);');
+    expect(text).toMatch(
+      /if \(billingProfileSourceAssetId && createTicketInput\.client_id && !createTicketInput\.billing_profile_id\) \{\s*\n\s*createTicketInput\.billing_profile_id =\s*\n\s*\(await resolveAssetBillingProfileIdForClient\(\s*\n\s*trx,\s*\n\s*tenant,\s*\n\s*billingProfileSourceAssetId,/
+    );
+  });
+
+  it('T130: the REST create reads the same first-asset rule', () => {
+    // POST /api/v1/tickets takes asset_ids (the mobile device picker), so the
+    // phone, the web dialog and the API must inherit from the same device.
+    expect(source('shared/models/ticketAssetLinkModel.ts')).toMatch(
+      /export function assetIdForBillingProfileInheritance\(assetIds: readonly string\[\]\): string \| null \{\s*\n\s*return assetIds\[0\] \?\? null;/
+    );
+
+    const text = source('server/src/lib/api/services/TicketService.ts');
+    expect(text).toContain("} from '@alga-psa/shared/models/ticketAssetLinkModel';");
+    expect(text).toContain('const billingProfileSourceAssetId = assetIdForBillingProfileInheritance(assetIds);');
+    expect(text).toMatch(/resolveAssetBillingProfileIdForClient\(trx, context\.tenant, billingProfileSourceAssetId, data\.client_id\)/);
   });
 
   it('T130: the portal prefers the asset profile over the contact heuristic', () => {

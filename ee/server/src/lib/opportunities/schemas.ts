@@ -11,8 +11,8 @@ export const opportunityPeriodSchema = z.object({
 });
 
 export const meetingReviewSchema = z.object({
-  session_id: z.string().uuid(),
-  opportunity_id: z.string().uuid(),
+  session_id: z.string().guid(),
+  opportunity_id: z.string().guid(),
   note: z.string().trim().max(4000).nullable().optional(),
 });
 
@@ -31,7 +31,7 @@ const commitmentResolutionSchema = z.enum([
 export const updateCommitmentSchema = z.object({
   description: z.string().trim().min(1).max(4000).optional(),
   resolution_status: commitmentResolutionSchema.optional(),
-  resolution_ref_id: z.string().uuid().nullable().optional(),
+  resolution_ref_id: z.string().guid().nullable().optional(),
 }).superRefine((input, ctx) => {
   if (!Object.values(input).some((value) => value !== undefined)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'At least one field is required' });

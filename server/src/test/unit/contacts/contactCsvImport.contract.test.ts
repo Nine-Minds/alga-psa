@@ -334,4 +334,64 @@ describe('contact CSV import action contract', () => {
       }),
     });
   });
+
+  it('a mapped but blank Work arrangement cell clears the stored arrangement', async () => {
+    const existingContact = {
+      contact_name_id: 'contact-remote',
+      full_name: 'Remote CSV Contact',
+      client_id: null,
+      phone_numbers: [],
+      additional_email_addresses: [],
+      email: 'remote@acme.com',
+      role: null,
+      notes: null,
+      is_inactive: false,
+      work_arrangement: 'remote',
+    } as unknown as IContact;
+
+    testState.trx = makeTrx({ directMatches: [{ contact_name_id: existingContact.contact_name_id }] });
+    testState.getContactByIdMock.mockResolvedValue(existingContact);
+    testState.updateContactMock.mockImplementation(async (_contactId: string, input: any) => ({
+      ...existingContact,
+      ...input,
+    }));
+
+    // contactCsvImportPayload turns a mapped, blank cell into null; the action must pass that null
+    // through so the arrangement actually clears instead of silently keeping "remote".
+    const results = await importContactsFromCSV([
+      { full_name: 'Remote CSV Contact', email: 'remote@acme.com', work_arrangement: null } as any,
+    ], true);
+
+    expect(results[0]).toMatchObject({ success: true });
+    expect(testState.updateContactMock.mock.calls[0][1]).toMatchObject({ work_arrangement: null });
+  });
+
+  it('leaves the stored work arrangement alone when the column is not mapped', async () => {
+    const existingContact = {
+      contact_name_id: 'contact-hybrid',
+      full_name: 'Hybrid Only Contact',
+      client_id: null,
+      phone_numbers: [],
+      additional_email_addresses: [],
+      email: 'hybrid@acme.com',
+      role: null,
+      notes: null,
+      is_inactive: false,
+      work_arrangement: 'hybrid',
+    } as unknown as IContact;
+
+    testState.trx = makeTrx({ directMatches: [{ contact_name_id: existingContact.contact_name_id }] });
+    testState.getContactByIdMock.mockResolvedValue(existingContact);
+    testState.updateContactMock.mockImplementation(async (_contactId: string, input: any) => ({
+      ...existingContact,
+      ...input,
+    }));
+
+    const results = await importContactsFromCSV([
+      { full_name: 'Hybrid Only Contact', email: 'hybrid@acme.com' } as any,
+    ], true);
+
+    expect(results[0]).toMatchObject({ success: true });
+    expect(testState.updateContactMock.mock.calls[0][1].work_arrangement).toBeUndefined();
+  });
 });

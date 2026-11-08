@@ -116,7 +116,10 @@
     "clientTags": "Tags do cliente",
     "tagModeAny": "Qualquer um de",
     "tagModeNone": "Nenhum de",
-    "droppedFromLink": "Alguns filtros deste link não são válidos e foram ignorados."
+    "droppedFromLink": "Alguns filtros deste link não são válidos e foram ignorados.",
+    "clearFilters": "Limpar filtros",
+    "location": "Localização",
+    "requesterLocation": "Localização do solicitante"
   },
   "create": {
     "title": "Criar ticket de suporte",
@@ -256,7 +259,9 @@
     "createTemplate": "Criar modelo a partir do ticket",
     "createWorkflowFromTicket": "Criar fluxo de trabalho a partir do ticket",
     "printWorkTag": "Imprimir etiqueta de trabalho",
-    "retry": "Tentar novamente"
+    "retry": "Tentar novamente",
+    "duplicateMultiple": "Duplicar várias vezes…",
+    "duplicateOptions": "Mais opções de duplicação"
   },
   "messages": {
     "noTickets": "Nenhum ticket encontrado",
@@ -439,7 +444,29 @@
     "bcc": "Cco",
     "ccBccInvalid": "Corrija os endereços destacados antes de enviar.",
     "ccBccTooMany": "No máximo {{max}} destinatários Cc e Cco podem ser copiados em um comentário.",
-    "ccBccNotSentOnInternal": "Cc e Cco não são enviados com uma nota interna. Desative Interna para usá-los."
+    "ccBccNotSentOnInternal": "Cc e Cco não são enviados com uma nota interna. Desative Interna para usá-los.",
+    "audience": {
+      "requester": "Solicitante",
+      "sharedIt": "TI compartilhada",
+      "organizationPrivate": "Privado da organização",
+      "placeholder": "Quem pode ver isto?",
+      "required": "Escolha quem pode ver este comentário antes de publicá-lo."
+    },
+    "shared": {
+      "loading": "Carregando a conversa compartilhada...",
+      "loadError": "Não foi possível carregar a conversa compartilhada.",
+      "reload": "Recarregar",
+      "errors": {
+        "forbidden": "Você não tem permissão para publicar para este público.",
+        "invalid": "Este comentário não pode ser publicado.",
+        "readOnly": "Este espaço de trabalho está somente leitura no momento.",
+        "operationConflict": "Este comentário conflita com uma tentativa anterior. Recarregue e tente novamente.",
+        "audienceUnresolved": "Escolha quem pode ver este comentário antes de publicá-lo.",
+        "unknownOutcome": "Não foi possível confirmar que o comentário foi publicado. Verifique a conversa antes de enviá-lo novamente."
+      },
+      "unavailable": "Este ticket não está disponível.",
+      "back": "Voltar aos tickets dos clientes"
+    }
   },
   "responseState": {
     "awaitingYourResponse": "Aguardando sua resposta",
@@ -1003,7 +1030,9 @@
       "heading": "Observadores",
       "placeholder": "Adicionar observadores..."
     },
-    "attachmentsPartialFailure": "Ticket criado, mas não foi possível anexar estes ficheiros: {{files}}. Adicione-os a partir do ticket."
+    "attachmentsPartialFailure": "Ticket criado, mas não foi possível anexar estes ficheiros: {{files}}. Adicione-os a partir do ticket.",
+    "contactLocationSuffix": "(localização do contato)",
+    "contactPrimaryLocationSuffix": "(localização principal do contato)"
   },
   "itil": {
     "calculatedPriority": "Prioridade (calculada)",
@@ -1625,7 +1654,9 @@
       "agentAlreadyAssigned": "Este usuário já está atribuído como agente adicional.",
       "teamNotFound": "Equipe não encontrada. Ela pode ter sido excluída. Atualize a página e tente novamente.",
       "teamLeadNotFound": "A equipe selecionada não tem líder. Escolha outra equipe ou defina um líder primeiro.",
-      "commentNotFound": "Comentário não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente."
+      "commentNotFound": "Comentário não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "boardNotFound": "Quadro não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "boardInactive": "O quadro de destino está inativo. Escolha um quadro ativo."
     },
     "bundle": {
       "masterAlreadyBundleMaster": "O ticket {{tickets}} já é um ticket principal de agrupamento e não pode ser adicionado como ticket filho. Desfaça o agrupamento primeiro ou use-o como ticket principal.",
@@ -1652,7 +1683,9 @@
       "missingFieldNamed": "Falta um campo obrigatório do ticket: {{field}}.",
       "referenceMissing": "Um dos registros de ticket selecionados não existe mais. Atualize a página e tente novamente.",
       "conflict": "Esta alteração do ticket conflita com um registro existente. Atualize a página e tente novamente.",
-      "valueNotAllowed": "Um dos valores do ticket não é permitido. Revise o formulário e tente novamente."
+      "valueNotAllowed": "Um dos valores do ticket não é permitido. Revise o formulário e tente novamente.",
+      "priorityItilBoardCustom": "A prioridade ‘{{priority}}’ é uma prioridade ITIL, mas o quadro ‘{{board}}’ usa prioridades personalizadas.",
+      "priorityCustomBoardItil": "A prioridade ‘{{priority}}’ é uma prioridade personalizada, mas o quadro ‘{{board}}’ usa prioridades ITIL."
     },
     "board": {
       "invalidReference": "O quadro, o status ou a regra selecionados são inválidos. Atualize a página e tente novamente.",
@@ -1661,7 +1694,14 @@
       "referenceInvalid": "O quadro, o status, a prioridade, o responsável, a equipe ou a política de SLA selecionados não são mais válidos. Atualize a página e tente novamente.",
       "duplicateName": "Já existe um quadro com este nome.",
       "duplicate": "Já existe um quadro ou status com as mesmas configurações.",
-      "invalidValue": "Um dos valores do quadro ou do status é inválido. Atualize a página e tente novamente."
+      "invalidValue": "Um dos valores do quadro ou do status é inválido. Atualize a página e tente novamente.",
+      "notificationEmailInvalid": "A regra de notificação {{rule}} tem um endereço de e-mail inválido (até {{max}} caracteres)",
+      "notificationEmailLimit": "A regra de notificação {{rule}} pode ter no máximo {{max}} endereços de e-mail",
+      "notificationRecipientRequired": "A regra de notificação {{rule}} deve notificar pelo menos um usuário, equipe ou endereço de e-mail",
+      "notificationEmailIsUser": "Regra de notificação {{rule}}: {{address}} é o endereço de e-mail de um usuário Alga. Selecione o usuário em vez disso.",
+      "notificationEmailIsContact": "Regra de notificação {{rule}}: {{address}} pertence a um contato ou local de um cliente e não pode ser destinatário.",
+      "notificationEmailClientDomain": "Regra de notificação {{rule}}: {{address}} pertence ao domínio de e-mail de um cliente e não pode ser destinatário.",
+      "notificationEmailInboundMailbox": "Regra de notificação {{rule}}: {{address}} é uma caixa de correio de entrada conectada e não pode ser destinatário."
     },
     "material": {
       "invalidValue": "Um dos valores de material selecionados é inválido. Atualize a página e tente novamente.",
@@ -1725,6 +1765,9 @@
       "templateRulesTargetOtherClients": "Algumas regras de aplicação automática deste modelo visam outros clientes. Remova esses clientes das regras antes de atribuir o modelo a um cliente.",
       "predicateClientOutsideScope": "O cliente {{client}} está fora do escopo deste modelo.",
       "predicateInvalid": "Regra de checklist inválida: {{detail}}"
+    },
+    "comment": {
+      "audienceRequired": "Escolha quem pode ver este comentário antes de publicá-lo."
     }
   },
   "ticketSection": {
@@ -2036,7 +2079,9 @@
       "changeLocation": "Alterar localização",
       "addDescriptionPrompt": "Adicione uma descrição — qual é o problema e do que o cliente precisa?",
       "projectTasks": "Tarefas do projeto",
-      "timeAndBilling": "Tempo e faturamento"
+      "timeAndBilling": "Tempo e faturamento",
+      "useContactLocation": "Usar a localização do contato",
+      "remote": "Remoto"
     },
     "timeline": {
       "subtitle": "Respostas, tempo e alterações do sistema em um só lugar",
@@ -2591,12 +2636,15 @@
       "columns": {
         "name": "Nome",
         "title": "Título do ticket",
+        "client": "Cliente",
         "board": "Quadro",
         "checklist": "Itens da checklist",
         "status": "Estado",
         "schedules": "Agendamentos"
       },
-      "deleteBlocked": "Usado por {{count}} agendamento(s) recorrente(s). Aponte-os para outro modelo ou arquive-os primeiro."
+      "deleteBlocked": "Usado por {{count}} agendamento(s) recorrente(s). Aponte-os para outro modelo ou arquive-os primeiro.",
+      "allClients": "Todos os clientes",
+      "clientFilter": "Todos os clientes"
     },
     "status": {
       "active": "Ativo",
@@ -2624,6 +2672,9 @@
       "title": "Título do ticket",
       "description": "Descrição",
       "descriptionPlaceholder": "Descrição",
+      "client": "Cliente",
+      "clientPlaceholder": "Todos os clientes",
+      "clientHelp": "Deixe vazio para oferecer o modelo a todos os clientes. Escolha um para o oferecer apenas nos tickets desse cliente.",
       "offerForManualUse": "Oferecer no seletor de novo ticket",
       "offerForManualUseHelp": "Desative para modelos usados apenas por agendamentos recorrentes.",
       "titleTokens": "Você pode usar {{tokens}} no título; eles são preenchidos por ticket."
@@ -2654,15 +2705,17 @@
       "fromTicket": "Preenchido a partir do ticket #{{number}}. Nada é guardado até clicar em Guardar.",
       "inlineImages": "A descrição contém imagens que pertencem ao ticket de origem. Podem deixar de ser apresentadas se esse ticket for eliminado. Remova-as ou carregue-as novamente se o modelo deve sobreviver ao ticket.",
       "viewOnly": "Pode ver este modelo, mas não o alterar.",
-      "referenceProblems": "Alguns campos deste modelo apontam para itens que já não existem. Ficam em branco quando o modelo é usado. Corrija-os e guarde:",
+      "referenceProblems": "Alguns campos deste modelo não são válidos: referem-se a itens que já não existem ou não são compatíveis entre si (por exemplo, uma prioridade que não corresponde ao quadro). Corrija-os e guarde:",
       "inactiveWarning": "Inativo: oculto no seletor de modelos; ainda usado por {{count}} agendamentos.",
       "sharedWarning": "As alterações aplicam-se a todos os agendamentos recorrentes que usam este modelo, a partir do próximo ticket criado.",
-      "boardChangeWarning": "Alterar o quadro limpa a prioridade e a categoria e pode invalidar o status dos agendamentos que usam este modelo. Esses agendamentos falham até que você os edite. Agendamentos afetados: {{schedules}}."
+      "boardChangeWarning": "Alterar o quadro limpa a prioridade e a categoria e pode invalidar o status dos agendamentos que usam este modelo. Esses agendamentos falham até que você os edite. Agendamentos afetados: {{schedules}}.",
+      "priorityTypeMismatchItil": "A prioridade ‘{{priority}}’ é uma prioridade ITIL, mas o quadro ‘{{board}}’ usa prioridades personalizadas. O salvamento será recusado até que você altere a prioridade ou o quadro.",
+      "priorityTypeMismatchCustom": "A prioridade ‘{{priority}}’ é uma prioridade personalizada, mas o quadro ‘{{board}}’ usa prioridades ITIL. O salvamento será recusado até que você altere a prioridade ou o quadro."
     },
     "errors": {
       "notFound": "Modelo de ticket não encontrado",
       "duplicateName": "Já existe um modelo com o nome {{name}}",
-      "invalidReferences": "O modelo refere um quadro, categoria ou prioridade que não está disponível",
+      "invalidReferences": "{{problems}}",
       "notAvailable": "Os modelos de tickets não estão disponíveis",
       "subcategoryNeedsCategory": "Uma subcategoria requer uma categoria",
       "inUseBySchedules": "Usado por {{count}} agendamento(s) recorrente(s): {{schedules}}. Aponte-os para outro modelo ou arquive-os primeiro."
@@ -2811,5 +2864,104 @@
       "notAvailable": "Esta resposta pronta não está disponível para este ticket.",
       "notATeamMember": "Só pode gerir respostas de equipa das equipas a que pertence."
     }
+  },
+  "batchDuplicate": {
+    "title": "Duplicar #{{number}} para contatos",
+    "titleLoading": "Duplicar para contatos",
+    "loading": "Carregando…",
+    "loadFailed": "Não foi possível carregar o ticket a duplicar. Tente novamente.",
+    "createFailed": "Não foi possível criar as cópias. Tente novamente.",
+    "templateLabel": "Modelo de título",
+    "insertToken": "Inserir:",
+    "nameHint": "Substitua \"{{name}}\" por {{token}} para personalizar cada cópia.",
+    "replace": "Substituir",
+    "contactsLabel": "Contatos",
+    "contactsPlaceholder": "Selecionar contatos…",
+    "addBlankRow": "Adicionar cópia sem contato",
+    "count": "{{count}} de {{max}}",
+    "capReached": "Máximo de {{max}} cópias por lote.",
+    "columns": {
+      "contact": "Contato",
+      "title": "Título"
+    },
+    "resetRow": "Redefinir para o modelo",
+    "removeRow": "Remover cópia",
+    "copyChecklist": "Copiar itens da lista de verificação (desmarcados)",
+    "cancel": "Cancelar",
+    "review": "Revisar",
+    "back": "Voltar",
+    "create_one": "Criar {{count}} ticket",
+    "create_other": "Criar {{count}} tickets",
+    "creating_one": "Criando {{count}} ticket…",
+    "creating_other": "Criando {{count}} tickets…",
+    "done": "Concluído",
+    "retryFailed_one": "Tentar novamente as falhas ({{count}})",
+    "retryFailed_other": "Tentar novamente as falhas ({{count}})",
+    "errors": {
+      "contactRequired": "Este título usa {{token}}, mas a cópia não tem contato.",
+      "unknownToken": "Token desconhecido: {{tokens}}",
+      "empty": "O título não pode estar vazio.",
+      "unresolvedToken": "O título ainda contém um token {{placeholder}}."
+    },
+    "summary": {
+      "client": "Cliente",
+      "board": "Quadro",
+      "category": "Categoria",
+      "priority": "Prioridade",
+      "assignee": "Responsável",
+      "team": "Equipe",
+      "additionalAgents": "Agentes adicionais",
+      "tags": "Etiquetas",
+      "checklist": "Lista de verificação",
+      "checklistCopy_one": "Copiar {{count}} item (desmarcado)",
+      "checklistCopy_other": "Copiar {{count}} itens (desmarcados)",
+      "checklistSkip": "Não copiada",
+      "customFields": "Campos personalizados",
+      "status": "Status",
+      "statusBoardDefault": "Padrão do quadro",
+      "none": "Nenhum",
+      "notCopied": "Comentários, lançamentos de tempo, anexos e data de vencimento não são copiados.",
+      "unresolved": "Nome indisponível"
+    },
+    "results": {
+      "created_one": "{{count}} ticket criado",
+      "created_other": "{{count}} tickets criados",
+      "failed_one": "{{count}} cópia falhou",
+      "failed_other": "{{count}} cópias falharam"
+    },
+    "discardTitle": "Descartar estas cópias?",
+    "discardMessage": "As cópias configuradas ainda não foram criadas. Descartá-las e fechar?",
+    "discardConfirm": "Descartar",
+    "discardKeep": "Continuar editando"
+  },
+  "sharedSla": {
+    "title": "Nível de serviço",
+    "msp": "Nível de serviço do MSP",
+    "customer": "Nível de serviço do cliente",
+    "state": {
+      "running": "Em andamento",
+      "paused": "Em pausa",
+      "met": "Cumprido",
+      "breached": "Violado"
+    },
+    "target": {
+      "response": "Primeira resposta",
+      "resolution": "Resolução"
+    },
+    "elapsed": "Decorrido: {{time}}",
+    "dueAt": "Vence: {{date}}",
+    "completedAt": "Cumprido em {{date}}",
+    "breached": "Violado",
+    "targetPaused": "Em pausa",
+    "noTarget": "Sem meta",
+    "duration": {
+      "hoursMinutes": "{{hours}} h {{minutes}} min",
+      "minutes": "{{minutes}} min"
+    },
+    "notStarted": "O relógio começa quando o ticket é escalado.",
+    "unavailable": "Este nível de serviço já não está disponível.",
+    "notConfigured": "Nenhum nível de serviço se aplica.",
+    "empty": "Ainda não há nível de serviço acompanhado para este ticket.",
+    "loadError": "Não foi possível carregar o nível de serviço."
   }
 }

@@ -376,8 +376,9 @@ the development server writes into the checkout (all of it ignored by Git).
 Building on the runner is what lets the webpack filesystem cache
 (`server/node_modules/.cache/webpack`, configured in `next.config.mjs`) and
 the Nx cache survive between runs: `scripts/build-cache-snapshot.mjs` pulls a
-snapshot of both from `ghcr.io/<repository>/build-cache:<edition>` before the
-build and, on runs of `main` only, pushes the new state afterwards. A pull
+snapshot of both from `ghcr.io/<repository>/build-cache:<edition>-v2` before
+the build and, on runs of `main` only, pushes the new state afterwards (the
+tag's generation suffix moves when a pack has to start over cold). A pull
 request never writes a snapshot, because a cache can shape build output. A
 missing or unreadable snapshot is a cold build, not a failure. The daily
 candidate-image cleanup removes the superseded, untagged snapshot versions.
@@ -387,6 +388,17 @@ that key into the webpack cache version and generates a new one per build
 when it is unset; and `next.config.mjs` makes production builds validate
 webpack snapshots by content hash, because a fresh checkout gives every file a
 new mtime and the timestamp-only default would invalidate every module.
+
+Every candidate carries the label `com.nineminds.source-tree` (the Git tree
+hash of the checkout it was built from, next to the commit in
+`org.opencontainers.image.revision`), and the two server candidates are also
+tagged `tree-<tree hash>` in the registry after their identity record is
+written. A pull request's merge commit and the squash commit that lands it on
+`main` have the same tree whenever `main` did not move in between, so the Argo
+deployment build can recognise an image CI already built from exactly the
+source it is deploying and copy it instead of compiling again. The candidate's
+own identity record is unaffected: it binds the run's tag and manifest digest,
+and the tree tag is a second name for that same digest.
 
 The journeys are partitioned across the `browser-<n>` shards by the runner
 itself. Each shard lists the whole collection, then takes its share

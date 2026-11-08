@@ -12,7 +12,7 @@ import { recurringTicketOverridesSchema } from './effectiveFields';
  * because a server-action file may only export async functions, and the editor reuses them for
  * client-side checks.
  */
-const uuid = z.string().uuid();
+const uuid = z.string().guid();
 const timeString = z.string().refine(isValidTimeString, 'Expected a time in HH:MM format');
 
 export const OPEN_PREVIOUS_POLICIES = ['always_create', 'skip'] as const;

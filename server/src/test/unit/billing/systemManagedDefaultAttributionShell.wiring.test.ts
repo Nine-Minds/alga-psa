@@ -22,6 +22,11 @@ const contractLineActionsSource = readFileSync(
   resolve(__dirname, '../../../../../packages/billing/src/actions/contractLineAction.ts'),
   'utf8',
 );
+// The line update guard lives in the shared transaction-scoped update module.
+const contractLineUpdateSource = readFileSync(
+  resolve(__dirname, '../../../../../packages/billing/src/lib/billing/contractLineUpdate.ts'),
+  'utf8',
+);
 const contractLineMappingActionsSource = readFileSync(
   resolve(__dirname, '../../../../../packages/billing/src/actions/contractLineMappingActions.ts'),
   'utf8',
@@ -82,7 +87,9 @@ describe('system-managed default attribution-shell cutover wiring', () => {
 
   it('F071/F073: backend mutation paths block authoring for system-managed default contracts', () => {
     expect(contractLineActionsSource).toContain('assertContractLineIsAuthorable');
-    expect(contractLineActionsSource).toContain('contract-line authoring is disabled');
+    expect(contractLineActionsSource).toContain("from '../lib/billing/contractLineUpdate'");
+    expect(contractLineUpdateSource).toContain('export async function assertContractLineIsAuthorable');
+    expect(contractLineUpdateSource).toContain('contract-line authoring is disabled');
     expect(contractLineMappingActionsSource).toContain('assertContractIsAuthorable');
     expect(contractLineMappingActionsSource).toContain('contract-line authoring is disabled');
     expect(contractPricingScheduleActionsSource).toContain('pricing schedule authoring is disabled');

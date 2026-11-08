@@ -155,14 +155,14 @@ export const userWithTeamsResponseSchema = userWithRolesResponseSchema.extend({
 // User preferences schemas
 export const userPreferenceSchema = z.object({
   setting_name: z.string().min(1, 'Setting name is required').max(100),
-  setting_value: z.any(),
+  setting_value: z.any().optional(),
   updated_at: dateSchema.optional()
 });
 
 export const createUserPreferenceSchema = z.object({
   user_id: uuidSchema,
   setting_name: z.string().min(1, 'Setting name is required').max(100),
-  setting_value: z.any()
+  setting_value: z.any().optional()
 });
 
 export const bulkUpdateUserPreferencesSchema = z.object({
@@ -173,7 +173,7 @@ export const bulkUpdateUserPreferencesSchema = z.object({
 export const userPreferenceResponseSchema = z.object({
   user_id: uuidSchema,
   setting_name: z.string(),
-  setting_value: z.any(),
+  setting_value: z.any().optional(),
   updated_at: dateSchema,
   tenant: uuidSchema
 });
@@ -311,9 +311,9 @@ export const bulkDeactivateUsersSchema = z.object({
 export const userActivityLogSchema = z.object({
                user_id: uuidSchema,
                activity_type: z.enum(['login', 'logout', 'password_change', 'profile_update', 'role_change', 'team_join', 'team_leave', 'user_created', '2fa_enabled', '2fa_disabled', 'user_deactivated', 'user_activated']),
-               ip_address: z.string().ip().optional(),
+               ip_address: z.union([z.ipv4(), z.ipv6()]).optional(),
                user_agent: z.string().optional(),
-               metadata: z.record(z.any()).optional(),
+               metadata: z.record(z.string(), z.any()).optional(),
                created_at: dateSchema.optional()
              });
 ;
@@ -331,8 +331,8 @@ export const userStatsResponseSchema = z.object({
   total_users: z.number(),
   active_users: z.number(),
   inactive_users: z.number(),
-  users_by_type: z.record(z.number()),
-  users_by_role: z.record(z.number()),
+  users_by_type: z.record(z.string(), z.number()),
+  users_by_role: z.record(z.string(), z.number()),
   users_with_2fa: z.number(),
   users_without_avatar: z.number(),
   recent_logins: z.number(), // last 30 days
@@ -342,7 +342,7 @@ export const userStatsResponseSchema = z.object({
 // Avatar management schemas
 export const uploadAvatarSchema = z.object({
   user_id: uuidSchema.optional(), // Optional for self-upload
-  avatar: z.any() // File will be validated separately
+  avatar: z.any().optional() // File will be validated separately
 });
 
 export const deleteAvatarSchema = z.object({
@@ -356,8 +356,8 @@ export const userSearchSchema = z.object({
   user_type: userTypeSchema.optional(),
   role_id: uuidSchema.optional(),
   team_id: uuidSchema.optional(),
-  include_inactive: booleanTransform.optional().default("false"),
-  limit: numberTransform.pipe(z.number().min(1).max(100)).optional().default('25')
+  include_inactive: booleanTransform.prefault("false"),
+  limit: numberTransform.pipe(z.number().min(1).max(100)).prefault('25')
 });
 
 // User import/export schemas
@@ -376,14 +376,14 @@ export const userImportSchema = z.object({
 
 export const userExportQuerySchema = z.object({
   format: z.enum(['csv', 'json', 'xlsx']).optional().default('csv'),
-  include_inactive: booleanTransform.optional().default("false"),
+  include_inactive: booleanTransform.prefault("false"),
   user_type: userTypeSchema.optional(),
   role_id: uuidSchema.optional(),
   team_id: uuidSchema.optional(),
   fields: z.array(z.string()).optional(),
-  include_roles: booleanTransform.optional().default("false"),
-  include_teams: booleanTransform.optional().default("false"),
-  include_preferences: booleanTransform.optional().default("false")
+  include_roles: booleanTransform.prefault("false"),
+  include_teams: booleanTransform.prefault("false"),
+  include_preferences: booleanTransform.prefault("false")
 });
 
 // Session and authentication response schemas
@@ -437,7 +437,7 @@ export const userBulkActionResultSchema = z.object({
   errors: z.array(z.object({
     index: z.number(),
     error: z.string(),
-    data: z.any()
+    data: z.any().optional()
   })).optional(),
   results: z.array(z.any()).optional()
 });

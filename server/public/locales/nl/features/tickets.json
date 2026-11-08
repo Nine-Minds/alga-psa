@@ -116,7 +116,10 @@
     "clientTags": "Klanttags",
     "tagModeAny": "Een van",
     "tagModeNone": "Geen van",
-    "droppedFromLink": "Sommige filters in deze link zijn ongeldig en zijn genegeerd."
+    "droppedFromLink": "Sommige filters in deze link zijn ongeldig en zijn genegeerd.",
+    "clearFilters": "Filters wissen",
+    "location": "Locatie",
+    "requesterLocation": "Locatie van aanvrager"
   },
   "create": {
     "title": "Supportticket aanmaken",
@@ -256,7 +259,9 @@
     "createTemplate": "Sjabloon maken van ticket",
     "createWorkflowFromTicket": "Workflow maken van ticket",
     "printWorkTag": "Werklabel afdrukken",
-    "retry": "Opnieuw proberen"
+    "retry": "Opnieuw proberen",
+    "duplicateMultiple": "Meerdere keren dupliceren…",
+    "duplicateOptions": "Meer dupliceeropties"
   },
   "messages": {
     "noTickets": "Geen tickets gevonden",
@@ -439,7 +444,29 @@
     "bcc": "Bcc",
     "ccBccInvalid": "Corrigeer de gemarkeerde adressen voordat u verzendt.",
     "ccBccTooMany": "Er kunnen maximaal {{max}} Cc- en Bcc-ontvangers op één opmerking worden gekopieerd.",
-    "ccBccNotSentOnInternal": "Cc en Bcc worden niet verzonden bij een interne notitie. Zet Intern uit om ze te gebruiken."
+    "ccBccNotSentOnInternal": "Cc en Bcc worden niet verzonden bij een interne notitie. Zet Intern uit om ze te gebruiken.",
+    "audience": {
+      "requester": "Aanvrager",
+      "sharedIt": "Gedeelde IT",
+      "organizationPrivate": "Privé voor organisatie",
+      "placeholder": "Wie kan dit zien?",
+      "required": "Kies wie deze opmerking kan zien voordat u deze plaatst."
+    },
+    "shared": {
+      "loading": "De gedeelde conversatie wordt geladen...",
+      "loadError": "De gedeelde conversatie kon niet worden geladen.",
+      "reload": "Opnieuw laden",
+      "errors": {
+        "forbidden": "U mag niet naar dit publiek posten.",
+        "invalid": "Deze opmerking kan niet worden geplaatst.",
+        "readOnly": "Deze werkruimte is momenteel alleen-lezen.",
+        "operationConflict": "Deze opmerking botst met een eerdere poging. Laad opnieuw en probeer het nog eens.",
+        "audienceUnresolved": "Kies wie deze opmerking kan zien voordat u hem plaatst.",
+        "unknownOutcome": "We konden niet bevestigen dat de opmerking is geplaatst. Controleer de conversatie voordat u hem opnieuw verstuurt."
+      },
+      "unavailable": "Dit ticket is niet beschikbaar.",
+      "back": "Terug naar klanttickets"
+    }
   },
   "responseState": {
     "awaitingYourResponse": "Wacht op uw reactie",
@@ -1003,7 +1030,9 @@
       "heading": "Volgers",
       "placeholder": "Volgers toevoegen..."
     },
-    "attachmentsPartialFailure": "Ticket aangemaakt, maar deze bestanden konden niet worden bijgevoegd: {{files}}. Voeg ze toe vanuit het ticket."
+    "attachmentsPartialFailure": "Ticket aangemaakt, maar deze bestanden konden niet worden bijgevoegd: {{files}}. Voeg ze toe vanuit het ticket.",
+    "contactLocationSuffix": "(locatie van contactpersoon)",
+    "contactPrimaryLocationSuffix": "(primaire locatie van contactpersoon)"
   },
   "itil": {
     "calculatedPriority": "Prioriteit (berekend)",
@@ -1625,7 +1654,9 @@
       "agentAlreadyAssigned": "Deze gebruiker is al toegewezen als extra behandelaar.",
       "teamNotFound": "Team niet gevonden. Het is mogelijk verwijderd. Vernieuw de pagina en probeer het opnieuw.",
       "teamLeadNotFound": "Het geselecteerde team heeft geen teamleider. Kies een ander team of wijs eerst een teamleider toe.",
-      "commentNotFound": "Reactie niet gevonden. Deze is mogelijk verwijderd. Vernieuw de pagina en probeer het opnieuw."
+      "commentNotFound": "Reactie niet gevonden. Deze is mogelijk verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "boardNotFound": "Bord niet gevonden. Dit is mogelijk verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "boardInactive": "Het doelbord is inactief. Kies een actief bord."
     },
     "bundle": {
       "masterAlreadyBundleMaster": "Ticket {{tickets}} is al een hoofdticket van een bundel en kan niet als onderliggend ticket worden toegevoegd. Hef de bundel eerst op of gebruik het als hoofdticket.",
@@ -1652,7 +1683,9 @@
       "missingFieldNamed": "Er ontbreekt een verplicht ticketveld: {{field}}.",
       "referenceMissing": "Een van de geselecteerde ticketrecords bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
       "conflict": "Deze ticketwijziging is in conflict met een bestaand record. Vernieuw de pagina en probeer het opnieuw.",
-      "valueNotAllowed": "Een van de ticketwaarden is niet toegestaan. Controleer het formulier en probeer het opnieuw."
+      "valueNotAllowed": "Een van de ticketwaarden is niet toegestaan. Controleer het formulier en probeer het opnieuw.",
+      "priorityItilBoardCustom": "Prioriteit ‘{{priority}}’ is een ITIL-prioriteit, maar bord ‘{{board}}’ gebruikt aangepaste prioriteiten.",
+      "priorityCustomBoardItil": "Prioriteit ‘{{priority}}’ is een aangepaste prioriteit, maar bord ‘{{board}}’ gebruikt ITIL-prioriteiten."
     },
     "board": {
       "invalidReference": "Het geselecteerde bord, de status of de regel is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
@@ -1661,7 +1694,14 @@
       "referenceInvalid": "Het geselecteerde bord, de status, de prioriteit, de behandelaar, het team of het SLA-beleid is niet langer geldig. Vernieuw de pagina en probeer het opnieuw.",
       "duplicateName": "Er bestaat al een bord met deze naam.",
       "duplicate": "Er bestaat al een bord of status met dezelfde instellingen.",
-      "invalidValue": "Een van de bord- of statuswaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw."
+      "invalidValue": "Een van de bord- of statuswaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "notificationEmailInvalid": "Meldingsregel {{rule}} bevat een ongeldig e-mailadres (maximaal {{max}} tekens)",
+      "notificationEmailLimit": "Meldingsregel {{rule}} mag maximaal {{max}} e-mailadressen bevatten",
+      "notificationRecipientRequired": "Meldingsregel {{rule}} moet minstens één gebruiker, team of e-mailadres informeren",
+      "notificationEmailIsUser": "Meldingsregel {{rule}}: {{address}} is het e-mailadres van een Alga-gebruiker. Kies in plaats daarvan de gebruiker.",
+      "notificationEmailIsContact": "Meldingsregel {{rule}}: {{address}} hoort bij een klantcontact of locatie en kan geen ontvanger zijn.",
+      "notificationEmailClientDomain": "Meldingsregel {{rule}}: {{address}} staat op het e-maildomein van een klant en kan geen ontvanger zijn.",
+      "notificationEmailInboundMailbox": "Meldingsregel {{rule}}: {{address}} is een gekoppelde inkomende mailbox en kan geen ontvanger zijn."
     },
     "material": {
       "invalidValue": "Een van de geselecteerde materiaalwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
@@ -1725,6 +1765,9 @@
       "templateRulesTargetOtherClients": "Sommige regels voor automatisch toepassen van dit sjabloon richten zich op andere klanten. Verwijder die klanten uit de regels voordat u het sjabloon aan één klant toewijst.",
       "predicateClientOutsideScope": "Klant {{client}} valt buiten het bereik van deze sjabloon.",
       "predicateInvalid": "Ongeldige checklistregel: {{detail}}"
+    },
+    "comment": {
+      "audienceRequired": "Kies wie deze opmerking kan zien voordat u deze plaatst."
     }
   },
   "ticketSection": {
@@ -2036,7 +2079,9 @@
       "changeLocation": "Locatie wijzigen",
       "addDescriptionPrompt": "Voeg een beschrijving toe — wat is het probleem en wat heeft de klant nodig?",
       "projectTasks": "Projecttaken",
-      "timeAndBilling": "Tijd en facturatie"
+      "timeAndBilling": "Tijd en facturatie",
+      "useContactLocation": "Locatie van contactpersoon gebruiken",
+      "remote": "Op afstand"
     },
     "timeline": {
       "subtitle": "Reacties, tijd en systeemwijzigingen op één plek",
@@ -2591,12 +2636,15 @@
       "columns": {
         "name": "Naam",
         "title": "Tickettitel",
+        "client": "Klant",
         "board": "Bord",
         "checklist": "Checklistitems",
         "status": "Status",
         "schedules": "Schema's"
       },
-      "deleteBlocked": "In gebruik door {{count}} terugkerend(e) schema('s). Wijs ze eerst naar een andere sjabloon of archiveer ze."
+      "deleteBlocked": "In gebruik door {{count}} terugkerend(e) schema('s). Wijs ze eerst naar een andere sjabloon of archiveer ze.",
+      "allClients": "Alle klanten",
+      "clientFilter": "Alle klanten"
     },
     "status": {
       "active": "Actief",
@@ -2624,6 +2672,9 @@
       "title": "Tickettitel",
       "description": "Beschrijving",
       "descriptionPlaceholder": "Beschrijving",
+      "client": "Klant",
+      "clientPlaceholder": "Alle klanten",
+      "clientHelp": "Laat leeg om het sjabloon voor alle klanten aan te bieden. Kies er één om het alleen op de tickets van die klant aan te bieden.",
       "offerForManualUse": "Aanbieden in de kiezer voor nieuwe tickets",
       "offerForManualUseHelp": "Uitschakelen voor sjablonen die alleen door terugkerende schema's worden gebruikt.",
       "titleTokens": "U kunt {{tokens}} in de titel gebruiken; ze worden per ticket ingevuld."
@@ -2654,15 +2705,17 @@
       "fromTicket": "Vooraf ingevuld vanuit ticket #{{number}}. Er wordt niets opgeslagen tot u op Opslaan klikt.",
       "inlineImages": "De beschrijving bevat afbeeldingen die bij het brionticket horen. Ze worden mogelijk niet meer getoond als dat ticket wordt verwijderd. Verwijder ze of upload ze opnieuw als het sjabloon het ticket moet overleven.",
       "viewOnly": "U kunt dit sjabloon bekijken maar niet wijzigen.",
-      "referenceProblems": "Sommige velden in dit sjabloon verwijzen naar dingen die niet meer bestaan. Ze blijven leeg wanneer het sjabloon wordt gebruikt. Corrigeer ze en sla op:",
+      "referenceProblems": "Sommige velden van dit sjabloon zijn ongeldig: ze verwijzen naar iets dat niet meer bestaat of passen niet bij elkaar (bijvoorbeeld een prioriteit die niet bij het bord past). Corrigeer ze en sla op:",
       "inactiveWarning": "Inactief: verborgen in de sjabloonkiezer; wordt nog gebruikt door {{count}} schema's.",
       "sharedWarning": "Wijzigingen gelden voor elk terugkerend schema dat deze sjabloon gebruikt, vanaf het volgende ticket dat het aanmaakt.",
-      "boardChangeWarning": "Het wijzigen van het bord wist prioriteit en categorie en kan de status van schema's met deze sjabloon ongeldig maken. Die schema's mislukken totdat u ze bewerkt. Betrokken schema's: {{schedules}}."
+      "boardChangeWarning": "Het wijzigen van het bord wist prioriteit en categorie en kan de status van schema's met deze sjabloon ongeldig maken. Die schema's mislukken totdat u ze bewerkt. Betrokken schema's: {{schedules}}.",
+      "priorityTypeMismatchItil": "Prioriteit ‘{{priority}}’ is een ITIL-prioriteit, maar bord ‘{{board}}’ gebruikt aangepaste prioriteiten. Opslaan wordt geweigerd totdat u de prioriteit of het bord wijzigt.",
+      "priorityTypeMismatchCustom": "Prioriteit ‘{{priority}}’ is een aangepaste prioriteit, maar bord ‘{{board}}’ gebruikt ITIL-prioriteiten. Opslaan wordt geweigerd totdat u de prioriteit of het bord wijzigt."
     },
     "errors": {
       "notFound": "Ticketsjabloon niet gevonden",
       "duplicateName": "Er bestaat al een sjabloon met de naam {{name}}",
-      "invalidReferences": "Het sjabloon verwijst naar een bord, categorie of prioriteit die niet beschikbaar is",
+      "invalidReferences": "{{problems}}",
       "notAvailable": "Ticketsjablonen zijn niet beschikbaar",
       "subcategoryNeedsCategory": "Een subcategorie vereist een categorie",
       "inUseBySchedules": "In gebruik door {{count}} terugkerend(e) schema('s): {{schedules}}. Wijs ze eerst naar een andere sjabloon of archiveer ze."
@@ -2811,5 +2864,104 @@
       "notAvailable": "Dit standaardantwoord is niet beschikbaar voor dit ticket.",
       "notATeamMember": "U kunt teamantwoorden alleen beheren voor teams waartoe u behoort."
     }
+  },
+  "batchDuplicate": {
+    "title": "#{{number}} dupliceren voor contacten",
+    "titleLoading": "Dupliceren voor contacten",
+    "loading": "Laden…",
+    "loadFailed": "Het te dupliceren ticket kon niet worden geladen. Probeer het opnieuw.",
+    "createFailed": "De kopieën konden niet worden aangemaakt. Probeer het opnieuw.",
+    "templateLabel": "Titelsjabloon",
+    "insertToken": "Invoegen:",
+    "nameHint": "Vervang \"{{name}}\" door {{token}} om elke kopie te personaliseren.",
+    "replace": "Vervangen",
+    "contactsLabel": "Contacten",
+    "contactsPlaceholder": "Selecteer contacten…",
+    "addBlankRow": "Kopie zonder contact toevoegen",
+    "count": "{{count}} van {{max}}",
+    "capReached": "Maximaal {{max}} kopieën per batch.",
+    "columns": {
+      "contact": "Contact",
+      "title": "Titel"
+    },
+    "resetRow": "Terugzetten naar sjabloon",
+    "removeRow": "Kopie verwijderen",
+    "copyChecklist": "Checklistitems kopiëren (niet aangevinkt)",
+    "cancel": "Annuleren",
+    "review": "Controleren",
+    "back": "Terug",
+    "create_one": "{{count}} ticket aanmaken",
+    "create_other": "{{count}} tickets aanmaken",
+    "creating_one": "{{count}} ticket wordt aangemaakt…",
+    "creating_other": "{{count}} tickets worden aangemaakt…",
+    "done": "Klaar",
+    "retryFailed_one": "Mislukte opnieuw proberen ({{count}})",
+    "retryFailed_other": "Mislukte opnieuw proberen ({{count}})",
+    "errors": {
+      "contactRequired": "Deze titel gebruikt {{token}}, maar de kopie heeft geen contact.",
+      "unknownToken": "Onbekende tokens: {{tokens}}",
+      "empty": "De titel mag niet leeg zijn.",
+      "unresolvedToken": "De titel bevat nog een token {{placeholder}}."
+    },
+    "summary": {
+      "client": "Klant",
+      "board": "Bord",
+      "category": "Categorie",
+      "priority": "Prioriteit",
+      "assignee": "Toegewezen aan",
+      "team": "Team",
+      "additionalAgents": "Extra medewerkers",
+      "tags": "Labels",
+      "checklist": "Controlelijst",
+      "checklistCopy_one": "{{count}} item kopiëren (niet aangevinkt)",
+      "checklistCopy_other": "{{count}} items kopiëren (niet aangevinkt)",
+      "checklistSkip": "Niet gekopieerd",
+      "customFields": "Aangepaste velden",
+      "status": "Status",
+      "statusBoardDefault": "Standaard van het bord",
+      "none": "Geen",
+      "notCopied": "Opmerkingen, tijdregistraties, bijlagen en de vervaldatum worden niet gekopieerd.",
+      "unresolved": "Naam niet beschikbaar"
+    },
+    "results": {
+      "created_one": "{{count}} ticket aangemaakt",
+      "created_other": "{{count}} tickets aangemaakt",
+      "failed_one": "{{count}} kopie mislukt",
+      "failed_other": "{{count}} kopieën mislukt"
+    },
+    "discardTitle": "Deze kopieën verwerpen?",
+    "discardMessage": "De ingestelde kopieën zijn nog niet aangemaakt. Verwerpen en sluiten?",
+    "discardConfirm": "Verwerpen",
+    "discardKeep": "Verder bewerken"
+  },
+  "sharedSla": {
+    "title": "Serviceniveau",
+    "msp": "Serviceniveau van de MSP",
+    "customer": "Serviceniveau van de klant",
+    "state": {
+      "running": "Loopt",
+      "paused": "Gepauzeerd",
+      "met": "Gehaald",
+      "breached": "Overschreden"
+    },
+    "target": {
+      "response": "Eerste reactie",
+      "resolution": "Oplossing"
+    },
+    "elapsed": "Verstreken: {{time}}",
+    "dueAt": "Deadline: {{date}}",
+    "completedAt": "Gehaald op {{date}}",
+    "breached": "Overschreden",
+    "targetPaused": "Gepauzeerd",
+    "noTarget": "Geen doel",
+    "duration": {
+      "hoursMinutes": "{{hours}} u {{minutes}} min",
+      "minutes": "{{minutes}} min"
+    },
+    "notStarted": "De klok start wanneer het ticket wordt geëscaleerd.",
+    "unavailable": "Dit serviceniveau is niet meer beschikbaar.",
+    "notConfigured": "Er is geen serviceniveau van toepassing.",
+    "empty": "Voor dit ticket wordt nog geen serviceniveau bijgehouden.",
+    "loadError": "Het serviceniveau kon niet worden geladen."
   }
 }

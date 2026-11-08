@@ -72,12 +72,12 @@ const fromRefSchema = entityRefSchema.describe('The record this link starts from
 const toRefSchema = entityRefSchema.describe('The record this link points to.');
 
 const linkItemOutputSchema = z.object({
-  link_id: z.string().uuid(),
+  link_id: z.string().guid(),
   namespace: z.string(),
   from: z.object({ type: z.string(), id: z.string() }),
   to: z.object({ type: z.string(), id: z.string() }),
   relation: z.string(),
-  attributes: z.record(z.unknown()),
+  attributes: z.record(z.string(), z.unknown()),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
 });
@@ -87,12 +87,12 @@ const upsertInputSchema = z.object({
   from: fromRefSchema,
   to: toRefSchema,
   relation: relationSchema.default('related'),
-  attributes: z.record(z.unknown()).default({}).describe('Optional extra details to store on the link (advanced).'),
+  attributes: z.record(z.string(), z.unknown()).default({}).describe('Optional extra details to store on the link (advanced).'),
   idempotency_key: idempotencyKeySchema,
 });
 
 const upsertOutputSchema = z.object({
-  link_id: z.string().uuid(),
+  link_id: z.string().guid(),
   created: z.boolean(),
 });
 
@@ -108,11 +108,11 @@ const lookupInputSchema = z.object({
 
 const lookupOutputSchema = z.object({
   matches: z.array(z.object({
-    link_id: z.string().uuid(),
+    link_id: z.string().guid(),
     type: z.string(),
     id: z.string(),
     relation: z.string(),
-    attributes: z.record(z.unknown()),
+    attributes: z.record(z.string(), z.unknown()),
   })),
 });
 

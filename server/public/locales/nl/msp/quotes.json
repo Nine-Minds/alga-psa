@@ -537,6 +537,7 @@
       "recurring": "Terugkerend",
       "service": "dienst",
       "setPrice": "Prijs instellen",
+      "taxable": "Belastbaar",
       "ungroupedItems": "Niet-gegroepeerde items"
     },
     "placeholders": {

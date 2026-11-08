@@ -69,6 +69,7 @@
     "sku": "SKU",
     "source": "Origem",
     "subtotal": "Subtotal",
+    "subtotalBeforeDiscounts": "Subtotal antes dos descontos",
     "tax": "Imposto",
     "termsAndConditions": "Termos e condições",
     "ticket": "Ticket",
@@ -93,7 +94,8 @@
       "pickedBy": "Separado por: ____________________     Data: ____________",
       "preTaxTotals": "Os totais exibidos não incluem impostos. O imposto aplicável é calculado na sua fatura.",
       "thankYouForOrder": "Obrigado pelo seu pedido.",
-      "checkedBy": "Conferido por: ____________________     Data: ____________"
+      "checkedBy": "Conferido por: ____________________     Data: ____________",
+      "releasedBy": "Liberado por: ____________________     Assinatura: ____________________     Data: ____________"
     },
     "serialNumbers": "Números de série",
     "allocatedSerialsNote": "Números de série alocados; sujeitos a alteração no atendimento.",
@@ -114,7 +116,17 @@
     "ownerMsp": "MSP",
     "ownerClient": "Cliente",
     "statusOpen": "Aberta",
-    "statusSealed": "Lacrada"
+    "statusSealed": "Lacrada",
+    "rmaReturnSlipTitle": "COMPROVANTE DE DEVOLUÇÃO DE RMA",
+    "device": "Dispositivo",
+    "vendor": "Fornecedor",
+    "vendorReference": "Referência do fornecedor",
+    "asset": "Ativo",
+    "assetTag": "Etiqueta do ativo",
+    "replacementSerial": "Número de série da substituição",
+    "shipping": "Envio",
+    "returnBy": "Devolver até",
+    "returnShipTo": "Enviar devolução para"
   },
   "errors": {
     "permissions": {

@@ -1,0 +1,4 @@
+{"label":"update ITIL board with custom priority","status":400,"body":"{\"error\":{\"code\":\"VALIDATION_ERROR\",\"message\":\"Validation failed\",\"details\":[{\"path\":[\"priority_id\"],\"message\":\"Priority ‘Curious Conundrum’ is a custom priority but board ‘ITIL Support’ uses ITIL priorities\"}]}}"}
+{"label":"create ITIL board with custom priority","status":400,"body":"{\"error\":{\"code\":\"VALIDATION_ERROR\",\"message\":\"Validation failed\",\"details\":[{\"path\":[\"priority_id\"],\"message\":\"Priority ‘Curious Conundrum’ is a custom priority but board ‘ITIL Support’ uses ITIL priorities\"}]}}"}
+{"persistedTicket":[{"board_id":"c1964d82-4542-4eae-9d26-46c88fefd8e3","priority_id":"a5146f36-5b12-4464-bf9b-a13b0b9e0aff"}],"original":{"board_id":"c1964d82-4542-4eae-9d26-46c88fefd8e3","priority_id":"a5146f36-5b12-4464-bf9b-a13b0b9e0aff"}}
+Temporary API key removed

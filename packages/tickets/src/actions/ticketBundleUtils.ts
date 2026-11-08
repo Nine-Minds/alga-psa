@@ -20,6 +20,7 @@ import {
 import type { BuiltWorkflowPayload } from '@alga-psa/event-schemas';
 import { diffTicketFields, publishTicketUpdate } from '../lib/liveUpdates';
 import {
+  assertBundlePropagationAuthority,
   BundlePropagationConfirmationRequiredError,
   type BundlePropagationChild,
   type BundlePropagationUnaffectedChild,
@@ -1405,6 +1406,7 @@ export async function propagateBundleMasterStatus(
     if (Object.keys(propagateFields).length === 0) {
       return { propagated: false, action: null, affectedChildIds: [] };
     }
+    assertBundlePropagationAuthority(ctx);
 
     const childRows = await tenantScopedTable(trx, 'tickets', ctx.tenant)
       .where({ master_ticket_id: masterId })
@@ -1504,6 +1506,8 @@ export async function propagateBundleMasterStatus(
     // activity row (a "children not updated" entry would be noise).
     return { propagated: false, action: crossesBoundary, affectedChildIds: [] };
   }
+
+  assertBundlePropagationAuthority(ctx);
 
   if (options.propagateToChildren === undefined) {
     const preview = await previewBundleStatusPropagation(trx, ctx.tenant, masterId, nextStatusId as string);

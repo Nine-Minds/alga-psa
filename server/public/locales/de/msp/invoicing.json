@@ -78,7 +78,8 @@
       "poScopeDiffers": "Der PO-Umfang ist unterschiedlich",
       "currencyDiffers": "Die Währung ist unterschiedlich",
       "taxTreatmentDiffers": "Die steuerliche Behandlung ist unterschiedlich",
-      "exportShapeDiffers": "Die Exportform ist unterschiedlich"
+      "exportShapeDiffers": "Die Exportform ist unterschiedlich",
+      "billingProfileDiffers": "Das Rechnungsprofil ist unterschiedlich"
     },
     "executionRows": {
       "labels": {
@@ -856,6 +857,7 @@
       "syncNow": "Mit QuickBooks synchronisieren",
       "viewInQbo": "In QuickBooks anzeigen",
       "voidInvoice": "Rechnung stornieren",
+      "delegateTax": "Steuer aus dem Buchhaltungssystem verwenden",
       "viewInXero": "In Xero anzeigen"
     },
     "loading": "Vorschau wird geladen...",
@@ -877,6 +879,13 @@
     },
     "applyCreditDialog": {
       "title": "Guthaben anwenden"
+    },
+    "delegateTaxDialog": {
+      "title": "Steuer aus dem Buchhaltungssystem verwenden",
+      "description": "Das Buchhaltungssystem berechnet die Steuer für diese Rechnung beim nächsten Export, und AlgaPSA ersetzt danach Steuer und Gesamtbetrag durch dieses Ergebnis. Nummern, Positionen, Preise und erfasste Zahlungen bleiben unverändert.",
+      "cancel": "Abbrechen",
+      "confirm": "Auf Steuer aus dem Buchhaltungssystem umstellen",
+      "switching": "Wird umgestellt…"
     },
     "voidDialog": {
       "title": "Rechnung stornieren",
@@ -1974,15 +1983,19 @@
       },
       "invoice_subtotal": {
         "label": "Zwischensumme",
-        "description": "Rechnungszwischensumme vor Steuern und Rabatten."
+        "description": "Rechnungszwischensumme nach Rabatten und Gutschriften, vor Steuern."
+      },
+      "invoice_grossSubtotal": {
+        "label": "Zwischensumme vor Rabatten",
+        "description": "Rechnungszwischensumme vor Rabatten und Gutschriften sowie vor Steuern."
+      },
+      "invoice_discountTotal": {
+        "label": "Rabatte",
+        "description": "Summe der Rabatt- und Gutschriftspositionen, als positiver Betrag dargestellt."
       },
       "invoice_tax": {
         "label": "Steuer",
         "description": "Steuerbetrag der Rechnung."
-      },
-      "invoice_discount": {
-        "label": "Rabatt",
-        "description": "Rabattbetrag der Rechnung."
       },
       "invoice_total": {
         "label": "Gesamt",
@@ -2121,6 +2134,26 @@
     "resize": {
       "handleHint": "Ziehen zum Ändern der Größe · Doppelklick passt an den Inhalt an",
       "autoValue": "Automatisch ({{value}})"
+    },
+    "bundleRows": {
+      "off": "Aus",
+      "quantities": "Nur Mengen",
+      "quantitiesAndPrices": "Mengen und Preise",
+      "custom": "Benutzerdefiniert",
+      "showChange": "Änderung zur Vorperiode anzeigen (+N / −N)",
+      "pricesNote": "Komponentenpreise sind in den Rechnungsdaten dieser Vorlage enthalten, auch für Kunden.",
+      "quantitiesNote": "Diese Vorlage gibt Komponentenpreise nicht an Kunden weiter.",
+      "blankOnBundle": "Leer in der Paketzeile",
+      "componentCells": "Zellen der Komponentenzeilen",
+      "cellClear": "— Leer —",
+      "field": {
+        "name": "Servicename",
+        "quantity": "Menge",
+        "period": "Leistungszeitraum",
+        "pricingBasis": "Preisbasis",
+        "unitPrice": "Einzelpreis",
+        "total": "Betrag"
+      }
     }
   },
   "projectBilling": {
@@ -2444,7 +2477,8 @@
       "moveDown": "{{row}} nach unten verschieben",
       "remove": "{{row}} entfernen",
       "label": "Bezeichnung",
-      "emphasize": "Hervorheben (Stil der Gesamtsumme)"
+      "emphasize": "Hervorheben (Stil der Gesamtsumme)",
+      "hideWhenZero": "Ausblenden, wenn null"
     }
   },
   "draftInvoiceDetails": {
@@ -2552,7 +2586,8 @@
       "packingSlip": "Lieferschein",
       "pickList": "Kommissionierliste",
       "workTag": "Arbeitsetikett / Label",
-      "stagingManifest": "Packliste"
+      "stagingManifest": "Packliste",
+      "rmaReturnSlip": "RMA-Rücksendeschein"
     }
   },
   "errors": {

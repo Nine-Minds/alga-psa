@@ -1,6 +1,13 @@
+// LEVERAGE: friction calendar-sync-duplicate-copies — stale copy of
+// ee/packages/calendar/src/lib/services/calendar (and utils/calendar). The live
+// path is @alga-psa/ee-calendar; the recurring-series import fix landed there
+// only. Reachable from tests alone (the integrations webhook handlers are dead:
+// calendarWebhookRoutes.delegator.test asserts the routes do not import them).
+// Do not fix bugs here — repoint the remaining test imports and delete.
 // @ts-nocheck
 // TODO: Implicit any type on response
 import axios, { AxiosInstance } from 'axios';
+import { microsoftIssuerKindFromSource, resolveMicrosoftOAuthAuthority } from '@alga-psa/shared/services/email/microsoftAuthority';
 import { getMicrosoftGraphBaseUrl, getMicrosoftTokenUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 import { BaseCalendarAdapter } from './base/BaseCalendarAdapter';
 import type { CalendarProviderConfig, ExternalCalendarEvent } from '@alga-psa/types';
@@ -147,8 +154,14 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
         throw new Error('Microsoft OAuth credentials not configured');
       }
 
-      // Always use 'common' for multi-tenant Azure AD apps
-      const tokenUrl = getMicrosoftTokenUrl('common');
+      // Platform env app -> common; otherwise the stored profile directory ID.
+      const usesPlatformEnvApp = !vendorConfig.clientId && Boolean(clientId) && clientId === process.env.MICROSOFT_CLIENT_ID;
+      const tokenUrl = getMicrosoftTokenUrl(
+        resolveMicrosoftOAuthAuthority({
+          issuerKind: usesPlatformEnvApp ? 'platform-managed' : 'tenant-owned',
+          profileTenantId: vendorConfig.tenantId || vendorConfig.tenant_id,
+        })
+      );
 
       // Omit scope on refresh: this preserves each refresh token's granted scopes.
       // Older connections can still sync event bodies and get a category-specific reconnect warning.
