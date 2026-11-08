@@ -37192,8 +37192,14 @@ paths:
   /api/v1/financial/bulk/invoices:
     post:
       summary: Run bulk invoice operation
-      description: FinancialService.bulkInvoiceOperation() supports
-        send/finalize/cancel/mark_paid operations.
+      description: "FinancialService.bulkInvoiceOperation() runs finalize/send/cancel
+        against the canonical invoice engines (1–50 ids). finalize requires
+        invoice:finalize, send requires invoice:send, cancel voids finalized
+        invoices (invoice:update, plus accounting_integrations:remote_mutate
+        when an accounting integration is connected). Each id runs
+        independently; per-id results carry success, error and outcome
+        (finalized/sent/voided). apply_credit is not supported (400): use POST
+        /api/v1/financial/invoices/{id}/credit."
       tags:
         - Financial
       security:
