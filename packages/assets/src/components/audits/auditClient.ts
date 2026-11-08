@@ -24,18 +24,51 @@ import { getAssetAudit, listAssetAudits, previewAssetAuditScope } from '../../ac
 
 export type AuditOutcome<T> =
   | { ok: true; data: T }
-  | { ok: false; message: string; denied: boolean };
+  | { ok: false; message: string; denied: boolean; messageKey?: string };
+
+/**
+ * The assets-namespace generic failure text, already carried by every locale.
+ * A failure with no usable message of its own borrows it rather than leaking
+ * English into the seven other languages the MSP app ships in.
+ */
+export const AUDIT_GENERIC_ERROR_KEY = 'assetListErrors.genericError';
+const AUDIT_GENERIC_ERROR_TEXT = 'An error occurred. Please try again later.';
 
 export function auditOutcome<T>(result: unknown): AuditOutcome<T> {
   if (isActionPermissionError(result)) return { ok: false, message: result.permissionError, denied: true };
   const r = result as { success?: boolean; data?: T; error?: { message?: string } } | null;
   if (r && r.success === true) return { ok: true, data: r.data as T };
   const message = r?.error?.message;
-  return {
-    ok: false,
-    denied: false,
-    message: message && !message.trimStart().startsWith('{') ? message : 'Something went wrong.',
-  };
+  // A structured payload must never reach the user; neither must a blank message.
+  if (!message || message.trimStart().startsWith('{')) {
+    return { ok: false, denied: false, message: AUDIT_GENERIC_ERROR_TEXT, messageKey: AUDIT_GENERIC_ERROR_KEY };
+  }
+  return { ok: false, denied: false, message };
+}
+
+interface AuditErrorLike {
+  message?: string;
+  messageKey?: string;
+}
+
+/** An SWR rejection that keeps the outcome's translation key alive through `throw`. */
+function auditError(outcome: { message: string; messageKey?: string }): Error {
+  const err: Error & { messageKey?: string } = new Error(outcome.message);
+  if (outcome.messageKey) err.messageKey = outcome.messageKey;
+  return err;
+}
+
+/**
+ * User-facing text for a failed outcome or a thrown fetch error: a server
+ * refusal keeps the server's own wording, anything unusable renders the
+ * translated generic message.
+ */
+export function auditErrorText(t: AuditTranslate, source: unknown): string {
+  if (typeof source === 'string' && source.trim()) return source;
+  const e = (source ?? undefined) as AuditErrorLike | undefined;
+  if (e?.messageKey) return t(e.messageKey, { defaultValue: e.message ?? AUDIT_GENERIC_ERROR_TEXT });
+  if (typeof e?.message === 'string' && e.message.trim()) return e.message;
+  return t(AUDIT_GENERIC_ERROR_KEY, { defaultValue: AUDIT_GENERIC_ERROR_TEXT });
 }
 
 export const AUDIT_LIST_KEY = 'asset-audits';
@@ -49,7 +82,7 @@ export function useAssetAuditList(filters: AssetAuditListFilters) {
     [AUDIT_LIST_KEY, 'list', filters],
     async () => {
       const outcome = auditOutcome<AssetAuditListPage>(await listAssetAudits(filters));
-      if (!outcome.ok) throw new Error(outcome.message);
+      if (!outcome.ok) throw auditError(outcome);
       return outcome.data;
     },
     { revalidateOnFocus: true, keepPreviousData: true },
@@ -67,7 +100,7 @@ export function useAssetAuditDetail(auditId: string) {
     auditId ? [AUDIT_LIST_KEY, 'detail', auditId] : null,
     async () => {
       const outcome = auditOutcome<AssetAuditWithItems>(await getAssetAudit(auditId));
-      if (!outcome.ok) throw new Error(outcome.message);
+      if (!outcome.ok) throw auditError(outcome);
       return outcome.data;
     },
     {

@@ -957,7 +957,8 @@ async function fetchInstallBase(
         .first()
       : Promise.resolve(null),
     // The client's most recent closed walk, for the tile's "Last audit" stat.
-    // Served by idx_asset_audits_tenant_client_started.
+    // idx_asset_audits_tenant_client_started narrows the (tenant, client_id)
+    // rows; the completed_at ordering is sorted on top of that handful.
     canReadAssets
       ? trx('asset_audits')
         .where({ tenant, client_id: clientId, status: 'completed' })

@@ -44,6 +44,7 @@ import { useAssetStatusLabel } from '../../lib/assetStatus';
 import { useAssetStatusRegistry } from '../shared/useAssetStatusOptions';
 import { useAssetCrossFeature } from '../../context/AssetCrossFeatureContext';
 import {
+  auditErrorText,
   auditMethodLabel,
   auditOutcome,
   auditResultLabel,
@@ -162,7 +163,7 @@ export function AssetAuditDetail({ auditId, id = 'asset-audit' }: AssetAuditDeta
       const outcome = auditOutcome<unknown>(await action());
       setBusyAssetId(null);
       if (!outcome.ok) {
-        setActionError(outcome.message);
+        setActionError(auditErrorText(t, outcome));
         return false;
       }
       // Every write returns the whole audit, but the key is mutated rather than
@@ -171,7 +172,7 @@ export function AssetAuditDetail({ auditId, id = 'asset-audit' }: AssetAuditDeta
       await mutate();
       return true;
     },
-    [mutate],
+    [mutate, t],
   );
 
   /**
@@ -364,9 +365,7 @@ export function AssetAuditDetail({ auditId, id = 'asset-audit' }: AssetAuditDeta
   if (error) {
     return (
       <div id={`${id}-error`} role="alert" className="p-6">
-        <p className="text-sm text-[rgb(var(--color-accent-700))]">
-          {error instanceof Error ? error.message : String(error)}
-        </p>
+        <p className="text-sm text-[rgb(var(--color-accent-700))]">{auditErrorText(t, error)}</p>
         <Button id={`${id}-retry-button`} variant="outline" className="mt-3" onClick={() => void mutate()}>
           {t('common.actions.retry', { defaultValue: 'Retry' })}
         </Button>

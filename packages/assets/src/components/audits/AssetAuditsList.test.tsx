@@ -259,6 +259,15 @@ describe('AssetAuditsList', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Audit store is unavailable');
   });
 
+  it('translates the generic failure instead of showing a raw payload', async () => {
+    h.listAssetAudits.mockResolvedValue({ success: false, error: { message: '{"code":"internal"}' } });
+    renderList();
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('An error occurred. Please try again later.');
+    expect(alert).not.toHaveTextContent('internal');
+  });
+
   it('says the view is empty rather than showing nothing at all', async () => {
     h.listAssetAudits.mockResolvedValue({ success: true, data: { audits: [], total: 0 } });
     renderList();

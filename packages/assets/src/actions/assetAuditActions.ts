@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import { hasPermission, withAuth } from '@alga-psa/auth';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, type ServiceContext } from '@alga-psa/db';
 import type {
   AssetAuditListPage,
   AssetAuditScopePreview,
@@ -44,9 +44,9 @@ function service() {
   return new AssetAuditService();
 }
 
-async function serviceContext(tenant: string, user: { user_id: string }) {
+async function serviceContext(tenant: string, user: { user_id: string }): Promise<ServiceContext> {
   const { knex } = await createTenantKnex();
-  return { tenant, userId: user.user_id, user, db: knex } as never;
+  return { tenant, userId: user.user_id, user, db: knex };
 }
 
 /** The audits list behind /msp/assets/audits and the client drawer's Audits tab. */

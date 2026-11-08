@@ -15,7 +15,7 @@ import { startAssetAudit } from '../../actions/assetAuditActions';
 import { getClientLocationsForAssets } from '../../actions/clientLookupActions';
 import { useAssetStatusLabel } from '../../lib/assetStatus';
 import { useAssetStatusRegistry } from '../shared/useAssetStatusOptions';
-import { auditOutcome, useAssetAuditScopePreview } from './auditClient';
+import { auditErrorText, auditOutcome, useAssetAuditScopePreview } from './auditClient';
 
 /** The "No location" choice; the service takes null for "assets with no location". */
 export const NO_LOCATION_VALUE = '__none__';
@@ -123,7 +123,7 @@ export function StartAuditDialog({
     );
     setSubmitting(false);
     if (!outcome.ok) {
-      setError(outcome.message);
+      setError(auditErrorText(t, outcome));
       return;
     }
     onOpenChange(false);
