@@ -906,7 +906,7 @@
     "reconnectingToServer": "Opnieuw verbinden met de server...",
     "refresh": "Vernieuwen",
     "markAllRead": "Alles als gelezen markeren",
-    "emptyTitle": "Geen meldingen",
+    "emptyTitle": "Geen notificaties",
     "emptyDescription": "U bent helemaal bij!"
   },
   "sidebar": {
@@ -1086,9 +1086,9 @@
     "sharedWorkspaceLabel": "Gedeelde werkplek",
     "details": {
       "notProvided": "Niet opgegeven",
-      "notAvailable": "Niet beschikbaar",
-      "cpuWithModel": "{{model}} (aantal kernen: {{count}})",
-      "cpuCores": "Aantal kernen: {{count}}",
+      "notAvailable": "N.v.t.",
+      "cpuWithModel": "{{model}} ({{count}} kernen)",
+      "cpuCores": "{{count}} kernen",
       "workstationTitle": "Werkstationgegevens",
       "networkDeviceTitle": "Netwerkapparaatgegevens",
       "serverTitle": "Servergegevens",
@@ -1104,7 +1104,7 @@
       "type": "Type",
       "virtual": "Virtueel",
       "physical": "Fysiek",
-      "assetTag": "Assetlabel",
+      "assetTag": "Assettag",
       "serialNumber": "Serienummer",
       "status": "Status",
       "location": "Locatie",
