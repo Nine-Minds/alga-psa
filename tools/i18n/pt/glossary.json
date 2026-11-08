@@ -2731,7 +2731,13 @@
       "{{size}} GB",
       "Code 128",
       "Ticket: {{number}}",
-      "RMA {{number}} · {{status}}"
+      "RMA {{number}} · {{status}}",
+      "Tickets",
+      "ticket",
+      "tickets",
+      "CPU",
+      "RAM",
+      "Firmware"
     ],
     "caseInsensitive": [
       "api",
