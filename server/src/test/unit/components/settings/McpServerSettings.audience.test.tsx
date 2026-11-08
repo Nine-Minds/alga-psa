@@ -4,6 +4,10 @@
 import React from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useSession } from 'next-auth/react';
+import { TierProvider } from '@/context/TierContext';
+
+vi.mock('next-auth/react', () => ({ useSession: vi.fn() }));
 
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
   default: ({ id, value, options, onValueChange }: any) => (
@@ -21,8 +25,18 @@ function json(body: unknown) {
   return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
 }
 
-describe('McpServerSettings trusted-IdP audience guidance', () => {
+function renderSettings() {
+  return render(<McpServerSettings />, { wrapper: TierProvider });
+}
+
+describe.each(['solo', 'pro'])('McpServerSettings trusted-IdP audience guidance (%s)', (plan) => {
   beforeEach(() => {
+    vi.stubEnv('NEXT_PUBLIC_EDITION', 'enterprise');
+    vi.mocked(useSession).mockReturnValue({
+      status: 'authenticated',
+      data: { user: { plan }, expires: '2099-01-01T00:00:00.000Z' },
+      update: vi.fn(),
+    });
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input);
       if (url.includes('/idp-suggestions')) return json({ data: { mcpResource: MCP_RESOURCE } });
@@ -36,7 +50,7 @@ describe('McpServerSettings trusted-IdP audience guidance', () => {
   });
 
   it('tells Entra admins to enter the Application (client) ID, not a URL', async () => {
-    render(<McpServerSettings />);
+    renderSettings();
     const input = await screen.findByLabelText('Audience');
     expect(input).toHaveAttribute('placeholder', 'e.g. 00000000-0000-0000-0000-000000000000');
     expect(input).toHaveValue('');
@@ -47,7 +61,7 @@ describe('McpServerSettings trusted-IdP audience guidance', () => {
   });
 
   it("pre-fills Google with the server's canonical MCP URL and clears it on switching away", async () => {
-    render(<McpServerSettings />);
+    renderSettings();
     await screen.findByLabelText('Audience');
     // Wait for the suggestions call so the canonical URL (not the jsdom origin) is used.
     await vi.waitFor(() =>
@@ -65,7 +79,7 @@ describe('McpServerSettings trusted-IdP audience guidance', () => {
   });
 
   it('keeps an audience the admin typed when switching providers', async () => {
-    render(<McpServerSettings />);
+    renderSettings();
     fireEvent.change(await screen.findByLabelText('Audience'), { target: { value: 'my-api' } });
     fireEvent.change(screen.getByTestId('idp-kind'), { target: { value: 'custom' } });
     expect(screen.getByLabelText('Audience')).toHaveValue('my-api');

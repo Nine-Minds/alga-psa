@@ -75,7 +75,7 @@ function createBatchKnex(rows: unknown[]) {
 }
 
 /** Contacts load in two queries: the contact row, then its 1:N phone rows. */
-function createContactKnex(row: unknown, phoneRows: unknown[]) {
+function createContactKnex(row: unknown, phoneRows: unknown[], locationRows: unknown[] = []) {
   const joinBuilder = {
     on: vi.fn().mockReturnThis(),
     andOn: vi.fn().mockReturnThis(),
@@ -100,12 +100,28 @@ function createContactKnex(row: unknown, phoneRows: unknown[]) {
     orderBy: vi.fn().mockReturnThis(),
     then: vi.fn((resolve, reject) => Promise.resolve(phoneRows).then(resolve, reject)),
   };
-  const knex = vi.fn((tableExpression: string) =>
-    tableExpression.startsWith('contact_phone_numbers') ? phoneBuilder : contactBuilder);
+  // The location join is an inner join (unlike the client left join above), so
+  // this builder needs its own `join`, matching tenantJoinIndexerTable's call.
+  const locationBuilder = {
+    join: vi.fn((_table: string, joinCallback: (this: typeof joinBuilder) => void) => {
+      joinCallback.call(joinBuilder);
+      return locationBuilder;
+    }),
+    select: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    whereIn: vi.fn().mockReturnThis(),
+    orderBy: vi.fn().mockReturnThis(),
+    then: vi.fn((resolve, reject) => Promise.resolve(locationRows).then(resolve, reject)),
+  };
+  const knex = vi.fn((tableExpression: string) => {
+    if (tableExpression.startsWith('contact_phone_numbers')) return phoneBuilder;
+    if (tableExpression.startsWith('contact_locations')) return locationBuilder;
+    return contactBuilder;
+  });
   Object.assign(knex, {
     raw: vi.fn((sql: string) => ({ sql })),
   });
-  return { knex, contactBuilder, phoneBuilder };
+  return { knex, contactBuilder, phoneBuilder, locationBuilder };
 }
 
 describe('search entity indexers', () => {
@@ -250,6 +266,7 @@ describe('search entity indexers', () => {
       ticket_id: 'ticket-1',
       ticket_number: 'TIC-1023',
       title: 'Exchange outage',
+      client_id: 'client-1',
       client_name: 'ACME Corp',
       updated_at: '2026-05-13T10:00:00.000Z',
     });
@@ -276,8 +293,9 @@ describe('search entity indexers', () => {
       subtitle: 'ACME Corp | TIC-1023',
       url: '/msp/tickets/ticket-1',
       metadata: { identifier: 'TIC-1023' },
-      acl: { requiredPermission: 'ticket:read' },
+      acl: { requiredPermission: 'ticket:read', clientScopeId: 'client-1' },
     });
+    expect((queryBuilder.select as any).mock.calls.flat()).toContain('t.client_id');
   });
 
   it('T032 ticket-comment indexer marks internal comments as internal-only', async () => {
@@ -288,6 +306,7 @@ describe('search entity indexers', () => {
       is_internal: true,
       ticket_title: 'Exchange outage',
       ticket_number: 'TIC-1023',
+      ticket_client_id: 'client-1',
       updated_at: '2026-05-13T10:00:00.000Z',
     });
 
@@ -317,8 +336,10 @@ describe('search entity indexers', () => {
       acl: {
         requiredPermission: 'ticket:read',
         isInternalOnly: true,
+        clientScopeId: 'client-1',
       },
     });
+    expect((queryBuilder.select as any).mock.calls.flat()).toContain('t.client_id as ticket_client_id');
   });
 
   it('L4a ticket-comment indexer is internal-only unless the resolved audience is requester', async () => {

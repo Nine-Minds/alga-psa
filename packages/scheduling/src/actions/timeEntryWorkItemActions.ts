@@ -29,6 +29,21 @@ function normalizeNonBillableWorkItemId(workItemId: string | null | undefined): 
   return workItemId || NON_BILLABLE_FALLBACK_WORK_ITEM_ID;
 }
 
+/**
+ * Whether the time-entry drawer may save time on this work item without a service. The answer comes only from a
+ * registered time source; native (and every tenant no source serves) answers false, so "service required" stands.
+ */
+export const isServiceOptionalForWorkItem = withAuth(async (
+  user,
+  { tenant },
+  workItemType: string,
+  workItemId: string
+): Promise<boolean> => {
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id, workItemType, workItemId },
+    (source, ctx) => source.work.serviceOptional(ctx, workItemType, workItemId));
+  return delegated.handled ? delegated.value === true : false;
+});
+
 export const fetchWorkItemsForTimeSheet = withAuth(async (
   user,
   { tenant },
@@ -183,10 +198,15 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
     }, new Map<string, Pick<IWorkItem, 'work_item_id' | 'name' | 'description' | 'type'>>()).values()
   );
 
-  return [...tickets, ...projectTasks, ...adHocEntries, ...interactions, ...nonBillableWorkItems].map((item): IExtendedWorkItem => ({
+  // Time-source seam: a registered provider lists the work items it owns on this sheet; native misses (0 statements).
+  const contributed = await delegateToTimeSource({ tenant, userId: user.user_id },
+    (source, ctx) => source.work.listSheetItems(ctx, db, validatedParams.timeSheetId));
+  const providerItems = contributed.handled ? contributed.value : [];
+
+  return [...tickets, ...projectTasks, ...adHocEntries, ...interactions, ...nonBillableWorkItems, ...(providerItems as any[])].map((item): IExtendedWorkItem => ({
     ...item,
     is_billable: item.type !== 'non_billable_category',
-    ticket_number: item.type === 'ticket' ? item.ticket_number : undefined
+    ticket_number: item.type === 'ticket' || providerItems.includes(item) ? item.ticket_number : undefined
   }));
   } catch (error) {
     const expected = timeSheetActionErrorFrom(error);

@@ -8,6 +8,7 @@
  * caller asking for something the two kinds do not mean.
  */
 
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { withTransaction, tenantDb } from '@alga-psa/db';
@@ -29,7 +30,6 @@ import {
 import { createApiResponse, createErrorResponse } from '../utils/response';
 import { requireRequestContext } from '../utils/requestContext';
 import { ApiContext } from '../middleware/apiMiddleware';
-import { hasPermission } from '../../auth/rbac';
 import { getConnection } from '../../db/db';
 import { uuidSchema } from '../schemas/common';
 
@@ -70,7 +70,7 @@ export class ApiAssetGroupController {
       return createErrorResponse('User context required', 401, 'UNAUTHORIZED');
     }
     const knex = await getConnection(context.tenant);
-    if (!(await hasPermission(context.user, 'asset', action, knex))) {
+    if (!(await hasApiContextPermission(context, 'asset', action, knex))) {
       return createErrorResponse(`Permission denied: Cannot ${action} asset`, 403, 'FORBIDDEN');
     }
     return context;

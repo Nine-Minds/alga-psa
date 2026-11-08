@@ -16,7 +16,7 @@
  * capability exists).
  */
 
-import { isFeatureFlagEnabled } from './features';
+import { evaluateFeatureFlag } from './features';
 import logger from './logger-universal';
 
 // ---------------------------------------------------------------------------
@@ -398,7 +398,7 @@ export async function admits(capability: CapabilityKey, tenantId: string): Promi
   if (cached) return cached;
 
   const result = await computeAdmits(gate, tenantId);
-  writeCache(key, result);
+  if (result.reasons.admitted !== 'flag-unavailable') writeCache(key, result);
   return result;
 }
 
@@ -407,14 +407,18 @@ async function computeAdmits(gate: CapabilityGateDefinition, tenantId: string): 
   // No eligibility resolver: nobody can be admitted, so do not even ask PostHog.
   if (!gate.eligibility) return decision(capability, 'admits', null, false, 'resolver-unregistered');
 
-  let flagOn: boolean;
+  let flag: Awaited<ReturnType<typeof evaluateFeatureFlag>>;
   try {
-    flagOn = await isFeatureFlagEnabled(gate.featureFlag, { tenantId });
+    flag = await evaluateFeatureFlag(gate.featureFlag, { tenantId });
   } catch (error) {
     warnDowngrade(capability, tenantId, 'admits', 'featureFlag', error);
     return decision(capability, 'admits', null, false, 'flag-unavailable');
   }
-  if (!flagOn) return decision(capability, 'admits', null, false, 'flag-off');
+  if (flag.status === 'unavailable') {
+    warnDowngrade(capability, tenantId, 'admits', 'featureFlag', 'evaluation unavailable');
+    return decision(capability, 'admits', null, false, 'flag-unavailable');
+  }
+  if (!flag.enabled) return decision(capability, 'admits', null, false, 'flag-off');
 
   try {
     const eligible = await gate.eligibility({ tenantId });

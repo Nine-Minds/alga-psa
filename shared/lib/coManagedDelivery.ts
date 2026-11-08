@@ -18,7 +18,10 @@ export interface DeliveryRecipient {
   principalId: string;
   /** Email address for email delivery; absent for in-app only recipients. */
   email?: string;
+  /** Ephemeral recipient-specific authorization projection; never stored in an outbox. */
+  redactedFields?: readonly string[];
 }
+
 
 export interface CommentDeliveryPlan {
   /** Audience of the comment's thread (L4a `resolveCommentAudience`), never `is_internal`. */
@@ -42,8 +45,23 @@ export interface InboundCommentActor {
 export type InboundAdmission =
   | { admitted: true; audience: CommentAudience; relationshipId: string; threadId: string | null; ticketId: string; parentCommentId: string | null;
       /** Set for shared_it / organization_private: the participant to write as. Absent = requester thread (native writer). */
-      actor?: InboundCommentActor }
-  | { admitted: false; reason: 'legacy_token' | 'stale_generation' | 'grant_revoked' | 'not_served' | 'not_participant' | 'audience_forbidden'; acknowledge: boolean };
+      actor?: InboundCommentActor;
+      /** Set for requester replies: the active contact authorized by admission. */
+      requesterContactId?: string;
+      /** Ticket client at admission, checked again at the native write boundary. */
+      requesterClientId?: string }
+  | { admitted: false; reason: 'legacy_token' | 'stale_generation' | 'grant_revoked' | 'not_served' | 'not_participant' | 'audience_forbidden' | 'sender_unauthenticated'; acknowledge: boolean };
+
+/**
+ * The inbound sender as the caller has verified it. `internalAttributionTrusted` is the caller's
+ * `allowsInternalSenderAttribution(senderAuthResults)`: without it the From address is only a claim and
+ * must never resolve to an internal user.
+ */
+export interface InboundSender {
+  email: string | null;
+  internalAttributionTrusted: boolean;
+  contactAttributionTrusted: boolean;
+}
 
 export interface InboundCommentWrite {
   tenant: string;
@@ -101,6 +119,8 @@ export interface CoManagedDeliveryProvider {
   flagStaleRoutingSending(tenant: string, olderThanMs: number): Promise<number>;
   /** Null when the ticket is not shared (or its grant is revoked); the native recipient step then runs unchanged. */
   planTicketComment(tenant: string, ticketId: string, commentId: string): Promise<CommentDeliveryPlan | null>;
+  /** Rebuild sponsor authorization for one delayed comment send; projections are returned only in memory. */
+  reauthorizeCommentRecipient?(input: { tenant: string; ticketId: string; commentId: string; relationshipId: string; sponsorTenant: string; principalId: string }): Promise<DeliveryRecipient | null>;
   /**
    * Audience of a native project-task comment's thread (`projectTaskAudience`: only explicit, consistent
    * metadata makes a task comment shared; everything else is organization_private). Null when the tenant
@@ -111,8 +131,8 @@ export interface CoManagedDeliveryProvider {
   /** Claim a ledger row; true = this caller owns the send. */
   claim(tenant: string, kind: string, sourceId: string, recipient: DeliveryRecipient): Promise<boolean>;
   finish(tenant: string, kind: string, sourceId: string, recipient: DeliveryRecipient, state: 'sent' | 'failed' | 'sending', outcome?: { error?: string; code?: string }): Promise<void>;
-  /** Inbound reply-token admission for a `cm2:`/`cm1:` token (metadata from email_reply_tokens) and a sender address. */
-  admitReplyToken(tenant: string, token: string, metadata: unknown, senderEmail: string | null): Promise<InboundAdmission>;
+  /** Inbound reply-token admission for a `cm2:`/`cm1:` token (metadata from email_reply_tokens) and the verified sender. */
+  admitReplyToken(tenant: string, token: string, metadata: unknown, sender: InboundSender): Promise<InboundAdmission>;
 }
 
 /**

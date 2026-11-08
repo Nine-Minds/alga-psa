@@ -387,6 +387,8 @@
     },
     "locations": {
       "billing": "Facturatie",
+      "contactCount_one": "1 contactpersoon",
+      "contactCount_other": "{{count}} contactpersonen",
       "manage": "Beheren",
       "more": "+{{count}} meer",
       "none": "Nog geen locaties.",
@@ -462,7 +464,7 @@
       "paused": "SLA gepauzeerd"
     },
     "software": {
-      "assetsMeta_one": "{{count}} asset",
+      "assetsMeta_one": "1 asset",
       "assetsMeta_other": "{{count}} assets",
       "loadError": "Softwareinventaris kon niet worden geladen.",
       "titles": "titels",
@@ -1354,7 +1356,10 @@
         "phoneLabel": "Telefoon",
         "setDefault": "Als standaard instellen",
         "shippingTag": "Verzending",
-        "unnamed": "Naamloze locatie"
+        "unnamed": "Naamloze locatie",
+        "contactCount_one": "1 contactpersoon",
+        "contactCount_other": "{{count}} contactpersonen",
+        "contactPrimary": "Primair"
       },
       "dialog": {
         "addTitle": "Nieuwe locatie toevoegen",
@@ -1951,7 +1956,8 @@
       "sourceIsTenantDefault": "Het record van uw eigen organisatie kan niet met een klant worden samengevoegd.",
       "sourceHasCoManagement": "Deze klant heeft een werkruimte voor co-managed IT. Annuleer de instelling of beëindig het co-management voordat u de klant samenvoegt.",
       "parentLinkCycle": "Die klant staat geregistreerd als onderliggend aan de klant die u samenvoegt; zo zou de hiërarchie worden omgedraaid.",
-      "invalidContractCutover": "Een van de overstapdatums valt buiten de looptijd van het bijbehorende contract."
+      "invalidContractCutover": "Een van de overstapdatums valt buiten de looptijd van het bijbehorende contract.",
+      "invalidContactLocation": "Een gekozen locatie hoort bij geen van de samengevoegde klanten."
     },
     "profileContacts": {
       "duplicateManager": "Een facturatieprofiel kan maar één beheerder hebben.",
@@ -2033,7 +2039,16 @@
     "billingStrategyHeading": "Samengevoegd werk en apparaten factureren onder",
     "billingStrategySource": "Factureringsprofiel van {{source}}, behouden als apart profiel bij {{target}}",
     "billingStrategyTarget": "Standaard factureringsprofiel van {{target}}",
-    "billingStrategyHelp": "Geldt voor {{tickets}} ticket(s), {{projects}} project(en), {{assets}} asset(s) en {{mappings}} RMM-apparaatgroep(en) zonder eigen factureringsprofiel. Rijen met een expliciet profiel houden dat, en facturen, factureringscycli, betalingen en credits blijven altijd op het samengevoegde profiel."
+    "billingStrategyHelp": "Geldt voor {{tickets}} ticket(s), {{projects}} project(en), {{assets}} asset(s) en {{mappings}} RMM-apparaatgroep(en) zonder eigen factureringsprofiel. Rijen met een expliciet profiel houden dat, en facturen, factureringscycli, betalingen en credits blijven altijd op het samengevoegde profiel.",
+    "locationsColumn": "Locaties",
+    "remoteBadge": "Op afstand",
+    "noLocationsAfterMerge": "Geen locaties",
+    "unnamedLocation": "Locatie",
+    "movingFrom": "komt over van {{client}}",
+    "primaryLocation": "Primair",
+    "targetAlsoHas": "{{client}} heeft ook ‘{{location}}’",
+    "useIt": "Gebruiken",
+    "contactLocationSummary": "{{count}} locatiekoppelingen van contactpersonen, {{repointed}} omgezet"
   },
   "billingProfileContacts": {
     "title": "Profielcontactpersonen",

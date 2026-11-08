@@ -22,7 +22,7 @@ export { isTenantScopedQuery } from './lib/tenantScopedQuery';
 export type { TenantScopedQuery } from './lib/tenantScopedQuery';
 export { tenantDb } from './lib/tenantDb';
 export type { TenantDb, TenantJoinOptions } from './lib/tenantDb';
-export { getTenantTableScope, parseTableExpression, requireTenantTableScope, tenantTableMetadata } from './lib/tenantTableMetadata';
+export { getTenantTableScope, parseTableExpression, registerTenantTables, requireTenantTableScope, tenantTableMetadata } from './lib/tenantTableMetadata';
 export type { ParsedTableExpression, TenantTableScope } from './lib/tenantTableMetadata';
 export {
   TENANT_TABLE_MANIFEST,
@@ -86,6 +86,9 @@ export {
   ACCOUNTING_EXPORT_INVOICE_CANCELLED,
   ACCOUNTING_EXPORT_INVOICE_NOT_FOUND,
 } from './lib/invoiceExternalSyncLock';
+
+// QBO item-target advisory lock (shared by integrations mapping CRUD and billing item import)
+export { lockQboItemTarget, lockQboItemTargets, qboItemTargetLockKey } from './lib/qboItemTargetLock';
 
 // Tenant Slug utilities
 export { getTenantIdBySlug, getTenantDisplayNameBySlug, getTenantSlugForTenant, buildTenantPortalSlug, isValidTenantSlug, getSlugParts } from './lib/tenantSlug';
