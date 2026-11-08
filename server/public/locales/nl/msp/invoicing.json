@@ -1533,15 +1533,15 @@
         },
         "start": {
           "label": "Start",
-          "tooltip": "Uitlijnen op het begin"
+          "tooltip": "Uitlijnen aan het begin"
         },
         "center": {
           "label": "Midden",
-          "tooltip": "Uitlijnen op het midden"
+          "tooltip": "Uitlijnen in het midden"
         },
         "end": {
           "label": "Einde",
-          "tooltip": "Uitlijnen op het einde"
+          "tooltip": "Uitlijnen aan het einde"
         }
       },
       "justify": {
@@ -1558,7 +1558,7 @@
           "tooltip": "Groeperen aan het einde"
         },
         "between": {
-          "label": "Tussenruimte",
+          "label": "Ruimte tussen",
           "tooltip": "Verdelen met ruimte tussen de items"
         },
         "around": {
@@ -1704,7 +1704,7 @@
           "label": "Onbewerkt",
           "description": "De opgeslagen waarde ongewijzigd gebruiken."
         },
-        "onlyDataField": "Dit geldt alleen voor gegevensveldknopen.",
+        "onlyDataField": "Dit geldt alleen voor gegevensveldknooppunten.",
         "aria": "Weergaveformaat: {{format}}"
       },
       "attachments": {
