@@ -15,6 +15,12 @@ vi.mock('@alga-psa/formatting/avatarUtils', async () => {
   };
 });
 
+// The chip-tag hydration runs a real tag_mappings join the fake query builders here cannot serve.
+vi.mock('@alga-psa/tags/lib/loadDisplayTags', () => ({
+  loadDisplayTagsForEntities: vi.fn(async () => new Map()),
+  displayTagKey: (taggedType: string, id: string) => `${taggedType}:${id}`,
+}));
+
 function createQueryChain(ticket: Record<string, unknown> | null) {
   const chain = {
     leftJoin: vi.fn(() => chain),

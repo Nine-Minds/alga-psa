@@ -14,7 +14,8 @@
 import type { Knex } from 'knex';
 import { randomUUID } from 'node:crypto';
 import type { IEventPublisher, WorkflowActor } from '@alga-psa/types';
-import type { BuiltWorkflowPayload, WorkflowCatalogEventType } from '@alga-psa/event-schemas';
+import { buildResponseStateChangedEvent, type ResponseStateChangedPayload } from '../../lib/tickets/responseState';
+import { buildWorkflowPayload, type BuiltWorkflowPayload, type WorkflowCatalogEventType } from '@alga-psa/event-schemas';
 import {
   buildInboundPublisherTicketAssignedPayload,
   buildInboundPublisherTicketCommentAddedPayload,
@@ -175,6 +176,16 @@ export class InboundEmailOutboxEventPublisher implements IEventPublisher {
       eventType: 'TICKET_COMMENT_ADDED',
       payload: buildInboundPublisherTicketCommentAddedPayload(data),
       publishOptions: isInitial ? { channel: 'internal-notifications' } : null,
+    });
+  }
+
+  /** Persist response-state changes in the same inbound-email transaction. */
+  async publishResponseStateChanged(payload: ResponseStateChangedPayload): Promise<void> {
+    const event = buildResponseStateChangedEvent(payload);
+    await this.enqueue({
+      eventKey: 'response-state-changed',
+      eventType: event.eventType,
+      payload: buildWorkflowPayload(event.payload, event.ctx),
     });
   }
 

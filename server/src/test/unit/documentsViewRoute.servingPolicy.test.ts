@@ -27,7 +27,7 @@ vi.mock('@alga-psa/user-composition/actions', () => ({ getCurrentUser: async () 
 vi.mock('@alga-psa/documents/actions/documentActions', () => ({ getAuthorizedDocumentByFileId: async () => ({ document_id: 'd' }) }));
 vi.mock('server/src/lib/services/apiKeyServiceForApi', () => ({ ApiKeyServiceForApi: {} }));
 vi.mock('@alga-psa/users/actions', () => ({ findUserByIdForApi: vi.fn() }));
-vi.mock('@/lib/api/middleware/apiMiddleware', () => ({ assertInternalApiUser: vi.fn() }));
+vi.mock('@/lib/api/middleware/apiMiddleware', () => ({ assertApiPrincipal: vi.fn() }));
 vi.mock('@alga-psa/db', () => ({
   tenantDb: (conn: any) => ({ table: (t: string) => conn(t), unscoped: (t: string) => conn(t) }),
   withTransaction: async (knex: any, cb: any) => cb(knex),

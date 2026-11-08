@@ -16,7 +16,7 @@ entry), so a broken journey blocks PRs.
 Client with billing cycles and tax config → contract wizard with the optional
 fields filled (PO required/number/amount, proration, end date, two fixed
 services, 25000¢ base rate) → assignment carries the PO → recurring-period
-sync → `generateInvoice` for the cycle.
+sync → `generateInvoiceForCycle` (test helper over due-work + `generateInvoiceForSelectionInputs`) for the cycle.
 Pins: wizard numbers land on the invoice exactly (subtotal, tax arithmetic,
 charges sum to base rate); charge details carry the arrears service period the
 money is for. Fixed lines bill **arrears** by default — the line starts a

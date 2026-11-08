@@ -27,6 +27,9 @@ services:
       DB_TYPE: ${DB_TYPE:-postgres}
       DB_HOST: ${PGBOUNCER_HOST:-pgbouncer}
       DB_PORT: ${PGBOUNCER_PORT:-6432}
+      # LEVERAGE: pattern pgbouncer-admin-direct — DB_HOST_ADMIN/DB_PORT_ADMIN (+ depends_on postgres) repeated per pooled service across overlays; a shared fragment would remove the drift risk (guarded by scripts/tests/compose-pgbouncer-auth.test.mjs)
+      DB_HOST_ADMIN: ${DB_HOST_ADMIN:-postgres}
+      DB_PORT_ADMIN: ${DB_PORT_ADMIN:-5432}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
       LOG_IS_FULL_DETAILS: ${LOG_IS_FULL_DETAILS:-false}
@@ -92,6 +95,8 @@ services:
       DB_TYPE: ${DB_TYPE:-postgres}
       DB_HOST: ${PGBOUNCER_HOST:-pgbouncer}
       DB_PORT: ${PGBOUNCER_PORT:-6432}
+      DB_HOST_ADMIN: ${DB_HOST_ADMIN:-postgres}
+      DB_PORT_ADMIN: ${DB_PORT_ADMIN:-5432}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
       LOG_IS_FULL_DETAILS: ${LOG_IS_FULL_DETAILS:-false}
@@ -110,6 +115,7 @@ services:
       IMAP_WEBHOOK_TIMEOUT_MS: ${IMAP_WEBHOOK_TIMEOUT_MS:-10000}
       IMAP_WEBHOOK_MAX_ATTEMPTS: ${IMAP_WEBHOOK_MAX_ATTEMPTS:-3}
       IMAP_WEBHOOK_SECRET: ${IMAP_WEBHOOK_SECRET:-}
+      STORAGE_LOCAL_BASE_PATH: ${STORAGE_LOCAL_BASE_PATH:-/data/files}
       STORAGE_DEFAULT_PROVIDER: ${IMAP_STORAGE_DEFAULT_PROVIDER:-s3}
       STORAGE_S3_ENDPOINT: ${IMAP_STORAGE_S3_ENDPOINT:-http://minio:9000}
       STORAGE_S3_REGION: ${IMAP_STORAGE_S3_REGION:-us-east-1}
@@ -118,6 +124,7 @@ services:
       STORAGE_S3_SECRET_KEY: ${IMAP_STORAGE_S3_SECRET_KEY:-minioadmin}
       STORAGE_S3_FORCE_PATH_STYLE: ${IMAP_STORAGE_S3_FORCE_PATH_STYLE:-true}
     volumes:
+      - files_data:/data/files
       - type: bind
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server
