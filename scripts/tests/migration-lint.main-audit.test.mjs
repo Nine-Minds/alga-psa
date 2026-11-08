@@ -3,6 +3,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
+import { ESLint } from 'eslint';
 
 import { run } from '../ci/migration-lint.mjs';
 import { lintMigrationSet } from '../lib/migration-lint.mjs';
@@ -24,7 +26,7 @@ test('every honoured annotation carries a reason of at least 12 characters', () 
   for (const a of report.allowed) assert.ok(a.reason.replace(/\s/g, '').length >= 12, `${a.file}:${a.line}`);
 });
 
-test('quote approval migrations pass safety validation against the November 7 release schema', () => {
+test('quote approval migrations pass safety and filename validation at CI handoff', async (t) => {
   const dir = new URL('../../server/migrations/', import.meta.url);
   const files = fs.readdirSync(dir)
     .filter((name) => /_create_quote_(access_links|decisions)\.cjs$/.test(name))
@@ -42,4 +44,11 @@ test('quote approval migrations pass safety validation against the November 7 re
   assert.deepEqual(report.violations, []);
   assert.deepEqual(report.undecided, []);
   assert.deepEqual(report.stale, []);
+
+  // The safety linter permits future timestamps; ESLint rejects them. Freeze
+  // the failing run's clock so this regression cannot disappear with time.
+  t.mock.timers.enable({ apis: ['Date'], now: Date.parse('2026-11-08T16:46:00Z') });
+  const eslint = new ESLint({ cwd: fileURLToPath(new URL('../../', import.meta.url)) });
+  const results = await eslint.lintFiles(files.map(({ name }) => fileURLToPath(new URL(name, dir))));
+  assert.deepEqual(results.flatMap((result) => result.messages.filter((message) => message.severity === 2)), []);
 });
