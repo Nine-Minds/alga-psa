@@ -1,5 +1,7 @@
 # SLA worker email review walkthrough
 
+The current, self-contained human review is the [hosted guide](http://100.109.101.64:43207/). It supersedes the historical walkthrough below and records its exact tested PR HEAD, fresh SMTP receipts, audit transitions, failure/recovery, and repeatable fixtures. During preparation, a real escalation exposed an existing failure when the escalation manager was already the primary assignee; the service now skips the duplicate additional-resource insert while preserving notification delivery, with a database behavioral regression test.
+
 ## Review state and revisions
 
 Open the [captain-facing walkthrough](http://100.109.101.64:43207/). It contains the chaptered recording, route settings, observed audit outcomes, worker error log, and reproduction steps.

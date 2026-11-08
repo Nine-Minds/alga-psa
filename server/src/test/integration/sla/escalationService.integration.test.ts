@@ -189,6 +189,30 @@ describe('SLA Escalation Service Integration Tests', () => {
     expect(notifications).toHaveLength(1);
   });
 
+  it('notifies an escalation manager who already owns the ticket without adding a duplicate resource', async () => {
+    const ticketId = await newTicket();
+    await tenantTable(db, tenantId, 'tickets').where({ ticket_id: ticketId })
+      .update({ assigned_to: managerL1Id });
+
+    await runCommitted(async (trx) => {
+      const result = await escalateTicket(trx, tenantId, ticketId, 1);
+      expect(result.success).toBe(true);
+      expect(result.resourceAdded).toBe(false);
+      expect(result.notificationsSent.inApp).toBe(true);
+      expect(sendNotification).not.toHaveBeenCalled();
+    });
+
+    expect(sendNotification).toHaveBeenCalledTimes(1);
+    expect(sendNotification.mock.calls[0][0]).toMatchObject({ userId: managerL1Id, boardId, mailClass: 'ticket' });
+    expect(await tenantTable(db, tenantId, 'ticket_resources').where({ ticket_id: ticketId })).toHaveLength(0);
+    const ticket = await tenantTable(db, tenantId, 'tickets').where({ ticket_id: ticketId }).first();
+    expect(ticket).toMatchObject({ assigned_to: managerL1Id, escalated: true, escalation_level: 1 });
+    const audit = await tenantTable(db, tenantId, 'sla_audit_log')
+      .where({ ticket_id: ticketId, event_type: 'ticket_escalated' }).first();
+    const data = typeof audit.event_data === 'string' ? JSON.parse(audit.event_data) : audit.event_data;
+    expect(data.notifications).toMatchObject({ email: 'sent', emailMessageId: 'smtp-message-1' });
+  });
+
   it('sends the escalation email only after commit, with mailClass ticket and the ticket board', async () => {
     const ticketId = await newTicket();
 

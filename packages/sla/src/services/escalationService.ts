@@ -318,6 +318,12 @@ async function addEscalationManagerAsResource(
   managerId: string,
   level: number
 ): Promise<boolean> {
+  // The primary assignee already has access. ticket_resources only represents
+  // additional users and rejects a resource that duplicates the assignee.
+  if (assignedTo === managerId) {
+    return false;
+  }
+
   const scopedDb = tenantDb(trx, tenant);
 
   // Check if this manager is already a resource on this ticket
