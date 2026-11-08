@@ -295,9 +295,11 @@ describe('ticket checklists', () => {
     expect(await getTicketChecklistItems(ticketId)).toHaveLength(1);
 
     hasPermissionMock.mockResolvedValue(false);
-    await expect(getTicketChecklistItems(ticketId)).rejects.toThrow(
-      'Permission denied: Cannot read ticket checklist'
-    );
+    await expect(getTicketChecklistItems(ticketId)).resolves.toEqual([]);
+    expect(hasPermissionMock).toHaveBeenLastCalledWith(userRef.user, 'ticket', 'read');
+
+    hasPermissionMock.mockResolvedValue(true);
+    expect(await getTicketChecklistItems(ticketId)).toHaveLength(1);
   });
 
   it('T023: completion stamps accountability and audit rows preserve prior signoff', async () => {
@@ -345,7 +347,8 @@ describe('ticket checklists', () => {
     };
 
     try {
-      await expect(getTicketChecklistItems(ticketId)).rejects.toThrow('Permission denied');
+      // Reads conceal inaccessible tickets; mutations return permission errors.
+      await expect(getTicketChecklistItems(ticketId)).resolves.toEqual([]);
       expect(await addChecklistItem(ticketId, { item_name: 'Unauthorized add' })).toMatchObject({ permissionError: expect.stringMatching(/permission denied/i) });
       expect(await updateChecklistItem(itemId, { item_name: 'Unauthorized update' })).toMatchObject({ permissionError: expect.stringMatching(/permission denied/i) });
       expect(await setChecklistItemCompleted(itemId, true)).toMatchObject({ permissionError: expect.stringMatching(/permission denied/i) });
