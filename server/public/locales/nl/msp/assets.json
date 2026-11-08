@@ -1474,12 +1474,12 @@
         "daily": "Dagelijks",
         "weekly": "Wekelijks",
         "monthly": "Maandelijks",
-        "quarterly": "Elk kwartaal",
+        "quarterly": "Driemaandelijks",
         "yearly": "Jaarlijks"
       }
     },
     "urgency": {
-      "overdue": "{{count}} d te laat",
+      "overdue": "{{count}} d achterstallig",
       "dueToday": "vandaag gepland",
       "inDays": "over {{count}} d"
     },
@@ -1529,7 +1529,7 @@
       "allClients": "Alle klanten",
       "allAssetTypes": "Alle assettypen",
       "allPlanTypes": "Alle plantypen",
-      "due": "Gepland voor",
+      "due": "Onderhoudsdatum",
       "clearAll": "Alles wissen",
       "done": "Klaar",
       "clientChip": "Klant"
@@ -1542,12 +1542,12 @@
       "actionableTitle": "Onderhoudsmomenten die actie vereisen",
       "plansTitle": "Actieve planwachtrij (op basis van onderhoudsmomenten)",
       "loading": "Onderhoud laden…",
-      "empty": "Geen onderhoudsmomenten komen overeen met deze filters.",
-      "emptyFiltered": "Geen onderhoudsmomenten komen overeen met deze filters. Wis een filter of verruim het bereik van de geplande datums.",
+      "empty": "Er zijn geen onderhoudsmomenten die aan deze filters voldoen.",
+      "emptyFiltered": "Er zijn geen onderhoudsmomenten die aan deze filters voldoen. Wis een filter of verruim het datumbereik.",
       "emptyHistory": "Voltooide en overgeslagen onderhoudsmomenten verschijnen hier zodra het onderhoud is afgesloten.",
       "emptyPlans": "Openstaande onderhoudsmomenten van plannen verschijnen hier zodra de schema's werk genereren.",
       "clearBeyond": "Naast deze {{count}} zijn er geen andere onderhoudsmomenten in de wachtrij — verruim het datumbereik of bekijk de planwachtrij.",
-      "allCaughtUp": "Alles bijgewerkt",
+      "allCaughtUp": "Alles afgehandeld",
       "nextDueIn": "— volgend onderhoud over {{count}} d",
       "shownCount": "{{shown}} getoond · {{open}} open ·",
       "inHistory": "{{count}} in de geschiedenis",
