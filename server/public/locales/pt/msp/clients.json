@@ -387,6 +387,8 @@
     },
     "locations": {
       "billing": "Faturação",
+      "contactCount_one": "1 contato",
+      "contactCount_other": "{{count}} contatos",
       "manage": "Gerir",
       "more": "+{{count}} mais",
       "none": "Ainda não há localizações.",
@@ -1354,7 +1356,10 @@
         "phoneLabel": "Telefone",
         "setDefault": "Definir como padrão",
         "shippingTag": "Envio",
-        "unnamed": "Localização sem nome"
+        "unnamed": "Localização sem nome",
+        "contactCount_one": "1 contato",
+        "contactCount_other": "{{count}} contatos",
+        "contactPrimary": "Principal"
       },
       "dialog": {
         "addTitle": "Adicionar novo local",
@@ -1951,7 +1956,8 @@
       "sourceIsTenantDefault": "O registro da sua própria organização não pode ser mesclado em um cliente.",
       "sourceHasCoManagement": "Este cliente tem um espaço de trabalho de TI cogerenciada. Cancele a configuração ou encerre a cogestão antes de mesclá-lo.",
       "parentLinkCycle": "Esse cliente está registrado como filho do que você está mesclando, então a mesclagem inverteria a hierarquia.",
-      "invalidContractCutover": "Uma das datas de virada está fora da vigência do contrato correspondente."
+      "invalidContractCutover": "Uma das datas de virada está fora da vigência do contrato correspondente.",
+      "invalidContactLocation": "Uma localização escolhida não pertence a nenhum dos clientes mesclados."
     },
     "profileContacts": {
       "duplicateManager": "Um perfil de faturamento só pode ter um responsável.",
@@ -2033,7 +2039,16 @@
     "billingStrategyHeading": "Faturar o trabalho e os dispositivos mesclados em",
     "billingStrategySource": "Perfil de faturamento de {{source}}, mantido como perfil separado em {{target}}",
     "billingStrategyTarget": "Perfil de faturamento padrão de {{target}}",
-    "billingStrategyHelp": "Aplica-se a {{tickets}} ticket(s), {{projects}} projeto(s), {{assets}} ativo(s) e {{mappings}} grupo(s) de dispositivos RMM sem perfil de faturamento próprio. Linhas com um perfil explícito o mantêm, e faturas, ciclos de faturamento, pagamentos e créditos permanecem sempre no perfil mesclado."
+    "billingStrategyHelp": "Aplica-se a {{tickets}} ticket(s), {{projects}} projeto(s), {{assets}} ativo(s) e {{mappings}} grupo(s) de dispositivos RMM sem perfil de faturamento próprio. Linhas com um perfil explícito o mantêm, e faturas, ciclos de faturamento, pagamentos e créditos permanecem sempre no perfil mesclado.",
+    "locationsColumn": "Localizações",
+    "remoteBadge": "Remoto",
+    "noLocationsAfterMerge": "Sem localizações",
+    "unnamedLocation": "Localização",
+    "movingFrom": "vem de {{client}}",
+    "primaryLocation": "Principal",
+    "targetAlsoHas": "{{client}} também tem \"{{location}}\"",
+    "useIt": "Usar esta",
+    "contactLocationSummary": "{{count}} vínculos de localização de contatos, {{repointed}} redirecionados"
   },
   "billingProfileContacts": {
     "title": "Contatos do perfil",

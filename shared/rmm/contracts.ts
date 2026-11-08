@@ -51,6 +51,11 @@ export interface NormalizedRmmExternalDeviceSnapshot {
   assetType: NormalizedRmmDeviceType;
   displayName: string;
   serialNumber?: string | null;
+  /**
+   * ISO date, written to assets.warranty_end_date; null/undefined never clears
+   * an existing value — manual data wins over an absent RMM value.
+   */
+  warrantyEndDate?: string | null;
   status?: string | null;
   location?: string | null;
   assetTag?: string | null;

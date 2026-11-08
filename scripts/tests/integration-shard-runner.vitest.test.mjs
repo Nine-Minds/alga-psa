@@ -18,7 +18,8 @@ test('actual integration runner partitions, executes and rejects missing or stal
   for (const file of ['scripts/run-tier1-integration.mjs', 'scripts/verify-integration-shards.mjs',
     'scripts/lib/integration-selection.mjs', 'scripts/lib/test-discovery.mjs', 'scripts/lib/test-execution-evidence.mjs',
     'scripts/lib/test-revision.mjs', 'scripts/lib/test-sharding.mjs',
-    'scripts/lib/flaky-policy.mjs', 'scripts/lib/vitest-flaky-reporter.mjs']) {
+    'scripts/lib/flaky-policy.mjs', 'scripts/lib/vitest-flaky-reporter.mjs', 'scripts/lib/flaky-error.mjs',
+    'scripts/lib/vitest-progress-reporter.mjs', 'scripts/lib/server-unit-durations.mjs']) {
     write(file, readFileSync(path.join(source, file), 'utf8'));
   }
   write('.gitignore', 'node_modules\ntest-results/\nserver/test-results-integration.json\n');
@@ -161,7 +162,8 @@ test('actual integration runner partitions, executes and rejects missing or stal
   assert.equal(onPush.status, 1, onPush.stdout);
   const pushEvidence = read('test-results/integration/evidence.json');
   assert.equal(pushEvidence.status, 'failed');
-  assert.ok(pushEvidence.failures.includes(`retry-only pass on push run: ${flakyId}`), pushEvidence.failures.join('\n'));
+  // The policy line carries the first attempt's error after the test id.
+  assert.ok(pushEvidence.failures.some(failure => failure.startsWith(`retry-only pass on push run: ${flakyId}`)), pushEvidence.failures.join('\n'));
   assert.equal(read('test-results/integration/flaky-tests.json').eventName, 'push');
 
   // Nothing retried: the journal stays beside the evidence and nothing publishes.

@@ -1,6 +1,7 @@
 'use client'
 
 import { encodeTicketWhere } from '../lib/ticketWhereUrl';
+import { useDefaultNotificationSuppression } from '../lib/notificationSuppressionDefaults';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -42,7 +43,15 @@ import { searchClientsForPicker } from '../actions/clientLookupActions';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { TagFilter } from '@alga-psa/ui/components/tags/TagFilter';
 import { WhereTagFilter } from './WhereTagFilter';
-import { WHERE_TAG_FILTERS, getWhereTagSelection, setWhereTagSelection, whereTagFilterChips } from '../lib/ticketWhereFilters';
+import {
+  WHERE_FILTERS,
+  WHERE_TAG_FILTERS,
+  getWhereTagSelection,
+  setWhereTagSelection,
+  whereFilterChips,
+} from '../lib/ticketWhereFilters';
+import { WhereLocationFilter, locationFilterLabel, type WhereLocationOption } from './WhereLocationFilter';
+import { listTicketFilterLocations } from '../actions/clientLookupActions';
 import type { TagSize } from '@alga-psa/ui/components/tags';
 import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
 import {
@@ -161,11 +170,6 @@ function SmartSearchResults<TScope, TRow extends object, TMetadata>(
   return <EnterpriseSmartSearchResults {...(props as unknown as AnySmartSearchResultsProps)} />;
 }
 
-const defaultNotificationSuppression = (): TicketNotificationSuppressionValue => ({
-  suppressContactNotifications: false,
-  suppressInternalNotifications: false,
-});
-
 interface TicketingDashboardProps {
   id?: string;
   initialTickets: ITicketListItem[];
@@ -198,6 +202,11 @@ interface TicketingDashboardProps {
   initialTicketTags?: Record<string, ITag[]>;
   initialTeams?: ITeam[];
   canUpdateTickets?: boolean;
+  /**
+   * The co-managed workspace is ended or lapsed: reads stay, every create/copy/delete control is withdrawn.
+   * Separate from `canUpdateTickets`, which only gates edits of existing rows.
+   */
+  workspaceReadOnly?: boolean;
   /**
    * Called immediately before any route change out of the list, so the container
    * can stop mirroring filter state into the URL. A write that lands while the
@@ -349,6 +358,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   clientTagDefinitions = EMPTY_TAG_DEFINITIONS,
   initialTeams = [],
   canUpdateTickets = true,
+  workspaceReadOnly = false,
   onNavigateAway,
   allowSlaStatusFilter = true,
   smartSearchAvailable = false,
@@ -402,6 +412,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [selectedDestinationStatusId, setSelectedDestinationStatusId] = useState<string>('');
   const [isLoadingDestinationStatuses, setIsLoadingDestinationStatuses] = useState(false);
   const [destinationStatusError, setDestinationStatusError] = useState<string>('');
+  const defaultNotificationSuppression = useDefaultNotificationSuppression();
   const [bulkMoveNotificationSuppression, setBulkMoveNotificationSuppression] =
     useState<TicketNotificationSuppressionValue>(() => defaultNotificationSuppression());
   const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>(initialAgentAvatarUrls);
@@ -541,7 +552,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     () => navigateAwayTo(buildCreateTicketHref({ isAlgaDeskMode: useAlgaDeskQuickAddForm })),
     [navigateAwayTo, useAlgaDeskQuickAddForm],
   );
-  usePageCreateShortcut(openQuickAddTicket);
+  usePageCreateShortcut(openQuickAddTicket, { enabled: !workspaceReadOnly });
 
   // Tag filter values from props
   const selectedTags = filterValues.tags ?? EMPTY_STRING_ARRAY;
@@ -553,8 +564,31 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     () => ({ 'contact.tags': contactTagDefinitions, 'client.tags': clientTagDefinitions }),
     [contactTagDefinitions, clientTagDefinitions],
   );
-  const hasWhereTagFilters = WHERE_TAG_FILTERS.some((d) => getWhereTagSelection(selectedWhere, d.path) !== null);
-  const whereTagFilterCount = WHERE_TAG_FILTERS.filter((d) => getWhereTagSelection(selectedWhere, d.path) !== null).length;
+  const hasWhereTagFilters = WHERE_FILTERS.some((d) => getWhereTagSelection(selectedWhere, d.path) !== null);
+  const whereTagFilterCount = WHERE_FILTERS.filter((d) => getWhereTagSelection(selectedWhere, d.path) !== null).length;
+
+  // The filtered client's locations, or every active tenant location grouped by client when no
+  // client narrows the list. Both Location filters share the one list.
+  const [whereLocationOptions, setWhereLocationOptions] = useState<WhereLocationOption[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const rows = await listTicketFilterLocations(selectedClient ?? null);
+        // The options are informational: anything other than a list leaves the control empty
+        // rather than failing the toolbar.
+        if (!cancelled) setWhereLocationOptions(Array.isArray(rows) ? rows : []);
+      } catch (error) {
+        console.error('Error loading the ticket location filter options:', error);
+        if (!cancelled) setWhereLocationOptions([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedClient]);
+  const whereLocationLabelById = useMemo(
+    () => new Map(whereLocationOptions.map((option) => [option.location_id, locationFilterLabel(option)])),
+    [whereLocationOptions],
+  );
   const [tagsVersion, setTagsVersion] = useState(0); // Used to force re-render when tags are fetched
 
   const isFiltered = useMemo(() => {
@@ -1731,7 +1765,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       canCreateTemplate: templatePermissions.create,
     });
 
-    return [selectionColumn, ...baseColumns, actionsColumn];
+    // Duplicate and "Create template" are the only row actions and both write.
+    return workspaceReadOnly ? [selectionColumn, ...baseColumns] : [selectionColumn, ...baseColumns, actionsColumn];
   }, [
     categories,
     boards,
@@ -1740,6 +1775,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     handleTicketClick,
     handleTagsChange,
     canUpdateTickets,
+    workspaceReadOnly,
     ticketTagsRef,
     onQuickViewClient,
     onQuickViewContact,
@@ -2341,9 +2377,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       });
     });
 
-    whereTagFilterChips(
+    whereFilterChips(
       selectedWhere,
-      (descriptor, tagId) => whereTagDefinitions[descriptor.path].find((d) => d.tag_id === tagId)?.tag_text,
+      (descriptor, valueId) => ('tags' in descriptor.options
+        ? whereTagDefinitions[descriptor.path as 'contact.tags' | 'client.tags'].find((d) => d.tag_id === valueId)?.tag_text
+        : whereLocationLabelById.get(valueId)),
       (descriptor) => t(descriptor.labelKey, descriptor.defaultLabel),
     ).forEach((chip) => {
       chips.push({
@@ -2357,7 +2395,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       ...chip,
       removeLabel: t('filters.removeFilterChip', 'Remove filter: {{label}}', { label: chip.label }),
     }));
-  }, [selectedBoards, excludedBoards, boards, selectedClient, selectedClientLabel, selectedContact, contactOptions, selectedAssignees, initialUsers, selectedTeams, teams, includeUnassigned, selectedStatus, statusOptions, selectedResponseState, selectedPriority, priorityOptions, selectedDueDateFilter, dueDateFilterValue, allowSlaStatusFilter, selectedSlaStatus, selectedCategories, excludedCategories, categories, selectedTags, selectedWhere, whereTagDefinitions, handleBoardSelect, handleClientSelect, handleContactSelect, handleCategorySelect, onFilterChange, t]);
+  }, [selectedBoards, excludedBoards, boards, selectedClient, selectedClientLabel, selectedContact, contactOptions, selectedAssignees, initialUsers, selectedTeams, teams, includeUnassigned, selectedStatus, statusOptions, selectedResponseState, selectedPriority, priorityOptions, selectedDueDateFilter, dueDateFilterValue, allowSlaStatusFilter, selectedSlaStatus, selectedCategories, excludedCategories, categories, selectedTags, selectedWhere, whereTagDefinitions, whereLocationLabelById, handleBoardSelect, handleClientSelect, handleContactSelect, handleCategorySelect, onFilterChange, t]);
 
   return (
     <>
@@ -2401,17 +2439,19 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 disabled: !hasSelection,
                 separator: true,
               },
-              {
+              ...(workspaceReadOnly ? [] : [{
                 id: `${id}-share-import`,
                 icon: Upload,
                 label: t('dashboard.importAction', { defaultValue: 'Import CSV' }),
                 onSelect: () => navigateAwayTo('/msp/tickets/import'),
-              },
+              }]),
             ] satisfies ShareAction[]}
           />
-          <Button id="add-ticket-button" onClick={openQuickAddTicket}>
-            {t('dashboard.addTicket', 'Add Ticket')}
-          </Button>
+          {!workspaceReadOnly && (
+            <Button id="add-ticket-button" onClick={openQuickAddTicket}>
+              {t('dashboard.addTicket', 'Add Ticket')}
+            </Button>
+          )}
         </>}
       />
       <BoardTabStrip
@@ -2720,17 +2760,30 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   }}
                   onClearTags={() => onFilterChange({ tags: undefined })}
                 />
-                {WHERE_TAG_FILTERS.map((descriptor) => (
-                  <WhereTagFilter
-                    key={descriptor.path}
-                    id={`${id}-where-${descriptor.taggedType}-tags`}
-                    label={t(descriptor.labelKey, descriptor.defaultLabel)}
-                    definitions={whereTagDefinitions[descriptor.path]}
-                    selection={getWhereTagSelection(selectedWhere, descriptor.path)}
-                    onChange={(selection) =>
-                      onFilterChange({ where: setWhereTagSelection(selectedWhere, descriptor.path, selection) })
-                    }
-                  />
+                {WHERE_FILTERS.map((descriptor) => (
+                  'tags' in descriptor.options ? (
+                    <WhereTagFilter
+                      key={descriptor.path}
+                      id={`${id}-where-${descriptor.options.tags}-tags`}
+                      label={t(descriptor.labelKey, descriptor.defaultLabel)}
+                      definitions={whereTagDefinitions[descriptor.path as 'contact.tags' | 'client.tags']}
+                      selection={getWhereTagSelection(selectedWhere, descriptor.path)}
+                      onChange={(selection) =>
+                        onFilterChange({ where: setWhereTagSelection(selectedWhere, descriptor.path, selection) })
+                      }
+                    />
+                  ) : (
+                    <WhereLocationFilter
+                      key={descriptor.path}
+                      id={`${id}-where-${descriptor.options.locations}-location`}
+                      label={t(descriptor.labelKey, descriptor.defaultLabel)}
+                      options={whereLocationOptions}
+                      selection={getWhereTagSelection(selectedWhere, descriptor.path)}
+                      onChange={(selection) =>
+                        onFilterChange({ where: setWhereTagSelection(selectedWhere, descriptor.path, selection) })
+                      }
+                    />
+                  )
                 ))}
                 </div>
               </div>
@@ -2985,6 +3038,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 value={selectedDestinationBoardId}
                 options={boards
                   .filter((board): board is IBoard & { board_id: string } => typeof board.board_id === 'string')
+                  .filter((board) => !board.is_inactive)
                   .map((board) => ({
                     value: board.board_id,
                     label: board.board_name ?? t('bulk.move.unnamedBoard', 'Unnamed board'),
@@ -3148,6 +3202,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         showPriority={canUpdateTickets}
         showTags={canUpdateTickets}
         showDueDate={canUpdateTickets}
+        showDelete={!workspaceReadOnly}
         statusDisabled={!selectedTicketsSharedBoardId}
         statusDisabledTitle={isResolvingSelectedBoards
           ? t('bulk.actionBar.statusResolvingBoards', 'Checking the boards of selected tickets…')

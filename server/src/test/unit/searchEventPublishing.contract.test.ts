@@ -138,18 +138,18 @@ describe('search index source event publishing contracts', () => {
     }
   });
 
-  it('T063 contract and client-contract CRUD emit contract-family events', () => {
+  it('T063 contract creation and assignment edits emit contract-family events', () => {
+    // Shared update/delete publishing is exercised in billing/contractLifecycle.behavior.test.ts.
     const contractSource = readRepoFile('packages/billing/src/actions/contractActions.ts');
     const clientContractSource = readRepoFile('packages/clients/src/actions/clientContractActions.ts');
 
-    for (const eventType of ['CONTRACT_CREATED', 'CONTRACT_UPDATED', 'CONTRACT_DELETED']) {
+    for (const eventType of ['CONTRACT_CREATED', 'CONTRACT_UPDATED']) {
       expect(contractSource + clientContractSource).toContain(`eventType: '${eventType}'`);
     }
 
     for (const eventType of [
       'CLIENT_CONTRACT_CREATED',
       'CLIENT_CONTRACT_UPDATED',
-      'CLIENT_CONTRACT_DELETED',
     ]) {
       expect(contractSource + clientContractSource).toContain(`eventType: '${eventType}'`);
     }

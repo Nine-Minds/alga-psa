@@ -244,6 +244,9 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
         id: item.quote_item_id,
         groupKey: item.location_id && item.location_id.trim().length > 0 ? item.location_id : UNASSIGNED_KEY,
         taxAmountIfIncluded: item.tax_amount_if_included ?? 0,
+        // Lets the preview re-tax a row on the base its own selection leaves
+        // after discounts, instead of reusing tax from the sent selection.
+        taxRateIfIncluded: item.tax_rate_if_included ?? 0,
       }))
     );
   }, [quote, canEditSelections, hasOptionalItems, previewItems]);

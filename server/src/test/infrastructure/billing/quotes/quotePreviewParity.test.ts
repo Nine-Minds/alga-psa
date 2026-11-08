@@ -123,7 +123,8 @@ describe('Quote optional-selection preview parity', () => {
         id: row.quote_item_id,
         is_selected: row.is_optional ? !deselected.has(row.quote_item_id) : row.is_selected,
         groupKey: row.is_recurring ? (row.billing_frequency ?? 'recurring') : 'one-time',
-        taxAmountIfIncluded: taxById.get(row.quote_item_id) ?? 0,
+        taxAmountIfIncluded: taxById.get(row.quote_item_id)?.taxAmount ?? 0,
+        taxRateIfIncluded: taxById.get(row.quote_item_id)?.taxPercentage ?? 0,
       }))
     );
 

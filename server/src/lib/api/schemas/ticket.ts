@@ -142,7 +142,8 @@ export const createTicketFieldsSchema = z.object({
   url: z.string().url().optional(),
   board_id: uuidSchema,
   client_id: uuidSchema,
-  location_id: uuidSchema.optional(),
+  /** Omitted asks the contact where the ticket belongs; null is "explicitly none" and is kept. */
+  location_id: uuidSchema.nullish(),
   contact_name_id: uuidSchema.optional(),
   status_id: uuidSchema,
   category_id: uuidSchema.optional(),
@@ -162,6 +163,11 @@ export const createTicketFieldsSchema = z.object({
   entered_at: historicalTimestampSchema.optional(),
   closed_at: offsetDatetimeSchema.optional(),
   closed_by: uuidSchema.optional(),
+  // Devices the ticket is raised against. Linked in the ticket's own
+  // transaction, so a rejected asset leaves no orphan ticket. The first asset
+  // also lends its billing profile (the from-asset rule, which the web create
+  // applies the same way).
+  asset_ids: z.array(uuidSchema).max(50).optional(),
   // Create silently: no customer-facing ticket-created email (which otherwise
   // falls back to the client email when the ticket has no contact) and no
   // portal/in-app notifications. Audit, workflows and webhooks are unaffected.
@@ -210,9 +216,15 @@ export const updateTicketSchema = createUpdateSchema(
     // Closure fields remain specific to historical create and status updates.
     closed_at: true,
     closed_by: true,
+    // Create-only: later links go through POST /tickets/{id}/assets.
+    asset_ids: true,
   })
 ).extend({
   contact_name_id: uuidSchema.nullable().optional(),
+  // Nullable so a re-classification can clear them: picking a category with no
+  // children has to drop the old parent's subcategory in the same request.
+  category_id: uuidSchema.nullable().optional(),
+  subcategory_id: uuidSchema.nullable().optional(),
   ...ticketNotificationSuppressionSchema,
   // Close despite unmet close rules; honored only when the caller's user holds
   // ticket:close_override. Stripped before the row update.
@@ -519,7 +531,9 @@ export const createTicketCommentSchema = z.object({
       (value) => getVisibleCommentLength(value) <= MAX_TICKET_COMMENT_LENGTH,
       `Comment text is too long (max ${MAX_TICKET_COMMENT_LENGTH} characters)`
     ),
-  is_internal: z.boolean().optional().default(false),
+  // No default: an unspecified visibility is distinguishable from an explicit false
+  // (a service principal's unspecified comment is internal; an explicit public one needs act-as).
+  is_internal: z.boolean().optional(),
   /** Audience for a co-managed workspace; ignored natively. Must agree with is_internal. */
   collaboration_audience: z.enum(['requester', 'organization_private']).optional(),
   is_resolution: z.boolean().optional().default(false),

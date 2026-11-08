@@ -9,6 +9,7 @@ import { reconcileCommentAttachments } from '../lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import { ticketUpdateStamp } from '../lib/tickets/ticketUpdateStamp';
 import { tenantDb } from '@alga-psa/db';
+import { applyCommentResponseState, announcerFor } from '../lib/tickets/responseState';
 import {
   assertReplyAudience, lockLabelledThreadAudience, nativeThreadAudience, type NativeCommentAudience,
 } from '../lib/commentAudience';
@@ -28,6 +29,7 @@ import { applyBoardDefaultWatchers } from '../lib/tickets/boardDefaultWatchers';
 import { TicketWatcherService } from '../services/tickets/ticketWatcherService';
 import { parseTicketWatchListAttributes } from '../lib/tickets/watchList';
 import { resolveAssetBillingProfileId } from './assetBillingProfileModel';
+import { resolveContactLocationId, shouldResolveContactLocation } from './contactLocation';
 import { buildTicketCommentAddedPayload, buildTicketModelChanges } from '../lib/tickets/ticketWorkflowEventPayloads';
 
 // LEVERAGE: pattern ticket-origins-duplicate — copy of TICKET_ORIGINS in @alga-psa/types (shared cannot import types); keep both in sync
@@ -177,7 +179,8 @@ export interface CreateTicketInput {
   description?: string;
   client_id?: string;
   contact_id?: string; // Note: Maps to contact_name_id in database
-  location_id?: string;
+  /** undefined = nobody said (resolved from the contact); null = explicitly none. */
+  location_id?: string | null;
   /**
    * Billing profile the ticket's work is attributed to. A soft default, never
    * required: a technician who ignores it still produces a correctly attributed
@@ -1055,6 +1058,18 @@ export class TicketModel {
       );
     }
 
+    // The one ticket-location autofill rule, and therefore the one every creation path inherits:
+    // REST v1 POST /tickets, mobile, the client portal, recurring generation and the MSP forms.
+    // `undefined` means "nobody said", so the requester's own location answers it; `null` means the
+    // operator chose None and is kept. The same-client check below then runs on the resolved value,
+    // so a contact at another client still fails rather than quietly attaching a foreign site.
+    if (shouldResolveContactLocation(cleanedInput)) {
+      const resolvedLocationId = await resolveContactLocationId(trx, tenant, cleanedInput.contact_id as string);
+      if (resolvedLocationId) {
+        cleanedInput.location_id = resolvedLocationId;
+      }
+    }
+
     // Perform business rule validation
     const businessRuleValidation = await this.validateBusinessRules(
       cleanedInput,
@@ -1799,24 +1814,15 @@ export class TicketModel {
         });
     }
 
-    // D3: key off the final stored visibility, not the requested flag.
-    if (!commentIsInternal && validatedData.author_type === 'contact') {
-      // Only update response state if tracking is enabled for this tenant
-      const tenantSettingsRow = await db.table('tenant_settings')
-        .select('ticket_display_settings')
-        .first();
-      const responseStateEnabled = (tenantSettingsRow?.ticket_display_settings as any)?.responseStateTrackingEnabled ?? true;
-
-      if (responseStateEnabled) {
-        // LEVERAGE: pattern response-state-from-comment — inbound-email/model comment path sets awaiting_internal directly and emits no TICKET_RESPONSE_STATE_CHANGED; use applyCommentResponseState (shared/lib/tickets/responseState.ts) once the model can emit after-commit events.
-        await db.table('tickets')
-          .where({
-            ticket_id: validatedData.ticket_id,
-          })
-          .update({
-            response_state: 'awaiting_internal',
-          });
-      }
+    if (validatedData.author_type === 'contact') {
+      await applyCommentResponseState(trx, {
+        tenant,
+        ticketId: validatedData.ticket_id,
+        authorType: 'client',
+        isInternal: commentIsInternal,
+        userId: validatedData.author_id ?? userId ?? null,
+        announce: announcerFor(eventPublisher),
+      });
     }
 
     // Publish comment event if publisher provided

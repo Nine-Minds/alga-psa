@@ -68,6 +68,7 @@ vi.mock('../../actions/ticketFormActions', () => ({
 vi.mock('../../actions/clientLookupActions', () => ({
   getContactsByClient: (...args: unknown[]) => getContactsByClientMock(...args),
   getClientLocations: (...args: unknown[]) => getClientLocationsMock(...args),
+  getContactEffectiveLocation: vi.fn().mockResolvedValue({ locationId: null, locations: [], workArrangement: null }),
   getClientById: (...args: unknown[]) => getClientByIdMock(...args),
   searchClientsForPicker: (...args: unknown[]) => searchClientsForPickerMock(...args)
 }));

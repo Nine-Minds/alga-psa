@@ -57,7 +57,8 @@
   "scripts": {
     "build": "tsup",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "generate:pdf-fonts": "node scripts/generate-pdf-fonts.mjs"
   },
   "dependencies": {
     "@alga-psa/authorization": "*",

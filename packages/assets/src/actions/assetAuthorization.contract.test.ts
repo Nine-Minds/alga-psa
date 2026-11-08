@@ -17,7 +17,7 @@ describe('asset authorization kernel contracts', () => {
     expect(source).toContain('export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryParams)');
     expect(source).toContain('buildAuthorizationAwarePage<AssetListScanRow>({');
     expect(source).toContain('const listQuery = requiresRecordAuthorization');
-    expect(source).toContain(': applyAssetTypeFilter(facetQuery.clone(), validatedParams.asset_type);');
+    expect(source).toContain(': applyAssetTypeFilter(facetQuery.clone(), assetTypeFilter);');
     expect(source).toContain('const countRow = await listQuery.clone()');
     expect(source).toContain(".count<{ count: string }>('assets.asset_id as count')");
     expect(source).toContain('filterReadableAssets(trx, tenant, context, rows, {');

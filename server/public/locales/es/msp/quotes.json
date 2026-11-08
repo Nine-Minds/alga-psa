@@ -537,6 +537,7 @@
       "recurring": "Periódico",
       "service": "servicio",
       "setPrice": "precio fijo",
+      "taxable": "Sujeto a impuestos",
       "ungroupedItems": "Artículos desagrupados"
     },
     "placeholders": {

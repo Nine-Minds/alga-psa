@@ -2207,6 +2207,7 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "1 asset",
       "Offline",
       "{{field}}: {{from}} → {{to}}",
       "{{from}} → {{to}}",

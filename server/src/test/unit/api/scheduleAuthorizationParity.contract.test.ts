@@ -48,8 +48,8 @@ describe('Schedule endpoints authorization parity contract', () => {
   it('enforces user_schedule RBAC in the service helpers', () => {
     const source = readServiceSource();
 
-    expect(source).toContain("hasPermission(context.user, 'user_schedule', 'update', knex)");
-    expect(source).toContain("hasPermission(context.user, 'user_schedule', action, knex)");
+    expect(source).toContain("hasApiContextPermission(context, 'user_schedule', 'update', knex)");
+    expect(source).toContain("hasApiContextPermission(context, 'user_schedule', action, knex)");
     expect(source).not.toMatch(/canViewAllSchedules[\s\S]{0,120}Simplified for now/);
   });
 });
