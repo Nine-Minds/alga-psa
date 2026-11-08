@@ -10,6 +10,10 @@
       "types": "./src/index.ts",
       "import": "./src/index.ts"
     },
+    "./deliveryRegistration": {
+      "types": "./src/deliveryRegistration.ts",
+      "import": "./src/deliveryRegistration.ts"
+    },
     "./capability": {
       "types": "./src/capability.ts",
       "import": "./src/capability.ts"
@@ -33,6 +37,10 @@
     "./managementPolicy": {
       "types": "./src/managementPolicy.ts",
       "import": "./src/managementPolicy.ts"
+    },
+    "./conversationContent": {
+      "types": "./src/conversationContent.ts",
+      "import": "./src/conversationContent.ts"
     },
     "./conversationRichText": {
       "types": "./src/conversationRichText.ts",
@@ -65,6 +73,10 @@
     "./sharedWork": {
       "types": "./src/sharedWork.ts",
       "import": "./src/sharedWork.ts"
+    },
+    "./sharedWorkProjection": {
+      "types": "./src/sharedWorkProjection.ts",
+      "import": "./src/sharedWorkProjection.ts"
     },
     "./sharedWorkRead": {
       "types": "./src/sharedWorkRead.ts",
@@ -106,9 +118,9 @@
       "types": "./src/projectTaskQueue.ts",
       "import": "./src/projectTaskQueue.ts"
     },
-    "./sharedWorkProjection": {
-      "types": "./src/sharedWorkProjection.ts",
-      "import": "./src/sharedWorkProjection.ts"
+    "./projectFieldMask": {
+      "types": "./src/projectFieldMask.ts",
+      "import": "./src/projectFieldMask.ts"
     },
     "./projectTaskEditing": {
       "types": "./src/projectTaskEditing.ts",
@@ -133,6 +145,110 @@
     "./projectTaskAudit": {
       "types": "./src/projectTaskAudit.ts",
       "import": "./src/projectTaskAudit.ts"
+    },
+    "./sharedTicketCommentWriter": {
+      "types": "./src/sharedTicketCommentWriter.ts",
+      "import": "./src/sharedTicketCommentWriter.ts"
+    },
+    "./inboundCommentWriter": {
+      "types": "./src/inboundCommentWriter.ts",
+      "import": "./src/inboundCommentWriter.ts"
+    },
+    "./refusalAck": {
+      "types": "./src/refusalAck.ts",
+      "import": "./src/refusalAck.ts"
+    },
+    "./ticketSlaRegistration": {
+      "types": "./src/ticketSlaRegistration.ts",
+      "import": "./src/ticketSlaRegistration.ts"
+    },
+    "./ticketSla": {
+      "types": "./src/ticketSla.ts",
+      "import": "./src/ticketSla.ts"
+    },
+    "./ticketSlaRead": {
+      "types": "./src/ticketSlaRead.ts",
+      "import": "./src/ticketSlaRead.ts"
+    },
+    "./portableExport": {
+      "types": "./src/portableExport.ts",
+      "import": "./src/portableExport.ts"
+    },
+    "./portableTransfer": {
+      "types": "./src/portableTransfer.ts",
+      "import": "./src/portableTransfer.ts"
+    },
+    "./portableSnapshot": {
+      "types": "./src/portableSnapshot.ts",
+      "import": "./src/portableSnapshot.ts"
+    },
+    "./portableTemporaryDirectory": {
+      "types": "./src/portableTemporaryDirectory.ts",
+      "import": "./src/portableTemporaryDirectory.ts"
+    },
+    "./portableWorkspaceGraph": {
+      "types": "./src/portableWorkspaceGraph.ts",
+      "import": "./src/portableWorkspaceGraph.ts"
+    },
+    "./portableCoreRegistry": {
+      "types": "./src/portableCoreRegistry.ts",
+      "import": "./src/portableCoreRegistry.ts"
+    },
+    "./portableContributorRegistry": {
+      "types": "./src/portableContributorRegistry.ts",
+      "import": "./src/portableContributorRegistry.ts"
+    },
+    "./portableArchive": {
+      "types": "./src/portableArchive.ts",
+      "import": "./src/portableArchive.ts"
+    },
+    "./portableWorkspaceManifest": {
+      "types": "./src/portableWorkspaceManifest.ts",
+      "import": "./src/portableWorkspaceManifest.ts"
+    },
+    "./portableDownload": {
+      "types": "./src/portableDownload.ts",
+      "import": "./src/portableDownload.ts"
+    },
+    "./projectTaskConversation": {
+      "types": "./src/projectTaskConversation.ts",
+      "import": "./src/projectTaskConversation.ts"
+    },
+    "./requesterSharedWork": {
+      "types": "./src/requesterSharedWork.ts",
+      "import": "./src/requesterSharedWork.ts"
+    },
+    "./portableDocumentExport": {
+      "types": "./src/portableDocumentExport.ts",
+      "import": "./src/portableDocumentExport.ts"
+    },
+    "./portableEngagementExport": {
+      "types": "./src/portableEngagementExport.ts",
+      "import": "./src/portableEngagementExport.ts"
+    },
+    "./portableConversationExport": {
+      "types": "./src/portableConversationExport.ts",
+      "import": "./src/portableConversationExport.ts"
+    },
+    "./portableOperationalExport": {
+      "types": "./src/portableOperationalExport.ts",
+      "import": "./src/portableOperationalExport.ts"
+    },
+    "./portableOperationalCatalog": {
+      "types": "./src/portableOperationalCatalog.ts",
+      "import": "./src/portableOperationalCatalog.ts"
+    },
+    "./portableSupplementalFileExport": {
+      "types": "./src/portableSupplementalFileExport.ts",
+      "import": "./src/portableSupplementalFileExport.ts"
+    },
+    "./requesterTaskConversation": {
+      "types": "./src/requesterTaskConversation.ts",
+      "import": "./src/requesterTaskConversation.ts"
+    },
+    "./projectTaskAudience": {
+      "types": "./src/projectTaskAudience.ts",
+      "import": "./src/projectTaskAudience.ts"
     }
   },
   "scripts": {
@@ -143,9 +259,15 @@
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/licensing": "*",
+    "@alga-psa/storage": "*",
     "knex": "^3.1.0",
     "@alga-psa/authorization": "*",
-    "@alga-psa/types": "*"
+    "@alga-psa/types": "*",
+    "@alga-psa/tickets": "*",
+    "@alga-psa/event-bus": "*",
+    "@alga-psa/event-schemas": "*",
+    "@alga-psa/shared": "*",
+    "uuid": "^11.1.1"
   },
   "devDependencies": {
     "typescript": "^5.4.0"

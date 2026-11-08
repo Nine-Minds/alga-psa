@@ -9,7 +9,8 @@ export interface QuickAddContactRenderProps {
   isOpen: boolean;
   onClose: () => void;
   onContactAdded: (newContact: IContact) => void;
-  clients: IClient[];
+  /** @deprecated Ignored. QuickAddContact searches clients on the server; kept optional so existing callers compile. */
+  clients?: IClient[];
   selectedClientId?: string | null;
 }
 
@@ -31,6 +32,10 @@ export interface ClientIntegrationContextType {
   getContactsByClient: (clientId: string, status?: ContactFilterStatus, sortBy?: string, sortDirection?: 'asc' | 'desc') => Promise<IContact[]>;
   getAllContacts: (status?: ContactFilterStatus, sortBy?: string, sortDirection?: 'asc' | 'desc') => Promise<IContact[]>;
   getContactByContactNameId: (contactNameId: string) => Promise<IContact | null>;
+  /** Loads one client by id (e.g. for a quick view); null when it no longer exists. */
+  getClientById: (clientId: string) => Promise<IClient | null>;
+  /** Returns the ids from `clientIds` that still exist (any status). Used to validate saved-view references. */
+  getExistingClientIds: (clientIds: string[]) => Promise<string[]>;
 
   // Component renderers
   renderQuickAddContact: (props: QuickAddContactRenderProps) => ReactNode;

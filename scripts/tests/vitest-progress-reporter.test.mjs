@@ -1,11 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, writeFileSync, rmSync, existsSync } from 'node:fs';
+import { mkdtempSync, readFileSync, realpathSync, writeFileSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
+import { collectedTestsFromJournal } from '../lib/vitest-progress-reporter.mjs';
 
 const reporter = fileURLToPath(new URL('../lib/vitest-progress-reporter.mjs', import.meta.url));
 const runners = ['../../node_modules/vitest/vitest.mjs'];
@@ -40,17 +41,31 @@ for (const runner of runners) {
     };
     writeFileSync(path.join(root, 'result.test.js'), `
       test('persists', () => expect(2 + 2).toBe(4));
-      test('detects regression', () => expect(2 + 2).toBe(5));
+      describe('nested', () => { test('detects regression', () => expect(2 + 2).toBe(5)); });
       test.skip('deferred', () => {});
+      test.todo('later');
     `);
     const result = await run().ended;
     assert.equal(result.code, 1, result.log);
     const completed = events();
     assert.deepEqual(completed.find((entry) => entry.event === 'run-started').files, ['result.test.js']);
     assert.equal(completed.find((entry) => entry.event === 'module-queued').file, 'result.test.js');
+    // The file reports its own registrations once imported, static skips and
+    // todos included with their mode; the derived inventory drops those two,
+    // as `vitest list` did, and names files the way the list did.
+    const collectedEvents = completed.filter((entry) => entry.event === 'module-collected');
+    assert.equal(collectedEvents.length, 1);
+    assert.deepEqual(collectedEvents[0].tests, [{ name: 'persists', mode: 'run' }, { name: 'nested > detects regression', mode: 'run' },
+      { name: 'deferred', mode: 'skip' }, { name: 'later', mode: 'todo' }]);
+    assert.ok(completed.findIndex((entry) => entry.event === 'module-collected') < completed.findIndex((entry) => entry.event === 'test-ready'));
+    // Files resolve against the root the journal itself announced (Vitest's
+    // real path), not the caller's spelling of it.
+    assert.deepEqual(collectedTestsFromJournal(readFileSync(output, 'utf8'), { root: '/nowhere' }), [
+      { name: 'persists', file: path.join(realpathSync(root), 'result.test.js'), projectName: undefined },
+      { name: 'nested > detects regression', file: path.join(realpathSync(root), 'result.test.js'), projectName: undefined }]);
     assert.equal(completed.find((entry) => entry.event === 'module-finished').state, 'failed');
-    assert.deepEqual(completed.filter((entry) => entry.event === 'test-finished').map((entry) => entry.state).sort(), ['failed', 'passed', 'skipped']);
-    assert.equal(completed.filter((entry) => entry.event === 'test-ready').length, 3);
+    assert.deepEqual(completed.filter((entry) => entry.event === 'test-finished').map((entry) => entry.state).sort(), ['failed', 'passed', 'skipped', 'skipped']);
+    assert.equal(completed.filter((entry) => entry.event === 'test-ready').length, 4);
     assert.equal(completed.at(-1).event, 'run-finished');
     assert.deepEqual(completed.map((entry) => entry.sequence), completed.map((_, index) => index));
     const previousRun = completed[0].runId;

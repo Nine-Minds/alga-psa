@@ -726,7 +726,10 @@
       "reportsToCycle": "Spowodowałoby to cykliczną strukturę podległości",
       "reportsTo": "Podlega",
       "noManager": "Brak przełożonego",
-      "reportsToHelp": "Przełożony widzi zgłoszenia, urządzenia i projekty osób mu podlegających, gdy jego grupa widoczności jest ograniczona do własnych danych."
+      "reportsToHelp": "Przełożony widzi zgłoszenia, urządzenia i projekty osób mu podlegających, gdy jego grupa widoczności jest ograniczona do własnych danych.",
+      "locations": "Lokalizacje",
+      "primaryLocation": "Główna",
+      "remote": "Zdalny"
     },
     "visibilityGroups": {
       "title": "Grupy widoczności",

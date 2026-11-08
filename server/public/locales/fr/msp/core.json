@@ -108,9 +108,11 @@
     "ticketsTemplates": "Modèles de tickets",
     "assetsCustody": "Matériel sous garde",
     "ticketsCannedResponses": "Réponses prédéfinies",
+    "ticketsCustomer": "Tickets clients",
     "profile": "Profil",
     "signOut": "Se déconnecter",
     "coManaged": "IT cogérée",
+    "coManagedArchive": "Archive IT cogérée",
     "coManagedAdministration": "Accès et administration"
   },
   "sidebar": {

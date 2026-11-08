@@ -19,10 +19,7 @@ describe('contract dialog client creation wiring contract', () => {
     expect(source).toContain('open: isQuickAddClientOpen,');
     expect(source).toContain('onOpenChange: setIsQuickAddClientOpen,');
     expect(source).toContain('skipSuccessDialog: true,');
-    expect(source).toContain(
-      '(client) => client.client_id === newClient.client_id,',
-    );
-    expect(source).toContain('nextClients[existingIndex] = newClient;');
+    expect(source).toContain('primeSelectedClient(newClient);');
     expect(source).toContain('setClientId(newClient.client_id);');
     expect(source).toContain(`setClientId(newClient.client_id);
           clearErrorIfSubmitted();`);

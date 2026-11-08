@@ -7,7 +7,7 @@ import {
   validateClause,
 } from '../querySchema';
 import type { Attribute, QuerySchema, Relation, SetAttribute, SqlFragment } from '../querySchema';
-import { isPredicateGroup } from '../types';
+import { COMPLEMENTS, isPredicateGroup } from '../types';
 import type { PredicateClause, PredicateGroup, PredicateLiteral, PredicateNode, PredicateOperator } from '../types';
 
 export interface CompileOptions {
@@ -41,11 +41,6 @@ const or = (parts: SqlFragment[]): SqlFragment => {
 
 const not = (part: SqlFragment): SqlFragment =>
   part === TRUE ? FALSE : part === FALSE ? TRUE : { sql: `NOT (${part.sql})`, bindings: part.bindings };
-
-const COMPLEMENT: Partial<Record<PredicateOperator, PredicateOperator>> = {
-  not_in: 'in',
-  is_empty: 'is_not_empty',
-};
 
 const escapeLike = (value: string): string => value.replace(/[\\%_]/g, (character) => `\\${character}`);
 
@@ -135,11 +130,16 @@ class Compiler {
         return { sql: `COALESCE(${ref} ${symbol} ${mark.sql}, FALSE)`, bindings: [colBinding, ...mark.bindings] };
       }
       case 'contains':
+      case 'not_contains':
+      case 'contains_ci':
+      case 'not_contains_ci':
       case 'starts_with':
       case 'ends_with': {
         const text = escapeLike(String(one ?? ''));
-        const pattern = operator === 'contains' ? `%${text}%` : operator === 'starts_with' ? `${text}%` : `%${text}`;
-        return { sql: `COALESCE(${ref} LIKE ? ESCAPE '\\', FALSE)`, bindings: [colBinding, pattern] };
+        const pattern = ['contains', 'not_contains', 'contains_ci', 'not_contains_ci'].includes(operator) ? `%${text}%` : operator === 'starts_with' ? `${text}%` : `%${text}`;
+        const like = operator.endsWith('_ci') ? 'ILIKE' : 'LIKE';
+        const negative = operator === 'not_contains' || operator === 'not_contains_ci';
+        return { sql: `COALESCE(${ref} ${negative ? 'NOT ' : ''}${like} ? ESCAPE '\\', FALSE)`, bindings: [colBinding, pattern] };
       }
       default:
         throw new PredicateSchemaError(`Operator ${operator} is not compilable on a column`, 'operator_not_allowed', clause.path);
@@ -233,7 +233,7 @@ class Compiler {
     const issue = validateClause(this.schema, clause);
     if (issue) throw new PredicateSchemaError(issue.message, issue.code, issue.path);
 
-    const complement = COMPLEMENT[clause.operator];
+    const complement = COMPLEMENTS[clause.operator];
     const operator = complement ?? clause.operator;
     const rootAlias = this.options.rootAlias;
 
