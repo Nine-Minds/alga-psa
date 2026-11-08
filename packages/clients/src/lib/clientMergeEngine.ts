@@ -11,6 +11,7 @@ import {
   suggestCutoverDate,
   type ClientOwnedMoveTable,
   type ContractDecision,
+  evaluateContactLocationChoices,
   type MergeBlocker,
   type MergeClientFacts,
   type MergeableContract,
@@ -18,6 +19,7 @@ import {
 } from './clientMergePlan';
 import { queueContactUpdated } from './contactEvents';
 import { queueClientLocationUpdated } from './clientLocationEvents';
+import { replaceContactLocations } from '../models/contactLocation';
 
 /**
  * Merging a client into a parent as a billing profile.
@@ -107,6 +109,11 @@ export interface ClientMergeInput {
   /** Defaults to true — see pinPortalGrants() for why. */
   pinPortalGrants?: boolean;
   externalRemapChoices?: ExternalMappingRemapChoice[];
+  /**
+   * Per-contact location sets to apply after the client-owned tables have moved. A contact that is
+   * not listed keeps its links exactly as they moved.
+   */
+  contactLocationAssignments?: ContactLocationAssignment[];
 }
 
 export interface MergeProfilePreview {
@@ -117,11 +124,38 @@ export interface MergeProfilePreview {
   isActive: boolean;
 }
 
+export interface MergeContactLocationPreview {
+  locationId: string;
+  locationName: string | null;
+  isPrimary: boolean;
+  /**
+   * A target location whose name matches this one's, case- and whitespace-insensitively. The dialog
+   * offers a one-click "Use it"; nothing is ever re-pointed without that click.
+   */
+  suggestedTargetLocationId: string | null;
+}
+
 export interface MergeContactPreview {
   contactNameId: string;
   fullName: string;
   email: string | null;
   suggestedBillingProfileId: string | null;
+  locations: MergeContactLocationPreview[];
+  workArrangement: string | null;
+}
+
+export interface MergeLocationAfterMergePreview {
+  locationId: string;
+  locationName: string | null;
+  /** True for a source location (it will have moved by the time the assignment applies). */
+  fromSource: boolean;
+  isActive: boolean;
+}
+
+/** One contact's whole location set after the merge, as the operator chose it. */
+export interface ContactLocationAssignment {
+  contactNameId: string;
+  locations: Array<{ locationId: string; isPrimary?: boolean }>;
 }
 
 export interface MergeContractPreview {
@@ -163,6 +197,8 @@ export interface ClientMergePreview {
   /** FR-G1: the devices and groups that move, and who they come from. */
   assets: MergeAssetsPreview;
   billingChoice: MergeBillingChoicePreview;
+  /** Every location the merged client will have: the source's (moving) and the target's own. */
+  locationsAfterMerge: MergeLocationAfterMergePreview[];
 }
 
 export interface ClientMergeResult {
@@ -175,6 +211,8 @@ export interface ClientMergeResult {
   remappedExternalMappingIds: string[];
   skippedExternalMappingIds: string[];
   billingStrategy: ClientMergeBillingStrategy;
+  /** How many of the moved links the operator re-pointed to a different location. */
+  repointedContactLocationCount: number;
 }
 
 const scoped = (trx: Knex.Transaction, tenant: string, table: string): Knex.QueryBuilder =>
@@ -332,6 +370,217 @@ async function moveClientOwnedRows(
   return moved;
 }
 
+/**
+ * Contact location links key on the contact and the location, never on the client, so a merge that
+ * moves both sides wholesale leaves every row untouched — which is exactly why nothing in the merge
+ * reports them unless it is asked to. These two reads are that report, and the guard against a
+ * silent half-move: a link whose contact and location ended up at different clients would be
+ * invisible in the UI and unfixable from it.
+ */
+const normalizeLocationName = (name: string | null | undefined): string =>
+  (name ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
+
+/**
+ * Every location the merged client will have, and — per existing link — the target location whose
+ * name matches, so the dialog can offer "Use it". The suggestion is only ever a suggestion: nothing
+ * here re-points anything.
+ */
+async function readContactLocationPreview(
+  trx: Knex.Transaction,
+  tenant: string,
+  sourceClientId: string,
+  targetClientId: string,
+  contactIds: readonly string[],
+): Promise<{
+  locationsAfterMerge: MergeLocationAfterMergePreview[];
+  byContact: Map<string, MergeContactLocationPreview[]>;
+  workArrangements: Map<string, string | null>;
+}> {
+  const rows = await scoped(trx, tenant, 'client_locations')
+    .whereIn('client_id', [sourceClientId, targetClientId])
+    .select('location_id', 'location_name', 'client_id', 'is_active')
+    .orderBy('location_name', 'asc') as Array<{
+      location_id: string; location_name: string | null; client_id: string; is_active: boolean | null;
+    }>;
+
+  const locationsAfterMerge: MergeLocationAfterMergePreview[] = rows.map((row) => ({
+    locationId: row.location_id,
+    locationName: row.location_name,
+    fromSource: row.client_id === sourceClientId,
+    isActive: row.is_active !== false,
+  }));
+
+  const targetByName = new Map<string, string>();
+  for (const row of rows) {
+    if (row.client_id !== targetClientId) continue;
+    const key = normalizeLocationName(row.location_name);
+    if (key && !targetByName.has(key)) targetByName.set(key, row.location_id);
+  }
+  const nameById = new Map(rows.map((row) => [row.location_id, row.location_name]));
+
+  const byContact = new Map<string, MergeContactLocationPreview[]>();
+  const workArrangements = new Map<string, string | null>();
+  if (contactIds.length === 0) return { locationsAfterMerge, byContact, workArrangements };
+
+  const contacts = await scoped(trx, tenant, 'contacts')
+    .whereIn('contact_name_id', contactIds)
+    .select('contact_name_id', 'work_arrangement') as Array<{ contact_name_id: string; work_arrangement: string | null }>;
+  for (const contact of contacts) workArrangements.set(contact.contact_name_id, contact.work_arrangement ?? null);
+
+  const links = await scoped(trx, tenant, 'contact_locations')
+    .whereIn('contact_name_id', contactIds)
+    .select('contact_name_id', 'location_id', 'is_primary')
+    .orderBy([{ column: 'is_primary', order: 'desc' }]) as Array<{
+      contact_name_id: string; location_id: string; is_primary: boolean;
+    }>;
+
+  for (const link of links) {
+    const locationName = nameById.get(link.location_id) ?? null;
+    const suggestion = targetByName.get(normalizeLocationName(locationName)) ?? null;
+    const existing = byContact.get(link.contact_name_id) ?? [];
+    existing.push({
+      locationId: link.location_id,
+      locationName,
+      isPrimary: Boolean(link.is_primary),
+      // A link already on a target location needs no suggestion.
+      suggestedTargetLocationId: suggestion && suggestion !== link.location_id ? suggestion : null,
+    });
+    byContact.set(link.contact_name_id, existing);
+  }
+
+  return { locationsAfterMerge, byContact, workArrangements };
+}
+
+async function readContactLocationIdsByContact(
+  trx: Knex.Transaction,
+  tenant: string,
+  contactIds: readonly string[],
+): Promise<Map<string, Set<string>>> {
+  const byContact = new Map<string, Set<string>>();
+  if (contactIds.length === 0) return byContact;
+  const rows = await scoped(trx, tenant, 'contact_locations')
+    .whereIn('contact_name_id', contactIds)
+    .select('contact_name_id', 'location_id') as Array<{ contact_name_id: string; location_id: string }>;
+  for (const row of rows) {
+    const existing = byContact.get(row.contact_name_id) ?? new Set<string>();
+    existing.add(row.location_id);
+    byContact.set(row.contact_name_id, existing);
+  }
+  return byContact;
+}
+
+/** Returns how many links ended up on a location the contact was not previously linked to. */
+async function applyContactLocationAssignments(
+  trx: Knex.Transaction,
+  tenant: string,
+  actorUserId: string | null,
+  args: {
+    assignments: readonly ContactLocationAssignment[];
+    sourceContactIds: readonly string[];
+    sourceClientId: string;
+    targetClientId: string;
+    linksBeforeByContact: Map<string, Set<string>>;
+  },
+): Promise<number> {
+  if (args.assignments.length === 0) return 0;
+
+  const sourceContacts = new Set(args.sourceContactIds);
+  const allowed = new Set(
+    await scoped(trx, tenant, 'client_locations')
+      // Both clients, because the source's locations have already moved to the target by now and a
+      // dry run reads them before they do.
+      .whereIn('client_id', [args.sourceClientId, args.targetClientId])
+      .pluck<string[]>('location_id'),
+  );
+
+  // The same guard the dry run evaluates, so the two can never disagree about what is allowed.
+  const [refused] = evaluateContactLocationChoices({
+    assignments: args.assignments,
+    sourceContactIds: sourceContacts,
+    allowedLocationIds: allowed,
+  });
+  if (refused) throw new Error(refused.message);
+
+  let repointed = 0;
+  for (const assignment of args.assignments) {
+    if (!sourceContacts.has(assignment.contactNameId)) continue;
+
+    const before = args.linksBeforeByContact.get(assignment.contactNameId) ?? new Set<string>();
+    repointed += assignment.locations.filter((choice) => !before.has(choice.locationId)).length;
+
+    await replaceContactLocations(
+      trx,
+      tenant,
+      assignment.contactNameId,
+      assignment.locations.map((choice) => ({ location_id: choice.locationId, is_primary: choice.isPrimary })),
+      { createdBy: actorUserId },
+    );
+  }
+
+  return repointed;
+}
+
+async function countContactLocationLinks(
+  trx: Knex.Transaction,
+  tenant: string,
+  contactIds: readonly string[],
+): Promise<number> {
+  if (contactIds.length === 0) return 0;
+  const row = await scoped(trx, tenant, 'contact_locations')
+    .whereIn('contact_name_id', contactIds)
+    .count<{ count: string }>('location_id as count')
+    .first();
+  return Number(row?.count ?? 0);
+}
+
+async function assertContactLocationsConsistent(
+  trx: Knex.Transaction,
+  tenant: string,
+  contactIds: readonly string[],
+  expectedCount: number,
+): Promise<number> {
+  const after = await countContactLocationLinks(trx, tenant, contactIds);
+  if (after !== expectedCount) {
+    throw new Error(
+      `CLIENT_MERGE_ERROR: contact location links changed during the merge (${expectedCount} before, ${after} after)`,
+    );
+  }
+
+  if (contactIds.length === 0) return after;
+
+  // Three scoped reads rather than a two-way join: the sets are one client's worth of rows, and
+  // comparing in TypeScript keeps the check readable and the tenant scope obvious on each side.
+  const links = await scoped(trx, tenant, 'contact_locations')
+    .whereIn('contact_name_id', contactIds)
+    .select('contact_name_id', 'location_id') as Array<{ contact_name_id: string; location_id: string }>;
+  if (links.length === 0) return after;
+
+  const contactClients = new Map(
+    ((await scoped(trx, tenant, 'contacts')
+      .whereIn('contact_name_id', contactIds)
+      .select('contact_name_id', 'client_id')) as Array<{ contact_name_id: string; client_id: string | null }>)
+      .map((row) => [row.contact_name_id, row.client_id ?? null]),
+  );
+  const locationClients = new Map(
+    ((await scoped(trx, tenant, 'client_locations')
+      .whereIn('location_id', [...new Set(links.map((link) => link.location_id))])
+      .select('location_id', 'client_id')) as Array<{ location_id: string; client_id: string | null }>)
+      .map((row) => [row.location_id, row.client_id ?? null]),
+  );
+
+  const crossed = links.find(
+    (link) => contactClients.get(link.contact_name_id) !== locationClients.get(link.location_id),
+  );
+  if (crossed) {
+    throw new Error(
+      'CLIENT_MERGE_ERROR: a contact location link would cross clients '
+      + `(contact ${crossed.contact_name_id}, location ${crossed.location_id})`,
+    );
+  }
+
+  return after;
+}
+
 async function readSourceProfiles(
   trx: Knex.Transaction,
   tenant: string,
@@ -417,7 +666,16 @@ function planVisibilityGroupRenames(
 export async function previewClientMerge(
   trx: Knex.Transaction,
   tenant: string,
-  input: { sourceClientId: string; targetClientId: string },
+  input: {
+    sourceClientId: string;
+    targetClientId: string;
+    /**
+     * The location sets the operator has chosen so far. Supplying them makes the dry run check
+     * them with the engine's own guard, so an impossible choice reads as a blocker on the step
+     * rather than as a failed merge.
+     */
+    contactLocationAssignments?: readonly ContactLocationAssignment[];
+  },
 ): Promise<ClientMergePreview> {
   const source = await readClientFacts(trx, tenant, input.sourceClientId);
   const target = await readClientFacts(trx, tenant, input.targetClientId);
@@ -437,6 +695,7 @@ export async function previewClientMerge(
       billingChoice: { unstampedTickets: 0, unstampedProjects: 0, unstampedAssets: 0, unstampedRmmMappings: 0 },
       counts: {},
       contacts: [],
+      locationsAfterMerge: [],
       contracts: [],
       visibilityGroupRenames: [],
       unrestrictedPortalUserIds: [],
@@ -486,6 +745,13 @@ export async function previewClientMerge(
 
   const contactIds = contactRows.map((row: any) => row.contact_name_id as string);
   const unrestrictedPortalUserIds = await findUnrestrictedPortalUsers(trx, tenant, contactIds);
+  counts['contact location'] = await countContactLocationLinks(trx, tenant, contactIds);
+  const locationPreview = await readContactLocationPreview(trx, tenant, source.clientId, target.clientId, contactIds);
+  blockers.push(...evaluateContactLocationChoices({
+    assignments: input.contactLocationAssignments ?? [],
+    sourceContactIds: new Set(contactIds),
+    allowedLocationIds: new Set(locationPreview.locationsAfterMerge.map((row) => row.locationId)),
+  }));
 
   const externalMappings = await readExternalMappings(trx, tenant, source.clientId, target.clientId);
   const assets = await readMergeAssetsPreview(trx, tenant, source.clientId);
@@ -511,6 +777,8 @@ export async function previewClientMerge(
       fullName: row.full_name ?? '',
       email: row.email ?? null,
       suggestedBillingProfileId: plan.movedDefaultProfileId,
+      locations: locationPreview.byContact.get(row.contact_name_id) ?? [],
+      workArrangement: locationPreview.workArrangements.get(row.contact_name_id) ?? null,
     })),
     contracts: contracts.map((contract) => ({
       clientContractId: contract.clientContractId,
@@ -533,6 +801,7 @@ export async function previewClientMerge(
     externalMappings,
     assets,
     billingChoice,
+    locationsAfterMerge: locationPreview.locationsAfterMerge,
   };
 }
 
@@ -647,6 +916,10 @@ export async function executeClientMerge(
     .where({ client_id: source.clientId })
     .select('contact_name_id');
   const sourceContactIds = sourceContacts.map((row: any) => row.contact_name_id as string);
+  const contactLocationLinksBefore = await countContactLocationLinks(trx, tenant, sourceContactIds);
+  // Captured before anything moves, so the report can say how many links the operator re-pointed
+  // rather than how many simply travelled with their contact.
+  const contactLocationsBeforeByContact = await readContactLocationIdsByContact(trx, tenant, sourceContactIds);
   const unrestrictedPortalUserIds = input.pinPortalGrants === false
     ? []
     : await findUnrestrictedPortalUsers(trx, tenant, sourceContactIds);
@@ -863,6 +1136,32 @@ export async function executeClientMerge(
     if (after) queueClientLocationUpdated(trx, tenant, before, after, eventOptions);
   }
 
+  counts['contact location'] = await assertContactLocationsConsistent(
+    trx,
+    tenant,
+    sourceContactIds,
+    contactLocationLinksBefore,
+  );
+
+  // The operator's per-contact location choices, applied after the client-owned tables have moved —
+  // both sides now belong to the target, so replaceContactLocations' same-client rule accepts them.
+  // A location of neither client fails the whole merge (the transaction rolls back) rather than
+  // landing a link nobody could see or fix.
+  const repointedContactLocationCount = await applyContactLocationAssignments(
+    trx,
+    tenant,
+    actorUserId,
+    {
+      assignments: input.contactLocationAssignments ?? [],
+      sourceContactIds,
+      sourceClientId: source.clientId,
+      targetClientId: target.clientId,
+      linksBeforeByContact: contactLocationsBeforeByContact,
+    },
+  );
+  counts['contact location'] = await countContactLocationLinks(trx, tenant, sourceContactIds);
+  counts['contact location re-pointed'] = repointedContactLocationCount;
+
   // --- 6. Polymorphic associations ---------------------------------------
   counts['logo demoted'] = await demoteCollidingLogos(
     trx,
@@ -981,6 +1280,7 @@ export async function executeClientMerge(
     remappedExternalMappingIds: remapped,
     skippedExternalMappingIds: skipped,
     billingStrategy,
+    repointedContactLocationCount,
   };
 }
 

@@ -1,7 +1,9 @@
 import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
+import { HumanWorkOwnerRequiredError } from '@alga-psa/shared/lib/humanWork/HumanWorkOwnerRequiredError';
 import { publishStoredWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { publishTicketTransitionsAfterCommit, ticketCreatedPublishedByCaller } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
+import { publishTicketTransitionsAfterCommit, silentTicketCreation, ticketCreatedPublishedByCaller } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import {
   buildApiTicketCreatedPayload,
   buildTicketClosedPayload,
@@ -12,6 +14,7 @@ import {
   buildTicketUpdatedPayload,
 } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { persistCommentPublication } from '@shared/lib/ticketCommentAttachments';
+import { assertReplyAudience, lockLabelledThreadAudience, nativeThreadAudience } from '@alga-psa/shared/lib/commentAudience';
 import { applyCommentResponseState, publishResponseStateChange, resolveCommentAuthor } from '@alga-psa/shared/lib/tickets/responseState';
 /**
  * Ticket Service
@@ -21,9 +24,14 @@ import { applyCommentResponseState, publishResponseStateChange, resolveCommentAu
 import { reconcileCommentAttachments, canReadCommentAttachment, filterReadableCommentAttachments, canAccessAttachmentTicket, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import {
-  BaseService, ServiceContext, ListResult, withTransaction, tenantDb, registerAfterCommit } from '@alga-psa/db';
+  BaseService, ServiceContext, ListResult, withTransaction, tenantDb, registerAfterCommit, withViaPrincipal, stampViaPrincipalRow } from '@alga-psa/db';
 import { scheduleJobAt as scheduleBackgroundJobAt, cancelScheduledJob } from '@alga-psa/core';
+import { runAuthorizedTicketWatcherWrite, TicketWatcherPermissionError } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
+import { buildAuthorizationPrincipalSubject } from 'server/src/lib/api/controllers/authorizationKernel';
+import { getAuthorizationKernel } from 'server/src/lib/authorization/kernel';
 import { applyTicketVisibilityFilter, type ContactVisibilityContext } from '@alga-psa/tickets/lib';
+import { displayTagKey, loadDisplayTagsForEntities } from '@alga-psa/tags/lib/loadDisplayTags';
+import { displayAudienceForUser } from '@alga-psa/tags/lib/tagDisplayRules';
 import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
 import { ITicket, ITicketWithDetails } from 'server/src/interfaces/ticket.interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
@@ -40,6 +48,10 @@ import {
   type BundleAfterCommitPublication,
   type BundleAttachFailure,
 } from '@alga-psa/tickets/actions/ticketBundleUtils';
+import {
+  findPriorityBoardTypeProblem,
+  findTicketUpdatePriorityBoardTypeProblem,
+} from '@alga-psa/tickets/lib/ticketFieldReferences';
 import { BundlePropagationConfirmationRequiredError } from '@alga-psa/tickets/lib/ticketBundlePropagation';
 import {
   BundleConcurrentModificationError,
@@ -77,7 +89,8 @@ import { NotFoundError, ValidationError, ConflictError, ForbiddenError, Unproces
 import { locationAddressSql } from './locationAddressSql';
 import { inboundSenderLabel } from './ticketCommentAuthor';
 import { hasPermission } from '../../auth/rbac';
-import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
+import { TicketModel, CreateTicketInput, HISTORICAL_TICKET_ERROR_PREFIX } from '@shared/models/ticketModel';
+import { auditCloseRulesBypassIfGated } from '@alga-psa/shared/lib/ticketCloseRules';
 import { preserveStoredWatchList } from '@shared/lib/tickets/watchList';
 import {
   TicketWatcherError,
@@ -86,6 +99,11 @@ import {
   type TicketWatcherWriteResult,
 } from '@shared/services/tickets/ticketWatcherService';
 import { resolveAssetTicketContactOptions } from '@alga-psa/shared/models/assetTicketContactModel';
+import { resolveAssetBillingProfileIdForClient } from '@alga-psa/shared/models/assetBillingProfileModel';
+import {
+  assetIdForBillingProfileInheritance,
+  dedupeTicketAssetIds,
+} from '@alga-psa/shared/models/ticketAssetLinkModel';
 import { ticketStatusClockPatch } from '@shared/lib/ticketStatusClock';
 import {
   CommentEmailRecipientsError,
@@ -105,6 +123,7 @@ import {
 import { ServerAnalyticsTracker } from '@alga-psa/analytics';
 // Event types no longer needed as we create objects directly
 import {
+  historicalTimestampSchema,
   CreateTicketData,
   UpdateTicketData,
   TicketFilterData,
@@ -127,7 +146,8 @@ import { renderTicketDescriptionHtml, renderTicketRichTextHtml } from './ticketR
 import { getClientLogoUrl, getContactAvatarUrl, getUserAvatarUrl } from '@alga-psa/formatting/avatarUtils';
 import { aggregateReactions } from '@alga-psa/types';
 import { StorageService } from '@alga-psa/storage/StorageService';
-import { generateDocumentPreviews, type PreviewGenerationResult } from '@alga-psa/documents/lib/documentPreviewGenerator';
+import type { PreviewGenerationResult } from '@alga-psa/documents/lib/documentPreviewGenerator';
+import { attachDocumentFromBytes, persistDocumentPreviews } from './documents/attachDocument';
 import { addMaterial, InsufficientStockError, MaterialValidationError } from '@alga-psa/inventory/lib';
 import { v4 as uuidv4 } from 'uuid';
 // import { performanceTracker } from '../../analytics/performanceTracking';
@@ -147,6 +167,10 @@ const TICKET_MOBILE_LIST_FIELDS = [
   'entered_at',
   'closed_at',
   'tags',
+  // Chip tags for the requester and client (tag display rules, viewer audience),
+  // the same `contact_tags` / `client_tags` the web ticket list rows carry.
+  'contact_tags',
+  'client_tags',
   'master_ticket_id',
   'bundle_master_ticket_number',
   'bundle_child_count',
@@ -233,24 +257,20 @@ function resolveTicketNotificationSuppression(input: TicketNotificationSuppressi
   return { suppressContactNotifications, suppressInternalNotifications };
 }
 
-function ticketUploadValidationMessage(error: unknown): string | null {
-  if (!(error instanceof Error)) {
-    return null;
-  }
-
-  if (error.message.startsWith('File size exceeds limit') || error.message === 'File type not allowed') {
-    return error.message;
-  }
-
-  return null;
-}
-
 function throwTicketModelCreateApiError(error: unknown): never {
   if (!(error instanceof Error)) {
     throw error;
   }
 
   const message = error.message;
+  const historicalMatch = message.match(
+    new RegExp(`^${HISTORICAL_TICKET_ERROR_PREFIX} \\[(\\w+)\\]:\\s*(.*)$`, 's')
+  );
+  if (historicalMatch) {
+    throw new ValidationError('Validation failed', [
+      { path: [historicalMatch[1]], message: historicalMatch[2] },
+    ]);
+  }
   if (message.startsWith('Input validation failed:')) {
     throw new ValidationError('Validation failed', [
       { path: [], message: message.replace(/^Input validation failed:\s*/, '') },
@@ -325,6 +345,28 @@ function tenantScopedTable(
   return tenantDb(conn, tenant).table(table);
 }
 
+/** Historical timestamps require the same MSP permission as the owning API write. */
+async function validateHistoricalTimestampWrite(
+  field: 'entered_at' | 'created_at',
+  value: unknown,
+  action: 'create' | 'update',
+  context: ServiceContext,
+  knex: Knex,
+): Promise<string> {
+  const user = context.user ? { ...context.user, tenant: context.tenant } : null;
+  if (user?.user_type !== 'internal'
+    || !(await hasPermission(user, 'ticket', action, knex))) {
+    throw new ForbiddenError(`Historical ${field} requires an internal user with ticket:${action} permission`);
+  }
+  const parsed = historicalTimestampSchema.safeParse(value);
+  if (!parsed.success) {
+    throw new ValidationError('Validation failed', parsed.error.issues.map((issue) => ({
+      ...issue, path: [field, ...issue.path],
+    })));
+  }
+  return parsed.data;
+}
+
 export type BundleMode = 'link_only' | 'sync_updates';
 
 export interface BundleMemberTicket {
@@ -378,6 +420,24 @@ function resolveScheduledCommentPublication(
 function isPreviewableMime(mimeType: string | null | undefined): boolean {
   const mime = (mimeType ?? '').toLowerCase();
   return mime.startsWith('image/') || mime === 'application/pdf' || mime.startsWith('video/');
+}
+
+/**
+ * tickets.closed_by has no foreign key, so a caller-supplied value must be checked
+ * against the tenant's users or any UUID (including another tenant's) would be stored.
+ */
+async function assertClosedByIsTenantUser(trx: Knex.Transaction, tenant: string, closedBy: string): Promise<void> {
+  const user = await tenantScopedTable(trx, 'users', tenant).where({ user_id: closedBy }).first('user_id');
+  if (!user) {
+    throw new ValidationError('Validation failed', [
+      { path: ['closed_by'], message: 'closed_by must be a user in this tenant' },
+    ]);
+  }
+}
+
+/** The request is made as a service principal itself (not acting as a human). */
+function isBareServicePrincipal(context: ServiceContext): boolean {
+  return (context.user as { user_type?: string } | undefined)?.user_type === 'service' && !context.viaPrincipalUserId;
 }
 
 export class TicketService extends BaseService<ITicket> {
@@ -660,6 +720,8 @@ export class TicketService extends BaseService<ITicket> {
       if (selectedFields.includes('entered_at')) selectParts.push('t.entered_at');
       if (selectedFields.includes('closed_at')) selectParts.push('t.closed_at');
       if (selectedFields.includes('master_ticket_id')) selectParts.push('t.master_ticket_id');
+      // The requester's id keys the contact chip lookup (client_id already rides along below).
+      if (selectedFields.includes('contact_tags')) selectParts.push('t.contact_name_id');
       if (selectedFields.includes('latest_activity_at')) {
         selectParts.push(knex.raw(`${latestActivity.sql} as latest_activity_at`, latestActivity.bindings));
       }
@@ -704,11 +766,50 @@ export class TicketService extends BaseService<ITicket> {
     if (wants('tags')) {
       await this.attachTicketTags(knex, context.tenant, tickets as Array<Record<string, unknown>>);
     }
+    if (wants('contact_tags') || wants('client_tags')) {
+      await this.attachPartyDisplayTags(knex, context, tickets as Array<Record<string, unknown>>, {
+        contact: wants('contact_tags'),
+        client: wants('client_tags'),
+      });
+    }
 
     return {
       data: tickets as ITicket[],
       total: parseInt(count as string)
     };
+  }
+
+  /**
+   * Chip tags for each ticket's requester (`contact_tags`) and client (`client_tags`): the entity's
+   * tags restricted to the caller audience's display rules, in rule order. One query per entity
+   * type for the whole page; a ticket without that party, or with no ruled tags, gets [].
+   */
+  private async attachPartyDisplayTags(
+    knex: Knex,
+    context: ServiceContext,
+    tickets: Array<Record<string, unknown>>,
+    which: { contact: boolean; client: boolean }
+  ): Promise<void> {
+    const idOf = (ticket: Record<string, unknown>, column: string): string | null =>
+      typeof ticket[column] === 'string' ? (ticket[column] as string) : null;
+    const refs: Array<{ taggedType: 'contact' | 'client'; ids: Array<string | null> }> = [];
+    if (which.contact) refs.push({ taggedType: 'contact', ids: tickets.map((t) => idOf(t, 'contact_name_id')) });
+    if (which.client) refs.push({ taggedType: 'client', ids: tickets.map((t) => idOf(t, 'client_id')) });
+
+    const byKey = tickets.length > 0
+      ? await loadDisplayTagsForEntities(knex, context.tenant, displayAudienceForUser(context.user), refs)
+      : new Map();
+
+    for (const ticket of tickets) {
+      if (which.contact) {
+        const id = idOf(ticket, 'contact_name_id');
+        ticket.contact_tags = (id && byKey.get(displayTagKey('contact', id))) || [];
+      }
+      if (which.client) {
+        const id = idOf(ticket, 'client_id');
+        ticket.client_tags = (id && byKey.get(displayTagKey('client', id))) || [];
+      }
+    }
   }
 
   private async attachTicketTags(
@@ -805,6 +906,7 @@ export class TicketService extends BaseService<ITicket> {
     scopedDb.tenantJoin(ticketQuery, 'statuses as stat', 't.status_id', 'stat.status_id', { type: 'left' });
     scopedDb.tenantJoin(ticketQuery, 'priorities as pri', 't.priority_id', 'pri.priority_id', { type: 'left' });
     scopedDb.tenantJoin(ticketQuery, 'categories as cat', 't.category_id', 'cat.category_id', { type: 'left' });
+    scopedDb.tenantJoin(ticketQuery, 'categories as subcat', 't.subcategory_id', 'subcat.category_id', { type: 'left' });
     scopedDb.tenantJoin(ticketQuery, 'users as assigned_user', 't.assigned_to', 'assigned_user.user_id', { type: 'left' });
     scopedDb.tenantJoin(ticketQuery, 'tickets as mt', 't.master_ticket_id', 'mt.ticket_id', { type: 'left' });
     const ticket = await ticketQuery
@@ -827,6 +929,7 @@ export class TicketService extends BaseService<ITicket> {
         'stat.is_closed as status_is_closed',
         'pri.priority_name',
         'cat.category_name',
+        'subcat.category_name as subcategory_name',
         knex.raw(`CASE 
           WHEN assigned_user.first_name IS NOT NULL AND assigned_user.last_name IS NOT NULL 
           THEN CONCAT(assigned_user.first_name, ' ', assigned_user.last_name) 
@@ -844,6 +947,7 @@ export class TicketService extends BaseService<ITicket> {
       this.getTicketDocuments(id, context),
       ticket.contact_name_id ? getContactAvatarUrl(ticket.contact_name_id, context.tenant) : Promise.resolve(null),
       ticket.client_id ? getClientLogoUrl(ticket.client_id, context.tenant) : Promise.resolve(null),
+      this.attachPartyDisplayTags(knex, context, [ticket], { contact: true, client: true }),
     ]);
 
     return {
@@ -1139,7 +1243,16 @@ export class TicketService extends BaseService<ITicket> {
 
     let result: TicketWatcherWriteResult;
     try {
-      result = await withTransaction(knex, write);
+      const subject = buildAuthorizationPrincipalSubject(context.user ?? { user_id: context.userId, tenant: context.tenant }, context.apiKeyId);
+      const kernel = await getAuthorizationKernel();
+      result = await withTransaction(knex, (trx) =>
+        runAuthorizedTicketWatcherWrite({
+          trx,
+          tenant: context.tenant,
+          ticketId,
+          principal: { subject, kernel },
+          write,
+        }));
     } catch (error) {
       throw this.mapTicketWatcherError(error);
     }
@@ -1157,6 +1270,9 @@ export class TicketService extends BaseService<ITicket> {
   }
 
   private mapTicketWatcherError(error: unknown): unknown {
+    if (error instanceof TicketWatcherPermissionError) {
+      return new ForbiddenError(error.message);
+    }
     if (!(error instanceof TicketWatcherError)) {
       return error;
     }
@@ -1337,105 +1453,24 @@ export class TicketService extends BaseService<ITicket> {
     }
 
     if (commentAttachmentDraft && !await canAccessAttachmentTicket(knex, context.tenant, context.userId, ticketId)) throw new NotFoundError('Ticket not found');
-    const mimeType = file.type || 'application/octet-stream';
-    try {
-      await StorageService.validateFileUpload(context.tenant, mimeType, file.size);
-    } catch (error) {
-      const message = ticketUploadValidationMessage(error);
-      if (message) {
-        throw new ValidationError('Validation failed', [
-          { path: ['file'], message },
-        ]);
-      }
-      throw error;
-    }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const uploadResult = await StorageService.uploadFile(context.tenant, buffer, file.name, {
-      mime_type: mimeType,
-      uploaded_by_id: context.userId,
-    });
-
-    let documentCommitted = false;
-    try {
-    const folderRecord = await tenantScopedTable(knex, 'document_folders', context.tenant)
-      .where({
-        entity_id: ticketId,
-        entity_type: 'ticket',
-        folder_path: '/Tickets/Attachments',
-      })
-      .select('folder_path')
-      .first();
-
-    const typeResult = await this.getDocumentTypeIdForMime(knex, context.tenant, mimeType);
-    const documentId = uuidv4();
-    const document: IDocument = {
-      document_id: documentId,
-      document_name: file.name,
-      type_id: typeResult.isShared ? null : typeResult.typeId,
-      shared_type_id: typeResult.isShared ? typeResult.typeId : undefined,
-      user_id: context.userId,
-      order_number: 0,
-      created_by: context.userId,
+    // Validation, storage, the transaction, rollback cleanup, previews and events all
+    // live in the shared upload core; the draft branch is a ticket-adapter option.
+    return attachDocumentFromBytes({
+      knex,
       tenant: context.tenant,
-      file_id: uploadResult.file_id,
-      storage_path: uploadResult.storage_path,
-      mime_type: mimeType,
-      file_size: file.size,
-      folder_path: folderRecord?.folder_path,
-      ...(commentAttachmentDraft ? { is_client_visible: true } : {}),
-    };
-
-    await withTransaction(knex, async (trx) => {
-      await tenantScopedTable(trx, 'documents', context.tenant).insert(document);
-      if (commentAttachmentDraft) await tenantDb(trx, context.tenant).table('ticket_comment_attachments').insert({
-        tenant: context.tenant, ticket_id: ticketId, document_id: documentId,
-        created_by: context.userId, state: 'draft', expires_at: new Date(Date.now() + 86400000),
-      });
-      await tenantScopedTable(trx, 'document_associations', context.tenant).insert({
-        association_id: uuidv4(),
-        document_id: documentId,
-        entity_id: ticketId,
-        entity_type: 'ticket',
-        tenant: context.tenant,
-      });
-
-      // Activity-timeline entry for the document attachment. Stored inside
-      // the same transaction so the timeline row never appears unless the
-      // document and its association were also persisted.
-      await writeTicketActivity(trx, {
-        tenant: context.tenant,
-        ticketId,
-        eventType: TICKET_ACTIVITY_EVENT.DOCUMENT_ATTACHED,
-        entityType: TICKET_ACTIVITY_ENTITY.DOCUMENT,
-        entityId: documentId,
-        actor: {
-          actorType: TICKET_ACTIVITY_ACTOR.USER,
-          userId: context.userId,
-        },
-        source: TICKET_ACTIVITY_SOURCE.API,
-        details: {
-          document_name: file.name,
-          mime_type: mimeType,
-          file_size: file.size,
-        },
-      });
+      actorUserId: context.userId,
+      viaPrincipalUserId: context.viaPrincipalUserId,
+      target: { entityType: 'ticket', entityId: ticketId },
+      file: {
+        fileName: file.name,
+        mimeType: file.type || 'application/octet-stream',
+        bytes: Buffer.from(await file.arrayBuffer()),
+      },
+      source: 'multipart',
+      options: { commentAttachmentDraft },
+      loadDocument: (documentId) => this.getDocumentById(documentId, context),
     });
-
-    documentCommitted = true;
-    await this.persistDocumentPreviews(knex, document, buffer, context.tenant);
-    const createdDocument = await this.getDocumentById(documentId, context);
-    if (!createdDocument) {
-      throw new Error('Uploaded document could not be loaded');
-    }
-
-    return createdDocument;
-    } finally {
-      if (commentAttachmentDraft && !documentCommitted) {
-        try { await StorageService.deleteFile(uploadResult.file_id, context.userId); }
-        catch (error) { console.error('Unable to remove unclaimed comment attachment storage', error); }
-      }
-    }
   }
 
   async downloadTicketDocument(
@@ -1488,7 +1523,7 @@ export class TicketService extends BaseService<ITicket> {
     documentId: string,
     variant: TicketDocumentVariant,
     context: ServiceContext
-  ): Promise<{ buffer: Buffer; fileId: string; mimeType: string }> {
+  ): Promise<{ buffer: Buffer; fileId: string; mimeType: string | null }> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
 
@@ -1531,30 +1566,17 @@ export class TicketService extends BaseService<ITicket> {
     return {
       buffer: result.buffer,
       fileId,
-      mimeType: result.metadata.mime_type || 'image/jpeg',
+      mimeType: result.metadata.mime_type ?? null,
     };
   }
 
-  private async persistDocumentPreviews(
+  private persistDocumentPreviews(
     knex: Knex,
     document: IDocument,
     buffer: Buffer,
     tenant: string,
   ): Promise<PreviewGenerationResult | null> {
-    try {
-      const result = await generateDocumentPreviews(document, buffer);
-      await tenantScopedTable(knex, 'documents', tenant)
-        .where({ document_id: document.document_id })
-        .update({
-          thumbnail_file_id: result.thumbnail_file_id,
-          preview_file_id: result.preview_file_id,
-          preview_generated_at: result.preview_generated_at,
-        });
-      return result;
-    } catch (error) {
-      console.error(`[TicketService] Preview generation failed for document ${document.document_id}:`, error);
-      return null;
-    }
+    return persistDocumentPreviews(knex, document, buffer, tenant);
   }
 
   async deleteTicketDocument(
@@ -1606,7 +1628,7 @@ export class TicketService extends BaseService<ITicket> {
         entityId: documentId,
         actor: {
           actorType: TICKET_ACTIVITY_ACTOR.USER,
-          userId: context.userId,
+          userId: context.userId, viaPrincipalUserId: context.viaPrincipalUserId ?? null,
         },
         source: TICKET_ACTIVITY_SOURCE.API,
         details: {
@@ -1736,61 +1758,34 @@ export class TicketService extends BaseService<ITicket> {
     return (material as ITicketMaterial | undefined) ?? null;
   }
 
-  private async getDocumentTypeIdForMime(
-    knex: Knex,
-    tenant: string,
-    mimeType: string,
-  ): Promise<{ typeId: string; isShared: boolean }> {
-    const scopedDb = tenantDb(knex, tenant);
-    const tenantType = await tenantScopedTable(knex, 'document_types', tenant)
-      .where({ type_name: mimeType })
-      .first();
-
-    if (tenantType) {
-      return { typeId: tenantType.type_id, isShared: false };
-    }
-
-    const sharedType = await scopedDb.table('shared_document_types')
-      .where({ type_name: mimeType })
-      .first();
-
-    if (sharedType) {
-      return { typeId: sharedType.type_id, isShared: true };
-    }
-
-    const generalType = `${mimeType.split('/')[0]}/*`;
-
-    const generalTenantType = await tenantScopedTable(knex, 'document_types', tenant)
-      .where({ type_name: generalType })
-      .first();
-
-    if (generalTenantType) {
-      return { typeId: generalTenantType.type_id, isShared: false };
-    }
-
-    const generalSharedType = await scopedDb.table('shared_document_types')
-      .where({ type_name: generalType })
-      .first();
-
-    if (generalSharedType) {
-      return { typeId: generalSharedType.type_id, isShared: true };
-    }
-
-    const unknownType = await scopedDb.table('shared_document_types')
-      .where({ type_name: 'application/octet-stream' })
-      .first();
-
-    if (!unknownType) {
-      throw new ConflictError('Unknown document type not found in shared document types');
-    }
-
-    return { typeId: unknownType.type_id, isShared: true };
-  }
-
   private assertValidTicketId(id: string): void {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(id)) {
       throw new ValidationError('Invalid ticket ID format');
+    }
+  }
+
+  /**
+   * Every named asset must exist in this tenant. Called inside the create
+   * transaction so an unknown id rolls the ticket back instead of leaving one
+   * with a missing device.
+   */
+  private async assertAssetsBelongToTenant(
+    assetIds: string[],
+    context: ServiceContext,
+    trx: Knex.Transaction
+  ): Promise<void> {
+    if (assetIds.length === 0) return;
+    const found = await tenantScopedTable(trx, 'assets', context.tenant)
+      .whereIn('asset_id', assetIds)
+      .pluck('asset_id');
+    const known = new Set(found as string[]);
+    const missing = assetIds.filter((assetId) => !known.has(assetId));
+    if (missing.length > 0) {
+      throw new ValidationError('Validation failed', missing.map((assetId) => ({
+        path: ['asset_ids'],
+        message: `asset_id ${assetId} was not found`,
+      })));
     }
   }
 
@@ -1821,12 +1816,23 @@ export class TicketService extends BaseService<ITicket> {
     }
   
     private async createTicket(data: CreateTicketData, context: ServiceContext): Promise<ITicket> {
+      // Supplying entered_at marks the ticket as a historical import: it is created
+      // silently (no TICKET_CREATED, no SLA, no notifications/webhooks/workflows).
+      const isHistorical = data.entered_at !== undefined;
+      if (isHistorical && context.user?.user_type !== 'internal') {
+        throw new ForbiddenError('Only MSP users can import historical tickets (entered_at)');
+      }
+
       const { knex } = await this.getKnex();
 
       // Request options, never `tickets` columns: the explicit CreateTicketInput
       // mapping below keeps them out of the insert.
       const { suppressContactNotifications, suppressInternalNotifications } =
         resolveTicketNotificationSuppression(data);
+
+      if (isHistorical) {
+        await validateHistoricalTimestampWrite('entered_at', data.entered_at, 'create', context, knex);
+      }
 
       const { fullTicket, externalLinks } = await withTransaction(knex, async (trx) => {
         // Validate status belongs to the specified board before proceeding
@@ -1842,6 +1848,26 @@ export class TicketService extends BaseService<ITicket> {
           ]);
         }
 
+        if (isHistorical && data.closed_by) {
+          await assertClosedByIsTenantUser(trx, context.tenant, data.closed_by);
+        }
+        const priorityProblem = await findPriorityBoardTypeProblem(trx, context.tenant, data.board_id, data.priority_id);
+        if (priorityProblem) {
+          throw new ValidationError('Validation failed', [{ path: ['priority_id'], message: priorityProblem.message }]);
+        }
+        // Devices named on the create request. Validated before the insert so a
+        // bad asset id rolls back with no ticket written at all.
+        const assetIds = dedupeTicketAssetIds(data.asset_ids);
+        await this.assertAssetsBelongToTenant(assetIds, context, trx);
+
+        // The first named device lends its billing profile, exactly like the
+        // from-asset dialog and the web create (one shared rule, so the phone
+        // and the API cannot disagree).
+        const billingProfileSourceAssetId = assetIdForBillingProfileInheritance(assetIds);
+        const inheritedBillingProfileId = billingProfileSourceAssetId
+          ? await resolveAssetBillingProfileIdForClient(trx, context.tenant, billingProfileSourceAssetId, data.client_id)
+          : null;
+
         // Convert API data format to TicketModel input format
         const createTicketInput: CreateTicketInput = {
           title: data.title,
@@ -1849,6 +1875,7 @@ export class TicketService extends BaseService<ITicket> {
           board_id: data.board_id,
           client_id: data.client_id,
           location_id: data.location_id,
+          billing_profile_id: inheritedBillingProfileId ?? undefined,
           contact_id: data.contact_name_id, // Maps to contact_name_id in database
           status_id: data.status_id,
           category_id: data.category_id,
@@ -1860,8 +1887,17 @@ export class TicketService extends BaseService<ITicket> {
           urgency_id: data.urgency_id,
           impact_id: data.impact_id,
           attributes: data.attributes,
-          source: 'api',
+          source: isHistorical ? 'api_import' : 'api',
           ticket_origin: TICKET_ORIGINS.API,
+          ...(isHistorical
+            ? {
+                historical: {
+                  entered_at: data.entered_at as string,
+                  closed_at: data.closed_at,
+                  closed_by: data.closed_at ? (data.closed_by ?? context.userId) : undefined,
+                },
+              }
+            : {}),
         };
 
         // Publish after the transaction commits so notification subscribers can
@@ -1874,7 +1910,9 @@ export class TicketService extends BaseService<ITicket> {
           context.tenant,
           trx,
           {}, // validation options
-          ticketCreatedPublishedByCaller('TicketService publishes TICKET_CREATED after the transaction commits'),
+          isHistorical
+            ? silentTicketCreation('API historical ticket import')
+            : ticketCreatedPublishedByCaller('TicketService publishes TICKET_CREATED after the transaction commits'),
           analyticsTracker,
           context.userId,
           3 // max retries
@@ -1883,6 +1921,24 @@ export class TicketService extends BaseService<ITicket> {
         // Handle tags if provided (API service specific functionality)
         if (data.tags && data.tags.length > 0) {
           await this.handleTags(ticketResult.ticket_id, data.tags, context, trx);
+        }
+
+        // Link the named devices in the same transaction as the insert, into the
+        // same asset_associations table the from-asset path and
+        // POST /tickets/{id}/assets write.
+        if (assetIds.length > 0) {
+          const linkedAt = new Date().toISOString();
+          await tenantScopedTable(trx, 'asset_associations', context.tenant).insert(
+            assetIds.map((assetId) => ({
+              tenant: context.tenant,
+              asset_id: assetId,
+              entity_id: ticketResult.ticket_id,
+              entity_type: 'ticket',
+              relationship_type: 'affected',
+              created_by: context.userId,
+              created_at: linkedAt,
+            }))
+          );
         }
 
         // Persist ticket-level external links in the same transaction so a bot's
@@ -1896,6 +1952,8 @@ export class TicketService extends BaseService<ITicket> {
           data.external_links ?? null,
           context.userId,
         );
+
+        await stampViaPrincipalRow(trx, context, 'tickets', { ticket_id: ticketResult.ticket_id }, 'entered_via_principal_id');
 
         // Get the full ticket data for return
         const fullTicket = await tenantScopedTable(trx, 'tickets', context.tenant)
@@ -1921,8 +1979,11 @@ export class TicketService extends BaseService<ITicket> {
           actor: {
             actorType: TICKET_ACTIVITY_ACTOR.API,
             userId: context.userId,
+            viaPrincipalUserId: context.viaPrincipalUserId ?? null,
           },
           source: TICKET_ACTIVITY_SOURCE.API,
+          // A historical ticket's timeline starts when it was originally opened.
+          ...(isHistorical ? { occurredAt: fullTicket.entered_at as string | Date } : {}),
           details: {
             title: fullTicket.title,
             board_id: fullTicket.board_id,
@@ -1931,35 +1992,52 @@ export class TicketService extends BaseService<ITicket> {
             assigned_to: fullTicket.assigned_to,
             client_id: fullTicket.client_id,
             ticket_origin: TICKET_ORIGINS.API,
-            // Same annotation the in-app silent paths write, so the timeline
-            // can mark the creation as silent.
+            ...(isHistorical ? { historical_import: true } : {}),
+            // Same annotation used for notification-suppressed live creations.
             ...(suppressContactNotifications
-              ? {
-                  notification_suppression: {
+              ? { notification_suppression: {
                     suppress_contact_notifications: true,
                     suppress_internal_notifications: suppressInternalNotifications,
-                  },
-                }
+                  } }
               : {}),
           },
         });
 
+        // A ticket imported already closed never passes through the close-rule
+        // gates; record the bypass on boards that have gates enabled.
+        // LEVERAGE: pattern historical-import-close-bypass-activity — same "imported closed => audit CLOSE_RULES_BYPASSED" as the CSV import (ticketImportActions.ts)
+        if (isHistorical && fullTicket.is_closed) {
+          await auditCloseRulesBypassIfGated(
+            trx,
+            context.tenant,
+            ticketResult.ticket_id,
+            fullTicket.board_id,
+            'api_import',
+            { actorType: TICKET_ACTIVITY_ACTOR.API, userId: context.userId },
+            TICKET_ACTIVITY_SOURCE.API,
+          );
+        }
+
         return { fullTicket, externalLinks };
       });
 
-      await this.safePublishEvent('TICKET_CREATED', context, buildApiTicketCreatedPayload({
-        ticketId: fullTicket.ticket_id,
-        userId: context.userId,
-        createdAt: fullTicket.entered_at
-          ? new Date(fullTicket.entered_at as unknown as string).toISOString()
-          : new Date().toISOString(),
-        boardId: fullTicket.board_id,
-        priorityId: fullTicket.priority_id,
-        clientId: fullTicket.client_id,
-        externalLinks,
-        suppressContactNotifications,
-        suppressInternalNotifications,
-      }));
+      // Historical imports are silent: no TICKET_CREATED (SLA, notifications,
+      // webhooks, workflows). Live creations retain notification suppression.
+      if (!isHistorical) {
+        await this.safePublishEvent('TICKET_CREATED', context, buildApiTicketCreatedPayload({
+          ticketId: fullTicket.ticket_id,
+          userId: context.userId,
+          createdAt: fullTicket.entered_at
+            ? new Date(fullTicket.entered_at as unknown as string).toISOString()
+            : new Date().toISOString(),
+          boardId: fullTicket.board_id,
+          priorityId: fullTicket.priority_id,
+          clientId: fullTicket.client_id,
+          externalLinks,
+          suppressContactNotifications,
+          suppressInternalNotifications,
+        }));
+      }
 
       // Post-commit: announce each inline ticket link so subscribers see the
       // same events as links added through the dedicated endpoint. Publishing
@@ -1974,9 +2052,15 @@ export class TicketService extends BaseService<ITicket> {
 
   /**
    * Update ticket
+   *
+   * `options.honorSuppliedClosure` is the status endpoint's opt-in (plan D4): only
+   * then does a caller-supplied closed_at / closed_by replace now / context.userId
+   * on an open -> closed crossing. Generic update always derives closure.
    */
-  async update(id: string, data: UpdateTicketData, context: ServiceContext): Promise<ITicket> {
+  async update(id: string, data: UpdateTicketData, context: ServiceContext, options: { honorSuppliedClosure?: boolean } = {}): Promise<ITicket> {
     const { knex } = await this.getKnex();
+    const enteredAt = data.entered_at === undefined ? undefined
+      : await validateHistoricalTimestampWrite('entered_at', data.entered_at, 'update', context, knex);
 
     return withTransaction(knex, async (trx) => {
       // Get current ticket for event comparison
@@ -1990,6 +2074,19 @@ export class TicketService extends BaseService<ITicket> {
 
       if (!currentTicket) {
         throw new NotFoundError('Ticket not found');
+      }
+
+      if (enteredAt !== undefined) {
+        // Preserve the chronology enforced when historical comments and closes are created.
+        const firstComment = await tenantScopedTable(trx, 'comments', context.tenant)
+          .where({ ticket_id: id }).orderBy('created_at', 'asc').first('created_at');
+        const enteredTime = Date.parse(enteredAt);
+        if ((currentTicket.closed_at && enteredTime > new Date(currentTicket.closed_at).getTime())
+          || (firstComment && enteredTime > new Date(firstComment.created_at).getTime())) {
+          throw new ValidationError('Validation failed', [
+            { path: ['entered_at'], message: 'entered_at must not be after the ticket closure or its earliest comment' },
+          ]);
+        }
       }
 
       // Remove undefined values from data object
@@ -2062,6 +2159,17 @@ export class TicketService extends BaseService<ITicket> {
         ]);
       }
 
+      // Priority family must match the board's priority_type; checked only when this patch changes either.
+      const priorityProblem = await findTicketUpdatePriorityBoardTypeProblem(
+        trx,
+        context.tenant,
+        currentTicket,
+        cleanedData as { board_id?: string | null; priority_id?: string | null }
+      );
+      if (priorityProblem) {
+        throw new ValidationError('Validation failed', [{ path: ['priority_id'], message: priorityProblem.message }]);
+      }
+
       if (cleanedData.status_id && cleanedData.status_id !== currentTicket.status_id) {
         const effectiveBoardId = cleanedData.board_id ?? currentTicket.board_id;
         const statusResult = effectiveBoardId
@@ -2125,7 +2233,7 @@ export class TicketService extends BaseService<ITicket> {
                     user: { user_id: context.userId, user_type: 'internal', tenant: context.tenant },
                   }
                 : undefined,
-              actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: context.userId },
+              actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: context.userId, viaPrincipalUserId: context.viaPrincipalUserId ?? null },
               source: TICKET_ACTIVITY_SOURCE.API,
             });
           } catch (error) {
@@ -2182,9 +2290,31 @@ export class TicketService extends BaseService<ITicket> {
       if (statusChanged) {
         updateData.is_closed = !!nextStatus?.is_closed;
         if (nextStatus?.is_closed && !previousStatus?.is_closed) {
-          closedAt = new Date();
+          // Only with the status endpoint's opt-in does a caller-supplied closed_at /
+          // closed_by win over now / the caller, so a backfilled close keeps its real
+          // date. Otherwise closure is derived (contract T048). Events fire either way.
+          const suppliedClosedAt = options.honorSuppliedClosure
+            ? (cleanedData as { closed_at?: string }).closed_at
+            : undefined;
+          const suppliedClosedBy = options.honorSuppliedClosure
+            ? (cleanedData as { closed_by?: string }).closed_by
+            : undefined;
+          closedAt = suppliedClosedAt ? new Date(suppliedClosedAt) : new Date();
+          const effectiveEnteredAt = enteredAt ?? currentTicket.entered_at;
+          if (
+            suppliedClosedAt
+            && effectiveEnteredAt
+            && closedAt.getTime() < new Date(effectiveEnteredAt).getTime()
+          ) {
+            throw new ValidationError('Validation failed', [
+              { path: ['closed_at'], message: 'closed_at must not be before the ticket entered_at' },
+            ]);
+          }
+          if (suppliedClosedBy) {
+            await assertClosedByIsTenantUser(trx, context.tenant, suppliedClosedBy);
+          }
           updateData.closed_at = closedAt;
-          updateData.closed_by = context.userId;
+          updateData.closed_by = suppliedClosedBy ?? context.userId;
         } else if (!nextStatus?.is_closed && previousStatus?.is_closed) {
           updateData.closed_at = null;
           updateData.closed_by = null;
@@ -2296,7 +2426,7 @@ export class TicketService extends BaseService<ITicket> {
         if (nextStatus?.is_closed) {
           await this.safePublishEvent('TICKET_CLOSED', context, buildTicketClosedPayload({
             ticketId: ticket.ticket_id,
-            closedByUserId: context.userId,
+            closedByUserId: (ticket.closed_by as string | null | undefined) ?? context.userId,
             closedAt: (closedAt ?? new Date()).toISOString(),
             suppressContactNotifications,
             suppressInternalNotifications,
@@ -2350,13 +2480,16 @@ export class TicketService extends BaseService<ITicket> {
         }
       }
 
-      await this.safePublishEvent('TICKET_UPDATED', context, buildTicketUpdatedPayload({
-        ticketId: ticket.ticket_id,
-        updatedByUserId: context.userId,
-        changes: structuredChanges,
-        suppressContactNotifications,
-        suppressInternalNotifications,
-      }));
+      // A date-only correction is historical bookkeeping, not a live ticket update.
+      if (enteredAt === undefined || Object.keys(cleanedData).some((field) => field !== 'entered_at')) {
+        await this.safePublishEvent('TICKET_UPDATED', context, buildTicketUpdatedPayload({
+          ticketId: ticket.ticket_id,
+          updatedByUserId: context.userId,
+          changes: structuredChanges,
+          suppressContactNotifications,
+          suppressInternalNotifications,
+        }));
+      }
 
       // Activity-timeline row for REST API updates. Uses curated diff so
       // only user-meaningful field changes produce a timeline entry; no-op
@@ -2391,7 +2524,7 @@ export class TicketService extends BaseService<ITicket> {
           entityId: id,
           actor: {
             actorType: TICKET_ACTIVITY_ACTOR.USER,
-            userId: context.userId,
+            userId: context.userId, viaPrincipalUserId: context.viaPrincipalUserId ?? null,
           },
           source: TICKET_ACTIVITY_SOURCE.API,
           changes: curated,
@@ -2441,6 +2574,11 @@ export class TicketService extends BaseService<ITicket> {
         throw new ValidationError('Validation failed', [
           { path: ['status_id'], message: `status_id ${data.status_id} does not belong to board_id ${data.board_id}` }
         ]);
+      }
+
+      const assetPriorityProblem = await findPriorityBoardTypeProblem(trx, context.tenant, data.board_id, data.priority_id);
+      if (assetPriorityProblem) {
+        throw new ValidationError('Validation failed', [{ path: ['priority_id'], message: assetPriorityProblem.message }]);
       }
 
       // Publish after the transaction commits so notification subscribers can
@@ -2676,6 +2814,9 @@ export class TicketService extends BaseService<ITicket> {
     context: ServiceContext
   ): Promise<any> {
     const { knex } = await this.getKnex();
+    if (data.created_at !== undefined) {
+      await validateHistoricalTimestampWrite('created_at', data.created_at, 'update', context, knex);
+    }
     const notificationSuppression = resolveTicketNotificationSuppression(data);
     let createdExternalLinks: IExternalEntityLink[] = [];
 
@@ -2690,12 +2831,28 @@ export class TicketService extends BaseService<ITicket> {
       }
 
       const apiNowIso = new Date().toISOString();
+      // `created_at` marks a historical comment: it is stored with that timestamp
+      // and publishes nothing (no response state, bundle reopen or
+      // TICKET_COMMENT_ADDED). The schema already rejects it together with
+      // scheduled publication and cc/bcc.
+      const isHistoricalComment = data.created_at !== undefined;
+      const apiStampIso = isHistoricalComment ? new Date(data.created_at as string).toISOString() : apiNowIso;
+      if (isHistoricalComment && ticket.entered_at && Date.parse(apiStampIso) < new Date(ticket.entered_at).getTime()) {
+        throw new ValidationError('Validation failed', [
+          { path: ['created_at'], message: 'created_at must not be before the ticket entered_at' },
+        ]);
+      }
       const apiParentCommentId = data.parent_comment_id || null;
       const apiIsReply = Boolean(apiParentCommentId);
 
       let apiCommentId: string;
       let apiThreadId: string;
       let apiIsInternal: boolean;
+      let apiThreadAudience: { collaboration_audience?: 'requester' | 'organization_private' | 'shared_it' } = {};
+
+      // author_type comes from the authenticated key's user, via the same
+      // resolver the UI action uses; a client user also records its contact.
+      const apiAuthor = await resolveCommentAuthor(trx, context.tenant, context.userId);
 
       if (apiIsReply) {
         // Reply: attach to the parent's existing thread and inherit its
@@ -2711,7 +2868,9 @@ export class TicketService extends BaseService<ITicket> {
             'parent.ticket_id',
             'parent.thread_id',
             'parent.deleted_at',
-            'thread.is_internal as thread_is_internal'
+            'parent.created_at as parent_created_at',
+            'thread.is_internal as thread_is_internal',
+            'thread.collaboration_audience as thread_audience'
           )
           .where('parent.comment_id', apiParentCommentId)
           .first();
@@ -2725,6 +2884,11 @@ export class TicketService extends BaseService<ITicket> {
         if (parent.deleted_at) {
           throw new ValidationError('Cannot reply to a deleted comment');
         }
+        if (isHistoricalComment && parent.parent_created_at && Date.parse(apiStampIso) < new Date(parent.parent_created_at).getTime()) {
+          throw new ValidationError('Validation failed', [
+            { path: ['created_at'], message: 'created_at must not be before the parent comment created_at' },
+          ]);
+        }
 
         const replyIds = await trx.raw('SELECT gen_random_uuid() AS comment_id');
         const replyGeneratedId = replyIds.rows?.[0]?.comment_id as string | undefined;
@@ -2735,6 +2899,16 @@ export class TicketService extends BaseService<ITicket> {
         apiCommentId = replyGeneratedId;
         apiThreadId = parent.thread_id;
         apiIsInternal = Boolean(parent.thread_is_internal);
+        if (parent.thread_audience != null) {
+          // Labelled thread: serialise against an audience change; the reply inherits it.
+          await lockLabelledThreadAudience(trx, context.tenant, { thread_id: parent.thread_id, collaboration_audience: parent.thread_audience });
+          apiThreadAudience = {
+            collaboration_audience: assertReplyAudience(
+              { collaboration_audience: parent.thread_audience, is_internal: parent.thread_is_internal },
+              { audience: (data as { collaboration_audience?: string | null }).collaboration_audience ?? null },
+            ),
+          };
+        }
       } else {
         // comments.thread_id is NOT NULL — generate IDs and create the thread row first.
         const apiCommentIds = await trx.raw(
@@ -2749,7 +2923,15 @@ export class TicketService extends BaseService<ITicket> {
 
         apiCommentId = apiGeneratedIds.comment_id;
         apiThreadId = apiGeneratedIds.thread_id;
-        apiIsInternal = data.is_internal || false;
+        // A bare service principal's comment defaults to internal: public text speaks for a human.
+        apiIsInternal = data.is_internal ?? isBareServicePrincipal(context);
+        // `{}` with zero SQL natively; fails closed for requester-visible staff comments in co-managed.
+        // LEVERAGE: pattern thread-audience-insert — nativeThreadAudience + spread into the comment_threads insert + label the publication payload is repeated at 5 sites (ticketModel, Comment.insert, optimizedTicketActions, ticketActions, TicketService); a single 'insertCommentThread' write path below would own it
+        apiThreadAudience = await nativeThreadAudience(trx, context.tenant, {
+          isInternal: apiIsInternal,
+          authorType: apiAuthor.authorType,
+          audience: (data as { collaboration_audience?: string | null }).collaboration_audience ?? null,
+        });
 
         await tenantScopedTable(trx, 'comment_threads', context.tenant).insert({
           tenant: context.tenant,
@@ -2758,9 +2940,10 @@ export class TicketService extends BaseService<ITicket> {
           project_task_id: null,
           root_comment_id: apiCommentId,
           is_internal: apiIsInternal,
+          ...apiThreadAudience,
           reply_count: 0,
-          last_activity_at: apiNowIso,
-          created_at: apiNowIso,
+          last_activity_at: apiStampIso,
+          created_at: apiStampIso,
           created_by: context.userId || null,
         });
       }
@@ -2788,11 +2971,11 @@ export class TicketService extends BaseService<ITicket> {
         throw error;
       }
 
-      // author_type comes from the authenticated key's user, via the same
-      // resolver the UI action uses; a client user also records its contact.
-      const apiAuthor = await resolveCommentAuthor(trx, context.tenant, context.userId);
       if (apiIsInternal && apiAuthor.authorType !== 'internal') {
         throw new ForbiddenError('Only MSP users can create internal comments');
+      }
+      if (!apiIsInternal && isBareServicePrincipal(context)) {
+        throw new HumanWorkOwnerRequiredError('is_internal');
       }
 
       const commentData = {
@@ -2807,8 +2990,8 @@ export class TicketService extends BaseService<ITicket> {
         author_type: apiAuthor.authorType,
         contact_id: apiAuthor.contactId,
         tenant: context.tenant,
-        created_at: apiNowIso,
-        updated_at: apiNowIso,
+        created_at: apiStampIso,
+        updated_at: apiStampIso,
         metadata: emailRecipients
           ? { ...(data.metadata ?? {}), email_recipients: emailRecipients }
           : data.metadata,
@@ -2821,7 +3004,9 @@ export class TicketService extends BaseService<ITicket> {
           : {}),
       };
 
-      const [comment] = await tenantScopedTable(trx, 'comments', context.tenant).insert(commentData).returning('*');
+      const [comment] = await tenantScopedTable(trx, 'comments', context.tenant)
+        .insert(withViaPrincipal(context, commentData, 'created_via_principal_id'))
+        .returning('*');
 
       await reconcileCommentAttachments(trx, context.tenant, comment.comment_id, context.userId);
 
@@ -2846,13 +3031,16 @@ export class TicketService extends BaseService<ITicket> {
           .where({ thread_id: apiThreadId })
           .update({
             reply_count: trx.raw('reply_count + 1'),
-            last_activity_at: apiNowIso,
+            // A historical reply must not move a newer thread's activity backwards.
+            last_activity_at: isHistoricalComment
+              ? trx.raw('GREATEST(last_activity_at, ?::timestamptz)', [apiStampIso])
+              : apiStampIso,
           });
       }
 
       // A scheduled public comment is not a client reply until publication
       // (the scheduled-publish worker applies the state then).
-      if (!scheduledPublication) {
+      if (!scheduledPublication && !isHistoricalComment) {
         await applyCommentResponseState(trx, {
           tenant: context.tenant,
           ticketId,
@@ -2862,7 +3050,9 @@ export class TicketService extends BaseService<ITicket> {
         });
       }
 
-      if (!comment.is_internal && !scheduledPublication) {
+      if (isHistoricalComment) {
+        // historical import: no bundle reopen
+      } else if (!comment.is_internal && !scheduledPublication) {
         await maybeReopenBundleMasterFromChildReply(trx, context.tenant, ticketId, context.userId);
       }
 
@@ -2898,8 +3088,17 @@ export class TicketService extends BaseService<ITicket> {
         tenantId: context.tenant, occurredAt: new Date().toISOString(), ticketId, commentId: comment.comment_id, userId: context.userId,
         comment: { content: comment.note, author: authorName, isInternal: comment.is_internal },
         ...notificationSuppression,
+        ...(apiThreadAudience.collaboration_audience
+          ? { collaboration_audience: apiThreadAudience.collaboration_audience, thread_id: apiThreadId }
+          : {}),
       });
       if (scheduledPublication) {
+        if (apiThreadAudience.collaboration_audience) {
+          // Keep the audience with the durable intent so the scheduled dispatch cannot widen it.
+          await tenantScopedTable(trx, 'comments', context.tenant)
+            .where({ comment_id: comment.comment_id })
+            .update({ comment_publication_payload: JSON.stringify({ ...eventPayload, commentId: comment.comment_id }) });
+        }
         // Never arm the worker before the row is committed; the boot
         // reconciler repairs a post-commit scheduling failure.
         registerAfterCommit(trx, async () => {
@@ -2913,6 +3112,8 @@ export class TicketService extends BaseService<ITicket> {
             .where({ comment_id: comment.comment_id, publish_state: 'scheduled' })
             .update({ schedule_job_id: scheduled.jobId });
         }, `schedule comment publication ${comment.comment_id}`);
+      } else if (isHistoricalComment) {
+        // historical import: no live TICKET_COMMENT_ADDED
       } else {
         await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: eventPayload }, publishStoredWorkflowEvent);
       }
@@ -2977,7 +3178,7 @@ export class TicketService extends BaseService<ITicket> {
         eventType: 'TICKET_COMMENT_SCHEDULE_CANCELED',
         entityType: TICKET_ACTIVITY_ENTITY.COMMENT,
         entityId: commentId,
-        actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: context.userId },
+        actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: context.userId, viaPrincipalUserId: context.viaPrincipalUserId ?? null },
         source: TICKET_ACTIVITY_SOURCE.API,
         details: { canceled: true },
       });
@@ -3026,7 +3227,7 @@ export class TicketService extends BaseService<ITicket> {
         const canOperatorRepair =
           comment.user_id == null &&
           context.user != null &&
-          (await hasPermission(context.user, 'ticket', 'update', trx));
+          (await hasApiContextPermission(context, 'ticket', 'update', trx));
         if (!canOperatorRepair) {
           throw new ValidationError('You can only edit your own comments');
         }
@@ -3684,12 +3885,12 @@ export class TicketService extends BaseService<ITicket> {
           childTicketIds: uniqueChildIds,
           mode: params.mode,
           choice: params.onClosedMaster ?? null,
-          actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: context.userId },
+          actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: context.userId, viaPrincipalUserId: context.viaPrincipalUserId ?? null },
           source: TICKET_ACTIVITY_SOURCE.API,
           occurredAt,
           mergedReason: `bundle:${params.mode}`,
         });
-        if (!attached.ok) {
+        if (attached.ok === false) {
           this.throwBundleAttachFailure(attached, {
             masterIsChildMessage: 'Cannot select a child ticket as the master.',
           });
@@ -3730,12 +3931,12 @@ export class TicketService extends BaseService<ITicket> {
           masterTicketId: params.masterTicketId,
           childTicketIds: childIds,
           choice: params.onClosedMaster ?? null,
-          actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: context.userId },
+          actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: context.userId, viaPrincipalUserId: context.viaPrincipalUserId ?? null },
           source: TICKET_ACTIVITY_SOURCE.API,
           occurredAt,
           mergedReason: 'bundle:added_children',
         });
-        if (!attached.ok) {
+        if (attached.ok === false) {
           this.throwBundleAttachFailure(attached, {
             masterIsChildMessage: 'Cannot add children to a bundled child ticket.',
           });
@@ -3845,11 +4046,11 @@ export class TicketService extends BaseService<ITicket> {
         mode: params.mode,
         reopenOnChildReply: params.reopenOnChildReply,
         choice: params.onClosedMaster ?? null,
-        actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: context.userId },
+        actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: context.userId, viaPrincipalUserId: context.viaPrincipalUserId ?? null },
         source: TICKET_ACTIVITY_SOURCE.API,
         occurredAt,
       });
-      if (!changed.ok) {
+      if (changed.ok === false) {
         if (changed.code === 'settings_not_found') throw new NotFoundError('Bundle settings not found');
         this.throwBundleAttachFailure(changed);
       }

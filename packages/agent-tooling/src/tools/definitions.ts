@@ -1,8 +1,11 @@
 /**
  * The constant meta-tool surface exposed over MCP (and mirrored by the EE chat
- * loop). Three tools, independent of API size — progressive disclosure via
- * search-then-execute. `finish_response` from the chat loop is intentionally
- * omitted: in MCP the host model ends its own turn.
+ * loop). Three progressive-disclosure tools independent of API size
+ * (search-then-execute), plus `attach_file`: the one tool that exists because
+ * ChatGPT can only hand a file to a top-level tool parameter declared in
+ * `_meta["openai/fileParams"]`, which `call_api_endpoint` (everything nested
+ * under `body`) cannot express. `finish_response` from the chat loop is
+ * intentionally omitted: in MCP the host model ends its own turn.
  */
 
 export type Edition = 'ce' | 'ee';
@@ -13,11 +16,46 @@ export interface MetaToolDefinition {
   description: string;
   /** JSON Schema for the tool input (MCP `inputSchema`). */
   inputSchema: Record<string, unknown>;
+  /** Optional MCP `_meta` emitted verbatim in `tools/list` (e.g. OpenAI file params). */
+  _meta?: Record<string, unknown>;
 }
 
 export const SEARCH_API_REGISTRY_TOOL = 'search_api_registry';
 export const SEARCH_BUSINESS_DATA_TOOL = 'search_business_data';
 export const CALL_API_ENDPOINT_TOOL = 'call_api_endpoint';
+export const ATTACH_FILE_TOOL = 'attach_file';
+
+/** Entities `POST /api/v1/documents` accepts (kept equal to the server's ATTACHABLE_ENTITY_TYPES by a server test). */
+export const ATTACH_FILE_ENTITY_TYPES = ['ticket', 'project_task', 'client', 'contact', 'asset'] as const;
+
+/**
+ * OpenAI's published file-parameter shape: all four properties declared,
+ * `download_url` and `file_id` required, nothing else allowed. ChatGPT's tool
+ * scan rejects deviations; a unit test pins this object.
+ */
+export const OPENAI_FILE_SCHEMA = {
+  type: 'object',
+  properties: {
+    download_url: { type: 'string', description: 'Temporary signed URL of the file (supplied by ChatGPT).' },
+    file_id: { type: 'string', description: 'ChatGPT file identifier.' },
+    mime_type: { type: 'string', description: 'MIME type of the file, when known.' },
+    file_name: { type: 'string', description: 'Original file name, when known.' },
+  },
+  required: ['download_url', 'file_id'],
+  additionalProperties: false,
+} as const;
+
+/** `initialize.instructions` sent by both the hosted MCP server and the stdio connector. */
+export const MCP_SERVER_INSTRUCTIONS =
+  'AlgaPSA tools: search_api_registry finds endpoints, call_api_endpoint runs them, search_business_data searches records. ' +
+  'To attach a file the user provided to a ticket, project task, client, contact or asset, use attach_file: ' +
+  'pass the user\'s attachment as `file` (ChatGPT) or give an https `url`. ' +
+  'A `url` must be on the workspace\'s allowed download hosts; if it is refused (FETCH_HOST_NOT_ALLOWED), ' +
+  'tell the user that a workspace admin can add that host under Settings > MCP Server, and do not retry with other URLs. ' +
+  'Never ask the user for an API key. ' +
+  'Never base64-encode a file you did not author yourself; content_base64 is only for small text you wrote. ' +
+  'call_api_endpoint cannot send multipart/form-data, so do not use it to upload files. ' +
+  'Attach one file per call; for several files make several calls.';
 
 export interface BuildMetaToolOptions {
   edition: Edition;
@@ -154,6 +192,51 @@ export function buildMetaToolDefinitions(options: BuildMetaToolOptions): MetaToo
         },
         required: ['entryId'],
       },
+    },
+    {
+      name: ATTACH_FILE_TOOL,
+      description:
+        'Attach ONE file to a ticket, project task, client, contact or asset. Provide exactly one source: ' +
+        '`file` (an attachment the user gave you in ChatGPT; it arrives as an object with a download_url), ' +
+        '`url` (an https link the server downloads, preferred for any other file; it must be on the workspace\'s allowed download hosts), or ' +
+        '`content_base64` (only small content you wrote yourself; never base64 a user-provided file). ' +
+        '`file_name` is required with content_base64 and otherwise defaults from the file or URL. ' +
+        'If a url is refused with FETCH_HOST_NOT_ALLOWED, tell the user a workspace admin can add that host under Settings > MCP Server > Allowed download hosts; do not retry with other URLs and never ask for an API key. ' +
+        'Call once per file. If the file did not arrive (missing or not a download link), ask the user to re-attach it from ChatGPT web or desktop.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          entity_type: {
+            type: 'string',
+            description: 'Kind of record to attach the file to.',
+            enum: [...ATTACH_FILE_ENTITY_TYPES],
+          },
+          entity_id: {
+            type: 'string',
+            description: 'UUID of the record (find it with search_business_data or search_api_registry).',
+          },
+          file: { $ref: '#/$defs/OpenAIFile' },
+          url: {
+            type: 'string',
+            description: 'https URL of the file for the server to download; the host must be on the workspace\'s allowed download hosts. Use instead of `file` / `content_base64`.',
+          },
+          content_base64: {
+            type: 'string',
+            description: 'Standard base64 of small content you authored yourself. Requires file_name.',
+          },
+          file_name: {
+            type: 'string',
+            description: 'File name with extension. Required with content_base64; otherwise optional.',
+          },
+          mime_type: {
+            type: 'string',
+            description: 'MIME type, if known. Optional; the server also inspects the bytes.',
+          },
+        },
+        required: ['entity_type', 'entity_id'],
+        $defs: { OpenAIFile: OPENAI_FILE_SCHEMA },
+      },
+      _meta: { 'openai/fileParams': ['file'] },
     },
   ];
 }

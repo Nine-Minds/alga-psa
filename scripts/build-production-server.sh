@@ -3,9 +3,8 @@
 # exactly the way the builder stages of Dockerfile.build and
 # ee/server/Dockerfile.build do it: assemblyscript templates, every upstream
 # package through Nx, then `next build --webpack` with the edition's module
-# resolution. Running it on the host lets the webpack filesystem cache
-# (server/node_modules/.cache/webpack, see next.config.mjs) and the Nx cache
-# survive between builds; inside the image they start empty every time.
+# resolution. Running it on the host lets the Nx package cache survive between
+# builds; production webpack caching is disabled to bound compilation memory.
 #
 #   scripts/build-production-server.sh community|enterprise
 #
@@ -40,15 +39,6 @@ export NEXT_PUBLIC_FORCE_FEATURE_FLAGS="${NEXT_PUBLIC_FORCE_FEATURE_FLAGS:-}"
 # refuses to read ("Unrecognized Cache Artifacts"); its entries are still
 # content-addressed, so accept them.
 export NX_REJECT_UNKNOWN_LOCAL_CACHE=0
-# Next folds the server-action encryption key into the webpack cache version
-# and generates a fresh key per build unless NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
-# is set, so a restored webpack cache is only ever reused when the caller
-# provides a stable key (CI uses a fixed test-only key for its candidates; a
-# deployment build should use a secret of its own).
-if [ -z "${NEXT_SERVER_ACTIONS_ENCRYPTION_KEY:-}" ]; then
-  echo "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY is unset: the webpack cache cannot carry over to the next build"
-fi
-
 phase_started=$SECONDS
 phase() { # <name> — report the previous phase's duration and start the next
   if [ -n "${phase_name:-}" ]; then echo "== $phase_name finished in $((SECONDS - phase_started))s"; fi
@@ -69,11 +59,6 @@ test -f packages/db/dist/index.js
 export USE_PREBUILT=true
 
 phase "next build --webpack ($edition)"
-if [ -d server/node_modules/.cache/webpack ]; then
-  echo "webpack filesystem cache present: $(du -sh server/node_modules/.cache/webpack | cut -f1)"
-else
-  echo "webpack filesystem cache absent: cold build"
-fi
 (cd server && npm exec -- next build --webpack)
 phase "done"
 test -f server/.next/BUILD_ID

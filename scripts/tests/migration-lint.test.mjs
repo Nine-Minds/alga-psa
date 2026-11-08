@@ -8,9 +8,12 @@ import { fileURLToPath } from 'node:url';
 
 import {
   RULES,
+  contextFromFacts,
+  deriveSchemaFacts,
   lintMigrationSet,
   parseAnnotations,
   scanSql,
+  shiftTimestamp,
   splitSqlStatements,
 } from '../lib/migration-lint.mjs';
 
@@ -54,7 +57,18 @@ function expectations(files) {
 const found = (r) => [...r.violations, ...r.undecided].map((v) => `${v.file}:${v.line}:${v.rule}`).sort();
 
 const RULE_IDS = Object.keys(RULES).map(Number);
-const rule6 = { baseMaxTimestamp: '20261023100000' };
+// Rule 6 fixtures are judged against a base whose newest migration touches `widgets`.
+const rule6Base = deriveSchemaFacts([{
+  name: 'server/migrations/20261023100000_widgets_note.cjs',
+  source: "exports.up = async (knex) => {\n  await knex.raw('ALTER TABLE widgets ADD COLUMN IF NOT EXISTS note text');\n};\n",
+}]);
+const rule6 = { baseMaxTimestamp: '20261023100000', newerTouching: contextFromFacts(rule6Base, { baseMaxTimestamp: '20261023100000' }).newerTouching };
+
+test('shiftTimestamp moves a 14-digit stamp by whole days across month boundaries', () => {
+  assert.equal(shiftTimestamp('20261030000000', -14), '20261016000000');
+  assert.equal(shiftTimestamp('20261005123045', -14), '20260921123045');
+  assert.equal(shiftTimestamp('20261231000000', 1), '20270101000000');
+});
 
 test('meta: every rule 1..8 has a failing and a passing fixture', () => {
   assert.deepEqual(RULE_IDS, [1, 2, 3, 4, 5, 6, 7, 8]);
@@ -161,6 +175,17 @@ test('annotations: allowed / missing reason / wrong rule', () => {
   const wrong = lintDir('annotation/wrong-rule');
   assert.deepEqual(wrong.violations.map((v) => v.rule), [3]);
   assert.equal(wrong.stale.length, 1, 'the mismatched annotation is reported stale');
+});
+
+test('annotations: a finding inside a helper is allowed at its call site, not for every caller', () => {
+  const r = lintDir('annotation/helper-call-site');
+  const file = 'annotation/helper-call-site/001_helper_call_site.cjs';
+  // Both findings sit on the helper's knex.raw line; only the annotated call is allowed.
+  assert.deepEqual(r.allowed.map((a) => [a.file, a.line, a.rule, a.annotationLine]), [[file, 3, 3, 9]]);
+  assert.match(r.allowed[0].message, /time_entries/);
+  assert.deepEqual(r.violations.map((v) => [v.file, v.line, v.rule]), [[file, 3, 3]]);
+  assert.match(r.violations[0].message, /comments/);
+  assert.deepEqual(r.stale, []);
 });
 
 test('annotations: parsing rules', () => {
@@ -271,10 +296,10 @@ test('CLI: exit codes against a temp git repo (0 clean, 1 violation, 2 cannot de
   assert.match(allowed.stdout, /ALLOWED .*verified empty table/);
   assert.match(allowed.stdout, /1 annotation\(s\) honoured/);
 
-  // Rule 6 on the real CLI path: a migration older than base's newest.
+  // Rule 6 on the real CLI path: a migration far older than base's newest.
   write('20230101000000_old.cjs', "exports.up = async () => {};\n");
   run(['add', '.']); run(['commit', '-q', '-m', 'old']);
-  assert.match(lint().stdout, /R6 timestamp 20230101000000 is not later/);
+  assert.match(lint().stdout, /R6 timestamp 20230101000000 is more than 14 days behind/);
   fs.rmSync(repo, { recursive: true, force: true });
 });
 
@@ -374,7 +399,25 @@ test('CLI PR mode: a rename that changes the timestamp is a new migration and ge
   r.commit('rename with older timestamp');
   const out = r.lint();
   assert.equal(out.status, 1, out.stdout);
-  assert.match(out.stdout, /20230101000000_touch\.cjs:1: R6 timestamp 20230101000000 is not later/);
+  assert.match(out.stdout, /20230101000000_touch\.cjs:1: R6 timestamp 20230101000000 is more than 14 days behind/);
+  r.cleanup();
+});
+
+test('CLI PR mode: a stamp behind base within the grace window passes unless a newer base migration touches the same table', () => {
+  const r = prRepo();
+  // Base: widgets created 20240101, altered 20240115. Five days behind the newest, touching a different table: fine.
+  r.write('20240110000000_gadgets.cjs', "exports.up = async (knex) => {\n  await knex.raw('CREATE TABLE IF NOT EXISTS gadgets (id int)');\n};\n");
+  r.commit('unrelated table');
+  let out = r.lint();
+  assert.equal(out.status, 0, out.stdout);
+  assert.doesNotMatch(out.stdout, /R6 /);
+  // Same stamp, but widgets is altered by the newer base migration: fresh and deployed databases would disagree on order.
+  r.write('20240110000000_widgets_b.cjs', `exports.up = async (knex) => {\n  await knex.raw('ALTER TABLE widgets ADD COLUMN IF NOT EXISTS b int');\n};\n`);
+  r.commit('conflicting table');
+  out = r.lint();
+  assert.equal(out.status, 1, out.stdout);
+  assert.match(out.stdout, /20240110000000_widgets_b\.cjs:1: R6 timestamp 20240110000000 sorts before a base migration that touches the same table: 20240115000000_touch\.cjs \(widgets\)/);
+  assert.doesNotMatch(out.stdout, /20240110000000_gadgets\.cjs:1: R6/);
   r.cleanup();
 });
 
@@ -389,12 +432,12 @@ test('CLI PR mode: an added file still goes through the unchanged path (no statu
   r.cleanup();
 });
 
-test('CLI PR mode: advancing base invalidates pending timestamps until both migrations are renumbered', (t) => {
+test('CLI PR mode: advancing base only invalidates a pending timestamp that sorts before a newer base migration on the same table', (t) => {
   const r = prRepo();
   t.after(r.cleanup);
   const migrations = [
-    ['20240201000000_receipts.cjs', '20240401000000_receipts.cjs', 'receipts'],
-    ['20240201000100_events.cjs', '20240401000100_events.cjs', 'events'],
+    ['20240201000000_receipts.cjs', '20240212000100_receipts.cjs', 'receipts'],
+    ['20240201000100_events.cjs', '20240212000200_events.cjs', 'events'],
   ];
   for (const [name, , table] of migrations) {
     r.write(name, `exports.up = async (knex) => { await knex.raw('CREATE TABLE IF NOT EXISTS ${table} (id int)'); };\n`);
@@ -402,18 +445,28 @@ test('CLI PR mode: advancing base invalidates pending timestamps until both migr
   r.commit('add pending migrations');
   assert.equal(r.lint().status, 0, 'timestamps initially follow base');
 
-  r.git('switch', '-q', 'main');
-  r.write('20240301000000_unrelated.cjs', 'exports.up = async () => {};\n');
-  r.commit('advance base with an unrelated migration');
-  r.git('switch', '-q', 'pr');
-  const merge = r.git('merge', '-q', '--no-edit', 'main');
-  assert.equal(merge.status, 0, merge.stderr);
-
   const lintJson = () => spawnSync('node', [CLI, '--repo', r.repo, '--base', 'main', '--json'], { encoding: 'utf8' });
+  const advanceBase = (name, body) => {
+    r.git('switch', '-q', 'main');
+    r.write(name, body);
+    r.commit(`advance base with ${name}`);
+    r.git('switch', '-q', 'pr');
+    const merge = r.git('merge', '-q', '--no-edit', 'main');
+    assert.equal(merge.status, 0, merge.stderr);
+  };
+
+  // Base moves on (within the 14-day window) with a migration that touches neither table: the pending stamps stay valid.
+  advanceBase('20240205000000_unrelated.cjs', "exports.up = async (knex) => { await knex.raw('CREATE TABLE IF NOT EXISTS unrelated (id int)'); };\n");
+  const tolerated = lintJson();
+  assert.equal(tolerated.status, 0, tolerated.stdout);
+
+  // Base gains a migration on receipts: only the receipts stamp is now out of order.
+  advanceBase('20240212000000_receipts_note.cjs', "exports.up = async (knex) => { await knex.raw('ALTER TABLE receipts ADD COLUMN IF NOT EXISTS note text'); };\n");
   const blocked = lintJson();
   assert.equal(blocked.status, 1, blocked.stdout);
   assert.deepEqual(JSON.parse(blocked.stdout).violations.map(({ file, rule }) => ({ file, rule })),
-    migrations.map(([name]) => ({ file: `server/migrations/${name}`, rule: 6 })));
+    [{ file: 'server/migrations/20240201000000_receipts.cjs', rule: 6 }]);
+  assert.match(JSON.parse(blocked.stdout).violations[0].message, /20240212000000_receipts_note\.cjs \(receipts\)/);
 
   for (const [oldName, newName] of migrations) {
     const rename = r.git('mv', `server/migrations/${oldName}`, `server/migrations/${newName}`);

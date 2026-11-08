@@ -54,7 +54,7 @@ describe('InvoiceService recurring selector-input routing', () => {
 
     const result = await service.generatePreview({ selector_input: selectorInput }, context);
 
-    expect(mocks.previewInvoiceForSelectionInput).toHaveBeenCalledWith(selectorInput);
+    expect(mocks.previewInvoiceForSelectionInput).toHaveBeenCalledWith(selectorInput, { consolidateFixedBundles: false });
     expect(result).toEqual({
       success: true,
       data: { invoiceNumber: 'PREVIEW-1' },
@@ -75,7 +75,7 @@ describe('InvoiceService recurring selector-input routing', () => {
       service.previewInvoice({ billing_cycle_id: compatibilityCycleId } as any, context),
     ).rejects.toThrow('Recurring invoice preview requires selector_input.');
 
-    expect(mocks.previewInvoiceForSelectionInput).toHaveBeenCalledWith(selectorInput);
+    expect(mocks.previewInvoiceForSelectionInput).toHaveBeenCalledWith(selectorInput, { consolidateFixedBundles: false });
     expect(selectorResult).toEqual({
       success: true,
       data: { invoiceNumber: 'PREVIEW-SELECTOR' },

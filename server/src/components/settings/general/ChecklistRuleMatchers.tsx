@@ -25,6 +25,10 @@ import {
   type TicketPredicateField,
 } from '@alga-psa/tickets/lib/ticketPredicateFields';
 import type { IChecklistTemplateApplyRule } from '@alga-psa/tickets/actions/checklists/checklistTemplateActions';
+import {
+  locationFilterLabel,
+  type WhereLocationOption,
+} from '@alga-psa/tickets/lib/ticketWhereFilters';
 
 const P = 'ticketing.checklistTemplates.predicate';
 
@@ -33,6 +37,8 @@ interface Props {
   index: number;
   options: Record<string, SelectOption[]>;
   tags: Record<'client' | 'contact', ITag[]>;
+  /** The tenant's locations, for the two location paths. Labelled by client, as in the toolbar. */
+  locations?: WhereLocationOption[];
   clientNames: Record<string, string>;
   ownerClientName?: string | null;
   onClientPicked: (id: string) => void;
@@ -44,6 +50,7 @@ export default function ChecklistRuleMatchers({
   index,
   options,
   tags,
+  locations = [],
   clientNames,
   ownerClientName,
   onClientPicked,
@@ -137,11 +144,19 @@ export default function ChecklistRuleMatchers({
         const locked = descriptor.ownerSensitive && ownerClientName != null;
         const sourceOptions =
           typeof descriptor.options === 'string' ? (options[descriptor.options] ?? []) : [];
-        const tagOptions =
+        // The two object-shaped sources: tag definitions by tagged type, and the tenant's locations.
+        // Both location paths offer the same list — one is the ticket's location, the other the
+        // requester's, but either way the value is a location id.
+        const joinedOptions =
           typeof descriptor.options === 'object'
-            ? tags[descriptor.options.tags].map((tag) => ({ value: tag.tag_id!, label: tag.tag_text }))
+            ? 'tags' in descriptor.options
+              ? (tags[descriptor.options.tags] ?? []).map((tag) => ({ value: tag.tag_id!, label: tag.tag_text }))
+              : locations.map((location) => ({
+                  value: location.location_id,
+                  label: locationFilterLabel(location),
+                }))
             : [];
-        const choices = [...sourceOptions, ...tagOptions];
+        const choices = [...sourceOptions, ...joinedOptions];
         for (const selected of values)
           if (selected && !choices.some((option) => option.value === selected))
             choices.push({ value: selected, label: selected });
