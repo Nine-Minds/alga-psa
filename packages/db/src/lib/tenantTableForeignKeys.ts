@@ -770,6 +770,8 @@ export const TENANT_TABLE_FOREIGN_KEYS: readonly TenantTableForeignKey[] = [
   { child: 'rmm_alert_rules', parent: 'rmm_integrations', column: 'integration_id', deleteRule: 'CASCADE', name: 'rmm_alert_rules_tenant_integration_id_foreign' },
   { child: 'rmm_alerts', parent: 'assets', column: 'asset_id', deleteRule: 'SET NULL', name: 'rmm_alerts_tenant_asset_id_foreign' },
   { child: 'rmm_alerts', parent: 'rmm_integrations', column: 'integration_id', deleteRule: 'CASCADE', name: 'rmm_alerts_tenant_integration_id_foreign' },
+  { child: 'rmm_condition_states', parent: 'rmm_integrations', column: 'integration_id', deleteRule: 'CASCADE', name: 'rmm_condition_states_tenant_integration_id_foreign' },
+  { child: 'rmm_condition_transitions', parent: 'rmm_integrations', column: 'integration_id', deleteRule: 'CASCADE', name: 'rmm_condition_transitions_tenant_integration_id_foreign' },
   { child: 'rmm_integrations', parent: 'tenants', column: '', deleteRule: 'CASCADE', name: 'rmm_integrations_tenant_foreign' },
   { child: 'rmm_maintenance_windows', parent: 'assets', column: 'asset_id', deleteRule: 'CASCADE', name: 'rmm_maintenance_windows_tenant_asset_id_foreign' },
   { child: 'rmm_maintenance_windows', parent: 'clients', column: 'client_id', deleteRule: 'CASCADE', name: 'rmm_maintenance_windows_tenant_client_id_foreign' },

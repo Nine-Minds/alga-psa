@@ -487,6 +487,8 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   role_permissions: { scope: 'tenant' },
   rmm_alert_rules: { scope: 'tenant' },
   rmm_alerts: { scope: 'tenant' },
+  rmm_condition_states: { scope: 'tenant' },
+  rmm_condition_transitions: { scope: 'tenant' },
   rmm_integrations: { scope: 'tenant' },
   rmm_maintenance_windows: { scope: 'tenant' },
   rmm_organization_mappings: { scope: 'tenant' },
