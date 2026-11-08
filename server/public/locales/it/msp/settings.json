@@ -2547,7 +2547,7 @@
         "run": "Esegui verifica preliminare",
         "empty": "Non è ancora stata eseguita una verifica preliminare per questa configurazione. Eseguila per visualizzare il piano per ciascuna entità e gli eventuali problemi.",
         "plan": "Piano",
-        "preflightedAt": "Verifica preliminare eseguita {{timestamp}}",
+        "preflightedAt": "Verifica preliminare eseguita il {{timestamp}}",
         "downloadCsv": "Scarica CSV",
         "downloadJson": "Scarica JSON",
         "columns": {
@@ -2594,16 +2594,16 @@
           "downloadCsv": "Impossibile scaricare il CSV degli esiti."
         },
         "actions": {
-          "created": "Creati",
-          "skipped": "Saltati",
-          "failed": "Non riusciti"
+          "created": "Creato",
+          "skipped": "Saltato",
+          "failed": "Non riuscito"
         },
         "counts": {
           "created": "creati",
           "skipped": "saltati",
           "failed": "non riusciti"
         },
-        "finishedAt": "Terminato {{timestamp}}.",
+        "finishedAt": "Terminato il {{timestamp}}.",
         "noLongerRunning": "Il job non è più in esecuzione.",
         "preparing": "Preparazione…",
         "downloadCsv": "Scarica CSV degli esiti",
@@ -2724,7 +2724,7 @@
         "source": "Origine: {{system}}",
         "sourceNotDeclared": "Sistema di origine non dichiarato",
         "producer": "Produttore: {{producer}}",
-        "uploaded": "Caricato {{timestamp}}",
+        "uploaded": "Caricato il {{timestamp}}",
         "lifecycleAria": "Ciclo di vita della migrazione",
         "inspecting": "Ispezione e preparazione del pacchetto in corso",
         "packageSuffix": "(pacchetto {{packageId}})",
@@ -3312,7 +3312,7 @@
     "selectPrompt": "Seleziona un ruolo o una risorsa per gestire i permessi",
     "unsavedChanges": "Hai modifiche non salvate",
     "adminLockedTooltip": "I permessi del ruolo amministratore sono definiti dal sistema e non possono essere modificati",
-    "none": "Nessuno",
+    "none": "Nessuna",
     "actionCount_one": "{{count}} azione",
     "actionCount_other": "{{count}} azioni",
     "views": {
@@ -3690,7 +3690,7 @@
         "create": "Crea",
         "update": "Aggiorna",
         "saving": "Salvataggio...",
-        "adding": "Aggiunta...",
+        "adding": "Aggiunta in corso...",
         "createDefault": "Crea pianificazione predefinita",
         "createCustom": "Crea pianificazione personalizzata",
         "addSchedule": "Aggiungi pianificazione",
@@ -3698,12 +3698,12 @@
       },
       "fields": {
         "scheduleName": "Nome della pianificazione *",
-        "scheduleNamePlaceholder": "Ad es., Orari di lavoro standard",
+        "scheduleNamePlaceholder": "es. Orari di lavoro standard",
         "timezone": "Fuso orario *",
         "is24x7": "Pianificazione 24/7 (sempre disponibile)",
         "isDefault": "Imposta come pianificazione predefinita",
         "holidayName": "Nome della festività *",
-        "holidayNamePlaceholder": "Ad es., Natale",
+        "holidayNamePlaceholder": "es. Natale",
         "holidayDate": "Data *",
         "holidayDatePlaceholder": "Seleziona data",
         "isRecurring": "Si ripete ogni anno"
