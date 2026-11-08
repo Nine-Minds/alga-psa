@@ -47,6 +47,10 @@ export interface NormalizedRmmDeviceExtensionSnapshot {
   pendingSoftwarePatches?: number | null;
   failedPatches?: number | null;
   lastPatchScanAt?: string | null;
+  /** Hardware make, written to assets.manufacturer (FR-A3). */
+  manufacturer?: string | null;
+  /** Hardware model, written to assets.model (FR-A3). */
+  model?: string | null;
   cpuModel?: string | null;
   cpuCores?: number | null;
   ramGb?: number | null;
@@ -64,6 +68,11 @@ export interface NormalizedRmmExternalDeviceSnapshot {
   assetType: NormalizedRmmDeviceType;
   displayName: string;
   serialNumber?: string | null;
+  /**
+   * ISO date, written to assets.warranty_end_date; null/undefined never clears
+   * an existing value — manual data wins over an absent RMM value.
+   */
+  warrantyEndDate?: string | null;
   status?: string | null;
   location?: string | null;
   assetTag?: string | null;

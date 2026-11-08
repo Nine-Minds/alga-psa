@@ -85,13 +85,17 @@ const PRODUCT_AGNOSTIC_CARDS = [
   'cc-card-notes',
 ];
 
-const PSA_ONLY_CARDS = ['cc-card-money', 'cc-card-install-base'];
+const PSA_ONLY_CARDS = ['cc-card-money', 'cc-card-install-base', 'cc-card-software'];
 
-const renderCenter = (isAlgaDeskMode: boolean) => render(
+const softwareTab = { id: 'software', label: 'Software', content: null };
+const getSoftwareSummary = vi.fn().mockResolvedValue({ rows: [], total: 0, page: 1, limit: 50 });
+
+const renderCenter = (isAlgaDeskMode: boolean, withSoftware = true) => render(
   <ClientCommandCenter
     idPrefix="cc"
     clientId="client-1"
-    tabs={[]}
+    tabs={withSoftware ? [softwareTab] : []}
+    getSoftwareSummary={withSoftware && !isAlgaDeskMode ? getSoftwareSummary : null}
     onTabUrlChange={vi.fn()}
     hasUnsavedRecordChanges={false}
     onDiscardRecordChanges={vi.fn()}

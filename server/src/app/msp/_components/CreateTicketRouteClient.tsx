@@ -4,6 +4,7 @@ import { useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import type { ITicket } from '@alga-psa/types';
+import { ClientAssetMultiSelect } from '@alga-psa/assets/components/ClientAssetMultiSelect';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import {
   type CreateTicketCloseMode,
@@ -87,6 +88,8 @@ export default function CreateTicketRouteClient({ closeMode, prefill }: CreateTi
       assetName={prefill.assetName}
       isAlgaDeskMode={prefill.isAlgaDeskMode}
       duplicateFromTicketId={prefill.duplicateFromTicketId}
+      templateId={prefill.templateId}
+      renderAssetPicker={prefill.isAlgaDeskMode ? undefined : (props) => <ClientAssetMultiSelect {...props} />}
     />
   );
 }

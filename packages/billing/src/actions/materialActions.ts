@@ -5,6 +5,8 @@ import { ITicketMaterial, IProjectMaterial } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { addMaterial, deleteMaterial, listMaterials } from '@alga-psa/inventory/lib';
+import { stockConflictResultFrom } from '@alga-psa/inventory/lib/consume';
+import type { StockConflictResult } from '@alga-psa/inventory/lib/stockConflict';
 import {
   actionError,
   permissionError,
@@ -83,18 +85,26 @@ export const addTicketMaterial = withAuth(async (user, { tenant }, input: {
   currency_code: string;
   description?: string | null;
   unit_id?: string | null; // serialized: the picked stock unit to deliver
-}): Promise<ITicketMaterial | MaterialActionError> => {
+  allow_reserved_override?: boolean;
+}): Promise<ITicketMaterial | MaterialActionError | StockConflictResult> => {
   return withMaterialActionErrors(async () => {
   if (!await hasPermission(user, 'billing', 'create')) {
     throw new Error('Permission denied: billing create required');
   }
   const { knex: db } = await createTenantKnex();
-  return (await addMaterial(
-    db,
-    tenant,
-    { ...input, parent_type: 'ticket', parent_id: input.ticket_id },
-    (user as any)?.user_id ?? null,
-  )) as ITicketMaterial;
+  try {
+    return (await addMaterial(
+      db,
+      tenant,
+      { ...input, parent_type: 'ticket', parent_id: input.ticket_id },
+      (user as any)?.user_id ?? null,
+    )) as ITicketMaterial;
+  } catch (error) {
+    // Stock-level refusals return a structured result (overrideable flag + quantities).
+    const conflict = stockConflictResultFrom(error);
+    if (conflict) return conflict;
+    throw error;
+  }
   });
 });
 
@@ -127,18 +137,26 @@ export const addProjectMaterial = withAuth(async (user, { tenant }, input: {
   currency_code: string;
   description?: string | null;
   unit_id?: string | null; // serialized: the picked stock unit to deliver
-}): Promise<IProjectMaterial | MaterialActionError> => {
+  allow_reserved_override?: boolean;
+}): Promise<IProjectMaterial | MaterialActionError | StockConflictResult> => {
   return withMaterialActionErrors(async () => {
   if (!await hasPermission(user, 'billing', 'create')) {
     throw new Error('Permission denied: billing create required');
   }
   const { knex: db } = await createTenantKnex();
-  return (await addMaterial(
-    db,
-    tenant,
-    { ...input, parent_type: 'project', parent_id: input.project_id },
-    (user as any)?.user_id ?? null,
-  )) as IProjectMaterial;
+  try {
+    return (await addMaterial(
+      db,
+      tenant,
+      { ...input, parent_type: 'project', parent_id: input.project_id },
+      (user as any)?.user_id ?? null,
+    )) as IProjectMaterial;
+  } catch (error) {
+    // Stock-level refusals return a structured result (overrideable flag + quantities).
+    const conflict = stockConflictResultFrom(error);
+    if (conflict) return conflict;
+    throw error;
+  }
   });
 });
 

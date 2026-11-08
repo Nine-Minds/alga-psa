@@ -50,6 +50,40 @@ describe('ticketEmailSubscriber suppression policy', () => {
     expect(shouldSendTicketClosedWatcherEmail(suppression, false)).toBe(false);
   });
 
+  // alga-2026-0002907: API creates with no contact fall back to the client's own
+  // address, so contact suppression is the only thing that keeps them silent.
+  it('ticket created contact suppression disables the client-fallback email but keeps assignee and internal-watcher mail', () => {
+    const suppression = resolveTicketNotificationSuppression({
+      suppressContactNotifications: true,
+    });
+
+    expect(shouldSendContactFacingTicketEmail(suppression)).toBe(false);
+    expect(shouldSendInternalTicketEmail(suppression)).toBe(true);
+    expect(shouldSendTicketWatcherEmail(suppression, true)).toBe(true);
+    expect(shouldSendTicketWatcherEmail(suppression, false)).toBe(false);
+  });
+
+  it('full suppression on ticket created sends nothing at all', () => {
+    const suppression = resolveTicketNotificationSuppression({
+      suppressContactNotifications: true,
+      suppressInternalNotifications: true,
+    });
+
+    expect(shouldSendContactFacingTicketEmail(suppression)).toBe(false);
+    expect(shouldSendInternalTicketEmail(suppression)).toBe(false);
+    expect(shouldSendTicketWatcherEmail(suppression, true)).toBe(false);
+    expect(shouldSendTicketWatcherEmail(suppression, false)).toBe(false);
+  });
+
+  it('a create that sets no flag keeps every ticket-created recipient class enabled', () => {
+    const suppression = resolveTicketNotificationSuppression({});
+
+    expect(shouldSendContactFacingTicketEmail(suppression)).toBe(true);
+    expect(shouldSendInternalTicketEmail(suppression)).toBe(true);
+    expect(shouldSendTicketWatcherEmail(suppression, true)).toBe(true);
+    expect(shouldSendTicketWatcherEmail(suppression, false)).toBe(true);
+  });
+
   it('T025: normal close leaves all close recipient classes enabled', () => {
     const suppression = resolveTicketNotificationSuppression({});
 

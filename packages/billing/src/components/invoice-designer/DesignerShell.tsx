@@ -17,9 +17,12 @@ import {
 import clsx from 'clsx';
 import { restrictToWindowEdges, createSnapModifier } from '@dnd-kit/modifiers';
 import {
+  CUSTOM_PAGE_SIZE_UNITS,
   clampInvoiceMarginMm,
   listInvoicePaperPresets,
   resolveTemplatePrintSettings,
+  validateCustomPageSize,
+  type CustomPageSize,
   type TemplateFieldDisplayFormat,
   type TemplatePrintSettings,
 } from '@alga-psa/types';
@@ -92,6 +95,7 @@ import {
   type DesignerWidthMode,
 } from './utils/sizeModes';
 import { resolveDesignerDocumentKind } from './utils/documentKind';
+import { barcodeValuePlaceholder, WORK_TAG_BARCODE_VALUE_EXAMPLE } from './utils/barcodeValueHint';
 import {
   buildDocumentExpressionPathOptions,
   resolveDocumentFieldLabel,
@@ -417,7 +421,7 @@ const INSPECTOR_TAB_LABELS: Record<DesignerInspectorTab, string> = {
   layout: 'Layout & size',
 };
 // Blocks whose content is edited by shell controls rather than schema panels.
-const SHELL_CONTENT_TYPES = new Set<DesignerComponentType>(['image', 'logo', 'qr', 'attachment-list', 'field']);
+const SHELL_CONTENT_TYPES = new Set<DesignerComponentType>(['image', 'logo', 'barcode', 'attachment-list', 'field']);
 
 type SizeMode = 'auto' | 'fill' | 'fit' | 'fixed';
 
@@ -638,6 +642,80 @@ const resolveDesignerShellPrintSettings = (nodes: DesignerNode[]) => {
   });
 };
 
+const CUSTOM_PAPER_VALUE = 'custom';
+const DEFAULT_CUSTOM_PAGE_SIZE: CustomPageSize = { width: 4, height: 2, unit: 'in' };
+
+/** Width / height / unit for a custom page; only valid sizes reach the store (the preview resizes live). */
+const CustomPageSizeFields: React.FC<{ size: CustomPageSize; onChange: (next: CustomPageSize) => void }> = ({
+  size,
+  onChange,
+}) => {
+  const { t } = useTranslation('msp/invoicing');
+  const [draft, setDraft] = useState({ width: `${size.width}`, height: `${size.height}`, unit: size.unit });
+  useEffect(() => {
+    setDraft({ width: `${size.width}`, height: `${size.height}`, unit: size.unit });
+  }, [size.width, size.height, size.unit]);
+  const candidate = { width: Number(draft.width), height: Number(draft.height), unit: draft.unit };
+  const error = validateCustomPageSize(candidate);
+  const commit = (next: typeof draft) => {
+    const parsed = { width: Number(next.width), height: Number(next.height), unit: next.unit };
+    if (validateCustomPageSize(parsed) === null) {
+      onChange(parsed);
+    }
+  };
+  return (
+    <div className="space-y-1" data-automation-id="designer-custom-page-size">
+      <div className="grid grid-cols-3 gap-2">
+        <div>
+          <label htmlFor="designer-custom-width-input" className="text-xs text-slate-500 block">
+            {t('designer.pageSetup.customWidth', { defaultValue: 'Width' })}
+          </label>
+          <Input
+            id="designer-custom-width-input"
+            type="number"
+            min={0}
+            step={0.01}
+            value={draft.width}
+            onChange={(event) => setDraft({ ...draft, width: event.target.value })}
+            onBlur={() => commit(draft)}
+          />
+        </div>
+        <div>
+          <label htmlFor="designer-custom-height-input" className="text-xs text-slate-500 block">
+            {t('designer.pageSetup.customHeight', { defaultValue: 'Height' })}
+          </label>
+          <Input
+            id="designer-custom-height-input"
+            type="number"
+            min={0}
+            step={0.01}
+            value={draft.height}
+            onChange={(event) => setDraft({ ...draft, height: event.target.value })}
+            onBlur={() => commit(draft)}
+          />
+        </div>
+        <div>
+          <label htmlFor="designer-custom-unit-select" className="text-xs text-slate-500 block">
+            {t('designer.pageSetup.customUnit', { defaultValue: 'Unit' })}
+          </label>
+          <CustomSelect
+            id="designer-custom-unit-select"
+            showPlaceholderInDropdown={false}
+            value={draft.unit}
+            onValueChange={(value) => {
+              const next = { ...draft, unit: value as CustomPageSize['unit'] };
+              setDraft(next);
+              commit(next);
+            }}
+            options={CUSTOM_PAGE_SIZE_UNITS.map((unit) => ({ value: unit, label: unit }))}
+          />
+        </div>
+      </div>
+      {error && <p className="text-[11px] text-red-600">{error}</p>}
+    </div>
+  );
+};
+
 export const DesignerShell: React.FC = () => {
   const { t } = useTranslation('msp/invoicing');
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
@@ -801,7 +879,7 @@ export const DesignerShell: React.FC = () => {
     return getTemplateFieldDisplayFormats(selectedFieldType.bindingKey);
   }, [selectedFieldType]);
   const selectedMediaParentSection = useMemo(() => {
-    if (!selectedNode || !['image', 'logo', 'qr'].includes(selectedNode.type)) {
+    if (!selectedNode || !['image', 'logo', 'barcode'].includes(selectedNode.type)) {
       return null;
     }
     const nodesById = new Map(nodes.map((node) => [node.id, node]));
@@ -1811,7 +1889,69 @@ export const DesignerShell: React.FC = () => {
       );
     }
 
-		    if (selectedNode.type === 'image' || selectedNode.type === 'logo' || selectedNode.type === 'qr') {
+    if (selectedNode.type === 'barcode') {
+      const symbology = metadata.symbology === 'code128' ? 'code128' : 'qr';
+      // Code 128 is a wide 1D strip (~95 x 12 mm at 96 px/in), QR a square. Auto-generated layer names
+      // ("Barcode / QR code 2" <-> "Code 128 2") follow the symbology; a name the user set is kept.
+      const switchBarcodeSymbology = (next: 'qr' | 'code128') => {
+        if (next === symbology) return;
+        const is1d = next === 'code128';
+        resizeNode(selectedNode.id, is1d ? { width: 359, height: 45 } : { width: 140, height: 140 }, false);
+        if (is1d) unsetNodeProp(selectedNode.id, 'style.aspectRatio', false);
+        else setNodeProp(selectedNode.id, 'style.aspectRatio', '1 / 1', false);
+        const autoName = /^(Barcode \/ QR code|Code 128)(?: (\d+))?$/.exec(getNodeName(selectedNode));
+        if (autoName) {
+          setNodeProp(selectedNode.id, 'name', `${is1d ? 'Code 128' : 'Barcode / QR code'}${autoName[2] ? ` ${autoName[2]}` : ''}`, false);
+        }
+        applyMetadata({ symbology: next }, true);
+      };
+      return (
+        <div className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-2">
+          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('designer.inspector.barcode', { defaultValue: 'Barcode' })}</p>
+          <div>
+            <label htmlFor="designer-barcode-symbology" className="text-xs text-slate-500 dark:text-slate-400 block mb-1">
+              {t('designer.inspector.barcodeSymbology', { defaultValue: 'Type' })}
+            </label>
+            <CustomSelect
+              id="designer-barcode-symbology"
+              showPlaceholderInDropdown={false}
+              value={symbology}
+              onValueChange={(value) => switchBarcodeSymbology(value === 'code128' ? 'code128' : 'qr')}
+              options={[
+                { value: 'qr', label: t('designer.inspector.barcodeQr', { defaultValue: 'QR code' }) },
+                { value: 'code128', label: t('designer.inspector.barcodeCode128', { defaultValue: 'Code 128' }) },
+              ]}
+            />
+          </div>
+          <div>
+            <label htmlFor="designer-barcode-value" className="text-xs text-slate-500 dark:text-slate-400 block mb-1">
+              {t('designer.inspector.barcodeValue', { defaultValue: 'Value' })}
+            </label>
+            <Input
+              id="designer-barcode-value"
+              value={metadata.value ?? ''}
+              placeholder={barcodeValuePlaceholder(documentKind)}
+              onChange={(event) => applyMetadata({ value: event.target.value }, false)}
+              onBlur={(event) => applyMetadata({ value: event.target.value }, true)}
+              className="text-xs"
+            />
+            <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+              {documentKind === 'work-tag'
+                ? t('designer.inspector.barcodeHintWorkTag', {
+                    defaultValue:
+                      'Text, or a field such as {{example}} (the record link). Keep the code at least about 20 mm wide so it scans.',
+                    example: WORK_TAG_BARCODE_VALUE_EXAMPLE,
+                  })
+                : t('designer.inspector.barcodeHint', {
+                    defaultValue: 'The text to encode. Keep the code at least about 20 mm wide so it scans.',
+                  })}
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+		    if (selectedNode.type === 'image' || selectedNode.type === 'logo') {
 		      const fitMode = metadata.fitMode ?? metadata.fit ?? 'contain';
         const objectFit = getNodeStyle(selectedNode)?.objectFit ?? fitMode;
         const rawObjectPosition = getNodeStyle(selectedNode)?.objectPosition ?? 'center center';
@@ -1848,7 +1988,7 @@ export const DesignerShell: React.FC = () => {
 		      return (
 		        <div className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-2">
 		          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('designer.inspector.media', { defaultValue: 'Media' })}</p>
-          {selectedNode.type !== 'qr' && (
+          {(
             <div className="grid grid-cols-2 gap-1" role="radiogroup" aria-label={t('designer.inspector.mediaSource', { defaultValue: 'Image source' })}>
               {([
                 ['logo', t('designer.inspector.mediaSourceLogo', { defaultValue: 'Company logo' })],
@@ -1888,7 +2028,7 @@ export const DesignerShell: React.FC = () => {
           {metadata.srcBinding === 'tenantLogo' ? (
             <p className="text-[11px] text-slate-500 dark:text-slate-400" data-automation-id="designer-media-logo-hint">
               {t('designer.inspector.mediaSourceLogoHint', {
-                defaultValue: 'Shows the logo from your company branding settings on every document.',
+                defaultValue: "Shows the logo from your own company's client record on every document.",
               })}
             </p>
           ) : (
@@ -2634,14 +2774,32 @@ export const DesignerShell: React.FC = () => {
                   <CustomSelect
                     showPlaceholderInDropdown={false}
                     id="designer-paper-preset-select"
-                    value={currentPrintSettings.paperPreset}
-                    onValueChange={(value) => applyPrintSettings({ paperPreset: value as TemplatePrintSettings['paperPreset'] })}
-                    options={listInvoicePaperPresets().map((preset) => ({
-                      value: preset.id,
-                      label: preset.label,
-                    }))}
+                    value={currentPrintSettings.customPageSize ? CUSTOM_PAPER_VALUE : currentPrintSettings.paperPreset}
+                    onValueChange={(value) => {
+                      if (value === CUSTOM_PAPER_VALUE) {
+                        applyPrintSettings({ customPageSize: currentPrintSettings.customPageSize ?? DEFAULT_CUSTOM_PAGE_SIZE });
+                        return;
+                      }
+                      applyPrintSettings({
+                        paperPreset: value as TemplatePrintSettings['paperPreset'],
+                        customPageSize: null,
+                      });
+                    }}
+                    options={[
+                      ...listInvoicePaperPresets().map((preset) => ({
+                        value: preset.id,
+                        label: preset.label,
+                      })),
+                      { value: CUSTOM_PAPER_VALUE, label: t('designer.pageSetup.customSize', { defaultValue: 'Custom size…' }) },
+                    ]}
                   />
                 </div>
+                {currentPrintSettings.customPageSize && (
+                  <CustomPageSizeFields
+                    size={currentPrintSettings.customPageSize}
+                    onChange={(next) => applyPrintSettings({ customPageSize: next })}
+                  />
+                )}
                 <div className="space-y-1">
                   <label htmlFor="designer-margin-mm-input" className="text-xs text-slate-500 block">
                     {t('designer.pageSetup.marginMm', { defaultValue: 'Margin (mm)' })}

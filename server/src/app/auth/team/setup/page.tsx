@@ -124,8 +124,9 @@ function TeamSetupContent() {
       if (result.success) {
         try {
           const signinRes = await signIn('credentials', {
-            username: result.username,
+            email: result.username,
             password: formData.password,
+            userType: 'internal',
             redirect: false
           });
           if (signinRes && (signinRes as any).error) {

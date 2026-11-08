@@ -18,7 +18,8 @@ test('actual integration runner partitions, executes and rejects missing or stal
   for (const file of ['scripts/run-tier1-integration.mjs', 'scripts/verify-integration-shards.mjs',
     'scripts/lib/integration-selection.mjs', 'scripts/lib/test-discovery.mjs', 'scripts/lib/test-execution-evidence.mjs',
     'scripts/lib/test-revision.mjs', 'scripts/lib/test-sharding.mjs',
-    'scripts/lib/flaky-policy.mjs', 'scripts/lib/vitest-flaky-reporter.mjs']) {
+    'scripts/lib/flaky-policy.mjs', 'scripts/lib/vitest-flaky-reporter.mjs', 'scripts/lib/flaky-error.mjs',
+    'scripts/lib/vitest-progress-reporter.mjs', 'scripts/lib/server-unit-durations.mjs']) {
     write(file, readFileSync(path.join(source, file), 'utf8'));
   }
   write('.gitignore', 'node_modules\ntest-results/\nserver/test-results-integration.json\n');
@@ -29,7 +30,7 @@ test('actual integration runner partitions, executes and rejects missing or stal
   write('server/src/amount.ts', 'export const amount = () => 5;\n');
   write('server/src/test/integration/extra.test.ts', "import { amount } from '../../amount'; test('observes affected behavior', () => expect(amount()).toBeGreaterThan(0));\n");
   write('server/src/test/integration/tier1.manifest.json', JSON.stringify({ paths: ['src/test/integration/billing/invoices/invoiceDueDate.test.ts'] }));
-  symlinkSync(path.join(source, 'server/node_modules'), path.join(root, 'server/node_modules'), 'dir');
+  symlinkSync(path.join(source, 'node_modules'), path.join(root, 'node_modules'), 'dir');
   const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' });
   git('init', '-q'); git('config', 'user.email', 'fixture@example.invalid'); git('config', 'user.name', 'CI fixture');
   git('add', '.'); git('commit', '-qm', 'fixture');
@@ -103,7 +104,7 @@ test('actual integration runner partitions, executes and rejects missing or stal
   const verifiedAffected = run('verify-integration-shards.mjs', 1, 'selected', 1, base);
   assert.equal(verifiedAffected.status, 0, verifiedAffected.stdout + verifiedAffected.stderr);
   assert.equal(read('test-results/integration-aggregate/aggregate.json').counts.passed, 2);
-  unlinkSync(path.join(root, 'server/node_modules'));
+  unlinkSync(path.join(root, 'node_modules'));
   const unavailableGraph = run('verify-integration-shards.mjs', 1, 'selected', 1, base);
   assert.equal(unavailableGraph.status, 1);
   assert.match(unavailableGraph.stderr, /Independent affected collection unavailable/);
@@ -128,7 +129,7 @@ test('actual integration runner partitions, executes and rejects missing or stal
   // The runner owns --retry=1 and the flaky reporter, so a fail-then-pass is
   // recorded instead of vanishing into a rerun. The affected-collection check
   // above removed the runner's node_modules; restore it to execute again.
-  symlinkSync(path.join(source, 'server/node_modules'), path.join(root, 'server/node_modules'), 'dir');
+  symlinkSync(path.join(source, 'node_modules'), path.join(root, 'node_modules'), 'dir');
   const marker = JSON.stringify(path.join(root, 'test-results/integration-marker'));
   write('server/src/test/integration/recovers.test.ts', [
     "import { existsSync, mkdirSync, writeFileSync } from 'node:fs';",
@@ -161,7 +162,8 @@ test('actual integration runner partitions, executes and rejects missing or stal
   assert.equal(onPush.status, 1, onPush.stdout);
   const pushEvidence = read('test-results/integration/evidence.json');
   assert.equal(pushEvidence.status, 'failed');
-  assert.ok(pushEvidence.failures.includes(`retry-only pass on push run: ${flakyId}`), pushEvidence.failures.join('\n'));
+  // The policy line carries the first attempt's error after the test id.
+  assert.ok(pushEvidence.failures.some(failure => failure.startsWith(`retry-only pass on push run: ${flakyId}`)), pushEvidence.failures.join('\n'));
   assert.equal(read('test-results/integration/flaky-tests.json').eventName, 'push');
 
   // Nothing retried: the journal stays beside the evidence and nothing publishes.

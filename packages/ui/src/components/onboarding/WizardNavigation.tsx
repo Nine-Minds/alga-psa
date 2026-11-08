@@ -3,6 +3,7 @@
 import React from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useTranslation } from '../../lib/i18n/client';
 
 interface WizardNavigationProps {
   currentStep: number;
@@ -37,14 +38,15 @@ export function WizardNavigation({
   isSkipDisabled = false,
   isLoading = false,
   showSaveDraft = false,
-  finishLabel = 'Finish Setup',
-  nextLabel = 'Next',
-  backLabel = 'Back',
-  skipLabel = 'Skip',
-  saveDraftLabel = 'Save as Draft',
-  savingLabel = 'Saving...',
-  completingLabel = 'Completing...',
+  finishLabel,
+  nextLabel,
+  backLabel,
+  skipLabel,
+  saveDraftLabel,
+  savingLabel,
+  completingLabel,
 }: WizardNavigationProps) {
+  const { t } = useTranslation('common');
   const isLastStep = currentStep === totalSteps - 1;
   const isFirstStep = currentStep === 0;
 
@@ -60,7 +62,7 @@ export function WizardNavigation({
           className="flex items-center gap-2"
         >
           <ChevronLeft className="w-4 h-4" />
-          {backLabel}
+          {backLabel ?? t('actions.back')}
         </Button>
 
         {showSaveDraft && onSaveDraft && (
@@ -71,7 +73,7 @@ export function WizardNavigation({
             onClick={onSaveDraft}
             disabled={isLoading}
           >
-            {saveDraftLabel}
+            {saveDraftLabel ?? t('actions.saveAsDraft')}
           </Button>
         )}
       </div>
@@ -84,7 +86,7 @@ export function WizardNavigation({
             variant="outline"
             onClick={onSkip}
           >
-            {skipLabel}
+            {skipLabel ?? t('actions.skip')}
           </Button>
         )}
         
@@ -95,7 +97,7 @@ export function WizardNavigation({
             onClick={onFinish}
             disabled={isNextDisabled}
           >
-            {isLoading ? completingLabel : finishLabel}
+            {isLoading ? (completingLabel ?? t('actions.completing')) : (finishLabel ?? t('actions.finishSetup'))}
           </Button>
         ) : (
           <Button
@@ -105,7 +107,7 @@ export function WizardNavigation({
             disabled={isNextDisabled}
             className="flex items-center gap-2"
           >
-            {isLoading ? savingLabel : nextLabel}
+            {isLoading ? (savingLabel ?? t('actions.saving')) : (nextLabel ?? t('actions.next'))}
             {!isLoading && <ChevronRight className="w-4 h-4" />}
           </Button>
         )}

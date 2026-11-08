@@ -231,7 +231,8 @@ export const ticketOnlyExecutionProvider: ServiceRequestExecutionProvider = {
           ticketCreatedPublishedByCaller('published on the owning transaction after the savepoint succeeds'),
           undefined,
           context.requesterUserId,
-          1
+          1,
+          { serviceRequestSubmissionId: context.submissionId }
         );
 
         await new WorkflowEventPublisher({ transaction: outerTrx! }).publishTicketCreated({

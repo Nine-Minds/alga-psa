@@ -1892,7 +1892,7 @@
     {
       "term": "bucket",
       "preferred": "forfait d’heures",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Résidu anglais non traduit pour les forfaits d’heures prépayées."
     },
     {
@@ -1916,7 +1916,7 @@
     {
       "term": "compartiment",
       "preferred": "forfait d’heures",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Calque du bucket d’heures ; le terme métier est forfait d’heures."
     },
     {
@@ -1946,7 +1946,7 @@
     {
       "term": "godet",
       "preferred": "forfait d’heures",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Calque du bucket d’heures."
     },
     {
@@ -1994,7 +1994,7 @@
     {
       "term": "seau",
       "preferred": "forfait d’heures",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Calque du bucket d’heures."
     },
     {
@@ -2081,6 +2081,12 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "1 contact",
+      "Conversation",
+      "{{from}} → {{to}}",
+      "RMA {{id}}",
+      "Datto RMM",
+      "mention",
       ",",
       "3CX",
       "Acme IT Solutions",
@@ -2123,6 +2129,7 @@
       "Excel",
       "Extensions",
       "Fax",
+      "{{size}} GB",
       "Gmail",
       "Google",
       "Google Calendar",
@@ -2197,6 +2204,7 @@
       "Services",
       "Shift",
       "Signature",
+      "Sites",
       "SLA",
       "SMS",
       "SMTP",
@@ -2246,7 +2254,16 @@
       "Normal (400)",
       "Style",
       "auto | 50% | 120px",
-      "Cc"
+      "Cc",
+      "Note",
+      "Consultation",
+      "Important",
+      "Compact",
+      "Extensions (Pro)",
+      "Stable",
+      "Code 128",
+      "RMA {{number}} · {{status}}",
+      "Page {{page}}"
     ],
     "caseInsensitive": [
       "api",
@@ -2457,6 +2474,6 @@
       "^Client \\*$",
       "^• (?:VPN|Wi-Fi)$"
     ],
-    "notes": "Cette liste d’autorisation est volontairement prudente ; l’outil d’audit doit signaler tout anglais identique qui ne correspond pas à l’une de ces valeurs exactes, à l’un de ces emprunts insensibles à la casse ou à l’un de ces motifs techniques. Duration templates use the unit symbols h and min in this locale as in English; only the exact symbol-only templates are allowed."
+    "notes": "Cette liste d’autorisation est volontairement prudente ; l’outil d’audit doit signaler tout anglais identique qui ne correspond pas à l’une de ces valeurs exactes, à l’un de ces emprunts insensibles à la casse ou à l’un de ces motifs techniques. Duration templates use the unit symbols h and min in this locale as in English; only the exact symbol-only templates are allowed. Page {{page}} is an identical French UI pagination label with a preserved interpolation placeholder."
   }
 }

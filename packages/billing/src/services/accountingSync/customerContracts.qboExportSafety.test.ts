@@ -41,20 +41,33 @@ import { enqueueInvoiceAutoExport } from './syncProducers';
 import { getAccountingSyncSettings } from './accountingSyncSettings';
 import { SyncOperationsRepository } from './syncOperationsRepository';
 
-/** Multi-table fake knex so the producer runs through the REAL settings code. */
+/** Multi-table fake knex so the producer and export-line safety guard run through the REAL settings code. */
 function makeKnex(tables: Record<string, any>) {
+  const tableReads = new Map<string, number>();
   const knex: any = vi.fn((table: string) => {
-    if (!(table in tables)) {
+    const tableName = table.replace(/\s+as\s+\w+$/i, '');
+    if (!(tableName in tables)) {
       throw new Error(`unexpected table ${table}`);
     }
-    const row = tables[table];
+    const row = tables[tableName];
+    const readIndex = tableReads.get(tableName) ?? 0;
+    tableReads.set(tableName, readIndex + 1);
     // Self-referential builder so tenantDb(...).table(name).where(...) can
     // chain a second .where(...) (the applier's own filter) after the
     // auto-injected tenant clause.
     const query: any = {
-      where: vi.fn(() => query),
+      where: vi.fn((condition) => {
+        if (typeof condition === 'function') condition(query);
+        return query;
+      }),
+      whereIn: vi.fn(() => query),
+      orWhereIn: vi.fn(() => query),
+      join: vi.fn((_joinedTable, callback) => {
+        callback?.call({ on: vi.fn().mockReturnThis(), andOn: vi.fn().mockReturnThis() });
+        return query;
+      }),
       select: vi.fn(() => query),
-      first: vi.fn(async () => row)
+      first: vi.fn(async () => Array.isArray(row) ? row[readIndex] : row)
     };
     return query;
   });
@@ -78,7 +91,7 @@ afterEach(() => {
 // ── Contract 1 ──────────────────────────────────────────────────────────────
 describe('Contract 1 — a document posted to QBO stays posted', () => {
   it('unfinalize is blocked on an exported invoice, directing to void or credit note', async () => {
-    const knex = makeKnex({ tenant_external_entity_mappings: { id: 'map-1' } });
+    const knex = makeKnex({ accounting_export_lines: [undefined, { id: 'line-1' }], tenant_external_entity_mappings: undefined });
 
     await expect(assertInvoiceNotExported(knex, 't1', 'inv-exported', 'unfinalize')).rejects.toThrow(
       /cannot be reopened/i
@@ -86,7 +99,7 @@ describe('Contract 1 — a document posted to QBO stays posted', () => {
   });
 
   it('hard delete is blocked on an exported invoice, directing to void', async () => {
-    const knex = makeKnex({ tenant_external_entity_mappings: { id: 'map-1' } });
+    const knex = makeKnex({ accounting_export_lines: [undefined, { id: 'line-1' }], tenant_external_entity_mappings: undefined });
 
     await expect(assertInvoiceNotExported(knex, 't1', 'inv-exported', 'delete')).rejects.toThrow(
       /void it instead of deleting/i
@@ -94,7 +107,7 @@ describe('Contract 1 — a document posted to QBO stays posted', () => {
   });
 
   it('unexported invoices are unaffected', async () => {
-    const knex = makeKnex({ tenant_external_entity_mappings: undefined });
+    const knex = makeKnex({ accounting_export_lines: [undefined, undefined], tenant_external_entity_mappings: undefined });
 
     await expect(assertInvoiceNotExported(knex, 't1', 'inv-local', 'unfinalize')).resolves.toBeUndefined();
   });

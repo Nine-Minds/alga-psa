@@ -24,7 +24,7 @@ export const apiEndpointSchema = z.object({
     description: z.string().optional(),
     example: z.any().optional()
   })).optional(),
-  responses: z.record(z.object({
+  responses: z.record(z.string(), z.object({
     description: z.string(),
     schema: z.any().optional()
   })).optional()
@@ -56,7 +56,7 @@ export const apiSchemaInfoSchema = z.object({
   name: z.string(),
   type: z.enum(['request', 'response', 'model']),
   description: z.string().optional(),
-  properties: z.record(z.object({
+  properties: z.record(z.string(), z.object({
     type: z.string(),
     description: z.string().optional(),
     required: z.boolean().optional(),
@@ -124,14 +124,14 @@ export const openApiSpecSchema = z.object({
     url: z.string(),
     description: z.string().optional()
   })),
-  paths: z.record(z.any()),
+  paths: z.record(z.string(), z.any()),
   components: z.object({
-    schemas: z.record(z.any()).optional(),
-    securitySchemes: z.record(z.any()).optional(),
-    parameters: z.record(z.any()).optional(),
-    responses: z.record(z.any()).optional()
+    schemas: z.record(z.string(), z.any()).optional(),
+    securitySchemes: z.record(z.string(), z.any()).optional(),
+    parameters: z.record(z.string(), z.any()).optional(),
+    responses: z.record(z.string(), z.any()).optional()
   }).optional(),
-  security: z.array(z.record(z.array(z.string()))).optional(),
+  security: z.array(z.record(z.string(), z.array(z.string()))).optional(),
   tags: z.array(z.object({
     name: z.string(),
     description: z.string().optional()
@@ -153,7 +153,7 @@ export const apiHealthSchema = z.object({
   version: z.string(),
   timestamp: z.string(),
   uptime: z.number(),
-  services: z.record(z.object({
+  services: z.record(z.string(), z.object({
     status: z.enum(['up', 'down', 'degraded']),
     latency: z.number().optional(),
     message: z.string().optional()
@@ -174,8 +174,8 @@ export const apiHealthResponseSchema = z.object({
 // API statistics
 export const apiStatsSchema = z.object({
   totalEndpoints: z.number(),
-  endpointsByCategory: z.record(z.number()),
-  endpointsByMethod: z.record(z.number()),
+  endpointsByCategory: z.record(z.string(), z.number()),
+  endpointsByMethod: z.record(z.string(), z.number()),
   totalSchemas: z.number(),
   totalPermissions: z.number(),
   coverage: z.object({
@@ -185,7 +185,7 @@ export const apiStatsSchema = z.object({
   }),
   usage: z.object({
     totalRequests: z.number(),
-    requestsByEndpoint: z.record(z.number()),
+    requestsByEndpoint: z.record(z.string(), z.number()),
     averageResponseTime: z.number(),
     errorRate: z.number()
   }).optional()

@@ -3,6 +3,7 @@
 import React from 'react';
 import { Minus, Plus } from 'lucide-react';
 import { Button } from './Button';
+import { useTranslation } from '../lib/i18n/client';
 
 export interface ViewDensityControlProps {
   value: number;
@@ -36,14 +37,14 @@ const ViewDensityControl: React.FC<ViewDensityControlProps> = ({
   defaultValue = 50,
   step = 10,
   idPrefix = 'view-density',
-  compactLabel = 'Compact',
-  spaciousLabel = 'Spacious',
-  resetLabel = 'Reset',
-  compactTitle = 'Snap to compact view',
-  decreaseTitle = 'Decrease spacing',
-  resetTitle = 'Reset to default',
-  increaseTitle = 'Increase spacing',
-  spaciousTitle = 'Snap to spacious view',
+  compactLabel,
+  spaciousLabel,
+  resetLabel,
+  compactTitle,
+  decreaseTitle,
+  resetTitle,
+  increaseTitle,
+  spaciousTitle,
   className = '',
   compactId,
   decreaseId,
@@ -51,6 +52,7 @@ const ViewDensityControl: React.FC<ViewDensityControlProps> = ({
   increaseId,
   spaciousId,
 }) => {
+  const { t } = useTranslation('common');
   const isAtMin = value <= minValue;
   const isAtMax = value >= maxValue;
   const isAtDefault = value === defaultValue;
@@ -71,10 +73,10 @@ const ViewDensityControl: React.FC<ViewDensityControlProps> = ({
         size="xs"
         onClick={() => onChange(minValue)}
         disabled={isAtMin}
-        title={compactTitle}
+        title={compactTitle ?? t('viewDensity.compact.title')}
         className="!h-6 !px-1 !min-w-0 text-xs text-gray-500 hover:text-gray-700 disabled:text-gray-400"
       >
-        {compactLabel}
+        {compactLabel ?? t('viewDensity.compact.label')}
       </Button>
       <Button
         id={decreaseId ?? `${idPrefix}-decrease`}
@@ -82,7 +84,7 @@ const ViewDensityControl: React.FC<ViewDensityControlProps> = ({
         size="xs"
         onClick={handleDecrease}
         disabled={isAtMin}
-        title={decreaseTitle}
+        title={decreaseTitle ?? t('viewDensity.decrease.title')}
         className="!w-6 !h-6 !p-0 !min-w-0"
       >
         <Minus className="w-3.5 h-3.5" />
@@ -93,10 +95,10 @@ const ViewDensityControl: React.FC<ViewDensityControlProps> = ({
         size="xs"
         onClick={() => onChange(defaultValue)}
         disabled={isAtDefault}
-        title={resetTitle}
+        title={resetTitle ?? t('viewDensity.reset.title')}
         className="!h-6 !px-1.5 !min-w-0 text-xs"
       >
-        {resetLabel}
+        {resetLabel ?? t('actions.reset')}
       </Button>
       <Button
         id={increaseId ?? `${idPrefix}-increase`}
@@ -104,7 +106,7 @@ const ViewDensityControl: React.FC<ViewDensityControlProps> = ({
         size="xs"
         onClick={handleIncrease}
         disabled={isAtMax}
-        title={increaseTitle}
+        title={increaseTitle ?? t('viewDensity.increase.title')}
         className="!w-6 !h-6 !p-0 !min-w-0"
       >
         <Plus className="w-3.5 h-3.5" />
@@ -115,10 +117,10 @@ const ViewDensityControl: React.FC<ViewDensityControlProps> = ({
         size="xs"
         onClick={() => onChange(maxValue)}
         disabled={isAtMax}
-        title={spaciousTitle}
+        title={spaciousTitle ?? t('viewDensity.spacious.title')}
         className="!h-6 !px-1 !min-w-0 text-xs text-gray-500 hover:text-gray-700 disabled:text-gray-400"
       >
-        {spaciousLabel}
+        {spaciousLabel ?? t('viewDensity.spacious.label')}
       </Button>
     </div>
   );

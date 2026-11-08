@@ -90,6 +90,14 @@
       "import": "./src/lib/sso/linkStateCookie.ts",
       "types": "./src/lib/sso/linkStateCookie.ts"
     },
+    "./lib/signInUserResolution": {
+      "import": "./src/lib/signInUserResolution.ts",
+      "types": "./src/lib/signInUserResolution.ts"
+    },
+    "./lib/tenantDiscovery": {
+      "import": "./src/lib/tenantDiscovery/index.ts",
+      "types": "./src/lib/tenantDiscovery/index.ts"
+    },
     "./lib/security/captcha": {
       "import": "./src/lib/security/captcha.ts",
       "types": "./src/lib/security/captcha.ts"
@@ -97,6 +105,14 @@
     "./nextauth/edge-auth": {
       "import": "./src/nextauth/edge-auth.ts",
       "types": "./src/nextauth/edge-auth.ts"
+    },
+    "./lib/permissionCapabilities": {
+      "import": "./src/lib/permissionCapabilities.ts",
+      "types": "./src/lib/permissionCapabilities.ts"
+    },
+    "./lib/knowledgeBasePermissions": {
+      "import": "./src/lib/knowledgeBasePermissions.ts",
+      "types": "./src/lib/knowledgeBasePermissions.ts"
     },
     "./lib/preCheckDeletion": {
       "import": "./src/lib/preCheckDeletion.ts",
@@ -126,7 +142,9 @@
     "@auth/core": "^0.41.3",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/licensing": "*",
     "@alga-psa/ui": "*",
+    "jose": "^6.1.3",
     "knex": "^3.1.0",
     "next-auth": "^5.0.0-beta.32",
     "ua-parser-js": "^1.0.37"

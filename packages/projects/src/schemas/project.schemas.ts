@@ -72,7 +72,7 @@ export const projectSchema = tenantSchema.extend({
   client_portal_config: clientPortalConfigSchema.optional(),
   // Declared here because updateProjectSchema.parse() strips unknown keys, so an
   // undeclared service_id would never reach the model.
-  service_id: z.string().uuid().nullable().optional()
+  service_id: z.string().guid().nullable().optional()
 });
 
 export const projectPhaseSchema = tenantSchema.extend({
@@ -87,7 +87,7 @@ export const projectPhaseSchema = tenantSchema.extend({
   created_at: z.date(),
   updated_at: z.date(),
   wbs_code: z.string(),
-  service_id: z.string().uuid().nullable().optional()
+  service_id: z.string().guid().nullable().optional()
 });
 
 export const projectTaskSchema = tenantSchema.extend({
@@ -96,7 +96,7 @@ export const projectTaskSchema = tenantSchema.extend({
   task_name: z.string(),
   description: z.string().nullable(),
   description_rich_text: z.string().nullable().optional(),
-  assigned_to: z.string().uuid().nullable().or(z.literal('unassigned')),
+  assigned_to: z.string().guid().nullable().or(z.literal('unassigned')),
   estimated_hours: z.number().nullable(),
   actual_hours: z.number().nullable(),
   project_status_mapping_id: z.string(),
@@ -105,8 +105,8 @@ export const projectTaskSchema = tenantSchema.extend({
   wbs_code: z.string(),
   start_date: z.date().nullable().optional(),
   due_date: z.date().nullable(),
-  priority_id: z.string().uuid().nullable().optional(),
-  service_id: z.string().uuid().nullable().optional(),
+  priority_id: z.string().guid().nullable().optional(),
+  service_id: z.string().guid().nullable().optional(),
   checklist_items: z.array(z.lazy(() => taskChecklistItemSchema)).optional(),
   task_type_key: z.string().optional(),
   order_key: z.string().nullable().optional()
@@ -165,8 +165,8 @@ export const createTaskSchema = projectTaskSchema.omit({
   wbs_code: true,  // wbs_code is auto-generated
   actual_hours: true,
 }).extend({
-  assigned_to: z.string().uuid().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
-  service_id: z.string().uuid().nullable().or(z.literal('')).transform(val => val === '' ? null : val).optional()
+  assigned_to: z.string().guid().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
+  service_id: z.string().guid().nullable().or(z.literal('')).transform(val => val === '' ? null : val).optional()
 });
 
 export const updateTaskSchema = projectTaskSchema.partial().omit({
@@ -179,8 +179,8 @@ export const updateTaskSchema = projectTaskSchema.partial().omit({
   // .extend replaces the key outright, so these have to restate .optional()
   // themselves — without it the surrounding .partial() is undone and every
   // partial task update is rejected with "assigned_to: Invalid input".
-  assigned_to: z.string().uuid().nullable().or(z.literal('')).transform(val => val === '' ? null : val).optional(),
-  service_id: z.string().uuid().nullable().or(z.literal('')).transform(val => val === '' ? null : val).optional()
+  assigned_to: z.string().guid().nullable().or(z.literal('')).transform(val => val === '' ? null : val).optional(),
+  service_id: z.string().guid().nullable().or(z.literal('')).transform(val => val === '' ? null : val).optional()
 });
 
 export const createChecklistItemSchema = taskChecklistItemSchema.omit({

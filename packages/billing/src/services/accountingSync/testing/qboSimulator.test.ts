@@ -35,6 +35,39 @@ describe('QboSimulator — QBO semantics the sync engine depends on', () => {
     expect(invoice.TotalAmt).toBe(10.42);
   });
 
+  it('subtracts DiscountLineDetail magnitudes from the total on create and sparse update', async () => {
+    const sim = new QboSimulator();
+    const discount = (amount: number) => ({
+      DetailType: 'DiscountLineDetail',
+      Amount: amount,
+      DiscountLineDetail: { PercentBased: false, DiscountAmount: amount, DiscountAccountRef: { value: 'DISCOUNT' } }
+    });
+    const invoice = await sim.client.create('Invoice', {
+      CustomerRef: { value: 'c-1' },
+      Line: [
+        { DetailType: 'SalesItemLineDetail', Amount: 3000.0 },
+        { DetailType: 'SalesItemLineDetail', Amount: 1050.0 },
+        discount(500.0),
+        discount(200.0),
+        discount(100.0),
+        discount(12.0)
+      ]
+    });
+
+    expect(invoice.TotalAmt).toBe(3238);
+    expect(invoice.Balance).toBe(3238);
+
+    const updated = await sim.client.update('Invoice', {
+      Id: invoice.Id,
+      SyncToken: invoice.SyncToken,
+      sparse: true,
+      Line: [{ DetailType: 'SalesItemLineDetail', Amount: 100.0 }, discount(25.0)]
+    });
+
+    expect(updated.TotalAmt).toBe(75);
+    expect(updated.Balance).toBe(75);
+  });
+
   it('taxAdjustmentCents models AST changing the total at create time', async () => {
     const sim = new QboSimulator({ taxAdjustmentCents: 825 });
     const invoice = await sim.client.create('Invoice', {
@@ -270,5 +303,35 @@ describe('QboSimulator — QBO semantics the sync engine depends on', () => {
 
     expect(firstPage.map((code) => code.Id)).toEqual(['tc-0', 'tc-1']);
     expect(secondPage.map((code) => code.Id)).toEqual(['tc-2', 'tc-3']);
+  });
+
+  it('pages the Item name catalog the Live QuickBooks mapping picker queries', async () => {
+    const sim = new QboSimulator();
+    const seeded = Array.from({ length: 5 }, (_unused, index) =>
+      sim.seedItem({ name: `Service ${index}`, type: 'Service' })
+    );
+
+    const firstPage = await sim.client.query<any>('SELECT Id, Name FROM Item STARTPOSITION 1 MAXRESULTS 2');
+    const secondPage = await sim.client.query<any>('SELECT Id, Name FROM Item STARTPOSITION 3 MAXRESULTS 2');
+
+    expect(firstPage).toEqual([
+      { Id: seeded[0].Id, Name: 'Service 0' },
+      { Id: seeded[1].Id, Name: 'Service 1' }
+    ]);
+    expect(secondPage).toEqual([
+      { Id: seeded[2].Id, Name: 'Service 2' },
+      { Id: seeded[3].Id, Name: 'Service 3' }
+    ]);
+  });
+
+  it('still serves the bare Item name catalog query with no pagination suffix', async () => {
+    const sim = new QboSimulator();
+    sim.seedItem({ name: 'Managed Services', type: 'Service' });
+    sim.seedItem({ name: 'Retired Add-on', type: 'Service', active: false });
+
+    const rows = await sim.client.query<any>('SELECT Id, Name FROM Item');
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].Name).toBe('Managed Services');
   });
 });

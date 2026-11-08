@@ -14,6 +14,7 @@ const linkClientToQboCustomerMock = vi.hoisted(() => vi.fn());
 const bulkLinkExactCustomerMatchesMock = vi.hoisted(() => vi.fn());
 const createQboCustomerForClientMock = vi.hoisted(() => vi.fn());
 const getQboCustomersMock = vi.hoisted(() => vi.fn());
+const deleteExternalEntityMappingMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../../actions/qboOnboardingActions', () => ({
   getCustomerMatchCandidates: async (...args: unknown[]) => getCustomerMatchCandidatesMock(...args),
@@ -26,6 +27,25 @@ vi.mock('@alga-psa/integrations/actions/qboActions', () => ({
   getQboCustomers: async (...args: unknown[]) => getQboCustomersMock(...args),
 }));
 
+vi.mock('@alga-psa/integrations/actions/externalMappingActions', () => ({
+  deleteExternalEntityMapping: async (...args: unknown[]) => deleteExternalEntityMappingMock(...args),
+}));
+
+// The unlink confirmation is asserted through a light stand-in: this suite is
+// about which action the panel calls with which mapping id, not about the
+// shared dialog's own rendering.
+vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
+  ConfirmationDialog: ({ id, isOpen, title, message, confirmLabel, cancelLabel, onConfirm, onClose }: any) =>
+    isOpen ? (
+      <div id={id}>
+        <h2>{title}</h2>
+        <p>{message}</p>
+        <button type="button" onClick={onClose}>{cancelLabel}</button>
+        <button type="button" onClick={() => void onConfirm()}>{confirmLabel}</button>
+      </div>
+    ) : null,
+}));
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Fixtures
 // ──────────────────────────────────────────────────────────────────────────────
@@ -36,6 +56,7 @@ const baseRows = [
     clientName: 'Acme Corp',
     mappedExternalId: null,
     mappedExternalName: null,
+    mappingId: null,
     suggestion: { externalId: 'qbo-1', externalName: 'Acme Corp', exact: true },
   },
   {
@@ -43,6 +64,7 @@ const baseRows = [
     clientName: 'Beta LLC',
     mappedExternalId: null,
     mappedExternalName: null,
+    mappingId: null,
     suggestion: { externalId: 'qbo-2', externalName: 'Beta L.L.C.', exact: false },
   },
   {
@@ -50,6 +72,7 @@ const baseRows = [
     clientName: 'Gamma Inc',
     mappedExternalId: null,
     mappedExternalName: null,
+    mappingId: null,
     suggestion: null,
   },
 ];
@@ -59,6 +82,7 @@ const mappedRow = {
   clientName: 'Delta Ltd',
   mappedExternalId: 'qbo-4',
   mappedExternalName: 'Delta Limited',
+  mappingId: 'mapping-4',
   suggestion: null,
 };
 
@@ -76,6 +100,7 @@ describe('QboCustomerMappingPanel contracts', () => {
     linkClientToQboCustomerMock.mockResolvedValue({ linked: true });
     bulkLinkExactCustomerMatchesMock.mockResolvedValue({ linked: 1 });
     createQboCustomerForClientMock.mockResolvedValue({ created: true, externalId: 'qbo-new' });
+    deleteExternalEntityMappingMock.mockResolvedValue({ success: true });
   });
 
   afterEach(() => {
@@ -224,6 +249,77 @@ describe('QboCustomerMappingPanel contracts', () => {
     await waitFor(() => {
       expect(screen.getAllByText('Delta Limited').length).toBeGreaterThan(0);
       expect(screen.getByRole('button', { name: /Re-link/i })).toBeInTheDocument();
+    });
+  });
+
+  it('mapped row offers Unlink; confirming calls deleteExternalEntityMapping with the mapping id and reloads', async () => {
+    getCustomerMatchCandidatesMock.mockResolvedValue({ rows: [mappedRow] });
+
+    const { QboCustomerMappingPanel } = await import('./QboCustomerMappingPanel');
+    render(<QboCustomerMappingPanel />);
+
+    const unlinkBtn = await screen.findByRole('button', { name: /^Unlink$/ });
+    expect(unlinkBtn.id).toBe('qbo-customer-unlink-client-4');
+    const loadsBeforeUnlink = getCustomerMatchCandidatesMock.mock.calls.length;
+
+    fireEvent.click(unlinkBtn);
+
+    expect(await screen.findByText('Unlink Delta Ltd from QuickBooks?')).toBeInTheDocument();
+    expect(deleteExternalEntityMappingMock).not.toHaveBeenCalled();
+
+    // Both the row button and the dialog's confirm read "Unlink"; the dialog's
+    // is the last one rendered.
+    const unlinkButtons = screen.getAllByRole('button', { name: /^Unlink$/ });
+    fireEvent.click(unlinkButtons[unlinkButtons.length - 1]);
+
+    await waitFor(() => {
+      expect(deleteExternalEntityMappingMock).toHaveBeenCalledWith('mapping-4');
+    });
+    await waitFor(() => {
+      expect(getCustomerMatchCandidatesMock.mock.calls.length).toBeGreaterThan(loadsBeforeUnlink);
+    });
+  });
+
+  it('cancelling the unlink confirmation calls nothing', async () => {
+    getCustomerMatchCandidatesMock.mockResolvedValue({ rows: [mappedRow] });
+
+    const { QboCustomerMappingPanel } = await import('./QboCustomerMappingPanel');
+    render(<QboCustomerMappingPanel />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /^Unlink$/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /^Keep link$/ }));
+
+    await waitFor(() => {
+      expect(screen.queryByText('Unlink Delta Ltd from QuickBooks?')).not.toBeInTheDocument();
+    });
+    expect(deleteExternalEntityMappingMock).not.toHaveBeenCalled();
+  });
+
+  it('unmapped rows offer no Unlink', async () => {
+    const { QboCustomerMappingPanel } = await import('./QboCustomerMappingPanel');
+    render(<QboCustomerMappingPanel />);
+
+    await screen.findByText('Acme Corp');
+    expect(screen.queryByRole('button', { name: /^Unlink$/ })).not.toBeInTheDocument();
+  });
+
+  it('surfaces an unlink failure instead of claiming success', async () => {
+    getCustomerMatchCandidatesMock.mockResolvedValue({ rows: [mappedRow] });
+    deleteExternalEntityMappingMock.mockResolvedValue({
+      actionError: 'Mapping not found. Refresh mappings and try again.',
+    });
+
+    const { QboCustomerMappingPanel } = await import('./QboCustomerMappingPanel');
+    render(<QboCustomerMappingPanel />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /^Unlink$/ }));
+    const unlinkButtons = screen.getAllByRole('button', { name: /^Unlink$/ });
+    fireEvent.click(unlinkButtons[unlinkButtons.length - 1]);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('Mapping not found. Refresh mappings and try again.')
+      ).toBeInTheDocument();
     });
   });
 });

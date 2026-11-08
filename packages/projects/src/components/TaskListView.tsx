@@ -7,6 +7,7 @@ import { ITaskResource } from '@alga-psa/types';
 import { ChevronDown, ChevronRight, Pencil, Copy, Trash2, Link2, Ban, GitBranch, Calendar, GripVertical, Plus, CheckSquare, Paperclip, Zap, ClipboardList, Bug, Sparkles, TrendingUp, Flag, BookOpen, CheckCircle2, RotateCcw } from 'lucide-react';
 import { phaseBadgeClasses, type PhaseBillingBadge } from '@alga-psa/core';
 import { extractTaskDescriptionText } from '../lib/taskRichText';
+import { filterTasks } from '../lib/taskFilters';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Button } from '@alga-psa/ui/components/Button';
 import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
@@ -38,6 +39,7 @@ import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useTaskSelection } from './TaskSelectionContext';
+import { useProjectDataSource } from '../context/ProjectDataSourceContext';
 
 // Auto-scroll configuration for drag operations
 const SCROLL_THRESHOLD = 80; // Pixels from edge to start scrolling
@@ -192,14 +194,16 @@ interface TaskListViewProps {
   /** Inline-edit handler. When provided, status/priority/type/due/hours cells
    *  become editable pickers/inputs that persist via a partial task update. */
   onTaskUpdate?: (taskId: string, updates: Partial<IProjectTask>) => void;
+  /** Only the status cell stays an inline editor; every other cell renders read-only (shared sources admit status only). */
+  statusOnlyUpdate?: boolean;
   taskResources: Record<string, ITaskResource[]>;
   taskTags: Record<string, ITag[]>;
   taskDependencies?: Record<string, { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] }>;
   checklistItems: Record<string, { total: number; completed: number; items?: Array<{ item_name: string; completed: boolean }> }>;
   documentCounts?: Record<string, number>;
   onTaskClick: (task: IProjectTask) => void;
-  onTaskDelete: (task: IProjectTask) => void;
-  onTaskDuplicate: (task: IProjectTask) => void;
+  onTaskDelete?: (task: IProjectTask) => void;
+  onTaskDuplicate?: (task: IProjectTask) => void;
   onTaskMove?: (taskId: string, newStatusMappingId: string, newPhaseId: string, beforeTaskId: string | null, afterTaskId: string | null) => Promise<void>;
   onAddPhase?: () => void;
   onAddTask?: (phaseId: string) => void;
@@ -220,6 +224,7 @@ interface TaskListViewProps {
   teamAvatarUrls?: Record<string, string | null>;
   // Filter props
   selectedPriorityFilter?: string;
+  selectedTaskTypeFilter?: string;
   selectedTaskTags?: string[];
   selectedAgentFilter?: string[];
   selectedTeamFilter?: string[];
@@ -254,6 +259,7 @@ export default function TaskListView({
   priorities = [],
   taskTypes = [],
   onTaskUpdate,
+  statusOnlyUpdate = false,
   taskResources,
   taskTags,
   taskDependencies = {},
@@ -278,6 +284,7 @@ export default function TaskListView({
   teamNames = {},
   teamAvatarUrls = {},
   selectedPriorityFilter = 'all',
+  selectedTaskTypeFilter = 'all',
   selectedTaskTags = [],
   selectedAgentFilter = [],
   selectedTeamFilter = [],
@@ -288,6 +295,7 @@ export default function TaskListView({
   searchCaseSensitive = false
 }: TaskListViewProps) {
   const { t } = useTranslation(['features/projects', 'common']);
+  const projectSource = useProjectDataSource();
   const taskTypeLabel = useTaskTypeLabel();
   // toLocaleDateString() with no locale follows the browser, not the app.
   const { formatDate } = useFormatters();
@@ -582,87 +590,28 @@ export default function TaskListView({
   const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const scrollSpeedRef = useRef<number>(0);
 
-  // Filter tasks based on search, priority and tags
-  const filteredTasks = useMemo(() => {
-    let filtered = tasks;
-
-    // Apply search filter
-    if (searchQuery.trim()) {
-      const query = searchCaseSensitive ? searchQuery : searchQuery.toLowerCase();
-      filtered = filtered.filter(task => {
-        const taskName = searchCaseSensitive ? task.task_name : task.task_name.toLowerCase();
-        const descText = taskDescriptionTextMap.get(task.task_id) ?? '';
-        const taskDescription = searchCaseSensitive
-          ? descText
-          : descText.toLowerCase();
-
-        if (searchWholeWord) {
-          // Use word boundary regex for whole word matching
-          const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          const wordRegex = new RegExp(`\\b${escapedQuery}\\b`, searchCaseSensitive ? '' : 'i');
-          return wordRegex.test(task.task_name) || wordRegex.test(descText);
-        } else {
-          return taskName.includes(query) || taskDescription.includes(query);
-        }
-      });
-    }
-
-    // Apply priority filter
-    if (selectedPriorityFilter !== 'all') {
-      filtered = filtered.filter(task => task.priority_id === selectedPriorityFilter);
-    }
-
-    // Apply tag filter
-    if (selectedTaskTags.length > 0) {
-      filtered = filtered.filter(task => {
-        const tags = taskTags[task.task_id] || [];
-        const tagTexts = tags.map(tag => tag.tag_text);
-        return selectedTaskTags.some(selectedTag => tagTexts.includes(selectedTag));
-      });
-    }
-
-    // Apply agent / team filter
-    if (selectedAgentFilter.length > 0 || selectedTeamFilter.length > 0 || includeUnassignedAgents) {
-      filtered = filtered.filter(task => {
-        // Check if task is unassigned (no primary assignee)
-        const isUnassigned = !task.assigned_to;
-
-        // If includeUnassignedAgents is selected and task is unassigned, include it
-        if (includeUnassignedAgents && isUnassigned) {
-          return true;
-        }
-
-        // If specific agents are selected, check if task matches
-        if (selectedAgentFilter.length > 0) {
-          // Check primary assignee
-          if (task.assigned_to && selectedAgentFilter.includes(task.assigned_to)) {
-            return true;
-          }
-
-          // Check additional agents from task resources (only if not filtering for primary only)
-          // Primary only filter is only applicable when exactly one agent is selected
-          if (!(primaryAgentOnly && selectedAgentFilter.length === 1)) {
-            const resources = taskResources[task.task_id] || [];
-            const hasMatchingAdditionalAgent = resources.some(
-              resource => resource.additional_user_id && selectedAgentFilter.includes(resource.additional_user_id)
-            );
-            if (hasMatchingAdditionalAgent) {
-              return true;
-            }
-          }
-        }
-
-        // If specific teams are selected, match by the task's assigned team
-        if (selectedTeamFilter.length > 0 && task.assigned_team_id && selectedTeamFilter.includes(task.assigned_team_id)) {
-          return true;
-        }
-
-        return false;
-      });
-    }
-
-    return filtered;
-  }, [tasks, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTags, taskTags, selectedAgentFilter, selectedTeamFilter, includeUnassignedAgents, primaryAgentOnly, taskResources, taskDescriptionTextMap]);
+  // Filter tasks with the shared predicate, so this list, the board and every
+  // derived count agree on what a filter leaves visible.
+  const filteredTasks = useMemo(() => filterTasks(
+    tasks,
+    {
+      searchQuery,
+      searchWholeWord,
+      searchCaseSensitive,
+      priorityId: selectedPriorityFilter,
+      taskTypeKey: selectedTaskTypeFilter,
+      tags: selectedTaskTags,
+      agentIds: selectedAgentFilter,
+      teamIds: selectedTeamFilter,
+      includeUnassigned: includeUnassignedAgents,
+      primaryAgentOnly,
+    },
+    {
+      tags: taskTags,
+      resources: taskResources,
+      descriptionText: (task) => taskDescriptionTextMap.get(task.task_id) ?? '',
+    },
+  ), [tasks, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTypeFilter, selectedTaskTags, taskTags, selectedAgentFilter, selectedTeamFilter, includeUnassignedAgents, primaryAgentOnly, taskResources, taskDescriptionTextMap]);
 
   // Group tasks by phase and status - include ALL phases and ALL statuses for drag-and-drop
   const phaseGroups = useMemo((): PhaseGroup[] => {
@@ -738,6 +687,7 @@ export default function TaskListView({
   const hasActiveFilter = Boolean(
     searchQuery.trim() ||
     selectedPriorityFilter !== 'all' ||
+    selectedTaskTypeFilter !== 'all' ||
     selectedTaskTags.length > 0 ||
     selectedAgentFilter.length > 0 ||
     selectedTeamFilter.length > 0 ||
@@ -1808,7 +1758,7 @@ export default function TaskListView({
                                     }
                                     case 'priority': {
                                       const taskPriority = task.priority_id ? priorityById.get(task.priority_id) : null;
-                                      if (onTaskUpdate) {
+                                      if (onTaskUpdate && !statusOnlyUpdate) {
                                         const priorityOptions = priorities.map(p => ({
                                           value: p.priority_id,
                                           label: p.priority_name,
@@ -1841,7 +1791,7 @@ export default function TaskListView({
                                     case 'task_type': {
                                       const taskType = taskTypeByKey.get(task.task_type_key);
                                       const TaskTypeIcon = taskTypeIcons[task.task_type_key] || ClipboardList;
-                                      if (onTaskUpdate && taskTypes.length > 0) {
+                                      if (onTaskUpdate && !statusOnlyUpdate && taskTypes.length > 0) {
                                         return (
                                           <td key="task_type" className={`py-2.5 px-3 align-middle ${tdBorder}`} onClick={(e) => e.stopPropagation()}>
                                             <TaskTypeSelector
@@ -1897,6 +1847,13 @@ export default function TaskListView({
                                                       </span>
                                                     </>
                                                   );
+                                                }
+                                                // Shared mode: the assignee is a display name only (no user id), shown as read-only text.
+                                                const sharedAssigneeName = projectSource.kind !== 'native' && !task.assigned_to
+                                                  ? (task as { assigned_to_name?: string | null }).assigned_to_name?.trim()
+                                                  : undefined;
+                                                if (sharedAssigneeName) {
+                                                  return <span className="text-[13px] text-[rgb(var(--color-text-700))] truncate" data-shared-assignee-name>{sharedAssigneeName}</span>;
                                                 }
                                                 return (
                                                   <span className="text-[13px] text-[rgb(var(--color-text-400))]">{t('projectList.unassigned', 'Unassigned')}</span>
@@ -1956,7 +1913,7 @@ export default function TaskListView({
                                         </td>
                                       );
                                     case 'start_date':
-                                      if (onTaskUpdate) {
+                                      if (onTaskUpdate && !statusOnlyUpdate) {
                                         return (
                                           <td key="start_date" className={`py-2.5 px-3 align-middle ${tdBorder}`} onClick={(e) => e.stopPropagation()}>
                                             <DatePicker
@@ -1979,7 +1936,7 @@ export default function TaskListView({
                                         </td>
                                       );
                                     case 'due_date':
-                                      if (onTaskUpdate) {
+                                      if (onTaskUpdate && !statusOnlyUpdate) {
                                         return (
                                           <td key="due_date" className={`py-2.5 px-3 align-middle ${tdBorder}`} onClick={(e) => e.stopPropagation()}>
                                             <DatePicker
@@ -2024,7 +1981,7 @@ export default function TaskListView({
                                     case 'est_hours':
                                       return (
                                         <td key="est_hours" className={`py-2.5 px-3 align-middle ${tdBorder}`}>
-                                          {onTaskUpdate ? (
+                                          {onTaskUpdate && !statusOnlyUpdate ? (
                                             <InlineHoursEdit
                                               minutes={task.estimated_hours}
                                               onCommit={(mins) => onTaskUpdate(task.task_id, { estimated_hours: mins ?? 0 })}

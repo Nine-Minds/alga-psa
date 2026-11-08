@@ -324,6 +324,7 @@ describe('runEntraConnectionDiagnostics', () => {
       'managed_tenants_count',
       'mappings_vs_discovery',
       'cipp_credentials_present',
+      'cipp_token_mint',
       'cipp_reachable',
       'cipp_auth',
       'cipp_tenant_list',

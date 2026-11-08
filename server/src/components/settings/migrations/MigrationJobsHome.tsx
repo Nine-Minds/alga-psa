@@ -321,8 +321,13 @@ const UploadPackageDialog = ({ isOpen, onClose, onUploaded }: UploadPackageDialo
               <Label htmlFor="amp-spreadsheet-entity">Spreadsheet records represent</Label>
               <CustomSelect id="amp-spreadsheet-entity" value={entityType} onValueChange={(value) => setEntityType(value as AmpEntityType)} disabled={isUploading} options={[
                 { value: 'assets', label: 'Assets (legacy asset import)' }, { value: 'organizations', label: 'Organizations' }, { value: 'locations', label: 'Locations' }, { value: 'contacts', label: 'Contacts' }, { value: 'tickets', label: 'Tickets' }, { value: 'ticket_comments', label: 'Ticket comments' },
+                { value: 'products', label: t('importExport.migration.spreadsheet.entities.products', { defaultValue: 'Products (catalog / price list)' }) },
+                { value: 'vendor_products', label: t('importExport.migration.spreadsheet.entities.vendorProducts', { defaultValue: 'Vendor price list (distributor costs)' }) },
               ]} />
               <p className="text-xs text-muted-foreground">Canonical headers are recognized automatically. Other columns can be mapped to custom asset-type fields during Configure. Contacts accept common spellings such as Name, First Name, Last Name, Email, Phone, Title, and Client; legacy asset names such as Asset Name, Asset Type, and Serial Number are preserved through the AMP flow.</p>
+              {(entityType === 'products' || entityType === 'vendor_products') && (
+                <p className="text-xs text-muted-foreground">{t('importExport.migration.spreadsheet.productsHint', { defaultValue: 'Prices and costs are read as decimal amounts (for example 1,299.50) using the currency column when present, otherwise the tenant currency. Negative, non-numeric or over-precise amounts are dropped and reported; the row is still imported. Products match existing products by SKU; vendor price-list rows reference a product by SKU and create or match the vendor by name.' })}</p>
+              )}
             </div>
           )}
 

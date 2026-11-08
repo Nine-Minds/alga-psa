@@ -3,16 +3,21 @@
  * Business logic for client-related operations
  */
 
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
+import { deactivateClientScopedChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
+import { deactivateClientScopedTicketTemplates } from '@alga-psa/shared/lib/ticketTemplates';
 import { Knex } from 'knex';
 import { locationAddressSql } from './locationAddressSql';
+import { getContactCountsByLocation } from '@alga-psa/shared/models/contactLocation';
 import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
 import { IClient, IClientLocation } from 'server/src/interfaces/client.interfaces';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
+import { displayTagKey, loadDisplayTagsForEntities } from '@alga-psa/tags/lib/loadDisplayTags';
+import { displayAudienceForUser } from '@alga-psa/tags/lib/tagDisplayRules';
 import { availableCreditSubquerySql } from '@alga-psa/billing/lib/creditBalance';
 import { isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../../api/middleware/apiMiddleware';
-import { hasPermission } from '@alga-psa/auth/rbac';
 import {
   createLocation as createClientLocation,
   deleteLocation as deleteClientLocation,
@@ -39,13 +44,11 @@ import {
   buildClientStatusChangedPayload,
   buildClientUpdatedPayload,
 } from '@alga-psa/workflow-streams';
-import { buildContactPrimarySetPayload } from '@alga-psa/workflow-streams';
+import { buildContactPrimarySetPayload, buildContactArchivedPayload } from '@alga-psa/workflow-streams';
 import {
-  ensureDefaultContractForClientIfBillingConfigured,
-} from '@alga-psa/shared/billingClients/defaultContract';
-import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
-import { initializeClientDefaultTax } from '@alga-psa/shared/billingClients/defaultTaxRate';
-import { resolveProductCode } from '@alga-psa/types';
+  createClientWithDefaults,
+  type CreateClientWithDefaultsData,
+} from '@alga-psa/shared/models/clientCreation';
 import {
   ClientMergeBlockedError,
   executeClientMerge,
@@ -314,8 +317,16 @@ export class ClientService extends BaseService<IClient> {
         })
       );
 
+      // Chip tags for picker rows (tag display rules, caller audience): one query for the page.
+      const displayTags = await loadDisplayTagsForEntities(trx, context.tenant, displayAudienceForUser(context.user), [
+        { taggedType: 'client', ids: clientsWithLogos.map((client) => client.client_id) },
+      ]);
+
       return {
-        data: clientsWithLogos,
+        data: clientsWithLogos.map((client) => ({
+          ...client,
+          display_tags: displayTags.get(displayTagKey('client', client.client_id)) ?? [],
+        })),
         total: parseInt(count as string)
       };
     });
@@ -347,12 +358,18 @@ export class ClientService extends BaseService<IClient> {
         return null;
       }
 
-      // Get logo URL
-      const logoUrl = await getClientLogoUrl(id, context.tenant);
+      const [logoUrl, displayTags] = await Promise.all([
+        getClientLogoUrl(id, context.tenant),
+        loadDisplayTagsForEntities(trx, context.tenant, displayAudienceForUser(context.user), [
+          { taggedType: 'client', ids: [id] },
+        ]),
+      ]);
 
       return withClientSinceDateString({
         ...stripLegacyClientTaxId(client),
-        logoUrl
+        logoUrl,
+        // Chip tags (tag display rules for the caller's audience), as the web pickers and ticket header show them.
+        display_tags: displayTags.get(displayTagKey('client', id)) ?? [],
       }) as unknown as IClient;
     });
   }
@@ -390,37 +407,20 @@ export class ClientService extends BaseService<IClient> {
         billing_email: data.billing_email,
         account_manager_id: data.account_manager_id,
         is_inactive: data.is_inactive || false,
+        lifecycle_status: (data as any).lifecycle_status ?? 'active',
         client_since: data.client_since ?? null,
-        tenant: context.tenant,
-        created_at: knex.raw('now()'),
-        updated_at: knex.raw('now()')
+        tenant: context.tenant
       };
 
-      // Insert into clients table
-      const [client] = await tenantDb(trx, context.tenant).table('clients').insert(clientData).returning('*')
-        .catch((error: unknown) => throwClientWriteApiError(error, data.client_name));
-
-      // Terminal step of charge attribution — every client has exactly one.
-      await ensureClientDefaultBillingProfile(trx, context.tenant, client.client_id, {
-        clientName: client.client_name,
-      });
-
-      await ensureDefaultContractForClientIfBillingConfigured(trx, {
-        tenant: context.tenant,
-        clientId: client.client_id,
-      });
-
-      // Tax initialization shares the client transaction: for PSA tenants an
-      // invalid/missing configuration must roll the client back rather than
-      // commit a client with no usable tax setup. AlgaDesk tenants have no tax
-      // rates (the product intentionally excludes billing) and keep the same
-      // exemption as the UI and shared client-writer paths.
-      const tenantProduct = await tenantDb(trx, context.tenant)
-        .table('tenants')
-        .first('product_code');
-      if (resolveProductCode(tenantProduct?.product_code).productCode !== 'algadesk') {
-        await initializeClientDefaultTax(trx, context.tenant, client.client_id);
-      }
+      // The shared creation seam owns the insert plus every default a client
+      // needs (tenant currency, default billing profile, default contract,
+      // default tax settings) in this transaction. Its failures are mapped to
+      // the same API errors direct inserts used to raise.
+      const client = await createClientWithDefaults(
+        trx,
+        context.tenant,
+        clientData as unknown as CreateClientWithDefaultsData
+      ).catch((error: unknown) => throwClientWriteApiError(error, data.client_name));
 
       // Handle tags if provided
       if ((data as any).tags && (data as any).tags.length > 0) {
@@ -522,6 +522,8 @@ export class ClientService extends BaseService<IClient> {
     clientId: string
   ): Promise<void> {
     await this.cleanupDefaultContractsForDeletedClient(trx, tenant, clientId);
+    await deactivateClientScopedChecklistTemplates(trx, tenant, clientId);
+    await deactivateClientScopedTicketTemplates(trx, tenant, clientId);
     await this.deleteFromTenantTableIfExists(trx, tenant, 'client_billing_settings', { client_id: clientId });
     await this.deleteFromTenantTableIfExists(trx, tenant, 'client_billing_cycles', { client_id: clientId });
     await this.deleteFromTenantTableIfExists(trx, tenant, 'client_tax_settings', { client_id: clientId });
@@ -649,6 +651,7 @@ export class ClientService extends BaseService<IClient> {
   async update(id: string, data: UpdateClientData, context: ServiceContext): Promise<IClient> {
     const { knex } = await this.getKnex();
     const result = await withTransaction(knex, async (trx) => {
+      let newlyDeactivatedContactIds: string[] = [];
       const db = tenantDb(trx, context.tenant);
       const before = await db.table('clients')
         .where('client_id', id)
@@ -667,7 +670,7 @@ export class ClientService extends BaseService<IClient> {
         'payment_terms', 'billing_cycle', 'credit_limit', 'default_currency_code',
         'preferred_payment_method', 'auto_invoice', 'invoice_delivery_method', 'region_code',
         'is_tax_exempt', 'tax_exemption_certificate', 'timezone', 'invoice_template_id', 'client_since',
-        'billing_contact_id', 'billing_email', 'account_manager_id', 'is_inactive',
+        'billing_contact_id', 'billing_email', 'account_manager_id', 'is_inactive', 'lifecycle_status',
       ] as const;
       const updateData: Record<string, unknown> = { updated_at: knex.raw('now()') };
       for (const column of clientColumns) {
@@ -705,7 +708,7 @@ export class ClientService extends BaseService<IClient> {
       // Deactivating a client also deactivates its contacts and their portal users
       // unless the caller chose "client only" — the same choice the web dialog offers.
       if (data.is_inactive === true && data.deactivate_contacts !== false) {
-        if (!before.is_inactive && !(await hasPermission(context.user, 'contact', 'update', trx))) {
+        if (!before.is_inactive && !(await hasApiContextPermission(context, 'contact', 'update', trx))) {
           throw new ForbiddenError('Permission denied: Cannot update contacts');
         }
         // Get all contact IDs for this client
@@ -714,6 +717,12 @@ export class ClientService extends BaseService<IClient> {
           .where({ client_id: id });
 
         const contactIds = contacts.map((c) => c.contact_name_id);
+
+        // Only contacts that were active flip state (and get contact.deactivated).
+        const activeNow = await db.table('contacts')
+          .select('contact_name_id')
+          .where({ client_id: id, is_inactive: false });
+        newlyDeactivatedContactIds = activeNow.map((c) => c.contact_name_id);
 
         // Deactivate all contacts
         await db.table('contacts')
@@ -739,7 +748,7 @@ export class ClientService extends BaseService<IClient> {
         }
       }
 
-      return { before, after: client, updatedFieldKeys };
+      return { before, after: client, updatedFieldKeys, newlyDeactivatedContactIds };
     });
 
     const occurredAt = (result.after as any).updated_at ?? new Date().toISOString();
@@ -764,6 +773,28 @@ export class ClientService extends BaseService<IClient> {
         }),
         ctx: { tenantId: context.tenant, occurredAt, actor },
         idempotencyKey: `client_status_changed:${id}:${occurredAt}`,
+      });
+    }
+
+    // Lifecycle column transitions (prospect → active → former) emit the same event
+    // the web action publishes, under its own key so both can change in one request.
+    const previousClientLifecycleStatus = (result.before as any)?.lifecycle_status;
+    const newClientLifecycleStatus = (result.after as any)?.lifecycle_status;
+    if (
+      typeof previousClientLifecycleStatus === 'string' &&
+      typeof newClientLifecycleStatus === 'string' &&
+      previousClientLifecycleStatus !== newClientLifecycleStatus
+    ) {
+      await publishWorkflowEvent({
+        eventType: 'CLIENT_STATUS_CHANGED',
+        payload: buildClientStatusChangedPayload({
+          clientId: id,
+          previousStatus: previousClientLifecycleStatus,
+          newStatus: newClientLifecycleStatus,
+          changedAt: occurredAt,
+        }),
+        ctx: { tenantId: context.tenant, occurredAt, actor },
+        idempotencyKey: `client_lifecycle_status_changed:${id}:${occurredAt}`,
       });
     }
 
@@ -796,6 +827,21 @@ export class ClientService extends BaseService<IClient> {
         }),
         ctx: { tenantId: context.tenant, occurredAt, actor },
         idempotencyKey: `client_archived:${id}:${occurredAt}`,
+      });
+    }
+
+    // Contacts the cascade flipped to inactive are real contact.deactivated transitions.
+    for (const contactId of result.newlyDeactivatedContactIds) {
+      await publishWorkflowEvent({
+        eventType: 'CONTACT_ARCHIVED',
+        payload: buildContactArchivedPayload({
+          contactId,
+          clientId: id,
+          archivedByUserId: typeof context.userId === 'string' ? context.userId : undefined,
+          archivedAt: occurredAt,
+        }),
+        ctx: { tenantId: context.tenant, occurredAt, actor },
+        idempotencyKey: `contact_archived:${contactId}:${occurredAt}`,
       });
     }
 
@@ -857,7 +903,18 @@ export class ClientService extends BaseService<IClient> {
         .orderBy('is_default', 'desc')
         .orderBy('location_name', 'asc');
 
-      return locations;
+      // contact_count tells an API caller (and the MCP agent) how many people work at each site,
+      // and therefore why a delete would be refused. One batched read for the whole list.
+      const counts = await getContactCountsByLocation(
+        trx,
+        context.tenant,
+        locations.map((location) => location.location_id),
+      );
+
+      return locations.map((location) => ({
+        ...location,
+        contact_count: counts.get(location.location_id) ?? 0,
+      }));
     });
   }
 
@@ -880,7 +937,7 @@ export class ClientService extends BaseService<IClient> {
           throw new NotFoundError('Client not found');
         }
 
-        return createClientLocation(trx, context.tenant, clientId, data);
+        return createClientLocation(trx, context.tenant, clientId, data, { actorUserId: context.userId });
       });
     } catch (error) {
       throwClientLocationApiError(error);
@@ -898,7 +955,7 @@ export class ClientService extends BaseService<IClient> {
     const { knex } = await this.getKnex();
     try {
       return await withTransaction(knex, (trx) =>
-        updateClientLocation(trx, context.tenant, clientId, locationId, data)
+        updateClientLocation(trx, context.tenant, clientId, locationId, data, { actorUserId: context.userId })
       );
     } catch (error) {
       throwClientLocationApiError(error);
@@ -915,7 +972,7 @@ export class ClientService extends BaseService<IClient> {
     const { knex } = await this.getKnex();
     try {
       await withTransaction(knex, (trx) =>
-        deleteClientLocation(trx, context.tenant, clientId, locationId)
+        deleteClientLocation(trx, context.tenant, clientId, locationId, { actorUserId: context.userId })
       );
     } catch (error) {
       throwClientLocationApiError(error);
@@ -1136,6 +1193,8 @@ export class ClientService extends BaseService<IClient> {
       }>;
       pinPortalGrants?: boolean;
       externalRemapChoices?: Array<{ mappingId: string; apply: boolean }>;
+      /** FR-G2: source_profile (default) | target_default. */
+      billingStrategy?: 'source_profile' | 'target_default';
     },
     context: ServiceContext
   ): Promise<ClientMergeResult> {
@@ -1150,6 +1209,7 @@ export class ClientService extends BaseService<IClient> {
           contractDecisions: input.contractDecisions,
           pinPortalGrants: input.pinPortalGrants,
           externalRemapChoices: input.externalRemapChoices,
+          billingStrategy: input.billingStrategy,
         })
       );
     } catch (error) {

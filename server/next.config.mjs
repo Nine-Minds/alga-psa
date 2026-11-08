@@ -104,6 +104,7 @@ class EditionBuildDiagnosticsPlugin {
       watchedRequests: options.watchedRequests || [
         '@product/chat/entry',
         '@product/mcp/entry',
+        '@product/service-principals/entry',
         '@product/extensions/entry',
         '@product/settings-extensions/entry',
         'ee/server/src/app/msp/chat/page',
@@ -223,6 +224,11 @@ const nextConfig = {
       '@alga-psa/auth/nextAuthOptions': '../packages/auth/src/lib/nextAuthOptions.ts',
       '@alga-psa/auth/actions': '../packages/auth/src/actions/index.ts',
       '@alga-psa/auth/components': '../packages/auth/src/components/index.ts',
+      '@product/service-principals/entry': (() => {
+        const eePath = path.join(__dirname, '../packages/product-service-principals/ee/entry.ts');
+        const ossPath = path.join(__dirname, '../packages/product-service-principals/oss/entry.ts');
+        return isEE ? eePath : ossPath;
+      })(),
       // SSO provider buttons - swap between CE stub and EE implementation
       '@alga-psa/auth/sso/entry': isEE
         ? '../ee/server/src/components/auth/SsoProviderButtons.tsx'
@@ -282,16 +288,29 @@ const nextConfig = {
       '@alga-psa/opportunities/': '../packages/opportunities/src/',
       '@alga-psa/tenancy': '../packages/tenancy/src',
       '@alga-psa/tenancy/': '../packages/tenancy/src/',
+      '@alga-psa/co-managed': '../packages/co-managed/src',
+      '@alga-psa/co-managed/': '../packages/co-managed/src/',
       '@alga-psa/event-schemas': '../packages/event-schemas/src',
       '@alga-psa/event-schemas/': '../packages/event-schemas/src/',
       // Leaf horizontal packages (resolve to source during local dev)
       '@alga-psa/types': '../packages/types/src',
       '@alga-psa/types/': '../packages/types/src/',
       '@alga-psa/core': '../packages/core/src',
+      // Any core export whose source lives under src/lib/ with no same-named
+      // mirror at the src/ root needs an explicit entry: the '@alga-psa/core/'
+      // prefix would send it to src/<name>, and the dist/ fallback is absent
+      // wherever packages/ is mounted from source (e.g. the Teams development
+      // browser lane). nextConfigCoreAliases.contract.test.ts guards this list.
       '@alga-psa/core/rateLimit': '../packages/core/src/lib/rateLimit/index.ts',
+      '@alga-psa/core/fileNames': '../packages/core/src/lib/fileNames.ts',
+      '@alga-psa/core/capability': '../packages/core/src/lib/capability.ts',
+      '@alga-psa/core/address': '../packages/core/src/lib/address.ts',
+      '@alga-psa/core/net/safeFetch': '../packages/core/src/lib/net/safeFetch.ts',
       '@alga-psa/core/': '../packages/core/src/',
       '@alga-psa/validation': '../packages/validation/src',
       '@alga-psa/validation/': '../packages/validation/src/',
+      '@alga-psa/predicates': '../packages/predicates/src',
+      '@alga-psa/predicates/': '../packages/predicates/src/',
       '@alga-psa/formatting': '../packages/formatting/src',
       '@alga-psa/formatting/': '../packages/formatting/src/',
       '@alga-psa/agent-tooling': '../packages/agent-tooling/src',
@@ -423,6 +442,9 @@ const nextConfig = {
       '@product/mcp/entry': isEE
         ? '@product/mcp/ee/entry'
         : '@product/mcp/oss/entry',
+      '@product/service-principals/entry': isEE
+        ? '@product/service-principals/ee/entry'
+        : '@product/service-principals/oss/entry',
       '@product/ext-proxy/handler': isEE
         ? '@product/ext-proxy/ee/handler'
         : '@product/ext-proxy/oss/handler',
@@ -444,6 +466,10 @@ const nextConfig = {
       '@alga-psa/workflows/entry': isEE
         ? '../ee/server/src/workflows/entry'
         : '../packages/ee/src/workflows/entry',
+      // Create-workflow-from-ticket seam (EE-only source; CE resolves to a disabled stub).
+      '@alga-psa/workflows/ticket-actions': isEE
+        ? '../ee/server/src/workflows/createFromTicket/entry'
+        : '../packages/ee/src/workflows/createFromTicket/entry',
       // user-activities workflow-task seam (EE-only source). CE resolves to stubs; EE to
       // the real implementations. Keeps the base user-activities package free of @alga-psa/workflows.
       '@alga-psa/user-activities/server/workflow-tasks': isEE
@@ -498,6 +524,7 @@ const nextConfig = {
     '@alga-psa/email',
     '@alga-psa/teams',
     '@alga-psa/tenancy',
+    '@alga-psa/co-managed',
     '@alga-psa/integrations',
     '@alga-psa/client-portal',
     '@alga-psa/portal-shared',
@@ -551,28 +578,31 @@ const nextConfig = {
       // when billing compiled. Compact IDs retain all actions and source maps.
       config.optimization = { ...config.optimization, moduleIds: 'deterministic' };
     }
-    // Filesystem cache: persists across builds (even after `rm -rf .next`)
-    // so the second cold build reuses module compilation work. Stored under
-    // node_modules/.cache/webpack so it survives `.next` clears.
-    // Keep Next's cache version and dev memory policy. Replacing this object
-    // discarded maxMemoryGenerations: 0 (Next manages its own memory cache)
-    // and the version metadata that invalidates incompatible cached builds.
-    const nextCache = typeof config.cache === 'object' && config.cache !== null ? config.cache : {};
-    config.cache = {
-      ...nextCache,
-      type: 'filesystem',
-      cacheDirectory: path.join(__dirname, 'node_modules/.cache/webpack'),
-      buildDependencies: {
-        ...nextCache.buildDependencies,
-        config: [...new Set([...(nextCache.buildDependencies?.config ?? []), __filename])],
-      },
-      // Snapshot all node_modules as immutable by mtime — avoids hash-stat on
-      // every file (huge in this monorepo).
-      managedPaths: [
-        path.resolve(__dirname, 'node_modules'),
-        path.resolve(__dirname, '../node_modules'),
-      ],
-    };
+    // Production cache packs reached 16 GB even with a one-day maxAge. Loading
+    // and rewriting them alongside the live module graph exhausted a 16 GB CI
+    // runner plus 11 GB of swap. A one-shot production compiler must release
+    // modules instead of retaining a second copy for the next build. Nx still
+    // caches the upstream package builds; development keeps its filesystem cache.
+    if (!dev) {
+      config.cache = false;
+    } else {
+      // Preserve Next's cache version and maxMemoryGenerations: 0, since Next
+      // manages development's in-memory cache itself.
+      const nextCache = typeof config.cache === 'object' && config.cache !== null ? config.cache : {};
+      config.cache = {
+        ...nextCache,
+        type: 'filesystem',
+        cacheDirectory: path.join(__dirname, 'node_modules/.cache/webpack'),
+        buildDependencies: {
+          ...nextCache.buildDependencies,
+          config: [...new Set([...(nextCache.buildDependencies?.config ?? []), __filename])],
+        },
+        managedPaths: [
+          path.resolve(__dirname, 'node_modules'),
+          path.resolve(__dirname, '../node_modules'),
+        ],
+      };
+    }
 
     // Add support for importing from ee/server/src using absolute paths
     // and ensure packages from root workspace are resolved
@@ -620,9 +650,17 @@ const nextConfig = {
       '@alga-psa/core/rateLimit': usePrebuilt
         ? path.join(prebuiltDirAbs('core'), 'lib/rateLimit/index.js')
         : path.join(__dirname, '../packages/core/src/lib/rateLimit/index.ts'),
+      '@alga-psa/core/fileNames': usePrebuilt
+        ? path.join(prebuiltDirAbs('core'), 'lib/fileNames.js')
+        : path.join(__dirname, '../packages/core/src/lib/fileNames.ts'),
+      '@alga-psa/core/net/safeFetch': usePrebuilt
+        ? path.join(prebuiltDirAbs('core'), 'lib/net/safeFetch.js')
+        : path.join(__dirname, '../packages/core/src/lib/net/safeFetch.ts'),
       '@alga-psa/core/': `${prebuiltDirAbs('core')}/`,
       '@alga-psa/validation': prebuiltDirAbs('validation'),
       '@alga-psa/validation/': `${prebuiltDirAbs('validation')}/`,
+      '@alga-psa/predicates': prebuiltDirAbs('predicates'),
+      '@alga-psa/predicates/': `${prebuiltDirAbs('predicates')}/`,
       '@alga-psa/formatting': prebuiltDirAbs('formatting'),
       '@alga-psa/formatting/': `${prebuiltDirAbs('formatting')}/`,
       '@alga-psa/event-schemas': prebuiltDirAbs('event-schemas'),
@@ -741,6 +779,9 @@ const nextConfig = {
       '@alga-psa/workflows/entry': isEE
         ? path.join(__dirname, '../ee/server/src/workflows/entry.tsx')
         : path.join(__dirname, '../packages/ee/src/workflows/entry.tsx'),
+      '@alga-psa/workflows/ticket-actions': isEE
+        ? path.join(__dirname, '../ee/server/src/workflows/createFromTicket/entry.tsx')
+        : path.join(__dirname, '../packages/ee/src/workflows/createFromTicket/entry.tsx'),
       // user-activities workflow-task seam (EE-only source) — CE stubs / EE impls.
       '@alga-psa/user-activities/server/workflow-tasks': isEE
         ? path.join(__dirname, '../ee/server/src/user-activities/workflowTasks.server.ts')
@@ -802,6 +843,10 @@ const nextConfig = {
       const pkgMcpEntry = path.join(__dirname, '../packages/product-mcp/entry.ts');
       const pkgMcpEeEntry = path.join(__dirname, '../packages/product-mcp/ee/entry.ts');
       config.resolve.alias[pkgMcpEntry] = pkgMcpEeEntry;
+
+      const pkgServicePrincipalsEntry = path.join(__dirname, '../packages/product-service-principals/entry.ts');
+      const pkgServicePrincipalsEeEntry = path.join(__dirname, '../packages/product-service-principals/ee/entry.ts');
+      config.resolve.alias[pkgServicePrincipalsEntry] = pkgServicePrincipalsEeEntry;
 
       const pkgEmailDomainsEntry = path.join(__dirname, '../packages/integrations/src/email/domains/entry.ts');
       const pkgEmailDomainsEeEntry = path.join(__dirname, '../packages/integrations/src/email/domains/ee/entry.ts');
@@ -1060,6 +1105,13 @@ const nextConfig = {
             path.join(__dirname, '../packages/product-mcp/oss/entry.ts')
           )
         );
+        // Same CE force for the service-principal seam (no EE source in CE).
+        config.plugins.push(
+          new webpack.NormalModuleReplacementPlugin(
+            /^@product[\\\/]service-principals[\\\/]entry$/,
+            path.join(__dirname, '../packages/product-service-principals/oss/entry.ts')
+          )
+        );
       }
     }
 
@@ -1072,6 +1124,7 @@ const nextConfig = {
         const cePackagesEeRegex = new RegExp(cePackagesEePrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
         const eeSrcRoot = path.join(__dirname, '../ee/server/src') + path.sep;
         const workflowsEeEntry = path.join(__dirname, '../ee/server/src/workflows/entry.tsx');
+        const workflowsCreateFromTicketEeEntry = path.join(__dirname, '../ee/server/src/workflows/createFromTicket/entry.tsx');
         const userActivitiesWorkflowTasksServerEe = path.join(__dirname, '../ee/server/src/user-activities/workflowTasks.server.ts');
         const userActivitiesWorkflowTaskActionsServerEe = path.join(__dirname, '../ee/server/src/user-activities/workflowTaskActions.server.ts');
         const userActivitiesWorkflowTasksClientEe = path.join(__dirname, '../ee/server/src/user-activities/workflowTasks.client.tsx');
@@ -1089,6 +1142,12 @@ const nextConfig = {
             path.join(__dirname, '../packages/product-mcp/ee/entry.ts')
           )
         );
+        config.plugins.push(
+          new webpack.NormalModuleReplacementPlugin(
+            /^@product[\\\/]service-principals[\\\/]entry$/,
+            path.join(__dirname, '../packages/product-service-principals/ee/entry.ts')
+          )
+        );
         config.plugins.push(new webpack.NormalModuleReplacementPlugin(/.*/, (resource) => {
           try {
             const req = resource.request || '';
@@ -1099,6 +1158,10 @@ const nextConfig = {
             // Force consistency by rewriting the workflows entry specifier to the canonical EE source file *before* resolution.
             if (req === '@alga-psa/workflows/entry') {
               resource.request = workflowsEeEntry;
+              return;
+            }
+            if (req === '@alga-psa/workflows/ticket-actions') {
+              resource.request = workflowsCreateFromTicketEeEntry;
               return;
             }
             // user-activities workflow-task seam: it's a real package export, so without
@@ -1259,6 +1322,16 @@ const nextConfig = {
     // OOMs in CI.
     cpus: buildCpus,
     ...(memoryBasedWorkersCount ? { memoryBasedWorkersCount: true } : {}),
+    // Compile server, edge and client in separate worker processes, one after
+    // another, so each compiler's module graph and in-memory webpack cache
+    // (production keeps every entry: maxMemoryGenerations Infinity) is freed
+    // before the next starts. Next enables this by default only when the
+    // config has no custom `webpack` function, which ours has; without it all
+    // three compilers stack in one process and a warm cache that a branch
+    // partly invalidates pushed the EE build past CI's runner memory.
+    webpackBuildWorker: true,
+    // Intern shared source strings and avoid keeping both strings and buffers.
+    webpackMemoryOptimizations: true,
     // Disable server source maps (RSC + server actions). Build-only — does
     // not affect production error traces from Sentry or similar tools.
     serverSourceMaps: false,
@@ -1300,6 +1373,9 @@ const nextConfig = {
     'handlebars',
     'jsdom',
     'monaco-editor',
+    // The SDK generator transpiles with the compiler API at runtime; keep it
+    // on disk so `ts.sys` can still read the default lib .d.ts files.
+    'typescript',
     '@js-temporal/polyfill',
     'pdfkit',
     'sharp',
@@ -1333,6 +1409,8 @@ const nextConfig = {
     'bcryptjs',
     'speakeasy',
     'qrcode',
+    // Barcode node (label rendering): server-only; loaded via bwip-js/node from barcode/encode.server.ts.
+    'bwip-js',
     'pdf-lib',
     'pdf2pic',
     'marked',
@@ -1344,6 +1422,9 @@ const nextConfig = {
     // out of the Turbopack server bundle that every static-gen worker loads.
     'nodemailer',
     'imapflow',
+    // Reached from the ticket email-html route (archived .eml → display HTML);
+    // a CJS Node parser with no business in a bundle.
+    'mailparser',
     'express',
     'fluent-ffmpeg',
     'tar',

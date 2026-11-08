@@ -535,6 +535,7 @@
         "renewal": "data decyzji o odnowieniu umowy",
         "contractEnd": "data zakończenia umowy",
         "warrantyEnd": "data zakończenia gwarancji zasobu",
+        "maintenanceDue": "data terminu przeglądu zasobu",
         "ticketStatusAge": "dzień, w którym zgłoszenie osiąga liczbę dni w statusie"
       }
     }
@@ -565,7 +566,8 @@
       "exportCsv": "Eksportuj CSV",
       "exportJson": "Eksportuj JSON",
       "close": "Zamknij",
-      "viewRunDetails": "Zobacz szczegóły uruchomienia"
+      "viewRunDetails": "Zobacz szczegóły uruchomienia",
+      "backToEvents": "Wróć do zdarzeń"
     },
     "table": {
       "schemaConflict": "katalog ≠ zgłoszenie",
@@ -627,7 +629,8 @@
     },
     "actions": {
       "refresh": "Odśwież",
-      "loadMore": "Załaduj więcej"
+      "loadMore": "Załaduj więcej",
+      "backToList": "Wróć do kolejki martwych komunikatów"
     },
     "table": {
       "columns": {
@@ -793,6 +796,7 @@
       "dateSourceRenewal": "Data decyzji o odnowieniu umowy",
       "dateSourceContractEnd": "Data zakończenia umowy",
       "dateSourceWarranty": "Koniec gwarancji zasobu",
+      "dateSourceMaintenanceDue": "Przegląd zasobu do wykonania",
       "dateOffset": "Dni",
       "dateDirection": "Moment",
       "before": "Przed",
@@ -879,6 +883,7 @@
       "add": "Dodaj",
       "remove": "Usuń",
       "empty": "Brak mapowań.",
+      "nameRequired": "Wpisz nazwę tego mapowania.",
       "expressionLabel": "Wyrażenie"
     },
     "schemaForm": {
@@ -1062,6 +1067,26 @@
           "label": "Wyświetl przestrzenie nazw powiązań",
           "description": "Wyświetl przestrzenie nazw powiązań encji workflow używane przez tego tenanta."
         }
+      },
+      "assets.get_maintenance": {
+        "label": "Pobierz konserwację zasobu",
+        "description": "Znajdź plan i wystąpienie według planu, wystąpienia lub powiązanego zgłoszenia."
+      },
+      "assets.create_maintenance_ticket": {
+        "label": "Utwórz zgłoszenie konserwacji",
+        "description": "Utwórz i powiąż zgłoszenie dla otwartego wystąpienia konserwacji."
+      },
+      "assets.complete_maintenance": {
+        "label": "Zakończ konserwację zasobu",
+        "description": "Zapisz konserwację i otwórz następne wystąpienie."
+      },
+      "assets.skip_maintenance": {
+        "label": "Pomiń konserwację zasobu",
+        "description": "Pomiń wystąpienie z podaniem powodu i otwórz następne."
+      },
+      "assets.set_maintenance_paused": {
+        "label": "Wstrzymaj lub wznów konserwację",
+        "description": "Wstrzymaj lub wznów plan konserwacji."
       }
     },
     "validation": {
@@ -1285,6 +1310,10 @@
         "data-store": {
           "label": "Magazyn danych",
           "description": "Odczytuj i zapisuj trwały stan workflow między uruchomieniami."
+        },
+        "maintenance": {
+          "label": "Konserwacja",
+          "description": "Znajduj konserwacje, łącz zgłoszenia, kończ lub pomijaj wystąpienia oraz wstrzymuj lub wznawiaj plany."
         }
       },
       "noMatches": {
@@ -1476,6 +1505,9 @@
         "contains": "zawiera",
         "starts_with": "zaczyna się od",
         "ends_with": "kończy się na",
+        "not_contains": "nie zawiera",
+        "not_starts_with": "nie zaczyna się od",
+        "not_ends_with": "nie kończy się na",
         "is_empty": "jest puste",
         "is_not_empty": "nie jest puste"
       },
@@ -1591,6 +1623,9 @@
         "client_id": "Proszę najpierw wybrać stałego klienta, aby wczytać opcje lokalizacji."
       },
       "ticket-category": {
+        "board_id": "Proszę najpierw wybrać stałą tablicę, aby wczytać opcje kategorii."
+      },
+      "ticket-category-any": {
         "board_id": "Proszę najpierw wybrać stałą tablicę, aby wczytać opcje kategorii."
       },
       "ticket-status": {
@@ -2377,7 +2412,12 @@
       "currentRun": "Uruchomienie {{id}}",
       "backToWorkflow": "Wróć do workflow"
     },
-    "title": "Studio uruchamiania workflow"
+    "title": "Studio uruchamiania workflow",
+    "communityEdition": {
+      "title": "Funkcja Pro",
+      "description": "Studio uruchomień workflow jest dostępne tylko w Pro.",
+      "runId": "ID uruchomienia: {{runId}}"
+    }
   },
   "schedules": {
     "common": {
@@ -3150,6 +3190,10 @@
         "selectBoard": "Wybierz lub wprowadź tablicę",
         "selectPriority": "Wybierz lub wprowadź priorytet"
       }
+    },
+    "proFeature": {
+      "title": "Funkcja Pro",
+      "description": "System workflow jest dostępny tylko w Pro. Uaktualnij swoją instalację, aby uzyskać dostęp do tej funkcji."
     }
   },
   "toggle": {
@@ -3288,5 +3332,29 @@
       "label": "Przekroczono głębokość przyczynowości",
       "hint": "Łańcuch wywołanych zdarzeń przekroczył maksymalną głębokość; pominięto, aby zapobiec niekontrolowanym pętlom."
     }
+  },
+  "createFromTicket": {
+    "title": "Utwórz workflow ze zgłoszenia",
+    "description": "Tworzy szkic workflow, którego pierwszy krok tworzy zgłoszenie takie jak #{{number}}. Nic nie zostaje opublikowane.",
+    "cancel": "Anuluj",
+    "creating": "Tworzenie…",
+    "submit": "Utwórz szkic i otwórz projektanta",
+    "nameLabel": "Nazwa workflow",
+    "triggerLabel": "Wyzwalacz",
+    "triggerManual": "Ręczny (uruchamiany na żądanie)",
+    "ticketCreatedWarning": "Ten workflow tworzy zgłoszenie, a nowe zgłoszenie ponownie uruchamia ten wyzwalacz. Przed publikacją dodaj warunek, aby uniknąć pętli.",
+    "includeLegend": "Uwzględnij ze zgłoszenia",
+    "propertiesAlways": "Tytuł, opis, klient, kontakt, tablica, kategoria i priorytet są zawsze uwzględniane.",
+    "includeAssignment": "Przypisanie",
+    "includeTags": "Tagi",
+    "includeCustomFields": "Pola niestandardowe",
+    "includeChecklist": "Lista kontrolna",
+    "errors": {
+      "nameRequired": "Nazwa workflow jest wymagana",
+      "generic": "Nie udało się utworzyć szkicu workflow"
+    },
+    "includeCustomFieldsCount": "Pola niestandardowe ({{n}})",
+    "includeChecklistCount": "Lista kontrolna ({{total}} pozycji: {{templates}} z szablonów / {{adHoc}} doraźnych)",
+    "checklistTemplateNote": "Pozycje z szablonów są stosowane ponownie z bieżącego szablonu, więc zmiany wprowadzone w tym zgłoszeniu nie są przenoszone."
   }
 }

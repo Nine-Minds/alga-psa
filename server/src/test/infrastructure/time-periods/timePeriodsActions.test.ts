@@ -63,7 +63,9 @@ describe('Time Periods Actions', () => {
     await context.reset();
 
     // Set up mocks
-    setupCommonMocks({ tenantId: context.tenantId });
+    // The period actions are gated on `time_period:*`; the fixture user carries no
+    // roles, so grant the checks here and let the permission suites cover refusals.
+    setupCommonMocks({ tenantId: context.tenantId, permissionCheck: () => true });
 
     // Create time period settings
     timePeriodSettingsId = uuidv4();

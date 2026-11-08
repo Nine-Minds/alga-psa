@@ -86,9 +86,9 @@ export function ActivitiesTableFilters({
     { value: ActivityType.TICKET, label: t('filters.activityTypeOptions.ticket', { defaultValue: 'Tickets' }) },
     { value: ActivityType.WORKFLOW_TASK, label: t('filters.activityTypeOptions.workflowTask', { defaultValue: 'Workflow Tasks' }) },
   ];
-  const [selectedPriorityId, setSelectedPriorityId] = useState<string>(
-    filters.priorityIds?.[0] || 'all'
-  );
+  // Derived from props so it follows filters that change from outside (view switches, late
+  // preference hydration) instead of going stale as seeded-once local state.
+  const selectedPriorityId = filters.priorityIds?.[0] ?? 'all';
   const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientClientTypeFilter, setClientClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
 
@@ -107,7 +107,6 @@ export function ActivitiesTableFilters({
   // -------- Handlers -------------------------------------------------------
 
   const handleReset = useCallback(() => {
-    setSelectedPriorityId('all');
     onChange({
       types: DEFAULT_TABLE_TYPES,
       isClosed: false,
@@ -146,7 +145,6 @@ export function ActivitiesTableFilters({
       const stillFilterable =
         newTypes.length === 1 && PRIORITY_FILTERABLE_TYPES.has(newTypes[0]);
       if (!stillFilterable) {
-        setSelectedPriorityId('all');
         delete next.priorityIds;
       }
 
@@ -157,7 +155,6 @@ export function ActivitiesTableFilters({
 
   const handlePriorityChange = useCallback(
     (value: string) => {
-      setSelectedPriorityId(value);
       const next: ActivityFiltersType = {
         ...filters,
         priorityIds: value && value !== 'all' ? [value] : undefined,

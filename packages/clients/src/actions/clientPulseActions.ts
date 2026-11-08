@@ -3,9 +3,12 @@
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { toCalendarDateString } from '@alga-psa/core';
+import { deriveClientContractStatus, getTenantLocalToday } from '@alga-psa/shared/billingClients';
 import type { Knex } from 'knex';
 import { toClientSinceDate } from '../lib/clientSince';
 import { getContactAvatarUrlsBatchAsync } from '../lib/documentsHelpers';
+import { getContactCountsByLocation } from '../models/contactLocation';
 import {
   actionError,
   permissionError,
@@ -288,6 +291,10 @@ async function fetchLocations(
     .orderBy('is_default', 'desc')
     .orderBy('location_name', 'asc');
 
+  // One batched, tenant-scoped count for the page so the tile states who works where without the
+  // reader having to open Manage Locations.
+  const contactCounts = await getContactCountsByLocation(trx, tenant, rows.map((row: any) => row.location_id));
+
   return rows.map((row: any) => ({
     location_id: row.location_id,
     location_name: row.location_name ?? null,
@@ -300,6 +307,7 @@ async function fetchLocations(
     is_default: Boolean(row.is_default),
     is_billing: Boolean(row.is_billing_address),
     is_shipping: Boolean(row.is_shipping_address),
+    contact_count: contactCounts.get(row.location_id) ?? 0,
   }));
 }
 
@@ -631,16 +639,22 @@ async function fetchMoney(
   clientId: string,
   nowMs: number,
 ): Promise<{ money: ClientPulseMoney; flags: ClientAttentionFlag[] }> {
+  // The aggregate carries `tenant` so the join below can match on the
+  // distribution key: without it Citus cannot push the join down to a single
+  // shard and opens a connection to another node mid-transaction, which is how
+  // this query started failing in production once that node hit its ceiling.
   const completedPayments = trx('invoice_payments')
     .where({ tenant, status: COMPLETED_PAYMENT_STATUS })
-    .groupBy('invoice_id')
-    .select('invoice_id')
+    .groupBy('tenant', 'invoice_id')
+    .select('tenant', 'invoice_id')
     .sum({ paid_amount: 'amount' })
     .as('ip');
 
-  const [invoiceRows, draftRows, draftAggRow, contractCountRow, currencyRow, timeWipRow, ticketMaterialWipRow, projectMaterialWipRow] = await Promise.all([
+  const [invoiceRows, draftRows, draftAggRow, contractAssignments, tenantToday, currencyRow, timeWipRow, ticketMaterialWipRow, projectMaterialWipRow] = await Promise.all([
     trx('invoices as i')
-      .leftJoin(completedPayments, 'ip.invoice_id', 'i.invoice_id')
+      .leftJoin(completedPayments, function joinCompletedPayments() {
+        this.on('ip.invoice_id', '=', 'i.invoice_id').andOn('ip.tenant', '=', 'i.tenant');
+      })
       .where({ 'i.tenant': tenant, 'i.client_id': clientId })
       .andWhere(function finalizedPredicate() {
         this.whereNotNull('i.finalized_at').orWhere('i.status', '!=', 'draft');
@@ -672,10 +686,13 @@ async function fetchMoney(
       .count<{ count: string }>('invoice_id as count')
       .sum({ total: 'total_amount' })
       .first(),
-    trx('contracts')
-      .where({ tenant, owner_client_id: clientId, status: 'active' })
-      .count<{ count: string }>('contract_id as count')
-      .first(),
+    trx('client_contracts as cc')
+      .join('contracts as c', function joinContracts() {
+        this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
+      })
+      .where({ 'cc.tenant': tenant, 'cc.client_id': clientId, 'cc.is_active': true, 'c.owner_client_id': clientId })
+      .select('cc.contract_id', 'cc.is_active', 'cc.start_date', 'cc.end_date', 'c.status as contract_status'),
+    getTenantLocalToday(trx, tenant),
     trx('invoices')
       .where({ tenant, client_id: clientId })
       .whereNotNull('currency_code')
@@ -735,6 +752,24 @@ async function fetchMoney(
       )
       .first(),
   ]);
+
+  const activeContractIds = new Set<string>();
+  for (const assignment of contractAssignments as Array<{
+    contract_id: string;
+    is_active: boolean;
+    start_date: string | Date | null;
+    end_date: string | Date | null;
+    contract_status: string;
+  }>) {
+    const status = deriveClientContractStatus({
+      isActive: assignment.is_active,
+      startDate: toCalendarDateString(assignment.start_date),
+      endDate: toCalendarDateString(assignment.end_date),
+      contractStatus: assignment.contract_status,
+      now: tenantToday,
+    });
+    if (status === 'active') activeContractIds.add(assignment.contract_id);
+  }
 
   // Aging is bucketed per billing profile and rolled up (F113, F115). The
   // client totals below are the sum of the rows, computed from the same
@@ -818,7 +853,7 @@ async function fetchMoney(
       unpaidInvoiceCount,
       draftInvoices,
       draftInvoiceCount,
-      activeContractCount: toNumber(contractCountRow?.count),
+      activeContractCount: activeContractIds.size,
       currencyCode: (currencyRow as any)?.currency_code ?? 'USD',
       wip,
     },
@@ -990,6 +1025,37 @@ async function fetchDocuments(
 }
 
 /**
+ * One optional section, isolated: when it fails the screen loses that card
+ * instead of the whole snapshot.
+ *
+ * The savepoint is what makes that possible. A bare try/catch would not be
+ * enough — a failed statement aborts the enclosing Postgres transaction, so
+ * every later section's query would fail too and the caller would still get
+ * nothing. For the same reason the sections run one at a time: ROLLBACK TO
+ * SAVEPOINT also discards every savepoint opened after it, and interleaved
+ * sections would tear down each other's. They share the transaction's single
+ * connection either way, so nothing is lost by sequencing them.
+ */
+async function optionalSection<T>(
+  trx: Knex.Transaction,
+  section: string,
+  fetch: () => Promise<T>,
+): Promise<T | null> {
+  const savepoint = `client_pulse_${section}`;
+  await trx.raw(`SAVEPOINT ${savepoint}`);
+  try {
+    const result = await fetch();
+    await trx.raw(`RELEASE SAVEPOINT ${savepoint}`);
+    return result;
+  } catch (error) {
+    await trx.raw(`ROLLBACK TO SAVEPOINT ${savepoint}`);
+    await trx.raw(`RELEASE SAVEPOINT ${savepoint}`);
+    console.error(`[getClientPulse] ${section} section unavailable; serving the pulse without it:`, error);
+    return null;
+  }
+}
+
+/**
  * Aggregated, RBAC-shaped snapshot powering the client command center.
  * Contract: ee/docs/plans/2026-07-02-client-command-center/PRD.md (D5/D6/D8).
  *
@@ -1061,20 +1127,27 @@ export const getClientPulse = withAuth(async (
       locations,
       record,
       notes,
-      serviceResult,
-      moneyResult,
-      installBaseResult,
-      documents,
     ] = await Promise.all([
       fetchPeople(trx, tenant, clientId, defaultContactId),
       fetchLocations(trx, tenant, clientId),
       fetchRecord(trx, tenant, clientRow, defaultContactId),
       fetchNotes(trx, tenant, clientRow.notes_document_id ?? null, clientRow.notes ?? null),
-      canReadTickets ? fetchService(trx, tenant, clientId, nowMs) : Promise.resolve(null),
-      canReadBilling ? fetchMoney(trx, tenant, clientId, nowMs) : Promise.resolve(null),
-      canReadInventory ? fetchInstallBase(trx, tenant, clientId, canReadAssets, nowMs) : Promise.resolve(null),
-      canReadDocuments ? fetchDocuments(trx, tenant, clientId) : Promise.resolve(null),
     ]);
+
+    // Each optional section degrades on its own (see optionalSection): one
+    // broken rollup costs the client screen a card, not the whole page.
+    const serviceResult = canReadTickets
+      ? await optionalSection(trx, 'service', () => fetchService(trx, tenant, clientId, nowMs))
+      : null;
+    const moneyResult = canReadBilling
+      ? await optionalSection(trx, 'money', () => fetchMoney(trx, tenant, clientId, nowMs))
+      : null;
+    const installBaseResult = canReadInventory
+      ? await optionalSection(trx, 'install_base', () => fetchInstallBase(trx, tenant, clientId, canReadAssets, nowMs))
+      : null;
+    const documents = canReadDocuments
+      ? await optionalSection(trx, 'documents', () => fetchDocuments(trx, tenant, clientId))
+      : null;
 
     const attention = sortAttention([
       ...(serviceResult?.flags ?? []),

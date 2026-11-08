@@ -79,6 +79,7 @@ export interface MigrationConfigurationOptions {
   priorities: Array<{ id: string; name: string }>;
   assetTypes: Array<{ slug: string; name: string; isBuiltin: boolean; fields: AssetTypeField[] }>;
   clients: Array<{ id: string; name: string }>;
+  serviceTypes: Array<{ id: string; name: string }>;
   users: Array<{ id: string; name: string }>;
   packageStatusNames: string[];
   packagePriorityNames: string[];
@@ -115,7 +116,7 @@ export async function loadMigrationConfigurationOptions(
     return rows.map((row: { value: string }) => row.value);
   };
 
-  const [boards, statuses, priorities, assetTypes, clients, users, stagedTypes] = await Promise.all([
+  const [boards, statuses, priorities, assetTypes, clients, serviceTypes, users, stagedTypes] = await Promise.all([
     db.table('boards').select('board_id', 'board_name').orderBy('board_name'),
     db
       .table('statuses')
@@ -125,6 +126,7 @@ export async function loadMigrationConfigurationOptions(
     db.table('priorities').select('priority_id', 'priority_name').orderBy('order_number'),
     db.table('asset_type_registry').select('slug', 'name', 'is_builtin', 'fields_schema').orderBy('name'),
     db.table('clients').where({ is_inactive: false }).select('client_id', 'client_name').orderBy('client_name'),
+    db.table('service_types').where({ is_active: true }).select('id', 'name').orderBy('name'),
     db
       .table('users')
       .where({ is_inactive: false })
@@ -161,6 +163,7 @@ export async function loadMigrationConfigurationOptions(
       fields: (typeof row.fields_schema === 'string' ? JSON.parse(row.fields_schema) : row.fields_schema ?? []) as AssetTypeField[],
     })),
     clients: clients.map((row) => ({ id: row.client_id, name: row.client_name })),
+    serviceTypes: serviceTypes.map((row) => ({ id: row.id, name: row.name })),
     users: users.map((row) => ({
       id: row.user_id,
       name: [row.first_name, row.last_name].filter(Boolean).join(' '),
@@ -212,7 +215,12 @@ export async function preflightMigrationJob(migrationJobId: string): Promise<Pre
   if (!job) {
     throw new Error('Migration job not found');
   }
-  if (!['needs_configuration', 'blocked', 'ready'].includes(job.state)) {
+  // A job left in 'preflighting' by a crashed or killed request would otherwise
+  // be un-preflightable forever, so a stale one may be re-run.
+  const staleAfterMs = 5 * 60 * 1000;
+  const staleInFlight =
+    job.state === 'preflighting' && Date.now() - new Date(job.updated_at).getTime() > staleAfterMs;
+  if (!['needs_configuration', 'blocked', 'ready'].includes(job.state) && !staleInFlight) {
     throw new Error(`Job in state ${job.state} cannot be preflighted.`);
   }
 
@@ -221,8 +229,23 @@ export async function preflightMigrationJob(migrationJobId: string): Promise<Pre
     .where({ migration_job_id: migrationJobId })
     .update({ state: 'preflighting', updated_at: knex.fn.now() });
 
-  const planner = new MigrationPlanner(knex, tenant);
-  return planner.preflight(migrationJobId);
+  try {
+    const planner = new MigrationPlanner(knex, tenant);
+    return await planner.preflight(migrationJobId);
+  } catch (error) {
+    // The planner resets per-record blocks before it can fail, so any prior
+    // plan is no longer trustworthy; send the job back to be preflighted again
+    // rather than leaving it spinning in 'preflighting'.
+    try {
+      await db
+        .table('migration_jobs')
+        .where({ migration_job_id: migrationJobId })
+        .update({ state: 'needs_configuration', preflighted_at: null, updated_at: knex.fn.now() });
+    } catch (revertError) {
+      console.error('[migrations] failed to revert job state after preflight failure', revertError);
+    }
+    throw error;
+  }
 }
 
 export async function executeMigrationJob(migrationJobId: string): Promise<{ jobId: string }> {

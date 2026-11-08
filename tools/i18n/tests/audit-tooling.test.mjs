@@ -44,6 +44,25 @@ test('Swedish default time-entry service settings have localized copy at both sc
   }
 });
 
+test('pseudo-localized co-managed ticket copy resolves with the same keys as English', () => {
+  const readTicketCopy = (locale) => {
+    const pack = JSON.parse(readFileSync(new URL(
+      `../../../server/public/locales/${locale}/msp/licensing.json`, import.meta.url,
+    ), 'utf8'));
+    return collectLeaves(pack.coManaged?.ticket ?? {});
+  };
+  const english = readTicketCopy('en');
+  assert.ok(english.size > 0, 'expected English co-managed ticket copy');
+
+  for (const locale of ['xx', 'yy']) {
+    assert.deepEqual(
+      [...readTicketCopy(locale).keys()].sort(),
+      [...english.keys()].sort(),
+      `${locale}: every co-managed ticket label must resolve in pseudo-localized UI`,
+    );
+  }
+});
+
 test('French audit accepts the cognate Question but rejects English question prose', (t) => {
   const root = mkdtempSync(join(tmpdir(), 'question-audit-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
@@ -75,6 +94,21 @@ for (const locale of ['fr', 'nl']) {
     assert.deepEqual(result.structuralErrors, []);
     assert.deepEqual(result.untranslated, []);
     assert.deepEqual(result.forbiddenViolations, []);
+  });
+}
+
+for (const locale of ['es', 'nl']) {
+  test(`${locale} shared-project unavailable copy follows the formal register`, () => {
+    const { report } = runAudit({
+      locale,
+      namespaceFilter: new Set(['msp/licensing']),
+      writeReport: false,
+    });
+    const namespace = report.namespaces[0];
+    assert.equal(namespace.keyCount > 0, true);
+    assert.deepEqual(namespace.structuralErrors, []);
+    assert.deepEqual(namespace.untranslated, []);
+    assert.deepEqual(namespace.forbiddenViolations, []);
   });
 }
 
@@ -120,7 +154,7 @@ for (const locale of ['pt', 'es', 'fr', 'it']) {
   });
 }
 
-for (const namespace of ['client-portal', 'msp/contacts']) {
+for (const namespace of ['client-portal', 'msp/contacts', 'msp/licensing']) {
   test(`Brazilian Portuguese ${namespace} copy passes the locale quality audit`, () => {
     const { report } = runAudit({
       locale: 'pt',
@@ -303,4 +337,20 @@ test('untranslated UI JSON output drains before exit', () => {
   const report = JSON.parse(result.stdout);
   assert.equal(Array.isArray(report.high), true);
   assert.equal(Array.isArray(report.partial), true);
+});
+
+test('inventory pack passes the audit in every locale, with the RMA {{id}} title kept verbatim', () => {
+  const registry = JSON.parse(readFileSync(new URL('../locales.registry.json', import.meta.url), 'utf8'));
+  for (const locale of Object.keys(registry)) {
+    const pack = JSON.parse(readFileSync(new URL(
+      `../../../server/public/locales/${locale}/features/inventory.json`, import.meta.url,
+    ), 'utf8'));
+    assert.equal(pack.rma.detail.title, 'RMA {{id}}', `${locale}: RMA acronym title stays identical`);
+
+    const { report } = runAudit({ locale, namespaceFilter: new Set(['features/inventory']), writeReport: false });
+    assert.equal(report.namespaces.length, 1, `${locale}: expected the inventory namespace`);
+    const [inventory] = report.namespaces;
+    assert.deepEqual(inventory.untranslated, [], `${locale}: English left in inventory`);
+    assert.deepEqual(inventory.forbiddenViolations, [], `${locale}: glossary violations in inventory`);
+  }
 });

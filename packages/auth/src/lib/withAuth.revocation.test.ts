@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({
   edgeAuth: vi.fn(),
   fullAuth: vi.fn(),
   getUserWithRoles: vi.fn(),
-  isRevokedOrIdentityMismatch: vi.fn(),
+  getRejectionReason: vi.fn(),
   runWithTenant: vi.fn(),
 }));
 
@@ -27,12 +27,13 @@ vi.mock('../nextauth/auth', () => ({
 
 vi.mock('@alga-psa/db/models/UserSession', () => ({
   UserSession: {
-    isRevokedOrIdentityMismatch: mocks.isRevokedOrIdentityMismatch,
+    getRejectionReason: mocks.getRejectionReason,
   },
 }));
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(),
+  noteTenantProductCode: vi.fn(),
   getUserWithRoles: mocks.getUserWithRoles,
   getUserWithRolesByEmail: vi.fn(),
   runWithTenant: mocks.runWithTenant,
@@ -62,7 +63,7 @@ beforeEach(() => {
 describe('withAuth durable session enforcement', () => {
   it('rejects a revoked JWT before the wrapped action runs', async () => {
     mocks.fullAuth.mockResolvedValue(trackedSession);
-    mocks.isRevokedOrIdentityMismatch.mockResolvedValue(true);
+    mocks.getRejectionReason.mockResolvedValue('revoked');
     const action = vi.fn();
     const wrapped = withAuth(action);
 
@@ -70,7 +71,7 @@ describe('withAuth durable session enforcement', () => {
 
     expect(mocks.fullAuth).toHaveBeenCalledOnce();
     expect(mocks.edgeAuth).not.toHaveBeenCalled();
-    expect(mocks.isRevokedOrIdentityMismatch).toHaveBeenCalledWith(
+    expect(mocks.getRejectionReason).toHaveBeenCalledWith(
       'tenant-1',
       'session-1',
       { userId: 'user-1', userType: 'internal' }
@@ -94,14 +95,14 @@ describe('withAuth durable session enforcement', () => {
 
     expect(mocks.fullAuth).toHaveBeenCalledOnce();
     expect(mocks.edgeAuth).not.toHaveBeenCalled();
-    expect(mocks.isRevokedOrIdentityMismatch).not.toHaveBeenCalled();
+    expect(mocks.getRejectionReason).not.toHaveBeenCalled();
     expect(mocks.getUserWithRoles).not.toHaveBeenCalled();
     expect(action).not.toHaveBeenCalled();
   });
 
   it('authorizes a live tracked session through the full-auth-first path', async () => {
     mocks.fullAuth.mockResolvedValue(trackedSession);
-    mocks.isRevokedOrIdentityMismatch.mockResolvedValue(false);
+    mocks.getRejectionReason.mockResolvedValue(null);
     mocks.getUserWithRoles.mockResolvedValue({
       user_id: 'user-1',
       tenant: 'tenant-1',
@@ -115,7 +116,7 @@ describe('withAuth durable session enforcement', () => {
 
     expect(mocks.fullAuth).toHaveBeenCalledOnce();
     expect(mocks.edgeAuth).not.toHaveBeenCalled();
-    expect(mocks.isRevokedOrIdentityMismatch).toHaveBeenCalledWith(
+    expect(mocks.getRejectionReason).toHaveBeenCalledWith(
       'tenant-1',
       'session-1',
       { userId: 'user-1', userType: 'internal' }

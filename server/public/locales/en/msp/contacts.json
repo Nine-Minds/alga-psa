@@ -62,14 +62,17 @@
       "phoneNumber": "Phone Number",
       "client": "Client",
       "tags": "Tags",
-      "actions": "Actions"
+      "actions": "Actions",
+      "location": "Location"
     },
     "lastPhoneTypeUsage": {
       "title": "Last Phone Type Usage",
       "message_one": "The following custom phone type is no longer used by any contact: {{labels}}. Delete the type definition, or keep it for future use?",
       "message_other": "The following custom phone types are no longer used by any contact: {{labels}}. Delete the type definitions, or keep them for future use?",
       "deleteType": "Delete Type",
-      "keepType": "Keep Type"
+      "keepType": "Keep Type",
+      "message_few": "The following custom phone types are no longer used by any contact: {{labels}}. Delete the type definitions, or keep them for future use?",
+      "message_many": "The following custom phone types are no longer used by any contact: {{labels}}. Delete the type definitions, or keep them for future use?"
     },
     "print": {
       "title": "Contacts",
@@ -180,7 +183,10 @@
       "role": "Role",
       "notes": "Notes",
       "primaryEmailLabel": "Primary Email Label",
-      "additionalEmails": "Additional Email Addresses"
+      "additionalEmails": "Additional Email Addresses",
+      "workArrangement": "Work Arrangement",
+      "locations": "Locations",
+      "primaryLocation": "Primary Location"
     },
     "unassigned": "Select field",
     "errors": {
@@ -455,7 +461,9 @@
         "invitationNotFound": "Invitation not found or already used."
       },
       "userNotFound": "Client user not found"
-    }
+    },
+    "boardCount_few": "{{count}} boards",
+    "boardCount_many": "{{count}} boards"
   },
   "quickAddContact": {
     "title": "Add New Contact",
@@ -626,14 +634,17 @@
       "email": "Email",
       "phoneNumber": "Phone Number",
       "actions": "Actions",
-      "role": "Role"
+      "role": "Role",
+      "location": "Location"
     },
     "filter": {
       "show": "Show:",
       "active": "Active Contacts",
       "inactive": "Inactive Contacts",
       "all": "All Contacts",
-      "searchPlaceholder": "Search contacts..."
+      "searchPlaceholder": "Search contacts...",
+      "allLocations": "All locations",
+      "noLocation": "No location"
     },
     "actions": {
       "openMenu": "Open menu",
@@ -734,7 +745,70 @@
       "visibilityDuplicate": "A visibility group with these details already exists for this client.",
       "visibilityInvalidData": "Invalid visibility group data provided. Please check the group details and selected boards.",
       "groupNameRequired": "Group name is required",
-      "readPermission": "Permission denied: Cannot read contacts"
+      "readPermission": "Permission denied: Cannot read contacts",
+      "idRequired": "Contact ID is required",
+      "schemaError": "Database schema error - please contact support",
+      "readFailed": "An unexpected error occurred while retrieving contact information",
+      "deleteRecordFailed": "Contact record not found or could not be deleted",
+      "updateIdRequired": "Contact ID is required for updates",
+      "clientMissing": "The selected client no longer exists",
+      "destinationMissing": "The selected inbound ticket destination no longer exists",
+      "updateMissing": "The contact you are trying to update no longer exists",
+      "updateRecordMissing": "Contact update completed without returning the updated contact record",
+      "clientIdRequired": "Client ID is required",
+      "specifiedClientMissing": "The specified client does not exist",
+      "updateDataRequired": "No update data provided",
+      "emailInvalid": "Please enter a valid email address",
+      "bulkUpdateFailed": "Client contact update completed without modifying any contact records",
+      "updateFailed": "An unexpected error occurred while updating client contacts",
+      "importMultipleMatches": "Imported email addresses match multiple existing contacts",
+      "updatePermission": "Cannot update contacts",
+      "importDataRequired": "No contact data provided",
+      "fullNameRequired": "Full name is required",
+      "importFailed": "An unexpected error occurred while importing contacts",
+      "emailsRequired": "No email addresses provided",
+      "validEmailsRequired": "No valid email addresses provided",
+      "checkEmailsFailed": "An unexpected error occurred while checking existing emails",
+      "portalAdminRequired": "Client portal admin access is required",
+      "assignedGroupInvalid": "Assigned visibility group is invalid for this contact",
+      "groupNotFound": "Visibility group not found",
+      "boardsInvalid": "One or more boards are invalid for this tenant",
+      "groupCreateFailed": "Visibility group creation completed without returning a group id",
+      "groupInUse": "Cannot delete visibility group while it is assigned to contacts",
+      "importEmailInvalid": "Invalid email format for contact: {{name}}",
+      "importClientMissing": "Client not found for contact: {{name}}",
+      "invalidEmailValue": "Invalid email format: {{email}}",
+      "invalidData": "Invalid contact data",
+      "phoneExtensionInvalid": "Phone {{index}}: Please enter a valid phone extension",
+      "phoneNumberInvalid": "Phone {{index}}: Please enter a valid phone number",
+      "phoneCountryRequired": "Phone {{index}}: Include the country calling code, starting with +",
+      "tenantEmailExists": "A contact email address already exists in this tenant",
+      "importRowFailed": "Could not import this contact. Check required fields and client references.",
+      "deleteMissing": "The contact you are trying to delete no longer exists.",
+      "deleteFailed": "Unable to delete contact. Please try again.",
+      "deleteDependencies": "Cannot delete contact because it has associated records",
+      "connectionFailed": "Database connection issue. Please try again.",
+      "deleteUnexpected": "An unexpected error occurred while deleting the contact",
+      "importFileFailed": "Unable to import contacts. Please check the file and try again.",
+      "portalAdminUpdateFailed": "Unable to update portal admin status. Please refresh and try again.",
+      "userLoadFailed": "Failed to get user",
+      "sharedMailboxAdmin": "Shared mailbox contacts cannot be client admins.",
+      "createFailed": "An unexpected error occurred while creating the contact",
+      "importDuplicateEmail": "Contact with this email already exists: {{value}}",
+      "importDuplicateName": "Contact with this name already exists: {{value}}",
+      "permissions": {
+        "readContacts": "Cannot read contacts",
+        "deleteContacts": "Cannot delete contacts",
+        "createContacts": "Cannot create contacts",
+        "updateContacts": "Cannot update contacts",
+        "managePhoneTypes": "Cannot manage phone types",
+        "updateClientUsers": "You do not have permission to update client users",
+        "viewClientUsers": "You do not have permission to view client users"
+      },
+      "field": "field",
+      "locationClientMismatch": "That location belongs to another client.",
+      "importLocationUnknown": "Cannot import {{name}}: the location \"{{location}}\" does not exist for that client",
+      "importLocationNoClient": "Cannot import {{name}}: locations need a client on the same row"
     }
   },
   "portal": {
@@ -759,7 +833,54 @@
       "scopeSummaryAll": "All",
       "scopeSummaryOwn": "Own",
       "managerScopeNote_one": "Their view also includes records of {{count}} person who reports to them.",
-      "managerScopeNote_other": "Their view also includes records of {{count}} people who report to them."
+      "managerScopeNote_other": "Their view also includes records of {{count}} people who report to them.",
+      "managerScopeNote_few": "Their view also includes records of {{count}} people who report to them.",
+      "managerScopeNote_many": "Their view also includes records of {{count}} people who report to them."
+    }
+  },
+  "messages": {
+    "success": {
+      "updated": "Contact updated successfully",
+      "created": "Contact created successfully"
+    }
+  },
+  "csvTemplate": {
+    "explorerRole": "Chief Explorer",
+    "explorerNotes": "Fell down a rabbit hole and discovered a whole new world",
+    "explorerTags": "Curious, Adventurous, Brave",
+    "teaRole": "Chief Tea Ceremony Expert",
+    "teaNotes": "Knows why a raven is like a writing desk",
+    "teaTags": "Creative, Eccentric, Tea Expert"
+  },
+  "entraContactBadge": {
+    "lastSyncedTitle": "Microsoft Entra · last synced {{date}}",
+    "description": "This contact is kept in step with a directory account.",
+    "signInName": "Sign-in name: {{name}}",
+    "lastSynced": "Last synced {{date}}",
+    "deleted": "Inactive — the Microsoft account was deleted.",
+    "disabled": "Inactive — the Microsoft account is disabled."
+  },
+  "contactLocations": {
+    "locations": "Locations",
+    "addLocation": "Add location",
+    "workArrangement": "Work arrangement",
+    "primary": "Primary",
+    "none": "No locations",
+    "inactiveMarker": "(inactive)",
+    "extraCount": "+{{count}}",
+    "chooseClientFirst": "Choose a client first to pick its locations.",
+    "loading": "Loading locations…",
+    "noneForClient": "This client has no locations yet.",
+    "arrangement": {
+      "unset": "Not set",
+      "on_site": "On site",
+      "hybrid": "Hybrid",
+      "remote": "Remote"
+    },
+    "clientChange": {
+      "title": "Change client?",
+      "message": "This removes {{count}} location link(s). Locations belong to a client, so they cannot follow the contact.",
+      "confirm": "Change client"
     }
   }
 }

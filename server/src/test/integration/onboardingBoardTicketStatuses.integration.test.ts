@@ -117,6 +117,8 @@ function globalCatalogTable(table: string) {
 }
 
 async function cleanupTenant(tenantId: string) {
+  await tenantTable(tenantId, 'tickets').delete().catch(() => undefined);
+  await tenantTable(tenantId, 'clients').delete().catch(() => undefined);
   await tenantTable(tenantId, 'next_number').delete().catch(() => undefined);
   await tenantTable(tenantId, 'priorities').where({ item_type: 'ticket' }).delete().catch(() => undefined);
   await tenantTable(tenantId, 'statuses').delete().catch(() => undefined);
@@ -216,7 +218,7 @@ describe('Onboarding board-specific ticket statuses', () => {
     );
 
     const result = await configureTicketing(
-      { user_id: userId },
+      { user_id: userId, user_type: 'internal' },
       { tenant: tenantId },
       {
         boardName: 'Support',
@@ -283,7 +285,7 @@ describe('Onboarding board-specific ticket statuses', () => {
 
     await expect(
       validateOnboardingDefaults(
-        { user_id: userId },
+        { user_id: userId, user_type: 'internal' },
         { tenant: tenantId }
       )
     ).resolves.toMatchObject({ success: true });
@@ -304,7 +306,7 @@ describe('Onboarding board-specific ticket statuses', () => {
     );
 
     const result = await configureTicketing(
-      { user_id: userId },
+      { user_id: userId, user_type: 'internal' },
       { tenant: tenantId },
       {
         boardName: 'Invalid Email Board',
@@ -389,7 +391,7 @@ describe('Onboarding board-specific ticket statuses', () => {
     );
 
     const result = await importReferenceData(
-      { user_id: userId },
+      { user_id: userId, user_type: 'internal' },
       { tenant: tenantId },
       'statuses',
       standardStatuses.map((status) => status.standard_status_id),
@@ -415,5 +417,81 @@ describe('Onboarding board-specific ticket statuses', () => {
       .count<{ count: string }>('status_id as count')
       .first();
     expect(Number(boardAStatusCount?.count ?? 0)).toBe(1);
+  });
+
+  describe('ticket start number', () => {
+    async function configureStart(tenantId: string, userId: string, start: number) {
+      const { configureTicketing } = await import(
+        '../../../../packages/onboarding/src/actions/onboarding-actions/onboardingActions'
+      );
+      const result = await configureTicketing({ user_id: userId, user_type: 'internal' }, { tenant: tenantId }, {
+        boardName: 'Numbering', supportEmail: '', isDefaultBoard: true, categories: [], priorities: [],
+        ticketPrefix: 'T', ticketPaddingLength: 6, ticketStartNumber: start,
+        statuses: [{ name: 'Open', is_closed: false, is_default: true, order_number: 10 }],
+      });
+      expect(result.success).toBe(true);
+    }
+    const nextTicketNumber = async (tenantId: string) =>
+      (await db.raw("select generate_next_number(?, 'TICKET') as n", [tenantId])).rows[0].n as string;
+
+    it('does not rewind the counter over numbers existing tickets already hold', async () => {
+      // Rewinding the counter below numbers existing tickets already hold would
+      // hand those numbers out again.
+      const { tenantId, userId } = await seedTenantAndUser();
+      await tenantTable(tenantId, 'next_number').insert({ tenant: tenantId, entity_type: 'TICKET', last_number: 150, initial_value: 1, prefix: 'T', padding_length: 6 });
+      const clientId = uuidv4();
+      await tenantTable(tenantId, 'clients').insert({ tenant: tenantId, client_id: clientId, client_name: 'Requester org' });
+      await tenantTable(tenantId, 'tickets').insert({ tenant: tenantId, ticket_number: 'T000150', client_id: clientId, title: 'Escalated' });
+      await configureStart(tenantId, userId, 100);
+      expect(await nextTicketNumber(tenantId)).toBe('T000151');
+    });
+
+    it('still applies a lower start number before any ticket exists', async () => {
+      const { tenantId, userId } = await seedTenantAndUser();
+      await tenantTable(tenantId, 'next_number').insert({ tenant: tenantId, entity_type: 'TICKET', last_number: 150, initial_value: 1, prefix: 'T', padding_length: 6 });
+      await configureStart(tenantId, userId, 100);
+      expect(await nextTicketNumber(tenantId)).toBe('T000100');
+    });
+
+    it('applies the start number on a tenant with no counter row and no tickets', async () => {
+      const { tenantId, userId } = await seedTenantAndUser();
+      await configureStart(tenantId, userId, 100);
+      expect(await nextTicketNumber(tenantId)).toBe('T000100');
+    });
+
+    it('waits for an in-flight ticket number allocation instead of rewinding over it', async () => {
+      const { tenantId, userId } = await seedTenantAndUser();
+      await tenantTable(tenantId, 'next_number').insert({ tenant: tenantId, entity_type: 'TICKET', last_number: 150, initial_value: 1, prefix: 'T', padding_length: 6 });
+      const clientId = uuidv4();
+      await tenantTable(tenantId, 'clients').insert({ tenant: tenantId, client_id: clientId, client_name: 'Requester org' });
+
+      // Connection A allocates T000151 and holds the allocator's advisory lock
+      // without having stored the ticket yet.
+      let releaseA!: () => void;
+      const aHolds = new Promise<void>((resolve) => { releaseA = resolve; });
+      let aAllocated!: () => void;
+      const aReady = new Promise<void>((resolve) => { aAllocated = resolve; });
+      const connectionA = db.transaction(async (trx) => {
+        const allocated = (await trx.raw("select generate_next_number(?, 'TICKET') as n", [tenantId])).rows[0].n;
+        expect(allocated).toBe('T000151');
+        aAllocated();
+        await aHolds;
+        await tenantDb(trx, tenantId).table('tickets').insert({ tenant: tenantId, ticket_number: allocated, client_id: clientId, title: 'In flight' });
+      });
+      await aReady;
+
+      // No ticket row exists yet, so only the lock stops setup from probing an
+      // empty tenant, concluding a rewind is safe, and reissuing T000151.
+      // Connection B (setup) must wait for A.
+      let setupFinished = false;
+      const connectionB = configureStart(tenantId, userId, 100).then(() => { setupFinished = true; });
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      expect(setupFinished).toBe(false);
+
+      releaseA();
+      await connectionA;
+      await connectionB;
+      expect(await nextTicketNumber(tenantId)).toBe('T000152');
+    });
   });
 });

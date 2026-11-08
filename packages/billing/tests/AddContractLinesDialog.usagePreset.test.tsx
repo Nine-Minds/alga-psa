@@ -13,6 +13,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const actionMocks = vi.hoisted(() => ({
   getContractLinePresets: vi.fn(),
+  getContractLinePresetServiceCounts: vi.fn(),
   getContractLinePresetServices: vi.fn(),
   getContractLinePresetFixedConfig: vi.fn(),
   copyPresetToContractLine: vi.fn(),
@@ -21,6 +22,7 @@ const actionMocks = vi.hoisted(() => ({
 
 vi.mock('@alga-psa/billing/actions/contractLinePresetActions', () => ({
   getContractLinePresets: actionMocks.getContractLinePresets,
+  getContractLinePresetServiceCounts: actionMocks.getContractLinePresetServiceCounts,
   getContractLinePresetServices: actionMocks.getContractLinePresetServices,
   getContractLinePresetFixedConfig: actionMocks.getContractLinePresetFixedConfig,
   copyPresetToContractLine: actionMocks.copyPresetToContractLine,
@@ -96,6 +98,7 @@ describe('AddContractLinesDialog usage preset authoring', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     actionMocks.getContractLinePresets.mockResolvedValue([usagePreset]);
+    actionMocks.getContractLinePresetServiceCounts.mockResolvedValue({ 'preset-usage': 1 });
     actionMocks.getContractLinePresetServices.mockResolvedValue(usagePresetServices);
     actionMocks.getContractLinePresetFixedConfig.mockResolvedValue(null);
     actionMocks.copyPresetToContractLine.mockResolvedValue('line-1');

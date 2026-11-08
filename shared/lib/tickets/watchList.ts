@@ -349,3 +349,31 @@ export function buildInboundWatchListRecipients(params: {
 
   return Array.from(deduped.values());
 }
+
+/**
+ * Generic ticket updates (REST PUT, the UI's general update) must not change
+ * watchers: `ticket_watchers` is the source of truth and `attributes.watch_list`
+ * is only its mirror, written by TicketWatcherService. Returns `incoming` with
+ * its `watch_list` replaced by the stored one (or removed when the ticket has
+ * none), so whatever the caller sent for that key is ignored.
+ */
+export function preserveStoredWatchList(
+  storedAttributes: unknown,
+  incoming: unknown
+): Record<string, unknown> | null {
+  const next: Record<string, unknown> =
+    incoming && typeof incoming === 'object' && !Array.isArray(incoming)
+      ? { ...(incoming as Record<string, unknown>) }
+      : {};
+  const stored =
+    storedAttributes && typeof storedAttributes === 'object' && !Array.isArray(storedAttributes)
+      ? (storedAttributes as Record<string, unknown>).watch_list
+      : undefined;
+
+  if (stored === undefined) {
+    delete next.watch_list;
+  } else {
+    next.watch_list = stored;
+  }
+  return Object.keys(next).length > 0 ? next : null;
+}

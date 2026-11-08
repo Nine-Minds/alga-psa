@@ -164,4 +164,125 @@ describe('registerAfterCommit', () => {
     expect(hook).toHaveBeenCalledTimes(1);
     expect(trx.commit).toHaveBeenCalledTimes(1);
   });
+
+  function createSavepoint(parent: any) {
+    let resolve!: () => void;
+    let reject!: (e: unknown) => void;
+    const executionPromise = new Promise<void>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    executionPromise.catch(() => {});
+    return { sp: { parentTransaction: parent, executionPromise } as any, resolve, reject };
+  }
+
+  const tick = () => new Promise((r) => setTimeout(r, 0));
+
+  it('fires a committed savepoint hook once, after the outer commit', async () => {
+    const { withTransaction, registerAfterCommit } = await import('@alga-psa/db');
+    const trx = createOwnedTrx();
+    const knex = createKnex(trx);
+    const hook = vi.fn();
+
+    await withTransaction(knex, async (t) => {
+      const { sp, resolve } = createSavepoint(t);
+      registerAfterCommit(sp, hook);
+      resolve();
+      await tick();
+      expect(hook).not.toHaveBeenCalled();
+    });
+
+    expect(hook).toHaveBeenCalledTimes(1);
+  });
+
+  it('never runs a hook from a savepoint that rolled back while the outer transaction commits', async () => {
+    const { withTransaction, registerAfterCommit } = await import('@alga-psa/db');
+    const trx = createOwnedTrx();
+    const knex = createKnex(trx);
+    const rolledBack = vi.fn();
+    const kept = vi.fn();
+
+    await withTransaction(knex, async (t) => {
+      const { sp, reject } = createSavepoint(t);
+      registerAfterCommit(sp, rolledBack);
+      reject(new Error('Permission denied'));
+      await tick();
+      registerAfterCommit(t, kept);
+    });
+
+    expect(rolledBack).not.toHaveBeenCalled();
+    expect(kept).toHaveBeenCalledTimes(1);
+  });
+
+  it('fires a hook from a nested savepoint once when every level commits', async () => {
+    const { withTransaction, registerAfterCommit } = await import('@alga-psa/db');
+    const trx = createOwnedTrx();
+    const knex = createKnex(trx);
+    const hook = vi.fn();
+
+    await withTransaction(knex, async (t) => {
+      const outerSp = createSavepoint(t);
+      const innerSp = createSavepoint(outerSp.sp);
+      registerAfterCommit(innerSp.sp, hook);
+      innerSp.resolve();
+      await tick();
+      outerSp.resolve();
+      await tick();
+      expect(hook).not.toHaveBeenCalled();
+    });
+
+    expect(hook).toHaveBeenCalledTimes(1);
+  });
+
+  it('drops a committed nested savepoint hook when the enclosing savepoint rolls back', async () => {
+    const { withTransaction, registerAfterCommit } = await import('@alga-psa/db');
+    const trx = createOwnedTrx();
+    const knex = createKnex(trx);
+    const hook = vi.fn();
+
+    await withTransaction(knex, async (t) => {
+      const outerSp = createSavepoint(t);
+      const innerSp = createSavepoint(outerSp.sp);
+      registerAfterCommit(innerSp.sp, hook);
+      innerSp.resolve();
+      await tick();
+      outerSp.reject(new Error('rollback'));
+      await tick();
+    });
+
+    expect(hook).not.toHaveBeenCalled();
+  });
+
+  it('attaches hooks from a child transactor without an executionPromise to the parent', async () => {
+    const { withTransaction, registerAfterCommit } = await import('@alga-psa/db');
+    const trx = createOwnedTrx();
+    const knex = createKnex(trx);
+    const hook = vi.fn();
+
+    await withTransaction(knex, async (t) => {
+      registerAfterCommit({ parentTransaction: t } as any, hook);
+      expect(hook).not.toHaveBeenCalled();
+    });
+
+    expect(hook).toHaveBeenCalledTimes(1);
+  });
+
+  it('never runs a hook when the outer transaction rolls back', async () => {
+    const { withTransaction, registerAfterCommit } = await import('@alga-psa/db');
+    const trx = createOwnedTrx();
+    const knex = createKnex(trx);
+    const hook = vi.fn();
+
+    await expect(
+      withTransaction(knex, async (t) => {
+        const { sp, resolve } = createSavepoint(t);
+        registerAfterCommit(sp, hook);
+        resolve();
+        await tick();
+        throw new Error('Rollback');
+      })
+    ).rejects.toThrow('Rollback');
+
+    expect(hook).not.toHaveBeenCalled();
+  });
 });

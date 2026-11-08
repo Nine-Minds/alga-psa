@@ -10,7 +10,7 @@ export function getRmmProviderDisplayName(provider?: RmmProvider | string): stri
     case 'tanium':
       return 'Tanium';
     case 'datto':
-      return 'Datto';
+      return 'Datto RMM';
     case 'levelio':
       return 'Level';
     case 'unifi':

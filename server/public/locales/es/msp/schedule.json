@@ -853,5 +853,81 @@
       "members": "Miembros",
       "creatorNote": "Podrá administrar este calendario."
     }
+  },
+  "ticketDetails": {
+    "title": "Detalles del ticket",
+    "numberedTitle": "Ticket n.º {{number}}",
+    "untitled": "Ticket sin título",
+    "noDescription": "Sin descripción",
+    "notAvailable": "No disponible",
+    "unassigned": "Sin asignar",
+    "fields": {
+      "title": {
+        "label": "Título"
+      },
+      "description": {
+        "label": "Descripción"
+      },
+      "status": {
+        "label": "Estado"
+      },
+      "priority": {
+        "label": "Prioridad"
+      },
+      "board": {
+        "label": "Tablero"
+      },
+      "client": {
+        "label": "Cliente"
+      },
+      "contact": {
+        "label": "Contacto"
+      },
+      "assignedUser": {
+        "label": "Usuario asignado"
+      },
+      "entered": {
+        "label": "Ingresado"
+      },
+      "updated": {
+        "label": "Actualizado"
+      },
+      "closed": {
+        "label": "Cerrado"
+      }
+    }
+  },
+  "projectTaskDetails": {
+    "title": "Tarea del proyecto",
+    "noDescription": "Sin descripción",
+    "notAvailable": "No disponible",
+    "unassigned": "Sin asignar",
+    "untitledItem": "Elemento sin título",
+    "noChecklistItems": "No hay elementos en la lista de comprobación",
+    "fields": {
+      "description": {
+        "label": "Descripción"
+      },
+      "project": {
+        "label": "Proyecto"
+      },
+      "phase": {
+        "label": "Fase"
+      },
+      "assignedTo": {
+        "label": "Asignado a"
+      },
+      "dueDate": {
+        "label": "Fecha de vencimiento"
+      },
+      "checklist": {
+        "label": "Lista de comprobación"
+      }
+    }
+  },
+  "fallback": {
+    "agentSchedule": "La vista del calendario del agente ahora se administra en Programación. (agentId: {{agentId}})",
+    "timeEntry": "Las entradas de tiempo se administran en Programación.",
+    "scheduling": "La programación se administra en Programación."
   }
 }

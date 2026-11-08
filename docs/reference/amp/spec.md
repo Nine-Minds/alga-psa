@@ -1,4 +1,4 @@
-# AMP format v1.0.0
+# AMP format v1.1.0
 
 ## Container
 
@@ -14,7 +14,7 @@ Allowlisted tables, and only these:
 
 - `amp_manifest` — exactly one row of package metadata
 - Entity tables: `organizations`, `locations`, `contacts`, `tickets`,
-  `ticket_comments`, `assets`
+  `ticket_comments`, `assets`, `products`, `vendor_products`
 - Auxiliary tables: `external_identifiers`, `custom_field_values`,
   `package_diagnostics`
 
@@ -29,7 +29,7 @@ column is a schema mismatch.
 
 | Field | Required | Meaning |
 | --- | --- | --- |
-| `format_version` | yes | Semantic version of the AMP format, e.g. `1.0.0` |
+| `format_version` | yes | Semantic version of the AMP format, e.g. `1.1.0` |
 | `package_id` | yes | Producer-chosen opaque identifier for this package |
 | `created_at` | yes | RFC 3339 UTC creation time |
 | `producer_name` / `producer_version` | yes | Tool that produced the package |
@@ -47,8 +47,10 @@ column is a schema mismatch.
 - **Timestamps** are RFC 3339 UTC with a trailing `Z`
   (`2026-01-31T12:00:00Z`). **Dates** are `YYYY-MM-DD`. No locale-dependent
   formats anywhere.
-- **Money**, when a future version introduces it, is integer minor units plus
-  an ISO 4217 currency code. v1 has no money fields.
+- **Money** (added in v1.1) is an integer in minor units plus an ISO 4217
+  currency code, carried as a `*_minor` column paired with a currency column
+  (for example `price_minor` / `price_currency`). A null currency
+  means the tenant billing currency at apply time.
 - **Text** values are UTF-8 and at most 64 KiB.
 - **`extension_json`** is a JSON string of at most 16 KiB and nesting depth at
   most 8. It preserves non-canonical source data; Alga stores it but never
@@ -77,7 +79,7 @@ records (see [mapping.md](mapping.md)).
 ## Canonical content hash
 
 `content_sha256` is the SHA-256 hex digest of a canonical serialization of the
-six entity tables — the manifest and auxiliary tables are excluded so the hash
+entity tables — the manifest and auxiliary tables are excluded so the hash
 is never self-referential:
 
 1. Process entity tables in ascending table-name order.
@@ -100,7 +102,7 @@ Additive changes — new optional columns or tables — increment the minor
 version. Any breaking semantic change increments the major version. A consumer
 accepts packages whose major version it implements and whose minor version is
 not newer than it understands, and reports the precise reason when it refuses
-a version. This implementation accepts `1.0.x`.
+a version. This implementation accepts `1.0.x` and `1.1.x`.
 
 ## Validation errors
 

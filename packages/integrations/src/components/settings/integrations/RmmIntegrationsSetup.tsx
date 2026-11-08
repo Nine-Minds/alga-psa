@@ -30,6 +30,7 @@ type RmmIntegrationOption = {
 // LEVERAGE: pattern rmm-provider-registration — icon style, dynamic import and component map are hand-maintained per provider
 const PROVIDER_ICON_STYLES: Record<RmmProviderMetadata['icon'], { className: string; label: string }> = {
   tacticalrmm: { className: 'bg-amber-500 text-[9px] font-bold tracking-wider text-white', label: 'TRMM' },
+  datto: { className: 'bg-sky-600 text-[9px] font-bold tracking-wider text-white', label: 'DRMM' },
   ninjaone: { className: 'bg-slate-900 text-base font-bold text-white', label: 'N' },
   tanium: { className: 'bg-red-600 text-base font-bold text-white', label: 'T' },
   levelio: { className: 'bg-blue-600 text-base font-bold text-white', label: 'L' },
@@ -143,6 +144,14 @@ const UniFiIntegrationSettings = dynamic(
   }
 );
 
+const DattoRmmIntegrationSettings = dynamic(
+  () => import('@enterprise/components/settings/integrations/DattoRmmIntegrationSettings'),
+  {
+    loading: () => <ProviderLoading title="Datto RMM" />,
+    ssr: false
+  }
+);
+
 const HuntressIntegrationSettings = dynamic(
   () => import('@enterprise/components/settings/integrations/HuntressIntegrationSettings'),
   {
@@ -153,6 +162,7 @@ const HuntressIntegrationSettings = dynamic(
 
 const providerSettingsComponents: Partial<Record<RmmProvider, React.ComponentType>> = {
   tacticalrmm: TacticalRmmIntegrationSettings,
+  datto: DattoRmmIntegrationSettings,
   ninjaone: NinjaOneIntegrationSettings,
   tanium: TaniumIntegrationSettings,
   levelio: LevelIoIntegrationSettings,

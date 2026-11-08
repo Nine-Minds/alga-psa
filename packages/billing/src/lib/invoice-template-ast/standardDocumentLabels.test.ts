@@ -23,4 +23,9 @@ describe('STANDARD_DOCUMENT_LABELS', () => {
     expect(findStandardDocumentLabelByText('Invoice #')?.i18nKey).toBe('labels.invoiceNumber');
     expect(findStandardDocumentLabelByText('My own heading')).toBeUndefined();
   });
+
+  it('resolves English text shared by several labels to the first, most general label', () => {
+    expect(findStandardDocumentLabelByText('Client')?.i18nKey).toBe('labels.client');
+    expect(findStandardDocumentLabelByText('Sealed')?.i18nKey).toBe('labels.sealedOn');
+  });
 });

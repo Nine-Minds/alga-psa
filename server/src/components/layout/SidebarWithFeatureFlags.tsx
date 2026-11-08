@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { useCapability, useFeatureFlag } from '@alga-psa/ui/hooks';
+import { resolveUiSlots } from '@alga-psa/ui/capability/uiSlotRegistry';
+import '@/config/coManagedMenu';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import Sidebar from './Sidebar';
 import {
@@ -23,6 +25,10 @@ import { useProduct } from '@/context/ProductContext';
 import { filterMenuSectionsByProduct } from '@/lib/productSurfaceRegistry';
 import { getLicenseStatus } from '@/lib/actions/licenseManagementActions';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+
+const CO_MANAGED_ADMINISTRATION_HREF = '/msp/co-management/administration';
+/** Menu rows that exist only while the co-managed capability is served. */
+export const CO_MANAGED_GATED_HREFS: ReadonlySet<string> = new Set([CO_MANAGED_ADMINISTRATION_HREF, '/msp/tickets/customer']);
 
 export function filterNavigationSectionsBySelfHost(
   sections: readonly NavigationSection[],
@@ -150,6 +156,8 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   const navigationFlag = useFeatureFlag('ui-navigation-v2', { defaultValue: true });
   const useNavigationSections =
     typeof navigationFlag === 'boolean' ? navigationFlag : navigationFlag?.enabled ?? false;
+  // Server-bootstrapped capability verdict (serves); never the raw rollout flag.
+  const { enabled: coManagedServed } = useCapability('co-managed');
   const marketingFlag = useFeatureFlag('marketing-module', { defaultValue: false });
   const marketingEnabled =
     typeof marketingFlag === 'boolean' ? marketingFlag : marketingFlag?.enabled ?? false;
@@ -207,13 +215,23 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
 
   // Filter and modify menu items based on permissions
   const menuSections = useMemo<NavigationSection[]>(() => {
+    // Capability-gated contributions join before the edition → tier →
+    // permission → product chain, which then filters them like any menu item.
+    const contributedSections = resolveUiSlots<NavigationSection>(
+      'msp.navigation.group',
+      new Set(coManagedServed ? ['co-managed' as const] : []),
+    ).flatMap((slot) => (slot.props ? [slot.props] : []));
     const baseSections = useNavigationSections
-      ? originalSections
-      : [{ title: '', items: legacyMenuItems } satisfies NavigationSection];
+      ? [...originalSections, ...contributedSections]
+      : [{ title: '', items: legacyMenuItems } satisfies NavigationSection, ...contributedSections];
 
     const filteredSections = baseSections.map((section) => ({
       ...section,
       items: section.items
+        .filter((item) => coManagedServed || !item.href || !CO_MANAGED_GATED_HREFS.has(item.href))
+        .map((item) => (!coManagedServed && item.subItems?.some((sub) => sub.href && CO_MANAGED_GATED_HREFS.has(sub.href))
+          ? { ...item, subItems: item.subItems.filter((sub) => !sub.href || !CO_MANAGED_GATED_HREFS.has(sub.href)) }
+          : item))
         .filter((item) => item.name !== 'Marketing' || marketingEnabled)
         .filter((item) => item.name !== 'Passwords' || credentialsVaultEnabled)
         .map((item) => {
@@ -238,7 +256,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
         userPermissions,
       ),
     );
-  }, [canWorkflowAdmin, userPermissions, useNavigationSections, hasFeature, productCode, edition, marketingEnabled, credentialsVaultEnabled]);
+  }, [canWorkflowAdmin, userPermissions, useNavigationSections, hasFeature, productCode, edition, marketingEnabled, credentialsVaultEnabled, coManagedServed]);
 
   const settingsSections = useMemo<NavigationSection[]>(() => {
     const editionSections = filterNavigationSectionsByEdition(settingsNavigationSections, edition);

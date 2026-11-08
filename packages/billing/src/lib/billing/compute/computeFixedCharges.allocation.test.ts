@@ -5,6 +5,7 @@ import {
   FIXED_LINE_RATE_UNRESOLVED,
   allocateFixedFeeWithoutCatalogPrice,
   computeFixedCharges,
+  resolveFixedPlanLevelBaseRate,
   type FixedChargeComputeInputs,
   type FixedPlanServiceRow,
 } from "./computeFixedCharges";
@@ -123,15 +124,15 @@ describe.each(["USD", "EUR", "JPY"])(
       for (const explanation of result.explanations) {
         expect(explanation.markers).toContain("fixed_fee_allocation_fallback");
         expect(explanation.markers).not.toContain("fmv_allocation");
-        expect(JSON.stringify(explanation)).toContain("Stored per-service shares");
+        expect(JSON.stringify(explanation)).toContain("Stored per-service amounts");
       }
     });
 
     it("treats stored shares as the member's share, not a per-unit rate", () => {
       const result = computeFixedCharges(
         inputs(currency, 90000, [
-          service("a", { service_base_rate: 20000, configuration_quantity: 5 }),
-          service("b", { service_base_rate: 10000, configuration_quantity: 1 }),
+          service("a", { service_base_rate: 20000, base_rate_basis: "share", configuration_quantity: 5 }),
+          service("b", { service_base_rate: 10000, base_rate_basis: "share", configuration_quantity: 1 }),
         ]),
         NO_TAX_PORTS,
       );
@@ -424,10 +425,10 @@ describe("allocateFixedFeeWithoutCatalogPrice", () => {
   it("chooses the basis by the fallback chain", () => {
     expect(
       allocateFixedFeeWithoutCatalogPrice(1000, [
-        { service_id: "a", service_base_rate: 1, quantity: 9 },
-        { service_id: "b", service_base_rate: 3, quantity: 1 },
+        { service_id: "a", service_base_rate: 1, base_rate_basis: "share", quantity: 9 },
+        { service_id: "b", service_base_rate: 3, base_rate_basis: "share", quantity: 1 },
       ]),
-    ).toMatchObject({ basis: "stored_shares", amounts: [250, 750] });
+    ).toMatchObject({ basis: "stored_rates", amounts: [250, 750] });
 
     expect(
       allocateFixedFeeWithoutCatalogPrice(1000, [
@@ -480,5 +481,129 @@ describe("allocateFixedFeeWithoutCatalogPrice", () => {
 
     // 33.33… each: the single leftover cent goes to the lowest service id.
     expect(allocation.amounts).toEqual([33, 34, 33]);
+  });
+});
+
+// One base_rate, two stored meanings (card c150b8de): the allocation weight of a
+// stored amount is its CONTRIBUTION to the fee, read through base_rate_basis.
+describe.each(["USD", "EUR"])("computeFixedCharges — base_rate_basis (%s)", (currency) => {
+  const taxableA: ChargeComputeTaxPorts = {
+    ...NO_TAX_PORTS,
+    // Member "a" is taxable at 10% in region R; member "b" is not taxable.
+    getTaxInfoFromService: (svc) =>
+      (svc as { service_id: string }).service_id === "a"
+        ? { taxRegion: "R", isTaxable: true }
+        : { taxRegion: null, isTaxable: false },
+    calculateTax: (_client, amount) => ({ taxRate: 0.1, taxAmount: Math.round(amount * 0.1) }),
+  };
+
+  it("symptom 1: inherited per-unit 225x1 / 225x3 with zero catalog prices splits 225/675", () => {
+    const result = computeFixedCharges(
+      inputs(currency, null, [
+        service("addon", { service_base_rate: 225, base_rate_basis: "per_unit", configuration_quantity: 1 }),
+        service("blkhr", { service_base_rate: 225, base_rate_basis: "per_unit", configuration_quantity: 3 }),
+      ]),
+      NO_TAX_PORTS,
+    );
+
+    expect(totals(result)).toEqual([225, 675]);
+    expect(sum(totals(result))).toBe(900);
+    expect(JSON.stringify(result.explanations)).toContain("Stored per-service amounts");
+  });
+
+  it("an inherited wizard share line (225 q1 / 675 q3) bills 900 split 225/675", () => {
+    const result = computeFixedCharges(
+      inputs(currency, null, [
+        service("addon", { service_base_rate: 225, base_rate_basis: "share", configuration_quantity: 1 }),
+        service("blkhr", { service_base_rate: 675, base_rate_basis: "share", configuration_quantity: 3 }),
+      ]),
+      NO_TAX_PORTS,
+    );
+
+    // Symptom 2: the shares are NOT multiplied by quantity (that billed 2,250).
+    expect(totals(result)).toEqual([225, 675]);
+    expect(sum(totals(result))).toBe(900);
+  });
+
+  it("resolveFixedPlanLevelBaseRate: shares ignore quantity, per-unit rates multiply", () => {
+    const shareRate = resolveFixedPlanLevelBaseRate({
+      clientContractLine: line(currency),
+      contractLineDetails: { contract_line_type: "Fixed", custom_rate: null } as never,
+      planServices: [
+        service("a", { service_base_rate: 225, base_rate_basis: "share", configuration_quantity: 1 }),
+        service("b", { service_base_rate: 675, base_rate_basis: "share", configuration_quantity: 3 }),
+      ],
+    });
+    expect(shareRate).toBe(9);
+
+    const perUnitRate = resolveFixedPlanLevelBaseRate({
+      clientContractLine: line(currency),
+      contractLineDetails: { contract_line_type: "Fixed", custom_rate: null } as never,
+      planServices: [
+        service("a", { service_base_rate: 225, base_rate_basis: "per_unit", configuration_quantity: 1 }),
+        service("b", { service_base_rate: 225, base_rate_basis: "per_unit", configuration_quantity: 3 }),
+      ],
+    });
+    expect(perUnitRate).toBe(9);
+  });
+
+  it("zero FMV, mixed taxability: tax follows each member's allocation", () => {
+    const result = computeFixedCharges(
+      inputs(currency, null, [
+        service("a", { service_base_rate: 225, base_rate_basis: "per_unit", configuration_quantity: 1 }),
+        service("b", { service_base_rate: 225, base_rate_basis: "per_unit", configuration_quantity: 3 }),
+      ]),
+      taxableA,
+    );
+
+    expect(totals(result)).toEqual([225, 675]);
+    const taxes = result.charges.map((charge) => charge.tax_amount);
+    // a is taxable at 10% of ITS 225 (not of an even 450 split); b is not taxable.
+    expect(taxes).toEqual([23, 0]);
+  });
+
+  it("FMV prices, mixed taxability: tax follows each member's FMV allocation", () => {
+    const result = computeFixedCharges(
+      inputs(currency, 100000, [
+        service("a", { default_rate: 10000 }),
+        service("b", { default_rate: 30000 }),
+      ]),
+      taxableA,
+    );
+
+    expect(totals(result)).toEqual([25000, 75000]);
+    expect(result.charges.map((charge) => charge.tax_amount)).toEqual([2500, 0]);
+  });
+});
+
+describe("allocateFixedFeeWithoutCatalogPrice — basis", () => {
+  it("weighs a per-unit rate by rate x quantity and a share as-is", () => {
+    expect(
+      allocateFixedFeeWithoutCatalogPrice(900, [
+        { service_id: "a", service_base_rate: 225, base_rate_basis: "per_unit", quantity: 1 },
+        { service_id: "b", service_base_rate: 225, base_rate_basis: "per_unit", quantity: 3 },
+      ]),
+    ).toMatchObject({ basis: "stored_rates", amounts: [225, 675], weights: [225, 675] });
+
+    expect(
+      allocateFixedFeeWithoutCatalogPrice(900, [
+        { service_id: "a", service_base_rate: 225, base_rate_basis: "share", quantity: 1 },
+        { service_id: "b", service_base_rate: 675, base_rate_basis: "share", quantity: 3 },
+      ]),
+    ).toMatchObject({ basis: "stored_rates", amounts: [225, 675], weights: [225, 675] });
+  });
+});
+
+describe("computeFixedCharges — non-Fixed line edge path", () => {
+  it("does not multiply a share by quantity", () => {
+    const result = computeFixedCharges(
+      inputs("USD", null, [
+        service("a", { service_base_rate: 675, base_rate_basis: "share", configuration_quantity: 3 }),
+        service("b", { service_base_rate: 225, base_rate_basis: "per_unit", configuration_quantity: 3 }),
+      ], { contractLineDetails: { contract_line_type: "Hourly", custom_rate: null } as never }),
+      NO_TAX_PORTS,
+    );
+
+    expect(totals(result)).toEqual([675, 675]);
   });
 });

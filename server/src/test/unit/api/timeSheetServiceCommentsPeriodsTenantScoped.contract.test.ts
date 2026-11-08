@@ -24,7 +24,10 @@ describe('time sheet service comments and periods tenant-scoped query contract',
     expect(section).toContain(".table('time_sheet_comments')");
     expect(section).toContain(".table('time_periods')");
     expect(section).toContain(".table('time_sheets')");
-    expect(section).toContain("const [period] = await tenantDb(trx, context.tenant).table('time_periods')");
+    // Period writes go through the TimePeriod model (the column whitelist), never a spread into the table.
+    expect(section).toContain('TimePeriod.');
+    expect(section).not.toMatch(/\.\.\.data/);
+    expect(section).not.toMatch(/table\('time_periods'\)\s*\.insert\(/);
 
     expect(section).not.toMatch(/knex\('time_sheet_comments'\)\s*\./);
     expect(section).not.toMatch(/knex\('time_periods'\)\s*\.(?:where|orderBy|first)/);

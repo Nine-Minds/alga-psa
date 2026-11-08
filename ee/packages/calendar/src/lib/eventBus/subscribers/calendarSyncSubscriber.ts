@@ -222,14 +222,24 @@ async function handleScheduleEntryUpdated(event: ScheduleEntryUpdatedEvent): Pro
             continue;
           }
 
-          // If user was assigned but no longer is, delete from their calendar
+          // If user was assigned but no longer is, remove only that user's provider copy.
+          // The Alga entry and other assignees' copies must survive an unassignment.
+          // removeProviderCopy throws on non-"gone" provider errors; the Alga entry is already
+          // correct, so log and continue with the remaining providers rather than failing the event.
           if (userWasAssigned && !userIsAssigned && provider.user_id) {
-            const result = await syncService.deleteScheduleEntry(entryId, provider.id, 'all');
-            if (result.success) {
-              logger.info('[CalendarSyncSubscriber] Removed entry from calendar after user unassignment', {
+            try {
+              await syncService.removeProviderCopy(entryId, provider.id);
+              logger.info('[CalendarSyncSubscriber] Removed provider copy after user unassignment', {
                 entryId,
                 calendarProviderId: provider.id,
                 userId: provider.user_id
+              });
+            } catch (removeError: any) {
+              logger.error('[CalendarSyncSubscriber] Failed to remove provider copy after user unassignment', {
+                entryId,
+                calendarProviderId: provider.id,
+                userId: provider.user_id,
+                error: removeError.message || removeError
               });
             }
             continue;

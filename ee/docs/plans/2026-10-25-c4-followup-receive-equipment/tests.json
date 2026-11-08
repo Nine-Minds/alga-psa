@@ -1,0 +1,124 @@
+[
+  {
+    "id": "T001",
+    "description": "AssociatedAssets revalidates on matchAssetCacheKeys([asset, ticket]) without a remount; another ticket's invalidation does not refetch",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "assetCacheKeys: ticketAssetsKey matched for the entity only; matchAnyEntityAssetsKeys",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "assetStatus: every ASSET_STATUSES entry has a key in every locale (including xx, yy)",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F005"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "assetStatus: held_by_msp renders 'Held by MSP'; no surface re-declares getAssetStatusLabel",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F005"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "AssociatedAssets shows 'Held by MSP', not the slug",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "AssociatedAssets row: name truncates with title; custody chip is in its own row, never inside the name's flex container; no sm:/max-sm: classes (viewport-independent)",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "ReceiveEquipmentDialog: held assets disabled and labelled with their location; free assets selectable",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "ReceiveEquipmentDialog: options stay enabled when the badge read fails",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "DialogShell: string error in top sticky alert, focused; {message, fieldId} focuses field (preventScroll), sets/clears aria-invalid and scrolls it into view with scroll-margin-top = alert height + 16; thrown error shown",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "ReceiveEquipmentDialog: server refusal in top alert, asset field focused and aria-invalid; success invalidates [asset, ticket] and custody keys",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F008",
+      "F009"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Playwright: receive a new item on a ticket, Assets panel shows it with 'Held by MSP' and no reload (not run: needs app server)",
+    "implemented": false,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F010"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "entityAssetOrder: newest association within first INITIAL_DISPLAY_COUNT rows; unauthorized dropped, deduped, tie-break; listEntityAssets uses ORDER BY created_at desc",
+    "implemented": true,
+    "featureIds": [
+      "F011",
+      "F001"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Shared-provider panel tests: initial empty cache, receive invalidation, remount, stale and failed bootstrap, failed refresh, and pending bootstrap superseded by refresh.",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Browser: receive, confirm status and custody, toggle Entry/Grid, open Grid Details and Assets, and check name width at 1024px without reload. Written; requires stopped app to be available for Smoke Test.",
+    "implemented": false,
+    "featureIds": [
+      "F012",
+      "F013"
+    ]
+  }
+]

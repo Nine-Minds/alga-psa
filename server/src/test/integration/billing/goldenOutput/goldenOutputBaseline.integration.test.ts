@@ -15,6 +15,7 @@ import {
   ensureClientPlanBundlesTable,
   ensureDefaultBillingSettings,
   unwrapInvoiceResult,
+  generateInvoiceForCycle,
 } from '../../../../../test-utils/billingTestHelpers';
 import { AccountingExportInvoiceSelector } from '@alga-psa/billing/services';
 
@@ -38,7 +39,7 @@ import { AccountingExportInvoiceSelector } from '@alga-psa/billing/services';
 //                     mismatch (also writing *.actual.json for inspection).
 //
 // Determinism: every seeded entity uses a fixed UUID and fixed dates; the
-// scenario is driven through the real engine (`generateInvoice`,
+// scenario is driven through the real engine (`generateInvoiceForCycle`,
 // `finalizeInvoice`, prepayment credit, export preview). The serialized
 // projection contains only deterministic money/structure values — generated
 // UUIDs and `now()` timestamps are excluded, not pinned — so any amount, tax,
@@ -58,7 +59,6 @@ let tenantId: string;
 let clientId: string;
 let invoiceId: string;
 
-let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoice;
 let finalizeInvoice: typeof import('@alga-psa/billing/actions/invoiceModification').finalizeInvoice;
 let syncRecurringServicePeriodsForContractLine: typeof import('@alga-psa/billing/actions/recurringServicePeriodSync').syncRecurringServicePeriodsForContractLine;
 let createPrepaymentInvoice: typeof import('@alga-psa/billing/actions/creditActions').createPrepaymentInvoice;
@@ -227,7 +227,6 @@ describe('T013 gate — F128 golden-output baseline (single-profile client)', ()
     tenantId = FIXED_TENANT;
     setupCommonMocks({ tenantId, userId: 'golden-harness-user', permissionCheck: () => true });
 
-    ({ generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
     ({ finalizeInvoice } = await import('@alga-psa/billing/actions/invoiceModification'));
     ({ syncRecurringServicePeriodsForContractLine } = await import('@alga-psa/billing/actions/recurringServicePeriodSync'));
     ({ createPrepaymentInvoice } = await import('@alga-psa/billing/actions/creditActions'));
@@ -361,7 +360,7 @@ async function seedScenario(): Promise<string> {
   }
   await finalizeInvoice(prepaymentId);
 
-  const generated = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoice(januaryCycleId));
+  const generated = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoiceForCycle(januaryCycleId));
   invoiceId = generated.invoice_id;
   const finalized = await finalizeInvoice(invoiceId);
   expect(finalized, JSON.stringify(finalized)).toEqual({ success: true });

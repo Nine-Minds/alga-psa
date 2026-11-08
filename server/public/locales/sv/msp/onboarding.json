@@ -41,6 +41,9 @@
     "errors": {
       "saveClientInfo": "Det gick inte att spara företagsuppgifterna",
       "addTeamMembers": "Det gick inte att lägga till teammedlemmarna",
+      "unsentInvites": "Skicka inbjudan till varje teammedlem du har lagt till, eller ta bort dem, innan du fortsätter.",
+      "teamMembersNotCreated": "De här teammedlemmarna skapades inte. Rätta eller ta bort var och en innan du fortsätter:",
+      "teamProgressNotSaved": "De här teammedlemmarna skapades, men konfigurationen kunde inte spara förloppet: {{users}}. Om du lämnar konfigurationen och kommer tillbaka kanske de inte visas som tillagda; deras konton finns redan, så lägg inte till dem igen. Välj Nästa för att fortsätta.",
       "saveClient": "Det gick inte att spara kunden",
       "addContact": "Det gick inte att lägga till kontakten",
       "setupBilling": "Det gick inte att konfigurera faktureringen",
@@ -414,6 +417,7 @@
       "invalidEmail": "Ange en giltig e-postadress",
       "passwordLength": "Lösenordet måste vara minst 8 tecken långt",
       "saveFailed": "Det gick inte att spara teammedlemmen",
+      "progressNotSaved": "{{email}} skapades, men konfigurationen kunde inte spara förloppet. Om du lämnar konfigurationen och kommer tillbaka kanske medlemmen inte visas som tillagd; kontot finns redan, så lägg inte till det igen.",
       "inviteFailed": "Det gick inte att skicka inbjudan",
       "roleRequired": "Välj en roll",
       "generic": "Ett fel uppstod"

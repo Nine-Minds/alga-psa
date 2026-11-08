@@ -31,6 +31,8 @@ import { getErrorMessage, isActionMessageError, isActionPermissionError } from '
 interface FixedPlanConfigurationProps {
   contractLineId: string;
   className?: string;
+  /** Contract currency code, resolved by the caller: contract.currency_code || client.default_currency_code || 'USD'. */
+  currencyCode: string;
 }
 
 type PlanType = 'Fixed' | 'Hourly' | 'Usage';
@@ -73,6 +75,7 @@ const isReturnedActionError = (value: unknown): boolean =>
 export function FixedPlanConfiguration({
   contractLineId,
   className = '',
+  currencyCode,
 }: FixedPlanConfigurationProps) {
   const { t } = useTranslation('msp/contract-lines');
   const { symbol } = useCurrencyFormat();
@@ -531,45 +534,43 @@ export function FixedPlanConfiguration({
                 <Label htmlFor="base-rate">
                   {t('configuration.fixed.settings.baseRateLabel', { defaultValue: 'Recurring Base Rate *' })}
                 </Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
-                  <Input
-                    id="base-rate"
-                    type="text"
-                    inputMode="decimal"
-                    value={baseRateInput}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/[^0-9.]/g, '');
-                      const decimalCount = (value.match(/\./g) || []).length;
-                      if (decimalCount <= 1) {
-                        // Any edit is the author's own value; it must survive
-                        // later service-list refreshes and catalog seeds.
-                        baseRateManualRef.current = true;
-                        setBaseRateInput(value);
-                        markDirty();
-                      }
-                    }}
-                    onBlur={() => {
-                      if (baseRateInput.trim() === '' || baseRateInput === '.') {
-                        // An explicit clear releases the manual override so a
-                        // later service total may seed the empty field again.
-                        baseRateManualRef.current = false;
-                        baseRateValueRef.current = undefined;
-                        setBaseRateInput('');
-                        setBaseRate(undefined);
-                      } else {
-                        const dollars = parseFloat(baseRateInput) || 0;
-                        const cents = Math.round(dollars * 100);
-                        baseRateManualRef.current = true;
-                        baseRateValueRef.current = cents;
-                        setBaseRate(cents);
-                        setBaseRateInput((cents / 100).toFixed(2));
-                      }
-                    }}
-                    placeholder={t('common.moneyPlaceholder', { defaultValue: '0.00' })}
-                    className="pl-10"
-                  />
-                </div>
+                <Input
+                  leadingAdornment={symbol(currencyCode)}
+                  id="base-rate"
+                  type="text"
+                  inputMode="decimal"
+                  value={baseRateInput}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9.]/g, '');
+                    const decimalCount = (value.match(/\./g) || []).length;
+                    if (decimalCount <= 1) {
+                      // Any edit is the author's own value; it must survive
+                      // later service-list refreshes and catalog seeds.
+                      baseRateManualRef.current = true;
+                      setBaseRateInput(value);
+                      markDirty();
+                    }
+                  }}
+                  onBlur={() => {
+                    if (baseRateInput.trim() === '' || baseRateInput === '.') {
+                      // An explicit clear releases the manual override so a
+                      // later service total may seed the empty field again.
+                      baseRateManualRef.current = false;
+                      baseRateValueRef.current = undefined;
+                      setBaseRateInput('');
+                      setBaseRate(undefined);
+                    } else {
+                      const dollars = parseFloat(baseRateInput) || 0;
+                      const cents = Math.round(dollars * 100);
+                      baseRateManualRef.current = true;
+                      baseRateValueRef.current = cents;
+                      setBaseRate(cents);
+                      setBaseRateInput((cents / 100).toFixed(2));
+                    }
+                  }}
+                  placeholder={t('common.moneyPlaceholder', { defaultValue: '0.00' })}
+                  
+                />
                 <p className="text-xs text-muted-foreground mt-1">
                   {t('configuration.fixed.settings.baseRateHelp', {
                     defaultValue: 'The total recurring fee for all fixed services combined',

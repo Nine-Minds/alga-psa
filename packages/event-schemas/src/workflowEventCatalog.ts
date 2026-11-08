@@ -25,6 +25,7 @@
  *   20260716140000_seed_inventory_workflow_events
  *   20260923120000_add_client_anniversary_workflow_event
  *   20261010120000_register_worker_schema_workflow_events
+ *   20261016100000_seed_client_location_workflow_events
  *
  * Adding a catalogued event: add the row here, add the seed migration, add the
  * schema to `workflowEventPayloadSchemas`, and add an entry to the emitter
@@ -49,12 +50,27 @@ export const WORKFLOW_EVENT_CATALOG = {
   APPOINTMENT_RESCHEDULED: { schemaRef: 'payload.AppointmentRescheduled.v1' },
   ASSET_ASSIGNED: { schemaRef: 'payload.AssetAssigned.v1' },
   ASSET_CREATED: { schemaRef: 'payload.AssetCreated.v1' },
+  ASSET_CUSTODY_CHANGED: { schemaRef: 'payload.AssetCustodyChanged.v1' },
   ASSET_UNASSIGNED: { schemaRef: 'payload.AssetUnassigned.v1' },
   ASSET_UPDATED: { schemaRef: 'payload.AssetUpdated.v1' },
   ASSET_WARRANTY_EXPIRING: { schemaRef: 'payload.AssetWarrantyExpiring.v1' },
   CAPACITY_THRESHOLD_REACHED: { schemaRef: 'payload.CapacityThresholdReached.v1' },
   CLIENT_ARCHIVED: { schemaRef: 'payload.ClientArchived.v1' },
   CLIENT_CREATED: { schemaRef: 'payload.ClientCreated.v1' },
+  QUOTE_SENT: { schemaRef: 'payload.QuoteSent.v1' },
+  QUOTE_VIEWED: { schemaRef: 'payload.QuoteViewed.v1' },
+  QUOTE_APPROVED: { schemaRef: 'payload.QuoteApproved.v1' },
+  QUOTE_ACCEPTED: { schemaRef: 'payload.QuoteAccepted.v1' },
+  QUOTE_REJECTED: { schemaRef: 'payload.QuoteRejected.v1' },
+  QUOTE_EXPIRED: { schemaRef: 'payload.QuoteExpired.v1' },
+  QUOTE_CONVERTED: { schemaRef: 'payload.QuoteConverted.v1' },
+  QUOTE_CONVERSION_REVERTED: { schemaRef: 'payload.QuoteConversionReverted.v1' },
+  QUOTE_SUPERSEDED: { schemaRef: 'payload.QuoteSuperseded.v1' },
+  QUOTE_CANCELLED: { schemaRef: 'payload.QuoteCancelled.v1' },
+  CLIENT_LOCATION_CREATED: { schemaRef: 'payload.ClientLocationCreated.v1' },
+  CLIENT_LOCATION_DEACTIVATED: { schemaRef: 'payload.ClientLocationDeactivated.v1' },
+  CLIENT_LOCATION_DELETED: { schemaRef: 'payload.ClientLocationDeleted.v1' },
+  CLIENT_LOCATION_UPDATED: { schemaRef: 'payload.ClientLocationUpdated.v1' },
   CLIENT_MERGED: { schemaRef: 'payload.ClientMerged.v1' },
   CLIENT_OWNER_ASSIGNED: { schemaRef: 'payload.ClientOwnerAssigned.v1' },
   CLIENT_STATUS_CHANGED: { schemaRef: 'payload.ClientStatusChanged.v1' },
@@ -167,6 +183,7 @@ export const WORKFLOW_EVENT_CATALOG = {
   INVENTORY_PO_RECEIVED: { schemaRef: 'payload.InventoryPoReceived.v1' },
   INVENTORY_SO_FULFILLED: { schemaRef: 'payload.InventorySoFulfilled.v1' },
   INVENTORY_RMA_CREATED: { schemaRef: 'payload.InventoryRmaCreated.v1' },
+  INVENTORY_RMA_UPDATED: { schemaRef: 'payload.InventoryRmaUpdated.v1' },
   OPPORTUNITY_CREATED: { schemaRef: 'payload.OpportunityCreated.v1' },
   OPPORTUNITY_STAGE_CHANGED: { schemaRef: 'payload.OpportunityStageChanged.v1' },
   OPPORTUNITY_STATUS_CHANGED: { schemaRef: 'payload.OpportunityStatusChanged.v1' },

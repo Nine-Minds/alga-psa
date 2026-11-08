@@ -3,6 +3,7 @@ import type { Knex } from 'knex';
 import { resolveEffectiveTimeZone, tenantDb } from '@alga-psa/db';
 import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions';
 import { getEmailNotificationService } from '@alga-psa/notifications';
+import { resolveTenantAppBase } from '@alga-psa/tenancy/server';
 import { getOpportunitySettings } from '../models/opportunitySettingsModel';
 
 export interface OpportunityDigestSummary {
@@ -79,7 +80,11 @@ export async function runOpportunityWeeklyDigest(
   const winsByOwner = new Map(winCounts.map((row) => [row.owner_id, Number(row.count)]));
   const newSuggestions = Number(suggestionCountRow?.count ?? 0);
   const queuePath = '/msp/opportunities';
-  const baseUrl = String(process.env.APP_URL ?? process.env.NEXTAUTH_URL ?? '').replace(/\/$/, '');
+  // LEVERAGE: pattern tenant-link-context — hand-built canonical base URL (APP_URL ?? NEXTAUTH_URL).
+  const canonicalBaseUrl = String(process.env.APP_URL ?? process.env.NEXTAUTH_URL ?? '').replace(/\/$/, '');
+  // Digest recipients are internal (MSP) users: use the tenant's MSP custom domain when one is active.
+  const mspBase = await resolveTenantAppBase(tenant, 'msp', { knex });
+  const baseUrl = mspBase.source === 'vanity' ? mspBase.baseUrl : canonicalBaseUrl;
   const summaries: OpportunityDigestSummary[] = [];
 
   for (const owner of owners) {

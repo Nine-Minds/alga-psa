@@ -5,6 +5,7 @@
 import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -234,9 +235,9 @@ export default function ApiKeysSetup() {
       dataIndex: 'active',
       width: '10%',
       render: (value: boolean) => (
-        <span className={`px-2 py-1 rounded text-sm ${value ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+        <Badge variant={value ? 'success' : 'error'}>
           {value ? t('security.apiKeys.list.status.active', 'Active') : t('security.apiKeys.list.status.inactive', 'Inactive')}
-        </span>
+        </Badge>
       ),
     },
     {

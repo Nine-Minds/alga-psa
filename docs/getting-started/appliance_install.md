@@ -29,13 +29,15 @@ Install codes are single-use. Keep the registration email handy. You enter the c
 | Requirement | Recommendation |
 | --- | --- |
 | Host | A 64-bit x86 machine or VM. The appliance image is Ubuntu Server 24.04. |
-| CPU and memory | 4 vCPUs and 16 GB RAM is a practical starting point. The appliance runs a database, cache, workers, and the application together. |
-| Disk | At least 60 GB. The installer uses the whole disk you select. |
+| CPU and memory | 4 vCPUs and 16 GB RAM minimum; 6-8 vCPUs recommended. The appliance runs a database, cache, workers, and the application together. On a VM, use a CPU type that exposes `aes`, `pclmulqdq`, and `avx2` (`host` on a single host). |
+| Disk | At least 60 GB on SSD or NVMe-backed storage. The installer uses the whole disk you select. |
 | Network address | A reachable IPv4 address. If you use DHCP, reserve the lease so the address does not change after a reboot. |
 | Outbound internet | HTTPS (port 443) to `license.nineminds.com` and `ghcr.io`. |
 | Install code | The code from your AlgaPSA registration email. |
 
 Outbound access matters most. During setup the appliance contacts `license.nineminds.com` to redeem the install code, then pulls its images from GitHub Container Registry (`ghcr.io`). If a firewall blocks either host, setup pauses at that step until you open the access.
+
+Hypervisor settings matter as well. Proxmox's default CPU type and qcow2 disks on directory storage can make the appliance much slower without any visible error. See [VM hardware settings](../../ee/docs/appliance/quick-start.md#vm-hardware-settings) before you create the VM.
 
 ## Install steps
 

@@ -108,6 +108,21 @@ class FakeBuilder {
     };
   }
 
+  /** Knex's single-column read; the engine uses it for location-id allowlists. */
+  pluck(column: string): Promise<any[]> {
+    return Promise.resolve(this.resolve().map((row) => valueOf(row, column)));
+  }
+
+  whereNotIn(column: string, values: any[]) {
+    this.predicates.push((row) => !values.includes(valueOf(row, column)));
+    return this;
+  }
+
+  /** knex exposes `delete` beside `del`; replaceContactLocations calls the former. */
+  delete(): Promise<number> {
+    return this.del();
+  }
+
   select(...columns: string[]) {
     this.projection = columns.flat();
     return this;
@@ -284,6 +299,7 @@ const fakeTrx: any = {
 };
 
 vi.mock('@alga-psa/db', () => ({
+  admitOperationalWrite: vi.fn().mockResolvedValue(undefined),
   tenantDb: () => ({
     table: (name: string) => new FakeBuilder(name),
     tenantJoin: (builder: any, joinTable: string, left: string, right: string) =>
@@ -291,7 +307,23 @@ vi.mock('@alga-psa/db', () => ({
   }),
 }));
 
-import { ClientMergeBlockedError, executeClientMerge } from './clientMergeEngine';
+// The shared client-creation seam (used when the merge re-provisions a
+// default billing profile) imports tenantDb from this subpath, not the
+// barrel above, so it needs the same fake table lookup mocked here too.
+vi.mock('@alga-psa/db/tenantDb', () => ({
+  tenantDb: () => ({
+    table: (name: string) => new FakeBuilder(name),
+    tenantJoin: (builder: any, joinTable: string, left: string, right: string) =>
+      builder.addJoin({ table: joinTable, left, right }),
+  }),
+}));
+
+const coManagedWorkspaces = vi.hoisted(() => ({
+  count: vi.fn(async (_trx: unknown, _options: { tenant: string; entityId: string }): Promise<number> => 0),
+}));
+vi.mock('@alga-psa/core/config/deletion', () => ({ countLiveCoManagedWorkspacesForClient: coManagedWorkspaces.count }));
+
+import { ClientMergeBlockedError, executeClientMerge, previewClientMerge } from './clientMergeEngine';
 
 const TENANT = 'tenant-1';
 
@@ -439,6 +471,127 @@ describe('executeClientMerge', () => {
     });
   });
 
+  // T141/T142 — F099: what happens to rows that carry no billing profile.
+  describe('billing strategy', () => {
+    const seedUnstamped = () => {
+      table('assets').push(
+        { tenant: TENANT, asset_id: 'asset-null', client_id: 'source', billing_profile_id: null },
+        { tenant: TENANT, asset_id: 'asset-plant', client_id: 'source', billing_profile_id: 'src-plant' },
+      );
+      table('rmm_organization_mappings').push(
+        { tenant: TENANT, mapping_id: 'map-null', client_id: 'source', billing_profile_id: null },
+      );
+      table('projects').push(
+        { tenant: TENANT, project_id: 'project-null', client_id: 'source', billing_profile_id: null },
+      );
+    };
+
+    it('T141: source_profile stamps every null-profile row and records the strategy', async () => {
+      seedUnstamped();
+
+      const result = await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+        sourceClientId: 'source',
+        targetClientId: 'target',
+        billingStrategy: 'source_profile',
+      });
+
+      expect(result.billingStrategy).toBe('source_profile');
+      expect(table('client_merges')[0]).toMatchObject({ billing_strategy: 'source_profile' });
+      for (const [tableName, key, id] of [
+        ['tickets', 'ticket_id', 'ticket-null'],
+        ['projects', 'project_id', 'project-null'],
+        ['assets', 'asset_id', 'asset-null'],
+        ['rmm_organization_mappings', 'mapping_id', 'map-null'],
+      ] as const) {
+        expect(table(tableName).find((row) => row[key] === id)).toMatchObject({
+          client_id: 'target',
+          billing_profile_id: 'src-default',
+        });
+      }
+    });
+
+    it('T142: target_default leaves them null, keeps explicit picks, and still stamps billing history', async () => {
+      seedUnstamped();
+
+      const result = await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+        sourceClientId: 'source',
+        targetClientId: 'target',
+        billingStrategy: 'target_default',
+      });
+
+      expect(result.billingStrategy).toBe('target_default');
+      expect(table('client_merges')[0]).toMatchObject({ billing_strategy: 'target_default' });
+      for (const [tableName, key, id] of [
+        ['tickets', 'ticket_id', 'ticket-null'],
+        ['projects', 'project_id', 'project-null'],
+        ['assets', 'asset_id', 'asset-null'],
+        ['rmm_organization_mappings', 'mapping_id', 'map-null'],
+      ] as const) {
+        expect(table(tableName).find((row) => row[key] === id)).toMatchObject({
+          client_id: 'target',
+          // Unattributed on purpose: the chain terminates at the target default.
+          billing_profile_id: null,
+        });
+      }
+      // An explicit pick is never second-guessed by either strategy.
+      expect(table('assets').find((row) => row.asset_id === 'asset-plant'))
+        .toMatchObject({ client_id: 'target', billing_profile_id: 'src-plant' });
+      expect(table('tickets').find((row) => row.ticket_id === 'ticket-plant'))
+        .toMatchObject({ client_id: 'target', billing_profile_id: 'src-plant' });
+      // Billing history is stamped regardless of the choice — an invoice with no
+      // profile would drop out of the target's AR entirely.
+      expect(table('invoices')[0]).toMatchObject({ client_id: 'target', billing_profile_id: 'src-default' });
+    });
+
+    it('T143: after the merge the asset carries what the alert ticket will inherit', async () => {
+      seedUnstamped();
+      // The asset's location default would answer for it if the column were
+      // null, so pin the column: that is the value FR-F2's resolver reads first.
+      await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+        sourceClientId: 'source',
+        targetClientId: 'target',
+        billingStrategy: 'source_profile',
+      });
+
+      const moved = table('assets').find((row) => row.asset_id === 'asset-null');
+      expect(moved).toMatchObject({ client_id: 'target', billing_profile_id: 'src-default' });
+      // So a ticket raised from that device (resolveAssetBillingProfileId ->
+      // asset profile) and an alert ticket for it both land on src-default
+      // rather than on the destination client's own default.
+      expect(moved!.billing_profile_id).not.toBe('tgt-default');
+      const mapping = table('rmm_organization_mappings').find((row) => row.mapping_id === 'map-null');
+      expect(mapping).toMatchObject({ billing_profile_id: 'src-default' });
+    });
+
+    it('T143: under target_default both fall through to the destination default', async () => {
+      seedUnstamped();
+
+      await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+        sourceClientId: 'source',
+        targetClientId: 'target',
+        billingStrategy: 'target_default',
+      });
+
+      // Null on both the asset and the mapping is what makes the attribution
+      // chain terminate at the target client default.
+      expect(table('assets').find((row) => row.asset_id === 'asset-null')!.billing_profile_id).toBeNull();
+      expect(table('rmm_organization_mappings').find((row) => row.mapping_id === 'map-null')!.billing_profile_id).toBeNull();
+    });
+
+    it('T141: source_profile is the default, so an omitted choice keeps today behaviour', async () => {
+      seedUnstamped();
+
+      const result = await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+        sourceClientId: 'source',
+        targetClientId: 'target',
+      });
+
+      expect(result.billingStrategy).toBe('source_profile');
+      expect(table('assets').find((row) => row.asset_id === 'asset-null'))
+        .toMatchObject({ billing_profile_id: 'src-default' });
+    });
+  });
+
   it('renames a colliding visibility group instead of dropping it', async () => {
     await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
       sourceClientId: 'source',
@@ -509,6 +662,204 @@ describe('executeClientMerge', () => {
     expect(locations.find((row) => row.location_id === 'loc-source')).toMatchObject({
       client_id: 'target',
       is_default: false,
+    });
+  });
+
+  it('previews the number of contact location links that will move, and the report matches', async () => {
+    table('contacts').push(
+      { tenant: TENANT, contact_name_id: 'ada', client_id: 'source', full_name: 'Ada', email: 'ada@acme.test' },
+      { tenant: TENANT, contact_name_id: 'bob', client_id: 'source', full_name: 'Bob', email: 'bob@acme.test' },
+    );
+    table('client_locations').push(
+      { tenant: TENANT, location_id: 'loc-source', client_id: 'source', is_default: false },
+      { tenant: TENANT, location_id: 'loc-depot', client_id: 'source', is_default: false },
+    );
+    table('contact_locations').push(
+      { tenant: TENANT, contact_name_id: 'ada', location_id: 'loc-source', is_primary: true },
+      { tenant: TENANT, contact_name_id: 'ada', location_id: 'loc-depot', is_primary: false },
+      { tenant: TENANT, contact_name_id: 'bob', location_id: 'loc-depot', is_primary: true },
+    );
+
+    const preview = await previewClientMerge(fakeTrx, TENANT, {
+      sourceClientId: 'source',
+      targetClientId: 'target',
+    });
+    expect(preview.counts['contact location']).toBe(3);
+
+    const result = await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+      sourceClientId: 'source',
+      targetClientId: 'target',
+    });
+    expect(result.counts['contact location']).toBe(preview.counts['contact location']);
+  });
+
+  it('carries every contact location link across, demoted source default included', async () => {
+    table('contacts').push(
+      { tenant: TENANT, contact_name_id: 'ada', client_id: 'source', full_name: 'Ada' },
+      { tenant: TENANT, contact_name_id: 'bob', client_id: 'source', full_name: 'Bob' },
+    );
+    table('client_locations').push(
+      { tenant: TENANT, location_id: 'loc-source', client_id: 'source', is_default: true },
+      { tenant: TENANT, location_id: 'loc-depot', client_id: 'source', is_default: false },
+      { tenant: TENANT, location_id: 'loc-target', client_id: 'target', is_default: true },
+    );
+    table('contact_locations').push(
+      { tenant: TENANT, contact_name_id: 'ada', location_id: 'loc-source', is_primary: true },
+      { tenant: TENANT, contact_name_id: 'ada', location_id: 'loc-depot', is_primary: false },
+      { tenant: TENANT, contact_name_id: 'bob', location_id: 'loc-depot', is_primary: true },
+    );
+
+    const result = await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+      sourceClientId: 'source',
+      targetClientId: 'target',
+    });
+
+    // The links key on contact and location, both of which moved wholesale, so not a row changes.
+    expect(table('contact_locations')).toHaveLength(3);
+    expect(result.counts['contact location']).toBe(3);
+    expect(table('contact_locations').filter((row) => row.is_primary)).toHaveLength(2);
+    // The demoted source default keeps its link.
+    expect(table('contact_locations').find((row) => row.location_id === 'loc-source'))
+      .toMatchObject({ contact_name_id: 'ada', is_primary: true });
+  });
+
+  it('fails the merge when a contact location link would end up crossing clients', async () => {
+    table('contacts').push({ tenant: TENANT, contact_name_id: 'ada', client_id: 'source', full_name: 'Ada' });
+    table('client_locations').push(
+      { tenant: TENANT, location_id: 'loc-source', client_id: 'source', is_default: false },
+      // A location of a third client: nothing in the merge moves it, so the link straddles.
+      { tenant: TENANT, location_id: 'loc-third', client_id: 'sibling', is_default: false },
+    );
+    table('contact_locations').push(
+      { tenant: TENANT, contact_name_id: 'ada', location_id: 'loc-source', is_primary: true },
+      { tenant: TENANT, contact_name_id: 'ada', location_id: 'loc-third', is_primary: false },
+    );
+
+    await expect(executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+      sourceClientId: 'source',
+      targetClientId: 'target',
+    })).rejects.toThrow(/cross clients/);
+  });
+
+  describe('contact location assignments', () => {
+    beforeEach(() => {
+      table('contacts').push(
+        { tenant: TENANT, contact_name_id: 'ada', client_id: 'source', full_name: 'Ada', email: 'ada@acme.test' },
+        { tenant: TENANT, contact_name_id: 'bob', client_id: 'source', full_name: 'Bob', email: 'bob@acme.test' },
+      );
+      table('client_locations').push(
+        { tenant: TENANT, location_id: 'src-head', client_id: 'source', location_name: 'Head office', is_default: false, is_active: true },
+        { tenant: TENANT, location_id: 'tgt-head', client_id: 'target', location_name: ' head  OFFICE ', is_default: false, is_active: true },
+        { tenant: TENANT, location_id: 'third-depot', client_id: 'sibling', location_name: 'Depot', is_default: false, is_active: true },
+      );
+      table('contact_locations').push(
+        { tenant: TENANT, contact_name_id: 'ada', location_id: 'src-head', is_primary: true },
+        { tenant: TENANT, contact_name_id: 'bob', location_id: 'src-head', is_primary: true },
+      );
+    });
+
+    it('re-points a listed contact to the target location and leaves an unlisted one alone', async () => {
+      const result = await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+        sourceClientId: 'source',
+        targetClientId: 'target',
+        contactLocationAssignments: [
+          { contactNameId: 'ada', locations: [{ locationId: 'tgt-head', isPrimary: true }] },
+        ],
+      });
+
+      expect(table('contact_locations').filter((row) => row.contact_name_id === 'ada'))
+        .toEqual([expect.objectContaining({ location_id: 'tgt-head', is_primary: true })]);
+      // Bob was not listed, so his link simply travelled with the moved source location.
+      expect(table('contact_locations').filter((row) => row.contact_name_id === 'bob'))
+        .toEqual([expect.objectContaining({ location_id: 'src-head', is_primary: true })]);
+      expect(result.repointedContactLocationCount).toBe(1);
+      expect(result.counts['contact location re-pointed']).toBe(1);
+      expect(result.counts['contact location']).toBe(2);
+    });
+
+    it('clears a contact\'s links when the assignment is empty', async () => {
+      const result = await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+        sourceClientId: 'source',
+        targetClientId: 'target',
+        contactLocationAssignments: [{ contactNameId: 'ada', locations: [] }],
+      });
+
+      expect(table('contact_locations').filter((row) => row.contact_name_id === 'ada')).toEqual([]);
+      expect(result.counts['contact location']).toBe(1);
+      expect(result.repointedContactLocationCount).toBe(0);
+    });
+
+    it('fails the merge when an assignment names two primaries', async () => {
+      await expect(executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+        sourceClientId: 'source',
+        targetClientId: 'target',
+        contactLocationAssignments: [{
+          contactNameId: 'ada',
+          locations: [
+            { locationId: 'src-head', isPrimary: true },
+            { locationId: 'tgt-head', isPrimary: true },
+          ],
+        }],
+      })).rejects.toThrow(/only one primary location/);
+    });
+
+    it('fails the merge, naming the contact and location, for a third client\'s location', async () => {
+      await expect(executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+        sourceClientId: 'source',
+        targetClientId: 'target',
+        contactLocationAssignments: [{ contactNameId: 'ada', locations: [{ locationId: 'third-depot' }] }],
+      })).rejects.toThrow(/ada cannot be linked to location third-depot/);
+    });
+
+    it('the dry run refuses the same third-client location the engine does, as a blocker', async () => {
+      const preview = await previewClientMerge(fakeTrx, TENANT, {
+        sourceClientId: 'source',
+        targetClientId: 'target',
+        contactLocationAssignments: [{ contactNameId: 'ada', locations: [{ locationId: 'third-depot' }] }],
+      });
+
+      expect(preview.blockers).toEqual([expect.objectContaining({
+        code: 'INVALID_CONTACT_LOCATION',
+        message: expect.stringMatching(/ada cannot be linked to location third-depot/),
+      })]);
+    });
+
+    it('the dry run passes a source or target location, and ignores an unmoved contact', async () => {
+      const preview = await previewClientMerge(fakeTrx, TENANT, {
+        sourceClientId: 'source',
+        targetClientId: 'target',
+        contactLocationAssignments: [
+          { contactNameId: 'ada', locations: [{ locationId: 'tgt-head', isPrimary: true }] },
+          { contactNameId: 'bob', locations: [{ locationId: 'src-head' }] },
+          // Not a contact of the source: nothing to refuse, because nothing will be applied.
+          { contactNameId: 'stranger', locations: [{ locationId: 'third-depot' }] },
+        ],
+      });
+
+      expect(preview.blockers).toEqual([]);
+    });
+
+    it('suggests the target location whose name matches, case- and whitespace-insensitively', async () => {
+      const preview = await previewClientMerge(fakeTrx, TENANT, {
+        sourceClientId: 'source',
+        targetClientId: 'target',
+      });
+
+      const ada = preview.contacts.find((contact) => contact.contactNameId === 'ada');
+      expect(ada?.locations).toEqual([
+        expect.objectContaining({
+          locationId: 'src-head',
+          locationName: 'Head office',
+          isPrimary: true,
+          suggestedTargetLocationId: 'tgt-head',
+        }),
+      ]);
+      expect(preview.locationsAfterMerge).toEqual(expect.arrayContaining([
+        expect.objectContaining({ locationId: 'src-head', fromSource: true }),
+        expect.objectContaining({ locationId: 'tgt-head', fromSource: false }),
+      ]));
+      // A third client's location is not part of the merged client.
+      expect(preview.locationsAfterMerge.map((row) => row.locationId)).not.toContain('third-depot');
     });
   });
 
@@ -760,6 +1111,19 @@ describe('executeClientMerge', () => {
       sourceClientId: 'source',
       targetClientId: 'target',
     })).rejects.toBeInstanceOf(ClientMergeBlockedError);
+  });
+
+  it('refuses to merge away a client whose co-managed workspace still holds seats', async () => {
+    coManagedWorkspaces.count.mockImplementation(async (_trx: unknown, { entityId }: { entityId: string }) => (entityId === 'source' ? 1 : 0));
+    try {
+      await expect(executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+        sourceClientId: 'source',
+        targetClientId: 'target',
+      })).rejects.toBeInstanceOf(ClientMergeBlockedError);
+      expect(table('clients').find((row) => row.client_id === 'source')!.merged_into_client_id ?? null).toBeNull();
+    } finally {
+      coManagedWorkspaces.count.mockImplementation(async () => 0);
+    }
   });
 
   it('refuses a merge into a client recorded as the source\'s own child', async () => {

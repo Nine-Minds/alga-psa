@@ -1356,7 +1356,7 @@ function WindowEditorDialog({
 // ---------------------------------------------------------------------------
 
 // LEVERAGE: pattern rmm-provider-registration — provider lists are hand-maintained per capability
-const POLLING_PROVIDERS = new Set(["ninjaone", "tacticalrmm", "unifi"]);
+const POLLING_PROVIDERS = new Set(["ninjaone", "tacticalrmm", "unifi", "datto"]);
 
 export function RmmAlertAutomationSettings({
   integrationId,

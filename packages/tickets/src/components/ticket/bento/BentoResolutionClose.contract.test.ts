@@ -60,7 +60,7 @@ describe('resolution comment close contract', () => {
 
     // Two-way visibility segment only: resolution rides along as its own toggle
     // so an internal note can also be the resolution.
-    expect(tile).toContain("useState<'client' | 'internal'>('client')");
+    expect(tile).toContain("useState<'client' | 'internal'>");
     expect(tile).not.toContain("'resolution'");
     expect(tile).toContain('id={`${id}-composer-resolution-toggle`}');
     expect(tile).toContain("composerVisibility === 'internal',");
@@ -91,9 +91,16 @@ describe('resolution comment close contract', () => {
       '../../TicketingDashboard.tsx',
     ].map(read);
 
+    // Every surface seeds its suppression state from the shared factory, which
+    // defaults to unchecked unless the tenant opts into
+    // defaultDontNotifyCustomer (see lib/notificationSuppressionDefaults.ts).
+    const defaults = read('../../../lib/notificationSuppressionDefaults.ts');
+    expect(defaults).toContain('suppressContactNotifications: false');
+    expect(defaults).toContain('suppressInternalNotifications: false');
+
     for (const source of sources) {
-      expect(source).toContain('suppressContactNotifications: false');
-      expect(source).toContain('suppressInternalNotifications: false');
+      expect(source).toContain('const defaultNotificationSuppression = useDefaultNotificationSuppression();');
+      expect(source).toContain('defaultNotificationSuppression()');
     }
 
     expect(read('../TicketConversation.tsx')).toContain('setNotificationSuppression(defaultNotificationSuppression())');

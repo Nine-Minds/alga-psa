@@ -61,6 +61,12 @@ describe('Quote infrastructure', () => {
     context = await resetContext();
     mockedTenantConnection.db = context.db;
     mockedTenantConnection.tenant = context.tenantId;
+    // The dev seeds ship grouped-layout quote fixtures (Q-0001 / Q-0002, see
+    // server/seeds/dev/90_quotes.cjs) into the very tenant this file reuses,
+    // and the listByTenant cases below assert tenant-wide counts and ordering.
+    // Drop them inside the test transaction — quote_items and quote_activities
+    // cascade — so each case sees only the rows it created.
+    await context.db('quotes').where({ tenant: context.tenantId }).del();
   }, 30000);
 
   afterEach(async () => {
@@ -525,8 +531,10 @@ describe('Quote infrastructure', () => {
 
     const reloadedItem = await context.db('quote_items').where({ tenant: context.tenantId, quote_item_id: item.quote_item_id }).first();
     expect(reloadedItem.tax_region).toBe('US-NY');
-    expect(Number(reloadedItem.tax_rate)).toBe(9);
-    expect(Number(reloadedItem.tax_amount)).toBeGreaterThan(0);
+    // alga-2026-0002902: the stored rate is the rate charged — 8.875, not a
+    // rounded 9 beside a tax amount computed at 8.875.
+    expect(Number(reloadedItem.tax_rate)).toBe(8.875);
+    expect(Number(reloadedItem.tax_amount)).toBe(Math.ceil((10000 * 8.875) / 100));
   });
 
   it('T056: Discount: percentage discount calculates correct amount from target item total', async () => {
@@ -823,8 +831,9 @@ describe('Quote infrastructure', () => {
     const reloadedQuote = await loadQuoteRow(quote.quote_id);
     expect(Number(reloadedQuote.subtotal)).toBe(1000);
     expect(Number(reloadedQuote.discount_total)).toBe(100);
-    expect(Number(reloadedQuote.tax)).toBe(100);
-    expect(Number(reloadedQuote.total_amount)).toBe(1000);
+    // 10% of the discounted base: 1000 - 100 = 900.
+    expect(Number(reloadedQuote.tax)).toBe(90);
+    expect(Number(reloadedQuote.total_amount)).toBe(990);
   });
 
   it('T064: Totals: adding an item triggers recalculation of all totals', async () => {
@@ -940,7 +949,11 @@ describe('Quote infrastructure', () => {
   });
 
   it('T068: Versioning: revise creates new quote row with version+1 and parent_quote_id set', async () => {
-    const quote = await createFinancialQuote({ status: 'sent' });
+    const quote = await createFinancialQuote({
+      status: 'sent',
+      recurring_section_title: 'Monthly Retainer',
+      onetime_section_title: 'Implementation',
+    });
 
     await QuoteItem.create(context.db, context.tenantId, {
       quote_id: quote.quote_id,
@@ -956,6 +969,8 @@ describe('Quote infrastructure', () => {
     expect(revision.version).toBe(2);
     expect(revision.parent_quote_id).toBe(quote.quote_id);
     expect(revision.status).toBe('draft');
+    expect(revision.recurring_section_title).toBe('Monthly Retainer');
+    expect(revision.onetime_section_title).toBe('Implementation');
   });
 
   it('T069: Versioning: revise copies all quote_items to new version with new item_ids', async () => {

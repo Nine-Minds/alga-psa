@@ -54,3 +54,14 @@ test('SerialCommandQueue preserves large JSON responses for Kubernetes API consu
   assert.equal(result.ok, true);
   assert.equal(JSON.parse(result.stdout).items[0].metadata.annotations.payload.length, 300 * 1024);
 });
+
+test('the queue reports commands whose wait plus run time crosses the slow threshold', async () => {
+  const slow = [];
+  const queue = createKubectlQueue({ name: 'slow-test', slowCommandMs: 150, onSlowCommand: (result) => slow.push(result) });
+  await Promise.all([
+    queue.enqueue('sleep 0.2; printf a', { timeoutMs: 2_000 }),
+    queue.enqueue('printf b', { timeoutMs: 2_000 }) // fast itself, but queued behind the first
+  ]);
+  assert.deepEqual(slow.map((result) => result.stdout), ['a', 'b']);
+  assert.ok(slow[1].queuedMs >= 150);
+});
