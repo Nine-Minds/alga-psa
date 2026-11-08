@@ -203,6 +203,7 @@
       "exclude": "Exclure",
       "excluded": "Exclu",
       "fallbackTitle": "Devis {{id}}",
+      "unnumberedTitle": "Devis",
       "include": "Inclure",
       "included": "Inclus",
       "lineItems": "Lignes du devis",
@@ -230,6 +231,79 @@
       "termsAndConditions": "Conditions générales",
       "total": "Total",
       "validUntil": "Valable jusqu'au"
+    },
+    "publicDecision": {
+      "accepted": {
+        "title": "Devis accepté",
+        "body": "Merci. Votre acceptation a été enregistrée et nous en avons été informés."
+      },
+      "rejected": {
+        "title": "Devis refusé",
+        "body": "Votre réponse a été enregistrée et nous en avons été informés."
+      },
+      "already": {
+        "title": "Il a déjà été répondu à ce devis",
+        "accepted": "Ce devis a été accepté le {{date}}.",
+        "rejected": "Ce devis a été refusé le {{date}}."
+      },
+      "changed": {
+        "title": "Ce devis a été modifié",
+        "body": "Ce devis a été modifié depuis que vous l'avez ouvert. Veuillez nous contacter."
+      },
+      "optionalItems": "Éléments facultatifs",
+      "optionalHint": "Choisissez les éléments facultatifs souhaités. Votre choix est envoyé lors de l'acceptation.",
+      "subtotal": "Sous-total",
+      "tax": "Taxe",
+      "total": "Total",
+      "fullName": "Nom complet",
+      "titleOptional": "Fonction (facultatif)",
+      "agreementVersion": "Version de l'accord {{version}}",
+      "accept": "Accepter le devis",
+      "reject": "Refuser le devis",
+      "submitting": "Envoi en cours...",
+      "rejectTitle": "Refuser le devis",
+      "rejectHint": "Dites-nous ce qui doit changer. Nous pourrons réviser et renvoyer le devis.",
+      "rejectConfirm": "Refuser",
+      "cancel": "Annuler",
+      "errors": {
+        "generic": "Une erreur s'est produite. Veuillez réessayer.",
+        "nameRequired": "Veuillez saisir votre nom complet.",
+        "agreementRequired": "Veuillez confirmer l'accord pour accepter ce devis.",
+        "agreementOutdated": "Le texte de l'accord a été mis à jour. Veuillez recharger la page et réessayer.",
+        "commentRequired": "Veuillez ajouter un bref commentaire avant de refuser ce devis.",
+        "tooLong": "Une de vos saisies est trop longue.",
+        "reload": "Veuillez recharger cette page et réessayer."
+      }
+    },
+    "public": {
+      "metaTitle": "Consultation du devis",
+      "notice": {
+        "accepted": "Ce devis a été accepté. Il est affiché ici pour information.",
+        "declined": "Ce devis a été refusé. Il est affiché ici pour information.",
+        "converted": "Ce devis a été accepté et est en cours de traitement. Il est affiché ici pour information.",
+        "readOnly": "Ceci est une vue en lecture seule de votre devis."
+      },
+      "outcome": {
+        "unavailable": {
+          "title": "Ce lien n'est pas disponible",
+          "body": "Le lien est peut-être mal saisi ou n'est plus actif."
+        },
+        "expired": {
+          "title": "Ce lien a expiré",
+          "body": "Pour des raisons de sécurité, les liens de devis cessent de fonctionner après un certain temps."
+        },
+        "superseded": {
+          "title": "Ce devis a été remplacé",
+          "body": "Une version plus récente a été envoyée. Veuillez utiliser le lien du dernier e-mail."
+        },
+        "decided": {
+          "title": "Ce devis a déjà fait l'objet d'une décision",
+          "body": "Une réponse a déjà été enregistrée ; il ne peut plus être ouvert depuis ce lien."
+        },
+        "help": "Besoin d'aide ? Répondez à l'e-mail dans lequel vous avez reçu ce lien.",
+        "signIn": "Se connecter au portail client",
+        "signInHint": "Vous avez déjà un compte sur le portail client ?"
+      }
     }
   },
   "enums": {

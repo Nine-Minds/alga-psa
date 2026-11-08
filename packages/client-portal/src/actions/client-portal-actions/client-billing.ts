@@ -135,6 +135,10 @@ async function getAuthorizedClientQuote(
   quoteId: string,
   allowedStatuses?: string[]
 ): Promise<ClientBillingActionResult<IQuote>> {
+  if (allowedStatuses?.length) {
+    // Serialize status-sensitive reads so concurrent acceptances cannot both change selections.
+    await tenantDb(trx, tenant).table('quotes').where({ quote_id: quoteId }).forUpdate().first('quote_id');
+  }
   const access = await authorizePortalUserForQuote(trx, user, tenant, quoteId, allowedStatuses);
   if (!('reason' in access)) {
     return access.quote;

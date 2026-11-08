@@ -68,6 +68,18 @@ vi.mock('@/lib/productSurfaceRegistry', () => ({ resolveProductApiBehavior: vi.f
 vi.mock('server/src/lib/authorization/kernel', () => ({
   getAuthorizationKernel: vi.fn(async () => ({ authorizeResource: authorizeResourceMock })),
 }));
+vi.mock('@alga-psa/authorization/assetReadAuthorization', () => ({
+  resolveAuthorizationSubjectForUser: vi.fn(async (_knex, tenant, user, apiKeyId) => ({
+    tenant,
+    userId: user.user_id,
+    userType: user.user_type,
+    roleIds: user.role_ids ?? [],
+    teamIds: [],
+    managedUserIds: [],
+    portfolioClientIds: [],
+    ...(apiKeyId ? { apiKeyId } : {}),
+  })),
+}));
 vi.mock('../../../lib/api/services/TicketService', () => ({
   TicketService: class {
     getById = vi.fn(async (id: string) => state.tickets[id] ?? null);

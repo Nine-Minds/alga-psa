@@ -14,7 +14,7 @@
  * once per decision.
  */
 import type { Knex } from 'knex';
-import type { IQuote, IQuoteItem, IUserWithRoles } from '@alga-psa/types';
+import type { IQuote, IQuoteDecisionSummary, IQuoteItem, IUserWithRoles } from '@alga-psa/types';
 import type { QuoteActor, QuoteLifecycleOptions } from '@alga-psa/shared/lib/quotes/quoteLifecycleEvents';
 import { getConnection, tenantDb, withTransaction } from '@alga-psa/db';
 import { onQuoteAccepted } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
@@ -43,6 +43,10 @@ export interface QuoteDecisionContext {
   ip?: string | null;
   userAgent?: string | null;
   agreementTextHash?: string | null;
+  /** Version of the agreement wording the hash was computed from. */
+  agreementVersion?: string | null;
+  /** sha256 of the public quote content the signer was shown (email-link decisions only). */
+  contentFingerprint?: string | null;
 }
 
 export interface QuoteDecisionSelections {
@@ -395,6 +399,8 @@ async function decideInTransaction(
           }
         : {}),
       agreement_text_hash: input.context?.agreementTextHash ?? null,
+      agreement_version: input.context?.agreementVersion ?? null,
+      content_fingerprint: input.context?.contentFingerprint ?? null,
       ip: input.context?.ip ?? null,
       user_agent: input.context?.userAgent ?? null,
       decided_at: decidedAt,
@@ -410,7 +416,8 @@ async function decideInTransaction(
     activity_type: action === 'accept' ? 'accepted' : 'rejected',
     description: activity.description,
     performed_by: userId,
-    metadata: activity.metadata,
+    // decision_id ties the activity to its quote_decisions row so readers never have to guess.
+    metadata: { ...activity.metadata, decision_id: decision.decision_id },
   });
 
   // 5. Hook, last, on the committed-in-this-transaction state.
@@ -458,4 +465,23 @@ export class QuoteAlreadyDecidedError extends Error {
     super('Quote is not in a valid state for this action');
     this.name = 'QuoteAlreadyDecidedError';
   }
+}
+
+/**
+ * The decision audit rows for a quote, newest first. This - not `quotes.accepted_by` -
+ * is the source for "who signed": a contact who accepted through an email link has no
+ * `users` row, so `accepted_by` is null for them.
+ */
+export async function listQuoteDecisions(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  quoteId: string,
+): Promise<IQuoteDecisionSummary[]> {
+  const rows = await tenantDb(knexOrTrx, tenant).table('quote_decisions')
+    .where({ quote_id: quoteId })
+    .orderBy('decided_at', 'desc')
+    .select(
+      'decision_id', 'decision', 'method', 'signer_name', 'signer_email', 'signer_title', 'comment', 'decided_at',
+    ) as Array<Omit<IQuoteDecisionSummary, 'decided_at'> & { decided_at: Date | string }>;
+  return rows.map((row) => ({ ...row, decided_at: new Date(row.decided_at).toISOString() }));
 }
