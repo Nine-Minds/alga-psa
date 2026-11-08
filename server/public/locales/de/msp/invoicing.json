@@ -1491,7 +1491,7 @@
         "useFieldPicker": "Feldauswahl verwenden",
         "current": "Aktuell",
         "unbound": "Nicht gebunden",
-        "searchFields": "Felder suchen...",
+        "searchFields": "Felder suchen…",
         "noMatches": "Keine passenden Felder.",
         "useCustomPath": "Benutzerdefinierten Pfad verwenden"
       },
@@ -1658,7 +1658,7 @@
           "description": "Ausgehend von der bevorzugten Elementgröße den verbleibenden Platz ausfüllen."
         },
         "share": {
-          "label": "Teilen",
+          "label": "Aufteilen",
           "description": "Den verfügbaren Platz gleichmäßig mit anderen Elementen in diesem Modus teilen."
         },
         "fixed": {
@@ -1704,7 +1704,7 @@
           "label": "Unverändert",
           "description": "Den gespeicherten Wert unverändert verwenden."
         },
-        "onlyDataField": "Dies gilt nur für Datenfeldknoten.",
+        "onlyDataField": "Dies gilt nur für Datenfeld-Knoten.",
         "aria": "Anzeigeformat: {{format}}"
       },
       "attachments": {
@@ -2339,12 +2339,12 @@
       "fieldRebound": "{{name}} zeigt jetzt {{path}}.",
       "dropIncompatibleComponent": "Das Ablageziel ist mit dieser Komponente nicht kompatibel.",
       "dropIncompatible": "Das Ablageziel ist nicht kompatibel.",
-      "dropIncompatiblePreset": "Das Ablageziel ist mit dieser Voreinstellung nicht kompatibel.",
+      "dropIncompatiblePreset": "Das Ablageziel ist mit dieser Vorlage nicht kompatibel.",
       "dropOnCanvas": "Legen Sie die Komponente auf der Leinwand ab, um sie hinzuzufügen.",
       "addComponentFailed": "Diese Komponente kann im aktuellen Kontext nicht hinzugefügt werden.",
-      "presetUnavailable": "Die Definition der Voreinstellung ist nicht verfügbar.",
-      "presetPlacementUnresolved": "Es konnte nicht ermittelt werden, wo diese Voreinstellung platziert werden soll.",
-      "addPresetFailed": "Diese Voreinstellung kann im aktuellen Kontext nicht hinzugefügt werden.",
+      "presetUnavailable": "Die Definition der Vorlage ist nicht verfügbar.",
+      "presetPlacementUnresolved": "Es konnte nicht ermittelt werden, wo diese Vorlage platziert werden soll.",
+      "addPresetFailed": "Diese Vorlage kann im aktuellen Kontext nicht hinzugefügt werden.",
       "inserted": "{{value}} eingefügt.",
       "insertedWithDiagnostic": "{{value}} eingefügt. {{diagnostic}}",
       "selectTextBlock": "Wählen Sie einen Textblock aus und setzen Sie dann den Fokus auf ein Textfeld, um Variablen einzufügen.",
