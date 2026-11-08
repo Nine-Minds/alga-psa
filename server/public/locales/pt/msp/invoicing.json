@@ -1684,13 +1684,13 @@
         "heightLower": "altura"
       },
       "flexItemHint": "Nesta pilha {{direction}}, estas configurações controlam como o item compartilha a {{axis}} com os demais itens.",
-      "flexBehavior": "Comportamento de {{axis}}",
-      "flexBehaviorAria": "Comportamento de {{axis}}: {{preset}}",
+      "flexBehavior": "Comportamento da {{axis}}",
+      "flexBehaviorAria": "Comportamento da {{axis}}: {{preset}}",
       "flexCustomNotice": "Este item tem valores flex personalizados. Escolha uma predefinição para simplificá-los ou ajuste os valores avançados abaixo.",
       "advancedFlexValues": "Valores flex avançados",
       "flexGrow": "Ocupar espaço extra",
       "flexShrink": "Permitir redução",
-      "flexBasis": "Tamanho preferido de {{axis}}",
+      "flexBasis": "Tamanho preferido da {{axis}}",
       "displayFormat": {
         "singleLine": {
           "label": "Linha única",
