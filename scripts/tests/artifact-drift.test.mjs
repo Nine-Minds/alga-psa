@@ -8,6 +8,19 @@ import YAML from 'yaml';
 import { applyAllow, formatReport, nonAdditiveChanges, readAllow, repoRoot } from '../ci/artifact-drift.mjs';
 import { writeDocument } from '../../sdk/scripts/lib/write-openapi-document.mjs';
 
+test('published OpenAPI formats describe the same API and the default document is CE', () => {
+  const directory = path.join(repoRoot, 'sdk/docs/openapi');
+  const documents = new Map();
+  for (const name of ['alga-openapi.ce', 'alga-openapi.ee', 'alga-openapi']) {
+    const json = JSON.parse(fs.readFileSync(path.join(directory, `${name}.json`), 'utf8'));
+    const yaml = YAML.parse(fs.readFileSync(path.join(directory, `${name}.yaml`), 'utf8'));
+    assert.deepEqual(yaml, json, `${name}: YAML and JSON consumers must see the same API contract`);
+    documents.set(name, json);
+  }
+  assert.deepEqual(documents.get('alga-openapi'), documents.get('alga-openapi.ce'),
+    'default and CE consumers must see the same API contract');
+});
+
 test('OpenAPI artifacts are identical for shared and copied schema values and preserve their data', (t) => {
   const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), 'openapi-output-'));
   t.after(() => fs.rmSync(outputDir, { recursive: true, force: true }));

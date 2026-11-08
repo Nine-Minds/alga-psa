@@ -22,35 +22,42 @@ const ALL_MSP = 'ALL_MSP';
  * Exact default-role identities per product, in the order the product's role
  * seed creates them.
  *
+ * `required: true` marks the two roles a tenant cannot be without — MSP Admin and
+ * client-portal Admin, the only roles the product protects from deletion and
+ * renaming. A tenant missing (or holding duplicates of) a required role is
+ * skipped as drifted. Every other default role is a grant target only while the
+ * tenant still has it: a tenant that deleted or renamed its Technician or
+ * client User role loses that role's default grants and nothing else, so the
+ * permission rows and the remaining roles' grants keep rolling out.
+ *
  * `legacy: true` marks a role the product no longer creates but whose grants are
  * still declared by catalog entries. It is granted when the tenant happens to
- * have the role (developer databases and older tenants do) and skipped without
- * error when it does not. It is never created.
+ * have the role (developer databases and older tenants do). It is never created.
  */
 const DEFAULT_ROLES = {
   psa: [
-    { key: 'msp:Admin', roleName: 'Admin', msp: true, client: false, allMsp: true },
+    { key: 'msp:Admin', roleName: 'Admin', msp: true, client: false, allMsp: true, required: true },
     { key: 'msp:Finance', roleName: 'Finance', msp: true, client: false },
     { key: 'msp:Manager', roleName: 'Manager', msp: true, client: false, legacy: true },
     { key: 'msp:Technician', roleName: 'Technician', msp: true, client: false },
     { key: 'msp:Project Manager', roleName: 'Project Manager', msp: true, client: false },
     { key: 'msp:Dispatcher', roleName: 'Dispatcher', msp: true, client: false },
-    { key: 'client:Admin', roleName: 'Admin', msp: false, client: true },
+    { key: 'client:Admin', roleName: 'Admin', msp: false, client: true, required: true },
     { key: 'client:Finance', roleName: 'Finance', msp: false, client: true },
     { key: 'client:User', roleName: 'User', msp: false, client: true },
   ],
   co_managed: [
-    { key: 'msp:Admin', roleName: 'Admin', msp: true, client: false, allMsp: true },
+    { key: 'msp:Admin', roleName: 'Admin', msp: true, client: false, allMsp: true, required: true },
     { key: 'msp:Technician', roleName: 'Technician', msp: true, client: false },
     { key: 'msp:Project Manager', roleName: 'Project Manager', msp: true, client: false },
     { key: 'msp:Dispatcher', roleName: 'Dispatcher', msp: true, client: false },
-    { key: 'client:Admin', roleName: 'Admin', msp: false, client: true },
+    { key: 'client:Admin', roleName: 'Admin', msp: false, client: true, required: true },
     { key: 'client:User', roleName: 'User', msp: false, client: true },
   ],
   algadesk: [
-    { key: 'msp:Admin', roleName: 'Admin', msp: true, client: false, allMsp: true },
+    { key: 'msp:Admin', roleName: 'Admin', msp: true, client: false, allMsp: true, required: true },
     { key: 'msp:Agent', roleName: 'Agent', msp: true, client: false },
-    { key: 'client:Admin', roleName: 'Admin', msp: false, client: true },
+    { key: 'client:Admin', roleName: 'Admin', msp: false, client: true, required: true },
     { key: 'client:User', roleName: 'User', msp: false, client: true },
   ],
 };

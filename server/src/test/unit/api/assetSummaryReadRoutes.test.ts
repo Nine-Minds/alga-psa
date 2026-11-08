@@ -53,6 +53,7 @@ const h = vi.hoisted(() => {
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: any[]) => fn(h.state.user, { tenant: h.state.tenant }, ...args),
+  withOptionalAuth: (fn: any) => (...args: any[]) => fn(h.state.user, { tenant: h.state.tenant }, ...args),
   hasPermission: vi.fn(async (_user: any, resource: string) => resource === 'ticket' ? h.state.ticketPermission : h.state.assetPermission),
   getCurrentUser: vi.fn(async () => h.state.user),
   runWithApiKeyUser: vi.fn(async (_user: any, fn: any) => fn()),

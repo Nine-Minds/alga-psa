@@ -62,6 +62,10 @@
       "import": "./dist/recordProjection.js",
       "types": "./src/recordProjection.ts"
     },
+    "./ticketRecordAuthorization": {
+      "import": "./dist/ticketRecordAuthorization.js",
+      "types": "./src/ticketRecordAuthorization.ts"
+    },
     "./rbac": {
       "import": "./dist/rbac.js",
       "types": "./src/rbac.ts"

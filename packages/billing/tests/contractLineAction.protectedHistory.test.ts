@@ -16,7 +16,12 @@ vi.mock('@alga-psa/db', () => {
       whereNot: vi.fn().mockReturnThis(),
       whereNotNull: vi.fn().mockReturnThis(), forUpdate: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(), first: vi.fn(async () => table === 'contract_lines' ? state.currentLine : undefined),
-      update: vi.fn(async () => 1), insert: vi.fn(async () => undefined),
+      update: vi.fn((data: any) => ({
+        returning: vi.fn(async () => {
+          state.persisted(data);
+          return [{ ...state.currentLine, ...data }];
+        }),
+      })), insert: vi.fn(async () => undefined),
       then: (resolve: (value: any) => unknown, reject: (reason: unknown) => unknown) => Promise.resolve(
         table === 'recurring_service_periods' ? state.periods :
           table === 'invoice_charge_details as iid' ? state.details : []
@@ -25,7 +30,7 @@ vi.mock('@alga-psa/db', () => {
     return q;
   };
   const db: any = { table: (name: string) => builder(name), tenantJoin: vi.fn() };
-  const knex: any = {};
+  const knex: any = { fn: { now: () => new Date('2026-06-01T00:00:00.000Z') } };
   return {
     createTenantKnex: vi.fn(async () => ({ knex, tenant: 'tenant-1' })),
     tenantDb: vi.fn(() => db),

@@ -28,11 +28,21 @@ vi.mock('server/src/lib/eventBus/publishers', () => ({
 }));
 
 // RBAC itself is not under test; the permissions each actor holds are set per test.
-const grants = vi.hoisted(() => ({ byUser: new Map<string, Set<string>>() }));
+const grants = vi.hoisted(() => {
+  const byUser = new Map<string, Set<string>>();
+  return {
+    byUser,
+    check: async (user: { user_id: string }, resource: string, action: string) =>
+      byUser.get(user.user_id)?.has(`${resource}:${action}`) ?? false,
+  };
+});
 vi.mock('@alga-psa/auth', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
-  hasPermission: vi.fn(async (user: { user_id: string }, resource: string, action: string) =>
-    grants.byUser.get(user.user_id)?.has(`${resource}:${action}`) ?? false),
+  hasPermission: vi.fn(grants.check),
+}));
+vi.mock('@/lib/auth/rbac', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  hasPermission: vi.fn(grants.check),
 }));
 
 let db: Knex;
@@ -43,6 +53,7 @@ const tenantRows = () =>
   tenantDb(db, '__test_tenant_fixture__').unscoped('tenants', 'test fixture creates and removes tenant rows');
 
 async function cleanupTenant(tenantId: string) {
+  await tenantTable(tenantId, 'time_entries').del();
   await tenantTable(tenantId, 'time_sheets').del();
   await tenantTable(tenantId, 'time_periods').del();
   await tenantTable(tenantId, 'users').del();
@@ -129,6 +140,14 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
     const service = serviceFor(f.tenantId);
     const ctx = contextFor(f.tenantId, f.actor);
     const created = await service.create({ period_id: f.periodId }, ctx);
+
+    grants.byUser.set(f.actor, new Set(['time_sheet:update']));
+    await tenantTable(f.tenantId, 'time_entries').insert({
+      tenant: f.tenantId, entry_id: uuidv4(), user_id: f.actor, time_sheet_id: created.id,
+      work_item_id: uuidv4(), work_item_type: 'ad_hoc', approval_status: 'DRAFT',
+      start_time: '2026-01-06T09:00:00Z', end_time: '2026-01-06T10:00:00Z',
+      work_date: '2026-01-06', work_timezone: 'UTC', billable_duration: 60,
+    });
 
     const updated = await service.update(created.id, { approval_status: 'SUBMITTED' }, ctx);
 

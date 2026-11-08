@@ -149,8 +149,10 @@ export interface StripeInvoice {
   customer: string;
   subscription: string | null;
   amount_due: number;
+  amount_paid?: number;
+  amount_remaining?: number;
   currency: string;
-  status: 'draft' | 'open' | 'paid';
+  status: 'draft' | 'open' | 'paid' | 'void';
   [key: string]: unknown;
 }
 
@@ -422,7 +424,10 @@ export class StripeEmulatorCore implements EmulatorCore {
   private buildInvoice(input: { customer: string; price: StripePrice; quantity: number;
     metadata: Record<string, string>; status: StripeInvoice['status'] }): StripeInvoice {
     return { id: this.newId('in'), object: 'invoice', customer: input.customer, subscription: null,
-      amount_due: input.price.unit_amount * input.quantity, currency: input.price.currency, status: input.status,
+      amount_due: input.price.unit_amount * input.quantity,
+      amount_paid: input.status === 'paid' ? input.price.unit_amount * input.quantity : 0,
+      amount_remaining: input.status === 'paid' || input.status === 'void' ? 0 : input.price.unit_amount * input.quantity,
+      currency: input.price.currency, status: input.status,
       subscription_details: { metadata: { ...input.metadata } },
       lines: { object: 'list', data: [{ price: { id: input.price.id }, quantity: input.quantity }] } };
   }

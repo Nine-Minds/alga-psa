@@ -32,6 +32,8 @@ const softwareRows = vi.hoisted(() => ([
 vi.mock('@alga-psa/auth', () => ({
   getCurrentUser: vi.fn(async () => principal),
   runWithApiKeyUser: vi.fn(async (_user: unknown, fn: () => Promise<unknown>) => fn()),
+  withAuth: (fn: any) => (...args: any[]) => fn(principal, { tenant: principal.tenant }, ...args),
+  withOptionalAuth: (fn: any) => (...args: any[]) => fn(principal, { tenant: principal.tenant }, ...args),
 }));
 vi.mock('@/lib/api/middleware/apiAuthMiddleware', () => ({
   authenticateApiKeyRequest: vi.fn(async (request: any) => {

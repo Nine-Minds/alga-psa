@@ -111,6 +111,32 @@ export function defaultEffectiveFrom(setting: ITimePeriodSettings, localToday: T
   return alignedPeriodStart(candidate, localToday) ?? localToday;
 }
 
+/**
+ * Clamp a defaulted effective_from past earlier settings that end on or after it: the new setting
+ * starts the day after the latest such effective_to (effective_to is inclusive).
+ *
+ * Returns max(aligned, latest effective_to date part + 1 day) over settings whose effective_to is on or
+ * after `aligned`; otherwise `aligned` unchanged. The result MAY BE IN THE FUTURE: if an earlier setting
+ * ends today or later, the new setting starts the day after it ends, while the old setting keeps
+ * governing today. effective_to is a timestamp column, so only its date part is used. Pure: it knows
+ * nothing about overlap, so callers must pass only the settings that actually conflict.
+ */
+export function clampDefaultPastEndedSettings(
+  aligned: Temporal.PlainDate,
+  endedSettings: Pick<ITimePeriodSettings, 'effective_to'>[]
+): Temporal.PlainDate {
+  let result = aligned;
+  for (const setting of endedSettings) {
+    if (!setting.effective_to) continue;
+    const dayAfter = parseDateValue(setting.effective_to as string | Temporal.PlainDate).add({ days: 1 });
+    // effective_to >= aligned  <=>  dayAfter > aligned
+    if (Temporal.PlainDate.compare(dayAfter, aligned) > 0 && Temporal.PlainDate.compare(dayAfter, result) > 0) {
+      result = dayAfter;
+    }
+  }
+  return result;
+}
+
 /** Exclusive end of the cell that starts at boundary B (see endOfConfiguredTimePeriod). */
 // LEVERAGE: pattern period-grid — see note above
 export function cellEnd(setting: ITimePeriodSettings, boundary: Temporal.PlainDate): Temporal.PlainDate {

@@ -24,6 +24,26 @@ vi.mock('../../../../../packages/billing/src/services/invoiceAutomaticAdjustment
   reconcileAutomaticInvoiceAdjustments: vi.fn(),
 }));
 
+// The preview taxes through the tenant's TaxService, which resolves its own
+// tenant (createTenantKnex) and rate tables. This suite mocks knex with no
+// tenant context, so replace only the TaxService-backed edge: the real
+// discount allocation (computeTaxAfterDiscounts) still runs, with a
+// deterministic 5% regional calculator matching the fixtures' tax_rate.
+const previewTax = vi.hoisted(() => ({ fn: vi.fn() }));
+vi.mock('../../../../../packages/billing/src/lib/billing/taxAfterDiscounts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../../../packages/billing/src/lib/billing/taxAfterDiscounts')>();
+  previewTax.fn.mockImplementation(async (charges, _clientId, _cycleEnd, defaultTaxRegion, _currency, adjustments) =>
+    actual.computeTaxAfterDiscounts({
+      charges,
+      chargeItemIds: adjustments?.chargeItemIds ?? [],
+      discounts: adjustments?.discounts ?? [],
+      defaultTaxRegion,
+      calculateRegionTax: async (_region, taxableBase) => Math.round(taxableBase * 0.05),
+    }),
+  );
+  return { ...actual, calculatePreviewTaxAfterDiscounts: previewTax.fn };
+});
+
 // Unknown preview failures surface only a coded UNEXPECTED result whose message
 // carries a short support reference; the raw cause stays in the server log.
 const UNEXPECTED_PREVIEW_FAILURE = {
@@ -527,10 +547,11 @@ describe('invoice preview recurring timing', () => {
       ...calculated,
       discounts: [{ discount_id: 'legacy', discount_name: 'Wrong legacy base', amount: 3200 }],
     } as any);
-    adjustmentPreview.mockResolvedValue({ discounts: [
+    const automaticDiscounts = [
       { discount_id: 'line-term', discount_name: 'Line 10%', discount_type: 'percentage', value: 10, amount: 400 },
       { discount_id: 'contract-term', discount_name: 'Contract fixed', discount_type: 'fixed', value: 2500, amount: 2500 },
-    ] });
+    ];
+    adjustmentPreview.mockResolvedValue({ discounts: automaticDiscounts, chargeItemIds: ['charge-line-1'] });
     const result = await previewInvoice('cycle-1');
     expect(result.success).toBe(true);
     if (!result.success) throw new Error(result.error);
@@ -540,8 +561,15 @@ describe('invoice preview recurring timing', () => {
     ]));
     expect(result.data.items.some((item) => item.description === 'Wrong legacy base')).toBe(false);
     expect(result.data.subtotal).toBe(1100);
-    expect(result.data.tax).toBe(200);
-    expect(result.data.total).toBe(1300);
+    // Discounts lower the taxable base before tax: 4000 - 400 - 2500 = 1100,
+    // taxed at 5% = 55 (not 5% of the pre-discount 4000 = 200).
+    expect(result.data.tax).toBe(55);
+    expect(result.data.total).toBe(1155);
+    // The preview hands the helper the discounts and line ids it allocates by.
+    expect(previewTax.fn).toHaveBeenCalledWith(
+      calculated.charges, 'client-1', expect.any(String), expect.any(String), 'USD',
+      { discounts: automaticDiscounts, chargeItemIds: ['charge-line-1'] },
+    );
     expect(adjustmentPreview).toHaveBeenCalledWith(
       expect.anything(), 'tenant-1', 'client-1', calculated.charges, expect.any(String),
     );

@@ -5,6 +5,7 @@ const state = vi.hoisted(() => ({ rbac: true, record: null as unknown, allowed: 
 vi.mock('@alga-psa/auth', () => ({
   getCurrentUser: vi.fn(async () => ({ user_id: 'u1', tenant: 't1', user_type: 'internal' })),
 }));
+vi.mock('@alga-psa/users/actions', () => ({ findUserByIdForApi: vi.fn() }));
 vi.mock('@/lib/api/middleware/runWithApiKeyOrSession', () => ({
   runWithApiKeyOrSession: async (_r: unknown, fn: () => Promise<unknown>) => fn(),
 }));

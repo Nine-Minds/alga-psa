@@ -3,6 +3,7 @@ import { buildAuthorizationPrincipalSubject, authorizeApiResource, isAuthorizedP
 import { QUOTE_LINE_RECORD_SOURCE, QUOTE_CONVERSION_PREVIEW_ITEM_SOURCE } from '@alga-psa/co-managed/recordProjection';
 
 const authorizeResourceMock = vi.fn();
+const resolveSubjectMock = vi.hoisted(() => vi.fn());
 
 vi.mock('server/src/lib/authorization/kernel', () => ({
   getAuthorizationKernel: vi.fn(async () => ({
@@ -10,8 +11,25 @@ vi.mock('server/src/lib/authorization/kernel', () => ({
   })),
 }));
 
+vi.mock('@alga-psa/authorization/assetReadAuthorization', async (original) => ({
+  ...await original<typeof import('@alga-psa/authorization/assetReadAuthorization')>(),
+  resolveAuthorizationSubjectForUser: (...args: unknown[]) => resolveSubjectMock(...args),
+}));
+
 describe('api authorization kernel helper', () => {
-  beforeEach(() => authorizeResourceMock.mockReset());
+  beforeEach(() => {
+    authorizeResourceMock.mockReset();
+    resolveSubjectMock.mockImplementation(async (_knex, tenant, user, apiKeyId) => ({
+      tenant,
+      userId: user.user_id,
+      userType: 'internal',
+      roleIds: [],
+      teamIds: [],
+      managedUserIds: [],
+      portfolioClientIds: [],
+      ...(apiKeyId ? { apiKeyId } : {}),
+    }));
+  });
 
   it('normalizes user roles, teams, and api key into authorization subject', () => {
     const subject = buildAuthorizationPrincipalSubject(
@@ -203,14 +221,20 @@ describe('api authorization kernel helper', () => {
 
   it('authorizeApiResource passes the mutation action through', async () => {
     authorizeResourceMock.mockReset();
-    authorizeResourceMock.mockResolvedValue({ allowed: true });
+    authorizeResourceMock.mockImplementation(async ({ resource }: { resource: { action: string } }) => ({
+      allowed: resource.action === 'update',
+    }));
     const base = { knex: {} as any, tenant: 't1', user: { user_id: 'u1' }, resource: 'ticket', recordContext: { id: 'r1' } };
 
-    await authorizeApiResource({ ...base, action: 'update' });
-    await authorizeApiResource({ ...base, action: 'delete' });
+    const updateAllowed = await authorizeApiResource({ ...base, action: 'update' });
+    const deleteAllowed = await authorizeApiResource({ ...base, action: 'delete' });
+    const readAllowed = await authorizeApiResource({ ...base, action: 'read' });
 
+    expect(updateAllowed).toBe(true);
+    expect(deleteAllowed).toBe(false);
+    expect(readAllowed).toBe(false);
     const actions = authorizeResourceMock.mock.calls.map((c) => c[0].resource.action);
-    expect(actions).toEqual(['update', 'delete']);
+    expect(actions).toEqual(['update', 'delete', 'read']);
   });
 
   it('API-key and session principals reach the kernel with the same resource/action', async () => {

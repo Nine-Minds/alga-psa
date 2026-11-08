@@ -4,6 +4,8 @@
  * asset surfaces convert between that and what a technician types.
  */
 
+import { formatCurrencyWithSymbol } from '@alga-psa/core/formatters';
+
 /**
  * "1,234.56" and "1.234,56" → 123456. Blank or unparseable input returns null
  * ("cleared"), and a negative amount clamps to zero — a device does not cost
@@ -71,7 +73,7 @@ export function formatMinorUnits(
   const amount = numeric / 100;
   const code = (currency || 'USD').toUpperCase();
   try {
-    return new Intl.NumberFormat(locale, { style: 'currency', currency: code }).format(amount);
+    return formatCurrencyWithSymbol(amount, locale, code);
   } catch {
     // Unknown currency code: show the amount with the code alongside it.
     return `${amount.toFixed(2)} ${code}`;
