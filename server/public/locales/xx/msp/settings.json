@@ -3306,6 +3306,54 @@
     "messages": {
       "adminLocked": "⟦Ȧḓḿīƞ řȯŀḗ ƥḗřḿīşşīȯƞş ƈȧƞƞȯŧ ƀḗ ḿȯḓīƒīḗḓ⟧",
       "permissionsUpdated": "⟦Ƥḗřḿīşşīȯƞş ŭƥḓȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ⟧"
+    },
+    "title": "⟦Ḿȧƞȧɠḗ Ƥḗřḿīşşīȯƞş⟧",
+    "description": "⟦Ƈȯƞƒīɠŭřḗ ȧƈƈḗşş ƥḗřḿīşşīȯƞş ƒȯř ḓīƒƒḗřḗƞŧ řȯŀḗş ȧƞḓ řḗşȯŭřƈḗş⟧",
+    "selectPrompt": "⟦Ƥŀḗȧşḗ şḗŀḗƈŧ ȧ řȯŀḗ ȯř řḗşȯŭřƈḗ ŧȯ ḿȧƞȧɠḗ ƥḗřḿīşşīȯƞş⟧",
+    "unsavedChanges": "⟦Ẏȯŭ ħȧṽḗ ŭƞşȧṽḗḓ ƈħȧƞɠḗş⟧",
+    "adminLockedTooltip": "⟦Ȧḓḿīƞ řȯŀḗ ƥḗřḿīşşīȯƞş ȧřḗ şẏşŧḗḿ-ḓḗƒīƞḗḓ ȧƞḓ ƈȧƞƞȯŧ ƀḗ ƈħȧƞɠḗḓ⟧",
+    "none": "⟦Ƞȯƞḗ⟧",
+    "actionCount_one": "⟦{{count}} ȧƈŧīȯƞ⟧",
+    "actionCount_other": "⟦{{count}} ȧƈŧīȯƞş⟧",
+    "views": {
+      "clientPortal": "⟦Ƈŀīḗƞŧ Ƥȯřŧȧŀ⟧"
+    },
+    "filters": {
+      "allResources": "⟦Ȧŀŀ Řḗşȯŭřƈḗş⟧",
+      "allRoles": "⟦Ȧŀŀ Řȯŀḗş⟧",
+      "selectRole": "⟦Şḗŀḗƈŧ ȧ řȯŀḗ⟧",
+      "filterByResource": "⟦Ƒīŀŧḗř ƀẏ řḗşȯŭřƈḗ⟧"
+    },
+    "columns": {
+      "resource": "⟦Řḗşȯŭřƈḗ⟧",
+      "role": "⟦Řȯŀḗ⟧",
+      "create": "⟦Ƈřḗȧŧḗ⟧",
+      "read": "⟦Řḗȧḓ⟧",
+      "update": "⟦Ŭƥḓȧŧḗ⟧",
+      "delete": "⟦Ḓḗŀḗŧḗ⟧",
+      "specialActions": "⟦Şƥḗƈīȧŀ Ȧƈŧīȯƞş⟧"
+    },
+    "actions": {
+      "cancel": "⟦Ƈȧƞƈḗŀ⟧",
+      "saveChanges": "⟦Şȧṽḗ ƈħȧƞɠḗş⟧",
+      "saving": "⟦Şȧṽīƞɠ...⟧"
+    },
+    "confirm": {
+      "title": "⟦Ƈȯƞƒīřḿ Ƥḗřḿīşşīȯƞ Ƈħȧƞɠḗş⟧",
+      "message": "⟦Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ şȧṽḗ ŧħḗşḗ ƥḗřḿīşşīȯƞ ƈħȧƞɠḗş?⟧",
+      "confirmLabel": "⟦Şȧṽḗ Ƈħȧƞɠḗş⟧"
+    },
+    "stats": {
+      "empty": "⟦Şḗŀḗƈŧ ȧ řȯŀḗ ȯř řḗşȯŭřƈḗ ŧȯ ṽīḗẇ ƥḗřḿīşşīȯƞş⟧",
+      "rolesForResource_one": "⟦{{count}} řȯŀḗ ƒȯř {{resource}}⟧",
+      "rolesForResource_other": "⟦{{count}} řȯŀḗş ƒȯř {{resource}}⟧",
+      "resourcesAndPermissions": "⟦{{count}} řḗşȯŭřƈḗş • {{assigned}}/{{total}} ƥḗřḿīşşīȯƞş⟧"
+    },
+    "errors": {
+      "fetchPermissions": "⟦Ƒȧīŀḗḓ ŧȯ ƒḗŧƈħ ƥḗřḿīşşīȯƞş⟧",
+      "fetchRoles": "⟦Ƒȧīŀḗḓ ŧȯ ƒḗŧƈħ řȯŀḗş⟧",
+      "fetchRolePermissions": "⟦Ƒȧīŀḗḓ ŧȯ ƒḗŧƈħ řȯŀḗ ƥḗřḿīşşīȯƞş⟧",
+      "savePermissions": "⟦Ƒȧīŀḗḓ ŧȯ şȧṽḗ ƥḗřḿīşşīȯƞş⟧"
     }
   },
   "sla": {

@@ -255,7 +255,8 @@
     "tagModeNone": "⟦Ƞȯƞḗ ȯƒ⟧",
     "droppedFromLink": "⟦Şȯḿḗ ƒīŀŧḗřş īƞ ŧħīş ŀīƞķ ȧřḗ ƞȯŧ ṽȧŀīḓ ȧƞḓ ẇḗřḗ īɠƞȯřḗḓ.⟧",
     "location": "⟦Ŀȯƈȧŧīȯƞ⟧",
-    "requesterLocation": "⟦Řḗʠŭḗşŧḗř ŀȯƈȧŧīȯƞ⟧"
+    "requesterLocation": "⟦Řḗʠŭḗşŧḗř ŀȯƈȧŧīȯƞ⟧",
+    "selectStatus": "⟦Şḗŀḗƈŧ Şŧȧŧŭş⟧"
   },
   "create": {
     "title": "⟦Ƈřḗȧŧḗ Şŭƥƥȯřŧ Ŧīƈķḗŧ⟧",
@@ -3185,5 +3186,9 @@
     "bundledTo": "⟦Ɓŭƞḓŀḗḓ → {{ticketNumber}}⟧",
     "master": "⟦Ḿȧşŧḗř⟧",
     "openChildrenShort": "⟦ȯƥḗƞ⟧"
+  },
+  "statusChange": {
+    "title": "⟦Ŭƥḓȧŧḗ Ŧīƈķḗŧ Şŧȧŧŭş⟧",
+    "message": "⟦Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ƈħȧƞɠḗ ŧħḗ şŧȧŧŭş ƒřȯḿ \"{{from}}\" ŧȯ \"{{to}}\"?⟧"
   }
 }
