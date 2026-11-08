@@ -2201,7 +2201,7 @@
       "client": "Klient",
       "allLocations": "Wszystkie lokalizacje",
       "allStatuses": "Wszystkie statusy",
-      "started": "Rozpoczęto"
+      "started": "Data rozpoczęcia"
     },
     "stats": {
       "expected": "oczekiwane",
@@ -2211,7 +2211,7 @@
       "unexpected": "nieoczekiwane"
     },
     "segments": {
-      "remaining": "Pozostało",
+      "remaining": "Pozostałe",
       "present": "Obecne",
       "missing": "Brakujące",
       "unexpected": "Nieoczekiwane",
