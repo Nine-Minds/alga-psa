@@ -2081,6 +2081,7 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "Cadence",
       "{{count}} ticket(s)",
       "client",
       "contact",
