@@ -1,10 +1,9 @@
 /**
- * Pure quote discount allocation and the row -> allocation-input derivation.
- *
- * The single implementation lives in `@alga-psa/core` (it also backs the shared
- * quote totals the client portal renders). This module re-exports it so the
- * workflow runtime's quote conversion (`quoteConversionDiscounts`) and other
- * `@alga-psa/shared` consumers keep their import path.
+ * Pure quote discount allocation and the row -> allocation-input derivation
+ * live in `@alga-psa/core`, which backs billing, the client portal, and shared
+ * workflow consumers. This module re-exports the single implementation so
+ * existing `@alga-psa/shared/billingClients/quoteDiscountAllocation` imports
+ * keep their path.
  */
 export {
   allocateQuoteDiscounts,

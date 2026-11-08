@@ -236,6 +236,10 @@ const exactApiKeySkipPaths = [
   // x-api-key). The route re-checks the session itself, and
   // `/api/notifications` has no other route to exempt.
   '/api/notifications/live-token',
+  // Customer-admin workspace export: a browser form POST from the session-authenticated export page (no
+  // x-api-key). The route re-checks the session, the co-managed capability and the export permission itself.
+  // Exact match only, so nothing else under /api/co-management is exempted by this entry.
+  '/api/co-management/export',
 ];
 
 export function shouldSkipApiKeyAuth(pathname: string): boolean {
@@ -243,6 +247,14 @@ export function shouldSkipApiKeyAuth(pathname: string): boolean {
     // Client portal document handlers authenticate the portal session and run
     // the shared tenant/client visibility resolver before serving content.
     /^\/api\/client-portal\/documents\/[^/]+\/(?:file|export)$/.test(pathname) ||
+    // Co-managed conversation attachment downloads: the handlers authenticate the
+    // session, run capabilityRouteGuard and resolveAttachmentAccess (denied, closed or
+    // kill-switched readers get 404). Single-segment ids only; no nested paths.
+    /^\/api\/co-management\/attachments\/[^/]+$/.test(pathname) ||
+    // Archived conversation bytes: the route independently checks the session,
+    // capability, sealed-manifest membership and archive ownership.
+    /^\/api\/co-management\/archive-files\/[^/]+$/.test(pathname) ||
+    /^\/api\/client-portal\/conversation-attachments\/[^/]+$/.test(pathname) ||
     exactApiKeySkipPaths.includes(pathname) ||
     apiKeySkipPaths.some((path) => pathname.startsWith(path)) ||
     (pathname.startsWith('/api/tickets/') &&

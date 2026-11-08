@@ -8,6 +8,8 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 
+import { PriorityBoardTypeError } from '../lib/ticketFieldReferences';
+
 export type TicketActionError = ActionMessageError | ActionPermissionError;
 
 /**
@@ -21,7 +23,9 @@ export type TicketErrorCode =
   | 'RESOURCE_ALREADY_EXISTS'
   | 'TEAM_NOT_FOUND'
   | 'TEAM_LEAD_NOT_FOUND'
-  | 'COMMENT_NOT_FOUND';
+  | 'COMMENT_NOT_FOUND'
+  | 'BOARD_NOT_FOUND'
+  | 'BOARD_INACTIVE';
 
 const TICKET_CODE_MESSAGES: Record<TicketErrorCode, string> = {
   TICKET_NOT_FOUND: 'Ticket not found. It may have been deleted or moved. Please refresh and try again.',
@@ -30,6 +34,8 @@ const TICKET_CODE_MESSAGES: Record<TicketErrorCode, string> = {
   TEAM_NOT_FOUND: 'Team not found. It may have been deleted. Please refresh and try again.',
   TEAM_LEAD_NOT_FOUND: 'The selected team does not have a team lead. Choose another team or assign a lead first.',
   COMMENT_NOT_FOUND: 'Comment not found. It may have been deleted. Please refresh and try again.',
+  BOARD_NOT_FOUND: 'Board not found. It may have been deleted. Please refresh and try again.',
+  BOARD_INACTIVE: 'The destination board is inactive. Choose an active board.',
 };
 
 const TICKET_CODE_MESSAGE_KEYS: Record<TicketErrorCode, string> = {
@@ -39,6 +45,8 @@ const TICKET_CODE_MESSAGE_KEYS: Record<TicketErrorCode, string> = {
   TEAM_NOT_FOUND: 'features/tickets:errors.action.teamNotFound',
   TEAM_LEAD_NOT_FOUND: 'features/tickets:errors.action.teamLeadNotFound',
   COMMENT_NOT_FOUND: 'features/tickets:errors.action.commentNotFound',
+  BOARD_NOT_FOUND: 'features/tickets:errors.action.boardNotFound',
+  BOARD_INACTIVE: 'features/tickets:errors.action.boardInactive',
 };
 
 /** Read by callers that need to tell "not found" apart after the message is localized. */
@@ -56,6 +64,7 @@ export const TICKET_NOT_FOUND_MESSAGE_KEY = TICKET_CODE_MESSAGE_KEYS.TICKET_NOT_
  */
 const EXPECTED_TICKET_MESSAGE_PREFIXES = [
   'Client users can only create their own comments',
+  'Contact does not belong to',
   'Client users cannot create internal comments',
   'Bundle settings not found',
   'Cannot add children to a bundled child ticket',
@@ -104,6 +113,7 @@ const EXPECTED_TICKET_MESSAGE_PREFIXES = [
   'Ticket is already bundled',
   'Ticket is not bundled',
   'Ticket cannot be closed',
+  'Title is empty or contains an unresolved',
   'Ticket status does not belong to the selected board',
   'Ticket not found',
   'Ticket resource not found',
@@ -142,6 +152,10 @@ function ticketErrorCodeOf(error: unknown): TicketErrorCode | undefined {
 export function ticketActionErrorFrom(error: unknown): TicketActionError | null {
   if (isAuthorizationThrow(error)) {
     return permissionError(error instanceof Error ? error.message : String(error));
+  }
+
+  if (error instanceof PriorityBoardTypeError) {
+    return actionError(error.message, error.messageKey, error.messageParams);
   }
 
   const audienceCode = (error as { code?: unknown } | null)?.code;

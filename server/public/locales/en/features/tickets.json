@@ -124,7 +124,10 @@
     "clientTags": "Client tags",
     "tagModeAny": "Any of",
     "tagModeNone": "None of",
-    "droppedFromLink": "Some filters in this link are not valid and were ignored."
+    "droppedFromLink": "Some filters in this link are not valid and were ignored.",
+    "clearFilters": "Clear filters",
+    "location": "Location",
+    "requesterLocation": "Requester location"
   },
   "create": {
     "title": "Create Support Ticket",
@@ -264,7 +267,9 @@
     "createTemplate": "Create template from ticket",
     "createWorkflowFromTicket": "Create workflow from ticket",
     "printWorkTag": "Print work tag",
-    "retry": "Retry"
+    "retry": "Retry",
+    "duplicateMultiple": "Duplicate multiple…",
+    "duplicateOptions": "More duplicate options"
   },
   "messages": {
     "noTickets": "No tickets found",
@@ -466,7 +471,9 @@
         "operationConflict": "This comment conflicts with an earlier attempt. Reload and try again.",
         "audienceUnresolved": "Choose who can see this comment before posting it.",
         "unknownOutcome": "We could not confirm the comment was posted. Check the conversation before sending it again."
-      }
+      },
+      "unavailable": "This ticket is not available.",
+      "back": "Back to Customer Tickets"
     }
   },
   "responseState": {
@@ -1031,7 +1038,9 @@
       "heading": "Watchers",
       "placeholder": "Add watchers..."
     },
-    "attachmentsPartialFailure": "Ticket created, but these files could not be attached: {{files}}. Add them from the ticket."
+    "attachmentsPartialFailure": "Ticket created, but these files could not be attached: {{files}}. Add them from the ticket.",
+    "contactLocationSuffix": "(contact's location)",
+    "contactPrimaryLocationSuffix": "(contact's primary)"
   },
   "itil": {
     "calculatedPriority": "Priority (Calculated)",
@@ -1653,7 +1662,9 @@
       "agentAlreadyAssigned": "This user is already assigned as an additional agent.",
       "teamNotFound": "Team not found. It may have been deleted. Please refresh and try again.",
       "teamLeadNotFound": "The selected team does not have a team lead. Choose another team or assign a lead first.",
-      "commentNotFound": "Comment not found. It may have been deleted. Please refresh and try again."
+      "commentNotFound": "Comment not found. It may have been deleted. Please refresh and try again.",
+      "boardNotFound": "Board not found. It may have been deleted. Please refresh and try again.",
+      "boardInactive": "The destination board is inactive. Choose an active board."
     },
     "bundle": {
       "masterAlreadyBundleMaster": "Ticket {{tickets}} is already a bundle master and cannot be added as children. Unbundle them first, or use one of them as the master.",
@@ -1680,7 +1691,9 @@
       "missingFieldNamed": "Missing required ticket field: {{field}}.",
       "referenceMissing": "One of the selected ticket records no longer exists. Please refresh and try again.",
       "conflict": "This ticket change conflicts with an existing record. Please refresh and try again.",
-      "valueNotAllowed": "One of the ticket values is not allowed. Please review the form and try again."
+      "valueNotAllowed": "One of the ticket values is not allowed. Please review the form and try again.",
+      "priorityItilBoardCustom": "Priority ‘{{priority}}’ is an ITIL priority but board ‘{{board}}’ uses custom priorities.",
+      "priorityCustomBoardItil": "Priority ‘{{priority}}’ is a custom priority but board ‘{{board}}’ uses ITIL priorities."
     },
     "board": {
       "invalidReference": "The selected board, status, or rule is invalid. Please refresh and try again.",
@@ -1689,7 +1702,14 @@
       "referenceInvalid": "The selected board, status, priority, assignee, team, or SLA policy is no longer valid. Please refresh and try again.",
       "duplicateName": "A board with this name already exists.",
       "duplicate": "A board or status with the same settings already exists.",
-      "invalidValue": "One of the board or status values is invalid. Please refresh and try again."
+      "invalidValue": "One of the board or status values is invalid. Please refresh and try again.",
+      "notificationEmailInvalid": "Notification rule {{rule}} has an invalid email address (up to {{max}} characters)",
+      "notificationEmailLimit": "Notification rule {{rule}} can have at most {{max}} email addresses",
+      "notificationRecipientRequired": "Notification rule {{rule}} must notify at least one user, team or email address",
+      "notificationEmailIsUser": "Notification rule {{rule}}: {{address}} is an Alga user's email address. Choose the user instead.",
+      "notificationEmailIsContact": "Notification rule {{rule}}: {{address}} belongs to a client contact or location and cannot be a recipient.",
+      "notificationEmailClientDomain": "Notification rule {{rule}}: {{address}} is on a client's email domain and cannot be a recipient.",
+      "notificationEmailInboundMailbox": "Notification rule {{rule}}: {{address}} is a connected inbound mailbox and cannot be a recipient."
     },
     "material": {
       "invalidValue": "One of the selected material values is invalid. Please refresh and try again.",
@@ -2065,7 +2085,9 @@
       "changeLocation": "Change location",
       "addDescriptionPrompt": "Add a description — what is the problem, and what does the customer need?",
       "projectTasks": "Project tasks",
-      "timeAndBilling": "Time & billing"
+      "timeAndBilling": "Time & billing",
+      "useContactLocation": "Use contact's location",
+      "remote": "Remote"
     },
     "timeline": {
       "subtitle": "Replies, time, and system changes in one place",
@@ -2612,12 +2634,15 @@
       "columns": {
         "name": "Name",
         "title": "Ticket title",
+        "client": "Client",
         "board": "Board",
         "checklist": "Checklist items",
         "status": "Status",
         "schedules": "Schedules"
       },
-      "deleteBlocked": "Used by {{count}} recurring schedule(s). Point them at another template or archive them first."
+      "deleteBlocked": "Used by {{count}} recurring schedule(s). Point them at another template or archive them first.",
+      "allClients": "All clients",
+      "clientFilter": "All clients"
     },
     "status": {
       "active": "Active",
@@ -2645,6 +2670,9 @@
       "title": "Ticket title",
       "description": "Description",
       "descriptionPlaceholder": "Description",
+      "client": "Client",
+      "clientPlaceholder": "All clients",
+      "clientHelp": "Leave empty to offer the template for every client. Pick one to offer it only on that client’s tickets.",
       "offerForManualUse": "Offer in the new ticket picker",
       "offerForManualUseHelp": "Turn off for templates that only recurring schedules use.",
       "titleTokens": "You can use {{tokens}} in the title; they are filled in per ticket."
@@ -2675,15 +2703,17 @@
       "fromTicket": "Prefilled from ticket #{{number}}. Nothing is saved until you click Save.",
       "inlineImages": "The description contains images that belong to the source ticket. They may stop displaying if that ticket is deleted. Remove them or re-upload them if the template should outlive the ticket.",
       "viewOnly": "You can view this template but not change it.",
-      "referenceProblems": "Some fields in this template point at things that no longer exist. They are left blank when the template is used. Fix them and save:",
+      "referenceProblems": "Some fields in this template are not valid: they refer to something that no longer exists, or do not fit together (for example a priority that does not match the board). Fix them and save:",
       "inactiveWarning": "Inactive: hidden from the template picker; still used by {{count}} schedules.",
       "sharedWarning": "Changes here apply to every recurring schedule that uses this template, from the next ticket each one creates.",
-      "boardChangeWarning": "Changing the board clears priority and category, and can make the status of schedules that use this template invalid. Those schedules fail until you edit them. Affected schedules: {{schedules}}."
+      "boardChangeWarning": "Changing the board clears priority and category, and can make the status of schedules that use this template invalid. Those schedules fail until you edit them. Affected schedules: {{schedules}}.",
+      "priorityTypeMismatchItil": "Priority ‘{{priority}}’ is an ITIL priority but board ‘{{board}}’ uses custom priorities. Saving is refused until you change the priority or the board.",
+      "priorityTypeMismatchCustom": "Priority ‘{{priority}}’ is a custom priority but board ‘{{board}}’ uses ITIL priorities. Saving is refused until you change the priority or the board."
     },
     "errors": {
       "notFound": "Ticket template not found",
       "duplicateName": "A template named {{name}} already exists",
-      "invalidReferences": "The template refers to a board, category or priority that is not available",
+      "invalidReferences": "{{problems}}",
       "notAvailable": "Ticket templates are not available",
       "subcategoryNeedsCategory": "A subcategory requires a category",
       "inUseBySchedules": "Used by {{count}} recurring schedule(s): {{schedules}}. Point them at another template or archive them first."
@@ -2832,5 +2862,104 @@
       "notAvailable": "This canned response is not available for this ticket.",
       "notATeamMember": "You can only manage team responses for teams you belong to."
     }
+  },
+  "batchDuplicate": {
+    "title": "Duplicate #{{number}} for contacts",
+    "titleLoading": "Duplicate for contacts",
+    "loading": "Loading…",
+    "loadFailed": "The ticket to duplicate could not be loaded. Please try again.",
+    "createFailed": "The copies could not be created. Please try again.",
+    "templateLabel": "Title template",
+    "insertToken": "Insert:",
+    "nameHint": "Replace \"{{name}}\" with {{token}} to personalise each copy.",
+    "replace": "Replace",
+    "contactsLabel": "Contacts",
+    "contactsPlaceholder": "Select contacts…",
+    "addBlankRow": "Add copy without contact",
+    "count": "{{count}} of {{max}}",
+    "capReached": "Maximum of {{max}} copies per batch.",
+    "columns": {
+      "contact": "Contact",
+      "title": "Title"
+    },
+    "resetRow": "Reset to template",
+    "removeRow": "Remove copy",
+    "copyChecklist": "Copy checklist items (unchecked)",
+    "cancel": "Cancel",
+    "review": "Review",
+    "back": "Back",
+    "create_one": "Create {{count}} ticket",
+    "create_other": "Create {{count}} tickets",
+    "creating_one": "Creating {{count}} ticket…",
+    "creating_other": "Creating {{count}} tickets…",
+    "done": "Done",
+    "retryFailed_one": "Retry failed ({{count}})",
+    "retryFailed_other": "Retry failed ({{count}})",
+    "errors": {
+      "contactRequired": "This title uses {{token}} but the copy has no contact.",
+      "unknownToken": "Unknown token: {{tokens}}",
+      "empty": "The title cannot be empty.",
+      "unresolvedToken": "The title still contains a {{placeholder}} placeholder."
+    },
+    "summary": {
+      "client": "Client",
+      "board": "Board",
+      "category": "Category",
+      "priority": "Priority",
+      "assignee": "Assignee",
+      "team": "Team",
+      "additionalAgents": "Additional agents",
+      "tags": "Tags",
+      "checklist": "Checklist",
+      "checklistCopy_one": "Copy {{count}} item (unchecked)",
+      "checklistCopy_other": "Copy {{count}} items (unchecked)",
+      "checklistSkip": "Not copied",
+      "customFields": "Custom fields",
+      "status": "Status",
+      "statusBoardDefault": "Board default",
+      "none": "None",
+      "notCopied": "Comments, time entries, attachments and due date are not copied.",
+      "unresolved": "Name unavailable"
+    },
+    "results": {
+      "created_one": "{{count}} ticket created",
+      "created_other": "{{count}} tickets created",
+      "failed_one": "{{count}} copy failed",
+      "failed_other": "{{count}} copies failed"
+    },
+    "discardTitle": "Discard these copies?",
+    "discardMessage": "The copies you set up have not been created yet. Discard them and close?",
+    "discardConfirm": "Discard",
+    "discardKeep": "Keep editing"
+  },
+  "sharedSla": {
+    "title": "Service level",
+    "msp": "MSP service level",
+    "customer": "Customer service level",
+    "state": {
+      "running": "Running",
+      "paused": "Paused",
+      "met": "Met",
+      "breached": "Breached"
+    },
+    "target": {
+      "response": "First response",
+      "resolution": "Resolution"
+    },
+    "elapsed": "Elapsed {{time}}",
+    "dueAt": "Due {{date}}",
+    "completedAt": "Met {{date}}",
+    "breached": "Breached",
+    "targetPaused": "Paused",
+    "noTarget": "No target",
+    "duration": {
+      "hoursMinutes": "{{hours}}h {{minutes}}m",
+      "minutes": "{{minutes}}m"
+    },
+    "notStarted": "The clock starts when the ticket is escalated.",
+    "unavailable": "This service level is no longer available.",
+    "notConfigured": "No service level applies.",
+    "empty": "No service level is being tracked for this ticket yet.",
+    "loadError": "The service level could not be loaded."
   }
 }

@@ -37,7 +37,7 @@ export interface ImageCropDialogProps {
  * is smaller on each axis: the window may hang past the image's edge (the
  * server pads that with transparency), but the image can never leave it.
  */
-const clampPosition = (
+export const clampPosition = (
   position: { x: number; y: number },
   zoom: number,
   media: MediaSize | null,
@@ -159,7 +159,9 @@ export function ImageCropDialog({
               restrictPosition={false}
               onCropChange={setPosition}
               onZoomChange={setZoom}
-              onMediaLoaded={setMedia}
+              // Not onMediaLoaded: that fires before the cover pass, so it reports the
+              // contain-fitted size. This one reports every size the media is drawn at.
+              setMediaSize={setMedia}
               onCropSizeChange={setCropSize}
               onCropComplete={(percentages) => setArea(percentages)}
               mediaProps={{ alt: imageName }}

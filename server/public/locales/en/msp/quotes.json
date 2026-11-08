@@ -537,6 +537,7 @@
       "recurring": "Recurring",
       "service": "service",
       "setPrice": "Set price",
+      "taxable": "Taxable",
       "ungroupedItems": "Ungrouped Items"
     },
     "placeholders": {

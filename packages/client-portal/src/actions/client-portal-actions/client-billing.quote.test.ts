@@ -80,8 +80,8 @@ vi.mock('@alga-psa/billing/services', async () => ({
   recalculateQuoteFinancials: (...args: any[]) => recalculateQuoteFinancialsMock(...args),
   resolveQuoteItemTaxesIfIncluded: async () =>
     new Map([
-      ['item-required', 0],
-      ['item-optional', 0],
+      ['item-required', { taxAmount: 0, taxPercentage: 0 }],
+      ['item-optional', { taxAmount: 0, taxPercentage: 0 }],
     ]),
 }));
 
@@ -689,8 +689,8 @@ describe('client quote billing actions', () => {
       recalculateQuoteFinancials: (...args: any[]) => recalculateQuoteFinancialsMock(...args),
       resolveQuoteItemTaxesIfIncluded: async () =>
         new Map([
-          ['item-required', 0],
-          ['item-optional', 0],
+          ['item-required', { taxAmount: 0, taxPercentage: 0 }],
+          ['item-optional', { taxAmount: 0, taxPercentage: 0 }],
         ]),
       createPDFGenerationService: vi.fn(() => ({ generateAndStore })),
     }));
@@ -730,8 +730,8 @@ describe('client quote billing actions', () => {
       recalculateQuoteFinancials: (...args: any[]) => recalculateQuoteFinancialsMock(...args),
       resolveQuoteItemTaxesIfIncluded: async () =>
         new Map([
-          ['item-required', 0],
-          ['item-optional', 0],
+          ['item-required', { taxAmount: 0, taxPercentage: 0 }],
+          ['item-optional', { taxAmount: 0, taxPercentage: 0 }],
         ]),
       createPDFGenerationService: vi.fn(() => ({
         generateAndStore: vi.fn(async () => ({ file_id: 'generated-pdf-file-1' })),

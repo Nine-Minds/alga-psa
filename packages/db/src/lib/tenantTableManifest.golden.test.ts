@@ -21,18 +21,20 @@ function parseActivityLiteral(): string[] {
 }
 
 describe('tenant table manifest golden order', () => {
-  it('computed order equals the activity literal element for element, with zero violations', () => {
+  it('shared manifest order matches shared entries in the activity literal', () => {
     const literal = parseActivityLiteral();
     const computed = computeTenantDeletionOrder();
+    const sharedTables = new Set(TENANT_TABLE_MANIFEST.map(entry => entry.table));
     expect(computed.violations).toEqual([]);
-    expect(computed.order).toEqual(literal);
-    expect(tenantDeletionOrder()).toEqual(literal);
+    expect(computed.order).toEqual(literal.filter(table => sharedTables.has(table)));
+    expect(computeTenantDeletionOrder(TENANT_TABLE_MANIFEST)).toEqual(computed);
+    expect(tenantDeletionOrder()).toEqual(computed.order);
   });
 
-  it('has 585 unique ordered names', () => {
+  it('has 609 unique ordered names', () => {
     const order = tenantDeletionOrder();
-    expect(order).toHaveLength(585);
-    expect(new Set(order).size).toBe(585);
+    expect(order).toHaveLength(609);
+    expect(new Set(order).size).toBe(609);
   });
 
   it('declares the eight breakCircularDependencies FKs as null-before-delete', () => {

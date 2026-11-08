@@ -387,6 +387,8 @@
     },
     "locations": {
       "billing": "Fakturering",
+      "contactCount_one": "1 kontakt",
+      "contactCount_other": "{{count}} kontakter",
       "manage": "Hantera",
       "more": "+{{count}} till",
       "none": "Inga platser ännu.",
@@ -1372,7 +1374,10 @@
         "phoneLabel": "Telefon",
         "setDefault": "Ange som standard",
         "shippingTag": "Leverans",
-        "unnamed": "Plats utan namn"
+        "unnamed": "Plats utan namn",
+        "contactCount_one": "1 kontakt",
+        "contactCount_other": "{{count}} kontakter",
+        "contactPrimary": "Primär"
       },
       "dialog": {
         "addTitle": "Lägg till ny plats",
@@ -1969,7 +1974,8 @@
       "sourceIsTenantDefault": "Din egen organisationspost kan inte slås samman med en kund.",
       "sourceHasCoManagement": "Den här kunden har en arbetsyta för samförvaltad IT. Avbryt dess konfiguration eller avsluta samförvaltningen innan du slår ihop den.",
       "parentLinkCycle": "Den kunden är registrerad som underordnad den du slår samman, så en sammanslagning i den riktningen skulle vända hierarkin upp och ner.",
-      "invalidContractCutover": "Ett av övergångsdatumen ligger utanför avtalets löptid."
+      "invalidContractCutover": "Ett av övergångsdatumen ligger utanför avtalets löptid.",
+      "invalidContactLocation": "En vald plats hör inte till någon av de kunder som slås samman."
     },
     "profileContacts": {
       "duplicateManager": "En faktureringsprofil kan bara ha en ansvarig.",
@@ -2033,7 +2039,16 @@
     "billingStrategyHeading": "Fakturera sammanslaget arbete och enheter under",
     "billingStrategySource": "Faktureringsprofilen för {{source}}, behållen som en separat profil hos {{target}}",
     "billingStrategyTarget": "Standardfaktureringsprofilen för {{target}}",
-    "billingStrategyHelp": "Gäller {{tickets}} ärende(n), {{projects}} projekt, {{assets}} tillgång(ar) och {{mappings}} RMM-enhetsgrupp(er) som saknar egen faktureringsprofil. Rader med en uttalad profil behåller den, och fakturor, faktureringscykler, betalningar och tillgodohavanden stannar alltid på den sammanslagna profilen."
+    "billingStrategyHelp": "Gäller {{tickets}} ärende(n), {{projects}} projekt, {{assets}} tillgång(ar) och {{mappings}} RMM-enhetsgrupp(er) som saknar egen faktureringsprofil. Rader med en uttalad profil behåller den, och fakturor, faktureringscykler, betalningar och tillgodohavanden stannar alltid på den sammanslagna profilen.",
+    "locationsColumn": "Platser",
+    "remoteBadge": "Distans",
+    "noLocationsAfterMerge": "Inga platser",
+    "unnamedLocation": "Plats",
+    "movingFrom": "flyttas från {{client}}",
+    "primaryLocation": "Primär",
+    "targetAlsoHas": "{{client}} har också ”{{location}}”",
+    "useIt": "Använd den",
+    "contactLocationSummary": "{{count}} platskopplingar för kontakter, {{repointed}} omdirigerade"
   },
   "billingProfileContacts": {
     "title": "Profilens kontakter",
