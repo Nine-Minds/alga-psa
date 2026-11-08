@@ -1527,7 +1527,7 @@
       "status": {
         "noRecording": "Brak nagrania",
         "recordingReady": "Nagranie gotowe",
-        "cancelled": "Anulowano",
+        "cancelled": "Anulowane",
         "failed": "Nagranie niedostępne",
         "recordingPending": "Oczekiwanie na nagranie"
       }
@@ -1667,8 +1667,8 @@
           "helper": "Liczba minut trwania interakcji"
         },
         "duration": "Czas trwania",
-        "hours": "godziny",
-        "minutes": "minuty"
+        "hours": "godz.",
+        "minutes": "min"
       }
     },
     "feed": {
@@ -1733,7 +1733,7 @@
       "unknownUser": "Nieznany",
       "noContact": "Brak powiązanego kontaktu",
       "noClient": "Brak powiązanego klienta",
-      "deleteConfirm": "Czy na pewno chcesz usunąć tę interakcję? Tej czynności nie można cofnąć.",
+      "deleteConfirm": "Czy na pewno chcesz usunąć tę interakcję? Tej operacji nie można cofnąć.",
       "timeEntryFailed": "Nie udało się przygotować wpisu czasu. Spróbuj ponownie.",
       "fields": {
         "title": "Tytuł:",
