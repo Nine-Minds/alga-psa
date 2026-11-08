@@ -106,25 +106,28 @@ describe('nx workspace', () => {
     }
   });
 
-  it('plans standalone integrations builds without pulling in the server', { timeout: 180_000 }, async () => {
-    // LEVERAGE: pattern nx-build-plan-fixture — task graph fixtures repeat across build boundary checks
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-nx-integrations-build-'));
-    try {
-      const outFile = path.join(tmpDir, 'tasks.json');
-      await runNx(['run', '@alga-psa/integrations:build', '--graph', outFile]);
-      const graph = JSON.parse(fs.readFileSync(outFile, 'utf8'));
-      const targets = Object.values(graph.tasks.tasks).map((task: any) => task.target);
-      expect(targets).toContainEqual(expect.objectContaining({
-        project: '@alga-psa/integrations', target: 'build',
-      }));
-      // Cross-implementation calendar tests belong to the application layer:
-      // importing server implementations from the package creates build cycles.
-      expect(targets.some(target => target.project === 'server')).toBe(false);
-      expect(targets.some(target => target.project === 'sebastian-ee')).toBe(false);
-    } finally {
-      fs.rmSync(tmpDir, { recursive: true, force: true });
-    }
-  });
+  it.each(['@alga-psa/integrations', '@alga-psa/assets'])(
+    'plans standalone %s builds without pulling in the server',
+    { timeout: 180_000 },
+    async (project) => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-nx-package-build-'));
+      try {
+        const outFile = path.join(tmpDir, 'tasks.json');
+        await runNx(['run', `${project}:build`, '--graph', outFile]);
+        const graph = JSON.parse(fs.readFileSync(outFile, 'utf8'));
+        const targets = Object.values(graph.tasks.tasks).map((task: any) => task.target);
+        expect(targets).toContainEqual(expect.objectContaining({
+          project, target: 'build',
+        }));
+        // Package fixtures must use lower-layer test helpers: importing server
+        // implementations from a package creates application build cycles.
+        expect(targets.some(target => target.project === 'server')).toBe(false);
+        expect(targets.some(target => target.project === 'sebastian-ee')).toBe(false);
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+      }
+    },
+  );
 
   it('runs the alga-module generator in dry-run mode', { timeout: 120_000 }, async () => {
     const output = await runNx([
