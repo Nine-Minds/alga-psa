@@ -343,12 +343,22 @@ vi.mock('../TicketInfo', () => ({
 
 vi.mock('../bento/TicketBentoLayout', () => ({
   __esModule: true,
-  default: ({ onBatchSelectChange }: { onBatchSelectChange?: (changes: Record<string, unknown>) => Promise<boolean> }) => (
-    <button
-      type="button"
-      data-testid="change-priority"
-      onClick={() => onBatchSelectChange?.({ priority_id: 'priority-2' })}
-    />
+  // Grid shows the Created/Updated stamps in the hero, passed down as heroMeta.
+  default: ({
+    onBatchSelectChange,
+    heroMeta,
+  }: {
+    onBatchSelectChange?: (changes: Record<string, unknown>) => Promise<boolean>;
+    heroMeta?: React.ReactNode;
+  }) => (
+    <>
+      <button
+        type="button"
+        data-testid="change-priority"
+        onClick={() => onBatchSelectChange?.({ priority_id: 'priority-2' })}
+      />
+      {heroMeta}
+    </>
   ),
 }));
 

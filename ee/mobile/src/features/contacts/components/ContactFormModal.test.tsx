@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   uploadContactAvatar: vi.fn(),
   deleteContactAvatar: vi.fn(),
   listClients: vi.fn(),
+  getClientLocations: vi.fn(),
   getEntityTags: vi.fn(),
   showToast: vi.fn(),
   launchImageLibraryAsync: vi.fn(),
@@ -31,7 +32,10 @@ vi.mock("../../../ui/toast/ToastProvider", () => ({ useToast: () => ({ showToast
 vi.mock("../../../capabilities/CapabilitiesContext", () => ({ useCapabilities: () => ({ defaultCountry: "US", features: {}, loaded: true }) }));
 vi.mock("../../../device/clientMetadata", () => ({ getClientMetadataHeaders: async () => ({}) }));
 vi.mock("../../../logging/logger", () => ({ logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() } }));
-vi.mock("../../../api/clients", () => ({ listClients: (...args: unknown[]) => mocks.listClients(...args) }));
+vi.mock("../../../api/clients", () => ({
+  listClients: (...args: unknown[]) => mocks.listClients(...args),
+  getClientLocations: (...args: unknown[]) => mocks.getClientLocations(...args),
+}));
 vi.mock("../../../api/contacts", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../api/contacts")>()),
   createContact: (...args: unknown[]) => mocks.createContact(...args),
@@ -60,6 +64,21 @@ const detail = {
   tags: [],
   phone_numbers: [{ contact_phone_number_id: "p1", phone_number: "+13202521658", canonical_type: null, custom_type: "Pager", is_default: true }],
   additional_email_addresses: [],
+};
+
+const warehouse = {
+  location_id: "loc-warehouse",
+  location_name: "Warehouse",
+  address_line1: "1 Yellow Brick Rd",
+  city: "Emerald City",
+  is_active: true,
+};
+const headOffice = {
+  location_id: "loc-head",
+  location_name: "Head office",
+  address_line1: "2 Yellow Brick Rd",
+  city: "Emerald City",
+  is_active: true,
 };
 
 async function flush() {
@@ -107,6 +126,7 @@ describe("ContactFormModal", () => {
     mocks.getEntityTags.mockResolvedValue({ ok: true, data: { data: { tags: [] } } });
     mocks.createContact.mockResolvedValue({ ok: true, data: { data: { contact_name_id: "contact-9", full_name: "Sam Lee" } } });
     mocks.updateContact.mockResolvedValue({ ok: true, data: { data: { ...detail, role: "CEO" } } });
+    mocks.getClientLocations.mockResolvedValue({ ok: true, data: { data: [warehouse, headOffice] } });
   });
 
   it("requires name and email with the shared wording before creating", async () => {
@@ -177,6 +197,60 @@ describe("ContactFormModal", () => {
     }));
     expect(renderer.root.find((n) => n.type === ("MockAvatar" as never)).props.imageUri).toBe("https://algapsa.test/api/avatar/1");
     expect(mocks.showToast).toHaveBeenCalledWith({ message: "Photo updated", tone: "success" });
+  });
+
+  // T082: the editor is enabled once a client is set, offers that client's locations, and submits
+  // the picked ones with exactly one primary.
+  it("asks for a client before offering locations", async () => {
+    const { renderer } = await render();
+    expect(renderer.root.find((n) => n.props?.testID === "contact-form-locations-hint")).toBeTruthy();
+    expect(mocks.getClientLocations).not.toHaveBeenCalled();
+  });
+
+  it("creates the contact with two locations and the primary flag", async () => {
+    const { renderer } = await render({ presetClient: { id: "client-1", name: "Acme" }, lockClient: true });
+    expect(mocks.getClientLocations).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ clientId: "client-1" }));
+    type(renderer, "contact-form-fullName", "Sam Lee");
+    type(renderer, "contact-form-email", "sam@acme.test");
+    const press = (testID: string) =>
+      act(() => renderer.root.find((n) => n.props?.testID === testID).props.onPress());
+    press("contact-form-location-loc-warehouse");
+    press("contact-form-location-loc-head");
+    press("contact-form-location-primary-loc-head");
+    // Work arrangement goes through the same Select the other type pickers use.
+    act(() => renderer.root.find((n) => n.props?.testID === "contact-form-work-arrangement").props.onPress());
+    const arrangement = renderer.root.findAll((n) => n.type === ("MockSelect" as never)).find((n) => n.props.visible === true);
+    await act(async () => arrangement!.props.onSelect("hybrid"));
+    await submit(renderer);
+
+    expect(mocks.createContact).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      data: expect.objectContaining({
+        work_arrangement: "hybrid",
+        locations: [
+          { location_id: "loc-warehouse", is_primary: false },
+          { location_id: "loc-head", is_primary: true },
+        ],
+      }),
+    }));
+  });
+
+  it("drops the links when the client changes, and sends the empty set", async () => {
+    const linked = {
+      ...detail,
+      work_arrangement: "on_site",
+      locations: [{ location_id: "loc-warehouse", location_name: "Warehouse", is_primary: true, is_active: true }],
+    };
+    mocks.listClients.mockResolvedValue({ ok: true, data: { data: [{ client_id: "client-2", client_name: "Oz Co" }] } });
+    const { renderer } = await render({ mode: "edit", initial: linked as never });
+
+    const picker = renderer.root.findAll((n) => n.props?.onSelect && n.props?.selectedId !== undefined)[0];
+    await act(async () => picker.props.onSelect("client-2", "Oz Co"));
+    await flush();
+    await submit(renderer);
+
+    expect(mocks.updateContact).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      data: expect.objectContaining({ client_id: "client-2", locations: [] }),
+    }));
   });
 
   it("shows the server message for a rejected write", async () => {

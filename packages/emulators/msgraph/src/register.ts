@@ -69,6 +69,23 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
     },
   });
   reg.seeder({
+    name: 'calendar-occurrence',
+    description: 'Cancel or override one occurrence of a recurring series, as Outlook does for a single instance',
+    params: z.object({
+      action: z.enum(['cancel', 'override']),
+      seriesMasterId: z.string(),
+      originalStart: z.string(),
+      event: z.record(z.string(), z.unknown()).default({}),
+    }),
+    run: async ({ action, seriesMasterId, originalStart, event: input }) => {
+      if (action === 'cancel') core.cancelCalendarOccurrence(seriesMasterId, originalStart);
+      else core.overrideCalendarOccurrence(seriesMasterId, originalStart, input);
+      const master = core.getCalendarEvent(seriesMasterId);
+      const deliveries = await deliverCalendarNotifications(core, master, 'updated', core.env);
+      return { master, deliveries };
+    },
+  });
+  reg.seeder({
     name: 'client',
     description:
       'Register an OAuth client id/secret pair, optionally with the admin-consented application permissions its app-only tokens carry in "roles"',
@@ -76,10 +93,15 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
       clientId: z.string(),
       clientSecret: z.string(),
       appRoles: z.array(z.string()).optional(),
+      displayName: z.string().optional(),
+      signInAudience: z.enum(['AzureADMyOrg', 'AzureADMultipleOrgs', 'AzureADandPersonalMicrosoftAccount']).optional(),
+      homeTenantId: z.string().optional(),
+      redirectUris: z.array(z.string()).optional(),
+      servicePrincipalTenants: z.array(z.string()).optional(),
     }),
-    run: ({ clientId, clientSecret, appRoles }) => {
-      core.registerClient(clientId, clientSecret, appRoles ?? []);
-      return { clientId, appRoles: appRoles ?? [] };
+    run: ({ clientId, clientSecret, appRoles, ...tenancy }) => {
+      core.registerClient(clientId, clientSecret, appRoles ?? [], tenancy);
+      return { clientId, appRoles: appRoles ?? [], ...tenancy };
     },
   });
 
@@ -129,6 +151,7 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
       mail: z.string().optional(),
       userPrincipalName: z.string().optional(),
       displayName: z.string().optional(),
+      tenantId: z.string().optional(),
     }),
     run: (input) => core.setSignedInUser(input),
   });
@@ -304,7 +327,7 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
       conversationType: z.enum(['personal', 'groupChat', 'channel']).optional(),
       tenantId: z.string().optional(),
       serviceUrl: z.string().optional(),
-      value: z.record(z.unknown()).optional(),
+      value: z.record(z.string(), z.unknown()).optional(),
       targetUrl: z.string().optional(),
       appId: z.string().optional(),
       tokenAgeSeconds: z.number().int().nonnegative().optional(),
@@ -378,7 +401,7 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
     params: z.object({
       name: z.string().min(1),
       seeder: z.string().min(1),
-      payload: z.record(z.unknown()),
+      payload: z.record(z.string(), z.unknown()),
     }),
     run: ({ name, seeder, payload }) => core.saveSeedPreset(name, seeder, payload),
   });

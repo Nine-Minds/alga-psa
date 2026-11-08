@@ -77,6 +77,7 @@ describe('upsertPlanServiceBucketConfigurationAction success contract', () => {
     expect(mockUpsertBucketOverlayInTransaction).toHaveBeenCalledWith(
       expect.anything(),
       'tenant-1',
+      user,
       'line-1',
       'service-1',
       {

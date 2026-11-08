@@ -165,6 +165,11 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
         if (table === 'statuses') return makeQueryBuilder({ is_closed: false });
         if (table === 'boards') return makeQueryBuilder({});
 
+        // Internal-thread guard (alga-2026-0002798): the matched thread is public.
+        if (table === 'comment_threads') {
+          return makeQueryBuilder({ threadId: 'matched-thread', isInternal: false });
+        }
+
         if (table === 'comments') {
           commentsQueryCount += 1;
           const firstResult = commentsQueryCount === 1
@@ -362,6 +367,85 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
     expect(upsertTicketWatchListRecipientsMock).not.toHaveBeenCalled();
   });
 
+  // alga-2026-0003119: an MSP tech mailing their own M365 helpdesk mailbox about an
+  // existing ticket carries no Authentication-Results (intra-tenant Exchange delivery),
+  // so the internal-user gate used to drop the identity and the thread-header gate then
+  // quarantined the message with no ticket, comment, or UI trace.
+  it('applies a Microsoft intra-org internal reply to the threaded ticket without a security event', async () => {
+    parseEmailReplyBodyMock.mockResolvedValue({
+      sanitizedText: 'Forwarding the customer chain', sanitizedHtml: undefined, confidence: 0.95,
+      strategy: 'plain', appliedHeuristics: [], warnings: [], tokens: {},
+    });
+    findContactByEmailMock.mockResolvedValue({
+      contact_id: null,
+      client_id: null,
+      user_id: 'internal-user-1',
+      email: 'tech@msp.example',
+      matched_email: 'tech@msp.example',
+      user_type: 'internal',
+      is_inactive: false,
+    });
+    withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
+      const trx = vi.fn((table: string) => {
+        if (table === 'tickets as t' || table === 'comments as c') return makeQueryBuilder(undefined);
+        if (table === 'email_sending_logs') return makeQueryBuilder({ threadId: 'thread-intraorg' });
+        if (table === 'comment_threads') return makeQueryBuilder({ ticketId: 'ticket-intraorg', threadId: 'thread-intraorg' });
+        if (table === 'comments') {
+          const builder: any = {
+            select: vi.fn().mockReturnThis(),
+            where: vi.fn().mockReturnThis(),
+            whereRaw: vi.fn().mockReturnThis(),
+            orderBy: vi.fn().mockReturnThis(),
+            first: vi.fn().mockResolvedValue({ parentCommentId: 'parent-comment-intraorg' }),
+            // The one-off Cc/Bcc lookup awaits the builder for a row list.
+            then: (resolve: any, reject: any) => Promise.resolve([]).then(resolve, reject),
+          };
+          return builder;
+        }
+        if (table === 'tickets') return makeQueryBuilder({ ticket_id: 'ticket-intraorg', board_id: 'board-1', client_id: 'client-1', attributes: {} });
+        if (table === 'statuses') return makeQueryBuilder({ is_closed: false });
+        if (table === 'boards') return makeQueryBuilder({});
+        throw new Error(`Unexpected table in unit test: ${table}`);
+      });
+      return callback(trx);
+    });
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const { processInboundEmailInApp } = await import('@alga-psa/shared/services/email/processInboundEmailInApp');
+      const result = await processInboundEmailInApp({
+        tenantId: 'tenant-1', providerId: 'provider-1',
+        emailData: buildEmailData({
+          id: 'email-intraorg-internal-1',
+          provider: 'microsoft',
+          from: { email: 'tech@msp.example', name: 'MSP Tech' },
+          inReplyTo: '<outbound-intraorg@example.test>',
+          // Intra-tenant Exchange delivery: the org stamp stands alone.
+          headers: { 'X-MS-Exchange-Organization-AuthAs': 'Internal' },
+        }),
+      }, { collectDiagnostics: true });
+
+      expect(result).toMatchObject({
+        outcome: 'replied', matchedBy: 'thread_headers', ticketId: 'ticket-intraorg', commentId: 'comment-1',
+      });
+      expect(result.diagnostics?.threading.matchedBy).toBe('thread_headers');
+      expect(result.diagnostics?.threading.failureReason ?? null).toBeNull();
+      expect(createCommentFromEmailMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ticket_id: 'ticket-intraorg',
+          author_type: 'internal',
+          author_id: 'internal-user-1',
+        }),
+        'tenant-1'
+      );
+      const warnings = warnSpy.mock.calls.map((call) => String(call[0]));
+      expect(warnings).not.toContain('SECURITY_EVENT inbound_email_internal_sender_auth_failed');
+      expect(warnings).not.toContain('security_event: inbound_thread_header_sender_quarantined');
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
   it('T035: References are walked from newest to oldest and first match wins', async () => {
     parseEmailReplyBodyMock.mockResolvedValue({
       sanitizedText: 'References reply body',
@@ -544,7 +628,8 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
       ticketId: 'ticket-provider-123',
       commentId: 'comment-1',
     });
-    expect(commentThreadQueryCount).toBe(2);
+    // Provider-thread lookup, thread->comment lookup, plus the internal-thread guard.
+    expect(commentThreadQueryCount).toBe(3);
     expect(findTicketByEmailThreadMock).not.toHaveBeenCalled();
     expect(createTicketFromEmailMock).not.toHaveBeenCalled();
     expect(createCommentFromEmailMock).toHaveBeenCalledWith(
@@ -650,6 +735,11 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
           return makeQueryBuilder(undefined);
         }
 
+        // Internal-thread guard (alga-2026-0002798): the matched thread is public.
+        if (table === 'comment_threads') {
+          return makeQueryBuilder({ threadId: 'matched-thread', isInternal: false });
+        }
+
         if (table === 'comments') {
           commentsQueryCount += 1;
           const firstResult = commentsQueryCount === 1
@@ -726,6 +816,273 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
       }),
       'tenant-1'
     );
+  });
+
+
+  // ---------------------------------------------------------------------
+  // alga-2026-0002798: external replies must never land in internal threads
+  // ---------------------------------------------------------------------
+  describe('external reply that header-matches an internal thread (production shape)', () => {
+    const TICKET = 'ticket-prod-1';
+    const INTERNAL_NOTE_MSG_ID = '<61dbd732-internal-note@alga.test>';
+    const SES_IN_REPLY_TO = '<0100019abc-0000-000000@email.amazonses.com>';
+
+    function installDb(opts: {
+      sendingLogs?: Record<string, string>; // rfc_message_id -> comment_thread_id
+      providerThreads?: Record<string, string>; // provider thread id -> thread_id
+      internalThreads: string[];
+      publicThreadId: string | null;
+      latestByThread: Record<string, string>;
+    }) {
+      withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
+        const trx = vi.fn((table: string) => {
+          if (table === 'tickets as t' || table === 'comments as c') return makeQueryBuilder(undefined);
+          if (table === 'tickets') {
+            return makeQueryBuilder({ ticket_id: TICKET, board_id: 'board-1', client_id: 'client-1', attributes: {} });
+          }
+          if (table === 'statuses') return makeQueryBuilder({ is_closed: false });
+          if (table === 'boards') return makeQueryBuilder({});
+
+          let criteria: Record<string, any> = {};
+          const builder: any = {
+            select: vi.fn().mockReturnThis(),
+            whereNotNull: vi.fn().mockReturnThis(),
+            whereRaw: vi.fn().mockReturnThis(),
+            andWhereRaw: vi.fn().mockReturnThis(),
+            orderBy: vi.fn().mockReturnThis(),
+            where: vi.fn((c: Record<string, any>) => {
+              criteria = { ...criteria, ...(typeof c === 'object' ? c : {}) };
+              return builder;
+            }),
+            // The one-off Cc/Bcc lookup awaits the comments builder for a row list.
+            then: (resolve: any, reject: any) => Promise.resolve([]).then(resolve, reject),
+          };
+
+          if (table === 'email_sending_logs') {
+            builder.first = vi.fn(async () => {
+              const threadId = opts.sendingLogs?.[criteria.rfc_message_id];
+              return threadId ? { threadId } : undefined;
+            });
+            return builder;
+          }
+
+          if (table === 'comment_threads') {
+            builder.first = vi.fn(async () => {
+              if (criteria.email_provider_thread_id) {
+                const threadId = opts.providerThreads?.[criteria.email_provider_thread_id];
+                return threadId ? { threadId } : undefined;
+              }
+              if (criteria.thread_id) {
+                return {
+                  ticketId: TICKET,
+                  threadId: criteria.thread_id,
+                  isInternal: opts.internalThreads.includes(criteria.thread_id),
+                };
+              }
+              if (criteria.ticket_id && criteria.is_internal === false) {
+                return opts.publicThreadId ? { threadId: opts.publicThreadId } : undefined;
+              }
+              return undefined;
+            });
+            return builder;
+          }
+
+          if (table === 'comments') {
+            builder.first = vi.fn(async () => {
+              const parentCommentId = opts.latestByThread[criteria.thread_id];
+              return parentCommentId ? { parentCommentId } : undefined;
+            });
+            return builder;
+          }
+
+          throw new Error(`Unexpected table in unit test: ${table}`);
+        });
+        return callback(trx);
+      });
+    }
+
+    beforeEach(() => {
+      parseEmailReplyBodyMock.mockResolvedValue({
+        sanitizedText: 'Customer reply',
+        sanitizedHtml: undefined,
+        confidence: 0.95,
+        strategy: 'plain',
+        appliedHeuristics: [],
+        warnings: [],
+        tokens: {}, // the reply token missed on the production reply
+      });
+    });
+
+    async function run(emailOverrides: Partial<EmailMessageDetails>) {
+      const { processInboundEmailInApp } = await import(
+        '@alga-psa/shared/services/email/processInboundEmailInApp'
+      );
+      return processInboundEmailInApp({
+        tenantId: 'tenant-1',
+        providerId: 'provider-1',
+        emailData: buildEmailData({ id: 'email-prod-shape-1', ...emailOverrides }),
+      });
+    }
+
+    const productionHeaders = {
+      // SES-assigned id: matches nothing we stored.
+      inReplyTo: SES_IN_REPLY_TO,
+      // Chain ends with the internal note's id; the public reply's id is missing.
+      references: ['<root@alga.test>', INTERNAL_NOTE_MSG_ID],
+    };
+
+    it('References fallback: external reply to an internal thread retargets to the newest public thread', async () => {
+      installDb({
+        sendingLogs: { [INTERNAL_NOTE_MSG_ID]: 'thread-internal' },
+        internalThreads: ['thread-internal'],
+        publicThreadId: 'thread-public',
+        latestByThread: { 'thread-internal': 'internal-latest', 'thread-public': 'public-latest' },
+      });
+
+      const result = await run(productionHeaders);
+
+      expect(result).toMatchObject({ outcome: 'replied', matchedBy: 'thread_headers', ticketId: TICKET });
+      const call = createCommentFromEmailMock.mock.calls[0][0];
+      expect(call.parent_comment_id).toBe('public-latest');
+      expect(call.author_type).toBe('contact');
+    });
+
+    it('References fallback: with no public thread the reply becomes a top-level public comment', async () => {
+      installDb({
+        sendingLogs: { [INTERNAL_NOTE_MSG_ID]: 'thread-internal' },
+        internalThreads: ['thread-internal'],
+        publicThreadId: null,
+        latestByThread: { 'thread-internal': 'internal-latest' },
+      });
+
+      const result = await run(productionHeaders);
+
+      expect(result).toMatchObject({ outcome: 'replied', ticketId: TICKET });
+      const call = createCommentFromEmailMock.mock.calls[0][0];
+      expect(call.parent_comment_id).toBeUndefined();
+      expect(call.ticket_id).toBe(TICKET);
+    });
+
+    it('provider thread id path: external reply to an internal thread retargets to the newest public thread', async () => {
+      installDb({
+        providerThreads: { 'provider-thread-xyz': 'thread-internal' },
+        internalThreads: ['thread-internal'],
+        publicThreadId: 'thread-public',
+        latestByThread: { 'thread-internal': 'internal-latest', 'thread-public': 'public-latest' },
+      });
+
+      const result = await run({ threadId: 'provider-thread-xyz' });
+
+      expect(result).toMatchObject({ outcome: 'replied', ticketId: TICKET });
+      expect(createCommentFromEmailMock.mock.calls[0][0].parent_comment_id).toBe('public-latest');
+    });
+
+    it('provider thread id path: with no public thread the reply becomes a top-level public comment', async () => {
+      installDb({
+        providerThreads: { 'provider-thread-xyz': 'thread-internal' },
+        internalThreads: ['thread-internal'],
+        publicThreadId: null,
+        latestByThread: { 'thread-internal': 'internal-latest' },
+      });
+
+      await run({ threadId: 'provider-thread-xyz' });
+
+      expect(createCommentFromEmailMock.mock.calls[0][0].parent_comment_id).toBeUndefined();
+    });
+
+    it('In-Reply-To path: external reply to an internal notification id is retargeted too', async () => {
+      installDb({
+        sendingLogs: { [INTERNAL_NOTE_MSG_ID]: 'thread-internal' },
+        internalThreads: ['thread-internal'],
+        publicThreadId: 'thread-public',
+        latestByThread: { 'thread-internal': 'internal-latest', 'thread-public': 'public-latest' },
+      });
+
+      await run({ inReplyTo: INTERNAL_NOTE_MSG_ID });
+
+      expect(createCommentFromEmailMock.mock.calls[0][0].parent_comment_id).toBe('public-latest');
+    });
+
+    it('reply-token path: external reply whose token resolves to an internal thread is retargeted', async () => {
+      parseEmailReplyBodyMock.mockResolvedValue({
+        sanitizedText: 'Customer reply', sanitizedHtml: undefined, confidence: 0.95, strategy: 'plain',
+        appliedHeuristics: [], warnings: [], tokens: { conversationToken: 'token-internal' },
+      });
+      findTicketByReplyTokenMock.mockResolvedValue({ ticketId: TICKET, commentId: 'internal-root' });
+      // comments lookup for the token's comment resolves its thread.
+      withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
+        const trx = vi.fn((table: string) => {
+          if (table === 'tickets as t' || table === 'comments as c') return makeQueryBuilder(undefined);
+          if (table === 'tickets') return makeQueryBuilder({ ticket_id: TICKET, board_id: 'board-1', client_id: 'client-1', attributes: {} });
+          if (table === 'statuses') return makeQueryBuilder({ is_closed: false });
+          if (table === 'boards') return makeQueryBuilder({});
+          let criteria: Record<string, any> = {};
+          const builder: any = {
+            select: vi.fn().mockReturnThis(),
+            orderBy: vi.fn().mockReturnThis(),
+            where: vi.fn((c: any) => { criteria = { ...criteria, ...c }; return builder; }),
+            then: (resolve: any, reject: any) => Promise.resolve([]).then(resolve, reject),
+          };
+          if (table === 'comments') {
+            builder.first = vi.fn(async () => {
+              if (criteria.comment_id) return { ticketId: TICKET, threadId: 'thread-internal' };
+              return { parentCommentId: criteria.thread_id === 'thread-public' ? 'public-latest' : 'internal-latest' };
+            });
+            return builder;
+          }
+          if (table === 'comment_threads') {
+            builder.first = vi.fn(async () => {
+              if (criteria.thread_id) return { threadId: criteria.thread_id, isInternal: true };
+              return { threadId: 'thread-public' };
+            });
+            return builder;
+          }
+          throw new Error(`Unexpected table in unit test: ${table}`);
+        });
+        return callback(trx);
+      });
+
+      const result = await run({});
+
+      expect(result).toMatchObject({ outcome: 'replied', matchedBy: 'reply_token' });
+      expect(createCommentFromEmailMock.mock.calls[0][0].parent_comment_id).toBe('public-latest');
+    });
+
+    it('an internal-user sender replying to the internal thread stays in it', async () => {
+      findContactByEmailMock.mockResolvedValue({
+        contact_id: undefined,
+        user_id: 'internal-user-1',
+        client_id: undefined,
+        email: 'client@example.com',
+        matched_email: 'client@example.com',
+        user_type: 'internal',
+      });
+      installDb({
+        sendingLogs: { [INTERNAL_NOTE_MSG_ID]: 'thread-internal' },
+        internalThreads: ['thread-internal'],
+        publicThreadId: 'thread-public',
+        latestByThread: { 'thread-internal': 'internal-latest', 'thread-public': 'public-latest' },
+      });
+
+      await run(productionHeaders);
+
+      const call = createCommentFromEmailMock.mock.calls[0][0];
+      expect(call.author_type).toBe('internal');
+      expect(call.parent_comment_id).toBe('internal-latest');
+    });
+
+    it('a public thread match is left untouched', async () => {
+      installDb({
+        sendingLogs: { [INTERNAL_NOTE_MSG_ID]: 'thread-public' },
+        internalThreads: [],
+        publicThreadId: 'thread-other-public',
+        latestByThread: { 'thread-public': 'public-latest', 'thread-other-public': 'other-latest' },
+      });
+
+      await run(productionHeaders);
+
+      expect(createCommentFromEmailMock.mock.calls[0][0].parent_comment_id).toBe('public-latest');
+    });
   });
 
 });

@@ -105,6 +105,15 @@ const connectedPbx = (): ThreecxCardState['pbx'] => ({
   capabilities: { xapi: true, callControl: true },
 });
 
+const idleButton = async (name: string): Promise<HTMLButtonElement> => {
+  let button: HTMLButtonElement | null = null;
+  await waitFor(() => {
+    button = screen.getByRole('button', { name }) as HTMLButtonElement;
+    expect(button.disabled).toBe(false);
+  });
+  return button!;
+};
+
 describe('ThreecxIntegrationSettings', () => {
   beforeEach(() => {
     cleanup();
@@ -269,10 +278,13 @@ describe('ThreecxIntegrationSettings', () => {
     await waitFor(() => expect(container.querySelector('#threecx-cdr-toggle')).toBeTruthy());
     fireEvent.click(container.querySelector('#threecx-cdr-toggle')!);
     await waitFor(() => expect(mocks.ok).toHaveBeenCalledWith({ enabled: true, lookbackDays: 30 }));
-    fireEvent.click(screen.getByRole('button', { name: 'Push now' }));
+    // Each action holds the panel busy (buttons disabled) until its reload
+    // settles; a click landing before that is dropped, so wait for idle.
+    fireEvent.click(await idleButton('Push now'));
     await waitFor(() => expect(mocks.ok).toHaveBeenCalledTimes(2));
-    fireEvent.click(screen.getByRole('button', { name: 'Import now' }));
+    fireEvent.click(await idleButton('Import now'));
     await waitFor(() => expect(mocks.ok).toHaveBeenCalledTimes(3));
+    await idleButton('Import now');
     fireEvent.click(container.querySelector('#threecx-phonebook-toggle')!);
     await waitFor(() => expect(mocks.ok).toHaveBeenCalledWith({ enabled: true, schedule: 'daily' }));
   });
@@ -289,11 +301,13 @@ describe('ThreecxIntegrationSettings', () => {
     await screen.findByText('3CX');
     await waitFor(() => expect(container.querySelector('#threecx-contact-queue-row-c1')).toBeTruthy());
     expect(container.querySelector('#threecx-contact-queue-row-p1')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+    fireEvent.click(await idleButton('Apply'));
     await waitFor(() => expect(mocks.ok).toHaveBeenCalledWith({ contactId: 'c1', clientId: 'cl1' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Leave without client' }));
+    // Each queue action stays busy (buttons disabled) until its reload settles;
+    // a click on a disabled button is dropped, so wait for the row to go idle.
+    fireEvent.click(await idleButton('Leave without client'));
     await waitFor(() => expect(mocks.ok).toHaveBeenCalledWith({ contactId: 'c1', clientId: null }));
-    fireEvent.click(screen.getByRole('button', { name: 'Complete' }));
+    fireEvent.click(await idleButton('Complete'));
     // The dialog mounts at document level, outside the render container.
     await waitFor(() => expect(document.querySelector('#threecx-complete-email')).toBeTruthy());
     expect((screen.getByRole('button', { name: 'Create contact' }) as HTMLButtonElement).disabled).toBe(true);
@@ -303,11 +317,118 @@ describe('ThreecxIntegrationSettings', () => {
     await waitFor(() => expect(mocks.ok).toHaveBeenCalledWith(expect.objectContaining({ pendingId: 'p1', email: 'no.mail@x.com', number: '+15550001111' })));
   });
 
+  it('a queue action keeps the row locked until its queue reload settles, then frees it', async () => {
+    const queue = {
+      success: true,
+      items: [
+        { kind: 'unmapped', contactId: 'c1', fullName: 'Jane Roe', email: 'jane@x.com', companyName: 'Acme', suggestedClientId: 'cl1', suggestedClientName: 'Acme Inc' },
+      ],
+    };
+    mocks.listQueue.mockResolvedValueOnce(queue);
+    const { container } = render(<ThreecxIntegrationSettings />);
+    await screen.findByText('3CX');
+    await waitFor(() => expect(container.querySelector('#threecx-contact-queue-row-c1')).toBeTruthy());
+
+    let releaseReload!: () => void;
+    mocks.listQueue.mockImplementationOnce(() => new Promise((resolve) => { releaseReload = () => resolve(queue); }));
+    fireEvent.click(await idleButton('Apply'));
+    await waitFor(() => expect(mocks.ok).toHaveBeenCalledWith({ contactId: 'c1', clientId: 'cl1' }));
+    await waitFor(() => expect(mocks.listQueue).toHaveBeenCalledTimes(2));
+
+    // The mapping call has returned but the reload has not: the row stays locked.
+    const leave = screen.getByRole('button', { name: 'Leave without client' }) as HTMLButtonElement;
+    expect(leave.disabled).toBe(true);
+    fireEvent.click(leave);
+    expect(mocks.ok).toHaveBeenCalledTimes(1);
+
+    await act(async () => { releaseReload(); });
+    fireEvent.click(await idleButton('Leave without client'));
+    await waitFor(() => expect(mocks.ok).toHaveBeenCalledWith({ contactId: 'c1', clientId: null }));
+  });
+
   it('T225: the template-stale hint shows when the uploaded version is older than the current one', async () => {
     mocks.getCardState.mockResolvedValue(cardState({ templateVersion: 1, currentTemplateVersion: 2 }));
     const { container } = render(<ThreecxIntegrationSettings />);
     await screen.findByText('3CX');
     await waitFor(() => expect(container.querySelector('#threecx-template-stale')).toBeTruthy());
+  });
+
+  it('a failing sync keeps its error visible after the reload, inside the Extensions section', async () => {
+    mocks.getCardState.mockResolvedValue(cardState({ pbx: connectedPbx() }));
+    mocks.ok.mockResolvedValueOnce({ success: false, error: 'PBX GET /Users failed (403): Forbidden' });
+    const { container } = render(<ThreecxIntegrationSettings />);
+    await screen.findByText('3CX');
+    fireEvent.click(await idleButton('Sync from PBX'));
+    await waitFor(() => expect(container.querySelector('#threecx-extensions-error')).toBeTruthy());
+    // The action's reload ran and succeeded; the error must survive it.
+    await idleButton('Sync from PBX');
+    expect(mocks.getCardState.mock.calls.length).toBeGreaterThanOrEqual(2);
+    const alert = container.querySelector('#threecx-extensions-section #threecx-extensions-error');
+    expect(alert?.textContent).toContain('PBX GET /Users failed (403): Forbidden');
+    expect(alert?.getAttribute('role')).toBe('alert');
+    expect(container.querySelector('#threecx-error-message')).toBeNull();
+    expect(container.querySelector('#threecx-pbx-error')).toBeNull();
+    // A new action in the same section clears it.
+    fireEvent.click(await idleButton('Sync from PBX'));
+    await waitFor(() => expect(container.querySelector('#threecx-extensions-error')).toBeNull());
+  });
+
+  it('shows a getThreecxCardState failure as a state error, not as an action error', async () => {
+    mocks.getCardState.mockResolvedValueOnce(cardState());
+    const { container } = render(<ThreecxIntegrationSettings />);
+    await screen.findByText('3CX');
+    mocks.getCardState.mockResolvedValue(cardState({ success: false, error: 'state load failed' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Rotate' }));
+    await waitFor(() => expect(container.querySelector('#threecx-state-error')?.textContent).toContain('state load failed'));
+  });
+
+  it('says 3CX returned no enabled users after a sync, and keeps the never-synced text distinct', async () => {
+    mocks.getCardState.mockResolvedValue(cardState({ pbx: connectedPbx(), extensionsSyncedAt: '2026-09-15T10:00:00Z' }));
+    const synced = render(<ThreecxIntegrationSettings />);
+    await screen.findByText('3CX');
+    await waitFor(() => expect(synced.container.querySelector('#threecx-extensions-empty-synced')).toBeTruthy());
+    expect(synced.container.querySelector('#threecx-extensions-empty-synced')?.textContent).toContain('3CX returned no enabled users');
+    expect(synced.container.querySelector('#threecx-extensions-empty')).toBeNull();
+    cleanup();
+
+    mocks.getCardState.mockResolvedValue(cardState({ pbx: connectedPbx(), extensionsSyncedAt: null }));
+    const never = render(<ThreecxIntegrationSettings />);
+    await waitFor(() => expect(never.container.querySelector('#threecx-extensions-empty')?.textContent).toBe('No extensions synced yet.'));
+    expect(never.container.querySelector('#threecx-extensions-empty-synced')).toBeNull();
+  });
+
+  it('disables Sync with the users reason and phonebook push with the contacts reason', async () => {
+    const usersReason = "The 3CX API app's role cannot read users. Role fix: Integrations > API > (app) > Role.";
+    const contactsReason = "The 3CX API app's role cannot manage contacts. Role fix: Integrations > API > (app) > Role.";
+    mocks.getCardState.mockResolvedValue(cardState({
+      pbx: {
+        ...connectedPbx(),
+        capabilities: {
+          xapi: true,
+          callControl: true,
+          users: { ok: false, status: 403, reason: usersReason },
+          contacts: { ok: false, status: 403, reason: contactsReason },
+        },
+      },
+    }));
+    const { container } = render(<ThreecxIntegrationSettings />);
+    await screen.findByText('3CX');
+    const sync = await screen.findByRole('button', { name: /Sync from PBX/ });
+    expect((sync as HTMLButtonElement).disabled).toBe(true);
+    expect(container.querySelector('#threecx-extensions-sync-disabled-reason')?.textContent).toBe(usersReason);
+    expect((screen.getByRole('button', { name: /Push now/ }) as HTMLButtonElement).disabled).toBe(true);
+    expect(container.querySelector('#threecx-phonebook-push-disabled-reason')?.textContent).toBe(contactsReason);
+    expect(container.querySelector('#threecx-pbx-capability-users-problem')?.textContent).toContain(usersReason);
+    expect(container.querySelector('#threecx-pbx-capability-contacts-problem')?.textContent).toContain(contactsReason);
+  });
+
+  it('treats state saved before role probing (no users/contacts) as enabled', async () => {
+    mocks.getCardState.mockResolvedValue(cardState({ pbx: connectedPbx() }));
+    const { container } = render(<ThreecxIntegrationSettings />);
+    await screen.findByText('3CX');
+    expect((await idleButton('Sync from PBX')).disabled).toBe(false);
+    expect((await idleButton('Push now')).disabled).toBe(false);
+    expect(container.querySelector('#threecx-extensions-sync-disabled-reason')).toBeNull();
   });
 
   it('T114: the component source wraps every visible string in t()', () => {

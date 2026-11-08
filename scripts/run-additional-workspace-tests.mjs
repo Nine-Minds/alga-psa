@@ -7,6 +7,7 @@ import { reconcileExecution } from './lib/test-execution-evidence.mjs';
 import { isAdditionalWorkspaceTest, reconcileDiscovery, repositoryTestFiles } from './lib/test-discovery.mjs';
 import { testRevision } from './lib/test-revision.mjs';
 import { partitionTestFiles } from './lib/test-sharding.mjs';
+import { collectedTestsFromJournal } from './lib/vitest-progress-reporter.mjs';
 import { normalizeTestFile } from './lib/test-execution-evidence.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -54,7 +55,7 @@ const env = {
 const filters = process.argv.slice(3);
 if (filters.some((filter) => filter.startsWith('-'))) throw new Error('Only file filters are supported');
 let args = ['--config', settings.config, ...filters];
-const run = (args) => spawnSync(process.execPath, [path.join(root, settings.vitest ?? 'server/node_modules/vitest/vitest.mjs'), ...args], { cwd, env, stdio: 'inherit' });
+const run = (args) => spawnSync(process.execPath, [path.join(root, settings.vitest ?? 'node_modules/vitest/vitest.mjs'), ...args], { cwd, env, stdio: 'inherit' });
 let allFiles = [];
 let before;
 let evidence;
@@ -119,13 +120,16 @@ try {
     const actual = collected.map(entry => normalizeTestFile(typeof entry === 'string' ? entry : entry.file, root)).sort();
     if (JSON.stringify(actual) !== JSON.stringify(assigned)) throw new Error('Shard collection differs from its assigned partition');
   }
-  phase = 'Test collection';
-  const testCollection = run(['list', ...args, `--json=${testsPath}`]);
-  if (testCollection.status !== 0) throw new Error(`Test collection failed (exit ${testCollection.status})`);
-  const collectedTests = JSON.parse(readFileSync(testsPath, 'utf8'));
   console.log(`${suite} suite: ${collected.length} required files`);
   phase = 'Execution';
+  // Each file reports its registrations through the progress reporter as its
+  // fork imports it, so the run is the only import of the suite; the inventory
+  // the verifier checks is read back from the journal after the run.
   const result = run(['run', ...args, '--reporter=default', '--reporter=json', `--reporter=${path.join(root, 'scripts/lib/vitest-progress-reporter.mjs')}`, `--outputFile.json=${reportPath}`]);
+  phase = 'Test collection';
+  const collectedTests = collectedTestsFromJournal(readFileSync(path.join(output, 'progress.jsonl'), 'utf8'), { root: cwd });
+  writeFileSync(testsPath, JSON.stringify(collectedTests) + '\n');
+  phase = 'Execution';
   let report;
   try { report = JSON.parse(readFileSync(reportPath, 'utf8')); } catch { report = null; }
   evidence = reconcileExecution({ collected, collectedTests, report, root, suite, revision: before.revision, exitCode: result.status });

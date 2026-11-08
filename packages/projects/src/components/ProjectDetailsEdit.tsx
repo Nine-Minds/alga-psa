@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { IProject } from '@alga-psa/types';
 import { IStatus } from '@alga-psa/types';
-import { IClient } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { ITag } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -16,6 +15,8 @@ import UserPicker from '@alga-psa/ui/components/UserPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { TagManager } from '@alga-psa/tags/components';
 import { updateProject, getProjectStatuses } from '../actions/projectActions';
+import { releaseAllProjectStaging } from '../actions/stagingActions';
+import { isStockConflictResult } from '@alga-psa/inventory/lib/stockConflict';
 import { getServices } from '../actions/serviceCatalogActions';
 import { timeEntryServiceChoices, type TimeEntryServiceChoice } from '@alga-psa/core';
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
@@ -43,7 +44,6 @@ import { useTranslation } from 'react-i18next';
 
 interface ProjectDetailsEditProps {
   initialProject: IProject;
-  clients: IClient[];
   onSave: (updatedProject: IProject) => void;
   onCancel: () => void;
   onChange?: () => void;
@@ -55,7 +55,6 @@ function isReturnedActionError(value: unknown): value is { actionError: string }
 
 const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
   initialProject,
-  clients,
   onSave,
   onCancel,
 }) => {
@@ -64,15 +63,6 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
   // Initialize tag permissions for project tags
   useTagPermissions(['project']);
   
-  // Debug logs
-  useEffect(() => {
-    console.log('ProjectDetailsEdit:', {
-      initialProject,
-      clientsLength: clients?.length,
-      clients
-    });
-  }, [initialProject, clients]);
-
   const [project, setProject] = useState<IProject>(initialProject);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
@@ -208,6 +198,35 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
           count: updatedProject.products_moved_to_hold,
         }), { icon: '⚠️' });
       }
+      const activeStagingClaims = updatedProject.active_staging_claims ?? 0;
+      if (activeStagingClaims > 0) {
+        const projectId = project.project_id;
+        toast((toastInstance) => (
+          <span className="flex flex-col gap-2" id="project-close-staging-claims">
+            {t('staging.closeWarning', '{{count}} reserved or staged item(s) still hold stock for this project.', { count: activeStagingClaims })}
+            <span className="flex gap-2">
+              <Button
+                id="project-close-release-staging"
+                size="sm"
+                onClick={async () => {
+                  toast.dismiss(toastInstance.id);
+                  const released = await releaseAllProjectStaging(projectId);
+                  if (isReturnedActionError(released) || isStockConflictResult(released)) {
+                    handleError(getErrorMessage(released));
+                    return;
+                  }
+                  toast.success(t('staging.releasedAll', 'Released {{count}} item(s). The stock is free again.', { count: released.released }));
+                }}
+              >
+                {t('staging.releaseAll', 'Release all reserved and staged')}
+              </Button>
+              <Button id="project-close-keep-staging" size="sm" variant="outline" onClick={() => toast.dismiss(toastInstance.id)}>
+                {t('staging.keepClaims', 'Keep them')}
+              </Button>
+            </span>
+          </span>
+        ), { duration: 30000, icon: '⚠️' });
+      }
       onSave(updatedProject);
     } catch (error) {
       const errorMessage = error instanceof Error
@@ -315,7 +334,6 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
             </label>
             <ClientPicker
               id='client-picker'
-              clients={clients}
               selectedClientId={project.client_id}
               onSelect={handleClientSelect}
               filterState="all"

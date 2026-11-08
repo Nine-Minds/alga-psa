@@ -121,7 +121,7 @@ vi.mock('@alga-psa/db/admin', () => ({
 }));
 vi.mock('@alga-psa/core/logger', () => ({ default: { debug: vi.fn(), trace: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 
-const { getAuthOptions, options } = await import('./nextAuthOptions');
+const { getAuthOptions } = await import('./nextAuthOptions');
 
 describe('nextAuth session expiry sliding', () => {
   beforeEach(() => {
@@ -228,22 +228,18 @@ describe('nextAuth session expiry sliding', () => {
     })).resolves.toBeNull();
   });
 
-  it('applies immediate fail-closed revocation checks in the synchronous auth config', async () => {
-    const jwt = options.callbacks?.jwt;
-    expect(jwt).toBeTypeOf('function');
-    getRejectionReasonMock.mockResolvedValue('revoked');
+  it('T010: drops the cookie for a token whose user_type is service without consulting the sessions table', async () => {
+    await expect(runJwt({
+      id: 'u-1',
+      tenant: 'tenant-1',
+      user_type: 'service',
+      session_id: 'sess-1',
+      last_plan_check: Date.now(),
+      last_session_extend: Date.now(),
+    })).resolves.toBeNull();
 
-    await expect(jwt!({
-      token: {
-        id: 'u-1',
-        tenant: 'tenant-1',
-        user_type: 'internal',
-        session_id: 'sess-1',
-        last_plan_check: Date.now(),
-        last_session_extend: Date.now(),
-      },
-      trigger: undefined,
-    } as any)).resolves.toBeNull();
+    expect(getRejectionReasonMock).not.toHaveBeenCalled();
+    expect(extendExpiryMock).not.toHaveBeenCalled();
   });
 
   it('rejects a reused OAuth JWT with no durable session_id', async () => {
@@ -290,26 +286,6 @@ describe('nextAuth session expiry sliding', () => {
       'sess-created',
       { userId: 'u-1', userType: 'internal' }
     );
-  });
-
-  it('creates a durable OAuth session in the synchronous auth config', async () => {
-    const jwt = options.callbacks?.jwt;
-    expect(jwt).toBeTypeOf('function');
-
-    await expect(jwt!({
-      token: {},
-      user: {
-        id: 'u-1',
-        email: 'user@example.com',
-        tenant: 'tenant-1',
-        user_type: 'internal',
-        loginMethod: 'azure-ad',
-      },
-      trigger: 'signIn',
-    } as any)).resolves.toMatchObject({
-      session_id: 'sess-created',
-      login_method: 'azure-ad',
-    });
   });
 
   it('fails closed when an OAuth session cannot be persisted', async () => {

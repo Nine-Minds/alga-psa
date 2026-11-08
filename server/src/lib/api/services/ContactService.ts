@@ -6,8 +6,17 @@
 import { Knex } from 'knex';
 import { BaseService, ListResult, ServiceContext, withTransaction, tenantDb } from '@alga-psa/db';
 import { getContactAvatarUrl } from '@alga-psa/formatting/avatarUtils';
+import { displayTagKey, loadDisplayTagsForEntities } from '@alga-psa/tags/lib/loadDisplayTags';
+import { displayAudienceForUser } from '@alga-psa/tags/lib/tagDisplayRules';
 import { deleteEntityImage, uploadEntityImage } from '@alga-psa/storage';
 import { ContactModel, clearContactLinksBeforeDelete } from '@alga-psa/shared/models/contactModel';
+import { getContactLocationsForContacts } from '@alga-psa/shared/models/contactLocation';
+import {
+  CONTACT_LOCATION_CLIENT_MISMATCH,
+  isContactLocationClientMismatch,
+  replaceContactLocations,
+} from '@alga-psa/clients/models/contactLocation';
+import type { ContactLocationInput, ContactWorkArrangement } from '@alga-psa/types';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { publishNonCatalogWorkflowEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import {
@@ -28,6 +37,28 @@ type ContactListRow = Omit<IContact, 'phone_numbers'> & {
   phone_numbers?: IContact['phone_numbers'];
   client_name?: string | null;
 };
+
+/**
+ * `locations` and the primary on every contact-returning response, in one batched read per page.
+ * The list, the single read, create, update, search and export all go through here so no surface
+ * quietly omits the field.
+ */
+async function attachLocations<T extends IContact>(
+  conn: Knex,
+  tenant: string,
+  contacts: T[],
+): Promise<T[]> {
+  if (contacts.length === 0) return contacts;
+  const byContact = await getContactLocationsForContacts(
+    conn,
+    tenant,
+    contacts.map((contact) => contact.contact_name_id),
+  );
+  return contacts.map((contact) => ({
+    ...contact,
+    locations: byContact.get(contact.contact_name_id) ?? [],
+  }));
+}
 
 function maybeUserActorFromContext(context: ServiceContext) {
   if (typeof context.userId !== 'string' || !context.userId) return undefined;
@@ -89,6 +120,14 @@ function applyDefaultPhoneJoins(query: Knex.QueryBuilder, knex: Knex, tenant: st
 function throwContactModelApiError(error: unknown): never {
   if (!(error instanceof Error)) {
     throw error;
+  }
+
+  // A location of another client is a bad request, not a server fault: it carries a code rather
+  // than a message prefix, so it would otherwise fall through to a 500.
+  if (isContactLocationClientMismatch(error)) {
+    throw new ValidationError('Validation failed', [
+      { path: ['locations'], message: error.message, code: CONTACT_LOCATION_CLIENT_MISMATCH },
+    ]);
   }
 
   const message = error.message;
@@ -177,15 +216,24 @@ export class ContactService extends BaseService<IContact> {
       ContactModel.hydrateContactsWithPhoneNumbers(contacts as any[], context.tenant, trx)
     );
 
-    const contactsWithAvatars = await Promise.all(
-      contactsWithPhones.map(async (contact: IContact) => ({
-        ...contact,
-        avatarUrl: await getContactAvatarUrl(contact.contact_name_id, context.tenant),
-      }))
-    );
+    const [contactsWithAvatars, displayTags] = await Promise.all([
+      Promise.all(
+        contactsWithPhones.map(async (contact: IContact) => ({
+          ...contact,
+          avatarUrl: await getContactAvatarUrl(contact.contact_name_id, context.tenant),
+        }))
+      ),
+      // Chip tags for picker rows (tag display rules, caller audience): one query for the page.
+      loadDisplayTagsForEntities(knex, context.tenant, displayAudienceForUser(context.user), [
+        { taggedType: 'contact', ids: contactsWithPhones.map((contact: IContact) => contact.contact_name_id) },
+      ]),
+    ]);
 
     return {
-      data: contactsWithAvatars,
+      data: (await attachLocations(knex, context.tenant, contactsWithAvatars as IContact[])).map((contact) => ({
+        ...contact,
+        display_tags: displayTags.get(displayTagKey('contact', contact.contact_name_id)) ?? [],
+      })),
       total: parseInt(count as string, 10),
     };
   }
@@ -228,16 +276,26 @@ export class ContactService extends BaseService<IContact> {
       }
 
       const [hydrated] = await ContactModel.hydrateContactsWithPhoneNumbers([baseContact as any], context.tenant, trx);
-      return hydrated as IContact;
+      const [withLocations] = await attachLocations(trx, context.tenant, [hydrated as IContact]);
+      return withLocations;
     });
 
     if (!contact) {
       return null;
     }
 
+    const [avatarUrl, displayTags] = await Promise.all([
+      getContactAvatarUrl(id, context.tenant),
+      loadDisplayTagsForEntities(knex, context.tenant, displayAudienceForUser(context.user), [
+        { taggedType: 'contact', ids: [id] },
+      ]),
+    ]);
+
     return {
       ...contact,
-      avatarUrl: await getContactAvatarUrl(id, context.tenant),
+      avatarUrl,
+      // Chip tags (tag display rules for the caller's audience), as the web pickers and ticket header show them.
+      display_tags: displayTags.get(displayTagKey('contact', id)) ?? [],
     } as IContact;
   }
 
@@ -259,16 +317,28 @@ export class ContactService extends BaseService<IContact> {
           role: data.role ?? undefined,
           notes: data.notes ?? undefined,
           is_inactive: data.is_inactive ?? false,
+          work_arrangement: (data as { work_arrangement?: ContactWorkArrangement | null }).work_arrangement ?? undefined,
         },
         context.tenant,
         trx
       );
 
+      // Same transaction as the contact, so a cross-client location rolls the contact back too.
+      const locations = (data as { locations?: ContactLocationInput[] }).locations;
+      if (locations !== undefined) {
+        await replaceContactLocations(trx, context.tenant, created.contact_name_id, locations, {
+          createdBy: typeof context.userId === 'string' ? context.userId : null,
+        });
+      }
+
       if ((data as any).tags && (data as any).tags.length > 0) {
         await this.handleTags(created.contact_name_id, (data as any).tags, context, trx);
       }
 
-      return ContactModel.getContactById(created.contact_name_id, context.tenant, trx);
+      const hydrated = await ContactModel.getContactById(created.contact_name_id, context.tenant, trx);
+      if (!hydrated) return hydrated;
+      const [withLocations] = await attachLocations(trx, context.tenant, [hydrated]);
+      return withLocations;
     }).catch(throwContactModelApiError);
 
     if (!contact) {
@@ -276,30 +346,29 @@ export class ContactService extends BaseService<IContact> {
     }
 
     const clientId = contact.client_id;
-    if (typeof clientId === 'string' && clientId) {
-      const occurredAt = contact.created_at ?? new Date().toISOString();
-      const actor = maybeUserActorFromContext(context);
-      await publishWorkflowEvent({
-        eventType: 'CONTACT_CREATED',
-        payload: buildContactCreatedPayload({
-          contactId: contact.contact_name_id,
-          clientId,
-          fullName: contact.full_name,
-          email: contact.email || undefined,
-          primaryEmailCanonicalType: contact.primary_email_canonical_type ?? null,
-          primaryEmailCustomTypeId: contact.primary_email_custom_type_id ?? null,
-          primaryEmailType: contact.primary_email_type ?? null,
-          additionalEmailAddresses: contact.additional_email_addresses ?? [],
-          phoneNumbers: contact.phone_numbers,
-          defaultPhoneNumber: contact.default_phone_number || undefined,
-          defaultPhoneType: contact.default_phone_type || undefined,
-          createdByUserId: typeof context.userId === 'string' ? context.userId : undefined,
-          createdAt: occurredAt,
-        }),
-        ctx: { tenantId: context.tenant, occurredAt, actor },
-        idempotencyKey: `contact_created:${contact.contact_name_id}`,
-      });
-    }
+    // Client-less contacts emit too: the webhook layer carries client_id only when present.
+    const occurredAt = contact.created_at ?? new Date().toISOString();
+    const actor = maybeUserActorFromContext(context);
+    await publishWorkflowEvent({
+      eventType: 'CONTACT_CREATED',
+      payload: buildContactCreatedPayload({
+        contactId: contact.contact_name_id,
+        clientId,
+        fullName: contact.full_name,
+        email: contact.email || undefined,
+        primaryEmailCanonicalType: contact.primary_email_canonical_type ?? null,
+        primaryEmailCustomTypeId: contact.primary_email_custom_type_id ?? null,
+        primaryEmailType: contact.primary_email_type ?? null,
+        additionalEmailAddresses: contact.additional_email_addresses ?? [],
+        phoneNumbers: contact.phone_numbers,
+        defaultPhoneNumber: contact.default_phone_number || undefined,
+        defaultPhoneType: contact.default_phone_type || undefined,
+        createdByUserId: typeof context.userId === 'string' ? context.userId : undefined,
+        createdAt: occurredAt,
+      }),
+      ctx: { tenantId: context.tenant, occurredAt, actor },
+      idempotencyKey: `contact_created:${contact.contact_name_id}`,
+    });
 
     return contact;
   }
@@ -343,7 +412,16 @@ export class ContactService extends BaseService<IContact> {
         throw new NotFoundError('Contact not found');
       }
 
-      const after = await ContactModel.updateContact(id, data, context.tenant, trx);
+      // ContactModel already dropped the links when the client changed; an explicit `locations`
+      // then writes the new set, and an omitted one leaves whatever survived.
+      const updated = await ContactModel.updateContact(id, data, context.tenant, trx);
+      const locations = (data as { locations?: ContactLocationInput[] }).locations;
+      if (locations !== undefined) {
+        await replaceContactLocations(trx, context.tenant, id, locations, {
+          createdBy: typeof context.userId === 'string' ? context.userId : null,
+        });
+      }
+      const [after] = await attachLocations(trx, context.tenant, [updated]);
 
       if (data.tags) {
         await this.handleTags(id, data.tags, context, trx);
@@ -357,43 +435,42 @@ export class ContactService extends BaseService<IContact> {
     const actor = maybeUserActorFromContext(context);
     const clientId = result.after.client_id ?? result.before.client_id;
 
-    if (typeof clientId === 'string' && clientId) {
-      const wasInactive = Boolean(result.before.is_inactive);
-      const isInactive = Boolean(result.after.is_inactive);
-      if (!wasInactive && isInactive) {
-        await publishWorkflowEvent({
-          eventType: 'CONTACT_ARCHIVED',
-          payload: buildContactArchivedPayload({
-            contactId: id,
-            clientId,
-            archivedByUserId: typeof context.userId === 'string' ? context.userId : undefined,
-            archivedAt: occurredAt,
-          }),
-          ctx: { tenantId: context.tenant, occurredAt, actor },
-          idempotencyKey: `contact_archived:${id}:${occurredAt}`,
-        });
-      }
-
-      const updatedPayload = buildContactUpdatedPayload({
-        contactId: id,
-        clientId,
-        before: result.before as any,
-        after: result.after as any,
-        updatedFieldKeys: result.updatedFieldKeys,
-        updatedByUserId: typeof context.userId === 'string' ? context.userId : undefined,
-        updatedAt: occurredAt,
+    // Client-less contacts emit too: the webhook layer carries client_id only when present.
+    const wasInactive = Boolean(result.before.is_inactive);
+    const isInactive = Boolean(result.after.is_inactive);
+    if (!wasInactive && isInactive) {
+      await publishWorkflowEvent({
+        eventType: 'CONTACT_ARCHIVED',
+        payload: buildContactArchivedPayload({
+          contactId: id,
+          clientId,
+          archivedByUserId: typeof context.userId === 'string' ? context.userId : undefined,
+          archivedAt: occurredAt,
+        }),
+        ctx: { tenantId: context.tenant, occurredAt, actor },
+        idempotencyKey: `contact_archived:${id}:${occurredAt}`,
       });
+    }
 
-      const updatedFields = (updatedPayload as any).updatedFields;
-      const changes = (updatedPayload as any).changes;
-      if ((Array.isArray(updatedFields) && updatedFields.length) || (changes && Object.keys(changes).length)) {
-        await publishWorkflowEvent({
-          eventType: 'CONTACT_UPDATED',
-          payload: updatedPayload,
-          ctx: { tenantId: context.tenant, occurredAt, actor },
-          idempotencyKey: `contact_updated:${id}:${occurredAt}`,
-        });
-      }
+    const updatedPayload = buildContactUpdatedPayload({
+      contactId: id,
+      clientId,
+      before: result.before as any,
+      after: result.after as any,
+      updatedFieldKeys: result.updatedFieldKeys,
+      updatedByUserId: typeof context.userId === 'string' ? context.userId : undefined,
+      updatedAt: occurredAt,
+    });
+
+    const updatedFields = (updatedPayload as any).updatedFields;
+    const changes = (updatedPayload as any).changes;
+    if ((Array.isArray(updatedFields) && updatedFields.length) || (changes && Object.keys(changes).length)) {
+      await publishWorkflowEvent({
+        eventType: 'CONTACT_UPDATED',
+        payload: updatedPayload,
+        ctx: { tenantId: context.tenant, occurredAt, actor },
+        idempotencyKey: `contact_updated:${id}:${occurredAt}`,
+      });
     }
 
     return result.after;
@@ -415,7 +492,8 @@ export class ContactService extends BaseService<IContact> {
         )
         .orderBy('c.full_name', 'asc');
 
-      return ContactModel.hydrateContactsWithPhoneNumbers(rows as any[], context.tenant, trx);
+      const hydrated = await ContactModel.hydrateContactsWithPhoneNumbers(rows as any[], context.tenant, trx);
+      return attachLocations(trx, context.tenant, hydrated as IContact[]);
     });
 
     return Promise.all(
@@ -516,9 +594,10 @@ export class ContactService extends BaseService<IContact> {
       .limit(searchData.limit || 25)
       .orderBy('c.full_name', 'asc');
 
-    const hydratedContacts = await withTransaction(knex, async (trx) =>
-      ContactModel.hydrateContactsWithPhoneNumbers(contacts as any[], context.tenant, trx)
-    );
+    const hydratedContacts = await withTransaction(knex, async (trx) => {
+      const hydrated = await ContactModel.hydrateContactsWithPhoneNumbers(contacts as any[], context.tenant, trx);
+      return attachLocations(trx, context.tenant, hydrated as IContact[]);
+    });
 
     return Promise.all(
       hydratedContacts.map(async (contact) => ({
@@ -583,13 +662,14 @@ export class ContactService extends BaseService<IContact> {
       ...filters,
     }, knex, context.tenant);
 
-    const contacts = await query
+    const baseRows = await query
       .select(
         'c.contact_name_id',
         'c.full_name',
         'c.email',
         'c.role',
         'c.is_inactive',
+        'c.work_arrangement',
         'c.created_at',
         'comp.client_name',
         'cpn_default.phone_number as default_phone_number',
@@ -597,13 +677,15 @@ export class ContactService extends BaseService<IContact> {
       )
       .orderBy('c.full_name', 'asc');
 
+    const contacts = await attachLocations(knex, context.tenant, baseRows as IContact[]);
+
     if (format === 'json') {
       return JSON.stringify(contacts, null, 2);
     }
 
     const headers = [
       'ID', 'Full Name', 'Email', 'Phone', 'Phone Type', 'Role',
-      'Client', 'Inactive', 'Created At',
+      'Client', 'Inactive', 'Work Arrangement', 'Locations', 'Primary Location', 'Created At',
     ];
 
     const rows = contacts.map((contact: any) => [
@@ -615,6 +697,10 @@ export class ContactService extends BaseService<IContact> {
       contact.role || '',
       contact.client_name || '',
       contact.is_inactive ? 'Yes' : 'No',
+      contact.work_arrangement || '',
+      // "Warehouse; Head office" — the same separator CSV import reads back.
+      (contact.locations ?? []).map((location: any) => location.location_name ?? '').filter(Boolean).join('; '),
+      (contact.locations ?? []).find((location: any) => location.is_primary)?.location_name || '',
       contact.created_at,
     ]);
 
@@ -672,6 +758,18 @@ export class ContactService extends BaseService<IContact> {
           break;
         case 'client_name':
           query.whereILike('comp.client_name', `%${value}%`);
+          break;
+        case 'location_id':
+          // Linked in any role, primary or not; tenant carried on both sides of the correlation.
+          query.whereExists(
+            scopedDb.subquery('contact_locations as cl_filter')
+              .select(knex.raw('1'))
+              .whereRaw('cl_filter.contact_name_id = c.contact_name_id')
+              .andWhere('cl_filter.location_id', value)
+          );
+          break;
+        case 'work_arrangement':
+          query.where('c.work_arrangement', value);
           break;
         case 'search': {
           const normalizedDigits = normalizePhoneForSearch(String(value));

@@ -23,6 +23,11 @@ export * from './lib/temporal';
 export * from './lib/invoice-renderer/types';
 export * from './lib/invoice-template-ast';
 export * from './lib/invoice-print-settings';
+export * from './lib/recordLinks';
+export * from './lib/taskCommentRedaction';
+export * from './lib/labels';
+export * from './lib/stagingManifest';
+export * from './lib/rmaReturnSlip';
 export * from './lib/xeroCsvTaxImport';
 export * from './lib/companySync';
 export * from './lib/telemetry';
@@ -31,6 +36,7 @@ export * from './lib/onboardingWizard';
 export * from './lib/knowledgeBase';
 export * from './lib/senderActionResult';
 export * from './lib/externalSystems';
+export * from './lib/paymentSettings';
 export * from './search';
 export * from './deletion';
 export * from './constants/index';
@@ -165,7 +171,19 @@ export interface TenantScopedEntity extends AuditFields {
 export type WorkflowActor =
   | { actorType: 'USER'; actorUserId: string }
   | { actorType: 'CONTACT'; actorContactId: string }
-  | { actorType: 'SYSTEM' };
+  | { actorType: 'SYSTEM' }
+  | { actorType: 'COLLABORATOR'; actorReference: WorkflowCollaborationActorReference };
+
+/** A co-managed collaborator from another tenant. Structurally identical to
+ * `CollaborationActorReference` in `@alga-psa/event-schemas`. */
+export type WorkflowCollaborationActorReference = {
+  ownerTenantId: string;
+  referenceId: string;
+  tenantId: string;
+  userId: string;
+  displayName: string;
+  organizationName: string;
+};
 
 /**
  * Interface for event publishing using dependency injection pattern
@@ -212,6 +230,23 @@ export interface IEventPublisher {
     userId?: string;
     actor?: WorkflowActor;
     metadata?: Record<string, any>;
+  }): Promise<void>;
+
+  /**
+   * Optional: record a ticket.response_state_changed event. Implemented by the
+   * durable inbound-email outbox publisher, which writes an outbox row inside
+   * the commit transaction. Publishers without it use the after-commit default.
+   */
+  publishResponseStateChanged?(payload: {
+    tenantId: string;
+    occurredAt: string;
+    ticketId: string;
+    userId: string | null;
+    previousResponseState: string | null;
+    newResponseState: string | null;
+    previousState: string | null;
+    newState: string | null;
+    trigger: 'comment' | 'manual' | 'close';
   }): Promise<void>;
 
   publishTicketAssigned(data: {

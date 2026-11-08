@@ -1,8 +1,11 @@
 'use server';
 
+import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
+import { isMspPrincipalUserType } from '@alga-psa/types';
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { ticketUpdateStamp } from '@shared/lib/tickets/ticketUpdateStamp';
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
+import { type NativeCommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 import { reconcileCommentAttachments } from '@shared/lib/ticketCommentAttachments';
@@ -23,6 +26,8 @@ import type {
   TicketTemplateDraftFromTicket,
 } from '@alga-psa/types';
 import { TICKET_ORIGINS } from '@alga-psa/types';
+import { parseTicketCreateExtras } from '../lib/ticketCreateExtras';
+import { mergeTicketWatchListRecipients, type TicketWatchListRecipientInput } from '@alga-psa/shared/lib/tickets/watchList';
 import Ticket from '../models/ticket';
 import { safeRevalidatePath as revalidatePath } from '../lib/safeRevalidate';
 import { getTicketAttributes } from '@alga-psa/auth/actions/policyActions';
@@ -43,6 +48,7 @@ import {
   ticketListItemSchema,
   ticketListFiltersSchema
 } from '../schemas/ticket.schema';
+import { resolveTicketTagIdsByText, compileTicketTagIdsFilter } from '../lib/ticketTagFilter';
 import { z } from 'zod';
 import { validateData } from '@alga-psa/validation';
 import { publishEvent, publishWorkflowEvent, publishStoredWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -56,6 +62,10 @@ import {
 import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import { TicketModel, CreateTicketInput } from '@alga-psa/shared/models/ticketModel';
 import { resolveAssetBillingProfileIdForClient } from '@alga-psa/shared/models/assetBillingProfileModel';
+import {
+  assetIdForBillingProfileInheritance,
+  dedupeTicketAssetIds,
+} from '@alga-psa/shared/models/ticketAssetLinkModel';
 import {
   TICKET_ACTIVITY_ACTOR,
   TICKET_ACTIVITY_ENTITY,
@@ -87,20 +97,24 @@ import {
   buildTicketUpdatedPayload,
 } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { buildTicketCommunicationWorkflowEvents, publishTicketCommunicationWorkflowEvent } from '../lib/workflowTicketCommunicationEvents';
+import { applyCreatedFromTemplateEffects } from '@alga-psa/shared/services/tickets/createTicketWithSideEffects';
 import { getTicketOrigin, type ResolvedTicketOrigin } from '../lib/ticketOrigin';
 import type { TicketWorkflowBlueprint } from '@alga-psa/shared/workflow/runtime/designer/draftFromTicket';
 import {
   copyChecklistFromSource,
   countDuplicableCustomFields,
-  insertChecklistItemsReplacingTemplates,
   pickDuplicableAttributes,
   type TicketDuplicateSource,
 } from '../lib/ticketDuplicate';
 import {
   descriptionHasInlineImages,
-  templateChecklistToItems,
   ticketToTemplateDraft,
 } from '../lib/ticketTemplates';
+import {
+  loadTemplateForInstantiation,
+  templateTicketProvenance,
+  type TemplateForInstantiation,
+} from '../lib/instantiateTicketTemplate';
 import { asJsonColumn } from '../lib/recurring/jsonColumn';
 import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility.server';
 import { extractActiveWatcherContactIds } from '@alga-psa/authorization/portal/visibility';
@@ -122,6 +136,7 @@ import {
   shouldApplyOpenOnlyStatusFilter,
 } from '../lib/ticketStatusFilter';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
+import { assertBoardAcceptsTickets } from './ticketBoardGuards';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 // SLA cancellation is injected by the composition layer to avoid tickets→sla cross-package violation
 let _cancelSlaFn: ((tenantId: string, ticketId: string) => Promise<void>) | null = null;
@@ -289,7 +304,7 @@ async function resolveClientVisibility(
   tenant: string,
   user: IUserWithRoles
 ): Promise<ContactVisibilityContext | null | undefined> {
-  if (user.user_type !== 'client') return undefined;
+  if (isMspPrincipalUserType(user.user_type)) return undefined;
   if (!user.contact_id) return null;
   try {
     return await getClientContactVisibilityContext(trx, tenant, user.contact_id);
@@ -446,6 +461,48 @@ async function publishResponseStateChangedEvent(
     // Don't throw - allow the operation to succeed even if event publishing fails
   }
 }
+/**
+ * Links assets to a freshly created ticket, one `asset_associations` row each, inside the caller's
+ * transaction. Ids are deduplicated; every asset must exist in the tenant (and, when `clientId` is
+ * given, belong to that client), otherwise this throws and the caller's create rolls back.
+ * LEVERAGE: pattern ticket-asset-association-insert — assetActions.createAssetAssociation inserts the same row for an existing ticket
+ */
+async function linkAssetsToNewTicket(
+  trx: Knex.Transaction,
+  tenant: string,
+  params: { ticketId: string; assetIds: string[]; userId: string; clientId?: string }
+): Promise<void> {
+  const assetIds = Array.from(new Set(params.assetIds.filter(Boolean)));
+  if (assetIds.length === 0) return;
+
+  const rows = await tenantScopedTable(trx, 'assets', tenant)
+    .whereIn('asset_id', assetIds)
+    .select('asset_id', 'client_id');
+  const byId = new Map<string, { client_id: string | null }>(rows.map((row: any) => [row.asset_id, row]));
+  for (const assetId of assetIds) {
+    const row = byId.get(assetId);
+    if (!row) {
+      throw new Error(`Invalid asset: ${assetId} was not found`);
+    }
+    if (params.clientId && row.client_id !== params.clientId) {
+      throw new Error(`Invalid asset: ${assetId} does not belong to the selected client`);
+    }
+  }
+
+  const createdAt = new Date().toISOString();
+  await tenantScopedTable(trx, 'asset_associations', tenant).insert(
+    assetIds.map((assetId) => ({
+      tenant,
+      asset_id: assetId,
+      entity_id: params.ticketId,
+      entity_type: 'ticket',
+      relationship_type: 'affected',
+      created_by: params.userId,
+      created_at: createdAt,
+    }))
+  );
+}
+
 interface CreateTicketFromAssetData {
     title: string;
     description: string;
@@ -482,14 +539,10 @@ export const createTicketFromAsset = withAuth(async (user, { tenant }, data: Cre
             );
 
             // Server-specific: Create the asset association
-            await tenantScopedTable(trx, 'asset_associations', tenant).insert({
-              tenant,
-              asset_id: data.asset_id,
-              entity_id: ticketResult.ticket_id,
-              entity_type: 'ticket',
-              relationship_type: 'affected',
-              created_by: user.user_id,
-              created_at: new Date().toISOString(),
+            await linkAssetsToNewTicket(trx, tenant, {
+              ticketId: ticketResult.ticket_id,
+              assetIds: [data.asset_id],
+              userId: user.user_id,
             });
 
             // Server-specific: Get full ticket data for return
@@ -564,6 +617,25 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       const asset_id = data.get('asset_id');
       const due_date = data.get('due_date');
 
+      // Optional create extras (linked assets, watchers). Parsed and validated before anything is
+      // written; both are optional so callers that send none behave as before.
+      const extras = parseTicketCreateExtras(data);
+      const hasCreateExtras = extras.assetIds.length > 0 || extras.watcherIds.length > 0;
+      if (hasCreateExtras) {
+        if (user.user_type !== 'internal') {
+          throw new Error('Permission denied: operation not available in client portal');
+        }
+        if (extras.assetIds.length > 0 && !await hasPermission(user, 'asset', 'update', trx)) {
+          throw new Error('Permission denied: Cannot link assets to tickets');
+        }
+      }
+      // The asset the dialog was opened from leads the picked ones, so it is
+      // also the one whose billing profile the ticket inherits below.
+      const linkedAssetIds = dedupeTicketAssetIds([
+        typeof asset_id === 'string' ? asset_id : '',
+        ...extras.assetIds,
+      ]);
+
       // Duplicate-ticket fields. The client only names the source; the hidden
       // carry-over (custom fields, checklist) is copied below from the source
       // row inside this transaction, never round-tripped through the client.
@@ -610,7 +682,14 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         title: data.get('title') as string,
         board_id: data.get('board_id') as string,
         client_id: data.get('client_id') as string,
-        location_id: location_id === '' ? undefined : (location_id as string),
+        // Three states, deliberately: the field absent (or '') means nobody said, so the model
+        // fills it from the contact; the literal 'none' is the operator choosing None and stays
+        // null; anything else is the id they picked.
+        location_id: location_id === null || location_id === ''
+          ? undefined
+          : location_id === 'none'
+            ? null
+            : (location_id as string),
         billing_profile_id: billing_profile_id === '' || billing_profile_id === null
           ? undefined
           : (billing_profile_id as string),
@@ -633,14 +712,15 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       // FR-F3: a ticket raised against an asset inherits the asset's billing
       // profile (or its location's default) when the caller picked none. This
       // is the QuickAddTicket path used by the asset header, the asset list,
-      // service history and maintenance — `createTicketFromAsset` does the
-      // same for its own dialog.
-      if (asset_id && createTicketInput.client_id && !createTicketInput.billing_profile_id) {
+      // service history and maintenance — `createTicketFromAsset` and the REST
+      // create read the same rule from ticketAssetLinkModel.
+      const billingProfileSourceAssetId = assetIdForBillingProfileInheritance(linkedAssetIds);
+      if (billingProfileSourceAssetId && createTicketInput.client_id && !createTicketInput.billing_profile_id) {
         createTicketInput.billing_profile_id =
           (await resolveAssetBillingProfileIdForClient(
             trx,
             tenant,
-            asset_id as string,
+            billingProfileSourceAssetId,
             createTicketInput.client_id
           )) ?? undefined;
       }
@@ -665,11 +745,7 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
 
       // Template path: authorize and load the template before creating anything, so a refused
       // request rolls back with nothing written.
-      let sourceTemplate: {
-        template_id: string;
-        name: string;
-        custom_fields: Record<string, unknown>;
-      } | null = null;
+      let sourceTemplate: TemplateForInstantiation | null = null;
       if (ticketTemplateId) {
         if (user.user_type !== 'internal') {
           throw new Error('Permission denied: operation not available in client portal');
@@ -677,21 +753,51 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         if (!await hasPermission(user, 'ticket_template', 'read', trx)) {
           throw new Error('Permission denied: Cannot use ticket templates');
         }
-        const templateRow = UUID_PATTERN.test(ticketTemplateId)
+        // Manual use needs an active template that is offered for it (R4/R5); schedules ignore both.
+        // A client-bound template is only offered for its own client.
+        const offered = UUID_PATTERN.test(ticketTemplateId)
           ? await tenantScopedTable(trx, 'ticket_templates', tenant)
-              .where({ template_id: ticketTemplateId, is_active: true })
-              .first('template_id', 'name', 'custom_fields')
+              .where({ template_id: ticketTemplateId, is_active: true, offer_for_manual_use: true })
+              .where((builder) => builder.whereNull('client_id').orWhere('client_id', createTicketInput.client_id ?? null))
+              .first('template_id')
           : undefined;
-        if (!templateRow) {
+        sourceTemplate = offered ? await loadTemplateForInstantiation(trx, tenant, ticketTemplateId) : null;
+        if (!sourceTemplate) {
           throw new Error('Ticket template not found');
         }
-        sourceTemplate = {
-          template_id: templateRow.template_id,
-          name: templateRow.name,
-          custom_fields: asJsonColumn<Record<string, unknown>>(templateRow.custom_fields ?? {}),
-        };
-        createTicketInput.created_from_template_id = sourceTemplate.template_id;
-        createTicketInput.attributes = pickDuplicableAttributes({ custom_fields: sourceTemplate.custom_fields });
+        const provenance = templateTicketProvenance(sourceTemplate);
+        createTicketInput.created_from_template_id = provenance.created_from_template_id;
+        createTicketInput.attributes = provenance.attributes;
+      }
+
+      // Watchers go into `attributes.watch_list`, so they are written by the same insert as the ticket.
+      if (extras.watcherIds.length > 0) {
+        const attributes: Record<string, unknown> = { ...(createTicketInput.attributes ?? {}) };
+        const watcherRows = await tenantScopedTable(trx, 'users', tenant)
+          .whereIn('user_id', extras.watcherIds)
+          .where({ user_type: 'internal' })
+          .select('user_id', 'email', 'first_name', 'last_name');
+        const watchersById = new Map<string, any>(watcherRows.map((row: any) => [row.user_id, row]));
+        const recipients: TicketWatchListRecipientInput[] = [];
+        for (const watcherId of extras.watcherIds) {
+          const watcher = watchersById.get(watcherId);
+          if (!watcher) {
+            throw new Error(`Invalid watcher: user ${watcherId} was not found`);
+          }
+          if (!watcher.email) {
+            throw new Error(`Invalid watcher: user ${watcherId} has no email address`);
+          }
+          recipients.push({
+            email: watcher.email,
+            source: 'manual',
+            name: `${watcher.first_name || ''} ${watcher.last_name || ''}`.trim() || undefined,
+            entity_type: 'user',
+            entity_id: watcher.user_id,
+          });
+        }
+        const watchList = mergeTicketWatchListRecipients(attributes.watch_list, recipients);
+        if (watchList.length > 0) attributes.watch_list = watchList;
+        createTicketInput.attributes = Object.keys(attributes).length > 0 ? attributes : undefined;
       }
 
       // Server-specific: Create adapters for dependency injection.
@@ -700,7 +806,7 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       const analyticsTracker = new TicketModelAnalyticsTracker();
 
       // Use shared TicketModel with retry logic
-      // LEVERAGE: pattern ticket-create-composition — creates a ticket then composes assets/agents/team/tags/checklist/activity/events by hand; see createTicketWithSideEffects (shared/services/tickets/createTicketWithSideEffects.ts)
+      // LEVERAGE: friction ticket-create-composition — template provenance and owned checklist items already go through the shared applyCreatedFromTemplateEffects; what still diverges from createTicketWithSideEffects is the form-driven create: single asset, ITIL priority mapping from form values, the analytics tracker and the UI-specific activity/event wiring
       const ticketResult = await TicketModel.createTicketWithRetry(
         createTicketInput,
         tenant,
@@ -712,16 +818,16 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         3 // max retries
       );
 
-      // Server-specific: Create asset association if asset_id is provided
-      if (asset_id) {
-        await tenantScopedTable(trx, 'asset_associations', tenant).insert({
-          tenant,
-          asset_id: asset_id as string,
-          entity_id: ticketResult.ticket_id,
-          entity_type: 'ticket',
-          relationship_type: 'affected',
-          created_by: user.user_id,
-          created_at: new Date().toISOString(),
+      // Asset associations, in the same transaction as the insert: the single `asset_id` ("opened from
+      // an asset") merged with the optional `asset_ids` list. Any failure rolls the whole create back.
+      if (linkedAssetIds.length > 0) {
+        await linkAssetsToNewTicket(trx, tenant, {
+          ticketId: ticketResult.ticket_id,
+          assetIds: linkedAssetIds,
+          userId: user.user_id,
+          // The picker is client-scoped, so a supplied list must match the ticket's client. The legacy
+          // single `asset_id` on its own keeps its old behaviour (existence only).
+          clientId: extras.assetIds.length > 0 ? createTicketInput.client_id : undefined,
         });
       }
 
@@ -831,34 +937,20 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       }
 
       if (sourceTemplate) {
-        const templateItems = copyChecklistFromTemplate
-          ? await tenantScopedTable(trx, 'ticket_template_checklist_items', tenant)
-              .where({ template_id: sourceTemplate.template_id })
-              .orderBy('order_number', 'asc')
-              .orderBy('created_at', 'asc')
-              .select('item_name', 'description', 'is_required', 'checklist_template_id')
-          : [];
-        const checklistItemsCopied = await insertChecklistItemsReplacingTemplates(trx, tenant, {
-          targetTicketId: ticketResult.ticket_id,
-          items: templateChecklistToItems(templateItems),
-          userId: user.user_id,
-        });
-
-        await writeTicketActivity(trx, {
-          tenant,
+        await applyCreatedFromTemplateEffects(trx, tenant, {
           ticketId: ticketResult.ticket_id,
-          eventType: TICKET_ACTIVITY_EVENT.CREATED_FROM_TEMPLATE,
-          entityType: TICKET_ACTIVITY_ENTITY.TICKET,
-          entityId: ticketResult.ticket_id,
-          actor: {
-            actorType: TICKET_ACTIVITY_ACTOR.USER,
-            userId: user.user_id,
-          },
-          source: TICKET_ACTIVITY_SOURCE.UI,
-          details: {
+          actor: { type: 'user', userId: user.user_id },
+          checklistItems: copyChecklistFromTemplate
+            ? sourceTemplate.checklist.map((item) => ({
+                item_name: item.item_name,
+                description: item.description,
+                is_required: item.is_required,
+                checklist_template_id: item.checklist_template_id,
+              }))
+            : [],
+          fromTemplate: {
             template_id: sourceTemplate.template_id,
             template_name: sourceTemplate.name,
-            checklist_items_copied: checklistItemsCopied,
             custom_fields_copied: countDuplicableCustomFields(createTicketInput.attributes),
           },
         });
@@ -1418,6 +1510,11 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         }
       }
 
+      // Human-work guard: only when this write changes assigned_to (legacy references untouched).
+      if (isChangingAssignment && updateData.assigned_to) {
+        await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to]);
+      }
+
       // Changing assigned_to needs the ticket_resources rows keyed to the old
       // assignee cleared first, then re-keyed to the new one.
       const finalizeResourceReassignment = isChangingAssignment
@@ -1593,10 +1690,6 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         try {
           await applyMatchingChecklistTemplates(trx, tenant, {
             ticket_id: id,
-            board_id: updatedTicket.board_id,
-            category_id: updatedTicket.category_id,
-            subcategory_id: updatedTicket.subcategory_id,
-            priority_id: updatedTicket.priority_id,
           }, {
             actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: user.user_id },
             source: TICKET_ACTIVITY_SOURCE.UI,
@@ -1855,6 +1948,7 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
       tenantFacade.tenantJoin(query, 'users as au', 't.assigned_to', 'au.user_id', { type: 'left' });
       tenantFacade.tenantJoin(query, 'clients as co', 't.client_id', 'co.client_id', { type: 'left' });
 
+    // LEVERAGE: pattern ticket-filter-tag-text — the remaining legacy-key filters here (board, status, priority, category, client, search) are hand-built SQL; optimizedTicketActions compiles all of them through ticketFiltersToPredicates. Fold this list onto buildTicketListBaseQuery.
     // Apply filters
     if (validatedFilters.boardId) {
       query = query.where('t.board_id', validatedFilters.boardId);
@@ -1870,7 +1964,9 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
       query = query.whereExists(
         tenantScopedTable(trx, 'statuses', tenant)
           .select('*')
-          .whereRaw('statuses.status_id = t.status_id')
+          // LEVERAGE: pattern tenant-correlated-exists — correlate on the distribution column so Citus can co-locate the subquery
+          .whereRaw('statuses.tenant = t.tenant')
+          .andWhereRaw('statuses.status_id = t.status_id')
           .andWhere('statuses.is_closed', false)
       );
     } else if (parsedStatusFilter.kind === 'name') {
@@ -1907,13 +2003,14 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
       });
     }
 
+    // Tag filtering goes through the predicate compiler on tag definition ids (path `tags`), the same
+    // grammar the optimized list uses. Unknown texts resolve to nothing and match no tickets.
     if (validatedFilters.tags && validatedFilters.tags.length > 0) {
-      const tagSubquery = tenantScopedTable(trx, 'tag_mappings as tm', tenant)
-        .select('tm.tagged_id')
-        .where('tm.tagged_type', 'ticket')
-        .whereIn('td.tag_text', validatedFilters.tags as string[]);
-      tenantFacade.tenantJoin(tagSubquery, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
-      query = query.whereIn('t.ticket_id', tagSubquery);
+      const idsByText = await resolveTicketTagIdsByText(trx, tenant, validatedFilters.tags);
+      const compiledTags = compileTicketTagIdsFilter(
+        (validatedFilters.tags as string[]).map((text) => idsByText[text]).filter((id): id is string => !!id)
+      );
+      query = query.whereRaw(compiledTags.sql, compiledTags.bindings as Knex.RawBinding[]);
     }
 
     if (validatedFilters.assignedToMe) {
@@ -2037,6 +2134,9 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
   }
 });
 
+// LEVERAGE: pattern guarded-comment-write — addTicketComment used to carry its own copy of the comment insert
+// (and lacked record authz / author_type / client guards). All ticket comment writes should go through
+// addTicketCommentInTransaction so the guards live in exactly one place.
 export const addTicketComment = withAuth(async (
   user,
   { tenant },
@@ -2044,6 +2144,7 @@ export const addTicketComment = withAuth(async (
   comment: string,
   isInternal: boolean,
   emailRecipients?: CommentEmailRecipientsInput | null,
+  audienceId?: NativeCommentAudience | null,
 ): Promise<void | TicketActionError> => {
   try {
     const {knex: db} = await createTenantKnex();
@@ -2053,110 +2154,16 @@ export const addTicketComment = withAuth(async (
         throw new Error('Permission denied: Cannot add comment');
       }
 
-      // Verify ticket exists
-      const ticket = await tenantScopedTable(trx, 'tickets', tenant)
-      .where({
-        ticket_id: ticketId
-      })
-      .first();
-
-    if (!ticket) {
-      throw new Error('Ticket not found');
-    }
-
-      // comments.thread_id is NOT NULL, so create the thread row first.
-      const idsResult = await trx.raw(
-        'SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id'
-      );
-      const generatedIds = idsResult.rows?.[0] as
-        | { comment_id: string; thread_id: string }
-        | undefined;
-      if (!generatedIds?.comment_id || !generatedIds?.thread_id) {
-        throw new Error('Database UUID generation did not return comment/thread identifiers.');
-      }
-      const nowIso = new Date().toISOString();
-
-      // One-off Cc/Bcc for this comment only; rejected on internal notes.
-      const resolvedEmailRecipients = await prepareCommentEmailRecipients(trx, tenant, {
-        cc: emailRecipients?.cc,
-        bcc: emailRecipients?.bcc,
+      // Single guarded write path: record-level authz, author_type derived from the user,
+      // client callers cannot create internal comments, plus the shared side effects.
+      await addTicketCommentInTransaction(trx, user as IUserWithRoles, tenant, {
+        ticketId,
+        content: comment,
         isInternal,
+        isResolution: false,
+        emailRecipients,
+        audienceId,
       });
-
-      await tenantScopedTable(trx, 'comment_threads', tenant).insert({
-        tenant,
-        thread_id: generatedIds.thread_id,
-        ticket_id: ticketId,
-        project_task_id: null,
-        root_comment_id: generatedIds.comment_id,
-        is_internal: isInternal,
-        reply_count: 0,
-        last_activity_at: nowIso,
-        created_at: nowIso,
-        created_by: user.user_id || null,
-      });
-
-      const [newComment] = await tenantScopedTable(trx, 'comments', tenant).insert({
-        tenant,
-        comment_id: generatedIds.comment_id,
-        thread_id: generatedIds.thread_id,
-        ticket_id: ticketId,
-        user_id: user.user_id,
-        author_type: 'internal',
-        note: comment,
-        is_internal: isInternal,
-        is_resolution: false,
-        created_at: nowIso,
-        ...(resolvedEmailRecipients ? { metadata: { email_recipients: resolvedEmailRecipients } } : {}),
-      }).returning('*');
-
-      await reconcileCommentAttachments(trx, tenant, newComment.comment_id, user.user_id);
-
-      // Publish comment added event
-      await persistCommentPublication(trx, {
-        eventType: 'TICKET_COMMENT_ADDED',
-        payload: buildTicketCommentAddedPayload({
-          tenantId: tenant,
-          occurredAt: (newComment as any).created_at ?? new Date().toISOString(),
-          ticketId: ticketId,
-          commentId: (newComment as any).comment_id ?? (newComment as any).id,
-          userId: user.user_id,
-          comment: {
-            content: comment,
-            author: `${user.first_name} ${user.last_name}`,
-            isInternal
-          }
-        })
-      }, publishStoredWorkflowEvent);
-
-      // Publish workflow v2 ticket message events (additive).
-      try {
-        const occurredAt = new Date().toISOString();
-        const workflowCtx = {
-          tenantId: tenant,
-          actor: { actorType: 'USER' as const, actorUserId: user.user_id },
-          occurredAt,
-          correlationId: (newComment as any).comment_id ?? (newComment as any).id,
-        };
-
-        const messageId = (newComment as any).comment_id ?? (newComment as any).id;
-        if (!messageId) return;
-        const createdAt = (newComment as any).created_at ?? occurredAt;
-        const events = buildTicketCommunicationWorkflowEvents({
-          ticketId,
-          messageId,
-          visibility: isInternal ? 'internal' : 'public',
-          author: { authorType: 'user', authorId: user.user_id },
-          channel: 'ui',
-          createdAt,
-        });
-
-        for (const ev of events) {
-          await publishTicketCommunicationWorkflowEvent(ev, workflowCtx);
-        }
-      } catch (eventError) {
-        console.error('[addTicketComment] Failed to publish workflow ticket message events:', eventError);
-      }
     });
   } catch (error) {
     const expected = ticketActionErrorFrom(error);
@@ -2332,6 +2339,8 @@ export const moveTicketsToBoard = withAuth(async (
 
   try {
     resolvedStatusId = await withTransaction(ticketKnex, async (trx: Knex.Transaction) => {
+      await assertBoardAcceptsTickets(trx, tenantAlias, destinationBoardId);
+
       if (!destinationStatusId) {
         const defaultStatusId = await TicketModel.getDefaultStatusId(tenantAlias, trx, destinationBoardId);
         if (!defaultStatusId) {

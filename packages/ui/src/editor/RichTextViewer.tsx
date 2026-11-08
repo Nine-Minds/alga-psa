@@ -15,6 +15,7 @@ import { Mention } from './Mention';
 import { splitEmbeddedNewlineBlocks } from './normalizeBlocks';
 import styles from './TicketDetails.module.css';
 import dynamic from 'next/dynamic';
+import { useTranslation } from '../lib/i18n/client';
 
 export interface RichTextViewerProps {
   id?: string;
@@ -305,10 +306,12 @@ function extractTextFromProseMirror(node: any): string {
   return '';
 }
 
+type MarkdownTranslator = (key: string, options: { defaultValue: string }) => string;
+
 /**
  * Convert ProseMirror inline content (text nodes with marks) to markdown.
  */
-function pmInlineToMarkdown(nodes: any[] | undefined): string {
+function pmInlineToMarkdown(nodes: any[] | undefined, t: MarkdownTranslator): string {
   if (!nodes) return '';
   return nodes.map((node) => {
     if (node.type === 'text' && typeof node.text === 'string') {
@@ -332,7 +335,7 @@ function pmInlineToMarkdown(nodes: any[] | undefined): string {
     }
     if (node.type === 'hardBreak' || node.type === 'hard_break') return '\n';
     if (node.type === 'mention') {
-      const label = node.attrs?.displayName || node.attrs?.username || 'mention';
+      const label = node.attrs?.displayName || node.attrs?.username || t('common:editor.mentions.fallback', { defaultValue: 'mention' });
       return `@${label}`;
     }
     return '';
@@ -343,17 +346,20 @@ function pmInlineToMarkdown(nodes: any[] | undefined): string {
  * Convert a ProseMirror JSON document to markdown text.
  * Preserves headings, lists, code blocks, blockquotes, inline formatting, etc.
  */
-export function prosemirrorToMarkdown(doc: any): string {
+export function prosemirrorToMarkdown(
+  doc: any,
+  t: MarkdownTranslator = (_key, options) => options.defaultValue,
+): string {
   if (!doc || !Array.isArray(doc.content)) return '';
 
   const renderNode = (node: any): string => {
     switch (node.type) {
       case 'paragraph':
-        return pmInlineToMarkdown(node.content);
+        return pmInlineToMarkdown(node.content, t);
 
       case 'heading': {
         const level = node.attrs?.level || 1;
-        return '#'.repeat(level) + ' ' + pmInlineToMarkdown(node.content);
+        return '#'.repeat(level) + ' ' + pmInlineToMarkdown(node.content, t);
       }
 
       case 'bulletList':
@@ -361,7 +367,7 @@ export function prosemirrorToMarkdown(doc: any): string {
         return (node.content || []).map((li: any) => {
           const inner = (li.content || [])
             .map((child: any) => {
-              if (child.type === 'paragraph') return pmInlineToMarkdown(child.content);
+              if (child.type === 'paragraph') return pmInlineToMarkdown(child.content, t);
               return renderNode(child);
             })
             .join('\n');
@@ -374,7 +380,7 @@ export function prosemirrorToMarkdown(doc: any): string {
         return (node.content || []).map((li: any) => {
           const inner = (li.content || [])
             .map((child: any) => {
-              if (child.type === 'paragraph') return pmInlineToMarkdown(child.content);
+              if (child.type === 'paragraph') return pmInlineToMarkdown(child.content, t);
               return renderNode(child);
             })
             .join('\n');
@@ -392,7 +398,7 @@ export function prosemirrorToMarkdown(doc: any): string {
       case 'blockquote':
         return (node.content || []).map((child: any) => {
           const text = child.type === 'paragraph'
-            ? pmInlineToMarkdown(child.content)
+            ? pmInlineToMarkdown(child.content, t)
             : renderNode(child);
           return text.split('\n').map((line: string) => `> ${line}`).join('\n');
         }).join('\n');
@@ -453,6 +459,7 @@ function RichTextViewerInternal({
   content,
   className = '',
 }: RichTextViewerProps) {
+  const { t } = useTranslation('common');
   const { resolvedTheme } = useTheme();
   const blockNoteTheme = resolvedTheme === 'dark' ? 'dark' : 'light';
   const [markdownBlocks, setMarkdownBlocks] = useState<PartialBlock[] | null>(null);
@@ -481,7 +488,7 @@ function RichTextViewerInternal({
       }
       // Handle ProseMirror/Tiptap JSON format: { type: "doc", content: [...] }
       if (parsed && typeof parsed === 'object' && parsed.type === 'doc' && Array.isArray(parsed.content)) {
-        const markdown = prosemirrorToMarkdown(parsed);
+        const markdown = prosemirrorToMarkdown(parsed, t);
         if (markdown && markdown.trim()) {
           return { syncBlocks: DEFAULT_EMPTY_BLOCK, rawMarkdown: markdown };
         }
@@ -523,7 +530,7 @@ function RichTextViewerInternal({
       },
     ];
     return { syncBlocks: autolinkBlocks(plainBlock), rawMarkdown: null };
-  }, [content]);
+  }, [content, t]);
 
   // The blocks to display: markdown-parsed blocks take priority over sync blocks
   const displayBlocks = rawMarkdown ? (markdownBlocks || syncBlocks) : syncBlocks;
@@ -652,9 +659,14 @@ function RichTextViewerWithBoundary(props: RichTextViewerProps) {
   );
 }
 
+function RichTextViewerLoading() {
+  const { t } = useTranslation('common');
+  return <div>{t('status.loading')}</div>;
+}
+
 const RichTextViewer = dynamic(() => Promise.resolve(RichTextViewerWithBoundary), {
   ssr: false,
-  loading: () => <div>Loading...</div>,
+  loading: RichTextViewerLoading,
 });
 
 export default RichTextViewer;

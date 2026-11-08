@@ -3,11 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 type Row = Record<string, any>;
 let tables: Record<string, Row[]> = {};
 let permissionGranted = true;
+let executeCommandGranted = true;
 const adapterCalls: Array<{ op: string; ref: any }> = [];
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: any[]) => fn({ user_id: 'u1' }, { tenant: 'tenant_1' }, ...args),
-  hasPermission: vi.fn(async () => permissionGranted),
+  hasPermission: vi.fn(async (_user: any, resource: string) =>
+    resource === 'rmm' ? executeCommandGranted : permissionGranted),
 }));
 
 vi.mock('@alga-psa/db', () => {
@@ -41,9 +43,15 @@ vi.mock('@alga-psa/db', () => {
 
 vi.mock('@alga-psa/integrations/lib/rmm/assetDeviceActions', () => ({
   resolveRmmAssetDeviceActions: vi.fn(async (provider: string) =>
-    provider === 'tacticalrmm'
+    provider === 'tacticalrmm' || provider === 'datto'
       ? {
+          runScript: async (ref: any, scriptId: string) => {
+            adapterCalls.push({ op: `runScript:${scriptId}`, ref });
+            return { jobId: 'job-1' };
+          },
           refresh: async (ref: any) => { adapterCalls.push({ op: 'refresh', ref }); },
+          remoteControlTypes: async (ref: any) => { adapterCalls.push({ op: 'remoteControlTypes', ref }); return ['splashtop']; },
+          remoteControlUrl: async (ref: any) => { adapterCalls.push({ op: 'remoteControlUrl', ref }); return 'https://remote.example/x'; },
           reboot: async (ref: any) => {
             adapterCalls.push({ op: 'reboot', ref });
             if (ref.deviceId === 'OFFLINE') throw new Error('Unable to contact the agent');
@@ -62,12 +70,14 @@ const workstation = {
 describe('asset RMM actions (provider dispatch)', () => {
   beforeEach(() => {
     permissionGranted = true;
+    executeCommandGranted = true;
     adapterCalls.length = 0;
     tables = {
       assets: [
         workstation,
         { asset_id: 'asset_lvl', asset_type: 'workstation', name: 'lvl-1', rmm_provider: 'levelio', rmm_device_id: 'dev-9', agent_status: 'online', last_seen_at: null, last_rmm_sync_at: null },
         { asset_id: 'asset_manual', asset_type: 'workstation', name: 'manual', rmm_provider: null, rmm_device_id: null, agent_status: null, last_seen_at: null, last_rmm_sync_at: null },
+        { asset_id: 'asset_datto', asset_type: 'workstation', name: 'dt-1', rmm_provider: 'datto', rmm_device_id: 'DEV-UID-1', agent_status: 'online', last_seen_at: null, last_rmm_sync_at: null },
         { asset_id: 'asset_offline', asset_type: 'server', name: 'srv-1', rmm_provider: 'tacticalrmm', rmm_device_id: 'OFFLINE', agent_status: 'offline', last_seen_at: null, last_rmm_sync_at: null },
       ],
       workstation_assets: [
@@ -117,5 +127,38 @@ describe('asset RMM actions (provider dispatch)', () => {
     permissionGranted = false;
     await expect(triggerRmmReboot('asset_1')).rejects.toThrow('Permission denied');
     expect(adapterCalls).toEqual([]);
+  });
+
+  it('dispatches datto assets to the adapter and gates reboot/script on rmm execute_command', async () => {
+    const { triggerRmmReboot, triggerRmmScript } = await import('@alga-psa/integrations/actions/integrations/assetRmmActions');
+    expect(await triggerRmmReboot('asset_datto')).toEqual({ success: true, message: 'Reboot command sent to dt-1' });
+    expect(await triggerRmmScript('asset_datto', 'comp-1')).toEqual({ success: true, jobId: 'job-1', message: 'Script queued for execution on dt-1' });
+    expect(adapterCalls.map((c) => c.op)).toEqual(['reboot', 'runScript:comp-1']);
+    expect(adapterCalls[0].ref).toEqual({ tenant: 'tenant_1', assetId: 'asset_datto', deviceId: 'DEV-UID-1', assetName: 'dt-1' });
+
+    adapterCalls.length = 0;
+    executeCommandGranted = false;
+    expect(await triggerRmmReboot('asset_datto')).toEqual({ success: false, message: 'Permission denied: Cannot execute RMM commands' });
+    expect(await triggerRmmScript('asset_datto', 'comp-1')).toMatchObject({ success: false, message: 'Permission denied: Cannot execute RMM commands' });
+    expect(adapterCalls).toEqual([]);
+
+    // Other providers keep the asset-update gate only.
+    expect(await triggerRmmReboot('asset_1')).toMatchObject({ success: true });
+  });
+
+  it('gates Datto Web Remote on rmm execute_command, listing nothing when it would be refused', async () => {
+    const { getAssetRemoteControlTypes, getAssetRemoteControlUrl } = await import('@alga-psa/integrations/actions/integrations/assetRmmActions');
+    expect(await getAssetRemoteControlTypes('asset_datto')).toEqual(['splashtop']);
+    expect(await getAssetRemoteControlUrl('asset_datto', 'splashtop')).toBe('https://remote.example/x');
+
+    adapterCalls.length = 0;
+    executeCommandGranted = false;
+    expect(await getAssetRemoteControlTypes('asset_datto')).toEqual([]);
+    await expect(getAssetRemoteControlUrl('asset_datto', 'splashtop')).rejects.toThrow('Permission denied: Cannot execute RMM commands');
+    expect(adapterCalls).toEqual([]);
+
+    // Other providers keep the asset-update gate only.
+    expect(await getAssetRemoteControlTypes('asset_1')).toEqual(['splashtop']);
+    expect(await getAssetRemoteControlUrl('asset_1', 'splashtop')).toBe('https://remote.example/x');
   });
 });

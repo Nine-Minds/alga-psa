@@ -17,7 +17,9 @@ function sectionBetween(startMarker: string, endMarker: string): string {
 describe('contactActions tenant-scoped query contract', () => {
   it('rejects a shared mailbox when granting client admin access on the server', () => {
     expect(source).toContain('assertContactIsNotSharedMailbox(trx, tenant, contactId');
-    expect(source).toContain('Shared mailbox contacts cannot be client admins.');
+    // The message is now localized (server-side translation path) rather than
+    // passed as a hardcoded default inside the shared helper.
+    expect(source).toContain("await contactText('errors.contact.sharedMailboxAdmin')");
   });
 
   it('uses structural tenant scoping for contact deletion roots', () => {

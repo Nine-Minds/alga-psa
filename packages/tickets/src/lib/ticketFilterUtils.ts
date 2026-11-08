@@ -1,4 +1,5 @@
 import type { ITicketListFilters } from '@alga-psa/types';
+import { decodeTicketWhere } from './ticketWhereUrl';
 import {
   isTicketStatusOpenFilter,
   TICKET_STATUS_FILTER_OPEN,
@@ -36,7 +37,7 @@ const ASSIGNEE_UUID_PATTERN =
  * The list serializes the assignee filter as a comma-separated list, but a URL
  * is a public boundary — it can be hand-edited, stale, or shared — and any
  * token that is not an assignee id used to reach ticketListFiltersSchema's
- * `z.string().uuid()` and throw, blanking the list. Parsing here means the
+ * `z.string().guid()` and throw, blanking the list. Parsing here means the
  * schema only ever sees well-formed ids. The `unassigned` pseudo-value is
  * translated to the `includeUnassigned` boolean the list already uses for
  * "no assignee" instead of being dropped.
@@ -97,6 +98,42 @@ export function normalizeAssignedToIdList(
 }
 
 /**
+ * The combined client+contact filter update a client-filter change produces.
+ *
+ * The two filters are cross-linked: the contact picker only ever offers
+ * contacts of the selected client, so a contact left over from a *different*
+ * client would be an impossible-by-construction combination that silently
+ * empties the list. Clearing it is the only honest outcome, and clearing it
+ * here — as one update rather than a follow-up — keeps the change to a single
+ * debounced fetch with no intermediate state where the stale contact still
+ * applies.
+ *
+ * Keeping rules, in order:
+ * - nothing selected → nothing to decide;
+ * - no client selected (cleared, or never set) → every contact is reachable,
+ *   so the contact stands;
+ * - the contact belongs to the next client → it stands;
+ * - anything else, *including unknown ownership* → cleared. Unknown means the
+ *   contact is not in the loaded option list, which for a client-scoped list is
+ *   precisely the evidence that it is not that client's contact.
+ */
+export function contactFilterUpdateForClientChange(params: {
+  /** The client filter after the change; '' / null / undefined = no client. */
+  nextClientId: string | null | undefined;
+  /** The contact filter currently applied, if any. */
+  currentContactId: string | null | undefined;
+  /** The client the current contact belongs to, when known. */
+  contactClientId?: string | null;
+}): { clientId?: string; contactId?: string } {
+  const clientId = params.nextClientId || undefined;
+  const contactId = params.currentContactId || undefined;
+
+  if (!contactId) return { clientId, contactId: undefined };
+  if (!clientId) return { clientId, contactId };
+  return { clientId, contactId: params.contactClientId === clientId ? contactId : undefined };
+}
+
+/**
  * Parse a returnFilters query string (from the ticket detail URL) back into
  * ITicketListFilters with proper defaults applied.
  *
@@ -137,5 +174,6 @@ export function parseReturnFilters(returnFiltersEncoded: string): ITicketListFil
     sortBy: params.get('sortBy') || 'entered_at',
     sortDirection: (params.get('sortDirection') as 'asc' | 'desc') || 'desc',
     bundleView: (params.get('bundleView') as 'bundled' | 'individual') || 'bundled',
+    where: decodeTicketWhere(params.get('where')).where,
   };
 }

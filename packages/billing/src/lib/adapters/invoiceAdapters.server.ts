@@ -4,25 +4,7 @@ import type {
   WasmInvoiceViewModel,
 } from '@alga-psa/types';
 import type { Knex } from 'knex';
-import { buildInvoiceLocationGroups } from './invoiceAdapters';
-import { displayAddressField, displayCountry } from '@alga-psa/core';
-
-const buildLocationAddressBlock = (location: WasmInvoiceLineItemLocation | null): string | null => {
-  if (!location) return null;
-  const lines: string[] = [];
-  for (const field of [location.address_line1, location.address_line2, location.address_line3]) {
-    const trimmed = displayAddressField(field);
-    if (trimmed) lines.push(trimmed);
-  }
-  const cityLine = [location.city, location.state_province, location.postal_code]
-    .map(displayAddressField)
-    .filter((value) => value.length > 0)
-    .join(', ');
-  if (cityLine) lines.push(cityLine);
-  const country = displayCountry(location.country_name, location.country_code);
-  if (country) lines.push(country);
-  return lines.length > 0 ? lines.join('\n') : null;
-};
+import { buildInvoiceLocationGroups, buildLocationAddressBlock } from './invoiceAdapters';
 
 async function enrichInvoiceViewModelWithProjects(
   knexOrTrx: Knex | Knex.Transaction,

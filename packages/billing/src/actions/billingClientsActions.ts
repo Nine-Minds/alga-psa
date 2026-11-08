@@ -4,7 +4,6 @@ import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type { IClient, IClientContract } from '@alga-psa/types';
 import {
-  getAllClients,
   getAllClientsPaginated,
   getClientsWithBillingCycleRangePaginated,
   getClientById,
@@ -15,6 +14,7 @@ import {
   createClientContractAssignment,
   updateClientContractAssignment,
   activateClientContractAssignment,
+  ContractAlreadyActiveScheduledError,
   checkAndReactivateExpiredContract,
   type ClientPaginationParams,
   type ClientContractAssignmentCreateInput,
@@ -28,6 +28,7 @@ import { getClientLogoUrl, getClientLogoUrlsBatch } from '@alga-psa/formatting/a
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildContractCreatedPayload } from '@alga-psa/workflow-streams';
 import { syncRecurringServicePeriodsForContract } from './recurringServicePeriodSync';
+import { syncPrepaidBlockIssuancesForContract } from '../services/prepaidBlockIssuanceSync';
 import {
   actionError,
   permissionError,
@@ -38,6 +39,13 @@ import {
 export type BillingClientsActionError = ActionMessageError | ActionPermissionError;
 
 function billingClientsActionErrorFrom(error: unknown): BillingClientsActionError | null {
+  if (error instanceof ContractAlreadyActiveScheduledError) {
+    return actionError(
+      error.message,
+      'msp/billing:errors.clientContract.alreadyActiveScheduled',
+      { startDate: error.startDate },
+    );
+  }
   if (error instanceof Error) {
     if (error.message.startsWith('Permission denied')) {
       return permissionError(error.message);
@@ -134,22 +142,6 @@ async function requireClientReadPermission(user: IUserWithRoles): Promise<void> 
   }
 }
 
-export const getAllClientsForBilling = withAuth(async (
-  user,
-  { tenant },
-  includeInactive: boolean = true
-): Promise<IClient[] | BillingClientsActionError> => {
-  return withBillingClientsActionErrors(async () => {
-    await requireClientReadPermission(user);
-  const { knex } = await createTenantKnex();
-  const clients = await getAllClients(knex, tenant, includeInactive);
-  return attachClientLogos(clients, tenant);
-  });
-});
-
-/** Same read for the draft adjustment loader, with auth rejection kept serializable. */
-export const getAllClientsForBillingRecoverable = withSerializableAuth(getAllClientsForBilling);
-
 export const getAllClientsPaginatedForBilling = withAuth(async (
   user,
   { tenant },
@@ -192,6 +184,127 @@ export const getClientByIdForBilling = withAuth(async (
   // the real logo, not just initials.
   const logoUrl = await getClientLogoUrl(clientId, tenant);
   return { ...client, logoUrl };
+  });
+});
+
+/** Same by-id read for the draft adjustment loader, with auth rejection kept serializable. */
+export const getClientByIdForBillingRecoverable = withSerializableAuth(getClientByIdForBilling);
+
+export interface ContractAssignmentReportRow {
+  client_contract_id: string;
+  client_id: string;
+  client_name: string | null;
+  client_logo_url: string | null;
+  contract_id: string;
+  contract_name: string;
+  start_date: string;
+  end_date: string | null;
+  is_active: boolean;
+  contract_line_count: number;
+}
+
+/**
+ * One query for the Contract Usage report: the active assignments of `contractId` to active
+ * clients, with client name, batched logos and the contract's line count. Replaces a
+ * per-client N+1 over the whole client list.
+ */
+export const getContractAssignmentsForReport = withAuth(async (
+  user,
+  { tenant },
+  contractId: string
+): Promise<ContractAssignmentReportRow[] | BillingClientsActionError> => {
+  return withBillingClientsActionErrors(async () => {
+    await requireClientReadPermission(user);
+    const { knex } = await createTenantKnex();
+
+    const rows = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
+      const query = db.table('client_contracts as cc')
+        .where({ 'cc.contract_id': contractId, 'cc.is_active': true, 'c.is_inactive': false });
+      db.tenantJoin(query, 'clients as c', 'cc.client_id', 'c.client_id');
+      db.tenantJoin(query, 'contracts as ct', 'cc.contract_id', 'ct.contract_id');
+      const assignments = await query
+        .select(
+          'cc.client_contract_id',
+          'cc.client_id',
+          'c.client_name',
+          'cc.contract_id',
+          'ct.contract_name',
+          'cc.start_date',
+          'cc.end_date',
+          'cc.is_active'
+        )
+        .orderBy('cc.start_date', 'desc');
+
+      const lineCountRow = await db.table('contract_lines')
+        .where({ contract_id: contractId })
+        .count('contract_line_id as count')
+        .first();
+      const lineCount = parseInt((lineCountRow?.count as string | undefined) ?? '0', 10);
+      return { assignments, lineCount };
+    });
+
+    // One row per client (latest assignment first), as the per-client `.find` used to give.
+    const seen = new Set<string>();
+    const latest = rows.assignments.filter((row: { client_id: string }) => {
+      if (seen.has(row.client_id)) return false;
+      seen.add(row.client_id);
+      return true;
+    });
+    const logoMap = latest.length > 0
+      ? await getClientLogoUrlsBatch(latest.map((r: { client_id: string }) => r.client_id), tenant)
+      : new Map<string, string | null>();
+
+    return latest
+      .map((row: any): ContractAssignmentReportRow => ({
+        client_contract_id: row.client_contract_id,
+        client_id: row.client_id,
+        client_name: row.client_name ?? null,
+        client_logo_url: logoMap.get(row.client_id) ?? null,
+        contract_id: row.contract_id,
+        contract_name: row.contract_name,
+        start_date: row.start_date,
+        end_date: row.end_date ?? null,
+        is_active: Boolean(row.is_active),
+        contract_line_count: rows.lineCount,
+      }))
+      .sort((a: ContractAssignmentReportRow, b: ContractAssignmentReportRow) =>
+        (a.client_name ?? '').localeCompare(b.client_name ?? ''));
+  });
+});
+
+/**
+ * Number of distinct active clients with an active assignment, per contract, in one grouped
+ * query. Replaces the N (contracts) x M (clients) loop in the Contract Performance report.
+ * Contracts without any active assignment are returned with a count of 0.
+ */
+export const countActiveClientsByContract = withAuth(async (
+  user,
+  { tenant },
+  contractIds: string[]
+): Promise<Array<{ contract_id: string; active_client_count: number }> | BillingClientsActionError> => {
+  return withBillingClientsActionErrors(async () => {
+    await requireClientReadPermission(user);
+    const ids = Array.from(new Set(contractIds ?? []));
+    if (ids.length === 0) return [];
+    const { knex } = await createTenantKnex();
+
+    const rows = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
+      const query = db.table('client_contracts as cc')
+        .whereIn('cc.contract_id', ids)
+        .andWhere({ 'cc.is_active': true, 'c.is_inactive': false });
+      db.tenantJoin(query, 'clients as c', 'cc.client_id', 'c.client_id');
+      return await query
+        .select('cc.contract_id')
+        .countDistinct('cc.client_id as active_client_count')
+        .groupBy('cc.contract_id');
+    });
+
+    const counts = new Map<string, number>(
+      rows.map((r: any) => [r.contract_id as string, parseInt(String(r.active_client_count), 10)])
+    );
+    return ids.map((contract_id) => ({ contract_id, active_client_count: counts.get(contract_id) ?? 0 }));
   });
 });
 
@@ -266,11 +379,13 @@ export const createClientContractForBilling = withAuth(async (
 
     const created = await createClientContractAssignment(trx, tenant, input);
     if (created.is_active) {
+      // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
       await syncRecurringServicePeriodsForContract(trx, {
         tenant,
         contractId: created.contract_id,
         sourceRunPrefix: 'client_contract_assignment_create',
       });
+      await syncPrepaidBlockIssuancesForContract(trx, tenant, created.contract_id);
     }
     return created;
   });
@@ -292,11 +407,13 @@ export const updateClientContractForBilling = withAuth(async (
   const updated = await withTransaction(knex, async (trx: Knex.Transaction) => {
     await assertClientContractAssignmentIsAuthorable(trx, tenant, clientContractId);
     const updatedAssignment = await updateClientContractAssignment(trx, tenant, clientContractId, updateData);
+    // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
     await syncRecurringServicePeriodsForContract(trx, {
       tenant,
       contractId: updatedAssignment.contract_id,
       sourceRunPrefix: 'client_contract_assignment_update',
     });
+    await syncPrepaidBlockIssuancesForContract(trx, tenant, updatedAssignment.contract_id);
     return updatedAssignment;
   });
 
@@ -319,11 +436,13 @@ export const activateClientContractForBilling = withAuth(async (
   const activated = await withTransaction(knex, async (trx: Knex.Transaction) => {
     await assertClientContractAssignmentIsAuthorable(trx, tenant, clientContractId);
     const activatedAssignment = await activateClientContractAssignment(trx, tenant, clientContractId);
+    // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
     await syncRecurringServicePeriodsForContract(trx, {
       tenant,
       contractId: activatedAssignment.contract_id,
       sourceRunPrefix: 'client_contract_activate',
     });
+    await syncPrepaidBlockIssuancesForContract(trx, tenant, activatedAssignment.contract_id);
     return activatedAssignment;
   });
 

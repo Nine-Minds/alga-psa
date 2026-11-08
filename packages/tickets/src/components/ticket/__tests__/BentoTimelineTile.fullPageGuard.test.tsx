@@ -134,6 +134,10 @@ function PageScope({ children }: { children?: React.ReactNode }) {
 
 const TILE_ID = 'ticket-timeline';
 
+// The top composer entry exists only for newest-first; oldest-first docks it
+// at the bottom (the newest end). Each placement suite sets the order it needs.
+let timelineOrder: 'asc' | 'desc' = 'asc';
+
 function FullPage({ editorKey = 0, onAddNewComment = vi.fn(async () => true) }: {
   editorKey?: number;
   onAddNewComment?: (...args: any[]) => Promise<boolean>;
@@ -151,6 +155,7 @@ function FullPage({ editorKey = 0, onAddNewComment = vi.fn(async () => true) }: 
             userMap={{}}
             contactMap={{}}
             contactFirstName="Andrew"
+            initialOrder={timelineOrder}
             editorKey={editorKey}
             onNewCommentContentChange={vi.fn()}
             onAddNewComment={onAddNewComment as any}
@@ -194,10 +199,18 @@ function scrollHeaderOffscreen() {
 
 type Placement = 'top' | 'bottom';
 
+// The pager paints in the same commit that lands the adjacent-ticket lookup, but
+// its record shortcuts are (re-)registered in that commit's passive effects —
+// until those run the registry still holds the initial, disabled action. The
+// list layout's guard test settles them the same way; this file skipped the
+// flush and a `]` press in the gap navigated nowhere (three CI shards, 10/21–10/30).
+const flushEffects = () => act(async () => {});
+
 async function renderPage(props: React.ComponentProps<typeof FullPage> = {}) {
   const result = render(<FullPage {...props} />);
   // Navigation renders once the adjacent-ticket lookup resolves.
   await screen.findByLabelText('Previous ticket');
+  await flushEffects();
   return result;
 }
 
@@ -209,6 +222,8 @@ async function openComposer(placement: Placement = 'top') {
   }
   const editor = await screen.findByRole('textbox', { name: 'Comment editor' });
   expect(document.getElementById(placement === 'top' ? `${TILE_ID}-composer-top` : `${TILE_ID}-composer-dock`)).not.toBeNull();
+  // The open composer owns its dialog scope from a passive effect too.
+  await flushEffects();
   return editor;
 }
 
@@ -256,6 +271,7 @@ describe.each<Placement>(['top', 'bottom'])(
   'full-page bento ticket view with a typed comment in the %s composer',
   (placement) => {
     beforeEach(() => {
+      timelineOrder = placement === 'top' ? 'desc' : 'asc';
       if (placement === 'bottom') scrollHeaderOffscreen();
     });
 
@@ -409,6 +425,10 @@ describe.each<Placement>(['top', 'bottom'])(
 );
 
 describe('full-page bento ticket view with nothing typed', () => {
+  beforeEach(() => {
+    timelineOrder = 'asc';
+  });
+
   it('history chords and reload are left alone, and the record shortcuts navigate', async () => {
     await renderPage();
 

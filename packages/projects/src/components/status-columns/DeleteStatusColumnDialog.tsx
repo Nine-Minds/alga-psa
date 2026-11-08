@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -36,14 +36,13 @@ export function DeleteStatusColumnDialog({
   idPrefix = 'status-column',
 }: DeleteStatusColumnDialogProps): React.ReactElement | null {
   const { t } = useTranslation(['features/projects', 'common']);
-  const [pickedMoveToId, setPickedMoveToId] = useState('');
-
-  // Only a different column clears the pick. `moveTargets` is rebuilt on every
-  // parent render, so resetting whenever it changes would drop a destination
-  // the operator had already chosen.
-  useEffect(() => {
-    setPickedMoveToId('');
-  }, [request?.id]);
+  // The pick is keyed to the column it was made for, so a different column
+  // starts with no pick while `moveTargets` (rebuilt on every parent render)
+  // never drops a destination the operator had already chosen. Keying the
+  // state beats resetting it in an effect: an effect lands a tick after the
+  // dialog mounts and would overwrite a pick made in that gap.
+  const [pick, setPick] = useState<{ requestId: string; moveToId: string } | null>(null);
+  const pickedMoveToId = pick && pick.requestId === request?.id ? pick.moveToId : '';
 
   // Destinations can still load in (or disappear) while the dialog is open, so
   // fall back to the first one until the pick is a real option.
@@ -84,7 +83,7 @@ export function DeleteStatusColumnDialog({
             ) : (
               <CustomSelect
                 value={moveToId}
-                onValueChange={setPickedMoveToId}
+                onValueChange={(value) => setPick({ requestId: request.id, moveToId: value })}
                 options={moveTargets.map((target) => ({
                   value: target.id,
                   label: target.isClosed

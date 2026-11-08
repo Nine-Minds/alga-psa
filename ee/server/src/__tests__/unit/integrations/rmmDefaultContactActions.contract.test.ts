@@ -34,14 +34,15 @@ describe('RMM default contact action contracts', () => {
     expect(source).toContain('dbUpdates.default_contact_id = updates.default_contact_id');
   });
 
-  it('T044: Tactical/Level/Tanium mapping actions select and persist default_contact_id', () => {
+  it('T044: Tactical/Datto/Level/Tanium mapping actions select and persist default_contact_id', () => {
     const tactical = readRepoFile('packages/integrations/src/actions/integrations/tacticalRmmActions.ts');
+    const datto = readRepoFile('ee/server/src/lib/actions/integrations/dattoRmmActions.ts');
     const level = readRepoFile('ee/server/src/lib/actions/integrations/levelIoActions.ts');
     const tanium = readRepoFile('ee/server/src/lib/actions/integrations/taniumActions.ts');
 
     // Each provider's list query selects the column, and its update accepts the
     // camelCase input mapped to the snake_case patch (set + clear-to-null).
-    for (const source of [tactical, level, tanium]) {
+    for (const source of [tactical, datto, level, tanium]) {
       expect(source).toContain('default_contact_id');
       expect(source).toContain('defaultContactId?: string | null');
       expect(source).toContain('patch.default_contact_id = input.defaultContactId || null');
@@ -49,6 +50,7 @@ describe('RMM default contact action contracts', () => {
     // Tactical/Level surface it via the joined select alias; Tanium also lists it
     // in its reconciliation select array.
     expect(tactical).toContain("'rom.default_contact_id'");
+    expect(datto).toContain("'rom.default_contact_id'");
     expect(level).toContain("'rom.default_contact_id'");
     expect(tanium).toContain("'rom.default_contact_id'");
   });

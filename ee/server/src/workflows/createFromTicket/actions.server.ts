@@ -28,7 +28,7 @@ import {
 import { EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF } from '@alga-psa/event-schemas';
 
 const CreateWorkflowFromTicketInput = z.object({
-  ticketId: z.string().uuid(),
+  ticketId: z.string().guid(),
   name: z.string().trim().min(1, 'Workflow name is required').max(200),
   trigger: z.discriminatedUnion('type', [
     z.object({ type: z.literal('manual') }),
@@ -144,7 +144,7 @@ export const createWorkflowFromTicketAction = withAuth(
   }
 );
 
-const ImportSummaryInput = z.object({ ticketId: z.string().uuid() });
+const ImportSummaryInput = z.object({ ticketId: z.string().guid() });
 
 export type WorkflowFromTicketImportSummary = {
   customFieldCount: number;

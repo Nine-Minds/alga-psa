@@ -24,7 +24,12 @@ import {
   LevelIoApiError,
   LEVELIO_API_KEY_SECRET,
   LEVELIO_WEBHOOK_SECRET_KEY,
+  LEVELIO_WEBHOOK_SIGNING_SECRET_KEY,
 } from '../../integrations/levelio/levelApiClient';
+import {
+  LEVELIO_AUTOMATION_DESCRIPTION_PLACEHOLDER,
+  LEVELIO_AUTOMATION_NAME_PLACEHOLDER,
+} from '../../integrations/levelio/webhookPayload';
 import {
   runLevelIoAlertsBackfill,
   runLevelIoDeviceSync,
@@ -39,6 +44,11 @@ import {
 } from '../../integrations/levelio/sync/transport';
 
 const PROVIDER = 'levelio' as const;
+
+/** Key pasted into Level's Settings -> Webhooks "secret" field. */
+function generateSigningSecret(): string {
+  return randomBytes(32).toString('hex');
+}
 
 function sanitizeError(error: unknown, fallback = 'Unable to complete the Level request.'): string {
   if (error instanceof LevelIoApiError) {
@@ -247,6 +257,10 @@ export const saveLevelIoConfiguration = withAdvancedAssetsAccess(async (
     if (!existingWebhookSecret) {
       await secretProvider.setTenantSecret(tenant, LEVELIO_WEBHOOK_SECRET_KEY, randomBytes(24).toString('hex'));
     }
+    const existingSigningSecret = await secretProvider.getTenantSecret(tenant, LEVELIO_WEBHOOK_SIGNING_SECRET_KEY);
+    if (!existingSigningSecret) {
+      await secretProvider.setTenantSecret(tenant, LEVELIO_WEBHOOK_SIGNING_SECRET_KEY, generateSigningSecret());
+    }
 
     const row = await upsertLevelIoIntegrationRow({
       tenant,
@@ -307,6 +321,7 @@ export const disconnectLevelIoIntegration = withAdvancedAssetsAccess(async (user
     await Promise.all([
       secretProvider.deleteTenantSecret(tenant, LEVELIO_API_KEY_SECRET),
       secretProvider.deleteTenantSecret(tenant, LEVELIO_WEBHOOK_SECRET_KEY),
+      secretProvider.deleteTenantSecret(tenant, LEVELIO_WEBHOOK_SIGNING_SECRET_KEY),
     ]);
 
     await tenantDb(knex, tenant).table('rmm_integrations')
@@ -550,16 +565,29 @@ export const getLevelIoWebhookInfo = withAdvancedAssetsAccess(async (user, { ten
       return { success: true, webhook: null };
     }
 
+    // Integrations connected before native webhook support have no signing
+    // secret yet; create it on first view so the native setup can be shown.
+    let signingSecret = await secretProvider.getTenantSecret(tenant, LEVELIO_WEBHOOK_SIGNING_SECRET_KEY);
+    if (!signingSecret) {
+      signingSecret = generateSigningSecret();
+      await secretProvider.setTenantSecret(tenant, LEVELIO_WEBHOOK_SIGNING_SECRET_KEY, signingSecret);
+    }
+
     const baseUrl = getWebhookBaseUrl().replace(/\/$/, '');
+    // Fallback automation payload. Level has no alert variables, so only
+    // documented system variables are used (docs.level.io/en/articles/11321970).
+    // `name` is typed by the customer per automation: together with the device
+    // it forms the alert identity (see automationAlertId in webhookPayload.ts).
     const payloadTemplate = JSON.stringify(
       {
         event: 'alert.triggered',
-        alert_id: '{{alert_id}}',
-        device_id: '{{device_id}}',
-        hostname: '{{hostname}}',
-        name: '{{alert_name}}',
-        severity: '{{severity}}',
-        description: '{{description}}',
+        name: LEVELIO_AUTOMATION_NAME_PLACEHOLDER,
+        severity: 'warning',
+        description: LEVELIO_AUTOMATION_DESCRIPTION_PLACEHOLDER,
+        device_id: '{{level_device_id}}',
+        hostname: '{{level_device_hostname}}',
+        group_id: '{{level_group_id}}',
+        alert_time: '{{level_time}}',
       },
       null,
       2
@@ -572,10 +600,30 @@ export const getLevelIoWebhookInfo = withAdvancedAssetsAccess(async (user, { ten
         headerName: 'X-Alga-Webhook-Secret',
         secret,
         payloadTemplate,
+        signingSecret,
+        eventTypes: ['alert_active', 'alert_resolved'],
       },
     };
   } catch (error) {
     return { success: false, error: sanitizeError(error, 'Unable to load Level webhook details.') };
+  }
+});
+
+export const regenerateLevelIoWebhookSigningSecret = withAdvancedAssetsAccess(async (user, { tenant }) => {
+  const permitted = await hasPermission(user as any, 'system_settings', 'update');
+  if (!permitted) return { success: false, error: 'Forbidden' };
+
+  try {
+    const secretProvider = await getSecretProviderInstance();
+    // Only for a connected integration (the shared secret exists once saved).
+    if (!(await secretProvider.getTenantSecret(tenant, LEVELIO_WEBHOOK_SECRET_KEY))) {
+      return { success: false, error: 'Connect Level before generating a webhook signing secret.' };
+    }
+    const signingSecret = generateSigningSecret();
+    await secretProvider.setTenantSecret(tenant, LEVELIO_WEBHOOK_SIGNING_SECRET_KEY, signingSecret);
+    return { success: true, signingSecret };
+  } catch (error) {
+    return { success: false, error: sanitizeError(error, 'Unable to regenerate the Level webhook signing secret.') };
   }
 });
 

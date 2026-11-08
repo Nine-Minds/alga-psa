@@ -1,7 +1,7 @@
 {
   "section": {
     "title": "Blocs d'heures",
-    "description": "Blocs d'heures prépayés à achat unique. Le temps non couvert par une ligne de contrat est décompté de ces blocs, en commençant par l'expiration la plus proche.",
+    "description": "Blocs d'heures prépayés ponctuels. Ils ne reçoivent que le temps qu'aucune ligne de contrat ne couvre. Les blocs émis par une ligne de contrat Bloc prépayé ne sont décomptés que par le temps de cette ligne.",
     "availableBalance": "{{hours}} h disponibles",
     "noBlocks": "Aucun bloc d'heures pour l'instant. Vendez un bloc à ce client ou accordez des heures offertes.",
     "loadFailed": "Échec du chargement des blocs d'heures. Réessayez."
@@ -30,7 +30,8 @@
     "status": "Statut",
     "expiration": "Expiration",
     "source": "Source",
-    "actions": "Actions"
+    "actions": "Actions",
+    "validFrom": "Valide à partir du {{date}}"
   },
   "status": {
     "pending": "En attente",
@@ -53,8 +54,10 @@
     "rateRequired": "Saisissez un taux valide.",
     "scopeLabel": "Périmètre — services couverts par ce bloc (vide = toute la main-d'œuvre)",
     "serviceLabel": "Service",
+    "serviceNoResults": "Aucun service trouvé",
     "servicePlaceholder": "Sélectionnez un service",
     "serviceRequired": "Sélectionnez un service.",
+    "serviceSearchPlaceholder": "Rechercher des services...",
     "submit": "Créer un brouillon de facture",
     "submitted": "Brouillon de facture {{invoiceNumber}} créé. Finalisez-le pour activer le bloc.",
     "title": "Vendre un bloc d'heures",
@@ -126,7 +129,10 @@
     "autoExpired": "Expiré automatiquement",
     "voidedLabel": "Annulé",
     "purchaseReversed": "Achat annulé (facture définalisée)",
-    "unknownUser": "Système"
+    "unknownUser": "Système",
+    "sourceContract": "Contrat : {{contract}}",
+    "remainingValue": "Valeur des heures restantes : {{value}}",
+    "validFrom": "Valide à partir du {{date}}"
   },
   "expire": {
     "error": "Impossible de faire expirer le bloc d'heures.",

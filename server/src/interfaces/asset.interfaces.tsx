@@ -174,8 +174,10 @@ export interface DiskUsageInfo {
 export interface RmmStorageInfo {
   name: string;
   total_gb: number;
-  free_gb: number;
-  utilization_percent: number;
+  /** Absent when the provider reports capacity only (e.g. Level.io `disks`). */
+  free_gb?: number | null;
+  /** Absent when free space is unknown; never substitute 0. */
+  utilization_percent?: number | null;
 }
 
 // Cached RMM data structure (returned by getAssetRmmData)
@@ -279,7 +281,7 @@ export interface AssetDocument {
 
 // Maintenance interfaces
 export type MaintenanceFrequency = 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom';
-export type MaintenanceType = 'preventive' | 'inspection' | 'calibration' | 'replacement';
+export type MaintenanceType = 'preventive' | 'corrective' | 'inspection' | 'calibration' | 'replacement';
 export type MaintenanceStatus = 'due' | 'overdue' | 'upcoming' | 'completed';
 
 export interface AssetMaintenanceSchedule {

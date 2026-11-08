@@ -15,7 +15,7 @@ Key goals:
 
 | Term | Description | Primary Tables |
 | --- | --- | --- |
-| **Contract template** | A reusable blueprint for a contract, including recommended lines, default billing frequencies, and metadata. | `contract_templates`, `contract_template_lines`, `contract_template_line_services`, `contract_template_line_service_configuration`, `contract_template_line_service_*` |
+| **Contract template** | A reusable blueprint for a contract, including recommended lines, default billing frequencies, and metadata. Now carries a required `currency_code` (the template's base currency). | `contract_templates`, `contract_template_lines`, `contract_template_line_services`, `contract_template_line_service_configuration`, `contract_template_line_service_*`, `contract_template_price_sets`, `contract_template_prices` |
 | **Contract** | A client-owned instantiated contract header. Non-template contracts belong to exactly one owning client and hold the line/configuration data used for billing. | `contracts`, `contract_lines`, `contract_pricing_schedules` |
 | **Client contract** | The assignment/lifecycle record for a client-owned contract header, including start/end dates, PO requirements, renewal workflow state, and live status. | `client_contracts` |
 | **Contract line** | A billable line definition (fixed, hourly, usage, bucket, product, license). | `contract_lines`, `contract_line_fixed_config`, `contract_line_service_configuration`, `contract_line_service_*` |
@@ -34,7 +34,7 @@ Products are implemented as a **subset of the existing service catalog**:
 
 - Catalog rows live in `service_catalog` with `item_kind = 'product'`.
 - Products are quantity-based sellable items (`billing_method = 'per_unit'` in V1).
-- Multi-currency pricing is stored in `service_prices` (one row per currency). `service_catalog.default_rate` mirrors the “primary” price for convenience.
+- Multi-currency pricing is stored in `service_prices` (one row per currency). `service_catalog.default_rate` mirrors the "primary" price for convenience.
 - Tax behavior is driven by `service_catalog.tax_rate_id` (nullable = non-taxable).
 - Optional license metadata (term/cadence) is stored on the catalog row (`is_license`, `license_term`, `license_billing_cadence`) without start/end/proration in V1.
 
@@ -54,7 +54,7 @@ Products are implemented as a **subset of the existing service catalog**:
 
 ### Taxes and accounting mapping
 
-- Tax calculation uses the same invoice persistence pipeline (`invoiceService.calculateAndDistributeTax`) and applies the product’s `tax_rate_id` (or falls back to client defaults depending on tenant tax configuration).
+- Tax calculation uses the same invoice persistence pipeline (`invoiceService.calculateAndDistributeTax`) and applies the product's `tax_rate_id` (or falls back to client defaults depending on tenant tax configuration).
 - Accounting exports and mappings treat products as catalog items; they reuse the existing mapping resolution paths for `service` / `service_category` where applicable.
 
 ## Data Model Layers
@@ -63,11 +63,13 @@ Products are implemented as a **subset of the existing service catalog**:
 
 Templates give sales and operations teams a curated starting point.
 
-- `contract_templates` – high level metadata (name, default frequency, status, optional JSON metadata).
+- `contract_templates` – high level metadata (name, default frequency, status, optional JSON metadata). Now also carries a required `currency_code` (the template's base currency), seeded from the tenant default at creation.
 - `contract_template_lines` – line-level defaults (type, descriptions, frequency, overtime rules) along with display order, billing timing, and optional template-level custom rates.
 - `contract_template_line_terms` – stores timing/terms metadata for template lines, including the new `billing_timing` flag (`arrears` or `advance`) that seeds client assignments.
 - `contract_template_line_services` – recommended catalog services and default quantities for a template line.
 - `contract_template_line_service_configuration` and child tables (`_fixed`, `_hourly`, `_usage`, `_bucket`) – configuration defaults for each service type.
+- `contract_template_price_sets` – optional per-currency rate collections on a template. Each set belongs to one template and one currency code.
+- `contract_template_prices` – individual line-amount entries within a price set, one per template line, storing the rate in the set's currency.
 
 Publishing or cloning a template never mutates the template tables; instead, the structure is copied into the client-specific tables via `cloneTemplateContractLine` (`server/src/lib/billing/utils/templateClone.ts`).
 
@@ -88,8 +90,8 @@ When a client-owned contract header is assigned or activated, the system snapsho
 - `client_contracts` – assignment/lifecycle record with start/end dates, PO requirements, renewal workflow state, and live status semantics. Managed by `clientContractActions` (`server/src/lib/actions/client-actions/clientContractActions.ts`).
   - Purchase order fields:
     - `po_required` (boolean) – blocks invoice generation when enabled and `po_number` is missing.
-    - `po_number` (text) – the customer’s PO reference used on invoices and accounting exports.
-    - `po_amount` (bigint cents, nullable) – advisory “authorized spend” amount for warning on overages.
+    - `po_number` (text) – the customer's PO reference used on invoices and accounting exports.
+    - `po_amount` (bigint cents, nullable) – advisory "authorized spend" amount for warning on overages.
 - `client_contract_lines` – individual lines the client receives. Each record may reference both the base contract line and the originating template line (for audits).
 - `client_contract_line_terms` – per-client billing rules (frequency, overtime, rounding) plus the `billing_timing` setting that determines whether a line bills in advance or arrears.
 - `client_contract_line_pricing` – the rate strategy used for the client instance. Stores template references and overrides applied either by templates, contracts, or pricing schedules.
@@ -97,7 +99,7 @@ When a client-owned contract header is assigned or activated, the system snapsho
 - `client_contract_service_configuration` and `_fixed`, `_hourly`, `_usage`, `_bucket`, `_rate_tiers` – cloned configuration records so the billing engine never reads template tables during invoice generation.
 - `client_contract_line_discounts` – optional mapping of discounts to client contract lines.
 
-The cloning helper ensures that future template edits do not retroactively change existing client contracts while still allowing the UI to surface “template vs client” differences.
+The cloning helper ensures that future template edits do not retroactively change existing client contracts while still allowing the UI to surface "template vs client" differences.
 
 ## Purchase Orders (PO)
 
@@ -165,7 +167,7 @@ await assignContractToClient('client-id', contract.contract_id, '2025-01-01', nu
 The billing engine lives in `server/src/lib/billing/billingEngine.ts`. It operates per client and billing cycle and returns an `IBillingResult` consumed by invoice generation.
 
 1. **Initialize tenant context** – `createTenantKnex()` establishes the multi-tenant connection.
-2. **Load billing cycle** – `client_billing_cycles` provides effective date ranges using **`[start, end)`** semantics (end is exclusive). If no explicit period exists, the engine derives it from the client’s frequency.
+2. **Load billing cycle** – `client_billing_cycles` provides effective date ranges using **`[start, end)`** semantics (end is exclusive). If no explicit period exists, the engine derives it from the client's frequency.
 3. **Guard rails** – `validateBillingPeriod` ensures the requested range does not span cycle changes. Existing invoices are detected via `hasExistingInvoiceForCycle`.
 4. **Collect client contract lines** – `getClientContractLinesAndCycle` joins `client_contract_lines`, `contract_lines`, `client_contract_line_pricing`, `client_contract_line_terms`, and the parent contract to build a normalized in-memory model. Template references are resolved so both template-sourced and bespoke lines participate.
 5. **Charge calculation** – for each client contract line the engine executes:
@@ -225,7 +227,7 @@ await updateManualInvoice(existingInvoiceId, {
 Credits are issued for prepayments, negative invoices, and manual adjustments.
 
 - `transactions` contains authoritative ledger events (`credit_issuance`, `credit_application`, `credit_expiration`, etc.).
-- `credit_tracking` mirrors each credit’s remaining balance and expiration.
+- `credit_tracking` mirrors each credit's remaining balance and expiration.
 - `credit_reconciliation_reports` captures discrepancies detected by scheduled validation jobs (`creditReconciliationValidation` and friends).
 - Application and expiration logic is implemented in `server/src/lib/actions/creditActions.ts` and background handlers in `server/src/lib/jobs/handlers/*Credits*.ts`.
 
@@ -233,7 +235,7 @@ Credits are issued for prepayments, negative invoices, and manual adjustments.
 
 Invoice rendering uses WebAssembly-based templates (see [Invoice Template System](./invoice_templates.md)). Default selection data lives in `invoice_template_assignments`:
 
-- `scope_type` is currently either `'tenant'` or `'company'` (the legacy label for client-specific defaults). The schema still uses `'company'` to avoid breaking existing data, even though the UI now surfaces the entity as “client”.
+- `scope_type` is currently either `'tenant'` or `'company'` (the legacy label for client-specific defaults). The schema still uses `'company'` to avoid breaking existing data, even though the UI now surfaces the entity as "client".
 - Each record is exclusive: either `standard_invoice_template_code` (for standard templates) **or** `invoice_template_id` (for custom templates) is populated.
 - The tenant-level default is discovered by querying scope `(tenant, 'tenant', NULL)`; client overrides use `(tenant, 'company', client_id)`.
 - Legacy columns `invoice_templates.is_default` and `clients.invoice_template_id` are kept in sync for backward compatibility but should be treated as derived data.
@@ -305,7 +307,7 @@ These interfaces are consumed throughout the billing dashboard (`ClientContractL
 
 | Area | Tables |
 | --- | --- |
-| Templates | `contract_templates`, `contract_template_lines`, `contract_template_line_services`, `contract_template_line_service_configuration`, `contract_template_line_service_fixed_config`, `contract_template_line_service_hourly_config`, `contract_template_line_service_usage_config`, `contract_template_line_service_bucket_config` |
+| Templates | `contract_templates`, `contract_template_lines`, `contract_template_line_services`, `contract_template_line_service_configuration`, `contract_template_line_service_fixed_config`, `contract_template_line_service_hourly_config`, `contract_template_line_service_usage_config`, `contract_template_line_service_bucket_config`, `contract_template_price_sets`, `contract_template_prices` |
 | Contract library | `contracts`, `contract_lines`, `contract_pricing_schedules`, `contract_line_fixed_config`, `contract_line_service_configuration`, `contract_line_service_fixed_config`, `contract_line_service_hourly_config`, `contract_line_service_usage_config`, `contract_line_service_bucket_config`, `contract_line_service_rate_tiers`, `contract_line_discounts` |
 | Client instances | `client_contracts`, `client_contract_lines`, `client_contract_line_pricing`, `client_contract_line_terms`, `client_contract_services`, `client_contract_service_configuration`, `client_contract_service_fixed_config`, `client_contract_service_hourly_config`, `client_contract_service_usage_config`, `client_contract_service_bucket_config`, `client_contract_service_rate_tiers`, `client_contract_line_discounts` |
 | Activity | `time_entries`, `usage_tracking`, `bucket_usage`, `license_assignments`, `product_usage` |
@@ -315,8 +317,9 @@ These interfaces are consumed throughout the billing dashboard (`ClientContractL
 
 Key column highlights:
 
-- `contract_template_line_terms` / `client_contract_line_terms` now include a `billing_timing` flag (`arrears` or `advance`) that drives line-level billing behaviour.
+- `contract_template_line_terms` / `client_contract_line_terms` include a `billing_timing` flag that drives line-level billing behaviour. Fixed lines accept `arrears` or `advance`; Hourly and Usage lines are restricted to `arrears` because the amount can only be calculated after the activity occurs. Submitting `advance` for a Hourly or Usage line through the REST API returns HTTP 400 with error code `CONTRACT_LINE_TIMING_NOT_ALLOWED`.
 - `invoice_item_details` includes `service_period_start`, `service_period_end`, and `billing_timing` so invoices can represent advance and arrears charges on a single document.
+- `contract_line_service_fixed_config.base_rate_basis` (`per_unit` | `share`) records how `base_rate` is interpreted for member lines on a fixed-fee plan. `per_unit` means the rate is multiplied by the line's quantity; `share` means the rate is the member's pre-allocated slice of the bundle total as set by the contract wizard's weighted-split logic. Every write path (wizard, REST API, template clone) is expected to set this field. Submitting an unrecognised value through the REST `PUT /api/v1/contract-lines/{id}/services/{serviceId}` returns HTTP 400.
 
 ## References
 

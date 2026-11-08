@@ -130,12 +130,17 @@ describe('TimeSheetService time periods (API)', () => {
       ['inside the extended end', '2026-11-08T12:00:00Z', true],
       ['at the exclusive end', '2026-11-09T00:00:00Z', false],
     ])('updates dates and ignores is_current (with and without it) %s', async (_label, now, expected) => {
+      vi.useFakeTimers({ toFake: ['Date'] });
       vi.setSystemTime(new Date(now));
       const period = await create({ start_date: '2026-11-01', end_date: '2026-11-08' });
 
       const withFlag = await update(period.period_id, { end_date: '2026-11-09', is_current: !expected });
       expect(withFlag.end_date).toBe('2026-11-09');
       expect(withFlag.is_current).toBe(expected);
+
+      vi.setSystemTime(new Date('2026-11-03T12:00:00Z')); // inside the period
+      const flagFalse = await update(period.period_id, { end_date: '2026-11-09', is_current: false });
+      expect(flagFalse.is_current).toBe(true);
 
       const without = await update(period.period_id, { start_date: '2026-11-02' });
       expect(without.start_date).toBe('2026-11-02');

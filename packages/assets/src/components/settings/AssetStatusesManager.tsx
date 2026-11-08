@@ -73,14 +73,27 @@ export default function AssetStatusesManager() {
     label: t(`assetStatusKinds.${value}`, { defaultValue: value }),
   })), [t]);
 
+  /**
+   * A drag fires many `dragover` events between renders, so the live order is
+   * kept in a ref: reading it from state would let two events compute the same
+   * move twice. The ref is written wherever rows are set, never synced from
+   * state in an effect — a passive effect lands a tick after the commit, and a
+   * drag or arrow key arriving in that gap would read a stale order.
+   */
+  const orderRef = useRef<AssetStatus[]>([]);
+  const replaceRows = useCallback((next: AssetStatus[]) => {
+    orderRef.current = next;
+    setRows(next);
+  }, []);
+
   const load = useCallback(async () => {
     const result = await listAssetStatuses({ includeArchived: true, withUsage: true });
     if (isActionPermissionError(result)) {
       toast.error(getErrorMessage(result));
       return;
     }
-    setRows(result);
-  }, []);
+    replaceRows(result);
+  }, [replaceRows]);
 
   useEffect(() => {
     void load().catch((error: unknown) => {
@@ -140,16 +153,6 @@ export default function AssetStatusesManager() {
     await load();
   }, [load, registryErrorMessage]);
 
-  /**
-   * A drag fires many `dragover` events between renders, so the live order is
-   * kept in a ref: reading it from state would let two events compute the same
-   * move twice.
-   */
-  const orderRef = useRef<AssetStatus[]>(rows);
-  useEffect(() => {
-    orderRef.current = rows;
-  }, [rows]);
-
   const moveRow = useCallback((fromIndex: number, toIndex: number): AssetStatus[] | null => {
     const current = orderRef.current;
     if (fromIndex === toIndex) return null;
@@ -157,10 +160,9 @@ export default function AssetStatusesManager() {
     const next = [...current];
     const [row] = next.splice(fromIndex, 1);
     next.splice(toIndex, 0, row);
-    orderRef.current = next;
-    setRows(next);
+    replaceRows(next);
     return next;
-  }, []);
+  }, [replaceRows]);
 
   const dragRef = useRef<{ statusId: string; orderAtStart: string } | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);

@@ -1,6 +1,6 @@
 import type { ApiClient } from "./client";
 import type { ApiResult } from "./types";
-import type { PaginatedResponse, SuccessResponse } from "./tickets";
+import type { PaginatedResponse, SuccessResponse, TicketListTag as DisplayTag } from "./tickets";
 import type { ContactListItem } from "./contacts";
 
 export type ClientListItem = {
@@ -16,6 +16,8 @@ export type ClientListItem = {
   default_currency_code?: string | null;
   account_manager_full_name?: string | null;
   logoUrl?: string | null;
+  /** Chip tags picked by the tenant's tag display rules (e.g. VIP), in rule order. */
+  display_tags?: DisplayTag[] | null;
   created_at?: string | null;
 };
 
@@ -41,6 +43,9 @@ export type ClientLocation = {
   phone_extension?: string | null;
   email?: string | null;
   is_default?: boolean;
+  is_active?: boolean;
+  /** How many contacts work here; also why deleting the location would be refused. */
+  contact_count?: number;
 };
 
 export type ListClientsParams = {

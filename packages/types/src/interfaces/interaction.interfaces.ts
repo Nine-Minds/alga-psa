@@ -1,5 +1,5 @@
 import { TenantEntity } from ".";
-import { IOnlineMeeting } from './online-meeting.interfaces';
+import { IOnlineMeetingView } from './online-meeting.interfaces';
 
 export interface IInteraction extends TenantEntity {
   interaction_id: string;
@@ -23,7 +23,7 @@ export interface IInteraction extends TenantEntity {
   status_id?: string;
   status_name?: string;
   is_status_closed?: boolean;
-  online_meeting?: IOnlineMeeting | null;
+  online_meeting?: IOnlineMeetingView | null;
 }
 
 export interface ISystemInteractionType {

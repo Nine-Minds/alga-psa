@@ -17,6 +17,7 @@ const REPO_ROOT = path.resolve(__dirname, '../../../..');
 
 const MANAGERS: Array<{ provider: string; file: string }> = [
   { provider: 'tactical', file: 'packages/integrations/src/components/settings/integrations/TacticalRmmIntegrationSettings.tsx' },
+  { provider: 'datto', file: 'ee/server/src/components/settings/integrations/DattoRmmIntegrationSettings.tsx' },
   { provider: 'tanium', file: 'ee/server/src/components/settings/integrations/TaniumIntegrationSettings.tsx' },
   { provider: 'levelio', file: 'ee/server/src/components/settings/integrations/LevelIoIntegrationSettings.tsx' },
   { provider: 'huntress', file: 'ee/server/src/components/settings/integrations/huntress/OrganizationMappingManager.tsx' },
@@ -67,6 +68,7 @@ describe('RMM organization mapping UIs', () => {
 
   it.each([
     ['tactical', 'packages/integrations/src/actions/integrations/tacticalRmmActions.ts'],
+    ['datto', 'ee/server/src/lib/actions/integrations/dattoRmmActions.ts'],
     ['tanium', 'ee/server/src/lib/actions/integrations/taniumActions.ts'],
     ['levelio', 'ee/server/src/lib/actions/integrations/levelIoActions.ts'],
     ['huntress', 'ee/server/src/lib/actions/integrations/huntressActions.ts'],

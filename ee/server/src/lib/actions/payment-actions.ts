@@ -19,7 +19,8 @@ import * as fs from 'fs';
 import {
   IPaymentProviderConfig,
   PaymentSettings,
-  DEFAULT_PAYMENT_SETTINGS,
+  mergePaymentSettings,
+  validatePaymentSettingsInput,
 } from '@alga-psa/types';
 
 // Path to ngrok URL file (written by ngrok-sync container)
@@ -154,10 +155,7 @@ export const getPaymentConfigAction = withAuth(async (user, { tenant }): Promise
       provider_type: config.provider_type,
       is_enabled: config.is_enabled,
       is_default: config.is_default,
-      settings: {
-        ...DEFAULT_PAYMENT_SETTINGS,
-        ...(config.settings as Partial<PaymentSettings>),
-      },
+      settings: mergePaymentSettings(config.settings),
       created_at: config.created_at,
       updated_at: config.updated_at,
       publishable_key: configuration?.publishable_key,
@@ -353,7 +351,8 @@ export const connectStripeAction = withAuth(async (
       webhook_secret_vault_path: webhookSecret
         ? `tenant/${tenant}/stripe_payment_webhook_secret`
         : (existingConfig?.webhook_secret_vault_path || null),
-      settings: DEFAULT_PAYMENT_SETTINGS,
+      // Preserve whatever the tenant already saved; defaults only fill gaps (first connect).
+      settings: mergePaymentSettings(existingConfig?.settings),
       updated_at: knex.fn.now(),
     };
 
@@ -474,6 +473,11 @@ export const updatePaymentSettingsAction = withAuth(async (
   { tenant },
   settings: Partial<PaymentSettings>
 ): Promise<PaymentActionResult<PaymentSettings>> => {
+  const expirationError = validatePaymentSettingsInput(settings);
+  if (expirationError) {
+    return { success: false, error: expirationError };
+  }
+
   try {
     const { knex } = await createTenantKnex();
 
@@ -490,14 +494,12 @@ export const updatePaymentSettingsAction = withAuth(async (
 
     // Merge settings
     const currentSettings = config.settings as Partial<PaymentSettings> || {};
-    const newSettings: PaymentSettings = {
-      ...DEFAULT_PAYMENT_SETTINGS,
-      ...currentSettings,
+    const newSettings: PaymentSettings = mergePaymentSettings(config.settings, {
       ...settings,
       ...(settings.autopayConsentText !== undefined && settings.autopayConsentText !== currentSettings.autopayConsentText
         ? { autopayConsentTextVersion: String(Number(currentSettings.autopayConsentTextVersion ?? '0') + 1) }
         : {}),
-    };
+    });
 
     // Update config
     await tenantDb(knex, tenant).table('payment_provider_configs')

@@ -108,8 +108,27 @@ async function processNotificationsForThreshold(
     blocksByClient[block.client_id].push(block);
   }
 
+  // Contract blocks carry their contract's name so the notice can say which
+  // contract the hours belong to.
+  const contractLineIds = Array.from(new Set(
+    expiringBlocks
+      .map((block) => (block as IHourBlock & { contract_line_id?: string | null }).contract_line_id)
+      .filter((id): id is string => Boolean(id)),
+  ));
+  const contractNameByLineId: Record<string, string> = {};
+  if (contractLineIds.length > 0) {
+    const db = tenantDb(knex, tenant);
+    const nameQuery = db.table('contract_lines as cl')
+      .whereIn('cl.contract_line_id', contractLineIds)
+      .select('cl.contract_line_id', 'c.contract_name');
+    db.tenantJoin(nameQuery, 'contracts as c', 'c.contract_id', 'cl.contract_id');
+    for (const row of await nameQuery) {
+      contractNameByLineId[row.contract_line_id] = row.contract_name;
+    }
+  }
+
   for (const [client, blocks] of Object.entries(blocksByClient)) {
-    await publishExpiringEvent(knex, tenant, client, blocks, daysBeforeExpiration);
+    await publishExpiringEvent(knex, tenant, client, blocks, daysBeforeExpiration, contractNameByLineId);
   }
 }
 
@@ -119,6 +138,7 @@ async function publishExpiringEvent(
   clientId: string,
   blocks: IHourBlock[],
   daysBeforeExpiration: number,
+  contractNameByLineId: Record<string, string> = {},
 ): Promise<void> {
   try {
     await publishEvent({
@@ -132,6 +152,9 @@ async function publishExpiringEvent(
           blockId: block.block_id,
           remainingMinutes: Number(block.remaining_minutes),
           expirationDate: toCalendarDateString(block.expiration_date) ?? '',
+          contractName: contractNameByLineId[
+            (block as IHourBlock & { contract_line_id?: string | null }).contract_line_id ?? ''
+          ] ?? null,
         })),
       },
     });

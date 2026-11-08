@@ -51,7 +51,7 @@ There is no user-authored code execution — no compilation, no Wasm, no sandbox
 - **Repeatable stack**: the `stack` node accepts an optional `repeat: { sourceBinding, itemBinding, keyPath? }` — the stack (and all its children) renders once per item in the source collection, pushing the current item onto the render scope under `itemBinding`. Nested `path` expressions and inner `dynamic-table` nodes resolve against the per-iteration item. Without `repeat`, the stack renders its children once against the outer scope.
 - Style tokens/classes and inline style declarations
 - Bindings for invoice values and collections (extensible — quote and sales-order bindings supported through the same per-document-kind catalog)
-- **Per-document-kind binding validation**: the designer's field picker only surfaces paths that the active document kind's render model actually exposes. Picker options, AST round-trip path normalization in `workspaceAst.ts`, and canvas preview data lookup all derive from the same `documentBindingCatalog`, so a path that appears in the picker is guaranteed to resolve at render time. The `invoice.discount` field has been removed from the catalog — it was never backed by a real render-model value; any template element bound to it should be re-mapped to a supported field.
+- **Per-document-kind binding validation**: the designer's field picker only surfaces paths that the active document kind's render model actually exposes. Picker options, AST round-trip path normalization in `workspaceAst.ts`, and canvas preview data lookup all derive from the same `documentBindingCatalog`, so a path that appears in the picker is guaranteed to resolve at render time. The `invoice.discount` field has been removed from the catalog — it was never backed by a real render-model value; any template element bound to it should be re-mapped to a supported field. Two replacement fields are now part of the render model: `invoice.discountTotal` carries the positive discount magnitude (the amount taken off), and `invoice.grossSubtotal` carries the pre-discount line-item subtotal (net subtotal plus the discount amount). Line-item rows also gain a boolean `isDiscount` field that is `true` for discount-type line items; use it in a `filter` transform to separate discount rows from charge rows in a custom totals section.
 - Declarative transform operations: `filter`, `sort`, `group`, `aggregate`, `computed-field`, `totals-compose`
 - Optional `strategyId` extension points on transform operations
 
@@ -126,8 +126,11 @@ Key entry points:
 
 PDF rendering uses the same AST evaluator + renderer path. The server wrapper produces a full HTML document for headless browser (Puppeteer) rendering.
 
-Key entry point:
+The issuing tenant's logo (`tenantClientLogo`) is resolved in one order on every generated document — invoice, quote, sales order and designer preview alike: the Settings → Branding wide logo, then the branding square logo (light variants only, since documents are white paper), then the own-company client record's logo (wide, then default). With none of those the image is hidden.
+
+Key entry points:
 - `packages/billing/src/services/pdfGenerationService.ts`
+- `packages/billing/src/lib/adapters/tenantPartyAdapter.ts` — the tenant-party and logo resolution
 
 ### 3.4 Localization
 
@@ -159,6 +162,8 @@ There are two types of invoice layouts:
 | `standard-grouped` | Recurring / one-time sections |
 | `standard-invoice-by-location` | Per-location bands (address header, items, location subtotal) using the repeatable stack + `groupsByLocation` |
 | `standard-invoice-by-ticket` | One primary table of eligible ticket rollups and retained charges using `ticketPresentationRows`; entry detail is optional |
+
+**Service period and currency in standard templates.** All five standard invoice templates include a **Service Period** column on each line-item row, showing the billing period as a formatted date range (e.g. `Sep 1, 2026 – Sep 30, 2026`) for recurring contract lines and blank for one-time charges. A **Currency** field also appears in the document header and the totals block. Custom templates can reproduce either element by binding `item.servicePeriodLabel` (per item, inside a `table` or `dynamic-table`) or `currencyCode` (a top-level document binding) from the field picker.
 
 A parallel set exists for quotes (`standard-quote-default`, `standard-quote-detailed`, `standard-quote-by-location`).
 

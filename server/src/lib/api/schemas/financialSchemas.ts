@@ -34,6 +34,7 @@ import {
   booleanTransform,
   dateTransform
 } from './common';
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
 // ============================================================================
 // ENUMS AND CONSTANTS
@@ -129,7 +130,7 @@ export const transactionBaseSchema = z.object({
   parent_transaction_id: uuidSchema.optional(),
   description: z.string().optional(),
   reference_number: z.string().optional(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
   balance_after: z.number(),
   expiration_date: dateSchema.optional(),
   related_transaction_id: uuidSchema.optional()
@@ -139,7 +140,7 @@ export const createTransactionSchema = transactionBaseSchema.extend({
   tenant: uuidSchema
 });
 
-export const updateTransactionSchema = transactionBaseSchema.partial();
+export const updateTransactionSchema = partialWithoutDefaults(transactionBaseSchema);
 
 export const transactionResponseSchema = transactionBaseSchema.merge(baseEntitySchema);
 
@@ -170,13 +171,13 @@ export const createCreditTrackingSchema = creditTrackingBaseSchema.extend({
   tenant: uuidSchema
 });
 
-export const updateCreditTrackingSchema = creditTrackingBaseSchema.partial();
+export const updateCreditTrackingSchema = partialWithoutDefaults(creditTrackingBaseSchema);
 
 export const creditTrackingResponseSchema = creditTrackingBaseSchema.merge(baseEntitySchema);
 
 export const creditListQuerySchema = paginationQuerySchema.merge(baseFilterSchema).extend({
   client_id: uuidSchema.optional(),
-  include_expired: booleanTransform.optional().default("false"),
+  include_expired: booleanTransform.prefault("false"),
   expiring_soon: booleanTransform.optional(),
   has_remaining: booleanTransform.optional()
 });
@@ -247,7 +248,7 @@ export const createPaymentMethodSchema = paymentMethodBaseSchema.extend({
   tenant: uuidSchema
 });
 
-export const updatePaymentMethodSchema = paymentMethodBaseSchema.partial();
+export const updatePaymentMethodSchema = partialWithoutDefaults(paymentMethodBaseSchema);
 
 export const paymentMethodResponseSchema = paymentMethodBaseSchema.merge(baseEntitySchema);
 
@@ -255,7 +256,7 @@ export const paymentMethodListQuerySchema = paginationQuerySchema.merge(baseFilt
   client_id: uuidSchema.optional(),
   type: paymentMethodTypeSchema.optional(),
   is_default: booleanTransform.optional(),
-  exclude_deleted: booleanTransform.optional().default("true")
+  exclude_deleted: booleanTransform.prefault("true")
 });
 
 // ============================================================================
@@ -394,7 +395,7 @@ export const createInvoiceSchema = invoiceWriteSchema.extend({
   tenant: uuidSchema
 });
 
-export const updateInvoiceSchema = invoiceWriteSchema.partial();
+export const updateInvoiceSchema = partialWithoutDefaults(invoiceWriteSchema);
 
 export const invoiceResponseSchema = invoiceWriteSchema.merge(baseEntitySchema).extend({
   billing_cycle_id: uuidSchema.optional(),
@@ -454,7 +455,7 @@ export const createInvoiceItemSchema = invoiceItemBaseSchema.extend({
   tenant: uuidSchema
 });
 
-export const updateInvoiceItemSchema = invoiceItemBaseSchema.partial();
+export const updateInvoiceItemSchema = partialWithoutDefaults(invoiceItemBaseSchema);
 
 export const invoiceItemResponseSchema = invoiceItemBaseSchema
   .merge(baseEntitySchema)
@@ -513,7 +514,7 @@ export const createTaxRateSchema = taxRateBaseSchema.extend({
 
 // Effective-row pair validation belongs in the authenticated mutation action.
 // An update may reuse stored currency or preserve a legacy unresolved cap.
-export const updateTaxRateSchema = taxRateBaseSchema.partial();
+export const updateTaxRateSchema = partialWithoutDefaults(taxRateBaseSchema);
 
 export const taxRateResponseSchema = taxRateBaseSchema.merge(baseEntitySchema).extend({
   tax_rate_id: uuidSchema,
@@ -541,7 +542,7 @@ export const taxRateAdvancedSchema = z.object({
   start_date: dateSchema,
   end_date: dateSchema.optional(),
   is_active: z.boolean().default(true),
-  conditions: z.record(z.any()).optional(),
+  conditions: z.record(z.string(), z.any()).optional(),
   description: z.string().nullable().optional(),
   region_code: z.string(),
   cap_amount: taxCapAmountSchema.optional(),
@@ -557,7 +558,7 @@ export const taxComponentSchema = z.object({
   is_compound: z.boolean().default(false),
   start_date: dateSchema.optional(),
   end_date: dateSchema.optional(),
-  conditions: z.record(z.any()).optional()
+  conditions: z.record(z.string(), z.any()).optional()
 });
 
 export const taxCalculationResultSchema = z.object({
@@ -602,7 +603,7 @@ export const createContractLineSchema = contractLineBaseSchema.extend({
   tenant: uuidSchema
 });
 
-export const updateContractLineSchema = contractLineBaseSchema.partial();
+export const updateContractLineSchema = partialWithoutDefaults(contractLineBaseSchema);
 
 export const contractLineResponseSchema = contractLineBaseSchema.merge(baseEntitySchema);
 
@@ -635,7 +636,7 @@ export const createClientContractLineSchema = clientContractLineBaseSchema.exten
   tenant: uuidSchema
 });
 
-export const updateClientContractLineSchema = clientContractLineBaseSchema.partial();
+export const updateClientContractLineSchema = partialWithoutDefaults(clientContractLineBaseSchema);
 
 export const clientContractLineResponseSchema = clientContractLineBaseSchema.merge(baseEntitySchema);
 
@@ -656,7 +657,7 @@ export const createClientContractLineCycleSchema = clientContractLineCycleBaseSc
   tenant: uuidSchema
 });
 
-export const updateClientContractLineCycleSchema = clientContractLineCycleBaseSchema.partial();
+export const updateClientContractLineCycleSchema = partialWithoutDefaults(clientContractLineCycleBaseSchema);
 
 export const clientContractLineCycleResponseSchema = clientContractLineCycleBaseSchema.merge(baseEntitySchema);
 
@@ -673,7 +674,7 @@ export const defaultBillingSettingsSchema = z.object({
   credit_expiration_notification_days: z.array(z.number().int().min(1)),
   credit_auto_apply_enabled: z.boolean().optional(),
   credit_application_order: z.enum(['expiration_first', 'oldest_first', 'newest_first']).optional(),
-  credit_eligible_service_type_ids: z.array(z.string().uuid()).nullable().optional(),
+  credit_eligible_service_type_ids: z.array(z.string().guid()).nullable().optional(),
   default_recurring_cadence_owner: z.enum(['client', 'contract']).default('client'),
   recurring_cadence_rollout_state: z.literal('mixed_enabled').default('mixed_enabled'),
   recurring_cadence_rollout_message: z.string().default(CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE)
@@ -688,7 +689,7 @@ export const clientContractLineSettingsSchema = z.object({
   credit_expiration_notification_days: z.array(z.number().int().min(1)).optional(),
   credit_auto_apply_enabled: z.boolean().optional(),
   credit_application_order: z.enum(['expiration_first', 'oldest_first', 'newest_first']).optional(),
-  credit_eligible_service_type_ids: z.array(z.string().uuid()).nullable().optional(),
+  credit_eligible_service_type_ids: z.array(z.string().guid()).nullable().optional(),
   default_recurring_cadence_owner: z.enum(['client', 'contract']).optional(),
   recurring_cadence_rollout_state: z.literal('mixed_enabled').optional(),
   recurring_cadence_rollout_message: z.string().optional()
@@ -702,7 +703,7 @@ export const updateBillingSettingsSchema = z.object({
   credit_expiration_notification_days: z.array(z.number().int().min(1)).optional(),
   credit_auto_apply_enabled: z.boolean().optional(),
   credit_application_order: z.enum(['expiration_first', 'oldest_first', 'newest_first']).optional(),
-  credit_eligible_service_type_ids: z.array(z.string().uuid()).nullable().optional(),
+  credit_eligible_service_type_ids: z.array(z.string().guid()).nullable().optional(),
   default_recurring_cadence_owner: z.enum(['client', 'contract']).optional()
 });
 
@@ -751,7 +752,7 @@ export const financialAnalyticsQuerySchema = z.object({
   date_from: dateSchema,
   date_to: dateSchema,
   group_by: z.enum(['day', 'week', 'month']).optional().default('month'),
-  include_projections: booleanTransform.optional().default("false")
+  include_projections: booleanTransform.prefault("false")
 });
 
 export const revenueAnalyticsSchema = z.object({
@@ -782,7 +783,7 @@ export const creditAnalyticsSchema = z.object({
 export const bulkInvoiceOperationSchema = z.object({
   invoice_ids: z.array(uuidSchema).min(1).max(50),
   operation: z.enum(['finalize', 'send', 'cancel', 'apply_credit']),
-  parameters: z.record(z.any()).optional()
+  parameters: z.record(z.string(), z.any()).optional()
 });
 
 export const bulkTransactionOperationSchema = z.object({
@@ -960,7 +961,7 @@ export const calculateBillingSchema = z.object({
   client_id: uuidSchema,
   period_start: dateSchema,
   period_end: dateSchema,
-}).strict('Billing calculation requests require canonical execution-window dates and do not accept billing_cycle_id.');
+}, { error: (issue) => (issue.code === 'unrecognized_keys' ? 'Billing calculation requests require canonical execution-window dates and do not accept billing_cycle_id.' : undefined) }).strict();
 
 export const billingCalculationResultSchema = z.object({
   charges: z.array(billingChargeBaseSchema),

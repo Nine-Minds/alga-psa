@@ -22,6 +22,18 @@ const hoisted = vi.hoisted(() => {
   };
 });
 
+// Participation is read first by the sweep; a plain PSA tenant is never served, so no
+// co-managed code or SQL is reached (isolation is covered by teamsMeetingSweepIsolation.test.ts).
+vi.mock('@alga-psa/core/capability', () => ({
+  serves: vi.fn(async () => ({ served: false })),
+}));
+
+vi.mock('@alga-psa/db', () => ({
+  getConnection: vi.fn(async () => {
+    throw new Error('A plain PSA tenant sweep must not open a co-managed connection');
+  }),
+}));
+
 vi.mock('@alga-psa/clients/models', () => ({
   OnlineMeetingModel: {
     getById: hoisted.getByIdMock,

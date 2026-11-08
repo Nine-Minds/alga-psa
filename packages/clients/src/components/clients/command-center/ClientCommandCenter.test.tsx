@@ -167,7 +167,7 @@ describe('ClientCommandCenter', () => {
     getClientPulseMock.mockResolvedValue(pulse({ locations: [{
       location_id: 'loc-1', location_name: 'HQ', address_line1: null, city: null,
       phone: '+13202521658', phone_extension: '42', country_code: 'US', email: null,
-      is_default: true, is_billing: false, is_shipping: false,
+      is_default: true, is_billing: false, is_shipping: false, contact_count: 0,
     }] }));
     renderCenter();
     expect(await screen.findAllByText('+1 320 252 1658 ext. 42')).toHaveLength(2);
@@ -360,5 +360,70 @@ describe('ClientCommandCenter', () => {
       await routed('interaction', 'i-1', [tab('details', 'Details'), tab('interactions', 'Interactions')]);
       expect(await screen.findByText('Interactions view')).toBeInTheDocument();
     });
+  });
+});
+
+describe('ClientCommandCenter software tile and quick links', () => {
+  const softwareResponse = {
+    rows: [
+      { software_id: 's1', title: 'Google Chrome', versions: ['125'], asset_count: 4, assets: [], last_seen: null },
+      { software_id: 's2', title: '7-Zip', versions: [], asset_count: 2, assets: [], last_seen: null },
+    ],
+    total: 12,
+    page: 1,
+    limit: 50,
+  };
+  const getSoftwareSummary = vi.fn();
+  const allTabs = [tab('details', 'Details'), tab('contacts', 'Contacts'), tab('assets', 'Assets'), tab('software', 'Software')];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getClientPulseMock.mockResolvedValue(pulse());
+    listClientTimelineMock.mockResolvedValue({ events: [], nextCursor: null });
+    getSoftwareSummary.mockResolvedValue(softwareResponse);
+  });
+
+  it('shows Contacts, Assets and Software quick links that open their focus views', async () => {
+    const onTabUrlChange = vi.fn();
+    renderCenter({ tabs: allTabs, getSoftwareSummary, onTabUrlChange });
+
+    const nav = document.getElementById('cc-quick-links');
+    expect(nav).not.toBeNull();
+    expect(['contacts', 'assets', 'software'].map((k) => document.getElementById(`cc-quick-link-${k}`)?.textContent))
+      .toEqual(['Contacts', 'Assets', 'Software']);
+
+    fireEvent.click(document.getElementById('cc-quick-link-software')!);
+    expect(await screen.findByText('Software view')).toBeInTheDocument();
+    expect(onTabUrlChange).toHaveBeenCalledWith('software');
+  });
+
+  it('only renders quick links for views that exist', () => {
+    renderCenter({ tabs: [tab('details', 'Details'), tab('contacts', 'Contacts')] });
+    expect(document.getElementById('cc-quick-link-contacts')).not.toBeNull();
+    expect(document.getElementById('cc-quick-link-assets')).toBeNull();
+    expect(document.getElementById('cc-quick-link-software')).toBeNull();
+  });
+
+  it('renders the tile with top titles and the total, and opens the Software focus view', async () => {
+    renderCenter({ tabs: allTabs, getSoftwareSummary });
+
+    expect(await screen.findByText('Google Chrome')).toBeInTheDocument();
+    expect(screen.getByText('7-Zip')).toBeInTheDocument();
+    expect(screen.getByText('12')).toBeInTheDocument();
+    expect(getSoftwareSummary).toHaveBeenCalledWith({ clientId: 'client-1', page: 1, sortBy: 'assets', sortDir: 'desc' });
+
+    fireEvent.click(document.getElementById('cc-card-software-open')!);
+    expect(await screen.findByText('Software view')).toBeInTheDocument();
+  });
+
+  it('hides the tile when no software reader is provided', async () => {
+    renderCenter({ tabs: allTabs });
+    await waitFor(() => expect(document.getElementById('cc-card-service')).not.toBeNull());
+    expect(document.getElementById('cc-card-software')).toBeNull();
+  });
+
+  it('keeps existing deep links working alongside the software view', async () => {
+    renderCenter({ tabs: allTabs, getSoftwareSummary, initialTabId: 'contacts' });
+    expect(await screen.findByText('Contacts view')).toBeInTheDocument();
   });
 });

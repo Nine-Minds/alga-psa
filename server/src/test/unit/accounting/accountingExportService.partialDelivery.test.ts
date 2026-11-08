@@ -49,9 +49,10 @@ function makeLine(lineId: string, invoiceId: string): AccountingExportLine {
  * failures, mirroring how the QuickBooks Online adapter isolates rejected invoices.
  */
 class PartialFailureAdapter implements AccountingExportAdapter {
-  readonly type = 'quickbooks_online';
-
-  constructor(private readonly deliverableInvoiceIds: Set<string>) {}
+  constructor(
+    private readonly deliverableInvoiceIds: Set<string>,
+    readonly type = 'quickbooks_online'
+  ) {}
 
   capabilities(): AccountingExportAdapterCapabilities {
     return {
@@ -106,6 +107,7 @@ class PartialFailureAdapter implements AccountingExportAdapter {
 
 function makeHarness(lines: AccountingExportLine[], adapter: AccountingExportAdapter) {
   const batch = makeBatch();
+  batch.adapter_type = adapter.type;
   const linesById = new Map(lines.map((line) => [line.line_id, line]));
   const addedErrors: Array<Record<string, any>> = [];
 
@@ -141,6 +143,33 @@ function makeHarness(lines: AccountingExportLine[], adapter: AccountingExportAda
 }
 
 describe('AccountingExportService partial delivery handling', () => {
+  it.each([true, false])('finalizes partial file delivery only when invoices were delivered (%s)', async (hasDelivery) => {
+    const deliveredLine = makeLine('33333333-3333-4333-8333-333333333333', '44444444-4444-4444-8444-444444444444');
+    const failedLine = makeLine('55555555-5555-4555-8555-555555555555', '66666666-6666-4666-8666-666666666666');
+    const postProcess = vi.fn(async () => undefined);
+    const adapter = Object.assign(
+      new PartialFailureAdapter(new Set(hasDelivery ? [deliveredLine.document_id] : []), 'quickbooks_csv'),
+      { postProcess }
+    );
+    const { batch, repository, adapterRegistry } = makeHarness([deliveredLine, failedLine], adapter);
+    const validationSpy = vi.spyOn(AccountingExportValidation, 'ensureMappingsForBatch')
+      .mockImplementation(async () => { batch.status = 'ready'; });
+    const publishers = await import('@alga-psa/event-bus/publishers');
+    const publishSpy = vi.spyOn(publishers, 'publishEvent').mockResolvedValue();
+    try {
+      const service = new AccountingExportService(repository, adapterRegistry);
+      const result = await service.executeBatch(BATCH_ID);
+      expect(postProcess).toHaveBeenCalledTimes(hasDelivery ? 1 : 0);
+      if (hasDelivery) {
+        expect(postProcess).toHaveBeenCalledWith(result, expect.objectContaining({ batch: expect.objectContaining({ tenant: TENANT }) }), undefined);
+      }
+      expect(batch.status).toBe(hasDelivery ? 'needs_attention' : 'failed');
+    } finally {
+      validationSpy.mockRestore();
+      publishSpy.mockRestore();
+    }
+  });
+
   it('releases a reservation when mapping preparation fails before transformation', async () => {
     const line = makeLine('33333333-3333-4333-8333-333333333333', '44444444-4444-4444-8444-444444444444');
     const adapter = new PartialFailureAdapter(new Set([line.document_id]));

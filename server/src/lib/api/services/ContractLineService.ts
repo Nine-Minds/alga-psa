@@ -12,6 +12,14 @@ import { IContractLineServiceConfiguration } from 'server/src/interfaces/contrac
 import { IService } from 'server/src/interfaces/billing.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { cloneTemplateContractLine } from '@alga-psa/billing/lib/billing/utils/templateClone';
+import {
+  legacyCloneAmountReader,
+  resolveTemplateAmountsForContract,
+} from '@alga-psa/shared/billingClients/templateAmounts';
+import {
+  upsertContractLinePrepaidBlockInTransaction,
+  removeContractLinePrepaidBlockInTransaction,
+} from '@alga-psa/billing/services/prepaidBlockConfigService';
 import { getFixedServiceBasisIssue, isUnitFixedService } from '@alga-psa/billing/lib/fixedServiceBasis';
 
 // Import existing models and actions for integration
@@ -27,7 +35,8 @@ import {
   DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
   resolveRecurringAuthoringPolicy,
 } from '@shared/billingClients/recurringAuthoringPolicy';
-import { normalizeTemplateRecurringStorage } from '@shared/billingClients/recurrenceStorageModel';
+import { normalizeRecurringStorageForLineType } from '@shared/billingClients/recurrenceStorageModel';
+import { resolveEffectiveBillingTiming } from '@shared/billingClients/contractLineTimingRule';
 import { resolveCadenceOwner } from '@shared/billingClients/recurringTiming';
 import { resolveBillingCycleAlignmentForCompatibility } from '@shared/billingClients/billingCycleAlignmentCompatibility';
 
@@ -42,6 +51,8 @@ import {
   UpdateFixedPlanConfigData,
   CreateContractData,
   UpdateContractData,
+  CreateContractAssignmentData,
+  UpdateContractAssignmentData,
   ContractResponse,
   CreateClientContractLineData,
   UpdateClientContractLineData,
@@ -67,7 +78,32 @@ import {
 
 import { ListOptions } from '../controllers/types';
 import { generateResourceLinks, addHateoasLinks } from '../utils/responseHelpers';
-import { ConflictError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
+import { ConflictError, NotFoundError, UnprocessableEntityError, ValidationError } from '../middleware/apiMiddleware';
+import {
+  activateClientContractAssignment,
+  checkAndReactivateExpiredContract,
+  ClientContractError,
+  createClientContractAssignment,
+  getClientContractById,
+  getClientContractsByContractId,
+  resolveClientContractCurrency,
+  updateClientContractAssignment,
+} from '@alga-psa/shared/billingClients';
+import { syncRecurringServicePeriodsForContract } from '@alga-psa/billing/actions/recurringServicePeriodSync';
+import { ContractDeletionError, deleteContractWithEvents } from '@alga-psa/billing/lib/contractDeletion';
+import { ContractUpdateError, updateContractHeaderWithEvents } from '@alga-psa/billing/lib/contractUpdate';
+import ContractModel from '@alga-psa/billing/models/contract';
+import { publishWorkflowEvent, publishNonCatalogWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildContractCreatedPayload } from '@alga-psa/workflow-streams';
+
+const API_V1_BASE = '/api/v1';
+
+/** Reduce an ISO datetime or YYYY-MM-DD input to the date-only form assignments store. */
+function toDateOnly(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return /^\d{4}-\d{2}-\d{2}/.test(trimmed) ? trimmed.slice(0, 10) : undefined;
+}
 
 export interface ContractLineServiceOptions {
   includeServices?: boolean;
@@ -83,6 +119,64 @@ function normalizeContractLineCompatibility<T extends { service_category?: unkno
     service_category: plan.service_category || undefined,
     cadence_owner: resolveCadenceOwner(plan.cadence_owner),
   };
+}
+
+const PREPAID_BLOCK_API_COLUMNS = [
+  'issue_mode',
+  'rollover_periods',
+  'block_minutes',
+  'block_price',
+  'sold_as_service_id',
+  'expiry_months',
+  'trigger_on_exhaustion',
+  'trigger_threshold_percent',
+  'trigger_on_expiry',
+  'trigger_on_renewal',
+  'replenishment_tier',
+] as const;
+
+/**
+ * Attach the optional Prepaid Block overlay (`prepaid_block`, null when absent) and the
+ * derived `display_kind` to Hourly lines. Never persisted; the stored type stays unchanged.
+ */
+async function attachPrepaidBlocks<T extends { contract_line_id?: string; contract_line_type?: string }>(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  plans: T[],
+): Promise<Array<T & { prepaid_block: Record<string, unknown> | null; display_kind: string | undefined }>> {
+  const hourlyIds = plans
+    .filter((p) => p.contract_line_type === 'Hourly' && p.contract_line_id)
+    .map((p) => p.contract_line_id as string);
+  const byLine = new Map<string, Record<string, unknown>>();
+  if (hourlyIds.length > 0) {
+    const rows = await tenantDb(trx, tenant).table('contract_line_prepaid_blocks')
+      .whereIn('contract_line_id', hourlyIds)
+      .select('contract_line_id', ...PREPAID_BLOCK_API_COLUMNS);
+    for (const row of rows) {
+      const { contract_line_id, ...config } = row as Record<string, unknown>;
+      byLine.set(contract_line_id as string, config);
+    }
+  }
+  return plans.map((p) => {
+    const prepaid_block = p.contract_line_id ? byLine.get(p.contract_line_id) ?? null : null;
+    return {
+      ...p,
+      prepaid_block,
+      display_kind: prepaid_block ? 'PrepaidBlock' : p.contract_line_type,
+    };
+  });
+}
+
+/** Run a config-service call and surface its rule violations as API validation errors. */
+async function runPrepaidBlockWrite<R>(fn: () => Promise<R>): Promise<R> {
+  try {
+    return await fn();
+  } catch (error) {
+    if (error instanceof Error && !(error instanceof NotFoundError) && !(error instanceof ConflictError)) {
+      throw new ValidationError(error.message);
+    }
+    throw error;
+  }
 }
 
 function throwPlanServiceConfigurationApiError(error: unknown): never {
@@ -162,6 +256,36 @@ export interface PlanTemplate {
   created_at: string;
   updated_at: string;
   tenant: string;
+}
+
+/**
+ * Select expressions for a contract's top-level `start_date` / `end_date`.
+ *
+ * Dates are an assignment property: UI-created contracts store them on
+ * `client_contracts`, not `contracts`. The contract resource reports the envelope
+ * over its assignments (earliest start, latest end; MIN/MAX ignore NULLs) and
+ * falls back to the contract's own stored dates only when it has no assignments
+ * (REST-created, unassigned contracts). The query must GROUP BY the contract key
+ * and left-join `client_contracts` under `clientContractAlias`.
+ *
+ * Any single-contract read (e.g. a future GET /contracts/{id}) must reuse this
+ * helper so list and detail cannot disagree.
+ */
+export function contractAssignmentPeriodSelects(
+  knex: Knex,
+  contractAlias = 'c',
+  clientContractAlias = 'cc'
+): Knex.Raw[] {
+  return [
+    knex.raw(
+      `CASE WHEN COUNT(??.contract_id) = 0 THEN ??.start_date ELSE MIN(??.start_date) END as start_date`,
+      [clientContractAlias, contractAlias, clientContractAlias]
+    ),
+    knex.raw(
+      `CASE WHEN COUNT(??.contract_id) = 0 THEN ??.end_date ELSE MAX(??.end_date) END as end_date`,
+      [clientContractAlias, contractAlias, clientContractAlias]
+    ),
+  ];
 }
 
 export class ContractLineService extends BaseService<IContractLine> {
@@ -260,7 +384,11 @@ export class ContractLineService extends BaseService<IContractLine> {
       ]);
   
       // Transform null to undefined for compatibility
-      const transformedPlans = plans.map((plan: any) => normalizeContractLineCompatibility(plan));
+      const transformedPlans = await attachPrepaidBlocks(
+        knex,
+        context.tenant,
+        plans.map((plan: any) => normalizeContractLineCompatibility(plan)),
+      );
   
       // Add HATEOAS links
       const plansWithLinks = transformedPlans.map((plan: any) => 
@@ -316,7 +444,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         }
     
         // Transform null to undefined for compatibility
-        const transformedPlan = normalizeContractLineCompatibility(plan);
+        const [transformedPlan] = await attachPrepaidBlocks(knex, context.tenant, [normalizeContractLineCompatibility(plan)]);
     
         // Add HATEOAS links
         return addHateoasLinks(transformedPlan, this.generatePlanLinks(id, context)) as ContractLineResponse;
@@ -334,7 +462,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       const { knex } = await this.getKnex();
       
       const result = await withTransaction(knex, async (trx) => {
-        const planData = this.addCreateAuditFields(data, context);
+        const planData = await this.addCreateAuditFields(trx, data, context);
         planData.contract_line_id = uuidv4();
 
         const baseRate = (data as any).base_rate ?? planData.custom_rate ?? null;
@@ -344,6 +472,7 @@ export class ContractLineService extends BaseService<IContractLine> {
           enableProration,
         });
         const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+          lineType: (data as any).contract_line_type ?? planData.contract_line_type ?? null,
           cadenceOwner: data.cadence_owner ?? planData.cadence_owner,
           defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
           billingTiming: (data as { billing_timing?: 'arrears' | 'advance' }).billing_timing,
@@ -359,7 +488,15 @@ export class ContractLineService extends BaseService<IContractLine> {
 
         delete (planData as any).base_rate;
 
-        const [contractLine] = await tenantDb(trx, context.tenant).table('contract_lines').insert(planData).returning('*');
+        // Prepaid Block config needs the line's services, which do not exist yet at creation.
+        if ((data as any).prepaid_block) {
+          throw new ValidationError(
+            'prepaid_block cannot be set when creating a contract line: add the line\'s services first, then PUT the line with prepaid_block.',
+          );
+        }
+        delete (planData as any).prepaid_block;
+
+        const [contractLine] = await tenantDb(trx, context.tenant).table('contract_lines').insert(await this.filterAuditFields(trx, planData)).returning('*');
 
         return {
           contractLineId: contractLine.contract_line_id,
@@ -401,8 +538,9 @@ export class ContractLineService extends BaseService<IContractLine> {
         const existingPlan = await this.getExistingPlan(id, context, trx);
         
         // Prepare update data
-        const updateData = this.addUpdateAuditFields(data, context);
+        const updateData = await this.addUpdateAuditFields(trx, data, context);
         const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+          lineType: (data as any).contract_line_type ?? existingPlan.contract_line_type ?? null,
           cadenceOwner: data.cadence_owner,
           fallbackCadenceOwner: existingPlan.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
           billingTiming: (data as { billing_timing?: 'arrears' | 'advance' }).billing_timing,
@@ -419,18 +557,34 @@ export class ContractLineService extends BaseService<IContractLine> {
           delete updateData.round_up_to_nearest;
         }
         
+        // prepaid_block is an overlay table, never a contract_lines column.
+        const prepaidBlockInput = (data as any).prepaid_block as Record<string, unknown> | null | undefined;
+        delete (updateData as any).prepaid_block;
+        if (prepaidBlockInput !== undefined && existingPlan.contract_line_type !== 'Hourly') {
+          throw new ValidationError('prepaid_block is only supported on Hourly contract lines.');
+        }
+
         // Update the plan
         const [updatedPlan] = await tenantDb(trx, context.tenant).table('contract_lines')
           .where('contract_line_id', id)
-          .update(updateData)
+          .update(await this.filterAuditFields(trx, updateData))
           .returning('*');
         
         if (!updatedPlan) {
           throw new NotFoundError('Plan not found');
         }
+
+        if (prepaidBlockInput === null) {
+          await runPrepaidBlockWrite(() => removeContractLinePrepaidBlockInTransaction(trx, context.tenant, id));
+        } else if (prepaidBlockInput) {
+          await runPrepaidBlockWrite(() =>
+            upsertContractLinePrepaidBlockInTransaction(trx, context.tenant, id, prepaidBlockInput as any),
+          );
+        }
         
         // Transform null to undefined for compatibility
-        return normalizeContractLineCompatibility(updatedPlan) as IContractLine;
+        const [withBlock] = await attachPrepaidBlocks(trx, context.tenant, [normalizeContractLineCompatibility(updatedPlan)]);
+        return withBlock as unknown as IContractLine;
       });
     }
   
@@ -452,8 +606,9 @@ export class ContractLineService extends BaseService<IContractLine> {
         await this.validatePlanUpdate(id, data, existingPlan, context, trx);
         
         // Prepare update data
-        const updateData = this.addUpdateAuditFields(data, context);
+        const updateData = await this.addUpdateAuditFields(trx, data, context);
         const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+          lineType: (data as any).contract_line_type ?? existingPlan.contract_line_type ?? null,
           cadenceOwner: data.cadence_owner,
           fallbackCadenceOwner: existingPlan.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
           billingTiming: data.billing_timing,
@@ -470,18 +625,33 @@ export class ContractLineService extends BaseService<IContractLine> {
           delete updateData.round_up_to_nearest;
         }
         
+        // prepaid_block is an overlay table, never a contract_lines column.
+        const prepaidBlockInput = (data as any).prepaid_block as Record<string, unknown> | null | undefined;
+        delete (updateData as any).prepaid_block;
+        if (prepaidBlockInput !== undefined && existingPlan.contract_line_type !== 'Hourly') {
+          throw new ValidationError('prepaid_block is only supported on Hourly contract lines.');
+        }
+
         // Update the plan
         const [updatedPlan] = await tenantDb(trx, context.tenant).table('contract_lines')
           .where('contract_line_id', id)
-          .update(updateData)
+          .update(await this.filterAuditFields(trx, updateData))
           .returning('*');
         
         if (!updatedPlan) {
           throw new NotFoundError('Plan not found');
         }
+
+        if (prepaidBlockInput === null) {
+          await runPrepaidBlockWrite(() => removeContractLinePrepaidBlockInTransaction(trx, context.tenant, id));
+        } else if (prepaidBlockInput) {
+          await runPrepaidBlockWrite(() =>
+            upsertContractLinePrepaidBlockInTransaction(trx, context.tenant, id, prepaidBlockInput as any),
+          );
+        }
         
         // Transform null to undefined for compatibility
-        const transformedPlan = normalizeContractLineCompatibility(updatedPlan);
+        const [transformedPlan] = await attachPrepaidBlocks(trx, context.tenant, [normalizeContractLineCompatibility(updatedPlan)]);
         
         return addHateoasLinks(transformedPlan, this.generatePlanLinks(id, context)) as ContractLineResponse;
       });
@@ -489,33 +659,40 @@ export class ContractLineService extends BaseService<IContractLine> {
 
 
   /**
-   * Delete contract line with cascade checks
+   * Delete contract line with cascade checks.
+   * Pass `trx` to enlist in a caller's transaction (bulk delete) instead of
+   * opening a new one per line.
    */
-  async delete(id: string, context: ServiceContext): Promise<void> {
-    const { knex } = await this.getKnex();
-    
-    return withTransaction(knex, async (trx) => {
+  async delete(id: string, context: ServiceContext, trx?: Knex.Transaction): Promise<void> {
+    const deleteInTransaction = async (conn: Knex.Transaction) => {
       // Check if plan is in use
-      const isInUse = await this.isPlanInUse(id, context, trx);
+      const isInUse = await this.isPlanInUse(id, context, conn);
       if (isInUse.inUse) {
         throw new ConflictError(`Cannot delete plan: ${isInUse.reason}`);
       }
-      
+
       // Remove associated services first
-      await this.removeAllServicesFromPlan(id, context, trx);
-      
+      await this.removeAllServicesFromPlan(id, context, conn);
+
       // Remove from any contracts
-      await this.removeContractLineFromAllContracts(id, context, trx);
-      
+      await this.removeContractLineFromAllContracts(id, context, conn);
+
       // Delete the plan
-      const deletedCount = await tenantDb(trx, context.tenant).table('contract_lines')
+      const deletedCount = await tenantDb(conn, context.tenant).table('contract_lines')
         .where('contract_line_id', id)
         .delete();
-      
+
       if (deletedCount === 0) {
         throw new NotFoundError('Plan not found');
       }
-    });
+    };
+
+    if (trx) {
+      return deleteInTransaction(trx);
+    }
+
+    const { knex } = await this.getKnex();
+    return withTransaction(knex, deleteInTransaction);
   }
 
   // ============================================================================
@@ -655,12 +832,16 @@ export class ContractLineService extends BaseService<IContractLine> {
             throw new ValidationError('custom_rate and type_config.base_rate disagree; provide the unit rate once');
           }
           const unitRate = explicitBaseRate ?? data.custom_rate ?? null;
-          typeConfig = { ...requestedTypeConfig, pricing_basis: 'unit', base_rate: unitRate };
+          typeConfig = { ...requestedTypeConfig, pricing_basis: 'unit', base_rate: unitRate, base_rate_basis: 'per_unit' };
           // A second, conflicting price on the base configuration would be
           // ambiguous; the per-unit rate is the only price.
           customRate = undefined;
         } else if (pricingBasis !== undefined && pricingBasis !== 'bundle') {
           throw new ValidationError(`Unsupported pricing basis: ${pricingBasis}`);
+        } else if (configurationType === 'Fixed' && typeConfig.base_rate != null && typeConfig.base_rate_basis == null) {
+          // A bundle member's stored rate must state its meaning. The API's
+          // documented sense of base_rate is the unit rate.
+          typeConfig = { ...typeConfig, base_rate_basis: 'per_unit' };
         }
 
         if (configurationType === 'Fixed') {
@@ -777,6 +958,10 @@ export class ContractLineService extends BaseService<IContractLine> {
           typeConfig = restTypeConfig;
           // custom_rate is the unit-rate alias for a per-unit service (see addServiceToPlan).
           const isUnit = isUnitFixedService({ pricing_basis: storedBasis });
+          if (typeConfig.base_rate != null && typeConfig.base_rate_basis == null && !fixed?.base_rate_basis) {
+            // Nothing stored and nothing stated: the API's documented unit-rate sense.
+            typeConfig = { ...typeConfig, base_rate_basis: 'per_unit' };
+          }
           if (isUnit && typeConfig.base_rate != null && data.custom_rate != null && typeConfig.base_rate !== data.custom_rate) {
             throw new ValidationError('custom_rate and type_config.base_rate disagree; provide the unit rate once');
           }
@@ -905,8 +1090,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         'c.status',
         'c.is_active',
         'c.is_template',
-        'c.start_date',
-        'c.end_date',
+        ...contractAssignmentPeriodSelects(knex),
         'c.created_at',
         'c.updated_at',
         'c.tenant',
@@ -964,7 +1148,10 @@ export class ContractLineService extends BaseService<IContractLine> {
   }
 
   /**
-   * Create a new client-owned instantiated contract header.
+   * Create a client-owned contract the way the UI wizard does: header, client assignment
+   * (client_contracts row, via the shared createClientContractAssignment) and optional contract
+   * lines commit in ONE transaction. If any step fails nothing is written, so a failed create
+   * can never leave an orphaned, UI-invisible header behind.
    */
   async createContract(
     data: CreateContractData,
@@ -976,38 +1163,511 @@ export class ContractLineService extends BaseService<IContractLine> {
     if (typeof ownerClientId !== 'string' || ownerClientId.trim().length === 0) {
       throw new ValidationError('Non-template contracts require an owning client');
     }
-    
-    return withTransaction(knex, async (trx) => {
+
+    const startDate = toDateOnly(data.start_date);
+    if (!startDate) {
+      throw new ValidationError('start_date is required');
+    }
+    const endDate = toDateOnly(data.end_date) ?? null;
+
+    const { contract, assignment, lines } = await withTransaction(knex, async (trx) => {
+      await this.validateClientExists(ownerClientId, context, trx);
+
       // `client_id` is the public alias for the owning client; it maps onto
       // `owner_client_id` below and must not re-enter the insert via `...rest`.
-      const { contract_description, client_id: _clientId, ...rest } = data as any;
-      const contractData = await this.filterAuditFields(
+      // Assignment terms and `lines` belong to client_contracts / contract_lines, not the header.
+      const {
+        contract_description,
+        client_id: _clientId,
+        lines: lineInputs,
+        billing_profile_id,
+        renewal_mode,
+        notice_period_days,
+        renewal_term_months,
+        use_tenant_renewal_defaults,
+        renewal_due_date_action_policy,
+        renewal_ticket_board_id,
+        renewal_ticket_status_id,
+        renewal_ticket_priority,
+        renewal_ticket_assignee_id,
+        po_required,
+        po_number,
+        po_amount,
+        ...rest
+      } = data as any;
+
+      const status = data.status ?? 'draft';
+      const contractData = await this.addCreateAuditFields(
         trx,
-        this.addCreateAuditFields(
-          {
-            contract_id: uuidv4(),
-            ...rest,
-            contract_description,
-            owner_client_id: ownerClientId,
-            start_date: data.start_date,
-            end_date: data.end_date,
-            // The owning client is enforced, so this is a non-template contract.
-            // Explicitly flag it (the column defaults to true) so non-template
-            // listings/reports that filter on is_template don't silently drop it.
-            is_template: false,
-            status: data.status ?? 'draft',
-          },
-          context
-        ),
+        {
+          contract_id: uuidv4(),
+          ...rest,
+          contract_description,
+          owner_client_id: ownerClientId,
+          // A contract is billed in its client's currency (same resolution as the wizard).
+          currency_code: await resolveClientContractCurrency(trx, context.tenant, ownerClientId),
+          start_date: data.start_date,
+          end_date: data.end_date,
+          // The owning client is enforced, so this is a non-template contract.
+          // Explicitly flag it (the column defaults to true) so non-template
+          // listings/reports that filter on is_template don't silently drop it.
+          is_template: false,
+          status,
+        },
+        context,
         'contracts'
       );
 
       const [contract] = await tenantDb(trx, context.tenant).table('contracts').insert(contractData).returning('*');
-      return addHateoasLinks(
-        { ...contract, client_id: contract.owner_client_id },
-        this.generateContractLinks(contract.contract_id, context)
-      ) as ContractResponse;
+
+      // Same rule as the wizard: a draft contract carries an inactive assignment.
+      const assignment = await this.runAssignmentOperation(() =>
+        createClientContractAssignment(trx, context.tenant, {
+          client_id: ownerClientId,
+          contract_id: contract.contract_id,
+          start_date: startDate,
+          end_date: endDate,
+          is_active: contract.is_active === true && status !== 'draft',
+          billing_profile_id: billing_profile_id ?? null,
+          renewal_mode,
+          notice_period_days,
+          renewal_term_months,
+          use_tenant_renewal_defaults,
+          renewal_due_date_action_policy,
+          renewal_ticket_board_id,
+          renewal_ticket_status_id,
+          renewal_ticket_priority,
+          renewal_ticket_assignee_id,
+          po_required,
+          po_number,
+          po_amount,
+        })
+      );
+
+      const lines: IContractLineMapping[] = [];
+      for (const line of (lineInputs ?? []) as Array<{ contract_line_id: string; custom_rate?: number }>) {
+        lines.push(
+          await this.addContractLineInTransaction(
+            contract.contract_id,
+            line.contract_line_id,
+            line.custom_rate,
+            context,
+            trx
+          )
+        );
+      }
+
+      // Lines are in place, so the assignment's service periods can be materialised.
+      if (assignment.is_active) {
+        await syncRecurringServicePeriodsForContract(trx, {
+          tenant: context.tenant,
+          contractId: contract.contract_id,
+          sourceRunPrefix: 'api_contract_create',
+        });
+      }
+
+      return { contract, assignment, lines };
     });
+
+    await this.publishContractCreated(contract, assignment, ownerClientId, startDate, endDate, context);
+
+    return addHateoasLinks(
+      {
+        ...contract,
+        client_id: contract.owner_client_id,
+        // The public contract period is assignment-owned. Return the same
+        // date-only values used by list/detail projections instead of the
+        // timestamp precision retained on the contract header.
+        start_date: assignment.start_date,
+        end_date: assignment.end_date,
+        assignment: this.withAssignmentLinks(contract.contract_id, assignment),
+        contract_lines: lines,
+      },
+      this.generateContractLinks(contract.contract_id, context)
+    ) as ContractResponse;
+  }
+
+  /**
+   * Get one non-template contract with its assignments and contract lines.
+   */
+  async getContract(contractId: string, context: ServiceContext): Promise<ContractResponse> {
+    const { knex } = await this.getKnex();
+    const db = tenantDb(knex, context.tenant);
+
+    const query = db.table('contracts as c');
+    db.tenantJoin(query, 'clients as oc', 'c.owner_client_id', 'oc.client_id', { type: 'left' });
+    const contract = await query
+      .where('c.contract_id', contractId)
+      .andWhere((builder: Knex.QueryBuilder) => builder.whereNull('c.is_template').orWhere('c.is_template', false))
+      .first('c.*', 'oc.client_name as owner_client_name');
+    if (!contract) {
+      throw new NotFoundError('Contract not found');
+    }
+
+    const [assignments, contractLines] = await Promise.all([
+      getClientContractsByContractId(knex, context.tenant, contractId),
+      db.table('contract_lines')
+        .where({ contract_id: contractId })
+        .orderBy('display_order', 'asc')
+        .select(
+          'contract_line_id',
+          'contract_line_name',
+          'contract_line_type',
+          'billing_frequency',
+          'custom_rate',
+          'display_order',
+          'is_active'
+        ),
+    ]);
+
+    return addHateoasLinks(
+      {
+        ...contract,
+        client_id: contract.owner_client_id,
+        assignments: assignments.map((assignment) => this.withAssignmentLinks(contractId, assignment)),
+        contract_lines: contractLines,
+      },
+      this.generateContractLinks(contractId, context)
+    ) as ContractResponse;
+  }
+
+  /**
+   * Update contract header fields with the same rules and events as the UI (shared
+   * updateContractHeaderWithEvents).
+   */
+  async updateContract(
+    contractId: string,
+    data: UpdateContractData,
+    context: ServiceContext
+  ): Promise<ContractResponse> {
+    const { knex } = await this.getKnex();
+
+    const current = await ContractModel.getById(knex, context.tenant, contractId);
+    if (!current) {
+      throw new NotFoundError('Contract not found');
+    }
+
+    try {
+      await updateContractHeaderWithEvents(knex, context.tenant, current, data as any, context.userId);
+    } catch (error) {
+      if (error instanceof ContractUpdateError) {
+        // System-managed contracts are not editable at all (422); the remaining rules are
+        // conflicts with the contract's current state (409).
+        if (error.code === 'SYSTEM_MANAGED') {
+          throw new UnprocessableEntityError(error.message);
+        }
+        throw new ConflictError(error.message);
+      }
+      throw error;
+    }
+
+    return this.getContract(contractId, context);
+  }
+
+  /**
+   * Delete a contract with exactly the UI's rules and events (shared deleteContractWithEvents).
+   */
+  async deleteContract(contractId: string, context: ServiceContext): Promise<void> {
+    const { knex } = await this.getKnex();
+
+    try {
+      await deleteContractWithEvents(knex, context.tenant, contractId, context.userId);
+    } catch (error) {
+      if (error instanceof ContractDeletionError) {
+        switch (error.code) {
+          case 'NOT_FOUND':
+            throw new NotFoundError('Contract not found');
+          case 'SYSTEM_MANAGED':
+            throw new UnprocessableEntityError(error.message);
+          case 'HAS_INVOICES':
+            throw new ConflictError(error.message);
+        }
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * List the client assignments (client_contracts rows) of a contract.
+   */
+  async listContractAssignments(contractId: string, context: ServiceContext): Promise<any[]> {
+    const { knex } = await this.getKnex();
+    await this.requireNonTemplateContract(knex, contractId, context);
+    const assignments = await getClientContractsByContractId(knex, context.tenant, contractId);
+    return assignments.map((assignment) => this.withAssignmentLinks(contractId, assignment));
+  }
+
+  /**
+   * Assign a contract to its owning client (e.g. an existing contract that has no
+   * client_contracts row and is therefore invisible in the UI).
+   */
+  async createContractAssignment(
+    contractId: string,
+    data: CreateContractAssignmentData,
+    context: ServiceContext
+  ): Promise<any> {
+    const { knex } = await this.getKnex();
+
+    const startDate = toDateOnly(data.start_date);
+    if (!startDate) {
+      throw new ValidationError('start_date is required');
+    }
+    const endDate = toDateOnly(data.end_date) ?? null;
+
+    const created = await withTransaction(knex, async (trx) => {
+      const contract = await this.requireNonTemplateContract(trx, contractId, context);
+      if (contract.is_system_managed_default === true) {
+        throw new UnprocessableEntityError(
+          'System-managed default contracts are attribution-only; manual assignment authoring is disabled.'
+        );
+      }
+
+      // Contracts are client-owned: the assignment is to the owner, as the wizard always does.
+      const clientId = data.client_id ?? contract.owner_client_id;
+      if (!clientId || clientId !== contract.owner_client_id) {
+        throw new UnprocessableEntityError('A contract can only be assigned to its owning client');
+      }
+
+      const existing = await getClientContractsByContractId(trx, context.tenant, contractId);
+      if (existing.length > 0) {
+        throw new ConflictError(
+          'Contract already has a client assignment; update it instead',
+          { client_contract_id: existing[0].client_contract_id }
+        );
+      }
+
+      const {
+        client_id: _clientId,
+        start_date: _start,
+        end_date: _end,
+        is_active,
+        ...terms
+      } = data as any;
+      const assignment = await this.runAssignmentOperation(() =>
+        createClientContractAssignment(trx, context.tenant, {
+          ...terms,
+          billing_profile_id: terms.billing_profile_id ?? null,
+          client_id: clientId,
+          contract_id: contractId,
+          start_date: startDate,
+          end_date: endDate,
+          is_active: is_active ?? (contract.is_active === true && contract.status !== 'draft'),
+        })
+      );
+
+      if (assignment.is_active) {
+        await syncRecurringServicePeriodsForContract(trx, {
+          tenant: context.tenant,
+          contractId,
+          sourceRunPrefix: 'api_client_contract_assignment_create',
+        });
+      }
+      return assignment;
+    });
+
+    return this.withAssignmentLinks(contractId, created);
+  }
+
+  /**
+   * Update an assignment. `is_active: true` activates the assignment and its contract header
+   * together (the UI's "Set to Active"); other fields go through updateClientContractAssignment.
+   */
+  async updateContractAssignment(
+    contractId: string,
+    clientContractId: string,
+    data: UpdateContractAssignmentData,
+    context: ServiceContext
+  ): Promise<any> {
+    const { knex } = await this.getKnex();
+
+    const updated = await withTransaction(knex, async (trx) => {
+      const contract = await this.requireNonTemplateContract(trx, contractId, context);
+      const existing = await getClientContractById(trx, context.tenant, clientContractId);
+      if (!existing || existing.contract_id !== contractId) {
+        throw new NotFoundError('Client contract assignment not found');
+      }
+      if (contract.is_system_managed_default === true) {
+        throw new UnprocessableEntityError(
+          'System-managed default contracts are attribution-only; assignment lifecycle and date edits are disabled.'
+        );
+      }
+
+      const { is_active, start_date, end_date, ...terms } = data as any;
+      const fieldUpdates: Record<string, unknown> = { ...terms };
+      if (start_date !== undefined) fieldUpdates.start_date = toDateOnly(start_date);
+      if (end_date !== undefined) fieldUpdates.end_date = toDateOnly(end_date) ?? null;
+      if (is_active === false) fieldUpdates.is_active = false;
+
+      let result = existing;
+      if (Object.keys(fieldUpdates).length > 0) {
+        result = await this.runAssignmentOperation(() =>
+          updateClientContractAssignment(trx, context.tenant, clientContractId, fieldUpdates as any)
+        );
+      }
+      if (is_active === true) {
+        result = await this.runAssignmentOperation(() =>
+          activateClientContractAssignment(trx, context.tenant, clientContractId)
+        );
+      }
+
+      await syncRecurringServicePeriodsForContract(trx, {
+        tenant: context.tenant,
+        contractId,
+        sourceRunPrefix: 'api_client_contract_assignment_update',
+      });
+      return result;
+    });
+
+    await checkAndReactivateExpiredContract(knex, context.tenant, contractId);
+
+    const refreshed = await getClientContractById(knex, context.tenant, clientContractId);
+    return this.withAssignmentLinks(contractId, refreshed ?? updated);
+  }
+
+  /**
+   * Remove an assignment. Refused once any invoice references it (end it with an update
+   * instead: set end_date or is_active=false).
+   */
+  async deleteContractAssignment(
+    contractId: string,
+    clientContractId: string,
+    context: ServiceContext
+  ): Promise<void> {
+    const { knex } = await this.getKnex();
+
+    const removed = await withTransaction(knex, async (trx) => {
+      const contract = await this.requireNonTemplateContract(trx, contractId, context);
+      const existing = await getClientContractById(trx, context.tenant, clientContractId);
+      if (!existing || existing.contract_id !== contractId) {
+        throw new NotFoundError('Client contract assignment not found');
+      }
+      if (contract.is_system_managed_default === true) {
+        throw new UnprocessableEntityError(
+          'System-managed default contracts are attribution-only; assignment lifecycle and date edits are disabled.'
+        );
+      }
+
+      const db = tenantDb(trx, context.tenant);
+      const chargeRef = await db.table('invoice_charges').where({ client_contract_id: clientContractId }).first('item_id');
+      const invoiceRef = await db.table('invoices').where({ client_contract_id: clientContractId }).first('invoice_id');
+      if (chargeRef || invoiceRef) {
+        throw new ConflictError(
+          'Cannot delete an assignment that has associated invoices; end it with an update instead'
+        );
+      }
+
+      await db.table('client_contracts').where({ client_contract_id: clientContractId }).delete();
+      return existing;
+    });
+
+    const occurredAt = new Date().toISOString();
+    await publishNonCatalogWorkflowEvent({
+      eventType: 'CLIENT_CONTRACT_DELETED',
+      payload: {
+        clientContractId,
+        contractId,
+        clientId: removed.client_id,
+        userId: context.userId,
+        timestamp: occurredAt,
+      },
+      ctx: {
+        tenantId: context.tenant,
+        occurredAt,
+        actor: { actorType: 'USER' as const, actorUserId: context.userId },
+      },
+      idempotencyKey: `client_contract_deleted:${clientContractId}:${occurredAt}`,
+    });
+  }
+
+  private async requireNonTemplateContract(
+    conn: Knex | Knex.Transaction,
+    contractId: string,
+    context: ServiceContext
+  ): Promise<any> {
+    const contract = await tenantDb(conn, context.tenant).table('contracts')
+      .where({ contract_id: contractId })
+      .andWhere((builder: Knex.QueryBuilder) => builder.whereNull('is_template').orWhere('is_template', false))
+      .first();
+    if (!contract) {
+      throw new NotFoundError('Contract not found');
+    }
+    return contract;
+  }
+
+  /**
+   * The shared assignment engine reports domain failures as ClientContractError; translate the
+   * code to the API's HTTP errors instead of letting them surface as 500s.
+   */
+  private async runAssignmentOperation<T>(operation: () => Promise<T>): Promise<T> {
+    try {
+      return await operation();
+    } catch (error) {
+      if (error instanceof ClientContractError) {
+        switch (error.code) {
+          case 'NOT_FOUND':
+            throw new NotFoundError(error.message);
+          case 'CONFLICT':
+            throw new ConflictError(error.message);
+          case 'INVALID':
+            throw new ValidationError(error.message);
+        }
+      }
+      throw error;
+    }
+  }
+
+  private withAssignmentLinks(contractId: string, assignment: any): any {
+    const href = `/api/v1/contracts/${contractId}/assignments/${assignment.client_contract_id}`;
+    return {
+      ...assignment,
+      _links: {
+        self: { href, method: 'GET', rel: 'self' },
+        edit: { href, method: 'PUT', rel: 'edit' },
+        delete: { href, method: 'DELETE', rel: 'delete' },
+        collection: { href: `/api/v1/contracts/${contractId}/assignments`, method: 'GET', rel: 'collection' },
+        contract: { href: `/api/v1/contracts/${contractId}`, method: 'GET', rel: 'contract' },
+      },
+    };
+  }
+
+  /**
+   * CONTRACT_CREATED, same payload and idempotency key as the wizard. Published after commit;
+   * a bus failure must not turn a committed create into a 500.
+   */
+  private async publishContractCreated(
+    contract: any,
+    assignment: any,
+    clientId: string,
+    startDate: string,
+    endDate: string | null,
+    context: ServiceContext
+  ): Promise<void> {
+    const createdAt = new Date(contract.created_at ?? Date.now()).toISOString();
+    try {
+      await publishWorkflowEvent({
+        eventType: 'CONTRACT_CREATED',
+        payload: buildContractCreatedPayload({
+          contractId: contract.contract_id,
+          clientId,
+          createdByUserId: context.userId,
+          createdAt,
+          startDate,
+          endDate,
+          status: assignment.assignment_status ?? contract.status,
+        }),
+        ctx: {
+          tenantId: context.tenant,
+          occurredAt: createdAt,
+          actor: { actorType: 'USER' as const, actorUserId: context.userId },
+        },
+        idempotencyKey: `contract_created:${contract.contract_id}:${clientId}`,
+      });
+    } catch (error) {
+      console.error('Failed to publish CONTRACT_CREATED for API-created contract', {
+        contractId: contract.contract_id,
+        error,
+      });
+    }
   }
 
   /**
@@ -1033,13 +1693,27 @@ export class ContractLineService extends BaseService<IContractLine> {
     context: ServiceContext
   ): Promise<IContractLineMapping> {
     const { knex } = await this.getKnex();
-    
-    return withTransaction(knex, async (trx) => {
-      await this.validateContractExists(contractId, context, trx);
-      await this.getExistingPlan(contractLineId, context, trx);
 
-      return repositoryAddContractLine(trx, context.tenant, contractId, contractLineId, customRate);
-    });
+    return withTransaction(knex, async (trx) =>
+      this.addContractLineInTransaction(contractId, contractLineId, customRate, context, trx)
+    );
+  }
+
+  /**
+   * The body of addContractLine, runnable inside a caller's transaction so create-with-lines
+   * and POST /contracts/{id}/contract-lines share one implementation.
+   */
+  private async addContractLineInTransaction(
+    contractId: string,
+    contractLineId: string,
+    customRate: number | undefined,
+    context: ServiceContext,
+    trx: Knex.Transaction
+  ): Promise<IContractLineMapping> {
+    await this.validateContractExists(contractId, context, trx);
+    await this.getExistingPlan(contractLineId, context, trx);
+
+    return repositoryAddContractLine(trx, context.tenant, contractId, contractLineId, customRate);
   }
 
   /**
@@ -1183,12 +1857,23 @@ export class ContractLineService extends BaseService<IContractLine> {
       // The template link stays as provenance on the assignment/response, but
       // recurring cadence fields are copied onto the live line and do not keep
       // following future template edits.
-      const templateRecurringStorage = normalizeTemplateRecurringStorage({
+      // LEVERAGE: pattern recurring-storage-copy — copy sites each re-derive (billing_timing, cadence_owner) from the source row; a shared copy helper would remove the repeated per-site normalization
+      const templateRecurringStorage = normalizeRecurringStorageForLineType({
         billing_timing: templateLine.billing_timing,
         cadence_owner: templateLine.cadence_owner,
-      });
+      }, templateLine.contract_line_type);
       const newContractLineId = uuidv4();
-      const contractLineData = this.addCreateAuditFields({
+      // The template's amounts in the TARGET contract's currency. The template
+      // line's own custom_rate / overtime_rate columns are in the template's
+      // currency and are never copied onto the contract line.
+      const templateAmounts = await resolveTemplateAmountsForContract(
+        trx,
+        context.tenant,
+        templateContractId,
+        targetContractId,
+      );
+      const templateAmountReader = legacyCloneAmountReader(templateAmounts, data.contract_line_id);
+      const contractLineData = await this.addCreateAuditFields(trx, {
         contract_line_id: newContractLineId,
         contract_id: targetContractId,
         contract_line_name: templateLine.contract_line_name,
@@ -1200,18 +1885,18 @@ export class ContractLineService extends BaseService<IContractLine> {
         cadence_owner: templateRecurringStorage.cadence_owner,
         is_active: data.is_active ?? true,
         is_custom: false,
-        custom_rate: data.custom_rate ?? templateLine.custom_rate,
+        custom_rate: data.custom_rate ?? templateAmountReader.lineRate(),
         display_order: templateLine.display_order ?? 0,
         enable_proration: templateLine.enable_proration,
         enable_overtime: templateLine.enable_overtime,
-        overtime_rate: templateLine.overtime_rate,
+        overtime_rate: templateAmountReader.lineOvertimeRate(),
         overtime_threshold: templateLine.overtime_threshold,
         enable_after_hours_rate: templateLine.enable_after_hours_rate,
         after_hours_multiplier: templateLine.after_hours_multiplier,
       }, context);
 
       const [newContractLine] = await tenantDb(trx, context.tenant).table('contract_lines')
-        .insert(contractLineData)
+        .insert(await this.filterAuditFields(trx, contractLineData))
         .returning('*');
 
       // LEVERAGE: pattern template-clone-substrate — legacy clone path; see cloneTemplateLineToContract (alga-2026-0002371).
@@ -1222,7 +1907,8 @@ export class ContractLineService extends BaseService<IContractLine> {
         contractLineId: newContractLineId,
         templateContractId,
         overrideRate: data.custom_rate ?? null,
-        effectiveDate: data.start_date
+        effectiveDate: data.start_date,
+        amounts: templateAmounts,
       });
 
       // Return response in legacy format for backwards compatibility
@@ -1265,13 +1951,13 @@ export class ContractLineService extends BaseService<IContractLine> {
       // Check if there are pending invoices or active usage
       await this.validateSafeUnassignment(clientContractLineId, assignment.client_id, context, trx);
 
-      const updateData = this.addUpdateAuditFields({
+      const updateData = await this.addUpdateAuditFields(trx, {
         is_active: false
       }, context);
 
       await tenantDb(trx, context.tenant).table('contract_lines')
         .where('contract_line_id', clientContractLineId)
-        .update(updateData);
+        .update(await this.filterAuditFields(trx, updateData));
     });
   }
 
@@ -1301,14 +1987,14 @@ export class ContractLineService extends BaseService<IContractLine> {
       }
       
       // Update plan activation status
-      const updateData = this.addUpdateAuditFields({
+      const updateData = await this.addUpdateAuditFields(trx, {
         is_active: data.is_active
       }, context);
       updateData.cadence_owner = resolveCadenceOwner(plan.cadence_owner);
       
       const [updatedPlan] = await tenantDb(trx, context.tenant).table('contract_lines')
         .where('contract_line_id', planId)
-        .update(updateData)
+        .update(await this.filterAuditFields(trx, updateData))
         .returning('*');
       
       return addHateoasLinks(
@@ -1336,8 +2022,10 @@ export class ContractLineService extends BaseService<IContractLine> {
       const sourcePlan = await this.getExistingPlan(data.source_contract_line_id, context, trx);
       
       // Create new plan
+// LEVERAGE: pattern recurring-storage-copy — copy sites each re-derive (billing_timing, cadence_owner) from the source row; a shared copy helper would remove the repeated per-site normalization
       const newPlanData = {
         ...sourcePlan,
+        billing_timing: resolveEffectiveBillingTiming(sourcePlan.contract_line_type, sourcePlan.billing_timing),
         contract_line_id: uuidv4(),
         contract_line_name: data.new_contract_line_name,
         is_custom: true,
@@ -1348,9 +2036,9 @@ export class ContractLineService extends BaseService<IContractLine> {
       };
       
       delete newPlanData.tenant; // Will be set by addCreateAuditFields
-      const auditedData = this.addCreateAuditFields(newPlanData, context);
+      const auditedData = await this.addCreateAuditFields(trx, newPlanData, context);
       
-      const [newPlan] = await tenantDb(trx, context.tenant).table('contract_lines').insert(auditedData).returning('*');
+      const [newPlan] = await tenantDb(trx, context.tenant).table('contract_lines').insert(await this.filterAuditFields(trx, auditedData)).returning('*');
       
       // Copy services if requested
       if (data.copy_services) {
@@ -1376,11 +2064,11 @@ export class ContractLineService extends BaseService<IContractLine> {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
-      const templateData = this.addCreateAuditFields({
+      const templateData = await this.addCreateAuditFields(trx, {
         template_id: uuidv4(),
         ...data,
         created_by: context.userId
-      }, context);
+      }, context, 'plan_templates');
       
       const [template] = await tenantDb(trx, context.tenant).table('plan_templates').insert(templateData).returning('*');
       
@@ -1423,7 +2111,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       }
       
       // Create plan from template
-      const planData = this.addCreateAuditFields({
+      const planData = await this.addCreateAuditFields(trx, {
         contract_line_id: uuidv4(),
         contract_line_name: data.contract_line_name,
         contract_line_type: template.contract_line_type,
@@ -1431,7 +2119,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         is_custom: true
       }, context);
       
-      const [newPlan] = await tenantDb(trx, context.tenant).table('contract_lines').insert(planData).returning('*');
+      const [newPlan] = await tenantDb(trx, context.tenant).table('contract_lines').insert(await this.filterAuditFields(trx, planData)).returning('*');
       
       // Add template services
       const templateServices = await tenantDb(trx, context.tenant).table('template_services')
@@ -1567,12 +2255,12 @@ export class ContractLineService extends BaseService<IContractLine> {
           await this.validatePlanCreation(planData, context, trx);
           
           // Create plan
-          const auditedData = this.addCreateAuditFields({
+          const auditedData = await this.addCreateAuditFields(trx, {
             contract_line_id: uuidv4(),
             ...planData
           }, context);
           
-          const [plan] = await tenantDb(trx, context.tenant).table('contract_lines').insert(auditedData).returning('*');
+          const [plan] = await tenantDb(trx, context.tenant).table('contract_lines').insert(await this.filterAuditFields(trx, auditedData)).returning('*');
           results.push(addHateoasLinks(plan, this.generatePlanLinks(plan.contract_line_id, context)) as ContractLineResponse);
         }
         
@@ -1614,7 +2302,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       
       return withTransaction(knex, async (trx) => {
         for (const planId of data.contract_line_ids) {
-          await this.delete(planId, context);
+          await this.delete(planId, context, trx);
         }
       });
     }
@@ -2039,10 +2727,10 @@ export class ContractLineService extends BaseService<IContractLine> {
     context: ServiceContext,
     trx: Knex.Transaction
   ): Promise<void> {
-    const templateRecurringStorage = normalizeTemplateRecurringStorage({
+    const templateRecurringStorage = normalizeRecurringStorageForLineType({
       billing_timing: templateLine.billing_timing,
       cadence_owner: templateLine.cadence_owner,
-    });
+    }, templateLine.contract_line_type);
     const clonedCustomRate = data.custom_rate ?? templateLine.custom_rate ?? null;
     const overlapping = await tenantDb(trx, context.tenant).table('contract_lines')
       .where('contract_id', targetContractId)
@@ -2138,7 +2826,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       // A per-unit service must stay per-unit in the copy: without its fixed
       // config it would be re-created as a bundle allocation and the seats
       // would silently stop billing.
-      let typeConfig: { pricing_basis: 'unit'; base_rate: number | null } | undefined;
+      let typeConfig: { pricing_basis: 'unit'; base_rate: number | null; base_rate_basis: 'per_unit' } | undefined;
       if (sourceService.configuration_type === 'Fixed') {
         const sourceFixed = await tenantDb(trx, context.tenant).table('contract_line_service_fixed_config')
           .where('config_id', sourceService.config_id)
@@ -2147,6 +2835,7 @@ export class ContractLineService extends BaseService<IContractLine> {
           const sourceRate = sourceFixed.base_rate == null ? null : Number(sourceFixed.base_rate);
           typeConfig = {
             pricing_basis: 'unit',
+            base_rate_basis: 'per_unit',
             base_rate: sourceRate === null ? null : Math.round(modifyRates ? adjust(sourceRate) : sourceRate),
           };
         }
@@ -2187,17 +2876,25 @@ export class ContractLineService extends BaseService<IContractLine> {
   }
 
   private generatePlanLinks(planId: string, context: ServiceContext): Record<string, { href: string; method: string; rel: string }> {
-    const baseUrl = '/api/v1/contract-lines';
-    return generateResourceLinks('contract-lines', planId, baseUrl, ['read', 'update', 'delete']);
+    // generateResourceLinks appends `/${resource}/${id}` to its base, so the base is the API root.
+    const links = generateResourceLinks('contract-lines', planId, API_V1_BASE, ['read', 'update', 'delete']);
+    // /contract-lines/{id} has no PATCH route (GET/PUT/DELETE only).
+    delete links.patch;
+    return links;
   }
 
   private generateContractLinks(contractId: string, context: ServiceContext): Record<string, { href: string; method: string; rel: string }> {
-    const baseUrl = '/api/v1/contracts';
-    return generateResourceLinks('contracts', contractId, baseUrl, ['read', 'update', 'delete']);
+    // Every route advertised here exists: /contracts/{id} serves GET/PUT/PATCH/DELETE.
+    const links = generateResourceLinks('contracts', contractId, API_V1_BASE, ['read', 'update', 'delete']);
+    links.assignments = { href: `${API_V1_BASE}/contracts/${contractId}/assignments`, method: 'GET', rel: 'assignments' };
+    links['contract-lines'] = { href: `${API_V1_BASE}/contracts/${contractId}/contract-lines`, method: 'POST', rel: 'contract-lines' };
+    return links;
   }
 
   private generateClientPlanLinks(clientContractLineId: string, context: ServiceContext): Record<string, { href: string; method: string; rel: string }> {
-    const baseUrl = '/api/v1/client-contract-lines';
-    return generateResourceLinks('client-contract-lines', clientContractLineId, baseUrl, ['read', 'update', 'delete']);
+    const links = generateResourceLinks('client-contract-lines', clientContractLineId, API_V1_BASE, ['read', 'update', 'delete']);
+    // /client-contract-lines/{id} has no PATCH route.
+    delete links.patch;
+    return links;
   }
 }

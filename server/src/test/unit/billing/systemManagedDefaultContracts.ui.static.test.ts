@@ -19,8 +19,12 @@ describe('system-managed default contract list/detail guards', () => {
     expect(source).toContain('Created automatically for uncontracted work');
     expect(source).toContain("t('contractDetail.systemManaged.createdAutomatically', {");
     expect(source).toContain('const isSystemManagedDefault = record.is_system_managed_default === true;');
-    expect(source).toContain('!isSystemManagedDefault && (record.assignment_status ?? record.status) === \'active\'');
+    // Terminate now covers the derived 'scheduled' status too (a confirmed future-start contract
+    // can be terminated before it starts); the system-managed guard still gates it.
+    expect(source).toContain('!isSystemManagedDefault && [\'active\', \'scheduled\'].includes(record.assignment_status ?? record.status)');
     expect(source).toContain('!isSystemManagedDefault && (record.assignment_status ?? record.status) === \'terminated\'');
+    // The disabled "Starts <date>" item that replaced the no-op Set to Active on scheduled rows.
+    expect(source).toContain('!isSystemManagedDefault && (record.assignment_status ?? record.status) === \'scheduled\'');
     expect(source).toContain('!isSystemManagedDefault && (record.assignment_status ?? record.status) === \'draft\'');
     expect(source).toContain('{!isSystemManagedDefault ? (');
     expect(source).toContain('id="client-contracts-tab-delete-menu-item"');

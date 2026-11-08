@@ -19,8 +19,16 @@ export default defineConfig({
       // current definitions rather than a stale dist/.
       { find: '@alga-psa/types', replacement: path.resolve(__dirname, '../types/src') },
       {
+        find: /^@alga-psa\/core\/capability$/,
+        replacement: path.resolve(__dirname, '../core/src/lib/capability.ts'),
+      },
+      {
         find: /^@alga-psa\/core\/i18n\/countryDateFormat$/,
         replacement: path.resolve(__dirname, '../core/src/lib/i18n/countryDateFormat.ts'),
+      },
+      {
+        find: /^@alga-psa\/core\/formatters$/,
+        replacement: path.resolve(__dirname, '../core/src/lib/formatters.ts'),
       },
       {
         find: /^@alga-psa\/core\/timeZones$/,

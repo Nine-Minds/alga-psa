@@ -350,6 +350,10 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
               <p className="mt-1">{formatCurrency(invoice.total, invoice.currencyCode)}</p>
             </div>
             <div>
+              <p className="text-sm font-medium text-gray-500">{t('invoice.currency', 'Currency')}</p>
+              <p className="mt-1">{invoice.currencyCode}</p>
+            </div>
+            <div>
               <p className="text-sm font-medium text-gray-500">{t('invoice.status', 'Status')}</p>
               <Badge variant={invoice.finalized_at ? 'success' : 'warning'} className="mt-1">
                 {invoice.finalized_at ? t('invoice.finalized', 'Finalized') : t('invoice.draft', 'Draft')}

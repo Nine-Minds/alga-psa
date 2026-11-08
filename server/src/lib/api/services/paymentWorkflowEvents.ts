@@ -1,6 +1,7 @@
-import { builtWorkflowPayload } from '@alga-psa/event-schemas';
+import { builtWorkflowPayload, type PaymentRecordedSource } from '@alga-psa/event-schemas';
 import { formatMoneyAmount } from './invoiceWorkflowEvents';
 
+// LEVERAGE: pattern payment-recorded-builder — packages/billing/src/lib/paymentRecordedEvent.ts builds the same payload (billing cannot import server/); belongs in a shared builders layer.
 export function buildPaymentRecordedPayload(params: {
   paymentId: string;
   clientId?: string | null;
@@ -10,6 +11,8 @@ export function buildPaymentRecordedPayload(params: {
   method: string;
   receivedByUserId?: string;
   gatewayTransactionId?: string | null;
+  /** Explicit provenance; consumers allow-list on it (missing = do not act). */
+  source?: PaymentRecordedSource;
 }) {
   return builtWorkflowPayload('PAYMENT_RECORDED', {
     paymentId: params.paymentId,
@@ -20,6 +23,7 @@ export function buildPaymentRecordedPayload(params: {
     method: params.method,
     receivedByUserId: params.receivedByUserId,
     gatewayTransactionId: params.gatewayTransactionId ?? undefined,
+    source: params.source,
   });
 }
 

@@ -10,8 +10,14 @@ function source(relativePath: string): string {
 
 describe('prepaid replenishment pending-state lifecycle wiring', () => {
   it('clears the pending state when the authenticated void path cancels an invoice', () => {
+    // The void body lives in the shared primitive; both the authenticated
+    // action and the accounting-sync external-void applier go through it.
     const voidSource = source('packages/billing/src/actions/voidInvoiceActions.ts');
-    expect(voidSource).toContain('suppressPrepaidReplenishmentForVoidedInvoice(trx, tenant, invoiceId)');
+    expect(voidSource).toContain('voidInvoiceLocally(trx, tenant, {');
+    const voidCoreSource = source('packages/billing/src/lib/invoiceVoidCore.ts');
+    expect(voidCoreSource).toContain('suppressPrepaidReplenishmentForVoidedInvoice(trx, tenant, invoiceId)');
+    const externalVoidSource = source('packages/billing/src/services/accountingSync/externalVoidApplier.ts');
+    expect(externalVoidSource).toContain('voidInvoiceLocally(trx, tenantId, {');
   });
 
   it('clears the pending state before hard deletion and on API invoice deletion', () => {
@@ -39,6 +45,9 @@ describe('prepaid replenishment pending-state lifecycle wiring', () => {
     const hourBlockSource = source('packages/billing/src/actions/hourBlockActions.ts');
     expect(replenishmentSource).toContain('createHourBlockPurchaseInvoiceInternal');
     expect(replenishmentSource).toContain('hours: input.amount / 60');
-    expect(hourBlockSource).toContain('source_invoice_id: invoiceId');
+    const pendingBlockSource = source('packages/billing/src/services/pendingHourBlockService.ts');
+    expect(hourBlockSource).toContain('createPendingHourBlockForInvoiceCharge');
+    expect(hourBlockSource).toContain('invoiceId,');
+    expect(pendingBlockSource).toContain('source_invoice_id: input.invoiceId');
   });
 });

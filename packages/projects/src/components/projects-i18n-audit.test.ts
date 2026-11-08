@@ -126,7 +126,9 @@ describe('T002: static i18n wiring audit', () => {
 describe('T002: confirmed zero-string components', () => {
   const zeroStringFiles = [
     'KanbanBoard.tsx',
-    'KanbanZoomControl.tsx',
+    // KanbanZoomControl.tsx was reclassified: it passes real button/title
+    // strings (compact/spacious labels, zoom titles) and is now wired with
+    // useTranslation('features/projects') — it belongs in the wired list above.
     'DonutChart.tsx',
     'TaskQuickAdd.tsx',
     'HoursProgressBar.tsx',

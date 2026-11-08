@@ -55,7 +55,13 @@ export type SubscriptionStateValue = 'active' | 'cancel_scheduled' | 'term_ends'
 
 /** Why a cancelled subscription ended, when the check-in says so. */
 export type SubscriptionEndReasonValue = 'payment_failed';
-
+/** The slice of a licence record that tier resolution reads. A tenant's own signed claim and the
+ * installation singleton both fit it. */
+export type SelfHostLicenseInput = Pick<LicenseStateRow, 'edition_choice' | 'trial_started_at' | 'license_token'> & {
+  /** `tenant`: an independently staged claim. It must name this tenant (`aud`), and it never
+   * inherits the installation's trial or CE choice. */
+  license_scope?: 'tenant';
+};
 /** Derived licensing state for an install. */
 export type LicenseStateKind =
   | 'ce'            // Community Edition chosen — always essentials
@@ -64,6 +70,7 @@ export type LicenseStateKind =
   | 'trial_expired' // Trial window elapsed, no license
   | 'licensed'      // Valid unexpired license present
   | 'license_expired' // License was present but has expired
+  | 'license_required' // A tenant-scoped claim is present but not currently valid
   | 'license_wrong_tenant'; // Validly-signed license, but issued for a different tenant (aud mismatch)
 
 /**
@@ -219,7 +226,7 @@ function licenseExpired(row: LicenseStateRow, tokenExp: Date | null, now: number
  * always has the session tenant at activation time).
  */
 export function resolveSelfHostTier(
-  row: LicenseStateRow | null,
+  row: SelfHostLicenseInput | null,
   expectedTenantId?: string,
 ): ResolvedLicenseState | null {
   if (!row) return null;
@@ -236,7 +243,8 @@ export function resolveSelfHostTier(
         // the appliance whose tenant matches. We only block when we actually
         // have a tenant to compare against — an unbound token, or a missing
         // expectedTenantId, falls through to the normal licensed result.
-        if (result.claims.aud && expectedTenantId && result.claims.aud !== expectedTenantId) {
+        if ((row.license_scope === 'tenant' && (!expectedTenantId || result.claims.aud !== expectedTenantId)) ||
+            (result.claims.aud && expectedTenantId && result.claims.aud !== expectedTenantId)) {
           return { state: 'license_wrong_tenant', tier: 'essentials', expiresAt: null, daysRemaining: null, subscription: null };
         }
         const daysRemaining = Math.ceil((expMs - now) / (24 * 60 * 60 * 1000));
@@ -264,6 +272,11 @@ export function resolveSelfHostTier(
       return licenseExpired(row, result.expiredAt ? new Date(result.expiredAt * 1000) : null, now);
     }
     // Malformed/bad_signature/unknown_kid — treat as if no token stored.
+  }
+
+  // A tenant-scoped claim never falls back to the installation's CE choice or trial.
+  if (row.license_scope === 'tenant') {
+    return { state: 'license_required', tier: 'essentials', expiresAt: null, daysRemaining: null };
   }
 
   // 2. Check CE choice (no trial available).

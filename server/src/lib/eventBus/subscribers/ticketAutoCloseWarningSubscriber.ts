@@ -17,6 +17,8 @@ import { getEventBus } from '../index';
 import { EventSchemas } from '@alga-psa/event-schemas';
 import { createTenantKnex, runWithTenant, buildTenantPortalSlug, tenantDb } from '@alga-psa/db';
 import { getEmailNotificationService } from '@alga-psa/notifications';
+import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
+import { buildTenantPortalUrl } from '@alga-psa/tenancy/server';
 
 const WARNING_SUBTYPE_NAME = 'Ticket Auto-Close Warning';
 const WARNING_TEMPLATE_NAME = 'ticket-auto-close-warning';
@@ -45,13 +47,20 @@ export async function unregisterTicketAutoCloseWarningSubscriber(): Promise<void
   logger.info('[TicketAutoCloseWarningSubscriber] Unregistered');
 }
 
-function formatCloseDate(date: Date): string {
-  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+// The close time is a timestamp (an instant), so it is formatted as a datetime
+// value in the recipient's locale rather than as a date-only calendar field.
+function formatCloseDate(date: Date, locale: string): string {
+  return new Intl.DateTimeFormat(locale, { dateStyle: 'long' }).format(date);
 }
 
-function buildPortalTicketUrl(tenant: string, ticketId: string): string {
-  const base = (process.env.APP_URL || '').replace(/\/$/, '');
-  return `${base}/client-portal/tickets/${ticketId}?tenant=${buildTenantPortalSlug(tenant)}`;
+async function buildPortalTicketUrl(tenant: string, ticketId: string): Promise<string> {
+  // Tenant portal origin (active custom domain, else the public base URL). With
+  // no origin the URL stays relative, as it did when APP_URL was unset.
+  return (
+    (await buildTenantPortalUrl(tenant, `/client-portal/tickets/${ticketId}`, {
+      tenant: buildTenantPortalSlug(tenant),
+    })) ?? `/client-portal/tickets/${ticketId}?tenant=${buildTenantPortalSlug(tenant)}`
+  );
 }
 
 async function handleTicketAutoCloseWarningEvent(event: unknown): Promise<void> {
@@ -108,6 +117,12 @@ async function handleTicketAutoCloseWarningEvent(event: unknown): Promise<void> 
       // contact has no portal account.
       const userIdForLog = portalUser?.user_id ?? assignedTo ?? enteredBy;
 
+      const recipientLocale = await resolveEmailLocale(tenantId, {
+        email: contact.email,
+        userType: 'client',
+        ...(contact.client_id ? { clientId: contact.client_id } : {}),
+      });
+
       await getEmailNotificationService().sendNotification({
         mailClass: 'ticket',
         boardId: ticket?.board_id,
@@ -121,8 +136,8 @@ async function handleTicketAutoCloseWarningEvent(event: unknown): Promise<void> 
             id: ticketNumber,
             title,
             metaLine: `Ticket #${ticketNumber}`,
-            scheduledCloseDate: formatCloseDate(new Date(scheduledCloseAt)),
-            url: buildPortalTicketUrl(tenantId, ticketId),
+            scheduledCloseDate: formatCloseDate(new Date(scheduledCloseAt), recipientLocale),
+            url: await buildPortalTicketUrl(tenantId, ticketId),
           },
         },
       });

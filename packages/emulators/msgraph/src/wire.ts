@@ -3,9 +3,10 @@ import { randomUUID } from 'node:crypto';
 import type { NextFunction, Request, Response, Router } from 'express';
 import { route } from '@alga-psa/emulator-host';
 import type { HostEnv } from '@alga-psa/emulator-host';
-import { GraphApiError, publicEvent, publicOnlineMeeting, publicSubscription, publicTeam } from './core';
+import { GraphApiError, OAuthError, publicEvent, publicOnlineMeeting, publicSubscription, publicTeam } from './core';
 import type { MsGraphCore } from './core';
 import { BOT_FRAMEWORK_ISSUER, botFrameworkJwks } from './botFramework';
+import { entraJwks } from './entraOidc';
 import { deliverCalendarNotifications, deliverNotifications, validateNotificationUrl } from './notifier';
 
 interface Authed {
@@ -23,6 +24,18 @@ function decodePath(path: string): string {
   } catch {
     return path;
   }
+}
+
+/** `$select` as Graph applies it: the named properties, and always `id`. */
+function parseSelect(raw: unknown): Set<string> | null {
+  if (typeof raw !== 'string') return null;
+  const fields = raw.split(',').map((field) => field.trim()).filter(Boolean);
+  return fields.length > 0 ? new Set(fields) : null;
+}
+
+function applySelect(full: Record<string, unknown>, select: Set<string> | null): Record<string, unknown> {
+  if (!select) return full;
+  return Object.fromEntries(Object.entries(full).filter(([key]) => key === 'id' || select.has(key)));
 }
 
 /**
@@ -59,6 +72,18 @@ function formUrlDecode(value: string): string {
   }
 }
 
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
+}
+
+/** The "Sign in" error page login.microsoftonline.com renders instead of redirecting. */
+function oauthErrorPage(err: OAuthError): string {
+  return `<!DOCTYPE html><html><head><title>Sign in to your account</title></head><body>`
+    + `<h1>Sign in</h1><div id="errorText">${escapeHtml(err.description)}</div>`
+    + `<p>Trace ID: ${escapeHtml(err.ids.traceId)}<br>Correlation ID: ${escapeHtml(err.ids.correlationId)}<br>`
+    + `Timestamp: ${escapeHtml(err.ids.timestamp)}</p></body></html>`;
+}
+
 /**
  * Vendor surface: Microsoft login (OAuth2 v2.0), the Graph v1.0 routes Alga's
  * email and Teams integrations use, and the Bot Framework connector plus its
@@ -86,16 +111,53 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
 
   // --- Microsoft login surface ---
 
+  router.get('/:tenant/v2.0/.well-known/openid-configuration', (req, res) => {
+    const base = `${req.protocol}://${req.get('host')}/${encodeURIComponent(String(req.params.tenant))}`;
+    res.json({
+      issuer: `${base}/v2.0`, authorization_endpoint: `${base}/oauth2/v2.0/authorize`,
+      token_endpoint: `${base}/oauth2/v2.0/token`, jwks_uri: `${base}/discovery/v2.0/keys`,
+      userinfo_endpoint: `${req.protocol}://${req.get('host')}/oidc/userinfo`,
+      response_types_supported: ['code'], subject_types_supported: ['public'],
+      id_token_signing_alg_values_supported: ['RS256'], code_challenge_methods_supported: ['S256'],
+      token_endpoint_auth_methods_supported: ['client_secret_basic', 'client_secret_post'],
+    });
+  });
+  router.get('/:tenant/discovery/v2.0/keys', (_req, res) => res.json(entraJwks()));
+  router.get('/oidc/userinfo', (req, res) => {
+    core.authenticate(String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, ''));
+    res.json({ ...core.signedInUser, sub: core.signedInUser.id });
+  });
+
   router.get('/:tenant/oauth2/v2.0/authorize', (req, res) => {
     const clientId = String(req.query.client_id ?? '');
     const redirectUri = String(req.query.redirect_uri ?? '');
     if (!clientId || !redirectUri) {
       throw new GraphApiError(400, { error: 'invalid_client' });
     }
-    const code = core.authorize(clientId, redirectUri, {
-      nonce: req.query.nonce ? String(req.query.nonce) : undefined,
-      scope: req.query.scope ? String(req.query.scope) : undefined,
-    });
+    let code: string;
+    try {
+      code = core.authorize(clientId, redirectUri, {
+        nonce: req.query.nonce ? String(req.query.nonce) : undefined,
+        scope: req.query.scope ? String(req.query.scope) : undefined,
+        codeChallenge: req.query.code_challenge ? String(req.query.code_challenge) : undefined,
+        codeChallengeMethod: req.query.code_challenge_method ? String(req.query.code_challenge_method) : undefined,
+        authorityTenant: String(req.params.tenant),
+      });
+    } catch (err) {
+      if (!(err instanceof OAuthError)) throw err;
+      if (err.aadsts === 50194) {
+        // Audience errors are returned to the (registered) redirect URI.
+        const callback = new URL(redirectUri);
+        callback.searchParams.set('error', err.error);
+        callback.searchParams.set('error_description', err.body.error_description);
+        if (req.query.state) callback.searchParams.set('state', String(req.query.state));
+        res.redirect(302, callback.toString());
+        return;
+      }
+      // 50011 / 700016 / 50020: Microsoft-hosted error page, never a redirect.
+      res.status(400).type('html').send(oauthErrorPage(err));
+      return;
+    }
     const callback = new URL(redirectUri);
     callback.searchParams.set('code', code);
     if (req.query.state) {
@@ -110,13 +172,19 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
       res.status(fault.status).json(fault.body);
       return;
     }
-    res.json(
-      core.grantToken({
-        ...clientSecretBasicCredentials(req),
-        ...req.body,
-        authorityTenant: String(req.params.tenant),
-      }),
-    );
+    try {
+      res.json(
+        core.grantToken({
+          ...clientSecretBasicCredentials(req),
+          ...req.body,
+          authorityTenant: String(req.params.tenant),
+          oidcIssuer: `${req.protocol}://${req.get('host')}/${encodeURIComponent(String(req.params.tenant))}/v2.0`,
+        }),
+      );
+    } catch (err) {
+      if (!(err instanceof OAuthError)) throw err;
+      res.status(err.status).json(err.body);
+    }
   });
 
   router.get('/:tenant/v2.0/adminconsent', (req, res) => {
@@ -338,13 +406,17 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
   graph.get('/me/calendar', (_req, res) => res.json(primaryCalendar));
   graph.get('/me/calendars', (_req, res) => res.json({ value: [primaryCalendar] }));
   graph.get('/me/calendarView/delta', (req, res) => {
-    const allowed = new Set(['startDateTime', 'endDateTime', '$deltatoken', '$skiptoken']);
+    // $select is how a client asks for type/seriesMasterId/originalStart, which
+    // Graph omits by default — without them an expanded occurrence is
+    // indistinguishable from a standalone event.
+    const allowed = new Set(['startDateTime', 'endDateTime', '$deltatoken', '$skiptoken', '$select']);
     const token = req.query.$deltatoken || req.query.$skiptoken;
     if (Object.keys(req.query).some(key => !allowed.has(key)) ||
         (req.query.$deltatoken && req.query.$skiptoken) ||
         (token && (req.query.startDateTime || req.query.endDateTime))) {
       throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery' } });
     }
+    const select = parseSelect(req.query.$select);
     const prefer = req.get('prefer') ?? '';
     if (prefer && !/^odata\.maxpagesize=\d+$/.test(prefer)) {
       throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery' } });
@@ -358,8 +430,14 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     });
     const next = new URL(`${req.protocol}://${req.get('host')}/v1.0/me/calendarView/delta`);
     next.searchParams.set(result.skipToken ? '$skiptoken' : '$deltatoken', result.skipToken ?? result.deltaToken!);
-    res.json({ value: result.value.map(event => '@removed' in event ? event : publicEvent(event)),
-      [result.skipToken ? '@odata.nextLink' : '@odata.deltaLink']: next.toString() });
+    // Graph's own next/delta links carry the original $select forward.
+    if (typeof req.query.$select === 'string') next.searchParams.set('$select', req.query.$select);
+    res.json({
+      value: result.value.map(event => '@removed' in event
+        ? event
+        : applySelect(publicEvent(event) as Record<string, unknown>, select)),
+      [result.skipToken ? '@odata.nextLink' : '@odata.deltaLink']: next.toString(),
+    });
   });
   const ownedEvent = (id: string) => {
     const event = core.getCalendarEvent(id);
@@ -398,7 +476,11 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     await deliverCalendarNotifications(core, event, 'created', env);
     res.status(201).json(publicEvent(event));
   }));
+  // Both shapes serve the same item: the adapter reads a series master through
+  // /me/events/{seriesMasterId}, and its own calendar events through
+  // /me/calendar/events/{id}. Either way the master carries its recurrence.
   graph.get('/me/calendar/events/:eventId', (req, res) => res.json(publicEvent(ownedEvent(String(req.params.eventId)))));
+  graph.get('/me/events/:eventId', (req, res) => res.json(publicEvent(ownedEvent(String(req.params.eventId)))));
   graph.patch('/me/calendar/events/:eventId', route(async (req, res) => {
     ownedEvent(String(req.params.eventId));
     const event = core.updateCalendarEvent(String(req.params.eventId), req.body ?? {});
@@ -416,6 +498,31 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
   // (creation probe, join-URL resolution), and recording/transcript artifacts.
   graph.post('/users/:userId/events', (req, res) => {
     res.status(201).json(publicEvent(core.createCalendarEvent(String(req.params.userId), req.body ?? {})));
+  });
+
+  // Only the extended-property lookup that durable Teams create/recover uses
+  // is modeled; any other $filter is refused rather than silently ignored.
+  graph.get('/users/:userId/events', (req, res) => {
+    const userId = String(req.params.userId);
+    const rawFilter = req.query.$filter;
+    let events = [...core.calendarEvents.values()].filter(event => event.organizerUserId === userId);
+    if (rawFilter !== undefined) {
+      const match = typeof rawFilter === 'string'
+        ? rawFilter.match(/^singleValueExtendedProperties\/Any\(ep:\s*ep\/id eq '((?:[^']|'')*)' and ep\/value eq '((?:[^']|'')*)'\)$/)
+        : null;
+      if (!match) {
+        throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery', message: 'Only singleValueExtendedProperties/Any(ep: ep/id eq \'<id>\' and ep/value eq \'<value>\') is modeled' } });
+      }
+      const [id, value] = [match[1], match[2]].map(part => part.replace(/''/g, "'"));
+      events = events.filter(event => Array.isArray(event.singleValueExtendedProperties)
+        && event.singleValueExtendedProperties.some((p: any) => p?.id === id && p?.value === value));
+    }
+    const top = Number.parseInt(String(req.query.$top ?? ''), 10);
+    if (Number.isFinite(top) && top >= 0) events = events.slice(0, top);
+    const select = parseSelect(req.query.$select);
+    res.json({
+      value: events.map(event => applySelect(publicEvent(event) as Record<string, unknown>, select)),
+    });
   });
 
   graph.patch('/users/:userId/events/:eventId', (req, res) => {

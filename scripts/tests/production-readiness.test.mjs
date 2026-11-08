@@ -236,9 +236,9 @@ test('CLI reads candidate artifacts, fails on missing JSON, and rejects a dirty 
     teamsDirectory, teamsReport, teamsEvidence, callbackDirectory, callbackReport, callbackRunner } = await cliFixture(t);
   { const result = run(); assert.equal(result.status, 'passed', result.failures.join('\n')); }
   const containerReport = { ...callbackReport, sourceRevisionOrigin: 'environment', sourceRevisionAfter: null };
-  const containerRunner = { ...callbackRunner, runtimeBinding: { imageRevision: revision,
+  const containerRunner = { ...callbackRunner, runtimeBinding: { runtimeImage: 'node:22-bookworm-slim',
     imageId: `sha256:${'1'.repeat(64)}`, containerImageId: `sha256:${'1'.repeat(64)}`,
-    mountedSourceRevision: revision, mountsReadOnly: true } };
+    mountedSourceRevision: revision, workspaceMounted: true } };
   write(`${callbackDirectory}/microsoft-callback-report.json`, containerReport);
   write(`${callbackDirectory}/microsoft-callback-runner.json`, containerRunner);
   assert.equal(run().status, 'passed');
@@ -251,7 +251,7 @@ test('CLI reads candidate artifacts, fails on missing JSON, and rejects a dirty 
     ({ runner }) => { runner.exitCode = 1; },
     ({ runner }) => { delete runner.exitCode; },
     ({ runner }) => { runner.source.after.dirty = true; },
-    ({ runner }) => { runner.runtimeBinding.mountsReadOnly = false; },
+    ({ runner }) => { runner.runtimeBinding.workspaceMounted = false; },
     ({ runner }) => { runner.runtimeBinding.containerImageId = `sha256:${'2'.repeat(64)}`; },
     ({ runner }) => { delete runner.runtimeBinding; },
   ]) {
@@ -404,11 +404,12 @@ test('the committed quarantine registry is valid and every entry is still in dat
   assert.deepEqual(resolved.failures, [], 'committed quarantine entries must be owned, justified and unexpired');
 });
 
-test('the committed registry requires successful Teams evidence after its quarantine expires', async () => {
+test('Teams requires successful evidence after its expired quarantine is removed', async () => {
   const { readFileSync } = await import('node:fs');
-  const quarantine = JSON.parse(readFileSync(new URL('../lib/quarantine.json', import.meta.url), 'utf8'));
-  // Reproduce the candidate date that exposed the expired Teams exemption.
-  const input = { ...fixture(), quarantine, now: '2026-11-03' };
+  const committed = JSON.parse(readFileSync(new URL('../lib/quarantine.json', import.meta.url), 'utf8'));
+  // Model the registry after the current exemption expires on 2026-12-02 and is retired.
+  const quarantine = { ...committed, entries: committed.entries.filter(entry => entry.artifact !== QUARANTINABLE) };
+  const input = { ...fixture(), quarantine, now: '2026-12-03' };
   const passing = evaluate(input);
   assert.equal(passing.status, 'passed', passing.failures.join('\n'));
   assert.equal(resultFor(passing, QUARANTINABLE).status, 'passed');

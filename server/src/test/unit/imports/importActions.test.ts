@@ -67,7 +67,7 @@ vi.mock('@/lib/imports/ImportRegistry', () => ({
 }));
 
 vi.mock('@/lib/imports/ImportManager', () => ({
-  ImportManager: vi.fn(() => mockManager),
+  ImportManager: vi.fn(function () { return mockManager; }),
 }));
 
 vi.mock('@/lib/imports/assetFieldDefinitions', () => {
@@ -90,11 +90,11 @@ vi.mock('@/lib/imports/assetFieldDefinitions', () => {
 });
 
 vi.mock('@/lib/imports/CsvImporter', () => ({
-  CsvImporter: vi.fn(() => ({ sourceType: 'csv_upload', parse: vi.fn() })),
+  CsvImporter: vi.fn(function () { return { sourceType: 'csv_upload', parse: vi.fn() }; }),
 }));
 
 vi.mock('@/lib/imports/DuplicateDetector', () => ({
-  DuplicateDetector: vi.fn(() => ({ detect: vi.fn() })),
+  DuplicateDetector: vi.fn(function () { return { detect: vi.fn() }; }),
 }));
 
 vi.mock('@alga-psa/storage/StorageService', () => ({

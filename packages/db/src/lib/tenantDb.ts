@@ -1,4 +1,6 @@
 import type { Knex } from 'knex';
+import { PassThrough } from 'node:stream';
+import { finished } from 'node:stream/promises';
 import {
   parseTableExpression,
   requireTenantTableScope,
@@ -6,6 +8,8 @@ import {
   type TenantTableScope,
 } from './tenantTableMetadata';
 import { createTenantScopedRootQuery, type TenantScopedQuery } from './tenantScopedQuery';
+import { isOperationalWriteTable } from './operationalWriteTables';
+import { admitOperationalWrite, admitTenantWrite, isTenantWriteGuarded } from './writeAdmission';
 
 export interface TenantJoinOptions {
   type?: 'inner' | 'left';
@@ -84,6 +88,82 @@ export interface TenantDb {
   ): Knex.QueryBuilder<Row, Row[]>;
 }
 
+/** The builder methods that turn a tenant-scoped builder into a write. */
+const WRITE_TERMINALS = ['insert', 'update', 'del', 'delete', 'truncate', 'increment', 'decrement'] as const;
+const WRITE_GUARDED = Symbol.for('alga.tenantDb.writeGuarded');
+
+/**
+ * Attach write admission to the write terminals of one builder.
+ *
+ * Reads are untouched: only the terminals above arm the guard, and an armed
+ * builder is a thenable whose `then` first awaits admission. Knex routes `catch`,
+ * `finally` and `asCallback` through `then`, so one patch covers every way a
+ * builder is awaited. `clone()` is re-guarded because knex clones drop own properties.
+ *
+ * Returns the builder unchanged (no wrapper, no cost) when the table is not an
+ * operational one or the tenant is known not to be co-managed.
+ */
+function guardWrites<B extends Knex.QueryBuilder>(
+  builder: B,
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  tableName: string,
+  armedOperation?: string,
+): B {
+  if (!isOperationalWriteTable(tableName) || !isTenantWriteGuarded(tenant)) return builder;
+  const target = builder as any;
+
+  const arm = (result: any, operation: string) => {
+    if (!result || result[WRITE_GUARDED]) return result;
+    const originalThen = result.then;
+    const originalStream = result.stream;
+    result[WRITE_GUARDED] = true;
+    const admit = () => admitTenantWrite(conn, tenant, { table: tableName, operation: `${operation}:${tableName}` });
+    result.then = function guardedThen(onFulfilled?: any, onRejected?: any) {
+      return admit().then(() => originalThen.call(result)).then(onFulfilled, onRejected);
+    };
+    result.stream = function guardedStream(optionsOrHandler?: any, handlerOrNil?: any) {
+      const handler = typeof optionsOrHandler === 'function' ? optionsOrHandler : handlerOrNil;
+      const options = typeof optionsOrHandler === 'function' ? undefined : optionsOrHandler;
+      const output = new PassThrough({ objectMode: true });
+      const run = admit().then(() => {
+        if (output.destroyed) return;
+        const source = originalStream.call(result, options);
+        source.on('error', (error: Error) => output.destroy(error));
+        output.on('close', () => source.destroy());
+        source.pipe(output);
+        return finished(source);
+      });
+      if (typeof handler === 'function') {
+        handler(output);
+        return run;
+      }
+      run.catch((error) => output.destroy(error));
+      return output;
+    };
+    result.pipe = function guardedPipe(writable: any, options?: any) {
+      return result.stream(options).pipe(writable);
+    };
+    return result;
+  };
+
+  for (const terminal of WRITE_TERMINALS) {
+    const original = target[terminal];
+    if (typeof original !== 'function') continue;
+    target[terminal] = function guardedTerminal(this: any, ...args: unknown[]) {
+      const result = original.apply(this, args);
+      return arm(result, terminal);
+    };
+  }
+
+  const originalClone = target.clone;
+  target.clone = function guardedClone(this: any, ...args: unknown[]) {
+    return guardWrites(originalClone.apply(this, args), conn, tenant, tableName, this[WRITE_GUARDED] ? this._method : undefined);
+  };
+  if (armedOperation) arm(target, armedOperation);
+  return builder;
+}
+
 function assertTenant(tenant: string | null | undefined): asserts tenant is string {
   if (!tenant || !tenant.trim()) {
     throw new Error('tenantDb requires a tenant id');
@@ -151,6 +231,7 @@ export function tenantDb(conn: Knex | Knex.Transaction, tenantInput: string | nu
       alias: parsed.rootAlias,
       tenant,
       tenantColumn: tenantColumn(scope),
+      decorateBuilder: (builder) => guardWrites(builder, conn, tenant, parsed.tableName),
     });
   }
 
@@ -198,7 +279,7 @@ export function tenantDb(conn: Knex | Knex.Transaction, tenantInput: string | nu
         `${parsed.rootAlias}.${scope.childColumn}`,
       ]);
 
-    return conn<Row, Row[]>(tableExpression).whereExists(parentQuery);
+    return guardWrites(conn<Row, Row[]>(tableExpression).whereExists(parentQuery), conn, tenant, parsed.tableName);
   }
 
   async function insertParentScoped<Row extends object = DynamicTenantRow>(
@@ -227,6 +308,8 @@ export function tenantDb(conn: Knex | Knex.Transaction, tenantInput: string | nu
       return [];
     }
 
+    await admitOperationalWrite(conn, tenant, parsed.tableName, `insert:${parsed.tableName}`);
+
     const parentIds = Array.from(new Set(rows.map((row) => (row as Record<string, unknown>)[scope.childColumn])));
     if (parentIds.some((id) => id === null || id === undefined || id === '')) {
       throw new Error(`Parent-scoped insert into ${parsed.tableName} requires ${scope.childColumn}`);
@@ -242,6 +325,7 @@ export function tenantDb(conn: Knex | Knex.Transaction, tenantInput: string | nu
       throw new Error(`Parent row not found for parent-scoped insert into ${parsed.tableName}`);
     }
 
+    // write-admission: exempt — insertParentScoped admits parsed.tableName before parent validation above.
     const inserted = await conn<Row, Row[]>(tableExpression)
       .insert(values as any)
       .returning(returning as any);

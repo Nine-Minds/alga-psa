@@ -19,20 +19,22 @@ import { buildSignedWebhookRequestHeaders, buildWebhookEnvelope } from '@/lib/we
 import { performWebhookDeliveryRequest } from '@/lib/webhooks/delivery';
 import { signRequest } from '@/lib/webhooks/sign';
 import {
-  SUPPORTED_WEBHOOK_EVENTS,
   enqueueDeliveryRetry,
   retryFailedDeliveriesForWebhook,
 } from '@/lib/webhooks/deliveryRetry';
+import { WEBHOOK_EVENT_NAMES, disallowedEventTypes } from '@/lib/webhooks/eventRegistry';
 import { webhookModel, type WebhookDeliveryRecord, type WebhookRecord } from '@/lib/webhooks/webhookModel';
 import { payloadFieldsByEntitySchema } from '@/lib/webhooks/payloadFields';
 
 const webhookInputSchema = z.object({
-  webhookId: z.string().uuid().optional(),
+  webhookId: z.string().guid().optional(),
   name: z.string().trim().min(1).max(255),
   url: z.string().url(),
-  eventTypes: z.array(z.enum(SUPPORTED_WEBHOOK_EVENTS)).min(1),
+  // Shape only: legacy names already stored on the webhook must round-trip. Registry membership is
+  // enforced in saveWebhook against what the row already holds.
+  eventTypes: z.array(z.string().trim().min(1)).min(1),
   customHeaders: z.record(z.string(), z.string()).default({}),
-  entityIds: z.array(z.string().uuid()).default([]),
+  entityIds: z.array(z.string().guid()).default([]),
   payloadFields: payloadFieldsByEntitySchema.optional(),
   retryConfig: z.record(z.string(), z.unknown()).nullable().optional(),
   verifySsl: z.boolean().default(true),
@@ -207,7 +209,7 @@ export const listWebhookEvents = withAuth(async (user): Promise<string[] | Webho
   if (permissionFailure) {
     return permissionFailure;
   }
-  return [...SUPPORTED_WEBHOOK_EVENTS];
+  return [...WEBHOOK_EVENT_NAMES];
 });
 
 export const listWebhooks = withAuth(async (user): Promise<WebhookSettingsView[] | WebhookActionError> => {
@@ -237,6 +239,18 @@ export const upsertWebhook = withAuth(async (
   const permissionFailure = await getWebhookPermissionError(user, action);
   if (permissionFailure) {
     return permissionFailure;
+  }
+
+  const existingEventTypes = parsed.webhookId
+    ? ((await webhookModel.getById(parsed.webhookId, user.tenant))?.eventTypes ?? [])
+    : [];
+  const rejectedEventTypes = disallowedEventTypes(parsed.eventTypes, existingEventTypes);
+  if (rejectedEventTypes.length > 0) {
+    return actionError(
+      `Unsupported event type: ${rejectedEventTypes.join(', ')}`,
+      'msp/profile:errors.webhooks.unsupportedEventType',
+      { eventTypes: rejectedEventTypes.join(', ') },
+    );
   }
 
   const normalizedHeaders = normalizeCustomHeaders(parsed.customHeaders);

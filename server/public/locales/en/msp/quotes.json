@@ -537,6 +537,7 @@
       "recurring": "Recurring",
       "service": "service",
       "setPrice": "Set price",
+      "taxable": "Taxable",
       "ungroupedItems": "Ungrouped Items"
     },
     "placeholders": {
@@ -630,6 +631,7 @@
       }
     },
     "sections": {
+      "carriedDiscounts": "Discounts carried onto contract lines",
       "contractItems": "Contract Items",
       "conversionMode": "Conversion Mode",
       "excludedFromConversion": "Excluded from Conversion",
@@ -655,6 +657,7 @@
       "converted": "Converted",
       "discount": "Discount",
       "fixed": "fixed",
+      "monthlyTotal": "Monthly total after discounts",
       "notConverted": "Not converted"
     },
     "partial": {

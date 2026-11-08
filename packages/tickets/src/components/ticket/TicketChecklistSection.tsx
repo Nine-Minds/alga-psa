@@ -36,16 +36,7 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatDateTime, getUserTimeZone, utcToLocal } from '@alga-psa/core';
-import {
-  addChecklistItem,
-  applyChecklistTemplate,
-  deleteChecklistItem,
-  getChecklistTemplates,
-  getTicketChecklistItems,
-  reorderChecklistItems,
-  setChecklistItemCompleted,
-  updateChecklistItem,
-} from '../../actions/checklists';
+import { useTicketDataSource, useTicketScreenReadOnly } from './TicketDataSourceContext';
 import type { IChecklistTemplate, ITicketChecklistItem } from '../../actions/checklists';
 
 const COMPLETED_AT_FORMAT = 'MMM d, yyyy h:mm a';
@@ -90,9 +81,22 @@ const TicketChecklistSection: React.FC<TicketChecklistSectionProps> = ({
   ticketId,
   initialItems,
   onItemsChanged,
-  disabled = false,
+  disabled: disabledProp = false,
 }) => {
   const { t } = useTranslation('features/tickets');
+  // A read-only ticket screen (for example an ended workspace) shows the section without edits.
+  const screenReadOnly = useTicketScreenReadOnly();
+  const disabled = disabledProp || screenReadOnly;
+  const {
+    addChecklistItem,
+    applyChecklistTemplate,
+    deleteChecklistItem,
+    getChecklistTemplates,
+    getTicketChecklistItems,
+    reorderChecklistItems,
+    setChecklistItemCompleted,
+    updateChecklistItem,
+  } = useTicketDataSource().checklist;
   const { data: session } = useSession();
 
   const [items, setItems] = useState<ITicketChecklistItem[]>(initialItems ?? []);
@@ -143,7 +147,8 @@ const TicketChecklistSection: React.FC<TicketChecklistSectionProps> = ({
         if (!cancelled) applyItems(fetched);
       })
       .catch((error) => {
-        console.error('Error fetching checklist items:', error);
+        // LEVERAGE: pattern cancellable-mount-fetch — fetch on mount, drop state and error reporting once cancelled; 3 sites in ticket sections.
+        if (!cancelled) console.error('Error fetching checklist items:', error);
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
@@ -359,7 +364,7 @@ const TicketChecklistSection: React.FC<TicketChecklistSectionProps> = ({
     if (templatesLoaded || templatesLoading) return;
     setTemplatesLoading(true);
     try {
-      const fetched = await getChecklistTemplates();
+      const fetched = await getChecklistTemplates({ forTicketId: ticketId });
       setTemplates(fetched);
       setTemplatesLoaded(true);
     } catch (error) {
@@ -367,7 +372,7 @@ const TicketChecklistSection: React.FC<TicketChecklistSectionProps> = ({
     } finally {
       setTemplatesLoading(false);
     }
-  }, [t, templatesLoaded, templatesLoading]);
+  }, [t, templatesLoaded, templatesLoading, ticketId]);
 
   const handleApplyTemplate = useCallback(
     async (template: IChecklistTemplate) => {

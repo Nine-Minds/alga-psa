@@ -11,6 +11,8 @@ export const QUOTE_ACTIVITY_TYPES = {
   approved: 'approved',
   approvalChangesRequested: 'approval_changes_requested',
   accepted: 'accepted',
+  /** The draft invoice a quote was converted to was deleted; the link was released. */
+  convertedInvoiceDeleted: 'converted_invoice_deleted',
 } as const;
 
 export type QuoteActivityType = (typeof QUOTE_ACTIVITY_TYPES)[keyof typeof QUOTE_ACTIVITY_TYPES];

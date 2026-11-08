@@ -55,10 +55,13 @@ vi.mock('@alga-psa/db', async () => {
   };
 });
 
-function assertWorkerTz(zone: string, expectedOffsetMinutes: number, at: string) {
+
+function assertWorkerTz(zone: string, expectedOffsetMinutes: number, at?: string | Date) {
   process.env.TZ = zone;
   // DST offsets belong to the scenario instant, not the date the suite runs.
-  expect(new Date(at).getTimezoneOffset(), `worker TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
+  const probe = at instanceof Date ? at : new Date(at ?? '2026-08-31T12:00:00.000Z');
+  expect(probe.getTimezoneOffset(), `worker TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
+
 }
 
 async function seedBase(timezone: string | null) {

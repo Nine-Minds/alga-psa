@@ -13,8 +13,16 @@
  * reconcile job) import this module; a stale fork that drifted on contract
  * coverage or FIFO ordering would mis-burn blocks.
  *
- * Burn model (docs/plans/2026-08-13-ad-hoc-prepaid-hour-blocks-plan.md):
- *  - Blocks catch billable time NOT matched to any contract line — contracts
+ * Burn model (docs/plans/2026-08-13-ad-hoc-prepaid-hour-blocks-plan.md and
+ * docs/plans/2026-10-13-prepaid-block-invoicing-plan.md D3):
+ *  - Every entry resolves to a BURN TARGET (`resolveBlockBurnTarget`):
+ *    `{ kind: 'contract', contractLineId }` when the entry's resolved contract
+ *    line carries a `contract_line_prepaid_blocks` config (draws ONLY blocks
+ *    issued for that line: active FIFO first, then the line's pending block as
+ *    a gap draw), `{ kind: 'adhoc' }` for the rule below, or null. Contract
+ *    blocks are never drawn by other lines' or non-contract time; ad-hoc blocks
+ *    (contract_line_id IS NULL) are never drawn by contract time.
+ *  - Ad-hoc blocks catch billable time NOT matched to any contract line — contracts
  *    always win. An entry is eligible when `contract_line_id` is null AND its
  *    service is not deterministically assignable to exactly one active
  *    contract line for the client at the entry's date.
@@ -51,6 +59,7 @@ export interface BlockBurnTimeEntry {
 
 interface EligibleBlock {
   block_id: string;
+  status?: string;
   remaining_minutes: number;
   expiration_date: string | null;
   purchased_at: string | null;
@@ -60,6 +69,24 @@ interface EligibleBlock {
 interface FifoAllocation {
   block_id: string;
   minutes: number;
+}
+
+/**
+ * Value of a block's unused hours, in the block currency's minor units:
+ * remaining_minutes / 60 x hourly_rate (hourly_rate is already minor units per
+ * hour). Rounded once here so every surface (reports, MSP dashboard, portal)
+ * shows the same figure; clients format it, they never recompute it.
+ */
+export function computeRemainingBlockValueMinor(block: {
+  remaining_minutes: number | string | null | undefined;
+  hourly_rate: number | string | null | undefined;
+}): number {
+  const minutes = Number(block.remaining_minutes ?? 0);
+  const rate = Number(block.hourly_rate ?? 0);
+  if (!Number.isFinite(minutes) || !Number.isFinite(rate) || minutes <= 0 || rate <= 0) {
+    return 0;
+  }
+  return Math.round((minutes * rate) / 60);
 }
 
 /**
@@ -146,6 +173,42 @@ export async function resolveClientIdForWorkItem(
   return null;
 }
 
+function eligibleLinesQuery(
+  trx: Knex.Transaction,
+  tenant: string,
+  clientId: string,
+  serviceId: string,
+  workDate: string,
+) {
+  const db = tenantDb(trx, tenant);
+  const query = db.table('client_contracts as cc');
+  db.tenantJoin(query, 'contracts as c', 'c.contract_id', 'cc.contract_id');
+  db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_id', 'c.contract_id');
+  db.tenantJoin(query, 'contract_line_services as cls', 'cls.contract_line_id', 'cl.contract_line_id');
+  return query
+    .where({ 'cc.client_id': clientId, 'cc.is_active': true, 'cls.service_id': serviceId })
+    .where('cc.start_date', '<=', workDate)
+    .where(function (this: Knex.QueryBuilder) {
+      this.whereNull('cc.end_date').orWhere('cc.end_date', '>=', workDate);
+    });
+}
+
+/**
+ * Distinct active contract line ids that cover `serviceId` for the client at
+ * `workDate`. Exactly one means the entry is deterministically contract-covered.
+ */
+export async function getEligibleContractLineIdsForServiceAtDate(
+  trx: Knex.Transaction,
+  tenant: string,
+  clientId: string,
+  serviceId: string,
+  workDate: string,
+): Promise<string[]> {
+  const rows = await eligibleLinesQuery(trx, tenant, clientId, serviceId, workDate)
+    .distinct('cl.contract_line_id as contract_line_id');
+  return rows.map((row: any) => row.contract_line_id as string);
+}
+
 /**
  * The one definition of "a contract line covers a service": client_contracts
  * (client, is_active) → contracts → contract_lines → contract_line_services,
@@ -187,15 +250,24 @@ export async function getEligibleContractLineCountForServiceAtDate(
   serviceId: string,
   workDate: string,
 ): Promise<number> {
-  const db = tenantDb(trx, tenant);
-  const row = await coveringContractLinesQuery(db, clientId, {
-    serviceIds: [serviceId],
-    from: workDate,
-    to: workDate,
-  })
-    .countDistinct('cl.contract_line_id as line_count')
-    .first<{ line_count: string | number }>();
-  return Number(row?.line_count ?? 0);
+  return (await getEligibleContractLineIdsForServiceAtDate(trx, tenant, clientId, serviceId, workDate)).length;
+}
+
+/** Where an entry's minutes may be drawn from. */
+export type BlockBurnTarget =
+  | { kind: 'contract'; contractLineId: string }
+  | { kind: 'adhoc' };
+
+async function lineHasPrepaidBlockConfig(
+  trx: Knex.Transaction,
+  tenant: string,
+  contractLineId: string,
+): Promise<boolean> {
+  const row = await tenantDb(trx, tenant)
+    .table('contract_line_prepaid_blocks')
+    .where({ contract_line_id: contractLineId })
+    .first('contract_line_id');
+  return Boolean(row);
 }
 
 /** A covering-line row as read from {@link coveringContractLinesQuery}. */
@@ -218,10 +290,19 @@ export interface ContractLineCoverageRow {
  * exactly one line on every covered date and rejects every entry), otherwise
  * 'when_assigned'. Lines that follow each other in time stay 'automatic'.
  * Output is sorted by service, contract and line name.
+ *
+ * `excludeContractLineId` hides one line from the returned `lines` only: a
+ * block issued BY a Prepaid Block line must not warn that the line's own time
+ * "will not draw this block" — that time draws it (the contract burn target).
+ * The overlap check still sees the excluded line, because un-assigned time on
+ * a service it shares with another line splits between the two, which keeps
+ * the service 'when_assigned'. A service with no lines left after the
+ * exclusion is dropped from the output.
  */
 export function classifyContractLineCoverage(
   rows: ContractLineCoverageRow[],
   window: { from: string; to: string },
+  excludeContractLineId?: string | null,
 ): ServiceContractLineCoverage[] {
   const byService = new Map<string, { name: string; lines: Map<string, ContractLineCoverageLine> }>();
   for (const row of rows) {
@@ -271,11 +352,17 @@ export function classifyContractLineCoverage(
         }
       }
     }
+    // The issuing line is never named as a covering line, but it has already
+    // been weighed in `overlap` above.
+    const displayed = excludeContractLineId
+      ? lines.filter((l) => l.contract_line_id !== excludeContractLineId)
+      : lines;
+    if (displayed.length === 0) continue;
     result.push({
       service_id: serviceId,
       service_name: entry.name,
       assignment: overlap ? 'when_assigned' : 'automatic',
-      lines,
+      lines: displayed,
     });
   }
   return result.sort(
@@ -359,7 +446,12 @@ export async function getContractLineCoverageRowsForClient(
  */
 export function classifyContractLineCoverageForWindow(
   rows: ContractLineCoverageRow[],
-  options: { serviceIds: string[] | null; window: { from: string; to: string } },
+  options: {
+    serviceIds: string[] | null;
+    window: { from: string; to: string };
+    /** The block's issuing line: never a coverage warning against its own block. */
+    excludeContractLineId?: string | null;
+  },
 ): ServiceContractLineCoverage[] {
   const allowed = options.serviceIds ? new Set(options.serviceIds) : null;
   const { from, to } = options.window;
@@ -369,7 +461,7 @@ export function classifyContractLineCoverageForWindow(
     const end = toDateOnly(row.end_date ?? null);
     return !!start && start <= to && (end === null || end >= from);
   });
-  return classifyContractLineCoverage(narrowed, options.window);
+  return classifyContractLineCoverage(narrowed, options.window, options.excludeContractLineId);
 }
 
 /**
@@ -381,17 +473,68 @@ export async function getContractLineCoverageForClient(
   conn: Knex | Knex.Transaction,
   tenant: string,
   clientId: string,
-  options: { serviceIds: string[] | null; expirationDate?: string | Date | null; today?: string },
+  options: {
+    serviceIds: string[] | null;
+    expirationDate?: string | Date | null;
+    today?: string;
+    /** The block's issuing line: never a coverage warning against its own block. */
+    excludeContractLineId?: string | null;
+  },
 ): Promise<ServiceContractLineCoverage[]> {
   const { rows, window } = await getContractLineCoverageRowsForClient(conn, tenant, clientId, options);
-  return classifyContractLineCoverage(rows, window);
+  return classifyContractLineCoverage(rows, window, options.excludeContractLineId);
 }
 
 /**
- * True when a billable time entry may draw down hour blocks: it has a service,
- * a positive billable duration, resolves to a client, carries no contract
- * line, and its service is not deterministically assigned to the client's
- * single active contract line at the entry's date.
+ * Resolves the burn target for a billable time entry, or null when the entry
+ * cannot draw any block: no service, no positive billable duration, no
+ * client/date, or it is contract-covered by a line WITHOUT a prepaid-block
+ * config (contracts always win over ad-hoc blocks).
+ *
+ *  - Contract target: the entry's `contract_line_id` (explicit or saved
+ *    resolution), or the single deterministic line from
+ *    getEligibleContractLineIdsForServiceAtDate, provided that line has a
+ *    `contract_line_prepaid_blocks` row.
+ *  - Ad-hoc target: no contract line and the service is not deterministically
+ *    assigned to exactly one active line (today's rule, unchanged).
+ */
+export async function resolveBlockBurnTarget(
+  trx: Knex.Transaction,
+  tenant: string,
+  entry: BlockBurnTimeEntry,
+  clientId?: string | null,
+): Promise<BlockBurnTarget | null> {
+  if (!entry.service_id) return null;
+  if (Math.floor(Number(entry.billable_duration) || 0) <= 0) return null;
+
+  if (entry.contract_line_id) {
+    return (await lineHasPrepaidBlockConfig(trx, tenant, entry.contract_line_id))
+      ? { kind: 'contract', contractLineId: entry.contract_line_id }
+      : null;
+  }
+
+  const resolvedClientId = clientId ?? (await resolveClientIdForWorkItem(trx, tenant, entry.work_item_id, entry.work_item_type));
+  if (!resolvedClientId) return null;
+
+  const workDate = toDateOnly(entry.work_date) ?? toDateOnly(entry.start_time);
+  if (!workDate) return null;
+
+  const lineIds = await getEligibleContractLineIdsForServiceAtDate(
+    trx,
+    tenant,
+    resolvedClientId,
+    entry.service_id,
+    workDate,
+  );
+  if (lineIds.length !== 1) return { kind: 'adhoc' };
+  return (await lineHasPrepaidBlockConfig(trx, tenant, lineIds[0]))
+    ? { kind: 'contract', contractLineId: lineIds[0] }
+    : null;
+}
+
+/**
+ * True when a billable time entry may draw down any hour block (see
+ * {@link resolveBlockBurnTarget}).
  */
 export async function isEntryEligibleForBlockBurn(
   trx: Knex.Transaction,
@@ -399,29 +542,15 @@ export async function isEntryEligibleForBlockBurn(
   entry: BlockBurnTimeEntry,
   clientId?: string | null,
 ): Promise<boolean> {
-  if (!entry.service_id) return false;
-  if (Math.floor(Number(entry.billable_duration) || 0) <= 0) return false;
-  if (entry.contract_line_id) return false;
-
-  const resolvedClientId = clientId ?? (await resolveClientIdForWorkItem(trx, tenant, entry.work_item_id, entry.work_item_type));
-  if (!resolvedClientId) return false;
-
-  const workDate = toDateOnly(entry.work_date) ?? toDateOnly(entry.start_time);
-  if (!workDate) return false;
-
-  const lineCount = await getEligibleContractLineCountForServiceAtDate(
-    trx,
-    tenant,
-    resolvedClientId,
-    entry.service_id,
-    workDate,
-  );
-  return lineCount !== 1;
+  return (await resolveBlockBurnTarget(trx, tenant, entry, clientId)) !== null;
 }
 
 /**
- * Selects the FIFO-ordered blocks eligible to burn for one entry: active, with
- * remaining minutes, not expired at the entry's date, and whose scope covers
+ * Selects the FIFO-ordered blocks eligible to burn for one entry: paid contract
+ * blocks (including those subsequently expired), or a pending contract block,
+ * with
+ * remaining minutes, inside the block's validity window at the entry's date
+ * (`valid_from <= date <= expiration_date`, either bound may be null), and whose scope covers
  * the entry's service. Scope semantics: a block with zero scope rows covers all
  * labor; a block with scope rows covers exactly those services. Implemented
  * with NOT EXISTS/EXISTS so a block scoped to [A,B] is NOT eligible for an
@@ -447,16 +576,96 @@ async function selectEligibleBlocks(
   tenant: string,
   clientId: string,
   entry: BlockBurnTimeEntry,
+  target: BlockBurnTarget,
 ): Promise<EligibleBlock[]> {
   const db = tenantDb(trx, tenant);
   const workDate = toDateOnly(entry.work_date) ?? toDateOnly(entry.start_time);
   if (!workDate) return [];
+  const timeZone = await resolveEffectiveTimeZone(trx, tenant);
+
+  // Lock the client's blocks on this line before reading invoice and termination state.
+  // If an expiry or reversal owns a block lock, the following eligibility
+  // statement then starts after it commits and sees its audit and invoice
+  // changes as well as the new block status.
+  if (target.kind === 'contract') {
+    await db.table('hour_blocks').where({ client_id: clientId, contract_line_id: target.contractLineId })
+      .select('block_id').orderBy('block_id', 'asc').forUpdate();
+  }
 
   const rows: any[] = await db.table('hour_blocks as hb')
-    .where({ 'hb.client_id': clientId, 'hb.status': 'active' })
+    .where({ 'hb.client_id': clientId })
+    .where(function (this: Knex.QueryBuilder) {
+      if (target.kind === 'contract') {
+        // The work date, not the date the entry is approved, determines whether
+        // a paid contract block can cover it. Pending blocks still hold gap draws.
+        this.where('hb.contract_line_id', target.contractLineId).whereIn('hb.status', ['active', 'expired', 'pending']);
+      } else {
+        this.whereNull('hb.contract_line_id').where('hb.status', 'active');
+      }
+    })
+    // Older reversals could leave an expired block behind. Such a block is
+    // not paid capacity even before its lifecycle state is repaired. Pending
+    // blocks retain their existing gap-draw hold behavior.
+    .where(function (this: Knex.QueryBuilder) {
+      this.where('hb.status', 'pending').orWhereNull('hb.source_invoice_id').orWhereExists(function (this: Knex.QueryBuilder) {
+        this.select(trx.raw('1')).from('invoices as source_invoice')
+          .where('source_invoice.tenant', tenant).whereRaw('source_invoice.tenant = hb.tenant')
+          .whereRaw('source_invoice.invoice_id = hb.source_invoice_id')
+          .whereNotIn('source_invoice.status', ['draft', 'cancelled']);
+      });
+    })
     .where('hb.remaining_minutes', '>', 0)
     .where(function (this: Knex.QueryBuilder) {
       this.whereNull('hb.expiration_date').orWhere('hb.expiration_date', '>=', workDate);
+    })
+    // Burn window lower bound (D5/R8): a cadence block never draws time worked
+    // before its service period starts. NULL valid_from = no bound (existing blocks).
+    .where(function (this: Knex.QueryBuilder) {
+      this.whereNull('hb.valid_from').orWhere('hb.valid_from', '<=', workDate);
+    })
+    // Renewing assignments keep purchased blocks through each block's own
+    // expiry, even without a renewal draft. A termination audit still caps
+    // that extension below, including historical work logged after termination.
+    .where(function (this: Knex.QueryBuilder) {
+      this.whereNull('hb.client_contract_id').orWhereExists(function (this: Knex.QueryBuilder) {
+        this.select(trx.raw('1')).from('client_contracts as cc')
+          .where('cc.tenant', tenant).whereRaw('cc.tenant = hb.tenant')
+          .whereRaw('cc.client_contract_id = hb.client_contract_id')
+          .where(function (this: Knex.QueryBuilder) { this.whereNull('cc.start_date').orWhere('cc.start_date', '<=', workDate); })
+          .where(function (this: Knex.QueryBuilder) {
+            this.whereNull('cc.end_date').orWhere('cc.end_date', '>=', workDate)
+              .orWhere(function (this: Knex.QueryBuilder) {
+                this.where('cc.status', 'renewing')
+                  .whereExists(function (this: Knex.QueryBuilder) {
+                    this.select(trx.raw('1')).from('contracts as renewing_contract')
+                      .where('renewing_contract.tenant', tenant).whereRaw('renewing_contract.tenant = cc.tenant')
+                      .whereRaw('renewing_contract.contract_id = cc.contract_id')
+                      .where('renewing_contract.status', '!=', 'draft')
+                      .where(function (this: Knex.QueryBuilder) {
+                        this.where(function (this: Knex.QueryBuilder) {
+                          this.where('cc.is_active', true).where('renewing_contract.status', '!=', 'terminated');
+                        }).orWhereExists(function (this: Knex.QueryBuilder) {
+                          // Once terminated, retain the renewal interval for
+                          // work before the recorded effective end date.
+                          this.select(trx.raw('1')).from('hour_block_audit as renewal_end')
+                            .where('renewal_end.tenant', tenant).whereRaw('renewal_end.tenant = hb.tenant')
+                            .whereRaw('renewal_end.block_id = hb.block_id')
+                            .where('renewal_end.type', 'contract_end_expiration');
+                        });
+                      });
+                  });
+              });
+          });
+      });
+    })
+    .whereNotExists(function (this: Knex.QueryBuilder) {
+      this.select(trx.raw('1')).from('hour_block_audit as end_audit')
+        .where('end_audit.tenant', tenant).whereRaw('end_audit.tenant = hb.tenant')
+        .whereRaw('end_audit.block_id = hb.block_id').where('end_audit.type', 'contract_end_expiration')
+        .whereRaw(`?::date > COALESCE(NULLIF(end_audit.metadata->>'effective_end_date', '')::date,
+          CASE WHEN end_audit.metadata->>'assignment_status' = 'expired'
+            THEN NULLIF(end_audit.metadata->>'assignment_end_date', '')::date END,
+          (end_audit.created_at AT TIME ZONE ?)::date)`, [workDate, timeZone]);
     })
     .where(function (this: Knex.QueryBuilder) {
       this.whereNotExists(function (this: Knex.QueryBuilder) {
@@ -479,12 +688,13 @@ async function selectEligibleBlocks(
           .where('s2.service_id', entry.service_id ?? '');
       });
     })
-    .select('hb.block_id', 'hb.remaining_minutes', 'hb.expiration_date', 'hb.purchased_at', 'hb.created_at')
+    .select('hb.block_id', 'hb.status', 'hb.remaining_minutes', 'hb.expiration_date', 'hb.purchased_at', 'hb.created_at')
     .orderBy('hb.block_id', 'asc')
     .forUpdate();
 
   const locked = rows.map((row) => ({
     block_id: row.block_id,
+    status: row.status as string,
     remaining_minutes: Number(row.remaining_minutes),
     expiration_date: row.expiration_date ? toDateOnly(row.expiration_date) : null,
     purchased_at: row.purchased_at ? new Date(row.purchased_at).toISOString() : null,
@@ -494,6 +704,8 @@ async function selectEligibleBlocks(
   // FIFO burn order on the already-locked rows: expiration first (soonest
   // first, never-expiring last), then purchase, then creation.
   locked.sort((a, b) => {
+    // Paid blocks retain FIFO order across status changes; pending comes last.
+    if ((a.status === 'pending') !== (b.status === 'pending')) return a.status === 'pending' ? 1 : -1;
     if (a.expiration_date === null && b.expiration_date !== null) return 1;
     if (a.expiration_date !== null && b.expiration_date === null) return -1;
     if (a.expiration_date !== null && b.expiration_date !== null && a.expiration_date !== b.expiration_date) {
@@ -529,16 +741,28 @@ export async function allocateTimeEntry(
   clientId: string,
   entry: BlockBurnTimeEntry,
 ): Promise<FifoAllocation[]> {
-  if (!(await isEntryEligibleForBlockBurn(trx, tenant, entry, clientId))) {
-    return [];
-  }
+  return (await allocateTimeEntryDetailed(trx, tenant, clientId, entry)).allocations;
+}
+
+/**
+ * As {@link allocateTimeEntry}, but also reports the burn target so callers
+ * (the time-entry save hook) can tell a contract draw from an ad-hoc one.
+ */
+export async function allocateTimeEntryDetailed(
+  trx: Knex.Transaction,
+  tenant: string,
+  clientId: string,
+  entry: BlockBurnTimeEntry,
+): Promise<{ target: BlockBurnTarget | null; allocations: FifoAllocation[] }> {
+  const target = await resolveBlockBurnTarget(trx, tenant, entry, clientId);
+  if (!target) return { target: null, allocations: [] };
 
   const neededMinutes = Math.floor(Number(entry.billable_duration) || 0);
-  if (neededMinutes <= 0) return [];
+  if (neededMinutes <= 0) return { target, allocations: [] };
 
-  const blocks = await selectEligibleBlocks(trx, tenant, clientId, entry);
+  const blocks = await selectEligibleBlocks(trx, tenant, clientId, entry, target);
   const allocations = computeFifoAllocation(neededMinutes, blocks);
-  if (allocations.length === 0) return allocations;
+  if (allocations.length === 0) return { target, allocations };
 
   const db = tenantDb(trx, tenant);
   const now = new Date().toISOString();
@@ -562,7 +786,7 @@ export async function allocateTimeEntry(
       });
   }
 
-  return allocations;
+  return { target, allocations };
 }
 
 /**
@@ -576,11 +800,39 @@ export async function reverseTimeEntryAllocations(
   timeEntryId: string,
 ): Promise<void> {
   const db = tenantDb(trx, tenant);
+  const allocatedBlocks = await db.table('hour_block_time_allocations')
+    .where({ tenant, time_entry_id: timeEntryId })
+    .select('block_id');
+
+  if (allocatedBlocks.length === 0) return;
+
+  // A reversal is the first half of a redraw. Lock the whole affected lines,
+  // not just the allocated blocks: a subsequent burn locks every line block,
+  // including earlier voided/pending blocks. Taking that earlier lock only
+  // after restoring a later block deadlocks against a line reconciliation.
+  // The subquery expands all affected lines in one canonically ordered lock
+  // statement; ad-hoc allocations retain their individual block locks.
+  const blockIds = allocatedBlocks.map((allocation) => allocation.block_id);
+  await db.table('hour_blocks')
+    .where({ tenant })
+    .where(function (this: Knex.QueryBuilder) {
+      this.whereIn('block_id', blockIds).orWhereIn(
+        'contract_line_id',
+        db.table('hour_blocks as allocated_block')
+          .whereIn('allocated_block.block_id', blockIds)
+          .whereNotNull('allocated_block.contract_line_id')
+          .select('allocated_block.contract_line_id'),
+      );
+    })
+    .select('block_id')
+    .orderBy('block_id', 'asc')
+    .forUpdate();
+
+  // A concurrent redraw may have changed the allocations while we waited.
+  // Restore only the balances represented by the now-committed rows.
   const allocations = await db.table('hour_block_time_allocations')
     .where({ tenant, time_entry_id: timeEntryId })
     .select('block_id', 'minutes');
-
-  if (allocations.length === 0) return;
 
   const now = new Date().toISOString();
   for (const allocation of allocations) {
@@ -671,7 +923,17 @@ async function selectClientEligibleEntries(
 
   return await query
     .where('te.tenant', tenant)
-    .whereNull('te.contract_line_id')
+    // Entries not on a contract line, plus entries on a Prepaid Block line
+    // (their blocks are drawn through the contract burn target).
+    .where(function (this: Knex.QueryBuilder) {
+      this.whereNull('te.contract_line_id').orWhereExists(function (this: Knex.QueryBuilder) {
+        this.select('*')
+          .from('contract_line_prepaid_blocks as clpb')
+          .where('clpb.tenant', tenant)
+          .whereRaw('clpb.tenant = te.tenant')
+          .whereRaw('clpb.contract_line_id = te.contract_line_id');
+      });
+    })
     .whereNotNull('te.service_id')
     .where('te.invoiced', false)
     .where('te.billable_duration', '>', 0)
@@ -741,7 +1003,17 @@ export async function reconcileClientAllocations(
     }
   }
 
-  const candidateIds = new Set<string>([...withAllocations, ...entryById.keys()]);
+  // Lock every block of the client up front in canonical block_id order so the
+  // per-entry selects below (which lock subsets) can never acquire out of
+  // order against another writer. Issuance/config locks are taken by callers
+  // before this point.
+  await lockBlocks(trx, tenant, { clientId });
+
+  // Oldest work first, so a gap-draw on a pending block is deterministic.
+  const candidateIds = sortEntryIdsByWorkDate(
+    new Set<string>([...withAllocations, ...entryById.keys()]),
+    entryById,
+  );
 
   let reconciled = 0;
   for (const entryId of candidateIds) {
@@ -767,6 +1039,146 @@ export async function reconcileClientAllocations(
 }
 
 /**
+ * Locks hour_blocks rows FOR UPDATE in canonical block_id order (the order
+ * every other hour_blocks check-then-act site uses). Returns the locked rows.
+ */
+async function lockBlocks(
+  trx: Knex.Transaction,
+  tenant: string,
+  scope: { clientId: string } | { contractLineId: string },
+): Promise<Array<{ block_id: string; status: string }>> {
+  const query = tenantDb(trx, tenant).table('hour_blocks as hb');
+  if ('contractLineId' in scope) {
+    query.where('hb.contract_line_id', scope.contractLineId);
+  } else {
+    query.where('hb.client_id', scope.clientId);
+  }
+  return await query.select('hb.block_id', 'hb.status').orderBy('hb.block_id', 'asc').forUpdate();
+}
+
+function sortEntryIdsByWorkDate(
+  ids: Set<string>,
+  entries: Map<string, BlockBurnTimeEntry>,
+): string[] {
+  const key = (id: string): string => {
+    const entry = entries.get(id);
+    const date = entry ? (toDateOnly(entry.work_date) ?? toDateOnly(entry.start_time) ?? '') : '';
+    const start = entry?.start_time ? new Date(entry.start_time as string | Date).getTime() : 0;
+    return `${date}|${String(Number.isFinite(start) ? start : 0).padStart(16, '0')}|${id}`;
+  };
+  return [...ids].sort((a, b) => (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0));
+}
+
+/**
+ * Re-draw for one Prepaid Block line: reverses and re-allocates the line's
+ * uninvoiced time entries (approved or not) against the line's blocks, oldest
+ * work first. Call after a pending block is created (overflow already logged
+ * lands on it), after a pending block is voided/deleted (released minutes
+ * fall back to overage), and after a contract block expires.
+ *
+ * Idempotent: the result depends only on current entry state and block state.
+ * Locks ALL of the line's blocks in canonical block_id order up front (callers
+ * take issuance/config locks first). Invoiced entries are never touched.
+ * Uninvoiced entries are rechecked against current work-date eligibility,
+ * including historical blocks and any assignment-end boundary.
+ */
+export async function reconcileLineAllocations(
+  trx: Knex.Transaction,
+  tenant: string,
+  contractLineId: string,
+): Promise<number> {
+  const db = tenantDb(trx, tenant);
+
+  const lockedBlocks = await lockBlocks(trx, tenant, { contractLineId });
+  if (lockedBlocks.length === 0) {
+    // No block ever issued for the line: nothing could be drawn or released.
+    return 0;
+  }
+  const entries: Array<BlockBurnTimeEntry & { entry_id: string }> = await db.table('time_entries as te')
+    .where({ 'te.contract_line_id': contractLineId, 'te.invoiced': false })
+    .whereNotNull('te.service_id')
+    .where('te.billable_duration', '>', 0)
+    .select(
+      'te.entry_id',
+      'te.service_id',
+      'te.billable_duration',
+      'te.contract_line_id',
+      'te.work_item_id',
+      'te.work_item_type',
+      'te.work_date',
+      'te.start_time',
+    );
+
+  // Entries with no stored contract_line_id whose burn target resolves to this
+  // line (the single deterministic line path in resolveBlockBurnTarget) belong
+  // to the line too: they were drawn from its blocks at save time, so a re-draw
+  // that ignored them would strip their coverage until the nightly reconcile.
+  {
+    const lineServiceIds: string[] = (await db.table('contract_line_services')
+      .where({ contract_line_id: contractLineId })
+      .distinct('service_id')).map((r: any) => r.service_id);
+    if (lineServiceIds.length > 0) {
+      const unassigned: Array<BlockBurnTimeEntry & { entry_id: string }> = await db.table('time_entries as te')
+        .whereNull('te.contract_line_id')
+        .where('te.invoiced', false)
+        .whereIn('te.service_id', lineServiceIds)
+        .where('te.billable_duration', '>', 0)
+        .select(
+          'te.entry_id',
+          'te.service_id',
+          'te.billable_duration',
+          'te.contract_line_id',
+          'te.work_item_id',
+          'te.work_item_type',
+          'te.work_date',
+          'te.start_time',
+        );
+      for (const candidate of unassigned) {
+        const candidateClientId = await resolveClientIdForWorkItem(trx, tenant, candidate.work_item_id, candidate.work_item_type);
+        if (!candidateClientId) continue;
+        const candidateTarget = await resolveBlockBurnTarget(trx, tenant, candidate, candidateClientId);
+        if (candidateTarget?.kind === 'contract' && candidateTarget.contractLineId === contractLineId) {
+          entries.push(candidate);
+        }
+      }
+    }
+  }
+
+  // Entries that carry an allocation against this line's blocks but no longer
+  // qualify (e.g. duration zeroed) still need their draw reversed.
+  const allocated: string[] = await db.table('hour_block_time_allocations as hba')
+    .whereIn('hba.block_id', lockedBlocks.map((b) => b.block_id))
+    .distinct('hba.time_entry_id')
+    .then((rows: any[]) => rows.map((r) => r.time_entry_id));
+
+  const entryById = new Map(entries.map((e) => [e.entry_id, e] as const));
+  const staleIds = allocated.filter((id) => !entryById.has(id));
+  if (staleIds.length > 0) {
+    const stale = await db.table('time_entries')
+      .whereIn('entry_id', staleIds)
+      .where('invoiced', false)
+      .select('entry_id', 'service_id', 'billable_duration', 'contract_line_id', 'work_item_id', 'work_item_type', 'work_date', 'start_time');
+    for (const row of stale) entryById.set(row.entry_id, row);
+  }
+
+  let redrawn = 0;
+  for (const entryId of sortEntryIdsByWorkDate(new Set(entryById.keys()), entryById)) {
+    const entry = entryById.get(entryId)!;
+    await reverseTimeEntryAllocations(trx, tenant, entryId);
+
+    const clientId = await resolveClientIdForWorkItem(trx, tenant, entry.work_item_id, entry.work_item_type);
+    if (!clientId) continue;
+    // Re-allocate only when the entry's burn target is this line (explicit
+    // contract_line_id or the single deterministic line for null-line entries).
+    const target = await resolveBlockBurnTarget(trx, tenant, entry, clientId);
+    if (target?.kind !== 'contract' || target.contractLineId !== contractLineId) continue;
+    const { allocations } = await allocateTimeEntryDetailed(trx, tenant, clientId, entry);
+    if (allocations.length > 0) redrawn += 1;
+  }
+  return redrawn;
+}
+
+/**
  * Derived available block minutes for a client: the sum of `remaining_minutes`
  * over active, non-expired blocks, optionally filtered to blocks whose scope
  * includes `serviceId` (empty scope = all labor). Analog of creditBalance.
@@ -776,6 +1188,12 @@ export async function getAvailableHourBlockMinutes(
   tenant: string,
   clientId: string,
   serviceId?: string,
+  options: {
+    /** Only blocks issued for this Prepaid Block line. */
+    contractLineId?: string;
+    /** Only ad-hoc blocks (contract_line_id IS NULL). Use for the ad-hoc balance. */
+    adhocOnly?: boolean;
+  } = {},
 ): Promise<number> {
   const db = tenantDb(conn, tenant);
   // "Today" for expiration eligibility is the TENANT's calendar date: expiration
@@ -809,11 +1227,20 @@ export async function getAvailableHourBlockMinutes(
     });
   }
 
+  if (options.contractLineId) {
+    query.where('hb.contract_line_id', options.contractLineId);
+  } else if (options.adhocOnly) {
+    query.whereNull('hb.contract_line_id');
+  }
+
   const row = await query
     .where({ 'hb.client_id': clientId, 'hb.status': 'active' })
     .where('hb.remaining_minutes', '>', 0)
     .where(function (this: Knex.QueryBuilder) {
       this.whereNull('hb.expiration_date').orWhere('hb.expiration_date', '>=', today);
+    })
+    .where(function (this: Knex.QueryBuilder) {
+      this.whereNull('hb.valid_from').orWhere('hb.valid_from', '<=', today);
     })
     .sum({ total: 'hb.remaining_minutes' })
     .first<{ total: string | number }>();
@@ -840,11 +1267,17 @@ export async function getAvailableHourBlockMinutesForSubjects(
   // LEVERAGE: pattern tenant-today — tenant-calendar "today" via resolveEffectiveTimeZone (see getContractLineCoverageForClient)
   const timeZone = await resolveEffectiveTimeZone(conn, tenant);
   const today = toCalendarDateStringInTimeZone(new Date(), timeZone);
+  // Contract-issued blocks belong to their Prepaid Block line, never to a
+  // bucket subject.
   const blocks = await db.table('hour_blocks as hb')
     .where({ 'hb.client_id': clientId, 'hb.status': 'active' })
+    .whereNull('hb.contract_line_id')
     .where('hb.remaining_minutes', '>', 0)
     .where(function (this: Knex.QueryBuilder) {
       this.whereNull('hb.expiration_date').orWhere('hb.expiration_date', '>=', today);
+    })
+    .where(function (this: Knex.QueryBuilder) {
+      this.whereNull('hb.valid_from').orWhere('hb.valid_from', '<=', today);
     })
     .select('hb.block_id', 'hb.remaining_minutes', 'hb.replenishment_bucket_usage_id')
     .orderBy('hb.block_id', 'asc');

@@ -128,12 +128,14 @@ The following REST API groups are available in the Community Edition under the b
 
 - [API Rate Limiting and Webhooks](api-rate-limiting-and-webhooks.md)
 - [Unified Full-Text Search](search.md)
-- **Tickets** — Create, read, update, and close service tickets; manage comments, time entries, assignments, and files. Includes ticket bundling, asset links, and agent/team assignment sub-resources (see below). `GET /api/v1/tickets` supports a `fields` query parameter for sparse field sets; pass `fields=tags` to include each ticket's tag array in the response — each entry contains `tag_id`, `tag_text`, `background_color`, and `text_color`. The endpoint also accepts a `sort` query parameter validated against an explicit allowlist; passing an unrecognised sort key returns `400 Bad Request` rather than a database error. Pass `sort=latest_activity_at` (with optional `order=asc` or `order=desc`) to order results by the most recent visible activity on each ticket — the newest of the ticket's own timestamps and its latest non-draft, non-deleted comment. `created_at` is accepted as a sort alias for the underlying `entered_at` column. `latest_activity_at` is also available as a selectable response field (its value is an ISO timestamp string); for client-portal callers the field is computed from non-internal comments only, so internal notes do not expose their timing to portal contacts.
+- **Tickets** — Create, read, update, and close service tickets; manage comments, time entries, assignments, and files. Includes ticket bundling, asset links, agent/team assignment, and watch-list management sub-resources (see below). `GET /api/v1/tickets` supports a `fields` query parameter for sparse field sets; pass `fields=tags` to include each ticket's tag array in the response — each entry contains `tag_id`, `tag_text`, `background_color`, and `text_color`. The endpoint also accepts a `sort` query parameter validated against an explicit allowlist; passing an unrecognised sort key returns `400 Bad Request` rather than a database error. Pass `sort=latest_activity_at` (with optional `order=asc` or `order=desc`) to order results by the most recent visible activity on each ticket — the newest of the ticket's own timestamps and its latest non-draft, non-deleted comment. `created_at` is accepted as a sort alias for the underlying `entered_at` column. `latest_activity_at` is also available as a selectable response field (its value is an ISO timestamp string); for client-portal callers the field is computed from non-internal comments only, so internal notes do not expose their timing to portal contacts.
+- **Opportunities** — Manage sales opportunities from creation through close. Create deals with a required next action, link quotes, record qualification evidence, and mark outcomes won or lost. `PATCH /api/v1/opportunities/{id}` accepts a partial body and is an alias for `PUT`. `POST /api/v1/opportunities/{id}/stage` moves an open deal to a different stage in the same pipeline without closing it. `expected_close_date` is returned as a `YYYY-MM-DD` date string. For opportunities managed by a pipeline automation flow, `pipeline_id`, `stage_id`, and `probability` are flow-owned and are rejected on `PUT`/`PATCH` — use `/stage` to advance flow-managed deals between stages.
 - **Assets** — Register hardware assets, schedule maintenance, map relationships between devices, drive RMM actions, and link assets to tickets (see below).
 - **Users** — Create and administer user accounts, manage passwords and two-factor authentication, and read roles, teams, and effective permissions.
 - **Billing** — Access contracts, contract lines, invoices, and billing analytics.
 - **Email Templates** — Read, create, and delete per-language notification email templates. `GET /api/v1/email/templates` lists all effective templates, merging system defaults with tenant overrides, and is filterable by `name`, `language`, `category`, and `customized` (pass `customized=true` to list only templates the tenant has overridden). `GET`, `PUT`, and `DELETE` on `/api/v1/email/templates/{name}` read, upsert, and remove individual tenant overrides; on the first `PUT` the system default is cloned as the baseline. Write and delete operations require the `settings` write permission and are flagged as requiring approval in the AI/MCP tool registry.
 - **Companies (Clients)** — Create, read, update, and delete client records. `GET /api/v1/clients` and `GET /api/v1/clients/{id}` include `phone_no`, `email`, and `address` fields populated from the client's default active location, so callers do not need a separate locations fetch for basic contact display. See the Client Merge and Billing Profile Contacts sections below for new sub-resources.
+- **Label Printing** — Generate PDF labels for tickets, assets, and stock inventory units via `POST /api/labels/pdf`. See **Label Printing** below.
 - Additional endpoints: contacts, projects, boards, categories, priorities, statuses, time entries, schedules, and more.
 
 #### Ticket Bundling
@@ -184,6 +186,56 @@ Beyond the primary assignee set via `PUT /tickets/{id}/assignment`, a ticket can
 **Assignment consistency fix:** `PUT /tickets/{id}/assignment` previously failed with an "Invalid reference" FK error when the ticket already had additional agents. The endpoint now atomically clears and re-keys `ticket_resources` rows before updating `tickets.assigned_to`, making primary-assignee changes reliable regardless of how many additional agents are attached.
 
 **Permissions:** all five routes require `ticket:update`.
+
+#### Ticket Watchers
+
+A ticket can have a watch list — users and external email addresses that receive all non-silent ticket notifications regardless of assignment. The REST API exposes full CRUD access to a ticket's watcher list.
+
+| Method | Path | Purpose |
+|--------|------|-------|
+| `GET` | `/tickets/{id}/watchers` | List all current watchers on the ticket |
+| `POST` | `/tickets/{id}/watchers` | Add a watcher. Requires `user_id` (internal user UUID) or `email` (external address) |
+| `PATCH` | `/tickets/{id}/watchers/{watcherId}` | Toggle the watcher's `silent` flag; a silent watcher is tracked but excluded from notifications |
+| `DELETE` | `/tickets/{id}/watchers/{watcherId}` | Remove a watcher from the ticket |
+
+**Silent watchers:** set `silent: true` to record a watcher in reporting without delivering notifications to them. Toggle this at any time with `PATCH`.
+
+**Migration note:** the legacy `watch_list` field on the ticket record is deprecated. Both the field and these sub-resource endpoints reflect the same underlying data; prefer the sub-resource for new integrations.
+
+**Permissions:** all four routes require `ticket:update`.
+
+#### Ticket → Project Links
+
+A support ticket is often blocked on, or related to, a project task — an upgrade scheduled for next week, a hardware procurement in flight. `GET /api/v1/tickets/{id}/project-links` returns all the project tasks the ticket is linked to, so an automation watching a ticket no longer has to scan every project to find its dependencies.
+
+| Method | Path | Purpose |
+|--------|------|-------|
+| `GET` | `/tickets/{id}/project-links` | List the project tasks linked to this ticket |
+
+Each row includes the project, phase, and task the link points to, the task's resolved status (custom mapping name, then project status, then standard status), an `is_closed` flag, and the last time the task changed. Links to projects the caller does not have `project:read` access to are silently omitted from the response.
+
+**Permissions:** requires `ticket:read` and `project:read`.
+
+#### Ticket Templates
+
+A ticket template is a reusable starting point for a ticket: its title, description, board, category, priority, ITIL values, tags, custom fields and a whole checklist. Templates were previously a UI-only feature; they are now available over REST (and therefore through the MCP integration), so an automation can keep them in step and apply them without rebuilding a checklist item by item.
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/tickets/templates` | List templates (paginated). Filters: `client_id` (that client's templates plus every tenant-wide one), `is_active` (omitted or `true` = active only, `false` = the inactive ones), `search` (name or ticket title substring) |
+| `POST` | `/tickets/templates` | Create a template, with its whole `checklist` array in the same request |
+| `GET` | `/tickets/templates/{templateId}` | Read one template with its ordered checklist, usage counts, and `referenceProblems` (fields pointing at a board, category or priority that no longer exists) |
+| `PUT` | `/tickets/templates/{templateId}` | Replace the template wholesale — omitted fields are reset and the `checklist` you send replaces the stored items. `is_active` activates or deactivates it |
+| `DELETE` | `/tickets/templates/{templateId}` | Delete the template and its checklist items. `409` while a non-archived recurring schedule still uses it |
+| `POST` | `/tickets/templates/{templateId}/instantiate` | Create one ticket from the template and return it, exactly as `POST /tickets` does |
+
+**Applying a template:** `instantiate` takes `client_id` (required) plus optional `contact_name_id`, `location_id`, `asset_ids`, `assigned_to`, `status_id`, `due_date` and the usual `suppressContactNotifications` / `suppressInternalNotifications` flags. The created ticket carries the template's tags, custom fields and checklist items, and records `created_from_template_id`. Prefer it over `POST /tickets` followed by one `POST /tickets/{id}/checklist` per item. The contact, location and assets must belong to `client_id`, and `status_id` must belong to the template's board — the same validation `POST /tickets` applies.
+
+**Title tokens:** a template title may contain `{{client}}`, `{{contact}}`, `{{due_date}}`, `{{month}}` and `{{year}}`, filled in per ticket from what you pass to `instantiate`; any other `{{token}}` is rejected when the template is saved.
+
+**Client-specific templates:** `client_id` is `null` by default, which offers the template for every client. Set it to bind the template to one client: it then only appears in that client's list and is refused (`400`) when instantiated for anyone else. Deleting the client deactivates and detaches its templates rather than deleting them; merging clients moves them to the surviving client.
+
+**Permissions:** list and read require `ticket_template:read`, create `ticket_template:create`, update and activate `ticket_template:update`, delete `ticket_template:delete`. `instantiate` requires `ticket:create` as well as `ticket_template:read`. The whole surface is internal (MSP) only; it is not exposed in the client portal.
 
 #### Ticket Comment Cc/Bcc
 
@@ -242,6 +294,38 @@ Time periods are the billing or pay windows that time sheets are filed against. 
 - Unknown period IDs return `404`; malformed (non-UUID) IDs return `400`. `close` is idempotent.
 
 **Permissions:** all time-period write endpoints require the `time_management` write permission.
+
+#### Label Printing
+
+Printable PDF labels can be generated for tickets, assets, and stock inventory units.
+
+| Method | Path | Purpose |
+|--------|------|-------|
+| `POST` | `/api/labels/pdf` | Generate a PDF label batch for one or more records |
+
+The request body is a JSON array of `{ "labelClass": "ticket" | "asset" | "stock_unit", "id": "<uuid>" }` objects. An optional `layout` field selects an n-up sheet format (e.g., a 2×5 Letter grid matching Avery 5163). Standard templates ship for each record type: ticket work tags (4×2 in, QR code encoding the ticket URL), asset labels (4×2 in, QR code plus a full-width Code 128 barcode for the asset tag), and stock unit labels (QR code encoding the unit URL).
+
+Any null, unauthorized, or unrecognized record in the batch returns `404 Not Found` for the entire request. A `labelClass` value outside the three above returns `400 Bad Request`.
+
+**Permissions:** `ticket:read` for ticket labels, `asset:read` for asset labels, and `inventory:read` for stock unit labels. All required permissions must be present for a mixed-type batch.
+
+#### Document Attachments
+
+Structured files can be attached to any AlgaPSA entity — tickets, assets, companies, and more — through a single write endpoint.
+
+| Method | Path | Purpose |
+|--------|------|-------|
+| `POST` | `/api/v1/documents` | Create a document record and attach it to an entity |
+
+Identify the target entity with `entity_type` (e.g. `ticket`, `asset`, `company`) and `entity_id` (UUID). Provide the document content through exactly one of:
+
+- `url` — a publicly reachable URL; AlgaPSA fetches and stores the content
+- `content_base64` — base64-encoded content provided inline
+- `file` — multipart file upload
+
+**Download host allowlist:** when using `url`, the hostname must appear in the tenant's **Allowed download hosts** list under **Settings → MCP Server → Allowed download hosts**. Requests with an unlisted host are rejected with `403 Forbidden`. The allowlist is not checked for `content_base64` or `file` uploads.
+
+**Permissions:** requires `document:create` plus the write permission for the entity type being attached to (e.g. `ticket:update` for a ticket attachment).
 
 ### Enterprise Edition APIs
 - **Tenant Provisioning API:** Enables partner-driven tenant management. See [tenant_provisioning_api.md](tenant_provisioning_api.md) for details.

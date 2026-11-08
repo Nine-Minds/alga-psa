@@ -537,6 +537,7 @@
       "recurring": "Powtarzający się",
       "service": "praca",
       "setPrice": "Ustal cenę",
+      "taxable": "Podlega opodatkowaniu",
       "ungroupedItems": "Rozgrupowane elementy"
     },
     "placeholders": {
@@ -630,6 +631,7 @@
       }
     },
     "sections": {
+      "carriedDiscounts": "Rabaty przeniesione na linie kontraktowe",
       "contractItems": "Przedmioty umowy",
       "conversionMode": "Tryb konwersji",
       "excludedFromConversion": "Wykluczone z konwersji",
@@ -655,6 +657,7 @@
       "converted": "Przekształcony",
       "discount": "Rabat",
       "fixed": "naprawił",
+      "monthlyTotal": "Suma miesięczna po rabatach",
       "notConverted": "Nie przekonwertowany"
     },
     "partial": {

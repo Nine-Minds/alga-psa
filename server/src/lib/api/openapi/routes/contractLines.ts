@@ -10,22 +10,22 @@ export function registerContractLineRoutes(registry: ApiOpenApiRegistry) {
   const ContractLineIdParam = registry.registerSchema(
     'ContractLineIdParam',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('Contract line UUID from contract_lines.contract_line_id.'),
+      id: zOpenApi.string().guid().describe('Contract line UUID from contract_lines.contract_line_id.'),
     }),
   );
 
   const ContractLineServiceParam = registry.registerSchema(
     'ContractLineServiceParam',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('Contract line UUID from contract_lines.contract_line_id.'),
-      serviceId: zOpenApi.string().uuid().describe('Service UUID from service_catalog.service_id.'),
+      id: zOpenApi.string().guid().describe('Contract line UUID from contract_lines.contract_line_id.'),
+      serviceId: zOpenApi.string().guid().describe('Service UUID from service_catalog.service_id.'),
     }),
   );
 
   const ContractLineTemplateParam = registry.registerSchema(
     'ContractLineTemplateParam',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('Template UUID from plan_templates.template_id.'),
+      id: zOpenApi.string().guid().describe('Template UUID from plan_templates.template_id.'),
     }),
   );
 
@@ -85,7 +85,7 @@ export function registerContractLineRoutes(registry: ApiOpenApiRegistry) {
       after_hours_multiplier: zOpenApi.number().min(0).optional(),
       is_active: zOpenApi.boolean().optional(),
       features: zOpenApi.array(zOpenApi.string()).optional(),
-      location_id: zOpenApi.string().uuid().nullable().optional(),
+      location_id: zOpenApi.string().guid().nullable().optional(),
     }),
   );
 
@@ -103,11 +103,11 @@ export function registerContractLineRoutes(registry: ApiOpenApiRegistry) {
   const AddServiceBody = registry.registerSchema(
     'ContractLineAddServiceBody',
     zOpenApi.object({
-      service_id: zOpenApi.string().uuid(),
+      service_id: zOpenApi.string().guid(),
       quantity: zOpenApi.number().min(0).optional().describe('Seat/unit count. Must be at least 1 for a bundle service; zero or more (whole number) when type_config.pricing_basis is "unit" (zero bills zero).'),
       custom_rate: zOpenApi.number().min(0).optional(),
       configuration_type: ConfigurationType.optional(),
-      type_config: zOpenApi.record(zOpenApi.unknown()).optional().describe('Type-specific configuration. For a Fixed service, set pricing_basis to "unit" to bill quantity x base_rate every period (base_rate is the unit rate in minor units of the contract currency; omit or null to follow the catalog price in the contract currency). The default "bundle" keeps the line total authoritative. Per-unit pricing is not available for products or non-Fixed lines.'),
+      type_config: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional().describe('Type-specific configuration. For a Fixed service, set pricing_basis to "unit" to bill quantity x base_rate every period (base_rate is the unit rate in minor units of the contract currency; omit or null to follow the catalog price in the contract currency). The default "bundle" keeps the line total authoritative. Per-unit pricing is not available for products or non-Fixed lines.'),
     }),
   );
 
@@ -116,9 +116,9 @@ export function registerContractLineRoutes(registry: ApiOpenApiRegistry) {
     zOpenApi.object({
       quantity: zOpenApi.number().min(0).optional().describe('New seat/unit count (zero or more, whole number, for a per-unit service; at least 1 for a bundle service). On a per-unit service the change is scheduled as a dated revision effective at the next unbilled period boundary; already-invoiced periods keep their price.'),
       custom_rate: zOpenApi.number().min(0).optional(),
-      type_config: zOpenApi.record(zOpenApi.unknown()).optional().describe('For a per-unit Fixed service, base_rate is the new unit rate (scheduled like a quantity change). pricing_basis may be sent only if it equals the stored basis; it cannot be changed after the service is added.'),
-      rate_tiers: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())).optional(),
-      user_type_rates: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())).optional(),
+      type_config: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional().describe('For a per-unit Fixed service, base_rate is the new unit rate (scheduled like a quantity change). pricing_basis may be sent only if it equals the stored basis; it cannot be changed after the service is added.'),
+      rate_tiers: zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown())).optional(),
+      user_type_rates: zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown())).optional(),
     }),
   );
 
@@ -135,7 +135,7 @@ export function registerContractLineRoutes(registry: ApiOpenApiRegistry) {
   const CopyContractLineBody = registry.registerSchema(
     'CopyContractLineBody',
     zOpenApi.object({
-      source_contract_line_id: zOpenApi.string().uuid().describe('Used by service; path id is currently ignored.'),
+      source_contract_line_id: zOpenApi.string().guid().describe('Used by service; path id is currently ignored.'),
       new_contract_line_name: zOpenApi.string().min(1).max(255),
       copy_services: zOpenApi.boolean().optional(),
       copy_configurations: zOpenApi.boolean().optional(),
@@ -161,7 +161,7 @@ export function registerContractLineRoutes(registry: ApiOpenApiRegistry) {
       plans: zOpenApi
         .array(
           zOpenApi.object({
-            contract_line_id: zOpenApi.string().uuid(),
+            contract_line_id: zOpenApi.string().guid(),
             data: UpdateContractLineBody,
           }),
         )
@@ -173,14 +173,21 @@ export function registerContractLineRoutes(registry: ApiOpenApiRegistry) {
   const BulkDeleteContractLinesBody = registry.registerSchema(
     'BulkDeleteContractLinesBody',
     zOpenApi.object({
-      contract_line_ids: zOpenApi.array(zOpenApi.string().uuid()).min(1).max(50),
+      contract_line_ids: zOpenApi.array(zOpenApi.string().guid()).min(1).max(50),
+    }),
+  );
+
+  const BulkDeleteContractLinesQuery = registry.registerSchema(
+    'BulkDeleteContractLinesQuery',
+    zOpenApi.object({
+      contract_line_ids: zOpenApi.string().optional().describe('Comma-separated contract line UUIDs. DELETE-only alternative to the request body, for clients that cannot send a body on DELETE.'),
     }),
   );
 
   const BulkAddServicesBody = registry.registerSchema(
     'BulkAddServicesBody',
     zOpenApi.object({
-      contract_line_id: zOpenApi.string().uuid(),
+      contract_line_id: zOpenApi.string().guid(),
       services: zOpenApi.array(AddServiceBody).min(1).max(20),
     }),
   );
@@ -188,8 +195,16 @@ export function registerContractLineRoutes(registry: ApiOpenApiRegistry) {
   const BulkRemoveServicesBody = registry.registerSchema(
     'BulkRemoveServicesBody',
     zOpenApi.object({
-      contract_line_id: zOpenApi.string().uuid(),
-      service_ids: zOpenApi.array(zOpenApi.string().uuid()).min(1).max(20),
+      contract_line_id: zOpenApi.string().guid(),
+      service_ids: zOpenApi.array(zOpenApi.string().guid()).min(1).max(20),
+    }),
+  );
+
+  const BulkRemoveServicesQuery = registry.registerSchema(
+    'BulkRemoveServicesQuery',
+    zOpenApi.object({
+      contract_line_id: zOpenApi.string().guid().optional().describe('Contract line UUID. DELETE-only alternative to the request body.'),
+      service_ids: zOpenApi.string().optional().describe('Comma-separated service UUIDs. DELETE-only alternative to the request body, for clients that cannot send a body on DELETE.'),
     }),
   );
 
@@ -203,7 +218,7 @@ export function registerContractLineRoutes(registry: ApiOpenApiRegistry) {
       default_services: zOpenApi
         .array(
           zOpenApi.object({
-            service_id: zOpenApi.string().uuid(),
+            service_id: zOpenApi.string().guid(),
             configuration_type: ConfigurationType,
             default_rate: zOpenApi.number().min(0).optional(),
             quantity: zOpenApi.number().min(1).optional(),
@@ -217,7 +232,7 @@ export function registerContractLineRoutes(registry: ApiOpenApiRegistry) {
   const CreateFromTemplateBody = registry.registerSchema(
     'CreateContractLineFromTemplateBody',
     zOpenApi.object({
-      template_id: zOpenApi.string().uuid().optional().describe('Optional; the template id is taken from the path {id} and overrides this field when both are present.'),
+      template_id: zOpenApi.string().guid().optional().describe('Optional; the template id is taken from the path {id} and overrides this field when both are present.'),
       contract_line_name: zOpenApi.string().min(1).max(255),
       modify_rates: zOpenApi
         .object({
@@ -228,7 +243,7 @@ export function registerContractLineRoutes(registry: ApiOpenApiRegistry) {
       override_services: zOpenApi
         .array(
           zOpenApi.object({
-            service_id: zOpenApi.string().uuid(),
+            service_id: zOpenApi.string().guid(),
             custom_rate: zOpenApi.number().min(0).optional(),
             quantity: zOpenApi.number().min(1).optional(),
           }),
@@ -242,8 +257,8 @@ export function registerContractLineRoutes(registry: ApiOpenApiRegistry) {
     zOpenApi.object({
       success: zOpenApi.literal(true),
       data: zOpenApi.union([
-        zOpenApi.record(zOpenApi.unknown()),
-        zOpenApi.array(zOpenApi.record(zOpenApi.unknown())),
+        zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()),
+        zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown())),
       ]),
       meta: zOpenApi
         .object({
@@ -417,13 +432,13 @@ export function registerContractLineRoutes(registry: ApiOpenApiRegistry) {
     method: 'delete',
     path: '/api/v1/contract-lines/bulk',
     summary: 'Bulk delete contract lines',
-    description: 'Alias route to bulkDeleteContractLines; deletes multiple contract lines by ID list.',
+    description: 'Alias route to bulkDeleteContractLines; deletes multiple contract lines by ID list. The ids may come from the request body or, for clients that cannot send a body on DELETE, from the `contract_line_ids` query parameter.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
-    request: { body: { schema: BulkDeleteContractLinesBody } },
+    request: { query: BulkDeleteContractLinesQuery, body: { schema: BulkDeleteContractLinesBody, required: false } },
     responses: {
       200: { description: 'Bulk delete completed.', schema: ContractLineApiSuccess },
-      400: { description: 'Invalid request payload.', schema: ContractLineApiError },
+      400: { description: 'Invalid, unparseable or missing request payload (no body and no `contract_line_ids` query parameter).', schema: ContractLineApiError },
       401: { description: 'x-api-key missing at middleware.', schema: ContractLineApiError },
       500: { description: 'Request context missing or delete blocked by dependency rules.', schema: ContractLineApiError },
     },
@@ -471,13 +486,31 @@ export function registerContractLineRoutes(registry: ApiOpenApiRegistry) {
     method: 'delete',
     path: '/api/v1/contract-lines/bulk/delete',
     summary: 'Bulk delete contract lines (explicit route)',
-    description: 'Same controller behavior as DELETE /api/v1/contract-lines/bulk.',
+    description: 'Same controller behavior as DELETE /api/v1/contract-lines/bulk. The ids may come from the request body or from the `contract_line_ids` query parameter.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { query: BulkDeleteContractLinesQuery, body: { schema: BulkDeleteContractLinesBody, required: false } },
+    responses: {
+      200: { description: 'Bulk delete completed.', schema: ContractLineApiSuccess },
+      400: { description: 'Invalid, unparseable or missing request payload (no body and no `contract_line_ids` query parameter).', schema: ContractLineApiError },
+      401: { description: 'x-api-key missing at middleware.', schema: ContractLineApiError },
+      500: { description: 'Request context missing or delete blocked by dependency rules.', schema: ContractLineApiError },
+    },
+    extensions: commonExtensions,
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/contract-lines/bulk/delete',
+    summary: 'Bulk delete contract lines (POST alias)',
+    description: 'Same controller behavior as DELETE /api/v1/contract-lines/bulk/delete, for clients that cannot send a body on DELETE.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: { body: { schema: BulkDeleteContractLinesBody } },
     responses: {
       200: { description: 'Bulk delete completed.', schema: ContractLineApiSuccess },
-      400: { description: 'Invalid request payload.', schema: ContractLineApiError },
+      400: { description: 'Invalid, unparseable or missing request payload.', schema: ContractLineApiError },
       401: { description: 'x-api-key missing at middleware.', schema: ContractLineApiError },
       500: { description: 'Request context missing or delete blocked by dependency rules.', schema: ContractLineApiError },
     },
@@ -510,13 +543,34 @@ export function registerContractLineRoutes(registry: ApiOpenApiRegistry) {
     method: 'delete',
     path: '/api/v1/contract-lines/bulk/remove-services',
     summary: 'Bulk remove services from contract line',
-    description: 'Removes multiple services from one contract_line_id and returns per-service success/failure results.',
+    description: 'Removes multiple services from one contract_line_id and returns per-service success/failure results. The ids may come from the request body or, for clients that cannot send a body on DELETE, from the `contract_line_id` + `service_ids` query parameters.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { query: BulkRemoveServicesQuery, body: { schema: BulkRemoveServicesBody, required: false } },
+    responses: {
+      200: { description: 'Bulk service removal completed.', schema: ContractLineApiSuccess },
+      400: { description: 'Invalid, unparseable or missing request payload (no body and no `contract_line_id` + `service_ids` query parameters).', schema: ContractLineApiError },
+      401: { description: 'x-api-key missing at middleware.', schema: ContractLineApiError },
+      500: { description: 'Request context missing or unhandled service failure.', schema: ContractLineApiError },
+    },
+    extensions: {
+      ...commonExtensions,
+      'x-partial-failures-in-response': true,
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/contract-lines/bulk/remove-services',
+    summary: 'Bulk remove services from contract line (POST alias)',
+    description: 'Same controller behavior as DELETE /api/v1/contract-lines/bulk/remove-services, for clients that cannot send a body on DELETE.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: { body: { schema: BulkRemoveServicesBody } },
     responses: {
       200: { description: 'Bulk service removal completed.', schema: ContractLineApiSuccess },
-      400: { description: 'Invalid request payload.', schema: ContractLineApiError },
+      400: { description: 'Invalid, unparseable or missing request payload.', schema: ContractLineApiError },
       401: { description: 'x-api-key missing at middleware.', schema: ContractLineApiError },
       500: { description: 'Request context missing or unhandled service failure.', schema: ContractLineApiError },
     },

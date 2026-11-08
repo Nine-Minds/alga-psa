@@ -5,6 +5,8 @@ export interface CancellationRequestEmailData {
   recipientName: string;
   recipientEmail: string;
   cancelAtDate: string;
+  /** Recipient's resolved BCP-47 locale for the date; defaults to 'en'. */
+  locale?: string;
 }
 
 // Email template color scheme (matches brand from welcome email)
@@ -32,11 +34,9 @@ export async function sendCancellationRequestEmail(
 
   const currentYear = new Date().getFullYear();
   const supportUrl = 'https://portal.nineminds.com/auth/client-portal/signin';
-  const formattedDate = new Date(data.cancelAtDate).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  const formattedDate = new Intl.DateTimeFormat(data.locale || 'en', {
+    dateStyle: 'long',
+  }).format(new Date(data.cancelAtDate));
 
   const subject = `Your AlgaPSA cancellation request has been received`;
 
@@ -202,11 +202,18 @@ If you did not request this, please contact support immediately.
 (c) ${currentYear} Nine Minds. All rights reserved.
   `.trim();
 
-  await emailService.sendEmail({
+  const result = await emailService.sendEmail({
     to: data.recipientEmail,
     from: 'info@nineminds.com',
     subject,
     html: htmlBody,
     text: textBody,
   });
+
+  // Email services resolve { success: false } on provider failures instead of throwing.
+  if (result && result.success === false) {
+    throw new Error(
+      result.error ? `Failed to send cancellation request email: ${result.error}` : 'Failed to send cancellation request email'
+    );
+  }
 }

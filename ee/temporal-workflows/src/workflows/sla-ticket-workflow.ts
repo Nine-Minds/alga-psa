@@ -500,12 +500,24 @@ export async function slaTicketWorkflow(
           });
         }
 
-        await activities.checkAndEscalate({
-          tenantId,
-          ticketId,
-          phase: phase.phase,
-          thresholdPercent: threshold,
-        });
+        // Escalation failures (after the activity's retries are exhausted) must
+        // never stop SLA tracking: log and carry on with the next threshold.
+        try {
+          await activities.checkAndEscalate({
+            tenantId,
+            ticketId,
+            phase: phase.phase,
+            thresholdPercent: threshold,
+          });
+        } catch (error) {
+          log.warn('SLA escalation failed; continuing SLA tracking', {
+            ticketId,
+            tenantId,
+            phase: phase.phase,
+            thresholdPercent: threshold,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
       }
 
       thresholdIndex += 1;

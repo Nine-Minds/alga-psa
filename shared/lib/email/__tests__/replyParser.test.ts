@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-import { getDefaultReplyParserConfig, parseEmailReply } from '../replyParser';
+import { getDefaultReplyParserConfig, htmlToVisibleText, parseEmailReply } from '../replyParser';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -167,6 +167,30 @@ On Thu, Nov 20, 2025 at 7:58 AM Software <support@nineminds.com> wrote:
       conversationToken: 'a83113b5-d30f-4ec9-85ce-0d0ce95fa49a',
       ticketId: 'a5ea2cf5-f572-436c-b485-9b5ca07a9e17',
       commentId: '3de1cc6a-8d4a-4b3c-9a27-72990ab84226',
+    });
+  });
+
+  describe('HTML-only replies (N3)', () => {
+    it('htmlToVisibleText exposes the visible text of an HTML-only body', () => {
+      expect(htmlToVisibleText('<div>Thanks, <b>fixed</b>.</div>').trim()).toBe('Thanks, fixed .');
+    });
+
+    it.each([
+      ['&nbsp;-only', '<div>&nbsp;</div><p>&nbsp;&nbsp;</p>'],
+      ['whitespace-only', '<div>  </div>\n<br>'],
+    ])('treats a %s HTML body as empty visible text', (_label, html) => {
+      expect(htmlToVisibleText(html).trim()).toBe('');
+    });
+
+    it('cuts HTML at the boundary tag so no unterminated tag survives', () => {
+      const config = getDefaultReplyParserConfig();
+      const html =
+        '<p>My answer</p><div class="quote" ' + config.htmlBoundaryAttribute + '="1"><p>Quoted history</p></div>';
+
+      const result = parseEmailReply({ text: '', html });
+
+      expect(result.sanitizedHtml).toBe('<p>My answer</p>');
+      expect(result.sanitizedHtml).not.toMatch(/<[^>]*$/);
     });
   });
 });

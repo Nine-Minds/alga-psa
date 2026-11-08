@@ -90,6 +90,8 @@ function buildReportKnex(params: {
     if (table === 'contract_line_unit_pricing_revisions as rev') {
       return buildThenableQuery([]);
     }
+    // The cadence-block pass reads each line's prepaid block configuration; none here.
+    if (table === 'contract_line_prepaid_blocks') return buildThenableQuery([]);
     throw new Error(`Unexpected table ${table}`);
   });
 }
@@ -181,6 +183,8 @@ describe('contractReportActions recurring service-period basis', () => {
       if (table === 'contract_line_unit_pricing_revisions as rev') {
         return buildThenableQuery([]);
       }
+      // The cadence-block pass reads each line's prepaid block configuration; none here.
+      if (table === 'contract_line_prepaid_blocks') return buildThenableQuery([]);
       throw new Error(`Unexpected table ${table}`);
     });
 

@@ -11,7 +11,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions/team-actions/avatarActions';
 import { CategoryPicker } from '../CategoryPicker';
-import type { RecurringReferenceData } from './useRecurringReferenceData';
+import type { TicketFieldReferenceData } from '../useTicketFieldReferenceData';
 
 /**
  * The four groups of template fields a client may override (board + status, priority, category,
@@ -20,7 +20,7 @@ import type { RecurringReferenceData } from './useRecurringReferenceData';
  */
 interface GroupProps {
   idPrefix: string;
-  reference: RecurringReferenceData;
+  reference: TicketFieldReferenceData;
   disabled?: boolean;
 }
 

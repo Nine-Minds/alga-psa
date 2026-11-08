@@ -830,7 +830,8 @@
           "groups_read": "Read directory groups",
           "entitlement_group_resolves": "Resolve entitlement group",
           "user_yield_preview": "User yield preview",
-          "per_tenant_users": "CIPP per-tenant users"
+          "per_tenant_users": "CIPP per-tenant users",
+          "cipp_token_mint": "CIPP API token mint"
         },
         "readiness": {
           "authenticated": "Signed in",
@@ -911,8 +912,8 @@
           "noManagedTenants": "No managed tenants were returned. The partner must be onboarded to Microsoft 365 Lighthouse with active GDAP relationships.",
           "mappedTenantMissing": "Mapped tenant \"{{client}}\" was not returned by discovery. GDAP may have expired or been terminated.",
           "mappingsLookupFailed": "Confirmed tenant mappings could not be read. Re-run diagnostics; if it persists, review the tenant mappings.",
-          "cippCredentialsMissing": "CIPP base URL and API token are required. Configure them on the Connection tab.",
-          "cippAuthRejected": "CIPP rejected the API credential. Rotate the CIPP API key from Settings > CIPP > API access; this is not an Azure client secret.",
+          "cippCredentialsMissing": "CIPP API URL and credentials are required. Configure them on the Connection tab.",
+          "cippAuthRejected": "CIPP rejected the legacy API key. Reconnect with a CIPP API client from the Connection tab (create one in CIPP > Integrations > CIPP-API).",
           "cippEmptyTenantList": "CIPP returned no tenants. Check CIPP customer visibility and configuration.",
           "cippUnreachable": "CIPP could not be reached. Verify the base URL, DNS/TLS, and outbound connectivity.",
           "cippPerTenantFailed": "CIPP could not read this tenant directory.",

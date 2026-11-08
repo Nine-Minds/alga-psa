@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { SearchInput } from '@alga-psa/ui/components/SearchInput';
@@ -32,6 +32,7 @@ import {
 } from '../actions';
 
 type SearchMode = 'serial' | 'mac';
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const isReturnedActionError = (value: unknown) => isActionMessageError(value) || isActionPermissionError(value);
 
 // Restock-to-sellable + restocking-fee is a billing composite (billing → inventory), so the
@@ -126,6 +127,9 @@ export function StockUnitsManager({
 }) {
   const { t } = useTranslation('features/inventory');
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const unitIdParam = searchParams?.get('unitId') ?? null;
   const { money } = useCurrencyFormat();
 
   // Render blank — not a misleading "$0.00" — when a unit has no recorded cost.
@@ -176,6 +180,7 @@ export function StockUnitsManager({
   const [locations, setLocations] = useState<IStockLocation[] | null>(null);
   const [historyDetail, setHistoryDetail] = useState<UnitDetail | null>(null);
   const [historyLoadingUnitId, setHistoryLoadingUnitId] = useState<string | null>(null);
+  const [unitUnavailable, setUnitUnavailable] = useState(false);
 
   // Restock-a-return dialog (returns opened-but-unused good stock to sellable, with fee).
   const [restockOpen, setRestockOpen] = useState(false);
@@ -277,39 +282,65 @@ export function StockUnitsManager({
     await reload();
   }, [reload]);
 
-  const openHistory = useCallback(
-    async (unitId: string) => {
-      setHistoryLoadingUnitId(unitId);
+  // The unit dialog is driven by `?unitId=` so a scanned label (and the row "History" action)
+  // land on the same, linkable view. Opening/closing only rewrites that one param.
+  const setUnitIdParam = useCallback(
+    (unitId: string | null) => {
+      const next = new URLSearchParams(searchParams?.toString() ?? '');
+      if (unitId) next.set('unitId', unitId);
+      else next.delete('unitId');
+      const qs = next.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname);
+    },
+    [pathname, router, searchParams],
+  );
+  const openHistory = useCallback((unitId: string) => setUnitIdParam(unitId), [setUnitIdParam]);
+  const closeUnitDialog = useCallback(() => {
+    setHistoryDetail(null);
+    setUnitUnavailable(false);
+    setUnitIdParam(null);
+  }, [setUnitIdParam]);
+
+  useEffect(() => {
+    if (!unitIdParam) {
+      setHistoryDetail(null);
+      setUnitUnavailable(false);
+      return;
+    }
+    let cancelled = false;
+    setHistoryLoadingUnitId(unitIdParam);
+    (async () => {
       try {
         const [detail, loadedLocations] = await Promise.all([
-          getUnitDetail(unitId),
+          UUID_RE.test(unitIdParam) ? getUnitDetail(unitIdParam) : Promise.resolve(null),
           locations === null ? listStockLocations() : Promise.resolve(locations),
         ]);
-        if (isReturnedActionError(detail)) {
-          toast.error(getErrorMessage(detail));
+        if (cancelled) return;
+        // Missing, cross-tenant and permission-denied are deliberately one state.
+        if (!detail || isReturnedActionError(detail)) {
+          setHistoryDetail(null);
+          setUnitUnavailable(true);
           return;
         }
-        if (!detail) {
-          toast.error(t('stockUnits.historyNotFound', 'No history recorded for this unit yet.'));
-          return;
+        if (locations === null && !isReturnedActionError(loadedLocations)) {
+          setLocations(loadedLocations as IStockLocation[]);
         }
-        if (locations === null) {
-          if (isReturnedActionError(loadedLocations)) {
-            toast.error(getErrorMessage(loadedLocations));
-            return;
-          }
-          setLocations(loadedLocations);
-        }
-        setHistoryDetail(detail);
+        setUnitUnavailable(false);
+        setHistoryDetail(detail as UnitDetail);
       } catch (e: any) {
+        if (cancelled) return;
         console.error(e);
-        toast.error(e?.message || t('stockUnits.historyLoadFailed', "Couldn't load this unit's history. Try again."));
+        setHistoryDetail(null);
+        setUnitUnavailable(true);
       } finally {
-        setHistoryLoadingUnitId(null);
+        if (!cancelled) setHistoryLoadingUnitId(null);
       }
-    },
-    [locations, t],
-  );
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unitIdParam]);
 
   // Locations are loaded lazily (history/restock both need them); load once on demand.
   const ensureLocations = useCallback(async () => {
@@ -546,10 +577,19 @@ export function StockUnitsManager({
     {
       title: t('common.status', 'Status'),
       dataIndex: 'status',
-      render: (v: any) => (
-        <Badge variant={statusVariant(v)} size="sm">
-          {humanizeStatus(v)}
-        </Badge>
+      render: (v: any, record: IStockUnit) => (
+        <div className="flex flex-col items-start gap-0.5">
+          <Badge variant={statusVariant(v)} size="sm">
+            {humanizeStatus(v)}
+          </Badge>
+          {v === 'allocated' && (record.allocated_project_number || record.allocated_so_number) && (
+            <span className="text-xs text-muted-foreground" id={`stock-unit-claimant-${record.unit_id}`}>
+              {record.allocated_project_number
+                ? t('stockUnits.claimant.project', 'Project {{number}}', { number: record.allocated_project_number })
+                : t('stockUnits.claimant.salesOrder', 'Sales order {{number}}', { number: record.allocated_so_number })}
+            </span>
+          )}
+        </div>
       ),
     },
     {
@@ -848,7 +888,8 @@ export function StockUnitsManager({
 
       <UnitHistoryDialog
         detail={historyDetail}
-        onClose={() => setHistoryDetail(null)}
+        unavailable={unitUnavailable}
+        onClose={closeUnitDialog}
         locations={locations || []}
       />
     </div>

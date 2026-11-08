@@ -83,7 +83,6 @@ describe('server/shared runtime tenant facade roots', () => {
 
   it('routes notification and SLA tenant roots through tenantDb', () => {
     const sendEventEmail = read('server/src/lib/notifications/sendEventEmail.ts');
-    expect(sendEventEmail).toContain("tenantDb(knex, tenantId).table('email_reply_tokens')");
     expect(sendEventEmail).toContain("db.table('tenant_email_templates')");
     expect(sendEventEmail).toContain("db.table('tickets')");
     expect(sendEventEmail).not.toMatch(directRootPattern(['email_reply_tokens', 'tenant_email_templates', 'tickets']));
@@ -118,7 +117,7 @@ describe('server/shared runtime tenant facade roots', () => {
     );
 
     const processor = read('shared/rmm/alerts/processRmmAlertEvent.ts');
-    expect(processor).toContain("import { tenantDb, withTransaction } from '@alga-psa/db'");
+    expect(processor).toContain("import { registerAfterCommit, tenantDb, withTransaction } from '@alga-psa/db'");
     expect(processor).toContain("db.table('tenant_external_entity_mappings')");
     expect(processor).toContain("db.table('rmm_maintenance_windows')");
     expect(processor).toContain("db.table('rmm_alert_rules')");

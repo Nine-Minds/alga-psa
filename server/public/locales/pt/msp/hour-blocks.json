@@ -1,7 +1,7 @@
 {
   "section": {
     "title": "Blocos de horas",
-    "description": "Blocos de horas pré-pagos avulsos. O tempo que não é coberto por uma linha de contrato consome esses blocos, começando pelo que expira primeiro.",
+    "description": "Blocos de horas pré-pagos avulsos. Recebem apenas o tempo que nenhuma linha de contrato cobre. Os blocos emitidos por uma linha de contrato de Bloco pré-pago são consumidos somente pelo tempo dessa própria linha.",
     "availableBalance": "{{hours}} h disponíveis",
     "noBlocks": "Ainda não há blocos de horas. Venda um bloco para este cliente ou conceda horas de cortesia.",
     "loadFailed": "Falha ao carregar os blocos de horas. Tente novamente."
@@ -30,7 +30,8 @@
     "status": "Status",
     "expiration": "Expiração",
     "source": "Origem",
-    "actions": "Ações"
+    "actions": "Ações",
+    "validFrom": "Válido a partir de {{date}}"
   },
   "status": {
     "pending": "Pendente",
@@ -53,8 +54,10 @@
     "rateRequired": "Introduza uma taxa válida.",
     "scopeLabel": "Escopo — serviços que este bloco cobre (vazio = toda a mão de obra)",
     "serviceLabel": "Serviço",
+    "serviceNoResults": "Nenhum serviço encontrado",
     "servicePlaceholder": "Selecione um serviço",
     "serviceRequired": "Selecione um serviço.",
+    "serviceSearchPlaceholder": "Pesquisar serviços...",
     "submit": "Criar fatura em rascunho",
     "submitted": "Fatura em rascunho {{invoiceNumber}} criada. Finalize-a para ativar o bloco.",
     "title": "Vender bloco de horas",
@@ -126,7 +129,10 @@
     "autoExpired": "Expirado automaticamente",
     "voidedLabel": "Anulado",
     "purchaseReversed": "Compra revertida (fatura desfinalizada)",
-    "unknownUser": "Sistema"
+    "unknownUser": "Sistema",
+    "sourceContract": "Contrato: {{contract}}",
+    "remainingValue": "Valor das horas restantes: {{value}}",
+    "validFrom": "Válido a partir de {{date}}"
   },
   "expire": {
     "error": "Não foi possível expirar o bloco de horas.",

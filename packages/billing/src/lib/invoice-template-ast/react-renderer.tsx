@@ -50,6 +50,12 @@ type RenderContext = {
   /** The recipient country's date shape: digit order, separator and clock. */
   dateFormat: CountryDateFormat;
   currencyCode: string;
+  /**
+   * Barcode SVGs from the async server prepass, keyed by node id. Undefined means "no prepass"
+   * (designer / client preview): barcode nodes render a placeholder. When provided, a barcode node
+   * without an entry is a bug and throws.
+   */
+  barcodes?: Record<string, string>;
 };
 
 const isRecord = (value: unknown): value is UnknownRecord =>
@@ -255,10 +261,11 @@ const formatValue = (value: unknown, format: TemplateValueFormat | undefined, ct
       return String(value);
     }
     try {
-      return new Intl.NumberFormat(ctx.locale, {
-        style: 'currency',
-        currency: ctx.currencyCode || 'USD',
-      }).format(numeric / 100);
+      // One formatter for every surface: the exponent comes from the currency and
+      // the glyph from the product's symbol table, so a preview or PDF reads
+      // "R 12.34" like the entry screens do — not Intl's "ZAR 12.34".
+      const currency = ctx.currencyCode || FALLBACK_CURRENCY;
+      return formatCurrencyFromMinorUnits(numeric, ctx.locale, currency);
     } catch {
       // Invalid currency code in template metadata — last-resort fallback.
       return formatCurrencyFromMinorUnits(numeric, ctx.locale, FALLBACK_CURRENCY);
@@ -299,7 +306,9 @@ interface RenderedCellLine {
  * blank lines (missing names, absent descriptions) are dropped. When a column
  * has no `lines`, or every line resolves empty, the function returns null so
  * the caller falls back to the flat `value` expression — keeping discount and
- * custom rows whose name is absent readable.
+ * custom rows whose name is absent readable. A line repeating text the cell
+ * already shows is dropped, so stacks such as the standard quote description
+ * (line `description` over `catalog_description`) print the text once.
  */
 const resolveColumnCellLines = (
   column: TemplateTableColumn,
@@ -321,6 +330,15 @@ const resolveColumnCellLines = (
     };
   };
   const nonEmpty = (entry: RenderedCellLine): boolean => entry.text.trim().length > 0;
+  const withoutRepeats = (entries: RenderedCellLine[]): RenderedCellLine[] => {
+    const seen = new Set<string>();
+    return entries.filter((entry) => {
+      const key = entry.text.trim();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
 
   // Primary lines decide whether the stack replaces the flat value; a
   // supplemental line (an annotation such as an optional-row marker) only
@@ -329,12 +347,12 @@ const resolveColumnCellLines = (
   const supplemental = column.lines.filter((line) => line.supplemental).map(resolveLine).filter(nonEmpty);
 
   if (primary.length > 0) {
-    return [...primary, ...supplemental];
+    return withoutRepeats([...primary, ...supplemental]);
   }
   if (supplemental.length > 0) {
     const value = resolveExpressionValue(column.value, evaluation, scope, ctx);
     const flat: RenderedCellLine = { text: formatValue(value ?? '', column.format, ctx) };
-    return [...(nonEmpty(flat) ? [flat] : []), ...supplemental];
+    return withoutRepeats([...(nonEmpty(flat) ? [flat] : []), ...supplemental]);
   }
   return null;
 };
@@ -394,7 +412,7 @@ const resolveTableStyle = (style: React.CSSProperties | undefined): React.CSSPro
 const buildAstCss = (ast: TemplateAst): string => {
   const baseCss = `
 .invoice-template-root {
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 14px;
   line-height: 1.35;
   color: #111827;
@@ -656,6 +674,13 @@ const renderNode = (
         gap: '8px',
       };
       const mergedStyle: React.CSSProperties = { ...defaultStackStyle, ...(style ?? {}) };
+      // A blank text line in a column takes no space: rendered, it is a zero-height item that still costs
+      // the stack's gap, so optional lines (a label's custody or brand line) would eat the fixed-height
+      // budget even when empty. Rows keep it: there a blank cell can be holding a position.
+      const renderChildren = (childScope: RenderScope) =>
+        node.children
+          .filter((child) => node.direction === 'row' || child.type !== 'text' || nodeHasVisibleContent(child, evaluation, childScope, ctx))
+          .map((child) => renderNode(child, evaluation, childScope, ctx));
 
       if (node.repeat) {
         const itemBinding = node.repeat.itemBinding;
@@ -669,7 +694,7 @@ const renderNode = (
               };
               return (
                 <React.Fragment key={`${node.id}-iter-${index}`}>
-                  {node.children.map((child) => renderNode(child, evaluation, iterationScope, ctx))}
+                  {renderChildren(iterationScope)}
                 </React.Fragment>
               );
             })}
@@ -679,7 +704,7 @@ const renderNode = (
 
       return (
         <div key={node.id} id={node.id} className={elementClassName || undefined} style={mergedStyle}>
-          {node.children.map((child) => renderNode(child, evaluation, scope, ctx))}
+          {renderChildren(scope)}
         </div>
       );
     }
@@ -783,6 +808,44 @@ const renderNode = (
           style={style}
           src={src}
           alt={String(alt ?? '')}
+        />
+      );
+    }
+    case 'barcode': {
+      if (!ctx.barcodes) {
+        return (
+          <div
+            key={node.id}
+            id={node.id}
+            className={elementClassName || undefined}
+            data-barcode-placeholder={node.symbology}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minWidth: '24mm',
+              minHeight: node.symbology === 'qr' ? '24mm' : '10mm',
+              border: '1px dashed #9ca3af',
+              color: '#6b7280',
+              fontSize: '11px',
+              ...(style ?? {}),
+            }}
+          >
+            {node.symbology === 'qr' ? 'QR code' : 'Code 128'}
+          </div>
+        );
+      }
+      const svg = ctx.barcodes[node.id];
+      if (!svg) {
+        throw new Error(`Barcode node "${node.id}" was not rendered by the barcode prepass`);
+      }
+      return (
+        <div
+          key={node.id}
+          id={node.id}
+          className={elementClassName || undefined}
+          style={style}
+          dangerouslySetInnerHTML={{ __html: svg }}
         />
       );
     }
@@ -926,6 +989,8 @@ const renderNode = (
 export interface TemplateReactRendererProps {
   ast: TemplateAst;
   evaluation: TemplateEvaluationResult;
+  /** Output of the async barcode prepass (server). Omit for placeholder rendering. */
+  barcodes?: Record<string, string>;
   /**
    * The recipient's locale. Wins over `metadata.locale` for numbers, dates and
    * currency so formatting never diverges from the language of the labels.
@@ -945,6 +1010,7 @@ export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({
   evaluation,
   locale: localeOverride,
   dateFormat,
+  barcodes,
 }) => {
   const invoiceRecord = isRecord(evaluation.bindings.invoice) ? evaluation.bindings.invoice : {};
   const invoiceRecordUntyped = invoiceRecord as Record<string, unknown>;
@@ -960,7 +1026,7 @@ export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({
         ast.layout,
         evaluation,
         {},
-        { ast, currencyCode, locale, dateFormat: dateFormat ?? SYSTEM_DATE_FORMAT },
+        { ast, currencyCode, locale, dateFormat: dateFormat ?? SYSTEM_DATE_FORMAT, barcodes },
         rootDocumentStyleOverride
       )}
     </div>
@@ -978,7 +1044,27 @@ export interface TemplateRenderOptions {
   /** The recipient country's date shape; the fixed system default when omitted. */
   dateFormat?: CountryDateFormat;
   t?: TemplateLabelTranslator;
+  /** Output of renderBarcodeSvgs (barcode/prepass.server.ts). */
+  barcodes?: Record<string, string>;
 }
+
+/** Resolve a value expression outside a render (used by the barcode prepass). */
+export const resolveTemplateExpressionValue = (
+  expression: TemplateValueExpression,
+  ast: TemplateAst,
+  evaluation: TemplateEvaluationResult,
+  options: { locale?: string; dateFormat?: CountryDateFormat } = {}
+): unknown => {
+  const invoiceRecord = isRecord(evaluation.bindings.invoice) ? (evaluation.bindings.invoice as Record<string, unknown>) : {};
+  const currencyCode = String(invoiceRecord.currencyCode ?? invoiceRecord.currency_code ?? ast.metadata?.currencyCode ?? 'USD');
+  const locale = String(options.locale ?? ast.metadata?.locale ?? 'en-US');
+  return resolveExpressionValue(expression, evaluation, {}, {
+    ast,
+    currencyCode,
+    locale,
+    dateFormat: options.dateFormat ?? SYSTEM_DATE_FORMAT,
+  });
+};
 
 export const renderEvaluatedTemplateAst = async (
   ast: TemplateAst,
@@ -996,6 +1082,7 @@ export const renderEvaluatedTemplateAst = async (
         evaluation={localizeTimePresentation(evaluation, options.t)}
         locale={options.locale}
         dateFormat={options.dateFormat}
+        barcodes={options.barcodes}
       />
     ),
     css: buildAstCss(normalizedAst),

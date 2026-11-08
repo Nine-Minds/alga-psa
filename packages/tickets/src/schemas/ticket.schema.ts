@@ -1,19 +1,20 @@
 import { z } from 'zod';
 import { TICKET_LIST_SORT_KEYS } from '../lib/ticketListSort';
+import { ticketWhereSchema } from '../lib/ticketWhere';
 
 export const ticketFormSchema = z.object({
   title: z.string(),
-  board_id: z.string().uuid(),
-  client_id: z.string().uuid().nullable(),
-  location_id: z.string().uuid().nullable().optional(),
-  billing_profile_id: z.string().uuid().nullable().optional(),
-  contact_name_id: z.string().uuid().nullable(),
-  status_id: z.string().uuid(),
-  assigned_to: z.string().uuid().nullable(),
-  priority_id: z.string().uuid().nullable(), // Required - used for both custom and ITIL priorities
+  board_id: z.string().guid(),
+  client_id: z.string().guid().nullable(),
+  location_id: z.string().guid().nullable().optional(),
+  billing_profile_id: z.string().guid().nullable().optional(),
+  contact_name_id: z.string().guid().nullable(),
+  status_id: z.string().guid(),
+  assigned_to: z.string().guid().nullable(),
+  priority_id: z.string().guid().nullable(), // Required - used for both custom and ITIL priorities
   description: z.string(),
-  category_id: z.string().uuid().nullable(),
-  subcategory_id: z.string().uuid().nullable(),
+  category_id: z.string().guid().nullable(),
+  subcategory_id: z.string().guid().nullable(),
   // ITIL-specific fields (for priority calculation)
   itil_impact: z.number().int().min(1).max(5).optional(),
   itil_urgency: z.number().int().min(1).max(5).optional(),
@@ -24,49 +25,49 @@ export const ticketFormSchema = z.object({
 export const createTicketFromAssetSchema = z.object({
   title: z.string(),
   description: z.string(),
-  priority_id: z.string().uuid(),
-  asset_id: z.string().uuid(),
-  client_id: z.string().uuid(),
+  priority_id: z.string().guid(),
+  asset_id: z.string().guid(),
+  client_id: z.string().guid(),
   /** FR-E8: the asset's assignee, or a shared workspace's single user. */
-  contact_name_id: z.string().uuid().nullable().optional(),
+  contact_name_id: z.string().guid().nullable().optional(),
   /** FR-F2: an explicit pick wins; omitted means "inherit from the asset". */
-  billing_profile_id: z.string().uuid().nullable().optional(),
+  billing_profile_id: z.string().guid().nullable().optional(),
 });
 
 export const ticketSchema = z.object({
-  tenant: z.string().uuid().optional(),
-  ticket_id: z.string().uuid(),
-  master_ticket_id: z.string().uuid().nullable().optional(),
+  tenant: z.string().guid().optional(),
+  ticket_id: z.string().guid(),
+  master_ticket_id: z.string().guid().nullable().optional(),
   ticket_number: z.string(),
   title: z.string(),
   description: z.string().nullable().optional(),
   url: z.string().nullable(),
-  board_id: z.string().uuid(),
-  client_id: z.string().uuid().nullable(),
-  location_id: z.string().uuid().nullable().optional(),
-  billing_profile_id: z.string().uuid().nullable().optional(),
-  contact_name_id: z.string().uuid().nullable(),
-  status_id: z.string().uuid(),
-  category_id: z.string().uuid().nullable(),
-  subcategory_id: z.string().uuid().nullable(),
-  entered_by: z.string().uuid(),
-  updated_by: z.string().uuid().nullable(),
-  closed_by: z.string().uuid().nullable(),
-  assigned_to: z.string().uuid().nullable(),
-  assigned_team_id: z.string().uuid().nullable().optional(),
+  board_id: z.string().guid(),
+  client_id: z.string().guid().nullable(),
+  location_id: z.string().guid().nullable().optional(),
+  billing_profile_id: z.string().guid().nullable().optional(),
+  contact_name_id: z.string().guid().nullable(),
+  status_id: z.string().guid(),
+  category_id: z.string().guid().nullable(),
+  subcategory_id: z.string().guid().nullable(),
+  entered_by: z.string().guid(),
+  updated_by: z.string().guid().nullable(),
+  closed_by: z.string().guid().nullable(),
+  assigned_to: z.string().guid().nullable(),
+  assigned_team_id: z.string().guid().nullable().optional(),
   escalated: z.boolean().nullable().optional(),
   escalation_level: z.number().int().min(1).max(3).nullable().optional(),
   escalated_at: z.string().datetime().nullable().optional(),
-  escalated_by: z.string().uuid().nullable().optional(),
+  escalated_by: z.string().guid().nullable().optional(),
   entered_at: z.string().nullable(),
   updated_at: z.string().nullable(),
   closed_at: z.string().nullable(),
   due_date: z.string().datetime().nullable().optional(),
   source: z.string().nullable().optional(),
   ticket_origin: z.string().nullable().optional(),
-  attributes: z.record(z.unknown()).nullable(),
+  attributes: z.record(z.string(), z.unknown()).nullable(),
   email_metadata: z.unknown().nullable().optional(),
-  priority_id: z.string().uuid().nullable(), // Used for both custom and ITIL priorities
+  priority_id: z.string().guid().nullable(), // Used for both custom and ITIL priorities
   // ITIL-specific fields (for priority calculation)
   itil_impact: z.number().int().min(1).max(5).nullable().optional(),
   itil_urgency: z.number().int().min(1).max(5).nullable().optional(),
@@ -74,9 +75,9 @@ export const ticketSchema = z.object({
   // Response state tracking
   response_state: z.enum(['awaiting_client', 'awaiting_internal']).nullable().optional(),
   // Provenance for a ticket created via "Duplicate". Create-only; no FK.
-  duplicated_from_ticket_id: z.string().uuid().nullable().optional(),
+  duplicated_from_ticket_id: z.string().guid().nullable().optional(),
   // Provenance for a ticket created from a ticket template. Create-only; no FK.
-  created_from_template_id: z.string().uuid().nullable().optional(),
+  created_from_template_id: z.string().guid().nullable().optional(),
 });
 
 export const ticketUpdateSchema = ticketSchema.partial().omit({
@@ -93,45 +94,45 @@ export const ticketUpdateSchema = ticketSchema.partial().omit({
 });
 
 export const ticketAttributesQuerySchema = z.object({
-  ticketId: z.string().uuid(),
+  ticketId: z.string().guid(),
 });
 
 // Create a base schema for ITicket first
 const baseTicketSchema = z.object({
-  tenant: z.string().uuid().optional(),
-  ticket_id: z.string().uuid(),
-  master_ticket_id: z.string().uuid().nullable().optional(),
+  tenant: z.string().guid().optional(),
+  ticket_id: z.string().guid(),
+  master_ticket_id: z.string().guid().nullable().optional(),
   ticket_number: z.string(),
   title: z.string(),
   url: z.string().nullable(),
-  client_id: z.string().uuid().nullable(),
-  location_id: z.string().uuid().nullable().optional(),
-  billing_profile_id: z.string().uuid().nullable().optional(),
-  contact_name_id: z.string().uuid().nullable(),
-  closed_by: z.string().uuid().nullable(),
-  assigned_to: z.string().uuid().nullable(),
-  assigned_team_id: z.string().uuid().nullable().optional(),
+  client_id: z.string().guid().nullable(),
+  location_id: z.string().guid().nullable().optional(),
+  billing_profile_id: z.string().guid().nullable().optional(),
+  contact_name_id: z.string().guid().nullable(),
+  closed_by: z.string().guid().nullable(),
+  assigned_to: z.string().guid().nullable(),
+  assigned_team_id: z.string().guid().nullable().optional(),
   escalated: z.boolean().nullable().optional(),
   escalation_level: z.number().int().min(1).max(3).nullable().optional(),
   escalated_at: z.string().datetime().nullable().optional(),
-  escalated_by: z.string().uuid().nullable().optional(),
+  escalated_by: z.string().guid().nullable().optional(),
   entered_at: z.string().nullable(),
   updated_at: z.string().nullable(),
   closed_at: z.string().nullable(),
   due_date: z.string().datetime().nullable().optional(),
   ticket_origin: z.string().nullable().optional(),
-  attributes: z.record(z.unknown()).nullable(),
-  updated_by: z.string().uuid().nullable(),
+  attributes: z.record(z.string(), z.unknown()).nullable(),
+  updated_by: z.string().guid().nullable(),
 });
 
 // Then extend it for ITicketListItem
 export const ticketListItemSchema = baseTicketSchema.extend({
-  status_id: z.string().uuid().nullable(),
-  priority_id: z.string().uuid().nullable(),
-  board_id: z.string().uuid().nullable(),
-  category_id: z.string().uuid().nullable(),
-  subcategory_id: z.string().uuid().nullable(),
-  entered_by: z.string().uuid().nullable(),
+  status_id: z.string().guid().nullable(),
+  priority_id: z.string().guid().nullable(),
+  board_id: z.string().guid().nullable(),
+  category_id: z.string().guid().nullable(),
+  subcategory_id: z.string().guid().nullable(),
+  entered_by: z.string().guid().nullable(),
   status_name: z.string(),
   priority_name: z.string(),
   priority_color: z.string().optional(),
@@ -147,7 +148,7 @@ export const ticketListItemSchema = baseTicketSchema.extend({
   latest_activity_at: z.string().nullable().optional(),
   latest_activity_actor: z
     .object({
-      kind: z.enum(['user', 'client_user', 'contact', 'email_sender', 'system']),
+      kind: z.enum(['user', 'client_user', 'service', 'contact', 'email_sender', 'system']),
       name: z.string().nullable(),
     })
     .nullable()
@@ -159,22 +160,22 @@ export const ticketListItemSchema = baseTicketSchema.extend({
 });
 
 export const ticketListFiltersSchema = z.object({
-  boardId: z.string().uuid().nullish(),
-  boardIds: z.array(z.union([z.string().uuid(), z.literal('no-board')])).optional(),
-  excludeBoardIds: z.array(z.union([z.string().uuid(), z.literal('no-board')])).optional(),
+  boardId: z.string().guid().nullish(),
+  boardIds: z.array(z.union([z.string().guid(), z.literal('no-board')])).optional(),
+  excludeBoardIds: z.array(z.union([z.string().guid(), z.literal('no-board')])).optional(),
   statusId: z.string().optional(),
   priorityId: z.string().optional(),
-  categoryId: z.union([z.string().uuid(), z.literal('no-category'), z.literal('all')]).nullish(),
-  categoryIds: z.array(z.union([z.string().uuid(), z.literal('no-category')])).optional(),
-  excludeCategoryIds: z.array(z.union([z.string().uuid(), z.literal('no-category')])).optional(),
-  clientId: z.string().uuid().nullish(),
-  contactId: z.string().uuid().nullish(),
+  categoryId: z.union([z.string().guid(), z.literal('no-category'), z.literal('all')]).nullish(),
+  categoryIds: z.array(z.union([z.string().guid(), z.literal('no-category')])).optional(),
+  excludeCategoryIds: z.array(z.union([z.string().guid(), z.literal('no-category')])).optional(),
+  clientId: z.string().guid().nullish(),
+  contactId: z.string().guid().nullish(),
   searchQuery: z.string().optional(),
   boardFilterState: z.enum(['active', 'inactive', 'all']),
   showOpenOnly: z.boolean().optional(),
   tags: z.array(z.string()).optional(),
-  assignedToIds: z.array(z.string().uuid()).optional(),
-  assignedTeamIds: z.array(z.string().uuid()).optional(),
+  assignedToIds: z.array(z.string().guid()).optional(),
+  assignedTeamIds: z.array(z.string().guid()).optional(),
   includeUnassigned: z.boolean().optional(),
   assignedToMe: z.boolean().optional(),
   // Due date filters
@@ -188,4 +189,5 @@ export const ticketListFiltersSchema = z.object({
   sortBy: z.enum(TICKET_LIST_SORT_KEYS).optional(),
   sortDirection: z.enum(['asc', 'desc']).optional(),
   bundleView: z.enum(['bundled', 'individual']).optional(),
+  where: ticketWhereSchema.optional(),
 });

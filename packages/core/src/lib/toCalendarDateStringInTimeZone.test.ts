@@ -11,6 +11,7 @@ import { toCalendarDateStringInTimeZone } from './dateTimeUtils';
 // test pins the process TZ to a zone that disagrees with the asserted target
 // zone and asserts the exact same result — proving host-TZ independence.
 
+
 const originalTz = process.env.TZ;
 afterEach(() => {
   if (originalTz === undefined) {
@@ -20,10 +21,12 @@ afterEach(() => {
   }
 });
 
-function assertTz(zone: string, expectedOffsetMinutes: number, at: string) {
+function assertTz(zone: string, expectedOffsetMinutes: number, at?: string | Date) {
   process.env.TZ = zone;
   // DST offsets belong to the fixture instant, not the date the suite runs.
-  expect(new Date(at).getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
+  const probe = at instanceof Date ? at : new Date(at ?? '2026-08-31T12:00:00.000Z');
+  expect(probe.getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
+
 }
 
 describe('toCalendarDateStringInTimeZone', () => {

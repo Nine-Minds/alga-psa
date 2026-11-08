@@ -1,6 +1,7 @@
 // @ts-nocheck
 'use server';
 
+import { isClientUserType } from '@alga-psa/types';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
@@ -10,7 +11,7 @@ import {
   IInvoiceCharge
 } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
-import { toPlainDate, displayAddressField, displayCountry } from '@alga-psa/core';
+import { toPlainDate, formatLocationAddress } from '@alga-psa/core';
 import Invoice from '@alga-psa/billing/models/invoice';
 import { getClientContractPurchaseOrderContext, getPurchaseOrderConsumedCents } from '@alga-psa/billing/services/purchaseOrderService';
 import { withAuth } from '@alga-psa/auth';
@@ -64,7 +65,7 @@ async function assertClientPortalInvoiceAccess(
   user: InvoiceQueryUser,
   invoiceId: string
 ): Promise<ActionPermissionError | null> {
-  if (user.user_type !== 'client') {
+  if (!isClientUserType(user.user_type)) {
     return null;
   }
   const portalClientId = await getClientPortalUserClientId(knex, tenant, user);
@@ -557,20 +558,12 @@ export const fetchInvoicesPaginated = withAuth(async (
         const clientProperties = invoice.properties as { logo?: string } || {};
 
         // Format location address
-        const addressParts: string[] = [];
-        const addressLine1 = displayAddressField(invoice.address_line1);
-        if (addressLine1) addressParts.push(addressLine1);
-        if (invoice.address_line2) addressParts.push(invoice.address_line2);
-        const cityStateZip = [displayAddressField(invoice.city), invoice.state_province, invoice.postal_code]
-          .filter(Boolean).join(', ');
-        if (cityStateZip) addressParts.push(cityStateZip);
-        const countryName = displayCountry(invoice.country_name);
-        if (countryName) addressParts.push(countryName);
+        const address = formatLocationAddress(invoice);
 
         return getBasicInvoiceViewModel(invoice, {
           client_name: invoice.client_name,
           logo: clientProperties.logo || '',
-          address: addressParts.join(', ') || ''
+          address
         });
       }));
 
@@ -703,20 +696,12 @@ export const fetchInvoicesByClient = withAuth(async (
       const clientProperties = invoice.properties as { logo?: string } || {};
       
       // Format location address
-      const addressParts: string[] = [];
-      const addressLine1 = displayAddressField(invoice.address_line1);
-      if (addressLine1) addressParts.push(addressLine1);
-      if (invoice.address_line2) addressParts.push(invoice.address_line2);
-      const cityStateZip = [displayAddressField(invoice.city), invoice.state_province, invoice.postal_code]
-        .filter(Boolean).join(', ');
-      if (cityStateZip) addressParts.push(cityStateZip);
-      const countryName = displayCountry(invoice.country_name);
-      if (countryName) addressParts.push(countryName);
-      
+      const address = formatLocationAddress(invoice);
+
       return getBasicInvoiceViewModel(invoice, {
         client_name: invoice.client_name,
         logo: clientProperties.logo || '',
-        address: addressParts.join(', ') || ''
+        address
       });
     }));
   } catch (error) {
