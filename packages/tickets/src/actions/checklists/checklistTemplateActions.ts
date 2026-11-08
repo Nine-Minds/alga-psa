@@ -2,6 +2,7 @@
 
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
+import { isClientUserType } from '@alga-psa/types';
 import { Knex } from 'knex';
 import { z } from 'zod';
 import { predicateGroupSchema } from '@alga-psa/predicates';
@@ -145,12 +146,23 @@ export interface GetChecklistTemplatesOptions {
 async function loadChecklistTemplates(
   db: Knex | Knex.Transaction,
   tenant: string,
-  options: { includeInactive?: boolean; clientId?: string; ticketClientId?: string | null } = {}
+  options: {
+    includeInactive?: boolean;
+    clientId?: string;
+    ticketClientId?: string | null;
+    visibleClientId?: string | null;
+  } = {}
 ): Promise<IChecklistTemplate[]> {
   const templates = await tenantScopedTable(db, 'checklist_templates', tenant)
       .modify((qb) => {
         if (!options.includeInactive) qb.where('is_active', true);
         // LEVERAGE: pattern checklist-template-client-scope — full lists and editor options share this scope predicate.
+        if (options.visibleClientId !== undefined) {
+          qb.where((scope) => {
+            scope.whereNull('client_id');
+            if (options.visibleClientId) scope.orWhere('client_id', options.visibleClientId);
+          });
+        }
         if (options.ticketClientId !== undefined) {
           qb.where((scope) => {
             scope.whereNull('client_id');
@@ -207,7 +219,10 @@ export const getChecklistTemplatesForTicket = withAuth(
         ticketId,
         action: 'read',
       });
-      return loadChecklistTemplates(trx, tenant, { ticketClientId: ticket.client_id });
+      return loadChecklistTemplates(trx, tenant, {
+        ticketClientId: ticket.client_id,
+        visibleClientId: isClientUserType(user.user_type) ? user.clientId ?? null : undefined,
+      });
     });
   }
 );

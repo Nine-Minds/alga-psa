@@ -109,6 +109,24 @@ describe('board mutation guard', () => {
     publishEventMock.mockResolvedValue(undefined);
   });
 
+  it.each(['create', 'update'] as const)(
+    '%s returns permission denial before validating malformed input',
+    async (action) => {
+      const { createBoard, updateBoard } = await import('./boardActions');
+      const malformedInput = { board_name: 42 };
+      const result = action === 'create'
+        ? await createBoard(malformedInput as any)
+        : await updateBoard('board-a', malformedInput as any);
+
+      expect(result).toMatchObject(denied);
+      expect(result).not.toHaveProperty('actionError');
+      expect(refusedBy()).toEqual([PERMISSION]);
+      expect(withTransactionMock).not.toHaveBeenCalled();
+      expect(reads).toHaveLength(0);
+      expect(writes).toHaveLength(0);
+      expect(publishEventMock).not.toHaveBeenCalled();
+    }
+  );
   it.each([
     ['create', 'internal', PERMISSION],
     ['create', 'client', PRINCIPAL],
