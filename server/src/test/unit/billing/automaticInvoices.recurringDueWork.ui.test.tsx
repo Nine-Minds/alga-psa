@@ -1357,7 +1357,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
         expect.objectContaining({
           selectorInputs: [clientRow.selectorInput],
         }),
-      ]);
+      ], { consolidateFixedBundles: false });
       expect(screen.getByText('Client Details')).toBeInTheDocument();
     });
 
@@ -1411,7 +1411,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
         expect.objectContaining({
           selectorInputs: [clientRow.selectorInput],
         }),
-      ]);
+      ], { consolidateFixedBundles: false });
       expect(screen.getByText('Client Details')).toBeInTheDocument();
     });
 
@@ -1492,7 +1492,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
         expect.objectContaining({
           selectorInputs: [contractRow.selectorInput, groupedMember.selectorInput],
         }),
-      ]);
+      ], { consolidateFixedBundles: false });
     });
   });
 
@@ -1529,7 +1529,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
         expect.objectContaining({
           selectorInputs: [contractRow.selectorInput],
         }),
-      ]);
+      ], { consolidateFixedBundles: false });
       expect(screen.getByText('Client Details')).toBeInTheDocument();
     });
   });
@@ -1697,7 +1697,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
         expect.objectContaining({
           selectorInputs: [clientRow.selectorInput],
         }),
-      ]);
+      ], { consolidateFixedBundles: false });
       expect(screen.getByText('Client Details')).toBeInTheDocument();
     });
   });
@@ -1740,7 +1740,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
         expect.objectContaining({
           selectorInputs: [contractRow.selectorInput],
         }),
-      ]);
+      ], { consolidateFixedBundles: false });
       expect(screen.getByText('Client Details')).toBeInTheDocument();
     });
   });

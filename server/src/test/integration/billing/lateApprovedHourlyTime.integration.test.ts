@@ -14,6 +14,7 @@ import {
   ensureDefaultBillingSettings,
 } from '../../../../test-utils/billingTestHelpers';
 import { seedBillingCycle } from '../../../../test-utils/billingProfileTestHelpers';
+import { generateInvoiceForCycle } from '../../../../test-utils/billingTestHelpers';
 
 // Approved hourly time dated inside a service period that an earlier invoice
 // already closed (approved late, or logged after the run) must neither vanish
@@ -24,7 +25,6 @@ let db: Knex;
 let tenantId: string;
 let currentUser: { user_id: string; user_type: string };
 let createClientContractFromWizard: typeof import('@alga-psa/billing/actions/contractWizardActions').createClientContractFromWizard;
-let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoice;
 let getLateApprovedHourlyTime: typeof import('@alga-psa/billing/actions/billingAndTax').getLateApprovedHourlyTime;
 let syncRecurringServicePeriodsForContractLine: typeof import('@alga-psa/billing/actions/recurringServicePeriodSync').syncRecurringServicePeriodsForContractLine;
 
@@ -315,7 +315,6 @@ describe('late approved hourly time in an already-invoiced service period', () =
     currentUser = { user_id: uuidv4(), user_type: 'internal' };
     setupCommonMocks({ tenantId, userId: currentUser.user_id, permissionCheck: () => true });
     ({ createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions'));
-    ({ generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
     ({ getLateApprovedHourlyTime } = await import('@alga-psa/billing/actions/billingAndTax'));
     ({ syncRecurringServicePeriodsForContractLine } = await import('@alga-psa/billing/actions/recurringServicePeriodSync'));
   }, HOOK_TIMEOUT);
@@ -341,7 +340,7 @@ describe('late approved hourly time in an already-invoiced service period', () =
   async function issueDecember(fixture: Fixture, finalize: boolean) {
     const { finalizeInvoice } = await import('@alga-psa/billing/actions/invoiceModification');
     await logApprovedHours(fixture, '2024-12-10T10:00:00Z', 120);
-    const january = (await generateInvoice(fixture.cycleIds.january)) as any;
+    const january = (await generateInvoiceForCycle(fixture.cycleIds.january)) as any;
     expect(january?.actionError).toBeUndefined();
     expect(Number(january.subtotal)).toBe(2 * HOURLY_RATE_CENTS);
     if (finalize) {
@@ -365,7 +364,7 @@ describe('late approved hourly time in an already-invoiced service period', () =
       serviceName: 'Late Remote Support',
     });
 
-    const february = (await generateInvoice(fixture.cycleIds.february)) as any;
+    const february = (await generateInvoiceForCycle(fixture.cycleIds.february)) as any;
     expect(february?.actionError).toBeUndefined();
     const snapshot = await invoiceSnapshot(february.invoice_id);
     expect(snapshot.links.sort()).toEqual([lateEntry.entry_id, current.entry_id].sort());
@@ -390,7 +389,7 @@ describe('late approved hourly time in an already-invoiced service period', () =
     const entry = await logApprovedHours(fixture, '2024-12-23T10:00:00Z', 60);
 
     expect(await late(fixture.clientId)).toEqual([]);
-    const february = (await generateInvoice(fixture.cycleIds.february)) as any;
+    const february = (await generateInvoiceForCycle(fixture.cycleIds.february)) as any;
     expect(february?.actionError).toBeUndefined();
     const snapshot = await invoiceSnapshot(february.invoice_id);
     expect(snapshot.links).toEqual([entry.entry_id]);
@@ -407,7 +406,7 @@ describe('late approved hourly time in an already-invoiced service period', () =
     const entry = await logApprovedHours(fixture, '2024-12-23T10:00:00Z', 90);
 
     expect(await late(fixture.clientId)).toEqual([]);
-    const february = (await generateInvoice(fixture.cycleIds.february)) as any;
+    const february = (await generateInvoiceForCycle(fixture.cycleIds.february)) as any;
     expect(february?.actionError).toBeUndefined();
     const snapshot = await invoiceSnapshot(february.invoice_id);
     expect(snapshot.links).toEqual([entry.entry_id]);
@@ -434,7 +433,7 @@ describe('late approved hourly time in an already-invoiced service period', () =
     });
     expect(notices.find((n) => n.entryId === inside.entry_id)).toMatchObject({ disposition: 'next_invoice' });
 
-    const february = (await generateInvoice(fixture.cycleIds.february)) as any;
+    const february = (await generateInvoiceForCycle(fixture.cycleIds.february)) as any;
     const snapshot = await invoiceSnapshot(february.invoice_id);
     expect(snapshot.links).toEqual([inside.entry_id]);
     expect(snapshot.subtotal).toBe(HOURLY_RATE_CENTS);
@@ -446,12 +445,12 @@ describe('late approved hourly time in an already-invoiced service period', () =
     const fixture = await seedHourlyClient();
     await issueDecember(fixture, true);
     const lateEntry = await logApprovedHours(fixture, '2024-12-20T10:00:00Z', 60);
-    const february = (await generateInvoice(fixture.cycleIds.february)) as any;
+    const february = (await generateInvoiceForCycle(fixture.cycleIds.february)) as any;
     const after = await invoiceSnapshot(february.invoice_id);
     expect(after.links).toEqual([lateEntry.entry_id]);
     expect(after.subtotal).toBe(HOURLY_RATE_CENTS);
 
-    await generateInvoice(fixture.cycleIds.february).catch(() => undefined);
+    await generateInvoiceForCycle(fixture.cycleIds.february).catch(() => undefined);
     expect(await invoiceSnapshot(february.invoice_id)).toEqual(after);
     const taken = await tenantTable(db, tenantId, 'invoice_time_entries').where({ entry_id: lateEntry.entry_id }).select('invoice_id');
     expect(taken).toHaveLength(1);

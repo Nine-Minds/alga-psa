@@ -15,6 +15,8 @@ import {
 } from '../../utils/translatableText';
 import { StandardLabelControl } from './StandardLabelControl';
 import { getStandardDocumentLabel } from '../../../../lib/invoice-template-ast/standardDocumentLabels';
+import { resolveDocumentCanonicalBindings } from '../../fields/documentBindingCatalog';
+import { resolveDesignerDocumentKind } from '../../utils/documentKind';
 
 type Props = {
   node: DesignerNode;
@@ -95,9 +97,28 @@ const setInlineColor = (
 // Rows a totals block can add; value paths are the render model's totals. Labels
 // are the standard document labels of the same name (namespace `documents`), so a
 // new row translates for each recipient like the rows a preset ships with.
-const TOTALS_ROW_PRESETS: Array<{ id: string; label: TranslatableRef; valuePath: string }> = (
-  ['subtotal', 'tax', 'total'] as const
-).map((id) => ({ id, label: getStandardDocumentLabel(`labels.${id}`)!, valuePath: id }));
+const TOTALS_ROW_PRESET_DEFINITIONS: Array<{
+  id: string;
+  label: TranslatableRef;
+  hideWhenZero?: boolean;
+}> = [
+  ...(['subtotal', 'tax', 'total'] as const).map((id) => ({
+    id,
+    label: getStandardDocumentLabel(`labels.${id}`)!,
+  })),
+  // Opt-in discount rows (alga0002295). `subtotal` stays net of discounts, so the layout
+  // `grossSubtotal / discountTotal / subtotal` adds up without double-counting.
+  { id: 'grossSubtotal', label: getStandardDocumentLabel('labels.subtotalBeforeDiscounts')! },
+  { id: 'discountTotal', label: getStandardDocumentLabel('labels.discounts')!, hideWhenZero: true },
+];
+
+const getTotalsRowPresets = (documentKind: ReturnType<typeof resolveDesignerDocumentKind>) => {
+  const valueBindings = resolveDocumentCanonicalBindings(documentKind).values ?? {};
+  return TOTALS_ROW_PRESET_DEFINITIONS.flatMap((preset) => {
+    const binding = valueBindings[preset.id];
+    return binding ? [{ ...preset, valuePath: binding.path }] : [];
+  });
+};
 
 const HEX_COLOR_RE = /^#(?:[0-9a-fA-F]{6})$/;
 
@@ -182,6 +203,9 @@ export const TotalsRowsEditorWidget: React.FC<Props> = ({ node }) => {
   const { t } = useTranslation('msp/invoicing');
   const setNodeProp = useInvoiceDesignerStore((state) => state.setNodeProp);
   const currentNode = useInvoiceDesignerStore((state) => state.nodesById[node.id] as DesignerNode | undefined);
+  const nodes = useInvoiceDesignerStore((state) => state.nodes);
+  const documentKind = useMemo(() => resolveDesignerDocumentKind(nodes), [nodes]);
+  const presets = useMemo(() => getTotalsRowPresets(documentKind), [documentKind]);
 
   const metadata = useMemo(() => getNodeMetadata(currentNode ?? node), [currentNode, node]);
   const rows = useMemo(() => readRows(metadata), [metadata]);
@@ -236,7 +260,7 @@ export const TotalsRowsEditorWidget: React.FC<Props> = ({ node }) => {
 
   const addRow = useCallback(
     (presetId: string) => {
-      const preset = TOTALS_ROW_PRESETS.find((candidate) => candidate.id === presetId);
+      const preset = presets.find((candidate) => candidate.id === presetId);
       if (!preset) return;
       const takenIds = new Set(rows.map((row) => String(row.id)));
       let id = preset.id;
@@ -254,12 +278,13 @@ export const TotalsRowsEditorWidget: React.FC<Props> = ({ node }) => {
             format: 'currency',
             type: 'currency',
             emphasize: preset.id === 'total',
+            ...(preset.hideWhenZero ? { hideWhenZero: true } : {}),
           },
         ],
         true
       );
     },
-    [rows, t, updateRows]
+    [presets, rows, updateRows]
   );
 
   const clearRowColors = useCallback(
@@ -284,7 +309,7 @@ export const TotalsRowsEditorWidget: React.FC<Props> = ({ node }) => {
       <span className="text-[11px] text-slate-400 dark:text-slate-500">
         {t('invoiceDesigner.totalsRowsEditor.addRow', { defaultValue: 'Add row:' })}
       </span>
-      {TOTALS_ROW_PRESETS.map((preset) => (
+      {presets.map((preset) => (
         <button
           key={preset.id}
           type="button"
@@ -400,6 +425,15 @@ export const TotalsRowsEditorWidget: React.FC<Props> = ({ node }) => {
                 onChange={(event) => updateRow(rowId, { emphasize: event.target.checked }, true)}
               />
               {t('invoiceDesigner.totalsRowsEditor.emphasize', { defaultValue: 'Emphasize (grand total style)' })}
+            </label>
+            <label className="flex items-center gap-2 text-[11px] text-slate-600 dark:text-slate-400">
+              <input
+                id={`${domBaseId}-hide-when-zero`}
+                type="checkbox"
+                checked={row.hideWhenZero === true}
+                onChange={(event) => updateRow(rowId, { hideWhenZero: event.target.checked ? true : undefined }, true)}
+              />
+              {t('invoiceDesigner.totalsRowsEditor.hideWhenZero', { defaultValue: 'Hide when zero' })}
             </label>
 
             <RowColorControl

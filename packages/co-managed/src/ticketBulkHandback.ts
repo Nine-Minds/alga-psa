@@ -5,6 +5,10 @@ import { CoManagedSharedWorkError, snapshotCoManagedSessionActor, assertCoManage
 import { withCoManagedSharedWork, type CoManagedSharedResource } from './sharedWork';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 
+/** Fields whose redaction makes a hand back unwritable: the work row, its revision and the shared journal. The queue's `canHandBack` and the command refuse on the same list. */
+export const CO_MANAGED_HANDBACK_FIELD_ALIASES: readonly string[] = ['work', 'co_management_ticket_work', 'responsibility', 'work_revision', 'revision', 'notes', 'comments', 'handoffs', 'co_management_ticket_handoffs', 'co_management_ticket_work.revision', 'co_management_ticket_work.responsibility']
+  .flatMap(name => [name, `values.${name}`, `tickets.${name}`]);
+
 export interface CoManagedBulkHandbackRequest {
   note: string;
   items: Array<{ resource: CoManagedSharedResource; operationId: string; expectedRevision: number }>;
@@ -31,7 +35,7 @@ export async function bulkHandBackCoManagedTickets(db: Knex, inputActor: CoManag
     try {
       const target: CoManagedSharedResource = { kind: 'ticket', tenant: resource.tenant.toLowerCase(), relationshipId: resource.relationshipId.toLowerCase(), id: resource.id.toLowerCase() };
       const receipt = await withCoManagedSharedWork(db, actor, target, 'update', write => withCoManagedSharedWork(write.trx, actor, target, 'read', async read => {
-        if (isCoManagedReadFieldHidden([...write.redactedFields, ...read.redactedFields], ['work', 'co_management_ticket_work', 'responsibility', 'work_revision', 'revision', 'notes', 'comments', 'handoffs', 'co_management_ticket_handoffs', 'co_management_ticket_work.revision', 'co_management_ticket_work.responsibility'].flatMap(name => [name, `values.${name}`, `tickets.${name}`]))) throw new CoManagedSharedWorkError();
+        if (isCoManagedReadFieldHidden([...write.redactedFields, ...read.redactedFields], CO_MANAGED_HANDBACK_FIELD_ALIASES)) throw new CoManagedSharedWorkError();
         const receipt = await handBackCoManagedTicket(write.trx, actor, target, { operationId: item.operationId, expectedRevision: item.expectedRevision, note: input.note });
         await assertCoManagedSessionUnexpired(write.trx, actor);
         await assertCoManagedOperationalWrite(write.trx, target.tenant);
