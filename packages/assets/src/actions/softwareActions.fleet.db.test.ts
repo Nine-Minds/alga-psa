@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import knexLib, { type Knex } from 'knex';
+import type { Knex } from 'knex';
 import { randomUUID } from 'node:crypto';
-import { wireLocalTestDbEnv } from '../../../../server/test-utils/dbConfig';
+import { createWorkspaceTestDbConnection } from '../../../db/test-utils/workspaceConnection';
 
 const holder: {
   knex: Knex;
@@ -49,29 +49,6 @@ vi.mock('../lib/assetReadAuthorization', async (importOriginal) => {
 
 import { searchSoftwareFleetWide } from './softwareActions';
 
-function testConnection(): Knex.PgConnectionConfig {
-  wireLocalTestDbEnv();
-  const database = process.env.TEST_DB_NAME || 'test_database';
-  const user = process.env.DB_USER_ADMIN;
-  const password = process.env.DB_PASSWORD_ADMIN;
-  if (
-    process.env.REQUIRE_DB !== '1' ||
-    !database ||
-    !user ||
-    !password ||
-    !/(^|_)(test|tests|regression)(_|$)/i.test(database)
-  ) {
-    throw new Error('Software fleet DB tests require REQUIRE_DB=1, a disposable TEST_DB_NAME and admin credentials');
-  }
-  return {
-    host: process.env.DB_HOST || '127.0.0.1',
-    port: Number(process.env.DB_PORT || 5432),
-    user,
-    password,
-    database,
-  };
-}
-
 let db: Knex;
 let trx: Knex.Transaction;
 let tenant: string;
@@ -79,7 +56,7 @@ let clientA: string;
 let clientB: string;
 
 beforeAll(async () => {
-  db = knexLib({ client: 'pg', connection: testConnection(), pool: { min: 1, max: 2 } });
+  db = createWorkspaceTestDbConnection();
 });
 
 beforeEach(async () => {
