@@ -248,6 +248,30 @@ describe('co-managed workspace drawer ownership', () => {
     expect(screen.getAllByRole('button', { name: 'Close drawer' })).toHaveLength(1);
   });
 
+  it('can close a shell-owned drawer after entering a workspace scope', async () => {
+    const view = render(<CoManagedCustomerShell><DetailsRoute /></CoManagedCustomerShell>);
+    fireEvent.click(await screen.findByRole('button', { name: 'Open shell route drawer' }));
+    expect(await screen.findByRole('heading', { name: 'Shell route details' })).toBeInTheDocument();
+
+    view.rerender(<CoManagedCustomerShell><WorkspaceProviders><div>Workspace route</div></WorkspaceProviders></CoManagedCustomerShell>);
+    fireEvent.click(screen.getByRole('button', { name: 'Close drawer' }));
+
+    expect(screen.queryByRole('heading', { name: 'Shell route details' })).not.toBeInTheDocument();
+  });
+
+  it('transfers shell drawer ownership to a workspace without rendering two drawers', async () => {
+    const view = render(<CoManagedCustomerShell><DetailsRoute /></CoManagedCustomerShell>);
+    fireEvent.click(await screen.findByRole('button', { name: 'Open shell route drawer' }));
+    expect(await screen.findByRole('heading', { name: 'Shell route details' })).toBeInTheDocument();
+
+    view.rerender(<CoManagedCustomerShell><WorkspaceProviders><Feed /></WorkspaceProviders></CoManagedCustomerShell>);
+    fireEvent.click(await screen.findByRole('button', { name: 'Open interaction DOS-SMOKE-0248-003', hidden: true }));
+
+    expect(await screen.findByRole('heading', { name: 'Interaction details' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Shell route details' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Close drawer' })).toHaveLength(1);
+  });
+
   it('keeps ordinary PSA workspace drawer details under workspace providers', async () => {
     render(<DrawerProvider><WorkspaceProviders><Feed /></WorkspaceProviders></DrawerProvider>);
     fireEvent.click(await screen.findByRole('button', { name: 'Open interaction DOS-SMOKE-0248-003' }));

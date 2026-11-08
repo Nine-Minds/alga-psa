@@ -2,7 +2,7 @@
 
 import Drawer from '../components/Drawer';
 import { guardActiveDismiss } from '../components/DismissGuard';
-import React, { createContext, useContext, useEffect, useRef, useState, ReactNode, useCallback, useMemo, useReducer } from 'react';
+import React, { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, ReactNode, useCallback, useReducer } from 'react';
 import type { Activity, ActivityType } from '@alga-psa/types';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Button } from '../components/Button';
@@ -73,25 +73,11 @@ interface DrawerContextType {
   hasOutlet?: () => boolean;
   /** Called by DrawerOutlet on mount; returns the unregister function. */
   registerOutlet?: () => () => void;
-  /** Routes drawer commands from an ancestor provider into the active child scope. */
-  registerDrawerDelegate?: (delegate: DrawerDispatchTarget) => () => void;
   canGoBack: boolean;
   canGoForward: boolean;
   currentEntry: DrawerHistoryEntry | null;
   history: DrawerHistoryEntry[];
 }
-
-type DrawerDispatchTarget = Pick<DrawerContextType,
-  | 'openDrawer'
-  | 'replaceDrawer'
-  | 'closeDrawer'
-  | 'goBack'
-  | 'openListDrawer'
-  | 'openDetailDrawer'
-  | 'openFormDrawer'
-  | 'goForward'
-  | 'hasOutlet'
->;
 
 // Define the drawer actions
 type DrawerAction =
@@ -103,6 +89,9 @@ type DrawerAction =
   | { type: 'CLOSE_DRAWER' }
   | { type: 'GO_BACK' }
   | { type: 'GO_FORWARD' };
+
+type DrawerHistoryAction = Extract<DrawerAction, { type: 'CLOSE_DRAWER' | 'GO_BACK' | 'GO_FORWARD' }>;
+type DrawerOpenAction = Exclude<DrawerAction, DrawerHistoryAction>;
 
 // Define the drawer state
 interface DrawerState {
@@ -267,194 +256,177 @@ function drawerReducer(state: DrawerState, action: DrawerAction): DrawerState {
   }
 }
 
+// Provider scopes retain the contexts in which their content may render. They
+// share one history; changing owners starts a new history instead of replaying
+// entries beneath a different set of feature providers.
+interface DrawerScope {
+  parent: DrawerScope | null;
+  children: Set<DrawerScope>;
+  outlets: number;
+  mounted: boolean;
+}
+
+interface OwnedDrawerState {
+  owner: DrawerScope | null;
+  drawer: DrawerState;
+}
+
+type OwnedDrawerAction =
+  | { type: 'OPEN'; action: DrawerOpenAction; owner: DrawerScope }
+  | { type: 'HISTORY'; action: DrawerHistoryAction; scope?: DrawerScope }
+  | { type: 'REMOVE_SCOPE'; scope: DrawerScope };
+
+const initialOwnedState: OwnedDrawerState = { owner: null, drawer: initialState };
+
+function isWithinScope(owner: DrawerScope | null, scope: DrawerScope): boolean {
+  for (let current = owner; current; current = current.parent) {
+    if (current === scope) return true;
+  }
+  return false;
+}
+
+function ownedDrawerReducer(state: OwnedDrawerState, event: OwnedDrawerAction): OwnedDrawerState {
+  if (event.type === 'REMOVE_SCOPE') {
+    return isWithinScope(state.owner, event.scope) ? initialOwnedState : state;
+  }
+  if (event.type === 'HISTORY' && event.scope && !isWithinScope(state.owner, event.scope)) return state;
+  const owner = event.type === 'OPEN' ? event.owner : state.owner;
+  const base = owner === state.owner ? state.drawer : initialState;
+  const drawer = drawerReducer(base, event.action);
+  return { owner: drawer.isOpen ? owner : null, drawer };
+}
+
+// Prefer the most recently mounted descendant with an outlet. Live membership
+// avoids restoring a stale delegate when overlapping routes leave out of order.
+function findOutletScope(scope: DrawerScope): DrawerScope | null {
+  if (!scope.mounted) return null;
+  for (const child of Array.from(scope.children).reverse()) {
+    const candidate = findOutletScope(child);
+    if (candidate) return candidate;
+  }
+  return scope.outlets > 0 ? scope : null;
+}
+
+interface DrawerStore {
+  state: OwnedDrawerState;
+  dispatch: React.Dispatch<OwnedDrawerAction>;
+  closeDrawer: (scope?: DrawerScope) => void;
+  goBack: (scope?: DrawerScope) => void;
+  goForward: (scope?: DrawerScope) => void;
+}
+
+const DrawerStoreContext = createContext<DrawerStore | null>(null);
+const DrawerScopeContext = createContext<DrawerScope | null>(null);
 const DrawerContext = createContext<DrawerContextType | undefined>(undefined);
 
-export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const parentDrawer = useContext(DrawerContext);
-  const [state, dispatch] = useReducer(drawerReducer, initialState);
-  const outletCountRef = useRef(0);
-  const drawerDelegateRef = useRef<DrawerDispatchTarget | null>(null);
-  const registerDrawerDelegate = useCallback((delegate: DrawerDispatchTarget) => {
-    const previous = drawerDelegateRef.current;
-    drawerDelegateRef.current = delegate;
-    return () => {
-      if (drawerDelegateRef.current === delegate) {
-        drawerDelegateRef.current = previous;
-      }
-    };
-  }, []);
-  const registerOutlet = useCallback(() => {
-    outletCountRef.current += 1;
-    return () => {
-      outletCountRef.current = Math.max(0, outletCountRef.current - 1);
-    };
-  }, []);
-  const hasOutlet = useCallback(
-    () => drawerDelegateRef.current?.hasOutlet?.() ?? outletCountRef.current > 0,
-    [],
-  );
-  
-  // Compute derived state
-  const canGoBack = state.currentIndex > 0;
-  const canGoForward = state.currentIndex < state.history.length - 1;
-  const currentEntry = state.currentIndex >= 0 ? state.history[state.currentIndex] : null;
-  
-  // Original methods (for backward compatibility)
-  const openDrawer = useCallback((content: ReactNode, onMount?: () => Promise<void>, onClose?: () => void, width?: string) => {
-    if (drawerDelegateRef.current) {
-      drawerDelegateRef.current.openDrawer(content, onMount, onClose, width);
-      return;
+function DrawerStoreProvider({ children }: { children: ReactNode }) {
+  const [state, dispatch] = useReducer(ownedDrawerReducer, initialOwnedState);
+  const stateRef = useRef(state);
+  useLayoutEffect(() => { stateRef.current = state; }, [state]);
+  const updateHistory = useCallback((action: DrawerHistoryAction, scope?: DrawerScope) => {
+    const current = stateRef.current;
+    if (scope && !scope.mounted) return;
+    if (action.type === 'CLOSE_DRAWER' && (!scope || isWithinScope(current.owner, scope))) {
+      current.drawer.history[current.drawer.currentIndex]?.onClose?.();
     }
-    dispatch({ type: 'OPEN_DRAWER', payload: { content, onMount, onClose, width } });
+    dispatch({ type: 'HISTORY', action, scope });
   }, []);
+  const closeDrawer = useCallback((scope?: DrawerScope) => updateHistory({ type: 'CLOSE_DRAWER' }, scope), [updateHistory]);
+  const goBack = useCallback((scope?: DrawerScope) => updateHistory({ type: 'GO_BACK' }, scope), [updateHistory]);
+  const goForward = useCallback((scope?: DrawerScope) => updateHistory({ type: 'GO_FORWARD' }, scope), [updateHistory]);
+  const { isOpen, currentIndex, history } = state.drawer;
 
-  const replaceDrawer = useCallback((content: ReactNode, onMount?: () => Promise<void>, width?: string) => {
-    if (drawerDelegateRef.current) {
-      drawerDelegateRef.current.replaceDrawer(content, onMount, width);
-      return;
-    }
-    dispatch({ type: 'REPLACE_DRAWER', payload: { content, onMount, width } });
-  }, []);
-
-  const closeDrawer = useCallback(() => {
-    if (drawerDelegateRef.current) {
-      drawerDelegateRef.current.closeDrawer();
-      return;
-    }
-    // Call onClose callback for the current entry before closing
-    if (currentEntry?.onClose) {
-      currentEntry.onClose();
-    }
-    dispatch({ type: 'CLOSE_DRAWER' });
-  }, [currentEntry]);
-
-  const goBack = useCallback(() => {
-    if (drawerDelegateRef.current) {
-      drawerDelegateRef.current.goBack();
-      return;
-    }
-    dispatch({ type: 'GO_BACK' });
-  }, []);
-  
-  // Enhanced methods for activities
-  const openListDrawer = useCallback((
-    activityType: ActivityType,
-    title: string,
-    content: ReactNode,
-    onMount?: () => Promise<void>,
-    metadata?: Record<string, any>
-  ) => {
-    if (drawerDelegateRef.current) {
-      drawerDelegateRef.current.openListDrawer(activityType, title, content, onMount, metadata);
-      return;
-    }
-    dispatch({
-      type: 'OPEN_LIST_DRAWER',
-      payload: { activityType, title, content, onMount, metadata }
-    });
-  }, []);
-  
-  const openDetailDrawer = useCallback((
-    activity: Activity,
-    content: ReactNode,
-    title?: string,
-    onMount?: () => Promise<void>
-  ) => {
-    if (drawerDelegateRef.current) {
-      drawerDelegateRef.current.openDetailDrawer(activity, content, title, onMount);
-      return;
-    }
-    dispatch({
-      type: 'OPEN_DETAIL_DRAWER',
-      payload: { activity, content, title, onMount }
-    });
-  }, []);
-  
-  const openFormDrawer = useCallback((
-    activity: Activity,
-    formId: string,
-    content: ReactNode,
-    title?: string,
-    onMount?: () => Promise<void>
-  ) => {
-    if (drawerDelegateRef.current) {
-      drawerDelegateRef.current.openFormDrawer(activity, formId, content, title, onMount);
-      return;
-    }
-    dispatch({
-      type: 'OPEN_FORM_DRAWER',
-      payload: { activity, formId, content, title, onMount }
-    });
-  }, []);
-  
-  const goForward = useCallback(() => {
-    if (drawerDelegateRef.current) {
-      drawerDelegateRef.current.goForward();
-      return;
-    }
-    dispatch({ type: 'GO_FORWARD' });
-  }, []);
-
-  const drawerDispatchTargetRef = useRef<DrawerDispatchTarget | null>(null);
-  drawerDispatchTargetRef.current = {
-    openDrawer,
-    replaceDrawer,
-    closeDrawer,
-    goBack,
-    openListDrawer,
-    openDetailDrawer,
-    openFormDrawer,
-    goForward,
-    hasOutlet,
-  };
-  const drawerDispatch = useMemo<DrawerDispatchTarget>(() => ({
-    openDrawer: (...args) => drawerDispatchTargetRef.current?.openDrawer(...args),
-    replaceDrawer: (...args) => drawerDispatchTargetRef.current?.replaceDrawer(...args),
-    closeDrawer: () => drawerDispatchTargetRef.current?.closeDrawer(),
-    goBack: () => drawerDispatchTargetRef.current?.goBack(),
-    openListDrawer: (...args) => drawerDispatchTargetRef.current?.openListDrawer(...args),
-    openDetailDrawer: (...args) => drawerDispatchTargetRef.current?.openDetailDrawer(...args),
-    openFormDrawer: (...args) => drawerDispatchTargetRef.current?.openFormDrawer(...args),
-    goForward: () => drawerDispatchTargetRef.current?.goForward(),
-    hasOutlet: () => drawerDispatchTargetRef.current?.hasOutlet?.() ?? false,
-  }), []);
-
-  useEffect(
-    () => parentDrawer?.registerDrawerDelegate?.(drawerDispatch),
-    [drawerDispatch, parentDrawer?.registerDrawerDelegate],
-  );
-
-  useShortcutScope('panel', state.isOpen);
-  // Keyboard and header-button dismissals go through the drawer's unsaved-changes
-  // guard; programmatic `closeDrawer()` callers (e.g. after a successful save) do not.
+  // Register keyboard commands once for the shared, visible history.
+  useShortcutScope('panel', isOpen);
   const guardedClose = useCallback(() => guardActiveDismiss(closeDrawer), [closeDrawer]);
   const guardedBack = useCallback(() => guardActiveDismiss(goBack), [goBack]);
   const guardedForward = useCallback(() => guardActiveDismiss(goForward), [goForward]);
-  useCatalogShortcut('panel.close', guardedClose, { enabled: state.isOpen });
-  useCatalogShortcut('drawer.historyBack', guardedBack, { enabled: state.isOpen && canGoBack });
-  useCatalogShortcut('drawer.historyForward', guardedForward, { enabled: state.isOpen && canGoForward });
+  useCatalogShortcut('panel.close', guardedClose, { enabled: isOpen });
+  useCatalogShortcut('drawer.historyBack', guardedBack, { enabled: isOpen && currentIndex > 0 });
+  useCatalogShortcut('drawer.historyForward', guardedForward, { enabled: isOpen && currentIndex < history.length - 1 });
 
   return (
-    <DrawerContext value={{
-      openDrawer,
-      replaceDrawer,
-      closeDrawer,
-      goBack,
-      openListDrawer,
-      openDetailDrawer,
-      openFormDrawer,
-      goForward,
-      hasOutlet,
-      registerOutlet,
-      registerDrawerDelegate,
-      canGoBack,
-      canGoForward,
-      currentEntry,
-      history: state.history
-    }}>
-      {children}
-    </DrawerContext>
+    <DrawerStoreContext value={{ state, dispatch, closeDrawer, goBack, goForward }}>
+      <DrawerScopeProvider>{children}</DrawerScopeProvider>
+    </DrawerStoreContext>
   );
+}
+
+function DrawerScopeProvider({ children }: { children: ReactNode }) {
+  const store = useContext(DrawerStoreContext)!;
+  const parent = useContext(DrawerScopeContext);
+  const [scope] = useState<DrawerScope>(() => ({ parent, children: new Set(), outlets: 0, mounted: true }));
+  const { state, dispatch, closeDrawer: closeOwnedDrawer, goBack: backOwnedDrawer, goForward: forwardOwnedDrawer } = store;
+
+  useLayoutEffect(() => {
+    scope.mounted = true;
+    parent?.children.add(scope);
+    return () => {
+      scope.mounted = false;
+      parent?.children.delete(scope);
+      dispatch({ type: 'REMOVE_SCOPE', scope });
+    };
+  }, [dispatch, parent, scope]);
+
+  const registerOutlet = useCallback(() => {
+    scope.outlets += 1;
+    return () => { scope.outlets -= 1; };
+  }, [scope]);
+  const hasOutlet = useCallback(() => findOutletScope(scope) !== null, [scope]);
+  // Async work may retain commands after its route has left. Such callbacks
+  // must not mutate the next route's drawer through the shared store.
+  const closeDrawer = useCallback(() => {
+    closeOwnedDrawer(scope);
+  }, [scope, closeOwnedDrawer]);
+  const goBack = useCallback(() => {
+    backOwnedDrawer(scope);
+  }, [scope, backOwnedDrawer]);
+  const goForward = useCallback(() => {
+    forwardOwnedDrawer(scope);
+  }, [scope, forwardOwnedDrawer]);
+  const open = useCallback((action: DrawerOpenAction) => {
+    if (scope.mounted) {
+      dispatch({ type: 'OPEN', owner: findOutletScope(scope) ?? scope, action });
+    }
+  }, [dispatch, scope]);
+  const openDrawer = useCallback<DrawerContextType['openDrawer']>((content, onMount, onClose, width) => {
+    open({ type: 'OPEN_DRAWER', payload: { content, onMount, onClose, width } });
+  }, [open]);
+  const replaceDrawer = useCallback<DrawerContextType['replaceDrawer']>((content, onMount, width) => {
+    open({ type: 'REPLACE_DRAWER', payload: { content, onMount, width } });
+  }, [open]);
+  const openListDrawer = useCallback<DrawerContextType['openListDrawer']>((activityType, title, content, onMount, metadata) => {
+    open({ type: 'OPEN_LIST_DRAWER', payload: { activityType, title, content, onMount, metadata } });
+  }, [open]);
+  const openDetailDrawer = useCallback<DrawerContextType['openDetailDrawer']>((activity, content, title, onMount) => {
+    open({ type: 'OPEN_DETAIL_DRAWER', payload: { activity, content, title, onMount } });
+  }, [open]);
+  const openFormDrawer = useCallback<DrawerContextType['openFormDrawer']>((activity, formId, content, title, onMount) => {
+    open({ type: 'OPEN_FORM_DRAWER', payload: { activity, formId, content, title, onMount } });
+  }, [open]);
+  const { history, currentIndex } = state.drawer;
+
+  return (
+    <DrawerScopeContext value={scope}>
+      <DrawerContext value={{
+        openDrawer, replaceDrawer, closeDrawer, goBack, goForward,
+        openListDrawer, openDetailDrawer, openFormDrawer, hasOutlet, registerOutlet,
+        canGoBack: currentIndex > 0,
+        canGoForward: currentIndex < history.length - 1,
+        currentEntry: history[currentIndex] ?? null,
+        history,
+      }}>
+        {children}
+      </DrawerContext>
+    </DrawerScopeContext>
+  );
+}
+
+export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const store = useContext(DrawerStoreContext);
+  return store
+    ? <DrawerScopeProvider>{children}</DrawerScopeProvider>
+    : <DrawerStoreProvider>{children}</DrawerStoreProvider>;
 };
 
 /**
@@ -464,7 +436,12 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 export const DrawerOutlet: React.FC = () => {
   const { t } = useTranslation('common');
   const { closeDrawer, goBack, goForward, canGoBack, canGoForward, currentEntry, history, registerOutlet } = useDrawer();
-  useEffect(() => registerOutlet?.(), [registerOutlet]);
+  const store = useContext(DrawerStoreContext)!;
+  const scope = useContext(DrawerScopeContext);
+  useLayoutEffect(() => registerOutlet?.(), [registerOutlet]);
+  // Every outlet observes the same history, but only its owning scope may
+  // materialize the content and supply its feature contexts.
+  if (store.state.owner !== scope) return null;
   const isOpen = history.length > 0 && currentEntry !== null;
   const title = currentEntry?.type === 'form' && !currentEntry.title
     ? t('drawer.formTitle', { title: currentEntry.metadata?.activity.title, defaultValue: `${currentEntry.metadata?.activity.title} - Form` })
