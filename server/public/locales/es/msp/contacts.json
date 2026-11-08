@@ -71,6 +71,7 @@
       "message_other": "Los siguientes tipos de teléfono personalizados ya no los usa ningún contacto: {{labels}}. ¿Eliminar las definiciones de los tipos o conservarlas para uso futuro?",
       "deleteType": "Eliminar tipo",
       "keepType": "Conservar tipo",
+      "message_few": "Los siguientes tipos de teléfono personalizados ya no los usa ningún contacto: {{labels}}. ¿Eliminar las definiciones de los tipos o conservarlas para uso futuro?",
       "message_many": "Los siguientes tipos de teléfono personalizados ya no los usa ningún contacto: {{labels}}. ¿Eliminar las definiciones de los tipos o conservarlas para uso futuro?"
     },
     "print": {
@@ -465,6 +466,7 @@
       "userNotFound": "No se encontró el usuario del cliente",
       "validationErrorTitle": "Error de validación"
     },
+    "boardCount_few": "{{count}} tableros",
     "boardCount_many": "{{count}} tableros"
   },
   "quickAddContact": {
@@ -759,7 +761,7 @@
     "lastTouch": "Última interacción",
     "editContact": "Editar contacto",
     "openFullPage": "Abrir página completa",
-    "viewAll": "Ver todos",
+    "viewAll": "Ver todas",
     "viewAllCount": "Ver todos ({{count}})",
     "reach": {
       "title": "Datos de contacto",
@@ -948,6 +950,7 @@
       "scopeSummaryOwn": "Propios",
       "managerScopeNote_one": "Su vista también incluye los registros de {{count}} persona que depende de ella.",
       "managerScopeNote_other": "Su vista también incluye los registros de {{count}} personas que dependen de ella.",
+      "managerScopeNote_few": "Su vista también incluye los registros de {{count}} personas que dependen de ella.",
       "managerScopeNote_many": "Su vista también incluye los registros de {{count}} de personas que dependen de ella.",
       "assignmentLabel": "Grupo de visibilidad de tickets",
       "assignmentPlaceholder": "Seleccione una asignación de visibilidad",
