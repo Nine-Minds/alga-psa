@@ -7,8 +7,9 @@
  * \u2212N change against the previous period. No component price is bound, so
  * clients on this template never receive component prices.
  *
- * Insert-only: existing standard templates and saved custom templates are never
- * touched. The AST is a frozen copy of buildStandardBundleQuantitiesAst in
+ * Only the standard-bundle-quantities catalog entry is inserted or refreshed;
+ * other standard templates and saved custom templates are never touched.
+ * The AST is a frozen copy of buildStandardBundleQuantitiesAst in
  * packages/billing/src/lib/invoice-template-ast/standardTemplates.ts at seeding
  * time (same convention as 20260902090100_add_by_ticket_standard_invoice_template).
  */
@@ -448,6 +449,7 @@ exports.up = async function up(knex) {
 
   const existing = await knex(INVOICE_TABLE).where({ standard_invoice_template_code: CODE }).first();
   if (existing) {
+    // migration-lint: allow 5 - the unique standard_invoice_template_code predicate limits this catalog refresh to one row; there is no bulk backfill to batch
     await knex(INVOICE_TABLE).where({ standard_invoice_template_code: CODE }).update({
       name: NAME,
       version: 1,
@@ -456,6 +458,7 @@ exports.up = async function up(knex) {
     });
     return;
   }
+  // migration-lint: allow 5 - inserts exactly one catalog entry with a unique standard_invoice_template_code; there is no bulk backfill to batch
   await knex(INVOICE_TABLE).insert({
     template_id: knex.raw('gen_random_uuid()'),
     name: NAME,

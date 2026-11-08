@@ -15,12 +15,6 @@ async function addColumn(knex, table, column, add) {
   await knex.schema.alterTable(table, add);
 }
 
-async function dropColumn(knex, table, column) {
-  if (!(await knex.schema.hasTable(table))) return;
-  if (!(await knex.schema.hasColumn(table, column))) return;
-  await knex.schema.alterTable(table, (t) => t.dropColumn(column));
-}
-
 exports.up = async function up(knex) {
   await addColumn(knex, 'contract_lines', 'invoice_line_subtitle', (t) => t.text('invoice_line_subtitle').nullable());
   await addColumn(knex, 'contract_template_lines', 'invoice_line_description', (t) => t.text('invoice_line_description').nullable());
@@ -29,8 +23,18 @@ exports.up = async function up(knex) {
 };
 
 exports.down = async function down(knex) {
-  await dropColumn(knex, 'invoice_charges', 'bundle_presentation');
-  await dropColumn(knex, 'contract_template_lines', 'invoice_line_subtitle');
-  await dropColumn(knex, 'contract_template_lines', 'invoice_line_description');
-  await dropColumn(knex, 'contract_lines', 'invoice_line_subtitle');
+  if (await knex.schema.hasTable('invoice_charges') && await knex.schema.hasColumn('invoice_charges', 'bundle_presentation')) {
+    await knex.schema.alterTable('invoice_charges', (t) => t.dropColumn('bundle_presentation'));
+  }
+  if (await knex.schema.hasTable('contract_template_lines')) {
+    if (await knex.schema.hasColumn('contract_template_lines', 'invoice_line_subtitle')) {
+      await knex.schema.alterTable('contract_template_lines', (t) => t.dropColumn('invoice_line_subtitle'));
+    }
+    if (await knex.schema.hasColumn('contract_template_lines', 'invoice_line_description')) {
+      await knex.schema.alterTable('contract_template_lines', (t) => t.dropColumn('invoice_line_description'));
+    }
+  }
+  if (await knex.schema.hasTable('contract_lines') && await knex.schema.hasColumn('contract_lines', 'invoice_line_subtitle')) {
+    await knex.schema.alterTable('contract_lines', (t) => t.dropColumn('invoice_line_subtitle'));
+  }
 };

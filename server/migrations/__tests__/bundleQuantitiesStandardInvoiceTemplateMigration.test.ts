@@ -8,7 +8,7 @@ import {
 import { getStandardTemplateAstByCode } from '@alga-psa/billing/lib/invoice-template-ast/standardTemplates';
 
 const require = createRequire(import.meta.url);
-const migration = require(path.resolve(__dirname, '../20261015090100_add_bundle_quantities_standard_invoice_template.cjs'));
+const migration = require(path.resolve(__dirname, '../20261108010100_add_bundle_quantities_standard_invoice_template.cjs'));
 
 const findChildRows = (node: any): any => {
   if (!node || typeof node !== 'object') return undefined;
@@ -36,5 +36,34 @@ describe('bundle quantities standard invoice template migration', () => {
     expect(detectBundleChildRowsPreset(seededChildRows)).toBe('quantities');
     expect(bundleChildRowsShowChange(seededChildRows)).toBe(true);
     expect(seededChildRows).toEqual(findChildRows(getStandardTemplateAstByCode('standard-bundle-quantities')));
+  });
+
+  it('refreshes only its own catalog entry on repeated runs', async () => {
+    const ownCode = 'standard-bundle-quantities';
+    const unrelated = { standard_invoice_template_code: 'standard-default', templateAst: 'unchanged' };
+    const own = { standard_invoice_template_code: ownCode, templateAst: 'outdated', created_at: 'original' };
+    const rows: Record<string, any> = { [ownCode]: own, 'standard-default': unrelated };
+    const insert = vi.fn();
+    const table: any = () => ({
+      where: ({ standard_invoice_template_code: code }: { standard_invoice_template_code: string }) => ({
+        first: async () => rows[code],
+        update: async (values: unknown) => Object.assign(rows[code], values),
+      }),
+      insert,
+    });
+    table.schema = { hasTable: async () => true, hasColumn: async () => true };
+    table.raw = (_sql: string, bindings: unknown[]) => ({ bindings });
+    table.fn = { now: () => 'now' };
+
+    await migration.up(table);
+    const refreshed = structuredClone(own);
+    await migration.up(table);
+
+    expect(insert).not.toHaveBeenCalled();
+    expect(own).toEqual(refreshed);
+    expect(own.created_at).toBe('original');
+    expect(unrelated).toEqual({ standard_invoice_template_code: 'standard-default', templateAst: 'unchanged' });
+    const seeded = JSON.parse((own.templateAst as any).bindings[0]);
+    expect(findChildRows(seeded)).toEqual(findChildRows(getStandardTemplateAstByCode(ownCode)));
   });
 });
