@@ -138,7 +138,7 @@
         "agents": "Agentes ({{count}} sin coincidencias)",
         "teams": "Equipos ({{count}} sin coincidencias)",
         "contacts": "Contactos ({{count}} sin coincidencias)",
-        "dateFormats": "Formatos de fecha ({{count}} no reconocidos)"
+        "dateFormats": "Formatos de fecha ({{count}} sin reconocer)"
       },
       "required": "Obligatorio",
       "itilCreateDisabled": "Tablero ITIL — creación deshabilitada",
@@ -2886,7 +2886,7 @@
       "paused": "SLA en pausa",
       "atRisk": "En riesgo",
       "onTrack": "Dentro del plazo",
-      "remaining": "Tiempo restante: {{magnitude}}"
+      "remaining": "Quedan {{magnitude}}"
     }
   },
   "cannedResponses": {
@@ -3118,7 +3118,7 @@
         "reopened": "Reabierto",
         "priorityChanged": "Prioridad modificada",
         "assigned": "Asignado",
-        "unassigned": "Sin asignar",
+        "unassigned": "Asignación quitada",
         "boardMoved": "Cambio de tablero",
         "responseState": "Estado de respuesta",
         "messageAdded": "Comentario agregado",
@@ -3173,8 +3173,8 @@
       "details": "Detalles"
     },
     "errors": {
-      "loadFailed": "No se pudo cargar el historial de actividad del ticket.",
-      "loadFailedPrefix": "No se pudo cargar el historial de actividad:"
+      "loadFailed": "No se pudo cargar la cronología de actividad del ticket.",
+      "loadFailedPrefix": "No se pudo cargar la cronología de actividad:"
     },
     "empty": {
       "noActivity": "Aún no hay actividad. Los nuevos eventos aparecerán aquí a medida que cambie el ticket.",
