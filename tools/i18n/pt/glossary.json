@@ -2740,7 +2740,9 @@
       "Firmware",
       "{{count}} ticket(s)",
       "status",
-      "{{actor}} • {{eventType}}"
+      "{{actor}} • {{eventType}}",
+      "Natural",
+      "Layout"
     ],
     "caseInsensitive": [
       "api",
