@@ -2081,6 +2081,11 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "Urgent",
+      "Standard",
+      "Ticket {{number}}",
+      "Interaction",
+      "Document",
       "Cadence",
       "{{count}} ticket(s)",
       "client",
