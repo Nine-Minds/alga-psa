@@ -13,6 +13,7 @@ export {
 export { ensureInvoiceEmailLinks } from './ensureInvoiceEmailLinks';
 export { BillingEngine } from '../lib/billing/billingEngine';
 export { recalculateQuoteFinancials, resolveQuoteItemTaxesIfIncluded } from './quoteCalculationService';
+export { getClientIdFromPortalUser, hasClientBillingReadPermission } from './clientPortalAccess';
 export {
   decideQuote,
   listQuoteDecisions,

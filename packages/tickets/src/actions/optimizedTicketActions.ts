@@ -106,6 +106,7 @@ import {
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { authorizeTicketRecordAccess, type TicketRecordRow } from '../lib/ticketRecordAuthorization';
+import { assertAllowedTicketUpdateOptions, AUTO_CLOSE_TICKET_AUTHORIZATION } from '../lib/ticketUpdateAuthorization';
 import { createTicketRelationshipSqlAdapter } from '../lib/ticketAuthorizationSql';
 import { compilePredicateFragment } from '@alga-psa/predicates/sql';
 import type { PredicateGroup } from '@alga-psa/predicates';
@@ -2484,9 +2485,9 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
 /**
  * Core ticket-update logic, executed inside a caller-provided transaction.
  *
- * Intentionally does NOT check permissions — callers must authorize first. The public
- * `updateTicketWithCache` wrapper performs the `ticket:update` check; bulk callers hoist
- * a single check and reuse this core per ticket, avoiding one permission lookup per row.
+ * Public wrappers check coarse `ticket:update` RBAC. This shared boundary also enforces
+ * per-record update access for ordinary actors; admitted collaboration and system actors
+ * carry their respective explicit authorization contexts.
  */
 export interface UpdateTicketInTransactionOptions {
   /** Close despite unmet close rules; honored only with ticket:close_override. */
@@ -2504,13 +2505,6 @@ export interface UpdateTicketInTransactionOptions {
    * only, undefined raises BundlePropagationConfirmationRequiredError.
    */
   propagateToChildren?: boolean;
-  /**
-   * Attribute the change to the system rather than `user` (auto-close engine):
-   * closed_by stays null, events carry a SYSTEM actor, and the audit row is
-   * system-sourced. `user` is still required for the call signature but is not
-   * referenced for attribution.
-   */
-  systemActor?: boolean;
 }
 
 export async function updateTicketInTransaction(
@@ -2521,10 +2515,19 @@ export async function updateTicketInTransaction(
   data: Partial<ITicket>,
   options?: UpdateTicketInTransactionOptions,
   collaboration?: TicketMutationCollaborationContext,
+  authorizationContext?: typeof AUTO_CLOSE_TICKET_AUTHORIZATION,
 ): Promise<'success'> {
     try {
       // Validate update data
       const validatedData = validateData(ticketUpdateSchema, data);
+      assertAllowedTicketUpdateOptions(options, [
+        'overrideCloseRules',
+        'overrideCloseRulesReason',
+        'suppressContactNotifications',
+        'suppressInternalNotifications',
+        'bypassCloseRules',
+        'propagateToChildren',
+      ]);
       const suppressContactNotifications = options?.suppressContactNotifications === true;
       const suppressInternalNotifications = options?.suppressInternalNotifications === true;
 
@@ -2535,7 +2538,10 @@ export async function updateTicketInTransaction(
     // Co-managed collaborator edits (admitted by the shared-work domain). Every
     // statement in this block is conditional on `collaboration`: a native caller
     // issues exactly the queries it issued before, and takes no additional lock.
-    const isSystemActor = options?.systemActor === true;
+    if (authorizationContext !== undefined && authorizationContext !== AUTO_CLOSE_TICKET_AUTHORIZATION) {
+      throw new Error('Invalid ticket update authorization context');
+    }
+    const isSystemActor = authorizationContext === AUTO_CLOSE_TICKET_AUTHORIZATION;
     if (collaboration && (isSystemActor || options?.overrideCloseRules || options?.bypassCloseRules ||
         suppressContactNotifications || suppressInternalNotifications)) {
       throw new Error('Shared ticket edits cannot override closure or notification policy');
@@ -2548,6 +2554,19 @@ export async function updateTicketInTransaction(
       const allowed = new Set(['title', 'url', 'status_id', 'priority_id', 'due_date', 'response_state', 'category_id', 'subcategory_id', 'attributes']);
       if (Object.keys(data).some((key) => !allowed.has(key))) throw new Error('Unsupported shared ticket edit fields');
       await collaboration.assertWriteAuthority(trx);
+    } else if (!isSystemActor) {
+      // Coarse ticket:update permission is checked by public wrappers, but it
+      // does not establish that this principal can mutate this particular row.
+      // Keep this gate in the shared action boundary so bulk and other public
+      // callers receive the same record-level policy before the update core
+      // loads or changes the ticket.
+      await authorizeTicketRecordAccess({
+        trx,
+        tenant,
+        user,
+        ticketId: id,
+        action: 'update',
+      });
     }
 
     // Get current ticket state before update
@@ -3189,7 +3208,7 @@ export async function updateTicketInTransaction(
           ctx: {
             tenantId: tenant,
             occurredAt,
-            // Native callers (including systemActor, e.g. auto-close) keep the USER actor they always had.
+            // Native callers (including trusted auto-close) keep the USER actor they always had.
             actor: collaborator ? workflowCtx.actor : { actorType: 'USER', actorUserId: user.user_id },
           },
         }),
@@ -3253,6 +3272,13 @@ export const updateTicketWithCache = withAuth(async (
   >,
 ): Promise<'success' | TicketActionError> => {
   try {
+    assertAllowedTicketUpdateOptions(options, [
+      'overrideCloseRules',
+      'overrideCloseRulesReason',
+      'suppressContactNotifications',
+      'suppressInternalNotifications',
+      'propagateToChildren',
+    ]);
     // MSP cached ticket write surface. A client-portal session must not reach it;
     // reject before the permission lookup or any ticket mutation.
     if (user.user_type !== 'internal') {

@@ -2,7 +2,13 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 import { createFakeKnex, CO_MANAGED_TENANT, clearWriteAdmissionCacheForTests, withReadOnlyWorkspace, type FakeKnex } from './fakeKnex';
 
-const h = vi.hoisted(() => ({ fake: null as any }));
+const h = vi.hoisted(() => ({
+  fake: null as any,
+  authorize: vi.fn(async (_input: { action: string; knex: { isTransaction?: boolean } }) => true),
+}));
+vi.mock('../../../lib/api/controllers/authorizationKernel', async (original) => ({
+  ...(await original<object>()), authorizeApiResourceAction: h.authorize,
+}));
 vi.mock('../../../lib/db/db', async (original) => ({ ...(await original<object>()), getConnection: async () => h.fake.knex }));
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn(), publishWorkflowEvent: vi.fn(), publishStoredWorkflowEvent: vi.fn(),
@@ -21,6 +27,7 @@ beforeEach(() => {
     return /from "tickets"/.test(sql) ? [{ ...ticket }] : undefined;
   });
   h.fake = fake;
+  h.authorize.mockReset().mockResolvedValue(true);
   clearWriteAdmissionCacheForTests();
 });
 afterEach(async () => { clearWriteAdmissionCacheForTests(); vi.unstubAllEnvs(); await fake.destroy(); });
@@ -33,9 +40,6 @@ async function updateThroughController() {
   // TicketService, transaction and SQL builder are the production implementations.
   controller.authenticate = async (request: NextRequest) => Object.assign(request, { context });
   controller.checkPermission = async () => undefined;
-  controller.assertTicketReadAllowed = async () => undefined;
-  // update() authorizes through the mutation guard (resource + 'update' scope).
-  controller.assertTicketMutationAllowed = async () => ({ ...ticket });
   controller.service.getKnex = async () => ({ knex: fake.knex, tenant: CO_MANAGED_TENANT });
   return controller.update()(new NextRequest(`http://localhost/api/v1/tickets/${ID}`, {
     method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ title: 'Renamed' }),
@@ -62,5 +66,23 @@ it('the same REST mutation succeeds and commits with the kill switch off', async
     expect(fake.writes().some((sql) => /^update "tickets"/.test(sql))).toBe(true);
     expect(fake.statements.some((sql) => /^commit/i.test(sql))).toBe(true);
     expect(fake.statements.some((sql) => /^rollback/i.test(sql))).toBe(false);
+  });
+}, 60_000);
+
+it.each(['update', 'read'])('rolls back without writes when %s scope is lost before the transaction recheck', async (deniedAction) => {
+  h.authorize.mockImplementation(async ({ action, knex }) => !(knex.isTransaction && action === deniedAction));
+  await withReadOnlyWorkspace(async () => {
+    vi.stubEnv('FORCE_CAPABILITIES', 'co-managed:off');
+    const response = await updateThroughController();
+    expect(response.status).toBe(403);
+    expect(h.authorize).toHaveBeenCalledWith(expect.objectContaining({
+      action: deniedAction,
+      knex: expect.objectContaining({ isTransaction: true }),
+    }));
+    expect(fake.statements.some((sql) => /from "tickets".*for update/i.test(sql))).toBe(true);
+    expect(fake.statements.some((sql) => /^rollback/i.test(sql))).toBe(true);
+    expect(fake.statements.some((sql) => /^commit/i.test(sql))).toBe(false);
+    expect(fake.writes()).toEqual([]);
+    expect(ticket.title).toBe('Old');
   });
 }, 60_000);

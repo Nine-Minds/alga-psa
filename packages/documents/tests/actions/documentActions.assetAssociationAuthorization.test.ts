@@ -34,6 +34,7 @@ class Query {
   }
   andWhere(column: string, value: unknown) { return this.where(column, value); }
   whereIn(column: string, values: unknown[]) { this.filters.push((row) => values.includes(row[column])); return this; }
+  orderBy(_column: string, _direction: 'asc' | 'desc') { return this; }
   select(..._columns: string[]) { return this; }
   clone() { const query = new Query(this.tableName, this.tenant); query.filters = [...this.filters]; return query; }
   private rows() {
