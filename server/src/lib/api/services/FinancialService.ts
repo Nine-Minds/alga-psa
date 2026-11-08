@@ -16,16 +16,17 @@
  * that are explicitly service-period aware.
  */
 
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { ListOptions } from '../controllers/types';
-import { hasPermission } from '../../auth/rbac';
 import {
   clearDefaultPaymentMethod,
   resolvePaymentBillingProfileId,
 } from '@alga-psa/shared/billingClients/billingProfilePayments';
 import { auditLog } from '../../logging/auditLog';
 import { InvoiceService } from './InvoiceService';
+
 import { TaxService, normalizeTaxCapAmount } from '@alga-psa/billing/services/taxService';
 import { assertPsaOnlyTenantAccess, ProductAccessError } from '@shared/services/productAccessGuard';
 import { v4 as uuidv4 } from 'uuid';
@@ -330,7 +331,7 @@ export class FinancialService extends BaseService<ITransaction> {
       throw new UnauthorizedError('Authentication required');
     }
 
-    if (!await hasPermission(context.user, resource, operation)) {
+    if (!await hasApiContextPermission(context, resource, operation)) {
       throw new ForbiddenError(`Permission denied: Cannot ${operation} ${resource}`);
     }
   }
@@ -419,6 +420,7 @@ export class FinancialService extends BaseService<ITransaction> {
       // Audit log
       await auditLog(trx, {
         userId: context.userId,
+        viaPrincipalUserId: context.viaPrincipalUserId ?? null,
         operation: 'transaction_created',
         tableName: 'transactions',
         recordId: transaction.transaction_id,
@@ -1128,6 +1130,7 @@ export class FinancialService extends BaseService<ITransaction> {
 
       await auditLog(trx, {
         userId: context.userId,
+        viaPrincipalUserId: context.viaPrincipalUserId ?? null,
         operation: 'payment_method_created',
         tableName: 'payment_methods',
         recordId: paymentMethod.payment_method_id,
@@ -1669,12 +1672,14 @@ export class FinancialService extends BaseService<ITransaction> {
         } else {
           console.error(`[FinancialService.bulkInvoiceOperation] ${operation.operation} failed for ${invoiceId}`, error);
           results.push({ id: invoiceId, success: false, error: 'Unexpected error processing invoice' });
+
         }
       }
     }
 
     const successful = results.filter(r => r.success).length;
     const failed = results.length - successful;
+
 
     // One summary audit row recording the canonical per-id outcomes. The
     // canonical engines wrote their own per-invoice rows already.
@@ -1820,6 +1825,7 @@ export class FinancialService extends BaseService<ITransaction> {
 
       await auditLog(trx, {
         userId: context.userId,
+        viaPrincipalUserId: context.viaPrincipalUserId ?? null,
         operation: 'bulk_transaction_operation',
         tableName: 'transactions',
         recordId: 'bulk',
@@ -1960,6 +1966,7 @@ export class FinancialService extends BaseService<ITransaction> {
     await withTransaction(knex, async (trx) => {
       await auditLog(trx, {
         userId: context.userId,
+        viaPrincipalUserId: context.viaPrincipalUserId ?? null,
         operation: 'bulk_credit_operation',
         tableName: 'credit_tracking',
         recordId: 'bulk',

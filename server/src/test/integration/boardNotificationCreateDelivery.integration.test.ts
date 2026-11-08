@@ -10,7 +10,7 @@ import { createClient, createTenant, createUser } from '../../../test-utils/test
  * Board notification rule, trigger "created": delivered inside both existing handleTicketCreated
  * handlers (email + in-app). Rule recipients are never assigned and never added to the watch list.
  */
-const sent: Array<{ to: string; template: string }> = [];
+const sent: Array<{ to: string; template: string; recipientUserId?: string; replyContext?: Record<string, unknown> }> = [];
 let testDb: Knex;
 const deniedUserIds = new Set<string>();
 const publishedBusEvents: Array<{ eventType: string; payload: Record<string, any> }> = [];
@@ -42,8 +42,8 @@ vi.mock('../../lib/db', async (importOriginal) => ({
 
 vi.mock('../../lib/notifications/sendEventEmail', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../lib/notifications/sendEventEmail')>()),
-  sendEventEmail: vi.fn(async (params: { to: string; template: string }) => {
-    sent.push({ to: params.to, template: params.template });
+  sendEventEmail: vi.fn(async (params: { to: string; template: string; recipientUserId?: string; replyContext?: Record<string, unknown> }) => {
+    sent.push({ to: params.to, template: params.template, recipientUserId: params.recipientUserId, replyContext: params.replyContext });
   }),
 }));
 
@@ -328,5 +328,128 @@ describe('board notification rules: create trigger delivery (integration)', () =
     expect(emailsFor('ticket-created')).toEqual(['assignee@example.com']);
     expect(sent.map((email) => email.to)).not.toContain('casey@client.example');
     expect(await inAppFor(ticketId, 'ticket-created')).toEqual([users.assignee]);
+  });
+
+  describe('plain-address (DL) recipients', () => {
+    /** A dedicated board + rule so the shared board's expectations stay untouched. */
+    async function makeDlBoard(addresses: string[], opts: { userIds?: string[] } = {}) {
+      const dlBoardId = uuidv4();
+      const dlStatusId = uuidv4();
+      await scoped.table('boards').insert({ tenant, board_id: dlBoardId, board_name: 'DL Queue', is_default: false });
+      await scoped.table('statuses').insert({ tenant, status_id: dlStatusId, board_id: dlBoardId, name: 'New', status_type: 'ticket', item_type: 'ticket', order_number: 1, is_default: true, is_closed: false });
+      const ruleId = uuidv4();
+      await scoped.table('board_notification_rules').insert({ tenant, rule_id: ruleId, board_id: dlBoardId, notify_on_create: true });
+      for (const email of addresses) {
+        await scoped.table('board_notification_rule_recipients').insert({ tenant, rule_id: ruleId, recipient_type: 'email', email });
+      }
+      for (const userId of opts.userIds ?? []) {
+        await scoped.table('board_notification_rule_recipients').insert({ tenant, rule_id: ruleId, recipient_type: 'user', user_id: userId });
+      }
+      return { dlBoardId, dlStatusId };
+    }
+
+    it('an unassigned ticket sends exactly one ticket-board-created to the DL, with no recipientUserId and no reply token, and no in-app', async () => {
+      await clearInApp();
+      const { dlBoardId, dlStatusId } = await makeDlBoard(['queue-dl@msp.test']);
+      const ticketId = await createTicketRow({ board_id: dlBoardId, status_id: dlStatusId });
+      await runWithTenant(tenant, () => emailHandler(event(ticketId)));
+      await runWithTenant(tenant, () => inAppHandler(event(ticketId), { propagateErrors: true }));
+
+      const toDl = sent.filter((email) => email.to === 'queue-dl@msp.test');
+      expect(toDl).toHaveLength(1);
+      expect(toDl[0].template).toBe('ticket-board-created');
+      expect(toDl[0].recipientUserId).toBeUndefined();
+      expect(toDl[0].replyContext).toMatchObject({ ticketId, issueReplyToken: false });
+      expect(await scoped.table('internal_notifications').where({ template_name: 'ticket-board-created' })).toEqual([]);
+      const ticket = await scoped.table('tickets').where({ ticket_id: ticketId }).first();
+      expect(ticket.attributes?.watch_list).toBeUndefined();
+    });
+
+    it('user sends keep issuing reply tokens (no issueReplyToken override)', async () => {
+      const { dlBoardId, dlStatusId } = await makeDlBoard(['queue-dl@msp.test'], { userIds: [users.techA] });
+      const ticketId = await createTicketRow({ board_id: dlBoardId, status_id: dlStatusId });
+      await runWithTenant(tenant, () => emailHandler(event(ticketId)));
+
+      const toUser = sent.find((email) => email.to === 'a@example.com');
+      expect(toUser?.replyContext?.issueReplyToken).toBeUndefined();
+      expect(toUser?.recipientUserId).toBe(users.techA);
+    });
+
+    it('an address that is an active internal user is that user: visibility-filtered, in-app delivered, with recipientUserId', async () => {
+      await clearInApp();
+      const { dlBoardId, dlStatusId } = await makeDlBoard(['b@example.com']);
+      const ticketId = await createTicketRow({ board_id: dlBoardId, status_id: dlStatusId });
+      await runWithTenant(tenant, () => emailHandler(event(ticketId)));
+      await runWithTenant(tenant, () => inAppHandler(event(ticketId), { propagateErrors: true }));
+
+      const toUser = sent.filter((email) => email.to === 'b@example.com');
+      expect(toUser).toHaveLength(1);
+      expect(toUser[0].recipientUserId).toBe(users.techB);
+      expect(toUser[0].replyContext?.issueReplyToken).toBeUndefined();
+      expect(await inAppFor(ticketId, 'ticket-board-created')).toEqual([users.techB]);
+
+      // And the read check applies to them: a denied user gets nothing, not even as a plain address.
+      sent.length = 0;
+      deniedUserIds.add(users.techB);
+      const deniedTicket = await createTicketRow({ board_id: dlBoardId, status_id: dlStatusId });
+      await runWithTenant(tenant, () => emailHandler(event(deniedTicket)));
+      expect(sent.filter((email) => email.to === 'b@example.com')).toEqual([]);
+    });
+
+    it('an address matching a client contact is never sent to', async () => {
+      const contactId = uuidv4();
+      await scoped.table('contacts').insert({ tenant, contact_name_id: contactId, full_name: 'Dee Contact', email: 'dee@client.example', client_id: clientId });
+      const { dlBoardId, dlStatusId } = await makeDlBoard(['dee@client.example']);
+      const ticketId = await createTicketRow({ board_id: dlBoardId, status_id: dlStatusId });
+      await runWithTenant(tenant, () => emailHandler(event(ticketId)));
+      expect(sent.filter((email) => email.to === 'dee@client.example')).toEqual([]);
+    });
+
+    it('a DL that is also an active watcher gets only the watcher email', async () => {
+      const { dlBoardId, dlStatusId } = await makeDlBoard(['watch-dl@msp.test']);
+      const ticketId = await createTicketRow({
+        board_id: dlBoardId,
+        status_id: dlStatusId,
+        attributes: JSON.stringify({ watch_list: [{ email: 'watch-dl@msp.test', active: true }] }),
+      });
+      await runWithTenant(tenant, () => emailHandler(event(ticketId)));
+
+      const toDl = sent.filter((email) => email.to === 'watch-dl@msp.test');
+      expect(toDl).toHaveLength(1);
+      expect(toDl[0].template).not.toBe('ticket-board-created');
+    });
+
+    it('a DL that equals the assignee email is not emailed twice', async () => {
+      const { dlBoardId, dlStatusId } = await makeDlBoard(['assignee@example.com']);
+      const ticketId = await createTicketRow({ board_id: dlBoardId, status_id: dlStatusId, assigned_to: users.assignee });
+      await runWithTenant(tenant, () => emailHandler(event(ticketId)));
+
+      const toAssignee = sent.filter((email) => email.to === 'assignee@example.com');
+      expect(toAssignee.map((email) => email.template)).toEqual(['ticket-created']);
+    });
+
+    it('a DL that is also named once as address in two rules is sent once', async () => {
+      const { dlBoardId, dlStatusId } = await makeDlBoard(['twice-dl@msp.test']);
+      const second = uuidv4();
+      await scoped.table('board_notification_rules').insert({ tenant, rule_id: second, board_id: dlBoardId, notify_on_create: true });
+      await scoped.table('board_notification_rule_recipients').insert({ tenant, rule_id: second, recipient_type: 'email', email: 'twice-dl@msp.test' });
+      const ticketId = await createTicketRow({ board_id: dlBoardId, status_id: dlStatusId });
+      await runWithTenant(tenant, () => emailHandler(event(ticketId)));
+      expect(sent.filter((email) => email.to === 'twice-dl@msp.test')).toHaveLength(1);
+    });
+
+    it('suppressInternalNotifications silences the DL', async () => {
+      const { dlBoardId, dlStatusId } = await makeDlBoard(['quiet-dl@msp.test']);
+      const ticketId = await createTicketRow({ board_id: dlBoardId, status_id: dlStatusId });
+      await runWithTenant(tenant, () => emailHandler(event(ticketId, { suppressInternalNotifications: true })));
+      expect(sent.filter((email) => email.to === 'quiet-dl@msp.test')).toEqual([]);
+    });
+
+    it('suppressContactNotifications alone does not silence the DL', async () => {
+      const { dlBoardId, dlStatusId } = await makeDlBoard(['internal-dl@msp.test']);
+      const ticketId = await createTicketRow({ board_id: dlBoardId, status_id: dlStatusId });
+      await runWithTenant(tenant, () => emailHandler(event(ticketId, { suppressContactNotifications: true })));
+      expect(sent.filter((email) => email.to === 'internal-dl@msp.test')).toHaveLength(1);
+    });
   });
 });

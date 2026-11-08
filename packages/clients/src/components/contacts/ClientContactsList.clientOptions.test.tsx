@@ -3,6 +3,10 @@
  *
  * Regression for alga0002338: editing a contact from a client's Contacts tab
  * must offer every client in the tenant, not just the client being viewed.
+ *
+ * The drawers no longer load or thread a client list at all: ContactDetailsEdit's picker
+ * searches the whole tenant on the server, so the guarantee holds by construction. These
+ * tests pin that no full-list call happens and no page-scoped list is passed down.
  */
 import '@testing-library/jest-dom/vitest';
 import React from 'react';
@@ -92,9 +96,6 @@ vi.mock('@radix-ui/react-dropdown-menu', () => ({
 }));
 
 const triage: any = { client_id: 'triage-id', client_name: 'Unmatched Email', is_inactive: false, location_country_code: 'US' };
-const life: any = { client_id: 'life-id', client_name: 'Life Landscaping', is_inactive: false };
-const inactive: any = { client_id: 'inactive-id', client_name: 'Dormant Co', is_inactive: true };
-const allClients = [triage, life, inactive];
 
 const brian: any = {
   contact_name_id: 'contact-1',
@@ -116,11 +117,10 @@ describe('ClientContactsList client options', () => {
     vi.clearAllMocks();
     hoisted.getContactsByClient.mockResolvedValue([brian]);
     hoisted.getContactByContactNameId.mockResolvedValue(brian);
-    hoisted.getAllClients.mockResolvedValue(allClients);
     hoisted.getCurrentUserAsync.mockResolvedValue({ user_id: 'user-1' });
   });
 
-  it('row Edit opens ContactDetailsEdit with every client from getAllClients(true)', async () => {
+  it('row Edit opens ContactDetailsEdit without loading or threading any client list', async () => {
     renderList();
     await screen.findByTestId('row-contact-1');
 
@@ -128,25 +128,25 @@ describe('ClientContactsList client options', () => {
 
     await waitFor(() => expect(hoisted.replaceDrawer).toHaveBeenCalledTimes(1));
     expect(hoisted.openDrawer).toHaveBeenCalledTimes(1);
-    expect(hoisted.getAllClients).toHaveBeenCalledWith(true);
+    expect(hoisted.getAllClients).not.toHaveBeenCalled();
     expect(hoisted.getContactByContactNameId).toHaveBeenCalledWith('contact-1');
 
     const element = lastReplacedElement()!;
     expect(element.type).toBe(ContactDetailsEdit);
-    expect(element.props.clients).toEqual(allClients);
+    expect(element.props.clients).toBeUndefined();
     expect(element.props.initialContact).toBe(brian);
   });
 
-  it('Quick View loads the full client list for the quick-view element', async () => {
+  it('Quick View loads no client list for the quick-view element', async () => {
     renderList();
     await screen.findByTestId('row-contact-1');
 
     fireEvent.click(screen.getByText('Quick View'));
 
     await waitFor(() => expect(hoisted.replaceDrawer).toHaveBeenCalledTimes(1));
-    expect(hoisted.getAllClients).toHaveBeenCalledWith(true);
+    expect(hoisted.getAllClients).not.toHaveBeenCalled();
     const element = lastReplacedElement()!;
-    expect(element.props.clients).toEqual(allClients);
+    expect(element.props.clients).toBeUndefined();
     expect(element.props.contact).toBe(brian);
     expect(element.props.userId).toBe('user-1');
   });
@@ -158,21 +158,8 @@ describe('ClientContactsList client options', () => {
     fireEvent.click(screen.getByText('Brian Linscott'));
 
     await waitFor(() => expect(hoisted.replaceDrawer).toHaveBeenCalledTimes(1));
-    expect(lastReplacedElement()!.props.clients).toEqual(allClients);
-  });
-
-  it('shows the error and never creates ContactDetailsEdit when the client list fails to load', async () => {
-    hoisted.getAllClients.mockRejectedValue(new Error('Permission denied: Cannot read clients'));
-    renderList();
-    await screen.findByTestId('row-contact-1');
-
-    fireEvent.click(screen.getByText('Edit'));
-
-    await waitFor(() => expect(hoisted.replaceDrawer).toHaveBeenCalledTimes(1));
-    const element = lastReplacedElement()!;
-    expect(element.type).not.toBe(ContactDetailsEdit);
-    const { container } = render(<>{element}</>);
-    expect(container).toHaveTextContent('Permission denied: Cannot read clients');
+    expect(hoisted.getAllClients).not.toHaveBeenCalled();
+    expect(lastReplacedElement()!.props.clients).toBeUndefined();
   });
 
   it('shows "Contact not found." when the contact no longer exists', async () => {

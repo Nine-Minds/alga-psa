@@ -250,6 +250,7 @@ async function loadProduct() {
     timeSheetActions,
     timeSheetOps,
     invoiceGeneration,
+    billingAndTax,
     contractWizard,
     recurringSync,
     portalTickets,
@@ -267,6 +268,7 @@ async function loadProduct() {
     import('@alga-psa/scheduling/actions/timeSheetActions'),
     import('@alga-psa/scheduling/actions/timeSheetOperations'),
     import('@alga-psa/billing/actions/invoiceGeneration'),
+    import('@alga-psa/billing/actions/billingAndTax'),
     import('@alga-psa/billing/actions/contractWizardActions'),
     import('@alga-psa/billing/actions/recurringServicePeriodSync'),
     import('@alga-psa/client-portal/actions/client-portal-actions/client-tickets'),
@@ -285,6 +287,7 @@ async function loadProduct() {
     timeSheetActions,
     timeSheetOps,
     invoiceGeneration,
+    billingAndTax,
     contractWizard,
     recurringSync,
     portalTickets,
@@ -810,13 +813,32 @@ const STEPS: Record<StepName, StepFn> = {
     unwrap(result, 'approveTimeSheet');
   },
 
-  // generateInvoice: the automatic-invoice engine for the January cycle, billing
-  // the approved two hours from the contract line set up in the fixture.
+  // Automatic invoice generation selects due recurring work first, then sends
+  // those concrete selections through the generation action. Cycle IDs are no
+  // longer accepted by the generation API.
   'invoice.generate': async ({ fixture, actAs, measure, product }) => {
     actAs(fixture.admin);
-    const invoice = await measure(() => product.invoiceGeneration.generateInvoice(fixture.billingCycleId));
-    const created = unwrap(invoice, 'generateInvoice') as { invoice_id?: string } | null;
-    if (!created?.invoice_id) throw new Error('hot-path scenario: generateInvoice produced no invoice');
+    const invoice = await measure(async () => {
+      const dueWork = unwrap(
+        await product.billingAndTax.getAvailableRecurringDueWork({ page: 1, pageSize: 100 }),
+        'getAvailableRecurringDueWork',
+      ) as { invoiceCandidates?: Array<{ clientId: string; windowStart: string; windowEnd: string; members: Array<{ selectorInput: unknown }> }> };
+      const candidate = dueWork.invoiceCandidates?.find((item) =>
+        item.clientId === fixture.clientId &&
+        item.windowStart.slice(0, 10) === '2025-01-01' &&
+        item.windowEnd.slice(0, 10) === '2025-02-01',
+      );
+      if (!candidate || candidate.members.length === 0) {
+        throw new Error('hot-path scenario: no January recurring due work for fixture client');
+      }
+      return product.invoiceGeneration.generateInvoiceForSelectionInputs(
+        candidate.members.map((member) => member.selectorInput as never),
+        {},
+        { billingCycleId: fixture.billingCycleId },
+      );
+    });
+    const created = unwrap(invoice, 'generateInvoiceForSelectionInputs') as { invoice_id?: string } | null;
+    if (!created?.invoice_id) throw new Error('hot-path scenario: invoice generation produced no invoice');
   },
 
   // getClientTicketDetails as the client-portal user (portal visibility

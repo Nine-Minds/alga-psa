@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   listItems: vi.fn(),
   listAccounts: vi.fn(),
   withTransaction: vi.fn(),
+  lockQboItemTargets: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -90,6 +91,7 @@ vi.mock('@alga-psa/db', () => {
     createTenantKnex: vi.fn(async () => ({ knex: {} })),
     lockInvoiceForExternalSync: vi.fn(),
     lockInvoicesForExternalSync: vi.fn(),
+    lockQboItemTargets: mocks.lockQboItemTargets,
     tenantDb: () => ({ table }),
     withTransaction: mocks.withTransaction,
     writeAccountingAudit: vi.fn(async () => undefined),
@@ -251,6 +253,19 @@ describe('createExternalEntityMappings', () => {
     expect(results[1].error).toMatch(/QuickBooks Item missing does not exist/);
     expect(mocks.qboCreate).toHaveBeenCalledTimes(1);
     expect(mocks.qboRead).toHaveBeenCalledTimes(3);
+    // Each QBO service row serializes on its own item target before the
+    // existence check, so item import never decides over a stale set.
+    expect(mocks.lockQboItemTargets.mock.calls.map((c: any[]) => [c[1], c[2]])).toEqual([
+      ['t1', [{ realm: 'qbo-realm', itemId: '10' }]],
+      ['t1', [{ realm: 'qbo-realm', itemId: 'missing' }]],
+      ['t1', [{ realm: 'qbo-realm', itemId: '12' }]],
+    ]);
+  });
+
+  it('does not take the QBO item-target lock for Xero rows', async () => {
+    const results = await call([row('svc-a', 'B', 'item'), row('svc-b', '200', 'account')]);
+    expect(results.map((r: any) => r.ok)).toEqual([true, true]);
+    expect(mocks.lockQboItemTargets).not.toHaveBeenCalled();
   });
 
   it('returns an empty result for an empty batch', async () => {

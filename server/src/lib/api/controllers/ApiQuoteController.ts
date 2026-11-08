@@ -3,6 +3,7 @@
  * Handles all quote-related API endpoints with API key authentication
  */
 
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiBaseController } from './ApiBaseController';
 import type { AuthenticatedApiRequest } from '../middleware/apiMiddleware';
@@ -14,6 +15,7 @@ import {
   createQuoteItemSchema,
   updateQuoteItemSchema,
   sendQuoteSchema,
+  cancelQuoteSchema,
   approvalRequestChangesSchema,
   convertQuoteSchema,
   reorderQuoteItemsSchema,
@@ -22,7 +24,6 @@ import {
   runWithTenant,
 } from '../../db';
 import { getConnection } from '../../db/db';
-import { hasPermission } from '../../auth/rbac';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import {
   BuiltinAuthorizationKernelProvider,
@@ -83,7 +84,7 @@ export class ApiQuoteController extends ApiBaseController {
     }
 
     const knex = await getConnection(apiRequest.context.tenant);
-    const allowed = await hasPermission(apiRequest.context.user, 'quotes', 'approve', knex);
+    const allowed = await hasApiContextPermission(apiRequest.context, 'quotes', 'approve', knex);
     if (!allowed) {
       throw new ForbiddenError('Permission denied: Cannot approve quote');
     }
@@ -628,6 +629,33 @@ export class ApiQuoteController extends ApiBaseController {
           return createSuccessResponse(quote);
         });
       } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  cancel() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, 'update');
+
+          const id = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context.tenant);
+          await this.assertQuoteReadAllowed(apiRequest, id, knex);
+          const body = await req.json().catch(() => ({}));
+          const data = cancelQuoteSchema.parse(body);
+
+          const quote = await this.quoteService.cancel(id, data.reason, apiRequest.context);
+
+          return createSuccessResponse(quote);
+        });
+      } catch (error) {
+        if (error instanceof ZodError) {
+          return handleApiError(new ValidationError('Validation failed', error.issues));
+        }
         return handleApiError(error);
       }
     };

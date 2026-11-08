@@ -1,5 +1,6 @@
 import { Knex } from 'knex';
 import { getAuthorizationKernel } from 'server/src/lib/authorization/kernel';
+import { resolveAuthorizationSubjectForUser } from '@alga-psa/authorization/assetReadAuthorization';
 import type {
   AuthorizationRecord,
   AuthorizationSubject,
@@ -95,6 +96,46 @@ export function buildAuthorizationPrincipalSubject(
   return subject;
 }
 
+export async function authorizeApiResourceAction(input: {
+  knex: Knex | Knex.Transaction;
+  tenant: string;
+  user: any;
+  apiKeyId?: string;
+  resource: string;
+  action: string;
+  recordContext: AuthorizationRecord;
+}): Promise<boolean> {
+  const kernel = await getAuthorizationKernel();
+  const subject = await resolveAuthorizationSubjectForUser(
+    input.knex,
+    input.tenant,
+    {
+      ...input.user,
+      user_id: input.user?.user_id,
+      user_type: input.user?.user_type === 'client' ? 'client' : input.user?.user_type === 'service' ? 'service' : 'internal',
+      clientId: input.user?.client_id ?? input.user?.clientId,
+      role_ids: [
+        ...normalizeStringArray(input.user?.role_ids),
+        ...normalizeIdArrayFromObjects(input.user?.roles, 'role_id'),
+      ],
+    },
+    input.apiKeyId,
+  );
+  subject.tenant = input.tenant;
+
+  const decision = await kernel.authorizeResource({
+    knex: input.knex as any,
+    subject,
+    resource: { type: input.resource, action: input.action },
+    record: input.recordContext,
+  });
+
+  return decision.allowed;
+}
+
+// Keep the existing generic name for callers that already pass an explicit action.
+export const authorizeApiResource = authorizeApiResourceAction;
+
 export async function authorizeApiResourceRead(input: {
   knex: Knex;
   tenant: string;
@@ -103,16 +144,5 @@ export async function authorizeApiResourceRead(input: {
   resource: string;
   recordContext: AuthorizationRecord;
 }): Promise<boolean> {
-  const kernel = await getAuthorizationKernel();
-  const subject = buildAuthorizationPrincipalSubject(input.user, input.apiKeyId);
-  subject.tenant = input.tenant;
-
-  const decision = await kernel.authorizeResource({
-    knex: input.knex as any,
-    subject,
-    resource: { type: input.resource, action: 'read' },
-    record: input.recordContext,
-  });
-
-  return decision.allowed;
+  return authorizeApiResourceAction({ ...input, action: 'read' });
 }

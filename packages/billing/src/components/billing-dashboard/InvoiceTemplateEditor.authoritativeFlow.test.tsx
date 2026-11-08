@@ -322,7 +322,9 @@ describe('InvoiceTemplateEditor authoritative preview flow', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Existing' }));
     await openExistingInvoiceSelect();
-    fireEvent.click(await screen.findByText('INV-EX-001 · Acme Co.'));
+    // The picker loads its options behind a 300 ms debounce; the default 1 s
+    // wait left no room for a loaded shard.
+    fireEvent.click(await screen.findByText('INV-EX-001 · Acme Co.', {}, { timeout: 5000 }));
 
     await waitFor(() => expect(getInvoiceForRenderingMock).toHaveBeenCalledWith('inv-existing-1'));
     await waitFor(() =>
@@ -331,7 +333,12 @@ describe('InvoiceTemplateEditor authoritative preview flow', () => {
       )
     );
 
-    const renderedPreview = document.querySelector('[data-automation-id=\"invoice-designer-preview-render-output\"]');
-    expect(renderedPreview?.textContent ?? '').toContain('INV-EX-001');
+    // The call above is observed the moment it is made; the rendered HTML lands
+    // only after its promise settles, so the output still read "Shaping and
+    // rendering preview..." when a shard checked it synchronously (run 41375685791).
+    await waitFor(() => {
+      const renderedPreview = document.querySelector('[data-automation-id=\"invoice-designer-preview-render-output\"]');
+      expect(renderedPreview?.textContent ?? '').toContain('INV-EX-001');
+    });
   });
 });
