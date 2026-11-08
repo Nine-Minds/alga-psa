@@ -13,15 +13,19 @@
  * deletion order, and server/src/test/unit/temporal/assetAuditTenantDeletionOrder.test.ts
  * reads that list out of the original create migration.
  *
- * Citus propagates CREATE INDEX to the shards; IF NOT EXISTS keeps a re-run a
- * no-op.
+ * Built CONCURRENTLY so an existing tenant's audit history stays readable and
+ * writable while the index is created; that forbids a transaction, hence the
+ * non-transactional config. Citus propagates it to the shards, and
+ * IF NOT EXISTS keeps a re-run a no-op.
  */
+
+exports.config = { transaction: false };
 
 exports.up = async function up(knex) {
   if (!(await knex.schema.hasTable('asset_audits'))) return;
 
   await knex.raw(`
-    CREATE INDEX IF NOT EXISTS idx_asset_audits_tenant_client_started
+    CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_asset_audits_tenant_client_started
     ON asset_audits (tenant, client_id, started_at DESC)
   `);
 };
@@ -29,5 +33,5 @@ exports.up = async function up(knex) {
 exports.down = async function down(knex) {
   if (!(await knex.schema.hasTable('asset_audits'))) return;
 
-  await knex.raw('DROP INDEX IF EXISTS idx_asset_audits_tenant_client_started');
+  await knex.raw('DROP INDEX CONCURRENTLY IF EXISTS idx_asset_audits_tenant_client_started');
 };
