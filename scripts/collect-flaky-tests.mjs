@@ -7,11 +7,19 @@ import { promisify } from 'node:util';
 import { aggregateFlakyTests, renderFlakyTestReport } from './lib/flaky-test-report.mjs';
 
 const execute = promisify(execFile);
-// production-regression.yml calls the lane workflows, so its runs carry every
-// lane's flaky artifacts. integration-tests.yml also runs standalone — including
-// the nightly schedule, the main producer of flakes on a merged revision — so
-// its own runs are inventoried too.
-const WORKFLOWS = ['production-regression.yml', 'integration-tests.yml'];
+// Every lane uploads its retry evidence under a fixed artifact name; the
+// repository artifact listing filters by that name, newest first, so the week's
+// evidence costs one page per name instead of one inventory request per
+// workflow run. Walking runs cost 600-900 requests a week against the 1,000 an
+// hour GITHUB_TOKEN allows, and the 2026-11-02 report was cut short by it.
+// scripts/tests/flaky-test-report.test.mjs derives this list from the workflow
+// matrices, so a lane growing a shard fails there instead of vanishing here.
+export const FLAKY_ARTIFACT_NAMES = Object.freeze([
+  ...[1, 2, 3, 4].map(shard => `flaky-tests-unit-shard-${shard}`),
+  ...[1, 2, 3, 4].map(shard => `flaky-tests-integration-shard-${shard}`),
+  ...[1, 2, 3].map(shard => `flaky-tests-infrastructure-shard-${shard}`),
+  'flaky-tests-browser-community', 'flaky-tests-browser-enterprise',
+]);
 const MEMBER = 'flaky-tests.json';
 const PREFIX = 'flaky-tests-';
 const archiveCap = 4 * 1024 * 1024, documentCap = 1024 * 1024, pageCap = 100;
@@ -54,23 +62,20 @@ async function boundedBytes(response, cap) {
   } finally { await reader.cancel(); }
 }
 
-// Read-only: lists recent production-regression runs, then every artifact whose
-// name marks it as flaky evidence. Expired, missing or unreadable artifacts are
-// reported as diagnostics; they never abort the weekly report.
-// The caps must clear a real week: this repository produced 351 regression runs
-// in seven days, one inventory request each. That plus the few flake reports
-// stays well inside the 1,000 requests an hour GITHUB_TOKEN is allowed, and
-// anything the caps do cut is reported as partial coverage rather than read as
-// a clean week.
+// Read-only: lists every artifact published under each known flaky-evidence
+// name since the window opened and downloads the unexpired ones. A name whose
+// listing fails, a page cap and an unreadable artifact are diagnostics; they
+// never abort the weekly report, and the report shows them as partial coverage.
 export async function collectFlakyArtifacts({ repository, githubToken, request = fetch, now = Date.now(),
-  windowDays = 7, maxRunPages = 6, maxArtifactPages = 3, maxRuns = 600, timeoutMs = 600_000 } = {}) {
+  windowDays = 7, names = FLAKY_ARTIFACT_NAMES, maxPages = 5, timeoutMs = 600_000 } = {}) {
   if (typeof repository !== 'string' || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) throw new FlakyCollectionError('configuration', 'invalid-repository');
   if (typeof githubToken !== 'string' || !githubToken) throw new FlakyCollectionError('configuration', 'github-token-missing');
   if (!Number.isSafeInteger(windowDays) || windowDays < 1 || windowDays > 90) throw new FlakyCollectionError('configuration', 'invalid-window');
+  if (!Array.isArray(names) || !names.length || names.some(name => typeof name !== 'string' || !name.startsWith(PREFIX))) throw new FlakyCollectionError('configuration', 'invalid-artifact-names');
   // `now` anchors the reported window; the deadline follows the wall clock.
   const deadline = Date.now() + timeoutMs;
   const api = `https://api.github.com/repos/${repository.toLowerCase()}`;
-  const since = new Date(now - windowDays * 86_400_000).toISOString().slice(0, 10);
+  const since = new Date(now - windowDays * 86_400_000).toISOString();
   const diagnostics = [];
   const get = async (url, { token = githubToken, redirect = 'error' } = {}) => {
     check(Date.now() < deadline);
@@ -83,52 +88,41 @@ export async function collectFlakyArtifacts({ repository, githubToken, request =
     check(response.status === 200);
     return JSON.parse((await boundedBytes(response, 4 * 1024 * 1024)).toString('utf8'));
   };
-  const pages = async (url, key, maxPages, onPage) => {
+  // The listing is newest first, so the first entry older than the window ends
+  // the name; a 30-day retention never costs more pages than the week needs.
+  const listed = async name => {
     const items = [], ids = new Set();
-    let total;
     for (let page = 1; ; page++) {
-      if (page > maxPages) { onPage('page-limit-reached'); break; }
-      const data = await json(`${url}${url.includes('?') ? '&' : '?'}per_page=${pageCap}&page=${page}`);
+      if (page > maxPages) { diagnostics.push({ scope: 'artifacts', artifactName: name, code: 'page-limit-reached' }); break; }
+      const data = await json(`${api}/actions/artifacts?${new URLSearchParams({ name, per_page: String(pageCap), page: String(page) })}`);
       check(Number.isSafeInteger(data.total_count) && data.total_count >= 0);
-      total ??= data.total_count;
-      check(Array.isArray(data[key]) && data[key].length <= pageCap);
-      for (const item of data[key]) {
-        check(Number.isSafeInteger(item.id) && item.id > 0);
+      check(Array.isArray(data.artifacts) && data.artifacts.length <= pageCap);
+      let olderThanWindow = false;
+      for (const item of data.artifacts) {
+        check(Number.isSafeInteger(item.id) && item.id > 0 && item.name === name);
+        const created = Date.parse(item.created_at ?? '');
+        check(Number.isFinite(created));
+        if (new Date(created).toISOString() < since) { olderThanWindow = true; break; }
         if (ids.has(item.id)) continue;
         ids.add(item.id); items.push(item);
       }
-      if (items.length >= total || data[key].length < pageCap) break;
+      if (olderThanWindow || data.artifacts.length < pageCap || items.length >= data.total_count) break;
     }
     return items;
   };
-  let runs = [];
-  try {
-    const created = new URLSearchParams({ created: `>=${since}` }).toString();
-    const seen = new Set();
-    for (const workflow of WORKFLOWS) {
-      for (const run of await pages(`${api}/actions/workflows/${workflow}/runs?${created}`, 'workflow_runs', maxRunPages,
-        code => diagnostics.push({ scope: 'runs', code }))) {
-        if (seen.has(run.id)) continue;
-        seen.add(run.id); runs.push(run);
-      }
-    }
-  } catch { throw new FlakyCollectionError('runs', 'run-inventory-unavailable'); }
-  // Newest first, so anything the cap cuts is the oldest end of the window
-  // rather than one workflow's entire inventory.
-  runs.sort((a, b) => String(b.created_at ?? '').localeCompare(String(a.created_at ?? '')));
-  if (runs.length > maxRuns) { diagnostics.push({ scope: 'runs', code: 'run-limit-reached' }); runs = runs.slice(0, maxRuns); }
   const artifacts = [];
-  for (const run of runs) {
-    if (Date.now() >= deadline) { diagnostics.push({ scope: 'runs', code: 'deadline-exceeded' }); break; }
-    const runId = String(run.id);
+  let artifactsListed = 0;
+  for (const name of names) {
+    if (Date.now() >= deadline) { diagnostics.push({ scope: 'artifacts', artifactName: name, code: 'deadline-exceeded' }); break; }
     let inventory;
-    try {
-      inventory = await pages(`${api}/actions/runs/${run.id}/artifacts`, 'artifacts', maxArtifactPages,
-        code => diagnostics.push({ scope: 'artifacts', runId, code }));
-    } catch { diagnostics.push({ scope: 'artifacts', runId, code: 'artifact-inventory-unavailable' }); continue; }
-    for (const artifact of inventory.filter(entry => typeof entry.name === 'string' && entry.name.startsWith(PREFIX))) {
-      if (artifact.expired !== false) { diagnostics.push({ scope: 'artifact', runId, code: 'artifact-expired' }); continue; }
+    try { inventory = await listed(name); }
+    catch { diagnostics.push({ scope: 'artifacts', artifactName: name, code: 'artifact-listing-unavailable' }); continue; }
+    artifactsListed += inventory.length;
+    for (const artifact of inventory) {
+      const runId = Number.isSafeInteger(artifact.workflow_run?.id) && artifact.workflow_run.id > 0 ? String(artifact.workflow_run.id) : null;
+      if (artifact.expired !== false) { diagnostics.push({ scope: 'artifact', artifactName: name, runId, code: 'artifact-expired' }); continue; }
       try {
+        check(runId !== null);
         check(Number.isSafeInteger(artifact.size_in_bytes) && artifact.size_in_bytes > 0 && artifact.size_in_bytes <= archiveCap);
         // The immutable artifact ID selects the fixed API endpoint, which may
         // redirect once to signed storage. archive_download_url is ignored.
@@ -143,13 +137,13 @@ export async function collectFlakyArtifacts({ repository, githubToken, request =
         check(response.status === 200);
         const bytes = await boundedBytes(response, archiveCap);
         check(bytes.length === artifact.size_in_bytes);
-        artifacts.push({ artifactName: artifact.name, runId, runAttempt: run.run_attempt ?? null,
-          createdAt: artifact.created_at ?? run.created_at,
-          document: await readFlakyDocumentZip(bytes, { timeoutMs: deadline - Date.now() }) });
-      } catch { diagnostics.push({ scope: 'artifact', runId, code: 'artifact-unreadable' }); }
+        const document = await readFlakyDocumentZip(bytes, { timeoutMs: deadline - Date.now() });
+        artifacts.push({ artifactName: name, runId, runAttempt: Number.isSafeInteger(document?.runAttempt) ? document.runAttempt : null,
+          createdAt: artifact.created_at, document });
+      } catch { diagnostics.push({ scope: 'artifact', artifactName: name, runId, code: 'artifact-unreadable' }); }
     }
   }
-  return { artifacts, diagnostics, runsInspected: runs.length };
+  return { artifacts, diagnostics, artifactsListed, namesInspected: names.length };
 }
 
 export async function runFlakyTestCollection({ directory, env = process.env, request = fetch, now = Date.now() }) {
@@ -165,13 +159,14 @@ export async function runFlakyTestCollection({ directory, env = process.env, req
   try {
     const collected = await collectFlakyArtifacts({ repository: env.GITHUB_REPOSITORY, githubToken: env.GITHUB_TOKEN,
       request, now, windowDays });
-    // Every diagnostic is a run or artifact the report could not read, so the
+    // Every diagnostic is a name or artifact the report could not read, so the
     // window was not fully covered and the summary must not imply otherwise.
     aggregated = aggregateFlakyTests(collected.artifacts, { windowDays, generatedAt: new Date(now).toISOString(),
-      coverage: { runsInspected: collected.runsInspected, complete: collected.diagnostics.length === 0,
-        limits: collected.diagnostics.map(entry => entry.code) } });
+      coverage: { artifactsListed: collected.artifactsListed, namesInspected: collected.namesInspected,
+        complete: collected.diagnostics.length === 0, limits: collected.diagnostics.map(entry => entry.code) } });
     diagnostics.status = 'collected';
-    diagnostics.runsInspected = collected.runsInspected;
+    diagnostics.artifactsListed = collected.artifactsListed;
+    diagnostics.namesInspected = collected.namesInspected;
     diagnostics.artifactsDownloaded = collected.artifacts.length;
     diagnostics.collection = collected.diagnostics;
     diagnostics.summary = aggregated.summary;

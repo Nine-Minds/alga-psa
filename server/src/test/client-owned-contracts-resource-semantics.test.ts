@@ -23,7 +23,7 @@ describe('client-owned contracts resource semantics', () => {
     expect(serviceSource).toContain(".whereNotNull('c.owner_client_id')");
     expect(serviceSource).toContain("'oc.client_name as owner_client_name'");
     expect(serviceSource).toContain("'c.status'");
-    expect(serviceSource).toContain("status: data.status ?? 'draft'");
+    expect(serviceSource).toContain("const status = data.status ?? 'draft';");
     expect(serviceSource).toContain("from(baseQuery.clone().as('client_owned_contracts'))");
 
     expect(schemaSource).toContain('owner_client_name: z.string().nullable().optional(),');

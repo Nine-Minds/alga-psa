@@ -69,6 +69,7 @@
     "sku": "SKU",
     "source": "Origem",
     "subtotal": "Subtotal",
+    "subtotalBeforeDiscounts": "Subtotal antes dos descontos",
     "tax": "Imposto",
     "termsAndConditions": "Termos e condições",
     "ticket": "Ticket",

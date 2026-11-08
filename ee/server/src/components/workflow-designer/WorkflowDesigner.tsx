@@ -16,7 +16,7 @@ import {
   MessageSquare, Edit, UserPlus, CheckCircle, Paperclip, Building, Users, Bot,
   Bell, Calendar, SquareCheck, StickyNote, ClipboardList, Ticket,
   FolderKanban, Handshake, Contact, Wand2, AppWindow, Hourglass, ShieldAlert,
-  CalendarPlus, Timer, BellRing, Gauge, ShieldCheck, MessagesSquare
+  CalendarPlus, Timer, BellRing, Gauge, ShieldCheck, MessagesSquare, Wifi
 } from 'lucide-react';
 import {
   getStepTypeColor,
@@ -3920,6 +3920,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     if (itemWithAction.groupKey || itemWithAction.iconToken) {
       switch (itemWithAction.iconToken ?? itemWithAction.groupKey) {
         case 'ticket': return <Ticket className={iconClass} />;
+        case 'maintenance': return <Cog className={iconClass} />;
         case 'contact': return <Contact className={iconClass} />;
         case 'client': return <Building className={iconClass} />;
         case 'communication': return <Mail className={iconClass} />;
@@ -3934,6 +3935,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         case 'ninjaone': return <ShieldAlert className={iconClass} />;
         case 'tacticalrmm': return <Terminal className={iconClass} />;
         case 'levelio': return <Gauge className={iconClass} />;
+        case 'unifi': return <Wifi className={iconClass} />;
         case 'huntress': return <ShieldCheck className={iconClass} />;
         case 'teams': return <MessagesSquare className={iconClass} />;
         case 'app': return <AppWindow className={iconClass} />;

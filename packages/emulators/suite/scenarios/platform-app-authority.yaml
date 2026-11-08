@@ -1,0 +1,30 @@
+name: platform-app-authority
+description: Both issuer kinds side by side; Nine Minds multi-tenant platform app and a customer single-tenant app, user in the customer directory
+# (a) Platform app (multi-tenant, home = Nine Minds directory 99999999-...):
+#     /common -> OK, tid = customer directory; /{ninemindsTenant} -> AADSTS50020
+#     (the Nov 2025 regression: authority pinned to the vendor tenant for a customer user).
+# (b) Customer app (single-tenant, home = customer directory bbbbbbbb-1111-4111-8111-111111111111):
+#     /common -> AADSTS50194; /{customerTenant} -> OK; /{otherTenant} -> AADSTS700016.
+# Assumed: 50194, 50011, 700016 and 50020 all fire at /authorize; /token repeats
+# the audience/authority check. 50194 redirects with error params; 50011,
+# 700016 and 50020 render a hosted HTML error page (HTTP 400, no redirect).
+steps:
+  - reset: msgraph
+  - seed: msgraph/client
+    params:
+      clientId: aaaaaaaa-2222-4222-8222-aaaaaaaaaaaa
+      clientSecret: platform-secret
+      displayName: Nine Minds Platform
+      signInAudience: AzureADMultipleOrgs
+      homeTenantId: 99999999-9999-4999-8999-999999999999
+      redirectUris: ["http://localhost:3000/api/auth/callback/azure-ad"]
+  - seed: msgraph/client
+    params:
+      clientId: aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa
+      clientSecret: single-tenant-secret
+      displayName: Cedar Grove Mail
+      signInAudience: AzureADMyOrg
+      homeTenantId: bbbbbbbb-1111-4111-8111-111111111111
+      redirectUris: ["http://localhost:3000/api/auth/callback/azure-ad"]
+  - seed: msgraph/signed-in-user
+    params: { userPrincipalName: jamie@cedar.example, mail: jamie@cedar.example, tenantId: bbbbbbbb-1111-4111-8111-111111111111 }

@@ -202,6 +202,8 @@ export interface ClientPulseLocation {
   is_default: boolean;
   is_billing: boolean;
   is_shipping: boolean;
+  /** How many contacts work here — the same count the Manage Locations cards show. */
+  contact_count: number;
 }
 
 export interface ClientPulseDocument {

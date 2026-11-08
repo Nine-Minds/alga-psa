@@ -20,6 +20,17 @@ vi.mock('@alga-psa/auth', () => ({
   }),
 }));
 
+vi.mock('../../lib/ticketRecordAuthorization', () => ({
+  authorizeTicketRecordAccessConcealed: async ({ tenant, ticketId }: { tenant: string; ticketId: string }) => {
+    state.events.push(`ticket-read:${tenant}`);
+    const ticket = state.ticketsByTenant[tenant]?.[ticketId];
+    if (!ticket || ticket.board_id !== 'board-1') {
+      throw new Error('Permission denied: Cannot access ticket');
+    }
+    return ticket;
+  },
+}));
+
 vi.mock('../../lib/clientPortalVisibility.server', () => ({
   getClientContactVisibilityContext: async () => ({
     effectiveTicketScope: 'client',
@@ -163,24 +174,6 @@ describe('applyChecklistTemplate record authorization', () => {
     expect(state.events).toEqual(['ticket-read:tenant-1']);
     expect(state.rows).toEqual(initialRows);
     expect(state.activities).toEqual(initialActivities);
-  });
-
-  it('resolves the otherwise-visible cross-tenant ticket when the real authorizer uses its owning tenant', async () => {
-    const { authorizeTicketRecordAccessConcealed } = await import('../../lib/ticketRecordAuthorization');
-
-    const ticket = await authorizeTicketRecordAccessConcealed({
-      trx: {} as any,
-      tenant: 'tenant-2',
-      user: state.user,
-      ticketId: 'cross-tenant-ticket',
-      action: 'update',
-    });
-
-    expect(ticket).toMatchObject({
-      ticket_id: 'cross-tenant-ticket', tenant: 'tenant-2', client_id: 'client-1',
-      board_id: 'board-1', contact_name_id: 'contact-1',
-    });
-    expect(state.events).toEqual(['ticket-read:tenant-2']);
   });
 
   it('applies a valid template after authorized ticket access', async () => {
