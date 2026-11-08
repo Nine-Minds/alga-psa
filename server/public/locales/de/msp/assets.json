@@ -54,6 +54,22 @@
       "closed": "Geschlossen",
       "warranty_review": "Garantieprüfung",
       "repaired": "Repariert"
+    },
+    "assetAuditStatus": {
+      "in_progress": "In Bearbeitung",
+      "completed": "Abgeschlossen",
+      "cancelled": "Abgebrochen"
+    },
+    "assetAuditResult": {
+      "expected": "Erwartet",
+      "present": "Vorhanden",
+      "missing": "Fehlend",
+      "unexpected": "Unerwartet"
+    },
+    "assetAuditMethod": {
+      "scan": "Scan",
+      "manual": "Manuell",
+      "register": "Vor Ort erfasst"
     }
   },
   "assetAlertsSection": {
@@ -204,6 +220,13 @@
         "any": "Beliebige Verwahrung",
         "inCustody": "In MSP-Verwahrung",
         "notInCustody": "Nicht in MSP-Verwahrung"
+      },
+      "audit": {
+        "any": "Alle Inventurergebnisse",
+        "present": "Letzte Inventur: vorhanden",
+        "missing": "Letzte Inventur: fehlend",
+        "never": "Noch nie inventarisiert",
+        "stale": "Seit 90 Tagen nicht inventarisiert"
       }
     },
     "activeFilters": {
@@ -377,7 +400,9 @@
       "location": "Standort",
       "purchaseDate": "Kaufdatum",
       "warrantyEnd": "Garantieende",
-      "notProvided": "Nicht bereitgestellt"
+      "notProvided": "Nicht bereitgestellt",
+      "lastAudited": "Zuletzt inventarisiert",
+      "neverAudited": "Noch nie inventarisiert"
     },
     "info": {
       "client": "Kunde",
@@ -842,24 +867,6 @@
     "links": {
       "title": "Fernzugriffslinks",
       "description": "URL-Vorlagen für ScreenConnect und andere Fernwartungstools konfigurieren.",
-      "errors": {
-        "load": "Fernzugriffslinks konnten nicht geladen werden.",
-        "save": "Fernzugriffslink konnte nicht gespeichert werden.",
-        "delete": "Fernzugriffslink konnte nicht gelöscht werden.",
-        "templateHttp": "Die Vorlage muss mit http:// oder https:// und einem direkten Hostnamen beginnen.",
-        "templatePlaceholder": "Die Vorlage enthält einen nicht unterstützten Platzhalter.",
-        "templateUrl": "Die Vorlage muss eine gültige http- oder https-URL ergeben.",
-        "required": "Eine Beschriftung und eine URL-Vorlage sind erforderlich.",
-        "partialDelete": "{{count}} ausgewählte Links konnten nicht gelöscht werden."
-      },
-      "noneAvailable": "Keine Fernzugriffsoptionen verfügbar.",
-      "confirmDeleteTitle": "Fernzugriffslink löschen?",
-      "confirmDeleteMessage": "Möchten Sie „{{label}}“ wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
-      "openMenu": "Menü öffnen",
-      "selectLabel": "{{label}} auswählen",
-      "confirmBulkDeleteTitle": "Ausgewählte Links löschen?",
-      "confirmBulkDeleteMessage": "{{count}} ausgewählte Fernzugriffslinks löschen?",
-      "selectedCount": "{{count}} ausgewählt",
       "add": "Link hinzufügen",
       "empty": "Keine Fernzugriffslinks konfiguriert.",
       "edit": "Bearbeiten",
@@ -872,10 +879,28 @@
       "template": "URL-Vorlage",
       "ninjaExample": "Beispiel für das NinjaOne-Geräte-Dashboard: https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Ersetzen Sie den Host durch Ihre NinjaOne-Region: app, eu, ca, oc oder us2 .ninjarmm.com.",
       "tokens": "Verwenden Sie {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {asset.rmm_provider}, {asset.rmm_organization_id}, {client.name} und {field.<key>} mit benutzerdefinierten Feldschlüsseln aus Einstellungen → Assets → Asset-Typen.",
+      "errors": {
+        "load": "Fernzugriffslinks konnten nicht geladen werden.",
+        "save": "Fernzugriffslink konnte nicht gespeichert werden.",
+        "delete": "Fernzugriffslink konnte nicht gelöscht werden.",
+        "templateHttp": "Die Vorlage muss mit http:// oder https:// und einem direkten Hostnamen beginnen.",
+        "templatePlaceholder": "Die Vorlage enthält einen nicht unterstützten Platzhalter.",
+        "templateUrl": "Die Vorlage muss eine gültige http- oder https-URL ergeben.",
+        "required": "Eine Beschriftung und eine URL-Vorlage sind erforderlich.",
+        "partialDelete": "{{count}} ausgewählte Links konnten nicht gelöscht werden."
+      },
       "loading": "Fernzugriffsoptionen werden geladen…",
+      "noneAvailable": "Keine Fernzugriffsoptionen verfügbar.",
       "unavailable": "Für dieses Asset nicht verfügbar",
+      "confirmDeleteTitle": "Fernzugriffslink löschen?",
+      "confirmDeleteMessage": "Möchten Sie „{{label}}“ wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
       "actions": "Aktionen",
-      "selectAll": "Alle Links auswählen"
+      "openMenu": "Menü öffnen",
+      "selectLabel": "{{label}} auswählen",
+      "selectAll": "Alle Links auswählen",
+      "confirmBulkDeleteTitle": "Ausgewählte Links löschen?",
+      "confirmBulkDeleteMessage": "{{count}} ausgewählte Fernzugriffslinks löschen?",
+      "selectedCount": "{{count}} ausgewählt"
     }
   },
   "assetListErrors": {
@@ -1653,7 +1678,8 @@
     "assignDialogTitle": "Dieses Asset zuweisen",
     "sharedWorkspace": "Gemeinsamer Arbeitsplatz",
     "sharedWorkspaceValue": "{{name}} · {{count}} Personen",
-    "billingProfile": "Abrechnungsprofil"
+    "billingProfile": "Abrechnungsprofil",
+    "lastAudited": "Zuletzt inventarisiert"
   },
   "assetTimeline": {
     "title": "Verlauf",
@@ -1683,7 +1709,11 @@
       "aGroup": "einer Gruppe",
       "autoAssignedFrom": "Automatisch {{contact}} zugewiesen über {{provider}}",
       "groupLocationMoved": "Mit {{group}} nach {{location}} verschoben",
-      "groupLocationCleared": "Standort mit {{group}} entfernt"
+      "groupLocationCleared": "Standort mit {{group}} entfernt",
+      "audit": "Inventur",
+      "auditPresent": "Inventur: vorhanden",
+      "auditMissing": "Inventur: fehlend",
+      "auditMethod": "Erfasst mit Methode: {{method}}"
     },
     "changeTypes": {
       "created": "Erstellt",
@@ -2145,6 +2175,105 @@
     },
     "badge": {
       "label": "RMA {{number}} · {{status}}"
+    }
+  },
+  "assetAudits": {
+    "title": "Standortinventuren",
+    "startAudit": "Inventur starten",
+    "noLocation": "Kein Standort",
+    "loading": "Inventuren werden geladen…",
+    "empty": "Noch keine Standortinventuren in dieser Ansicht.",
+    "columns": {
+      "client": "Kunde",
+      "location": "Standort",
+      "status": "Status",
+      "startedBy": "Gestartet von",
+      "started": "Gestartet",
+      "completed": "Abgeschlossen",
+      "expected": "Erwartet",
+      "present": "Vorhanden",
+      "missing": "Fehlend",
+      "unexpected": "Unerwartet"
+    },
+    "filters": {
+      "client": "Kunde",
+      "allLocations": "Alle Standorte",
+      "allStatuses": "Alle Status",
+      "started": "Gestartet"
+    },
+    "stats": {
+      "expected": "erwartet",
+      "present": "vorhanden",
+      "missing": "fehlend",
+      "remaining": "verbleibend",
+      "unexpected": "unerwartet"
+    },
+    "segments": {
+      "remaining": "Verbleibend",
+      "present": "Vorhanden",
+      "missing": "Fehlend",
+      "unexpected": "Unerwartet",
+      "all": "Alle"
+    },
+    "start": {
+      "title": "Standortinventur starten",
+      "client": "Kunde",
+      "clientPlaceholder": "Kunden auswählen",
+      "location": "Standort",
+      "locationHint": "„Kein Standort“ umfasst die Geräte des Kunden, für die kein Standort hinterlegt ist.",
+      "statuses": "Einbezogene Asset-Status",
+      "statusesHint": "Ohne Statusauswahl werden alle Status einbezogen.",
+      "statusesLoading": "Status werden geladen…",
+      "notes": "Notizen",
+      "notesPlaceholder": "Zweck dieser Begehung (optional)",
+      "pickClient": "Wählen Sie einen Kunden aus, um den Umfang der Inventur zu sehen.",
+      "counting": "Einbezogene Geräte werden gezählt…",
+      "countUnavailable": "Die Geräteanzahl ist derzeit nicht verfügbar.",
+      "expected_one": "1 Gerät in diesem Umfang erwartet",
+      "expected_other": "{{count}} Geräte in diesem Umfang erwartet",
+      "submit": "Inventur starten",
+      "starting": "Wird gestartet…"
+    },
+    "detail": {
+      "backToClient": "Zurück zu den Inventuren des Kunden",
+      "untitledClient": "Kunde",
+      "location": "Standort",
+      "startedBy": "Gestartet von",
+      "started": "Gestartet",
+      "completed": "Abgeschlossen",
+      "scopeStatuses": "Einbezogene Status",
+      "allStatuses": "Alle Status",
+      "notes": "Notizen",
+      "exportCsv": "CSV exportieren",
+      "addUnexpected": "Unerwartetes Asset hinzufügen",
+      "addUnexpectedHint": "Ein vor Ort gefundenes Gerät außerhalb des Umfangs dieser Inventur wird als unerwartet erfasst, niemals als erwartet.",
+      "addUnexpectedPlaceholder": "Asset suchen…",
+      "addUnexpectedEmpty": "Keine weiteren Assets für diesen Kunden.",
+      "complete": "Inventur abschließen",
+      "completeConfirm_one": "1 nicht markiertes Gerät wird als fehlend erfasst.",
+      "completeConfirm_other": "{{count}} nicht markierte Geräte werden als fehlend erfasst.",
+      "cancelAudit": "Inventur abbrechen",
+      "cancelConfirm": "Die Inventur wird abgebrochen und es werden keine Änderungen an den Assets gespeichert. Dies kann nicht rückgängig gemacht werden.",
+      "keepAudit": "Inventur fortsetzen"
+    },
+    "items": {
+      "columns": {
+        "asset": "Asset",
+        "type": "Typ",
+        "serial": "Seriennummer / Tag",
+        "result": "Ergebnis",
+        "method": "Methode",
+        "markedBy": "Markiert von",
+        "markedAt": "Markiert am",
+        "actions": "Aktionen"
+      },
+      "searchPlaceholder": "Nach Name, Tag oder Seriennummer suchen",
+      "empty": "Keine Assets in dieser Ansicht.",
+      "markPresent": "Als vorhanden markieren",
+      "undoMark": "Rückgängig machen",
+      "createTicket": "Ticket erstellen",
+      "ticketTitle": "Bei Standortinventur fehlend: {{asset}}",
+      "ticketDescription": "Bei der am {{date}} gestarteten Standortinventur nicht gefunden."
     }
   }
 }
