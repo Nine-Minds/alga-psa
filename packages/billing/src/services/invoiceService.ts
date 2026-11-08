@@ -1648,6 +1648,8 @@ async function persistFixedInvoiceCharges(
   const bundleConfigCreatedAt = new Map<string, string | Date | null>();
   const bundleConfigIds = Array.from(new Set(
     Array.from(fixedPlanDetailsMap.values())
+      // Virtual contract associations have no stored service configuration.
+      .filter((planEntry) => !planEntry.sourceClientContractLineId.startsWith('contract-'))
       .flatMap((planEntry) => planEntry.details.map((detail) => detail.config_id))
       .filter((id): id is string => Boolean(id)),
   ));
