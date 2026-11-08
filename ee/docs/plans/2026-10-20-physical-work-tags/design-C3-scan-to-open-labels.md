@@ -117,7 +117,7 @@ So a 403 and a 404 look identical. This covers a missing record, a record-level 
 ### 3. Asset read authorization on REST (server)
 
 `ApiAssetController.getById` becomes: product gate → `asset:read` RBAC → load → record-level check → 404.
-- The record-level check reuses what web uses (`authorizeRecord` in `packages/assets/src/actions/assetActions.ts` ~2409 / the authorization kernel through `authorizeApiResourceRead` with resource `asset`).
+- The record-level check reuses what web uses (`authorizeRecord` in `packages/assets/src/actions/assetActions.ts` ~2409 / the authorization kernel through `projectApiResourceRead` with resource `asset`).
 - RBAC denial returns 403, as the rest of the API does, before any load, so it cannot reveal whether a record exists.
 - A missing record and a record-level denial both return **404** `Asset not found`, so the record-level check cannot be used to probe ids.
 

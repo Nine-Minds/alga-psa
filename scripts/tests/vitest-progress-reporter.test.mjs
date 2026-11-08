@@ -7,9 +7,56 @@ import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 import { collectedTestsFromJournal } from '../lib/vitest-progress-reporter.mjs';
+import { reconcileExecution } from '../lib/test-execution-evidence.mjs';
 
 const reporter = fileURLToPath(new URL('../lib/vitest-progress-reporter.mjs', import.meta.url));
 const runners = ['../../node_modules/vitest/vitest.mjs'];
+
+test('nested Vitest coordinators cannot overwrite the owning run inventory', { timeout: 30000 }, async (t) => {
+  const root = mkdtempSync(path.join(tmpdir(), 'alga-nested-progress-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const output = path.join(root, 'progress.jsonl');
+  const report = path.join(root, 'results.json');
+  const runner = fileURLToPath(new URL(runners[0], import.meta.url));
+  const config = include => `export default ${JSON.stringify({ test: {
+    globals: true, include, maxWorkers: 1, fileParallelism: false, reporters: [reporter], pool: 'forks',
+  } })};`;
+  writeFileSync(path.join(root, 'vitest.config.mjs'), config(['parent.test.js']));
+  writeFileSync(path.join(root, 'child.config.mjs'), config(['child.test.js']));
+  writeFileSync(path.join(root, 'child.test.js'), "test('nested probe', () => expect(1).toBe(1));");
+  writeFileSync(path.join(root, 'parent.test.js'), `
+    import { spawnSync } from 'node:child_process';
+    test('before probe', () => expect(1).toBe(1));
+    test('runs a fresh process', () => {
+      const child = spawnSync(process.execPath, [${JSON.stringify(runner)}, 'run', '--config', 'child.config.mjs'], {
+        env: { ...process.env }, encoding: 'utf8', timeout: 10000,
+      });
+      expect(child.status, child.stdout + child.stderr).toBe(0);
+    });
+    test('after probe', () => expect(2).toBe(2));
+  `);
+  const result = await new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [runner, 'run', '--reporter', reporter, '--reporter=json', `--outputFile.json=${report}`], {
+      cwd: root, env: { ...process.env, TEST_PROGRESS_PATH: output }, stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    let log = '';
+    child.stdout.on('data', chunk => { log += chunk; });
+    child.stderr.on('data', chunk => { log += chunk; });
+    const watchdog = setTimeout(() => child.kill('SIGKILL'), 25000);
+    child.on('error', reject);
+    child.on('close', code => { clearTimeout(watchdog); resolve({ code, log }); });
+  });
+  assert.equal(result.code, 0, result.log);
+  const journal = readFileSync(output, 'utf8');
+  const events = journal.trim().split('\n').map(JSON.parse);
+  assert.equal(new Set(events.map(event => event.runId)).size, 1);
+  assert.deepEqual(events.map(event => event.sequence), events.map((_, index) => index));
+  const collectedTests = collectedTestsFromJournal(journal);
+  assert.deepEqual(collectedTests.map(test => test.name), ['before probe', 'runs a fresh process', 'after probe']);
+  const evidence = reconcileExecution({ root, suite: 'fixture', revision: 'fixture', exitCode: result.code,
+    collected: [path.join(root, 'parent.test.js')], collectedTests, report: JSON.parse(readFileSync(report, 'utf8')) });
+  assert.equal(evidence.status, 'passed', evidence.failures.join('\n'));
+});
 
 for (const runner of runners) {
   test(`real ${runner} preserves results and interrupted import evidence`, { timeout: 30000 }, async (t) => {

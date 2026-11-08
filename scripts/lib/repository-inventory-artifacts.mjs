@@ -42,7 +42,7 @@ export function readVitestInventoryArtifact({ input, root, revision, descriptor 
     collectionFile: path.join(directory, 'collected.json'), casesFile: path.join(directory, 'collected-tests.json') }, directory);
 }
 
-export function verifyRepositoryInventory({ root, revision, input, candidates, manualRunners, exclusions }) {
+export function verifyRepositoryInventory({ root, revision, input, candidates, manualRunners, exclusions, delegations = [] }) {
   const collections = [], failures = [];
   const attempt = (name, read) => {
     try { collections.push(...read()); }
@@ -90,7 +90,7 @@ export function verifyRepositoryInventory({ root, revision, input, candidates, m
         casesFile: path.join(directory, runner.runner, 'collected-tests.json') }, directory);
     });
   });
-  const result = reconcileDiscovery({ root, candidates, collections, exclusions });
+  const result = reconcileDiscovery({ root, candidates, collections, exclusions, delegations });
   result.failures.push(...failures);
   return { ...result, revision, scope: 'repository-inventory', executionVerified: false,
     status: result.failures.length ? 'failed' : 'passed',

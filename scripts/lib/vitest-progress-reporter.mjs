@@ -9,6 +9,15 @@ export default class VitestProgressReporter {
   onInit(context) {
     this.root = context.config.root;
     this.output = path.resolve(process.env.TEST_PROGRESS_PATH || 'test-progress.jsonl');
+    // Nested Vitest probes inherit the reporter configuration and environment.
+    // Give each coordinator its own journal instead of truncating its parent's
+    // inventory and mixing registrations from two different runs.
+    const owner = process.env.TEST_PROGRESS_OWNER ? JSON.parse(process.env.TEST_PROGRESS_OWNER) : null;
+    if (owner?.output === this.output && owner.pid !== process.pid) {
+      this.output = `${this.output}.${process.pid}.jsonl`;
+    }
+    process.env.TEST_PROGRESS_PATH = this.output;
+    process.env.TEST_PROGRESS_OWNER = JSON.stringify({ pid: process.pid, output: this.output });
     this.runId = randomUUID();
     this.sequence = 0;
     mkdirSync(path.dirname(this.output), { recursive: true });

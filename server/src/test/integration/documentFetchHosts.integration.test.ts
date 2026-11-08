@@ -51,7 +51,7 @@ const rbac = vi.hoisted(() => ({
 vi.mock('../../lib/auth/rbac', () => rbac);
 vi.mock('@alga-psa/auth/rbac', () => rbac);
 vi.mock('../../lib/api/controllers/authorizationKernel', () => ({
-  authorizeApiResourceRead: vi.fn(async () => true),
+  projectApiResourceRead: vi.fn(async (input: { record: object }) => input.record),
 }));
 vi.mock('../../lib/api/controllers/ApiBaseController', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../lib/api/controllers/ApiBaseController')>();

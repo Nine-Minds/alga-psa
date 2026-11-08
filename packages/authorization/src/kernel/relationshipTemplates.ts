@@ -320,8 +320,10 @@ function compileBundleRuleSql(
     return { supported: true };
   }
 
-  // `not_self_approver` only constrains mutations; it never denies a read.
-  if (rule.constraintKey && rule.constraintKey !== 'not_self_approver') {
+  // These constraints do not remove rows from a read. Field hiding is applied
+  // by the response/predicate projector; its relationship template still scopes
+  // the rows here. Unknown constraints must continue to fail closed.
+  if (rule.constraintKey && !['not_self_approver', 'hide_sensitive_fields'].includes(rule.constraintKey)) {
     return { supported: false, reason: `unsupported bundle constraint ${rule.constraintKey}` };
   }
 

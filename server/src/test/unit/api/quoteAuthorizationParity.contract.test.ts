@@ -12,11 +12,13 @@ describe('Quote controller authorization parity contract', () => {
     const source = readControllerSource();
 
     expect(source).toContain('private async assertQuoteReadAllowed(');
-    expect(source).toContain("resource: 'billing'");
+    expect(source).not.toContain(['authorize', 'ApiResourceRead'].join(''));
+    expect(source).toContain("kind: 'quote'");
     expect(source).toContain('const quote = await this.assertQuoteReadAllowed(apiRequest, id);');
     expect(source).toContain('await this.assertQuoteReadAllowed(apiRequest, id, knex);');
     expect(source).toContain('await this.assertQuoteReadAllowed(apiRequest, quoteId, knex);');
-    expect(source).toContain('const existingQuote = await this.assertQuoteReadAllowed(apiRequest, id, knex);');
+    // Mutation logic reads the unredacted row; the projection only gates.
+    expect(source).toContain('const existingQuote = await this.quoteService.getById(id, apiRequest.context);');
     expect(source).toContain('await this.assertQuoteApproveAllowed(apiRequest, existingQuote as Record<string, any>);');
     expect(source).toContain('update() {');
     expect(source).toContain('delete() {');

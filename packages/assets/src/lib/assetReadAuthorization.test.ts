@@ -82,12 +82,19 @@ describe('resolveAuthorizationSubjectForUser', () => {
       tenant: 'tenant-a',
       userId: 'svc-1',
       userType: 'service',
+      apiKeyId: null,
       roleIds: ['role-msp-automation'],
       teamIds: ['team-ops'],
       managedUserIds: [],
       clientId: null,
       portfolioClientIds: [],
     });
+  });
+
+  it('retains the API-key assignment identity alongside the resolved principal', async () => {
+    const user = { ...sessionUser({ user_id: 'svc-key', user_type: 'service' }), apiKeyId: 'asset-read-key' };
+    const subject = await resolveAuthorizationSubjectForUser({} as any, 'tenant-a', user);
+    expect(subject).toMatchObject({ userId: 'svc-key', userType: 'service', apiKeyId: 'asset-read-key' });
   });
 
   it('scopes a client portal user to their own client', async () => {

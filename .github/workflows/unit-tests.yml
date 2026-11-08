@@ -120,14 +120,57 @@ jobs:
 
       - name: Determine Nx base/head
         shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SHA: ${{ github.sha }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "NX_BASE=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_ENV"
-            echo "NX_HEAD=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_ENV"
-          else
-            echo "NX_BASE=${{ github.event.before }}" >> "$GITHUB_ENV"
-            echo "NX_HEAD=${{ github.sha }}" >> "$GITHUB_ENV"
+          set -euo pipefail
+
+          head="$EVENT_SHA"
+          case "$EVENT_NAME" in
+            pull_request)
+              base="$PR_BASE_SHA"
+              head="$PR_HEAD_SHA"
+              ;;
+            push)
+              base="$PUSH_BEFORE_SHA"
+              if [[ -z "$base" || "$base" =~ ^0+$ ]]; then
+                base="$(git rev-parse "$head^")"
+              fi
+              ;;
+            workflow_dispatch)
+              if [[ -z "$DEFAULT_BRANCH" ]]; then
+                echo "Cannot resolve Nx base: repository default branch is missing for workflow_dispatch" >&2
+                exit 1
+              fi
+              # Checkout uses fetch-depth: 0. Fetch the default branch tip explicitly
+              # so merge-base and Nx both have the complete manual-run comparison.
+              git fetch --no-tags origin "$DEFAULT_BRANCH"
+              base="$(git merge-base "$head" FETCH_HEAD)"
+              ;;
+            *)
+              echo "Unsupported event for Nx base resolution: $EVENT_NAME" >&2
+              exit 1
+              ;;
+          esac
+
+          if [[ -z "$base" || -z "$head" ]] || ! git cat-file -e "$base^{commit}" 2>/dev/null || ! git cat-file -e "$head^{commit}" 2>/dev/null; then
+            echo "Cannot resolve valid Nx base/head commits (base='$base', head='$head')" >&2
+            exit 1
           fi
+
+          echo "Nx comparison: base=$base head=$head"
+          echo "NX_BASE=$base" >> "$GITHUB_ENV"
+          echo "NX_HEAD=$head" >> "$GITHUB_ENV"
+
+      - name: Calculate Nx affected projects
+        run: npx nx show projects --affected --base="$NX_BASE" --head="$NX_HEAD"
+        env:
+          NX_DAEMON: 'false'
 
       # Libraries and services only. The server app is excluded on purpose: its
       # `test` target is `vitest run src/test/unit`, and the server-unit shards

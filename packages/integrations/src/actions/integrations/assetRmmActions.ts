@@ -30,6 +30,12 @@ export interface RmmCommandResult {
   jobId?: string;
 }
 
+/** Internal response envelope lets REST select the source graph for this asset type without serializing the type. */
+export interface RmmApiReadResult {
+  assetType: string;
+  data: RmmCachedData | null;
+}
+
 type ManagedAssetRow = {
   asset_type: string;
   name: string;
@@ -107,9 +113,7 @@ async function canExecuteCommands(user: unknown, provider: string | null | undef
  * provider syncs populate. Never throws for a missing row: the page renders
  * its "not managed" state from null.
  */
-export const getAssetRmmData = withAuth(async (user, { tenant }, assetId: string): Promise<RmmCachedData | null> => {
-  await requireAssetPermission(user, 'read');
-
+async function loadAssetRmmData(tenant: string, assetId: string): Promise<RmmApiReadResult | null> {
   const asset = await loadManagedAsset(tenant, assetId);
   if (!asset?.rmm_provider) return null;
 
@@ -143,20 +147,34 @@ export const getAssetRmmData = withAuth(async (user, { tenant }, assetId: string
   };
 
   return {
-    provider: asset.rmm_provider as RmmProvider,
-    agent_status: (asset.agent_status || 'unknown') as RmmAgentStatus,
-    last_check_in: asset.last_seen_at ? new Date(asset.last_seen_at).toISOString() : null,
-    last_rmm_sync_at: asset.last_rmm_sync_at ? new Date(asset.last_rmm_sync_at).toISOString() : null,
-    current_user: ext.current_user ? String(ext.current_user) : null,
-    uptime_seconds: toNumber(ext.uptime_seconds),
-    lan_ip: ext.lan_ip ? String(ext.lan_ip) : null,
-    wan_ip: ext.wan_ip ? String(ext.wan_ip) : null,
-    cpu_utilization_percent: toNumber(ext.cpu_utilization_percent),
-    memory_utilization_percent: toNumber(ext.memory_usage_percent),
-    memory_used_gb: toNumber(ext.memory_used_gb),
-    memory_total_gb: toNumber(ext.ram_gb),
-    storage,
+    assetType: asset.asset_type,
+    data: {
+      provider: asset.rmm_provider as RmmProvider,
+      agent_status: (asset.agent_status || 'unknown') as RmmAgentStatus,
+      last_check_in: asset.last_seen_at ? new Date(asset.last_seen_at).toISOString() : null,
+      last_rmm_sync_at: asset.last_rmm_sync_at ? new Date(asset.last_rmm_sync_at).toISOString() : null,
+      current_user: ext.current_user ? String(ext.current_user) : null,
+      uptime_seconds: toNumber(ext.uptime_seconds),
+      lan_ip: ext.lan_ip ? String(ext.lan_ip) : null,
+      wan_ip: ext.wan_ip ? String(ext.wan_ip) : null,
+      cpu_utilization_percent: toNumber(ext.cpu_utilization_percent),
+      memory_utilization_percent: toNumber(ext.memory_usage_percent),
+      memory_used_gb: toNumber(ext.memory_used_gb),
+      memory_total_gb: toNumber(ext.ram_gb),
+      storage,
+    },
   };
+}
+
+export const getAssetRmmData = withAuth(async (user, { tenant }, assetId: string): Promise<RmmCachedData | null> => {
+  await requireAssetPermission(user, 'read');
+  return (await loadAssetRmmData(tenant, assetId))?.data ?? null;
+});
+
+/** REST adapter retains the discriminator needed to apply the actual extension-table source descriptor. */
+export const getAssetRmmDataForApi = withAuth(async (user, { tenant }, assetId: string): Promise<RmmApiReadResult | null> => {
+  await requireAssetPermission(user, 'read');
+  return loadAssetRmmData(tenant, assetId);
 });
 
 /** Pulls the device from its provider, then returns the refreshed cached data. */
@@ -165,6 +183,15 @@ export const refreshAssetRmmData = withAuth(async (user, { tenant }, assetId: st
   const { ref, actions } = await resolveDevice(tenant, assetId);
   await actions.refresh(ref);
   return getAssetRmmData(assetId);
+});
+
+/** API refresh preserves update authorization and returns the source discriminator for response projection. */
+export const refreshAssetRmmDataForApi = withAuth(async (user, { tenant }, assetId: string): Promise<RmmApiReadResult | null> => {
+  await requireAssetPermission(user, 'update');
+  await requireAssetPermission(user, 'read');
+  const { ref, actions } = await resolveDevice(tenant, assetId);
+  await actions.refresh(ref);
+  return loadAssetRmmData(tenant, assetId);
 });
 
 export const triggerRmmReboot = withAuth(async (user, { tenant }, assetId: string): Promise<RmmCommandResult> => {

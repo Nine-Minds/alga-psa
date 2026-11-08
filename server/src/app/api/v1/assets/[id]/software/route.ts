@@ -14,14 +14,24 @@
  */
 
 import { NextResponse } from 'next/server';
-import {
-  getAssetSoftware,
-  getAssetSoftwareSummary,
-} from '@alga-psa/assets/actions/softwareActions';
+import { getAssetSoftwareForApi } from '@alga-psa/assets/actions/softwareActions';
 import { assetActionErrorFrom, assetActionErrorMessage } from '@alga-psa/assets/actions/assetActionErrors';
-import { guardAssetReadForRequest } from 'server/src/lib/api/controllers/assetReadGuard';
+import { readAssetGateForRequest } from 'server/src/lib/api/controllers/assetReadGuard';
+import {
+  isAuthorizedProjectionFieldReadable,
+  reprojectUnderDecision,
+} from 'server/src/lib/api/controllers/authorizationKernel';
+import {
+  ASSET_SOFTWARE_SOURCE,
+  ASSET_SOFTWARE_SUMMARY_SOURCE,
+} from '@alga-psa/co-managed/recordProjection';
 import { runWithApiKeyOrSession } from 'server/src/lib/api/middleware/runWithApiKeyOrSession';
-import type { SoftwareCategory, SoftwareType } from '@alga-psa/types';
+import type {
+  AssetSoftwareDisplayItem,
+  AssetSoftwareSummary,
+  SoftwareCategory,
+  SoftwareType,
+} from '@alga-psa/types';
 
 const SOFTWARE_CATEGORIES = new Set<string>([
   'Browser',
@@ -87,6 +97,62 @@ function assetActionErrorResponse(value: unknown): NextResponse | null {
   return NextResponse.json({ error: message }, { status });
 }
 
+function countBy<T>(rows: readonly AssetSoftwareDisplayItem[], key: (row: AssetSoftwareDisplayItem) => T): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const row of rows) {
+    const value = key(row);
+    const name = value == null || value === '' ? 'Uncategorized' : String(value);
+    counts[name] = (counts[name] ?? 0) + 1;
+  }
+  return counts;
+}
+
+function summarizeVisibleSoftware(
+  rows: readonly AssetSoftwareDisplayItem[],
+  readable: (field: string) => boolean,
+): Record<string, any> {
+  const hasVisibleRows = rows.length > 0;
+  const currentReadable = !hasVisibleRows || readable('is_current');
+  const currentRows = currentReadable ? rows.filter((row) => row.is_current === true) : [];
+  const categoryReadable = currentReadable && (!hasVisibleRows || readable('category'));
+  const typeReadable = currentReadable && (!hasVisibleRows || readable('software_type'));
+  const securityReadable = currentReadable && (!hasVisibleRows || readable('is_security_relevant'));
+  const managedReadable = currentReadable && (!hasVisibleRows || readable('is_managed'));
+  const firstSeenReadable = currentReadable && (!hasVisibleRows || readable('first_seen_at'));
+  const byType: Record<SoftwareType, number> = {
+    application: 0,
+    driver: 0,
+    update: 0,
+    system: 0,
+  };
+  if (typeReadable) {
+    for (const row of currentRows) {
+      if (row.software_type in byType) byType[row.software_type] += 1;
+    }
+  }
+
+  const recentSince = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const recentlyInstalled = firstSeenReadable
+    ? currentRows.filter((row) => {
+      const firstSeen = new Date(row.first_seen_at).getTime();
+      return Number.isFinite(firstSeen) && firstSeen >= recentSince;
+    }).length
+    : null;
+
+  return {
+    total_installed: currentReadable ? currentRows.length : null,
+    by_category: categoryReadable ? countBy(currentRows, (row) => row.category) : null,
+    by_type: typeReadable ? byType : null,
+    security_software_count: securityReadable
+      ? currentRows.filter((row) => row.is_security_relevant).length
+      : null,
+    managed_software_count: managedReadable
+      ? currentRows.filter((row) => row.is_managed).length
+      : null,
+    recently_installed_count: recentlyInstalled,
+  };
+}
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -97,7 +163,7 @@ export async function GET(
       return NextResponse.json({ error: 'Missing asset ID' }, { status: 400 });
     }
 
-    const denied = await guardAssetReadForRequest(request, id);
+    const { projection: assetGate, denied } = await readAssetGateForRequest(request, id);
     if (denied) return denied;
 
     const url = new URL(request.url);
@@ -131,38 +197,54 @@ export async function GET(
     const search = url.searchParams.get('search') || undefined;
     const include_uninstalled = includeUninstalledParam.value;
 
-    // Fetch software list and summary in parallel (API-key callers resolve the
-    // withAuth identity via the key; session callers pass through).
-    const [softwareResult, summary] = await runWithApiKeyOrSession(request, () => Promise.all([
-      getAssetSoftware({
-        asset_id: id,
-        page,
-        limit,
-        category: category || undefined,
-        software_type: software_type || undefined,
-        search,
-        include_uninstalled,
-      }),
-      getAssetSoftwareSummary(id),
-    ]));
+    // Authorization precedes data loading; project the complete candidate set
+    // before any predicate, pagination, or summary can observe hidden rows.
+    const rawRows = await runWithApiKeyOrSession(request, () => getAssetSoftwareForApi(id));
+    const softwareError = assetActionErrorResponse(rawRows);
+    if (softwareError) return softwareError;
+    const projectedRows = reprojectUnderDecision(
+      assetGate,
+      rawRows as AssetSoftwareDisplayItem[],
+      ASSET_SOFTWARE_SOURCE,
+    ) as Array<Partial<AssetSoftwareDisplayItem> & { software_id: string }>;
+    const fieldReadable = (field: string) => isAuthorizedProjectionFieldReadable(
+      assetGate, field, ASSET_SOFTWARE_SOURCE,
+    );
 
-    const softwareError = assetActionErrorResponse(softwareResult);
-    if (softwareError) {
-      return softwareError;
-    }
-    const summaryError = assetActionErrorResponse(summary);
-    if (summaryError) {
-      return summaryError;
-    }
+    const term = search?.trim().toLocaleLowerCase();
+    const searchableFields = (['name', 'publisher'] as const).filter(fieldReadable);
+    let visibleRows = projectedRows.filter((row) => {
+      if (!include_uninstalled && (!fieldReadable('is_current') || row.is_current !== true)) return false;
+      if (category && (!fieldReadable('category') || row.category !== category)) return false;
+      if (software_type && (!fieldReadable('software_type') || row.software_type !== software_type)) return false;
+      if (term) {
+        const matches = searchableFields.some((field) =>
+          typeof row[field] === 'string' && row[field]!.toLocaleLowerCase().includes(term),
+        );
+        if (!matches) return false;
+      }
+      return true;
+    });
+
+    visibleRows = visibleRows.sort((left, right) => {
+      const leftName = fieldReadable('name') && typeof left.name === 'string' ? left.name.toLocaleLowerCase() : left.software_id;
+      const rightName = fieldReadable('name') && typeof right.name === 'string' ? right.name.toLocaleLowerCase() : right.software_id;
+      return leftName.localeCompare(rightName);
+    });
+
+    const total = visibleRows.length;
+    const data = visibleRows.slice((page - 1) * limit, page * limit);
+    const rawSummary = summarizeVisibleSoftware(projectedRows as AssetSoftwareDisplayItem[], fieldReadable);
+    const summary = reprojectUnderDecision(assetGate, rawSummary, ASSET_SOFTWARE_SUMMARY_SOURCE);
 
     return NextResponse.json({
-      data: softwareResult.software,
+      data,
       summary,
       pagination: {
-        page: softwareResult.page,
-        limit: softwareResult.limit,
-        total: softwareResult.total,
-        totalPages: Math.ceil(softwareResult.total / softwareResult.limit),
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
       },
       _links: {
         self: { href: `/api/v1/assets/${id}/software` },

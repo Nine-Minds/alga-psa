@@ -118,6 +118,10 @@
       "types": "./src/projectTaskQueue.ts",
       "import": "./src/projectTaskQueue.ts"
     },
+    "./recordProjection": {
+      "types": "./src/recordProjection.ts",
+      "import": "./src/recordProjection.ts"
+    },
     "./projectFieldMask": {
       "types": "./src/projectFieldMask.ts",
       "import": "./src/projectFieldMask.ts"

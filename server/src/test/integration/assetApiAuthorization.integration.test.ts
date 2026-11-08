@@ -54,6 +54,7 @@ let exportGet: typeof import('../../app/api/v1/assets/export/route').GET;
 let searchGet: typeof import('../../app/api/v1/assets/search/route').GET;
 let statsGet: typeof import('../../app/api/v1/assets/stats/route').GET;
 let bulkUpdate: typeof import('../../app/api/v1/assets/bulk-update/route').PUT;
+let bulkStatusUpdate: typeof import('../../app/api/v1/assets/bulk-status/route').PUT;
 
 const table = (name: string) => tenantDb(connection.db!, tenant).table(name);
 const schema = (name: string) => tenantDb(db, '__asset_authz_schema__').unscoped(name, 'asset authz integration schema inspection');
@@ -81,13 +82,13 @@ async function createCaller(actions: string[]) {
   return { userId, apiKey: key.api_key, apiKeyId: key.api_key_id };
 }
 
-async function grantBundle(caller: { userId: string; apiKeyId: string }, clientIds: string[], actions = ['read']) {
+async function grantBundle(caller: { userId: string; apiKeyId: string }, clientIds: string[], actions = ['read'], redactedFields: string[] = []) {
   const bundle = await createAuthorizationBundle(connection.db!, { tenant, name: `Asset scope ${randomUUID()}`, actorUserId: caller.userId });
   for (const action of actions) {
     await upsertBundleRule(connection.db!, {
       tenant, bundleId: bundle.bundleId, revisionId: bundle.revisionId,
       resourceType: 'asset', action, templateKey: 'selected_clients',
-      config: { selectedClientIds: clientIds }, actorUserId: caller.userId,
+      config: { selectedClientIds: clientIds, redactedFields }, actorUserId: caller.userId,
     });
   }
   await publishBundleRevision(connection.db! as any, { tenant, bundleId: bundle.bundleId, revisionId: bundle.revisionId, actorUserId: caller.userId });
@@ -130,6 +131,7 @@ beforeAll(async () => {
   ({ GET: searchGet } = await import('../../app/api/v1/assets/search/route'));
   ({ GET: statsGet } = await import('../../app/api/v1/assets/stats/route'));
   ({ PUT: bulkUpdate } = await import('../../app/api/v1/assets/bulk-update/route'));
+  ({ PUT: bulkStatusUpdate } = await import('../../app/api/v1/assets/bulk-status/route'));
 }, 180_000);
 
 beforeEach(async () => {
@@ -188,6 +190,20 @@ describe('asset API-key authorization through public routes and migrated Postgre
     expect((await invoke(assetItemGet, request(updater, `/api/v1/assets/${assetId}`), { id: assetId })).status).toBe(403);
     const updated = await invoke(assetItemPut, request(updater, `/api/v1/assets/${assetId}`, 'PUT', { name: 'Updated' }), { id: assetId });
     expect(updated.status).toBe(200);
+    expect((await updated.json()).data).toBeNull();
+    expect((await table('assets').where({ asset_id: assetId }).first()).name).toBe('Updated');
+    const bulkUpdated = await invoke(bulkUpdate, request(updater, '/api/v1/assets/bulk-update', 'PUT', {
+      assets: [{ asset_id: assetId, data: { name: 'Bulk updated' } }],
+    }));
+    expect(bulkUpdated.status).toBe(200);
+    expect((await bulkUpdated.json()).data).toBeNull();
+    expect((await table('assets').where({ asset_id: assetId }).first()).name).toBe('Bulk updated');
+    const statusUpdated = await invoke(bulkStatusUpdate, request(updater, '/api/v1/assets/bulk-status', 'PUT', {
+      asset_ids: [assetId], status: 'inactive',
+    }));
+    expect(statusUpdated.status).toBe(200);
+    expect((await statusUpdated.json()).data).toBeNull();
+    expect((await table('assets').where({ asset_id: assetId }).first()).status).toBe('inactive');
     expect((await invoke(assetItemDelete, request(updater, `/api/v1/assets/${assetId}`, 'DELETE'), { id: assetId })).status).toBe(403);
     const deleter = await createCaller(['delete']);
     expect((await invoke(assetItemPut, request(deleter, `/api/v1/assets/${createdAssetId}`, 'PUT', { name: 'No update' }), { id: createdAssetId })).status).toBe(403);
@@ -333,6 +349,35 @@ describe('asset API-key authorization through public routes and migrated Postgre
       expect(deniedBulk.status).toBe(404);
       const unchanged = await table('assets').where({ tenant }).whereIn('asset_id', [firstId, secondId]).select('name');
       expect(unchanged.map((row: any) => row.name).sort()).toEqual(['First', 'Second']);
+    } finally { globalThis.__algaAuthorizationKernelSingleton = previousKernel; }
+  }, 180_000);
+
+  it('keeps read redactions and update scope independent for single and bulk writes', async () => {
+    const { a, b } = await clients();
+    const allowedId = await createAsset(a, 'Allowed');
+    const deniedId = await createAsset(b, 'Read only');
+    const caller = await createCaller(['read', 'update']);
+    await grantBundle(caller, [a, b], ['read'], ['assets.serial_number']);
+    await grantBundle(caller, [a], ['update']);
+    const previousKernel = globalThis.__algaAuthorizationKernelSingleton;
+    const { createEnterpriseAuthorizationKernel } = await import('../../../../ee/server/src/lib/authorization/kernel');
+    globalThis.__algaAuthorizationKernelSingleton = await createEnterpriseAuthorizationKernel();
+    try {
+      const updated = await invoke(assetItemPut, request(caller, `/api/v1/assets/${allowedId}`, 'PUT', { name: 'Changed' }), { id: allowedId });
+      expect(updated.status).toBe(200);
+      const data = (await updated.json()).data;
+      expect(data).toMatchObject({ asset_id: allowedId, name: 'Changed' });
+      expect(data).not.toHaveProperty('serial_number');
+      const denied = await invoke(assetItemPut, request(caller, `/api/v1/assets/${deniedId}`, 'PUT', { name: 'Unauthorized' }), { id: deniedId });
+      expect(denied.status).toBe(404);
+      const move = await invoke(assetItemPut, request(caller, `/api/v1/assets/${allowedId}`, 'PUT', { client_id: b }), { id: allowedId });
+      expect(move.status).toBe(404);
+      expect((await table('assets').where({ asset_id: allowedId }).first()).client_id).toBe(a);
+      const bulk = await invoke(bulkUpdate, request(caller, '/api/v1/assets/bulk-update', 'PUT', {
+        assets: [allowedId, deniedId].map(asset_id => ({ asset_id, data: { name: 'Unauthorized batch' } })),
+      }));
+      expect(bulk.status).toBe(404);
+      expect((await table('assets').whereIn('asset_id', [allowedId, deniedId]).orderBy('name').pluck('name'))).toEqual(['Changed', 'Read only']);
     } finally { globalThis.__algaAuthorizationKernelSingleton = previousKernel; }
   }, 180_000);
 });

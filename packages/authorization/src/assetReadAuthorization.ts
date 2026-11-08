@@ -23,6 +23,7 @@ import { resolveBundleNarrowingRulesForEvaluation } from './bundles/service';
 export type AssetAuthUser = {
   user_id: string;
   user_type: AuthorizationSubject['userType'];
+  apiKeyId?: string | null;
   clientId?: string | null;
   client_id?: string | null;
   role_ids?: string[];
@@ -76,6 +77,7 @@ export async function resolveAuthorizationSubjectForUser(
     tenant,
     userId: user.user_id,
     userType: user.user_type,
+    apiKeyId: user.apiKeyId ?? null,
     roleIds,
     teamIds: teamRows.map((row) => row.team_id),
     managedUserIds: managedRows.map((row) => row.user_id),
@@ -200,10 +202,40 @@ export function isAssetReadAllowed(
   return isAssetActionAllowed(trx, tenant, context, asset, 'read');
 }
 
+export interface AuthorizedAssetRead<T extends AssetAuthorizationInput> {
+  asset: T;
+  index: number;
+  redactedFields: readonly string[];
+}
+
+/** Batch read decisions preserve each candidate's redactions for the source-aware response projector. */
+export async function authorizeReadableAssets<T extends AssetAuthorizationInput>(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  context: AssetReadAuthorizationContext,
+  assets: readonly T[],
+): Promise<AuthorizedAssetRead<T>[]> {
+  if (assets.length === 0) return [];
+  const records = await resolveAssetAuthorizationRecords(trx, tenant, [...assets]);
+  const decisions: Array<AuthorizedAssetRead<T> | null> = await Promise.all(assets.map(async (asset, index) => {
+    const decision = await context.authorizationKernel.authorizeResource({
+      subject: context.subject,
+      resource: { type: 'asset', action: 'read', id: asset.asset_id },
+      record: records.get(asset.asset_id),
+      requestCache: context.requestCache,
+      knex: trx as Knex,
+    });
+    return decision.allowed
+      ? { asset, index, redactedFields: decision.redactedFields ?? [] }
+      : null;
+  }));
+  return decisions.filter((decision): decision is AuthorizedAssetRead<T> => decision !== null);
+}
+
 /**
  * Batch form of {@link isAssetReadAllowed}: the subset of `assets` the caller may read, resolved with ONE
- * association query. Used by the custody queue and label enrichment, where an unreadable asset must be
- * dropped, never leaked.
+ * association query. Use when callers need membership only; response paths should use
+ * {@link authorizeReadableAssets} to retain each row's field-redaction decision.
  */
 export async function filterReadableAssets<T extends AssetAuthorizationInput>(
   trx: Knex | Knex.Transaction,
@@ -214,22 +246,20 @@ export async function filterReadableAssets<T extends AssetAuthorizationInput>(
 ): Promise<T[]> {
   if (assets.length === 0) return [];
   const records = await resolveAssetAuthorizationRecords(trx, tenant, [...assets]);
-  const allowed = await Promise.all(
-    assets.map(async (asset) => {
-      const record = records.get(asset.asset_id);
-      // The association query has no ordering, so batching can change which user is treated as the owner.
-      if (options?.resolveMultiUserOwnersIndividually && (record?.assignedUserIds?.length ?? 0) > 1) {
-        return isAssetReadAllowed(trx, tenant, context, asset);
-      }
-      const decision = await context.authorizationKernel.authorizeResource({
-        subject: context.subject,
-        resource: { type: 'asset', action: 'read', id: asset.asset_id },
-        record,
-        requestCache: context.requestCache,
-        knex: trx as Knex,
-      });
-      return decision.allowed;
-    })
-  );
+  const allowed = await Promise.all(assets.map(async (asset) => {
+    const record = records.get(asset.asset_id);
+    // Association queries do not order owners; resolve multi-user assets individually when callers need membership.
+    if (options?.resolveMultiUserOwnersIndividually && (record?.assignedUserIds?.length ?? 0) > 1) {
+      return isAssetReadAllowed(trx, tenant, context, asset);
+    }
+    const decision = await context.authorizationKernel.authorizeResource({
+      subject: context.subject,
+      resource: { type: 'asset', action: 'read', id: asset.asset_id },
+      record,
+      requestCache: context.requestCache,
+      knex: trx as Knex,
+    });
+    return decision.allowed;
+  }));
   return assets.filter((_, i) => allowed[i]);
 }

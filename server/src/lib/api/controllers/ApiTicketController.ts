@@ -22,10 +22,40 @@ import {
 import {
   getConnection
 } from '../../db/db';
-import { authorizeApiResource, authorizeApiResourceRead, buildAuthorizationPrincipalSubject } from './authorizationKernel';
+import { 
+  hasPermission 
+} from '../../auth/rbac';
+import {
+  authorizeApiResource,
+  buildAuthorizationPrincipalSubject,
+  projectApiResourceRead,
+  projectApiResourceReads,
+  reprojectUnderDecision,
+  reprojectUnderDecisions,
+  type AuthorizedProjection,
+} from './authorizationKernel';
+import {
+  TICKET_DOCUMENT_DOWNLOAD_SOURCE,
+  TICKET_DOCUMENT_SOURCE,
+  TICKET_DOCUMENT_VARIANT_SOURCES,
+  TICKET_AGENT_RESPONSE_SOURCE,
+  TICKET_CHECKLIST_ITEM_SOURCE,
+  TICKET_COMMENT_SOURCE,
+  TICKET_EXTERNAL_LINK_SOURCE,
+  TICKET_EXTERNAL_LINK_LOOKUP_SOURCE,
+  TICKET_MATERIAL_SOURCE,
+  TICKET_RECORD_SOURCE,
+  TICKET_WATCHER_SOURCE,
+  TICKET_TIME_ENTRIES_RESPONSE_SOURCE,
+  TICKET_ASSETS_RESPONSE_SOURCE,
+  type RedactableRecordSource,
+} from '@alga-psa/co-managed/recordProjection';
+import { createProjectedFileResponse, createProjectedPreviewResponse } from '../utils/projectedFileResponse';
 import { buildTicketRecordContext } from './recordContexts';
-import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
+import { getAuthorizationKernel } from 'server/src/lib/authorization/kernel';
+import { buildProjectedPage } from '@alga-psa/authorization/pagination';
 import { compileTenantScopedResourceReadAuthorizationSql, resolveDefaultBuiltinRelationshipRules } from '@alga-psa/authorization/kernel';
+import { resolveAssetAuthorizationRecords } from '@alga-psa/assets/lib/assetReadAuthorization';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { createTicketRelationshipSqlAdapter } from '@alga-psa/tickets/lib/ticketAuthorizationSql';
 import { type TenantScopedQuery, tenantDb } from '@alga-psa/db';
@@ -39,7 +69,6 @@ import {
   updateBundleSettingsSchema
 } from '../schemas/ticketBundle';
 import { ZodError } from 'zod';
-import { buildDocumentPreviewHeaders } from '@alga-psa/core';
 import {
   addChecklistItem,
   getTicketChecklistItems,
@@ -60,7 +89,7 @@ import {
 // empty in CE, populated in EE). Returns null when a rule isn't representable in
 // SQL so the caller falls back to the per-row JS kernel. RBAC is gated upstream
 // by checkPermission('read'), exactly as the per-row path relies on.
-async function resolveTicketReadAuthorizationApplier(
+export async function resolveTicketReadAuthorizationApplier(
   apiRequest: AuthenticatedApiRequest,
   knex: Knex
 ): Promise<((query: TenantScopedQuery) => void) | null> {
@@ -88,6 +117,26 @@ async function resolveTicketReadAuthorizationApplier(
       bundleRules,
       ctx: { subject, adapter },
     });
+
+  // The SQL path pages and counts rows before redaction could suppress any, and would serialize unprojected rows.
+  // Any rule that redacts fields forces the per-row projector path instead.
+  if (bundleRules.some((rule) => (rule.redactedFields?.length ?? 0) > 0 || rule.constraintKey === 'hide_sensitive_fields')) {
+    return null;
+  }
+
+  // Redactions can also come from the builtin provider's resolver, which no rule list reveals. Ask the kernel the same
+  // question the projector will ask (field redactions for this subject on tickets); anything non-empty means the SQL
+  // path would serialize rows the projector redacts, so the per-row path must run instead.
+  const kernel = await getAuthorizationKernel();
+  const builtinRedactions = await kernel.resolveFieldRedactions({
+    knex: knex as any,
+    subject,
+    resource: { type: 'ticket', action: 'read' },
+    record: { id: '00000000-0000-0000-0000-000000000000' },
+  });
+  if (builtinRedactions.length > 0) {
+    return null;
+  }
 
   // Probe representability on a throwaway builder before committing to SQL.
   const probe = tenantDb(knex, subject.tenant).scoped('tickets as t');
@@ -122,37 +171,52 @@ export class ApiTicketController extends ApiBaseController {
     this.ticketService = ticketService;
   }
 
-  // LEVERAGE: pattern ticket-record-context — thin wrapper over the shared builder; callers should import ./recordContexts directly
-  private buildTicketRecordContext(ticket: Record<string, any>) {
-    return buildTicketRecordContext(ticket);
-  }
-
+  /** Denied OR suppressed answers 404 (403 would confirm the ticket exists); row-independent RBAC 403 happens earlier. */
   private async assertTicketReadAllowed(
     apiRequest: AuthenticatedApiRequest,
     ticketId: string,
     knex?: Awaited<ReturnType<typeof getConnection>>
-  ): Promise<Record<string, any>> {
+  ): Promise<AuthorizedProjection<Record<string, any>>> {
     const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
     const ticket = await this.ticketService.getById(ticketId, apiRequest.context);
     if (!ticket) {
       throw new NotFoundError('ticket not found');
     }
 
-    const ticketRow = ticket as Record<string, any>;
-    const allowed = await authorizeApiResourceRead({
+    const projection = await projectApiResourceRead({
       knex: resolvedKnex,
       tenant: apiRequest.context.tenant,
       user: apiRequest.context.user,
       apiKeyId: apiRequest.context.apiKeyId,
-      resource: 'ticket',
-      recordContext: this.buildTicketRecordContext(ticketRow),
+      kind: 'ticket',
+      record: ticket as Record<string, any>,
     });
 
-    if (!allowed) {
-      throw new ForbiddenError('Permission denied: Cannot read ticket');
+    if (!projection) {
+      throw new NotFoundError('ticket not found');
     }
 
-    return ticket as Record<string, any>;
+    return projection;
+  }
+
+  private async assertTicketDocumentReadAllowed(
+    ticketGate: AuthorizedProjection<Record<string, any>>,
+    ticketId: string,
+    documentId: string,
+    context: AuthenticatedApiRequest['context'],
+    source: RedactableRecordSource,
+  ): Promise<AuthorizedProjection<Record<string, any>>> {
+    const documents = await this.ticketService.getTicketDocuments(ticketId, context);
+    const document = documents.find((item) => item.document_id === documentId);
+    const projection = document
+      ? reprojectUnderDecision(ticketGate, document as Record<string, any>, source)
+      : null;
+
+    if (!projection) {
+      throw new NotFoundError('Document not found');
+    }
+
+    return projection;
   }
 
   private async assertTicketMutationAllowed(
@@ -160,7 +224,7 @@ export class ApiTicketController extends ApiBaseController {
     ticketId: string,
     action: 'update' | 'delete',
     knex?: Awaited<ReturnType<typeof getConnection>>
-  ): Promise<Record<string, any>> {
+  ): Promise<AuthorizedProjection<Record<string, any>>> {
     const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
     const ticket = await this.ticketService.getById(ticketId, apiRequest.context);
     if (!ticket) {
@@ -169,58 +233,61 @@ export class ApiTicketController extends ApiBaseController {
 
     // Must still be readable, then authorized against the mutation action's scope.
     const ticketRow = ticket as Record<string, any>;
-    const recordContext = this.buildTicketRecordContext(ticketRow);
-    const authInput = {
+    const recordContext = buildTicketRecordContext(ticketRow);
+    const projection = await projectApiResourceRead({
+      knex: resolvedKnex,
+      tenant: apiRequest.context.tenant,
+      user: apiRequest.context.user,
+      apiKeyId: apiRequest.context.apiKeyId,
+      kind: 'ticket',
+      record: ticketRow,
+      recordContext,
+    });
+    if (!projection) {
+      throw new NotFoundError('ticket not found');
+    }
+
+    const allowed = await authorizeApiResource({
       knex: resolvedKnex,
       tenant: apiRequest.context.tenant,
       user: apiRequest.context.user,
       apiKeyId: apiRequest.context.apiKeyId,
       resource: 'ticket',
+      action,
       recordContext,
-    };
-    const allowed =
-      (await authorizeApiResourceRead(authInput)) &&
-      (await authorizeApiResource({ ...authInput, action }));
-
+    });
     if (!allowed) {
       throw new ForbiddenError(`Permission denied: Cannot ${action} ticket`);
     }
 
-    return ticket as Record<string, any>;
+    return projection;
   }
 
   private async filterAuthorizedTickets(
     apiRequest: AuthenticatedApiRequest,
     tickets: Record<string, any>[],
     knex?: Awaited<ReturnType<typeof getConnection>>
-  ): Promise<Record<string, any>[]> {
+  ): Promise<AuthorizedProjection<Record<string, any>>[]> {
     if (tickets.length === 0) {
       return [];
     }
 
-    const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
-    const allowedByRow = await Promise.all(
-      tickets.map((ticket) =>
-        authorizeApiResourceRead({
-          knex: resolvedKnex,
-          tenant: apiRequest.context.tenant,
-          user: apiRequest.context.user,
-          apiKeyId: apiRequest.context.apiKeyId,
-          resource: 'ticket',
-          recordContext: this.buildTicketRecordContext(ticket),
-        })
-      )
-    );
-
-    return tickets.filter((_, index) => allowedByRow[index]);
+    return projectApiResourceReads({
+      knex: knex ?? await getConnection(apiRequest.context.tenant),
+      tenant: apiRequest.context.tenant,
+      user: apiRequest.context.user,
+      apiKeyId: apiRequest.context.apiKeyId,
+      kind: 'ticket',
+      records: tickets,
+    });
   }
 
   private async listAllAuthorizedTickets(
     apiRequest: AuthenticatedApiRequest,
     knex?: Awaited<ReturnType<typeof getConnection>>
-  ): Promise<Record<string, any>[]> {
+  ): Promise<AuthorizedProjection<Record<string, any>>[]> {
     const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
-    const authorizedTickets: Record<string, any>[] = [];
+    const authorizedTickets: AuthorizedProjection<Record<string, any>>[] = [];
     const pageSize = 100;
     let page = 1;
 
@@ -268,7 +335,7 @@ export class ApiTicketController extends ApiBaseController {
     return linkId;
   }
 
-  private buildTicketStatsFromAuthorizedRows(tickets: Record<string, any>[]) {
+  private buildTicketStatsFromAuthorizedRows(tickets: AuthorizedProjection<Record<string, any>>[]) {
     const now = new Date();
     const startOfToday = new Date(now);
     startOfToday.setHours(0, 0, 0, 0);
@@ -385,7 +452,7 @@ export class ApiTicketController extends ApiBaseController {
             );
           }
 
-          const authorizedPage = await buildAuthorizationAwarePage<Record<string, any>>({
+          const authorizedPage = await buildProjectedPage<Record<string, any>, AuthorizedProjection<Record<string, any>>>({
             page,
             limit,
             fetchPage: (sourcePage, sourceLimit) =>
@@ -393,16 +460,15 @@ export class ApiTicketController extends ApiBaseController {
                 { page: sourcePage, limit: sourceLimit, filters, sort, order, fields: fields.length > 0 ? fields : undefined },
                 apiRequest.context
               ),
-            authorizeRecord: async (ticket) => {
-              return authorizeApiResourceRead({
+            projectRecord: (ticket) =>
+              projectApiResourceRead({
                 knex,
                 tenant: apiRequest.context.tenant,
                 user: apiRequest.context.user,
                 apiKeyId: apiRequest.context.apiKeyId,
-                resource: 'ticket',
-                recordContext: this.buildTicketRecordContext(ticket),
-              });
-            },
+                kind: 'ticket',
+                record: ticket,
+              }),
             scanLimit: 100,
           });
 
@@ -702,15 +768,16 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const ticketGate = await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
 
           const comments = await this.ticketService.getTicketComments(
             ticketId,
             apiRequest.context!,
             { limit, offset, order, contentFormat }
           );
+          const projectedComments = reprojectUnderDecision(ticketGate, comments, TICKET_COMMENT_SOURCE);
 
-          return createSuccessResponse(comments, 200, undefined, apiRequest);
+          return createSuccessResponse(projectedComments, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -731,10 +798,11 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const ticketGate = await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
 
           const checklist = await getTicketChecklistItems(ticketId);
-          return createSuccessResponse(checklist, 200, undefined, apiRequest);
+          const projectedChecklist = reprojectUnderDecision(ticketGate, checklist, TICKET_CHECKLIST_ITEM_SOURCE);
+          return createSuccessResponse(projectedChecklist, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -755,7 +823,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
+          const ticketGate = await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           const data = await this.validateData(apiRequest, createTicketChecklistItemSchema);
 
           const result = await addChecklistItem(ticketId, data);
@@ -770,7 +838,8 @@ export class ApiTicketController extends ApiBaseController {
           if (!created) {
             throw new NotFoundError('Checklist item not found');
           }
-          return createSuccessResponse(created, 201, undefined, apiRequest);
+          const projection = reprojectUnderDecision(ticketGate, created, TICKET_CHECKLIST_ITEM_SOURCE);
+          return createSuccessResponse(projection, 201, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -792,7 +861,7 @@ export class ApiTicketController extends ApiBaseController {
           const ticketId = await this.extractIdFromPath(apiRequest);
           const itemId = this.extractChecklistItemId(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
+          const ticketGate = await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           const data = await this.validateData(apiRequest, updateTicketChecklistCompletionSchema);
 
           // Bind the item to the authorized ticket before calling the existing
@@ -813,7 +882,8 @@ export class ApiTicketController extends ApiBaseController {
           if (!updated) {
             throw new NotFoundError('Checklist item not found');
           }
-          return createSuccessResponse(updated, 200, undefined, apiRequest);
+          const projection = reprojectUnderDecision(ticketGate, updated, TICKET_CHECKLIST_ITEM_SOURCE);
+          return createSuccessResponse(projection, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -833,13 +903,14 @@ export class ApiTicketController extends ApiBaseController {
           await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const ticketGate = await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
 
           const links = await getTicketExternalLinks(ticketId);
           if (isServerActionErrorResult(links)) {
             return createServerActionErrorResponse(links);
           }
-          return createSuccessResponse(links, 200, undefined, apiRequest);
+          const projectedLinks = reprojectUnderDecision(ticketGate, links, TICKET_EXTERNAL_LINK_SOURCE);
+          return createSuccessResponse(projectedLinks, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -861,14 +932,15 @@ export class ApiTicketController extends ApiBaseController {
           await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
+          const ticketGate = await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           const data = await this.validateData(apiRequest, createExternalLinkSchema);
 
           const result = await addExternalLink({ ticket_id: ticketId, ...data });
           if (isServerActionErrorResult(result)) {
             return createServerActionErrorResponse(result);
           }
-          return createSuccessResponse(result, 201, undefined, apiRequest);
+          const projection = reprojectUnderDecision(ticketGate, result, TICKET_EXTERNAL_LINK_SOURCE);
+          return createSuccessResponse(projection, 201, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -889,7 +961,7 @@ export class ApiTicketController extends ApiBaseController {
           const ticketId = await this.extractIdFromPath(apiRequest);
           const linkId = this.extractExternalLinkId(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
+          const ticketGate = await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           const data = await this.validateData(apiRequest, updateExternalLinkSchema);
 
           const before = await getTicketExternalLinks(ticketId);
@@ -901,7 +973,8 @@ export class ApiTicketController extends ApiBaseController {
           if (isServerActionErrorResult(result)) {
             return createServerActionErrorResponse(result);
           }
-          return createSuccessResponse(result, 200, undefined, apiRequest);
+          const projection = reprojectUnderDecision(ticketGate, result, TICKET_EXTERNAL_LINK_SOURCE);
+          return createSuccessResponse(projection, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -922,7 +995,7 @@ export class ApiTicketController extends ApiBaseController {
           const ticketId = await this.extractIdFromPath(apiRequest);
           const linkId = this.extractExternalLinkId(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
+          const ticketGate = await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
 
           const before = await getTicketExternalLinks(ticketId);
           if (isServerActionErrorResult(before) || !before.some((link) => link.link_id === linkId)) {
@@ -933,7 +1006,8 @@ export class ApiTicketController extends ApiBaseController {
           if (isServerActionErrorResult(result)) {
             return createServerActionErrorResponse(result);
           }
-          return createSuccessResponse({ link_id: linkId }, 200, undefined, apiRequest);
+          const projection = reprojectUnderDecision(ticketGate, { link_id: linkId }, TICKET_EXTERNAL_LINK_SOURCE);
+          return createSuccessResponse(projection, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -969,9 +1043,16 @@ export class ApiTicketController extends ApiBaseController {
           // Authorize against the resolved ticket before leaking any link data:
           // a plain `ticket:read` grant is not enough for restricted principals.
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertTicketReadAllowed(apiRequest, result.ticket_id, knex);
+          const ticketGate = await this.assertTicketReadAllowed(apiRequest, result.ticket_id, knex);
+          const projection = reprojectUnderDecision(ticketGate, result, TICKET_EXTERNAL_LINK_LOOKUP_SOURCE);
+          const predicate = reprojectUnderDecision(ticketGate, { ticket_id: result.ticket_id, link: data }, TICKET_EXTERNAL_LINK_LOOKUP_SOURCE);
+          // A hit must not reveal a predicate value that the same decision hides in the response.
+          const predicateLink = predicate?.link;
+          if (!projection?.link || !predicateLink || Object.keys(data).some(key => !Object.hasOwn(predicateLink, key))) {
+            throw new NotFoundError('No ticket found for that external link');
+          }
 
-          return createSuccessResponse(result, 200, undefined, apiRequest);
+          return createSuccessResponse(projection, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -992,10 +1073,11 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const ticketGate = await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
           const documents = await this.ticketService.getTicketDocuments(ticketId, apiRequest.context!);
+          const projectedDocuments = reprojectUnderDecision(ticketGate, documents, TICKET_DOCUMENT_SOURCE);
 
-          return createSuccessResponse(documents, 200, undefined, apiRequest);
+          return createSuccessResponse(projectedDocuments, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1016,14 +1098,33 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const ticketGate = await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
           // Response exposes asset records, so also require asset:read.
           if (!(await hasApiContextPermission(apiRequest.context!, 'asset', 'read', knex))) {
             throw new ForbiddenError('Permission denied: Cannot read asset');
           }
           const assets = await this.ticketService.getTicketAssets(ticketId, apiRequest.context!);
+          const recordContexts = await resolveAssetAuthorizationRecords(knex, apiRequest.context!.tenant, assets as any);
+          const assetProjections = await projectApiResourceReads({
+            knex,
+            tenant: apiRequest.context!.tenant,
+            user: apiRequest.context!.user,
+            apiKeyId: apiRequest.context!.apiKeyId,
+            kind: 'asset',
+            records: assets,
+            recordContextForRecord: (asset) => recordContexts.get(asset.asset_id),
+          });
+          const projectionsByAssetId = new Map(assetProjections.map((projection) => [projection.asset_id, projection]));
+          const projections = assets.flatMap((asset) => {
+            const assetProjection = projectionsByAssetId.get(asset.asset_id);
+            if (!assetProjection) return [];
+            const projection = reprojectUnderDecisions(
+              [ticketGate, assetProjection], asset, TICKET_ASSETS_RESPONSE_SOURCE,
+            );
+            return projection ? [projection] : [];
+          });
 
-          return createSuccessResponse(assets, 200, undefined, apiRequest);
+          return createSuccessResponse(projections, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1123,11 +1224,12 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const ticketGate = await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
 
           const agents = await this.ticketService.getTicketAgents(ticketId, apiRequest.context!);
+          const projection = reprojectUnderDecision(ticketGate, agents as Record<string, any>, TICKET_AGENT_RESPONSE_SOURCE);
 
-          return createSuccessResponse(agents, 200, undefined, apiRequest);
+          return createSuccessResponse(projection, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1148,7 +1250,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
+          const ticketGate = await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
 
           const body = await req.json();
           const validation = addTicketAgentSchema.safeParse(body);
@@ -1157,8 +1259,9 @@ export class ApiTicketController extends ApiBaseController {
           }
 
           const agents = await this.ticketService.addTicketAgent(ticketId, validation.data, apiRequest.context!);
+          const projection = reprojectUnderDecision(ticketGate, agents as Record<string, any>, TICKET_AGENT_RESPONSE_SOURCE);
 
-          return createSuccessResponse(agents, 201, undefined, apiRequest);
+          return createSuccessResponse(projection, 201, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1216,11 +1319,12 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const ticketGate = await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
 
           const watchers = await this.ticketService.listWatchers(ticketId, apiRequest.context!);
+          const projectedWatchers = reprojectUnderDecision(ticketGate, watchers, TICKET_WATCHER_SOURCE);
 
-          return createSuccessResponse(watchers, 200, undefined, apiRequest);
+          return createSuccessResponse(projectedWatchers, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1241,7 +1345,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
+          const ticketGate = await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
 
           const body = await req.json();
           const validation = addTicketWatcherSchema.safeParse(body);
@@ -1252,7 +1356,8 @@ export class ApiTicketController extends ApiBaseController {
           const watchers = await this.ticketService.addWatcher(ticketId, validation.data, apiRequest.context!);
 
           // Set-add: always 200 with the full list, never 201.
-          return createSuccessResponse(watchers, 200, undefined, apiRequest);
+          const projection = reprojectUnderDecision(ticketGate, watchers, TICKET_WATCHER_SOURCE);
+          return createSuccessResponse(projection, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1273,7 +1378,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
+          const ticketGate = await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
 
           const body = await req.json();
           const validation = updateTicketWatcherSchema.safeParse(body);
@@ -1283,7 +1388,9 @@ export class ApiTicketController extends ApiBaseController {
 
           const watchers = await this.ticketService.setWatcherActive(ticketId, validation.data, apiRequest.context!);
 
-          return createSuccessResponse(watchers, 200, undefined, apiRequest);
+          const projection = reprojectUnderDecision(ticketGate, watchers, TICKET_WATCHER_SOURCE);
+
+          return createSuccessResponse(projection, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1304,7 +1411,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
+          const ticketGate = await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
 
           const url = new URL(apiRequest.url || req.url);
           const validation = removeTicketWatcherQuerySchema.safeParse(
@@ -1321,7 +1428,9 @@ export class ApiTicketController extends ApiBaseController {
             apiRequest.context!
           );
 
-          return createSuccessResponse(watchers, 200, undefined, apiRequest);
+          const projection = reprojectUnderDecision(ticketGate, watchers, TICKET_WATCHER_SOURCE);
+
+          return createSuccessResponse(projection, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1342,7 +1451,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
+          const ticketGate = await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
 
           const body = await req.json();
           const validation = assignTicketTeamSchema.safeParse(body);
@@ -1351,8 +1460,9 @@ export class ApiTicketController extends ApiBaseController {
           }
 
           const ticket = await this.ticketService.assignTeam(ticketId, validation.data, apiRequest.context!);
+          const projection = reprojectUnderDecision(ticketGate, ticket as Record<string, any>, TICKET_RECORD_SOURCE);
 
-          return createSuccessResponse(ticket, 200, undefined, apiRequest);
+          return createSuccessResponse(projection, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1373,7 +1483,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
+          const ticketGate = await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
 
           // DELETE bodies are optional; no body means remove_all.
           let body: unknown = {};
@@ -1394,8 +1504,9 @@ export class ApiTicketController extends ApiBaseController {
           }
 
           const ticket = await this.ticketService.removeTeam(ticketId, validation.data, apiRequest.context!);
+          const projection = reprojectUnderDecision(ticketGate, ticket as Record<string, any>, TICKET_RECORD_SOURCE);
 
-          return createSuccessResponse(ticket, 200, undefined, apiRequest);
+          return createSuccessResponse(projection, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1416,7 +1527,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
+          const ticketGate = await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           const formData = await req.formData();
           const file = formData.get('file');
 
@@ -1428,7 +1539,9 @@ export class ApiTicketController extends ApiBaseController {
 
           const document = await this.ticketService.uploadTicketDocument(ticketId, file, apiRequest.context!, formData.get('commentAttachmentDraft') === 'true');
 
-          return createSuccessResponse(document, 201, undefined, apiRequest);
+          const projection = reprojectUnderDecision(ticketGate, document, TICKET_DOCUMENT_SOURCE);
+
+          return createSuccessResponse(projection, 201, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1449,7 +1562,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const ticketGate = await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
 
           // Extract documentId from the URL path segment after "documents/"
           const url = new URL(apiRequest.url || req.url);
@@ -1463,14 +1576,18 @@ export class ApiTicketController extends ApiBaseController {
             ]);
           }
 
+          const documentGate = await this.assertTicketDocumentReadAllowed(
+            ticketGate, ticketId, documentId, apiRequest.context!, TICKET_DOCUMENT_DOWNLOAD_SOURCE,
+          );
           const result = await this.ticketService.downloadTicketDocument(ticketId, documentId, apiRequest.context!);
+          const metadata = reprojectUnderDecision(documentGate, {
+            fileName: result.fileName,
+            mimeType: result.mimeType,
+            disposition: 'attachment' as const,
+          }, TICKET_DOCUMENT_DOWNLOAD_SOURCE);
+          if (!metadata) throw new NotFoundError('Document not found');
 
-          const headers = new Headers();
-          headers.set('Content-Type', result.mimeType);
-          headers.set('Content-Disposition', `attachment; filename="${encodeURIComponent(result.fileName)}"`);
-          headers.set('Cache-Control', 'no-store');
-
-          return new NextResponse(new Uint8Array(result.buffer), { status: 200, headers });
+          return createProjectedFileResponse(req, result.buffer, metadata);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1491,7 +1608,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const ticketGate = await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
 
           const url = new URL(apiRequest.url || req.url);
           const segments = url.pathname.split('/');
@@ -1504,24 +1621,18 @@ export class ApiTicketController extends ApiBaseController {
             ]);
           }
 
+          const source = TICKET_DOCUMENT_VARIANT_SOURCES[variant];
+          const documentGate = await this.assertTicketDocumentReadAllowed(
+            ticketGate, ticketId, documentId, apiRequest.context!, source,
+          );
           const result = await this.ticketService.downloadTicketDocumentVariant(ticketId, documentId, variant, apiRequest.context!);
+          const metadata = reprojectUnderDecision(documentGate, {
+            fileId: result.fileId,
+            mimeType: result.mimeType,
+          }, source);
+          if (!metadata) throw new NotFoundError('Document not found');
 
-          const etag = `"${result.fileId}"`;
-          const headers = new Headers();
-          // LEVERAGE: pattern byte-serving-headers — policy headers set by hand in each byte-serving route
-          for (const [name, value] of Object.entries(buildDocumentPreviewHeaders(result.mimeType))) {
-            headers.set(name, value);
-          }
-          headers.set('ETag', etag);
-          // Variants are immutable per file id: a regenerated preview gets a new id.
-          headers.set('Cache-Control', 'private, max-age=31536000, immutable');
-
-          if (req.headers.get('if-none-match') === etag) {
-            return new NextResponse(null, { status: 304, headers });
-          }
-
-          headers.set('Content-Length', String(result.buffer.length));
-          return new NextResponse(new Uint8Array(result.buffer), { status: 200, headers });
+          return createProjectedPreviewResponse(req, result.buffer, metadata);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1581,7 +1692,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const ticketGate = await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
 
           const summary = await fetchTimeEntriesForTicketCore(
             apiRequest.context!.user!,
@@ -1590,7 +1701,12 @@ export class ApiTicketController extends ApiBaseController {
             ticketId,
           );
 
-          return createSuccessResponse(summary, 200, undefined, apiRequest);
+          return createSuccessResponse(
+            reprojectUnderDecision(ticketGate, summary as Record<string, any>, TICKET_TIME_ENTRIES_RESPONSE_SOURCE),
+            200,
+            undefined,
+            apiRequest,
+          );
         });
       } catch (error) {
         return handleApiError(error);
@@ -1611,10 +1727,11 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const ticketGate = await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
           const materials = await this.ticketService.getTicketMaterials(ticketId, apiRequest.context!);
+          const projectedMaterials = reprojectUnderDecision(ticketGate, materials, TICKET_MATERIAL_SOURCE);
 
-          return createSuccessResponse(materials, 200, undefined, apiRequest);
+          return createSuccessResponse(projectedMaterials, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1636,10 +1753,12 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
+          const ticketGate = await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           const material = await this.ticketService.addTicketMaterial(ticketId, validatedData, apiRequest.context!);
 
-          return createSuccessResponse(material, 201, undefined, apiRequest);
+          const projection = reprojectUnderDecision(ticketGate, material, TICKET_MATERIAL_SOURCE);
+
+          return createSuccessResponse(projection, 201, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1716,14 +1835,16 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
+          const ticketGate = await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           const comment = await this.ticketService.addComment(
             ticketId,
             validatedData,
             apiRequest.context!
           );
 
-          return createSuccessResponse(comment, 201);
+          const projection = reprojectUnderDecision(ticketGate, comment, TICKET_COMMENT_SOURCE);
+
+          return createSuccessResponse(projection, 201);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1744,7 +1865,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
+          const ticketGate = await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
 
           const url = new URL(apiRequest.url || req.url);
           const segments = url.pathname.split('/');
@@ -1757,7 +1878,8 @@ export class ApiTicketController extends ApiBaseController {
           }
 
           const result = await this.ticketService.cancelScheduledComment(ticketId, commentId, apiRequest.context!);
-          return createSuccessResponse(result, 200, undefined, apiRequest);
+          const projection = reprojectUnderDecision(ticketGate, result, TICKET_COMMENT_SOURCE);
+          return createSuccessResponse(projection, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1822,7 +1944,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
+          const ticketGate = await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           // Extract commentId from URL: /api/v1/tickets/{id}/comments/{commentId}
           const url = new URL(req.url);
           const segments = url.pathname.split('/').filter(Boolean);
@@ -1835,7 +1957,9 @@ export class ApiTicketController extends ApiBaseController {
             apiRequest.context!
           );
 
-          return createSuccessResponse(comment);
+          const projection = reprojectUnderDecision(ticketGate, comment, TICKET_COMMENT_SOURCE);
+
+          return createSuccessResponse(projection);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1912,7 +2036,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
+          const gate = await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           const updated = await this.ticketService.update(
             ticketId,
             validatedData,
@@ -1924,7 +2048,11 @@ export class ApiTicketController extends ApiBaseController {
             throw new NotFoundError('Ticket not found');
           }
 
-          return createSuccessResponse(updated);
+          const projection = reprojectUnderDecision(gate, updated, TICKET_RECORD_SOURCE);
+          if (!projection) {
+            throw new NotFoundError('Ticket not found');
+          }
+          return createSuccessResponse(projection);
         });
       } catch (error) {
         return handleApiError(error);
@@ -2001,7 +2129,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
+          const gate = await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           const updated = await this.ticketService.update(
             ticketId,
             validatedData,
@@ -2012,7 +2140,11 @@ export class ApiTicketController extends ApiBaseController {
             throw new NotFoundError('Ticket not found');
           }
 
-          return createSuccessResponse(updated);
+          const projection = reprojectUnderDecision(gate, updated, TICKET_RECORD_SOURCE);
+          if (!projection) {
+            throw new NotFoundError('Ticket not found');
+          }
+          return createSuccessResponse(projection);
         });
       } catch (error) {
         return handleApiError(error);
@@ -2030,7 +2162,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketMutationAllowed(apiRequest, id, 'update', knex);
+          const gate = await this.assertTicketMutationAllowed(apiRequest, id, 'update', knex);
 
           const data = this.options.updateSchema
             ? await this.validateData(apiRequest, this.options.updateSchema)
@@ -2041,7 +2173,11 @@ export class ApiTicketController extends ApiBaseController {
             throw new NotFoundError(`${this.options.resource} not found`);
           }
 
-          return createSuccessResponse(updated);
+          const projection = reprojectUnderDecision(gate, updated, TICKET_RECORD_SOURCE);
+          if (!projection) {
+            throw new NotFoundError(`${this.options.resource} not found`);
+          }
+          return createSuccessResponse(projection);
         });
       } catch (error) {
         return handleApiError(error);
@@ -2169,8 +2305,42 @@ export class ApiTicketController extends ApiBaseController {
         return await runWithTenant(apiRequest.context.tenant, async () => {
           await this.checkPermission(apiRequest, 'read');
           const ticketId = await this.extractIdFromPath(apiRequest);
+          await this.assertTicketReadAllowed(apiRequest, ticketId);
           const bundle = await this.ticketService.getBundle(apiRequest.context, ticketId);
-          return createSuccessResponse(bundle, 200, undefined, apiRequest);
+          const knex = await getConnection(apiRequest.context.tenant);
+          const projectMember = async (member: Record<string, any> | null) => {
+            if (!member || typeof member.ticket_id !== 'string') return null;
+            const authorizationRecord = await this.ticketService.getById(member.ticket_id, apiRequest.context);
+            if (!authorizationRecord) return null;
+            return projectApiResourceRead({
+              knex,
+              tenant: apiRequest.context.tenant,
+              user: apiRequest.context.user,
+              apiKeyId: apiRequest.context.apiKeyId,
+              kind: 'ticket',
+              record: member,
+              recordContext: buildTicketRecordContext(authorizationRecord),
+            });
+          };
+
+          const master = await projectMember(bundle.master as Record<string, any> | null);
+          // The bundle's master identifier is response metadata. Do not let it disclose an
+          // independently denied or identifier-suppressed master ticket.
+          if (!master || typeof master.ticket_id !== 'string') {
+            throw new NotFoundError('Ticket not found');
+          }
+          const children = (await Promise.all(bundle.children.map(projectMember)))
+            .filter((child): child is AuthorizedProjection<Record<string, any>> => child !== null);
+          if (ticketId !== master.ticket_id && !children.some((child) => child.ticket_id === ticketId)) {
+            throw new NotFoundError('Ticket not found');
+          }
+
+          return createSuccessResponse({
+            ...bundle,
+            master_ticket_id: master.ticket_id,
+            master,
+            children,
+          }, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);

@@ -39,6 +39,23 @@ function containsPattern(term: string): string {
   return `%${term.replace(/[\\%_]/g, '\\$&')}%`;
 }
 
+function toAssetSoftwareDisplayItem(row: any): AssetSoftwareDisplayItem {
+  return {
+    software_id: row.software_id,
+    name: row.name,
+    publisher: row.publisher,
+    category: row.category as SoftwareCategory,
+    software_type: row.software_type as SoftwareType,
+    version: row.version,
+    install_date: row.install_date,
+    size_bytes: row.size_bytes,
+    first_seen_at: row.first_seen_at,
+    is_current: row.is_current,
+    is_managed: row.is_managed,
+    is_security_relevant: row.is_security_relevant,
+  };
+}
+
 /**
  * Get software installed on an asset. Requires asset:read.
  * Uses the normalized asset_software table with software_catalog join — the
@@ -120,20 +137,7 @@ export const getAssetSoftware = withAuth(async (
       .limit(limit)
       .offset(offset);
 
-    const software: AssetSoftwareDisplayItem[] = rows.map((row: any) => ({
-      software_id: row.software_id,
-      name: row.name,
-      publisher: row.publisher,
-      category: row.category as SoftwareCategory,
-      software_type: row.software_type as SoftwareType,
-      version: row.version,
-      install_date: row.install_date,
-      size_bytes: row.size_bytes,
-      first_seen_at: row.first_seen_at,
-      is_current: row.is_current,
-      is_managed: row.is_managed,
-      is_security_relevant: row.is_security_relevant,
-    }));
+    const software: AssetSoftwareDisplayItem[] = rows.map(toAssetSoftwareDisplayItem);
 
     return {
       software,
@@ -147,6 +151,45 @@ export const getAssetSoftware = withAuth(async (
       return expected;
     }
     console.error('Error getting asset software:', error);
+    throw error;
+  }
+});
+
+/** Complete tenant-scoped input for the asset REST projection/pagination boundary. */
+export const getAssetSoftwareForApi = withAuth(async (
+  user,
+  { tenant },
+  assetId: string,
+): Promise<AssetSoftwareDisplayItem[] | AssetActionError> => {
+  const { knex } = await createTenantKnex();
+  try {
+    if (!await hasPermission(user, 'asset', 'read')) {
+      throw new Error('Permission denied: Cannot read assets');
+    }
+
+    const rows = await tenantScopedTable(knex, tenant, 'v_asset_software_details')
+      .where('asset_id', assetId)
+      .select(
+        'software_id',
+        'software_name as name',
+        'publisher',
+        'category',
+        'software_type',
+        'version',
+        'install_date',
+        'size_bytes',
+        'first_seen_at',
+        'is_current',
+        'is_managed',
+        'is_security_relevant',
+      )
+      .orderBy('software_name');
+
+    return rows.map(toAssetSoftwareDisplayItem);
+  } catch (error) {
+    const expected = assetActionErrorFrom(error);
+    if (expected) return expected;
+    console.error('Error getting asset software for API:', error);
     throw error;
   }
 });
