@@ -74,6 +74,28 @@ function isReturnedActionError(value: unknown): value is ActionMessageError | Ac
   return isActionMessageError(value) || isActionPermissionError(value);
 }
 
+// TICKET_IMPORT_FIELDS carries English display labels, so the mapping step
+// rendered them untranslated. Keys mirror TicketExportDialog's EXPORT_FIELDS,
+// which also puts the same two date columns under enteredAt/closedAt.
+const FIELD_LABELS: Record<MappableTicketField, { labelKey: string; fallback: string }> = {
+  title: { labelKey: 'fields.title', fallback: 'Title' },
+  description: { labelKey: 'fields.description', fallback: 'Description' },
+  status: { labelKey: 'fields.status', fallback: 'Status' },
+  priority: { labelKey: 'fields.priority', fallback: 'Priority' },
+  board: { labelKey: 'fields.board', fallback: 'Board' },
+  category: { labelKey: 'fields.category', fallback: 'Category' },
+  subcategory: { labelKey: 'fields.subcategory', fallback: 'Subcategory' },
+  client: { labelKey: 'fields.client', fallback: 'Client' },
+  contact: { labelKey: 'fields.contact', fallback: 'Contact' },
+  assigned_to: { labelKey: 'fields.assignedTo', fallback: 'Assigned To' },
+  assigned_team: { labelKey: 'fields.assignedTeam', fallback: 'Assigned Team' },
+  due_date: { labelKey: 'fields.dueDate', fallback: 'Due Date' },
+  entered_at: { labelKey: 'fields.enteredAt', fallback: 'Entered At' },
+  closed_at: { labelKey: 'fields.closedAt', fallback: 'Closed At' },
+  is_closed: { labelKey: 'fields.isClosed', fallback: 'Is Closed' },
+  tags: { labelKey: 'fields.tags', fallback: 'Tags' },
+};
+
 interface TicketImportDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -272,7 +294,8 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
     const requiredFields: MappableTicketField[] = ['title', 'client'];
     for (const requiredField of requiredFields) {
       if (!columnMappings.some(mapping => mapping.ticketField === requiredField)) {
-        errors.push(t('importDialog.errors.requiredFieldNotMapped', { defaultValue: 'Required field "{{field}}" is not mapped', field: TICKET_IMPORT_FIELDS[requiredField].label }));
+        const { labelKey, fallback } = FIELD_LABELS[requiredField];
+        errors.push(t('importDialog.errors.requiredFieldNotMapped', { defaultValue: 'Required field "{{field}}" is not mapped', field: t(labelKey, { defaultValue: fallback }) }));
       }
     }
     return errors;
@@ -971,7 +994,9 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                 <span className="w-2/3">{t('importDialog.mapping.csvColumn', { defaultValue: 'Select CSV Column' })}</span>
               </div>
               <div className="border-t dark:border-[rgb(var(--color-border-200))] pt-4 space-y-3">
-                {Object.entries(TICKET_IMPORT_FIELDS).filter(([fieldKey]) => fieldKey !== 'board' && fieldKey !== 'subcategory').map(([fieldKey, { label, required }]) => {
+                {Object.entries(TICKET_IMPORT_FIELDS).filter(([fieldKey]) => fieldKey !== 'board' && fieldKey !== 'subcategory').map(([fieldKey, { required }]) => {
+                  const { labelKey, fallback } = FIELD_LABELS[fieldKey as MappableTicketField];
+                  const label = `${t(labelKey, { defaultValue: fallback })}${required ? ' *' : ''}`;
                   const currentMapping = columnMappings.find(m => m.ticketField === fieldKey);
                   const csvHeader = currentMapping?.csvHeader || 'unassigned';
 
