@@ -90,12 +90,12 @@
       "unmatchedCount": "Antal värden: {{count}}",
       "unmatchedIntro": "från din CSV-fil som inte matchar befintliga data",
       "unmatchedNextStep": "Du hanterar dessa i nästa steg.",
-      "invalidRowCount": "Antal rader: {{count}}",
-      "invalidRowsHelp": "med valideringsfel. Aktivera ”Hoppa över ogiltiga rader” för att fortsätta eller gå tillbaka och rätta CSV-filen."
+      "invalidRowCount": "Antal rader med valideringsfel: {{count}}.",
+      "invalidRowsHelp": "Aktivera ”Hoppa över ogiltiga rader” för att fortsätta eller gå tillbaka och rätta CSV-filen."
     },
-    "confirmLargeImport": "Bekräfta stor import (antal ärenden: {{count}})",
-    "confirmLargeImportHelp": "Jag förstår att följande antal ärenden skapas: {{count}}. Det kan ta en stund.",
-    "confirmLargeImportUpToHelp": "Jag förstår att högst följande antal ärenden skapas: {{count}}. Det kan ta en stund.",
+    "confirmLargeImport": "Bekräfta stor import ({{count}} ärenden)",
+    "confirmLargeImportHelp": "Jag förstår att {{count}} ärenden skapas. Det kan ta en stund.",
+    "confirmLargeImportUpToHelp": "Jag förstår att högst {{count}} ärenden skapas. Det kan ta en stund.",
     "resolve": {
       "chooseHandling": "Välj hur varje värde ska hanteras nedan.",
       "sections": {
@@ -129,8 +129,8 @@
       "selectTeam": "Välj team…",
       "selectContact": "Välj kontakt…",
       "onClient": "– hos {{client}}",
-      "skippedTicketCount": "Antal ärenden: {{count}}",
-      "skippedDueToClients": "som hoppas över eftersom kundmatchningarna hoppades över.",
+      "skippedTicketCount": "Antal ärenden som hoppas över: {{count}}.",
+      "skippedDueToClients": "Det beror på att vissa kunder hoppades över vid matchningen.",
       "dates": {
         "help": "Det gick inte att läsa vissa datum i din CSV-fil automatiskt. Ange hur de ska tolkas.",
         "lookLike": "Dina datum ser ut så här:",
@@ -336,7 +336,7 @@
     "noClient": "Ingen kund",
     "multipleClients": "Flera kunder",
     "noDueDate": "Inget måldatum",
-    "dueInDays": "Antal dagar kvar: {{count}}"
+    "dueInDays": "om {{count}} dagar"
   },
   "actions": {
     "view": "Visa",
@@ -2736,10 +2736,10 @@
       "days": "{{days}} d"
     },
     "cell": {
-      "breached": "SLA-tiden har överskridits",
+      "breached": "SLA-brott",
       "paused": "SLA-timer pausad",
       "atRisk": "Risk för överskridande",
-      "onTrack": "Inom tidsgränsen",
+      "onTrack": "Enligt plan",
       "remaining": "{{magnitude}} kvar"
     }
   },
@@ -2903,7 +2903,7 @@
       "contact": "kontakt",
       "dueDate": "måldatum",
       "responseState": "svarsstatus",
-      "closedAt": "stängt den",
+      "closedAt": "stängningstid",
       "closedBy": "stängt av",
       "title": "titel",
       "url": "URL"
@@ -3039,7 +3039,7 @@
     "toggleChildren": "Visa eller dölj gruppens underärenden",
     "bundledTo": "Grupperat → {{ticketNumber}}",
     "master": "Huvudärende",
-    "openChildrenShort": "öppna"
+    "openChildrenShort": "kvar"
   },
   "statusChange": {
     "title": "Uppdatera ärendestatus",
