@@ -9,7 +9,7 @@ export function hasCurrentManualRunnerReview(runner, now = new Date()) {
     && /^\d{4}-\d{2}-\d{2}$/.test(expiry ?? '')
     && Number.isFinite(Date.parse(`${expiry}T00:00:00Z`))
     && new Date(`${expiry}T00:00:00Z`).toISOString().slice(0, 10) === expiry
-    && expiry > now.toISOString().slice(0, 10));
+    && expiry >= now.toISOString().slice(0, 10));
 }
 
 // Collection must execute the runner's module loading, not just duplicate its

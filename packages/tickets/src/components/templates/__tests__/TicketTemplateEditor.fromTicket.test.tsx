@@ -6,11 +6,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 const getDraftMock = vi.fn();
+const getPrioritiesMock = vi.fn();
 const createTemplateMock = vi.fn();
 const getTemplateMock = vi.fn();
+const listSchedulesMock = vi.fn();
 const updateTemplateMock = vi.fn();
 const replaceMock = vi.fn();
 const permissionsMock = vi.fn();
+const referenceDataMock = vi.fn();
 
 vi.mock('next/link', () => ({
   __esModule: true,
@@ -27,6 +30,10 @@ vi.mock('../../../actions/ticketTemplateActions', () => ({
   createTicketTemplate: (...args: unknown[]) => createTemplateMock(...args),
   getTicketTemplate: (...args: unknown[]) => getTemplateMock(...args),
   updateTicketTemplate: (...args: unknown[]) => updateTemplateMock(...args),
+  listSchedulesForTemplate: (...args: unknown[]) => listSchedulesMock(...args),
+}));
+vi.mock('@alga-psa/reference-data/actions/priorityActions', () => ({
+  getAllPriorities: (...args: unknown[]) => getPrioritiesMock(...args),
 }));
 vi.mock('../../../actions/ticketActions', () => ({
   getTicketTemplateDraftFromTicket: (...args: unknown[]) => getDraftMock(...args),
@@ -35,9 +42,7 @@ vi.mock('../useTicketTemplatePermissions', () => ({
   useTicketTemplatePermissions: () => permissionsMock(),
 }));
 vi.mock('../../useTicketFieldReferenceData', () => ({
-  useTicketFieldReferenceData: () => ({
-    loading: false, error: null, users: [], teams: [], boards: [], checklistTemplates: [], boardData: {}, ensureBoard: vi.fn(),
-  }),
+  useTicketFieldReferenceData: () => referenceDataMock(),
 }));
 // The shared field groups are covered by the recurring editor's tests; here they just expose their values.
 vi.mock('../../recurring/RecurringFieldGroups', () => ({
@@ -102,10 +107,18 @@ const makeDraft = (overrides: Record<string, unknown> = {}) => ({
 describe('TicketTemplateEditor with ?fromTicket', () => {
   beforeEach(() => {
     getDraftMock.mockReset();
+    getPrioritiesMock.mockReset();
     createTemplateMock.mockReset();
+    getTemplateMock.mockReset();
+    listSchedulesMock.mockReset();
     replaceMock.mockReset();
     getDraftMock.mockResolvedValue(makeDraft());
+    getPrioritiesMock.mockResolvedValue([]);
     createTemplateMock.mockResolvedValue({ template_id: UUID(50) });
+    listSchedulesMock.mockResolvedValue([]);
+    referenceDataMock.mockReturnValue({
+      loading: false, error: null, users: [], teams: [], boards: [], checklistTemplates: [], boardData: {}, ensureBoard: vi.fn(),
+    });
     permissionsMock.mockReturnValue({ read: true, create: true, update: true, delete: true, loaded: true });
   });
 
@@ -205,5 +218,87 @@ describe('TicketTemplateEditor with ?fromTicket', () => {
     fireEvent.click(document.getElementById('ticket-template-save') as HTMLElement);
     await waitFor(() => expect(document.getElementById('ticket-template-errors')).toHaveTextContent(/name/i));
     expect(createTemplateMock).not.toHaveBeenCalled();
+  });
+
+  it('looks up a deleted stored priority once and keeps its missing-reference warning visible', async () => {
+    const deletedPriorityId = UUID(41);
+    getTemplateMock.mockResolvedValue({
+      template_id: UUID(40),
+      name: 'Legacy template',
+      notes: null,
+      title: 'Legacy ticket',
+      description: null,
+      offer_for_manual_use: true,
+      client_id: null,
+      board_id: UUID(1),
+      category_id: null,
+      subcategory_id: null,
+      priority_id: deletedPriorityId,
+      itil_impact: null,
+      itil_urgency: null,
+      tags: [],
+      custom_fields: {},
+      checklist: [],
+      referenceProblems: [{ field: 'priority_id', message: 'The selected priority no longer exists' }],
+    });
+
+    render(<TicketTemplateEditor templateId={UUID(40)} />);
+
+    await waitFor(() => {
+      expect(getPrioritiesMock).toHaveBeenCalledTimes(1);
+      expect(screen.getByTestId('priority-value')).toHaveTextContent(deletedPriorityId);
+      expect(document.getElementById('ticket-template-reference-problems')).toHaveTextContent(
+        'The selected priority no longer exists'
+      );
+    });
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(getPrioritiesMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the family mismatch warning visible for a stored priority from the other family', async () => {
+    const storedPriorityId = UUID(42);
+    referenceDataMock.mockReturnValue({
+      loading: false,
+      error: null,
+      users: [],
+      teams: [],
+      boards: [{ board_id: UUID(1), board_name: 'Service Desk', priority_type: 'itil' }],
+      checklistTemplates: [],
+      boardData: {},
+      ensureBoard: vi.fn(),
+    });
+    getPrioritiesMock.mockResolvedValue([
+      { priority_id: storedPriorityId, priority_name: 'Urgent', is_from_itil_standard: false },
+    ]);
+    getTemplateMock.mockResolvedValue({
+      template_id: UUID(40),
+      name: 'Legacy template',
+      notes: null,
+      title: 'Legacy ticket',
+      description: null,
+      offer_for_manual_use: true,
+      client_id: null,
+      board_id: UUID(1),
+      category_id: null,
+      subcategory_id: null,
+      priority_id: storedPriorityId,
+      itil_impact: null,
+      itil_urgency: null,
+      tags: [],
+      custom_fields: {},
+      checklist: [],
+      referenceProblems: [{ field: 'priority_id', message: 'Priority ‘Urgent’ is a custom priority but board ‘Service Desk’ uses ITIL priorities' }],
+    });
+
+    render(<TicketTemplateEditor templateId={UUID(40)} />);
+
+    expect(await screen.findByTestId('priority-value')).toHaveTextContent(storedPriorityId);
+    expect(document.getElementById('ticket-template-priority-type-warning')).toHaveTextContent(
+      'Priority ‘Urgent’ is a custom priority but board ‘Service Desk’ uses ITIL priorities'
+    );
+    expect(document.getElementById('ticket-template-reference-problems')).toHaveTextContent(
+      'Priority ‘Urgent’ is a custom priority but board ‘Service Desk’ uses ITIL priorities'
+    );
+    expect(getPrioritiesMock).toHaveBeenCalledTimes(1);
   });
 });

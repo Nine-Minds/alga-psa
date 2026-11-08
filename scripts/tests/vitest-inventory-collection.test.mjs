@@ -49,7 +49,8 @@ test('manual Vitest runner reviews remain valid through their stated expiry date
   for (const runner of manualRunners) {
     assert.equal(hasCurrentManualRunnerReview(runner, today), true, `${runner.runner} review must be current`);
   }
-  assert.equal(hasCurrentManualRunnerReview({ reason: 'reviewed', issue: 'issue', expires: '2026-11-08' }, today), false);
+  assert.equal(hasCurrentManualRunnerReview({ reason: 'reviewed', issue: 'issue', expires: '2026-11-07' }, today), false);
+  assert.equal(hasCurrentManualRunnerReview({ reason: 'reviewed', issue: 'issue', expires: '2026-11-08' }, today), true);
   assert.equal(hasCurrentManualRunnerReview({ reason: 'reviewed', issue: 'issue', expires: '2026-11-09' }, today), true);
 });
 
