@@ -160,7 +160,7 @@
       "selectCategory": "Seleziona categoria...",
       "selectTeam": "Seleziona team...",
       "selectContact": "Seleziona contatto...",
-      "onClient": "— per {{client}}",
+      "onClient": "— presso {{client}}",
       "skippedTicketCount": "{{count}} ticket",
       "skippedDueToClients": "verranno saltati perché hai scelto di saltare i clienti corrispondenti.",
       "dates": {
@@ -2886,7 +2886,7 @@
       "paused": "SLA in pausa",
       "atRisk": "A rischio",
       "onTrack": "Nei tempi previsti",
-      "remaining": "Tempo rimanente: {{magnitude}}"
+      "remaining": "{{magnitude}} rimanenti"
     }
   },
   "cannedResponses": {
@@ -3071,9 +3071,9 @@
       "reopened": "{{actor}} ha riaperto il ticket",
       "reopenedByEmail": "Attivato da una risposta email in entrata",
       "bundleReopened": "Ticket principale del gruppo riaperto",
-      "bundleReopenedSubtitle": "Attivato da una risposta a un ticket secondario",
-      "bundleStatusNotPropagated": "{{actor}} ha modificato lo stato del ticket principale del gruppo (ticket secondari non aggiornati)",
-      "bundleStatusPropagated": "{{actor}} ha {{action}} il ticket principale del gruppo e {{count}} ticket secondari",
+      "bundleReopenedSubtitle": "Attivato da una risposta a un ticket figlio",
+      "bundleStatusNotPropagated": "{{actor}} ha modificato lo stato del ticket principale del gruppo (ticket figli non aggiornati)",
+      "bundleStatusPropagated": "{{actor}} ha {{action}} il ticket principale del gruppo e {{count}} ticket figli",
       "bundleAction": {
         "reopened": "riaperto",
         "closed": "chiuso"
@@ -3118,7 +3118,7 @@
         "reopened": "Riaperto",
         "priorityChanged": "Priorità modificata",
         "assigned": "Assegnato",
-        "unassigned": "Non assegnato",
+        "unassigned": "Assegnazione rimossa",
         "boardMoved": "Spostamento tra bacheche",
         "responseState": "Stato risposta",
         "messageAdded": "Commento aggiunto",
@@ -3182,7 +3182,7 @@
     }
   },
   "bundle": {
-    "toggleChildren": "Mostra/nascondi i ticket secondari del gruppo",
+    "toggleChildren": "Mostra/nascondi i ticket figli del gruppo",
     "bundledTo": "Raggruppato → {{ticketNumber}}",
     "master": "Principale",
     "openChildrenShort": "aperti"
