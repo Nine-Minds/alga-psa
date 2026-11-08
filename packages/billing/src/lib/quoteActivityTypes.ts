@@ -11,6 +11,8 @@ export const QUOTE_ACTIVITY_TYPES = {
   approved: 'approved',
   approvalChangesRequested: 'approval_changes_requested',
   accepted: 'accepted',
+  /** A recipient opened the quote through a public email access link (card alga-2026-0002820). */
+  viewedViaEmailLink: 'viewed_via_email_link',
   /** The draft invoice a quote was converted to was deleted; the link was released. */
   convertedInvoiceDeleted: 'converted_invoice_deleted',
 } as const;

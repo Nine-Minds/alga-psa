@@ -352,6 +352,11 @@ export async function mintAgentSessionKey(params: {
 }): Promise<string> {
   const { tenant, agentId, backingUserId: userId } = params;
   const ttl = params.ttlSeconds ?? 300;
+  // R6.0a: an agent may only obtain a dispatch key while the tenant is entitled to
+  // service principals. Every request mints its own short-lived key, so a downgrade
+  // cuts already-connected MCP clients off at their next call — the previously minted
+  // key is never renewed and no new one is issued.
+  await assertServicePrincipalTier(tenant);
   const token = crypto.randomBytes(32).toString('hex');
   const hash = crypto.createHash('sha256').update(token).digest('hex');
   await runWithTenant(tenant, async () => {

@@ -223,6 +223,7 @@ describe('decideQuote (alga-2026-0002820 1/6)', () => {
     expect(accepted.metadata).toEqual({
       selected_optional_quote_item_ids: [],
       deselected_optional_quote_item_ids: [optional],
+      decision_id: rows[0].decision_id,
     });
     expect(await activities(tenantId, quoteId, 'status_changed')).toHaveLength(1);
     expect(onQuoteAcceptedSpy).toHaveBeenCalledTimes(1);
@@ -250,7 +251,7 @@ describe('decideQuote (alga-2026-0002820 1/6)', () => {
     expect(rows[0]).toMatchObject({ decision: 'rejected', method: 'portal', comment: 'Budget is not approved yet.' });
     const [rejected] = await activities(tenantId, quoteId, 'rejected');
     expect(rejected.description).toBe('Quote rejected by client');
-    expect(rejected.metadata).toEqual({ rejection_reason: 'Budget is not approved yet.' });
+    expect(rejected.metadata).toEqual({ rejection_reason: 'Budget is not approved yet.', decision_id: rows[0].decision_id });
     expect(onQuoteAcceptedSpy).not.toHaveBeenCalled();
   });
 
@@ -375,6 +376,7 @@ describe('decideQuote (alga-2026-0002820 1/6)', () => {
       accepted_by: me.user_id,
       accepted_at: row.accepted_at.toISOString(),
       note: 'Verbal OK on the phone',
+      decision_id: decision.decision_id,
     });
     expect(onQuoteAcceptedSpy).toHaveBeenCalledTimes(1);
   });

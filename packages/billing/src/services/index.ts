@@ -15,6 +15,7 @@ export { BillingEngine } from '../lib/billing/billingEngine';
 export { recalculateQuoteFinancials, resolveQuoteItemTaxesIfIncluded } from './quoteCalculationService';
 export {
   decideQuote,
+  listQuoteDecisions,
   authorizePortalUserForQuote,
   type DecideQuoteInput,
   type QuoteDecisionAction,
@@ -154,12 +155,29 @@ export {
 export { verifyAndCompletePublicSetup, type SetupInspection } from './publicSetupConfirmation';
 export {
   QuoteAccessLinks,
+  QUOTE_ACCESS_TOKEN_LENGTH,
   computeQuoteAccessExpiry,
   hashQuoteAccessToken,
   type IQuoteAccessLink,
   type QuoteAccessLinkRevokeReason,
+  type QuoteAccessResolveFailure,
   type QuoteAccessResolveResult,
 } from './quoteAccessLinks';
+export {
+  computePublicQuoteFingerprint,
+  fingerprintPublicQuoteView,
+  loadPublicQuoteView,
+  projectPublicQuote,
+  projectPublicQuoteItems,
+  recordQuoteViewedViaEmailLink,
+  resolveQuoteRecipientLocale,
+  PUBLIC_QUOTE_FIELDS,
+  PUBLIC_QUOTE_ITEM_FIELDS,
+  type PublicQuote,
+  type PublicQuoteItem,
+  type PublicQuoteLocation,
+  type PublicQuoteView,
+} from './publicQuoteView';
 
 // Label batch rendering (work tags, asset / stock-unit labels): one PDF from N authorized view models.
 export {
@@ -175,3 +193,16 @@ export { LabelRenderError } from '../lib/label-batch/renderLabelBatchHtml';
 export type { LabelPrintItem } from '../lib/label-batch/renderLabelBatchHtml';
 export { LabelLayoutError } from '../lib/label-batch/layout';
 export type { LabelBatchLayout, OnePerPageLayout, GridLayout } from '../lib/label-batch/layout';
+
+export {
+  submitQuoteLinkDecision,
+  getCurrentQuoteAgreement,
+  hashQuoteAgreementText,
+  QUOTE_LINK_DECISION_LIMITS,
+  type QuoteAgreementDescriptor,
+  type QuoteLinkDecisionInput,
+  type QuoteLinkCommittedSnapshot,
+  type QuoteLinkDecisionOutcome,
+  type QuoteLinkInputProblem,
+  type QuoteLinkRequestContext,
+} from './quoteLinkDecisionService';

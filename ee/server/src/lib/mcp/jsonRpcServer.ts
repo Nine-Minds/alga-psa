@@ -298,12 +298,18 @@ async function resolveAuth(
         agentId: resolved.agent.agent_id,
         backingUserId: resolved.backingUserId as string,
       });
-    } catch (err) {
-      // Name/code match, not instanceof: the class may cross a module seam.
-      if ((err as { name?: string }).name === 'AgentInactiveError') {
-        return { ok: false, status: 403, error: (err as Error).message };
+    } catch (error) {
+      // A valid IdP token can outlive the tenant's Pro entitlement. Report the
+      // expected denial at the authentication boundary, before any dispatch.
+      if (error instanceof Error && 'code' in error && error.code === 'TIER_ACCESS_DENIED') {
+        return { ok: false, status: 403, error: error.message };
       }
-      throw err;
+      // Name/code match, not instanceof: the class may cross a module seam.
+      const err = error as { name?: string; message?: string };
+      if ((err as { name?: string }).name === 'AgentInactiveError') {
+        return { ok: false, status: 403, error: err.message ?? 'Agent is inactive' };
+      }
+      throw error;
     }
     return { ok: true, auth: { apiKey: sessionKey, agentId: resolved.agent.agent_id, tenant: resolved.tenant } };
   }
