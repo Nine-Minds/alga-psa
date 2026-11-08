@@ -1,4 +1,10 @@
 {
+  "tabs": {
+    "paymentMethods": "Metody płatności i płatność automatyczna"
+  },
+  "invoice": {
+    "autopayWillCharge": "Zostanie obciążona {{date}} karta {{brand}} •••• {{last4}}"
+  },
   "nav": {
     "dashboard": "Panel",
     "tickets": "Zgłoszenia",
@@ -11,6 +17,7 @@
     "account": "Konto",
     "signOut": "Wyloguj się",
     "clientPortal": "Portal klienta",
+    "clientPortalLabel": "Portal klienta",
     "portal": "Portal",
     "notifications": "Powiadomienia",
     "documents": "Dokumenty",
@@ -23,7 +30,6 @@
     "myDevices": "Moje urządzenia",
     "helpCenter": "Centrum pomocy",
     "organization": "Organizacja",
-    "clientPortalLabel": "Portal klienta",
     "supportCard": {
       "title": "Potrzebujesz pilnej pomocy?",
       "description": "Skontaktuj się z nami w dowolnej chwili."
@@ -35,6 +41,52 @@
       "apps": "Aplikacje"
     },
     "licenses": "Licencje"
+  },
+  "sidebar": {
+    "goToDashboard": "Przejdź do panelu",
+    "logoAlt": "Logo portalu klienta",
+    "expandSidebar": "Rozwiń pasek boczny",
+    "collapseSidebar": "Zwiń pasek boczny"
+  },
+  "devices": {
+    "pageTitle": "Moje urządzenia",
+    "loading": "Ładowanie urządzeń…",
+    "statusOkTitle": "Wszystkie urządzenia aktywne",
+    "statusOkBody": "{{count}} urządzeń zgłaszających się",
+    "empty": {
+      "title": "Brak urządzeń",
+      "body": "Tutaj pojawią się urządzenia zarządzane przez dostawcę."
+    },
+    "types": {
+      "workstation": "Stacje robocze",
+      "server": "Serwery",
+      "mobile": "Mobilne",
+      "printer": "Drukarki",
+      "network": "Sieć",
+      "unknown": "Inne"
+    },
+    "statusAttentionTitle": "Niektóre urządzenia wymagają uwagi",
+    "statusAttentionBody": "{{active}} z {{total}} urządzeń aktywnych",
+    "statusCount": "{{count}} {{status}}",
+    "searchPlaceholder": "Szukaj po nazwie, znaczniku lub numerze seryjnym",
+    "filters": {
+      "allTypes": "Wszystkie typy",
+      "allStatuses": "Wszystkie statusy"
+    },
+    "clearFilters": "Wyczyść filtry",
+    "columns": {
+      "name": "Nazwa",
+      "type": "Typ",
+      "status": "Status",
+      "location": "Lokalizacja",
+      "updated": "Zaktualizowano",
+      "actions": "Akcje"
+    },
+    "notAvailable": "Brak",
+    "detailsTitle": "Szczegóły zasobu",
+    "createTicket": "Utwórz zgłoszenie",
+    "createTicketForDevice": "Utwórz zgłoszenie dla tego urządzenia",
+    "rowActionsLabel": "Akcje wiersza"
   },
   "dashboard": {
     "title": "Panel",
@@ -61,27 +113,6 @@
       "upcomingVisitsDescription": "Zaplanowane wizyty z naszymi technikami.",
       "activeDevicesDescription": "Urządzenia, którymi obecnie zarządzamy i monitorujemy."
     },
-    "quickActions": {
-      "title": "Szybkie akcje",
-      "createTicket": "Utwórz zgłoszenie",
-      "requestAppointment": "Zarezerwuj wizytę",
-      "viewLatestInvoice": "Zobacz ostatnią fakturę",
-      "newServiceRequest": "Nowe zgłoszenie serwisowe",
-      "createSupportTicket": "Utwórz zgłoszenie do pomocy technicznej"
-    },
-    "appointments": {
-      "title": "Nadchodzące wizyty",
-      "noUpcoming": "Brak nadchodzących wizyt. Złóż wniosek teraz!",
-      "requestButton": "Złóż wniosek o wizytę",
-      "viewAll": "Zobacz wszystkie wizyty →",
-      "technician": "Technik",
-      "noUpcomingShort": "Nic w kalendarzu",
-      "countLabel": "Nadchodzące: {{count}}"
-    },
-    "recentActivity": {
-      "title": "Ostatnia aktywność"
-    },
-    "viewAll": "Zobacz wszystkie {{item}} →",
     "welcomeBack": "Witamy z powrotem",
     "heroSubtitle": "Oto podsumowanie Twojej aktywności wsparcia IT. Nasz zespół jest gotowy pomóc.",
     "greeting": {
@@ -143,6 +174,27 @@
       "emptyShort": "Brak urządzeń",
       "emptyBody": "Tutaj pojawią się urządzenia zarządzane przez dostawcę."
     },
+    "quickActions": {
+      "title": "Szybkie akcje",
+      "createTicket": "Utwórz zgłoszenie",
+      "requestAppointment": "Zarezerwuj wizytę",
+      "viewLatestInvoice": "Zobacz ostatnią fakturę",
+      "newServiceRequest": "Nowe zgłoszenie serwisowe",
+      "createSupportTicket": "Utwórz zgłoszenie do pomocy technicznej"
+    },
+    "appointments": {
+      "title": "Nadchodzące wizyty",
+      "noUpcoming": "Brak nadchodzących wizyt. Złóż wniosek teraz!",
+      "noUpcomingShort": "Nic w kalendarzu",
+      "countLabel": "Nadchodzące: {{count}}",
+      "requestButton": "Złóż wniosek o wizytę",
+      "viewAll": "Zobacz wszystkie wizyty →",
+      "technician": "Technik"
+    },
+    "recentActivity": {
+      "title": "Ostatnia aktywność"
+    },
+    "viewAll": "Zobacz wszystkie {{item}} →",
     "timeAgo": {
       "justNow": "przed chwilą",
       "minutes": "{{count}} min temu",
@@ -416,6 +468,7 @@
       "addPaymentError": "Nie udało się dodać metody płatności",
       "removePaymentError": "Nie udało się usunąć metody płatności",
       "setDefaultError": "Nie udało się ustawić domyślnej metody płatności",
+      "methodUpdateError": "Nie udało się zaktualizować tej metody płatności. Spróbuj ponownie.",
       "loadingBillingInfo": "Ładowanie informacji rozliczeniowych...",
       "overviewTitle": "Przegląd rozliczeń",
       "paymentMethodsTitle": "Metody płatności",
@@ -435,28 +488,6 @@
         "adding": "Dodawanie...",
         "view": "Wyświetl"
       },
-      "fields": {
-        "cardNumber": "Numer karty",
-        "expiryMonth": "Miesiąc",
-        "expiryYear": "Rok",
-        "cvv": "CVV",
-        "setAsDefault": "Ustaw jako domyślną metodę płatności",
-        "billingProfile": "Płaci za"
-      },
-      "history": {
-        "period": "Okres",
-        "startDate": "Data rozpoczęcia",
-        "endDate": "Data zakończenia",
-        "status": "Status",
-        "empty": "Brak historii rozliczeń"
-      },
-      "validation": {
-        "cardNumber": "Wprowadź poprawny 16-cyfrowy numer karty",
-        "expMonth": "Wprowadź poprawny miesiąc (01-12)",
-        "expYear": "Wprowadź poprawny rok (2024-2099)",
-        "cvv": "Wprowadź poprawny CVV"
-      },
-      "methodUpdateError": "Nie udało się zaktualizować tej metody płatności. Spróbuj ponownie.",
       "cardSetup": {
         "success": "Karta została bezpiecznie zapisana.",
         "error": "Nie udało się zapisać karty. Spróbuj ponownie."
@@ -488,6 +519,27 @@
         "unavailable": "Nie udało się teraz otworzyć strony płatności. Spróbuj ponownie za kilka minut.",
         "viewInPortal": "Zobacz fakturę w portalu klienta",
         "contactProvider": "Skontaktuj się ze swoim dostawcą rozliczeń, aby otrzymać nowy link."
+      },
+      "fields": {
+        "cardNumber": "Numer karty",
+        "expiryMonth": "Miesiąc",
+        "expiryYear": "Rok",
+        "cvv": "CVV",
+        "setAsDefault": "Ustaw jako domyślną metodę płatności",
+        "billingProfile": "Płaci za"
+      },
+      "history": {
+        "period": "Okres",
+        "startDate": "Data rozpoczęcia",
+        "endDate": "Data zakończenia",
+        "status": "Status",
+        "empty": "Brak historii rozliczeń"
+      },
+      "validation": {
+        "cardNumber": "Wprowadź poprawny 16-cyfrowy numer karty",
+        "expMonth": "Wprowadź poprawny miesiąc (01-12)",
+        "expYear": "Wprowadź poprawny rok (2024-2099)",
+        "cvv": "Wprowadź poprawny CVV"
       }
     }
   },
@@ -576,8 +628,6 @@
     },
     "notifications": {
       "unreadCount_one": "{{count}} nieprzeczytane powiadomienie",
-      "unreadCount_few": "{{count}} nieprzeczytane powiadomienia",
-      "unreadCount_many": "{{count}} nieprzeczytanych powiadomień",
       "unreadCount_other": "{{count}} nieprzeczytanych powiadomień",
       "title": "Ustawienia powiadomień",
       "email": "Powiadomienia e-mail",
@@ -586,7 +636,9 @@
       "invoices": "Powiadomienia o fakturach",
       "announcements": "Ogłoszenia systemowe",
       "emailPreferences": "E-mail",
-      "internalPreferences": "Wewnętrzne"
+      "internalPreferences": "Wewnętrzne",
+      "unreadCount_few": "{{count}} nieprzeczytane powiadomienia",
+      "unreadCount_many": "{{count}} nieprzeczytanych powiadomień"
     },
     "actions": {
       "save": "Zapisz zmiany",
@@ -598,16 +650,16 @@
     "messages": {
       "updateSuccess": "Profil zaktualizowany pomyślnie",
       "updateError": "Nie udało się zaktualizować profilu",
+      "emailAlreadyExists": "Użytkownik o tym adresie e-mail już istnieje",
+      "reportsToSelf": "Użytkownik nie może podlegać samemu sobie",
+      "reportsToCycle": "Spowodowałoby to cykliczną strukturę podległości",
+      "invalidTimezone": "Wybierz strefę czasową powiązaną z miastem, np. America/New_York.",
       "photoUploaded": "Zdjęcie przesłane pomyślnie",
       "photoRemoved": "Zdjęcie usunięte pomyślnie",
       "userNotFound": "Nie znaleziono użytkownika",
       "loadError": "Nie udało się wczytać profilu",
       "loading": "Ładowanie profilu...",
-      "avatarDescription": "Ten awatar jest widoczny dla personelu MSP podczas przeglądania danych kontaktowych.",
-      "emailAlreadyExists": "Użytkownik o tym adresie e-mail już istnieje",
-      "reportsToSelf": "Użytkownik nie może podlegać samemu sobie",
-      "reportsToCycle": "Spowodowałoby to cykliczną strukturę podległości",
-      "invalidTimezone": "Wybierz strefę czasową powiązaną z miastem, np. America/New_York."
+      "avatarDescription": "Ten awatar jest widoczny dla personelu MSP podczas przeglądania danych kontaktowych."
     },
     "imageUpload": {
       "uploadAvatar": "Prześlij awatar",
@@ -719,17 +771,62 @@
       "permissionError": "Nie masz uprawnień do zarządzania użytkownikami",
       "loadError": "Nie udało się wczytać użytkowników",
       "emailExists": "Kontakt z tym adresem e-mail już istnieje",
-      "createError": "Nie udało się utworzyć użytkownika",
-      "deleteError": "Nie udało się usunąć użytkownika",
       "emailAlreadyExists": "Użytkownik o tym adresie e-mail już istnieje",
       "reportsToSelf": "Użytkownik nie może podlegać samemu sobie",
       "reportsToCycle": "Spowodowałoby to cykliczną strukturę podległości",
+      "createError": "Nie udało się utworzyć użytkownika",
+      "deleteError": "Nie udało się usunąć użytkownika",
       "reportsTo": "Podlega",
       "noManager": "Brak przełożonego",
       "reportsToHelp": "Przełożony widzi zgłoszenia, urządzenia i projekty osób mu podlegających, gdy jego grupa widoczności jest ograniczona do własnych danych.",
       "locations": "Lokalizacje",
       "primaryLocation": "Główna",
-      "remote": "Zdalny"
+      "remote": "Zdalny",
+      "thisUser": "ten użytkownik",
+      "deactivate": {
+        "title": "Dezaktywuj użytkownika i zdecyduj o otwartych zgłoszeniach i zadaniach",
+        "confirm": "Dezaktywuj użytkownika",
+        "deactivating": "Dezaktywowanie…",
+        "thisUserCapitalized": "Ten użytkownik",
+        "openWorkPrompt": "ma otwarte zgłoszenia lub zadania. Wybierz, co ma się z nimi stać przed dezaktywacją konta.",
+        "reassignTo": "Przypisz otwarte zgłoszenia i zadania do",
+        "selectAssignee": "Wybierz aktywnego użytkownika wewnętrznego",
+        "noAssignee": "Brak aktywnego użytkownika wewnętrznego, któremu można przypisać zgłoszenia i zadania.",
+        "selectedUser": "wybrany użytkownik",
+        "buckets": {
+          "tickets": "Zgłoszenia",
+          "tasks": "Zadania projektowe"
+        },
+        "openCount": "Otwarte: {{label}} ({{count}})",
+        "actions": {
+          "reassign": "Przypisz ponownie",
+          "unassign": "Usuń przypisanie",
+          "archive": "Archiwizuj"
+        },
+        "labels": {
+          "ticket": "zgłoszenie",
+          "tickets": "zgłoszenia",
+          "projectTask": "zadanie projektowe",
+          "projectTasks": "zadania projektowe"
+        },
+        "summary": {
+          "archived": "Do archiwizacji: {{label}} ({{count}})",
+          "unassigned": "Do usunięcia przypisania: {{label}} ({{count}})",
+          "reassigned": "Do ponownego przypisania: {{label}} ({{count}}), nowa osoba przypisana: {{name}}"
+        }
+      }
+    },
+    "messages": {
+      "saveChanges": "Zapisz zmiany",
+      "failedToLoad": "Nie udało się wczytać informacji o koncie",
+      "updateSuccess": "Ustawienia klienta zaktualizowane pomyślnie",
+      "userAdded": "Użytkownik dodany pomyślnie",
+      "userRemoved": "Użytkownik usunięty pomyślnie",
+      "inviteSent": "Zaproszenie wysłane pomyślnie",
+      "noPermission": "Nie masz uprawnień do dostępu do ustawień klienta",
+      "clientNotFound": "Nie znaleziono klienta",
+      "detailsLoadError": "Nie udało się wczytać danych klienta",
+      "updateError": "Nie udało się zaktualizować danych klienta"
     },
     "visibilityGroups": {
       "title": "Grupy widoczności",
@@ -786,18 +883,6 @@
       "scopeSummaryAll": "Wszystkie",
       "scopeSummaryOwn": "Własne"
     },
-    "messages": {
-      "saveChanges": "Zapisz zmiany",
-      "failedToLoad": "Nie udało się wczytać informacji o koncie",
-      "updateSuccess": "Ustawienia klienta zaktualizowane pomyślnie",
-      "userAdded": "Użytkownik dodany pomyślnie",
-      "userRemoved": "Użytkownik usunięty pomyślnie",
-      "inviteSent": "Zaproszenie wysłane pomyślnie",
-      "noPermission": "Nie masz uprawnień do dostępu do ustawień klienta",
-      "clientNotFound": "Nie znaleziono klienta",
-      "detailsLoadError": "Nie udało się wczytać danych klienta",
-      "updateError": "Nie udało się zaktualizować danych klienta"
-    },
     "domain": {
       "title": "Domena niestandardowa",
       "description": "Klienci planu Pro mogą hostować portal w domenie niestandardowej. Domyślny hostowany adres jest widoczny poniżej.",
@@ -814,8 +899,6 @@
     "markAllAsRead": "Oznacz wszystkie jako przeczytane",
     "noNotifications": "Brak nowych powiadomień",
     "unreadCount_one": "{{count}} nieprzeczytane powiadomienie",
-    "unreadCount_few": "{{count}} nieprzeczytane powiadomienia",
-    "unreadCount_many": "{{count}} nieprzeczytanych powiadomień",
     "unreadCount_other": "{{count}} nieprzeczytanych powiadomień",
     "settings": "Ustawienia powiadomień",
     "viewAll": "Zobacz wszystkie powiadomienia",
@@ -869,53 +952,14 @@
     "card": {
       "unread": "Nieprzeczytane",
       "noMessage": "Brak wiadomości"
-    }
-  },
-  "sidebar": {
-    "goToDashboard": "Przejdź do panelu",
-    "logoAlt": "Logo portalu klienta",
-    "expandSidebar": "Rozwiń pasek boczny",
-    "collapseSidebar": "Zwiń pasek boczny"
-  },
-  "devices": {
-    "pageTitle": "Moje urządzenia",
-    "loading": "Ładowanie urządzeń…",
-    "statusOkTitle": "Wszystkie urządzenia aktywne",
-    "statusOkBody": "{{count}} urządzeń zgłaszających się",
-    "empty": {
-      "title": "Brak urządzeń",
-      "body": "Tutaj pojawią się urządzenia zarządzane przez dostawcę."
     },
-    "types": {
-      "workstation": "Stacje robocze",
-      "server": "Serwery",
-      "mobile": "Mobilne",
-      "printer": "Drukarki",
-      "network": "Sieć",
-      "unknown": "Inne"
-    },
-    "statusAttentionTitle": "Niektóre urządzenia wymagają uwagi",
-    "statusAttentionBody": "{{active}} z {{total}} urządzeń aktywnych",
-    "statusCount": "{{count}} {{status}}",
-    "searchPlaceholder": "Szukaj po nazwie, znaczniku lub numerze seryjnym",
-    "filters": {
-      "allTypes": "Wszystkie typy",
-      "allStatuses": "Wszystkie statusy"
-    },
-    "clearFilters": "Wyczyść filtry",
-    "columns": {
-      "name": "Nazwa",
-      "type": "Typ",
-      "status": "Status",
-      "location": "Lokalizacja",
-      "updated": "Zaktualizowano",
-      "actions": "Akcje"
-    },
-    "notAvailable": "Brak",
-    "detailsTitle": "Szczegóły zasobu",
-    "createTicket": "Utwórz zgłoszenie",
-    "createTicketForDevice": "Utwórz zgłoszenie dla tego urządzenia",
-    "rowActionsLabel": "Akcje wiersza"
+    "unreadCount_few": "{{count}} nieprzeczytane powiadomienia",
+    "unreadCount_many": "{{count}} nieprzeczytanych powiadomień",
+    "reconnectingToServer": "Ponowne łączenie z serwerem...",
+    "refresh": "Odśwież",
+    "markAllRead": "Oznacz wszystkie jako przeczytane",
+    "emptyTitle": "Brak powiadomień",
+    "emptyDescription": "Wszystko na bieżąco!"
   },
   "billing": {
     "columns": {
@@ -1045,7 +1089,34 @@
     },
     "unassigned": "Nieprzypisany",
     "sharedWorkspace": "Współdzielone stanowisko: {{name}}",
-    "sharedWorkspaceLabel": "Współdzielone stanowisko"
+    "sharedWorkspaceLabel": "Współdzielone stanowisko",
+    "details": {
+      "notProvided": "Nie podano",
+      "notAvailable": "Brak",
+      "cpuWithModel": "{{model}} (liczba rdzeni: {{count}})",
+      "cpuCores": "Liczba rdzeni: {{count}}",
+      "workstationTitle": "Szczegóły stacji roboczej",
+      "networkDeviceTitle": "Szczegóły urządzenia sieciowego",
+      "serverTitle": "Szczegóły serwera",
+      "basicInformation": "Podstawowe informacje",
+      "os": "System operacyjny",
+      "cpu": "CPU",
+      "ram": "RAM",
+      "storage": "Pamięć masowa",
+      "deviceType": "Typ urządzenia",
+      "ipAddress": "Adres IP",
+      "ports": "Porty",
+      "firmware": "Oprogramowanie układowe",
+      "type": "Typ",
+      "virtual": "Wirtualny",
+      "physical": "Fizyczny",
+      "assetTag": "Tag zasobu",
+      "serialNumber": "Numer seryjny",
+      "status": "Status",
+      "location": "Lokalizacja",
+      "purchaseDate": "Data zakupu",
+      "warrantyEndDate": "Data zakończenia gwarancji"
+    }
   },
   "errors": {
     "account": {
@@ -1099,11 +1170,5 @@
       "duplicate": "Grupa widoczności o takich danych już istnieje dla tego klienta.",
       "invalidData": "Nieprawidłowe dane grupy widoczności. Sprawdź dane grupy i wybrane tablice."
     }
-  },
-  "tabs": {
-    "paymentMethods": "Metody płatności i płatność automatyczna"
-  },
-  "invoice": {
-    "autopayWillCharge": "Zostanie obciążona {{date}} karta {{brand}} •••• {{last4}}"
   }
 }

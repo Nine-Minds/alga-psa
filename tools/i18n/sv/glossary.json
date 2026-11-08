@@ -533,6 +533,8 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "{{actor}} • {{eventType}}",
+      "Markdown",
       "{{from}} → {{to}}",
       "{{field}}: {{from}} → {{to}}",
       "RMA {{id}}",

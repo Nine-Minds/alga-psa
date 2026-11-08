@@ -1882,7 +1882,8 @@
         "loading": "Loading email templates...",
         "templateCount": "({{templateCount}} templates)",
         "usingCustom": "Using custom template",
-        "usingStandard": "Using standard template"
+        "usingStandard": "Using standard template",
+        "notCurrentlySent": "Not currently sent"
       },
       "columns": {
         "name": "Name",
@@ -1906,7 +1907,8 @@
         "close": "Close",
         "cancel": "Cancel",
         "saving": "Saving...",
-        "save": "Save"
+        "save": "Save",
+        "variableReference": "Variable reference"
       },
       "description": "Each event type has a standard template that can be customized. You can either use the standard template or create a custom version.",
       "filter": {
@@ -1929,7 +1931,8 @@
         "notAvailable": "N/A"
       },
       "edit": {
-        "title": "Edit Custom Template: {{name}}"
+        "title": "Edit Custom Template: {{name}}",
+        "variableSuggestions": "Template variable suggestions"
       },
       "languages": {
         "en": "English",
@@ -1939,7 +1942,8 @@
         "nl": "Dutch",
         "it": "Italian",
         "pl": "Polish",
-        "pt": "Portuguese"
+        "pt": "Portuguese",
+        "sv": "Swedish"
       }
     },
     "emailBranding": {
@@ -2508,7 +2512,9 @@
       },
       "actions": {
         "back": "Back to migrations",
-        "upload": "Upload package"
+        "upload": "Upload package",
+        "close": "Close",
+        "cancel": "Cancel"
       },
       "errors": {
         "noImportableRecords": "This package contained no importable records.",
@@ -2521,10 +2527,48 @@
         "storageRejected": "The server rejected this upload. Ask your administrator to check the storage file-type configuration.",
         "spreadsheetFailed": "The spreadsheet could not be imported. Please try again.",
         "uploadFailed": "The package could not be uploaded. Please try again.",
-        "unknown": "The upload failed. Please try again."
+        "unknown": "The upload failed. Please try again.",
+        "loadJobs": "Failed to load migration jobs.",
+        "loadJob": "Failed to load the migration job.",
+        "jobNotFound": "Migration job not found."
       },
       "preflight": {
-        "title": "Preflight"
+        "title": "Preflight",
+        "description": "A dry run that validates every staged record against this tenant and your configuration. Nothing is created by preflight.",
+        "errors": {
+          "loadReport": "Failed to load the preflight report.",
+          "runFailed": "Preflight failed to run.",
+          "startMigration": "Failed to start the migration.",
+          "downloadCsv": "Failed to download the preflight CSV.",
+          "downloadJson": "Failed to download the preflight JSON."
+        },
+        "running": "Preflight running…",
+        "runAgain": "Run preflight again",
+        "run": "Run preflight",
+        "empty": "No preflight has run for this configuration yet. Run preflight to see the per-entity plan and any issues.",
+        "plan": "Plan",
+        "preflightedAt": "Preflighted {{timestamp}}",
+        "downloadCsv": "Download CSV",
+        "downloadJson": "Download JSON",
+        "columns": {
+          "entity": "Entity",
+          "staged": "Staged",
+          "toCreate": "To create",
+          "toSkip": "To skip (already migrated)",
+          "blocked": "Blocked"
+        },
+        "noStagedRecords": "The package staged no records.",
+        "blockingIssues": "Blocking issues ({{count}})",
+        "warnings": "Warnings ({{count}})",
+        "blockedWithIssues_one": "The migration cannot run: {{count}} blocking issue must be resolved first.",
+        "blockedWithIssues_other": "The migration cannot run: {{count}} blocking issues must be resolved first.",
+        "blockedNoPreflight": "The migration cannot run until a preflight passes without blocking issues.",
+        "needsConfiguration": "The migration can run once a preflight of the saved configuration passes.",
+        "starting": "Starting…",
+        "runMigration": "Run migration",
+        "recordsAffected_one": "{{count}} record affected",
+        "recordsAffected_other": "{{count}} records affected",
+        "sampleRecords": "Sample records:"
       },
       "run": {
         "queued": "Migration queued",
@@ -2542,14 +2586,58 @@
         "claimedBySamePackage": "Already migrated by this package",
         "claimedByOtherPackage": "Already migrated by {{file}}",
         "claimedByExistingEntity": "Matched to an existing entity",
-        "matchedBySku": "Matched existing product by SKU"
+        "matchedBySku": "Matched existing product by SKU",
+        "title": "Results",
+        "errors": {
+          "loadSummary": "Failed to load the outcome summary.",
+          "loadRecords": "Failed to load outcome records.",
+          "downloadCsv": "Failed to download the outcome CSV."
+        },
+        "actions": {
+          "created": "Created",
+          "skipped": "Skipped",
+          "failed": "Failed"
+        },
+        "counts": {
+          "created": "created",
+          "skipped": "skipped",
+          "failed": "failed"
+        },
+        "finishedAt": "Finished {{timestamp}}.",
+        "noLongerRunning": "The job is no longer running.",
+        "preparing": "Preparing…",
+        "downloadCsv": "Download outcome CSV",
+        "failedLabel": "The migration failed:",
+        "cancelled": "The migration was cancelled at a checkpoint. Records applied before the cancellation remain and are listed below.",
+        "noRecordsWritten": "No outcome records were written for this job.",
+        "noRecordsMatch": "No outcome records match these filters.",
+        "columns": {
+          "entity": "Entity",
+          "sourceRecord": "Source record",
+          "action": "Action",
+          "result": "Result",
+          "at": "At"
+        },
+        "filters": {
+          "allEntities": "All entities",
+          "allActions": "All actions"
+        },
+        "unknownError": "Unknown error",
+        "recordLimitNotice": "Showing the first {{count}} matching records. Download the outcome CSV for the complete list."
       },
       "spreadsheet": {
         "entities": {
           "products": "Products (catalog / price list)",
-          "vendorProducts": "Vendor price list (distributor costs)"
+          "vendorProducts": "Vendor price list (distributor costs)",
+          "assets": "Assets (legacy asset import)",
+          "organizations": "Organizations",
+          "locations": "Locations",
+          "contacts": "Contacts",
+          "tickets": "Tickets",
+          "ticketComments": "Ticket comments"
         },
-        "productsHint": "Prices and costs are read as decimal amounts (for example 1,299.50) using the currency column when present, otherwise the tenant currency. Negative, non-numeric or over-precise amounts are dropped and reported; the row is still imported. Products match existing products by SKU; vendor price-list rows reference a product by SKU and create or match the vendor by name."
+        "productsHint": "Prices and costs are read as decimal amounts (for example 1,299.50) using the currency column when present, otherwise the tenant currency. Negative, non-numeric or over-precise amounts are dropped and reported; the row is still imported. Products match existing products by SKU; vendor price-list rows reference a product by SKU and create or match the vendor by name.",
+        "headersHint": "Canonical headers are recognized automatically. Other columns can be mapped to custom asset-type fields during Configure. Contacts accept common spellings such as Name, First Name, Last Name, Email, Phone, Title, and Client; legacy asset names such as Asset Name, Asset Type, and Serial Number are preserved through the AMP flow."
       },
       "configure": {
         "products": {
@@ -2557,7 +2645,92 @@
           "serviceType": "Service type for new products",
           "serviceTypePlaceholder": "Select a service type",
           "serviceTypeHelp": "Products whose SKU already exists are matched and left unchanged; only new products are filed under this service type."
+        },
+        "title": "Configure the migration",
+        "description": "Map the package's reference data to this tenant. Preflight verifies every mapping before anything can run.",
+        "errors": {
+          "loadOptions": "Failed to load configuration options.",
+          "save": "Failed to save the configuration.",
+          "optionsUnavailable": "Configuration options are unavailable."
+        },
+        "clientPlaceholder": "Select a client",
+        "mappingPlaceholder": "Select a mapping",
+        "tickets": {
+          "title": "Tickets",
+          "board": "Board",
+          "boardPlaceholder": "Select a board",
+          "defaultRequester": "Default requester client",
+          "defaultRequesterHelp": "Used when a ticket's organization cannot be resolved.",
+          "defaultAssignee": "Default assignee",
+          "defaultAssigneePlaceholder": "Leave tickets unassigned"
+        },
+        "statusMapping": {
+          "title": "Status mapping",
+          "description": "Every status name in the package must map to a ticket status in this tenant.",
+          "empty": "The package's tickets carry no status names."
+        },
+        "priorityMapping": {
+          "title": "Priority mapping",
+          "description": "Every priority name in the package must map to a priority in this tenant.",
+          "empty": "The package's tickets carry no priority names."
+        },
+        "assets": {
+          "title": "Assets"
+        },
+        "assetTypeMapping": {
+          "title": "Asset type mapping",
+          "description": "Every asset type name in the package must map to an asset type in this tenant.",
+          "empty": "The package's assets carry no asset type names."
+        },
+        "general": {
+          "title": "General",
+          "defaultClient": "Default client for orphaned records",
+          "defaultClientHelp": "Contacts and assets whose organization cannot be resolved are attached to this client."
+        },
+        "saved": "Configuration saved. Run preflight to validate it against the staged records.",
+        "saving": "Saving…",
+        "save": "Save configuration"
+      },
+      "home": {
+        "title": "Migrations",
+        "description": "Bring data from another PSA into Alga by uploading an AMP package or a CSV/XLSX spreadsheet. Each upload is inspected, configured, and preflighted before anything is created.",
+        "columns": {
+          "package": "Package",
+          "sourceSystem": "Source system",
+          "state": "State",
+          "progress": "Progress",
+          "created": "Created"
+        },
+        "empty": {
+          "title": "No migrations yet",
+          "descriptionPrefix": "An Alga Migration Package (",
+          "descriptionSuffix": ") is a portable, validated archive of organizations, locations, contacts, tickets, comments, and assets exported from another system. Upload one to inspect its contents, map its reference data to this tenant, and run a preflighted, repeat-safe import.",
+          "docsLink": "Read the AMP package reference"
         }
+      },
+      "upload": {
+        "title": "Upload migration package",
+        "tooLarge": "Migration packages must be {{megabytes}} MB or smaller.",
+        "fileLabel": "Package or spreadsheet",
+        "fileHint": "AMP (.amp) or CSV/XLSX, up to {{megabytes}} MB. Spreadsheets become an AMP package before staging; nothing is imported until you run the migration.",
+        "entityLabel": "Spreadsheet records represent",
+        "rejected": "The package was rejected and nothing was staged. Fix these problems in the source package and upload it again:",
+        "stagedWithDiagnostics": "The package staged, but some source data needs your attention before you run the import:",
+        "continueToConfigure": "Continue to configure",
+        "uploading": "Uploading…",
+        "submit": "Upload"
+      },
+      "detail": {
+        "source": "Source: {{system}}",
+        "sourceNotDeclared": "Source system not declared",
+        "producer": "Producer: {{producer}}",
+        "uploaded": "Uploaded {{timestamp}}",
+        "lifecycleAria": "Migration lifecycle",
+        "inspecting": "The package is being inspected and staged",
+        "packageSuffix": "(package {{packageId}})",
+        "inspectingRefresh": ". This view refreshes automatically.",
+        "rejectedBody": "This package was rejected during inspection; nothing was staged and nothing will be imported from it. Fix the package in the source system and upload a new one.",
+        "rejectionDetails": "Rejection details"
       }
     },
     "jobDetails": {
@@ -3018,7 +3191,8 @@
     "rmmEnterpriseNote": "RMM integrations are available in Pro.",
     "categoryHeading": "{{label}} Integrations",
     "loading": {
-      "payments": "Loading payment settings..."
+      "payments": "Loading payment settings...",
+      "hudu": "Loading Hudu integration settings..."
     },
     "categories": {
       "accounting": {
@@ -3110,6 +3284,11 @@
         "name": "Telephony",
         "description": "Journal calls as interactions, recognise callers, and turn a call into a ticket"
       }
+    },
+    "addOnRequired": {
+      "heading": "{{featureName}} requires the {{addOnName}} add-on",
+      "manageAddOns": "Manage add-ons",
+      "entraDescription": "Purchase the Enterprise add-on to activate Microsoft Entra Sync, including tenant discovery, client mapping, contact sync, and reconciliation workflows."
     }
   },
   "orgChart": {
@@ -3127,6 +3306,54 @@
     "messages": {
       "adminLocked": "Admin role permissions cannot be modified",
       "permissionsUpdated": "Permissions updated successfully"
+    },
+    "title": "Manage Permissions",
+    "description": "Configure access permissions for different roles and resources",
+    "selectPrompt": "Please select a role or resource to manage permissions",
+    "unsavedChanges": "You have unsaved changes",
+    "adminLockedTooltip": "Admin role permissions are system-defined and cannot be changed",
+    "none": "None",
+    "actionCount_one": "{{count}} action",
+    "actionCount_other": "{{count}} actions",
+    "views": {
+      "clientPortal": "Client Portal"
+    },
+    "filters": {
+      "allResources": "All Resources",
+      "allRoles": "All Roles",
+      "selectRole": "Select a role",
+      "filterByResource": "Filter by resource"
+    },
+    "columns": {
+      "resource": "Resource",
+      "role": "Role",
+      "create": "Create",
+      "read": "Read",
+      "update": "Update",
+      "delete": "Delete",
+      "specialActions": "Special Actions"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "saveChanges": "Save changes",
+      "saving": "Saving..."
+    },
+    "confirm": {
+      "title": "Confirm Permission Changes",
+      "message": "Are you sure you want to save these permission changes?",
+      "confirmLabel": "Save Changes"
+    },
+    "stats": {
+      "empty": "Select a role or resource to view permissions",
+      "rolesForResource_one": "{{count}} role for {{resource}}",
+      "rolesForResource_other": "{{count}} roles for {{resource}}",
+      "resourcesAndPermissions": "{{count}} resources • {{assigned}}/{{total}} permissions"
+    },
+    "errors": {
+      "fetchPermissions": "Failed to fetch permissions",
+      "fetchRoles": "Failed to fetch roles",
+      "fetchRolePermissions": "Failed to fetch role permissions",
+      "savePermissions": "Failed to save permissions"
     }
   },
   "sla": {
@@ -3415,6 +3642,91 @@
         "timerPaused": "SLA Timer: Paused"
       },
       "unknown": "Unknown"
+    },
+    "businessHours": {
+      "title": "Business Hours Schedules",
+      "description": "Define when your support team is available for SLA calculations",
+      "loading": "Loading business hours schedules...",
+      "default": "Default",
+      "recurring": "Recurring",
+      "openMenu": "Open menu",
+      "workingHours": "Working Hours",
+      "dailyHours": "Daily Hours",
+      "closed": "Closed",
+      "alwaysOpen": "This is a 24/7 schedule - available all day, every day.",
+      "holidays": "Holidays",
+      "noHolidays": "No holidays defined for this schedule.",
+      "timezoneLabel": "Timezone: {{timezone}}",
+      "days": {
+        "0": "Sunday",
+        "1": "Monday",
+        "2": "Tuesday",
+        "3": "Wednesday",
+        "4": "Thursday",
+        "5": "Friday",
+        "6": "Saturday"
+      },
+      "columns": {
+        "name": "Name",
+        "timezone": "Timezone",
+        "actions": "Actions",
+        "holidayName": "Holiday Name",
+        "date": "Date",
+        "day": "Day",
+        "enabled": "Enabled",
+        "startTime": "Start Time",
+        "endTime": "End Time"
+      },
+      "empty": {
+        "title": "No Business Hours Schedules",
+        "description": "Create your first business hours schedule to start calculating SLA times."
+      },
+      "actions": {
+        "edit": "Edit",
+        "viewDetails": "View Details",
+        "delete": "Delete",
+        "cancel": "Cancel",
+        "close": "Close",
+        "create": "Create",
+        "update": "Update",
+        "saving": "Saving...",
+        "adding": "Adding...",
+        "createDefault": "Create Default Schedule",
+        "createCustom": "Create Custom Schedule",
+        "addSchedule": "Add Schedule",
+        "addHoliday": "Add Holiday"
+      },
+      "fields": {
+        "scheduleName": "Schedule Name *",
+        "scheduleNamePlaceholder": "e.g., Standard Business Hours",
+        "timezone": "Timezone *",
+        "is24x7": "24/7 Schedule (always available)",
+        "isDefault": "Set as default schedule",
+        "holidayName": "Holiday Name *",
+        "holidayNamePlaceholder": "e.g., Christmas Day",
+        "holidayDate": "Date *",
+        "holidayDatePlaceholder": "Select date",
+        "isRecurring": "Repeats annually"
+      },
+      "dialog": {
+        "editTitle": "Edit Schedule",
+        "createTitle": "Create Schedule",
+        "deleteScheduleTitle": "Delete Schedule",
+        "deleteScheduleMessage": "Are you sure you want to delete \"{{name}}\"? This will also delete all associated holidays. This action cannot be undone.",
+        "deleteHolidayTitle": "Delete Holiday",
+        "deleteHolidayMessage": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone."
+      },
+      "errors": {
+        "loadSchedules": "Failed to load business hours schedules",
+        "loadScheduleDetails": "Failed to load schedule details",
+        "nameRequired": "Schedule name is required",
+        "invalidTimeRange": "Invalid time range for {{day}}: End time must be after start time",
+        "saveSchedule": "Failed to save schedule",
+        "deleteSchedule": "Failed to delete schedule",
+        "createDefaultSchedule": "Failed to create default schedule",
+        "addHoliday": "Failed to add holiday",
+        "deleteHoliday": "Failed to delete holiday"
+      }
     }
   },
   "clientPortalLanguage": {
