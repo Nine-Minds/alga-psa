@@ -2572,7 +2572,12 @@
       "Asset: {{name}}",
       "Ticket: {{number}}",
       "RMA {{number}} · {{status}}",
-      "Markdown"
+      "Markdown",
+      "ticket",
+      "tickets",
+      "RAM",
+      "Firmware",
+      "{{count}} open {{label}}"
     ],
     "caseInsensitive": [
       "account",
