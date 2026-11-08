@@ -19,6 +19,9 @@ const target = {
   priority_id: 'priority-1',
   response_time_minutes: 100,
   resolution_time_minutes: 200,
+  escalation_1_percent: 70,
+  escalation_2_percent: 90,
+  escalation_3_percent: 110,
   is_24x7: true,
 };
 
