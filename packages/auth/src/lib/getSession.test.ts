@@ -25,6 +25,7 @@ vi.mock('@alga-psa/db/models/UserSession', () => ({
   UserSession: {
     isRevokedOrIdentityMismatch: vi.fn(),
     getRejectionReason: vi.fn(),
+    logLifecycle: vi.fn(),
   },
 }));
 
@@ -51,6 +52,7 @@ beforeEach(() => {
   vi.mocked(fullAuth).mockReset();
   vi.mocked(UserSession.isRevokedOrIdentityMismatch).mockReset();
   vi.mocked(UserSession.getRejectionReason).mockReset();
+  vi.mocked(UserSession.logLifecycle).mockReset();
   vi.mocked(logger.warn).mockReset();
   vi.mocked(logger.error).mockReset();
   requestHeaders.current = new Headers({ 'x-request-id': 'req-safe-1' });
@@ -89,6 +91,7 @@ describe('getSession', () => {
     expect(logger.warn).toHaveBeenCalledWith('[auth] session_rejected', {
       reason: 'durable_session_revoked', requestId: 'req-safe-1',
     });
+    expect(UserSession.logLifecycle).toHaveBeenCalledWith('rejected', 'session-1', 'durable_session_revoked');
   });
 
   it('rejects a session with no tracked session identifier without querying the database', async () => {
