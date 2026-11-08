@@ -2,6 +2,23 @@
 
 Notable, externally visible changes to the Alga PSA REST API, newest first.
 
+## 2026-11-08 — Time-sheet write endpoints fixed; submission and approval notes become a history
+
+**Affected endpoints:** `POST /api/v1/time-sheets`, `PUT /api/v1/time-sheets/{id}`, `POST /api/v1/time-sheets/{id}/submit`, `/approve`, `/request-changes`, `/reverse-approval`, `GET /api/v1/time-sheets/{id}`, `/search`, `/export`, `POST|GET /api/v1/time-sheets/{id}/comments`
+
+The time-sheet write endpoints referenced columns that do not exist on `time_sheets` (`created_at`, `updated_at`, `submission_notes`, `approval_notes`), so creating, submitting, approving and reviewing a time sheet over REST failed with `500`. All of them now persist correctly. Notes written along the way are kept as a per-sheet history instead of a single overwritten field.
+
+**Changes:**
+
+- **Notes history.** `submission_notes` on `/submit`, `approval_notes` on `/approve`, `change_reason` and `detailed_feedback` on `/request-changes`, and `reversal_reason` on `/reverse-approval` are each stored as a separate history entry. `GET /time-sheets/{id}` returns them as a `notes` array. Each entry has `note_id`, `kind` (`submission`, `approval`, `request_changes`, `reverse_approval` or `legacy`), `note`, `detail`, `created_by`, `user_name` and `created_at`. Approval notes, change requests and reversals are also posted as approver comments.
+- **Removed fields.** `notes` is no longer accepted on `POST` or `PUT /time-sheets` and is no longer returned on a time sheet; `created_at` and `updated_at` are no longer returned either, because the table has no such columns. Existing `time_sheets.notes` values are migrated into the history as `kind: "legacy"`.
+- **Guarded status changes.** `/submit` and `PUT` with `approval_status` go through the same lifecycle rules as the UI. Users can submit only their own sheets, only from `DRAFT` or `CHANGES_REQUESTED`, and only when the sheet has time entries. Approving or requesting changes requires the `time_sheet` `approve` permission and a `SUBMITTED` sheet. A wrong starting status returns `409`. `PUT` with `approval_status: "CHANGES_REQUESTED"` requires a `change_reason`, and setting `DRAFT` directly is refused.
+- **Comments.** The request field for `POST /time-sheets/{id}/comments` is `comment` (previously `comment_text`). Responses carry `comment`, `is_approver` and `time_sheet_id`; `user_role` is gone.
+- **Search** now matches the `query` against the owner name and note history text (`fields=user_name,note`).
+- **Export** returns every matching time sheet instead of stopping at 25 rows. Its array filters (`approval_statuses`, `user_ids`, `period_ids`, `fields`) accept repeated keys or comma-separated values, like search.
+
+**Migration note:** Stop sending `notes` on create or update; send `submission_notes` on submit instead. Read the latest reviewer feedback from the `notes` history on `GET /time-sheets/{id}`.
+
 ## 2026-11-08 — Ticket API: historical `entered_at` and comment `created_at` for imports
 
 **Affected endpoints:** `POST /api/v1/tickets`, `PUT /api/v1/tickets/{id}`, `POST /api/v1/tickets/{id}/comments`
