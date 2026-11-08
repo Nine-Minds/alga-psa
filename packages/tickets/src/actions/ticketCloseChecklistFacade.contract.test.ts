@@ -56,13 +56,15 @@ describe('ticket close/checklist/material facade contract', () => {
     }
   });
 
-  it('keeps migrated ticket helper roots behind tenantDb', () => {
+  it('prevents unscoped query roots in migrated ticket helpers', () => {
     const facadeSources = Object.entries(sources)
       .filter(([name]) => name !== 'materialCatalog' && name !== 'inventoryMaterials')
       .map(([, source]) => source);
 
     for (const source of facadeSources) {
-      expect(source).toContain('tenantDb');
+      // Helpers may delegate all queries to an authorized service (covered for
+      // manual application by applyChecklistTemplate.authorization.test.ts).
+      // Reject direct query roots without requiring unused facade imports.
       expect(source).not.toContain('createTenantScopedQuery');
       expect(source).not.toMatch(/\.where\(\{[^}\n]*(?:\btenant\b|['"][^'"]*\.tenant['"])/);
       expect(source).not.toMatch(/\.andWhere\([^)\n]*(?:\btenant\b|['"][^'"]*\.tenant['"])/);
