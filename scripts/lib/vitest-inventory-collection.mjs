@@ -15,9 +15,9 @@ export function hasCurrentManualRunnerReview(runner, now = new Date()) {
 // Collection must execute the runner's module loading, not just duplicate its
 // include globs. Compare file discovery with registered cases to catch empty
 // files and collection errors without running test bodies or starting services.
-export function collectVitestInventory({ root, runner, output, env = process.env }) {
+export function collectVitestInventory({ root, runner, output, env = process.env, now = new Date() }) {
   if (!runner.owner?.trim() || !runner.runtime?.trim()) throw new Error(`Missing runner ownership/runtime: ${runner.runner}`);
-  if (runner.mandatory === false && !hasCurrentManualRunnerReview(runner)) {
+  if (runner.mandatory === false && !hasCurrentManualRunnerReview(runner, now)) {
     throw new Error(`Manual runner requires a reason, tracking issue and unexpired review: ${runner.runner}`);
   }
   const directory = path.join(output, runner.runner);

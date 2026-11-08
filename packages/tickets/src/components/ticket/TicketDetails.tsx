@@ -71,12 +71,13 @@ import { isTeamActionError } from '@alga-psa/teams/actions';
 import AgentScheduleDrawer from "./AgentScheduleDrawer";
 import type { WorkItemScheduleContext } from '@alga-psa/ui/context';
 import { Button } from "@alga-psa/ui/components/Button";
+import BatchDuplicateTicketDialog from "./BatchDuplicateTicketDialog";
 import Drawer from '@alga-psa/ui/components/Drawer';
 import { Input } from "@alga-psa/ui/components/Input";
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import { Label } from "@alga-psa/ui/components/Label";
 import { PresenceBar } from '@alga-psa/ui/presence/PresenceBar';
-import { ExternalLink, Printer, Mail, History, Trash2, Copy, MoreHorizontal, LayoutTemplate, Workflow } from 'lucide-react';
+import { ExternalLink, Printer, Mail, History, Trash2, Copy, Users, MoreHorizontal, LayoutTemplate, Workflow } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@alga-psa/ui/components/DropdownMenu';
 import { useTicketTemplatePermissions } from '../templates/useTicketTemplatePermissions';
 import { WorkItemType } from "@alga-psa/types";
@@ -458,6 +459,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isEmailNotificationLogsDrawerOpen, setIsEmailNotificationLogsDrawerOpen] = useState(false);
     const [isActivityLogDrawerOpen, setIsActivityLogDrawerOpen] = useState(false);
     const [activityLogRefreshKey, setActivityLogRefreshKey] = useState(0);
+    const [batchDuplicateOpen, setBatchDuplicateOpen] = useState(false);
     // Single-ticket delete (mirrors the client/contact detail-page delete pattern)
     const [isDeleteTicketDialogOpen, setIsDeleteTicketDialogOpen] = useState(false);
 
@@ -3886,6 +3888,15 @@ const handleClose = () => {
                     <Copy className="h-4 w-4 mr-2" />
                     {t('actions.duplicate', { defaultValue: 'Duplicate' })}
                 </DropdownMenuItem> : null}
+                {capabilities.duplicate ? (
+                    <DropdownMenuItem
+                        id={`${id}-batch-duplicate-menu-item`}
+                        onSelect={() => setBatchDuplicateOpen(true)}
+                    >
+                        <Users className="h-4 w-4 mr-2" />
+                        {t('actions.duplicateMultiple', { defaultValue: 'Duplicate multiple…' })}
+                    </DropdownMenuItem>
+                ) : null}
                 {capabilities.createTemplate && templatePermissions.create ? (
                     <DropdownMenuItem
                         id={`${id}-create-template-menu-item`}
@@ -5077,6 +5088,14 @@ const handleClose = () => {
                 </div>
             </Drawer>
             ) : null}
+            {batchDuplicateOpen && ticket.ticket_id && (
+                <BatchDuplicateTicketDialog
+                    sourceTicketId={ticket.ticket_id}
+                    isOpen
+                    onClose={() => setBatchDuplicateOpen(false)}
+                    onCompleted={() => setActivityLogRefreshKey((value) => value + 1)}
+                />
+            )}
             {isPrintWorkTagOpen && (
                 <LabelPrintDialog
                     isOpen={isPrintWorkTagOpen}
