@@ -10,10 +10,19 @@ import { setupCommonMocks, createMockUser } from '../../../test-utils/testMocks'
 import * as auth from '@alga-psa/auth';
 import * as rbac from '@alga-psa/auth/rbac';
 import * as ticketActions from '@alga-psa/tickets/actions/ticketActions';
+import * as ticketResourceActions from '@alga-psa/tickets/actions/ticketResourceActions';
 import { TestContext } from '../../../test-utils/testContext';
+import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createUser } from '../../../test-utils/testDataFactory';
+import {
+  createAuthorizationBundle,
+  createBundleAssignment,
+  publishBundleRevision,
+  upsertBundleRule,
+} from '@alga-psa/authorization/bundles/service';
 import * as dbModule from '@alga-psa/db';
 import { tenantDb } from '@alga-psa/db';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 
 vi.mock('@alga-psa/auth', async () => {
   const { createAuthModuleMock } = await import('../../../test-utils/authModuleMock');
@@ -22,7 +31,7 @@ vi.mock('@alga-psa/auth', async () => {
 
 const HOOK_TIMEOUT = 900_000;
 
-describe('addTicket create extras (integration)', () => {
+describe.sequential('addTicket create extras (integration)', () => {
   const context = new TestContext({ runSeeds: true });
   let realPermissionCheck: typeof rbac.hasPermission;
 
@@ -33,6 +42,9 @@ describe('addTicket create extras (integration)', () => {
   let priorityId: string;
   let creator: any;
   let watcherUserId: string;
+  let primaryAgentId: string;
+  let additionalAgentId: string;
+  let secondAdditionalAgentId: string;
   let assetA: string;
   let assetB: string;
   let foreignAsset: string;
@@ -83,8 +95,19 @@ describe('addTicket create extras (integration)', () => {
     return Number((row as any).n);
   }
 
+  function poolLikeForActionTransactions() {
+    const outer = context.db;
+    return new Proxy(outer as any, {
+      get: (target, prop) =>
+        prop === 'commit' || prop === 'rollback' ? undefined : prop === 'transaction'
+          ? (cb: any) => target.transaction(cb)
+          : Reflect.get(target, prop, target),
+    });
+  }
+
   beforeEach(async () => {
     await context.reset();
+    vi.mocked(publishWorkflowEvent).mockClear();
     tenantId = context.tenantId;
     clientId = context.clientId;
 
@@ -93,6 +116,15 @@ describe('addTicket create extras (integration)', () => {
     });
     watcherUserId = await createUser(context.db, tenantId, {
       username: 'extras-watcher', first_name: 'Wes', last_name: 'Watcher', email: 'wes@example.com', user_type: 'internal',
+    });
+    primaryAgentId = await createUser(context.db, tenantId, {
+      username: 'extras-primary', first_name: 'Pat', last_name: 'Primary', email: 'pat@example.com', user_type: 'internal',
+    });
+    additionalAgentId = await createUser(context.db, tenantId, {
+      username: 'extras-additional', first_name: 'Ari', last_name: 'Additional', email: 'ari@example.com', user_type: 'internal',
+    });
+    secondAdditionalAgentId = await createUser(context.db, tenantId, {
+      username: 'extras-additional-2', first_name: 'Sam', last_name: 'Second', email: 'sam@example.com', user_type: 'internal',
     });
 
     boardId = uuidv4();
@@ -105,7 +137,7 @@ describe('addTicket create extras (integration)', () => {
     });
 
     const otherClientId = uuidv4();
-    await tt('clients').insert({ tenant: tenantId, client_id: otherClientId, client_name: 'Other Client' });
+    await tt('clients').insert({ tenant: tenantId, client_id: otherClientId, client_name: `Other Client ${uuidv4()}` });
     assetA = await insertAsset(clientId, 'EXT-A');
     assetB = await insertAsset(clientId, 'EXT-B');
     foreignAsset = await insertAsset(otherClientId, 'EXT-X');
@@ -170,13 +202,7 @@ describe('addTicket create extras (integration)', () => {
     // TestContext runs everything inside one outer transaction, so addTicket's withTransaction would
     // just join it and nothing could roll back. Hand the action a pool-like handle (no commit/rollback)
     // whose transaction() is a savepoint, so the action owns its transaction as it does in production.
-    const outer = context.db;
-    const poolLike = new Proxy(outer as any, {
-      get: (target, prop) =>
-        prop === 'commit' || prop === 'rollback' ? undefined : prop === 'transaction'
-          ? (cb: any) => target.transaction(cb)
-          : Reflect.get(target, prop, target),
-    });
+    const poolLike = poolLikeForActionTransactions();
     vi.spyOn(dbModule, 'createTenantKnex').mockImplementationOnce(async () => ({ knex: poolLike, tenant: tenantId }) as any);
     const outcome = await ticketActions.addTicket(
       createForm({ asset_ids: JSON.stringify([assetA, foreignAsset]) })
@@ -185,6 +211,117 @@ describe('addTicket create extras (integration)', () => {
     expect(message).toMatch(/Invalid asset/);
     expect(await countTickets()).toBe(before);
     expect(await tt('asset_associations').where({ asset_id: assetA }).count('* as n').first().then((r: any) => Number(r.n))).toBe(0);
+  });
+
+  it('creates primary and additional staffing atomically when later ticket updates are denied', async () => {
+    const before = await countTickets();
+    const ticketUpdatePermissions = await tt('permissions')
+      .where({ resource: 'ticket', action: 'update', msp: true }).select('permission_id');
+    await tt('role_permissions').whereIn('permission_id', ticketUpdatePermissions.map((p: any) => p.permission_id)).delete();
+    vi.spyOn(dbModule, 'createTenantKnex').mockImplementationOnce(async () => ({
+      knex: poolLikeForActionTransactions(), tenant: tenantId,
+    }) as any);
+    const created: any = await ticketActions.addTicket(createForm({
+      assigned_to: primaryAgentId,
+      additional_agent_ids: JSON.stringify([additionalAgentId]),
+    }));
+    expect(created?.ticket_id).toBeTruthy();
+
+    // The creator has create but not update permission for both creation and the
+    // follow-up resource action. The assignment inserted during creation stays available.
+    const beforeDeniedAssignments = await tt('ticket_resources').where({ ticket_id: created.ticket_id }).select('*');
+    const beforeDeniedAudit = await tt('ticket_audit_logs').where({ ticket_id: created.ticket_id }).select('*');
+    const denied = await ticketResourceActions.addTicketResource(created.ticket_id, secondAdditionalAgentId, 'support');
+
+    expect(denied).toMatchObject({ permissionError: expect.stringContaining('Permission denied') });
+    const ticket = await tt('tickets').where({ ticket_id: created.ticket_id }).first();
+    expect(ticket.assigned_to).toBe(primaryAgentId);
+    expect(await tt('ticket_resources').where({ ticket_id: created.ticket_id }).select('*'))
+      .toEqual(beforeDeniedAssignments);
+    expect(beforeDeniedAssignments.map((row: any) => row.additional_user_id)).toEqual([additionalAgentId]);
+    expect(await tt('ticket_audit_logs').where({ ticket_id: created.ticket_id }).select('*')).toEqual(beforeDeniedAudit);
+    expect(beforeDeniedAudit).toEqual(expect.arrayContaining([
+      expect.objectContaining({ event_type: 'TICKET_ASSIGNED', details: expect.objectContaining({ additional_agent_id: additionalAgentId }) }),
+    ]));
+    expect(await countTickets()).toBe(before + 1);
+  });
+
+  it('keeps create-time staffing when creator has ticket:update but the real record policy denies later updates', async () => {
+    const bundle = await createAuthorizationBundle(context.db, {
+      tenant: tenantId,
+      name: `assigned-only-ticket-updates-${uuidv4()}`,
+      actorUserId: creator.user_id,
+    });
+    await upsertBundleRule(context.db, {
+      tenant: tenantId,
+      bundleId: bundle.bundleId,
+      revisionId: bundle.revisionId,
+      resourceType: 'ticket',
+      action: 'update',
+      templateKey: 'assigned',
+      config: {},
+      actorUserId: creator.user_id,
+    });
+    await publishBundleRevision(context.db as any, {
+      tenant: tenantId,
+      bundleId: bundle.bundleId,
+      revisionId: bundle.revisionId,
+      actorUserId: creator.user_id,
+    });
+    await createBundleAssignment(context.db, {
+      tenant: tenantId,
+      bundleId: bundle.bundleId,
+      targetType: 'user',
+      targetId: creator.user_id,
+      actorUserId: creator.user_id,
+    });
+
+    expect(await auth.hasPermission(creator, 'ticket', 'update', context.db)).toBe(true);
+    vi.spyOn(dbModule, 'createTenantKnex').mockImplementationOnce(async () => ({
+      knex: poolLikeForActionTransactions(), tenant: tenantId,
+    }) as any);
+    const created: any = await ticketActions.addTicket(createForm({
+      assigned_to: primaryAgentId,
+      additional_agent_ids: JSON.stringify([additionalAgentId]),
+    }));
+    expect(created?.ticket_id).toBeTruthy();
+    expect(await tt('tickets').where({ ticket_id: created.ticket_id }).first())
+      .toMatchObject({ assigned_to: primaryAgentId });
+    expect(await tt('ticket_resources').where({ ticket_id: created.ticket_id }).select('*'))
+      .toEqual([expect.objectContaining({ additional_user_id: additionalAgentId })]);
+
+    const beforeDeniedAssignments = await tt('ticket_resources').where({ ticket_id: created.ticket_id }).select('*');
+    const beforeDeniedAudit = await tt('ticket_audit_logs').where({ ticket_id: created.ticket_id }).select('*');
+    const denied = await ticketResourceActions.addTicketResource(created.ticket_id, secondAdditionalAgentId, 'support');
+    expect(denied).toMatchObject({ permissionError: expect.stringMatching(/Cannot access ticket|record/i) });
+    expect((await tt('tickets').where({ ticket_id: created.ticket_id }).first()).assigned_to).toBe(primaryAgentId);
+    expect(await tt('ticket_resources').where({ ticket_id: created.ticket_id }).select('*'))
+      .toEqual(beforeDeniedAssignments);
+    expect(await tt('ticket_audit_logs').where({ ticket_id: created.ticket_id }).select('*'))
+      .toEqual(beforeDeniedAudit);
+  });
+
+  it('rolls back ticket and valid staffing when a later additional agent is invalid', async () => {
+    const before = await countTickets();
+    const eventsBefore = vi.mocked(publishWorkflowEvent).mock.calls.length;
+    vi.spyOn(dbModule, 'createTenantKnex').mockImplementationOnce(async () => ({
+      knex: poolLikeForActionTransactions(), tenant: tenantId,
+    }) as any);
+    const outcome = await ticketActions.addTicket(createForm({
+      assigned_to: primaryAgentId,
+      additional_agent_ids: JSON.stringify([additionalAgentId, uuidv4()]),
+    }));
+
+    expect(outcome).toMatchObject({
+      actionError: expect.stringMatching(/selected agents cannot be assigned/i),
+    });
+    expect(await countTickets()).toBe(before);
+    expect(await tt('ticket_resources').where({ additional_user_id: additionalAgentId }).count('* as n').first()
+      .then((row: any) => Number(row.n))).toBe(0);
+    expect(await tt('ticket_audit_logs').where({ event_type: 'TICKET_ASSIGNED' })
+      .whereRaw("details->>'additional_agent_id' = ?", [additionalAgentId]).count('* as n').first()
+      .then((row: any) => Number(row.n))).toBe(0);
+    expect(vi.mocked(publishWorkflowEvent).mock.calls).toHaveLength(eventsBefore);
   });
 
   it('rejects an unknown watcher without creating a ticket', async () => {
@@ -216,5 +353,42 @@ describe('addTicket create extras (integration)', () => {
       .then((v: any) => JSON.stringify(v), (e: Error) => e.message);
     expect(message).toMatch(/Cannot link assets/);
     expect(await countTickets()).toBe(before);
+  });
+
+  it('publishes ticket creation and staffing only after commit, when independent reads see committed assignments', async () => {
+    const setupTransaction = context.transaction;
+    expect(setupTransaction).toBeTruthy();
+    await setupTransaction!.commit();
+    (context as any).activeTransaction = null;
+
+    // Use a distinct pool so a read cannot see rows through the writer transaction.
+    const observerDb = await createTestDbConnection({ recreate: false });
+    const observed: Array<{ eventType: string; ticket: any; resources: any[] }> = [];
+    vi.mocked(publishWorkflowEvent).mockImplementation(async (event: any) => {
+      const ticketId = event.payload?.ticketId;
+      if (!ticketId || !['TICKET_CREATED', 'TICKET_ASSIGNED', 'TICKET_ADDITIONAL_AGENT_ASSIGNED'].includes(event.eventType)) return;
+      const ticket = await observerDb('tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
+      const resources = await observerDb('ticket_resources').where({ tenant: tenantId, ticket_id: ticketId }).select('*');
+      observed.push({ eventType: event.eventType, ticket, resources });
+    });
+
+    try {
+      const created: any = await ticketActions.addTicket(createForm({
+        assigned_to: primaryAgentId,
+        additional_agent_ids: JSON.stringify([additionalAgentId]),
+      }));
+      expect(created?.ticket_id).toBeTruthy();
+
+      for (const eventType of ['TICKET_CREATED', 'TICKET_ASSIGNED', 'TICKET_ADDITIONAL_AGENT_ASSIGNED']) {
+        const observation = observed.find((entry) => entry.eventType === eventType);
+        expect(observation, `${eventType} should be published after the create commit`).toBeTruthy();
+        expect(observation!.ticket).toMatchObject({ ticket_id: created.ticket_id, assigned_to: primaryAgentId });
+        expect(observation!.resources).toEqual(expect.arrayContaining([
+          expect.objectContaining({ ticket_id: created.ticket_id, additional_user_id: additionalAgentId }),
+        ]));
+      }
+    } finally {
+      await observerDb.destroy();
+    }
   });
 });

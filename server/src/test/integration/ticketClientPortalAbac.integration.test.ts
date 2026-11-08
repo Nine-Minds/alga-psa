@@ -14,6 +14,12 @@ import { addTicketCommentWithCache } from '@alga-psa/tickets/actions/optimizedTi
 import { bulkUpdateTicketDueDate, bulkUpdateTicketPriority } from '@alga-psa/tickets/actions/ticketActions';
 import { createComment } from '@alga-psa/tickets/actions/comment-actions/commentActions';
 import { silentTicketCreation } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
+import {
+  addTicketResource,
+  canAddAsAdditionalAgent,
+  getTicketResources,
+  removeTicketResource,
+} from '@alga-psa/tickets/actions/ticketResourceActions';
 
 const eventMocks = vi.hoisted(() => {
   const publishEvent = vi.fn().mockResolvedValue(undefined);
@@ -461,6 +467,59 @@ describeDb('ticket client-portal ABAC (TicketService)', () => {
       await tenantRows('contacts', fixture.tenantId).where({ contact_name_id: fixture.contactAId }).update({ is_client_admin: false });
       await tenantRows('client_portal_visibility_groups', fixture.tenantId).where({ group_id: fixture.groupVisibleId }).update({ ticket_scope: 'client' });
     }
+  });
+
+  it('authorizes client ticket-resource actions against the visible ticket record inside the action transaction', async () => {
+    const additionalAgentId = uuidv4();
+    const newlyAddedAgentId = uuidv4();
+    await db('users').insert({
+      tenant: fixture.tenantId, user_id: additionalAgentId, username: `resource-agent-${additionalAgentId}`,
+      hashed_password: 'not-used', email: `${additionalAgentId}@example.com`, user_type: 'internal', is_inactive: false,
+    });
+    await db('users').insert({
+      tenant: fixture.tenantId, user_id: newlyAddedAgentId, username: `resource-agent-${newlyAddedAgentId}`,
+      hashed_password: 'not-used', email: `${newlyAddedAgentId}@example.com`, user_type: 'internal', is_inactive: false,
+    });
+    await db('tickets').where({ tenant: fixture.tenantId, ticket_id: fixture.ticketVisibleId }).update({ assigned_to: fixture.internalUserId });
+    await db('tickets').where({ tenant: fixture.tenantId, ticket_id: fixture.ticketHiddenBoardId }).update({ assigned_to: fixture.internalUserId });
+    const [visibleAssignment] = await db('ticket_resources').insert({
+      tenant: fixture.tenantId, ticket_id: fixture.ticketVisibleId, assigned_to: fixture.internalUserId,
+      additional_user_id: additionalAgentId, role: 'support', assigned_at: new Date(),
+    }).returning('assignment_id');
+    const [hiddenAssignment] = await db('ticket_resources').insert({
+      tenant: fixture.tenantId, ticket_id: fixture.ticketHiddenBoardId, assigned_to: fixture.internalUserId,
+      additional_user_id: additionalAgentId, role: 'support', assigned_at: new Date(),
+    }).returning('assignment_id');
+
+    optimizedPathMocks.hasPermission.mockResolvedValue(true);
+    optimizedPathMocks.tenant = fixture.tenantId;
+    optimizedPathMocks.user = { ...clientA(), tenant: fixture.tenantId };
+    const beforeHiddenTicket = await tenantRows('tickets', fixture.tenantId).where({ ticket_id: fixture.ticketHiddenBoardId }).first();
+    const beforeHiddenResources = await tenantRows('ticket_resources', fixture.tenantId).where({ ticket_id: fixture.ticketHiddenBoardId }).select('*');
+    const beforeHiddenActivity = await tenantRows('ticket_audit_logs', fixture.tenantId).where({ ticket_id: fixture.ticketHiddenBoardId }).select('*');
+    const emittedBefore = eventMocks.publishWorkflowEvent.mock.calls.length;
+
+    await runWithTenant(fixture.tenantId, async () => {
+      expect(await canAddAsAdditionalAgent(fixture.ticketVisibleId, newlyAddedAgentId)).toBe(true);
+      expect(await getTicketResources(fixture.ticketVisibleId)).toEqual(expect.arrayContaining([
+        expect.objectContaining({ assignment_id: visibleAssignment.assignment_id }),
+      ]));
+      const added = await addTicketResource(fixture.ticketVisibleId, newlyAddedAgentId, 'support');
+      expect(added).toMatchObject({ additional_user_id: newlyAddedAgentId, ticket_id: fixture.ticketVisibleId });
+      expect(await removeTicketResource(visibleAssignment.assignment_id)).toBeUndefined();
+
+      expect(await getTicketResources(fixture.ticketHiddenBoardId)).toMatchObject({ permissionError: expect.any(String) });
+      expect(await canAddAsAdditionalAgent(fixture.ticketHiddenBoardId, additionalAgentId)).toBe(false);
+      expect(await addTicketResource(fixture.ticketHiddenBoardId, additionalAgentId, 'support')).toMatchObject({ permissionError: expect.any(String) });
+      expect(await removeTicketResource(hiddenAssignment.assignment_id)).toMatchObject({ permissionError: expect.any(String) });
+    });
+
+    expect(await tenantRows('tickets', fixture.tenantId).where({ ticket_id: fixture.ticketHiddenBoardId }).first()).toMatchObject({
+      assigned_to: beforeHiddenTicket.assigned_to,
+    });
+    expect(await tenantRows('ticket_resources', fixture.tenantId).where({ ticket_id: fixture.ticketHiddenBoardId }).select('*')).toEqual(beforeHiddenResources);
+    expect(await tenantRows('ticket_audit_logs', fixture.tenantId).where({ ticket_id: fixture.ticketHiddenBoardId }).select('*')).toEqual(beforeHiddenActivity);
+    expect(eventMocks.publishWorkflowEvent).toHaveBeenCalledTimes(emittedBefore + 1); // visible add only; denied add emits nothing
   });
 
   it('bulk due-date and priority updates enforce current portal record visibility', async () => {
