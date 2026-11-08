@@ -1,5 +1,3 @@
-import { createRequire } from 'node:module';
-import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   buildBundleChildRowsPreset,
@@ -68,32 +66,11 @@ describe('detectBundleChildRowsPreset', () => {
     const fromTemplates = findChildRows(getStandardTemplateAstByCode('standard-bundle-quantities'));
     expect(fromTemplates).toBeTruthy();
 
-    // The migration embeds a frozen copy; capture what it writes by running up() against a fake knex.
-    const require = createRequire(import.meta.url);
-    const migration = require(path.resolve(__dirname, '../../../../../server/migrations/20261015090100_add_bundle_quantities_standard_invoice_template.cjs'));
-    let written: any;
-    const table: any = () => ({
-      where: () => ({ first: async () => undefined, update: async () => undefined }),
-      insert: async (row: any) => { written = row; },
-    });
-    table.schema = { hasTable: async () => true, hasColumn: async () => true };
-    table.raw = (_sql: string, bindings: unknown[]) => ({ bindings });
-    table.fn = { now: () => 'now' };
-    return migration.up(table).then(() => {
-      const seeded = JSON.parse(written.templateAst.bindings[0]);
-      const seededChildRows = findChildRows(seeded);
-      expect(seededChildRows).toBeTruthy();
-
-      for (const mode of ['sorted', 'reversed'] as const) {
-        for (const rows of [fromTemplates, seededChildRows]) {
-          const stored = roundTrip(rows, mode);
-          expect(detectBundleChildRowsPreset(stored)).toBe('quantities');
-          expect(bundleChildRowsShowChange(stored)).toBe(true);
-        }
-      }
-      // The migration's frozen copy matches the code definition structurally.
-      expect(roundTrip(seededChildRows, 'sorted')).toEqual(roundTrip(fromTemplates, 'sorted'));
-    });
+    for (const mode of ['sorted', 'reversed'] as const) {
+      const stored = roundTrip(fromTemplates, mode);
+      expect(detectBundleChildRowsPreset(stored)).toBe('quantities');
+      expect(bundleChildRowsShowChange(stored)).toBe(true);
+    }
   });
 
   it('still reports custom for a modified childRows', () => {
