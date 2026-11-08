@@ -66001,6 +66001,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "format": "uuid",
           "description": "Quote UUID from quotes.quote_id."
         }
+      },
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
       }
     ],
     "requestBodySchema": {

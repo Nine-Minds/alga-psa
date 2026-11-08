@@ -147419,6 +147419,17 @@
             "description": "Quote UUID from quotes.quote_id.",
             "name": "id",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+            },
+            "required": false,
+            "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+            "name": "X-Alga-Act-As",
+            "in": "header"
           }
         ],
         "requestBody": {
@@ -147453,7 +147464,7 @@
             }
           },
           "400": {
-            "description": "Validation or request parsing failure.",
+            "description": "Validation or request parsing failure. ACT_AS_NOT_SUPPORTED: the act-as header was sent with a key that cannot act as another user.",
             "content": {
               "application/json": {
                 "schema": {
@@ -147473,7 +147484,7 @@
             }
           },
           "403": {
-            "description": "RBAC denied for quote resource action.",
+            "description": "RBAC denied for quote resource action. ACT_AS_NOT_ALLOWED: the service principal is not allowed to act as users.",
             "content": {
               "application/json": {
                 "schema": {
@@ -147488,6 +147499,37 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/QuotesContractsApiErrorV1"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "ACT_AS_REQUIRED: a service principal performed human work without the act-as header; ACT_AS_INVALID_TARGET: the act-as user is missing, inactive, client or service; HUMAN_WORK_ASSIGNEE_INVALID: a service user was given as assignee/resource.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
                 }
               }
             }
