@@ -26,7 +26,11 @@ import { Knex } from 'knex';
 import {
   BaseService, ServiceContext, ListResult, withTransaction, tenantDb, registerAfterCommit, withViaPrincipal, stampViaPrincipalRow } from '@alga-psa/db';
 import { scheduleJobAt as scheduleBackgroundJobAt, cancelScheduledJob } from '@alga-psa/core';
-import { runAuthorizedTicketWatcherWrite, TicketWatcherPermissionError } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
+import {
+  runAuthorizedTicketWatcherWrite,
+  TicketWatcherPermissionError,
+  TicketWatcherTicketNotFoundError,
+} from '@alga-psa/tickets/lib/ticketRecordAuthorization';
 import { buildAuthorizationPrincipalSubject } from 'server/src/lib/api/controllers/authorizationKernel';
 import { getAuthorizationKernel } from 'server/src/lib/authorization/kernel';
 import { applyTicketVisibilityFilter, type ContactVisibilityContext } from '@alga-psa/tickets/lib';
@@ -1272,6 +1276,9 @@ export class TicketService extends BaseService<ITicket> {
   private mapTicketWatcherError(error: unknown): unknown {
     if (error instanceof TicketWatcherPermissionError) {
       return new ForbiddenError(error.message);
+    }
+    if (error instanceof TicketWatcherTicketNotFoundError) {
+      return new NotFoundError(error.message);
     }
     if (!(error instanceof TicketWatcherError)) {
       return error;
