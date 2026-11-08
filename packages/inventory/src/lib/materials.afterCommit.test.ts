@@ -12,28 +12,10 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock('@alga-psa/core/logger', () => ({ default: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() } }));
-vi.mock('@alga-psa/db', async () => {
-  const hooks = await import('../../../db/src/lib/afterCommit');
-  const ownedTransactions = new WeakSet<object>();
-  const withTransaction = async (db: any, callback: (trx: any) => unknown) => {
-    if (ownedTransactions.has(db) || (typeof db?.commit === 'function' && typeof db?.rollback === 'function')) return callback(db);
-    return db.transaction(async (trx: any) => {
-      ownedTransactions.add(trx);
-      try {
-        return await callback(trx);
-      } finally {
-        ownedTransactions.delete(trx);
-      }
-    });
-  };
-  return {
-    admitOperationalWrite: (...args: any[]) => h.addOperationalWrite(...args),
-    withTransaction,
-    registerAfterCommit: hooks.registerAfterCommit,
-    registerAfterCommitWithConnection: hooks.registerAfterCommitWithConnection,
-    flushAfterCommitHooks: hooks.flushAfterCommitHooks,
-  };
-});
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/db')>()),
+  admitOperationalWrite: (...args: any[]) => h.addOperationalWrite(...args),
+}));
 vi.mock('./consume', () => ({
   recordStockConsumption: (...args: any[]) => h.recordStockConsumption(...args),
   reverseStockConsumption: vi.fn(),
@@ -47,6 +29,7 @@ vi.mock('./tenantCurrency', () => ({ resolveTenantCurrency: vi.fn() }));
 vi.mock('./assetLink', () => ({ createAndLinkDeliveredAsset: (...args: any[]) => h.createAsset(...args) }));
 
 import type { Knex } from 'knex';
+import { withTransaction } from '@alga-psa/db';
 import { addMaterial } from './materials';
 
 const TENANT = 'tenant-1';
@@ -85,8 +68,6 @@ function makeRootConnection() {
       const result = await callback(trx);
       trx.commit();
       root.committed = true;
-      const { flushAfterCommitHooks } = await import('../../../db/src/lib/afterCommit');
-      await flushAfterCommitHooks(trx, root);
       return result;
     } catch (error) {
       trx.rollback(error);
@@ -135,7 +116,7 @@ beforeEach(() => {
 describe('addMaterial post-commit effects', () => {
   it('keeps effects pending until the outer commit, then runs each once with the root connection', async () => {
     const root = makeRootConnection();
-    const result = await root.transaction(async (outerTrx: Knex.Transaction) => {
+    const result = await withTransaction(root, async (outerTrx: Knex.Transaction) => {
       const row = await addMaterial(outerTrx as Knex, TENANT, input, 'user-1');
       expect((row as any).ticket_material_id).toBe('material-1');
       expect(h.createAsset).not.toHaveBeenCalled();
@@ -151,7 +132,7 @@ describe('addMaterial post-commit effects', () => {
 
   it('suppresses delivered-asset creation and stock-low publication when the outer transaction rolls back', async () => {
     const root = makeRootConnection();
-    await expect(root.transaction(async (outerTrx: Knex.Transaction) => {
+    await expect(withTransaction(root, async (outerTrx: Knex.Transaction) => {
       await addMaterial(outerTrx as Knex, TENANT, input, 'user-1');
       expect(h.createAsset).not.toHaveBeenCalled();
       expect(h.publishInventoryEvent).not.toHaveBeenCalled();

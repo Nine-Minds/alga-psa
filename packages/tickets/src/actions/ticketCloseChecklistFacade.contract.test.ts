@@ -12,7 +12,6 @@ function readRepoFile(relativePath: string): string {
 
 const sources = {
   displaySettings: readRepoFile('packages/tickets/src/actions/ticketDisplaySettings.ts'),
-  materialCatalog: readRepoFile('packages/tickets/src/actions/materialCatalogActions.ts'),
   inventoryMaterials: readRepoFile('packages/inventory/src/lib/materials.ts'),
   checklistItems: readRepoFile('packages/tickets/src/actions/checklists/ticketChecklistActions.ts'),
   checklistTemplates: readRepoFile('packages/tickets/src/actions/checklists/checklistTemplateActions.ts'),
@@ -58,7 +57,7 @@ describe('ticket close/checklist/material facade contract', () => {
 
   it('keeps migrated ticket helper roots behind tenantDb', () => {
     const facadeSources = Object.entries(sources)
-      .filter(([name]) => name !== 'materialCatalog' && name !== 'inventoryMaterials')
+      .filter(([name]) => name !== 'inventoryMaterials')
       .map(([, source]) => source);
 
     for (const source of facadeSources) {
@@ -73,10 +72,8 @@ describe('ticket close/checklist/material facade contract', () => {
       }
     }
 
-    expect(sources.materialCatalog).toContain("from '@alga-psa/inventory/lib'");
-    expect(sources.materialCatalog).toContain("listMaterials(db, tenant, 'ticket', ticketId)");
-    expect(sources.materialCatalog).toContain("{ ...input, parent_type: 'ticket', parent_id: input.ticket_id }");
-    expect(sources.materialCatalog).toContain("deleteMaterial(db, tenant, 'ticket', ticketMaterialId");
+    // Material delegation, authorization and transaction identity are exercised
+    // by materialCatalogActions.authorization.test.ts.
   });
 
   it('uses facade joins for the migrated tenant-table joins', () => {

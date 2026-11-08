@@ -204,8 +204,9 @@ describe('material catalog action authorization', () => {
   });
 
   it('continues authorized MSP reads, adds, and deletes with the requested ticket', async () => {
+    const input = { ticket_id: 'ticket-1', client_id: 'client-1', service_id: 'service-1', quantity: 1, rate: 100, currency_code: 'USD' };
     await expect(listTicketMaterials('ticket-1')).resolves.toEqual([{ ticket_material_id: ticketMaterialId }]);
-    await expect(addTicketMaterial({ ticket_id: 'ticket-1', client_id: 'client-1', service_id: 'service-1', quantity: 1, rate: 100, currency_code: 'USD' })).resolves.toEqual({ ticket_material_id: 'material-new' });
+    await expect(addTicketMaterial(input)).resolves.toEqual({ ticket_material_id: 'material-new' });
     await expect(deleteTicketMaterial(ticketMaterialId)).resolves.toBeUndefined();
     expect(h.authorizeTicket).toHaveBeenCalledWith(expect.objectContaining({ ticketId: 'ticket-1', action: 'read', tenant: 'tenant-1' }));
     expect(h.authorizeTicket).toHaveBeenCalledWith(expect.objectContaining({ ticketId: 'ticket-1', action: 'update', tenant: 'tenant-1' }));
@@ -215,5 +216,12 @@ describe('material catalog action authorization', () => {
     expect(h.authorizeTicket.mock.calls[0][0].trx).toBe(h.listMaterials.mock.calls[0][0]);
     expect(h.authorizeTicket.mock.calls[1][0].trx).toBe(h.addMaterial.mock.calls[0][0]);
     expect(h.authorizeTicket.mock.calls[2][0].trx).toBe(h.deleteMaterial.mock.calls[0][0]);
+    expect(h.listMaterials).toHaveBeenCalledWith(expect.anything(), h.tenant, 'ticket', 'ticket-1');
+    expect(h.addMaterial).toHaveBeenCalledWith(expect.anything(), h.tenant,
+      { ...input, parent_type: 'ticket', parent_id: 'ticket-1' }, h.currentUser.user_id);
+    expect(h.deleteMaterial).toHaveBeenCalledWith(expect.anything(), h.tenant, 'ticket', ticketMaterialId, h.currentUser.user_id);
+    [h.listMaterials, h.addMaterial, h.deleteMaterial].forEach((operation, index) => {
+      expect(h.authorizeTicket.mock.invocationCallOrder[index]).toBeLessThan(operation.mock.invocationCallOrder[0]);
+    });
   });
 });
