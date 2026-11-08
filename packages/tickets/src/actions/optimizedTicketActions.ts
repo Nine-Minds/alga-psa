@@ -1,7 +1,13 @@
 'use server';
 
 import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
-import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
+import {
+  isClientUserType,
+  isMspPrincipalUserType,
+  USER_RESPONSE_FIELD_NAMES,
+  sanitizeUserForResponse,
+  type SafeApiUser,
+} from '@alga-psa/types';
 import { resolveTicketMutationCollaborator, type TicketMutationCollaborationContext } from '../lib/ticketMutationActor';
 import { formatCollaborationActorName } from '@alga-psa/event-schemas/collaboration';
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
@@ -10,6 +16,7 @@ import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { resolveCommentMergeTokens } from '../lib/cannedResponses/commentMerge';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 import { nativeThreadAudience, type NativeCommentAudience } from '@alga-psa/shared/lib/commentAudience';
+import { applyCommentResponseState } from '@alga-psa/shared/lib/tickets/responseState';
 
 import { reconcileCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import {
@@ -22,7 +29,6 @@ import type {
   ITicketListFilters,
   IAgentSchedule,
   IComment,
-  IClient,
   IContact,
   IBoard,
   ITicketCategory,
@@ -67,6 +73,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { withAuth } from '@alga-psa/auth';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
+import { attachContactLocations } from '@alga-psa/shared/models/contactLocation';
 import { preserveStoredWatchList } from '@alga-psa/shared/lib/tickets/watchList';
 import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import { ticketUpdateStamp } from '@shared/lib/tickets/ticketUpdateStamp';
@@ -129,6 +136,7 @@ import {
   TICKET_STATUS_FILTER_OPEN,
 } from '../lib/ticketStatusFilter';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
+import { assertBoardAcceptsTickets } from './ticketBoardGuards';
 import { resolveTicketListSortSpec, ticketLatestActivitySql } from './ticketListSortSql';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import { resolveBoardStopwatchEnabled } from '../lib/boardLiveTicketTimer';
@@ -393,61 +401,6 @@ function applyTicketReadAuthorizationSql(
   });
 }
 
-// LEVERAGE: pattern response-state-from-comment — duplicate of applyCommentResponseState (shared/lib/tickets/responseState.ts) minus the tracking-setting check; not swapped because the contract/live-update tests pin this local function and the swap adds the tracking check.
-async function updateTicketResponseStateFromComment(
-  trx: Knex.Transaction,
-  tenant: string,
-  ticketId: string,
-  authorType: 'internal' | 'client' | 'unknown',
-  isInternal: boolean,
-  userId: string | null
-): Promise<{ previousState: TicketResponseState; newState: TicketResponseState }> {
-  const ticket = await tenantScopedTable(trx, 'tickets', tenant)
-    .select('response_state')
-    .where({ ticket_id: ticketId })
-    .first();
-
-  const previousState = (ticket?.response_state || null) as TicketResponseState;
-  let newState: TicketResponseState = previousState;
-
-  if (isInternal) {
-    return { previousState, newState };
-  }
-
-  if (authorType === 'internal') {
-    newState = 'awaiting_client';
-  } else if (authorType === 'client') {
-    newState = 'awaiting_internal';
-  }
-
-  if (newState !== previousState) {
-    await tenantScopedTable(trx, 'tickets', tenant)
-      .where({ ticket_id: ticketId })
-      .update({ response_state: newState });
-
-    registerAfterCommit(trx, () =>
-      publishWorkflowEvent({
-        eventType: 'TICKET_RESPONSE_STATE_CHANGED',
-        payload: buildTicketResponseStateChangedPayload({
-          ticketId,
-          userId,
-          previousState,
-          newState,
-          trigger: 'comment',
-        }),
-        ctx: {
-          tenantId: tenant,
-          occurredAt: new Date().toISOString(),
-          actor: userId ? { actorType: 'USER', actorUserId: userId } : { actorType: 'SYSTEM' },
-        },
-      }),
-      `TICKET_RESPONSE_STATE_CHANGED ticket=${ticketId}`
-    );
-  }
-
-  return { previousState, newState };
-}
-
 // Helper function to safely convert dates
 function convertDates<T extends { entered_at?: Date | string | null, updated_at?: Date | string | null, closed_at?: Date | string | null, due_date?: Date | string | null }>(record: T): T {
   return {
@@ -460,6 +413,12 @@ function convertDates<T extends { entered_at?: Date | string | null, updated_at?
 }
 
 /**
+ * A `users` row as this bundle may expose it: allow-listed columns only
+ * (never hashed_password, two_factor_secret, ...), see USER_RESPONSE_FIELD_NAMES.
+ */
+type SafeConsolidatedUser = SafeApiUser; // Pick<IUserWithRoles, AllowlistedUserField> & { roles, avatarUrl?, clientId? }
+
+/**
  * Consolidated function to get all ticket data for the ticket details page
  * This reduces multiple network calls by fetching all related data in a single server action
  */
@@ -470,6 +429,12 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     return await withTransaction(db, async (trx) => {
     if (!await hasPermission(user, 'ticket', 'read', trx)) {
       throw new Error('Permission denied: Cannot view ticket');
+    }
+
+    // This bundle is an MSP view (tenant-wide client list, raw comments, agent pickers);
+    // every caller is MSP composition. Client-portal principals never receive it.
+    if (user.user_type === 'client') {
+      throw new Error('Permission denied: consolidated ticket data is an MSP view');
     }
 
     try {
@@ -527,9 +492,8 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     const [
       comments,
       documentRows,
-      clients,
       resources,
-      users,
+      rawUsers,
       statuses,
       boards,
       priorities,
@@ -554,21 +518,6 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
           'da.entity_type': 'ticket'
         }),
       
-      tenantLeftJoin(
-        trx,
-        tenant,
-        tenantScopedTable(trx, 'clients as c', tenant)
-        .select(
-          'c.*',
-          'da.document_id'
-        ),
-        'document_associations as da',
-        'c.client_id',
-        'da.entity_id',
-        { on: (join) => join.andOnVal('da.entity_type', '=', 'client') }
-      )
-        .orderBy('c.client_name', 'asc'),
-
       tenantScopedTable(trx, 'ticket_resources', tenant)
         .where({
           ticket_id: ticketId
@@ -576,7 +525,9 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       
       // Users - removed document joins that were causing duplicates
       // Avatar URLs are fetched later using getUserAvatarUrl()
+      // LEVERAGE: pattern users-star-projection — every ticket loader's users fetch should route through USER_RESPONSE_FIELD_NAMES (users.* carries hashed_password / two_factor_secret)
       tenantScopedTable(trx, 'users', tenant)
+        .select(...USER_RESPONSE_FIELD_NAMES)
         .where('user_type', 'internal')
         .where('is_inactive', false)
         .orderBy('first_name', 'asc'),
@@ -646,47 +597,17 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       })()
     ]);
 
+    // Projection is the fix; this is the guarantee that a future edit to the query
+    // above cannot silently re-widen what leaves this action.
+    const users: SafeConsolidatedUser[] = (rawUsers as Array<Record<string, unknown>>).map(
+      (row) => sanitizeUserForResponse(row)
+    );
+
     // Use the same document policy as subsequent fetches before returning rows
     // or deriving counts. This also annotates effective comment visibility.
     const documents = await hasPermission(user, 'document', 'read', trx)
       ? await authorizeAndRedactDocuments(trx, tenant, user, documentRows as IDocument[])
       : [];
-
-    // --- Add Logo URL Processing for the fetched 'clients' list ---
-    const clientsData = clients as (IClient & { document_id?: string })[];
-    const documentIds = clientsData
-      .map((c: any) => c.document_id)
-      .filter((id: any): id is string => !!id);
-
-    let fileIdMap: Record<string, string> = {};
-    if (documentIds.length > 0) {
-      const fileRecords = await tenantScopedTable(trx, 'documents', tenant)
-        .select('document_id', 'file_id')
-        .whereIn('document_id', documentIds);
-
-      fileIdMap = fileRecords.reduce((acc: Record<string, string>, record: { document_id: string; file_id?: string | null }) => {
-        if (record.file_id) {
-          acc[record.document_id] = record.file_id;
-        }
-        return acc;
-      }, {} as Record<string, string>);
-    }
-
-    // Process the full clients list to add logoUrl using batch loading
-    const clientIds = clientsData.map(c => c.client_id);
-    const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
-    
-    const clientsWithLogos = clientsData.map((clientData) => {
-      const logoUrl = logoUrlsMap.get(clientData.client_id) || null;
-      const { document_id, ...clientResult } = clientData;
-      return {
-        ...clientResult,
-        properties: clientData.properties || {},
-        logoUrl,
-      };
-    });
-    // --- End Logo URL Processing for 'clients' list ---
-
 
     // Fetch specific client and contact data if available
     let client: any = null;
@@ -767,26 +688,47 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         .first();
     }
 
+    // Where these people work, in one batched read for the whole page: the requester tile shows
+    // the ticket's contact location (and offers it when the ticket sits elsewhere), and the
+    // contact picker rows carry the same secondary line as everywhere else.
+    if (contacts.length > 0) {
+      contacts = await attachContactLocations(trx, tenant, contacts, (contact) => contact.contact_name_id) as IContact[];
+    }
+    if (contactInfo) {
+      [contactInfo] = await attachContactLocations(trx, tenant, [contactInfo], (contact) => contact.contact_name_id);
+    }
+
     const displayTags = {
       contact: contactInfo?.displayTags ?? [],
       client: client?.displayTags ?? [],
     };
 
     // Fetch created by user
-    const createdByUser = ticket.entered_by ? 
+    // LEVERAGE: pattern users-star-projection — see availableAgents query above
+    const createdByUserRow = ticket.entered_by ?
       await tenantScopedTable(trx, 'users', tenant)
+        .select(...USER_RESPONSE_FIELD_NAMES)
         .where({
           user_id: ticket.entered_by
         })
         .first() : null;
 
     // Fetch last updated by user
-    const updatedByUser = ticket.updated_by ?
+    // LEVERAGE: pattern users-star-projection — see availableAgents query above
+    const updatedByUserRow = ticket.updated_by ?
       await tenantScopedTable(trx, 'users', tenant)
+        .select(...USER_RESPONSE_FIELD_NAMES)
         .where({
           user_id: ticket.updated_by
         })
         .first() : null;
+
+    const createdByUser: SafeConsolidatedUser | null = createdByUserRow
+      ? sanitizeUserForResponse(createdByUserRow)
+      : null;
+    const updatedByUser: SafeConsolidatedUser | null = updatedByUserRow
+      ? sanitizeUserForResponse(updatedByUserRow)
+      : null;
 
     // Fetch board
     const board = ticket.board_id ?
@@ -815,7 +757,9 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
 
     const extraCommentAuthors: Array<{ user_id: string; user_type?: string | null; contact_id?: string | null }> =
       extraAuthorIds.length > 0
+        // LEVERAGE: pattern users-star-projection — see availableAgents query above
         ? await tenantScopedTable(trx, 'users', tenant).whereIn('user_id', extraAuthorIds)
+          .select(...USER_RESPONSE_FIELD_NAMES)
         : [];
 
     // Client-portal authors carry their avatar on the linked contact, not the user
@@ -911,8 +855,11 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       label: `${agent.first_name} ${agent.last_name}`
     }));
 
-    const boardOptions = (boards as Array<{ board_id?: string; board_name?: string | null }>)
-      .filter((board): board is { board_id: string; board_name?: string | null } => board.board_id !== undefined)
+    // Inactive boards stay listed only while the ticket is already on one, so
+    // the picker can still show its current value.
+    const boardOptions = (boards as Array<{ board_id?: string; board_name?: string | null; is_inactive?: boolean | null }>)
+      .filter((board): board is { board_id: string; board_name?: string | null; is_inactive?: boolean | null } => board.board_id !== undefined)
+      .filter((board) => !board.is_inactive || board.board_id === ticket.board_id)
       .map((board) => ({
         value: board.board_id,
         label: board.board_name || ""
@@ -1183,7 +1130,6 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         priority: priorityOptions
       },
       categories,
-      clients: clientsWithLogos,
       locations,
       agentSchedules: agentSchedulesList
     };
@@ -1323,6 +1269,7 @@ async function buildTicketListBaseQuery(
     tenantLeftJoin(trx, tenant, baseQuery, 'categories as cat', 't.category_id', 'cat.category_id');
     tenantLeftJoin(trx, tenant, baseQuery, 'clients as comp', 't.client_id', 'comp.client_id');
     tenantLeftJoin(trx, tenant, baseQuery, 'contacts as cn', 't.contact_name_id', 'cn.contact_name_id');
+    tenantLeftJoin(trx, tenant, baseQuery, 'client_locations as tloc', 't.location_id', 'tloc.location_id');
     tenantLeftJoin(trx, tenant, baseQuery, 'users as u', 't.entered_by', 'u.user_id');
     tenantLeftJoin(trx, tenant, baseQuery, 'users as au', 't.assigned_to', 'au.user_id');
     tenantLeftJoin(trx, tenant, baseQuery, 'teams as tm', 't.assigned_team_id', 'tm.team_id');
@@ -1795,6 +1742,7 @@ function buildTicketListItemsQuery(
       'cat.category_name',
       'comp.client_name',
       'cn.full_name as contact_name',
+      'tloc.location_name as ticket_location_name',
       displayTagsForEntityQuery(trx, tenant, audience, 'contact', 't.contact_name_id').as('contact_tags'),
       displayTagsForEntityQuery(trx, tenant, audience, 'client', 't.client_id').as('client_tags'),
       trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
@@ -1824,6 +1772,7 @@ function mapTicketListItems(tickets: any[]): ITicketListItem[] {
       category_name,
       client_name,
       contact_name,
+      ticket_location_name,
       entered_by_name,
       assigned_to_name,
       assigned_team_name,
@@ -1866,6 +1815,7 @@ function mapTicketListItems(tickets: any[]): ITicketListItem[] {
       category_name: category_name || 'Unknown',
       client_name: client_name || 'Unknown',
       contact_name: contact_name || null,
+      ticket_location_name: ticket_location_name || null,
       entered_by_name: entered_by_name || 'Unknown',
       assigned_to_name: assigned_to_name || null,
       assigned_team_name: assigned_team_name || null,
@@ -2413,7 +2363,6 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         priorities,
         boards,
         categories,
-        clients,
         users,
         tags
       ] = await Promise.all([
@@ -2438,10 +2387,6 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         .orderBy('display_order', 'asc')
         .orderBy('category_name', 'asc'),
       
-      tenantScopedTable(trx, 'clients as c', tenant)
-        .select('c.*')
-        .orderBy('c.client_name', 'asc'),
-
       tenantScopedTable(trx, 'users', tenant)
         .orderBy('first_name', 'asc'),
 
@@ -2515,27 +2460,6 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         label: `${user.first_name} ${user.last_name}`
       }));
 
-      // --- Add Logo URL Processing ---
-      const clientsData = clients as IClient[];
-
-      // Process clients to add logoUrl using batch loading
-      const clientIds = clientsData.map((c: IClient) => c.client_id);
-      const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
-    
-      const clientChipTags = await loadDisplayTagsForEntities(trx, tenant, displayAudienceForUser(user), [
-        { taggedType: 'client', ids: clientIds },
-      ]);
-      const clientsWithLogos = clientsData.map((clientData: IClient) => {
-        const logoUrl = logoUrlsMap.get(clientData.client_id) || null;
-        return {
-          ...clientData,
-          properties: clientData.properties || {},
-          logoUrl,
-          displayTags: clientChipTags.get(displayTagKey('client', clientData.client_id)) ?? [],
-        };
-      });
-      // --- End Logo URL Processing ---
-
       // Use tenant categories directly (includes ITIL ones if copied)
 
       return {
@@ -2544,7 +2468,6 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         boardOptions,
         agentOptions,
         categories,
-        clients: clientsWithLogos, // Return clients with logos
         users,
         contactTagDefinitions,
         clientTagDefinitions,
@@ -2747,6 +2670,10 @@ export async function updateTicketInTransaction(
 
     if (isBoardChange && !updateData.status_id) {
       throw new Error('Changing the board requires selecting a status for the destination board');
+    }
+
+    if (isBoardChange) {
+      await assertBoardAcceptsTickets(trx, tenant, updateData.board_id as string);
     }
 
     // If updating category or subcategory, ensure they are compatible
@@ -3493,7 +3420,7 @@ export async function addTicketCommentInTransaction(
     // If conversion fails, use a fallback message
     markdownContent = "[Error converting content to markdown]";
   }
-    
+
   // Insert comment with markdown_content. comments.thread_id is NOT NULL, so
   // create the thread row first using IDs generated up-front.
   const idsResult = await trx.raw(
@@ -3588,14 +3515,13 @@ export async function addTicketCommentInTransaction(
 
   // Update ticket response state based on comment visibility and author (F005-F008)
   if (!isScheduled) {
-    await updateTicketResponseStateFromComment(
-      trx,
+    await applyCommentResponseState(trx, {
       tenant,
       ticketId,
       authorType,
-      authorType === 'internal' ? isInternal : false,
-      user.user_id ?? null
-    );
+      isInternal: authorType === 'internal' ? isInternal : false,
+      userId: user.user_id ?? null,
+    });
   }
 
   // Bundle child→master reopen: a public reply on a bundled child can

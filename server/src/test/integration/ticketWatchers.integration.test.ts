@@ -57,11 +57,17 @@ vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import {
+  createAuthorizationBundle,
+  createBundleAssignment,
+  publishBundleRevision,
+  upsertBundleRule,
+} from '@alga-psa/authorization/bundles/service';
+import {
   TicketWatcherError,
   TicketWatcherService,
 } from '../../../../shared/services/tickets/ticketWatcherService';
 import { TicketService } from '../../lib/api/services/TicketService';
-import { NotFoundError, UnprocessableEntityError } from '../../lib/api/middleware/apiMiddleware';
+import { ForbiddenError, NotFoundError, UnprocessableEntityError } from '../../lib/api/middleware/apiMiddleware';
 import {
   addTicketWatchers,
   removeTicketWatcher,
@@ -88,14 +94,18 @@ function scoped(table: string, tenant: string = tenantId) {
   return tenantDb(db, tenant).table(table);
 }
 
-async function insertTicket(attributes: unknown = null, tenant: string = tenantId): Promise<string> {
+async function insertTicket(
+  attributes: unknown = null,
+  tenant: string = tenantId,
+  ticketClientId: string = clientId
+): Promise<string> {
   const id = uuidv4();
   await scoped('tickets', tenant).insert({
     tenant,
     ticket_id: id,
     ticket_number: `TW-${id.slice(0, 8)}`,
     title: 'Watcher fixture ticket',
-    client_id: clientId,
+    client_id: ticketClientId,
     board_id: tenant === tenantId ? boardId : null,
     status_id: tenant === tenantId ? statusId : null,
     entered_by: tenant === tenantId ? actorId : null,
@@ -662,4 +672,124 @@ describe('ticket watchers', () => {
       expect(await tableRows()).toHaveLength(0);
     });
   });
+
+  describe('record-level ticket:update authorization (real bundle rows)', () => {
+    // A published bundle assigned to the actor leaves ticket:read unrestricted but
+    // narrows ticket:update to one client, so tickets of any other client are
+    // readable yet not updatable.
+    let allowedClientId: string;
+    let bundleId: string;
+    let blockedTicket: string;
+    let allowedTicket: string;
+    let previousKernel: typeof globalThis.__algaAuthorizationKernelSingleton;
+    const DENIED = 'Permission denied: Cannot update ticket watchers';
+
+    beforeAll(async () => {
+      // Bundle narrowing is enterprise-only: the CE built-in kernel has no bundle
+      // provider. Install the EE kernel (as inventoryApi.integration does) so the
+      // REST path evaluates the real bundle rows seeded below.
+      const { createEnterpriseAuthorizationKernel } = await import('../../../../ee/server/src/lib/authorization/kernel');
+      previousKernel = globalThis.__algaAuthorizationKernelSingleton;
+      globalThis.__algaAuthorizationKernelSingleton = await createEnterpriseAuthorizationKernel();
+      allowedClientId = uuidv4();
+      await scoped('clients').insert({
+        tenant: tenantId,
+        client_id: allowedClientId,
+        client_name: `Update-Scope Client ${uuidv4().slice(0, 8)}`,
+      });
+      const created = await createAuthorizationBundle(db, {
+        tenant: tenantId,
+        name: `Watcher update narrowing ${uuidv4()}`,
+        actorUserId: actorId,
+      });
+      bundleId = created.bundleId;
+      await upsertBundleRule(db, {
+        tenant: tenantId,
+        bundleId,
+        revisionId: created.revisionId,
+        resourceType: 'ticket',
+        action: 'update',
+        templateKey: 'selected_clients',
+        config: { selectedClientIds: [allowedClientId] },
+        actorUserId: actorId,
+      });
+      await publishBundleRevision(db as any, {
+        tenant: tenantId,
+        bundleId,
+        revisionId: created.revisionId,
+        actorUserId: actorId,
+      });
+      await createBundleAssignment(db, {
+        tenant: tenantId,
+        bundleId,
+        targetType: 'user',
+        targetId: actorId,
+        actorUserId: actorId,
+      });
+    }, HOOK_TIMEOUT);
+
+    afterAll(async () => {
+      globalThis.__algaAuthorizationKernelSingleton = previousKernel;
+      const t = (table: string) => tenantDb(db, tenantId).table(table);
+      await t('authorization_bundle_assignments').where({ bundle_id: bundleId }).delete();
+      await t('authorization_bundle_rules').where({ bundle_id: bundleId }).delete();
+      await t('authorization_bundles').where({ bundle_id: bundleId }).update({ published_revision_id: null });
+      await t('authorization_bundle_revisions').where({ bundle_id: bundleId }).delete();
+      await t('authorization_bundles').where({ bundle_id: bundleId }).delete();
+    }, HOOK_TIMEOUT);
+
+    beforeEach(async () => {
+      blockedTicket = await insertTicket(null, tenantId, clientId);
+      allowedTicket = await insertTicket(null, tenantId, allowedClientId);
+      // Existing watcher so toggle / remove have something real to act on.
+      for (const id of [blockedTicket, allowedTicket]) {
+        await withTransaction(db, (trx) =>
+          TicketWatcherService.add(trx, tenantId, id, { email: 'seed@vendor.example' }, actorId));
+      }
+    });
+
+    async function snapshot(id: string) {
+      const row = await scoped('tickets').where({ ticket_id: id }).first('attributes');
+      return JSON.stringify({ rows: await tableRows(id), attributes: row.attributes });
+    }
+
+    it('REST: add / setActive / remove on a readable-but-not-updatable ticket are Forbidden and change nothing', async () => {
+      const before = await snapshot(blockedTicket);
+      publishWorkflowEventMock.mockClear();
+
+      await expect(service.addWatcher(blockedTicket, { email: 'evil@example.com' }, ctx())).rejects.toBeInstanceOf(ForbiddenError);
+      await expect(service.setWatcherActive(blockedTicket, { email: 'seed@vendor.example', active: false }, ctx()))
+        .rejects.toBeInstanceOf(ForbiddenError);
+      await expect(service.removeWatcher(blockedTicket, 'seed@vendor.example', undefined, ctx()))
+        .rejects.toBeInstanceOf(ForbiddenError);
+
+      expect(await snapshot(blockedTicket)).toBe(before);
+      await expectMirrorMatchesTable(blockedTicket);
+      expect(publishWorkflowEventMock.mock.calls.filter((c) => (c[0] as any).eventType === 'TICKET_UPDATED')).toHaveLength(0);
+      // Read scope is untouched: the same actor can still list the watchers.
+      expect((await service.listWatchers(blockedTicket, ctx())).map((w) => w.email)).toEqual(['seed@vendor.example']);
+    });
+
+    it('REST control: an in-scope ticket under the same bundle still adds, toggles and removes', async () => {
+      const added = await service.addWatcher(allowedTicket, { email: 'ok@example.com' }, ctx());
+      expect(added.map((w) => w.email).sort()).toEqual(['ok@example.com', 'seed@vendor.example']);
+      const toggled = await service.setWatcherActive(allowedTicket, { email: 'ok@example.com', active: false }, ctx());
+      expect(toggled.find((w) => w.email === 'ok@example.com')?.active).toBe(false);
+      const removed = await service.removeWatcher(allowedTicket, 'ok@example.com', undefined, ctx());
+      expect(removed.map((w) => w.email)).toEqual(['seed@vendor.example']);
+      await expectMirrorMatchesTable(allowedTicket);
+    });
+
+    it('server actions: denied on the out-of-scope ticket (no changes), allowed on the in-scope one', async () => {
+      const before = await snapshot(blockedTicket);
+      await expect(addTicketWatchers(blockedTicket, [{ email: 'evil@example.com' }])).rejects.toThrow(DENIED);
+      await expect(setTicketWatcherActive(blockedTicket, 'seed@vendor.example', false)).rejects.toThrow(DENIED);
+      await expect(removeTicketWatcher(blockedTicket, 'seed@vendor.example')).rejects.toThrow(DENIED);
+      expect(await snapshot(blockedTicket)).toBe(before);
+
+      const ok = await addTicketWatchers(allowedTicket, [{ email: 'ok@example.com' }]);
+      expect((ok as any).watchers.map((w: any) => w.email)).toContain('ok@example.com');
+    });
+  });
+
 });

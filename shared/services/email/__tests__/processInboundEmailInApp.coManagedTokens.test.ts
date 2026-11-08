@@ -9,6 +9,8 @@ const found = { ticketId: 'ticket-1', commentId: null as string | null, metadata
 const findTicketByReplyTokenMock = vi.fn();
 const findTicketByEmailThreadMock = vi.fn();
 const createCommentFromEmailMock = vi.fn();
+const findContactByEmailMock = vi.fn();
+const upsertTicketWatchListRecipientsMock = vi.fn(async (..._args: unknown[]) => ({ updated: false, watchList: [] }));
 const servesMock = vi.fn(async () => ({ served: true }));
 const threadRow: { value: unknown } = { value: undefined };
 const parsed: { tokens: Record<string, string> } = { tokens: {} };
@@ -35,9 +37,9 @@ vi.mock('../../../workflow/actions/emailWorkflowActions', () => ({
   findTicketByReplyToken: (...a: unknown[]) => findTicketByReplyTokenMock(...a),
   findTicketByEmailThread: (...a: unknown[]) => findTicketByEmailThreadMock(...a),
   resolveInboundTicketDefaults: async () => null, resolveEffectiveInboundTicketDefaults: async () => null,
-  findContactByEmail: async () => null, findInboundEmailDomainMapping: async () => null, createContactForInboundSender: async () => null,
+  findContactByEmail: (...a: unknown[]) => findContactByEmailMock(...a), findInboundEmailDomainMapping: async () => null, createContactForInboundSender: async () => null,
   findValidClientPrimaryContactId: async () => null, findEmailProviderMailboxAddress: async () => 'support@example.com',
-  upsertTicketWatchListRecipients: async () => ({ updated: false, watchList: [] }), createTicketFromEmail: async () => ({ ticket_id: 'new', ticket_number: 'T' }),
+  upsertTicketWatchListRecipients: (...a: unknown[]) => upsertTicketWatchListRecipientsMock(...a), createTicketFromEmail: async () => ({ ticket_id: 'new', ticket_number: 'T' }),
   createCommentFromEmail: (...a: unknown[]) => createCommentFromEmailMock(...a), processEmailAttachment: async () => ({ success: true }),
 }));
 vi.mock('../processInboundEmailArtifacts', () => ({ processInboundEmailArtifactsBestEffort: async () => undefined }));
@@ -72,6 +74,8 @@ describe('inbound reply token matrix (CM L5)', () => {
     findTicketByReplyTokenMock.mockResolvedValue(found);
     findTicketByEmailThreadMock.mockResolvedValue(null);
     createCommentFromEmailMock.mockResolvedValue('native-comment');
+    findContactByEmailMock.mockResolvedValue(null);
+    upsertTicketWatchListRecipientsMock.mockClear();
   });
   afterEach(() => { coManagedDeliverySeam.reset(); coManagedInboundCommentSeam.reset(); });
 
@@ -93,8 +97,58 @@ describe('inbound reply token matrix (CM L5)', () => {
   });
 
   it('a requester reply (no actor) keeps the native writer, in the requester thread', async () => {
-    admission = { admitted: true, audience: 'requester', relationshipId: 'rel', threadId: 'thr', ticketId: 'ticket-1', parentCommentId: null };
+    admission = { admitted: true, audience: 'requester', relationshipId: 'rel', threadId: 'thr', ticketId: 'ticket-1', parentCommentId: null, requesterContactId: 'contact-1', requesterClientId: 'client-1' };
     await inbound('cm2:abc');
+    expect(writes).toHaveLength(0);
+    expect(createCommentFromEmailMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['missing resolved contact', null],
+    ['different resolved contact', { contact_id: 'contact-2', user_type: 'contact', is_inactive: false, client_id: 'client-1' }],
+    ['same contact moved to another client', { contact_id: 'contact-1', user_type: 'contact', is_inactive: false, client_id: 'client-2' }],
+    ['inactive resolved contact', { contact_id: 'contact-1', user_type: 'contact', is_inactive: true, client_id: 'client-1' }],
+    ['identity without active state', { contact_id: 'contact-1', user_type: 'contact', client_id: 'client-1' }],
+  ])('requester admission followed by %s is stopped before comment effects', async (_label, resolvedContact) => {
+    admission = { admitted: true, audience: 'requester', relationshipId: 'rel', threadId: 'thr', ticketId: 'ticket-1', parentCommentId: null, requesterContactId: 'contact-1', requesterClientId: 'client-1' };
+    findContactByEmailMock.mockResolvedValue(resolvedContact);
+    await inbound('cm2:abc', { headers: { 'authentication-results': 'mx; spf=pass smtp.mailfrom=msp.test' } });
+    expect(createCommentFromEmailMock).not.toHaveBeenCalled();
+    expect(upsertTicketWatchListRecipientsMock).not.toHaveBeenCalled();
+    expect(writes).toHaveLength(0);
+  });
+
+  it('a forged From cannot become an anonymous comment even if admission returned a contact identity', async () => {
+    admission = { admitted: true, audience: 'requester', relationshipId: 'rel', threadId: 'thr', ticketId: 'ticket-1', parentCommentId: null, requesterContactId: 'contact-1', requesterClientId: 'client-1' };
+    findContactByEmailMock.mockResolvedValue({ contact_id: 'contact-1', user_type: 'contact', is_inactive: false, client_id: 'client-1' });
+    findTicketByEmailThreadMock.mockResolvedValue({ ticketId: 'fallback-ticket' });
+    const result = await inbound('cm2:abc', { headers: {} });
+    expect(result).toMatchObject({ outcome: 'quarantined', reason: 'co_managed_token_refused' });
+    expect(createCommentFromEmailMock).not.toHaveBeenCalled();
+    expect(upsertTicketWatchListRecipientsMock).not.toHaveBeenCalled();
+    expect(findTicketByEmailThreadMock).not.toHaveBeenCalled();
+    expect(writes).toHaveLength(0);
+  });
+
+  it('requester admission completes through the native writer only for the same trusted active contact', async () => {
+    admission = { admitted: true, audience: 'requester', relationshipId: 'rel', threadId: 'thr', ticketId: 'ticket-1', parentCommentId: null, requesterContactId: 'contact-1', requesterClientId: 'client-1' };
+    findContactByEmailMock.mockResolvedValue({ contact_id: 'contact-1', user_type: 'contact', is_inactive: false, client_id: 'client-1' });
+    await inbound('cm2:abc', { headers: { 'authentication-results': 'mx; spf=pass smtp.mailfrom=msp.test' } });
+    expect(createCommentFromEmailMock).toHaveBeenCalledTimes(1);
+    expect(createCommentFromEmailMock.mock.calls[0][0]).toMatchObject({ author_type: 'contact', contact_id: 'contact-1' });
+    expect(writes).toHaveLength(0);
+  });
+
+  it('requester identity lookup errors retry without falling through to an available thread-header target', async () => {
+    const { InboundRetryLaterError } = await import('../inboundRetryLaterError');
+    admission = { admitted: true, audience: 'requester', relationshipId: 'rel', threadId: 'thr', ticketId: 'ticket-1', parentCommentId: null, requesterContactId: 'contact-1', requesterClientId: 'client-1' };
+    findContactByEmailMock.mockRejectedValueOnce(new Error('identity store unavailable'));
+    findTicketByEmailThreadMock.mockResolvedValue({ ticketId: 'fallback-ticket' });
+
+    await expect(inbound('cm2:abc')).rejects.toBeInstanceOf(InboundRetryLaterError);
+    expect(findTicketByEmailThreadMock).not.toHaveBeenCalled();
+    expect(createCommentFromEmailMock).not.toHaveBeenCalled();
+    expect(upsertTicketWatchListRecipientsMock).not.toHaveBeenCalled();
     expect(writes).toHaveLength(0);
   });
 
@@ -110,6 +164,37 @@ describe('inbound reply token matrix (CM L5)', () => {
     expect(createCommentFromEmailMock).not.toHaveBeenCalled();
     expect(acks).toHaveLength(1);
     expect(acks[0]).toMatchObject({ tenant: 'tenant-1', to: expect.stringMatching(/^agent@msp\.test$/i), ticketId: 'ticket-1', reason });
+  });
+
+  describe('sender authentication (the cm2 reply must not let a forged From act as an internal user)', () => {
+    const PASS = 'mx; dmarc=pass header.from=msp.test';
+    const SPF_ONLY = 'mx; spf=pass smtp.mailfrom=msp.test';
+
+    it('passes internalAttributionTrusted=true when Authentication-Results satisfy allowsInternalSenderAttribution', async () => {
+      admission = { admitted: true, audience: 'shared_it', relationshipId: 'rel', threadId: 'thr', ticketId: 'ticket-1', parentCommentId: null, actor: { tenant: 'msp', userId: 'u1' } };
+      await inbound('cm2:abc', { headers: { 'authentication-results': PASS } });
+      expect(admitSpy).toHaveBeenCalledWith('tenant-1', 'cm2:abc', expect.anything(), { email: 'agent@msp.test', internalAttributionTrusted: true, contactAttributionTrusted: false });
+    });
+
+    it.each([
+      ['spf only (not enough for internal attribution)', { 'authentication-results': SPF_ONLY }],
+      ['absent Authentication-Results', {}],
+      ['failing dmarc', { 'authentication-results': 'mx; dmarc=fail header.from=msp.test' }],
+    ])('passes internalAttributionTrusted=false for %s', async (_n, headers) => {
+      admission = { admitted: false, reason: 'sender_unauthenticated', acknowledge: false };
+      await inbound('cm2:abc', { headers });
+      expect(admitSpy).toHaveBeenCalledWith('tenant-1', 'cm2:abc', expect.anything(), { email: 'agent@msp.test', internalAttributionTrusted: false, contactAttributionTrusted: _n.startsWith('spf only') });
+    });
+
+    it('sender_unauthenticated is quarantined (not inert): no write, no native fallthrough, no acknowledgement', async () => {
+      admission = { admitted: false, reason: 'sender_unauthenticated', acknowledge: false };
+      const result: any = await inbound('cm2:abc', { headers: {} }, { collectDiagnostics: true });
+      expect(result).toMatchObject({ outcome: 'quarantined', reason: 'co_managed_sender_unauthenticated', ticketId: 'ticket-1', matchedBy: 'reply_token' });
+      expect(writes).toHaveLength(0);
+      expect(acks).toHaveLength(0);
+      expect(createCommentFromEmailMock).not.toHaveBeenCalled();
+      expect(findTicketByEmailThreadMock).not.toHaveBeenCalled();
+    });
   });
 
   it('an auto-reply to a refused token is not acknowledged (no mail loop)', async () => {

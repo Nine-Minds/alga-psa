@@ -3,10 +3,11 @@
  * Handles all time entry-related database operations for the REST API
  */
 
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { delegateRest } from '@alga-psa/scheduling/lib/timeSource';
 import { assertHumanWorkAssignee, assertHumanWorkOwner } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb, withViaPrincipal, stampViaPrincipalRow } from '@alga-psa/db';
 import {
   CreateTimeEntryData,
   UpdateTimeEntryData,
@@ -27,7 +28,6 @@ import { ConflictError, ForbiddenError, NotFoundError, NotImplementedError, Vali
 import { computeWorkDateFields, resolveUserTimeZone, truncateToMinute } from 'server/src/lib/utils/workDate';
 import { buildTimeEntryApprovedPayload, toWorkflowTimeEntryWorkItemType } from '@alga-psa/workflow-streams';
 import { buildTicketTimeEntryAddedWorkflowEvent } from './timeEntryWorkflowEvents';
-import { hasPermission } from '../../auth/rbac';
 import type { IUser } from '@alga-psa/types';
 import {
   StopwatchConflictError,
@@ -61,6 +61,10 @@ export class TimeEntryService extends BaseService<any> {
       primaryKey: 'entry_id',
       tenantColumn: 'tenant',
       searchableFields: ['notes'],
+      viaPrincipalColumns: {
+        create: ['created_via_principal_id', 'updated_via_principal_id'],
+        update: ['updated_via_principal_id'],
+      },
       defaultSort: 'start_time',
       defaultOrder: 'desc'
     });
@@ -91,6 +95,14 @@ export class TimeEntryService extends BaseService<any> {
   // before pg hydrates it into a Date in the Node process's timezone.
   private workDateProjection(knex: Knex): Knex.Raw {
     return knex.raw("to_char(??, 'YYYY-MM-DD') as ??", [`${this.tableName}.work_date`, 'work_date']);
+  }
+
+  /** A contributed work item type (not in the native set) is rejected exactly as the schema rejected it before it became a contributed type. */
+  private assertNativeWorkItemType(workItemType: string | undefined): void {
+    if (workItemType === 'co_managed') {
+      throw new ValidationError('Validation failed', [{ code: 'invalid_enum_value', path: ['work_item_type'],
+        message: "Invalid enum value. Expected 'ticket' | 'project_task' | 'non_billable_category' | 'ad_hoc' | 'interaction'" }]);
+    }
   }
 
   private assertServiceIdPresent(serviceId: string | null | undefined): void {
@@ -278,6 +290,7 @@ export class TimeEntryService extends BaseService<any> {
     // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId, workItemType: data.work_item_type, workItemId: data.work_item_id }, 'entries', 'create', [data, context]);
     if (delegated.handled) return delegated.value;
+    this.assertNativeWorkItemType(data.work_item_type);
     const { knex } = await this.getKnex();
 
     this.assertServiceIdPresent(data.service_id);
@@ -296,7 +309,7 @@ export class TimeEntryService extends BaseService<any> {
         throw new ForbiddenError('Permission denied: Missing user context');
       }
 
-      const canReadTickets = await hasPermission(context.user, 'ticket', 'read', knex);
+      const canReadTickets = await hasApiContextPermission(context, 'ticket', 'read', knex);
       if (!canReadTickets) {
         throw new ForbiddenError('Permission denied: Cannot read tickets');
       }
@@ -416,6 +429,7 @@ export class TimeEntryService extends BaseService<any> {
     // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'update', [id, data, context]);
     if (delegated.handled) return delegated.value;
+    this.assertNativeWorkItemType((data as { work_item_type?: string }).work_item_type);
     const { knex } = await this.getKnex();
     const existing = await this.getById(id, context);
     if (!existing) {
@@ -673,6 +687,7 @@ export class TimeEntryService extends BaseService<any> {
     // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId, workItemType: data.work_item_type, workItemId: data.work_item_id }, 'entries', 'startTimeTracking', [data, context]);
     if (delegated.handled) return delegated.value;
+    this.assertNativeWorkItemType(data.work_item_type);
     const { knex } = await this.getKnex();
 
     this.assertServiceIdPresent(data.service_id);
@@ -755,7 +770,7 @@ export class TimeEntryService extends BaseService<any> {
     if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
 
-    if (!await hasPermission(context.user, 'time_entry', 'read', knex)) {
+    if (!await hasApiContextPermission(context, 'time_entry', 'read', knex)) {
       throw new ForbiddenError('Permission denied: Cannot read time entries');
     }
 
@@ -910,10 +925,10 @@ export class TimeEntryService extends BaseService<any> {
         
         await this.buildTenantScopedQuery(knex, context)
           .where('entry_id', entryId)
-          .update({
+          .update(withViaPrincipal(context, {
             approval_status: 'APPROVED',
             updated_at: new Date()
-          });
+          }, 'updated_via_principal_id'));
 
         results.push({ success: true, entry_id: entryId });
 
@@ -976,10 +991,10 @@ export class TimeEntryService extends BaseService<any> {
         await this.buildTenantScopedQuery(knex, context)
           .where('entry_id', entryId)
           .where('approval_status', 'SUBMITTED')
-          .update({
+          .update(withViaPrincipal(context, {
             approval_status: 'CHANGES_REQUESTED',
             updated_at: new Date()
-          });
+          }, 'updated_via_principal_id'));
 
         results.push({ success: true, entry_id: entryId });
 
@@ -1263,17 +1278,19 @@ export class TimeEntryService extends BaseService<any> {
       throw new ForbiddenError('Permission denied: Missing user context');
     }
     try {
-      return await knex.transaction((trx) =>
-        persistTimeEntry(trx, {
+      return await knex.transaction(async (trx) => {
+        const persisted = await persistTimeEntry(trx, {
           tenant: context.tenant,
           actor: context.user as IUser,
           entry,
+          viaPrincipalUserId: context.viaPrincipalUserId,
           contractLine,
           // The sheet was resolved from work_date (getOrCreateTimeSheetForWorkDate),
           // so the period is checked against the same date the bucketing used.
           sheetPeriodCheck: 'work_date',
-        }),
-      );
+        });
+        return persisted;
+      });
     } catch (error) {
       throw mapStopwatchError(error);
     }

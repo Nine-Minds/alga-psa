@@ -150,7 +150,11 @@
       "title": "Kundenzuweisung",
       "useTenantRenewalDefaults": "Mandanten-Verlängerungsstandards verwenden",
       "usingCustomSettings": "Benutzerdefinierte Zuweisungseinstellungen werden verwendet",
-      "usingTenantDefaults": "Mandantenstandards werden verwendet"
+      "usingTenantDefaults": "Mandantenstandards werden verwendet",
+      "billingProfileUseDefault": "{{name}} verwenden (Standard des Kunden)",
+      "billingProfileAssigned": "Zugewiesenes Abrechnungsprofil",
+      "billingProfileUnavailable": "Kein Profil – Zuordnung ausstehend",
+      "billingProfileLoading": "Abrechnungsprofil wird geladen…"
     },
     "clientOwnership": {
       "assignmentStatus": "Zuweisungsstatus",
@@ -375,6 +379,82 @@
         "failed": "Die Messweise dieses Dienstes konnte nicht geändert werden."
       },
       "effectiveFrom": "Messänderung wirksam ab"
+    },
+    "billing": {
+      "title": "Abrechnungsprofil & Zahlungsbedingungen",
+      "asOf": "Stand: {{date}}",
+      "profileLabel": "Abrechnungsprofil",
+      "inactive": "Inaktiv",
+      "lineCountOne": "{{count}} Linie",
+      "lineCountOther": "{{count}} Linien",
+      "termsLabel": "Zahlungsbedingungen",
+      "terms": {
+        "net_30": "Netto 30",
+        "net_15": "Netto 15",
+        "net_14": "Netto 14",
+        "net_7": "Netto 7",
+        "due_on_receipt": "Fällig bei Erhalt"
+      },
+      "termsSource": {
+        "profile": "aus dem Abrechnungsprofil",
+        "client": "vom Kunden",
+        "tenant": "aus dem Mandantenstandard",
+        "default": "Standard — keine Bedingungen hinterlegt"
+      },
+      "profileSource": {
+        "client_default": "Standard des Kunden",
+        "contract": "dem Vertrag zugewiesen",
+        "contract_line": "an der Linie festgelegt",
+        "work_item": "am Ticket oder Projekt festgelegt"
+      },
+      "valueSource": {
+        "profile": "Profil",
+        "client": "Kunde",
+        "contract": "Vertrag",
+        "default": "Standard"
+      },
+      "dueSentence": "Eine Rechnung vom {{invoiceDate}} ist am {{dueDate}} fällig — {{terms}} {{source}}",
+      "detailsToggle": "Weitere Abrechnungsdetails",
+      "fieldNone": "Keine",
+      "taxRegionChain": "Service-Region, dann Standort der Vertragslinie, dann Kundenstandard",
+      "taxExempt": "Steuerbefreit",
+      "taxable": "Steuerpflichtig",
+      "templateCustom": "Eigene Vorlage",
+      "templateDefault": "Standardvorlage",
+      "paymentMethod": {
+        "credit_card": "Kreditkarte",
+        "bank_transfer": "Banküberweisung",
+        "check": "Scheck"
+      },
+      "fieldLabel": {
+        "bill_to": "Rechnungsempfänger",
+        "payment_method": "Zahlungsart",
+        "tax_exemption": "Steuerbefreiung",
+        "tax_region": "Steuerregion",
+        "delivery": "Rechnungszustellung",
+        "template": "Rechnungsvorlage",
+        "po_number": "Bestellnummer",
+        "currency": "Währung",
+        "cadence": "Abrechnungsrhythmus",
+        "profile_billing_cycle": "Abrechnungszyklus des Profils",
+        "profile_billing_cycle_unapplied": "Abrechnungszyklus des Profils (noch nicht angewendet)"
+      },
+      "warnings": {
+        "inactiveProfile": "{{name}} ist inaktiv. Positionen bleiben diesem Profil zugeordnet, werden aber über das Standardprofil mit dessen Zahlungsbedingungen abgerechnet.",
+        "mixedProfiles": "Dieser Vertrag wird über {{count}} verschiedene Profile abgerechnet, daher deckt kein einzelnes Profil ihn ab. Jede Rechnung verwendet die Zahlungsbedingungen des Profils, auf dem sie ausgestellt wird.",
+        "lineOverride": "Die Linie „{{line}}\" wird über {{name}} statt über das Profil des Vertrags abgerechnet.",
+        "workItemOverride": "Zeit auf einem Ticket oder Projekt wird über das Profil dieses Arbeitselements abgerechnet, sofern es eines hat. Ohne Profil gilt das Standardprofil des Kunden.",
+        "workItemOverrideWithProfiles": "Zeit auf einem Ticket oder Projekt wird über das Profil dieses Arbeitselements abgerechnet, sofern es eines hat ({{names}}). Ohne Profil gilt das Standardprofil des Kunden.",
+        "mixedProfilesSameInvoice": "Die Positionen dieses Vertrags sind {{count}} verschiedenen Profilen zugeordnet, landen aber alle auf der Rechnung von {{invoice}}; es gilt ein einziger Satz Zahlungsbedingungen.",
+        "bucketCoverageNote": "Bei Positionen mit vorausbezahltem Kontingent oder Stundenblock folgt die vom Kontingent oder Block abgedeckte Zeit nicht dem Arbeitselement; nur die übrige Stundenzeit tut das."
+      },
+      "simulationNote": "Die simulierte Preisgestaltung verwendet die Steuerbefreiung auf Kundenebene. Die Befreiung eines Profils wird in dieser Simulation nicht angewendet.",
+      "dueSentenceWorkItem": "Eine Rechnung vom {{invoiceDate}} ist am {{dueDate}} fällig — {{terms}} {{source}}, sofern das Ticket oder Projekt nicht über ein anderes Profil abgerechnet wird",
+      "workItemProfileLine": "Wenn das Ticket oder Projekt über {{name}} abgerechnet wird:",
+      "invoiceLanding": {
+        "notBilledSeparately": "Zugeordnet zu {{attributed}}; abgerechnet auf {{invoice}} ({{attributed}} rechnet nicht separat ab) — {{terms}}, fällig am {{dueDate}}",
+        "inactiveProfile": "Zugeordnet zu {{attributed}}; abgerechnet über {{invoice}} ({{attributed}} ist inaktiv und hat daher keine eigene Rechnung) — {{terms}}, fällig am {{dueDate}}"
+      }
     }
   },
   "contractDialog": {

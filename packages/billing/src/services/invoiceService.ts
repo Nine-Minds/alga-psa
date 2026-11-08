@@ -1,4 +1,5 @@
 import { Temporal } from '@js-temporal/polyfill';
+import { describeContributedEntry } from '../lib/billing/timeEntryWorkContext';
 import { ManualInvoiceError, type HandledManualInvoiceErrorCode } from '../errors/manualInvoiceErrors';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
@@ -22,8 +23,11 @@ import { overPrepaidBlockDescription, prepaidBlockFeeDescription } from '../lib/
 import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
 import { resolveChargeProfile } from '../lib/billing/billingProfileResolution';
 import { resolveInvoiceBillingRecipient } from './invoiceBillingRecipientService';
+import { allocateDiscountsBeforeTax, buildDiscountTaxEntities, type DiscountPool, type DiscountTaxEntity, type DiscountTaxLineInput } from '../lib/discountAllocationBeforeTax';
+import { discountPoolFromInvoiceRow } from '../lib/billing/invoiceDiscountPools';
 import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
 import { buildBundleSnapshot, loadPreviousBundlePeriods, type BundleSnapshotDetailInput, type PreviousPeriodRequest } from '../lib/invoiceBundleComponents';
+import { distributeExternalTaxToFixedDetails, zeroFixedDetailTaxForInvoice } from './delegatedFixedDetailTax';
 
 
 // Helper interface for tax calculation
@@ -777,6 +781,50 @@ export async function recalculatePercentageDiscountInvoiceCharges(
   return normalizedInvoiceItems;
 }
 
+/** L6a1/T0-2 seam stand-in: manual-invoice time sources owned by a serving work-context contributor. */
+async function validateContributedManualTimeSources(
+  tx: Knex.Transaction,
+  tenant: string,
+  invoice: any,
+  clientId: string,
+  sourceItems: ManualInvoiceItemInput[],
+  reject: () => Error,
+): Promise<Map<ManualInvoiceItemInput, InvoiceTimeEntrySnapshot> | null> {
+  if (invoice.client_id !== clientId || !invoice.is_manual || invoice.is_prepayment) return null;
+  const snapshots = new Map<ManualInvoiceItemInput, InvoiceTimeEntrySnapshot>();
+  const seen = new Set<string>();
+  const ordered = [...sourceItems].sort((a, b) => String((a.source_link as any).entryId).localeCompare(String((b.source_link as any).entryId)));
+  for (const item of ordered) {
+    const entryId = (item.source_link as { entryId: string }).entryId;
+    const described = await describeContributedEntry(tx, tenant, entryId);
+    if (!described) return null;
+    if (seen.has(entryId)) throw reject();
+    seen.add(entryId);
+    const entry = await tenantScopedTable(tx, tenant, 'time_entries').where({ entry_id: entryId }).forUpdate().first();
+    if (!entry || entry.invoiced) {
+      throw new ManualInvoiceError('SOURCE_ALREADY_BILLED', 'The selected time entry is already billed or removed.');
+    }
+    const { context } = described;
+    if (!described.contributor.workItemTypes.includes(entry.work_item_type) || context.clientId !== invoice.client_id ||
+        entry.approval_status !== 'APPROVED' || Number(entry.billable_duration) <= 0 || !entry.service_id) throw reject();
+    const service = await tenantScopedTable(tx, tenant, 'service_catalog').where({ service_id: entry.service_id }).forShare().first();
+    if (!service) throw reject();
+    const minutes = Number(entry.billable_duration);
+    const rate = Math.max(0, Math.round(Number(service.default_rate) || 0));
+    if (item.service_id !== entry.service_id || item.quantity !== minutes / 60 || item.rate !== rate) throw reject();
+    const isTicket = context.sourceKind === 'ticket';
+    snapshots.set(item, {
+      version: 2, rateKind: 'uniform', uniformRate: rate,
+      workItemType: context.sourceKind, workItemId: context.sourceId,
+      ticketNumber: isTicket ? context.ticketNumber : null, title: context.title ?? null,
+      description: null, entryDate: entry.start_time ? new Date(entry.start_time).toISOString() : null,
+      billedMinutes: minutes, rate, netAmount: Math.round(minutes / 60 * rate),
+      serviceId: entry.service_id, serviceName: service.service_name,
+    });
+  }
+  return snapshots;
+}
+
 /** Validate ticket sources under locks held until invoice creation commits. */
 async function validateManualTicketSources(
   tx: Knex.Transaction,
@@ -794,6 +842,13 @@ async function validateManualTicketSources(
   const reject = () => new ManualInvoiceError(
     'SOURCE_NOT_ELIGIBLE', 'The selected source does not match this ticket invoice or is no longer eligible.',
   );
+  // L6a1/T0-2 seam stand-in (timeEntryWorkContext): a ticket-less manual invoice whose sources are all
+  // time entries owned by a serving contributor (shared co-managed work) validates through that contributor.
+  // Native tenants never reach this: no contributor serves them, so the native rejection below is unchanged.
+  if (invoice && !invoice.ticket_id && sourceItems.every(item => item.source_link?.kind === 'time_entry' && !item.is_discount)) {
+    const contributed = await validateContributedManualTimeSources(tx, tenant, invoice, clientId, sourceItems, reject);
+    if (contributed) return contributed;
+  }
   if (!invoice?.ticket_id || invoice.client_id !== clientId || !invoice.is_manual || invoice.is_prepayment) {
     throw reject();
   }
@@ -1160,7 +1215,7 @@ export async function persistManualInvoiceCharges(
       if (alreadyPersisted) {
         // Idempotent re-submission: the same editor payload arrived twice, so
         // reuse the row instead of minting a duplicate charge.
-        if (requestItem.service_id) {
+        if (requestItem.service_id && !alreadyPersisted.is_discount) {
           serviceToItemMap.set(requestItem.service_id, alreadyPersisted.item_id);
         }
         subtotal += Number(alreadyPersisted.net_amount ?? 0);
@@ -1223,7 +1278,10 @@ export async function persistManualInvoiceCharges(
         sourceSnapshots.get(requestItem),
       );
     }
-    if (requestItem.service_id) {
+    // A manual credit carries the service of the line it refunds but is not a
+    // target a discount can apply to: pointing a discount at it would leave
+    // the discount with no taxable line to reduce.
+    if (requestItem.service_id && !isCredit) {
       serviceToItemMap.set(requestItem.service_id, invoiceItem.item_id);
     }
     subtotal += netAmount;
@@ -1759,6 +1817,11 @@ async function persistFixedInvoiceCharges(
         allocated_amount: allocatedAmountCents,
         tax_amount: taxAmountCents,
         tax_rate: detail.tax_rate ?? 0,
+        // Member tax decision from computeFixedCharges; read back by
+        // calculateAndDistributeTax. The parent is taxable if ANY component is,
+        // so neither tax nor discount allocation may read it from the parent.
+        is_taxable: detail.is_taxable === true,
+        tax_region: detail.tax_region ?? null,
         tenant
       });
 
@@ -2246,6 +2309,10 @@ export async function calculateAndDistributeTax(
         });
     }
 
+    // A fixed-plan parent carries its tax through child allocation rows; push the
+    // imported amount down so detail tax still sums to the parent exactly.
+    await distributeExternalTaxToFixedDetails(tx, tenant, invoiceId);
+
     // Return total external tax
     const totalExternalTax = items.reduce((sum, item) => sum + Number(item.external_tax_amount || 0), 0);
     console.log(`[calculateAndDistributeTax] External tax total: ${totalExternalTax}`);
@@ -2269,6 +2336,10 @@ export async function calculateAndDistributeTax(
           total_price: netAmount
         });
     }
+
+    // The engine still computes per-service tax for the preview path, so a
+    // fixed-plan parent's allocation rows would keep it while the parent reads 0.
+    await zeroFixedDetailTaxForInvoice(tx, tenant, invoiceId);
 
     return 0;
   }
@@ -2318,19 +2389,21 @@ export async function calculateAndDistributeTax(
 
   let fixedDetails: any[] = [];
   if (consolidatedItemIds.length > 0) {
-    // Fetch details. Tax info (is_taxable, tax_region) should now be on the parent invoice_item
-    // derived during item creation based on service's tax_rate_id.
+    // Fetch details. Each member's own tax decision (is_taxable, tax_region) is stored on the
+    // detail row at persist time; NULL means a legacy row that inherits from the parent charge.
     const fixedDetailsQuery = tenantDb(tx, tenant).table('invoice_charge_fixed_details as iifd')
         .whereIn('iid.item_id', consolidatedItemIds) // Filter by the correctly identified parent IDs
         .select(
             'iifd.item_detail_id',
             'iifd.allocated_amount',
+            'iifd.is_taxable as detail_is_taxable',
+            'iifd.tax_region as detail_tax_region',
             'iid.item_id as parent_item_id',
-            'iid.service_id' // Keep service_id if needed for other logic, but not for tax region/taxability here
+            'iid.service_id'
         );
     tenantDb(tx, tenant).tenantJoin(fixedDetailsQuery, 'invoice_charge_details as iid', 'iid.item_detail_id', 'iifd.item_detail_id');
     fixedDetails = await fixedDetailsQuery;
-    console.log(`[calculateAndDistributeTax] Fetched ${fixedDetails.length} fixed details (tax info from parent item):`, JSON.stringify(fixedDetails.map(d => ({ detail_id: d.item_detail_id, parent_id: d.parent_item_id, amount: d.allocated_amount })), null, 2));
+    console.log(`[calculateAndDistributeTax] Fetched ${fixedDetails.length} fixed details (member tax flags with parent fallback):`, JSON.stringify(fixedDetails.map(d => ({ detail_id: d.item_detail_id, parent_id: d.parent_item_id, amount: d.allocated_amount })), null, 2));
   } else {
       console.log(`[calculateAndDistributeTax] No consolidated items found, skipping fixed detail fetch.`);
   }
@@ -2339,24 +2412,54 @@ export async function calculateAndDistributeTax(
   const taxableEntities: ITaxableEntity[] = [];
   const creditItems = invoiceItems.filter(item => Number(item.net_amount) < 0 && item.is_discount !== true);
 
-  // Process fixed details into taxable entities
+  // Process fixed details into entities using EACH DETAIL's own taxability and
+  // region. The parent is taxable if any component is, so reading the parent
+  // would tax exempt components. Components that carry no tax here are not tax
+  // entities, but they stay in the discount allocation (below) so they absorb
+  // their share of an untargeted discount, and they are written back with tax 0.
+  // One lookup per call: the fixed-detail, per-item and discount-allocation
+  // steps below all resolve the same client default region.
+  // LEVERAGE: friction fixed-bundle-tax-carrier — fixed bundles are the only charges taxed through a child
+  // table with its own tax rules; preview (computeFixedCharges) and this saved pass duplicate the decision.
+  // A shared "taxable line" layer would remove that.
+  let clientDefaultRegionLookup: Promise<string> | undefined;
+  const resolveClientDefaultTaxRegion = (): Promise<string> =>
+    (clientDefaultRegionLookup ??= getClientDefaultTaxRegionCode(tx, tenant, client.client_id).then((region) => region || ''));
+  const untaxedFixedDetails: Array<{ id: string; parentId: string; amount: number; region: string; serviceId: string | null }> = [];
+  const fixedDetailServiceIds = new Map<string, string | null>();
   for (const detail of fixedDetails) {
     const parentItem = invoiceItems.find(item => item.item_id === detail.parent_item_id);
     if (!parentItem) {
         console.error(`[calculateAndDistributeTax] Could not find parent item ${detail.parent_item_id} for detail ${detail.item_detail_id}`);
         continue; // Skip this detail if parent is missing
     }
-    const isTaxable = parentItem.is_taxable === true; // Get taxability from parent
+    // Member decision wins; NULL (legacy row) inherits from the parent. A parent explicitly
+    // marked non-taxable forces all of its details non-taxable.
+    const isTaxable = parentItem.is_taxable !== false
+      && (detail.detail_is_taxable ?? parentItem.is_taxable) === true;
     const allocatedAmount = Number(detail.allocated_amount || 0);
+    // Member region first, then parent region, then client default; only a
+    // positive amount reaches the tax engine or the discount allocation.
+    const resolvedRegion = detail.detail_tax_region || parentItem.tax_region
+      || (allocatedAmount > 0 ? await resolveClientDefaultTaxRegion() : '');
+    fixedDetailServiceIds.set(detail.item_detail_id, detail.service_id ?? null);
+
     if (allocatedAmount > 0 && isTaxable) {
       taxableEntities.push({
         id: detail.item_detail_id,
         type: 'fixed_detail',
         amount: allocatedAmount,
-        // Use service region first, then lookup client default. Provide empty string if null.
-        taxRegion: parentItem.tax_region || await getClientDefaultTaxRegionCode(tx, tenant, client.client_id) || '', // Get region from parent
+        taxRegion: resolvedRegion,
         isTaxable: true,
         parentId: detail.parent_item_id,
+      });
+    } else {
+      untaxedFixedDetails.push({
+        id: detail.item_detail_id,
+        parentId: detail.parent_item_id,
+        amount: Math.max(0, allocatedAmount),
+        region: resolvedRegion,
+        serviceId: detail.service_id ?? null,
       });
     }
   }
@@ -2378,7 +2481,7 @@ export async function calculateAndDistributeTax(
         type: 'item',
         amount: Number(item.net_amount),
         // Use item region first, then lookup client default. Provide empty string if null.
-        taxRegion: item.tax_region || await getClientDefaultTaxRegionCode(tx, tenant, client.client_id) || '',
+        taxRegion: item.tax_region || await resolveClientDefaultTaxRegion(),
         isTaxable: true,
       });
     }
@@ -2423,10 +2526,94 @@ export async function calculateAndDistributeTax(
   }
   console.log(`[calculateAndDistributeTax] Region groups created:`, JSON.stringify(Object.keys(regionGroups)));
 
+  // 3b. Apply discounts before tax. A seller-funded discount lowers the taxable
+  // base of the lines it applies to; the shared allocation spreads each
+  // discount over its lines (exempt lines absorb their share too) and the
+  // reduced amounts below feed the unchanged tax distribution.
+  {
+    const itemsById = new Map(invoiceItems.map((item) => [item.item_id, item]));
+    const allocationLines: DiscountTaxLineInput[] = [];
+
+    for (const group of Object.values(regionGroups)) {
+      for (const entity of group.taxable) {
+        const owner = itemsById.get(entity.type === 'fixed_detail' ? entity.parentId! : entity.id);
+        allocationLines.push({
+          id: entity.id,
+          itemId: owner?.item_id ?? entity.id,
+          amount: entity.amount,
+          region: entity.taxRegion,
+          taxable: true,
+          serviceId: entity.type === 'fixed_detail'
+            ? fixedDetailServiceIds.get(entity.id) ?? null
+            : owner?.service_id ?? null,
+          clientContractId: owner?.client_contract_id ?? null,
+        });
+      }
+    }
+    // Untaxed fixed components take their pro rata share like any other line.
+    for (const untaxed of untaxedFixedDetails) {
+      allocationLines.push({
+        id: untaxed.id,
+        itemId: untaxed.parentId,
+        amount: untaxed.amount,
+        region: untaxed.region,
+        taxable: false,
+        serviceId: untaxed.serviceId,
+        clientContractId: itemsById.get(untaxed.parentId)?.client_contract_id ?? null,
+      });
+    }
+    // Positive non-discount lines that are not taxed still take a share of an
+    // untargeted discount; a discount on exempt labor must not lower tax on
+    // taxable hardware.
+    for (const item of invoiceItems) {
+      if (item.parent_item_id || item.is_discount || Number(item.net_amount) <= 0) continue;
+      // Taxable lines are already represented above (as the item or, for a
+      // consolidated fixed plan, as its detail entities); consolidated parents
+      // are always represented by their details.
+      if (item.is_taxable === true || consolidatedItemIds.includes(item.item_id)) continue;
+      allocationLines.push({
+        id: item.item_id,
+        itemId: item.item_id,
+        amount: Number(item.net_amount),
+        region: item.tax_region || '', // empty falls back to the client default below
+        taxable: false,
+        serviceId: item.service_id ?? null,
+        clientContractId: item.client_contract_id ?? null,
+      });
+    }
+    // Look the default up only if some line has no region of its own;
+    // buildDiscountTaxEntities applies it to exactly those lines.
+    const clientDefaultRegion = allocationLines.some((line) => !line.region)
+      ? await resolveClientDefaultTaxRegion()
+      : '';
+    const allocationEntities = buildDiscountTaxEntities(allocationLines, clientDefaultRegion);
+
+    const pools = invoiceItems
+      .filter((item) => item.is_discount === true)
+      .map(discountPoolFromInvoiceRow)
+      .filter((pool): pool is DiscountPool => pool !== null);
+
+    if (pools.length > 0) {
+      const allocation = allocateDiscountsBeforeTax({ entities: allocationEntities, pools });
+      for (const group of Object.values(regionGroups)) {
+        for (const entity of group.taxable) {
+          entity.amount = allocation.taxableAmountById.get(entity.id) ?? entity.amount;
+        }
+      }
+      console.log(`[calculateAndDistributeTax] Applied ${pools.length} discount pool(s) before tax.`);
+    }
+  }
+
   // 4. Calculate Regional Base & Tax and 5. Distribute Tax
   let computedTotalInvoiceTax = 0;
   const detailUpdates: { item_detail_id: string, tax_amount: number, tax_rate: number }[] = [];
   const itemTaxUpdates: { item_id: string, tax_amount: number, tax_rate: number }[] = []; // Renamed for clarity
+  // Components that are not taxed in this pass carry no tax; write that
+  // explicitly so a re-calculated draft cannot keep a stale amount and so the
+  // step 7 sum onto the parent only includes tax computed here.
+  for (const untaxed of untaxedFixedDetails) {
+    detailUpdates.push({ item_detail_id: untaxed.id, tax_amount: 0, tax_rate: 0 });
+  }
 
   for (const [region, group] of Object.entries(regionGroups)) {
     const positiveSum = group.taxable.reduce((sum, entity) => sum + entity.amount, 0);

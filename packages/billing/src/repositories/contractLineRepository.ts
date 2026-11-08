@@ -41,7 +41,6 @@ export type DetailedContractLine = IContractLineMapping & {
   billing_frequency?: string;
   rate?: number | null;
   enable_proration?: boolean;
-  invoice_line_description?: string | null;
   start_date?: string | null;
   end_date?: string | null;
   billing_cycle_alignment?: 'start' | 'end' | 'prorated';
@@ -176,7 +175,6 @@ export async function fetchDetailedContractLines(
             ? Number(row.default_rate)
             : null,
       enable_proration: row.template_enable_proration ?? false,
-      invoice_line_description: row.invoice_line_description ?? null,
       billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
         billingCycleAlignment: row.template_billing_cycle_alignment,
         enableProration: row.template_enable_proration,
@@ -225,15 +223,14 @@ export async function fetchDetailedContractLines(
       invoice_line_description: row.invoice_line_description ?? null,
       invoice_line_subtitle: row.invoice_line_subtitle ?? null,
       billing_frequency: row.billing_frequency,
-    rate: row.custom_rate !== undefined && row.custom_rate !== null ? Number(row.custom_rate) : null,
-    enable_proration: row.enable_proration ?? false,
-    invoice_line_description: row.invoice_line_description ?? null,
-    start_date: row.start_date ?? null,
-    end_date: row.end_date ?? null,
-    billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
-      billingCycleAlignment: row.billing_cycle_alignment,
-      enableProration: row.enable_proration,
-    }),
+      rate: row.custom_rate !== undefined && row.custom_rate !== null ? Number(row.custom_rate) : null,
+      enable_proration: row.enable_proration ?? false,
+      start_date: row.start_date ?? null,
+      end_date: row.end_date ?? null,
+      billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
+        billingCycleAlignment: row.billing_cycle_alignment,
+        enableProration: row.enable_proration,
+      }),
   }));
 }
 

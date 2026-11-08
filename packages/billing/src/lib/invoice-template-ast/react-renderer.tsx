@@ -3,7 +3,7 @@ import { TemplateEvaluationError } from './evaluator';
 import { localizeTimePresentation } from './timePresentationLocalization';
 import type { TemplateLabelTranslator } from './i18nLabels';
 import React from 'react';
-import { formatCurrencyFromMinorUnits, fromMinorUnits } from '@alga-psa/core';
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import { SYSTEM_DATE_FORMAT, type CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
 import type {
   TemplateAst,
@@ -263,12 +263,11 @@ const formatValue = (value: unknown, format: TemplateValueFormat | undefined, ct
       return String(value);
     }
     try {
-      // LEVERAGE: pattern minor-unit-currency-format — same Intl currency format as fieldFormatting.formatCurrency; a core formatter honouring a caller-supplied currencyDisplay would remove both
+      // One formatter for every surface: the exponent comes from the currency and
+      // the glyph from the product's symbol table, so a preview or PDF reads
+      // "R 12.34" like the entry screens do — not Intl's "ZAR 12.34".
       const currency = ctx.currencyCode || FALLBACK_CURRENCY;
-      return new Intl.NumberFormat(ctx.locale, {
-        style: 'currency',
-        currency,
-      }).format(fromMinorUnits(numeric, ctx.locale, currency));
+      return formatCurrencyFromMinorUnits(numeric, ctx.locale, currency);
     } catch {
       // Invalid currency code in template metadata — last-resort fallback.
       return formatCurrencyFromMinorUnits(numeric, ctx.locale, FALLBACK_CURRENCY);
@@ -309,7 +308,9 @@ interface RenderedCellLine {
  * blank lines (missing names, absent descriptions) are dropped. When a column
  * has no `lines`, or every line resolves empty, the function returns null so
  * the caller falls back to the flat `value` expression — keeping discount and
- * custom rows whose name is absent readable.
+ * custom rows whose name is absent readable. A line repeating text the cell
+ * already shows is dropped, so stacks such as the standard quote description
+ * (line `description` over `catalog_description`) print the text once.
  */
 const resolveColumnCellLines = (
   column: TemplateTableColumn,
@@ -331,6 +332,15 @@ const resolveColumnCellLines = (
     };
   };
   const nonEmpty = (entry: RenderedCellLine): boolean => entry.text.trim().length > 0;
+  const withoutRepeats = (entries: RenderedCellLine[]): RenderedCellLine[] => {
+    const seen = new Set<string>();
+    return entries.filter((entry) => {
+      const key = entry.text.trim();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
 
   // Primary lines decide whether the stack replaces the flat value; a
   // supplemental line (an annotation such as an optional-row marker) only
@@ -339,12 +349,12 @@ const resolveColumnCellLines = (
   const supplemental = column.lines.filter((line) => line.supplemental).map(resolveLine).filter(nonEmpty);
 
   if (primary.length > 0) {
-    return [...primary, ...supplemental];
+    return withoutRepeats([...primary, ...supplemental]);
   }
   if (supplemental.length > 0) {
     const value = resolveExpressionValue(column.value, evaluation, scope, ctx);
     const flat: RenderedCellLine = { text: formatValue(value ?? '', column.format, ctx) };
-    return [...(nonEmpty(flat) ? [flat] : []), ...supplemental];
+    return withoutRepeats([...(nonEmpty(flat) ? [flat] : []), ...supplemental]);
   }
   return null;
 };
@@ -526,7 +536,7 @@ const resolveTableStyle = (style: React.CSSProperties | undefined): React.CSSPro
 const buildAstCss = (ast: TemplateAst): string => {
   const baseCss = `
 .invoice-template-root {
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 14px;
   line-height: 1.35;
   color: #111827;

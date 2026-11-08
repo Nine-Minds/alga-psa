@@ -172,7 +172,25 @@ async function measureContainment(html: string): Promise<ContainmentReport[]> {
           outside: Array.from(new Set(outside)),
           overBarcode: Array.from(new Set(overBarcode)),
           identifierText: identifiers.map((el) => el.textContent ?? ''),
-          identifierClipped: identifiers.map((el) => el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1),
+          // Clipped means a cap hides part of the identifier — never allowed. The vertical
+          // half of that is measured against the nearest capping ancestor rather than the
+          // element's own scroll height, because a font whose natural line box is taller
+          // than the authored line-height reports layout overflow while hiding nothing
+          // (JetBrains Mono's ascent+descent is 1.32em against the identifier's 1.1).
+          identifierClipped: identifiers.map((el) => {
+            if (el.scrollWidth > el.clientWidth + 1) return true;
+            let cap: DOMRect | null = null;
+            for (let p: HTMLElement | null = el; p; p = p.parentElement) {
+              if (getComputedStyle(p).overflow !== 'visible') {
+                cap = p.getBoundingClientRect();
+                break;
+              }
+            }
+            if (!cap) return false;
+            const range = document.createRange();
+            range.selectNodeContents(el);
+            return Array.from(range.getClientRects()).some((r) => !inside(r, { l: cap!.left, t: cap!.top, r: cap!.right, b: cap!.bottom }));
+          }),
         };
       });
     });

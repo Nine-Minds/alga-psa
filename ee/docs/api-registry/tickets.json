@@ -1226,6 +1226,66 @@
         "rbacResource": "ticket",
         "approvalRequired": true
       }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/tickets/templates"
+      },
+      "metadata": {
+        "rbacResource": "ticket_template",
+        "approvalRequired": false
+      }
+    },
+    {
+      "match": {
+        "method": "post",
+        "path": "/api/v1/tickets/templates"
+      },
+      "metadata": {
+        "rbacResource": "ticket_template",
+        "approvalRequired": false
+      }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/tickets/templates/{templateId}"
+      },
+      "metadata": {
+        "rbacResource": "ticket_template",
+        "approvalRequired": false
+      }
+    },
+    {
+      "match": {
+        "method": "put",
+        "path": "/api/v1/tickets/templates/{templateId}"
+      },
+      "metadata": {
+        "rbacResource": "ticket_template",
+        "approvalRequired": true
+      }
+    },
+    {
+      "match": {
+        "method": "delete",
+        "path": "/api/v1/tickets/templates/{templateId}"
+      },
+      "metadata": {
+        "rbacResource": "ticket_template",
+        "approvalRequired": true
+      }
+    },
+    {
+      "match": {
+        "method": "post",
+        "path": "/api/v1/tickets/templates/{templateId}/instantiate"
+      },
+      "metadata": {
+        "rbacResource": "ticket_template",
+        "approvalRequired": true
+      }
     }
   ]
 }

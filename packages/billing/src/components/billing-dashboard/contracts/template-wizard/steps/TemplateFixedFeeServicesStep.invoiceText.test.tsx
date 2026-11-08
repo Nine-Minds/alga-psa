@@ -22,7 +22,7 @@ import type { TemplateWizardData } from '../TemplateWizard';
 import { TemplateFixedFeeServicesStep } from './TemplateFixedFeeServicesStep';
 
 const data: TemplateWizardData = {
-  contract_name: 'T', billing_frequency: 'monthly', fixed_services: [], product_services: [], hourly_services: [],
+  contract_name: 'T', currency_code: 'USD', billing_frequency: 'monthly', fixed_services: [], product_services: [], hourly_services: [],
 };
 
 afterEach(() => cleanup());

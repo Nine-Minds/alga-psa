@@ -255,6 +255,9 @@ export const ROUTE_NAMESPACES = {
   '/msp/platform-updates': ['common', 'msp/core', 'msp/profile'],
   '/msp/extensions': ['common', 'msp/core', 'msp/extensions'],
   '/msp/licenses': ['common', 'msp/core', 'msp/licensing'],
+  // Departure and the MSP archive; the rest of the co-managed screens keep their defaultValue fallbacks.
+  '/msp/co-managed': ['common', 'msp/core', 'msp/licensing', 'msp/co-managed-lifecycle'],
+  '/msp/co-management': ['common', 'msp/core', 'msp/licensing', 'msp/co-managed-lifecycle'],
   '/msp/account': ['common', 'msp/core', 'msp/account', 'msp/licensing'],
   '/msp/add-ons': ['common', 'msp/core', 'msp/account', 'msp/licensing'],
   '/msp/user-activities': ['common', 'msp/core', 'msp/user-activities', 'msp/workflows', 'features/tickets', 'features/projects', 'msp/schedule', 'msp/opportunities', 'msp/time-entry', 'features/documents'],

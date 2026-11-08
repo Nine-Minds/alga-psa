@@ -168,6 +168,12 @@ provider.
 | Registry endpoint (`/api/v1/meta/mcp-registry`) | ✓ | ✓ |
 | Remote MCP server (`/api/mcp`) + agent identity + IdP auth + audit | — | ✓ |
 
+## Migration note — existing IdP registrations without an audience
+
+Migration `20261030090000_deactivate_agent_idp_providers_without_audience.cjs` (shipped 2026-10-30) automatically deactivates any `agent_idp_providers` row whose `audience` column is NULL or blank.
+
+If you registered a trusted IdP before the audience field was required, that registration is now deactivated and token validation will reject new agent connections against it. To restore access, open **Settings → MCP Server**, delete the deactivated provider entry, and re-add it with an explicit audience value. See [The easy path — provider presets](#the-easy-path--provider-presets-reuse-and-hosted-built-ins) for the correct audience per provider type.
+
 ## Known MVP limitations
 
 - **PRM is instance-wide.** `/.well-known/oauth-protected-resource` lists all trusted issuers
