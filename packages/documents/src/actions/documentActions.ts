@@ -2384,9 +2384,9 @@ export const createDocumentAssociations = withAuth(async (
       if (entity_type === 'asset') {
         const assetAuthorization = await authorizeAssetAssociationWrite(trx, tenant, user, entity_id);
         if (assetAuthorization) return assetAuthorization;
-        if (!await hasPermission(user, 'document', 'read') ||
-            !await hasPermission(user, 'asset', 'read') ||
-            !await hasPermission(user, 'asset', 'update')) {
+        if (!await hasPermission(user, 'document', 'read', trx) ||
+            !await hasPermission(user, 'asset', 'read', trx) ||
+            !await hasPermission(user, 'asset', 'update', trx)) {
           return permissionError('Permission denied: Cannot update document associations', 'documents:errors.permissions.updateAssociations');
         }
 
@@ -2511,9 +2511,9 @@ export const removeDocumentAssociations = withAuth(async (
           const assetAuthorization = await authorizeAssetAssociationWrite(trx, tenant, user, entity_id);
           if (assetAuthorization) return assetAuthorization;
         }
-        if (!await hasPermission(user, 'document', 'read') ||
-            !await hasPermission(user, 'asset', 'read') ||
-            !await hasPermission(user, 'asset', 'delete')) {
+        if (!await hasPermission(user, 'document', 'read', trx) ||
+            !await hasPermission(user, 'asset', 'read', trx) ||
+            !await hasPermission(user, 'asset', 'delete', trx)) {
           return permissionError('Permission denied: Cannot update document associations', 'documents:errors.permissions.updateAssociations');
         }
         if (rows.some((row: { entity_type: string }) => row.entity_type !== 'asset')) {
