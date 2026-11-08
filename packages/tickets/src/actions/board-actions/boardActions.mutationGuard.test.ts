@@ -161,6 +161,8 @@ describe('board mutation guard', () => {
       const { createBoard } = await import('./boardActions');
       const result = await createBoard({ board_name: 'X', is_default: true } as any);
       expect(result).toMatchObject(denied);
+      expect(result).not.toHaveProperty('code');
+      expect(result).not.toHaveProperty('actionError');
       expect(refusedBy()).toEqual([PERMISSION]);
       expect(withTransactionMock).not.toHaveBeenCalled();
       expect(reads).toHaveLength(0);
@@ -222,6 +224,7 @@ describe('board mutation guard', () => {
       const { updateBoard } = await import('./boardActions');
       const result = await updateBoard('board-a', { is_default: true, board_name: 'Hijack' } as any);
       expect(result).toMatchObject(denied);
+      expect(result).not.toHaveProperty('actionError');
       expect(refusedBy()).toEqual([PERMISSION]);
       expect(withTransactionMock).not.toHaveBeenCalled();
       expect(reads).toHaveLength(0);
