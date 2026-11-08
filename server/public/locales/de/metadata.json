@@ -374,6 +374,10 @@
       "title": "Asset-Inventar",
       "custody": {
         "title": "Equipment in Verwahrung"
+      },
+      "audits": {
+        "title": "Standortaudits",
+        "detailTitle": "Standortaudit"
       }
     },
     "chat": {
