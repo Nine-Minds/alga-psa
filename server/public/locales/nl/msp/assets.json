@@ -2245,6 +2245,8 @@
       "allStatuses": "Alle statussen",
       "notes": "Notities",
       "exportCsv": "CSV exporteren",
+      "exportStarted": "CSV-export gestart.",
+      "exportEmpty": "Er is niets te exporteren in deze weergave.",
       "addUnexpected": "Onverwachte asset toevoegen",
       "addUnexpectedHint": "Een apparaat dat op locatie wordt gevonden maar buiten deze controleselectie valt, wordt als onverwacht geregistreerd, nooit als verwacht.",
       "addUnexpectedPlaceholder": "Zoek een asset…",
