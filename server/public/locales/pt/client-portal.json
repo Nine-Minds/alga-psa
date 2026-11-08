@@ -783,7 +783,7 @@
         "deactivating": "Desativando…",
         "thisUserCapitalized": "Este usuário",
         "openWorkPrompt": "tem trabalho em aberto. Escolha o que deve acontecer antes de desativar o usuário.",
-        "reassignTo": "Reatribuir trabalho em aberto a",
+        "reassignTo": "Reatribuir o trabalho em aberto para",
         "selectAssignee": "Selecione um usuário interno ativo",
         "noAssignee": "Nenhum usuário interno ativo está disponível para reatribuição.",
         "selectedUser": "o usuário selecionado",
@@ -804,9 +804,9 @@
           "projectTasks": "tarefas de projeto"
         },
         "summary": {
-          "archived": "Será feito o arquivamento de {{count}} {{label}}",
-          "unassigned": "Será removida a atribuição de {{count}} {{label}}",
-          "reassigned": "Será feita a reatribuição de {{count}} {{label}} para {{name}}"
+          "archived": "{{count}} {{label}}: arquivar",
+          "unassigned": "{{count}} {{label}}: remover atribuição",
+          "reassigned": "{{count}} {{label}}: reatribuir para {{name}}"
         }
       }
     },
