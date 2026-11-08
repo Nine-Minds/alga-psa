@@ -885,7 +885,7 @@
       "removeFilter": "Rimuovi",
       "valuesCommaSeparated": "Valori (separati da virgole)",
       "valueLabel": "Valore",
-      "absoluteTimestampHint": "Salvato come timestamp assoluto usando il fuso orario attuale del tuo browser.",
+      "absoluteTimestampHint": "Salvato come timestamp assoluto in base al fuso orario attuale del tuo browser.",
       "saveAsConflict": "\"{{saveAs}}\" è in conflitto con un percorso di output di un passaggio esistente"
     },
     "mappingExpr": {
@@ -1461,11 +1461,11 @@
       "close": "Chiudi",
       "loadingSchema": "Caricamento dello schema…",
       "publishedContractSchema": "Schema del contratto pubblicato",
-      "publishedSnapshot": "Istantanea dello schema pubblicato.",
-      "publishedSnapshotMissing": "Istantanea dello schema pubblicato mancante; viene mostrato lo schema attualmente restituito dal registro degli schemi.",
+      "publishedSnapshot": "Snapshot dello schema pubblicato.",
+      "publishedSnapshotMissing": "Snapshot dello schema pubblicato mancante; viene mostrato lo schema attualmente restituito dal registro degli schemi.",
       "publishedLoadFailed": "Impossibile caricare lo schema pubblicato.",
-      "noPublishedSnapshot": "Nessuna istantanea dello schema pubblicato salvata per la versione {{version}}.",
-      "noPublishedSnapshotWithRef": "Nessuna istantanea dello schema pubblicato salvata per la versione {{version}}. (payloadSchemaRef: {{schemaRef}})"
+      "noPublishedSnapshot": "Nessuno snapshot dello schema pubblicato salvato per la versione {{version}}.",
+      "noPublishedSnapshotWithRef": "Nessuno snapshot dello schema pubblicato salvato per la versione {{version}}. (payloadSchemaRef: {{schemaRef}})"
     },
     "expression": {
       "insertField": "Inserisci campo",
@@ -1650,8 +1650,8 @@
     "waitFilterOperators": {
       "equals": "uguale a",
       "notEquals": "diverso da",
-      "in": "è tra",
-      "notIn": "non è tra",
+      "in": "incluso in",
+      "notIn": "non incluso in",
       "exists": "esiste",
       "notExists": "non esiste",
       "greaterThan": "maggiore di",
@@ -1663,7 +1663,7 @@
       "endsWith": "termina con"
     },
     "schemaPolicy": {
-      "dateTriggerMismatch": "Lo schema del payload del trigger basato su una data deve corrispondere all'origine selezionata.",
+      "dateTriggerMismatch": "Lo schema del payload del trigger di data deve corrispondere all'origine selezionata.",
       "eventCatalogLoadFailed": "Impossibile caricare il catalogo degli eventi. La pubblicazione e l'esecuzione sono disabilitate finché il catalogo non viene caricato.",
       "triggerEventMissing": "L'evento trigger \"{{eventName}}\" non è presente nel catalogo degli eventi.",
       "eventSchemaInvalid": "{{sourceLabel}} \"{{eventName}}\" {{schemaLabel}}. Correggi la voce nel catalogo degli eventi inserendo uno schema valido prima di pubblicare o eseguire il workflow.",
@@ -1681,7 +1681,7 @@
       "systemEvent": "L'evento di sistema",
       "tenantEvent": "L'evento del tenant",
       "missingSchemaRef": "non ha un riferimento allo schema",
-      "unknownSchemaRefShort": "ha un riferimento allo schema sconosciuto"
+      "unknownSchemaRefShort": "ha un riferimento schema sconosciuto"
     }
   },
   "actionInputFieldInfo": {
