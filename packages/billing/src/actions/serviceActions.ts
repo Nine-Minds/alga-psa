@@ -202,7 +202,7 @@ export interface CatalogPickerSearchOptions {
 
 export type CatalogPickerItem = Pick<
   IService,
-  'service_id' | 'service_name' | 'billing_method' | 'unit_of_measure' | 'unit_code' | 'item_kind' | 'sku' | 'description' | 'product_category'
+  'service_id' | 'service_name' | 'billing_method' | 'unit_of_measure' | 'unit_code' | 'item_kind' | 'sku' | 'description' | 'product_category' | 'tax_rate_id'
 > & {
   default_rate: number;
   /** Rate from service_prices for the requested currency (null when no currency-specific price exists). */
@@ -275,6 +275,7 @@ export const searchServiceCatalogForPicker = withAuth(async (
         'sc.sku as sku',
         'sc.description as description',
         'sc.product_category as product_category',
+        'sc.tax_rate_id as tax_rate_id',
         trx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
         trx.raw('CAST(sc.cost AS FLOAT) as cost'),
         'sc.cost_currency as cost_currency'

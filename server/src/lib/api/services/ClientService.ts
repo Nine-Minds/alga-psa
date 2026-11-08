@@ -3,17 +3,21 @@
  * Business logic for client-related operations
  */
 
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { deactivateClientScopedChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
+import { deactivateClientScopedTicketTemplates } from '@alga-psa/shared/lib/ticketTemplates';
 import { Knex } from 'knex';
 import { locationAddressSql } from './locationAddressSql';
+import { getContactCountsByLocation } from '@alga-psa/shared/models/contactLocation';
 import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
 import { IClient, IClientLocation } from 'server/src/interfaces/client.interfaces';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
+import { displayTagKey, loadDisplayTagsForEntities } from '@alga-psa/tags/lib/loadDisplayTags';
+import { displayAudienceForUser } from '@alga-psa/tags/lib/tagDisplayRules';
 import { availableCreditSubquerySql } from '@alga-psa/billing/lib/creditBalance';
 import { isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../../api/middleware/apiMiddleware';
-import { hasPermission } from '@alga-psa/auth/rbac';
 import {
   createLocation as createClientLocation,
   deleteLocation as deleteClientLocation,
@@ -313,8 +317,16 @@ export class ClientService extends BaseService<IClient> {
         })
       );
 
+      // Chip tags for picker rows (tag display rules, caller audience): one query for the page.
+      const displayTags = await loadDisplayTagsForEntities(trx, context.tenant, displayAudienceForUser(context.user), [
+        { taggedType: 'client', ids: clientsWithLogos.map((client) => client.client_id) },
+      ]);
+
       return {
-        data: clientsWithLogos,
+        data: clientsWithLogos.map((client) => ({
+          ...client,
+          display_tags: displayTags.get(displayTagKey('client', client.client_id)) ?? [],
+        })),
         total: parseInt(count as string)
       };
     });
@@ -346,12 +358,18 @@ export class ClientService extends BaseService<IClient> {
         return null;
       }
 
-      // Get logo URL
-      const logoUrl = await getClientLogoUrl(id, context.tenant);
+      const [logoUrl, displayTags] = await Promise.all([
+        getClientLogoUrl(id, context.tenant),
+        loadDisplayTagsForEntities(trx, context.tenant, displayAudienceForUser(context.user), [
+          { taggedType: 'client', ids: [id] },
+        ]),
+      ]);
 
       return withClientSinceDateString({
         ...stripLegacyClientTaxId(client),
-        logoUrl
+        logoUrl,
+        // Chip tags (tag display rules for the caller's audience), as the web pickers and ticket header show them.
+        display_tags: displayTags.get(displayTagKey('client', id)) ?? [],
       }) as unknown as IClient;
     });
   }
@@ -505,6 +523,7 @@ export class ClientService extends BaseService<IClient> {
   ): Promise<void> {
     await this.cleanupDefaultContractsForDeletedClient(trx, tenant, clientId);
     await deactivateClientScopedChecklistTemplates(trx, tenant, clientId);
+    await deactivateClientScopedTicketTemplates(trx, tenant, clientId);
     await this.deleteFromTenantTableIfExists(trx, tenant, 'client_billing_settings', { client_id: clientId });
     await this.deleteFromTenantTableIfExists(trx, tenant, 'client_billing_cycles', { client_id: clientId });
     await this.deleteFromTenantTableIfExists(trx, tenant, 'client_tax_settings', { client_id: clientId });
@@ -689,7 +708,7 @@ export class ClientService extends BaseService<IClient> {
       // Deactivating a client also deactivates its contacts and their portal users
       // unless the caller chose "client only" — the same choice the web dialog offers.
       if (data.is_inactive === true && data.deactivate_contacts !== false) {
-        if (!before.is_inactive && !(await hasPermission(context.user, 'contact', 'update', trx))) {
+        if (!before.is_inactive && !(await hasApiContextPermission(context, 'contact', 'update', trx))) {
           throw new ForbiddenError('Permission denied: Cannot update contacts');
         }
         // Get all contact IDs for this client
@@ -884,7 +903,18 @@ export class ClientService extends BaseService<IClient> {
         .orderBy('is_default', 'desc')
         .orderBy('location_name', 'asc');
 
-      return locations;
+      // contact_count tells an API caller (and the MCP agent) how many people work at each site,
+      // and therefore why a delete would be refused. One batched read for the whole list.
+      const counts = await getContactCountsByLocation(
+        trx,
+        context.tenant,
+        locations.map((location) => location.location_id),
+      );
+
+      return locations.map((location) => ({
+        ...location,
+        contact_count: counts.get(location.location_id) ?? 0,
+      }));
     });
   }
 

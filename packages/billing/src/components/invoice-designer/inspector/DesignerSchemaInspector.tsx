@@ -21,6 +21,7 @@ import type {
   DesignerInspectorVisibleWhen,
 } from '../schema/inspectorSchema';
 import { TableEditorWidget } from './widgets/TableEditorWidget';
+import { BundleComponentRowsWidget } from './widgets/BundleComponentRowsWidget';
 import { TotalsRowsEditorWidget } from './widgets/TotalsRowsEditorWidget';
 import { StandardLabelControl } from './widgets/StandardLabelControl';
 import {
@@ -1045,6 +1046,9 @@ export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById, tab 
     if (field.kind === 'widget') {
       if (field.widget === 'table-editor') {
         return <TableEditorWidget key={field.id} node={node} />;
+      }
+      if (field.widget === 'bundle-component-rows') {
+        return <BundleComponentRowsWidget key={field.id} node={node} />;
       }
       if (field.widget === 'field-binding-picker') {
         const value = resolveValue(field);

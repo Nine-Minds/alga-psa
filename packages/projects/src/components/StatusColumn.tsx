@@ -10,6 +10,7 @@ import TaskCard from './TaskCard';
 import styles from './ProjectDetail.module.css';
 import { IUserWithRoles } from '@alga-psa/types';
 import { useState, useRef } from 'react';
+import { useProjectDataSource } from '../context/ProjectDataSourceContext';
 import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
 import { darkenColor } from '@alga-psa/ui/lib/colorUtils';
@@ -122,6 +123,9 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
   const { isSelected, setTasksSelected } = useTaskSelection();
+  const projectSource = useProjectDataSource();
+  const addCardHidden = projectSource.kind !== 'native' || projectSource.screen.hideCreate || projectSource.screen.readOnly;
+  const dropHidden = projectSource.screen.hideKanbanDrag || projectSource.screen.readOnly;
   const [isDraggedOver, setIsDraggedOver] = useState(false);
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
   const [dropPosition, setDropPosition] = useState<'before' | 'after' | null>(null);
@@ -197,7 +201,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
     const draggedTaskId = e.dataTransfer.getData('text/plain');
     const draggedTask = tasks.find(t => t.task_id === draggedTaskId);
     
-    if (!draggedTask) {
+    if (!draggedTask || dropHidden) {
       return;
     }
 
@@ -389,7 +393,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
               </span>
             </div>
             <div className={`${styles.statusHeader} flex-shrink-0 flex items-center`}>
-              <Button
+              {!addCardHidden && <Button
                 id={`add-task-button-${status.status_id}`}
                 variant="default"
                 size="sm"
@@ -401,7 +405,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
                 data-project-tree-data={JSON.stringify(projectTreeData)}
               >
                 <Plus className={zoomLevel <= 30 ? 'w-3 h-3 text-white' : 'w-4 h-4 text-white'} />
-              </Button>
+              </Button>}
               <span
                 className={`${zoomLevel <= 30 ? 'text-[10px] px-1.5' : 'text-xs px-2'} font-medium py-0.5 rounded-full`}
                 style={configuredColor ? {

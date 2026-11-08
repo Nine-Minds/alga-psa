@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
 import { slaTicketWorkflow } from '../sla-ticket-workflow.js';
+import { slaTicketWorkflow as slaTicketWorkflowParent } from './fixtures/sla-ticket-workflow-parent.js';
 
 const schedule24x7 = {
   schedule_id: '24x7',
@@ -19,6 +20,9 @@ const target = {
   priority_id: 'priority-1',
   response_time_minutes: 10,
   resolution_time_minutes: null,
+  escalation_1_percent: 70,
+  escalation_2_percent: 90,
+  escalation_3_percent: 110,
   is_24x7: true,
 };
 
@@ -36,6 +40,7 @@ async function setupWorkflowTest(activitiesOverrides: Record<string, any> = {}) 
     ticketId: string;
     phase: 'response' | 'resolution';
     thresholdPercent: number;
+    escalationLevel?: 1 | 2 | 3;
   }> = [];
   const statusUpdates: Array<{
     tenantId: string;
@@ -55,6 +60,7 @@ async function setupWorkflowTest(activitiesOverrides: Record<string, any> = {}) 
       ticketId: string;
       phase: 'response' | 'resolution';
       thresholdPercent: number;
+      escalationLevel?: 1 | 2 | 3;
     }) => {
       notifications.push(input);
     },
@@ -130,7 +136,215 @@ describe('slaTicketWorkflow integration', () => {
       ]);
 
       const escalatedThresholds = escalations.map((entry) => entry.thresholdPercent);
-      expect(escalatedThresholds).toEqual([50, 75, 90, 100]);
+      expect(escalatedThresholds).toEqual([70, 90, 110]);
+    } finally {
+      await env.teardown();
+    }
+  });
+
+  it('evaluates policy escalation thresholds at 70%, 90%, and 110%, only when due', async () => {
+    const { env, worker, taskQueue, escalations } = await setupWorkflowTest();
+    try {
+      await worker.runUntil(async () => {
+        const handle = await env.client.workflow.start(slaTicketWorkflow, {
+          args: [{
+            ticketId: 'ticket-escalation-timing',
+            tenantId: 'tenant-escalation-timing',
+            policyTargets: [{ ...target, response_time_minutes: 10 }],
+            businessHoursSchedule: schedule24x7,
+          }],
+          taskQueue,
+          workflowId: 'sla-ticket-tenant-escalation-timing-ticket-escalation-timing',
+        });
+
+        await expect.poll(async () => (await handle.query<any>('getState')).nextWakeTime).toBeTruthy();
+        await env.sleep(6 * 60 * 1000);
+        expect(escalations.map((entry) => entry.thresholdPercent)).toEqual([]);
+        await env.sleep(1 * 60 * 1000);
+        await expect.poll(() => escalations.map((entry) => entry.thresholdPercent)).toEqual([70]);
+        await env.sleep(2 * 60 * 1000);
+        await expect.poll(() => escalations.map((entry) => entry.thresholdPercent)).toEqual([70, 90]);
+        await env.sleep(2 * 60 * 1000);
+        await handle.result();
+      });
+
+      expect(escalations.map((entry) => entry.thresholdPercent)).toEqual([70, 90, 110]);
+    } finally {
+      await env.teardown();
+    }
+  });
+
+  it('uses configured policy thresholds, deduplicates coincident notification points, and keeps 110% reachable in resolution', async () => {
+    const { env, worker, taskQueue, notifications, escalations } = await setupWorkflowTest();
+    try {
+      await worker.runUntil(async () => {
+        const handle = await env.client.workflow.start(slaTicketWorkflow, {
+          args: [{
+            ticketId: 'ticket-policy-thresholds',
+            tenantId: 'tenant-policy-thresholds',
+            policyTargets: [{
+              ...target,
+              response_time_minutes: 4,
+              resolution_time_minutes: 8,
+              escalation_1_percent: 50,
+              escalation_2_percent: 80,
+              escalation_3_percent: 110,
+            }],
+            notificationThresholds: [50, 80, 100],
+            businessHoursSchedule: schedule24x7,
+          }],
+          taskQueue,
+          workflowId: 'sla-ticket-tenant-policy-thresholds-ticket-policy-thresholds',
+        });
+        await handle.result();
+      });
+
+      expect(notifications.filter((entry) => entry.phase === 'response').map((entry) => entry.thresholdPercent))
+        .toEqual([50, 80, 100]);
+      expect(escalations.filter((entry) => entry.phase === 'response').map((entry) => entry.thresholdPercent))
+        .toEqual([50, 80, 110]);
+      expect(escalations.filter((entry) => entry.phase === 'resolution').map((entry) => entry.thresholdPercent))
+        .toEqual([50, 80, 110]);
+    } finally {
+      await env.teardown();
+    }
+  });
+
+  it('cancels pending response escalations when response is completed before the response threshold', async () => {
+    const { env, worker, taskQueue, escalations } = await setupWorkflowTest();
+    try {
+      await worker.runUntil(async () => {
+        const handle = await env.client.workflow.start(slaTicketWorkflow, {
+          args: [{
+            ticketId: 'ticket-response-carry',
+            tenantId: 'tenant-response-carry',
+            policyTargets: [{ ...target, response_time_minutes: 4, resolution_time_minutes: 10 }],
+            businessHoursSchedule: schedule24x7,
+          }],
+          taskQueue,
+          workflowId: 'sla-ticket-tenant-response-carry-ticket-response-carry',
+        });
+
+        await handle.signal('completeResponse', { met: true });
+        await env.sleep(12 * 60 * 1000);
+        await expect.poll(async () => (await handle.query<any>('getState')).currentPhase).toBe('resolution');
+        expect(escalations.filter((entry) => entry.phase === 'response')).toEqual([]);
+      });
+    } finally {
+      await env.teardown();
+    }
+  });
+
+  it('cancels deferred response escalations when response completes during resolution', async () => {
+    const { env, worker, taskQueue, escalations } = await setupWorkflowTest();
+    try {
+      await worker.runUntil(async () => {
+        const handle = await env.client.workflow.start(slaTicketWorkflow, {
+          args: [{
+            ticketId: 'ticket-response-complete-in-resolution',
+            tenantId: 'tenant-response-complete-in-resolution',
+            policyTargets: [{ ...target, response_time_minutes: 10, resolution_time_minutes: 30 }],
+            businessHoursSchedule: schedule24x7,
+          }],
+          taskQueue,
+          workflowId: 'sla-ticket-tenant-response-complete-in-resolution-ticket',
+        });
+
+        await env.sleep(10 * 60 * 1000);
+        await expect.poll(async () => (await handle.query<any>('getState')).currentPhase).toBe('resolution');
+        await handle.signal('completeResponse', { met: false });
+        await env.sleep(2 * 60 * 1000);
+        await expect.poll(() => escalations.filter((entry) => entry.phase === 'response').length).toBe(2);
+        expect(escalations.filter((entry) => entry.phase === 'response').map((entry) => entry.thresholdPercent))
+          .toEqual([70, 90]);
+        await handle.signal('completeResolution', { met: true });
+        await handle.result();
+      });
+    } finally {
+      await env.teardown();
+    }
+  });
+
+  it('exits a paused response escalation when response completes while resolution stays paused', async () => {
+    const { env, worker, taskQueue, notifications, escalations } = await setupWorkflowTest();
+    try {
+      await worker.runUntil(async () => {
+        const handle = await env.client.workflow.start(slaTicketWorkflow, {
+          args: [{
+            ticketId: 'ticket-response-complete-while-paused',
+            tenantId: 'tenant-response-complete-while-paused',
+            policyTargets: [{ ...target, response_time_minutes: 10, resolution_time_minutes: 30 }],
+            businessHoursSchedule: schedule24x7,
+          }],
+          taskQueue,
+          workflowId: 'sla-ticket-tenant-response-complete-while-paused-ticket',
+        });
+
+        await env.sleep(10 * 60 * 1000);
+        await expect.poll(async () => (await handle.query<any>('getState')).currentPhase).toBe('resolution');
+
+        await handle.signal('pause', { reason: 'status_pause' });
+        await expect.poll(async () => (await handle.query<any>('getState')).pauseState.isPaused).toBe(true);
+        await handle.signal('completeResponse', { met: false });
+
+        // Queries must remain responsive after completion interrupts the paused event.
+        await expect.poll(async () => {
+          const state = await handle.query<any>('getState');
+          return { phase: state.currentPhase, paused: state.pauseState.isPaused };
+        }).toEqual({ phase: 'resolution', paused: true });
+
+        await env.sleep(2 * 60 * 1000);
+        expect(escalations.filter((entry) => entry.phase === 'response').map((entry) => entry.thresholdPercent))
+          .toEqual([70, 90]);
+        expect(notifications.filter((entry) => entry.phase === 'resolution')).toEqual([]);
+
+        await handle.signal('resume');
+        await expect.poll(async () => (await handle.query<any>('getState')).pauseState.isPaused).toBe(false);
+        await env.sleep(6 * 60 * 1000);
+        await expect.poll(() => notifications.some(
+          (entry) => entry.phase === 'resolution' && entry.thresholdPercent === 50
+        )).toBe(true);
+        expect(escalations.filter((entry) => entry.phase === 'response').map((entry) => entry.thresholdPercent))
+          .toEqual([70, 90]);
+
+        await handle.signal('completeResolution', { met: true });
+        await handle.result();
+      });
+    } finally {
+      await env.teardown();
+    }
+  });
+
+  it('evaluates coincident escalation levels independently at one shared wake point', async () => {
+    const { env, worker, taskQueue, notifications, escalations } = await setupWorkflowTest();
+    try {
+      await worker.runUntil(async () => {
+        const handle = await env.client.workflow.start(slaTicketWorkflow, {
+          args: [{
+            ticketId: 'ticket-coincident',
+            tenantId: 'tenant-coincident',
+            policyTargets: [{
+              ...target,
+              response_time_minutes: 2,
+              escalation_1_percent: 80,
+              escalation_2_percent: 80,
+              escalation_3_percent: 80,
+            }],
+            notificationThresholds: [80, 100],
+            businessHoursSchedule: schedule24x7,
+          }],
+          taskQueue,
+          workflowId: 'sla-ticket-tenant-coincident-ticket-coincident',
+        });
+        await env.sleep(2 * 60 * 1000);
+        await expect.poll(() => escalations.filter((entry) => entry.phase === 'response' && entry.thresholdPercent === 80).length)
+          .toBe(3);
+        await handle.result();
+      });
+      expect(escalations.filter((entry) => entry.phase === 'response' && entry.thresholdPercent === 80))
+        .toHaveLength(3);
+      expect(notifications.filter((entry) => entry.phase === 'response').map((entry) => entry.thresholdPercent))
+        .toEqual([80, 100]);
     } finally {
       await env.teardown();
     }
@@ -380,6 +594,55 @@ describe('slaTicketWorkflow integration', () => {
       });
 
       expect(notifications.map(({ thresholdPercent }) => thresholdPercent)).toEqual([50, 75, 90, 100]);
+    } finally {
+      await env.teardown();
+    }
+  });
+
+  it('replays a completed history generated by the parent workflow revision', async () => {
+    const env = await TestWorkflowEnvironment.createTimeSkipping();
+    const taskQueue = `test-sla-parent-history-${Date.now()}`;
+    const workflowId = `sla-ticket-legacy-history-${Date.now()}`;
+    const activities = {
+      calculateNextWakeTime: async ({ currentTime, targetMinutes, pauseMinutes }: {
+        currentTime: string;
+        targetMinutes: number;
+        pauseMinutes: number;
+      }) => new Date(new Date(currentTime).getTime() + (targetMinutes + pauseMinutes) * 60000).toISOString(),
+      sendSlaNotification: async () => {},
+      checkAndEscalate: async () => {},
+      updateSlaStatus: async () => {},
+      recordSlaAuditLog: async () => {},
+      completeIfTicketClosed: async () => ({ closed: false, responseMet: null, resolutionMet: null }),
+    };
+
+    try {
+      const parentWorker = await Worker.create({
+        connection: env.nativeConnection,
+        taskQueue,
+        workflowsPath: path.resolve(__dirname, './fixtures/sla-ticket-workflow-parent.ts'),
+        activities,
+      });
+      let legacyHistory: unknown;
+      await parentWorker.runUntil(async () => {
+        const handle = await env.client.workflow.start(slaTicketWorkflowParent, {
+          args: [{
+            ticketId: 'ticket-parent-history',
+            tenantId: 'tenant-parent-history',
+            policyTargets: [target],
+            businessHoursSchedule: schedule24x7,
+          }],
+          taskQueue,
+          workflowId,
+        });
+        await handle.result();
+        legacyHistory = await handle.fetchHistory();
+      });
+
+      expect(legacyHistory).toBeDefined();
+      await Worker.runReplayHistory({
+        workflowsPath: path.resolve(__dirname, '../sla-ticket-workflow.ts'),
+      }, legacyHistory!, workflowId);
     } finally {
       await env.teardown();
     }
