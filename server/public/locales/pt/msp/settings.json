@@ -2558,7 +2558,7 @@
           "blocked": "Bloqueados"
         },
         "noStagedRecords": "Nenhum registro foi preparado a partir do pacote.",
-        "blockingIssues": "Problemas que impedem a migração ({{count}})",
+        "blockingIssues": "Problemas impeditivos ({{count}})",
         "warnings": "Avisos ({{count}})",
         "blockedWithIssues_one": "A migração não pode ser executada: {{count}} problema impeditivo precisa ser resolvido primeiro.",
         "blockedWithIssues_other": "A migração não pode ser executada: {{count}} problemas impeditivos precisam ser resolvidos primeiro.",
@@ -2685,7 +2685,7 @@
         "general": {
           "title": "Geral",
           "defaultClient": "Cliente padrão para registros órfãos",
-          "defaultClientHelp": "Contatos e ativos cuja organização não possa ser identificada são vinculados a este cliente."
+          "defaultClientHelp": "Contatos e ativos cuja organização não pode ser identificada são vinculados a este cliente."
         },
         "saved": "Configuração salva. Execute a verificação prévia para validá-la em relação aos registros preparados.",
         "saving": "Salvando…",
@@ -3673,7 +3673,7 @@
         "holidayName": "Nome do feriado",
         "date": "Data",
         "day": "Dia",
-        "enabled": "Ativado",
+        "enabled": "Habilitado",
         "startTime": "Hora de início",
         "endTime": "Hora de término"
       },
@@ -3706,7 +3706,7 @@
         "holidayNamePlaceholder": "Ex.: Natal",
         "holidayDate": "Data *",
         "holidayDatePlaceholder": "Selecione a data",
-        "isRecurring": "Repete anualmente"
+        "isRecurring": "Repetir anualmente"
       },
       "dialog": {
         "editTitle": "Editar agenda",
