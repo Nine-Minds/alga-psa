@@ -47,9 +47,9 @@ function uniqueNonEmpty(values: Array<string | null | undefined> | undefined): s
  * template semantics; the resource supplies the columns/relations they map to.
  */
 export interface RelationshipSqlAdapter {
-  ownerColumn: string;
-  clientColumn: string;
-  boardColumn: string;
+  ownerColumn?: string;
+  clientColumn?: string;
+  boardColumn?: string;
   contactColumn?: string;
   /**
    * Column holding the ticket's billing profile. When omitted, billing-profile
@@ -62,7 +62,7 @@ export interface RelationshipSqlAdapter {
    * `contact_visibility` (narrower, fail-closed).
    */
   watchListColumn?: string;
-  teamColumn: string;
+  teamColumn?: string;
   /**
    * Column holding a boolean client-visibility flag. When omitted, the
    * `client_visible_only` bundle constraint denies all rows — matching the JS
@@ -76,6 +76,10 @@ export interface RelationshipSqlAdapter {
    * when `userIds` is empty.
    */
   applyAssignedUsers(builder: Knex.QueryBuilder, userIds: string[]): void;
+  /** Optional relationship-backed ownership mapping for resources without a scalar owner column. */
+  applyOwnerUsers?(builder: Knex.QueryBuilder, userIds: string[]): void;
+  /** Optional relationship-backed team mapping for resources without a scalar team column. */
+  applyTeams?(builder: Knex.QueryBuilder, teamIds: string[]): void;
 }
 
 export interface RelationshipSqlContext {
@@ -117,7 +121,13 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
     matches: (input) =>
       typeof input.record?.ownerUserId === 'string' && input.record.ownerUserId === input.subject.userId,
     compileSql: (builder, ctx) => {
-      builder.where(ctx.adapter.ownerColumn, ctx.subject.userId);
+      if (ctx.adapter.applyOwnerUsers) {
+        ctx.adapter.applyOwnerUsers(builder, [ctx.subject.userId]);
+      } else if (ctx.adapter.ownerColumn) {
+        builder.where(ctx.adapter.ownerColumn, ctx.subject.userId);
+      } else {
+        deny(builder);
+      }
     },
   },
   assigned: {
@@ -140,22 +150,28 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
     matches: (input) =>
       RELATIONSHIP_TEMPLATES.own.matches(input) || RELATIONSHIP_TEMPLATES.assigned.matches(input),
     compileSql: (builder, ctx) => {
-      builder
-        .where(ctx.adapter.ownerColumn, ctx.subject.userId)
-        .orWhere(function orAssigned(this: Knex.QueryBuilder) {
+      builder.where(function ownOrAssigned(this: Knex.QueryBuilder) {
+        if (ctx.adapter.applyOwnerUsers) ctx.adapter.applyOwnerUsers(this, [ctx.subject.userId]);
+        else if (ctx.adapter.ownerColumn) this.where(ctx.adapter.ownerColumn, ctx.subject.userId);
+        else deny(this);
+        this.orWhere(function orAssigned(this: Knex.QueryBuilder) {
           ctx.adapter.applyAssignedUsers(this, [ctx.subject.userId]);
         });
+      });
     },
   },
   own_or_managed: {
     matches: (input) =>
       RELATIONSHIP_TEMPLATES.own.matches(input) || RELATIONSHIP_TEMPLATES.managed.matches(input),
     compileSql: (builder, ctx) => {
-      builder
-        .where(ctx.adapter.ownerColumn, ctx.subject.userId)
-        .orWhere(function orManaged(this: Knex.QueryBuilder) {
+      builder.where(function ownOrManaged(this: Knex.QueryBuilder) {
+        if (ctx.adapter.applyOwnerUsers) ctx.adapter.applyOwnerUsers(this, [ctx.subject.userId]);
+        else if (ctx.adapter.ownerColumn) this.where(ctx.adapter.ownerColumn, ctx.subject.userId);
+        else deny(this);
+        this.orWhere(function orManaged(this: Knex.QueryBuilder) {
           ctx.adapter.applyAssignedUsers(this, ctx.subject.managedUserIds ?? []);
         });
+      });
     },
   },
   same_client: {
@@ -170,6 +186,7 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
         deny(builder);
         return;
       }
+      if (!ctx.adapter.clientColumn) { deny(builder); return; }
       builder.where(ctx.adapter.clientColumn, ctx.subject.clientId);
     },
   },
@@ -177,6 +194,7 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
     matches: (input) =>
       Boolean(input.record?.clientId && input.subject.portfolioClientIds?.includes(input.record.clientId)),
     compileSql: (builder, ctx) => {
+      if (!ctx.adapter.clientColumn) { deny(builder); return; }
       whereInOrDeny(builder, ctx.adapter.clientColumn, ctx.subject.portfolioClientIds);
     },
   },
@@ -184,13 +202,16 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
     matches: (input) =>
       Boolean(input.record?.clientId && input.selectedClientIds?.includes(input.record.clientId)),
     compileSql: (builder, ctx) => {
+      if (!ctx.adapter.clientColumn) { deny(builder); return; }
       whereInOrDeny(builder, ctx.adapter.clientColumn, ctx.selectedClientIds);
     },
   },
   same_team: {
     matches: (input) => hasIntersection(input.record?.teamIds, input.subject.teamIds),
     compileSql: (builder, ctx) => {
-      whereInOrDeny(builder, ctx.adapter.teamColumn, ctx.subject.teamIds);
+      if (ctx.adapter.applyTeams) ctx.adapter.applyTeams(builder, ctx.subject.teamIds ?? []);
+      else if (ctx.adapter.teamColumn) whereInOrDeny(builder, ctx.adapter.teamColumn, ctx.subject.teamIds);
+      else deny(builder);
     },
   },
   // One rule intersects client, board, and contact restrictions. Built-in rules
@@ -203,11 +224,16 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
         deny(builder);
         return;
       }
+      if (!ctx.adapter.clientColumn) {
+        deny(builder);
+        return;
+      }
       builder.where(ctx.adapter.clientColumn, scope.clientId);
       if (scope.effectiveTicketScope === 'contact' && !ctx.adapter.contactColumn) {
         // Contact scope without a contact column cannot be expressed: deny.
         if (scope.visibleBoardIds !== null) {
-          whereInOrDeny(builder, ctx.adapter.boardColumn, scope.visibleBoardIds);
+          if (!ctx.adapter.boardColumn) deny(builder);
+          else whereInOrDeny(builder, ctx.adapter.boardColumn, scope.visibleBoardIds);
         }
         deny(builder);
         return;
@@ -217,7 +243,7 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
         return;
       }
       applyTicketVisibilityFilter(builder, scope, {
-        boardColumn: ctx.adapter.boardColumn,
+        boardColumn: ctx.adapter.boardColumn ?? '',
         // Only read under contact scope, which returned above when it is absent.
         contactColumn: ctx.adapter.contactColumn ?? '',
         billingProfileColumn: ctx.adapter.billingProfileColumn,
@@ -229,6 +255,7 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
     matches: (input) =>
       Boolean(input.record?.boardId && input.selectedBoardIds?.includes(input.record.boardId)),
     compileSql: (builder, ctx) => {
+      if (!ctx.adapter.boardColumn) { deny(builder); return; }
       whereInOrDeny(builder, ctx.adapter.boardColumn, ctx.selectedBoardIds);
     },
   },

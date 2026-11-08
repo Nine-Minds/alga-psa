@@ -137,6 +137,12 @@ export async function expireQuotesHandler(data: ExpireQuotesJobData): Promise<vo
           }).returning('*');
         if (!changed) continue;
 
+        // Same transaction as the status change: an expired quote must not stay reachable by link.
+        await db.table('quote_access_links')
+          .where({ quote_id: quote.quote_id })
+          .whereNull('revoked_at')
+          .update({ revoked_at: trx.fn.now(), revoked_reason: 'cancelled' });
+
         const [activity] = await db.table('quote_activities').insert({
           tenant: tenantId,
           quote_id: quote.quote_id,

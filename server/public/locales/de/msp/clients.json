@@ -387,6 +387,8 @@
     },
     "locations": {
       "billing": "Rechnung",
+      "contactCount_one": "1 Kontakt",
+      "contactCount_other": "{{count}} Kontakte",
       "manage": "Verwalten",
       "more": "+{{count}} weitere",
       "none": "Noch keine Standorte.",
@@ -1354,7 +1356,10 @@
         "phoneLabel": "Telefon",
         "setDefault": "Als Standard festlegen",
         "shippingTag": "Versand",
-        "unnamed": "Unbenannter Standort"
+        "unnamed": "Unbenannter Standort",
+        "contactCount_one": "1 Kontakt",
+        "contactCount_other": "{{count}} Kontakte",
+        "contactPrimary": "Primär"
       },
       "dialog": {
         "addTitle": "Neuen Standort hinzufügen",
@@ -1951,7 +1956,8 @@
       "sourceIsTenantDefault": "Der Datensatz Ihrer eigenen Organisation kann nicht in einen Kunden zusammengeführt werden.",
       "sourceHasCoManagement": "Dieser Kunde hat einen Co-Managed-IT-Arbeitsbereich. Brechen Sie dessen Einrichtung ab oder beenden Sie das Co-Management, bevor Sie ihn zusammenführen.",
       "parentLinkCycle": "Dieser Kunde ist als untergeordneter Kunde des zusammenzuführenden Kunden hinterlegt; die Zusammenführung würde die Hierarchie umkehren.",
-      "invalidContractCutover": "Einer der Stichtage liegt außerhalb der Laufzeit seines Vertrags."
+      "invalidContractCutover": "Einer der Stichtage liegt außerhalb der Laufzeit seines Vertrags.",
+      "invalidContactLocation": "Ein gewählter Standort gehört zu keinem der beiden zusammengeführten Kunden."
     },
     "profileContacts": {
       "duplicateManager": "Ein Abrechnungsprofil kann nur eine Leitung haben.",
@@ -2033,7 +2039,16 @@
     "billingStrategyHeading": "Abrechnungsprofil für zusammengeführte Arbeit und Geräte",
     "billingStrategySource": "Abrechnungsprofil von {{source}}, als separates Profil bei {{target}} beibehalten",
     "billingStrategyTarget": "Standard-Abrechnungsprofil von {{target}}",
-    "billingStrategyHelp": "Gilt für {{tickets}} Ticket(s), {{projects}} Projekt(e), {{assets}} Asset(s) und {{mappings}} RMM-Gerätegruppe(n) ohne eigenes Abrechnungsprofil. Zeilen mit einem expliziten Profil behalten es, und Rechnungen, Abrechnungszyklen, Zahlungen und Guthaben bleiben immer beim zusammengeführten Profil."
+    "billingStrategyHelp": "Gilt für {{tickets}} Ticket(s), {{projects}} Projekt(e), {{assets}} Asset(s) und {{mappings}} RMM-Gerätegruppe(n) ohne eigenes Abrechnungsprofil. Zeilen mit einem expliziten Profil behalten es, und Rechnungen, Abrechnungszyklen, Zahlungen und Guthaben bleiben immer beim zusammengeführten Profil.",
+    "locationsColumn": "Standorte",
+    "remoteBadge": "Im Homeoffice",
+    "noLocationsAfterMerge": "Keine Standorte",
+    "unnamedLocation": "Standort",
+    "movingFrom": "wechselt von {{client}}",
+    "primaryLocation": "Primär",
+    "targetAlsoHas": "{{client}} hat auch „{{location}}“",
+    "useIt": "Diesen verwenden",
+    "contactLocationSummary": "{{count}} Kontakt-Standortverknüpfungen, {{repointed}} umgehängt"
   },
   "billingProfileContacts": {
     "title": "Profilkontakte",

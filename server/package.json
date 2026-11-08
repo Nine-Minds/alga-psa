@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "1.6.17",
+  "version": "1.6.18",
   "private": true,
   "type": "module",
   "engines": {
@@ -8,7 +8,7 @@
     "npm": ">=10.0.0"
   },
   "scripts": {
-    "dev": "cd .. && npx nx build-deps server && cd server && NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development NEXT_DIST_DIR=\"${NEXT_DIST_DIR:-.next-dev}\" npx tsx dev-server.ts",
+    "dev": "NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development NEXT_DIST_DIR=\"${NEXT_DIST_DIR:-.next-dev}\" npx tsx dev-server.ts",
     "dev:turbo": "cd .. && npx nx build-deps server && cd server && NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development DEV_TURBOPACK=1 NEXT_DIST_DIR=\"${NEXT_DIST_DIR:-.next-dev}\" npx tsx dev-server.ts",
     "dev:express": "NODE_OPTIONS='--max-old-space-size=8192' NODE_ENV=development nodemon --watch index.ts --watch src/middleware --ext ts --exec tsx index.ts",
     "dev:ngrok": "node scripts/dev-with-ngrok-instructions.js",
@@ -145,6 +145,7 @@
     "archiver": "^7.0.1",
     "autoprefixer": "^10.4.21",
     "axios": "^1.20.0",
+    "bwip-js": "^4.11.4",
     "class-variance-authority": "^0.7.0",
     "clean": "^4.0.2",
     "clsx": "^2.1.1",

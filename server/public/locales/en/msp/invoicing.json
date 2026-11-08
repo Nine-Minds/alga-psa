@@ -78,7 +78,8 @@
       "poScopeDiffers": "PO scope differs",
       "currencyDiffers": "Currency differs",
       "taxTreatmentDiffers": "Tax treatment differs",
-      "exportShapeDiffers": "Export shape differs"
+      "exportShapeDiffers": "Export shape differs",
+      "billingProfileDiffers": "Invoice profile differs"
     },
     "executionRows": {
       "labels": {
@@ -1982,15 +1983,19 @@
       },
       "invoice_subtotal": {
         "label": "Subtotal",
-        "description": "The invoice subtotal before tax and discounts."
+        "description": "The invoice subtotal after discounts and credits, before tax."
+      },
+      "invoice_grossSubtotal": {
+        "label": "Subtotal Before Discounts",
+        "description": "The invoice subtotal before discounts and credits, and before tax."
+      },
+      "invoice_discountTotal": {
+        "label": "Discounts",
+        "description": "The total of discount and credit lines, shown as a positive amount."
       },
       "invoice_tax": {
         "label": "Tax",
         "description": "The tax amount for the invoice."
-      },
-      "invoice_discount": {
-        "label": "Discount",
-        "description": "The invoice discount amount."
       },
       "invoice_total": {
         "label": "Total",
@@ -2129,6 +2134,26 @@
     "resize": {
       "handleHint": "Drag to resize · double-click to size to content",
       "autoValue": "Auto ({{value}})"
+    },
+    "bundleRows": {
+      "off": "Off",
+      "quantities": "Quantities only",
+      "quantitiesAndPrices": "Quantities and prices",
+      "custom": "Custom",
+      "showChange": "Show change from the previous period (+N / −N)",
+      "pricesNote": "Component prices are included in this template’s invoice data, including for clients.",
+      "quantitiesNote": "Component prices are not exposed to clients by this template.",
+      "blankOnBundle": "Blank on the bundle row",
+      "componentCells": "Component row cells",
+      "cellClear": "— Empty —",
+      "field": {
+        "name": "Service name",
+        "quantity": "Quantity",
+        "period": "Service period",
+        "pricingBasis": "Pricing basis",
+        "unitPrice": "Unit price",
+        "total": "Amount"
+      }
     }
   },
   "projectBilling": {
@@ -2452,7 +2477,8 @@
       "moveDown": "Move {{row}} down",
       "remove": "Remove {{row}}",
       "label": "Label",
-      "emphasize": "Emphasize (grand total style)"
+      "emphasize": "Emphasize (grand total style)",
+      "hideWhenZero": "Hide when zero"
     }
   },
   "draftInvoiceDetails": {
