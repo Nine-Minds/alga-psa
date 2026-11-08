@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { pseudoString } from '../lib/pseudo-locale.mjs';
 
 const require = createRequire(import.meta.url);
 const {
@@ -60,6 +61,26 @@ test('pseudo-localized co-managed ticket copy resolves with the same keys as Eng
       [...english.keys()].sort(),
       `${locale}: every co-managed ticket label must resolve in pseudo-localized UI`,
     );
+  }
+});
+
+test('pseudo-localized service principal messages preserve current copy and layout expansion', () => {
+  const readMessages = (locale) => {
+    const settings = JSON.parse(readFileSync(new URL(
+      `../../../server/public/locales/${locale}/msp/settings.json`, import.meta.url,
+    ), 'utf8'));
+    return collectLeaves(settings.servicePrincipals ?? {});
+  };
+  const english = readMessages('en');
+  assert.ok(english.size > 0, 'expected English service principal messages');
+
+  for (const locale of ['xx', 'yy']) {
+    const messages = readMessages(locale);
+    assert.deepEqual([...messages.keys()].sort(), [...english.keys()].sort());
+    for (const [key, source] of english) {
+      assert.equal(messages.get(key), pseudoString(source, locale),
+        `${locale}.${key}: preserve current wording, interpolation tokens and locale expansion`);
+    }
   }
 });
 
