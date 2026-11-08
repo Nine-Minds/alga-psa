@@ -7,8 +7,41 @@
 import React from 'react';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { buildBundleChildRowsPreset, DEFAULT_BUNDLE_COLUMN_IDS } from '@alga-psa/billing/lib/invoice-template-ast/bundleChildRows';
+import type { InvoiceBundleRowsLayout } from '@alga-psa/types';
 import InvoiceDetailsDialog from './InvoiceDetailsDialog';
+
+// API response fixtures use the shared layout contract independently of the
+// billing designer's preset builder.
+const quantitiesLayout: InvoiceBundleRowsLayout = {
+  columnIds: { description: 'description', quantity: 'quantity', unitPrice: 'unit-price', total: 'line-total' },
+  childRows: {
+    sourcePath: 'item.components',
+    itemBinding: 'component',
+    parentBlankColumns: ['quantity', 'unit-price'],
+    cells: {
+      description: { value: { type: 'path', path: 'component.name' } },
+      quantity: {
+        value: { type: 'path', path: 'component.quantity' },
+        format: 'number',
+        change: { value: { type: 'path', path: 'component.quantityChange' }, format: 'signed-number' },
+      },
+    },
+  },
+};
+
+const totalOnlyLayout: InvoiceBundleRowsLayout = {
+  columnIds: quantitiesLayout.columnIds,
+  childRows: {
+    sourcePath: 'item.components',
+    itemBinding: 'component',
+    parentBlankColumns: [],
+    cells: {
+      description: { value: { type: 'path', path: 'component.name' } },
+      quantity: { value: { type: 'path', path: 'component.quantity' }, format: 'number' },
+      'line-total': { value: { type: 'path', path: 'component.total' }, format: 'currency' },
+    },
+  },
+};
 
 const snapshot = {
   version: 1,
@@ -52,6 +85,10 @@ vi.mock('@alga-psa/client-portal/actions', () => ({
   sendClientInvoiceEmail: vi.fn(async () => ({ success: true })),
 }));
 
+vi.mock('@alga-psa/billing/actions/billingClientLocationActions', () => ({
+  getActiveClientLocationsForBilling: vi.fn(async () => []),
+}));
+
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
   Dialog: ({ isOpen, children }: any) => (isOpen ? <div>{children}</div> : null),
   DialogContent: ({ children }: any) => <div>{children}</div>,
@@ -89,7 +126,7 @@ const renderDialog = async () => {
 
 describe('InvoiceDetailsDialog bundle component rows follow the template', () => {
   it('quantities preset: name, +2 change and quantity; no prices; quantity and unit price blank on the bundle row', async () => {
-    currentInvoice = invoiceWith({ columnIds: DEFAULT_BUNDLE_COLUMN_IDS, childRows: buildBundleChildRowsPreset({ prices: false, showChange: true }) });
+    currentInvoice = invoiceWith(quantitiesLayout);
     const { parent, childCells } = await renderDialog();
     expect(within(parent).getByText('Endpoint management and support')).toBeInTheDocument();
     expect(childCells).toEqual(['\u2022 Workstations', '+248', '', '']);
@@ -98,10 +135,8 @@ describe('InvoiceDetailsDialog bundle component rows follow the template', () =>
   });
 
   it('a total-only binding shows the component amount but not a unit price', async () => {
-    const preset = buildBundleChildRowsPreset({ prices: true, showChange: false });
-    const { [DEFAULT_BUNDLE_COLUMN_IDS.unitPrice]: _dropped, ...cells } = preset.cells;
     currentInvoice = invoiceWith(
-      { columnIds: DEFAULT_BUNDLE_COLUMN_IDS, childRows: { ...preset, cells } },
+      totalOnlyLayout,
       { d1: { item_detail_id: 'd1', allocated_amount: 60000, rate: 1250 } },
     );
     const { childCells } = await renderDialog();

@@ -8,7 +8,7 @@ import {
 import { getStandardTemplateAstByCode } from '@alga-psa/billing/lib/invoice-template-ast/standardTemplates';
 
 const require = createRequire(import.meta.url);
-const migration = require(path.resolve(__dirname, '../20261108010100_add_bundle_quantities_standard_invoice_template.cjs'));
+const migration = require(path.resolve(__dirname, '../20261107120100_add_bundle_quantities_standard_invoice_template.cjs'));
 
 const findChildRows = (node: any): any => {
   if (!node || typeof node !== 'object') return undefined;

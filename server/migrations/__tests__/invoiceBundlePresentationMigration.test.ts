@@ -3,7 +3,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const require = createRequire(import.meta.url);
-const migration = require(path.resolve(__dirname, '../20261108010000_add_invoice_bundle_text_and_presentation.cjs'));
+const migration = require(path.resolve(__dirname, '../20261107120000_add_invoice_bundle_text_and_presentation.cjs'));
 
 const schemaFixture = (tables: Record<string, string[]>) => {
   const columns = new Map(Object.entries(tables).map(([name, values]) => [name, new Set(values)]));
