@@ -2245,6 +2245,8 @@
       "allStatuses": "Alle Status",
       "notes": "Notizen",
       "exportCsv": "CSV exportieren",
+      "exportStarted": "CSV-Export gestartet.",
+      "exportEmpty": "In dieser Ansicht gibt es nichts zu exportieren.",
       "addUnexpected": "Unerwartetes Asset hinzufügen",
       "addUnexpectedHint": "Ein vor Ort gefundenes Gerät außerhalb des Umfangs dieser Inventur wird als unerwartet erfasst, niemals als erwartet.",
       "addUnexpectedPlaceholder": "Asset suchen…",
