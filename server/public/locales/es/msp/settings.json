@@ -2629,7 +2629,7 @@
         "entities": {
           "products": "Productos (catálogo / lista de precios)",
           "vendorProducts": "Lista de precios de proveedores (costos del distribuidor)",
-          "assets": "Activos (importación de activos heredada)",
+          "assets": "Activos (importación heredada)",
           "organizations": "Organizaciones",
           "locations": "Ubicaciones",
           "contacts": "Contactos",
@@ -2726,7 +2726,7 @@
         "producer": "Productor: {{producer}}",
         "uploaded": "Subido: {{timestamp}}",
         "lifecycleAria": "Ciclo de vida de la migración",
-        "inspecting": "Se está inspeccionando el paquete y preparando sus registros",
+        "inspecting": "El paquete se está inspeccionando y preparando",
         "packageSuffix": "(paquete {{packageId}})",
         "inspectingRefresh": ". Esta vista se actualiza automáticamente.",
         "rejectedBody": "Este paquete se rechazó durante la inspección; no se preparó ningún registro ni se importará nada de él. Corrija el paquete en el sistema de origen y suba uno nuevo.",
@@ -3288,7 +3288,7 @@
     "addOnRequired": {
       "heading": "{{featureName}} requiere el complemento {{addOnName}}",
       "manageAddOns": "Administrar complementos",
-      "entraDescription": "Adquiera el complemento Enterprise para activar Microsoft Entra Sync, que incluye detección de inquilinos, asignación de clientes, sincronización de contactos y flujos de trabajo de conciliación."
+      "entraDescription": "Adquiera el complemento Enterprise para activar Microsoft Entra Sync, que incluye descubrimiento de inquilinos, asignación de clientes, sincronización de contactos y flujos de trabajo de conciliación."
     }
   },
   "orgChart": {
@@ -3311,8 +3311,8 @@
     "description": "Configure los permisos de acceso para distintos roles y recursos",
     "selectPrompt": "Seleccione un rol o recurso para administrar los permisos",
     "unsavedChanges": "Tiene cambios sin guardar",
-    "adminLockedTooltip": "El sistema define los permisos del rol de administrador y no se pueden cambiar",
-    "none": "Ninguno",
+    "adminLockedTooltip": "Los permisos del rol de administrador están definidos por el sistema y no se pueden cambiar",
+    "none": "Ninguna",
     "actionCount_one": "{{count}} acción",
     "actionCount_other": "{{count}} acciones",
     "views": {
