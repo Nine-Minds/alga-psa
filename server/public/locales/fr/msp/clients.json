@@ -1469,7 +1469,7 @@
       "status": {
         "noRecording": "Aucun enregistrement",
         "recordingReady": "Enregistrement prêt",
-        "cancelled": "Annulé",
+        "cancelled": "Réunion annulée",
         "failed": "Enregistrement indisponible",
         "recordingPending": "Enregistrement en attente"
       }
@@ -1701,7 +1701,7 @@
           "helper": "Supprimer définitivement cette interaction"
         },
         "back": {
-          "label": "Revenir",
+          "label": "Retour",
           "helper": "Revenir à la vue précédente"
         },
         "addTicket": {
