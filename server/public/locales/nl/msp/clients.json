@@ -329,7 +329,8 @@
       "empty": "Geen klantspecifieke checklistsjablonen.",
       "loadFailed": "Checklistsjablonen laden mislukt",
       "retry": "Opnieuw proberen"
-    }
+    },
+    "audits": "Audits"
   },
   "clientCommandCenter": {
     "cards": {
@@ -383,7 +384,12 @@
       "warrantyExpired_other": "{{count}} buiten garantie",
       "warrantyExpiring_one": "1 verloopt binnen ≤90 d",
       "warrantyExpiring_other": "{{count}} verlopen binnen ≤90 d",
-      "warrantyTracked": " (van {{count}} bijgehouden)"
+      "warrantyTracked": " (van {{count}} bijgehouden)",
+      "auditsLink": "Locatieaudits",
+      "lastAudit": "Laatste audit op {{date}}",
+      "lastAuditMissing_one": "1 ontbreekt",
+      "lastAuditMissing_other": "{{count}} ontbreken",
+      "neverAudited": "Nooit geaudit"
     },
     "locations": {
       "billing": "Facturatie",
@@ -392,7 +398,9 @@
       "manage": "Beheren",
       "more": "+{{count}} meer",
       "none": "Nog geen locaties.",
-      "shipping": "Verzending"
+      "shipping": "Verzending",
+      "lastAudit": "Geaudit op {{date}}",
+      "neverAudited": "Nooit geaudit"
     },
     "money": {
       "activeContracts": "Actieve contracten",
@@ -1671,7 +1679,8 @@
           "members": "Leden",
           "people": "Personen"
         }
-      }
+      },
+      "startAudit": "Audit starten"
     },
     "tickets": {
       "addTicket": "Ticket toevoegen",
