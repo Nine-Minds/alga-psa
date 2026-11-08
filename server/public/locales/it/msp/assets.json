@@ -1713,7 +1713,7 @@
       "audit": "Audit",
       "auditPresent": "Audit: presente",
       "auditMissing": "Audit: mancante",
-      "auditMethod": "Contrassegnato tramite {{method}}"
+      "auditMethod": "Contrassegnato: {{method}}"
     },
     "changeTypes": {
       "created": "Creato",
@@ -2182,7 +2182,7 @@
     "startAudit": "Avvia audit",
     "noLocation": "Nessuna sede",
     "loading": "Caricamento degli audit…",
-    "empty": "Nessun audit delle sedi corrisponde a questa vista.",
+    "empty": "Nessun audit di sede corrisponde ancora a questa vista.",
     "columns": {
       "client": "Cliente",
       "location": "Sede",
@@ -2246,7 +2246,7 @@
       "notes": "Note",
       "exportCsv": "Esporta CSV",
       "exportStarted": "Esportazione CSV avviata.",
-      "exportEmpty": "Non c'è nulla da esportare in questa vista.",
+      "exportEmpty": "Non c’è nulla da esportare in questa vista.",
       "addUnexpected": "Aggiungi asset non previsto",
       "addUnexpectedHint": "Un dispositivo trovato in sede ma non incluso nell’ambito di questo audit viene registrato come non previsto, mai come previsto.",
       "addUnexpectedPlaceholder": "Cerca un asset…",
