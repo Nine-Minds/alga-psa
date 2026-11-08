@@ -11,10 +11,14 @@
 # and the stack's secrets by UID 1000, and `next dev` writes next-env.d.ts, the
 # dist directory and logs/ into the checkout, all of which are ignored by Git.
 # The wrapper still proves the source clean before and after.
+# Inherited cap_drop: ALL also removes root's filesystem access across these
+# owners. Grant only that access here; production keeps all capabilities dropped.
 services:
   server:
     image: node:22-bookworm-slim
     user: '0:0'
+    cap_add:
+      - DAC_OVERRIDE
     working_dir: /app/server
     environment:
       HOME: /root

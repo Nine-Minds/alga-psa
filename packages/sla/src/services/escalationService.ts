@@ -227,7 +227,8 @@ export async function checkEscalationNeeded(
   trx: Knex.Transaction,
   tenant: string,
   ticketId: string,
-  elapsedPercent: number
+  elapsedPercent: number,
+  requestedLevel?: 1 | 2 | 3
 ): Promise<1 | 2 | 3 | null> {
   const scopedDb = tenantDb(trx, tenant);
 
@@ -263,6 +264,15 @@ export async function checkEscalationNeeded(
   }
 
   const currentLevel = ticket.escalation_level || 0;
+
+  // Configured wake points can coincide. Evaluate each level independently so
+  // one shared timer does not collapse several due escalation actions into L3.
+  if (requestedLevel !== undefined) {
+    const threshold = target[`escalation_${requestedLevel}_percent`];
+    return threshold && elapsedPercent >= threshold && currentLevel < requestedLevel
+      ? requestedLevel
+      : null;
+  }
 
   // Check which escalation level should be triggered
   // Only trigger if we haven't already escalated to this level

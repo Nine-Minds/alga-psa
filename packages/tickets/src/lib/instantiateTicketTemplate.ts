@@ -23,7 +23,7 @@ import { countDuplicableCustomFields, pickDuplicableAttributes } from './ticketD
 
 /** A template could not become a ticket. The message is the user-facing reason (stored on a failed occurrence). */
 export class TicketTemplateInstantiationError extends Error {
-  constructor(message: string, readonly code: 'TEMPLATE_NOT_FOUND' | 'INVALID_REFERENCES') {
+  constructor(message: string, readonly code: 'TEMPLATE_NOT_FOUND' | 'INVALID_REFERENCES' | 'CLIENT_MISMATCH') {
     super(message);
     this.name = 'TicketTemplateInstantiationError';
   }
@@ -34,6 +34,8 @@ export interface TemplateForInstantiation {
   name: string;
   title: string;
   description: string | null;
+  /** Client the template is bound to; null = usable for every client. */
+  client_id: string | null;
   board_id: string | null;
   category_id: string | null;
   subcategory_id: string | null;
@@ -68,6 +70,7 @@ export async function loadTemplateForInstantiation(
     name: row.name,
     title: row.title,
     description: row.description ?? null,
+    client_id: row.client_id ?? null,
     board_id: row.board_id ?? null,
     category_id: row.category_id ?? null,
     subcategory_id: row.subcategory_id ?? null,
@@ -152,6 +155,10 @@ export async function instantiateTicketTemplate(
   const template = await loadTemplateForInstantiation(trx, tenant, input.templateId);
   if (!template) {
     throw new TicketTemplateInstantiationError('The ticket template no longer exists; point the schedule at another template', 'TEMPLATE_NOT_FOUND');
+  }
+  // A template bound to one client never produces a ticket for another.
+  if (template.client_id && template.client_id !== input.client.client_id) {
+    throw new TicketTemplateInstantiationError('This ticket template belongs to a different client', 'CLIENT_MISMATCH');
   }
 
   const fields = resolveTemplateTicketFields(template, input.dispatch, input.overrides);

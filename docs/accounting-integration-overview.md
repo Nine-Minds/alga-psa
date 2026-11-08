@@ -34,7 +34,7 @@ Key architecture artifacts come from:
 
 ### Data Model
 - `tenant_external_entity_mappings` (Postgres) stores `integration_type`, `alga_entity_type`, `alga_entity_id`, `external_entity_id`, optional `external_realm_id`, `metadata`, status fields, and timestamps.
-- Unique constraints prevent duplicate mappings per tenant/entity/realm combination: one mapping per Alga entity per realm, and external targets are one-to-one, except Xero revenue-account targets (`metadata.xeroTargetKind = 'account'`), which many services may share (`idx_unique_external_mapping` is a partial index that excludes them).
+- Unique constraints prevent duplicate mappings per tenant/entity/realm combination: one mapping per Alga entity per realm, and external targets are one-to-one, except (1) Xero revenue-account targets (`metadata.xeroTargetKind = 'account'`), which many services may share, and (2) QuickBooks Online tax codes, which many Alga tax regions may share (this is necessary for Automated Sales Tax realms where all taxable regions must map to the same `TAX` or `NON` pseudo-code). (`idx_unique_external_mapping` is a partial index that excludes both cases.)
 - Metadata enables adapter-specific payload data (e.g., Xero tax components).
 
 ### Server Actions (`packages/integrations/src/actions/externalMappingActions.ts`)

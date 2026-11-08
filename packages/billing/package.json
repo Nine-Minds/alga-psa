@@ -41,6 +41,10 @@
       "types": "./src/lib/payments/invoicePaymentUrls.ts",
       "import": "./dist/lib/payments/invoicePaymentUrls.mjs"
     },
+    "./lib/billing/timeEntryWorkContext": {
+      "types": "./src/lib/billing/timeEntryWorkContext.ts",
+      "import": "./dist/lib/billing/timeEntryWorkContext.mjs"
+    },
     "./services": {
       "types": "./src/services/index.ts",
       "import": "./dist/services/index.mjs"
@@ -53,7 +57,8 @@
   "scripts": {
     "build": "tsup",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "generate:pdf-fonts": "node scripts/generate-pdf-fonts.mjs"
   },
   "dependencies": {
     "@alga-psa/authorization": "*",

@@ -61,6 +61,9 @@ vi.mock('./syncMappingLedger', () => ({
     async findByExternalId(_type: string, externalId: string) {
       return mappingStore.find((m) => m.external_entity_id === externalId);
     }
+    async findAllByExternalId(_type: string, externalId: string) {
+      return mappingStore.filter((m) => m.external_entity_id === externalId && !m.deleted_at);
+    }
     async insert(params: any) {
       const row = { id: `m-${mappingStore.length + 1}`, ...params };
       mappingStore.push({
@@ -105,6 +108,7 @@ function makeKnex() {
       _whereCriteria: undefined as any,
       where: vi.fn((criteria: any) => { query._whereCriteria = criteria; return query; }),
       andWhere: vi.fn(() => query),
+      whereNull: vi.fn(() => query),
       whereIn: vi.fn(() => query),
       select: vi.fn(async () => {
         if (table === 'service_catalog') return catalogRows;
@@ -138,8 +142,11 @@ function makeKnex() {
   return knex;
 }
 
+const lockQboItemTargets = vi.fn(async (..._args: any[]) => undefined);
+
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: makeKnex() })),
+  lockQboItemTargets: (...args: any[]) => lockQboItemTargets(...args),
   tenantDb: (knex: any) => knex,
   withTransaction: (knex: any, fn: any) => knex.transaction(fn)
 }));
@@ -336,5 +343,85 @@ describe('qboItemImportService', () => {
     expect(serviceUpdate).not.toHaveBeenCalled();
     expect(serviceCreate).not.toHaveBeenCalled();
     expect(mappingStore).toHaveLength(1);
+  });
+  it('execute: takes the tenant/realm/item target lock before deciding each applied row', async () => {
+    qboQuery.mockResolvedValue([qboItem({ Id: 'q-lock', Name: 'Locked', UnitPrice: 1 })]);
+
+    await executeQboItemImportForTenant({ tenant: 't1', realm: 'r1', options: DEFAULTS });
+
+    expect(lockQboItemTargets).toHaveBeenCalledTimes(1);
+    expect(lockQboItemTargets).toHaveBeenCalledWith(expect.anything(), 't1', [{ realm: 'r1', itemId: 'q-lock' }]);
+    // The lock precedes any catalog or ledger write.
+    expect(lockQboItemTargets.mock.invocationCallOrder[0]).toBeLessThan(serviceCreate.mock.invocationCallOrder[0]);
+  });
+
+  describe('items shared by several services', () => {
+    const seedShared = () => {
+      for (const id of ['svc-a', 'svc-b']) {
+        catalogRows.push({
+          service_id: id, service_name: id, item_kind: 'service', sku: null,
+          description: null, default_rate: 100, cost: null, is_active: true
+        });
+      }
+      const rows = [
+        { id: 'm-a', alga_entity_id: 'svc-a', external_entity_id: 'q-shared', external_realm_id: 'r1', sync_status: 'synced', metadata: { keep: 'a' } },
+        { id: 'm-b', alga_entity_id: 'svc-b', external_entity_id: 'q-shared', external_realm_id: 'r1', sync_status: 'synced', metadata: { keep: 'b' } }
+      ];
+      mappingStore.push(...rows);
+      itemMappingRows.push(...rows.map((r) => ({ id: r.id, alga_entity_id: r.alga_entity_id, external_entity_id: 'q-shared' })));
+    };
+
+    it('preview and execute skip a multi-mapped item with a reason and write nothing', async () => {
+      seedShared();
+      qboQuery.mockResolvedValue([qboItem({ Id: 'q-shared', Name: 'Renamed in QBO', UnitPrice: 999 })]);
+
+      const preview = await previewQboItemImportForTenant({ tenant: 't1', realm: 'r1', options: DEFAULTS });
+      expect(preview.summary).toMatchObject({ skip: 1, create: 0, update: 0, link: 0 });
+      expect(preview.rows[0].flags).toContain('shared_item_mapping');
+      expect(preview.rows[0].reason).toBeTruthy();
+
+      const before = JSON.stringify(mappingStore);
+      const result = await executeQboItemImportForTenant({ tenant: 't1', realm: 'r1', options: DEFAULTS });
+
+      expect(result).toMatchObject({ created: 0, updated: 0, linked: 0, skipped: 1, errors: [] });
+      expect(serviceCreate).not.toHaveBeenCalled();
+      expect(serviceUpdate).not.toHaveBeenCalled();
+      expect(JSON.stringify(mappingStore)).toBe(before);
+      expect(lockQboItemTargets).not.toHaveBeenCalled();
+    });
+
+    it('a tombstone plus one live mapping is unambiguous and imports normally', async () => {
+      seedShared();
+      mappingStore[1].deleted_at = '2026-01-01T00:00:00Z';
+      itemMappingRows.pop(); // loadExistingItemMappings filters tombstones in SQL
+      qboQuery.mockResolvedValue([qboItem({ Id: 'q-shared', Name: 'svc-a', UnitPrice: 5 })]);
+
+      const result = await executeQboItemImportForTenant({ tenant: 't1', realm: 'r1', options: DEFAULTS });
+
+      expect(result.skipped).toBe(0);
+      expect(result.updated + result.linked).toBe(1);
+      expect(serviceCreate).not.toHaveBeenCalled();
+    });
+
+    it('a second mapping that appears after the preview aborts the row instead of choosing a winner', async () => {
+      catalogRows.push({
+        service_id: 'svc-a', service_name: 'svc-a', item_kind: 'service', sku: null,
+        description: null, default_rate: 100, cost: null, is_active: true
+      });
+      mappingStore.push({ id: 'm-a', alga_entity_id: 'svc-a', external_entity_id: 'q-race', external_realm_id: 'r1', sync_status: 'synced', metadata: {} });
+      itemMappingRows.push({ id: 'm-a', alga_entity_id: 'svc-a', external_entity_id: 'q-race' });
+      // A concurrent writer maps another service once the lock is granted.
+      lockQboItemTargets.mockImplementationOnce(async () => {
+        mappingStore.push({ id: 'm-late', alga_entity_id: 'svc-late', external_entity_id: 'q-race', external_realm_id: 'r1', sync_status: 'synced', metadata: {} });
+      });
+      qboQuery.mockResolvedValue([qboItem({ Id: 'q-race', Name: 'Changed', UnitPrice: 7 })]);
+
+      const result = await executeQboItemImportForTenant({ tenant: 't1', realm: 'r1', options: DEFAULTS });
+
+      expect(result.updated).toBe(0);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].message).toMatch(/changed after the preview/);
+      expect(serviceUpdate).not.toHaveBeenCalled();
+    });
   });
 });

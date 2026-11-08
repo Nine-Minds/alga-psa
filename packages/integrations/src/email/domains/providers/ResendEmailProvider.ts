@@ -489,32 +489,52 @@ export class ResendEmailProvider implements IEmailProvider {
   }
 
   private transformResendRecords(records: ResendDomainResponse['records'] | undefined, domain?: string): DnsRecord[] {
-    const suffix = domain?.toLowerCase().replace(/\.$/, '');
-    return (records ?? []).map((record) => ({
-      type: record.type.toUpperCase() as DnsRecord['type'],
-      name: this.ensureAbsoluteRecordName(record.name, suffix),
-      value: record.value,
-      ttl: record.ttl ? parseInt(record.ttl, 10) : undefined,
-      priority: record.priority ? parseInt(record.priority, 10) : undefined,
-    }));
+    const registered = domain?.toLowerCase().replace(/\.$/, '');
+    return (records ?? []).map((record) => {
+      const { name, host } = this.resolveRecordName(record.name, registered);
+      return {
+        type: record.type.toUpperCase() as DnsRecord['type'],
+        name,
+        host,
+        value: record.value,
+        ttl: record.ttl ? parseInt(record.ttl, 10) : undefined,
+        priority: record.priority ? parseInt(record.priority, 10) : undefined,
+      };
+    });
   }
 
-  private ensureAbsoluteRecordName(name: string, domain?: string): string {
+  // Resend reports record names relative to the registrable zone (public suffix list),
+  // so a subdomain like `e.resxtech.com` gets `send.e`, not `send`. Match the longest
+  // subdomain prefix first so the label is not appended twice (`send.e.e.resxtech.com`).
+  private resolveRecordName(rawName: string, domain?: string): { name: string; host: string } {
+    const trimmed = (rawName || '').replace(/\.$/, '').trim();
+    const host = trimmed === '' ? '@' : trimmed;
+
     if (!domain) {
-      return name;
+      return { name: trimmed, host };
     }
 
-    const trimmed = (name || '').replace(/\.$/, '').trim();
-    if (trimmed === '' || trimmed === '@') {
-      return domain;
+    if (host === '@') {
+      return { name: domain, host };
     }
 
     const lower = trimmed.toLowerCase();
-    if (lower === domain || lower.endsWith(`.${domain}`)) {
-      return trimmed;
+    if (lower === domain) {
+      return { name: trimmed, host: '@' };
+    }
+    if (lower.endsWith(`.${domain}`)) {
+      return { name: trimmed, host: trimmed.slice(0, trimmed.length - domain.length - 1) };
     }
 
-    return `${trimmed}.${domain}`;
+    const labels = domain.split('.');
+    for (let k = labels.length - 1; k >= 1; k--) {
+      const prefix = labels.slice(0, k).join('.');
+      if (lower === prefix || lower.endsWith(`.${prefix}`)) {
+        return { name: `${trimmed}.${labels.slice(k).join('.')}`, host };
+      }
+    }
+
+    return { name: `${trimmed}.${domain}`, host };
   }
 
   private normalizeDomainStatus(status?: string): { normalizedStatus: DomainVerificationResult['status']; rawStatus?: string } {
