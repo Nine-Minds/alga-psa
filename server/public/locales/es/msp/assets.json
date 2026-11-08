@@ -2187,7 +2187,7 @@
       "client": "Cliente",
       "location": "Ubicación",
       "status": "Estado",
-      "startedBy": "Iniciada por",
+      "startedBy": "Iniciado por",
       "started": "Iniciado",
       "completed": "Completado",
       "expected": "Esperados",
@@ -2238,7 +2238,7 @@
       "backToClient": "Volver a las auditorías del cliente",
       "untitledClient": "Cliente",
       "location": "Ubicación",
-      "startedBy": "Iniciada por",
+      "startedBy": "Iniciado por",
       "started": "Iniciado",
       "completed": "Completado",
       "scopeStatuses": "Estados incluidos en la auditoría",
@@ -2256,7 +2256,7 @@
       "completeConfirm_other": "{{count}} dispositivos sin marcar se registrarán como faltantes.",
       "cancelAudit": "Cancelar auditoría",
       "cancelConfirm": "Se abandona la auditoría y no se guarda ningún cambio en los activos. Esta acción no se puede deshacer.",
-      "keepAudit": "Continuar auditando"
+      "keepAudit": "Seguir auditando"
     },
     "items": {
       "columns": {
