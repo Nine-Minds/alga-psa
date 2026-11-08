@@ -385,11 +385,11 @@
       "warrantyExpiring_one": "1 vence en ≤90 d",
       "warrantyExpiring_other": "{{count}} vencen en ≤90 d",
       "warrantyTracked": " (de {{count}} con seguimiento)",
-      "auditsLink": "Auditorías de ubicaciones",
+      "auditsLink": "Auditorías de sitios",
       "lastAudit": "Última auditoría: {{date}}",
       "lastAuditMissing_one": "1 faltante",
       "lastAuditMissing_other": "{{count}} faltantes",
-      "neverAudited": "Sin auditorías previas"
+      "neverAudited": "Nunca auditado"
     },
     "locations": {
       "billing": "Facturación",
@@ -400,7 +400,7 @@
       "none": "Aún no hay ubicaciones.",
       "shipping": "Envío",
       "lastAudit": "Auditada el {{date}}",
-      "neverAudited": "Sin auditorías previas"
+      "neverAudited": "Nunca auditada"
     },
     "money": {
       "activeContracts": "Contratos activos",
