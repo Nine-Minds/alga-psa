@@ -85,7 +85,6 @@ describe('ProjectInfo materials drawer', () => {
       <ProjectInfo
         project={project}
         users={[]}
-        clients={[]}
         phases={[]}
       />
     );

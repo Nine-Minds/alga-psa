@@ -1,0 +1,18 @@
+name: single-tenant-common-rejected
+description: Single-tenant (AzureADMyOrg) app; authorizing at /common or /organizations fails with AADSTS50194
+# Assumed (docs do not say which endpoint raises it): AADSTS50194 fires at
+# /authorize, as a redirect to redirect_uri with error=invalid_request and
+# error_description (state echoed); /token repeats the check as a JSON 400 with
+# error_codes [50194]. Drive: GET /common/oauth2/v2.0/authorize?client_id=...
+steps:
+  - reset: msgraph
+  - seed: msgraph/client
+    params:
+      clientId: aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa
+      clientSecret: single-tenant-secret
+      displayName: Cedar Grove Mail
+      signInAudience: AzureADMyOrg
+      homeTenantId: bbbbbbbb-1111-4111-8111-111111111111
+      redirectUris: ["http://localhost:3000/api/auth/callback/azure-ad"]
+  - seed: msgraph/signed-in-user
+    params: { userPrincipalName: jamie@cedar.example, mail: jamie@cedar.example, tenantId: bbbbbbbb-1111-4111-8111-111111111111 }

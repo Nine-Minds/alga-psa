@@ -96,7 +96,8 @@
       "policies": "Policyer",
       "apiKeys": "API-nycklar",
       "webhooks": "Webhookar",
-      "userProvisioning": "Användaretablering"
+      "userProvisioning": "Användaretablering",
+      "servicePrincipals": "Tjänstehuvudmän"
     },
     "loading": {
       "roles": "Läser in rollkonfiguration…",
@@ -107,7 +108,8 @@
       "webhooks": "Läser in webhookkonfiguration…",
       "sso": "Läser in verktyg för SSO-hantering…",
       "sessions": "Läser in aktiva sessioner…",
-      "userProvisioning": "Läser in SCIM-etablering…"
+      "userProvisioning": "Läser in SCIM-etablering…",
+      "servicePrincipals": "Läser in tjänstehuvudmän..."
     },
     "scim": {
       "title": "Användaretablering",

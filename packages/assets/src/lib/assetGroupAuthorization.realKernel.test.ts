@@ -31,6 +31,7 @@ vi.mock('@alga-psa/db', () => ({
           rows = rows.filter((row) => values.includes(row[key]));
           return query;
         },
+        orderBy() { return query; },
         select() { return query; },
         first() { return Promise.resolve(rows[0]); },
         pluck(key: string) { return Promise.resolve(rows.map((row) => row[key])); },

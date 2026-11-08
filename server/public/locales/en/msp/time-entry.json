@@ -133,7 +133,8 @@
       "notes": "Notes",
       "deleteTimeEntry": "Delete Time Entry",
       "unsavedChanges": "Unsaved changes",
-      "contractLine": "Contract line"
+      "contractLine": "Contract line",
+      "operational": "Operational - not billed"
     },
     "placeholders": {
       "selectService": "Select a service",

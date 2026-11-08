@@ -88,12 +88,12 @@ describe('ticketSmartSearch definition', () => {
       tickets: [{ ticket_id: 'a' } as never],
       metadata: { agentAvatarUrls: {}, teamAvatarUrls: {}, ticketTags: {} },
     });
-    await expect(ticketSmartSearch.hydrateRows({} as never, ['a'])).resolves.toEqual({
+    await expect(ticketSmartSearch.hydrateRows({} as never, ['a'], new Map())).resolves.toEqual({
       rows: [{ ticket_id: 'a' }],
       metadata: { agentAvatarUrls: {}, teamAvatarUrls: {}, ticketTags: {} },
     });
     vi.mocked(loadTicketListItemsByIds).mockResolvedValue({ permissionError: 'nope' } as never);
-    await expect(ticketSmartSearch.hydrateRows({} as never, ['a'])).resolves.toEqual({ permissionError: 'nope' });
+    await expect(ticketSmartSearch.hydrateRows({} as never, ['a'], new Map())).resolves.toEqual({ permissionError: 'nope' });
     expect(ticketSmartSearch.rowId({ ticket_id: 'z' } as never)).toBe('z');
   });
 

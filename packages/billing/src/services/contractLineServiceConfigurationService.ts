@@ -10,22 +10,38 @@ import {
 } from '../lib/billing/seatRevisions';
 import { resolveRecurringUnitKind, type RecurringUnitKind } from '@alga-psa/shared/billingClients/recurringUnitPricing';
 import { Knex } from 'knex';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import { v4 as uuidv4 } from 'uuid';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import {
+  ContractLineServiceConfigurationMutableValues,
   IContractLineServiceConfiguration,
   IContractLineServiceFixedConfig,
   IContractLineServiceHourlyConfig,
   IContractLineServiceUsageConfig,
   IContractLineServiceBucketConfig,
   IContractLineServiceRateTier,
-  IUserTypeRate
+  IUserTypeRate,
+  IUserWithRoles
 } from '@alga-psa/types';
 import ContractLineServiceConfiguration from '../models/contractLineServiceConfiguration';
 import ContractLineServiceFixedConfig, { resolveFixedMemberRateWrite } from '../models/contractLineServiceFixedConfig';
 import ContractLineServiceHourlyConfig from '../models/contractLineServiceHourlyConfig';
 import ContractLineServiceUsageConfig from '../models/contractLineServiceUsageConfig';
 import ContractLineServiceBucketConfig from '../models/contractLineServiceBucketConfig';
+import {
+  assertServiceEligibleForContractLine,
+  resolveContractLineServiceConfigurationType,
+} from '../lib/contractLineServiceConfigPolicy';
+
+export type ConfigurationRebindInput = {
+  targetContractLineId: string;
+  targetServiceId: string;
+  configurationType?: IContractLineServiceConfiguration['configuration_type'];
+  mutableValues?: ContractLineServiceConfigurationMutableValues;
+  typeConfig?: Partial<IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig>;
+  rateTiers?: IContractLineServiceRateTier[];
+};
 
 export class ContractLineServiceConfigurationService {
   private knex: Knex;
@@ -314,7 +330,7 @@ export class ContractLineServiceConfigurationService {
    */
   async updateConfiguration(
     configId: string,
-    baseConfig?: Partial<IContractLineServiceConfiguration>,
+    baseConfig?: ContractLineServiceConfigurationMutableValues,
     typeConfig?: Partial<IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig>,
     rateTiers?: IContractLineServiceRateTier[], // Add rateTiers parameter
     // userTypeRates parameter removed as it's not used for hourly updates here
@@ -490,6 +506,99 @@ export class ContractLineServiceConfigurationService {
       // User type rates are plan-wide and not updated here.
       
       return true;
+    });
+  }
+
+  /** Rebind a live configuration under the source-delete and target-create gates. */
+  async rebindConfiguration(user: IUserWithRoles, configId: string, input: ConfigurationRebindInput): Promise<string> {
+    await this.initKnex();
+    return this.knex.transaction(async (trx) => {
+      await lockTenantBilling(trx, this.tenant);
+      const configModel = new ContractLineServiceConfiguration(trx, this.tenant);
+      const current = await tenantDb(trx, this.tenant).table('contract_line_service_configuration')
+        .where({ config_id: configId }).forUpdate().first() as IContractLineServiceConfiguration | undefined;
+      if (!current) throw new Error(`Configuration with ID ${configId} not found`);
+
+      if (!await hasPermission(user, 'billing', 'delete', trx)) {
+        throw new Error('Permission denied: billing:delete required to remove the configuration from its source line');
+      }
+      if (!await hasPermission(user, 'billing', 'create', trx)) {
+        throw new Error('Permission denied: billing:create required to attach the configuration to its target line');
+      }
+
+      const authorableLine = async (lineId: string) => {
+        const line = await tenantDb(trx, this.tenant).table('contract_lines')
+          .where({ contract_line_id: lineId }).forUpdate().first();
+        if (!line) throw new Error(`Contract line ${lineId} not found`);
+        if (line.contract_id) {
+          const contract = await tenantDb(trx, this.tenant).table('contracts')
+            .where({ contract_id: line.contract_id }).first('is_system_managed_default');
+          if (contract?.is_system_managed_default === true) {
+            throw new Error('System-managed default contracts are attribution-only; contract-line service configuration authoring is disabled.');
+          }
+        }
+        return line;
+      };
+      const checkedLines = new Map<string, any>();
+      for (const lineId of [...new Set([current.contract_line_id, input.targetContractLineId])].sort()) {
+        checkedLines.set(lineId, await authorableLine(lineId));
+      }
+
+      const targetService = await tenantDb(trx, this.tenant).table('service_catalog')
+        .where({ service_id: input.targetServiceId }).first();
+      if (!targetService) throw new Error(`Service ${input.targetServiceId} not found`);
+      assertServiceEligibleForContractLine(targetService, checkedLines.get(input.targetContractLineId).contract_line_type);
+      const targetConfig = await configModel.getByContractLineIdAndServiceId(input.targetContractLineId, input.targetServiceId);
+      if (targetConfig && targetConfig.config_id !== configId) {
+        const duplicate = new Error('This service configuration already exists for the selected contract line.') as Error & { code: string };
+        duplicate.code = '23505';
+        throw duplicate;
+      }
+
+      const targetType = input.configurationType ?? current.configuration_type;
+      const compatibleType = resolveContractLineServiceConfigurationType(
+        checkedLines.get(input.targetContractLineId).contract_line_type,
+        targetType,
+      );
+      const sourceMembership = { contract_line_id: current.contract_line_id, service_id: current.service_id };
+      const targetMembership = { contract_line_id: input.targetContractLineId, service_id: input.targetServiceId };
+      const identityChanges = sourceMembership.contract_line_id !== targetMembership.contract_line_id || sourceMembership.service_id !== targetMembership.service_id;
+      if (identityChanges || compatibleType !== current.configuration_type) {
+        const deletionGuard = await configurationDeletionGuard({ trx, tenant: this.tenant, configId });
+        if (deletionGuard) throw new Error(deletionGuard);
+      }
+
+      const membershipTable = () => tenantDb(trx, this.tenant).table('contract_line_services');
+      if (identityChanges) {
+        const targetMembershipRow = await membershipTable().where(targetMembership).first('service_id');
+        if (!targetMembershipRow) await membershipTable().insert({ tenant: this.tenant, ...targetMembership });
+        await membershipTable().where(sourceMembership).delete();
+      }
+
+      if (compatibleType !== current.configuration_type) {
+        const transactionService = new ContractLineServiceConfigurationService(trx, this.tenant);
+        await transactionService.deleteConfiguration(configId);
+        return transactionService.createConfiguration({
+          tenant: this.tenant,
+          contract_line_id: input.targetContractLineId,
+          service_id: input.targetServiceId,
+          configuration_type: compatibleType,
+          custom_rate: input.mutableValues?.custom_rate !== undefined ? input.mutableValues.custom_rate : current.custom_rate,
+          quantity: input.mutableValues?.quantity !== undefined ? input.mutableValues.quantity : current.quantity,
+        }, input.typeConfig ?? {}, input.rateTiers as any);
+      }
+
+      if (identityChanges) {
+        await configModel.rebindIdentity(configId, input.targetContractLineId, input.targetServiceId);
+      }
+      if (input.typeConfig || input.rateTiers) {
+        await new ContractLineServiceConfigurationService(trx, this.tenant)
+          .updateConfiguration(configId, input.mutableValues, input.typeConfig, input.rateTiers);
+      } else if (input.mutableValues) {
+        await new ContractLineServiceConfigurationService(trx, this.tenant)
+          .updateConfiguration(configId, input.mutableValues);
+      }
+      return configId;
     });
   }
 
@@ -795,7 +904,8 @@ export class ContractLineServiceConfigurationService {
   async upsertPlanServiceBucketConfiguration(
     contractLineId: string,
     serviceId: string,
-    bucketConfigData: Partial<Omit<IContractLineServiceBucketConfig, 'config_id' | 'tenant' | 'created_at' | 'updated_at'>>
+    bucketConfigData: Partial<Omit<IContractLineServiceBucketConfig, 'config_id' | 'tenant' | 'created_at' | 'updated_at'>>,
+    actor?: IUserWithRoles,
   ): Promise<string> {
     await this.initKnex();
 
@@ -860,10 +970,12 @@ export class ContractLineServiceConfigurationService {
         console.log(`Created base config with ID: ${configId}`);
       } else {
         configId = baseConfig.config_id;
-        // 3. Update base configuration type if it's not Bucket
         if (baseConfig.configuration_type !== 'Bucket') {
-          console.log(`Base config ${configId} type is ${baseConfig.configuration_type}. Updating to Bucket.`);
-          await planServiceConfigModel.update(configId, { configuration_type: 'Bucket' });
+          if (!actor) throw new Error('Permission denied: billing:delete and billing:create are required to change configuration type');
+          return new ContractLineServiceConfigurationService(trx, this.tenant).rebindConfiguration(actor, configId, {
+            targetContractLineId: contractLineId, targetServiceId: serviceId, configurationType: 'Bucket',
+            typeConfig: bucketConfigData,
+          });
         }
       }
 
@@ -906,7 +1018,8 @@ export class ContractLineServiceConfigurationService {
   async upsertPlanServiceHourlyConfiguration(
     contractLineId: string,
     serviceId: string,
-    hourlyConfigData: Partial<Omit<IContractLineServiceHourlyConfig, 'config_id' | 'tenant' | 'created_at' | 'updated_at'>>
+    hourlyConfigData: Partial<Omit<IContractLineServiceHourlyConfig, 'config_id' | 'tenant' | 'created_at' | 'updated_at'>>,
+    actor?: IUserWithRoles,
   ): Promise<string> {
     await this.initKnex();
 
@@ -939,10 +1052,11 @@ export class ContractLineServiceConfigurationService {
         console.log(`Created base config with ID: ${configId}`);
       } else {
         configId = baseConfig.config_id;
-        // 3. Update base configuration type if it's not Hourly
         if (baseConfig.configuration_type !== 'Hourly') {
-          console.log(`Base config ${configId} type is ${baseConfig.configuration_type}. Updating to Hourly.`);
-          await planServiceConfigModel.update(configId, { configuration_type: 'Hourly' });
+          if (!actor) throw new Error('Permission denied: billing:delete and billing:create are required to change configuration type');
+          return new ContractLineServiceConfigurationService(trx, this.tenant).rebindConfiguration(actor, configId, {
+            targetContractLineId: contractLineId, targetServiceId: serviceId, configurationType: 'Hourly', typeConfig: hourlyConfigData,
+          });
         }
       }
 
@@ -991,7 +1105,8 @@ export class ContractLineServiceConfigurationService {
       unit_of_measure?: string;
       enable_tiered_pricing?: boolean;
       minimum_usage?: number | null;
-    }
+    },
+    actor?: IUserWithRoles,
   ): Promise<string> {
     await this.initKnex();
 
@@ -1032,13 +1147,15 @@ export class ContractLineServiceConfigurationService {
         configId = await planServiceConfigModel.create(newBaseConfig);
       } else {
         configId = baseConfig.config_id;
-        const updatePayload: Partial<IContractLineServiceConfiguration> = {
-          custom_rate: normalizedUnitRate,
-        };
         if (baseConfig.configuration_type !== 'Usage') {
-          updatePayload.configuration_type = 'Usage';
+          if (!actor) throw new Error('Permission denied: billing:delete and billing:create are required to change configuration type');
+          return new ContractLineServiceConfigurationService(trx, this.tenant).rebindConfiguration(actor, configId, {
+            targetContractLineId: contractLineId, targetServiceId: serviceId, configurationType: 'Usage',
+            mutableValues: { custom_rate: normalizedUnitRate },
+            typeConfig: { unit_of_measure: usageConfigData.unit_of_measure, enable_tiered_pricing: usageConfigData.enable_tiered_pricing, minimum_usage: usageConfigData.minimum_usage, base_rate: normalizedUnitRate },
+          });
         }
-        await planServiceConfigModel.update(configId, updatePayload);
+        await planServiceConfigModel.update(configId, { custom_rate: normalizedUnitRate });
       }
 
       const usagePayload = {

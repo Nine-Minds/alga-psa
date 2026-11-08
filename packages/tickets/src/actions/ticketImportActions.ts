@@ -111,53 +111,6 @@ async function ticketImportRowErrorMessage(error: unknown): Promise<string> {
   return 'Unable to save this import row. Check required fields and mapped references.';
 }
 
-function tenantWhereColumnSql(
-  conn: Knex | Knex.Transaction,
-  tenant: string,
-  leftTenantColumn: string,
-  rightTenantColumn: string
-): { sql: string; bindings: Knex.RawBinding[] } {
-  const fragmentSource = (conn as Knex)('__tenant_where_fragment__').select(conn.raw('1'));
-
-  tenantDb(conn, tenant).tenantWhereColumn(fragmentSource, leftTenantColumn, rightTenantColumn);
-
-  const compiled = fragmentSource.toSQL();
-  const marker = ' where ';
-  const markerIndex = compiled.sql.indexOf(marker);
-
-  if (markerIndex < 0) {
-    throw new Error('Tenant where-column SQL fragment marker was not present in compiled SQL.');
-  }
-
-  return {
-    sql: compiled.sql.slice(markerIndex + marker.length),
-    bindings: compiled.bindings as Knex.RawBinding[],
-  };
-}
-
-function tenantScopedTicketBatchUpdateScopeSql(
-  conn: Knex | Knex.Transaction,
-  tenant: string,
-  ticketIds: string[]
-): {
-  sql: string;
-  bindings: Knex.RawBinding[];
-  targetTenantPredicate: { sql: string; bindings: Knex.RawBinding[] };
-} {
-  const scoped = tenantDb(conn, tenant)
-    .table('tickets')
-    .select('ticket_id', 'tenant')
-    .whereIn('ticket_id', ticketIds)
-    .toSQL();
-  const targetTenantPredicate = tenantWhereColumnSql(conn, tenant, 'target.tenant', 'scoped_tickets.tenant');
-
-  return {
-    sql: `(${scoped.sql}) scoped_tickets`,
-    bindings: scoped.bindings as Knex.RawBinding[],
-    targetTenantPredicate,
-  };
-}
-
 // ---------------------------------------------------------------------------
 // CSV template
 // ---------------------------------------------------------------------------
@@ -639,13 +592,27 @@ export const importTickets = withAuth(async (
       throw new Error('No ticket priorities found. Please configure priorities first.');
     }
 
-    // Pre-load all status is_closed flags to avoid per-ticket queries
+    // Pre-load statuses to avoid per-ticket queries and resolve a closed
+    // historical row to a status that belongs to its destination board.
     const allStatuses = await tenantScopedTable('statuses')
       .where({ status_type: 'ticket' })
-      .select('status_id', 'is_closed');
-    const statusClosedMap = new Map<string, boolean>();
+      .select('status_id', 'board_id', 'is_closed', 'is_default', 'order_number')
+      .orderBy('order_number');
+    const statusById = new Map<string, { status_id: string; board_id: string | null; is_closed: boolean; is_default: boolean }>();
+    const closedStatusesByBoard = new Map<string, Array<{ status_id: string; board_id: string | null; is_closed: boolean; is_default: boolean }>>();
     for (const s of allStatuses) {
-      statusClosedMap.set(s.status_id, Boolean(s.is_closed));
+      const status = {
+        status_id: s.status_id,
+        board_id: s.board_id ?? null,
+        is_closed: Boolean(s.is_closed),
+        is_default: Boolean(s.is_default),
+      };
+      statusById.set(status.status_id, status);
+      if (status.is_closed && status.board_id) {
+        const boardStatuses = closedStatusesByBoard.get(status.board_id) ?? [];
+        boardStatuses.push(status);
+        closedStatusesByBoard.set(status.board_id, boardStatuses);
+      }
     }
 
     // Pre-load contact → client_id mapping for cross-client validation
@@ -656,9 +623,8 @@ export const importTickets = withAuth(async (
       contactClientMap.set(c.contact_name_id, c.client_id || null);
     }
 
-    // Collect post-creation updates to batch at the end
-    const enteredAtUpdates: Array<{ ticket_id: string; entered_at: string }> = [];
-    const closedUpdates: Array<{ ticket_id: string; closed_at: string; closed_by: string; board_id: string | null }> = [];
+    // Imported-closed tickets, recorded for the close-rules bypass audit after creation.
+    const closedUpdates: Array<{ ticket_id: string; board_id: string | null }> = [];
 
     // Step 6: Pre-resolve all tickets (pure logic, no DB)
     interface ResolvedTicket {
@@ -714,10 +680,25 @@ export const importTickets = withAuth(async (
         }
       }
 
-      const finalStatusId = resolvedStatusId || resolvedFallbackStatusId;
-      let isClosed = ticket.is_closed;
-      if (finalStatusId && statusClosedMap.get(finalStatusId)) {
-        isClosed = true;
+      const destinationBoardId = ticket.board_id || defaultBoardId;
+      let finalStatusId = resolvedStatusId || resolvedFallbackStatusId;
+      const requestedStatus = resolvedStatusId ? statusById.get(resolvedStatusId) : undefined;
+      let isClosed = ticket.is_closed || (
+        requestedStatus?.board_id === destinationBoardId && requestedStatus.is_closed
+      );
+
+      const finalStatus = statusById.get(finalStatusId);
+      if (isClosed && (finalStatus?.board_id !== destinationBoardId || !finalStatus.is_closed)) {
+        const destinationClosedStatuses = closedStatusesByBoard.get(destinationBoardId) ?? [];
+        const closedStatus = destinationClosedStatuses.find((status) => status.is_default) ?? destinationClosedStatuses[0];
+        if (!closedStatus) {
+          errors.push(
+            `Row ${ticket.rowNumber}: Cannot import "${ticket.title}" as closed because destination board ${destinationBoardId} has no closed ticket status. Add a closed status to that board or choose a board with one.`,
+          );
+          ticketsSkipped++;
+          continue;
+        }
+        finalStatusId = closedStatus.status_id;
       }
 
       resolvedTickets.push({
@@ -737,6 +718,7 @@ export const importTickets = withAuth(async (
 
     // Contacts created during import, keyed by "contactName\0clientId" to deduplicate
     const createdContactMap = new Map<string, string>();
+    const nowIso = new Date().toISOString();
     // Rows to announce once the import is settled: createSingleTicket runs inside savepoints that
     // can roll back, so a contact is only published if it still exists at the end.
     const createdContactRows = new Map<string, any>();
@@ -786,6 +768,19 @@ export const importTickets = withAuth(async (
         entered_by: user.user_id,
         source: 'csv_import',
         ticket_origin: 'INTERNAL',
+        // The model owns historical creation: it writes entered_at and, for a
+        // closed status, is_closed / closed_at / closed_by with the row.
+        // A closed row with no open date defaults entered_at to closed_at (or now
+        // when neither is given), so a supplied closed_at is never before it.
+        historical: isClosed
+          ? {
+              entered_at: ticket.entered_at || ticket.closed_at || nowIso,
+              closed_at: ticket.closed_at || nowIso,
+              closed_by: user.user_id,
+            }
+          : ticket.entered_at
+            ? { entered_at: ticket.entered_at }
+            : undefined,
       };
 
       const result = await TicketModel.createTicket(
@@ -795,15 +790,7 @@ export const importTickets = withAuth(async (
       );
 
       if (isClosed && result.ticket_id) {
-        closedUpdates.push({
-          ticket_id: result.ticket_id,
-          closed_at: ticket.closed_at || new Date().toISOString(),
-          closed_by: user.user_id,
-          board_id: ticket.board_id || null,
-        });
-      }
-      if (ticket.entered_at && result.ticket_id) {
-        enteredAtUpdates.push({ ticket_id: result.ticket_id, entered_at: ticket.entered_at });
+        closedUpdates.push({ ticket_id: result.ticket_id, board_id: ticket.board_id || null });
       }
       if (ticket.tags.length > 0 && result.ticket_id) {
         const pendingTags = ticket.tags.map(tagText => ({
@@ -821,7 +808,6 @@ export const importTickets = withAuth(async (
       let batchOk = false;
 
       // Snapshot mutable state before attempting the batch so we can restore on rollback
-      const prevEnteredLen = enteredAtUpdates.length;
       const prevClosedLen = closedUpdates.length;
       const prevCreated = ticketsCreated;
       const prevNumbers = ticketNumbers.length;
@@ -843,7 +829,6 @@ export const importTickets = withAuth(async (
         // Batch failed — rollback DB and restore in-memory state
         await trx.raw(`ROLLBACK TO SAVEPOINT ${sp}`);
         await trx.raw(`RELEASE SAVEPOINT ${sp}`);
-        enteredAtUpdates.length = prevEnteredLen;
         closedUpdates.length = prevClosedLen;
         ticketsCreated = prevCreated;
         ticketNumbers.length = prevNumbers;
@@ -859,7 +844,6 @@ export const importTickets = withAuth(async (
           // savepoint rollback removes the contact row, so the in-memory state
           // has to be restored too or later rows reuse an id that no longer exists.
           const rowContactMap = new Map(createdContactMap);
-          const rowEnteredLen = enteredAtUpdates.length;
           const rowClosedLen = closedUpdates.length;
 
           const created = await safeInsert(
@@ -873,61 +857,16 @@ export const importTickets = withAuth(async (
             ticketsSkipped++;
             createdContactMap.clear();
             for (const [k, v] of rowContactMap) createdContactMap.set(k, v);
-            enteredAtUpdates.length = rowEnteredLen;
             closedUpdates.length = rowClosedLen;
           }
         }
       }
     }
 
-    // Batch post-creation updates to reduce round-trips
-    // Use parameterized VALUES + UPDATE FROM to avoid string interpolation
-    const BATCH_SIZE = 100;
-    for (let i = 0; i < enteredAtUpdates.length; i += BATCH_SIZE) {
-      const batch = enteredAtUpdates.slice(i, i + BATCH_SIZE);
-      const values = batch.map(() => '(?::uuid, ?::timestamptz)').join(', ');
-      const params: (string)[] = [];
-      for (const u of batch) { params.push(u.ticket_id, u.entered_at); }
-      const ticketScope = tenantScopedTicketBatchUpdateScopeSql(trx, tenant, batch.map((u) => u.ticket_id));
-      await admitOperationalWrite(trx, tenant, 'tickets', 'raw:ticket-import-dates');
-      await trx.raw(
-        `
-          UPDATE tickets AS target
-          SET entered_at = v.entered_at
-          FROM ${ticketScope.sql}
-          JOIN (VALUES ${values}) AS v(tid, entered_at)
-            ON scoped_tickets.ticket_id = v.tid
-          WHERE target.ticket_id = scoped_tickets.ticket_id
-            AND ${ticketScope.targetTenantPredicate.sql}
-        `,
-        [...ticketScope.bindings, ...params, ...ticketScope.targetTenantPredicate.bindings]
-      );
-    }
-    for (let i = 0; i < closedUpdates.length; i += BATCH_SIZE) {
-      const batch = closedUpdates.slice(i, i + BATCH_SIZE);
-      const values = batch.map(() => '(?::uuid, ?::timestamptz, ?::uuid)').join(', ');
-      const params: (string)[] = [];
-      for (const u of batch) { params.push(u.ticket_id, u.closed_at, u.closed_by); }
-      const ticketScope = tenantScopedTicketBatchUpdateScopeSql(trx, tenant, batch.map((u) => u.ticket_id));
-      await admitOperationalWrite(trx, tenant, 'tickets', 'raw:ticket-import-dates');
-      await trx.raw(
-        `
-          UPDATE tickets AS target
-          SET closed_at = v.closed_at,
-              closed_by = v.closed_by
-          FROM ${ticketScope.sql}
-          JOIN (VALUES ${values}) AS v(tid, closed_at, closed_by)
-            ON scoped_tickets.ticket_id = v.tid
-          WHERE target.ticket_id = scoped_tickets.ticket_id
-            AND ${ticketScope.targetTenantPredicate.sql}
-        `,
-        [...ticketScope.bindings, ...params, ...ticketScope.targetTenantPredicate.bindings]
-      );
-    }
-
     // Imported-closed tickets never pass through the close-rule gates; record
     // the bypass on boards that have gates enabled. Gate config is looked up
     // once per board, not per ticket.
+    // LEVERAGE: pattern historical-import-close-bypass-activity — same CLOSE_RULES_BYPASSED audit as TicketService.create (api_import); fold into a shared helper.
     if (closedUpdates.length > 0) {
       const closedBoardIds = [...new Set(closedUpdates.map((u) => u.board_id).filter((b): b is string => !!b))];
       const gatedBoards = new Set<string>();

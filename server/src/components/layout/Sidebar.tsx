@@ -23,6 +23,7 @@ import { useMspBranding } from './MspBrandingContext';
 import { pickLogoForSurface } from './mspBranding';
 import SidebarMenuItem from './SidebarMenuItem';
 import SidebarSubMenuItem from './SidebarSubMenuItem';
+import SidebarCollapsedFlyout from './SidebarCollapsedFlyout';
 import SidebarBottomMenuItem from './SidebarBottomMenuItem';
 import GitHubStarButton from './GitHubStarButton';
 import SearchPalette from '@/components/search/SearchPalette';
@@ -153,6 +154,12 @@ const Sidebar: React.FC<SidebarProps> = ({
     return searchParams?.get('tab') === targetTab;
   };
 
+  // Routes that belong to a section without being one of its listed links, so a
+  // section row stays highlighted across its whole subtree (any /msp/settings
+  // page keeps Settings lit, even after "Back to Main").
+  const isRelatedPathActive = (paths: readonly string[]) =>
+    paths.some((related) => pathname === related || (pathname?.startsWith(`${related}/`) ?? false));
+
   const toggleSubmenu = (name: string) => {
     setOpenSubmenu(openSubmenu === name ? null : name);
   };
@@ -178,26 +185,39 @@ const Sidebar: React.FC<SidebarProps> = ({
     items: section.items.map(translateMenuItem),
   });
 
-  const renderMenuItem = (item: MenuItem) => {
+  const renderMenuItem = (item: MenuItem, idPrefix: 'menu' | 'bottom-menu' = 'menu') => {
+    const itemId = `${idPrefix}-${item.name.toLowerCase().replace(/\s+/g, '-')}`;
+    const menuItem = (
+      <SidebarMenuItem
+        id={itemId}
+        item={item}
+        isActive={isActive}
+        isRelatedPathActive={isRelatedPathActive}
+        sidebarOpen={sidebarOpen}
+        openSubmenu={openSubmenu}
+        onToggleSubmenu={toggleSubmenu}
+        onMenuItemClick={onMenuItemClick}
+      />
+    );
+
     if (sidebarOpen) {
+      const isExpanded = Boolean(item.subItems) && openSubmenu === item.name;
       return (
-        <li key={item.name}>
-          <SidebarMenuItem
-            id={`menu-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
-            item={item}
-            isActive={isActive}
-            sidebarOpen={sidebarOpen}
-            openSubmenu={openSubmenu}
-            onToggleSubmenu={toggleSubmenu}
-            onMenuItemClick={onMenuItemClick}
-          />
+        // An open section is bracketed by the same hairline the rail already uses
+        // under the last bottom item, so its sub-items read as one marked group.
+        <li
+          key={item.name}
+          className={isExpanded ? 'my-1 py-1 border-y border-sidebar-text/20' : undefined}
+          data-automation-id={isExpanded ? `sidebar-section-open-${itemId}` : undefined}
+        >
+          {menuItem}
           {item.subItems && openSubmenu === item.name && (
             <ul className="ml-4 mt-2 space-y-1">
               {item.subItems.map((subItem: MenuItem): React.JSX.Element => (
                 <li key={subItem.name}>
                   <SidebarSubMenuItem
                     item={subItem}
-                    parentId={`menu-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
+                    parentId={itemId}
                     isActive={isActive}
                     onMenuItemClick={onMenuItemClick}
                   />
@@ -209,35 +229,30 @@ const Sidebar: React.FC<SidebarProps> = ({
       );
     }
 
+    // Collapsed: a flyout beside the rail carries the sub-item labels, because
+    // a stack of 4rem-wide sub-icons is unreadable.
+    if (item.subItems) {
+      return (
+        <SidebarCollapsedFlyout
+          key={item.name}
+          label={item.name}
+          parentId={itemId}
+          subItems={item.subItems}
+          open={openSubmenu === item.name}
+          onOpenChange={(next) => setOpenSubmenu(next ? item.name : null)}
+          isActive={isActive}
+          onMenuItemClick={onMenuItemClick}
+        >
+          {menuItem}
+        </SidebarCollapsedFlyout>
+      );
+    }
+
     return (
       <Tooltip.Provider delayDuration={300} key={item.name}>
         <Tooltip.Root>
           <Tooltip.Trigger asChild>
-            <li>
-              <SidebarMenuItem
-                id={`menu-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
-                item={item}
-                isActive={isActive}
-                sidebarOpen={sidebarOpen}
-                openSubmenu={openSubmenu}
-                onToggleSubmenu={toggleSubmenu}
-                onMenuItemClick={onMenuItemClick}
-              />
-              {item.subItems && openSubmenu === item.name && (
-                <ul className="ml-4 mt-2 space-y-1">
-                  {item.subItems.map((subItem: MenuItem): React.JSX.Element => (
-                    <li key={subItem.name}>
-                      <SidebarSubMenuItem
-                        item={subItem}
-                        parentId={`menu-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
-                        isActive={isActive}
-                        onMenuItemClick={onMenuItemClick}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </li>
+            <li>{menuItem}</li>
           </Tooltip.Trigger>
           <Tooltip.Portal>
             <Tooltip.Content
@@ -274,6 +289,17 @@ const Sidebar: React.FC<SidebarProps> = ({
   const sectionsToRender = rawSectionsToRender.map(translateSection);
   const translatedBottomMenuItems = bottomMenuItems.map(translateMenuItem);
   const backToMainLabel = t('sidebar.backToMain', { defaultValue: 'Back to Main' });
+  // A swapped nav with no name of its own leaves the user guessing which section
+  // replaced the main menu, so each sub mode states it.
+  const modeTitle = isSettingsMode
+    ? t('sidebar.settings', { defaultValue: 'Settings' })
+    : isBillingMode
+      ? t('nav.billing.label', { defaultValue: 'Billing' })
+      : isExtensionsMode
+        ? t('nav.extensions', { defaultValue: 'Extensions' })
+        : isInventoryMode
+          ? t('nav.inventory.label', { defaultValue: 'Inventory' })
+          : null;
 
   // Determine automation ID based on mode
   const sidebarAutomationId = isSettingsMode
@@ -297,7 +323,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     >
       <a
         href="/msp/dashboard"
-        className="p-4 flex items-center space-x-2 hover:bg-white/10 cursor-pointer"
+        className="p-4 flex items-center space-x-2 hover:bg-sidebar-text/10 cursor-pointer"
         aria-label={t('sidebar.goToDashboard', { defaultValue: 'Go to dashboard' })}
         id="logo-home-link"
       >
@@ -338,9 +364,14 @@ const Sidebar: React.FC<SidebarProps> = ({
         )}
       </a>
 
-      {/* Back to Main button - shown in settings and billing modes. The logo
-          link above already pads its bottom, so only the button's own padding
-          separates the two. */}
+      {/* Search sits directly under the logo in every mode, so it never moves
+          when the nav swaps. */}
+      <SearchPalette
+        collapsed={!sidebarOpen}
+        onCollapsedClick={() => setSidebarOpen(true)}
+      />
+
+      {/* Swapped-nav header: the mode's own name, then the way back out. */}
       {isSubMode && (
         <div
           className={`px-2 pb-2 transition-all duration-200 ease-out ${
@@ -351,11 +382,20 @@ const Sidebar: React.FC<SidebarProps> = ({
               : 'opacity-100 translate-x-0'
           }`}
         >
+          {sidebarOpen && modeTitle && (
+            <h2
+              id="sidebar-mode-title"
+              data-automation-id="sidebar-mode-title"
+              className="px-3 pt-1 pb-2 text-base font-semibold text-sidebar-text truncate"
+            >
+              {modeTitle}
+            </h2>
+          )}
           {sidebarOpen ? (
             <button
               id="settings-back-to-main-button"
               onClick={handleBackToMain}
-              className="w-full px-3 py-2 flex items-center gap-2 text-base text-sidebar-icon hover:text-sidebar-text hover:bg-white/10 rounded-md transition-colors"
+              className="w-full px-3 py-2 flex items-center gap-2 text-base text-sidebar-icon hover:text-sidebar-text hover:bg-sidebar-text/10 rounded-md transition-colors"
             >
               <ChevronLeft className="h-5 w-5" />
               <span>{backToMainLabel}</span>
@@ -367,9 +407,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                   <button
                     id="settings-back-to-main-button"
                     onClick={handleBackToMain}
-                    className="w-full p-2 flex items-center justify-center text-sidebar-icon hover:text-sidebar-text hover:bg-white/10 rounded-md transition-colors"
+                    className="mx-auto h-10 w-10 flex items-center justify-center text-sidebar-icon hover:text-sidebar-text hover:bg-sidebar-text/10 rounded-md transition-colors"
                   >
-                    <ChevronLeft className="h-4 w-4" />
+                    <ChevronLeft className="h-5 w-5" />
                   </button>
                 </Tooltip.Trigger>
                 <Tooltip.Portal>
@@ -378,7 +418,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                     side="right"
                     sideOffset={5}
                   >
-                    {backToMainLabel}
+                    {/* Collapsed has no room for the mode title, so the tooltip
+                        carries both the mode and the way back. */}
+                    {modeTitle ? `${modeTitle} — ${backToMainLabel}` : backToMainLabel}
                     <Tooltip.Arrow style={{ fill: 'rgb(var(--color-submenu-bg))' }} />
                   </Tooltip.Content>
                 </Tooltip.Portal>
@@ -387,11 +429,6 @@ const Sidebar: React.FC<SidebarProps> = ({
           )}
         </div>
       )}
-
-      <SearchPalette
-        collapsed={!sidebarOpen}
-        onCollapsedClick={() => setSidebarOpen(true)}
-      />
 
       <nav className={`${isSubMode ? 'mt-0' : 'mt-1'} flex-grow min-h-0 overflow-y-auto overscroll-contain sidebar-nav`}>
         <div
@@ -440,33 +477,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           }`}
         >
           <ul className="space-y-1">
-            {translatedBottomMenuItems.map((item): React.JSX.Element => (
-              <li key={item.name}>
-                <SidebarMenuItem
-                  id={`bottom-menu-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
-                  item={item}
-                  isActive={isActive}
-                  sidebarOpen={sidebarOpen}
-                  openSubmenu={openSubmenu}
-                  onToggleSubmenu={toggleSubmenu}
-                  onMenuItemClick={onMenuItemClick}
-                />
-                {item.subItems && openSubmenu === item.name && (
-                  <ul className="ml-4 mt-2 space-y-1">
-                    {item.subItems.map((subItem: MenuItem): React.JSX.Element => (
-                      <li key={subItem.name}>
-                        <SidebarSubMenuItem
-                          item={subItem}
-                          parentId={`bottom-menu-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
-                          isActive={isActive}
-                          onMenuItemClick={onMenuItemClick}
-                        />
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </li>
-            ))}
+            {translatedBottomMenuItems.map((item) => renderMenuItem(item, 'bottom-menu'))}
           </ul>
         </div>
       )}
