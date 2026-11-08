@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AccountManagement from '../../../components/settings/account/AccountManagement';
-import { interpolate } from './spTestHarness';
 
 const mocks = vi.hoisted(() => ({
   tier: { value: 'pro' as string },
   spUsage: vi.fn(),
+  coManagedPurchaseState: vi.fn(),
   cancelSubscriptionAction: vi.fn(),
   checkAccountManagementPermission: vi.fn(),
   sendCancellationFeedbackAction: vi.fn(),
@@ -107,11 +107,8 @@ vi.mock('@stripe/react-stripe-js', () => ({
 vi.mock('@ee/components/licensing/ReduceLicensesModal', () => ({ default: () => null }));
 vi.mock('../../../components/settings/account/AiUsageSection', () => ({ default: () => null }));
 
-vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
-  useTranslation: () => ({
-    t: (key: string, options?: { defaultValue?: string } & Record<string, unknown>) =>
-      options?.defaultValue ? interpolate(options.defaultValue, options) : key,
-  }),
+vi.mock('@/lib/actions/coManagedActions', () => ({
+  getCoManagedPurchaseState: mocks.coManagedPurchaseState,
 }));
 vi.mock('../../../lib/actions/service-principal-actions', () => ({
   getServicePrincipalUsage: mocks.spUsage,
@@ -193,8 +190,10 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
 describe('T032 / T036 AccountManagement service principal usage row', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.tier.value = 'pro';
     mocks.checkAccountManagementPermission.mockResolvedValue(true);
     mocks.spUsage.mockResolvedValue({ limit: 10, used: 3, remaining: 7 });
+    mocks.coManagedPurchaseState.mockResolvedValue(null);
   });
 
   async function openLicenseDetails() {
@@ -211,6 +210,28 @@ describe('T032 / T036 AccountManagement service principal usage row', () => {
     expect(screen.getByRole('link', { name: 'Service principal settings' }).getAttribute('href'))
       .toBe('/msp/security-settings?tab=service-principals');
     expect(mocks.spUsage).toHaveBeenCalled();
+  });
+
+  it('keeps usage visible alongside an enabled co-managed pool with the real i18n hooks', async () => {
+    mocks.coManagedPurchaseState.mockResolvedValue({
+      capacity: 8,
+      allocated: 2,
+      available: 6,
+      selfHosted: true,
+      purchase: {
+        pending: null,
+        canPurchase: false,
+        canResume: false,
+        reason: 'self_host_license',
+      },
+    });
+
+    const row = await openLicenseDetails();
+    await waitFor(() => expect(row.textContent).toContain('3 of 10'));
+    const managePool = await screen.findByRole('link', { name: 'coManaged.manageLicense' });
+    expect(managePool).toHaveAttribute('href', '/msp/licenses');
+    expect(row).toBeVisible();
+    expect(mocks.coManagedPurchaseState).toHaveBeenCalledTimes(1);
   });
 
   it('shows Available on Pro, blocked usage, and the blocked-access explanation below Pro', async () => {
