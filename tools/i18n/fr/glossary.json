@@ -2268,7 +2268,12 @@
       "ticket",
       "tickets",
       "RAM",
-      "Ports"
+      "Ports",
+      "Plan",
+      "Migrations",
+      "{{count}} action",
+      "{{count}} actions",
+      "Date *"
     ],
     "caseInsensitive": [
       "api",
