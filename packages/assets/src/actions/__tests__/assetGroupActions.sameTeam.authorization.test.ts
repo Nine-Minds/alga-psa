@@ -17,6 +17,17 @@ vi.mock('@alga-psa/db', () => ({
   tenantDb: (_trx: unknown, tenant: string) => ({
     table(name: string) {
       let rows = (h.tables[name] ?? []).filter((row) => row.tenant === tenant).map((row) => ({ ...row }));
+      const ordering: Array<{ key: string; direction: 'asc' | 'desc' }> = [];
+      const orderedRows = () => [...rows].sort((left, right) => {
+        for (const { key, direction } of ordering) {
+          const a = left[key];
+          const b = right[key];
+          if (a === b) continue;
+          const comparison = a == null ? 1 : b == null ? -1 : a < b ? -1 : 1;
+          return direction === 'asc' ? comparison : -comparison;
+        }
+        return 0;
+      });
       const query: any = {
         where(criteria: Row) {
           rows = rows.filter((row) => Object.entries(criteria).every(([key, value]) => row[key] === value));
@@ -26,9 +37,13 @@ vi.mock('@alga-psa/db', () => ({
           rows = rows.filter((row) => values.includes(row[key]));
           return query;
         },
-        select() { return Promise.resolve(rows); },
-        first() { return Promise.resolve(rows[0]); },
-        pluck(key: string) { return Promise.resolve(rows.map((row) => row[key])); },
+        orderBy(key: string, direction: 'asc' | 'desc' = 'asc') {
+          ordering.push({ key, direction });
+          return query;
+        },
+        select() { return Promise.resolve(orderedRows()); },
+        first() { return Promise.resolve(orderedRows()[0]); },
+        pluck(key: string) { return Promise.resolve(orderedRows().map((row) => row[key])); },
       };
       return query;
     },
@@ -90,5 +105,15 @@ describe('listAssetGroups with same_team asset read restrictions', () => {
     for (const privateValue of ['out-team', 'Restricted group', 'Restricted description', 'mixed', 'Mixed group', 'Mixed description']) {
       expect(serialized).not.toContain(privateValue);
     }
+  });
+
+  it('removes a previously readable group after team membership is revoked', async () => {
+    expect(await listAssetGroups('client-1')).toEqual([
+      { group_id: 'in-team', name: 'Visible group', description: 'Visible description', member_count: 1 },
+    ]);
+
+    h.tables.team_members = [];
+
+    expect(await listAssetGroups('client-1')).toEqual([]);
   });
 });

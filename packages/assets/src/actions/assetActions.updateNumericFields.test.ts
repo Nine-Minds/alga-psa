@@ -65,9 +65,25 @@ const h = vi.hoisted(() => {
     private readonly table: string;
     private objWheres: Array<Record<string, any>> = [];
     private inWheres: Array<{ col: string; vals: any[] }> = [];
+    private groupColumns: string[] = [];
+    private countExpression: string | null = null;
+    private rowLimit: number | undefined;
+    private rowOffset = 0;
 
     constructor(tableSpec: string) {
       this.table = tableSpec.split(' as ')[0];
+    }
+
+    clone() {
+      const query = new QB(this.table);
+      query.objWheres = this.objWheres.map((where) => ({ ...where }));
+      query.inWheres = this.inWheres.map(({ col, vals }) => ({ col, vals: [...vals] }));
+      query.nullWheres = this.nullWheres.map((where) => ({ ...where }));
+      query.groupColumns = [...this.groupColumns];
+      query.countExpression = this.countExpression;
+      query.rowLimit = this.rowLimit;
+      query.rowOffset = this.rowOffset;
+      return query;
     }
 
     private get rows(): Row[] {
@@ -98,8 +114,9 @@ const h = vi.hoisted(() => {
     leftJoin(_table: any, _fn: any) { return this; }
     orderBy() { return this; }
     modify(callback: (query: any) => void) { callback(this); return this; }
-    limit() { return this; }
-    offset() { return this; }
+    groupBy(...columns: string[]) { this.groupColumns.push(...columns.map(stripPrefix)); return this; }
+    limit(value: number) { this.rowLimit = value; return this; }
+    offset(value: number) { this.rowOffset = value; return this; }
 
     private filtered(): Row[] {
       let rows = [...this.rows];
@@ -116,15 +133,30 @@ const h = vi.hoisted(() => {
     }
 
     private detached(): Row[] {
-      return this.filtered().map((row) => ({ ...row }));
+      let rows = this.filtered();
+      if (this.countExpression) {
+        const [expression, alias = 'count'] = this.countExpression.split(' as ');
+        const groups = new Map<string, Row[]>();
+        if (this.groupColumns.length === 0) groups.set('all', rows);
+        else for (const row of rows) {
+          const key = JSON.stringify(this.groupColumns.map((column) => row[column]));
+          const group = groups.get(key) ?? [];
+          group.push(row);
+          groups.set(key, group);
+        }
+        rows = [...groups.values()].map((group) => ({
+          ...Object.fromEntries(this.groupColumns.map((column) => [column, group[0][column]])),
+          [alias]: String(group.filter((row) => expression === '*' || row[stripPrefix(expression)] != null).length),
+        }));
+      }
+      return rows.slice(this.rowOffset, this.rowLimit === undefined ? undefined : this.rowOffset + this.rowLimit)
+        .map((row) => ({ ...row }));
     }
 
     first() { return Promise.resolve(this.detached()[0]); }
     count(expression: string) {
-      const key = expression.split(' as ')[1] ?? 'count';
-      const result: any = Promise.resolve([{ [key]: String(this.filtered().length) }]);
-      result.first = () => Promise.resolve({ [key]: String(this.filtered().length) });
-      return result;
+      this.countExpression = expression;
+      return this;
     }
     sum(expression: string) {
       const key = expression.split(' as ')[1] ?? 'sum';
@@ -477,6 +509,34 @@ describe('getAsset returns the normalised Asset (alga0002283 root cause)', () =>
     expect(result.assets).toEqual(expect.arrayContaining([
       expect.objectContaining({ asset_id: ASSET_ID, group: allowedSummary }),
       expect.objectContaining({ asset_id: otherAssetId, group: null }),
+    ]));
+    expect(JSON.stringify(result)).not.toContain('Forbidden group');
+  });
+
+  it.each([
+    { filter: { asset_type: 'network_device' }, expectedIds: [ASSET_ID, 'denied-group-asset'] },
+    { filter: { asset_types: ['network_device', 'workstation'] }, expectedIds: [ASSET_ID, 'denied-group-asset', 'workstation-asset'] },
+  ])('keeps group visibility and type facets independent of the selected types: $filter', async ({ filter, expectedIds }) => {
+    seedAsset();
+    seedAsset({ asset_id: 'denied-group-asset' });
+    seedAsset({ asset_id: 'workstation-asset', asset_type: 'workstation' });
+    seedAsset({ asset_id: 'server-asset', asset_type: 'server' });
+    seedAsset({ asset_id: 'inactive-asset', status: 'inactive' });
+    seedAsset({ asset_id: 'foreign-asset', tenant: 'another-tenant' });
+    const allowedSummary = { group_id: 'allowed-group', name: 'Allowed group', member_count: 2 };
+    h.privateGroupSummary = { group_id: 'secret-group', name: 'Forbidden group', member_count: 2 };
+    h.authorizedGroupSummaries.mockResolvedValue(new Map([[ASSET_ID, allowedSummary]]));
+
+    const result = await listAssets({ page: 1, limit: 10, status: 'active', ...filter });
+
+    expect(result).toMatchObject({
+      total: expectedIds.length,
+      asset_type_counts: { network_device: 2, workstation: 1, server: 1 },
+    });
+    expect('assets' in result && result.assets.map((asset) => asset.asset_id).sort()).toEqual([...expectedIds].sort());
+    expect('assets' in result && result.assets).toEqual(expect.arrayContaining([
+      expect.objectContaining({ asset_id: ASSET_ID, group: allowedSummary }),
+      expect.objectContaining({ asset_id: 'denied-group-asset', group: null }),
     ]));
     expect(JSON.stringify(result)).not.toContain('Forbidden group');
   });
