@@ -55,6 +55,7 @@ test('workspace DB runner collects and executes app-credential opt-in suites wit
   writeFileSync(path.join(root, 'server/src/test/integration/authorization/assetGroupAuthorization.db.test.ts'), `
     describe('asset group authorization regression', () => {
       it('runs when selected by its repository-root path', () => {
+        expect(process.env.REQUIRE_DB).toBe('1');
         expect(process.env.TEST_DB_NAME).toBe('fixture_database');
       });
     });

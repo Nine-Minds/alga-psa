@@ -109,7 +109,7 @@ export class ApiAssetGroupController {
     clientId: string,
     assetIds: readonly string[]
   ): Promise<void> {
-    if (!await hasPermission(context.user!, 'asset', 'update', trx)) {
+    if (!await hasApiContextPermission(context, 'asset', 'update', trx)) {
       throw new AssetGroupError('permission_denied', 'Permission denied: Cannot update assets');
     }
     await assertAssetGroupAssetsUpdatable(trx, context.tenant, context.user!, clientId, assetIds);
@@ -120,7 +120,7 @@ export class ApiAssetGroupController {
     trx: Knex.Transaction,
     groupId: string
   ): Promise<void> {
-    if (!await hasPermission(context.user!, 'asset', 'update', trx)) {
+    if (!await hasApiContextPermission(context, 'asset', 'update', trx)) {
       throw new AssetGroupError('permission_denied', 'Permission denied: Cannot update assets');
     }
     await lockAndAuthorizeAssetGroupMembers(trx, context.tenant, context.user!, groupId);

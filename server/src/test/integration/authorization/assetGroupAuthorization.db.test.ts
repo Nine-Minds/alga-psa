@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import knexLib, { type Knex } from 'knex';
 
 const holder = vi.hoisted(() => ({ knex: undefined as unknown as Knex, tenant: '', userId: '' }));
-const apiAccess = vi.hoisted(() => ({ permissions: new Set<string>() }));
+const apiAccess = vi.hoisted(() => ({ permissions: new Set<string>(), principalUserId: '', principalPermissions: new Set<string>() }));
 
 vi.mock('@alga-psa/auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@alga-psa/auth')>();
@@ -28,10 +28,16 @@ vi.mock('../../../../../server/src/lib/api/utils/requestContext', () => ({
     tenant: holder.tenant,
     userId: holder.userId,
     user: { user_id: holder.userId, tenant: holder.tenant, user_type: 'internal' },
+    viaPrincipalUserId: apiAccess.principalUserId || undefined,
   }),
 }));
 vi.mock('../../../../../server/src/lib/auth/rbac', () => ({
-  hasPermission: async (_user: unknown, resource: string, action: string) => apiAccess.permissions.has(`${resource}:${action}`),
+  hasPermission: async (user: { user_id: string }, resource: string, action: string) =>
+    (user.user_id === apiAccess.principalUserId ? apiAccess.principalPermissions : apiAccess.permissions).has(`${resource}:${action}`),
+}));
+vi.mock('@alga-psa/users/actions', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  findUserByIdForApi: async (userId: string) => ({ user_id: userId, tenant: holder.tenant, user_type: 'internal' }),
 }));
 vi.mock('../../../../../server/src/lib/db/db', () => ({ getConnection: async () => holder.knex }));
 
@@ -43,7 +49,7 @@ import {
   setAssetGroupOwner,
   updateAssetGroup,
 } from '../../../../../packages/assets/src/actions/assetGroupActions';
-import { createAssetReadContext, isAssetActionAllowed } from '../../../../../packages/assets/src/lib/assetReadAuthorization';
+import { createAssetReadContext, isAssetActionAllowed, resolveAssetAuthorizationRecords } from '../../../../../packages/assets/src/lib/assetReadAuthorization';
 import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../../../../../packages/inventory/src/test-utils/inventoryTestDatabase';
 import { wireLocalTestDbEnv } from '../../../../../server/test-utils/dbConfig';
 import { tenantDb } from '@alga-psa/db';
@@ -232,12 +238,21 @@ describe('asset group mutation authorization', () => {
     expect(await database().table('asset_history').count('* as count').first()).toEqual(historyBefore);
   });
 
-  it('denies an updatable member whose client matches the group but is outside the group client scope', async () => {
+  it('denies a same-team member whose client matches the group but is outside the group client scope', async () => {
     const assetId = await createAsset('Matching client without scope', excludedClientId);
     await assignAssetToTeam(assetId);
     const context = await createAssetReadContext(holder.knex, holder.tenant, { user_id: holder.userId, user_type: 'internal' });
     const record = { asset_id: assetId, client_id: excludedClientId };
-    expect(await isAssetActionAllowed(holder.knex, holder.tenant, context, record, 'update')).toBe(true);
+    const records = await resolveAssetAuthorizationRecords(holder.knex, holder.tenant, [record]);
+    // The update rule alone allows the team, but mutations also need read visibility.
+    expect(await context.authorizationKernel.authorizeResource({
+      subject: context.subject,
+      resource: { type: 'asset', action: 'update', id: assetId },
+      record: records.get(assetId),
+      requestCache: context.requestCache,
+      knex: holder.knex,
+    })).toHaveProperty('allowed', true);
+    expect(await isAssetActionAllowed(holder.knex, holder.tenant, context, record, 'update')).toBe(false);
     expect(await isAssetActionAllowed(holder.knex, holder.tenant, context, record, 'read')).toBe(false);
     const group = await holder.knex.transaction((trx) => createGroup(trx, holder.tenant, {
       clientId: excludedClientId, name: 'Matching excluded client', kind: 'bundle',
@@ -289,6 +304,48 @@ describe('asset group mutation authorization', () => {
       expect(await database().table('asset_groups').where({ group_id: group.group_id })).toHaveLength(0);
     } finally {
       apiAccess.permissions.clear();
+    }
+  });
+
+  it('requires both delegated API actors to hold update permission for group creation and deletion', async () => {
+    const controller = new ApiAssetGroupController();
+    const create = () => controller.create(new NextRequest('http://localhost/api/v1/asset-groups', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ client_id: clientId, name: 'Delegated API group', kind: 'bundle' }),
+    }));
+    const before = await database().table('asset_groups').count('* as count').first();
+    const routePermissions = ['asset:create', 'asset:delete'];
+    try {
+      apiAccess.principalUserId = randomUUID();
+      apiAccess.permissions = new Set([...routePermissions, 'asset:update']);
+      apiAccess.principalPermissions = new Set(routePermissions);
+      expect((await create()).status).toBe(403);
+      apiAccess.permissions = new Set(routePermissions);
+      apiAccess.principalPermissions.add('asset:update');
+      expect((await create()).status).toBe(403);
+      expect(await database().table('asset_groups').count('* as count').first()).toEqual(before);
+
+      apiAccess.permissions.add('asset:update');
+      const created = await create();
+      expect(created.status).toBe(200);
+      const { data: group } = await created.json();
+      const remove = () => controller.delete(new NextRequest(`http://localhost/api/v1/asset-groups/${group.group_id}`, {
+        method: 'DELETE',
+      }), { id: group.group_id });
+      apiAccess.principalPermissions.delete('asset:update');
+      expect((await remove()).status).toBe(403);
+      apiAccess.principalPermissions.add('asset:update');
+      apiAccess.permissions.delete('asset:update');
+      expect((await remove()).status).toBe(403);
+      expect(await database().table('asset_groups').where({ group_id: group.group_id })).toHaveLength(1);
+
+      apiAccess.permissions.add('asset:update');
+      expect((await remove()).status).toBe(200);
+      expect(await database().table('asset_groups').where({ group_id: group.group_id })).toHaveLength(0);
+    } finally {
+      apiAccess.principalUserId = '';
+      apiAccess.permissions.clear();
+      apiAccess.principalPermissions.clear();
     }
   });
 
