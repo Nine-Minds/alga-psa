@@ -112,8 +112,12 @@ test('questionnaire mapping deletion is required by the Temporal readiness inven
   assert.equal(isAdditionalWorkspaceTest(file, 'temporal-readiness'), true);
   assert.equal(isAdditionalWorkspaceTest(file, 'temporal-engine'), false);
   assert.equal(isAdditionalWorkspaceTest(file, 'temporal-database'), false);
-  const candidates = [file].filter(candidate => isAdditionalWorkspaceTest(candidate, 'temporal-readiness'));
-  assert.equal(inspect({ candidates, collections: [] }).status, 'failed');
+  const candidate = [file].filter(candidate => isAdditionalWorkspaceTest(candidate, 'temporal-readiness'));
+  assert.equal(inspect({ candidates: candidate, collections: [] }).status, 'failed');
+  assert.equal(inspect({
+    candidates: candidate,
+    collections: [{ runner: 'temporal-readiness', status: 'passed', files: [{ file: `/repo/${file}` }] }],
+  }).status, 'passed');
 });
 
 test('tenant deletion regressions remain required in the Temporal readiness lane', () => {
@@ -151,6 +155,15 @@ test('the mutation sandbox guard executes in the required Node tooling suite', (
 
 test('migration forwarding must execute in Temporal readiness', () => {
   const file = 'ee/temporal-workflows/src/activities/__tests__/migration-apply-forwarding.test.ts';
+  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-readiness'), true);
+  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-engine'), false);
+  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-database'), false);
+  const candidates = [file].filter(candidate => isAdditionalWorkspaceTest(candidate, 'temporal-readiness'));
+  assert.equal(inspect({ candidates, collections: [] }).status, 'failed');
+});
+
+test('quote acceptance finalization forwarding executes in Temporal readiness', () => {
+  const file = 'ee/temporal-workflows/src/activities/__tests__/quote-acceptance-finalization-forwarding.test.ts';
   assert.equal(isAdditionalWorkspaceTest(file, 'temporal-readiness'), true);
   assert.equal(isAdditionalWorkspaceTest(file, 'temporal-engine'), false);
   assert.equal(isAdditionalWorkspaceTest(file, 'temporal-database'), false);

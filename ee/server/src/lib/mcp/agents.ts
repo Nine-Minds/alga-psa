@@ -5,6 +5,7 @@ import { getConnection } from '@/lib/db/db';
 import { resolveIdpFromPreset, type IdpKind } from './idpPresets';
 import { isUsableAudience, MISSING_AUDIENCE_MESSAGE } from './audience';
 import { listBuiltinIssuers } from './idpBuiltins';
+import { assertSafeIdpUrl } from './idpNetwork';
 import {
   archiveOrDeleteServicePrincipal,
   assertServicePrincipalTier,
@@ -227,6 +228,9 @@ export async function addTrustedIdp(input: TrustedIdpInput): Promise<TrustedIdp>
     subjectClaim: input.subjectClaim,
     discoveryBaseUrl: input.discoveryBaseUrl,
   });
+  // Validate persisted values too: preset discovery is remote input, and custom
+  // rows may have been created before this boundary existed.
+  await Promise.all([assertSafeIdpUrl(resolved.issuer), assertSafeIdpUrl(resolved.jwksUri)]);
   return runWithTenant(input.tenant, async () => {
     const { knex } = await createTenantKnex(input.tenant);
     const db = tenantDb(knex, input.tenant);

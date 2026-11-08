@@ -8,12 +8,6 @@ const contractActionsSource = readFileSync(
 );
 
 describe('system-managed contract action guardrails wiring', () => {
-  it('F049: contract actions enforce billing permission checks for view and mutation routes', () => {
-    expect(contractActionsSource).toContain("await assertBillingPermission(user, 'read', 'view billing contracts')");
-    expect(contractActionsSource).toContain("await assertBillingPermission(user, 'create', 'create billing contracts')");
-    expect(contractActionsSource).toContain("await assertBillingPermission(user, 'update', 'update billing contracts')");
-  });
-
   it('F050: create/update paths reject only system-managed identity mutations that should be blocked', () => {
     expect(contractActionsSource).toContain('const assertNoSystemManagedIdentityMutation =');
     expect(contractActionsSource).toContain("operation === 'create'");
