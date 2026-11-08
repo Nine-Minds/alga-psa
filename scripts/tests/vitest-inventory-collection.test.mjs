@@ -54,6 +54,20 @@ test('real Vitest inventory loads cases without executing bodies and rejects emp
     runner: { ...runner, mandatory: false, reason: 'Manual fixture', issue: 'fixture-1', expires: '2000-01-01' } }), /unexpired review/);
   writeFileSync(path.join(root, 'base.test.js'),
     'test("must only collect", () => { throw new Error("body must not execute") });');
+  const OriginalDate = globalThis.Date;
+  globalThis.Date = class extends OriginalDate {
+    constructor(...args) { super(...(args.length ? args : ['2026-11-08T12:00:00Z'])); }
+    static now() { return OriginalDate.parse('2026-11-08T12:00:00Z'); }
+  };
+  try {
+    const expiresToday = collectVitestInventory({ root, output: path.join(root, 'reports'),
+      runner: { ...runner, mandatory: false, reason: 'Manual fixture', issue: 'fixture-1', expires: '2026-11-08' } });
+    assert.equal(expiresToday.status, 'passed');
+    assert.throws(() => collectVitestInventory({ root, output: path.join(root, 'reports'),
+      runner: { ...runner, mandatory: false, reason: 'Manual fixture', issue: 'fixture-1', expires: '2026-11-07' } }), /unexpired review/);
+  } finally {
+    globalThis.Date = OriginalDate;
+  }
   const valid = collect();
   assert.equal(valid.status, 'passed');
   assert.deepEqual(valid.files, ['base.test.js']);
