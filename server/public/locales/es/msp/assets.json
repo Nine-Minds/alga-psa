@@ -2245,6 +2245,8 @@
       "allStatuses": "Todos los estados",
       "notes": "Notas",
       "exportCsv": "Exportar CSV",
+      "exportStarted": "Se inició la exportación CSV.",
+      "exportEmpty": "No hay nada que exportar en esta vista.",
       "addUnexpected": "Agregar activo no esperado",
       "addUnexpectedHint": "Un dispositivo encontrado en sitio pero fuera del alcance de esta auditoría se registra como no esperado, nunca como esperado.",
       "addUnexpectedPlaceholder": "Buscar un activo…",
