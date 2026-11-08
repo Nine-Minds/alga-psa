@@ -201,6 +201,29 @@ export function isAssetReadAllowed(
 }
 
 /**
+ * Load an asset and enforce its record-level read decision using the same
+ * transaction the caller will use for the protected operation. A null result
+ * deliberately combines missing and unreadable assets to avoid an existence
+ * oracle at ID-based action boundaries.
+ */
+export async function loadReadableAssetById(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  user: AssetAuthUser,
+  assetId: string
+): Promise<AssetAuthorizationInput | null> {
+  const asset = await tenantDb(trx, tenant)
+    .table('assets')
+    .where({ asset_id: assetId })
+    .select('asset_id', 'client_id')
+    .first() as AssetAuthorizationInput | undefined;
+
+  if (!asset) return null;
+  const context = await createAssetReadContext(trx, tenant, user);
+  return await isAssetReadAllowed(trx, tenant, context, asset) ? asset : null;
+}
+
+/**
  * Batch form of {@link isAssetReadAllowed}: the subset of `assets` the caller may read, resolved with ONE
  * association query. Used by the custody queue and label enrichment, where an unreadable asset must be
  * dropped, never leaked.
