@@ -8,6 +8,8 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 
+import { PriorityBoardTypeError } from '../lib/ticketFieldReferences';
+
 export type TicketActionError = ActionMessageError | ActionPermissionError;
 
 /**
@@ -150,6 +152,10 @@ function ticketErrorCodeOf(error: unknown): TicketErrorCode | undefined {
 export function ticketActionErrorFrom(error: unknown): TicketActionError | null {
   if (isAuthorizationThrow(error)) {
     return permissionError(error instanceof Error ? error.message : String(error));
+  }
+
+  if (error instanceof PriorityBoardTypeError) {
+    return actionError(error.message, error.messageKey, error.messageParams);
   }
 
   const audienceCode = (error as { code?: unknown } | null)?.code;

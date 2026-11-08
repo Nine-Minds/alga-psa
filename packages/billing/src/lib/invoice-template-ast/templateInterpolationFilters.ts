@@ -1,4 +1,4 @@
-export type TemplateTokenFilter = 'currency';
+export type TemplateTokenFilter = 'currency' | 'daterange';
 
 export type ParsedTemplateToken = {
   path: string;
@@ -31,6 +31,12 @@ export const parseTemplateToken = (rawToken: string): ParsedTemplateToken | null
 
   if (filter === 'currency') {
     return { path, filter: 'currency' };
+  }
+
+  // Bundle component period label: `component.periodLabelStart|daterange`
+  // formats the start and the sibling `periodLabelEnd` as "start – end".
+  if (filter === 'daterange') {
+    return { path, filter: 'daterange' };
   }
 
   return null;

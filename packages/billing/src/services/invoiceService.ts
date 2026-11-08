@@ -26,6 +26,7 @@ import { resolveInvoiceBillingRecipient } from './invoiceBillingRecipientService
 import { allocateDiscountsBeforeTax, buildDiscountTaxEntities, type DiscountPool, type DiscountTaxEntity, type DiscountTaxLineInput } from '../lib/discountAllocationBeforeTax';
 import { discountPoolFromInvoiceRow } from '../lib/billing/invoiceDiscountPools';
 import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+import { buildBundleSnapshot, loadPreviousBundlePeriods, type BundleSnapshotDetailInput, type PreviousPeriodRequest } from '../lib/invoiceBundleComponents';
 import { distributeExternalTaxToFixedDetails, zeroFixedDetailTaxForInvoice } from './delegatedFixedDetailTax';
 
 
@@ -1603,7 +1604,7 @@ async function persistFixedInvoiceCharges(
     ),
   );
   // Map: clientContractLineId -> { contract_line_name, invoice_line_description, contract_line_base_rate }
-  const planInfoMap = new Map<string, { contract_line_name: string; invoice_line_description?: string | null; contract_line_base_rate: number | null }>();
+  const planInfoMap = new Map<string, { contract_line_name: string; invoice_line_description?: string | null; invoice_line_subtitle?: string | null; contract_line_base_rate: number | null }>();
 
   // Filter out virtual contract-association IDs that start with "contract-" as they're not real UUIDs in the database
   const validDbPlanIds = clientPlanIds.filter(id => !id.startsWith('contract-'));
@@ -1626,6 +1627,7 @@ async function persistFixedInvoiceCharges(
         'cl.contract_line_id as client_contract_line_id',
         'cl.contract_line_name',
         'cl.invoice_line_description',
+        'cl.invoice_line_subtitle',
         'cl.custom_rate as contract_line_base_rate'
        );
 
@@ -1633,6 +1635,7 @@ async function persistFixedInvoiceCharges(
       planInfoMap.set(detail.client_contract_line_id, {
         contract_line_name: detail.contract_line_name,
         invoice_line_description: detail.invoice_line_description ?? null,
+        invoice_line_subtitle: detail.invoice_line_subtitle ?? null,
         contract_line_base_rate: detail.contract_line_base_rate != null
           ? Number(detail.contract_line_base_rate)
           : null
@@ -1640,6 +1643,35 @@ async function persistFixedInvoiceCharges(
   }
   }
 
+  // Bundle presentation inputs, batched once per invoice: service configuration
+  // creation order (component order) and each line's previous billed period.
+  const bundleConfigCreatedAt = new Map<string, string | Date | null>();
+  const bundleConfigIds = Array.from(new Set(
+    Array.from(fixedPlanDetailsMap.values())
+      // Virtual contract associations have no stored service configuration.
+      .filter((planEntry) => !planEntry.sourceClientContractLineId.startsWith('contract-'))
+      .flatMap((planEntry) => planEntry.details.map((detail) => detail.config_id))
+      .filter((id): id is string => Boolean(id)),
+  ));
+  if (bundleConfigIds.length > 0) {
+    const configRows = await tenantScopedTable(tx, tenant, 'contract_line_service_configuration')
+      .whereIn('config_id', bundleConfigIds)
+      .select('config_id', 'created_at');
+    for (const row of configRows) bundleConfigCreatedAt.set(row.config_id, row.created_at ?? null);
+  }
+  const previousPeriodRequests: PreviousPeriodRequest[] = [];
+  for (const planEntry of fixedPlanDetailsMap.values()) {
+    const lineId = planEntry.sourceClientContractLineId;
+    if (lineId.startsWith('contract-')) continue;
+    const starts = planEntry.details
+      .map((detail) => detail.servicePeriodStart)
+      .filter((value): value is string => Boolean(value))
+      .sort();
+    if (starts.length > 0 && !previousPeriodRequests.some((request) => request.contractLineId === lineId)) {
+      previousPeriodRequests.push({ contractLineId: lineId, earliestPeriodStart: starts[0] });
+    }
+  }
+  const previousBundlePeriods = await loadPreviousBundlePeriods(tx, tenant, invoiceId, previousPeriodRequests);
 
   // Iterate using clientContractLineId as the key
   for (const [fixedPlanGroupKey, planEntry] of fixedPlanDetailsMap.entries()) {
@@ -1696,6 +1728,24 @@ async function persistFixedInvoiceCharges(
     }
 
     const parentItemId = uuidv4();
+    // Detail ids are allocated up front so the parent's snapshot can reference them.
+    const detailIds = planEntry.details.map(() => uuidv4());
+    const bundlePresentation = buildBundleSnapshot({
+      subtitle: planInfo.invoice_line_subtitle ?? null,
+      previousPeriod: previousBundlePeriods.get(planEntry.sourceClientContractLineId) ?? null,
+      details: planEntry.details
+        .map((detail, index): BundleSnapshotDetailInput | null => detail.serviceId ? ({
+          detailItemId: detailIds[index],
+          serviceId: detail.serviceId,
+          serviceName: detail.serviceName,
+          rawQuantity: detail.raw_quantity !== undefined ? detail.raw_quantity : (Number(detail.quantity) || null),
+          pricingBasis: detail.pricing_basis ?? 'bundle',
+          configCreatedAt: detail.config_id ? bundleConfigCreatedAt.get(detail.config_id) ?? null : null,
+          servicePeriodStart: detail.servicePeriodStart ?? null,
+          servicePeriodEnd: detail.servicePeriodEnd ?? null,
+        }) : null)
+        .filter((entry): entry is BundleSnapshotDetailInput => entry !== null),
+    });
     const aggregatedTaxRate = planNetTotal
       ? Number(((planTaxTotal / planNetTotal) * 100).toFixed(6))
       : 0;
@@ -1720,14 +1770,15 @@ async function persistFixedInvoiceCharges(
       location_id: planLocationId,
       billing_profile_id: planBillingProfileId,
       billing_profile_source: planBillingProfileSource,
+      bundle_presentation: JSON.stringify(bundlePresentation),
       created_by: session.user.id,
       created_at: now,
       updated_at: now,
       tenant
     });
 
-    for (const detail of planEntry.details) {
-      const detailId = uuidv4();
+    for (const [detailIndex, detail] of planEntry.details.entries()) {
+      const detailId = detailIds[detailIndex];
       const allocatedAmountCents = Number(detail.allocated_amount ?? detail.total ?? 0);
       const taxAmountCents = Number(detail.tax_amount || 0);
       const detailQuantity = Number(detail.quantity ?? 1) || 1;

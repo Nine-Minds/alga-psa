@@ -106,10 +106,20 @@ export default defineConfig({
       // alongside the server-wide glob.
       'src/lib/quoteTermsContent.test.ts',
       'src/components/invoice-designer/ast/workspaceAst.richText.test.ts',
+      'src/components/invoice-designer/ast/workspaceAst.childRows.test.ts',
+      'src/components/invoice-designer/inspector/widgets/BundleComponentRowsWidget.test.tsx',
+      'src/components/invoice-designer/preview/sampleScenarios.bundles.test.ts',
+      'src/components/billing-dashboard/contracts/template-wizard/steps/TemplateFixedFeeServicesStep.invoiceText.test.tsx',
+      'src/components/invoice-designer/canvas/DesignCanvas.bundleRows.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteForm.terms.test.tsx',
       // Timezone-safe date-only rendering: the renderer and field formatting
       // share one UTC-pinned formatter — listed for the same reason as above.
       'src/lib/invoice-template-ast/fieldFormatting.test.ts',
+      'src/lib/invoice-template-ast/childRows.test.ts',
+      'src/lib/invoice-template-ast/bundleChildRows.test.ts',
+      'src/lib/invoice-template-ast/standardTemplates.bundleQuantities.test.ts',
+      'src/lib/invoice-template-ast/bundleRows.pdf.test.ts',
+      'src/lib/invoiceBundleComponents/**/*.test.ts',
       'src/lib/invoice-template-ast/react-renderer.test.tsx',
       'src/lib/invoice-template-ast/server-render.inlineImages.test.ts',
       // Invoice discount render model (alga0002295): unformatted-field behaviour,

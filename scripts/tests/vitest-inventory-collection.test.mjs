@@ -104,6 +104,8 @@ test('real Vitest inventory loads cases without executing bodies and rejects emp
     now: new Date('2026-11-08T00:00:00Z') }));
   assert.doesNotThrow(() => collectVitestInventory({ root, output: path.join(root, 'reports'),
     runner: { ...reviewedRunner, expires: '2026-11-09' }, now: new Date('2026-11-08T23:59:59Z') }));
+  assert.throws(() => collectVitestInventory({ root, output: path.join(root, 'reports'),
+    runner: reviewedRunner, now: new Date('2026-11-09T00:00:00Z') }), /unexpired review/);
   const OriginalDate = globalThis.Date;
   globalThis.Date = class extends OriginalDate {
     constructor(...args) { super(...(args.length ? args : ['2026-11-08T12:00:00Z'])); }

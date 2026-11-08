@@ -786,6 +786,9 @@
       "cost": "Cost: {{cost}}",
       "costInCurrency": "Cost in {{currency}}: {{cost}}",
       "margin": "Margin: {{margin}} per unit"
+    },
+    "invoiceText": {
+      "subtitleLabel": "Invoice subtitle"
     }
   },
   "contractLineEdit": {
@@ -802,7 +805,9 @@
       "rate": "Rate",
       "invoiceText": "Invoice line text",
       "invoiceTextPlaceholder": "Printed on the invoice; defaults to the line name",
-      "invoiceTextHelp": "This text prints verbatim on the recurring invoice line."
+      "invoiceTextHelp": "This text prints verbatim on the recurring invoice line.",
+      "invoiceSubtitle": "Invoice subtitle",
+      "invoiceSubtitleHelp": "A muted second line under the invoice line text."
     },
     "sections": {
       "billingTiming": "Billing Timing",
@@ -1633,7 +1638,11 @@
       "nameLabel": "Line name (optional)",
       "namePlaceholder": "Fixed line {{number}}",
       "removeLine": "Remove fixed line",
-      "noServiceWarning": "This line has a recurring amount but no service to bill it on. Add a service before finishing; you can still save it as a draft."
+      "noServiceWarning": "This line has a recurring amount but no service to bill it on. Add a service before finishing; you can still save it as a draft.",
+      "invoiceTitleLabel": "Invoice title (optional)",
+      "invoiceTitlePlaceholder": "Defaults to the line name",
+      "invoiceSubtitleLabel": "Invoice subtitle (optional)",
+      "invoiceSubtitlePlaceholder": "e.g. Managed endpoint and backup services"
     },
     "recurringChange": {
       "title": "Confirm recurring total change",
@@ -2272,7 +2281,11 @@
     },
     "actions": {
       "addService": "Add Service"
-    }
+    },
+    "invoiceTitleLabel": "Invoice title (optional)",
+    "invoiceTitlePlaceholder": "Defaults to the line name",
+    "invoiceSubtitleLabel": "Invoice subtitle (optional)",
+    "invoiceSubtitlePlaceholder": "e.g. Managed endpoint and backup services"
   },
   "templateProducts": {
     "heading": "Products",

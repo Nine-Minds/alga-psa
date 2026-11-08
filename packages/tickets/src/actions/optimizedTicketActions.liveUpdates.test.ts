@@ -383,6 +383,14 @@ function buildTrx(params: {
       return boardsBuilder;
     }
 
+    if (table === 'priorities') {
+      return {
+        where: vi.fn(() => ({
+          first: vi.fn(async () => ({ priority_name: 'Normal', is_from_itil_standard: false })),
+        })),
+      };
+    }
+
     if (table === 'tenant_settings') {
       return { select: () => ({ first: async () => params.tenantSettings }) };
     }
