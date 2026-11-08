@@ -12,6 +12,12 @@ describe('Tactical alert detail arrival and replay parity', () => {
     expect(arrived.details).toBe('Sentinel service stopped');
 
     const metadata = JSON.parse(JSON.stringify(persistRmmAlertMetadata(arrived)));
+    expect(metadata).toMatchObject({
+      id: 'alert-1',
+      message: 'Sentinel service stopped',
+      description: 'Sentinel service stopped',
+      _algaNormalized: { details: 'Sentinel service stopped' },
+    });
     const replayed = { ...arrived, details: readPersistedRmmAlertDetails(metadata) };
     const rule: RmmAlertRuleRow = {
       tenant: 'tenant', rule_id: 'rule', integration_id: 'integration', name: 'details only',
