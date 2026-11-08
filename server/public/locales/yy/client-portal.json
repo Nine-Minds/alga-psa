@@ -921,7 +921,12 @@
       "noMessage": "〖Ƞȯ ḿḗşşȧɠḗ ····〗"
     },
     "unreadCount_few": "〖{{count}} ŭƞřḗȧḓ ƞȯŧīƒīƈȧŧīȯƞş ············〗",
-    "unreadCount_many": "〖{{count}} ŭƞřḗȧḓ ƞȯŧīƒīƈȧŧīȯƞş ············〗"
+    "unreadCount_many": "〖{{count}} ŭƞřḗȧḓ ƞȯŧīƒīƈȧŧīȯƞş ············〗",
+    "reconnectingToServer": "〖Řḗƈȯƞƞḗƈŧīƞɠ ŧȯ şḗřṽḗř... ··········〗",
+    "refresh": "〖Řḗƒřḗşħ ···〗",
+    "markAllRead": "〖Ḿȧřķ ȧŀŀ řḗȧḓ ······〗",
+    "emptyTitle": "〖Ƞȯ ƞȯŧīƒīƈȧŧīȯƞş ·······〗",
+    "emptyDescription": "〖Ẏȯŭ'řḗ ȧŀŀ ƈȧŭɠħŧ ŭƥ! ·········〗"
   },
   "billing": {
     "columns": {

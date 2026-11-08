@@ -1492,7 +1492,14 @@
       "refreshRecordings": "Refresh recordings",
       "sectionTitle": "Online Meeting",
       "transcriptArtifact": "Transcript",
-      "viewTranscript": "View transcript"
+      "viewTranscript": "View transcript",
+      "status": {
+        "noRecording": "No recording",
+        "recordingReady": "Recording ready",
+        "cancelled": "Cancelled",
+        "failed": "Recording unavailable",
+        "recordingPending": "Recording pending"
+      }
     },
     "quickAdd": {
       "clientRequired": "Select a client for this interaction",
@@ -1551,6 +1558,86 @@
       "assignedTo": {
         "label": "Assigned To",
         "placeholder": "Select user"
+      },
+      "endBeforeStart": "End time must be on or after the start time.",
+      "endBeforeStartShort": "End time must be on or after the start time",
+      "rangeTooLong": "Interactions can't be longer than 24 hours.",
+      "reflectionLabel": "Quick Add Interaction",
+      "validationIntro": "Please fix the following errors:",
+      "loadingEditor": "Loading editor...",
+      "dialog": {
+        "createTitle": "Add New Interaction",
+        "editTitle": "Edit Interaction"
+      },
+      "actions": {
+        "cancel": "Cancel",
+        "cancelHelper": "Cancel creating/editing this interaction",
+        "save": "Save Interaction",
+        "saveHelper": "Create this new interaction",
+        "update": "Update Interaction",
+        "updateHelper": "Save changes to this interaction",
+        "close": "Close Dialog",
+        "closeHelper": "Close the interaction dialog"
+      },
+      "fields": {
+        "type": {
+          "label": "Interaction Type",
+          "helper": "Select the type of interaction (phone call, email, meeting, etc.)",
+          "placeholder": "Select Interaction Type"
+        },
+        "title": {
+          "label": "Interaction Title",
+          "helper": "Enter a descriptive title for this interaction",
+          "placeholder": "Title"
+        },
+        "notes": {
+          "label": "Interaction Notes",
+          "helper": "Add detailed notes about this interaction"
+        },
+        "notesShort": "Notes",
+        "status": {
+          "label": "Interaction Status",
+          "helper": "Set the current status of this interaction",
+          "placeholder": "Select Status"
+        },
+        "user": {
+          "label": "Assigned User",
+          "helper": "Select the user responsible for this interaction",
+          "placeholder": "Select User"
+        },
+        "userShort": "User",
+        "client": {
+          "label": "Associated Client",
+          "helper": "Select the client this interaction is related to"
+        },
+        "clientShort": "Client",
+        "contact": {
+          "label": "Associated Contact",
+          "helper": "Select the contact this interaction is with",
+          "placeholder": "Select Contact"
+        },
+        "contactShort": "Contact",
+        "startTime": {
+          "label": "Start Time",
+          "helper": "When did this interaction start?",
+          "placeholder": "Select start time"
+        },
+        "endTime": {
+          "label": "End Time",
+          "helper": "When did this interaction end?",
+          "placeholder": "Select end time"
+        },
+        "durationHours": {
+          "label": "Duration Hours",
+          "helper": "Duration hours of the interaction"
+        },
+        "durationMinutes": {
+          "label": "Duration Minutes",
+          "helper": "Duration minutes of the interaction"
+        },
+        "duration": "Duration",
+        "hours": "hours",
+        "minutes": "minutes"
       }
     },
     "feed": {
@@ -1608,6 +1695,51 @@
       "transcriptTitle": "Call transcript",
       "loading": "Loading transcript…",
       "loadFailed": "The transcript could not be loaded."
+    },
+    "details": {
+      "title": "Interaction Details",
+      "noTitle": "No title",
+      "unknownUser": "Unknown",
+      "noContact": "No contact associated",
+      "noClient": "No client associated",
+      "deleteConfirm": "Are you sure you want to delete this interaction? This action cannot be undone.",
+      "timeEntryFailed": "Failed to prepare time entry. Please try again.",
+      "fields": {
+        "title": "Title:",
+        "notes": "Notes",
+        "status": "Status:",
+        "startTime": "Start Time:",
+        "endTime": "End Time:",
+        "duration": "Duration:",
+        "user": "User:",
+        "contact": "Contact:",
+        "client": "Client:"
+      },
+      "actions": {
+        "cancel": "Cancel",
+        "editShort": "Edit",
+        "deleteShort": "Delete",
+        "edit": {
+          "label": "Edit Interaction",
+          "helper": "Edit this interaction details"
+        },
+        "delete": {
+          "label": "Delete Interaction",
+          "helper": "Delete this interaction permanently"
+        },
+        "back": {
+          "label": "Back",
+          "helper": "Go back to previous view"
+        },
+        "addTicket": {
+          "label": "Add Ticket",
+          "helper": "Create a new ticket related to this interaction"
+        },
+        "addTimeEntry": {
+          "label": "Add Time Entry",
+          "helper": "Add time entry for this interaction"
+        }
+      }
     }
   },
   "clientDrawer": {

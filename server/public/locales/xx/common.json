@@ -157,7 +157,16 @@
     "unnamedTeam": "⟦Ŭƞƞȧḿḗḓ Ŧḗȧḿ⟧",
     "userPicker": "⟦Ŭşḗř Ƥīƈķḗř⟧",
     "noUsersFound": "⟦Ƞȯ ŭşḗřş ƒȯŭƞḓ⟧",
-    "contactRemoteLocation": "⟦Řḗḿȯŧḗ⟧"
+    "contactRemoteLocation": "⟦Řḗḿȯŧḗ⟧",
+    "selectBoard": "⟦Şḗŀḗƈŧ Ɓȯȧřḓ⟧",
+    "activeBoards": "⟦Ȧƈŧīṽḗ Ɓȯȧřḓş⟧",
+    "inactiveBoards": "⟦Īƞȧƈŧīṽḗ Ɓȯȧřḓş⟧",
+    "allBoards": "⟦Ȧŀŀ Ɓȯȧřḓş⟧",
+    "boardPicker": "⟦Ɓȯȧřḓ Ƥīƈķḗř⟧",
+    "filterByStatus": "⟦Ƒīŀŧḗř ƀẏ şŧȧŧŭş⟧",
+    "statusFilter": "⟦Şŧȧŧŭş Ƒīŀŧḗř⟧",
+    "boards": "⟦Ɓȯȧřḓş⟧",
+    "inactiveSuffix": "⟦(Īƞȧƈŧīṽḗ)⟧"
   },
   "serviceTypeSelect": {
     "placeholder": "⟦Şḗŀḗƈŧ şḗřṽīƈḗ ŧẏƥḗ...⟧",
@@ -1712,7 +1721,14 @@
       "assigned": "⟦Ȧşşīɠƞḗḓ:⟧",
       "performedBy": "⟦ƀẏ {{name}}⟧",
       "internal": "⟦Īƞŧḗřƞȧŀ⟧"
-    }
+    },
+    "title": "⟦Ƞȯŧīƒīƈȧŧīȯƞş⟧",
+    "reconnectingToServer": "⟦Řḗƈȯƞƞḗƈŧīƞɠ ŧȯ şḗřṽḗř...⟧",
+    "refresh": "⟦Řḗƒřḗşħ⟧",
+    "markAllAsRead": "⟦Ḿȧřķ ȧŀŀ ȧş řḗȧḓ⟧",
+    "markAllRead": "⟦Ḿȧřķ ȧŀŀ řḗȧḓ⟧",
+    "emptyTitle": "⟦Ƞȯ ƞȯŧīƒīƈȧŧīȯƞş⟧",
+    "emptyDescription": "⟦Ẏȯŭ'řḗ ȧŀŀ ƈȧŭɠħŧ ŭƥ!⟧"
   },
   "importConflicts": {
     "title": "⟦Řḗşȯŀṽḗ Īḿƥȯřŧ Ƈȯƞƒŀīƈŧş⟧",
