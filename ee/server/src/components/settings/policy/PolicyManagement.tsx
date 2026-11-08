@@ -33,6 +33,8 @@ import {
   DropdownMenuItem,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { TIER_FEATURES, type ColumnDefinition, type IUserWithRoles, type ITeam } from '@alga-psa/types';
+import { getAuthorizationActions } from '@alga-psa/authorization/bundles/resourceActions';
+import AuthorizationResourceActionSelect from './AuthorizationResourceActionSelect';
 import { getAllUsers, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { getTeams, getTeamAvatarUrlsBatchAction, isTeamActionError } from '@alga-psa/teams/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -69,7 +71,6 @@ const RESOURCE_SECTIONS: Array<{ labelKey: string; resourceType: string }> = [
   { labelKey: 'policyManagement.resourceSections.billing', resourceType: 'billing' },
 ];
 
-const ACTION_OPTIONS = ['read', 'create', 'update', 'delete', 'approve'];
 const ASSIGNMENT_TARGET_TYPES = ['role', 'team', 'user', 'api_key'] as const;
 
 type AssignmentTargetType = (typeof ASSIGNMENT_TARGET_TYPES)[number];
@@ -508,11 +509,6 @@ export default function PolicyManagement() {
     }
     return groups;
   }, [assignmentData]);
-
-  const actionOptions = useMemo<SelectOption[]>(
-    () => ACTION_OPTIONS.map((action) => ({ value: action, label: action })),
-    []
-  );
 
   const assignmentTargetTypeOptions = useMemo<SelectOption[]>(
     () =>
@@ -1426,9 +1422,9 @@ export default function PolicyManagement() {
                               <div className="grid gap-3 md:grid-cols-3">
                                 <label className="text-sm">
                                   <div className="mb-1 text-muted-foreground">{t('policyManagement.editor.ruleForm.action')}</div>
-                                  <CustomSelect
+                                  <AuthorizationResourceActionSelect
                                     id={`authorization-bundle-rule-action-${section.resourceType}`}
-                                    options={actionOptions}
+                                    resourceType={section.resourceType}
                                     value={draft.action}
                                     onValueChange={(value) => updateRuleDraft(section.resourceType, { action: value })}
                                   />
@@ -1769,6 +1765,10 @@ export default function PolicyManagement() {
                           value={simulatorResourceType}
                           onValueChange={(value) => {
                             setSimulatorResourceType(value);
+                            const actions = getAuthorizationActions(value);
+                            if (!actions.includes(simulatorAction)) {
+                              setSimulatorAction(actions[0] ?? '');
+                            }
                             setSimulatorRecordId('');
                             setSimulationResult(null);
                           }}
@@ -1777,9 +1777,9 @@ export default function PolicyManagement() {
 
                       <label className="text-sm">
                         <div className="mb-1 text-muted-foreground">{t('policyManagement.simulator.action')}</div>
-                        <CustomSelect
+                        <AuthorizationResourceActionSelect
                           id="authorization-bundle-simulator-action"
-                          options={actionOptions}
+                          resourceType={simulatorResourceType}
                           value={simulatorAction}
                           onValueChange={setSimulatorAction}
                         />

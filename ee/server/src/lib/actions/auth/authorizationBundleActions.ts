@@ -33,6 +33,7 @@ import {
 } from '@alga-psa/authorization/bundles/service';
 import { STARTER_AUTHORIZATION_BUNDLES } from '@alga-psa/authorization/bundles/starterBundles';
 import { AUTHORIZATION_TEMPLATE_CATALOG, AUTHORIZATION_CONSTRAINT_CATALOG } from '@alga-psa/authorization/bundles/catalog';
+import { AUTHORIZATION_RESOURCE_ACTIONS, supportsAuthorizationResourceAction } from '@alga-psa/authorization/bundles/resourceActions';
 
 export interface AuthorizationBundleLibraryEntry {
   bundleId: string;
@@ -123,15 +124,8 @@ export type AuthorizationBundleSimulationActionResult =
       error: AuthorizationBundleSimulationValidationError;
     };
 
-const SUPPORTED_SIMULATION_ACTIONS = new Set(['read', 'approve']);
-const SUPPORTED_SIMULATION_RESOURCE_TYPES = new Set([
-  'ticket',
-  'document',
-  'time_entry',
-  'project',
-  'asset',
-  'billing',
-]);
+const SUPPORTED_SIMULATION_ACTIONS = new Set<string>(Object.values(AUTHORIZATION_RESOURCE_ACTIONS).flat());
+const SUPPORTED_SIMULATION_RESOURCE_TYPES = new Set(Object.keys(AUTHORIZATION_RESOURCE_ACTIONS));
 
 function tenantScopedTable(knexOrTrx: Knex | Knex.Transaction, tenant: string, table: string): Knex.QueryBuilder {
   return tenantDb(knexOrTrx, tenant).table(table);
@@ -475,6 +469,10 @@ export const upsertAuthorizationBundleDraftRuleAction = withAuth(
   ): Promise<void> => {
     await assertTierAccess(TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES);
     await assertSecuritySettingsPermission(user, 'write');
+
+    if (!supportsAuthorizationResourceAction(input.resourceType, input.action)) {
+      throw new Error(`Unsupported authorization action ${input.resourceType}:${input.action}.`);
+    }
 
     const { knex } = await createTenantKnex();
     await knex.transaction(async (trx) => {
@@ -870,7 +868,7 @@ function getSimulationModeValidationError(input: {
   if (!SUPPORTED_SIMULATION_ACTIONS.has(input.action)) {
     return {
       code: 'unsupported_simulation_action',
-      message: 'The simulator currently supports only Read and Approve checks. Choose one of those actions and try again.',
+      message: 'This action is not available in the simulator.',
     };
   }
 
@@ -878,6 +876,13 @@ function getSimulationModeValidationError(input: {
     return {
       code: 'unsupported_simulation_resource_type',
       message: 'This record type is not available in the simulator yet. Choose a supported record type and try again.',
+    };
+  }
+
+  if (!supportsAuthorizationResourceAction(input.resourceType, input.action)) {
+    return {
+      code: 'unsupported_simulation_action',
+      message: 'This action is not available for the selected record type in the simulator.',
     };
   }
 

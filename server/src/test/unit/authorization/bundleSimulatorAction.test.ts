@@ -14,6 +14,7 @@ type KnexMock = ((tableName: string) => {
     table: string;
     where: Row[];
   }[];
+  transaction: (callback: (trx: any) => unknown) => Promise<unknown>;
 };
 
 const authContext = {
@@ -61,9 +62,25 @@ const serviceMocks = vi.hoisted(() => ({
   deleteBundleRule: vi.fn(),
   createAuthorizationBundle: vi.fn(),
   listAuthorizationBundles: vi.fn(async () => []),
-  publishBundleRevision: vi.fn(),
+  publishBundleRevision: vi.fn(async () => {
+    serviceMocks.authoringState.publishedRules = [...serviceMocks.authoringState.draftRules];
+  }),
   setBundleAssignmentStatus: vi.fn(),
-  upsertBundleRule: vi.fn(),
+  upsertBundleRule: vi.fn(async (_knex: unknown, input: Row) => {
+    serviceMocks.authoringState.draftRules.push({
+      ruleId: 'authored-project-create-task',
+      resourceType: input.resourceType,
+      action: input.action,
+      templateKey: input.templateKey,
+      constraintKey: input.constraintKey ?? null,
+      config: input.config ?? {},
+      position: input.position ?? 0,
+    });
+  }),
+  authoringState: {
+    draftRules: [] as Row[],
+    publishedRules: [] as Row[],
+  },
 }));
 
 const dbMocks = vi.hoisted(() => ({
@@ -76,8 +93,8 @@ const hasPermissionMock = vi.hoisted(() => vi.fn(async () => true));
 // quoteSelfApproval.integration.test.ts; here it is a controllable seam.
 const resolveAllowSelfApprovalFlagMock = vi.hoisted(() => vi.fn(async () => false));
 
-// The kernel's default rbacEvaluator resolves roles via User.getUserRolesWithPermissions;
-// grant every simulator resource/action so the bundle/builtin narrowing stages stay decisive.
+// The simulator's default RBAC evaluator reads realistic role grants: project
+// task creation is granted via project_task:create, not project:create_task.
 const kernelRbacRoles = vi.hoisted(() => {
   const resources = ['ticket', 'document', 'time_entry', 'project', 'asset', 'billing'];
   const actions = ['read', 'approve'];
@@ -88,15 +105,24 @@ const kernelRbacRoles = vi.hoisted(() => {
       description: '',
       msp: true,
       client: true,
-      permissions: resources.flatMap((resource) =>
-        actions.map((action) => ({
-          permission_id: `${resource}-${action}`,
-          resource,
-          action,
+      permissions: [
+        ...resources.flatMap((resource) =>
+          actions.map((action) => ({
+            permission_id: `${resource}-${action}`,
+            resource,
+            action,
+            msp: true,
+            client: true,
+          }))
+        ),
+        {
+          permission_id: 'project_task-create',
+          resource: 'project_task',
+          action: 'create',
           msp: true,
           client: true,
-        }))
-      ),
+        },
+      ],
     },
   ];
 });
@@ -133,6 +159,7 @@ function buildKnexMock(input: {
   quote?: Row;
   document?: Row;
   bundle: Row;
+  project?: Row;
   principalOptions: Row[];
 }): KnexMock {
   const calls: Array<{ table: string; where: Row[] }> = [];
@@ -188,6 +215,10 @@ function buildKnexMock(input: {
           return input.document ? [pickColumns(input.document, columns) as Row] : [];
         }
 
+        if (state.table === 'projects') {
+          return input.project ? [pickColumns(input.project, columns) as Row] : [];
+        }
+
         return [];
       },
       async first(...columns: string[]) {
@@ -221,6 +252,10 @@ function buildKnexMock(input: {
           return pickColumns(input.document, columns);
         }
 
+        if (state.table === 'projects') {
+          return pickColumns(input.project, columns);
+        }
+
         return undefined;
       },
     };
@@ -229,6 +264,7 @@ function buildKnexMock(input: {
   }) as KnexMock;
 
   knex.__calls = calls;
+  knex.transaction = async (callback: (trx: KnexMock) => unknown) => callback(knex);
   return knex;
 }
 
@@ -280,7 +316,15 @@ vi.mock('@alga-psa/authorization/bundles/service', () => ({
   deleteBundleRule: serviceMocks.deleteBundleRule,
   createAuthorizationBundle: serviceMocks.createAuthorizationBundle,
   ensureDraftBundleRevision: serviceMocks.ensureDraftBundleRevision,
-  listBundleRulesForRevision: serviceMocks.listBundleRulesForRevision,
+  listBundleRulesForRevision: (knex: unknown, input: { revisionId: string }) => {
+    if (input.revisionId === revisionContext.draftRevisionId && serviceMocks.authoringState.draftRules.length > 0) {
+      return serviceMocks.authoringState.draftRules;
+    }
+    if (input.revisionId === revisionContext.publishedRevisionId && serviceMocks.authoringState.publishedRules.length > 0) {
+      return serviceMocks.authoringState.publishedRules;
+    }
+    return serviceMocks.listBundleRulesForRevision(knex, input);
+  },
   listAuthorizationBundles: serviceMocks.listAuthorizationBundles,
   publishBundleRevision: serviceMocks.publishBundleRevision,
   setBundleAssignmentStatus: serviceMocks.setBundleAssignmentStatus,
@@ -294,6 +338,8 @@ import {
   listAuthorizationSimulationPrincipalsAction,
   listAuthorizationSimulationRecordsAction,
   runAuthorizationBundleSimulationAction,
+  upsertAuthorizationBundleDraftRuleAction,
+  publishAuthorizationBundleDraftAction,
 } from '../../../../../ee/server/src/lib/actions/auth/authorizationBundleActions';
 
 function expectSuccessfulSimulation(
@@ -311,8 +357,18 @@ describe('runAuthorizationBundleSimulationAction', () => {
   const ticketId = 'ticket-1';
   const quoteId = 'quote-1';
   const documentId = 'document-1';
+  const projectId = 'project-1';
+  const clientAId = 'client-a';
+  const clientBId = 'client-b';
+  let projectRecord: Row;
 
   beforeEach(() => {
+    projectRecord = {
+      project_id: projectId,
+      project_name: 'Project A',
+      client_id: clientAId,
+      tenant: authContext.tenant,
+    };
     const knex = buildKnexMock({
       principal: {
         user_id: principalUserId,
@@ -350,6 +406,7 @@ describe('runAuthorizationBundleSimulationAction', () => {
         is_client_visible: false,
         tenant: authContext.tenant,
       },
+      project: projectRecord,
       bundle: {
         published_revision_id: revisionContext.publishedRevisionId,
       },
@@ -363,6 +420,10 @@ describe('runAuthorizationBundleSimulationAction', () => {
     serviceMocks.ensureDraftBundleRevision.mockClear();
     serviceMocks.listBundleRulesForRevision.mockClear();
     serviceMocks.listAuthorizationBundles.mockClear();
+    serviceMocks.upsertBundleRule.mockClear();
+    serviceMocks.publishBundleRevision.mockClear();
+    serviceMocks.authoringState.draftRules = [];
+    serviceMocks.authoringState.publishedRules = [];
     assertTierAccessMock.mockReset();
     assertTierAccessMock.mockResolvedValue(undefined);
     hasPermissionMock.mockReset();
@@ -400,6 +461,49 @@ describe('runAuthorizationBundleSimulationAction', () => {
     expect(result.draft.reasonCodes).toContain('rbac:rbac_allowed');
     expect(result.draft.reasonCodes).toContain('bundle:bundle_template_denied');
     expect(serviceMocks.listBundleRulesForRevision).toHaveBeenCalledTimes(2);
+  });
+
+  it('authors and publishes project:create_task, then simulates with project_task:create RBAC', async () => {
+    await upsertAuthorizationBundleDraftRuleAction({
+      bundleId: 'bundle-1',
+      resourceType: 'project',
+      action: 'create_task',
+      templateKey: 'selected_clients',
+      config: { selectedClientIds: [clientAId] },
+    });
+    expect(serviceMocks.upsertBundleRule).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      resourceType: 'project',
+      action: 'create_task',
+      templateKey: 'selected_clients',
+      config: { selectedClientIds: [clientAId] },
+    }));
+
+    await publishAuthorizationBundleDraftAction('bundle-1');
+    expect(serviceMocks.publishBundleRevision).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      bundleId: 'bundle-1',
+      revisionId: revisionContext.draftRevisionId,
+    }));
+
+    const decisionA = expectSuccessfulSimulation(await runAuthorizationBundleSimulationAction({
+      bundleId: 'bundle-1',
+      principalUserId,
+      resourceType: 'project',
+      action: 'create_task',
+      resourceId: projectId,
+    }));
+    expect(decisionA.draft.allowed).toBe(true);
+    expect(decisionA.published.allowed).toBe(true);
+
+    projectRecord.client_id = clientBId;
+    const decisionB = expectSuccessfulSimulation(await runAuthorizationBundleSimulationAction({
+      bundleId: 'bundle-1',
+      principalUserId,
+      resourceType: 'project',
+      action: 'create_task',
+      resourceId: projectId,
+    }));
+    expect(decisionB.draft.allowed).toBe(false);
+    expect(decisionB.published.allowed).toBe(false);
   });
 
   it('supports synthetic scenarios without a persisted resource lookup', async () => {
@@ -537,7 +641,7 @@ describe('runAuthorizationBundleSimulationAction', () => {
       bundleId: 'bundle-1',
       principalUserId,
       resourceType: 'ticket',
-      action: 'delete',
+      action: 'reopen',
       resourceId: ticketId,
     });
 
@@ -545,7 +649,7 @@ describe('runAuthorizationBundleSimulationAction', () => {
       ok: false,
       error: expect.objectContaining({
         code: 'unsupported_simulation_action',
-        message: expect.stringContaining('supports only Read and Approve checks'),
+        message: expect.stringContaining('not available in the simulator'),
       }),
     });
   });

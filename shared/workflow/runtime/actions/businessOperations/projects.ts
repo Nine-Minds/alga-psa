@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { generateKeyBetween } from 'fractional-indexing';
 import { getDeletionConfig, validateDeletion } from '@alga-psa/core/server';
 import { tenantDb } from '@alga-psa/db';
+import type { AUTHORIZATION_RESOURCE_ACTIONS } from '@alga-psa/authorization/bundles/resourceActions';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
@@ -29,6 +30,7 @@ import {
 } from './shared';
 
 const nullableUuidSchema = z.union([uuidSchema, z.null()]);
+type ProjectResourceAction = (typeof AUTHORIZATION_RESOURCE_ACTIONS.project)[number];
 
 const projectSummarySchema = z.object({
   project_id: withWorkflowPicker(uuidSchema, 'Project', 'project'),
@@ -1089,18 +1091,15 @@ async function resolveActorAuthorizationSubject(tx: TenantTxContext): Promise<Au
   };
 }
 
-async function createProjectReadAuthorizer(tx: TenantTxContext): Promise<(project: Record<string, unknown>) => Promise<boolean>> {
+async function createProjectAuthorizer(
+  tx: TenantTxContext,
+  action: ProjectResourceAction
+): Promise<(project: Record<string, unknown>) => Promise<boolean>> {
   const subject = await resolveActorAuthorizationSubject(tx);
   const authorizationKernel = createAuthorizationKernel({
     builtinProvider: new BuiltinAuthorizationKernelProvider(),
     bundleProvider: new BundleAuthorizationKernelProvider({
-      resolveRules: async (input) => {
-        try {
-          return await resolveBundleNarrowingRulesForEvaluation(tx.trx, input);
-        } catch {
-          return [];
-        }
-      },
+      resolveRules: (input) => resolveBundleNarrowingRulesForEvaluation(tx.trx, input),
     }),
     rbacEvaluator: async () => true,
   });
@@ -1112,7 +1111,7 @@ async function createProjectReadAuthorizer(tx: TenantTxContext): Promise<(projec
 
     const decision = await authorizationKernel.authorizeResource({
       subject,
-      resource: { type: 'project', action: 'read', id: projectId },
+      resource: { type: 'project', action, id: projectId },
       record: toProjectAuthorizationRecord(project),
       requestCache,
       knex: tx.trx,
@@ -1154,21 +1153,23 @@ async function createTicketReadAuthorizer(tx: TenantTxContext): Promise<(ticket:
 }
 
 async function canReadProject(tx: TenantTxContext, project: Record<string, unknown>): Promise<boolean> {
-  const authorize = await createProjectReadAuthorizer(tx);
+  const authorize = await createProjectAuthorizer(tx, 'read');
   return authorize(project);
 }
 
-async function assertProjectReadable(
+async function assertProjectAuthorized(
   ctx: any,
   tx: TenantTxContext,
-  project: Record<string, unknown>
+  project: Record<string, unknown>,
+  action: ProjectResourceAction
 ): Promise<void> {
-  const allowed = await canReadProject(tx, project);
+  const authorize = await createProjectAuthorizer(tx, action);
+  const allowed = await authorize(project);
   if (!allowed) {
     throwActionError(ctx, {
       category: 'ActionError',
       code: 'PERMISSION_DENIED',
-      message: 'Permission denied: project:read',
+      message: `Permission denied: project:${action}`,
       details: { project_id: project.project_id },
     });
   }
@@ -1193,7 +1194,7 @@ async function assertTicketReadable(
 
 async function filterAuthorizedProjects(tx: TenantTxContext, projects: Record<string, unknown>[]) {
   if (projects.length === 0) return [];
-  const authorize = await createProjectReadAuthorizer(tx);
+  const authorize = await createProjectAuthorizer(tx, 'read');
   const allowed = await Promise.all(projects.map((project) => authorize(project)));
   return projects.filter((_, idx) => allowed[idx]);
 }
@@ -1237,6 +1238,7 @@ export function registerProjectActions(): void {
 
       const project = await tenantScopedTable(tx, 'projects').where('project_id', input.project_id).first();
       if (!project) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Project not found' });
+      await assertProjectAuthorized(ctx, tx, project, 'create_task');
 
       const phaseId = input.phase_id ?? (await tenantScopedTable(tx, 'project_phases')
         .where('project_id', input.project_id)
@@ -1409,7 +1411,7 @@ export function registerProjectActions(): void {
         }
 
         if (project) {
-          await assertProjectReadable(ctx, tx, project);
+          await assertProjectAuthorized(ctx, tx, project, 'read');
         }
 
         if (!project) {
@@ -1602,7 +1604,7 @@ export function registerProjectActions(): void {
         }
 
         const project = await ensureProjectExists(ctx, tx, String(phase.project_id));
-        await assertProjectReadable(ctx, tx, project);
+        await assertProjectAuthorized(ctx, tx, project, 'read');
 
         ctx.logger?.info('workflow_action:projects.find_phase', {
           duration_ms: Date.now() - startedAt,
@@ -1952,7 +1954,7 @@ export function registerProjectActions(): void {
         await requireProjectUpdatePermission(ctx, tx);
         const projectColumns = await getTableColumns(tx, 'projects');
         const project = await ensureProjectExists(ctx, tx, input.project_id);
-        await assertProjectReadable(ctx, tx, project);
+        await assertProjectAuthorized(ctx, tx, project, 'update');
 
         const patch: Record<string, unknown> = {};
         if (input.patch.project_name !== undefined && projectColumns.has('project_name')) patch.project_name = input.patch.project_name;
@@ -2015,7 +2017,7 @@ export function registerProjectActions(): void {
         const phaseColumns = await getTableColumns(tx, 'project_phases');
         const phase = await ensurePhaseExists(ctx, tx, input.phase_id);
         const project = await ensureProjectExists(ctx, tx, String(phase.project_id));
-        await assertProjectReadable(ctx, tx, project);
+        await assertProjectAuthorized(ctx, tx, project, 'update');
 
         const patch: Record<string, unknown> = {};
         if (input.patch.phase_name !== undefined && phaseColumns.has('phase_name')) patch.phase_name = input.patch.phase_name;
@@ -2079,7 +2081,7 @@ export function registerProjectActions(): void {
         const taskColumns = await getTableColumns(tx, 'project_tasks');
         const task = await ensureTaskContext(ctx, tx, input.task_id);
         const project = await ensureProjectExists(ctx, tx, String(task.project_id));
-        await assertProjectReadable(ctx, tx, project);
+        await assertProjectAuthorized(ctx, tx, project, 'update');
 
         const patch: Record<string, unknown> = {};
         if (input.patch.task_name !== undefined && taskColumns.has('task_name')) patch.task_name = input.patch.task_name;
@@ -2133,7 +2135,7 @@ export function registerProjectActions(): void {
         const taskColumns = await getTableColumns(tx, 'project_tasks');
         const sourceTask = await ensureTaskContext(ctx, tx, input.task_id);
         const sourceProject = await ensureProjectExists(ctx, tx, String(sourceTask.project_id));
-        await assertProjectReadable(ctx, tx, sourceProject);
+        await assertProjectAuthorized(ctx, tx, sourceProject, 'update');
 
         const targetPhase = await ensurePhaseExists(ctx, tx, input.target_phase_id);
         const targetProjectId = String(targetPhase.project_id);
@@ -2147,7 +2149,7 @@ export function registerProjectActions(): void {
         }
 
         const targetProject = await ensureProjectExists(ctx, tx, targetProjectId);
-        await assertProjectReadable(ctx, tx, targetProject);
+        await assertProjectAuthorized(ctx, tx, targetProject, 'update');
 
         const targetProjectStatusMappingId = await resolveTargetProjectStatusMappingId(tx, {
           sourceTask,
@@ -2275,7 +2277,7 @@ export function registerProjectActions(): void {
         const task = await ensureTaskContext(ctx, tx, input.task_id);
         validateOptionalTaskScope(ctx, task, { project_id: input.project_id, phase_id: input.phase_id });
         const project = await ensureProjectExists(ctx, tx, String(task.project_id));
-        await assertProjectReadable(ctx, tx, project);
+        await assertProjectAuthorized(ctx, tx, project, 'update');
 
         const resolvedUsers = await resolveActiveTaskAssignmentUsers(ctx, tx, {
           primaryUserId: input.primary_user_id,
@@ -2381,12 +2383,12 @@ export function registerProjectActions(): void {
 
         const sourceTask = await ensureTaskContext(ctx, tx, input.source_task_id);
         const sourceProject = await ensureProjectExists(ctx, tx, String(sourceTask.project_id));
-        await assertProjectReadable(ctx, tx, sourceProject);
+        await assertProjectAuthorized(ctx, tx, sourceProject, 'read');
 
         const targetPhase = await ensurePhaseExists(ctx, tx, input.target_phase_id);
         const targetProjectId = String(targetPhase.project_id);
         const targetProject = await ensureProjectExists(ctx, tx, targetProjectId);
-        await assertProjectReadable(ctx, tx, targetProject);
+        await assertProjectAuthorized(ctx, tx, targetProject, 'create_task');
 
         const explicitMapping = input.target_project_status_mapping_id
           ? await ensureStatusMappingExists(ctx, tx, input.target_project_status_mapping_id)
@@ -2611,7 +2613,7 @@ export function registerProjectActions(): void {
         const task = await ensureTaskContext(ctx, tx, input.task_id);
         validateOptionalTaskScope(ctx, task, { project_id: input.project_id, phase_id: input.phase_id });
         const project = await ensureProjectExists(ctx, tx, String(task.project_id));
-        await assertProjectReadable(ctx, tx, project);
+        await assertProjectAuthorized(ctx, tx, project, 'delete');
 
         const timeEntriesExist = await tx.trx.schema.hasTable('time_entries');
         if (timeEntriesExist) {
@@ -2706,7 +2708,7 @@ export function registerProjectActions(): void {
         await requireProjectDeletePermission(ctx, tx);
         const phase = await ensurePhaseExists(ctx, tx, input.phase_id);
         const project = await ensureProjectExists(ctx, tx, String(phase.project_id));
-        await assertProjectReadable(ctx, tx, project);
+        await assertProjectAuthorized(ctx, tx, project, 'delete');
 
         const taskIds = await tenantScopedTable(tx, 'project_tasks')
           .where('phase_id', input.phase_id)
@@ -2806,7 +2808,7 @@ export function registerProjectActions(): void {
       try {
         await requireProjectDeletePermission(ctx, tx);
         const project = await ensureProjectExists(ctx, tx, input.project_id);
-        await assertProjectReadable(ctx, tx, project);
+        await assertProjectAuthorized(ctx, tx, project, 'delete');
 
         const deletionConfig = getDeletionConfig('project');
         if (!deletionConfig) {
@@ -2965,7 +2967,7 @@ export function registerProjectActions(): void {
         await requirePermission(ctx, tx, { resource: 'ticket', action: 'read' });
         const task = await ensureTaskContext(ctx, tx, input.task_id);
         const project = await ensureProjectExists(ctx, tx, String(task.project_id));
-        await assertProjectReadable(ctx, tx, project);
+        await assertProjectAuthorized(ctx, tx, project, 'update');
         const ticket = await ensureTicketExists(ctx, tx, input.ticket_id);
         await assertTicketReadable(ctx, tx, ticket);
 
@@ -3112,7 +3114,7 @@ export function registerProjectActions(): void {
       try {
         await requireProjectUpdatePermission(ctx, tx);
         const project = await ensureProjectExists(ctx, tx, input.project_id);
-        await assertProjectReadable(ctx, tx, project);
+        await assertProjectAuthorized(ctx, tx, project, 'update');
         const tagResult = await ensureTagMappings(tx, {
           taggedType: 'project',
           taggedId: input.project_id,
@@ -3162,7 +3164,7 @@ export function registerProjectActions(): void {
         const task = await ensureTaskContext(ctx, tx, input.task_id);
         validateOptionalTaskScope(ctx, task, { project_id: input.project_id, phase_id: input.phase_id });
         const project = await ensureProjectExists(ctx, tx, String(task.project_id));
-        await assertProjectReadable(ctx, tx, project);
+        await assertProjectAuthorized(ctx, tx, project, 'update');
 
         const tagResult = await ensureTagMappings(tx, {
           taggedType: 'project_task',
