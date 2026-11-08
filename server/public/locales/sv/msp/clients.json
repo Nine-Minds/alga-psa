@@ -1487,7 +1487,7 @@
       "status": {
         "noRecording": "Ingen inspelning",
         "recordingReady": "Inspelningen är klar",
-        "cancelled": "Avbruten",
+        "cancelled": "Avbokat",
         "failed": "Inspelningen är inte tillgänglig",
         "recordingPending": "Väntar på inspelning"
       }
@@ -1553,7 +1553,7 @@
       "endBeforeStart": "Sluttiden måste vara samma som eller senare än starttiden.",
       "endBeforeStartShort": "Sluttiden måste vara samma som eller senare än starttiden",
       "rangeTooLong": "Interaktioner får inte vara längre än 24 timmar.",
-      "reflectionLabel": "Lägg till interaktion snabbt",
+      "reflectionLabel": "Snabbregistrering av interaktion",
       "validationIntro": "Rätta följande fel:",
       "loadingEditor": "Läser in redigeraren…",
       "dialog": {
