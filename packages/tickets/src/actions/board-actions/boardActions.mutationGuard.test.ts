@@ -136,15 +136,19 @@ describe('board mutation guard', () => {
     currentUser.user_type = userType;
     if (userType === 'client') granted.add(`ticket_settings:${action}`);
     const { createBoard, updateBoard } = await import('./boardActions');
-    const invalidInput = { board_name: 42, tenant: 'other-tenant' } as any;
+    const invalidInputs = [
+      null as any,
+      { board_name: 42, tenant: 'other-tenant' } as any,
+    ];
 
-    const result = action === 'create'
-      ? await createBoard(invalidInput)
-      : await updateBoard('board-a', invalidInput);
-
-    expect(result).toMatchObject(denied);
-    expect(result).not.toHaveProperty('actionError');
-    expect(refusedBy()).toEqual([code]);
+    for (const invalidInput of invalidInputs) {
+      const result = action === 'create'
+        ? await createBoard(invalidInput)
+        : await updateBoard('board-a', invalidInput);
+      expect(result).toMatchObject(denied);
+      expect(result).not.toHaveProperty('actionError');
+    }
+    expect(refusedBy()).toEqual([code, code]);
     expect(withTransactionMock).not.toHaveBeenCalled();
     expect(reads).toEqual([]);
     expect(writes).toEqual([]);

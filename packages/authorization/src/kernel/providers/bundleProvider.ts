@@ -9,6 +9,7 @@ import type {
 import { ALLOW_ALL_SCOPE } from '../scope';
 import { evaluateRelationshipTemplate } from '../relationshipTemplates';
 import { isSelfApprovalBlocked } from '../selfApproval';
+import { matchRulesForAction } from '../actionAliases';
 
 export interface BundleNarrowingRule {
   id: string;
@@ -72,9 +73,7 @@ export class BundleAuthorizationKernelProvider implements BundleAuthorizationPro
 
   async evaluateNarrowing(input: AuthorizationEvaluationInput): Promise<BundleAuthorizationResult> {
     const rules = await this.resolveRules(input);
-    const matchingRules = rules.filter(
-      (rule) => rule.resource === input.resource.type && rule.action === input.resource.action
-    );
+    const matchingRules = matchRulesForAction(rules, input.resource.type, input.resource.action);
 
     if (matchingRules.length === 0) {
       return {

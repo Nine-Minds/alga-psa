@@ -2,6 +2,7 @@ import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import type { ITicket, IUserWithRoles } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
+import { hasPermission } from './rbac';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
@@ -170,13 +171,8 @@ export async function createTicketAuthorizationContext(
       relationshipRules,
     }),
     bundleProvider: new BundleAuthorizationKernelProvider({
-      resolveRules: async (input) => {
-        try {
-          return await resolveBundleNarrowingRulesForEvaluation(trx as Knex.Transaction, input);
-        } catch {
-          return [];
-        }
-      },
+      // A policy lookup failure must not become an empty rule set that grants access.
+      resolveRules: (input) => resolveBundleNarrowingRulesForEvaluation(trx as Knex.Transaction, input),
     }),
     rbacEvaluator: async () => true,
   });
@@ -236,7 +232,7 @@ export async function authorizeTicketRecordAccess(input: {
   tenant: string;
   user: IUserWithRoles;
   ticketId: string;
-  action: 'read' | 'update';
+  action: 'read' | 'update' | 'delete';
   /** Already-loaded ticket row (must include the authorization columns); skips the reload. */
   ticketRow?: TicketRecordRow;
 }): Promise<TicketRecordRow> {
@@ -263,6 +259,15 @@ export async function authorizeTicketRecordAccess(input: {
 
   if (!decision.allowed) {
     throw new Error('Permission denied: Cannot access ticket');
+  }
+
+  if (input.action === 'delete' && !(await hasPermission(
+    { ...input.user, tenant: input.tenant },
+    'ticket',
+    'delete',
+    input.trx,
+  ))) {
+    throw new Error('Permission denied: Cannot delete ticket');
   }
 
   return ticket;

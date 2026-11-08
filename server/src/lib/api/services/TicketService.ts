@@ -65,6 +65,7 @@ import {
 } from '@alga-psa/tickets/lib/ticketBundlePolicy';
 import { BUNDLE_CHILD_LOCKED_FIELDS, isChildWorkflowLocked } from '@alga-psa/tickets/lib/bundleWorkflowLock';
 import { deleteTicketChildRecords } from '@alga-psa/tickets/lib/deleteTicketChildRecords';
+import { authorizeTicketRecordAccessConcealed } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
 import {
   ticketLatestActivitySql,
 } from '@alga-psa/tickets/actions/ticketListSortSql';
@@ -557,6 +558,33 @@ export class TicketService extends BaseService<ITicket> {
    */
   async delete(id: string, context: ServiceContext): Promise<void> {
     const { knex } = await this.getKnex();
+    const user = context.user as IUserWithRoles | undefined;
+    if (!user) {
+      throw new ForbiddenError('Authenticated user context is required to delete tickets');
+    }
+
+    const authorizeDelete = async (trx: Knex | Knex.Transaction, tenant: string) => {
+      try {
+        await authorizeTicketRecordAccessConcealed({
+          trx,
+          tenant,
+          user,
+          ticketId: id,
+          action: 'delete',
+        });
+      } catch (error) {
+        if (error instanceof Error && error.message === 'Ticket not found') {
+          throw new NotFoundError('Ticket not found');
+        }
+        if (error instanceof Error && error.message.startsWith('Permission denied')) {
+          if (isClientUserType(user.user_type)) throw new NotFoundError('Ticket not found');
+          throw new ForbiddenError('Permission denied: Cannot delete ticket');
+        }
+        throw error;
+      }
+    };
+
+    await authorizeDelete(knex, context.tenant);
 
     const result = await deleteEntityWithValidation(
       'ticket',
@@ -564,6 +592,8 @@ export class TicketService extends BaseService<ITicket> {
       knex,
       context.tenant,
       async (trx, tenant) => {
+        await authorizeDelete(trx, tenant);
+
         const ticket = await tenantScopedTable(trx, 'tickets', tenant)
           .where({ ticket_id: id })
           .first();
