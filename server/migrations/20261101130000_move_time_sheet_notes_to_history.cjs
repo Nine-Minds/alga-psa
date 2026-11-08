@@ -12,7 +12,7 @@ exports.up = async function up(knex) {
   // Preserve them as `legacy`; null created_by makes the missing provenance explicit.
   if (await knex.schema.hasTable('time_sheet_notes')) {
     await knex.raw(`ALTER TABLE time_sheet_notes DROP CONSTRAINT IF EXISTS time_sheet_notes_kind_check`);
-    await knex.raw(`ALTER TABLE time_sheet_notes ADD CONSTRAINT time_sheet_notes_kind_check CHECK (kind IN ('submission', 'approval', 'request_changes', 'reverse_approval', 'legacy'))`);
+    await knex.raw(`ALTER TABLE time_sheet_notes ADD CONSTRAINT time_sheet_notes_kind_check CHECK (kind IN ('submission', 'approval', 'request_changes', 'reverse_approval', 'legacy')) NOT VALID`);
     await knex.raw(`ALTER TABLE time_sheet_notes ALTER COLUMN created_by DROP NOT NULL`);
   }
   if (!(await knex.schema.hasColumn('time_sheets', 'notes'))) return;
@@ -57,7 +57,10 @@ exports.up = async function up(knex) {
     last = rows[rows.length - 1];
   }
 
-  await knex.schema.alterTable('time_sheets', (table) => table.dropColumn('notes'));
+  await knex.schema.alterTable('time_sheets', (table) => {
+    // migration-lint: allow 3 — legacy notes are copied to time_sheet_notes above before retiring this temporary column.
+    table.dropColumn('notes');
+  });
 };
 
 exports.down = async function down(knex) {
