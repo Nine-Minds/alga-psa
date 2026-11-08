@@ -15,7 +15,7 @@ import {
   resolveExternalDeviceId,
   severityForKind,
 } from '../mappers/deviceMapper';
-import { createUniFiClient, type UniFiApiClient, type UniFiConnectionMode } from '../unifiApiClient';
+import { createUniFiClient, type UniFiClientSurface, type UniFiConnectionMode } from '../unifiApiClient';
 import { parseUniFiScopeKey, type MappedSite } from '../sync/syncEngine';
 
 export const UNIFI_OFFLINE_ACTIVITY_TYPE = 'DEVICE_OFFLINE';
@@ -23,7 +23,7 @@ export const DEFAULT_OFFLINE_GRACE_MINUTES = 5;
 
 export interface UniFiAlertFetcherDeps {
   getKnex: () => Promise<any>;
-  createClient: (tenantId: string, mode: UniFiConnectionMode) => Promise<Pick<UniFiApiClient, 'listDevices'>>;
+  createClient: (tenantId: string, mode: UniFiConnectionMode) => Promise<Pick<UniFiClientSurface, 'listDevices'>>;
   now: () => Date;
 }
 
@@ -286,7 +286,7 @@ export function createUniFiAlertFetcher(overrides: Partial<UniFiAlertFetcherDeps
     const failedScopes: string[] = [];
     const scopeObservationTimes: Record<string, string> = {};
     const observations: Parameters<typeof reconcileConditionObservations>[0]['observations'] = [];
-    let client: Pick<UniFiApiClient, 'listDevices'> | null = null;
+    let client: Pick<UniFiClientSurface, 'listDevices'> | null = null;
     if (sites.length > 0) {
       try {
         client = await deps.createClient(tenantId, mode);

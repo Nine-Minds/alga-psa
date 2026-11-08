@@ -12,7 +12,8 @@ import { ingestNormalizedRmmDeviceSnapshot } from '@alga-psa/shared/rmm/sharedAs
 import type { NormalizedRmmIngestionResult } from '@alga-psa/shared/rmm/contracts';
 import { upsertAssetFact } from '@alga-psa/assets/lib/assetFactsService';
 import type { RmmSyncResult } from '../../../../interfaces/rmm.interfaces';
-import { UniFiApiError, type UniFiApiClient, type UniFiDevice } from '../unifiApiClient';
+import { UniFiApiError, type UniFiClientSurface, type UniFiDevice } from '../unifiApiClient';
+import { unreachableConsoleMessage } from '../credentials/types';
 import { mapUniFiDeviceToSnapshot, normalizeMac, resolveExternalDeviceId } from '../mappers/deviceMapper';
 
 export const UNIFI_PROVIDER = 'unifi' as const;
@@ -21,7 +22,7 @@ type UniFiSyncEventName = 'RMM_SYNC_STARTED' | 'RMM_SYNC_COMPLETED' | 'RMM_SYNC_
 
 export interface UniFiSyncDeps {
   knex: Knex;
-  client: UniFiApiClient;
+  client: UniFiClientSurface;
   ingest?: typeof ingestNormalizedRmmDeviceSnapshot;
   upsertFact?: typeof upsertAssetFact;
   publishEvent?: (event: Record<string, unknown>) => Promise<void>;
@@ -96,7 +97,9 @@ export async function runUniFiScopeSync(args: UniFiSyncArgs, deps: UniFiSyncDeps
     await setUniFiSyncStatus(deps.knex, args.tenant, { sync_status: 'syncing', sync_error: null });
     const db = tenantDb(deps.knex, args.tenant);
 
-    const { sites, failures } = await deps.client.listSites();
+    // A manual or scheduled organization sync re-checks which key reaches which console.
+    deps.client.invalidateRoutes?.();
+    const { sites, failures, unreachable = [] } = await deps.client.listSites();
     if (failures.length > 0 && sites.length === 0) {
       throw new Error(`Unable to list UniFi sites: ${failures.map((f) => `${f.hostName}: ${f.message}`).join('; ')}`);
     }
@@ -142,7 +145,11 @@ export async function runUniFiScopeSync(args: UniFiSyncArgs, deps: UniFiSyncDeps
       }
     }
 
-    const warnings = failures.map((f) => `Console "${f.hostName}" could not be listed: ${f.message}`);
+    const warnings = [
+      ...failures.map((f) => `Console "${f.hostName}" could not be listed: ${f.message}`),
+      ...unreachable.map((c) => unreachableConsoleMessage(c.name)),
+    ];
+    const fleet = await deps.client.getFleetReport?.().catch(() => undefined);
     await setUniFiSyncStatus(deps.knex, args.tenant, {
       sync_status: 'completed',
       last_sync_at: deps.knex.fn.now(),
@@ -160,7 +167,7 @@ export async function runUniFiScopeSync(args: UniFiSyncArgs, deps: UniFiSyncDeps
         items_processed: sites.length,
         items_created: created,
         items_updated: updated,
-        items_failed: failures.length,
+        items_failed: failures.length + unreachable.length,
         completed_at: completedAt,
       },
     });
@@ -174,8 +181,9 @@ export async function runUniFiScopeSync(args: UniFiSyncArgs, deps: UniFiSyncDeps
       items_processed: sites.length,
       items_created: created,
       items_updated: updated,
-      items_failed: failures.length,
+      items_failed: failures.length + unreachable.length,
       errors: warnings,
+      ...(fleet ? { credentials: fleet.credentials, unreachableConsoles: fleet.unreachableConsoles } : {}),
     };
   } catch (error) {
     const message = sanitizeError(error);
@@ -248,7 +256,7 @@ export async function loadMappedSites(deps: UniFiSyncDeps, tenant: string, integ
  * A failed detail fetch only costs that device its uplink fact, never the sync.
  */
 async function enrichWithDetail(
-  client: UniFiApiClient,
+  client: UniFiClientSurface,
   site: Pick<MappedSite, 'hostId' | 'siteId'>,
   devices: UniFiDevice[]
 ): Promise<UniFiDevice[]> {
@@ -362,7 +370,8 @@ function safeJson(value: string): Record<string, any> | null {
  *
  * Fail-closed: a site whose listing throws is reported in errors[] and is NOT
  * tombstoned (a partial or failed list must never look like "device removed").
- * Auth failures abort the whole run; a console_forbidden (403 from one console's
+ * Auth failures abort the whole run (with several keys the client throws auth only when
+ * every key was rejected; one dead key is a per-site `credential_unavailable`); a console_forbidden (403 from one console's
  * Connector proxy) is a per-site error. An empty listing for a site with live
  * mapped devices is treated as suspect and tombstones nothing.
  */
@@ -377,6 +386,9 @@ export async function runUniFiFullSync(args: UniFiSyncArgs, deps: UniFiSyncDeps)
 
   try {
     await setUniFiSyncStatus(deps.knex, args.tenant, { sync_status: 'syncing', sync_error: null });
+    // Full sync re-probes: forget persisted routes so a key added or fixed since the
+    // last run is picked up. The real listing call doubles as the probe.
+    deps.client.invalidateRoutes?.();
     const sites = await loadMappedSites(deps, args.tenant, args.integrationId);
 
     let processed = 0;
@@ -457,6 +469,7 @@ export async function runUniFiFullSync(args: UniFiSyncArgs, deps: UniFiSyncDeps)
       }
     }
 
+    const fleet = await deps.client.getFleetReport?.().catch(() => undefined);
     await setUniFiSyncStatus(deps.knex, args.tenant, {
       sync_status: errors.length ? 'error' : 'completed',
       last_sync_at: deps.knex.fn.now(),
@@ -495,6 +508,7 @@ export async function runUniFiFullSync(args: UniFiSyncArgs, deps: UniFiSyncDeps)
       items_updated: updated,
       items_failed: errors.length,
       errors,
+      ...(fleet ? { credentials: fleet.credentials, unreachableConsoles: fleet.unreachableConsoles } : {}),
     };
   } catch (error) {
     const message = sanitizeError(error);

@@ -549,6 +549,8 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'software_catalog', deletion: 'ordered' },
   { table: 'rmm_condition_transitions', deletion: 'ordered' },
   { table: 'rmm_condition_states', deletion: 'ordered' },
+  { table: 'unifi_console_routes', deletion: 'ordered' },
+  { table: 'unifi_credentials', deletion: 'ordered' },
   { table: 'rmm_webhook_events', deletion: 'ordered' },
   { table: 'rmm_maintenance_windows', deletion: 'ordered', clientKeyed: true },
   { table: 'rmm_alert_rules', deletion: 'ordered' },

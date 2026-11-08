@@ -329,6 +329,8 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'software_catalog',
   'rmm_condition_transitions',
   'rmm_condition_states',
+  'unifi_console_routes',
+  'unifi_credentials',
   'rmm_webhook_events',
   'rmm_maintenance_windows',
   'rmm_alert_rules',
