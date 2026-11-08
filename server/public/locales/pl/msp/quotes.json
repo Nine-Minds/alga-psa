@@ -537,6 +537,7 @@
       "recurring": "Powtarzający się",
       "service": "praca",
       "setPrice": "Ustal cenę",
+      "taxable": "Podlega opodatkowaniu",
       "ungroupedItems": "Rozgrupowane elementy"
     },
     "placeholders": {

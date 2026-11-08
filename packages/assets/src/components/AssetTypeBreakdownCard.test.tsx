@@ -1,24 +1,12 @@
 /* @vitest-environment jsdom */
 
-/**
- * T316 (F313): dashboard by-type breakdown shows counts for custom types
- * with registry-resolved labels (not raw slugs), keeps built-in labels, and
- * forwards chip clicks to the type filter.
- */
-
 import React from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { AssetTypeBreakdownCard } from './AssetTypeBreakdownCard';
 import { resolveAssetTypeLabel } from '../lib/assetTypeDisplay';
-
-const mockGetAssetCountsByType = vi.fn();
-
-vi.mock('../actions/assetStatisticsActions', () => ({
-  getAssetCountsByType: (...args: unknown[]) => mockGetAssetCountsByType(...args),
-}));
 
 vi.mock('@alga-psa/ui/components/Card', () => ({
   Card: ({ children, ...props }: any) => <div {...props}>{children}</div>,
@@ -28,18 +16,10 @@ vi.mock('@alga-psa/ui/ui-reflection/withDataAutomationId', () => ({
   withDataAutomationId: ({ id }: { id: string }) => ({ id, 'data-automation-id': id }),
 }));
 
-const stableT = (key: string, options?: Record<string, unknown>) => {
-  let text = String(options?.defaultValue ?? key);
-  for (const [name, value] of Object.entries(options ?? {})) {
-    if (name === 'defaultValue') continue;
-    text = text.replace(`{{${name}}}`, String(value));
-  }
-  return text;
-};
-const stableTranslation = { t: stableT };
-
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
-  useTranslation: () => stableTranslation,
+  useTranslation: () => ({
+    t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key,
+  }),
 }));
 
 const registry = [
@@ -57,87 +37,83 @@ const registry = [
   },
 ];
 
-// Mirrors the dashboard's resolver: built-ins keep their labels, custom
-// slugs resolve through the registry, unknown slugs title-case.
 const getTypeLabel = (slug: string) =>
   slug === 'workstation' ? 'Workstation' : resolveAssetTypeLabel(registry, slug);
 
-describe('AssetTypeBreakdownCard (T316)', () => {
-  beforeEach(() => {
-    mockGetAssetCountsByType.mockReset();
-    mockGetAssetCountsByType.mockResolvedValue({
-      workstation: 7,
-      door_access: 3,
-      mystery_thing: 1,
-    });
-  });
+describe('AssetTypeBreakdownCard', () => {
+  afterEach(cleanup);
 
-  afterEach(() => {
-    cleanup();
-  });
+  it('shows registry labels and the counts supplied with the asset list', () => {
+    render(
+      <AssetTypeBreakdownCard
+        getTypeLabel={getTypeLabel}
+        counts={{ workstation: 7, door_access: 3, mystery_thing: 1 }}
+      />
+    );
 
-  it('shows registry labels (not raw slugs) for custom types alongside built-ins', async () => {
-    render(<AssetTypeBreakdownCard getTypeLabel={getTypeLabel} />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Door Access System')).toBeTruthy();
-    });
+    expect(screen.getByText('Door Access System')).toBeTruthy();
     expect(screen.getByText('Workstation')).toBeTruthy();
     expect(screen.getByText('7')).toBeTruthy();
     expect(screen.getByText('3')).toBeTruthy();
-    // Unregistered slug keeps the historical fallback, never the raw slug.
     expect(screen.getByText('Mystery Thing')).toBeTruthy();
     expect(screen.queryByText('door_access')).toBeNull();
-    // Stable, slug-keyed ids.
     expect(document.getElementById('asset-type-breakdown-door_access')).toBeTruthy();
   });
 
-  it('forwards chip clicks to the type filter and marks active types', async () => {
+  it('forwards chip clicks and marks active types', async () => {
     const onSelectType = vi.fn();
     render(
       <AssetTypeBreakdownCard
         getTypeLabel={getTypeLabel}
+        counts={{ workstation: 7, door_access: 3 }}
         onSelectType={onSelectType}
         activeTypes={['workstation']}
       />
     );
 
-    await waitFor(() => {
-      expect(screen.getByText('Door Access System')).toBeTruthy();
-    });
-
     await userEvent.click(screen.getByText('Door Access System'));
     expect(onSelectType).toHaveBeenCalledWith('door_access');
-
-    const activeChip = document.getElementById('asset-type-breakdown-workstation');
-    expect(activeChip?.className).toContain('border-primary-300');
+    expect(document.getElementById('asset-type-breakdown-workstation')?.className)
+      .toContain('border-primary-300');
   });
 
-  it('refetches when refreshToken changes and hides itself with zero assets', async () => {
-    // Each fetch resolves only when the test says so, so assertions observe
-    // the rendered outcome rather than racing the promise flush.
-    const pending: Array<(counts: Record<string, number>) => void> = [];
-    mockGetAssetCountsByType.mockImplementation(
-      () => new Promise<Record<string, number>>((resolve) => pending.push(resolve))
-    );
+  it('shows loading, hides an empty result, and renders new counts', () => {
     const { container, rerender } = render(
-      <AssetTypeBreakdownCard getTypeLabel={getTypeLabel} refreshToken={0} />
+      <AssetTypeBreakdownCard getTypeLabel={getTypeLabel} counts={null} />
+    );
+    expect(container.querySelector('.skeleton-fill')).toBeTruthy();
+
+    rerender(<AssetTypeBreakdownCard getTypeLabel={getTypeLabel} counts={{}} />);
+    expect(container.innerHTML).toBe('');
+
+    rerender(<AssetTypeBreakdownCard getTypeLabel={getTypeLabel} counts={{ door_access: 2 }} />);
+    expect(screen.getByText('Door Access System')).toBeTruthy();
+    expect(screen.getByText('2')).toBeTruthy();
+  });
+
+  it('keeps a selected type visible at zero when other filters exclude it', () => {
+    render(
+      <AssetTypeBreakdownCard
+        getTypeLabel={getTypeLabel}
+        counts={{ workstation: 4 }}
+        activeTypes={['door_access']}
+      />
     );
 
-    await waitFor(() => expect(mockGetAssetCountsByType).toHaveBeenCalledTimes(1));
-    // Loading skeleton while the first fetch is in flight.
-    expect(document.getElementById('asset-type-breakdown')).toBeTruthy();
+    const chip = document.getElementById('asset-type-breakdown-door_access');
+    expect(chip?.textContent).toContain('0');
+    expect(chip?.className).toContain('border-primary-300');
+  });
 
-    pending[0]({});
-    await waitFor(() => expect(container.innerHTML).toBe(''));
+  it('keeps a selected custom type whose slug matches an object property', () => {
+    render(
+      <AssetTypeBreakdownCard
+        getTypeLabel={getTypeLabel}
+        counts={{}}
+        activeTypes={['constructor']}
+      />
+    );
 
-    rerender(<AssetTypeBreakdownCard getTypeLabel={getTypeLabel} refreshToken={1} />);
-    await waitFor(() => expect(mockGetAssetCountsByType).toHaveBeenCalledTimes(2));
-
-    pending[1]({ door_access: 2 });
-    await waitFor(() => {
-      expect(screen.getByText('Door Access System')).toBeTruthy();
-    });
-    expect(screen.getByText('2')).toBeTruthy();
+    expect(document.getElementById('asset-type-breakdown-constructor')?.textContent).toContain('0');
   });
 });

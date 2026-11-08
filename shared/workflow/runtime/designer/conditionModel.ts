@@ -1,5 +1,6 @@
 import jsonata from 'jsonata';
 import {
+  COMPLEMENTS,
   PREDICATE_OPERATORS,
   operatorTakesList,
   operatorTakesValue,
@@ -61,17 +62,34 @@ const SYMBOL_TO_COMPARISON_OPERATOR: Record<string, WorkflowConditionOperator> =
   '<=': 'lte',
 };
 
-const TEXT_FUNCTION_BY_OPERATOR: Partial<Record<WorkflowConditionOperator, string>> = {
+const POSITIVE_TEXT_FUNCTION_BY_OPERATOR: Partial<Record<WorkflowConditionOperator, string>> = {
   contains: 'contains',
   starts_with: 'startsWith',
   ends_with: 'endsWith',
 };
 
-const OPERATOR_BY_TEXT_FUNCTION: Record<string, WorkflowConditionOperator> = {
-  contains: 'contains',
-  startsWith: 'starts_with',
-  endsWith: 'ends_with',
+/**
+ * Workflow function for each text operator. A negative text operator calls the `not` form of its positive
+ * function (`not_contains` -> `notContains`), found through the shared `COMPLEMENTS` table. Those functions
+ * are true for a missing or non-string value, as `NOT <positive>` requires.
+ */
+const TEXT_FUNCTION_BY_OPERATOR: Partial<Record<WorkflowConditionOperator, string>> = {
+  ...POSITIVE_TEXT_FUNCTION_BY_OPERATOR,
+  ...Object.fromEntries(
+    (Object.entries(COMPLEMENTS) as Array<[WorkflowConditionOperator, WorkflowConditionOperator]>).flatMap(
+      ([negative, positive]) => {
+        const positiveFunction = POSITIVE_TEXT_FUNCTION_BY_OPERATOR[positive];
+        return positiveFunction ? [[negative, `not${positiveFunction[0].toUpperCase()}${positiveFunction.slice(1)}`]] : [];
+      },
+    ),
+  ),
 };
+
+const OPERATOR_BY_TEXT_FUNCTION: Record<string, WorkflowConditionOperator> = Object.fromEntries(
+  (Object.entries(TEXT_FUNCTION_BY_OPERATOR) as Array<[WorkflowConditionOperator, string]>).map(
+    ([operator, textFunction]) => [textFunction, operator],
+  ),
+);
 
 const SIMPLE_PATH_SEGMENT = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
@@ -98,6 +116,15 @@ const serializeLiteral = (value: WorkflowConditionLiteral): string => {
   return JSON.stringify(value);
 };
 
+/**
+ * A needle for a text function. The workflow engine rewrites `==` and `name(` in the whole source before
+ * parsing, string literals included, so `=` and `(` are written as unicode escapes to keep the needle literal.
+ */
+const serializeNeedle = (value: WorkflowConditionLiteral): string =>
+  typeof value === 'string'
+    ? JSON.stringify(value).replace(/=/g, '\\u003d').replace(/\(/g, '\\u0028')
+    : serializeLiteral(value);
+
 const asSingleLiteral = (value: WorkflowConditionClause['value']): WorkflowConditionLiteral => {
   if (Array.isArray(value)) return value[0] ?? '';
   return value === undefined ? '' : value;
@@ -117,7 +144,7 @@ export const serializeConditionClause = (clause: WorkflowConditionClause): strin
 
   const textFunction = TEXT_FUNCTION_BY_OPERATOR[clause.operator];
   if (textFunction) {
-    return `${textFunction}(${path}, ${serializeLiteral(asSingleLiteral(clause.value))})`;
+    return `${textFunction}(${path}, ${serializeNeedle(asSingleLiteral(clause.value))})`;
   }
 
   switch (clause.operator) {

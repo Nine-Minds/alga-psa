@@ -41,17 +41,17 @@ export const clientFormSchema = z.object({
   notes: z.string().optional(),
   // Calendar date the relationship began; null keeps the created_at fallback.
   client_since: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'client_since must be a YYYY-MM-DD date').optional().nullable(),
-  properties: z.record(z.any()).optional(),
-  parent_client_id: z.string().uuid().optional().nullable(),
-  contract_line_id: z.string().uuid().optional().nullable()
+  properties: z.record(z.string(), z.any()).optional(),
+  parent_client_id: z.string().guid().optional().nullable(),
+  contract_line_id: z.string().guid().optional().nullable()
 });
 
 // Complete client schema for validation
 export const clientSchema = z.object({
-  client_id: z.string().uuid(),
+  client_id: z.string().guid(),
   client_name: z.string(),
   client_type: z.enum(['company', 'individual']).nullable(),
-  tenant: z.string().uuid(),
+  tenant: z.string().guid(),
   url: z.string().nullable(),
   phone_no: z.string().nullable(),
   email: z.string().nullable(),
@@ -65,9 +65,9 @@ export const clientSchema = z.object({
   is_inactive: z.boolean().nullable(),
   created_at: z.string(),
   updated_at: z.string(),
-  properties: z.record(z.any()).nullable(),
-  parent_client_id: z.string().uuid().nullable(),
-  contract_line_id: z.string().uuid().nullable(),
+  properties: z.record(z.string(), z.any()).nullable(),
+  parent_client_id: z.string().guid().nullable(),
+  contract_line_id: z.string().guid().nullable(),
   is_default: z.boolean().nullable(),
   // Additional allowlisted account columns written by the questionnaire answer
   // mapping engine. Optional/nullable so existing callers are unaffected; Zod
@@ -116,7 +116,7 @@ export function validateData<T>(schema: z.ZodSchema<T>, data: unknown): T {
     return schema.parse(data);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errorMessages = error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ');
+      const errorMessages = error.issues.map(err => `${err.path.join('.')}: ${err.message}`).join(', ');
       throw new Error(`Validation failed: ${errorMessages}`);
     }
     throw error;

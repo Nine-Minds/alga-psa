@@ -11,6 +11,7 @@ import ClientAvatar from './ClientAvatar';
 import { EntityTagBadges } from './EntityChip';
 import { TagFilter } from './tags/TagFilter';
 import { useClientTags } from '../context/ClientTagsContext';
+import { useClientPickerSearch } from '../context/ClientPickerSearchContext';
 import { useTranslation } from '../lib/i18n/client';
 import type { AutomationProps } from '../ui-reflection/types';
 
@@ -47,8 +48,11 @@ export type ClientPickerSearchFn = (
 
 export interface AsyncClientPickerProps {
   id?: string;
-  /** Server search; pass `searchClientsForPicker`. */
-  searchClients: ClientPickerSearchFn;
+  /**
+   * Server search (`searchClientsForPicker`). Optional: falls back to the searcher supplied by
+   * `ClientPickerSearchProvider` (mounted in the MSP shells). An explicit prop wins.
+   */
+  searchClients?: ClientPickerSearchFn;
   onSelect: (clientId: string | null) => void;
   selectedClientId: string | null;
   filterState?: ClientPickerStatusFilter;
@@ -70,6 +74,12 @@ export interface AsyncClientPickerProps {
 }
 
 const DEFAULT_PAGE_SIZE = 25;
+
+const missingSearcher: ClientPickerSearchFn = async () => {
+  throw new Error(
+    'AsyncClientPicker has no searcher: pass `searchClients` or mount ClientPickerSearchProvider'
+  );
+};
 
 function PickerFilters({
   id,
@@ -169,7 +179,7 @@ function PickerFilters({
  */
 export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProps> = ({
   id = 'client-picker',
-  searchClients,
+  searchClients: searchClientsProp,
   onSelect,
   selectedClientId,
   filterState,
@@ -188,6 +198,9 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
   debounceMs,
 }) => {
   const { t } = useTranslation('common');
+  const contextSearch = useClientPickerSearch();
+  const searchClients: ClientPickerSearchFn =
+    searchClientsProp ?? contextSearch.searchClients ?? missingSearcher;
   const [internalStatus, setInternalStatus] = useState<ClientPickerStatusFilter>(filterState ?? 'active');
   const [internalType, setInternalType] = useState<ClientPickerTypeFilter>(clientTypeFilter ?? 'all');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);

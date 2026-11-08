@@ -86,7 +86,7 @@ export async function authenticateApiKeyRequest(
   }
 
   const apiRequest = req as AuthenticatedApiRequest;
-  apiRequest.context = await buildAuthenticatedApiContext(keyRecord);
+  apiRequest.context = await buildAuthenticatedApiContext(keyRecord, req);
   apiRequest.context.rateLimit = await enforceApiRateLimit(apiRequest, apiRequest.context);
 
   return apiRequest;

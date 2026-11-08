@@ -21,7 +21,7 @@ const setup = (readable: string[], userType = 'internal') => {
   };
   const renderPdf = vi.fn(async () => ({ pdf: Buffer.from('%PDF'), labels: 1, sheets: 1 }));
   const deps: PrintLabelsDeps = {
-    providers: { 'ticket-work-tag': provider, 'asset-identity': undefined, 'stock-unit-identity': undefined, 'staging-container': undefined },
+    providers: { 'ticket-work-tag': provider, 'asset-identity': undefined, 'stock-unit-identity': undefined, 'staging-container': undefined, 'rma-work-tag': undefined },
     renderPdf, describeClientError: () => null,
     resolveTemplate: vi.fn(async () => ({ ok: true as const, templateCode: 'standard-ticket-work-tag', templateAst: null })) as never,
     getLinkedAssetParts: vi.fn(async (_c, subjects: unknown[]) => subjects.map(() => null)) as never,

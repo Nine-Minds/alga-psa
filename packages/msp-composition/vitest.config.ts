@@ -7,6 +7,8 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     include: ['src/**/*.test.{ts,tsx}'],
+    // DB suites run through the workspace DB runner (scripts/run-workspace-db-tests.mjs).
+    exclude: ['**/node_modules/**', '**/*.db.test.{ts,tsx}'],
     sequence: { concurrent: false, shuffle: false },
     coverage: { enabled: false },
   },

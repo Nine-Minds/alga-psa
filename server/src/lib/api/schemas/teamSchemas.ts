@@ -556,8 +556,8 @@ export const teamStatsResponseSchema = z.object({
   average_team_size: z.number(),
   largest_team_size: z.number(),
   total_members: z.number(),
-  teams_by_department: z.record(z.number()),
-  teams_by_location: z.record(z.number()),
+  teams_by_department: z.record(z.string(), z.number()),
+  teams_by_location: z.record(z.string(), z.number()),
   performance_distribution: z.object({
     high_performing: z.number(),
     average_performing: z.number(),

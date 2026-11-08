@@ -16,6 +16,12 @@ if (typeof window !== 'undefined') {
     (globalThis as Record<string, unknown>).ResizeObserver = ResizeObserverStub;
   }
 
+  // jsdom does not implement scrollIntoView; cmdk (ClientPicker's listbox) calls
+  // it on the highlighted item whenever the active selection changes.
+  if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
+    Element.prototype.scrollIntoView = function scrollIntoView() {};
+  }
+
   // CI runs the affected nx projects in parallel, so a saturated runner can
   // stretch renders past testing-library's 1s default async timeout (waitFor,
   // findBy*) and flake component suites that pass everywhere else. Configure

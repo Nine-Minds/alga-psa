@@ -71,7 +71,7 @@ describe('composeText helpers', () => {
     expect(parsed.success).toBe(false);
     expect(parsed.success ? [] : parsed.error.issues.map((issue) => issue.message)).toEqual(
       expect.arrayContaining([
-        'String must contain at least 1 character(s)',
+        'Too small: expected string to have >=1 characters',
         'Output labels must be unique within the step.',
         'Stable keys must be unique within the step.',
       ])

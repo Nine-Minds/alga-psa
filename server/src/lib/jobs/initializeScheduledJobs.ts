@@ -5,6 +5,7 @@ import { tenantDb } from '@alga-psa/db';
 import { scheduleMarketingJobsForTenant } from './marketingScheduleCutover';
 import { initializeJobRunner } from './initializeJobRunner';
 import { convergeCeMaintenanceSchedules } from './convergeCeMaintenanceSchedules';
+import { forcedValue } from '@alga-psa/core/capability';
 
 const isEnterpriseWorkflowEdition = (): boolean =>
   process.env.EDITION === 'enterprise'
@@ -25,6 +26,21 @@ export async function initializeScheduledJobs(): Promise<void> {
     // for immediate jobs (invoice generation, imports, ...).
     await initializeScheduler();
     logger.info('Job scheduler initialized');
+
+    // Load the production descriptor before either edition builds its durable
+    // recurring schedules. Keep the import guarded so FORCE_CAPABILITIES off
+    // does not load co-managed restore code during scheduler boot.
+    try {
+      const forced = forcedValue(process.env.FORCE_CAPABILITIES, 'co-managed');
+      if (forced !== 'off' && forced !== 'malformed') {
+        const { registerPortableRestoreJobs } = await import('./portableRestoreJobs');
+        await registerPortableRestoreJobs(isEnterpriseWorkflowEdition() ? 'ee' : 'ce');
+      }
+    } catch (error) {
+      logger.warn('Portable restore maintenance registration failed; continuing native scheduler setup', {
+        error: error instanceof Error ? error.message : 'unknown registration failure',
+      });
+    }
 
     if (isEnterpriseWorkflowEdition()) {
       logger.info('Skipping server-side recurring schedule convergence (Temporal owns recurring schedules in EE)');

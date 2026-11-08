@@ -1,0 +1,4 @@
+Revision: a055d8c541d6751d575eb8b200ca8053d54b6674 (application source unchanged during build)
+Command (server/): NODE_OPTIONS=--max-old-space-size=24576 npm run build
+Result: EXIT_CODE=0
+Full log: /tmp/alga-smoke-evidence/priority-board-20261103-1624/build-takeover-final.log on X670E

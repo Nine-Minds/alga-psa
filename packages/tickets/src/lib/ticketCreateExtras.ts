@@ -9,7 +9,7 @@ export const TICKET_CREATE_LIMITS = {
   maxWatchers: 50,
 } as const;
 
-const uuid = z.string().uuid();
+const uuid = z.string().guid();
 
 /**
  * The optional create-payload additions. Both are optional so existing `addTicket` callers

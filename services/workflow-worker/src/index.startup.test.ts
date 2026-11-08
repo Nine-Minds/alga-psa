@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
   dotenvConfigMock,
@@ -101,12 +101,18 @@ vi.mock('./registerEnterpriseStorageProviders.js', () => ({
   registerEnterpriseStorageProviders: (...args: unknown[]) => registerEnterpriseStorageProvidersMock(...args)
 }));
 
+const { healthState, registrationMode, callOrder } = vi.hoisted(() => ({
+  healthState: { workers: {} as Record<string, boolean>, ready: false },
+  registrationMode: { fail: false },
+  callOrder: [] as string[]
+}));
+
 vi.mock('./healthServer.js', () => ({
   HealthServer: class {
     async start() {}
     async stop() {}
-    setWorker() {}
-    markReady() {}
+    setWorker(name: string, ready: boolean) { healthState.workers[name] = ready; }
+    markReady() { healthState.ready = true; }
   }
 }));
 
@@ -153,11 +159,25 @@ vi.mock('@alga-psa/core/capability', () => ({
 describe('workflow worker startup', () => {
   beforeEach(() => {
     vi.resetModules();
+    healthState.workers = {};
+    healthState.ready = false;
+    registrationMode.fail = false;
+    callOrder.length = 0;
+    // Stand-in for the shared registration module (re-run per boot: a vi.mock factory is cached across resetModules).
+    // Registers on the REAL seam, or throws like an image that cannot resolve @alga-psa/co-managed.
+    vi.doMock('@alga-psa/co-managed/deliveryRegistration', async () => {
+      callOrder.push('import');
+      if (registrationMode.fail) throw new Error('cannot resolve co-managed');
+      const { coManagedWorkflowTicketSeam } = await import('@alga-psa/shared/lib/coManagedDelivery');
+      if (!coManagedWorkflowTicketSeam.hasProvider()) coManagedWorkflowTicketSeam.register(() => ({ retain: async () => undefined }));
+      return {};
+    });
     delete process.env.WORKFLOW_RUNTIME_V2_ENABLE_DB_POLLING;
     delete process.env.WORKFLOW_RUNTIME_V2_ENABLE_TEMPORAL_POLLING;
 
     dotenvConfigMock.mockReset();
     initializeWorkflowRuntimeV2Mock.mockReset();
+    initializeWorkflowRuntimeV2Mock.mockImplementation(() => { callOrder.push('init'); });
     registerWorkflowEmailProviderMock.mockReset();
     registerEnterpriseStorageProvidersMock.mockReset();
     sweepWorkerStartMock.mockReset();
@@ -237,6 +257,41 @@ describe('workflow worker startup', () => {
         expect(sweepWorkerStartMock).toHaveBeenCalledTimes(1);
       });
       expect(loggerErrorMock).not.toHaveBeenCalled();
+    } finally {
+      processOnSpy.mockRestore();
+    }
+  });
+
+  afterEach(async () => {
+    const { coManagedWorkflowTicketSeam } = await import('@alga-psa/shared/lib/coManagedDelivery');
+    coManagedWorkflowTicketSeam.reset();
+  });
+
+  it('registers the co-managed workflow ticket authority before initializeWorkflowRuntimeV2 and reports ready', async () => {
+    const processOnSpy = vi.spyOn(process, 'on').mockReturnValue(process);
+    try {
+      await import('./index.ts');
+      await vi.waitFor(() => expect(healthState.ready).toBe(true));
+      const { coManagedWorkflowTicketSeam } = await import('@alga-psa/shared/lib/coManagedDelivery');
+      expect(coManagedWorkflowTicketSeam.hasProvider()).toBe(true);
+      expect(healthState.workers['co-managed-workflow-authority']).toBe(true);
+      expect(callOrder).toEqual(['import', 'init']);
+    } finally {
+      processOnSpy.mockRestore();
+    }
+  });
+
+  it('stays not-ready with a named reason when the provider import throws', async () => {
+    registrationMode.fail = true;
+    const processOnSpy = vi.spyOn(process, 'on').mockReturnValue(process);
+    try {
+      await import('./index.ts');
+      await vi.waitFor(() => expect(eventWorkerStartMock).toHaveBeenCalledTimes(1));
+      expect(healthState.workers['co-managed-workflow-authority']).toBe(false);
+      expect(healthState.ready).toBe(false);
+      expect(loggerInfoMock).not.toHaveBeenCalledWith('[WorkflowWorker] All services started successfully');
+      expect(loggerInfoMock).toHaveBeenCalledWith(expect.stringContaining('NOT ready'));
+      expect(loggerErrorMock).toHaveBeenCalledWith(expect.stringContaining('Failed to register the co-managed workflow ticket authority'), expect.anything());
     } finally {
       processOnSpy.mockRestore();
     }

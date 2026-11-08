@@ -78,7 +78,8 @@
       "poScopeDiffers": "Inköpsorderns omfattning skiljer sig åt",
       "currencyDiffers": "Valutorna skiljer sig åt",
       "taxTreatmentDiffers": "Skattehanteringen skiljer sig åt",
-      "exportShapeDiffers": "Exportstrukturen skiljer sig åt"
+      "exportShapeDiffers": "Exportstrukturen skiljer sig åt",
+      "billingProfileDiffers": "Faktureringsprofilen skiljer sig åt"
     },
     "executionRows": {
       "labels": {
@@ -856,6 +857,7 @@
       "syncNow": "Synkronisera med QuickBooks",
       "viewInQbo": "Visa i QuickBooks",
       "voidInvoice": "Makulera faktura",
+      "delegateTax": "Använd skatt från bokföringssystemet",
       "viewInXero": "Visa i Xero"
     },
     "loading": "Läser in förhandsgranskning…",
@@ -877,6 +879,13 @@
     },
     "applyCreditDialog": {
       "title": "Avräkna tillgodohavande"
+    },
+    "delegateTaxDialog": {
+      "title": "Använd skatt från bokföringssystemet",
+      "description": "Bokföringssystemet beräknar skatten för den här fakturan vid nästa export, och AlgaPSA ersätter sedan skatt och totalsumma med det resultatet. Nummer, rader, priser och registrerade betalningar förblir oförändrade.",
+      "cancel": "Avbryt",
+      "confirm": "Byt till skatt från bokföringssystemet",
+      "switching": "Byter..."
     },
     "voidDialog": {
       "title": "Makulera faktura",
@@ -1974,15 +1983,19 @@
       },
       "invoice_subtotal": {
         "label": "Delsumma",
-        "description": "Fakturans delsumma före moms och rabatter."
+        "description": "Fakturans delsumma efter rabatter och krediter, före moms."
+      },
+      "invoice_grossSubtotal": {
+        "label": "Delsumma före rabatter",
+        "description": "Fakturans delsumma före rabatter och krediter, och före moms."
+      },
+      "invoice_discountTotal": {
+        "label": "Rabatter",
+        "description": "Summan av rabatt- och kreditrader, visad som ett positivt belopp."
       },
       "invoice_tax": {
         "label": "Moms",
         "description": "Fakturans momsbelopp."
-      },
-      "invoice_discount": {
-        "label": "Rabatt",
-        "description": "Fakturans rabattbelopp."
       },
       "invoice_total": {
         "label": "Att betala",
@@ -2121,6 +2134,26 @@
     "resize": {
       "handleHint": "Dra för att ändra storlek · dubbelklicka för att anpassa till innehållet",
       "autoValue": "Automatisk ({{value}})"
+    },
+    "bundleRows": {
+      "off": "Av",
+      "quantities": "Endast kvantiteter",
+      "quantitiesAndPrices": "Kvantiteter och priser",
+      "custom": "Anpassad",
+      "showChange": "Visa ändring från föregående period (+N / −N)",
+      "pricesNote": "Komponentpriser ingår i den här mallens fakturadata, även för kunder.",
+      "quantitiesNote": "Den här mallen visar inte komponentpriser för kunder.",
+      "blankOnBundle": "Tomt på paketraden",
+      "componentCells": "Celler för komponentrader",
+      "cellClear": "— Tom —",
+      "field": {
+        "name": "Tjänstenamn",
+        "quantity": "Antal",
+        "period": "Tjänsteperiod",
+        "pricingBasis": "Prisgrund",
+        "unitPrice": "Á-pris",
+        "total": "Belopp"
+      }
     }
   },
   "projectBilling": {
@@ -2444,7 +2477,8 @@
       "moveDown": "Flytta {{row}} nedåt",
       "remove": "Ta bort {{row}}",
       "label": "Etikett",
-      "emphasize": "Framhäv (som slutsumma)"
+      "emphasize": "Framhäv (som slutsumma)",
+      "hideWhenZero": "Dölj när noll"
     }
   },
   "draftInvoiceDetails": {
@@ -2552,7 +2586,8 @@
       "packingSlip": "Följesedel",
       "pickList": "Plocklista",
       "workTag": "Arbetsetikett / Etikett",
-      "stagingManifest": "Packlista"
+      "stagingManifest": "Packlista",
+      "rmaReturnSlip": "RMA-returfölje"
     }
   },
   "errors": {

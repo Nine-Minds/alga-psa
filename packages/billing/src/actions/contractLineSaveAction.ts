@@ -61,6 +61,8 @@ export interface ContractLineEditDraft {
     round_up_to_nearest?: number | null;
     location_id?: string | null;
     invoice_line_description?: string | null;
+    /** Muted second line under the bundle title (Fixed lines). */
+    invoice_line_subtitle?: string | null;
     start_date?: string | null;
     end_date?: string | null;
   };
@@ -107,7 +109,7 @@ export const getContractLineEditVersion = withAuth(async (
 
 const LINE_FIELDS = [
   'billing_timing', 'cadence_owner', 'minimum_billable_time', 'round_up_to_nearest',
-  'location_id', 'invoice_line_description', 'start_date', 'end_date',
+  'location_id', 'invoice_line_description', 'invoice_line_subtitle', 'start_date', 'end_date',
 ] as const;
 
 const finiteNonNegative = (value: unknown, label: string) => {
@@ -153,9 +155,6 @@ export const saveContractLineEdit = withAuth(async (
       // ---- 1. Validate and resolve. No writes before the "write" marker. ----
       if (!await hasPermission(user, 'billing', 'update', trx)) {
         return permissionError('Permission denied: billing update required', 'msp/billing:errors.permissions.billingUpdate');
-      }
-      if (draft.added_service_ids.length > 0 && !await hasPermission(user, 'billing', 'create', trx)) {
-        return permissionError('Permission denied: billing create required', 'msp/billing:errors.permissions.billingCreate');
       }
       if ((draft.removed_service_ids.length > 0 || draft.removed_config_ids.length > 0) && !await hasPermission(user, 'billing', 'delete', trx)) {
         return permissionError('Permission denied: billing delete required', 'msp/billing:errors.permissions.billingDelete');
@@ -354,7 +353,7 @@ export const saveContractLineEdit = withAuth(async (
         if (removedIds.includes(entry.service_id)) continue;
         if (entry.overlay) {
           if (!await hasPermission(user, 'billing', 'update', trx)) throw new Error('Permission denied: Cannot update bucket overlays');
-          await upsertBucketOverlayInTransaction(trx, tenant, contractLineId, entry.service_id, {
+          await upsertBucketOverlayInTransaction(trx, tenant, user, contractLineId, entry.service_id, {
             total_minutes: entry.overlay.total_minutes,
             overage_rate: entry.overlay.overage_rate,
             allow_rollover: entry.overlay.allow_rollover ?? false,

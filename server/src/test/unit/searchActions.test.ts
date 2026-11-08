@@ -659,4 +659,13 @@ describe('search actions', () => {
       totalCount: 1,
     }).success).toBe(false);
   });
+
+  it('routes full search and typeahead through withProjectSearchAccess and passes the searchIndex on', () => {
+    const source = readFileSync(resolve(__dirname, '../../lib/actions/searchActions.ts'), 'utf8');
+    expect(source).toContain("from '@alga-psa/search/projectSearchAccess'");
+    expect(source.match(/withProjectSearchAccess\(knex, tenant, user/g)).toHaveLength(2);
+    expect(source).toContain('runAppSearch(accessKnex, tenant, user, parsedInput, searchIndex)');
+    expect(source).toMatch(/runSearchTypeaheadQuery\(\{[^}]*knex: accessKnex[^}]*searchIndex \}\)/);
+    expect(source).toMatch(/countSearchMatches\(\{[^}]*knex: accessKnex[^}]*searchIndex \}\)/);
+  });
 });
