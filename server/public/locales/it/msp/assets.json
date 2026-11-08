@@ -2245,6 +2245,8 @@
       "allStatuses": "Tutti gli stati",
       "notes": "Note",
       "exportCsv": "Esporta CSV",
+      "exportStarted": "Esportazione CSV avviata.",
+      "exportEmpty": "Non c'è nulla da esportare in questa vista.",
       "addUnexpected": "Aggiungi asset non previsto",
       "addUnexpectedHint": "Un dispositivo trovato in sede ma non incluso nell’ambito di questo audit viene registrato come non previsto, mai come previsto.",
       "addUnexpectedPlaceholder": "Cerca un asset…",
