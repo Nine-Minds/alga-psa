@@ -189,6 +189,10 @@ describe('TimeSheetService write paths (REST API, alga-2026-0002763)', () => {
       expect(await commentsFor(sheet.id)).toMatchObject([{
         comment: 'Changes requested: Missing task detail\n\nDetails: Please identify the client task.', is_approver: true,
       }]);
+      // Update accepts change-request metadata; submission and approval notes belong to their
+      // dedicated operations and must not create extra audit records during this transition.
+      expect(await notesFor(sheet.id)).toHaveLength(1);
+      expect(await commentsFor(sheet.id)).toHaveLength(1);
       timeSheetResponseSchema.parse(wire(updated));
     });
 

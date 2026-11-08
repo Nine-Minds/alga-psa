@@ -457,7 +457,7 @@ export class TimeSheetService extends BaseService<any> {
 
   async update(id: string, data: UpdateTimeSheetData, context: ServiceContext): Promise<any> {
     // approval_status is derived state: a supplied status is a *request* for a transition, never a column write.
-    const { approval_status: requestedStatus, change_reason, detailed_feedback, submission_notes, approval_notes, ...fields } = data;
+    const { approval_status: requestedStatus, change_reason, detailed_feedback, ...fields } = data;
 
     // Allow an external time source to own the record before looking it up in the native store. In particular,
     // a delegated DRAFT update may legitimately refer to an id that does not exist in the native time_sheets table.
@@ -503,8 +503,6 @@ export class TimeSheetService extends BaseService<any> {
           await transitionTimeSheet(trx, existing, requestedStatus, context, {
             change_reason,
             detailed_feedback,
-            submission_notes,
-            approval_notes,
           });
         }
       });
