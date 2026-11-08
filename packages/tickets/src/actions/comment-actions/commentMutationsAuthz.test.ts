@@ -140,7 +140,9 @@ describe('comment mutations: client principals need record access to the owning 
     commentRow = ownComment('ticket-2');
     hasPermissionMock.mockReset().mockResolvedValue(true);
     commentUpdate.mockReset();
-    commentDelete.mockReset();
+    commentDelete.mockReset().mockImplementation(() => {
+      writes.push({ table: 'comments', op: 'delete' });
+    });
     createTenantKnexMock.mockReset().mockResolvedValue({ knex: {}, tenant: 'tenant-1' });
     withTransactionMock.mockReset().mockImplementation(async (_k: any, cb: any) => cb(makeTrx()));
   });
@@ -163,6 +165,19 @@ describe('comment mutations: client principals need record access to the owning 
     expect(JSON.stringify(result?.message ?? result)).toMatch(/denied|permission/i);
     expect(commentDelete).not.toHaveBeenCalled();
     expect(writes).toEqual([]);
+  });
+
+  it('deleteComment: clears email reply references before deleting the comment', async () => {
+    ticketRow = ownTicket;
+    commentRow = ownComment('ticket-1');
+
+    await deleteComment('c-1');
+
+    expect(writes).toEqual([
+      { table: 'comment_reactions', op: 'delete' },
+      { table: 'email_reply_tokens', op: 'update' },
+      { table: 'comments', op: 'delete' },
+    ]);
   });
 
   it('toggleCommentReaction: rejects a client reacting on a comment of a ticket they cannot see', async () => {

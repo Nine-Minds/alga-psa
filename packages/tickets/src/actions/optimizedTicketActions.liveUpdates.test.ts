@@ -39,6 +39,13 @@ vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: (...args: any[]) => hasPermissionMock(...args),
 }));
 
+vi.mock('@alga-psa/authorization/bundles/service', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/authorization/bundles/service')>()),
+  loadAuthorizationEvaluationSnapshot: vi.fn(async () => ({
+    roleIds: [], teamIds: [], managedUserIds: [], rules: [],
+  })),
+}));
+
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnexMock(...args),
   tenantDb: (conn: any, _tenant: string) => ({
