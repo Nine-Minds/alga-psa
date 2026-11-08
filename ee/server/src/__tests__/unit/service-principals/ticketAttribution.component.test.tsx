@@ -2,21 +2,21 @@
 /// <reference types="@testing-library/jest-dom/vitest" />
 /**
  * T033: ticket activity and time-entry detail render "<human> via <principal>", and a
- * service-authored comment renders the Service badge. CE resolves @enterprise/* to render-nothing
- * stubs, so the EE components are mounted here via vi.mock to exercise the real slots.
+ * service-authored comment renders the Service badge. The EE suite owns this composition test
+ * so the shared tickets package does not depend on the enterprise application.
  */
 import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IComment, TicketTimeEntriesSummary } from '@alga-psa/types';
-import CommentItem from './CommentItem';
-import TicketActivityTimeline from './TicketActivityTimeline';
-import TicketTimeEntries from './TicketTimeEntries';
+import CommentItem from '@alga-psa/tickets/components/ticket/CommentItem';
+import TicketActivityTimeline from '@alga-psa/tickets/components/ticket/TicketActivityTimeline';
+import TicketTimeEntries from '@alga-psa/tickets/components/ticket/TicketTimeEntries';
 
 const m = vi.hoisted(() => ({ fetchTimeEntriesForTicket: vi.fn(), getTimeline: vi.fn() }));
 
-vi.mock('@enterprise/components/service-principals/ViaPrincipalLabel', () => import('../../../../../ee/server/src/components/service-principals/ViaPrincipalLabel'));
-vi.mock('@enterprise/components/service-principals/ServiceAuthorBadge', () => import('../../../../../ee/server/src/components/service-principals/ServiceAuthorBadge'));
+vi.mock('@enterprise/components/service-principals/ViaPrincipalLabel', () => import('../../../components/service-principals/ViaPrincipalLabel'));
+vi.mock('@enterprise/components/service-principals/ServiceAuthorBadge', () => import('../../../components/service-principals/ServiceAuthorBadge'));
 
 vi.mock('@alga-psa/ui/editor', () => ({
   RichTextViewer: () => <div data-testid="rich-text-viewer" />,
@@ -28,7 +28,7 @@ vi.mock('@alga-psa/ui/context', () => ({
   useSchedulingCallbacks: () => ({ fetchTimeEntriesForTicket: m.fetchTimeEntriesForTicket }),
 }));
 vi.mock('@alga-psa/ui/components', () => ({ useContentCardVariant: () => 'default' }));
-vi.mock('../../actions/ticketActivityActions', () => ({ getTicketTimelineEntries: m.getTimeline }));
+vi.mock('@alga-psa/tickets/actions/ticketActivityActions', () => ({ getTicketTimelineEntries: m.getTimeline }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => {
   const fill = (text: string, values?: Record<string, unknown>) =>

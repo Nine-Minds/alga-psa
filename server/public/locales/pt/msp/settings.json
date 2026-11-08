@@ -4108,7 +4108,7 @@
       "rateLimit": "Substituição do limite de taxa (opcional)",
       "rateLimitBurst": "Tamanho do burst (máx. {{max}})",
       "rateLimitRefill": "Requisições por minuto (máx. {{max}})",
-      "allowActAsHelp": "Quando ativado, os pedidos podem atuar como um utilizador interno ativo. Cada ação tem de ser permitida tanto para a conta de serviço como para esse utilizador."
+      "allowActAsHelp": "Quando ativada, esta opção permite que as requisições atuem como um usuário interno ativo. Cada ação deve ser permitida tanto para o principal de serviço quanto para esse usuário."
     },
     "keys": {
       "loadFailed": "Falha ao carregar as chaves",
@@ -4175,7 +4175,7 @@
       "availableOnPro": "Disponível no Pro",
       "row": "{{used}} de {{limit}}",
       "label": "Principais de serviço",
-      "seatNote": "As contas de serviço não consomem licenças de utilizador.",
+      "seatNote": "Os principais de serviço não consomem licenças de usuário.",
       "settingsLink": "Definições das contas de serviço",
       "blockedAccess": "O acesso à API e ao MCP é bloqueado abaixo do Pro.",
       "blockedCount": "{{used}} principais ativos bloqueados pelo plano"
@@ -4191,7 +4191,7 @@
       "api": "API",
       "mcpAgent": "Agente MCP"
     },
-    "seatNote": "As contas de serviço não consomem licenças de utilizador.",
+    "seatNote": "Os principais de serviço não consomem licenças de usuário.",
     "blockedAccess": "O acesso à API e ao MCP dos principais de serviço é bloqueado imediatamente abaixo do Pro. Os registos existentes continuam disponíveis para limpeza."
   },
 "tagDisplay": {

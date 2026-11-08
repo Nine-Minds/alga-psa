@@ -81,6 +81,40 @@ test('French audit accepts the cognate Question but rejects English question pro
   ]);
 });
 
+test('French audit accepts the feminine status Inactive but rejects English status prose', (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'inactive-audit-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  for (const language of ['en', 'fr']) {
+    mkdirSync(join(root, language), { recursive: true });
+    writeFileSync(join(root, language, 'keys.json'), JSON.stringify({
+      status: 'Inactive',
+      description: 'Inactive API key',
+      message: 'This key is inactive',
+    }));
+  }
+  const { report } = runAudit({ locale: 'fr', localesDir: root, writeReport: false });
+  assert.equal(report.namespaces.length, 1);
+  assert.deepEqual(report.namespaces[0].untranslated.map(({ key }) => key), [
+    'description', 'message',
+  ]);
+});
+
+for (const locale of ['pt', 'fr']) {
+  test(`${locale} service principal settings pass the locale quality audit`, () => {
+    const { report } = runAudit({
+      locale,
+      namespaceFilter: new Set(['msp/settings']),
+      writeReport: false,
+    });
+    assert.equal(report.namespaces.length, 1);
+    const result = report.namespaces[0];
+    assert.ok(result.keyCount > 0);
+    assert.deepEqual(result.structuralErrors, []);
+    assert.deepEqual(result.untranslated, []);
+    assert.deepEqual(result.forbiddenViolations, []);
+  });
+}
+
 for (const locale of ['fr', 'nl']) {
   test(`${locale} service request mapping copy passes the locale quality audit`, () => {
     const { report } = runAudit({
