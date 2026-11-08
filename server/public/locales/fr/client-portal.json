@@ -637,6 +637,7 @@
       "announcements": "Annonces système",
       "emailPreferences": "E-mail",
       "internalPreferences": "Internes",
+      "unreadCount_few": "{{count}} notifications non lues",
       "unreadCount_many": "{{count}} notifications non lues"
     },
     "actions": {
@@ -796,7 +797,7 @@
           "tickets": "Tickets",
           "tasks": "Tâches de projet"
         },
-        "openCount": "{{label}} en cours : {{count}}",
+        "openCount": "{{count}} {{label}} en cours",
         "actions": {
           "reassign": "Réaffecter",
           "unassign": "Retirer l'affectation",
@@ -809,9 +810,9 @@
           "projectTasks": "tâches de projet"
         },
         "summary": {
-          "archived": "Archivage prévu : {{count}} {{label}}",
-          "unassigned": "Retrait d'affectation prévu : {{count}} {{label}}",
-          "reassigned": "Réaffectation prévue : {{count}} {{label}} à {{name}}"
+          "archived": "{{count}} {{label}} à archiver",
+          "unassigned": "{{count}} {{label}} à laisser sans affectation",
+          "reassigned": "{{count}} {{label}} à réaffecter à {{name}}"
         }
       }
     },
@@ -952,6 +953,7 @@
       "unread": "Non lue",
       "noMessage": "Aucun message"
     },
+    "unreadCount_few": "{{count}} notifications non lues",
     "unreadCount_many": "{{count}} notifications non lues",
     "reconnectingToServer": "Reconnexion au serveur...",
     "refresh": "Actualiser",
@@ -1090,13 +1092,13 @@
     "sharedWorkspaceLabel": "Espace partagé",
     "details": {
       "notProvided": "Non renseigné",
-      "notAvailable": "Non disponible",
-      "cpuWithModel": "{{model}} (nombre de cœurs : {{count}})",
-      "cpuCores": "Nombre de cœurs : {{count}}",
+      "notAvailable": "N/D",
+      "cpuWithModel": "{{model}} ({{count}} cœurs)",
+      "cpuCores": "{{count}} cœurs",
       "workstationTitle": "Détails du poste de travail",
       "networkDeviceTitle": "Détails de l'équipement réseau",
       "serverTitle": "Détails du serveur",
-      "basicInformation": "Informations générales",
+      "basicInformation": "Informations de base",
       "os": "Système d'exploitation",
       "cpu": "CPU",
       "ram": "RAM",
