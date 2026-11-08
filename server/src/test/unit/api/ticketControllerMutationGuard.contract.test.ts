@@ -4,6 +4,7 @@ import { NextRequest } from 'next/server';
 const h = vi.hoisted(() => ({
   deniedActions: new Set<string>(),
   authorize: vi.fn(),
+  authorizeRead: vi.fn(),
   getById: vi.fn(),
   update: vi.fn(),
   delete: vi.fn(),
@@ -12,6 +13,7 @@ const h = vi.hoisted(() => ({
 vi.mock('../../../lib/api/controllers/authorizationKernel', async (original) => ({
   ...(await original<object>()),
   authorizeApiResourceAction: h.authorize,
+  authorizeApiResourceRead: h.authorizeRead,
 }));
 vi.mock('../../../lib/api/services/TicketService', () => ({
   TicketService: class {
@@ -58,6 +60,10 @@ describe('ApiTicketController mutation authorization guard', () => {
   beforeEach(() => {
     h.deniedActions = new Set();
     h.authorize.mockReset().mockImplementation(async ({ action }: { action: string }) => !h.deniedActions.has(action));
+    h.authorizeRead.mockReset().mockImplementation(async () => ({
+      allowed: !h.deniedActions.has('read'),
+      redactedFields: [],
+    }));
     h.getById.mockReset().mockResolvedValue(ticket);
     h.update.mockReset().mockResolvedValue({ ...ticket, title: 'Updated' });
     h.delete.mockReset().mockResolvedValue(undefined);
