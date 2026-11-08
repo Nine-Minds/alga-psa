@@ -2596,7 +2596,8 @@
       "invoiceDelete": "Permission denied: invoice delete required",
       "invoiceAccess": "Permission denied: invoice access denied",
       "otherClientInvoices": "Permission denied: cannot access invoices for another client",
-      "invoiceRead": "Permission denied: invoice read required"
+      "invoiceRead": "Permission denied: invoice read required",
+      "invoiceSend": "Permission denied: invoice send required"
     },
     "invoice": {
       "notFound": "Invoice not found",

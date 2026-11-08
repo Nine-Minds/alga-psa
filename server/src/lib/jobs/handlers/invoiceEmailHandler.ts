@@ -69,6 +69,7 @@ async function getClientRow(
 export interface InvoiceEmailJobData extends Record<string, unknown> {
   jobServiceId: string;
   tenantId: string;
+  forwardedExecutionId?: string;
   invoiceIds: string[];
   senderId?: string;
   steps: {
@@ -192,6 +193,7 @@ export class InvoiceEmailHandler {
           await jobService.updateJobStatus(jobServiceId, JobStatus.Processing, {
             tenantId,
             pgBossJobId,
+            forwardedExecutionId: data.forwardedExecutionId,
             stepResult: {
               step: pdfStep.type,
               status: 'started',
@@ -223,6 +225,7 @@ export class InvoiceEmailHandler {
           await jobService.updateJobStatus(jobServiceId, JobStatus.Processing, {
             tenantId,
             pgBossJobId,
+            forwardedExecutionId: data.forwardedExecutionId,
             stepResult: {
               step: pdfStep.type,
               status: 'completed',
@@ -246,6 +249,7 @@ export class InvoiceEmailHandler {
           await jobService.updateJobStatus(jobServiceId, JobStatus.Processing, {
             tenantId,
             pgBossJobId,
+            forwardedExecutionId: data.forwardedExecutionId,
             stepResult: {
               step: emailStep.type,
               status: 'started',
@@ -340,6 +344,7 @@ export class InvoiceEmailHandler {
             await jobService.updateJobStatus(jobServiceId, JobStatus.Processing, {
               tenantId,
               pgBossJobId,
+              forwardedExecutionId: data.forwardedExecutionId,
               stepResult: {
                 step: emailStep.type,
                 status: 'completed',
@@ -389,6 +394,7 @@ export class InvoiceEmailHandler {
           await jobService.updateJobStatus(jobServiceId, JobStatus.Failed, {
             tenantId,
             pgBossJobId,
+            forwardedExecutionId: data.forwardedExecutionId,
             error: contextualError
           });
           throw error;
@@ -399,6 +405,7 @@ export class InvoiceEmailHandler {
       await jobService.updateJobStatus(jobServiceId, JobStatus.Completed, {
         tenantId,
         pgBossJobId,
+        forwardedExecutionId: data.forwardedExecutionId,
         details: `Successfully processed ${invoiceIds.length} invoice(s)`
       });
 
@@ -408,7 +415,8 @@ export class InvoiceEmailHandler {
       await jobService.updateJobStatus(jobServiceId, JobStatus.Failed, {
         error: errorMessage,
         tenantId,
-        pgBossJobId
+        pgBossJobId,
+        forwardedExecutionId: data.forwardedExecutionId,
       });
       throw error;
     }

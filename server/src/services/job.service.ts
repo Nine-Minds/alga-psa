@@ -3,7 +3,12 @@ import { JobScheduler } from '../lib/jobs/jobScheduler';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { JobStatus } from '../types/job';
 import { createTenantKnex, runWithTenant } from 'server/src/lib/db';
-import { tenantDb } from '@alga-psa/db';
+import { getAdminConnection, tenantDb } from '@alga-psa/db';
+import {
+  claimForwardedJobExecution,
+  recordForwardedJobExecutionOutcome,
+  type ForwardedJobStatus,
+} from '@alga-psa/jobs/lib/forwardedJobCompletion';
 
 export interface JobStep {
   stepName: string;
@@ -68,6 +73,10 @@ export interface JobStatusUpdate {
   pgBossJobId?: string;
   stepResult?: JobStepResult;
   details?: string;
+  /** Set by the server subscriber for a Temporal-forwarded handler. The
+   * workflow owns jobs.status for these executions; handlers may still append
+   * progress metadata, but cannot change the workflow's status. */
+  forwardedExecutionId?: string;
 }
 
 export class JobService {
@@ -159,6 +168,7 @@ export class JobService {
       status,
       scheduledJobId: updates.pgBossJobId
     };
+    updateData.forwardedExecutionId = updates.forwardedExecutionId;
 
     if (updates.error) {
       updateData.error = typeof updates.error === 'string' 
@@ -176,6 +186,84 @@ export class JobService {
     }
 
     await this.updateJobRecord(jobId, updateData, updates.tenantId);
+  }
+
+  /** Persist the server-side result of a Temporal-forwarded handler without
+   * changing workflow-owned job status. The Temporal workflow remains the
+   * authority for terminal/recurring status transitions. */
+  async recordForwardedJobOutcome(
+    jobId: string,
+    tenantId: string,
+    executionId: string,
+    outcome: { status: 'completed' | 'failed'; error?: string },
+  ): Promise<boolean> {
+    const db = await getAdminConnection();
+    return db.transaction(async (trx) => {
+      await trx.raw('SELECT set_config(\'app.current_tenant\', ?, true)', [tenantId]);
+      const table = tenantDb(trx, tenantId).table('jobs');
+      const job = await table.where({ job_id: jobId }).forUpdate().first('metadata');
+      if (!job) throw new Error(`Job with ID ${jobId} not found`);
+      const metadata = job.metadata
+        ? (typeof job.metadata === 'string' ? JSON.parse(job.metadata) : job.metadata)
+        : {};
+      const transition = recordForwardedJobExecutionOutcome(metadata, executionId, outcome);
+      if (!transition.recorded) return false;
+      await table.where({ job_id: jobId }).update({
+        metadata: JSON.stringify(transition.metadata),
+        updated_at: new Date(),
+      });
+      return true;
+    });
+  }
+
+  /** Atomically move a forwarded run from queued to processing. Only the event
+   * delivery that wins this row-locked transition may invoke the handler. */
+  async claimForwardedJobExecution(
+    jobId: string,
+    tenantId: string,
+    executionId: string,
+  ): Promise<{ claimed: boolean; status?: ForwardedJobStatus }> {
+    const db = await getAdminConnection();
+    return db.transaction(async (trx) => {
+      await trx.raw('SELECT set_config(\'app.current_tenant\', ?, true)', [tenantId]);
+      const table = tenantDb(trx, tenantId).table('jobs');
+      const job = await table.where({ job_id: jobId }).forUpdate().first('metadata');
+      if (!job) throw new Error(`Job with ID ${jobId} not found`);
+      const metadata = job.metadata
+        ? (typeof job.metadata === 'string' ? JSON.parse(job.metadata) : job.metadata)
+        : {};
+      const transition = claimForwardedJobExecution(metadata, executionId);
+      if (transition.claimed) {
+        await table.where({ job_id: jobId }).update({
+          metadata: JSON.stringify(transition.metadata),
+          updated_at: new Date(),
+        });
+      }
+      return { claimed: transition.claimed, status: transition.status };
+    });
+  }
+
+  async getForwardedJobExecution(jobId: string, tenantId: string): Promise<{
+    executionId: string;
+    status: ForwardedJobStatus;
+    error?: string;
+  } | undefined> {
+    return runWithTenant(tenantId, async () => {
+      const { knex } = await createTenantKnex();
+      const job = await tenantDb(knex, tenantId).table('jobs')
+        .where({ job_id: jobId }).first('metadata');
+      if (!job) return undefined;
+      const metadata = job.metadata
+        ? (typeof job.metadata === 'string' ? JSON.parse(job.metadata) : job.metadata)
+        : {};
+      const execution = metadata.serverExecution;
+      if (typeof execution?.executionId !== 'string') return undefined;
+      return {
+        executionId: execution.executionId,
+        status: execution.status,
+        ...(typeof execution.error === 'string' ? { error: execution.error } : {}),
+      };
+    });
   }
 
   async getJobDetails(jobId: string, knexOrTrx?: Knex | Knex.Transaction): Promise<JobDetail[]> {
@@ -326,39 +414,33 @@ export class JobService {
       throw new Error('Tenant ID is required when updating a job record');
     }
 
-    await runWithTenant(resolvedTenant, async () => {
-      const { knex } = await createTenantKnex();
-      
-      const currentJob = await tenantDb(knex, resolvedTenant).table('jobs')
-        .where('job_id', id)
-        .first();
+    const db = await getAdminConnection();
+    await db.transaction(async (trx) => {
+      await trx.raw('SELECT set_config(\'app.current_tenant\', ?, true)', [resolvedTenant]);
+      const table = tenantDb(trx, resolvedTenant).table('jobs');
+      const currentJob = await table.where('job_id', id).forUpdate().first();
+      if (!currentJob) throw new Error(`Job with ID ${id} not found`);
 
-      if (!currentJob) {
-        throw new Error(`Job with ID ${id} not found`);
-      }
-
-      const currentMetadata = currentJob.metadata ?
-        (typeof currentJob.metadata === 'string' ? JSON.parse(currentJob.metadata) : currentJob.metadata)
+      const currentMetadata = currentJob.metadata
+        ? (typeof currentJob.metadata === 'string' ? JSON.parse(currentJob.metadata) : currentJob.metadata)
         : {};
-
-      // Add step results directly without modifying their structure
-      const stepResults = updates.stepResults || [];
-
+      // Serialize all metadata writers on the jobs row. In particular, a
+      // progress append must merge the latest serverExecution outcome rather
+      // than replace it with a stale snapshot.
       const updatedMetadata = {
         ...currentMetadata,
-        scheduledJobId: updates.scheduledJobId,
-        stepResults: [...(currentMetadata.stepResults || []), ...stepResults]
+        scheduledJobId: updates.scheduledJobId ?? currentMetadata.scheduledJobId,
+        stepResults: [...(currentMetadata.stepResults || []), ...(updates.stepResults || [])],
       };
-
       const updateData: Record<string, any> = {
-        status: updates.status,
         updated_at: new Date(),
-        metadata: JSON.stringify(updatedMetadata)
+        metadata: JSON.stringify(updatedMetadata),
       };
-
-      await tenantDb(knex, resolvedTenant).table('jobs')
-        .where('job_id', id)
-        .update(updateData);
+      const isForwardedHandler = Boolean(updates.forwardedExecutionId);
+      if (!isForwardedHandler) {
+        updateData.status = updates.status;
+      }
+      await table.where('job_id', id).update(updateData);
     });
   }
 }
