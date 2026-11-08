@@ -242,8 +242,34 @@ export const getInteractionsForEntity = withAuth(async (
       if (admitted.handled) return admitted.interactions;
     }
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await InteractionModel.getForEntity(entityId, entityType, tenant);
+      return InteractionModel.getForEntity(entityId, entityType, tenant);
     });
+  } catch (error) {
+    const expected = interactionActionErrorFrom(error);
+    if (expected) return expected;
+    console.error(`Error fetching interactions for ${entityType}:`, error);
+    throw error;
+  }
+});
+
+export const getInteractionsForEntityPage = withAuth(async (
+  user,
+  { tenant },
+  entityId: string,
+  entityType: 'contact' | 'client' | 'ticket' | 'opportunity',
+  cursor?: string | null
+): Promise<{ interactions: IInteraction[]; nextCursor?: string | null; hasMore?: boolean } | InteractionActionError> => {
+  try {
+    await assertMspPermission(user, 'interaction', 'read', 'Permission denied: Cannot read interactions');
+    const { knex } = await createTenantKnex();
+    if (entityType !== 'opportunity') {
+      const admitted = await interactionSeam.delegate(tenant, p => p.readInteractions(knex, tenant,
+        () => resolveInteractionBrowserActor(user, tenant), { entity: { id: entityId, type: entityType }, filters: { cursor } }));
+      if (admitted.handled) return { interactions: admitted.interactions, nextCursor: admitted.nextCursor, hasMore: admitted.hasMore };
+    }
+    return await withTransaction(knex, async (trx: Knex.Transaction) => ({
+      interactions: await InteractionModel.getForEntity(entityId, entityType, tenant), nextCursor: null, hasMore: false,
+    }));
   } catch (error) {
     const expected = interactionActionErrorFrom(error);
     if (expected) return expected;
@@ -270,7 +296,7 @@ export const getRecentInteractions = withAuth(async (
     const admitted = await interactionSeam.delegate(tenant, p => p.readInteractions(knex, tenant, () => resolveInteractionBrowserActor(user, tenant), { filters }));
     if (admitted.handled) return admitted.interactions;
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await InteractionModel.getRecentInteractions(filters, tenant);
+      return InteractionModel.getRecentInteractions(filters, tenant);
     });
   } catch (error) {
     const expected = interactionActionErrorFrom(error);
@@ -290,9 +316,10 @@ export const getInteractionsPage = withAuth(async (
 
     const { knex } = await createTenantKnex();
     const admitted = await interactionSeam.delegate(tenant, p => p.readInteractions(knex, tenant, () => resolveInteractionBrowserActor(user, tenant), { filters, paginated: true }));
-    if (admitted.handled) return { interactions: admitted.interactions, total: admitted.total, page: admitted.page, pageSize: admitted.pageSize };
+    if (admitted.handled) return { interactions: admitted.interactions, total: admitted.total, totalExact: admitted.totalExact, page: admitted.page, pageSize: admitted.pageSize, nextCursor: admitted.nextCursor, hasMore: admitted.hasMore };
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return InteractionModel.getInteractionsPage(filters, tenant, trx);
+      const result = await InteractionModel.getInteractionsPage(filters, tenant, trx);
+      return { ...result, nextCursor: null, hasMore: result.page * result.pageSize < result.total };
     });
   } catch (error) {
     const expected = interactionActionErrorFrom(error);

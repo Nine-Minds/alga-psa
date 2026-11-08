@@ -683,6 +683,8 @@
     "ariaLabel": "〖Ƥȧɠīƞȧŧīȯƞ ····〗",
     "totalItems": "〖{{count}} {{itemLabel}} ŧȯŧȧŀ ············〗",
     "totalRecordsInline": "〖({{count}} ŧȯŧȧŀ řḗƈȯřḓş) ··········〗",
+    "pageNumber": "〖Ƥȧɠḗ {{current}} ·······〗",
+    "totalCountIncomplete": "〖Ŧȯŧȧŀ ƈȯŭƞŧ īƞƈȯḿƥŀḗŧḗ ·········〗",
     "pageOf": "〖Ƥȧɠḗ {{current}} ȯƒ {{total}} ············〗",
     "itemsLabel_few": "〖īŧḗḿş ··〗",
     "itemsLabel_many": "〖īŧḗḿş ··〗"

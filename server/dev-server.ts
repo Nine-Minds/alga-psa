@@ -6,6 +6,7 @@ import {
   attachNextUpgradeHandler,
   type NextUpgradeApp,
 } from './src/lib/http/upgradeHandling';
+import { installTurbopackHmrSubscriptionDiagnostics } from './hmr-subscription-diagnostics';
 
 // `import next from 'next'` trips Vitest's CJS interop ("Cannot set property
 // default of [object Module]"); the CJS export works identically under tsx.
@@ -70,21 +71,49 @@ export interface RunningDevServer {
   close: () => Promise<void>;
 }
 
+/**
+ * Next 16 defaults to Turbopack when a custom server omits both bundler flags.
+ * Keep the ordinary `dev` command on Webpack and make Turbopack opt-in through
+ * the explicit `dev:turbo` command/environment flag. The captured session
+ * shows repeated Turbopack restart events for a shared server entry chunk and
+ * HMR hash-mismatch reload messages. It does not establish the underlying
+ * cause; this keeps ordinary dev off the captured Turbo path.
+ */
+export function resolveNextDevBundlerOptions(
+  options: Pick<DevServerOptions, 'turbopack' | 'webpack'> = {},
+  environment: Pick<NodeJS.ProcessEnv, 'DEV_TURBOPACK'> = process.env,
+): { turbopack: true } | { webpack: true } {
+  const useTurbopack = options.turbopack ?? (
+    options.webpack === true ? false : environment.DEV_TURBOPACK === '1'
+  );
+  if (useTurbopack && options.webpack === true) {
+    throw new Error('Development server cannot enable Webpack and Turbopack together');
+  }
+  return useTurbopack ? { turbopack: true } : { webpack: true };
+}
+
 export async function startDevServer(
   options: DevServerOptions = {},
+  createNextApp: CreateNext = createNext,
 ): Promise<RunningDevServer> {
+  if (process.env.NEXT_TURBOPACK_HMR_SUBSCRIPTION_DIAGNOSTICS === '1') {
+    const swc = require('next/dist/build/swc') as {
+      loadBindings: Parameters<typeof installTurbopackHmrSubscriptionDiagnostics>[0];
+    };
+    await installTurbopackHmrSubscriptionDiagnostics(swc.loadBindings);
+  }
+
   const port = options.port ?? Number.parseInt(process.env.PORT || '3000', 10);
   const hostname = options.hostname ?? process.env.HOSTNAME ?? '0.0.0.0';
   const dir = options.dir ?? import.meta.dirname;
-  const turbopack = options.turbopack ?? process.env.DEV_TURBOPACK === '1';
+  const bundlerOptions = resolveNextDevBundlerOptions(options);
 
-  const app = createNext({
+  const app = createNextApp({
     dev: true,
     hostname,
     port,
     dir,
-    ...(turbopack ? { turbopack: true } : {}),
-    ...(options.webpack ? { webpack: true } : {}),
+    ...bundlerOptions,
   });
   await app.prepare();
 
@@ -124,7 +153,7 @@ export async function startDevServer(
   const actualPort =
     typeof address === 'object' && address ? address.port : port;
   console.log(
-    `[dev-server] ready on http://${hostname}:${actualPort}${turbopack ? ' (turbopack)' : ''} (custom upgrade handler active)`,
+    `[dev-server] ready on http://${hostname}:${actualPort}${'turbopack' in bundlerOptions ? ' (turbopack)' : ' (webpack)'} (custom upgrade handler active)`,
   );
 
   return {

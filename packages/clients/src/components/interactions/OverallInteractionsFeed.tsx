@@ -139,6 +139,9 @@ export default function OverallInteractionsFeed({
   const latestRequestRef = useRef(0);
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
   const [total, setTotal] = useState(0);
+  const [totalExact, setTotalExact] = useState(true);
+  const cursorsByPageRef = useRef<Record<number, string | null>>({});
+  const [hasMore, setHasMore] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [isLoading, setIsLoading] = useState(true);
@@ -171,6 +174,7 @@ export default function OverallInteractionsFeed({
     const timeout = setTimeout(() => {
       setDebouncedSearch(searchTerm.trim());
       setCurrentPage(1);
+      cursorsByPageRef.current = {};
     }, 300);
     return () => clearTimeout(timeout);
   }, [searchTerm]);
@@ -204,23 +208,29 @@ export default function OverallInteractionsFeed({
       dateTo: endTime,
       page: currentPage,
       pageSize,
+      cursor: cursorsByPageRef.current[currentPage] ?? undefined,
     })
       .then((result) => {
         if (requestId !== latestRequestRef.current) return;
         if (isReturnedActionError(result)) {
           setInteractions([]);
           setTotal(0);
+          setTotalExact(false);
           setLoadError(getErrorMessage(result));
           return;
         }
         setInteractions(result.interactions);
         setTotal(result.total);
+        setTotalExact(result.totalExact);
+        cursorsByPageRef.current[currentPage + 1] = result.nextCursor ?? null;
+        setHasMore(result.hasMore ?? false);
       })
       .catch((error) => {
         if (requestId !== latestRequestRef.current) return;
         console.error('Error fetching interactions:', error);
         setInteractions([]);
         setTotal(0);
+        setTotalExact(false);
         setLoadError(t('interactions.feed.loadFailed', {
           defaultValue: 'Interactions could not be loaded. Please try again.',
         }));
@@ -251,6 +261,7 @@ export default function OverallInteractionsFeed({
   const changeFilter = useCallback((update: () => void) => {
     update();
     setCurrentPage(1);
+    cursorsByPageRef.current = {};
   }, []);
 
   const filteredContacts = useMemo(
@@ -282,6 +293,7 @@ export default function OverallInteractionsFeed({
     setStartTime(undefined);
     setEndTime(undefined);
     setCurrentPage(1);
+    cursorsByPageRef.current = {};
   };
 
   const refreshInteractions = useCallback(() => {
@@ -586,25 +598,37 @@ export default function OverallInteractionsFeed({
       {loadError ? <p className="m-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700" role="alert">{loadError}</p> : null}
       {isLoading ? (
         <p className="p-6 text-sm text-[rgb(var(--color-text-500))]" id="overall-interactions-loading">{t('interactions.overall.loading', { defaultValue: 'Loading interactions…' })}</p>
-      ) : tableData.length === 0 ? (
-        <p className="p-6 text-sm text-[rgb(var(--color-text-500))]" id="overall-interactions-empty">{t('interactions.overall.empty', { defaultValue: 'No interactions match these filters.' })}</p>
       ) : (
-        <DataTable
-          id="overall-interactions-table"
-          data={tableData}
-          columns={columns}
-          pagination
-          currentPage={currentPage}
-          onPageChange={setCurrentPage}
-          pageSize={pageSize}
-          totalItems={total}
-          onItemsPerPageChange={(nextPageSize) => {
-            setPageSize(nextPageSize);
-            setCurrentPage(1);
-          }}
-          rowClassName={() => 'cursor-pointer outline-none focus:outline-none focus-visible:outline-none focus-within:outline-none hover:!bg-table-hover'}
-          onRowClick={handleInteractionClick}
-        />
+        <>
+          {tableData.length === 0 ? (
+            <p className="p-6 text-sm text-[rgb(var(--color-text-500))]" id="overall-interactions-empty">
+              {hasMore
+                ? t('interactions.overall.incompleteEmpty', { defaultValue: 'More interactions remain to search.' })
+                : t('interactions.overall.empty', { defaultValue: 'No interactions match these filters.' })}
+            </p>
+          ) : null}
+          {(tableData.length > 0 || hasMore || currentPage > 1) ? (
+            <DataTable
+              id="overall-interactions-table"
+              data={tableData}
+              columns={columns}
+              pagination
+              currentPage={currentPage}
+              onPageChange={setCurrentPage}
+              pageSize={pageSize}
+              totalItems={total}
+              totalItemsExact={totalExact}
+              hasMorePages={hasMore}
+              onItemsPerPageChange={(nextPageSize) => {
+                setPageSize(nextPageSize);
+                setCurrentPage(1);
+                cursorsByPageRef.current = {};
+              }}
+              rowClassName={() => 'cursor-pointer outline-none focus:outline-none focus-visible:outline-none focus-within:outline-none hover:!bg-table-hover'}
+              onRowClick={handleInteractionClick}
+            />
+          ) : null}
+        </>
       )}
 
       <QuickAddContact

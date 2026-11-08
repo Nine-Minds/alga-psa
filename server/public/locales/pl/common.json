@@ -636,6 +636,8 @@
     "ariaLabel": "Stronicowanie",
     "totalItems": "{{count}} {{itemLabel}} łącznie",
     "totalRecordsInline": "({{count}} łącznie rekordów)",
+    "pageNumber": "Strona {{current}}",
+    "totalCountIncomplete": "Niepełna liczba wyników",
     "pageOf": "Strona {{current}} z {{total}}",
     "itemsLabel_one": "element",
     "itemsLabel_few": "elementy",

@@ -50,7 +50,9 @@ vi.mock('@alga-psa/ui/components/DataTable', () => ({
     mocks.tableProps = props;
     return (
       <div data-testid="interaction-data-table">
-        <span>{props.data.length} rows</span>
+        {props.data.map((row: { title?: string }) => <span key={row.title}>{row.title}</span>)}
+        {props.hasMorePages && <button onClick={() => props.onPageChange(props.currentPage + 1)}>Next</button>}
+        {props.currentPage > 1 && <button onClick={() => props.onPageChange(props.currentPage - 1)}>Previous</button>}
         <button onClick={() => props.onPageChange(2)}>Page 2</button>
       </div>
     );
@@ -146,6 +148,7 @@ describe('OverallInteractionsFeed table', () => {
     mocks.getInteractionsPage.mockReset().mockResolvedValue({
       interactions: [interaction],
       total: 42,
+      totalExact: true,
       page: 1,
       pageSize: 10,
     });
@@ -188,6 +191,83 @@ describe('OverallInteractionsFeed table', () => {
     await waitFor(() => expect(mocks.getInteractionsPage).toHaveBeenCalledWith(
       expect.objectContaining({ search: 'urgent', page: 1, pageSize: 10 }),
     ));
+  });
+
+  it('marks a bounded total as inexact for DataTable pagination', async () => {
+    mocks.getInteractionsPage.mockResolvedValue({
+      interactions: [interaction],
+      total: 100,
+      totalExact: false,
+      page: 1,
+      pageSize: 10,
+      nextCursor: { interaction_date: '2026-01-01T00:00:00.000Z', interaction_id: 'interaction-1' },
+      hasMore: true,
+    });
+
+    render(<OverallInteractionsFeed users={[]} contacts={[]} clients={[]} />);
+    await screen.findByTestId('interaction-data-table');
+
+    expect(mocks.tableProps).toMatchObject({ totalItems: 100, totalItemsExact: false, hasMorePages: true });
+  });
+
+  it('continues an empty bounded search window and returns from a terminal empty page', async () => {
+    const continuation = { interaction_date: '2026-02-01T00:00:00.000Z', interaction_id: 'cursor-1' };
+    const nextContinuation = { interaction_date: '2026-01-01T00:00:00.000Z', interaction_id: 'cursor-2' };
+    mocks.getInteractionsPage.mockImplementation(({ search, page }: { search?: string; page: number }) => {
+      if (search !== 'needle') {
+        return Promise.resolve({ interactions: [], total: 0, totalExact: true, page, pageSize: 10 });
+      }
+      if (page === 1) {
+        return Promise.resolve({
+          interactions: [], total: 100, totalExact: false, page, pageSize: 10,
+          nextCursor: continuation, hasMore: true,
+        });
+      }
+      if (page === 2) {
+        return Promise.resolve({
+          interactions: [interaction], total: 100, totalExact: false, page, pageSize: 10,
+          nextCursor: nextContinuation, hasMore: true,
+        });
+      }
+      return Promise.resolve({
+        interactions: [], total: 100, totalExact: false, page, pageSize: 10,
+        nextCursor: null, hasMore: false,
+      });
+    });
+
+    render(<OverallInteractionsFeed users={[]} contacts={[]} clients={[]} />);
+    fireEvent.change(screen.getByPlaceholderText('Search interactions'), { target: { value: 'needle' } });
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    await waitFor(() => expect(mocks.getInteractionsPage).toHaveBeenCalledWith(expect.objectContaining({
+      search: 'needle', page: 1,
+    })));
+    expect(screen.getByTestId('interaction-data-table')).toBeTruthy();
+    expect(screen.getByText('More interactions remain to search.')).toBeTruthy();
+    expect(mocks.tableProps).toMatchObject({
+      totalItemsExact: false,
+      hasMorePages: true,
+      currentPage: 1,
+    });
+    expect(screen.getByRole('button', { name: 'Next' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+
+    await waitFor(() => expect(mocks.getInteractionsPage).toHaveBeenCalledWith(expect.objectContaining({
+      search: 'needle', page: 2, cursor: continuation,
+    })));
+    expect(await screen.findByText('Follow up')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+
+    await waitFor(() => expect(mocks.getInteractionsPage).toHaveBeenCalledWith(expect.objectContaining({
+      search: 'needle', page: 3, cursor: nextContinuation,
+    })));
+    expect(screen.getByText('No interactions match these filters.')).toBeTruthy();
+    expect(screen.queryByText('More interactions remain to search.')).toBeNull();
+    expect(await screen.findByRole('button', { name: 'Previous' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Previous' }));
+    await waitFor(() => expect(mocks.getInteractionsPage).toHaveBeenCalledWith(expect.objectContaining({
+      search: 'needle', page: 2, cursor: continuation,
+    })));
+    expect(await screen.findByText('Follow up')).toBeTruthy();
   });
 
   it('keeps advanced filters collapsed until the standard Filters control is opened', async () => {
