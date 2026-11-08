@@ -312,6 +312,9 @@ export type ContractTemplateWizardSubmission = {
   /** The template's base currency (ISO 4217). Amounts the wizard writes are in this currency. */
   currency_code: string;
   fixed_services: TemplateFixedServiceInput[];
+  /** Invoice title/subtitle for the template's Fixed bundle line (title defaults to the line name). */
+  invoice_line_description?: string | null;
+  invoice_line_subtitle?: string | null;
   product_services?: TemplateProductServiceInput[];
   hourly_services?: TemplateHourlyServiceInput[];
   usage_services?: TemplateUsageServiceInput[];
@@ -840,6 +843,8 @@ export const createContractTemplateFromWizard = withAuth(async (
     if (filteredFixedServices.length > 0) {
       const createdFixedLine = await ContractLine.create(trx, {
         contract_line_name: `${submission.contract_name} - Fixed Fee`,
+        invoice_line_description: submission.invoice_line_description?.trim() || null,
+        invoice_line_subtitle: submission.invoice_line_subtitle?.trim() || null,
         billing_frequency: submission.billing_frequency ?? 'monthly',
         billing_timing: recurringAuthoringPolicy.billingTiming,
         cadence_owner: recurringAuthoringPolicy.cadenceOwner,
@@ -1961,6 +1966,8 @@ export const createClientContractFromWizard = withAuth(async (
           writableFixedLines.length,
         ),
         description: fixedLine.description ?? null,
+        invoice_line_description: fixedLine.invoice_line_description?.trim() || null,
+        invoice_line_subtitle: fixedLine.invoice_line_subtitle?.trim() || null,
         location_id: fixedLine.location_id ?? null,
         billing_frequency: fixedLine.billing_frequency ?? submission.billing_frequency ?? 'monthly',
         is_custom: true,
@@ -2618,6 +2625,8 @@ function mapStoredFixedLineToWizard(
       source_contract_line_id: line.contract_line_id,
       contract_line_name: line.contract_line_name,
       description: line.description ?? null,
+      invoice_line_description: (line as { invoice_line_description?: string | null }).invoice_line_description ?? null,
+      invoice_line_subtitle: (line as { invoice_line_subtitle?: string | null }).invoice_line_subtitle ?? null,
       ...(options.includeLocation ? { location_id: line.location_id ?? null } : {}),
       billing_frequency: line.billing_frequency,
       billing_timing: line.billing_timing,

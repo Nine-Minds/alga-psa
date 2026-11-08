@@ -786,6 +786,9 @@
       "cost": "Kosten: {{cost}}",
       "costInCurrency": "Kosten in {{currency}}: {{cost}}",
       "margin": "Marge: {{margin}} per eenheid"
+    },
+    "invoiceText": {
+      "subtitleLabel": "Factuurondertitel"
     }
   },
   "contractLineEdit": {
@@ -802,7 +805,9 @@
       "rate": "Tarief",
       "invoiceText": "Factuurregeltekst",
       "invoiceTextPlaceholder": "Wordt op de factuur afgedrukt; standaard de regelnaam",
-      "invoiceTextHelp": "Deze tekst wordt letterlijk op de terugkerende factuurregel afgedrukt."
+      "invoiceTextHelp": "Deze tekst wordt letterlijk op de terugkerende factuurregel afgedrukt.",
+      "invoiceSubtitle": "Factuurondertitel",
+      "invoiceSubtitleHelp": "Een gedempte tweede regel onder de tekst van de factuurregel."
     },
     "sections": {
       "billingTiming": "Facturatietiming",
@@ -1633,7 +1638,11 @@
       "nameLabel": "Regelnaam (optioneel)",
       "namePlaceholder": "Vaste regel {{number}}",
       "removeLine": "Vaste regel verwijderen",
-      "noServiceWarning": "Deze regel heeft een terugkerend bedrag maar geen dienst om het op te factureren. Voeg een dienst toe voordat u afrondt; u kunt de regel nog wel als concept opslaan."
+      "noServiceWarning": "Deze regel heeft een terugkerend bedrag maar geen dienst om het op te factureren. Voeg een dienst toe voordat u afrondt; u kunt de regel nog wel als concept opslaan.",
+      "invoiceTitleLabel": "Factuurtitel (optioneel)",
+      "invoiceTitlePlaceholder": "Standaard de regelnaam",
+      "invoiceSubtitleLabel": "Factuurondertitel (optioneel)",
+      "invoiceSubtitlePlaceholder": "bijv. Beheerde endpoints en back-up"
     },
     "recurringChange": {
       "title": "Wijziging van het terugkerende totaal bevestigen",
@@ -2272,7 +2281,11 @@
     },
     "actions": {
       "addService": "Service toevoegen"
-    }
+    },
+    "invoiceTitleLabel": "Factuurtitel (optioneel)",
+    "invoiceTitlePlaceholder": "Standaard de regelnaam",
+    "invoiceSubtitleLabel": "Factuurondertitel (optioneel)",
+    "invoiceSubtitlePlaceholder": "bijv. Beheerde endpoints en back-up"
   },
   "templateProducts": {
     "heading": "Producten",

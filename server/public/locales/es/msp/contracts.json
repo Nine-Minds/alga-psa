@@ -786,6 +786,9 @@
       "cost": "Coste: {{cost}}",
       "costInCurrency": "Coste en {{currency}}: {{cost}}",
       "margin": "Margen: {{margin}} por unidad"
+    },
+    "invoiceText": {
+      "subtitleLabel": "Subtítulo de la factura"
     }
   },
   "contractLineEdit": {
@@ -802,7 +805,9 @@
       "rate": "Tarifa",
       "invoiceText": "Texto de la línea de factura",
       "invoiceTextPlaceholder": "Se imprime en la factura; por defecto, el nombre de la línea",
-      "invoiceTextHelp": "Este texto se imprime textualmente en la línea de factura recurrente."
+      "invoiceTextHelp": "Este texto se imprime textualmente en la línea de factura recurrente.",
+      "invoiceSubtitle": "Subtítulo de la factura",
+      "invoiceSubtitleHelp": "Una segunda línea atenuada bajo el texto de la línea de factura."
     },
     "sections": {
       "billingTiming": "Momento de facturación",
@@ -1633,7 +1638,11 @@
       "nameLabel": "Nombre de la línea (opcional)",
       "namePlaceholder": "Línea fija {{number}}",
       "removeLine": "Quitar línea fija",
-      "noServiceWarning": "Esta línea tiene un importe recurrente pero ningún servicio sobre el que facturarlo. Añada un servicio antes de finalizar; aún puede guardarla como borrador."
+      "noServiceWarning": "Esta línea tiene un importe recurrente pero ningún servicio sobre el que facturarlo. Añada un servicio antes de finalizar; aún puede guardarla como borrador.",
+      "invoiceTitleLabel": "Título de la factura (opcional)",
+      "invoiceTitlePlaceholder": "Por defecto, el nombre de la línea",
+      "invoiceSubtitleLabel": "Subtítulo de la factura (opcional)",
+      "invoiceSubtitlePlaceholder": "p. ej. Servicios gestionados de equipos y copias de seguridad"
     },
     "recurringChange": {
       "title": "Confirmar el cambio del total recurrente",
@@ -2272,7 +2281,11 @@
     },
     "actions": {
       "addService": "Agregar servicio"
-    }
+    },
+    "invoiceTitleLabel": "Título de la factura (opcional)",
+    "invoiceTitlePlaceholder": "Por defecto, el nombre de la línea",
+    "invoiceSubtitleLabel": "Subtítulo de la factura (opcional)",
+    "invoiceSubtitlePlaceholder": "p. ej. Servicios gestionados de equipos y copias de seguridad"
   },
   "templateProducts": {
     "heading": "Productos",
