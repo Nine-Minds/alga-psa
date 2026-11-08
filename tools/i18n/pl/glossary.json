@@ -2361,7 +2361,10 @@
       "auto | 50% | 120px",
       "Code 128",
       "RMA {{number}} · {{status}}",
-      "Plan"
+      "Plan",
+      "Workflow",
+      "status",
+      "{{actor}} • {{eventType}}"
     ],
     "caseInsensitive": [
       "api",
