@@ -12,7 +12,6 @@ import {
   type RelationshipRule,
 } from './kernel';
 import type { AuthorizationKernel } from './kernel';
-import { TicketWatcherError } from '@alga-psa/shared/services/tickets/ticketWatcherService';
 import { resolveBundleNarrowingRulesForEvaluation } from './bundles/service';
 import { extractActiveWatcherContactIds } from './portal/visibility';
 import type { ContactVisibilityContext } from './portal/visibility';
@@ -279,6 +278,14 @@ export class TicketWatcherPermissionError extends Error {
   }
 }
 
+/** Missing ticket result for watcher authorization, kept independent of the shared service layer. */
+export class TicketWatcherTicketNotFoundError extends Error {
+  constructor() {
+    super('Ticket not found');
+    this.name = 'TicketWatcherTicketNotFoundError';
+  }
+}
+
 export type TicketWatcherWritePrincipal =
   | { user: IUserWithRoles }
   | { subject: AuthorizationSubject; kernel: AuthorizationKernel };
@@ -299,7 +306,7 @@ export async function runAuthorizedTicketWatcherWrite<T>(input: {
         .first()) as (Partial<ITicket> & { ticket_id: string }) | undefined)
     : undefined;
   if (!ticket) {
-    throw new TicketWatcherError('ticket_not_found');
+    throw new TicketWatcherTicketNotFoundError();
   }
 
   let subject: AuthorizationSubject;

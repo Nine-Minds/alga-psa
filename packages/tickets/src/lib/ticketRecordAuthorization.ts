@@ -6,6 +6,7 @@ export {
   createTicketAuthorizationContext,
   runAuthorizedTicketWatcherWrite,
   TicketWatcherPermissionError,
+  TicketWatcherTicketNotFoundError,
 } from '@alga-psa/authorization/ticketRecordAuthorization';
 export type {
   TicketRecordRow,
