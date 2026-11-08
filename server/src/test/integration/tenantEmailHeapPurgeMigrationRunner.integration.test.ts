@@ -10,7 +10,9 @@ import { verifyTestDatabase } from '../../../test-utils/dbConfig';
 
 const originalMigration = '20261013120000_purge_tenant_email_settings_local_heap.cjs';
 const forwardMigration = '20261104120000_purge_tenant_email_settings_local_heap.cjs';
-const testDatabaseName = process.env.TEST_DB_NAME;
+// Match the integration test database default used by dbConfig. CI's shard
+// runner sets the connection details but intentionally relies on this default.
+const testDatabaseName = process.env.TEST_DB_NAME || 'test_database';
 
 let db: Knex;
 let migrationDirectory: string;
@@ -43,9 +45,6 @@ async function removeMigrationHistory(tableName: string): Promise<void> {
 
 describe('tenant email heap purge migration history compatibility', () => {
   beforeAll(() => {
-    if (!testDatabaseName) {
-      throw new Error('Set TEST_DB_NAME to a dedicated disposable database before running this integration test.');
-    }
     verifyTestDatabase(testDatabaseName);
     if (!process.env.DB_PASSWORD_ADMIN) {
       throw new Error('Set DB_PASSWORD_ADMIN for the dedicated TEST_DB_NAME database before running this integration test.');
