@@ -32,7 +32,10 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 vi.mock('@alga-psa/event-bus', () => ({ getEventBus: vi.fn(() => ({ publish: vi.fn() })), ServerEventPublisher: class {} }));
-vi.mock('@alga-psa/authorization/bundles/service', () => ({ resolveBundleNarrowingRulesForEvaluation: async () => [] }));
+vi.mock('@alga-psa/authorization/bundles/service', () => ({
+  resolveBundleNarrowingRulesForEvaluation: async () => [],
+  loadAuthorizationEvaluationSnapshot: async () => ({ roleIds: [], teamIds: [], managedUserIds: [], rules: [] }),
+}));
 vi.mock('@alga-psa/authorization/kernel', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
   createAuthorizationKernel: () => ({ authorizeResource: async () => ({ allowed: true }) }),
