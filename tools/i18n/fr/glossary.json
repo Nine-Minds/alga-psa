@@ -2081,6 +2081,11 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "{{count}} ticket(s)",
+      "client",
+      "contact",
+      "{{actor}} • {{eventType}}",
+      "Source",
       "1 contact",
       "Conversation",
       "{{from}} → {{to}}",
