@@ -1,9 +1,17 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { sanitizeUserForResponse } from '../../../../../packages/users/src/services/userResponseSanitizer';
+import {
+  sanitizeUserForResponse,
+  USER_RESPONSE_COLUMNS
+} from '../../../../../packages/users/src/services/userResponseSanitizer';
+import { UserService } from '../../../../../packages/users/src/services/UserService';
 import { redactSensitiveFields } from '@/lib/api/utils/redactSensitiveFields';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('@alga-psa/formatting/avatarUtils', () => ({
+  getUserAvatarUrl: vi.fn(async () => null)
+}));
 
 const repoRoot = path.resolve(__dirname, '../../../../..');
 
@@ -127,24 +135,44 @@ describe('UserService API response sensitive field contract', () => {
     expect((result as Record<string, unknown>).safeField).toBe('visible-value');
   });
 
-  it('projects only allowlisted columns for enhanced user responses', () => {
-    const source = readRepoFile('packages/users/src/services/UserService.ts');
-    const sanitizerSource = readRepoFile('packages/types/src/constants/userResponseSanitizer.ts');
+  it('selects allowlisted columns and sanitizes the enhanced getById response', async () => {
+    const rawUser = {
+      user_id: 'user-1',
+      username: 'test-user',
+      email: 'test@example.com',
+      user_type: 'internal',
+      hashed_password: 'hash',
+      two_factor_secret: 'totp-secret',
+      recovery_codes: ['one-time-code'],
+      password_reset_token: 'reset-token',
+      unexpected_new_secret: 'should-not-pass-through'
+    };
+    const query = {
+      where: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      first: vi.fn().mockResolvedValue(rawUser)
+    };
+    const service = new UserService() as any;
+    service.ensurePermission = vi.fn().mockResolvedValue(undefined);
+    service.getKnex = vi.fn().mockResolvedValue({ knex: {} });
+    service.buildTenantScopedQuery = vi.fn(() => query);
 
-    expect(sanitizerSource).toContain('USER_RESPONSE_FIELD_NAMES_TUPLE = [');
-    expect(sanitizerSource).toContain('export const USER_RESPONSE_FIELD_NAMES');
-    expect(sanitizerSource).toContain('export const USER_RESPONSE_COLUMNS');
-    expect(sanitizerSource).toContain('USER_RESPONSE_FIELD_NAMES.map');
-    expect(sanitizerSource).toContain('export const API_USER_CONTEXT_COLUMNS');
-    expect(source).not.toContain(".select('users.*')");
-    expect(source).not.toContain(".returning('*')");
-    expect(sanitizerSource).toContain("'hashed_password'");
-    expect(sanitizerSource).toContain("'password'");
-    expect(sanitizerSource).toContain("'two_factor_secret'");
-    expect(sanitizerSource).toContain("'password_reset_token'");
-    expect(sanitizerSource).toContain("'api_key_hash'");
-    expect(sanitizerSource).toContain('for (const field of USER_RESPONSE_FIELD_NAMES)');
-    expect(source).toContain('{ ...sanitizeUserForResponse(user), roles: [] }');
+    const result = await service.getById(
+      'user-1',
+      { userId: 'actor-1', tenant: 'tenant-1' } as any,
+      { includeRoles: false, includeHateoas: false }
+    );
+
+    expect(query.select).toHaveBeenCalledWith(USER_RESPONSE_COLUMNS);
+    expect(result).toMatchObject({
+      user_id: 'user-1',
+      username: 'test-user',
+      email: 'test@example.com',
+      roles: [],
+      avatarUrl: null
+    });
+    expectNoSensitiveUserFields(result);
+    expect(result).not.toHaveProperty('unexpected_new_secret');
   });
 
   it('server user actions return safe user DTOs and update passwords by tenant-scoped user identity', () => {
