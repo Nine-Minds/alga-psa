@@ -301,9 +301,88 @@ describe('computeHourBlockMovement extinction', () => {
     expect(blockContributesToMonth(movement)).toBe(false);
   });
 
-  it('keeps the balance outstanding until an elapsed expiry is processed', () => {
-    // Status still active: the nightly settlement job has not marked it yet.
+  it('projects the write-off for an unprocessed expiry once the date has passed', () => {
+    // Status still active: the nightly settlement job has not marked it yet,
+    // but a report viewed after the expiration date shows the block written
+    // off — the projection assumes nothing else changes between now and then.
     const movement = computeHourBlockMovement('2026-05', block({ expirationDate: '2026-04-30' }));
+    expect(movement.opening).toBe(0);
+    expect(movement.expired).toBe(0);
+    expect(movement.closing).toBe(0);
+    expect(blockContributesToMonth(movement)).toBe(false);
+  });
+
+  it('projects the write-off in the expiration month itself, burn first', () => {
+    // Viewed mid-flight (status active, expiry inside the month): burn up to
+    // the expiration date is recognised, the residual is projected as expired.
+    const movement = computeHourBlockMovement(
+      '2026-04',
+      block({ expirationDate: '2026-04-30', allocations: [{ date: '2026-04-10', minutes: 240 }] }),
+    );
+    expect(movement.opening).toBe(600000);
+    expect(movement.applied).toBe(-60000);
+    expect(movement.expired).toBe(-(2160 * 250));
+    expect(movement.closing).toBe(0);
+    expectBalanced(movement);
+    expect(movement.detail.minutesBurned).toBe(240);
+  });
+
+  it('keeps a pre-expiry month unchanged while the block is still active', () => {
+    // Expiry lands in a later month: months before it must not see the
+    // projection, so the present-day report matches the portal exactly.
+    const movement = computeHourBlockMovement('2026-04', block({ expirationDate: '2026-05-31' }));
+    expect(movement.opening).toBe(600000);
+    expect(movement.expired).toBe(0);
+    expect(movement.closing).toBe(600000);
+  });
+
+  it('composes to the same figures once the expiry job has processed the block', () => {
+    // The job flips status to expired and writes an auto_expiration audit on
+    // or after the expiration date; the settled min() path must restate the
+    // projected months by nothing.
+    // (detail.status legitimately still reports the row's current status.)
+    const money = (m: ReturnType<typeof computeHourBlockMovement>) => ({
+      opening: m.opening,
+      issued: m.issued,
+      applied: m.applied,
+      adjustments: m.adjustments,
+      expired: m.expired,
+      closing: m.closing,
+    });
+    const projected = computeHourBlockMovement('2026-05', block({ expirationDate: '2026-04-30' }));
+    const settled = computeHourBlockMovement(
+      '2026-05',
+      block({ status: 'expired', expirationDate: '2026-04-30', expiredAt: '2026-05-01' }),
+    );
+    expect(money(settled)).toEqual(money(projected));
+    const projectedApril = computeHourBlockMovement(
+      '2026-04',
+      block({ expirationDate: '2026-04-30', allocations: [{ date: '2026-04-10', minutes: 240 }] }),
+    );
+    const settledApril = computeHourBlockMovement(
+      '2026-04',
+      block({
+        status: 'expired',
+        expirationDate: '2026-04-30',
+        expiredAt: '2026-05-01',
+        allocations: [{ date: '2026-04-10', minutes: 240 }],
+      }),
+    );
+    expect(money(settledApril)).toEqual(money(projectedApril));
+  });
+
+  it('ignores expiration_date for pending blocks', () => {
+    // Pending blocks carry no liability at all; the projection must not
+    // resurrect one (or write one off) before the invoice is finalized.
+    const movement = computeHourBlockMovement('2026-04', block({ status: 'pending', purchasedAt: '2026-04-01', expirationDate: '2026-04-15' }));
+    expect(movement.closing).toBe(0);
+    expect(blockContributesToMonth(movement)).toBe(false);
+  });
+
+  it('ignores expiration_date for voided blocks without a void date', () => {
+    // A voided block writes off at voidedAt; a stale expiration_date must
+    // not move the write-off earlier.
+    const movement = computeHourBlockMovement('2026-04', block({ status: 'voided', voidedAt: null, expirationDate: '2026-04-10' }));
     expect(movement.opening).toBe(600000);
     expect(movement.expired).toBe(0);
     expect(movement.closing).toBe(600000);
