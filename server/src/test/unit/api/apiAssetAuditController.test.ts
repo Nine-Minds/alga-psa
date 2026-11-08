@@ -74,6 +74,7 @@ const TENANT = '11111111-1111-1111-1111-111111111111';
 const CLIENT = '22222222-2222-2222-2222-222222222222';
 const ASSET = '33333333-3333-3333-3333-333333333333';
 const AUDIT = '44444444-4444-4444-4444-444444444444';
+const LOCATION = '55555555-5555-5555-5555-555555555555';
 
 function request(path: string, init?: { method?: string; body?: unknown }): NextRequest {
   const req = new NextRequest(`http://localhost${path}`, {
@@ -142,6 +143,41 @@ describe('ApiAssetAuditController', () => {
     const body = await response.json();
     expect(body.pagination).toMatchObject({ page: 1, limit: 5, total: 1 });
     expect(serviceState.calls[0].args[0]).toMatchObject({ client_id: CLIENT, limit: 5 });
+  });
+
+  it('passes the location, status and date-range filters through to the service', async () => {
+    serviceState.list = { data: [], total: 0 };
+
+    const response = await new ApiAssetAuditController().list(
+      request(
+        `/api/v1/asset-audits?client_id=${CLIENT}&location_id=${LOCATION}&status=completed` +
+          '&started_from=2026-03-01T00:00:00.000Z&started_to=2026-03-31T23:59:59.999Z',
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(serviceState.calls[0].args[0]).toMatchObject({
+      client_id: CLIENT,
+      location_id: LOCATION,
+      status: 'completed',
+      started_from: '2026-03-01T00:00:00.000Z',
+      started_to: '2026-03-31T23:59:59.999Z',
+    });
+  });
+
+  it('passes the "no location" scope through as a boolean', async () => {
+    serviceState.list = { data: [], total: 0 };
+
+    await new ApiAssetAuditController().list(request('/api/v1/asset-audits?no_location=true'));
+
+    expect(serviceState.calls[0].args[0]).toMatchObject({ no_location: true });
+  });
+
+  it('rejects a status outside the audit lifecycle', async () => {
+    const response = await new ApiAssetAuditController().list(request('/api/v1/asset-audits?status=paused'));
+
+    expect(response.status).toBe(400);
+    expect(serviceState.calls).toHaveLength(0);
   });
 
   it('refuses to list audits without asset:read', async () => {

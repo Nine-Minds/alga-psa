@@ -89,6 +89,10 @@ export interface Asset {
   billing_profile_id?: string | null;
   /** Profile name; read-only, joined on read. */
   billing_profile_name?: string | null;
+  /** When the last completed site audit looked for this device. */
+  last_audited_at?: string | null;
+  /** What that audit found: 'present' or 'missing'. */
+  last_audit_result?: 'present' | 'missing' | null;
   created_at: string;
   updated_at: string;
   tenant: string;
@@ -592,6 +596,10 @@ export interface AssetQueryParams {
   search?: string;
   agent_status?: RmmAgentStatus;
   rmm_managed?: boolean;
+  /** Last completed site audit verdict; 'never' means never audited. */
+  last_audit_result?: 'present' | 'missing' | 'never';
+  /** Only assets not audited within this many days (never-audited included). */
+  not_audited_days?: number;
   maintenance_status?: MaintenanceStatus;
   maintenance_type?: MaintenanceType;
   sort_by?: string;

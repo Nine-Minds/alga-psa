@@ -23,12 +23,20 @@ const h = vi.hoisted(() => {
     private wheres: Array<Record<string, any>> = [];
     private inWheres: Array<{ col: string; values: any[] }> = [];
     private nullWheres: string[] = [];
+    private cmpWheres: Array<{ col: string; op: string; value: any }> = [];
 
     constructor(private readonly table: string) {}
 
     where(arg: any, op?: any, value?: any) {
       if (typeof arg === 'string') {
         const col = arg.split('.').pop()!;
+        // `where(col, '>=', value)`: a comparison, not an equality. Folding it
+        // into the equality list would make a range filter silently match
+        // nothing (or everything), which is exactly what the tests check.
+        if (typeof op === 'string' && ['>=', '<=', '>', '<'].includes(op)) {
+          this.cmpWheres.push({ col, op, value });
+          return this;
+        }
         this.wheres.push({ [col]: value === undefined ? op : value });
       } else if (arg && typeof arg === 'object') {
         this.wheres.push(
@@ -130,7 +138,15 @@ const h = vi.hoisted(() => {
         (row) =>
           this.wheres.every((w) => Object.entries(w).every(([k, v]) => row[k] === v)) &&
           this.inWheres.every(({ col, values }) => values.includes(row[col])) &&
-          this.nullWheres.every((col) => row[col] === null || row[col] === undefined),
+          this.nullWheres.every((col) => row[col] === null || row[col] === undefined) &&
+          this.cmpWheres.every(({ col, op, value }) => {
+            const left = row[col];
+            if (left === null || left === undefined) return false;
+            if (op === '>=') return left >= value;
+            if (op === '<=') return left <= value;
+            if (op === '>') return left > value;
+            return left < value;
+          }),
       );
     }
   }
@@ -171,7 +187,9 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
   };
 });
 
-import { AssetAuditService } from '../../../lib/api/services/AssetAuditService';
+// The lifecycle lives in @alga-psa/assets (the v1 controller reaches it through
+// a thin error-mapping adapter), so the behaviour is asserted where it lives.
+import { AssetAuditService } from '@alga-psa/assets/lib/audits/service';
 
 const TENANT = 'tenant-1';
 const OTHER_TENANT = 'tenant-2';
@@ -442,5 +460,155 @@ describe('AssetAuditService.cancel, get and list', () => {
 
   it('reports a missing audit as not found', async () => {
     await expect(service.get('nope', context)).rejects.toThrow('Audit not found');
+  });
+});
+
+/**
+ * The web list filters on more than the client: mobile sends client only, the
+ * desktop list sends location (including "no location"), status and a
+ * started_at range. Both the rows and the count must see the same predicates,
+ * or the pager disagrees with the page it is paging over.
+ */
+describe('AssetAuditService.list filters', () => {
+  const otherLocation = 'loc-2';
+
+  async function seedAudits() {
+    const here = await service.start({ client_id: CLIENT, location_id: LOCATION, statuses: ['active'] }, context);
+    const nowhere = await service.start({ client_id: CLIENT, location_id: null, statuses: ['active'] }, context);
+    const elsewhere = await service.start(
+      { client_id: 'client-9', location_id: otherLocation, statuses: [] },
+      context,
+    );
+    await service.complete(here.audit_id, context);
+    // Dated by hand: the fake inserts rows without the column default.
+    h.state.asset_audits.find((row) => row.audit_id === here.audit_id)!.started_at = '2026-03-01T10:00:00.000Z';
+    h.state.asset_audits.find((row) => row.audit_id === nowhere.audit_id)!.started_at = '2026-03-05T10:00:00.000Z';
+    h.state.asset_audits.find((row) => row.audit_id === elsewhere.audit_id)!.started_at =
+      '2026-04-10T10:00:00.000Z';
+    return { here, nowhere, elsewhere };
+  }
+
+  it('narrows by client, and the count agrees with the rows', async () => {
+    const { here, nowhere } = await seedAudits();
+
+    const listed = await service.list({ client_id: CLIENT }, context);
+
+    expect(listed.total).toBe(2);
+    expect(listed.data.map((row) => row.audit_id).sort()).toEqual([here.audit_id, nowhere.audit_id].sort());
+  });
+
+  it('narrows by location, and "no location" is its own answer', async () => {
+    const { here, nowhere } = await seedAudits();
+
+    const atLocation = await service.list({ location_id: LOCATION }, context);
+    const withoutLocation = await service.list({ no_location: true }, context);
+
+    expect(atLocation.data.map((row) => row.audit_id)).toEqual([here.audit_id]);
+    expect(atLocation.total).toBe(1);
+    expect(withoutLocation.data.map((row) => row.audit_id)).toEqual([nowhere.audit_id]);
+    expect(withoutLocation.total).toBe(1);
+  });
+
+  it('"no location" wins over a location_id sent alongside it', async () => {
+    const { nowhere } = await seedAudits();
+
+    const listed = await service.list({ no_location: true, location_id: LOCATION }, context);
+
+    expect(listed.data.map((row) => row.audit_id)).toEqual([nowhere.audit_id]);
+  });
+
+  it('narrows by status', async () => {
+    const { here } = await seedAudits();
+
+    const completed = await service.list({ status: 'completed' }, context);
+    const open = await service.list({ status: 'in_progress' }, context);
+
+    expect(completed.data.map((row) => row.audit_id)).toEqual([here.audit_id]);
+    expect(completed.total).toBe(1);
+    expect(open.total).toBe(2);
+  });
+
+  it('narrows by a started_at range, inclusive of both bounds', async () => {
+    const { here, nowhere } = await seedAudits();
+
+    const inMarch = await service.list(
+      { started_from: '2026-03-01T00:00:00.000Z', started_to: '2026-03-31T23:59:59.999Z' },
+      context,
+    );
+    const fromTheFifth = await service.list({ started_from: '2026-03-05T10:00:00.000Z' }, context);
+
+    expect(inMarch.total).toBe(2);
+    expect(inMarch.data.map((row) => row.audit_id).sort()).toEqual([here.audit_id, nowhere.audit_id].sort());
+    expect(fromTheFifth.data.map((row) => row.audit_id)).toContain(nowhere.audit_id);
+    expect(fromTheFifth.data.map((row) => row.audit_id)).not.toContain(here.audit_id);
+  });
+
+  it('combines filters instead of letting the last one win', async () => {
+    const { here } = await seedAudits();
+
+    const listed = await service.list(
+      { client_id: CLIENT, location_id: LOCATION, status: 'completed', started_from: '2026-01-01T00:00:00.000Z' },
+      context,
+    );
+
+    expect(listed.data.map((row) => row.audit_id)).toEqual([here.audit_id]);
+    expect(listed.total).toBe(1);
+  });
+});
+
+/**
+ * The web items table shows the asset's type, serial, tag and who marked it —
+ * the reads have to carry those, or the table renders a column of dashes.
+ */
+describe('AssetAuditService read enrichment', () => {
+  it('selects the asset type and the marking user alongside the item identity', async () => {
+    const audit = await service.start({ client_id: CLIENT, location_id: LOCATION, statuses: ['active'] }, context);
+    await service.markItem(audit.audit_id, { asset_id: 'a-1', result: 'present', method: 'manual' }, context);
+
+    const fetched = await service.get(audit.audit_id, context);
+    const item = fetched.items.find((row) => row.asset_id === 'a-1')!;
+
+    // The fake returns whole rows (joins are no-ops), so the assertion is that
+    // the selected shape is wired, including the marking user id.
+    expect(item.marked_by).toBe('user-1');
+    expect(item.method).toBe('manual');
+  });
+
+  it('defaults a mark with no method to manual, the way the web marks', async () => {
+    const audit = await service.start({ client_id: CLIENT, location_id: LOCATION, statuses: ['active'] }, context);
+
+    await service.markItem(audit.audit_id, { asset_id: 'a-1' }, context);
+
+    expect(items(audit.audit_id).find((item) => item.asset_id === 'a-1')?.method).toBe('manual');
+  });
+});
+
+/**
+ * The start dialog's live count is taken off the same predicate the snapshot
+ * uses, so the number the technician sees is the number they get.
+ */
+describe('AssetAuditService.previewScope', () => {
+  it('counts the assets the snapshot would hold', async () => {
+    const expected = await service.previewScope(
+      { client_id: CLIENT, location_id: LOCATION, statuses: ['active'] },
+      context,
+    );
+
+    expect(expected).toBe(2);
+  });
+
+  it('counts the no-location scope separately', async () => {
+    const expected = await service.previewScope({ client_id: CLIENT, location_id: null }, context);
+
+    expect(expected).toBe(1);
+  });
+
+  it('agrees with what start actually snapshots', async () => {
+    const scope = { client_id: CLIENT, location_id: LOCATION, statuses: ['active'] };
+
+    const previewed = await service.previewScope(scope, context);
+    const audit = await service.start(scope, context);
+
+    expect(audit.expected_count).toBe(previewed);
   });
 });
