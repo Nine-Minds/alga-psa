@@ -2590,6 +2590,7 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "Markdown",
       "Offline",
       "{{field}}: {{from}} → {{to}}",
       "{{from}} → {{to}}",
