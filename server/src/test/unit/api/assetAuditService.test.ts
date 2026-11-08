@@ -365,6 +365,54 @@ describe('AssetAuditService.unmarkItem', () => {
   });
 });
 
+describe('AssetAuditService result counts', () => {
+  // The lists read the row's count columns while the detail counts the items it
+  // was handed, so a run whose counts are only written on completion reads as
+  // all-zero in the lists while the detail shows the marks.
+  it('keeps the row counts in step with the items as the walk goes', async () => {
+    const audit = await service.start({ client_id: CLIENT, location_id: LOCATION, statuses: ['active'] }, context);
+
+    const marked = await service.markItem(
+      audit.audit_id,
+      { asset_id: 'a-1', result: 'present', method: 'manual' },
+      context,
+    );
+    expect(marked.present_count).toBe(1);
+    expect(marked.unexpected_count).toBe(0);
+
+    const withStray = await service.markItem(
+      audit.audit_id,
+      { asset_id: 'a-5', result: 'present', method: 'manual' },
+      context,
+    );
+    expect(withStray.present_count).toBe(1);
+    expect(withStray.unexpected_count).toBe(1);
+
+    const undone = await service.unmarkItem(audit.audit_id, 'a-1', context);
+    expect(undone.present_count).toBe(0);
+    expect(undone.unexpected_count).toBe(1);
+  });
+
+  it('keeps what a cancelled run saw on its row, so the list agrees with the detail', async () => {
+    const audit = await service.start({ client_id: CLIENT, location_id: LOCATION, statuses: ['active'] }, context);
+    await service.markItem(audit.audit_id, { asset_id: 'a-1', result: 'present', method: 'manual' }, context);
+    await service.markItem(audit.audit_id, { asset_id: 'a-5', result: 'present', method: 'manual' }, context);
+
+    const cancelled = await service.cancel(audit.audit_id, context);
+
+    expect(cancelled.status).toBe('cancelled');
+    expect(cancelled.present_count).toBe(1);
+    expect(cancelled.unexpected_count).toBe(1);
+    // Nothing was concluded missing: the run was abandoned, not finished.
+    expect(cancelled.missing_count).toBe(0);
+    const { data } = await service.list({ client_id: CLIENT }, context);
+    expect(data.find((row) => row.audit_id === audit.audit_id)).toMatchObject({
+      present_count: 1,
+      unexpected_count: 1,
+    });
+  });
+});
+
 describe('AssetAuditService.complete', () => {
   it('T051 fills missing from expected minus present and writes the counts', async () => {
     const audit = await service.start({ client_id: CLIENT, location_id: LOCATION, statuses: ['active'] }, context);

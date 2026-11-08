@@ -168,10 +168,7 @@ export class AssetAuditService extends BaseService<any> {
       const method = data.method ?? 'manual';
 
       if (existing && existing.result === result && existing.marked_at) {
-        return {
-          ...(await this.loadAudit(trx, context.tenant, auditId)),
-          items: await this.loadItems(trx, context.tenant, auditId),
-        };
+        return this.countedResult(trx, context.tenant, audit);
       }
 
       // Citus rejects non-IMMUTABLE functions in the DO UPDATE SET of an insert
@@ -204,10 +201,7 @@ export class AssetAuditService extends BaseService<any> {
           .update({ expected_count: Number(audit.expected_count ?? 0) + 1 });
       }
 
-      return {
-        ...(await this.loadAudit(trx, context.tenant, auditId)),
-        items: await this.loadItems(trx, context.tenant, auditId),
-      };
+      return this.countedResult(trx, context.tenant, audit);
     });
   }
 
@@ -219,7 +213,7 @@ export class AssetAuditService extends BaseService<any> {
     const knex = await this.getDbForContext(context);
 
     return withTransaction(knex, async (trx) => {
-      await this.requireInProgress(trx, context.tenant, auditId);
+      const audit = await this.requireInProgress(trx, context.tenant, auditId);
 
       const item = await scoped(trx, context.tenant, 'asset_audit_items')
         .where({ audit_id: auditId, asset_id: assetId })
@@ -238,10 +232,7 @@ export class AssetAuditService extends BaseService<any> {
           .update({ result: 'expected', method: null, marked_at: null, marked_by: null });
       }
 
-      return {
-        ...(await this.loadAudit(trx, context.tenant, auditId)),
-        items: await this.loadItems(trx, context.tenant, auditId),
-      };
+      return this.countedResult(trx, context.tenant, audit);
     });
   }
 
@@ -315,21 +306,23 @@ export class AssetAuditService extends BaseService<any> {
     });
   }
 
-  /** Abandon the run; only an open audit can be cancelled. */
+  /**
+   * Abandon the run; only an open audit can be cancelled. Nothing is written to
+   * the assets — but what the walk did see is kept on the row, because a
+   * cancelled audit is terminal and its counts would otherwise read as zero in
+   * the lists for good while the detail still showed the marks.
+   */
   async cancel(auditId: string, context: ServiceContext): Promise<AssetAuditWithItems> {
     const knex = await this.getDbForContext(context);
 
     return withTransaction(knex, async (trx) => {
-      await this.requireInProgress(trx, context.tenant, auditId);
+      const audit = await this.requireInProgress(trx, context.tenant, auditId);
 
       await scoped(trx, context.tenant, 'asset_audits')
         .where({ audit_id: auditId })
         .update({ status: 'cancelled', updated_at: new Date().toISOString() });
 
-      return {
-        ...(await this.loadAudit(trx, context.tenant, auditId)),
-        items: await this.loadItems(trx, context.tenant, auditId),
-      };
+      return this.countedResult(trx, context.tenant, audit);
     });
   }
 
@@ -367,6 +360,36 @@ export class AssetAuditService extends BaseService<any> {
     ]);
 
     return { data: rows, total: Number((countRow as { count?: string })?.count ?? 0) };
+  }
+
+  /**
+   * A mutation's answer, with the audit row's result counts brought in step
+   * with its items first.
+   *
+   * Those columns are what every list reads, while the detail page counts the
+   * items it was given. `complete` has always written them, but nothing else
+   * did: an open run read as 0 present in the list while the detail showed the
+   * marks, and a cancelled run kept that disagreement for good. The update is
+   * only issued when a count actually moved.
+   */
+  private async countedResult(
+    conn: Knex | Knex.Transaction,
+    tenant: string,
+    audit: AssetAuditRecord,
+  ): Promise<AssetAuditWithItems> {
+    const items = await this.loadItems(conn, tenant, audit.audit_id);
+    const counts = {
+      present_count: items.filter((item) => item.result === 'present').length,
+      missing_count: items.filter((item) => item.result === 'missing').length,
+      unexpected_count: items.filter((item) => item.result === 'unexpected').length,
+    };
+    const moved = (Object.keys(counts) as Array<keyof typeof counts>).some(
+      (key) => Number((audit as unknown as Record<string, unknown>)[key] ?? 0) !== counts[key],
+    );
+    if (moved) {
+      await scoped(conn, tenant, 'asset_audits').where({ audit_id: audit.audit_id }).update(counts);
+    }
+    return { ...(await this.loadAudit(conn, tenant, audit.audit_id)), items };
   }
 
   /** The shared list predicates, applied to both the row and the count query. */
