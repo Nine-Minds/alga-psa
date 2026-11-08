@@ -116,7 +116,9 @@
     "clientTags": "Etiquetas del cliente",
     "tagModeAny": "Cualquiera de",
     "tagModeNone": "Ninguna de",
-    "droppedFromLink": "Algunos filtros de este enlace no son válidos y se ignoraron."
+    "droppedFromLink": "Algunos filtros de este enlace no son válidos y se ignoraron.",
+    "location": "Ubicación",
+    "requesterLocation": "Ubicación del solicitante"
   },
   "create": {
     "title": "Crear ticket de soporte",
@@ -458,7 +460,9 @@
         "operationConflict": "Este comentario entra en conflicto con un intento anterior. Recarga e inténtalo de nuevo.",
         "audienceUnresolved": "Elige quién puede ver este comentario antes de publicarlo.",
         "unknownOutcome": "No pudimos confirmar que el comentario se publicó. Revisa la conversación antes de enviarlo de nuevo."
-      }
+      },
+      "unavailable": "Este ticket no está disponible.",
+      "back": "Volver a Tickets de clientes"
     }
   },
   "responseState": {
@@ -1023,7 +1027,9 @@
       "heading": "Observadores",
       "placeholder": "Añadir observadores..."
     },
-    "attachmentsPartialFailure": "Ticket creado, pero no se pudieron adjuntar estos archivos: {{files}}. Añádalos desde el ticket."
+    "attachmentsPartialFailure": "Ticket creado, pero no se pudieron adjuntar estos archivos: {{files}}. Añádalos desde el ticket.",
+    "contactLocationSuffix": "(ubicación del contacto)",
+    "contactPrimaryLocationSuffix": "(ubicación principal del contacto)"
   },
   "itil": {
     "calculatedPriority": "Prioridad (calculada)",
@@ -1645,7 +1651,9 @@
       "agentAlreadyAssigned": "Este usuario ya está asignado como agente adicional.",
       "teamNotFound": "Equipo no encontrado. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
       "teamLeadNotFound": "El equipo seleccionado no tiene responsable. Elija otro equipo o asigne un responsable primero.",
-      "commentNotFound": "Comentario no encontrado. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo."
+      "commentNotFound": "Comentario no encontrado. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "boardNotFound": "Tablero no encontrado. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "boardInactive": "El tablero de destino está inactivo. Elija un tablero activo."
     },
     "bundle": {
       "masterAlreadyBundleMaster": "El ticket {{tickets}} ya es un ticket principal de agrupación y no puede añadirse como ticket secundario. Deshaga la agrupación primero o utilícelo como principal.",
@@ -1681,7 +1689,14 @@
       "referenceInvalid": "El tablero, el estado, la prioridad, el responsable, el equipo o la política de SLA seleccionados ya no son válidos. Actualice la página e inténtelo de nuevo.",
       "duplicateName": "Ya existe un tablero con este nombre.",
       "duplicate": "Ya existe un tablero o estado con la misma configuración.",
-      "invalidValue": "Uno de los valores del tablero o del estado no es válido. Actualice la página e inténtelo de nuevo."
+      "invalidValue": "Uno de los valores del tablero o del estado no es válido. Actualice la página e inténtelo de nuevo.",
+      "notificationEmailInvalid": "La regla de notificación {{rule}} tiene una dirección de correo electrónico no válida (hasta {{max}} caracteres)",
+      "notificationEmailLimit": "La regla de notificación {{rule}} puede tener como máximo {{max}} direcciones de correo electrónico",
+      "notificationRecipientRequired": "La regla de notificación {{rule}} debe notificar al menos a un usuario, equipo o dirección de correo electrónico",
+      "notificationEmailIsUser": "Regla de notificación {{rule}}: {{address}} es la dirección de correo de un usuario de Alga. Elige al usuario en su lugar.",
+      "notificationEmailIsContact": "Regla de notificación {{rule}}: {{address}} pertenece a un contacto o ubicación de un cliente y no puede ser destinatario.",
+      "notificationEmailClientDomain": "Regla de notificación {{rule}}: {{address}} pertenece al dominio de correo de un cliente y no puede ser destinatario.",
+      "notificationEmailInboundMailbox": "Regla de notificación {{rule}}: {{address}} es un buzón de entrada conectado y no puede ser destinatario."
     },
     "material": {
       "invalidValue": "Uno de los valores de material seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
@@ -2057,7 +2072,9 @@
       "changeLocation": "Cambiar ubicación",
       "addDescriptionPrompt": "Añade una descripción: ¿cuál es el problema y qué necesita el cliente?",
       "projectTasks": "Tareas del proyecto",
-      "timeAndBilling": "Tiempo y facturación"
+      "timeAndBilling": "Tiempo y facturación",
+      "useContactLocation": "Usar la ubicación del contacto",
+      "remote": "Remota"
     },
     "timeline": {
       "subtitle": "Respuestas, tiempo y cambios del sistema en un solo lugar",
@@ -2612,12 +2629,15 @@
       "columns": {
         "name": "Nombre",
         "title": "Título del ticket",
+        "client": "Cliente",
         "board": "Tablero",
         "checklist": "Elementos de la lista",
         "status": "Estado",
         "schedules": "Programaciones"
       },
-      "deleteBlocked": "Usada por {{count}} programación(es) recurrente(s). Asígneles otra plantilla o archívelas primero."
+      "deleteBlocked": "Usada por {{count}} programación(es) recurrente(s). Asígneles otra plantilla o archívelas primero.",
+      "allClients": "Todos los clientes",
+      "clientFilter": "Todos los clientes"
     },
     "status": {
       "active": "Activa",
@@ -2645,6 +2665,9 @@
       "title": "Título del ticket",
       "description": "Descripción",
       "descriptionPlaceholder": "Descripción",
+      "client": "Cliente",
+      "clientPlaceholder": "Todos los clientes",
+      "clientHelp": "Déjelo vacío para ofrecer la plantilla a todos los clientes. Elija uno para ofrecerla solo en los tickets de ese cliente.",
       "offerForManualUse": "Ofrecer en el selector de nuevo ticket",
       "offerForManualUseHelp": "Desactívelo para plantillas que solo usan las programaciones recurrentes.",
       "titleTokens": "Puede usar {{tokens}} en el título; se rellenan en cada ticket."
@@ -2832,5 +2855,35 @@
       "notAvailable": "Esta respuesta predefinida no está disponible para este ticket.",
       "notATeamMember": "Solo puede administrar respuestas de equipo de los equipos a los que pertenece."
     }
+  },
+  "sharedSla": {
+    "title": "Nivel de servicio",
+    "msp": "Nivel de servicio del MSP",
+    "customer": "Nivel de servicio del cliente",
+    "state": {
+      "running": "En curso",
+      "paused": "En pausa",
+      "met": "Cumplido",
+      "breached": "Incumplido"
+    },
+    "target": {
+      "response": "Primera respuesta",
+      "resolution": "Resolución"
+    },
+    "elapsed": "Transcurrido: {{time}}",
+    "dueAt": "Vence: {{date}}",
+    "completedAt": "Cumplido el {{date}}",
+    "breached": "Incumplido",
+    "targetPaused": "En pausa",
+    "noTarget": "Sin objetivo",
+    "duration": {
+      "hoursMinutes": "{{hours}} h {{minutes}} min",
+      "minutes": "{{minutes}} min"
+    },
+    "notStarted": "El reloj empieza cuando se escala el ticket.",
+    "unavailable": "Este nivel de servicio ya no está disponible.",
+    "notConfigured": "No se aplica ningún nivel de servicio.",
+    "empty": "Todavía no se hace seguimiento de ningún nivel de servicio para este ticket.",
+    "loadError": "No se pudo cargar el nivel de servicio."
   }
 }

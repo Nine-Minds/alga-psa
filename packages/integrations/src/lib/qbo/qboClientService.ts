@@ -2,6 +2,7 @@ import axios, { type AxiosRequestConfig } from 'axios';
 import { getSecretProviderInstance, type ISecretProvider } from '@alga-psa/core/secrets';
 import { createTenantKnex } from '@alga-psa/db';
 import { notifyQboConnectionChanged } from './qboConnectionChangeProvider';
+import { getTenantQboEnvironmentSetting } from './qboEnvironmentSettings';
 import { retireTerminalDisconnectRecord } from '../providerDisconnect/retire';
 import {
   getProviderCredentialWriteDisposition,
@@ -168,6 +169,20 @@ export async function resolveQboOAuthCredentials(
     );
   }
 
+  // Intuit accepts only an app's Development keys against a sandbox company, and
+  // the shared deployment app is registered with Production keys. So a tenant
+  // that deliberately chose sandbox must bring its own app; falling back to the
+  // shared one would fail at sign-in with an opaque Intuit error. Only the
+  // explicit tenant setting gates this — a deployment-wide sandbox default
+  // (dev, test, self-host with QBO_ENVIRONMENT=sandbox) legitimately uses
+  // app-level keys.
+  if ((await getExplicitTenantQboEnvironment(tenantId)) === 'sandbox') {
+    throw new AppError(
+      'QBO_CONFIG_MISSING',
+      'Connecting an Intuit sandbox company requires this tenant\'s own Intuit app: save its Development keys (client ID and secret) before connecting. The shared app uses Production keys, which Intuit rejects for sandbox companies.'
+    );
+  }
+
   const [appClientId, appClientSecret] = await Promise.all([
     getQboClientId(provider),
     getQboClientSecret(provider)
@@ -198,6 +213,42 @@ export function getQboEnvironment(): QboEnvironment {
     logger.warn(`Ignoring invalid QBO_ENVIRONMENT value "${configured}"; expected "sandbox" or "production"`);
   }
   return process.env.NODE_ENV === 'production' ? 'production' : 'sandbox';
+}
+
+/**
+ * The tenant's explicitly chosen Intuit environment, or null when it never
+ * chose one. Never falls back to the process-wide value — callers that need a
+ * decision use resolveTenantQboEnvironment; callers that need to know whether
+ * the tenant itself asked for sandbox use this.
+ *
+ * A read failure reports "no choice" rather than throwing: the environment is a
+ * preference, and an unreadable tenant_settings row must not break a client
+ * that would otherwise work on the deployment default.
+ */
+export async function getExplicitTenantQboEnvironment(tenantId: string): Promise<QboEnvironment | null> {
+  if (!tenantId) {
+    return null;
+  }
+  try {
+    const { knex } = await createTenantKnex(tenantId);
+    return await getTenantQboEnvironmentSetting(knex, tenantId);
+  } catch (error) {
+    logger.warn(
+      { tenantId, error: error instanceof Error ? error.name : 'unknown error' },
+      'Could not read the tenant QBO environment setting; falling back to the deployment default'
+    );
+    return null;
+  }
+}
+
+/**
+ * Effective Intuit environment for a tenant: its own setting when it has one,
+ * else the deployment-wide value. A stored connection's own environment (see
+ * QboTenantCredentials.environment) outranks both — it is the environment the
+ * realm and tokens were actually issued in.
+ */
+export async function resolveTenantQboEnvironment(tenantId: string): Promise<QboEnvironment> {
+  return (await getExplicitTenantQboEnvironment(tenantId)) ?? getQboEnvironment();
 }
 
 function computeBaseUrl(envValue?: string | null): string {
@@ -369,6 +420,8 @@ export class QboClientService {
   private tenantId: string;
   private realmId: string;
   private credentials!: QboTenantCredentials;
+  // Resolved once in initialize() so the URL builders stay synchronous.
+  private environment!: QboEnvironment;
 
   private constructor(tenantId: string, realmId: string) {
     this.tenantId = tenantId;
@@ -400,6 +453,10 @@ export class QboClientService {
 
   private async initialize(initialCredentials: QboTenantCredentials): Promise<void> {
     this.credentials = initialCredentials;
+    // The environment stamped on the stored credentials wins: realm and tokens
+    // were issued in that environment and stay valid only there, even if the
+    // tenant setting is flipped afterwards.
+    this.environment = initialCredentials.environment ?? (await resolveTenantQboEnvironment(this.tenantId));
 
     if (this.isTokenExpired()) {
       logger.info({ tenantId: this.tenantId, realmId: this.realmId }, 'QBO access token expired or nearing expiry, refreshing...');
@@ -421,7 +478,7 @@ export class QboClientService {
       {
         tenantId: this.tenantId,
         realmId: this.realmId,
-        environment: getQboEnvironment(),
+        environment: this.environment,
         minorVersion: QBO_MINOR_VERSION
       },
       'QBO client initialized'
@@ -481,7 +538,7 @@ export class QboClientService {
   }
 
   private isProductionEnvironment(): boolean {
-    return getQboEnvironment() === 'production';
+    return this.environment === 'production';
   }
 
   private getApiBaseUrl(): string {

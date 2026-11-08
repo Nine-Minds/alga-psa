@@ -15,6 +15,7 @@ import { getAdminConnection, refreshAdminConnection } from '@alga-psa/db/admin.j
 import { getTenantTableScope, retryOnReadOnly, tenantDb, type TenantTableScope } from '@alga-psa/db';
 // Subpath import: the activity suites mock the '@alga-psa/db' barrel with a fixed export set.
 import { tenantDeletionOrder } from '@alga-psa/db/tenantTableManifest';
+import { TENANT_TABLE_MANIFEST } from '../db/tenantTableManifest.js';
 import { TagModel } from '@alga-psa/shared/models/tagModel.js';
 import { Knex } from 'knex';
 import { getSecret } from '@alga-psa/core/secrets';
@@ -56,6 +57,7 @@ export {
  * Synced from cli/cleanup-tenant.nu
  */
 export const TENANT_TABLES_DELETION_ORDER: string[] = [
+  'service_principals',
   'email_sender_routes',
   'email_sender_addresses',
   // rma_cases has a NO ACTION FK to asset_custody (rma_cases_custody_fk) plus FKs to clients/assets/
@@ -313,6 +315,8 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'asset_group_members',
   'asset_group_contacts',
   'asset_groups',
+  'asset_audit_items',
+  'asset_audits',
   'software_catalog',
   'rmm_webhook_events',
   'rmm_maintenance_windows',
@@ -457,9 +461,14 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'service_request_definition_versions', 'service_request_definitions',
   'co_management_board_scopes',
   'co_managed_allocations',
+  'co_managed_relationship_closures',
+  'co_managed_archive_manifests',
   'co_managed_entitlements',
   'co_managed_provisioning_operations',
   'co_managed_purchase_operations',
+  'co_managed_independent_upgrades',
+  'co_managed_upgrade_purchases',
+  'portable_workspace_activations',
   'tenant_license_state',
   'co_managed_meeting_creation_operations',
   'co_management_relationship_events',
@@ -471,14 +480,26 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'co_management_private_comments',
   'co_management_private_threads',
   'co_management_private_command_receipts',
+  // L4b: files -> drafts (FK), then transfer records and retained archive files.
+  'co_management_conversation_attachments',
+  'co_management_conversation_drafts',
+  'co_management_thread_transfers',
+  'co_managed_archive_files',
   'co_managed_project_task_references',
   'collaboration_actor_references',
   'co_managed_participation_evidence',
+  'portable_restore_suspensions',
+  'portable_workspace_restores',
+  'portable_workspace_restore_uploads',
   // Handoffs FK to ticket work, which FKs to relationships: children first. References and
   // receipts reference the client/board/relationship rows deleted later.
   'co_management_ticket_handoffs',
   'co_management_ticket_work',
   'co_managed_ticket_references',
+  'sla_organization_notification_events',
+  'sla_organization_events',
+  'sla_organization_obligations',
+  'co_managed_sla_priority_mappings',
   'co_management_command_receipts',
   // Delivery ledger rows cite tickets/users only by soft id; leaf, before relationships.
   'co_management_deliveries',
@@ -539,6 +560,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'ticket_entity_links',
   'ticket_bundle_status_propagations',
   'tickets',
+  'contact_locations',
   'client_locations',
   'categories',
   'boards',
@@ -652,9 +674,9 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'tax_regions',
 ];
 
-// The manifest (packages/db tenantTableManifest) owns membership and order; the array above is its
-// golden projection, asserted element-for-element by tenantTableManifest.golden.test.ts.
-const TENANT_TABLES_DELETION_SET = new Set(tenantDeletionOrder());
+// The composed manifest (db/tenantTableManifest) owns membership and order; the array above is its
+// golden projection, asserted element-for-element by db/__tests__/tenantTableManifest.test.ts.
+const TENANT_TABLES_DELETION_SET = new Set(tenantDeletionOrder(TENANT_TABLE_MANIFEST));
 const MANAGEMENT_TENANT_DISCOVERY_CONTEXT = '__tenant_deletion_management_tenant_discovery__';
 
 type TenantColumnName = 'tenant' | 'tenant_id';
@@ -1806,8 +1828,8 @@ export async function deleteTenantData(
     // Step 2: Delete from each table in order
     // The loop runs the manifest order. The local binding keeps the established loop
     // shape that source-text contract tests assert; the exported literal above is the
-    // golden copy `tenantTableManifest.golden.test.ts` compares against.
-    const TENANT_TABLES_DELETION_ORDER = tenantDeletionOrder();
+    // golden copy `db/__tests__/tenantTableManifest.test.ts` compares against.
+    const TENANT_TABLES_DELETION_ORDER = tenantDeletionOrder(TENANT_TABLE_MANIFEST);
     for (const tableName of TENANT_TABLES_DELETION_ORDER) {
       try {
         const tableBoundary = await resolveTenantDeletionTableBoundary(

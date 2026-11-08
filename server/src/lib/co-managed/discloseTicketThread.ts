@@ -1,0 +1,40 @@
+import { StorageProviderFactory } from '@alga-psa/storage/StorageProviderFactory';
+import { uploadConversationAttachmentObject } from './conversationAttachments';
+import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
+import { discloseCoManagedThread, discloseCoManagedPrivateThread, CoManagedSharedWorkError, CoManagedAttachmentError, CoManagedThreadDisclosureError, type CoManagedThreadDisclosureContext, type CoManagedThreadDisclosureRequest, type CoManagedSharedResource, type CoManagedSessionActor } from '@alga-psa/co-managed';
+import { writeTicketActivity } from '@alga-psa/shared/lib/ticketActivity';
+import { collaborationActorReferenceSchema } from '@alga-psa/event-schemas/collaboration';
+
+/** Persist the audience audit with the entire thread change, then invalidate
+ * each comment's search representation without emitting its old or new body. */
+export async function discloseSharedThread(db: Knex, actor: CoManagedSessionActor, resource: CoManagedSharedResource, request: CoManagedThreadDisclosureRequest) {
+  const afterChange = async (context: CoManagedThreadDisclosureContext) => {
+    const { trx, actor, resource } = context, owner = tenantDb(trx, resource.tenant);
+    const saved = context.actorReferenceId ? await owner.table('collaboration_actor_references').where('actor_reference_id', context.actorReferenceId).first() : null;
+    const reference = saved ? collaborationActorReferenceSchema.parse({ ownerTenantId: resource.tenant, referenceId: context.actorReferenceId,
+      tenantId: actor.tenant, userId: actor.userId, displayName: saved.display_name, organizationName: saved.organization_name }) : undefined;
+    await writeTicketActivity(trx, { tenant: resource.tenant, ticketId: resource.id, eventType: 'TICKET_COMMENT_UPDATED', entityType: 'comment', entityId: context.rootCommentId,
+      actor: { actorType: 'user', ...(reference ? { actorReferenceId: reference.referenceId } : { userId: actor.userId }) }, source: 'ui', occurredAt: context.appliedAt,
+      details: { is_internal: context.audience !== 'requester', collaboration_audience: context.audience, previous_audience: context.previousAudience,
+        thread_id: context.threadId, audience_changed: true, comment_count: context.commentIds.length } });
+    // Notification of a disclosure is L5's. The reference's durable event queue (`conversationEvents`) is not on main and the
+    // comment outbox is single-shot per comment, so no event is emitted here; the activity row above is the durable record.
+  };
+  const customer = resource.tenant.toLowerCase();
+  return request.storeTenant.toLowerCase() === customer
+    ? discloseCoManagedThread(db, actor, resource, request, afterChange)
+    : discloseCoManagedPrivateThread(db, actor, resource, request, {
+      download: async path => (await StorageProviderFactory.createProvider()).download(path),
+      upload: async (path, bytes, mime) => {
+        try { await uploadConversationAttachmentObject(customer, path, bytes, mime); }
+        catch (error) { if (error instanceof CoManagedAttachmentError) throw new CoManagedThreadDisclosureError('INVALID_THREAD_DISCLOSURE'); throw error; }
+      },
+    }, afterChange);
+}
+
+/** Legacy ticket callers retain their ticket-only contract. */
+export async function discloseSharedTicketThread(...args: Parameters<typeof discloseSharedThread>) {
+  if (args[2]?.kind !== 'ticket') throw new CoManagedSharedWorkError();
+  return discloseSharedThread(...args);
+}

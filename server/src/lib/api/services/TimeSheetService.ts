@@ -3,12 +3,13 @@
  * Handles all time sheet-related database operations for the REST API
  */
 
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { delegateRest } from '@alga-psa/scheduling/lib/timeSource';
 import { v4 as uuidv4 } from 'uuid';
 import { assertHumanWorkAssignee, assertHumanWorkOwner } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
-import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb, withViaPrincipal, stampViaPrincipalRow } from '@alga-psa/db';
 import { 
   CreateTimeSheetData,
   UpdateTimeSheetData,
@@ -41,7 +42,6 @@ import { buildScheduleEntryCreatedPayload, buildScheduleEntryDeletedPayload, bui
 import { TimePeriod } from '@alga-psa/scheduling/models/timePeriod';
 import { ensureTimePeriodCoversDate } from '@alga-psa/scheduling/lib/timePeriodMaterialization';
 import { Temporal } from '@js-temporal/polyfill';
-import { hasPermission } from '../../auth/rbac';
 import {
   assertEditableGroupCalendar,
   buildVisibilityFilter,
@@ -1255,6 +1255,13 @@ export class TimeSheetService extends BaseService<any> {
       // Failures throw (404/403); they never fall back to a personal entry.
       const calendarId = data.calendar_id ?? null;
       const assignedUserIds: string[] = data.assigned_user_ids || [];
+      // Human-work guard: an entry with no assignee books the caller, who must be a human;
+      // explicit assignees must be interactive users.
+      if (assignedUserIds.length === 0) {
+        await assertHumanWorkOwner(knex, context.tenant, context.userId, 'assigned_user_ids');
+      } else {
+        await assertHumanWorkAssignee(knex, context.tenant, assignedUserIds);
+      }
       if (calendarId) {
         const access = await this.assertWritableGroupCalendar(knex, calendarId, context);
         if (assignedUserIds.some((userId) => !canAssignUser(userId, access))) {
@@ -1290,6 +1297,8 @@ export class TimeSheetService extends BaseService<any> {
           assignedUserIds,
           assignedByUserId: context.userId
         });
+
+        await stampViaPrincipalRow(trx, context, 'schedule_entries', { entry_id: entry.entry_id }, 'created_via_principal_id');
 
         return entry;
       });
@@ -1670,13 +1679,13 @@ export class TimeSheetService extends BaseService<any> {
   private async canManageTimeSheets(context: ServiceContext): Promise<boolean> {
     if (!context.user) return false;
     const { knex } = await this.getKnex();
-    return hasPermission(context.user, 'time_sheet', 'manage', knex);
+    return hasApiContextPermission(context, 'time_sheet', 'manage', knex);
   }
 
   private async canApproveTimeSheets(context: ServiceContext): Promise<boolean> {
     if (!context.user) return false;
     const { knex } = await this.getKnex();
-    return hasPermission(context.user, 'time_sheet', 'approve', knex);
+    return hasApiContextPermission(context, 'time_sheet', 'approve', knex);
   }
 
   /**
@@ -1737,13 +1746,13 @@ export class TimeSheetService extends BaseService<any> {
   private async canViewAllSchedules(context: ServiceContext): Promise<boolean> {
     if (!context.user) return false;
     const { knex } = await this.getKnex();
-    return hasPermission(context.user, 'user_schedule', 'update', knex);
+    return hasApiContextPermission(context, 'user_schedule', 'update', knex);
   }
 
   private async canManageSchedules(context: ServiceContext, action: 'update' | 'delete' = 'update'): Promise<boolean> {
     if (!context.user) return false;
     const { knex } = await this.getKnex();
-    return hasPermission(context.user, 'user_schedule', action, knex);
+    return hasApiContextPermission(context, 'user_schedule', action, knex);
   }
 
   private async getTimeSheetUser(userId: string, context: ServiceContext): Promise<any> {

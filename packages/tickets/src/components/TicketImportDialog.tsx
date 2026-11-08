@@ -12,8 +12,9 @@ import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
 import type { ColumnDefinition } from '@alga-psa/types';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import type { IUser, IBoard, IClient } from '@alga-psa/types';
+import type { IUser, IBoard } from '@alga-psa/types';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { searchClientsForPicker } from '../actions/clientLookupActions';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Upload, AlertTriangle, Check, Download, ChevronDown } from 'lucide-react';
 import { parseCSV } from '@alga-psa/core';
@@ -77,7 +78,6 @@ interface TicketImportDialogProps {
   isOpen: boolean;
   onClose: () => void;
   initialBoards: IBoard[];
-  initialClients: IClient[];
   initialUsers?: IUser[];
   onImportComplete: () => void;
 }
@@ -95,7 +95,6 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
   isOpen,
   onClose,
   initialBoards,
-  initialClients,
   initialUsers,
   onImportComplete,
 }) => {
@@ -1256,7 +1255,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                             )}
                             {res.action === 'map_to_existing' && (
                               <div className="ml-1 w-fit">
-                                <ClientPicker id={`client-res-${info.name}`} clients={initialClients} onSelect={(id) => handleClientResolutionChange(info.name, 'map_to_existing', id || undefined)} selectedClientId={res.mappedClientId || null} filterState="active" onFilterStateChange={() => {}} clientTypeFilter="all" onClientTypeFilterChange={() => {}} placeholder="Select client..." fitContent />
+                                <ClientPicker id={`client-res-${info.name}`} searchClients={searchClientsForPicker} onSelect={(id) => handleClientResolutionChange(info.name, 'map_to_existing', id || undefined)} selectedClientId={res.mappedClientId || null} filterState="active" onFilterStateChange={() => {}} clientTypeFilter="all" onClientTypeFilterChange={() => {}} placeholder="Select client..." fitContent />
                               </div>
                             )}
                           </div>

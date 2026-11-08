@@ -1,9 +1,9 @@
 /** Guarded time-sheet approval transitions shared by REST status writers. */
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { tenantDb, type ServiceContext } from '@alga-psa/db';
+import { tenantDb, withViaPrincipal, type ServiceContext } from '@alga-psa/db';
 import { assertHumanWorkOwner } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
-import { hasPermission } from '../../auth/rbac';
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { ConflictError, ForbiddenError, NotFoundError } from '../middleware/apiMiddleware';
 
 type Status = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'CHANGES_REQUESTED';
@@ -35,7 +35,7 @@ export async function transitionTimeSheet(
 
   const ownSubmission = target === 'SUBMITTED' && sheet.user_id === context.userId;
   const allowed = !!context.user && (target !== 'SUBMITTED' || ownSubmission)
-    && await hasPermission(context.user, 'time_sheet', transitions[target].permission, trx);
+    && await hasApiContextPermission(context, 'time_sheet', transitions[target].permission, trx);
   if (!allowed) {
     throw new ForbiddenError(target === 'SUBMITTED'
       ? 'Permission denied: Can only submit your own time sheets'
@@ -58,7 +58,11 @@ export async function transitionTimeSheet(
 
   if (target === 'APPROVED') {
     await assertHumanWorkOwner(trx, context.tenant, context.userId, 'approved_by');
-    await db.table('time_sheets').where({ id: sheetId }).update({ approval_status: target, approved_at: new Date(), approved_by: context.userId });
+    await db.table('time_sheets').where({ id: sheetId }).update(withViaPrincipal(context, {
+      approval_status: target,
+      approved_at: new Date(),
+      approved_by: context.userId,
+    }, 'approved_via_principal_id'));
     if (payload.approval_notes) {
       await addHistory(db, sheetId, 'approval', payload.approval_notes, null, context);
       await addComment(db, sheetId, payload.approval_notes, context, true);
