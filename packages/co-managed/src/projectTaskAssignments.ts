@@ -5,6 +5,7 @@ import { withCoManagedSharedWork, type CoManagedSharedResource } from './sharedW
 import { coManagedAssigneeOption, type CoManagedAssignee } from './sharedWorkAssignees';
 import { snapshotCoManagedSessionActor, isCoManagedUuid, CoManagedSharedWorkError, type CoManagedSessionActor } from './sharedWorkIdentity';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
+import { coManagedEditFieldPaths } from './sharedWorkProjection';
 import { CoManagedTaskEditError } from './projectTaskEditing';
 import { readCoManagedCustomerOrganizationName } from './projectTaskQueue';
 import { assertCoManagedProjectWorkServed } from './projectTaskGate';
@@ -47,8 +48,7 @@ export async function assignCoManagedProjectTask(db: Knex, inputActor: CoManaged
     const task = await taskQuery.first('task.task_name', 'project.project_name');
     if (!task) throw new CoManagedSharedWorkError();
     // A redacted name is stored as empty, never inferred from a sibling column.
-    // LEVERAGE: pattern co-managed-alias-lists — hand-built [field, values.field, project_tasks.field] lists; see coManagedAuditFieldAliases.
-    const taskName = isCoManagedReadFieldHidden(context.redactedFields, ['task_name', 'values.task_name', 'project_tasks.task_name']) ? '' : task.task_name;
+    const taskName = isCoManagedReadFieldHidden(context.redactedFields, coManagedEditFieldPaths('task_name')) ? '' : task.task_name;
     const projectName = isCoManagedReadFieldHidden(context.redactedFields, ['project', 'projectName', 'project_name', 'projects.project_name']) ? '' : task.project_name;
     const assignedColumns = { assigned_to: assignee.kind === 'user' ? assignee.id : null, assigned_team_id: assignee.kind === 'team' ? assignee.id : null };
     const snapshots = { assignee_name: option.name, organization_name: await readCoManagedCustomerOrganizationName(trx, resource.tenant, context.redactedFields), task_name: taskName, project_name: projectName };
