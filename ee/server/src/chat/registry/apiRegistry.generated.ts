@@ -64479,7 +64479,19 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "Work Management v1"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {
@@ -64506,7 +64518,19 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "Work Management v1"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {
@@ -64610,6 +64634,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "format": "uuid",
           "description": "UUID path identifier from underlying resource tables."
         }
+      },
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
       }
     ],
     "responseBodySchema": {
@@ -64645,6 +64680,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string",
           "format": "uuid",
           "description": "UUID path identifier from underlying resource tables."
+        }
+      },
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
         }
       }
     ],
@@ -64753,6 +64799,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string",
           "format": "uuid",
           "description": "UUID path identifier from underlying resource tables."
+        }
+      },
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
         }
       }
     ]

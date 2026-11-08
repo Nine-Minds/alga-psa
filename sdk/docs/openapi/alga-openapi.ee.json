@@ -144331,6 +144331,19 @@
         "x-alga-products": [
           "psa"
         ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+            },
+            "required": false,
+            "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+            "name": "X-Alga-Act-As",
+            "in": "header"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Time period settings.",
@@ -144338,6 +144351,37 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/WorkV1TimePeriodSettingsListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ACT_AS_NOT_SUPPORTED: the act-as header was sent with a key that cannot act as another user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
                 }
               }
             }
@@ -144353,11 +144397,42 @@
             }
           },
           "403": {
-            "description": "Permission denied (time_period:manage for writes, time_period:read for reads).",
+            "description": "Permission denied (time_period:manage for writes, time_period:read for reads). ACT_AS_NOT_ALLOWED: the service principal is not allowed to act as users.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "ACT_AS_INVALID_TARGET: the act-as user is missing, inactive, client or service.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
                 }
               }
             }
@@ -144395,6 +144470,19 @@
         "x-alga-products": [
           "psa"
         ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+            },
+            "required": false,
+            "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+            "name": "X-Alga-Act-As",
+            "in": "header"
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -144417,7 +144505,7 @@
             }
           },
           "400": {
-            "description": "Validation failure (field ranges, effective_to before effective_from).",
+            "description": "Validation failure (field ranges, effective_to before effective_from). ACT_AS_NOT_SUPPORTED: the act-as header was sent with a key that cannot act as another user.",
             "content": {
               "application/json": {
                 "schema": {
@@ -144437,7 +144525,7 @@
             }
           },
           "403": {
-            "description": "Permission denied (time_period:manage for writes, time_period:read for reads).",
+            "description": "Permission denied (time_period:manage for writes, time_period:read for reads). ACT_AS_NOT_ALLOWED: the service principal is not allowed to act as users.",
             "content": {
               "application/json": {
                 "schema": {
@@ -144452,6 +144540,37 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "ACT_AS_REQUIRED: a service principal performed human work without the act-as header; ACT_AS_INVALID_TARGET: the act-as user is missing, inactive, client or service; HUMAN_WORK_ASSIGNEE_INVALID: a service user was given as assignee/resource.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
                 }
               }
             }
@@ -144502,6 +144621,17 @@
             "description": "UUID path identifier from underlying resource tables.",
             "name": "id",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+            },
+            "required": false,
+            "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+            "name": "X-Alga-Act-As",
+            "in": "header"
           }
         ],
         "responses": {
@@ -144511,6 +144641,37 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/WorkV1TimePeriodSettingsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ACT_AS_NOT_SUPPORTED: the act-as header was sent with a key that cannot act as another user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
                 }
               }
             }
@@ -144526,7 +144687,7 @@
             }
           },
           "403": {
-            "description": "Permission denied (time_period:manage for writes, time_period:read for reads).",
+            "description": "Permission denied (time_period:manage for writes, time_period:read for reads). ACT_AS_NOT_ALLOWED: the service principal is not allowed to act as users.",
             "content": {
               "application/json": {
                 "schema": {
@@ -144541,6 +144702,37 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "ACT_AS_INVALID_TARGET: the act-as user is missing, inactive, client or service.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
                 }
               }
             }
@@ -144589,6 +144781,17 @@
             "description": "UUID path identifier from underlying resource tables.",
             "name": "id",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+            },
+            "required": false,
+            "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+            "name": "X-Alga-Act-As",
+            "in": "header"
           }
         ],
         "requestBody": {
@@ -144613,7 +144816,7 @@
             }
           },
           "400": {
-            "description": "Validation failure.",
+            "description": "Validation failure. ACT_AS_NOT_SUPPORTED: the act-as header was sent with a key that cannot act as another user.",
             "content": {
               "application/json": {
                 "schema": {
@@ -144633,7 +144836,7 @@
             }
           },
           "403": {
-            "description": "Permission denied (time_period:manage for writes, time_period:read for reads).",
+            "description": "Permission denied (time_period:manage for writes, time_period:read for reads). ACT_AS_NOT_ALLOWED: the service principal is not allowed to act as users.",
             "content": {
               "application/json": {
                 "schema": {
@@ -144658,6 +144861,37 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "ACT_AS_REQUIRED: a service principal performed human work without the act-as header; ACT_AS_INVALID_TARGET: the act-as user is missing, inactive, client or service; HUMAN_WORK_ASSIGNEE_INVALID: a service user was given as assignee/resource.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
                 }
               }
             }
@@ -144706,11 +144940,53 @@
             "description": "UUID path identifier from underlying resource tables.",
             "name": "id",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+            },
+            "required": false,
+            "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+            "name": "X-Alga-Act-As",
+            "in": "header"
           }
         ],
         "responses": {
           "204": {
             "description": "Deleted."
+          },
+          "400": {
+            "description": "ACT_AS_NOT_SUPPORTED: the act-as header was sent with a key that cannot act as another user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
           },
           "401": {
             "description": "API key missing/invalid or associated user missing.",
@@ -144723,7 +144999,7 @@
             }
           },
           "403": {
-            "description": "Permission denied (time_period:manage for writes, time_period:read for reads).",
+            "description": "Permission denied (time_period:manage for writes, time_period:read for reads). ACT_AS_NOT_ALLOWED: the service principal is not allowed to act as users.",
             "content": {
               "application/json": {
                 "schema": {
@@ -144738,6 +145014,37 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "ACT_AS_REQUIRED: a service principal performed human work without the act-as header; ACT_AS_INVALID_TARGET: the act-as user is missing, inactive, client or service; HUMAN_WORK_ASSIGNEE_INVALID: a service user was given as assignee/resource.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
                 }
               }
             }
