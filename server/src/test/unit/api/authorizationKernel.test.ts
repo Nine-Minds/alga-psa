@@ -144,7 +144,7 @@ describe('api authorization kernel helper', () => {
 
     expect(updateAllowed).toBe(true);
     expect(deleteAllowed).toBe(false);
-    expect(readAllowed).toBe(false);
+    expect(readAllowed.allowed).toBe(false);
     const actions = authorizeResourceMock.mock.calls.map((c) => c[0].resource.action);
     expect(actions).toEqual(['update', 'delete', 'read']);
   });
