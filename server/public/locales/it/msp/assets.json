@@ -54,6 +54,22 @@
       "closed": "Chiuso",
       "warranty_review": "Verifica garanzia",
       "repaired": "Riparato"
+    },
+    "assetAuditStatus": {
+      "in_progress": "In corso",
+      "completed": "Completato",
+      "cancelled": "Annullato"
+    },
+    "assetAuditResult": {
+      "expected": "Previsto",
+      "present": "Presente",
+      "missing": "Mancante",
+      "unexpected": "Non previsto"
+    },
+    "assetAuditMethod": {
+      "scan": "Scansione",
+      "manual": "Manuale",
+      "register": "Registrato in sede"
     }
   },
   "assetAlertsSection": {
@@ -204,6 +220,13 @@
         "any": "Qualsiasi custodia",
         "inCustody": "In custodia MSP",
         "notInCustody": "Non in custodia MSP"
+      },
+      "audit": {
+        "any": "Qualsiasi esito dell'audit",
+        "present": "Ultimo audit: presente",
+        "missing": "Ultimo audit: mancante",
+        "never": "Mai sottoposto ad audit",
+        "stale": "Nessun audit negli ultimi 90 giorni"
       }
     },
     "activeFilters": {
@@ -377,7 +400,9 @@
       "location": "Posizione",
       "purchaseDate": "Data di acquisto",
       "warrantyEnd": "Fine della garanzia",
-      "notProvided": "Non fornito"
+      "notProvided": "Non fornito",
+      "lastAudited": "Ultimo audit",
+      "neverAudited": "Mai sottoposto ad audit"
     },
     "info": {
       "client": "Cliente",
@@ -842,24 +867,6 @@
     "links": {
       "title": "Collegamenti di accesso remoto",
       "description": "Configura modelli URL per ScreenConnect e altri strumenti di accesso remoto.",
-      "errors": {
-        "load": "Impossibile caricare i collegamenti di accesso remoto.",
-        "save": "Impossibile salvare il collegamento di accesso remoto.",
-        "delete": "Impossibile eliminare il collegamento di accesso remoto.",
-        "templateHttp": "Il modello deve iniziare con http:// o https:// e un host letterale.",
-        "templatePlaceholder": "Il modello contiene un segnaposto non supportato.",
-        "templateUrl": "Il modello deve generare un URL http o https valido.",
-        "required": "Sono obbligatori un’etichetta e un modello URL.",
-        "partialDelete": "Impossibile eliminare {{count}} collegamento/i selezionato/i."
-      },
-      "noneAvailable": "Nessuna opzione di accesso remoto disponibile.",
-      "confirmDeleteTitle": "Eliminare il collegamento di accesso remoto?",
-      "confirmDeleteMessage": "Eliminare “{{label}}”? Questa azione è irreversibile.",
-      "openMenu": "Apri menu",
-      "selectLabel": "Seleziona {{label}}",
-      "confirmBulkDeleteTitle": "Eliminare i collegamenti selezionati?",
-      "confirmBulkDeleteMessage": "Eliminare {{count}} collegamento/i di accesso remoto selezionato/i?",
-      "selectedCount": "{{count}} selezionato/i",
       "add": "Aggiungi collegamento",
       "empty": "Nessun collegamento di accesso remoto configurato.",
       "edit": "Modifica",
@@ -872,10 +879,28 @@
       "template": "Modello URL",
       "ninjaExample": "Esempio di dashboard dispositivo NinjaOne: https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Sostituisci l’host con la tua regione NinjaOne: app, eu, ca, oc o us2 .ninjarmm.com.",
       "tokens": "Usa {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {asset.rmm_provider}, {asset.rmm_organization_id}, {client.name} e {field.<key>} con le chiavi dei campi personalizzati definite in Impostazioni → Asset → Tipi di asset.",
+      "errors": {
+        "load": "Impossibile caricare i collegamenti di accesso remoto.",
+        "save": "Impossibile salvare il collegamento di accesso remoto.",
+        "delete": "Impossibile eliminare il collegamento di accesso remoto.",
+        "templateHttp": "Il modello deve iniziare con http:// o https:// e un host letterale.",
+        "templatePlaceholder": "Il modello contiene un segnaposto non supportato.",
+        "templateUrl": "Il modello deve generare un URL http o https valido.",
+        "required": "Sono obbligatori un’etichetta e un modello URL.",
+        "partialDelete": "Impossibile eliminare {{count}} collegamento/i selezionato/i."
+      },
       "loading": "Caricamento delle opzioni di accesso remoto…",
+      "noneAvailable": "Nessuna opzione di accesso remoto disponibile.",
       "unavailable": "Non disponibile per questo asset",
+      "confirmDeleteTitle": "Eliminare il collegamento di accesso remoto?",
+      "confirmDeleteMessage": "Eliminare “{{label}}”? Questa azione è irreversibile.",
       "actions": "Azioni",
-      "selectAll": "Seleziona tutti i collegamenti"
+      "openMenu": "Apri menu",
+      "selectLabel": "Seleziona {{label}}",
+      "selectAll": "Seleziona tutti i collegamenti",
+      "confirmBulkDeleteTitle": "Eliminare i collegamenti selezionati?",
+      "confirmBulkDeleteMessage": "Eliminare {{count}} collegamento/i di accesso remoto selezionato/i?",
+      "selectedCount": "{{count}} selezionato/i"
     }
   },
   "assetListErrors": {
@@ -1653,7 +1678,8 @@
     "assignDialogTitle": "Assegna questo asset",
     "sharedWorkspace": "Postazione condivisa",
     "sharedWorkspaceValue": "{{name}} · {{count}} persone",
-    "billingProfile": "Profilo di fatturazione"
+    "billingProfile": "Profilo di fatturazione",
+    "lastAudited": "Ultimo audit"
   },
   "assetTimeline": {
     "title": "Cronologia",
@@ -1683,7 +1709,11 @@
       "aGroup": "un gruppo",
       "autoAssignedFrom": "Assegnato automaticamente a {{contact}} da {{provider}}",
       "groupLocationMoved": "Spostato in {{location}} con {{group}}",
-      "groupLocationCleared": "Posizione rimossa con {{group}}"
+      "groupLocationCleared": "Posizione rimossa con {{group}}",
+      "audit": "Audit",
+      "auditPresent": "Audit: presente",
+      "auditMissing": "Audit: mancante",
+      "auditMethod": "Contrassegnato tramite {{method}}"
     },
     "changeTypes": {
       "created": "Creato",
@@ -2145,6 +2175,105 @@
     },
     "badge": {
       "label": "RMA {{number}} · {{status}}"
+    }
+  },
+  "assetAudits": {
+    "title": "Audit delle sedi",
+    "startAudit": "Avvia audit",
+    "noLocation": "Nessuna sede",
+    "loading": "Caricamento degli audit…",
+    "empty": "Nessun audit delle sedi corrisponde a questa vista.",
+    "columns": {
+      "client": "Cliente",
+      "location": "Sede",
+      "status": "Stato",
+      "startedBy": "Avviato da",
+      "started": "Avviato",
+      "completed": "Completato",
+      "expected": "Previsti",
+      "present": "Presenti",
+      "missing": "Mancanti",
+      "unexpected": "Non previsti"
+    },
+    "filters": {
+      "client": "Cliente",
+      "allLocations": "Tutte le sedi",
+      "allStatuses": "Tutti gli stati",
+      "started": "Avviato"
+    },
+    "stats": {
+      "expected": "previsti",
+      "present": "presenti",
+      "missing": "mancanti",
+      "remaining": "rimanenti",
+      "unexpected": "non previsti"
+    },
+    "segments": {
+      "remaining": "Rimanenti",
+      "present": "Presenti",
+      "missing": "Mancanti",
+      "unexpected": "Non previsti",
+      "all": "Tutti"
+    },
+    "start": {
+      "title": "Avvia audit della sede",
+      "client": "Cliente",
+      "clientPlaceholder": "Seleziona un cliente",
+      "location": "Sede",
+      "locationHint": "\"Nessuna sede\" include nell’audit i dispositivi del cliente senza una sede registrata.",
+      "statuses": "Stati degli asset inclusi nell’audit",
+      "statusesHint": "Se non selezioni alcuno stato, l’audit include tutti gli stati.",
+      "statusesLoading": "Caricamento degli stati…",
+      "notes": "Note",
+      "notesPlaceholder": "Scopo del sopralluogo (facoltativo)",
+      "pickClient": "Seleziona un cliente per vedere cosa è incluso nell’audit.",
+      "counting": "Conteggio dei dispositivi inclusi nell’audit…",
+      "countUnavailable": "Il numero di dispositivi non è disponibile al momento.",
+      "expected_one": "1 dispositivo previsto in questo audit",
+      "expected_other": "{{count}} dispositivi previsti in questo audit",
+      "submit": "Avvia audit",
+      "starting": "Avvio…"
+    },
+    "detail": {
+      "backToClient": "Torna agli audit del cliente",
+      "untitledClient": "Cliente",
+      "location": "Sede",
+      "startedBy": "Avviato da",
+      "started": "Avviato",
+      "completed": "Completato",
+      "scopeStatuses": "Stati inclusi nell’audit",
+      "allStatuses": "Tutti gli stati",
+      "notes": "Note",
+      "exportCsv": "Esporta CSV",
+      "addUnexpected": "Aggiungi asset non previsto",
+      "addUnexpectedHint": "Un dispositivo trovato in sede ma non incluso nell’ambito di questo audit viene registrato come non previsto, mai come previsto.",
+      "addUnexpectedPlaceholder": "Cerca un asset…",
+      "addUnexpectedEmpty": "Nessun altro asset per questo cliente.",
+      "complete": "Completa audit",
+      "completeConfirm_one": "1 dispositivo non contrassegnato verrà registrato come mancante.",
+      "completeConfirm_other": "{{count}} dispositivi non contrassegnati verranno registrati come mancanti.",
+      "cancelAudit": "Annulla audit",
+      "cancelConfirm": "L’audit viene abbandonato e nessun dato viene salvato negli asset. Questa operazione non può essere annullata.",
+      "keepAudit": "Continua l’audit"
+    },
+    "items": {
+      "columns": {
+        "asset": "Asset",
+        "type": "Tipo",
+        "serial": "Numero di serie / tag",
+        "result": "Esito",
+        "method": "Metodo",
+        "markedBy": "Contrassegnato da",
+        "markedAt": "Contrassegnato il",
+        "actions": "Azioni"
+      },
+      "searchPlaceholder": "Cerca per nome, tag o numero di serie",
+      "empty": "Nessun asset in questa vista.",
+      "markPresent": "Contrassegna come presente",
+      "undoMark": "Annulla",
+      "createTicket": "Crea ticket",
+      "ticketTitle": "Mancante durante l’audit della sede: {{asset}}",
+      "ticketDescription": "Non trovato durante l’audit della sede avviato il {{date}}."
     }
   }
 }
