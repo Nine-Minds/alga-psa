@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { isMspPrincipalUserType } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import type { IDocument, IUser } from '@alga-psa/types';
@@ -125,7 +126,8 @@ async function resolveDocumentAuthorizationRecords(
   trx: Knex.Transaction,
   tenant: string,
   user: IUser,
-  documents: DocumentAuthorizationInput[]
+  documents: DocumentAuthorizationInput[],
+  associationOverrides?: Map<string, DocumentAssociationRow[]>
 ): Promise<Map<string, AuthorizationRecord>> {
   const documentIds = documents.map((doc) => doc.document_id);
   const records = new Map<string, AuthorizationRecord>();
@@ -133,9 +135,11 @@ async function resolveDocumentAuthorizationRecords(
     return records;
   }
 
-  const associations = await tenantScopedTable(trx, 'document_associations', tenant)
-    .whereIn('document_id', documentIds)
-    .select<DocumentAssociationRow[]>('document_id', 'entity_id', 'entity_type');
+  const associations = associationOverrides
+    ? documentIds.flatMap((documentId) => associationOverrides.get(documentId) ?? [])
+    : await tenantScopedTable(trx, 'document_associations', tenant)
+        .whereIn('document_id', documentIds)
+        .select<DocumentAssociationRow[]>('document_id', 'entity_id', 'entity_type');
 
   const associationByDocument = new Map<string, DocumentAssociationRow[]>();
   for (const association of associations) {
@@ -344,7 +348,8 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
   tenant: string,
   user: IUser,
   documents: T[],
-  verifiedRecipientLifecycleAccess?: (documentId: string) => Promise<boolean>
+  verifiedRecipientLifecycleAccess?: (documentId: string) => Promise<boolean>,
+  associationOverrides?: Map<string, DocumentAssociationRow[]>
 ): Promise<T[]> {
   if (documents.length === 0) {
     return [];
@@ -353,9 +358,12 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
   // Document RBAC belongs to callers (see rbacEvaluator below): verified mailbox
   // recipients hold no roles yet are granted access through the lifecycle check.
   // Every associated asset must be readable, regardless of other associations.
-  const assetLinks = await tenantScopedTable(trx, 'document_associations', tenant)
-    .where({ entity_type: 'asset' }).whereIn('document_id', documents.map(doc => doc.document_id))
-    .select<DocumentAssociationRow[]>('document_id', 'entity_id', 'entity_type');
+  const assetLinks = associationOverrides
+    ? documents.flatMap((document) => associationOverrides.get(document.document_id) ?? [])
+        .filter((association) => association.entity_type === 'asset')
+    : await tenantScopedTable(trx, 'document_associations', tenant)
+        .where({ entity_type: 'asset' }).whereIn('document_id', documents.map(doc => doc.document_id))
+        .select<DocumentAssociationRow[]>('document_id', 'entity_id', 'entity_type');
   const readableAssetIds = new Set<string>();
   if (assetLinks.length && await hasPermission({ ...user, tenant }, 'asset', 'read', trx)) {
     const ids = [...new Set(assetLinks.map(link => link.entity_id))];
@@ -393,7 +401,8 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
       document_id: document.document_id,
       created_by: document.created_by,
       is_client_visible: document.is_client_visible,
-    }))
+    })),
+    associationOverrides
   );
 
   const decisions = await Promise.all(
@@ -448,5 +457,46 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
   }
 
   return authorizedDocuments;
+}
+
+/**
+ * Evaluate a proposed document association with the same relationship rules used for
+ * persisted documents. Callers use this before inserting either the document or its
+ * association, so an unauthorized target cannot leave partial state behind.
+ */
+export async function canAuthorizeDocumentAssociation(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUser,
+  entityId: string,
+  entityType: string
+): Promise<boolean> {
+  // The lifecycle authorizer also checks ticket_comment_attachments.document_id,
+  // which is a UUID column even for an unpersisted association candidate.
+  const documentId = randomUUID();
+  const candidate = {
+    document_id: documentId,
+    tenant,
+    document_name: '',
+    type_id: null,
+    user_id: '',
+    order_number: 0,
+    created_by: '',
+    // The persisted document will be owned by the creator. For a client principal,
+    // allow the relationship kernel to decide the target association itself here;
+    // otherwise the read authorizer's private-document guard would reject every
+    // proposed client association before same-client rules can run.
+    is_client_visible: user.user_type === 'client',
+  } as IDocument;
+  const association: DocumentAssociationRow = { document_id: documentId, entity_id: entityId, entity_type: entityType };
+  const authorized = await authorizeAndRedactDocuments(
+    trx,
+    tenant,
+    user,
+    [candidate],
+    undefined,
+    new Map([[documentId, [association]]])
+  );
+  return authorized.length === 1;
 }
 

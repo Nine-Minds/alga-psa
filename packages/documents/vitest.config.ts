@@ -86,6 +86,12 @@ const storageStubAlias = [
 ];
 
 const nodeAliases = [
+  // The workflow-streams package publishes its runtime entry from dist, which
+  // is not built for focused action tests; resolve its source entry instead.
+  {
+    find: /^@alga-psa\/workflow-streams$/,
+    replacement: path.resolve(__dirname, '../workflow-streams/src/streams/index.ts'),
+  },
   // safeFetch etc. resolve from core source rather than unbuilt dist.
   ...exportedSourceAliases('@alga-psa/core', path.resolve(__dirname, '../core')),
   { find: /^@alga-psa\/types$/, replacement: path.resolve(__dirname, '../types/src') },

@@ -232,6 +232,9 @@ export const getBlockContent = withAuth(async (user, { tenant }, documentId: str
       if (!authorizedDocument) {
         return permissionError('Permission denied: Cannot read documents', 'documents:errors.permissions.read');
       }
+      if (!Object.prototype.hasOwnProperty.call(authorizedDocument, 'content')) {
+        return null;
+      }
 
       return tenantScopedTable(trx, 'document_block_content', tenant)
         .where({ document_id: documentId })
