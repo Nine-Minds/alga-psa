@@ -203,6 +203,7 @@ const FieldBindingPicker: React.FC<FieldBindingPickerProps> = ({
   value,
   applyNormalized,
 }) => {
+  const { t } = useTranslation('msp/invoicing');
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
   const documentKind = useMemo(() => resolveDesignerDocumentKind(nodes), [nodes]);
   const normalizedBinding = value.trim();
@@ -450,6 +451,7 @@ const CssLengthStepperField: React.FC<CssLengthFieldProps> = ({
   defaultUnit,
   applyNormalized,
 }) => {
+  const { t } = useTranslation('msp/invoicing');
   const parsed = useMemo(
     () => parseCssLength(rawValue, { allowedUnits, defaultUnit }),
     [allowedUnits, defaultUnit, rawValue]
