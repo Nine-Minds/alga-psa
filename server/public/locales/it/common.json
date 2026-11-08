@@ -1751,7 +1751,7 @@
     "markAllAsRead": "Segna tutte come lette",
     "markAllRead": "Segna tutte come lette",
     "emptyTitle": "Nessuna notifica",
-    "emptyDescription": "Hai letto tutte le notifiche!"
+    "emptyDescription": "Non c'è nulla da leggere!"
   },
   "importConflicts": {
     "title": "Risolvi i conflitti di importazione",
