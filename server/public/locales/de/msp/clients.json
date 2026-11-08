@@ -330,7 +330,7 @@
       "loadFailed": "Checklistenvorlagen konnten nicht geladen werden",
       "retry": "Erneut versuchen"
     },
-    "audits": "Audits"
+    "audits": "Inventuren"
   },
   "clientCommandCenter": {
     "cards": {
@@ -385,11 +385,11 @@
       "warrantyExpiring_one": "1 läuft in ≤90 T ab",
       "warrantyExpiring_other": "{{count}} laufen in ≤90 T ab",
       "warrantyTracked": " (von {{count}} erfasst)",
-      "auditsLink": "Standortaudits",
-      "lastAudit": "Letztes Audit {{date}}",
+      "auditsLink": "Standortinventuren",
+      "lastAudit": "Letzte Inventur {{date}}",
       "lastAuditMissing_one": "1 fehlt",
       "lastAuditMissing_other": "{{count}} fehlen",
-      "neverAudited": "Noch nie auditiert"
+      "neverAudited": "Noch nie inventarisiert"
     },
     "locations": {
       "billing": "Rechnung",
@@ -399,8 +399,8 @@
       "more": "+{{count}} weitere",
       "none": "Noch keine Standorte.",
       "shipping": "Versand",
-      "lastAudit": "Auditiert {{date}}",
-      "neverAudited": "Noch nie auditiert"
+      "lastAudit": "Inventur am {{date}}",
+      "neverAudited": "Noch nie inventarisiert"
     },
     "money": {
       "activeContracts": "Aktive Verträge",
@@ -1680,7 +1680,7 @@
           "people": "Personen"
         }
       },
-      "startAudit": "Audit starten"
+      "startAudit": "Inventur starten"
     },
     "tickets": {
       "addTicket": "Ticket hinzufügen",
