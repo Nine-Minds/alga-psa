@@ -3581,7 +3581,14 @@ export class ChatCompletionsService {
       genericParameters.body ??
       undefined;
 
-    if (bodyValue !== undefined && method !== 'GET' && method !== 'DELETE') {
+    // Only GET/HEAD never carry a body; a DELETE does when the endpoint
+    // documents one (the bulk deletes take their ids there).
+    const bodyAllowed =
+      method !== 'GET' &&
+      method !== 'HEAD' &&
+      (method !== 'DELETE' || entry.requestBodySchema !== undefined);
+
+    if (bodyValue !== undefined && bodyAllowed) {
       headers['Content-Type'] = headers['Content-Type'] ?? 'application/json';
       init.body =
         typeof bodyValue === 'string'

@@ -502,6 +502,21 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     });
   }
 
+  // Location (off by default; the catalog is the single source for that).
+  if (columnVisibility.location) {
+    columns.push({
+      key: 'location',
+      col: {
+        title: t('fields.location', 'Location'),
+        dataIndex: 'ticket_location_name',
+        width: '10%',
+        render: (value: string | null) => (
+          <span className="text-gray-700 truncate">{value || ''}</span>
+        ),
+      },
+    });
+  }
+
   // Assigned To
   if (columnVisibility.assigned_to) {
     columns.push({

@@ -3,7 +3,7 @@ import type { ZodError } from 'zod';
 import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { actionError, permissionError, type ActionMessageError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import { createAssetReadContext, isAssetReadAllowed } from '@alga-psa/assets/lib/assetReadAuthorization';
+import { createAssetReadContext, isAssetActionAllowed, type AssetAuthorizationAction } from '@alga-psa/assets/lib/assetReadAuthorization';
 import { publishCustodyChanged } from '@alga-psa/assets/lib/custody/publishCustodyChanged';
 import { isCustodyError } from '@alga-psa/assets/lib/custody/errors';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -32,6 +32,7 @@ export async function requireWarrantyPerm(user: any, action: 'create' | 'read' |
 }
 
 const CODE_MESSAGES: Record<string, [string, string]> = {
+  ticket_not_found: ['Ticket not found.', 'features/inventory:errors.rma.ticketNotFound'],
   not_found: ['RMA case not found. It may have been updated or deleted. Please refresh and try again.', 'features/inventory:errors.rma.caseNotFound'],
   unit_tracked: ['This RMA is for a stock unit. Use the stock-unit RMA actions.', 'features/inventory:errors.rma.warrantyUnitTracked'],
   stock_tracked_asset: ['This device was sold from stock. Open an RMA from its stock unit instead.', 'features/inventory:errors.rma.warrantyStockTrackedAsset'],
@@ -42,6 +43,7 @@ const CODE_MESSAGES: Record<string, [string, string]> = {
   location_required: ['Choose where the device is now so it can be received back.', 'features/inventory:errors.rma.warrantyLocationRequired'],
   invalid_transition: ['That step is not available in the RMA’s current status. Refresh and try again.', 'features/inventory:errors.rma.warrantyInvalidTransition'],
   warranty_review_close: ['Approve or deny the claim before closing it.', 'features/inventory:errors.rma.warrantyReviewClose'],
+  wrong_track: ['This step is only for advance-replacement claims.', 'features/inventory:errors.rma.warrantyWrongTrack'],
 };
 
 /**
@@ -95,29 +97,33 @@ export async function withWarrantyErrors<T>(operation: () => Promise<T>): Promis
   }
 }
 
-/** Builds the core option that applies the asset's record-level read check; a miss reads as "not found". */
-export async function assetGate(trx: Knex.Transaction, tenant: string, user: { user_id: string } & Record<string, any>) {
+/**
+ * Builds the core option that applies the asset's record-level check for `action`; a miss reads as "not found".
+ * Mutations pass 'update' so a bundle that lets a user read an asset but not update it cannot change it.
+ */
+export async function assetGate(trx: Knex.Transaction, tenant: string, user: { user_id: string } & Record<string, any>, action: AssetAuthorizationAction) {
   const ctx = await createAssetReadContext(trx, tenant, user as any);
   return async (assetId: string, clientId: string | null) => {
-    if (!(await isAssetReadAllowed(trx, tenant, ctx, { asset_id: assetId, client_id: clientId }))) {
+    if (!(await isAssetActionAllowed(trx, tenant, ctx, { asset_id: assetId, client_id: clientId }, action))) {
       throw new WarrantyError('not_found', 'RMA case not found');
     }
   };
 }
 
-/** Run one transition core inside a transaction, then publish its post-commit events. */
+/** Run one transition core inside a transaction, then publish its post-commit events. Authorizes assets for 'update'. */
 export async function runWarrantyTransition(
   user: { user_id: string } & Record<string, any>,
   tenant: string,
   core: (trx: Knex.Transaction, authorizeAsset: (assetId: string, clientId: string | null) => Promise<void>) => Promise<WarrantyTransitionResult>
 ): Promise<WarrantyTransitionResult> {
   const { knex: db } = await createTenantKnex();
-  const result = await withTransaction(db, async (trx: Knex.Transaction) => core(trx, await assetGate(trx, tenant, user)));
+  const result = await withTransaction(db, async (trx: Knex.Transaction) => core(trx, await assetGate(trx, tenant, user, 'update')));
   await publishAfterCommit(tenant, user.user_id, result);
   return result;
 }
 
 export async function publishAfterCommit(tenant: string, actorUserId: string, result: WarrantyTransitionResult): Promise<void> {
+  if (result.noop) return;
   await publishRmaUpdated(tenant, result.rma, result.previousStatus, result.changedFields, actorUserId);
   for (const effect of result.custodyEffects) {
     await publishCustodyChanged({ tenant, actorUserId, custody: effect.custody, eventType: effect.eventType as any, occurredAt: effect.occurredAt });

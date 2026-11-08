@@ -16,15 +16,16 @@
  * that are explicitly service-period aware.
  */
 
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { ListOptions } from '../controllers/types';
-import { hasPermission } from '../../auth/rbac';
 import {
   clearDefaultPaymentMethod,
   resolvePaymentBillingProfileId,
 } from '@alga-psa/shared/billingClients/billingProfilePayments';
 import { auditLog } from '../../logging/auditLog';
+import { describeStatusChangeBlock } from '../../invoices/invoiceStatusPolicy';
 import { TaxService, normalizeTaxCapAmount } from '@alga-psa/billing/services/taxService';
 import { assertPsaOnlyTenantAccess, ProductAccessError } from '@shared/services/productAccessGuard';
 import { v4 as uuidv4 } from 'uuid';
@@ -290,7 +291,7 @@ export class FinancialService extends BaseService<ITransaction> {
       throw new UnauthorizedError('Authentication required');
     }
 
-    if (!await hasPermission(context.user, resource, operation)) {
+    if (!await hasApiContextPermission(context, resource, operation)) {
       throw new ForbiddenError(`Permission denied: Cannot ${operation} ${resource}`);
     }
   }
@@ -379,6 +380,7 @@ export class FinancialService extends BaseService<ITransaction> {
       // Audit log
       await auditLog(trx, {
         userId: context.userId,
+        viaPrincipalUserId: context.viaPrincipalUserId ?? null,
         operation: 'transaction_created',
         tableName: 'transactions',
         recordId: transaction.transaction_id,
@@ -1088,6 +1090,7 @@ export class FinancialService extends BaseService<ITransaction> {
 
       await auditLog(trx, {
         userId: context.userId,
+        viaPrincipalUserId: context.viaPrincipalUserId ?? null,
         operation: 'payment_method_created',
         tableName: 'payment_methods',
         recordId: paymentMethod.payment_method_id,
@@ -1602,24 +1605,31 @@ export class FinancialService extends BaseService<ITransaction> {
           
           switch (operation.operation) {
             case 'finalize':
-              result = await tenantDb(trx, context.tenant).table('invoices')
+            case 'cancel': {
+              // Status / finalized_at are owned by the finalize and void commands
+              // (credit reversal, hour blocks, provider propagation, ...). This
+              // route only holds invoice:update, so it never writes them; the
+              // shared policy decides which message the caller gets.
+              const target = operation.operation === 'finalize' ? 'sent' : 'cancelled';
+              const current = await tenantDb(trx, context.tenant).table('invoices')
                 .where('invoice_id', invoiceId)
-                .update({
-                  status: 'sent',
-                  finalized_at: new Date().toISOString()
-                })
-                .returning('*');
-              break;
-              
-            case 'cancel':
-              result = await tenantDb(trx, context.tenant).table('invoices')
-                .where('invoice_id', invoiceId)
-                .update({
-                  status: 'cancelled'
-                })
-                .returning('*');
-              break;
-              
+                .first('status');
+              if (!current) {
+                throw new NotFoundError('Invoice not found');
+              }
+              const blocked = describeStatusChangeBlock(current.status, target);
+              if (blocked) {
+                throw new ConflictError(blocked);
+              }
+              // Policy-plain or no-op (e.g. pending -> sent): still no inline write.
+              const owner = operation.operation === 'finalize'
+                ? 'finalizeInvoice (requires invoice:finalize)'
+                : 'void (requires invoice:void)';
+              throw new ConflictError(
+                `Bulk ${operation.operation} is not available here; use the ${owner} command`
+              );
+            }
+
             case 'apply_credit':
               // This would need additional parameters in the operation
               const creditAmount = operation.parameters?.credit_amount || 0;
@@ -1655,6 +1665,7 @@ export class FinancialService extends BaseService<ITransaction> {
       // Audit log for bulk operation
       await auditLog(trx, {
         userId: context.userId,
+        viaPrincipalUserId: context.viaPrincipalUserId ?? null,
         operation: 'bulk_invoice_operation',
         tableName: 'invoices',
         recordId: 'bulk',
@@ -1790,6 +1801,7 @@ export class FinancialService extends BaseService<ITransaction> {
 
       await auditLog(trx, {
         userId: context.userId,
+        viaPrincipalUserId: context.viaPrincipalUserId ?? null,
         operation: 'bulk_transaction_operation',
         tableName: 'transactions',
         recordId: 'bulk',
@@ -1930,6 +1942,7 @@ export class FinancialService extends BaseService<ITransaction> {
     await withTransaction(knex, async (trx) => {
       await auditLog(trx, {
         userId: context.userId,
+        viaPrincipalUserId: context.viaPrincipalUserId ?? null,
         operation: 'bulk_credit_operation',
         tableName: 'credit_tracking',
         recordId: 'bulk',

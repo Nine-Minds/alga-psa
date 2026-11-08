@@ -28,6 +28,7 @@ vi.mock('@alga-psa/user-composition/hooks', () => ({
     value: opts.defaultValue,
     setValue: vi.fn(),
     hasLoadedInitial: true,
+    hasResolved: true,
   }),
 }));
 vi.mock('@alga-psa/ui/components/ViewSwitcher', () => ({ default: () => null }));

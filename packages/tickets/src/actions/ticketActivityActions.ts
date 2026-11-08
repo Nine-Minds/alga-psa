@@ -4,22 +4,15 @@ import { Knex } from 'knex';
 
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import {
   buildUnifiedTicketTimeline,
   readTicketActivity,
   type TicketActivityRow,
   type TicketTimelineEntry,
 } from '@alga-psa/shared/lib/ticketActivity';
+import { authorizeTicketRecordAccessConcealed } from '../lib/ticketRecordAuthorization';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
-
-function tenantScopedTable(
-  conn: Knex | Knex.Transaction,
-  table: string,
-  tenant: string
-): Knex.QueryBuilder {
-  return tenantDb(conn, tenant).table(table);
-}
 
 /**
  * Return the chronological unified timeline (activity + comments) for an
@@ -51,22 +44,18 @@ export const getTicketTimelineEntries = withAuth(
 
     const { knex } = await createTenantKnex();
 
-    return withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
       if (!(await hasPermission(user, 'ticket', 'read', trx))) {
         throw new Error('Permission denied: cannot read ticket');
       }
 
-      // Confirm the ticket exists and is in tenant scope before reading
-      // activity rows; this guards against orphan reads if a ticket was
-      // deleted and only activity rows remain.
-      const ticket = await tenantScopedTable(trx, 'tickets', tenant)
-        .where({ ticket_id: ticketId })
-        .first(['ticket_id']);
-      if (!ticket) {
-        throw new Error('Ticket not found');
-      }
+      // Record-level policy (bundle/relationship narrowing). Hidden and missing
+      // tickets both surface as `Ticket not found`.
+      const ticket = await authorizeTicketRecordAccessConcealed({
+        trx, tenant, user, ticketId, action: 'read', conceal: 'all',
+      });
 
-      return buildUnifiedTicketTimeline(trx, tenant, ticketId, {
+      return buildUnifiedTicketTimeline(trx, tenant, ticket.ticket_id, {
         order: opts?.order ?? 'desc',
         includeInternalNotes: true,
         includeTimeEntries: opts?.includeTimeEntries ?? false,
@@ -101,11 +90,14 @@ export const getTicketActivityRows = withAuth(
 
     const { knex } = await createTenantKnex();
 
-    return withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
       if (!(await hasPermission(user, 'ticket', 'read', trx))) {
         throw new Error('Permission denied: cannot read ticket');
       }
-      return readTicketActivity(trx, tenant, ticketId);
+      const ticket = await authorizeTicketRecordAccessConcealed({
+        trx, tenant, user, ticketId, action: 'read', conceal: 'all',
+      });
+      return readTicketActivity(trx, tenant, ticket.ticket_id);
     });
     } catch (error) {
       const expected = ticketActionErrorFrom(error);

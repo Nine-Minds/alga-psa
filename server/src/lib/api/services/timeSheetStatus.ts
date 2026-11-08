@@ -2,20 +2,15 @@
  * Time-sheet approval status transitions (alga-2026-0003017).
  *
  * `time_sheets.approval_status` is derived state, not a writable column. Every status change runs exactly one
- * transition from this table, and each transition carries (a) a capability check, (b) a from-state precondition and
- * (c) the side effects that give the new state its meaning. Callers (the dedicated verbs and `update`) may
- * *request* a transition; none may write the column directly.
- *
- * Ordering contract for callers: findTransition -> assertTransitionCapability -> resolveTransition (from-state)
- * -> applyTransition. Capability is checked before the from-state so an unauthorised caller learns nothing about
- * the sheet's state (403 before 409), matching the pre-existing verbs.
+ * transition from this table, and each transition carries a capability check, a from-state precondition and the
+ * side effects that give the new state its meaning. Callers may request a transition; none may write the column.
  */
 
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { tenantDb, type ServiceContext } from '@alga-psa/db';
+import { tenantDb, withViaPrincipal, type ServiceContext } from '@alga-psa/db';
 import { assertHumanWorkOwner } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
-import { hasPermission } from '../../auth/rbac';
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { ConflictError, ForbiddenError, ValidationError } from '../middleware/apiMiddleware';
 
 export type TimeSheetStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'CHANGES_REQUESTED';
@@ -33,79 +28,54 @@ export interface TransitionDescriptor {
   target: TransitionTarget;
   from: readonly TimeSheetStatus[];
   capability: TransitionCapability;
-  /** Message of the ForbiddenError when the capability check fails. */
   forbiddenMessage: string;
-  /** Message of the ConflictError when the sheet is not in an allowed from-state. */
   conflictMessage: string;
-  /** Payload fields that must be non-blank; checked by applyTransition before any write (400). */
   requiredPayload?: readonly (keyof TransitionPayload)[];
 }
 
 export const TIME_SHEET_TRANSITIONS: Readonly<Record<TransitionTarget, TransitionDescriptor>> = {
   SUBMITTED: {
-    target: 'SUBMITTED',
-    from: ['DRAFT', 'CHANGES_REQUESTED'],
-    capability: 'submit-own',
+    target: 'SUBMITTED', from: ['DRAFT', 'CHANGES_REQUESTED'], capability: 'submit-own',
     forbiddenMessage: 'Permission denied: Can only submit your own time sheets',
     conflictMessage: 'Time sheet can only be submitted from DRAFT or CHANGES_REQUESTED status',
   },
   APPROVED: {
-    target: 'APPROVED',
-    from: ['SUBMITTED'],
-    capability: 'approve',
+    target: 'APPROVED', from: ['SUBMITTED'], capability: 'approve',
     forbiddenMessage: 'Permission denied: Cannot approve time sheets',
     conflictMessage: 'Time sheet must be submitted before approval',
   },
   CHANGES_REQUESTED: {
-    target: 'CHANGES_REQUESTED',
-    from: ['SUBMITTED'],
-    capability: 'approve',
+    target: 'CHANGES_REQUESTED', from: ['SUBMITTED'], capability: 'approve',
     forbiddenMessage: 'Permission denied: Cannot request changes to time sheets',
     conflictMessage: 'Time sheet must be submitted before requesting changes',
     requiredPayload: ['change_reason'],
   },
 };
 
-/** Look up the transition for a target status. A target outside the table (e.g. DRAFT) is a 409. */
 export function findTransition(target: string): TransitionDescriptor {
   const descriptor = (TIME_SHEET_TRANSITIONS as Record<string, TransitionDescriptor | undefined>)[target];
-  if (!descriptor) {
-    throw new ConflictError(`Time sheet status cannot be set to ${target} directly`);
-  }
+  if (!descriptor) throw new ConflictError(`Time sheet status cannot be set to ${target} directly`);
   return descriptor;
 }
 
-/** Resolve the transition and enforce its from-state precondition. */
 export function resolveTransition(sheet: { approval_status: string }, target: string): TransitionDescriptor {
   const descriptor = findTransition(target);
-  if (!descriptor.from.includes(sheet.approval_status as TimeSheetStatus)) {
-    throw new ConflictError(descriptor.conflictMessage);
-  }
+  if (!descriptor.from.includes(sheet.approval_status as TimeSheetStatus)) throw new ConflictError(descriptor.conflictMessage);
   return descriptor;
 }
 
-/** Capability check for a transition. Throws ForbiddenError (403). */
 export async function assertTransitionCapability(
   trx: Knex.Transaction,
   sheet: { user_id: string },
   descriptor: TransitionDescriptor,
-  context: ServiceContext
+  context: ServiceContext,
 ): Promise<void> {
-  let allowed: boolean;
-  if (descriptor.capability === 'submit-own') {
-    allowed =
-      sheet.user_id === context.userId &&
-      !!context.user &&
-      (await hasPermission(context.user, 'time_sheet', 'update', trx));
-  } else {
-    allowed = !!context.user && (await hasPermission(context.user, 'time_sheet', 'approve', trx));
-  }
-  if (!allowed) {
-    throw new ForbiddenError(descriptor.forbiddenMessage);
-  }
+  const allowed = descriptor.capability === 'submit-own'
+    ? sheet.user_id === context.userId && !!context.user && await hasApiContextPermission(context, 'time_sheet', 'update', trx)
+    : !!context.user && await hasApiContextPermission(context, 'time_sheet', 'approve', trx);
+  if (!allowed) throw new ForbiddenError(descriptor.forbiddenMessage);
 }
 
-/** Reject (400) a payload missing a field the transition requires. Pure: runs before any write. */
 function assertTransitionPayload(descriptor: TransitionDescriptor, payload: TransitionPayload): void {
   for (const field of descriptor.requiredPayload ?? []) {
     const value = payload[field];
@@ -115,35 +85,38 @@ function assertTransitionPayload(descriptor: TransitionDescriptor, payload: Tran
   }
 }
 
-/**
- * time_sheets has neither approval/submission notes nor updated_at; transition notes live in time_sheet_comments
- * (same shape the workflow runtime writes). `isApprover` is true for approver notes and false for the submitter's.
- */
 async function insertComment(
   trx: Knex.Transaction,
   sheetId: string,
   comment: string,
   isApprover: boolean,
-  context: ServiceContext
+  context: ServiceContext,
 ) {
   await tenantDb(trx, context.tenant).table('time_sheet_comments').insert({
-    comment_id: uuidv4(),
-    time_sheet_id: sheetId,
-    user_id: context.userId,
-    comment,
-    is_approver: isApprover,
-    created_at: trx.fn.now(),
-    tenant: context.tenant,
+    comment_id: uuidv4(), time_sheet_id: sheetId, user_id: context.userId, comment,
+    is_approver: isApprover, created_at: trx.fn.now(), tenant: context.tenant,
   });
 }
 
-/** Write the new status and the side effects that give it meaning. Runs inside the caller's transaction. */
+async function insertHistory(
+  trx: Knex.Transaction,
+  sheetId: string,
+  kind: 'submission' | 'approval' | 'request_changes',
+  note: string,
+  detail: string | null,
+  context: ServiceContext,
+) {
+  await tenantDb(trx, context.tenant).table('time_sheet_notes').insert({
+    tenant: context.tenant, time_sheet_id: sheetId, kind, note, detail, created_by: context.userId,
+  });
+}
+
 export async function applyTransition(
   trx: Knex.Transaction,
   sheet: { id: string },
   descriptor: TransitionDescriptor,
   context: ServiceContext,
-  payload: TransitionPayload = {}
+  payload: TransitionPayload = {},
 ): Promise<void> {
   assertTransitionPayload(descriptor, payload);
   const db = tenantDb(trx, context.tenant);
@@ -151,55 +124,45 @@ export async function applyTransition(
 
   switch (descriptor.target) {
     case 'SUBMITTED': {
-      const entry = await db.table('time_entries').where({ time_sheet_id: sheet.id }).first();
-      if (!entry) {
+      if (!await db.table('time_entries').where({ time_sheet_id: sheet.id }).first('entry_id')) {
         throw new ConflictError('Cannot submit time sheet without time entries');
       }
-      await sheets().update({
-        approval_status: 'SUBMITTED',
-        submitted_at: new Date(),
-      });
+      await sheets().update({ approval_status: 'SUBMITTED', submitted_at: new Date() });
       if (payload.submission_notes?.trim()) {
+        await insertHistory(trx, sheet.id, 'submission', payload.submission_notes, null, context);
         await insertComment(trx, sheet.id, payload.submission_notes, false, context);
       }
       return;
     }
     case 'APPROVED': {
-      // Human-work guard: approval requires a human approver.
       await assertHumanWorkOwner(trx, context.tenant, context.userId, 'approved_by');
-      await sheets().update({
-        approval_status: 'APPROVED',
-        approved_at: new Date(),
-        approved_by: context.userId,
-      });
+      await sheets().update(withViaPrincipal(context, {
+        approval_status: 'APPROVED', approved_at: new Date(), approved_by: context.userId,
+      }, 'approved_via_principal_id'));
       if (payload.approval_notes) {
+        await insertHistory(trx, sheet.id, 'approval', payload.approval_notes, null, context);
         await insertComment(trx, sheet.id, payload.approval_notes, true, context);
       }
-      // time_entries has no approved_at/approved_by columns (they live on time_sheets).
-      await db.table('time_entries').where({ time_sheet_id: sheet.id }).update({
-        approval_status: 'APPROVED',
-        updated_at: new Date(),
-      });
+      await db.table('time_entries').where({ time_sheet_id: sheet.id }).update({ approval_status: 'APPROVED', updated_at: new Date() });
       return;
     }
     case 'CHANGES_REQUESTED': {
-      await sheets().update({
-        approval_status: 'CHANGES_REQUESTED',
-      });
+      await sheets().update({ approval_status: 'CHANGES_REQUESTED' });
       const details = payload.detailed_feedback ? `\n\nDetails: ${payload.detailed_feedback}` : '';
+      await insertHistory(trx, sheet.id, 'request_changes', payload.change_reason!, payload.detailed_feedback ?? null, context);
       await insertComment(trx, sheet.id, `Changes requested: ${payload.change_reason}${details}`, true, context);
       return;
     }
   }
 }
 
-/** The full guarded sequence every consumer runs: find -> capability (403) -> from-state (409) -> apply. */
+/** Capability is checked before state, preserving 403-before-409 behavior. */
 export async function transitionTimeSheet(
   trx: Knex.Transaction,
   sheet: { id: string; user_id: string; approval_status: string },
   target: string,
   context: ServiceContext,
-  payload: TransitionPayload = {}
+  payload: TransitionPayload = {},
 ): Promise<void> {
   const descriptor = findTransition(target);
   await assertTransitionCapability(trx, sheet, descriptor, context);

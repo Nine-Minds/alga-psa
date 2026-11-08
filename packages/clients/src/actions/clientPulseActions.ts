@@ -3,9 +3,12 @@
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { toCalendarDateString } from '@alga-psa/core';
+import { deriveClientContractStatus, getTenantLocalToday } from '@alga-psa/shared/billingClients';
 import type { Knex } from 'knex';
 import { toClientSinceDate } from '../lib/clientSince';
 import { getContactAvatarUrlsBatchAsync } from '../lib/documentsHelpers';
+import { getContactCountsByLocation } from '../models/contactLocation';
 import {
   actionError,
   permissionError,
@@ -288,6 +291,10 @@ async function fetchLocations(
     .orderBy('is_default', 'desc')
     .orderBy('location_name', 'asc');
 
+  // One batched, tenant-scoped count for the page so the tile states who works where without the
+  // reader having to open Manage Locations.
+  const contactCounts = await getContactCountsByLocation(trx, tenant, rows.map((row: any) => row.location_id));
+
   return rows.map((row: any) => ({
     location_id: row.location_id,
     location_name: row.location_name ?? null,
@@ -300,6 +307,7 @@ async function fetchLocations(
     is_default: Boolean(row.is_default),
     is_billing: Boolean(row.is_billing_address),
     is_shipping: Boolean(row.is_shipping_address),
+    contact_count: contactCounts.get(row.location_id) ?? 0,
   }));
 }
 
@@ -642,7 +650,7 @@ async function fetchMoney(
     .sum({ paid_amount: 'amount' })
     .as('ip');
 
-  const [invoiceRows, draftRows, draftAggRow, contractCountRow, currencyRow, timeWipRow, ticketMaterialWipRow, projectMaterialWipRow] = await Promise.all([
+  const [invoiceRows, draftRows, draftAggRow, contractAssignments, tenantToday, currencyRow, timeWipRow, ticketMaterialWipRow, projectMaterialWipRow] = await Promise.all([
     trx('invoices as i')
       .leftJoin(completedPayments, function joinCompletedPayments() {
         this.on('ip.invoice_id', '=', 'i.invoice_id').andOn('ip.tenant', '=', 'i.tenant');
@@ -678,10 +686,13 @@ async function fetchMoney(
       .count<{ count: string }>('invoice_id as count')
       .sum({ total: 'total_amount' })
       .first(),
-    trx('contracts')
-      .where({ tenant, owner_client_id: clientId, status: 'active' })
-      .count<{ count: string }>('contract_id as count')
-      .first(),
+    trx('client_contracts as cc')
+      .join('contracts as c', function joinContracts() {
+        this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
+      })
+      .where({ 'cc.tenant': tenant, 'cc.client_id': clientId, 'cc.is_active': true, 'c.owner_client_id': clientId })
+      .select('cc.contract_id', 'cc.is_active', 'cc.start_date', 'cc.end_date', 'c.status as contract_status'),
+    getTenantLocalToday(trx, tenant),
     trx('invoices')
       .where({ tenant, client_id: clientId })
       .whereNotNull('currency_code')
@@ -741,6 +752,24 @@ async function fetchMoney(
       )
       .first(),
   ]);
+
+  const activeContractIds = new Set<string>();
+  for (const assignment of contractAssignments as Array<{
+    contract_id: string;
+    is_active: boolean;
+    start_date: string | Date | null;
+    end_date: string | Date | null;
+    contract_status: string;
+  }>) {
+    const status = deriveClientContractStatus({
+      isActive: assignment.is_active,
+      startDate: toCalendarDateString(assignment.start_date),
+      endDate: toCalendarDateString(assignment.end_date),
+      contractStatus: assignment.contract_status,
+      now: tenantToday,
+    });
+    if (status === 'active') activeContractIds.add(assignment.contract_id);
+  }
 
   // Aging is bucketed per billing profile and rolled up (F113, F115). The
   // client totals below are the sum of the rows, computed from the same
@@ -824,7 +853,7 @@ async function fetchMoney(
       unpaidInvoiceCount,
       draftInvoices,
       draftInvoiceCount,
-      activeContractCount: toNumber(contractCountRow?.count),
+      activeContractCount: activeContractIds.size,
       currencyCode: (currencyRow as any)?.currency_code ?? 'USD',
       wip,
     },

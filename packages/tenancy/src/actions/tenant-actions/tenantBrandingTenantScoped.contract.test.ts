@@ -78,6 +78,28 @@ describe('tenant branding actions tenant-scoped query contract', () => {
     expect(infoAction.slice(0, infoAction.indexOf('getConnection'))).toContain("user.user_type !== 'internal'");
   });
 
+  it('gates every logo mutator on settings:update before it writes branding', () => {
+    const logoSource = readFileSync(resolve(__dirname, 'tenantLogoActions.ts'), 'utf8');
+    expect(logoSource).toContain("hasPermission(user, 'settings', 'update', knex)");
+
+    const mutators = ['uploadTenantLogo', 'recropTenantLogo', 'deleteTenantLogo', 'linkDocumentAsTenantLogo'];
+    for (const mutator of mutators) {
+      const start = logoSource.indexOf(`export const ${mutator}`);
+      const body = logoSource.slice(start, logoSource.indexOf('\n});', start));
+      expect(body).toContain('guardTenantLogoWrite(user, tenant, tenantId)');
+      expect(body.indexOf('guardTenantLogoWrite(')).toBeLessThan(body.indexOf('writeBrandingLogoUrl('));
+    }
+
+    // Only the four guarded mutators may call the branding writer.
+    const callers = logoSource.match(/await writeBrandingLogoUrl\(/g) ?? [];
+    const guardedCallers = mutators.reduce((count, mutator) => {
+      const start = logoSource.indexOf(`export const ${mutator}`);
+      const body = logoSource.slice(start, logoSource.indexOf('\n});', start));
+      return count + (body.match(/await writeBrandingLogoUrl\(/g) ?? []).length;
+    }, 0);
+    expect(callers).toHaveLength(guardedCallers);
+  });
+
   it('uses structural tenant scoping for tenant settings branding roots', () => {
     for (const file of files) {
       const source = readFileSync(resolve(__dirname, file), 'utf8');

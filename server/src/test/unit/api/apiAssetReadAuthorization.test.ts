@@ -13,6 +13,7 @@ const state = vi.hoisted(() => ({
   record: null as unknown,
   recordLevelAllowed: true,
   calls: [] as string[],
+  actions: [] as string[],
 }));
 
 vi.mock('@/lib/api/services/AssetService', () => ({
@@ -55,7 +56,8 @@ vi.mock('@/lib/auth/rbac', () => ({
 vi.mock('@/lib/db/db', () => ({ getConnection: vi.fn(async () => ({})) }));
 
 vi.mock('@/lib/api/controllers/authorizationKernel', () => ({
-  authorizeApiResourceRead: vi.fn(async () => {
+  authorizeApiResource: vi.fn(async (input: { action: string }) => {
+    state.actions.push(input.action);
     state.calls.push('record-level');
     return state.recordLevelAllowed;
   }),
@@ -86,6 +88,7 @@ beforeEach(() => {
   state.record = { id: ASSET, clientId: 'c1' };
   state.recordLevelAllowed = true;
   state.calls = [];
+  state.actions = [];
 });
 
 const endpoints: Array<[string, string, (c: InstanceType<typeof ApiAssetController>, r: NextRequest) => Promise<Response>]> = [
@@ -99,6 +102,7 @@ describe.each(endpoints)('asset read authorization: %s', (_name, suffix, call) =
   it('allows a permitted caller', async () => {
     const res = await call(new ApiAssetController(), request(suffix));
     expect(res.status).toBe(200);
+    expect(state.actions).toEqual(['read']);
   });
 
   it('403s without asset:read, before loading the record', async () => {

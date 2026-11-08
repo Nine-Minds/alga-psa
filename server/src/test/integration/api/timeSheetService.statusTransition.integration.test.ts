@@ -90,14 +90,14 @@ async function seedSheet(
   f: { tenantId: string; periodId: string },
   userId: string,
   status: string,
-  opts: { entries?: number; notes?: string } = {}
+  opts: { entries?: number; notes?: string; periodId?: string } = {}
 ) {
   const id = uuidv4();
   await tenantTable(f.tenantId, 'time_sheets').insert({
     tenant: f.tenantId,
     id,
     user_id: userId,
-    period_id: f.periodId,
+    period_id: opts.periodId ?? f.periodId,
     approval_status: status,
     notes: opts.notes ?? null,
   });
@@ -166,7 +166,11 @@ describe('TimeSheetService.update approval_status is a requested transition (rea
   it('2. an approver updating a SUBMITTED sheet to APPROVED yields exactly the state the approve verb produces', async () => {
     const f = await seed();
     const viaUpdate = await seedSheet(f, f.owner, 'SUBMITTED', { entries: 2 });
-    const viaVerb = await seedSheet(f, f.owner, 'SUBMITTED', { entries: 2 });
+    const distinctPeriodId = uuidv4();
+    await tenantTable(f.tenantId, 'time_periods').insert({
+      tenant: f.tenantId, period_id: distinctPeriodId, start_date: '2026-01-13', end_date: '2026-01-20',
+    });
+    const viaVerb = await seedSheet(f, f.owner, 'SUBMITTED', { entries: 2, periodId: distinctPeriodId });
     const svc = serviceFor(f.tenantId);
     const ctx = contextFor(f.tenantId, f.approver);
 
@@ -174,7 +178,7 @@ describe('TimeSheetService.update approval_status is a requested transition (rea
     await svc.approveTimeSheet(viaVerb.id, {} as any, ctx);
 
     const normSheet = (r: any, id: string) => {
-      const { id: _id, approved_at, ...rest } = r;
+      const { id: _id, period_id: _periodId, approved_at, ...rest } = r;
       expect(approved_at).toBeInstanceOf(Date);
       expect(r.id).toBe(id);
       return rest;
