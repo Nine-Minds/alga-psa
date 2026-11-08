@@ -41225,6 +41225,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "boolean"
         }
       },
+      "additionalProperties": false,
       "description": "Payload for updating a board. All fields are optional."
     },
     "responseBodySchema": {

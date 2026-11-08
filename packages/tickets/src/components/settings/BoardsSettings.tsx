@@ -2,6 +2,7 @@
 
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { checkCurrentUserPermissions } from '@alga-psa/auth/actions/permissionActions';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, MoreVertical, HelpCircle, ChevronDown, ArrowLeft, AlertTriangle, CheckCircle2, Settings2, Users, ListChecks, Mail, Zap, Clock, Search, Inbox, Star, LayoutGrid, EyeOff, Bell, Trash2 } from "lucide-react";
 import { IBoard, ITeam, CategoryType, PriorityType, IPriority, IUser, DeletionValidationResult, DeletionDependency, isSenderActionFailure, type SenderActionFailure } from '@alga-psa/types';
@@ -538,6 +539,22 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     ticket_statuses: [] as ManagedTicketStatus[],
   });
   const [boards, setBoards] = useState<IBoard[]>([]);
+  // UI gating only: the board server actions enforce ticket_settings:<action> themselves.
+  // All false until the batch resolves (and on failure) so a control never flashes in
+  // for a user who cannot use it.
+  const [boardPermissions, setBoardPermissions] = useState({ create: false, update: false, delete: false });
+  useEffect(() => {
+    let cancelled = false;
+    const actions = ['create', 'update', 'delete'] as const;
+    checkCurrentUserPermissions(actions.map((action) => ({ resource: 'ticket_settings', action })))
+      .then((results) => {
+        if (cancelled) return;
+        const granted = (action: string) => results.some((r) => r.action === action && r.granted);
+        setBoardPermissions({ create: granted('create'), update: granted('update'), delete: granted('delete') });
+      })
+      .catch(() => { /* stay hidden; the server remains the boundary */ });
+    return () => { cancelled = true; };
+  }, []);
   const [users, setUsers] = useState<IUser[]>([]);
   const [teams, setTeams] = useState<ITeam[]>([]);
   // Avatar URLs for the default agents/teams shown in the boards list, keyed by
@@ -1461,6 +1478,10 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
           regularResult = await importReferenceData('boards', regularBoardIds);
         }
 
+        if (isReturnedActionError(regularResult)) {
+          throw new Error(getErrorMessage(regularResult));
+        }
+
         if (regularResult?.imported) allResults.imported.push(...regularResult.imported);
         if (regularResult?.skipped) allResults.skipped.push(...regularResult.skipped);
       }
@@ -1722,7 +1743,10 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
       dataIndex: 'actions',
       width: '5%',
       sortable: false,
-      render: (_value: unknown, board: IBoard) => (
+      render: (_value: unknown, board: IBoard) => {
+        const canDelete = boardPermissions.delete && !board.is_default;
+        if (!boardPermissions.update && !canDelete) return null;
+        return (
         <div className="text-right">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -1731,10 +1755,12 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => startEditing(board)}>
-                {t('ticketing.boards.actions.edit')}
-              </DropdownMenuItem>
-              {!board.is_default && (
+              {boardPermissions.update && (
+                <DropdownMenuItem onClick={() => startEditing(board)}>
+                  {t('ticketing.boards.actions.edit')}
+                </DropdownMenuItem>
+              )}
+              {canDelete && (
                 <DropdownMenuItem
                   onClick={() => setDeleteDialog({ isOpen: true, boardId: board.board_id || '', boardName: board.board_name || '' })}
                   className="text-destructive"
@@ -1745,7 +1771,8 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      ),
+        );
+      }
     },
   ];
 
@@ -1760,6 +1787,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
             <p className="text-sm text-gray-500">{t('ticketing.boards.alert')}</p>
           </div>
           <div className="flex shrink-0 gap-2">
+            {boardPermissions.create && (
             <Button
               id="add-board-button"
               onClick={() => {
@@ -1786,6 +1814,8 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
             >
               <Plus className="h-4 w-4 mr-2" /> {t('ticketing.boards.actions.addBoard')}
             </Button>
+            )}
+            {boardPermissions.create && (
             <Button
               id="import-boards-button"
               variant="outline"
@@ -1802,6 +1832,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
             >
               {t('ticketing.boards.actions.importStandard')}
             </Button>
+            )}
           </div>
         </div>
 
@@ -1837,7 +1868,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
           onPageChange={setBoardsPage}
           pageSize={boardsPageSize}
           onItemsPerPageChange={(size) => { setBoardsPageSize(size); setBoardsPage(1); }}
-          onRowClick={(board) => startEditing(board)}
+          onRowClick={boardPermissions.update ? (board) => startEditing(board) : undefined}
           rowClassName={(board) => (board.is_inactive ? 'opacity-60' : '')}
         />
         {visibleBoards.length === 0 && (
