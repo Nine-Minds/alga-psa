@@ -140,7 +140,7 @@ async function getAuthorizedClientQuote(
     await tenantDb(trx, tenant).table('quotes').where({ quote_id: quoteId }).forUpdate().first('quote_id');
   }
   const access = await authorizePortalUserForQuote(trx, user, tenant, quoteId, allowedStatuses);
-  if (access.ok) {
+  if (!('reason' in access)) {
     return access.quote;
   }
 

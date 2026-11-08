@@ -532,7 +532,9 @@ describe('client quote billing actions', () => {
     ]);
     expect(updateIfStatusMock).toHaveBeenCalledWith(
       expect.anything(), 'tenant-1', 'quote-1', 'sent',
-      { status: 'accepted', accepted_at: expect.any(String), accepted_by: 'portal-user-1', updated_by: 'portal-user-1' }
+      { status: 'accepted', accepted_at: expect.any(String), accepted_by: 'portal-user-1', updated_by: 'portal-user-1' },
+      // The portal user acts as their contact on the lifecycle event (QUOTE_ACCEPTED/QUOTE_REJECTED).
+      { actor: { actorType: 'CONTACT', actorContactId: 'contact-1' }, acceptedOnBehalf: false },
     );
     expect(onQuoteAcceptedMock).toHaveBeenCalledTimes(1);
     expect(onQuoteAcceptedMock).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ quote_id: 'quote-1', status: 'accepted' }));
@@ -560,7 +562,9 @@ describe('client quote billing actions', () => {
     ]);
     expect(updateIfStatusMock).toHaveBeenCalledWith(
       expect.anything(), 'tenant-1', 'quote-1', 'sent',
-      { status: 'rejected', rejected_at: expect.any(String), rejection_reason: 'Budget is not approved yet.', updated_by: 'portal-user-1' }
+      { status: 'rejected', rejected_at: expect.any(String), rejection_reason: 'Budget is not approved yet.', updated_by: 'portal-user-1' },
+      // The portal user acts as their contact on the lifecycle event (QUOTE_ACCEPTED/QUOTE_REJECTED).
+      { actor: { actorType: 'CONTACT', actorContactId: 'contact-1' }, acceptedOnBehalf: false },
     );
     expect(onQuoteAcceptedMock).not.toHaveBeenCalled();
     expect(quoteDecisionInsertLog[0]).toMatchObject({ decision: 'rejected', method: 'portal', comment: 'Budget is not approved yet.' });

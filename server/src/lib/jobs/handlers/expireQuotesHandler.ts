@@ -137,7 +137,7 @@ export async function expireQuotesHandler(data: ExpireQuotesJobData): Promise<vo
           }).returning('*');
         if (!changed) continue;
 
-        // Same transaction as the status change.
+        // Same transaction as the status change: an expired quote must not stay reachable by link.
         await db.table('quote_access_links')
           .where({ quote_id: quote.quote_id })
           .whereNull('revoked_at')
