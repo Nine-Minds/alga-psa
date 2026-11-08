@@ -74,8 +74,12 @@ vi.mock('@/hooks/useKeyboardShortcutPreferenceStorage', () => ({
 }));
 
 vi.mock('@/components/layout/DefaultLayout', () => ({
-  default: ({ children, topBanner }: { children: React.ReactNode; topBanner?: React.ReactNode }) => (
-    <div data-testid="psa-default-layout"><div data-testid="shell-column">{topBanner}{children}</div></div>
+  default: ({ children, topBanner, initialSidebarCollapsed }: {
+    children: React.ReactNode; topBanner?: React.ReactNode; initialSidebarCollapsed: boolean;
+  }) => (
+    <div data-testid="psa-default-layout" data-sidebar-collapsed={initialSidebarCollapsed}>
+      <div data-testid="shell-column">{topBanner}{children}</div>
+    </div>
   ),
 }));
 
@@ -171,21 +175,35 @@ describe('MspLayoutClient product shell behavior', () => {
     expect(screen.queryByTestId('product-route-boundary')).not.toBeInTheDocument();
   });
 
-  it('RT006: preserves PSA layout path for PSA tenants', () => {
+  it.each([
+    { initialSidebarCollapsed: false, selfHostLicensing: false },
+    { initialSidebarCollapsed: true, selfHostLicensing: false },
+    { initialSidebarCollapsed: false, selfHostLicensing: true },
+    { initialSidebarCollapsed: true, selfHostLicensing: true },
+  ])('preserves the PSA shell and sidebar state with $initialSidebarCollapsed collapsed and $selfHostLicensing self-host licensing', ({ initialSidebarCollapsed, selfHostLicensing }) => {
     render(
       <MspLayoutClient
         session={null}
         productCode="psa"
         needsOnboarding={false}
-        initialSidebarCollapsed={false}
-        canRunOnboarding
+        initialSidebarCollapsed={initialSidebarCollapsed}
+        selfHostLicensing={selfHostLicensing}
       >
         <div>psa content</div>
       </MspLayoutClient>,
     );
 
-    expect(screen.getByTestId('psa-default-layout')).toBeInTheDocument();
+    const shell = screen.getByTestId('psa-default-layout');
+    expect(shell).toContainElement(screen.getByText('psa content'));
+    expect(shell).toHaveAttribute('data-sidebar-collapsed', String(initialSidebarCollapsed));
     expect(screen.queryByTestId('algadesk-shell')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('customer-shell')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('product-route-boundary')).not.toBeInTheDocument();
+    if (selfHostLicensing) {
+      expect(shell).toContainElement(screen.getByTestId('license-banner'));
+    } else {
+      expect(screen.queryByTestId('license-banner')).not.toBeInTheDocument();
+    }
   });
 
   it('co_managed: renders the ended notice inside the customer shell and the boundary on a denied route', () => {
