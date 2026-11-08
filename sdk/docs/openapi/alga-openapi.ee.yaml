@@ -4533,6 +4533,28 @@ components:
           type: string
           format: uuid
           description: Only audits of this client.
+        location_id:
+          type: string
+          format: uuid
+          description: Only audits scoped to this client location.
+        no_location:
+          type: string
+          description: true returns only audits scoped to the assets that have no
+            location. Wins over location_id.
+        status:
+          type: string
+          enum:
+            - in_progress
+            - completed
+            - cancelled
+          description: Only audits in this state.
+        started_from:
+          type: string
+          description: ISO timestamp; only audits started at or after it. Send a day
+            boundary in the viewer time zone.
+        started_to:
+          type: string
+          description: ISO timestamp; only audits started at or before it.
     CreateAssetAuditRequest:
       type: object
       properties:
@@ -4643,6 +4665,10 @@ components:
               type:
                 - string
                 - "null"
+            started_by_name:
+              type:
+                - string
+                - "null"
             items:
               type: array
               items:
@@ -4688,6 +4714,10 @@ components:
                     type:
                       - string
                       - "null"
+                  asset_type:
+                    type:
+                      - string
+                      - "null"
                   client_id:
                     type:
                       - string
@@ -4699,6 +4729,10 @@ components:
                       - "null"
                     format: uuid
                   location:
+                    type:
+                      - string
+                      - "null"
+                  marked_by_name:
                     type:
                       - string
                       - "null"
@@ -4789,6 +4823,10 @@ components:
                 type:
                   - string
                   - "null"
+              started_by_name:
+                type:
+                  - string
+                  - "null"
               items:
                 type: array
                 items:
@@ -4834,6 +4872,10 @@ components:
                       type:
                         - string
                         - "null"
+                    asset_type:
+                      type:
+                        - string
+                        - "null"
                     client_id:
                       type:
                         - string
@@ -4845,6 +4887,10 @@ components:
                         - "null"
                       format: uuid
                     location:
+                      type:
+                        - string
+                        - "null"
+                    marked_by_name:
                       type:
                         - string
                         - "null"
@@ -38764,8 +38810,8 @@ paths:
                 $ref: "#/components/schemas/AssetAuditErrorResponse"
     get:
       summary: List site audits
-      description: Returns the tenant audits newest first, optionally narrowed to one
-        client.
+      description: Returns the tenant audits newest first, optionally narrowed by
+        client, location (or "no location"), status and a started_at range.
       tags:
         - Asset audits
       security:
@@ -38799,6 +38845,50 @@ paths:
           required: false
           description: Only audits of this client.
           name: client_id
+          in: query
+        - schema:
+            type: string
+            format: uuid
+            description: Only audits scoped to this client location.
+          required: false
+          description: Only audits scoped to this client location.
+          name: location_id
+          in: query
+        - schema:
+            type: string
+            description: true returns only audits scoped to the assets that have no
+              location. Wins over location_id.
+          required: false
+          description: true returns only audits scoped to the assets that have no
+            location. Wins over location_id.
+          name: no_location
+          in: query
+        - schema:
+            type: string
+            enum:
+              - in_progress
+              - completed
+              - cancelled
+            description: Only audits in this state.
+          required: false
+          description: Only audits in this state.
+          name: status
+          in: query
+        - schema:
+            type: string
+            description: ISO timestamp; only audits started at or after it. Send a day
+              boundary in the viewer time zone.
+          required: false
+          description: ISO timestamp; only audits started at or after it. Send a day
+            boundary in the viewer time zone.
+          name: started_from
+          in: query
+        - schema:
+            type: string
+            description: ISO timestamp; only audits started at or before it.
+          required: false
+          description: ISO timestamp; only audits started at or before it.
+          name: started_to
           in: query
         - schema:
             type: string
