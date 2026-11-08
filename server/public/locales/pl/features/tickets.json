@@ -120,7 +120,7 @@
         "issues": "Problemy"
       },
       "unmatchedCount": "Wartości z pliku CSV: {{count}}",
-      "unmatchedIntro": "— nie pasują do istniejących danych.",
+      "unmatchedIntro": "— nie pasują do istniejących danych",
       "unmatchedNextStep": "Dopasujesz je w następnym kroku.",
       "invalidRowCount": "Wiersze: {{count}}",
       "invalidRowsHelp": "— zawierają błędy walidacji. Włącz „Pomiń niepoprawne wiersze”, aby kontynuować, lub wróć i popraw plik CSV."
@@ -162,7 +162,7 @@
       "selectContact": "Wybierz kontakt...",
       "onClient": "— u klienta {{client}}",
       "skippedTicketCount": "Zgłoszenia: {{count}}",
-      "skippedDueToClients": "— zostaną pominięte z powodu pominięcia dopasowania klientów.",
+      "skippedDueToClients": "— zostaną pominięte, ponieważ pominięto dopasowanie klientów.",
       "dates": {
         "help": "Nie udało się automatycznie odczytać niektórych dat w pliku CSV. Wskaż, jak je interpretować.",
         "lookLike": "Twoje daty wyglądają tak:",
@@ -3054,7 +3054,7 @@
       "title": "tytuł",
       "url": "URL"
     },
-    "externalSystemFallback": "system zewnętrzny",
+    "externalSystemFallback": "systemem zewnętrznym",
     "annotation": {
       "silentAll": "tryb cichy — bez powiadomień",
       "silentContact": "tryb cichy — bez powiadomienia kontaktu"
@@ -3106,7 +3106,7 @@
       "internalNoteAdded": "Dodano notatkę wewnętrzną",
       "customerReply": "Odpowiedź klienta",
       "inboundEmailReply": "Odpowiedź w przychodzącej wiadomości e-mail",
-      "actor": "Zobacz kartę rozmowy"
+      "actor": "Zobacz zakładkę Rozmowa"
     },
     "filters": {
       "events": {
