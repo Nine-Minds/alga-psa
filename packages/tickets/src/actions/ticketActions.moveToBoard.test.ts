@@ -11,6 +11,7 @@ const hasPermissionMock = vi.fn();
 const createTagsForEntityWithTransactionMock = vi.fn();
 const findTagsByEntityIdsMock = vi.fn();
 const bulkApplyTagsToEntitiesMock = vi.fn();
+const getTagsByEntitiesMock = vi.fn();
 const authorizeTicketRecordAccessMock = vi.fn();
 const authorizeTicketRecordAccessConcealedMock = vi.fn();
 const assignTeamToTicketMock = vi.fn();
@@ -97,7 +98,7 @@ vi.mock('@alga-psa/tags/actions/tagActions', () => ({
 
 vi.mock('@alga-psa/tags/models/tagMapping', () => ({
   default: {
-    getByEntities: vi.fn(async () => []),
+    getByEntities: (...args: any[]) => getTagsByEntitiesMock(...args),
   },
 }));
 
@@ -237,6 +238,7 @@ describe('ticketActions moveTicketsToBoard', () => {
     securityState.authorizationOrder = [];
     securityState.deniedTicketId = null;
     createTenantKnexMock.mockResolvedValue({ knex: {} });
+    getTagsByEntitiesMock.mockReset().mockResolvedValue([]);
     hasPermissionMock.mockResolvedValue(true);
     getDefaultStatusIdMock.mockReset();
     validateStatusBelongsToBoardMock.mockReset();
@@ -652,6 +654,7 @@ describe('ticketActions ticket action authorization regressions', () => {
     securityState.authorizationOrder = [];
     securityState.deniedTicketId = null;
     createTenantKnexMock.mockResolvedValue({ knex: {} });
+    getTagsByEntitiesMock.mockReset().mockResolvedValue([]);
     hasPermissionMock.mockReset().mockResolvedValue(true);
     withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => callback(createMockTrx(new Map())));
     authorizeTicketRecordAccessMock.mockReset().mockImplementation(async (input: any) => {
@@ -711,6 +714,7 @@ describe('ticketActions ticket action authorization regressions', () => {
     expect(result.failed).toHaveLength(2);
     expect(authorizeTicketRecordAccessMock).toHaveBeenCalledTimes(2);
     expect(securityState.authorizationOrder).toEqual(['authorize:ticket-visible', 'authorize:ticket-hidden']);
+    expect(getTagsByEntitiesMock).not.toHaveBeenCalled();
     expect(bulkApplyTagsToEntitiesMock).not.toHaveBeenCalled();
     expect(securityState.createdTags).toEqual([]);
   });
@@ -743,6 +747,54 @@ describe('ticketActions ticket action authorization regressions', () => {
       { entityId: 'ticket-a', tagText: 'urgent' },
       { entityId: 'ticket-b', tagText: 'urgent' },
     ]);
+  });
+
+  it('keeps existing tag snapshots and normalized targets in the authorized tenant transaction', async () => {
+    const trx = createMockTrx(new Map());
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => callback(trx));
+    getTagsByEntitiesMock.mockImplementation(async () => {
+      securityState.authorizationOrder.push('read-tags');
+      return [
+        { tagged_id: 'ticket-a', tag_text: 'existing-a' },
+        { tagged_id: 'ticket-b', tag_text: 'existing-b' },
+      ];
+    });
+    const { bulkAddTagsToTickets } = await import('./ticketActions');
+
+    const result = await bulkAddTagsToTickets(['ticket-a', 'ticket-a', 'ticket-b'], [' urgent ', 'urgent', '']);
+
+    expect(result).toEqual({ updatedIds: ['ticket-a', 'ticket-b'], failed: [] });
+    expect(securityState.authorizationOrder).toEqual([
+      'authorize:ticket-a', 'authorize:ticket-b', 'read-tags', 'apply-tags',
+    ]);
+    for (const ticketId of ['ticket-a', 'ticket-b']) {
+      expect(authorizeTicketRecordAccessMock).toHaveBeenCalledWith({
+        trx, tenant: 'tenant-1', user: securityState.user, ticketId, action: 'update',
+      });
+    }
+    expect(getTagsByEntitiesMock).toHaveBeenCalledExactlyOnceWith(trx, 'tenant-1', ['ticket-a', 'ticket-b'], 'ticket');
+    expect(bulkApplyTagsToEntitiesMock).toHaveBeenCalledExactlyOnceWith(trx, 'tenant-1', 'ticket', [
+      { entityId: 'ticket-a', newTexts: ['urgent'], existingTexts: ['existing-a'] },
+      { entityId: 'ticket-b', newTexts: ['urgent'], existingTexts: ['existing-b'] },
+    ]);
+    expect(securityState.createdTags).toEqual([
+      { entityId: 'ticket-a', tagText: 'urgent' },
+      { entityId: 'ticket-b', tagText: 'urgent' },
+    ]);
+    expect(revalidatePathMock).toHaveBeenCalledTimes(1);
+    expect(revalidatePathMock.mock.calls[0][0]).toBe('/msp/tickets');
+  });
+
+  it('reports every target as failed and leaves the list cache alone when tag storage rejects the batch', async () => {
+    bulkApplyTagsToEntitiesMock.mockRejectedValue(new Error('tag storage failed'));
+    const { bulkAddTagsToTickets } = await import('./ticketActions');
+
+    const result = await bulkAddTagsToTickets(['ticket-a', 'ticket-a', 'ticket-b'], ['urgent']);
+
+    expect(result.updatedIds).toEqual([]);
+    expect(result.failed.map(({ ticketId }) => ticketId)).toEqual(['ticket-a', 'ticket-b']);
+    expect(securityState.createdTags).toEqual([]);
+    expect(revalidatePathMock).not.toHaveBeenCalled();
   });
 
   it('conceals appointment access for a client with ticket:read on a hidden ticket', async () => {
