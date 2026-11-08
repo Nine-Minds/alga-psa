@@ -6,7 +6,7 @@ const h = vi.hoisted(() => {
     document_associations: [{ tenant: 'tenant-1', association_id: 'association-1', entity_id: 'asset-1', entity_type: 'asset', document_id: 'document-1' }],
   } as Record<string, any[]>;
   let readable = true;
-  let actionable = true;
+  const deniedActions = new Set<string>();
 
   class Query {
     private filters: Record<string, unknown>[] = [];
@@ -38,8 +38,7 @@ const h = vi.hoisted(() => {
     permissions: [] as Array<[unknown, string, string]>,
     get readable() { return readable; },
     set readable(value: boolean) { readable = value; },
-    get actionable() { return actionable; },
-    set actionable(value: boolean) { actionable = value; },
+    deniedActions,
   };
 });
 
@@ -58,7 +57,7 @@ vi.mock('@shared/lib/documentAuthorization', () => ({ authorizeAndRedactDocument
 vi.mock('../lib/assetReadAuthorization', () => ({
   createAssetReadContext: vi.fn(async () => ({})),
   isAssetReadAllowed: vi.fn(async () => h.readable),
-  isAssetActionAllowed: vi.fn(async () => h.actionable),
+  isAssetActionAllowed: vi.fn(async (_trx: unknown, _tenant: string, _context: unknown, _asset: unknown, action: string) => !h.deniedActions.has(action)),
 }));
 vi.mock('./assetActionErrors', () => ({ assetActionErrorFrom: (error: unknown) => ({ actionError: String(error) }) }));
 
@@ -67,7 +66,7 @@ import { associateDocumentWithAsset, removeDocumentFromAsset } from './assetDocu
 beforeEach(() => {
   h.state.document_associations = [{ tenant: 'tenant-1', association_id: 'association-1', entity_id: 'asset-1', entity_type: 'asset', document_id: 'document-1' }];
   h.readable = true;
-  h.actionable = true;
+  h.deniedActions.clear();
   h.permissions.length = 0;
 });
 
@@ -84,20 +83,23 @@ describe('asset document association authorization', () => {
   });
 
   it.each([
-    ['associate', async () => associateDocumentWithAsset({ entity_id: 'asset-1', entity_type: 'asset', document_id: 'document-2' } as any)],
-    ['remove', async () => removeDocumentFromAsset('association-1')],
-  ])('%s refuses a readable asset when update is denied and leaves associations unchanged', async (_operation, invoke) => {
-    h.actionable = false;
+    ['associate', 'update', async () => associateDocumentWithAsset({ entity_id: 'asset-1', entity_type: 'asset', document_id: 'document-2' } as any)],
+    ['remove', 'delete', async () => removeDocumentFromAsset('association-1')],
+  ] as const)('%s refuses a readable asset when %s is denied and leaves associations unchanged', async (_operation, action, invoke) => {
+    h.deniedActions.add(action);
     const before = [...h.state.document_associations];
     const result = await invoke();
-    expect(JSON.stringify(result)).toContain('Cannot update assets');
+    expect(result).toEqual({ actionError: `Error: Permission denied: Cannot ${action} assets` });
     expect(h.state.document_associations).toEqual(before);
   });
 
   it.each([
-    ['associate', async () => associateDocumentWithAsset({ entity_id: 'asset-1', entity_type: 'asset', document_id: 'document-2' } as any)],
-    ['remove', async () => removeDocumentFromAsset('association-1')],
-  ])('%s succeeds when read and update are allowed', async (_operation, invoke) => {
+    ['associate', 'update', 'delete', async () => associateDocumentWithAsset({ entity_id: 'asset-1', entity_type: 'asset', document_id: 'document-2' } as any)],
+    ['remove', 'delete', 'update', async () => removeDocumentFromAsset('association-1')],
+  ] as const)('%s succeeds when read and %s are allowed even if %s is narrowed', async (_operation, _action, otherAction, invoke) => {
+    // Record-level bundle rules narrow the operation's action independently of
+    // the coarse asset:update permission required to edit document associations.
+    h.deniedActions.add(otherAction);
     const result = await invoke();
     if (result !== undefined) expect(JSON.stringify(result)).not.toContain('Permission denied');
     expect(h.permissions).toContainEqual([h.user, 'asset', 'update']);
