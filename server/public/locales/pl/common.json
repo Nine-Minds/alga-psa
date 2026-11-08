@@ -1761,7 +1761,7 @@
     "reconnectingToServer": "Ponowne łączenie z serwerem...",
     "refresh": "Odśwież",
     "markAllAsRead": "Oznacz wszystkie jako przeczytane",
-    "markAllRead": "Oznacz wszystkie jako przeczytane",
+    "markAllRead": "Oznacz jako przeczytane",
     "emptyTitle": "Brak powiadomień",
     "emptyDescription": "Jesteś na bieżąco!"
   },
