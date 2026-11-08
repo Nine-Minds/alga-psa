@@ -2,7 +2,7 @@ import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import type { ITicket, IUserWithRoles } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
-import { hasPermission } from '@alga-psa/authorization/rbac';
+import { hasPermission } from './rbac';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
@@ -13,7 +13,7 @@ import {
   type RelationshipRule,
 } from './kernel';
 import type { AuthorizationKernel } from './kernel';
-import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
+import { resolveBundleNarrowingRulesForEvaluation } from './bundles/service';
 import { extractActiveWatcherContactIds } from './portal/visibility';
 import type { ContactVisibilityContext } from './portal/visibility';
 import { getClientContactVisibilityContext } from './portal/visibility.server';
