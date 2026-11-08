@@ -1496,7 +1496,7 @@
         "useCustomPath": "Utiliser un chemin personnalisé"
       },
       "customCssPreserved": "Valeur CSS personnalisée conservée jusqu’à modification :",
-      "pickField": "Sélectionner {{field}}"
+      "pickField": "Sélectionner : {{field}}"
     },
     "shell": {
       "selectedLabel": "Sélectionné :",
@@ -1558,7 +1558,7 @@
           "tooltip": "Regrouper à la fin"
         },
         "between": {
-          "label": "Entre les éléments",
+          "label": "Espacement",
           "tooltip": "Répartir avec un espace entre les éléments"
         },
         "around": {
@@ -2347,8 +2347,8 @@
       "addPresetFailed": "Impossible d’ajouter ce préréglage dans le contexte actuel.",
       "inserted": "Insertion de {{value}} effectuée.",
       "insertedWithDiagnostic": "Insertion de {{value}} effectuée. {{diagnostic}}",
-      "selectTextBlock": "Sélectionnez un bloc de texte, puis activez un champ de texte pour insérer des variables.",
-      "focusTextField": "Activez un champ de texte dans l’inspecteur pour insérer cette variable.",
+      "selectTextBlock": "Sélectionnez un bloc de texte, puis cliquez dans un champ de texte pour insérer des variables.",
+      "focusTextField": "Cliquez dans un champ de texte de l’inspecteur pour insérer cette variable.",
       "selectSectionToFit": "Sélectionnez une section à ajuster.",
       "sectionNoChildren": "La section ne contient aucun élément enfant à ajuster.",
       "sectionFitted": "La section a été ajustée au contenu.",
