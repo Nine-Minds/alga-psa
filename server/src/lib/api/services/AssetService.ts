@@ -1694,7 +1694,7 @@ export class AssetService extends BaseService<any> {
         bundleRules,
         ctx: { subject, adapter },
       });
-      if (!compiled.supported) {
+      if (compiled.supported === false) {
         // Never execute a partially compiled authorization predicate.
         throw new Error(`Unsupported asset read authorization predicate: ${compiled.reason}`);
       }
@@ -1705,7 +1705,7 @@ export class AssetService extends BaseService<any> {
       resourceType: 'asset', action: 'read', builtinRules, bundleRules,
       ctx: { subject, adapter },
     });
-    if (!compiled.supported) throw new Error(`Unsupported asset read authorization predicate: ${compiled.reason}`);
+    if (compiled.supported === false) throw new Error(`Unsupported asset read authorization predicate: ${compiled.reason}`);
     return apply;
   }
 
