@@ -13,19 +13,20 @@ export function getEmailNotificationService() { return new EmailNotificationServ
 
 registerHooks({
   resolve(specifier, context, nextResolve) {
-    const resolved = nextResolve(specifier, context);
-    if (resolved.url.endsWith('/dist/packages/db/src/index.js')) {
-      return { url: pathToFileURL(runtimeFixture).href, shortCircuit: true };
-    }
     const consumerEntry = process.env.WORKER_EMAIL_REDIRECT_CONSUMER === 'sla-notification'
       ? '/dist/packages/sla/src/services/slaNotificationService.js'
       : '/dist/packages/sla/src/services/escalationService.js';
     if (context.parentURL?.endsWith(consumerEntry)
-      && resolved.url.endsWith('/dist/packages/notifications/src/notifications/email.js')) {
+      && specifier.endsWith('/notifications/src/notifications/email.js')) {
       return {
         url: `data:text/javascript,${encodeURIComponent(placeholder)}`,
         shortCircuit: true,
       };
+    }
+
+    const resolved = nextResolve(specifier, context);
+    if (resolved.url.endsWith('/dist/packages/db/src/index.js')) {
+      return { url: pathToFileURL(runtimeFixture).href, shortCircuit: true };
     }
     return resolved;
   },
