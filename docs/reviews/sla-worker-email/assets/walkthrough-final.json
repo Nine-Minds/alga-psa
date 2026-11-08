@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "title": "SLA worker email: board routing, truthful audit, SMTP failure and notifications",
+  "paneId": "lightweight-review-guide-3d5269d8-fb7c-43a7-b95d-b2ec48600992-ts_robert-X670E-Pro-RS",
+  "startedAt": "2026-11-08T17:11:58.969Z",
+  "finishedAt": "2026-11-08T17:13:02.194Z",
+  "durationMs": 14745,
+  "width": 1725,
+  "height": 957,
+  "bytes": 1028037,
+  "frames": 163,
+  "marks": [
+    {
+      "t": 0.041,
+      "label": "In-app SLA escalation and failure notifications remain visible"
+    },
+    {
+      "t": 5.468,
+      "label": "Email Logs show the two fresh board-routed escalations"
+    },
+    {
+      "t": 9.088,
+      "label": "Board A sender, 250 OK, and provider message ID"
+    },
+    {
+      "t": 12.5,
+      "label": "Board B sender, 250 OK, and distinct provider message ID"
+    }
+  ],
+  "files": {
+    "video": "walkthrough-final.webm",
+    "chapters": "walkthrough-final.vtt"
+  }
+}

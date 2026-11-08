@@ -1,0 +1,17 @@
+WEBVTT
+
+1
+00:00:00.041 --> 00:00:05.468
+In-app SLA escalation and failure notifications remain visible
+
+2
+00:00:05.468 --> 00:00:09.088
+Email Logs show the two fresh board-routed escalations
+
+3
+00:00:09.088 --> 00:00:12.500
+Board A sender, 250 OK, and provider message ID
+
+4
+00:00:12.500 --> 00:00:14.745
+Board B sender, 250 OK, and distinct provider message ID
