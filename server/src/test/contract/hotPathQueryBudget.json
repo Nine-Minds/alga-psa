@@ -35,22 +35,22 @@
     },
     {
       "name": "comment.add",
-      "statements": 21,
+      "statements": 26,
       "locks": 3
     },
     {
       "name": "comment.edit",
-      "statements": 12,
+      "statements": 17,
       "locks": 2
     },
     {
       "name": "comment.delete",
-      "statements": 11,
+      "statements": 16,
       "locks": 0
     },
     {
       "name": "comment.scheduledEnqueue",
-      "statements": 14,
+      "statements": 19,
       "locks": 2
     },
     {
@@ -85,7 +85,7 @@
     }
   ],
   "totals": {
-    "statements": 490,
+    "statements": 510,
     "locks": 17
   },
   "denylist": [

@@ -148,7 +148,7 @@ describe('commentActions: own_or_assigned bundle-restricted MSP user (real autho
       ticket_id: ids.foreignTicket, note: note(`intrusion-${mark}`), is_internal: true, is_resolution: false,
     } as any));
     expect(await countComments(ids.foreignTicket)).toBe(before);
-    expect(JSON.stringify(attempt)).toMatch(/Permission denied/);
+    expect(JSON.stringify(attempt)).toMatch(/Ticket not found/);
 
     // Indistinguishable from naming a ticket that does not exist.
     const missing = await outcome(() => createComment({
@@ -169,11 +169,11 @@ describe('commentActions: own_or_assigned bundle-restricted MSP user (real autho
 
   it('updateComment / deleteComment / toggleCommentReaction on a comment of an inaccessible ticket are denied', async () => {
     const upd = await outcome(() => updateComment(ids.foreignComment, { note: note('edited') } as any));
-    expect(JSON.stringify(upd)).toMatch(/Permission denied/);
+    expect(JSON.stringify(upd)).toMatch(/Ticket not found/);
     const react = await outcome(() => toggleCommentReaction(ids.foreignComment, '👍'));
     expect(JSON.stringify(react)).toMatch(/Permission denied/);
     const del = await outcome(() => deleteComment(ids.foreignComment));
-    expect(JSON.stringify(del)).toMatch(/Permission denied/);
+    expect(JSON.stringify(del)).toMatch(/Ticket not found/);
 
     const row = await db('comments').where({ tenant, comment_id: ids.foreignComment }).first();
     expect(row).toBeTruthy();
