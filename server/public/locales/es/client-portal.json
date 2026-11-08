@@ -637,6 +637,7 @@
       "announcements": "Anuncios del sistema",
       "emailPreferences": "Correo electrónico",
       "internalPreferences": "Interno",
+      "unreadCount_few": "{{count}} notificaciones no leídas",
       "unreadCount_many": "{{count}} notificaciones no leídas"
     },
     "actions": {
@@ -787,16 +788,16 @@
         "confirm": "Desactivar usuario",
         "deactivating": "Desactivando…",
         "thisUserCapitalized": "Este usuario",
-        "openWorkPrompt": "tiene trabajo pendiente. Elija qué hacer antes de desactivarlo.",
+        "openWorkPrompt": "tiene trabajo pendiente. Elija qué hacer antes de desactivar la cuenta.",
         "reassignTo": "Reasignar el trabajo pendiente a",
         "selectAssignee": "Seleccione un usuario interno activo",
         "noAssignee": "No hay ningún usuario interno activo disponible para la reasignación.",
-        "selectedUser": "el usuario seleccionado",
+        "selectedUser": "la persona seleccionada",
         "buckets": {
           "tickets": "Tickets",
           "tasks": "Tareas de proyecto"
         },
-        "openCount": "Pendientes: {{count}} {{label}}",
+        "openCount": "{{count}} {{label}} pendientes",
         "actions": {
           "reassign": "Reasignar",
           "unassign": "Quitar asignación",
@@ -952,6 +953,7 @@
       "unread": "No leída",
       "noMessage": "Sin mensaje"
     },
+    "unreadCount_few": "{{count}} notificaciones sin leer",
     "unreadCount_many": "{{count}} notificaciones sin leer",
     "reconnectingToServer": "Reconectando con el servidor...",
     "refresh": "Actualizar",
@@ -1090,9 +1092,9 @@
     "sharedWorkspaceLabel": "Espacio compartido",
     "details": {
       "notProvided": "No proporcionado",
-      "notAvailable": "No disponible",
-      "cpuWithModel": "{{model}} (núcleos: {{count}})",
-      "cpuCores": "Núcleos: {{count}}",
+      "notAvailable": "N/D",
+      "cpuWithModel": "{{model}} ({{count}} núcleos)",
+      "cpuCores": "{{count}} núcleos",
       "workstationTitle": "Detalles de la estación de trabajo",
       "networkDeviceTitle": "Detalles del dispositivo de red",
       "serverTitle": "Detalles del servidor",
@@ -1113,7 +1115,7 @@
       "status": "Estado",
       "location": "Ubicación",
       "purchaseDate": "Fecha de compra",
-      "warrantyEndDate": "Fecha de vencimiento de la garantía"
+      "warrantyEndDate": "Fecha de fin de garantía"
     }
   },
   "errors": {
