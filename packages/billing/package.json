@@ -83,6 +83,7 @@
     "@alga-psa/workflows": "*",
     "bwip-js": "^4.11.4",
     "qrcode": "^1.5.4",
+    "rate-limiter-flexible": "^5.0.5",
     "zod": "^4.6.7",
     "@alga-psa/sla": "*"
   },

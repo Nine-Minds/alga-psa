@@ -169,6 +169,10 @@ export async function slaTicketWorkflow(
     return;
   }
 
+  // Preserve the pre-change activity command sequence and rounded deadlines
+  // when replaying histories created before exact escalation thresholds.
+  const useExactEscalationThresholds = patched('sla-exact-escalation-thresholds-v1');
+
   let responseCompleted = input.carried?.responseCompleted ?? false;
   let resolutionCompleted = false;
   let cancelled = false;
@@ -422,7 +426,11 @@ export async function slaTicketWorkflow(
       target.escalation_2_percent,
       target.escalation_3_percent,
     ].filter((value): value is number => Number.isFinite(value) && value > 0);
-    const useConfiguredEscalationWakePoints = patched('sla-escalation-configured-wakepoints-v1');
+    // The PR branch and current main introduced the same wake-point behavior
+    // under separate patch markers. Either marker enables it for histories
+    // that recorded that version; retain both markers for deterministic replay.
+    const useConfiguredEscalationWakePoints =
+      patched('sla-escalation-configured-wakepoints-v1') || useExactEscalationThresholds;
     const escalationWakePoints = [...new Set(configuredEscalationThresholds)].sort((a, b) => a - b);
     const thresholds = useConfiguredEscalationWakePoints
       ? [...new Set([...notificationWakePoints, ...escalationWakePoints])].sort((a, b) => a - b)
@@ -532,9 +540,9 @@ export async function slaTicketWorkflow(
       const eventTargetMinutes = actionPhase === 'response'
         ? target.response_time_minutes!
         : phase.targetMinutes;
-      const thresholdMinutes = Math.ceil(
-        (eventTargetMinutes * threshold) / 100
-      );
+      const thresholdMinutes = useExactEscalationThresholds
+        ? (eventTargetMinutes * threshold) / 100
+        : Math.ceil((eventTargetMinutes * threshold) / 100);
 
       const wakeTimeIso = await activities.calculateNextWakeTime({
         currentTime: startedAt.toISOString(),
