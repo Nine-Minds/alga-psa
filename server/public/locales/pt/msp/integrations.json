@@ -3087,6 +3087,9 @@
         }
       },
       "unifi": {
+        "proFeature": {
+          "description": "A integração com UniFi está disponível no AlgaPSA Pro."
+        },
         "actions": {
           "saveConfiguration": "Guardar configuração",
           "testConnection": "Testar ligação",
@@ -3143,8 +3146,8 @@
           "site": "Site UniFi",
           "siteIdLabel": "ID: {{id}}",
           "mappedClient": "Cliente mapeado",
-          "defaultContact": "Contacto predefinido",
-          "selectContact": "Selecionar contacto",
+          "defaultContact": "Contato padrão",
+          "selectContact": "Selecionar contato",
           "autoSync": "Sincronização automática",
           "autoSyncEnabled": "Ativada",
           "autoSyncDisabled": "Desativada"

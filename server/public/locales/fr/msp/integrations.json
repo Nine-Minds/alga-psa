@@ -3087,6 +3087,9 @@
         }
       },
       "unifi": {
+        "proFeature": {
+          "description": "L’intégration UniFi est disponible dans AlgaPSA Pro."
+        },
         "actions": {
           "saveConfiguration": "Enregistrer la configuration",
           "testConnection": "Tester la connexion",
@@ -3134,7 +3137,7 @@
           "apiKeyPlaceholderExisting": "Clé enregistrée. Saisissez une nouvelle clé pour la remplacer",
           "apiKeyPlaceholderNew": "Collez votre clé d'API UniFi",
           "connectionMode": "Mode de connexion",
-          "modeSiteManager": "Site Manager (cloud)",
+          "modeSiteManager": "Site Manager (dans le cloud)",
           "modeLocal": "Contrôleur local",
           "localBaseUrl": "URL du contrôleur",
           "localBaseUrlPlaceholder": "https://unifi.example.com"

@@ -3110,6 +3110,9 @@
         }
       },
       "unifi": {
+        "proFeature": {
+          "description": "UniFi integration is available in AlgaPSA Pro."
+        },
         "actions": {
           "saveConfiguration": "Save Configuration",
           "testConnection": "Test Connection",

@@ -3087,6 +3087,9 @@
         }
       },
       "unifi": {
+        "proFeature": {
+          "description": "De UniFi-integratie is beschikbaar in AlgaPSA Pro."
+        },
         "actions": {
           "saveConfiguration": "Configuratie opslaan",
           "testConnection": "Verbinding testen",
@@ -3134,7 +3137,7 @@
           "apiKeyPlaceholderExisting": "Sleutel opgeslagen. Voer een nieuwe sleutel in om deze te vervangen",
           "apiKeyPlaceholderNew": "Plak uw UniFi-API-sleutel",
           "connectionMode": "Verbindingsmodus",
-          "modeSiteManager": "Site Manager (cloud)",
+          "modeSiteManager": "Site Manager (in de cloud)",
           "modeLocal": "Lokale controller",
           "localBaseUrl": "Controller-URL",
           "localBaseUrlPlaceholder": "https://unifi.example.com"

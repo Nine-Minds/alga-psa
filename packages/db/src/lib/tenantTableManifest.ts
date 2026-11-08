@@ -543,6 +543,8 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'asset_audit_items', deletion: 'ordered' },
   { table: 'asset_audits', deletion: 'ordered', clientKeyed: true },
   { table: 'software_catalog', deletion: 'ordered' },
+  { table: 'rmm_condition_transitions', deletion: 'ordered' },
+  { table: 'rmm_condition_states', deletion: 'ordered' },
   { table: 'rmm_webhook_events', deletion: 'ordered' },
   { table: 'rmm_maintenance_windows', deletion: 'ordered', clientKeyed: true },
   { table: 'rmm_alert_rules', deletion: 'ordered' },
