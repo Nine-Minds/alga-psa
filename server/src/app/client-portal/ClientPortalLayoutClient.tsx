@@ -15,6 +15,7 @@ import { ClientPortalDocumentsProvider } from "./ClientPortalDocumentsProvider";
 import { usePathname } from "next/navigation";
 import { resolveProductRouteBehavior } from "@/lib/productSurfaceRegistry";
 import { ProductRouteBoundary } from "@/components/product/ProductRouteBoundary";
+import { CoManagedRequesterTaskProvider } from "@/components/co-managed/CoManagedRequesterTaskConversation";
 
 interface Props {
   children: React.ReactNode;
@@ -52,6 +53,7 @@ export function ClientPortalLayoutClient({
         <DateFormatProvider dateFormat={dateFormat}>
         <BrandingProvider initialBranding={branding}>
           <ClientPortalDocumentsProvider>
+          <CoManagedRequesterTaskProvider>
             <ClientPortalLayout
               productCode={productCode}
               appointmentsEnabled={appointmentsEnabled}
@@ -61,6 +63,7 @@ export function ClientPortalLayoutClient({
                 ? <ProductRouteBoundary behavior={routeBehavior} scope="client-portal" />
                 : children}
             </ClientPortalLayout>
+          </CoManagedRequesterTaskProvider>
           </ClientPortalDocumentsProvider>
         </BrandingProvider>
         </DateFormatProvider>

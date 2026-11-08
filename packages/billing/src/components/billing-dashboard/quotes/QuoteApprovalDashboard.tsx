@@ -27,7 +27,7 @@ const isReturnedActionError = (value: unknown) =>
 
 const QuoteApprovalDashboard: React.FC<QuoteApprovalDashboardProps> = ({ embedded = false }) => {
   const { t } = useTranslation('msp/quotes');
-  const { formatCurrency, formatDate } = useFormatters();
+  const { formatCurrency, formatCalendarDate } = useFormatters();
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedQuoteId = embedded ? null : searchParams?.get('quoteId');
@@ -132,14 +132,14 @@ const QuoteApprovalDashboard: React.FC<QuoteApprovalDashboardProps> = ({ embedde
     {
       title: t('common.columns.quoteDate', { defaultValue: 'Quote Date' }),
       dataIndex: 'quote_date',
-      render: (value: string | null | undefined) => value ? formatDate(value) : '—',
+      render: (value: string | null | undefined) => value ? formatCalendarDate(value) : '—',
     },
     {
       title: t('common.columns.validUntil', { defaultValue: 'Valid Until' }),
       dataIndex: 'valid_until',
-      render: (value: string | null | undefined) => value ? formatDate(value) : '—',
+      render: (value: string | null | undefined) => value ? formatCalendarDate(value) : '—',
     },
-  ]), [formatCurrency, formatDate, t]);
+  ]), [formatCurrency, formatCalendarDate, t]);
 
   if (selectedQuoteId) {
     return (

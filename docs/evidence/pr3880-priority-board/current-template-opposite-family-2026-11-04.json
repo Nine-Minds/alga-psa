@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "title": "Opposite family template validation",
+  "paneId": "3c471de2-b8db-4889-a0d8-9fed53c26374",
+  "startedAt": "2026-11-04T00:38:30.767Z",
+  "finishedAt": "2026-11-04T00:38:48.434Z",
+  "durationMs": 16610,
+  "width": 988,
+  "height": 557,
+  "bytes": 655731,
+  "frames": 247,
+  "marks": [
+    {
+      "t": 16.384,
+      "label": "Legacy custom priority on ITIL board warning"
+    }
+  ],
+  "files": {
+    "video": "current-test-temp.webm",
+    "chapters": "current-test-temp.vtt"
+  }
+}

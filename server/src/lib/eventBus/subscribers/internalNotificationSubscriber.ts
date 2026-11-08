@@ -1,3 +1,6 @@
+import { resolveCoManagedCommentStep, audienceRecipients } from '../../notifications/coManagedCommentDelivery';
+import { projectCoManagedNotificationSnapshot } from '@alga-psa/co-managed/sharedWorkProjection';
+import { CO_MANAGED_LEDGER } from '@shared/lib/deliveryLedger';
 import { isInteractiveUserType } from '@alga-psa/types';
 
 import { readTicketNotificationActor, resolveTicketNotificationActorName } from '../../notifications/ticketNotificationContext';
@@ -26,9 +29,10 @@ import {
 } from '@alga-psa/shared/services/email/inboundEmailConsumerDedupe';
 import { resolveTicketSubjectLabel, usableDisplayName } from '@alga-psa/shared/lib/ticketRequesterDisplay';
 import { isInboundOutboxEvent } from '@alga-psa/shared/services/email/inboundEmailDurableStore';
-import { resolveBoardNotificationRecipients } from '@alga-psa/shared/lib/tickets/boardNotificationRules';
+import { resolveBoardNotificationAudience } from '@alga-psa/shared/lib/tickets/boardNotificationRules';
 import { getAllTicketAssignees } from '@alga-psa/shared/lib/tickets/ticketAssignees';
 import { filterRecipientsWhoCanReadTicket } from '../../notifications/boardNotificationAudience';
+import { formatCurrencyWithSymbol } from '@alga-psa/core/formatters';
 
 /** Consumers of the inbound outbox events use this stable ledger consumer id. */
 const INBOUND_OUTBOX_NOTIFICATION_CONSUMER = 'internal-notification';
@@ -243,7 +247,8 @@ async function handleTicketCreated(event: TicketCreatedEvent, opts?: InternalNot
     // Board notification rules (trigger: created). One-shot queue alert to the
     // rule's users and teams; never assigns and never touches the watch list.
     if (ticket.board_id && shouldCreateStaffTicketNotification(resolveTicketNotificationSuppression(payload))) {
-      const ruleRecipients = await resolveBoardNotificationRecipients(
+      // Users only: plain-address recipients are email-only (no in-app).
+      const { users: ruleRecipients } = await resolveBoardNotificationAudience(
         db,
         tenantId,
         { kind: 'created', boardId: ticket.board_id },
@@ -354,7 +359,8 @@ async function handleTicketStatusChanged(
       : (await tenantScopedTable(db, 'statuses', tenantId).select('name').where({ status_id: statusId }).first())?.name;
 
     const assignees = await getAllTicketAssignees(db, tenantId, ticketId);
-    const recipients = await resolveBoardNotificationRecipients(
+    // Users only: plain-address recipients are email-only (no in-app).
+    const { users: recipients } = await resolveBoardNotificationAudience(
       db,
       tenantId,
       { kind: 'status_entered', statusId },
@@ -1901,6 +1907,54 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
       ticketNumber: ticket.ticket_number
     });
 
+    // CM L5: on a shared ticket the audience-aware co-managed step replaces the native assignee/contact
+    // steps below. Each in-app notification is claimed, created and marked sent in ONE transaction. The
+    // served decision is made once; an unserved tenant gets null at zero SQL and runs the native steps.
+    const coManagedStep = await resolveCoManagedCommentStep(tenantId, ticketId, comment?.id);
+    if (coManagedStep) {
+      const assigneeIds = await getAllTicketAssignees(db, tenantId, ticketId);
+      const customerUsers = assigneeIds.map((id) => ({ kind: 'customer_user' as const, principalId: id }));
+      let requester: { kind: 'requester_contact'; principalId: string } | null = null;
+      let requesterUserId: string | null = null;
+      if (ticket.contact_name_id) {
+        const contactUser = await tenantScopedTable(db, 'users', tenantId)
+          .select('user_id').where({ contact_id: ticket.contact_name_id, user_type: 'client' }).first();
+        if (contactUser) { requester = { kind: 'requester_contact', principalId: contactUser.user_id }; requesterUserId = contactUser.user_id; }
+      }
+      for (const recipient of audienceRecipients(coManagedStep, { customerUsers, requester })) {
+        const isSponsor = recipient.kind === 'msp_user' || recipient.kind === 'team';
+        const sponsorProjection = isSponsor ? projectCoManagedNotificationSnapshot(recipient.redactedFields ?? [], { commentPreview, authorName, ticketNumber: ticket.ticket_number }) : null;
+        const projectedTicketNumber = sponsorProjection
+          ? (sponsorProjection.ticketNumber ?? 'Shared ticket')
+          : (ticket.ticket_number || 'New Ticket');
+        const projectedAuthorName = sponsorProjection?.authorName ?? (isSponsor ? 'A team member' : authorName);
+        // Sponsor users have their inbox in the MSP tenant, so their row (and its ledger claim) live there.
+        const targetTenant = isSponsor ? coManagedStep.plan.sponsorTenant : tenantId;
+        if (recipient.principalId === userId || (!isSponsor && notifiedUserIds.has(recipient.principalId))) continue;
+        const isRequester = recipient.principalId === requesterUserId;
+        if (!shouldCreateTicketCommentNotification(suppression, isRequester ? 'contact' : 'internal')) continue;
+        const link = isSponsor ? '/msp/co-managed' : isRequester ? ticketPortalUrl : ticketUrl;
+        if (!link) continue;
+        await createNotificationFromTemplateInternal(isSponsor ? await getConnection(targetTenant) : db, {
+          tenant: targetTenant,
+          user_id: recipient.principalId,
+          template_name: isRequester ? 'ticket-comment-added-client' : 'ticket-comment-added',
+          type: 'info',
+          category: 'tickets',
+          link,
+          data: { authorName: projectedAuthorName, ticketId: projectedTicketNumber, commentPreview: sponsorProjection?.conversationSuppressed ? '' : commentPreview },
+          metadata: {
+            ticketId: ticket.ticket_id,
+            ticketNumber: projectedTicketNumber,
+            comment: { id: comment?.id, text: sponsorProjection?.conversationSuppressed ? '' : commentPreview, author: projectedAuthorName,
+              ...(userId && sponsorProjection?.authorName !== null ? { authorId: userId } : {}), isInternal: false },
+          },
+        }, { delivery: { ledger: CO_MANAGED_LEDGER, key: { delivery_kind: 'ticket_comment_in_app', source_id: comment!.id!, recipient: recipient.principalId }, extra: { recipient_kind: recipient.kind } } });
+        if (!isSponsor) notifiedUserIds.add(recipient.principalId);
+      }
+      return;
+    }
+
     // Notify all assigned agents (if not internal comment)
     if (
       !comment?.isInternal &&
@@ -2401,8 +2455,7 @@ function formatInternalProjectBillingAmount(
 ): string {
   const currencyCode = currency?.trim() || 'USD';
   try {
-    return new Intl.NumberFormat(locale, { style: 'currency', currency: currencyCode })
-      .format(amountCents / 100);
+    return formatCurrencyWithSymbol(amountCents / 100, locale, currencyCode);
   } catch {
     return `${currencyCode} ${(amountCents / 100).toFixed(2)}`;
   }

@@ -19,12 +19,12 @@ import * as path from 'path';
 import { fileURLToPath } from 'url';
 import knex, { Knex } from 'knex';
 import {
-  TENANT_TABLE_MANIFEST,
   TenantManifestCycleError,
   computeTenantDeletionOrder,
   placeTenantTable,
   tenantDeletionOrder,
 } from '../packages/db/src/lib/tenantTableManifest';
+import { TENANT_TABLE_MANIFEST } from '../ee/temporal-workflows/src/db/tenantTableManifest';
 import { TENANT_TABLE_FOREIGN_KEYS, type TenantTableForeignKey } from '../packages/db/src/lib/tenantTableForeignKeys';
 import { tenantTableMetadata } from '../packages/db/src/lib/tenantTableMetadata';
 
@@ -126,11 +126,11 @@ async function check(): Promise<number> {
 
   // 1. Order legality and cycles (no database needed).
   try {
-    const computed = computeTenantDeletionOrder();
+    const computed = computeTenantDeletionOrder(TENANT_TABLE_MANIFEST);
     for (const v of computed.violations) {
       problems.push(`violation: ${v.child} (#${v.childIndex}) must be deleted before ${v.parent} (#${v.parentIndex}) [${v.column}, ${v.deleteRule}]`);
     }
-    const declared = [...tenantDeletionOrder()];
+    const declared = [...tenantDeletionOrder(TENANT_TABLE_MANIFEST)];
     if (!computed.violations.length && computed.order.some((t, i) => t !== declared[i])) {
       problems.push('computed order differs from declared order without violations');
     }
@@ -141,7 +141,7 @@ async function check(): Promise<number> {
 
   // 2. The activity literal is a golden projection of the manifest.
   const literal = parseActivityLiteral();
-  const ordered = [...tenantDeletionOrder()];
+  const ordered = [...tenantDeletionOrder(TENANT_TABLE_MANIFEST)];
   if (literal.length !== ordered.length || literal.some((t, i) => t !== ordered[i])) {
     problems.push(`activity TENANT_TABLES_DELETION_ORDER (${literal.length}) differs from the manifest order (${ordered.length})`);
   }
@@ -186,15 +186,15 @@ async function check(): Promise<number> {
 }
 
 function place(table: string): number {
-  const order = [...tenantDeletionOrder()];
+  const order = [...tenantDeletionOrder(TENANT_TABLE_MANIFEST)];
   let computed: string[] = order;
   try {
-    computed = computeTenantDeletionOrder().order;
+    computed = computeTenantDeletionOrder(TENANT_TABLE_MANIFEST).order;
   } catch (error) {
     if (!(error instanceof TenantManifestCycleError)) throw error;
     console.error(`warning: ${error.message}; placing against the declared order`);
   }
-  const w = placeTenantTable(table, computed);
+  const w = placeTenantTable(table, computed, undefined, TENANT_TABLE_MANIFEST);
   console.log(JSON.stringify(w, null, 2));
   if (w.earliestIndex > w.latestIndex) {
     console.error(`No legal position: ${w.mustFollow.join(', ')} must precede ${table}, which must precede ${w.mustPrecede.join(', ')}.`);

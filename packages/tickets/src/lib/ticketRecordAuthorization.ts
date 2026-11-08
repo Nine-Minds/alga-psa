@@ -1,2 +1,3 @@
-// Keep the ticket-domain import path stable for existing ticket callers.
+// Moved to @alga-psa/authorization so layers below tickets (inventory) can use it. Kept as a re-export so
+// existing importers keep working.
 export * from '@alga-psa/authorization/ticketRecordAuthorization';

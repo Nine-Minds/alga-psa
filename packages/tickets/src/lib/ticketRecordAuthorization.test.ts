@@ -9,7 +9,7 @@ import {
 
 const getVisibilityMock = vi.fn<(...args: any[]) => Promise<any>>();
 const hasPermissionMock = vi.hoisted(() => vi.fn<(...args: any[]) => Promise<boolean>>(async () => true));
-const resolveBundleRulesMock = vi.hoisted(() => vi.fn<(...args: any[]) => Promise<any[]>>(async () => []));
+const resolveBundleRulesMock = vi.hoisted(() => vi.fn(async () => [] as any[]));
 
 vi.mock('@alga-psa/db', () => ({
   tenantDb: (conn: any) => ({ table: (t: string) => conn(t) }),
@@ -47,7 +47,11 @@ const scope = (o: Record<string, unknown> = {}) => ({
 const client = { user_id: 'u1', user_type: 'client', contact_id: 'contact-1', clientId: 'client-1', roles: [{ role_id: 'r' }] } as any;
 
 describe('createTicketAuthorizationContext', () => {
-  beforeEach(() => { getVisibilityMock.mockReset(); hasPermissionMock.mockReset().mockResolvedValue(true); resolveBundleRulesMock.mockReset().mockResolvedValue([]); });
+  beforeEach(() => {
+    getVisibilityMock.mockReset();
+    hasPermissionMock.mockReset().mockResolvedValue(true);
+    resolveBundleRulesMock.mockReset().mockResolvedValue([]);
+  });
 
   it('resolves contact visibility once and passes it to the kernel for client principals', async () => {
     getVisibilityMock.mockResolvedValue(scope({ visibleBoardIds: ['b1'] }));
@@ -121,6 +125,16 @@ describe('authorizeTicketRecordAccess (client principals)', () => {
     );
   });
 
+  it('fails closed when bundle policy resolution fails during deletion', async () => {
+    const internal = { user_id: 'internal-1', user_type: 'internal', roles: [{ role_id: 'r1' }] } as any;
+    resolveBundleRulesMock.mockRejectedValueOnce(new Error('bundle policy database unavailable'));
+
+    await expect(authorizeTicketRecordAccess({
+      trx: fakeTrx(row()), tenant: 'tenant-1', user: internal, ticketId: 't1', action: 'delete',
+    })).rejects.toThrow('bundle policy database unavailable');
+    expect(hasPermissionMock).not.toHaveBeenCalled();
+  });
+
   it('conceals a retained UUID after client visibility is lost, matching a missing ticket', async () => {
     getVisibilityMock.mockResolvedValue(scope({ effectiveTicketScope: 'contact', ticketScope: 'contact' }));
     const request = (ticket: any) => authorizeTicketRecordAccessConcealed({
@@ -132,35 +146,52 @@ describe('authorizeTicketRecordAccess (client principals)', () => {
     expect(missing).toBe('Permission denied: Cannot access ticket');
     expect(invisible).toBe('Permission denied: Cannot access ticket');
   });
+});
 
-  it('denies a restricted internal principal with a retained UUID after bundle visibility is lost', async () => {
-    resolveBundleRulesMock.mockResolvedValueOnce([
-      { id: 'board-scope', resource: 'ticket', action: 'update', templateKey: 'selected_boards', selectedBoardIds: ['b2'] },
+describe('authorizeTicketRecordAccessConcealed conceal option', () => {
+  const internal = { user_id: 'i1', user_type: 'internal', roles: [{ role_id: 'r' }] } as any;
+  const row = { ticket_id: 't1', client_id: 'c', board_id: 'b', assigned_to: null, entered_by: null, assigned_team_id: null };
+
+  const run = (user: any, ticket: any, extra: Record<string, unknown> = {}) =>
+    authorizeTicketRecordAccessConcealed({ trx: fakeTrx(ticket), tenant: 'tenant-1', user, ticketId: 't1', action: 'read', ...extra });
+
+  // Internal users are only denied by a bundle rule; simulate via the bundle service.
+  const denyAll = async () => {
+    resolveBundleRulesMock.mockResolvedValue([
+      { id: 'rule-1', resource: 'ticket', action: 'read', templateKey: 'selected_boards', selectedBoardIds: ['other-board'] },
     ]);
-    const internal = { user_id: 'internal-1', user_type: 'internal', roles: [{ role_id: 'r1' }] } as any;
+  };
 
-    await expect(authorizeTicketRecordAccess({
-      trx: fakeTrx(row({ board_id: 'b1' })),
-      tenant: 'tenant-1',
-      user: internal,
-      ticketId: 't1',
-      action: 'delete',
-    })).rejects.toThrow('Permission denied: Cannot access ticket');
-    expect(hasPermissionMock).not.toHaveBeenCalled();
+  beforeEach(() => {
+    getVisibilityMock.mockReset();
+    resolveBundleRulesMock.mockReset().mockResolvedValue([]);
   });
 
-  it('fails closed when bundle policy resolution fails, even with coarse delete permission', async () => {
-    const internal = { user_id: 'internal-1', user_type: 'internal', roles: [{ role_id: 'r1' }] } as any;
-    resolveBundleRulesMock.mockRejectedValueOnce(new Error('bundle policy database unavailable'));
-    hasPermissionMock.mockResolvedValue(true);
+  it('default and "client" keep the kernel denial message for internal users', async () => {
+    await denyAll();
+    await expect(run(internal, row)).rejects.toThrow('Permission denied: Cannot access ticket');
+    await expect(run(internal, row, { conceal: 'client' })).rejects.toThrow('Permission denied: Cannot access ticket');
+  });
 
-    await expect(authorizeTicketRecordAccess({
-      trx: fakeTrx(row({ board_id: 'b1' })),
-      tenant: 'tenant-1',
-      user: internal,
-      ticketId: 't1',
-      action: 'delete',
-    })).rejects.toThrow('bundle policy database unavailable');
-    expect(hasPermissionMock).not.toHaveBeenCalled();
+  it('"all" maps an internal kernel denial to Ticket not found', async () => {
+    await denyAll();
+    await expect(run(internal, row, { conceal: 'all' })).rejects.toThrow('Ticket not found');
+  });
+
+  it('"all" still reports a missing ticket as Ticket not found for internal users', async () => {
+    await expect(run(internal, null, { conceal: 'all' })).rejects.toThrow('Ticket not found');
+  });
+
+  it('"all" keeps client principals on Permission denied', async () => {
+    getVisibilityMock.mockResolvedValue(scope());
+    await expect(run(client, null, { conceal: 'all' })).rejects.toThrow('Permission denied: Cannot access ticket');
+    await expect(run(client, null)).rejects.toThrow('Permission denied: Cannot access ticket');
+  });
+
+  it('"all" passes unrelated errors through unchanged', async () => {
+    const trx = (() => { throw new Error('db exploded'); }) as any;
+    await expect(
+      authorizeTicketRecordAccessConcealed({ trx, tenant: 'tenant-1', user: internal, ticketId: 't1', action: 'read', conceal: 'all' }),
+    ).rejects.toThrow('db exploded');
   });
 });

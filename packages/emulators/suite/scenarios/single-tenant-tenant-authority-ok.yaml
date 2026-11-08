@@ -1,0 +1,17 @@
+name: single-tenant-tenant-authority-ok
+description: Single-tenant app authorizing at its own tenant-specific authority; tid/iss are the home tenant
+# Assumed: the tenant-specific authority equal to the home tenant passes every
+# check at /authorize and /token. Another tenant id would raise AADSTS700016
+# (assumed at /authorize; /token repeats it).
+steps:
+  - reset: msgraph
+  - seed: msgraph/client
+    params:
+      clientId: aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa
+      clientSecret: single-tenant-secret
+      displayName: Cedar Grove Mail
+      signInAudience: AzureADMyOrg
+      homeTenantId: bbbbbbbb-1111-4111-8111-111111111111
+      redirectUris: ["http://localhost:3000/api/auth/callback/azure-ad"]
+  - seed: msgraph/signed-in-user
+    params: { userPrincipalName: jamie@cedar.example, mail: jamie@cedar.example, tenantId: bbbbbbbb-1111-4111-8111-111111111111 }

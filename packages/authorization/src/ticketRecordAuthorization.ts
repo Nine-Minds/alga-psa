@@ -2,7 +2,7 @@ import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import type { ITicket, IUserWithRoles } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
-import { hasPermission } from './rbac';
+import { hasPermission } from '@alga-psa/authorization/rbac';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
@@ -11,9 +11,10 @@ import {
   type AuthorizationRecord,
   type AuthorizationSubject,
   type RelationshipRule,
-} from '@alga-psa/authorization/kernel';
+} from './kernel';
+import type { AuthorizationKernel } from './kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
-import { extractActiveWatcherContactIds } from '@alga-psa/authorization/portal/visibility';
+import { extractActiveWatcherContactIds } from './portal/visibility';
 import type { ContactVisibilityContext } from './portal/visibility';
 import { getClientContactVisibilityContext } from './portal/visibility.server';
 
@@ -28,6 +29,9 @@ import { getClientContactVisibilityContext } from './portal/visibility.server';
  * and evaluates the same policy before reading or mutating it.
  *
  * Server-only: imports the authorization kernel and client-portal visibility.
+ *
+ * Lives in `@alga-psa/authorization` (not `@alga-psa/tickets`) so layers below tickets, such as inventory,
+ * can run the same record check; `@alga-psa/tickets/lib/ticketRecordAuthorization` re-exports it.
  */
 
 type Conn = Knex | Knex.Transaction;
@@ -167,6 +171,7 @@ export async function createTicketAuthorizationContext(
       relationshipRules,
     }),
     bundleProvider: new BundleAuthorizationKernelProvider({
+      // A policy lookup failure must not become an empty rule set that grants access.
       resolveRules: (input) => resolveBundleNarrowingRulesForEvaluation(trx as Knex.Transaction, input),
     }),
     rbacEvaluator: async () => true,
@@ -268,20 +273,106 @@ export async function authorizeTicketRecordAccess(input: {
   return ticket;
 }
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** The actor passed the coarse permission but not the per-record update decision. */
+export class TicketWatcherPermissionError extends Error {
+  constructor() {
+    super('Permission denied: Cannot update ticket watchers');
+    this.name = 'TicketWatcherPermissionError';
+  }
+}
+
+/** Missing ticket result for watcher authorization, kept independent of the shared service layer. */
+export class TicketWatcherTicketNotFoundError extends Error {
+  constructor() {
+    super('Ticket not found');
+    this.name = 'TicketWatcherTicketNotFoundError';
+  }
+}
+
+export type TicketWatcherWritePrincipal =
+  | { user: IUserWithRoles }
+  | { subject: AuthorizationSubject; kernel: AuthorizationKernel };
+
+/** Authorize ticket:update before a shared watcher write touches watcher rows. */
+export async function runAuthorizedTicketWatcherWrite<T>(input: {
+  trx: Knex.Transaction;
+  tenant: string;
+  ticketId: string;
+  principal: TicketWatcherWritePrincipal;
+  write: (trx: Knex.Transaction) => Promise<T>;
+}): Promise<T> {
+  const { trx, tenant, ticketId, principal } = input;
+  const ticket = UUID_PATTERN.test(ticketId)
+    ? ((await tenantScopedTable(trx, tenant, 'tickets')
+        .where({ ticket_id: ticketId })
+        .forUpdate()
+        .first()) as (Partial<ITicket> & { ticket_id: string }) | undefined)
+    : undefined;
+  if (!ticket) {
+    throw new TicketWatcherTicketNotFoundError();
+  }
+
+  let subject: AuthorizationSubject;
+  let kernel: AuthorizationKernel;
+  let selectedBoardIds: string[] | undefined;
+  if ('user' in principal) {
+    const context = await createTicketAuthorizationContext(trx, tenant, principal.user);
+    subject = context.authorizationSubject;
+    kernel = context.authorizationKernel;
+    selectedBoardIds = context.selectedBoardIds;
+  } else {
+    subject = { ...principal.subject, tenant };
+    kernel = principal.kernel;
+  }
+
+  const record = toTicketAuthorizationRecord(ticket);
+  const decision = await kernel.authorizeMutation({
+    subject,
+    resource: { type: 'ticket', action: 'update', id: ticketId },
+    record,
+    mutation: { kind: 'update_watchers', record },
+    selectedBoardIds,
+    requestCache: new RequestLocalAuthorizationCache(),
+    knex: trx,
+  });
+  if (!decision.allowed) {
+    throw new TicketWatcherPermissionError();
+  }
+
+  return input.write(trx);
+}
+
 /**
- * Same policy as {@link authorizeTicketRecordAccess}, but a client principal gets the
- * identical `Permission denied` error whether the ticket is missing or not visible, so
- * a ticket UUID cannot be probed. Internal users keep `Ticket not found` (mapped to 404).
+ * Same policy as {@link authorizeTicketRecordAccess}, but conceals whether a ticket exists so a
+ * ticket UUID cannot be probed.
+ *
+ * - `conceal: 'client'` (default): a client principal gets the identical `Permission denied`
+ *   error whether the ticket is missing or not visible (not-found -> denied). Internal users keep
+ *   the distinct `Ticket not found` / `Permission denied` errors.
+ * - `conceal: 'all'`: additionally, for non-client (internal) users a kernel denial is reported as
+ *   `Ticket not found` (denied -> not-found), so a missing ticket and a policy-hidden ticket are
+ *   indistinguishable (both map to 404). Only the exact kernel-denial message is remapped; every
+ *   other error passes through unchanged. Client principals behave as in `'client'`.
+ *
  * Kept separate so existing callers of authorizeTicketRecordAccess are unaffected.
  */
 export async function authorizeTicketRecordAccessConcealed(
-  input: Parameters<typeof authorizeTicketRecordAccess>[0],
+  input: Parameters<typeof authorizeTicketRecordAccess>[0] & { conceal?: 'client' | 'all' },
 ): Promise<TicketRecordRow> {
+  const { conceal = 'client', ...accessInput } = input;
   try {
-    return await authorizeTicketRecordAccess(input);
+    return await authorizeTicketRecordAccess(accessInput);
   } catch (error) {
-    if (isClientUserType(input.user.user_type) && error instanceof Error && error.message === 'Ticket not found') {
-      throw new Error('Permission denied: Cannot access ticket');
+    if (error instanceof Error) {
+      if (isClientUserType(input.user.user_type)) {
+        if (error.message === 'Ticket not found') {
+          throw new Error('Permission denied: Cannot access ticket');
+        }
+      } else if (conceal === 'all' && error.message === 'Permission denied: Cannot access ticket') {
+        throw new Error('Ticket not found');
+      }
     }
     throw error;
   }
