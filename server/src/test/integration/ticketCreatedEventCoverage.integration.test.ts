@@ -73,6 +73,14 @@ describe('TICKET_CREATED coverage across creation sites (integration)', () => {
     scoped = tenantDb(testDb, tenant);
     clientId = await createClient(testDb, tenant, 'Acme');
     actorId = await createUser(testDb, tenant, { email: 'actor@example.com' });
+    const roleId = uuidv4();
+    const permissionId = uuidv4();
+    await scoped.table('roles').insert({ tenant, role_id: roleId, role_name: 'Ticket importer', msp: true, client: false });
+    await scoped.table('permissions').insert({
+      tenant, permission_id: permissionId, resource: 'ticket', action: 'create', msp: true, client: false,
+    });
+    await scoped.table('role_permissions').insert({ tenant, role_id: roleId, permission_id: permissionId });
+    await scoped.table('user_roles').insert({ tenant, user_id: actorId, role_id: roleId });
     boardId = uuidv4();
     statusId = uuidv4();
     priorityId = uuidv4();
@@ -255,6 +263,28 @@ describe('TICKET_CREATED coverage across creation sites (integration)', () => {
   });
 
   describe('silent opt-outs are explicit', () => {
+    it('REST historical import without ticket:create permission writes nothing and emits no events', async () => {
+      const unprivilegedActorId = await createUser(testDb, tenant, { user_type: 'internal' });
+      const service = new TicketService();
+      vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: testDb, tenant });
+      const before = await scoped.table('tickets').count('* as count').first();
+
+      await expect(service.create({
+        ...baseInput('Unauthorized historical ticket'),
+        entered_by: unprivilegedActorId,
+        status_id: closedStatusId,
+        entered_at: '2025-03-14T09:30:00Z',
+        closed_at: '2025-03-20T16:00:00Z',
+      } as any, {
+        tenant,
+        userId: unprivilegedActorId,
+        user: { user_id: unprivilegedActorId, user_type: 'internal' },
+      } as any)).rejects.toMatchObject({ statusCode: 403 });
+
+      expect((await scoped.table('tickets').count('* as count').first())?.count).toBe(before?.count);
+      expect(busEvents).toHaveLength(0);
+    });
+
     it('REST historical import persists the final closed state without lifecycle events', async () => {
       const service = new TicketService();
       vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: testDb, tenant });
