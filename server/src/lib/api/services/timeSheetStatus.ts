@@ -11,7 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { tenantDb, withViaPrincipal, type ServiceContext } from '@alga-psa/db';
 import { assertHumanWorkOwner } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { hasApiContextPermission } from '../middleware/apiContextPermission';
-import { ConflictError, ForbiddenError, ValidationError } from '../middleware/apiMiddleware';
+import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 
 export type TimeSheetStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'CHANGES_REQUESTED';
 export type TransitionTarget = 'SUBMITTED' | 'APPROVED' | 'CHANGES_REQUESTED';
@@ -165,7 +165,10 @@ export async function transitionTimeSheet(
   payload: TransitionPayload = {},
 ): Promise<void> {
   const descriptor = findTransition(target);
-  await assertTransitionCapability(trx, sheet, descriptor, context);
-  resolveTransition(sheet, target);
-  await applyTransition(trx, sheet, descriptor, context, payload);
+  const lockedSheet = await tenantDb(trx, context.tenant).table('time_sheets')
+    .where({ id: sheet.id }).forUpdate().first('id', 'user_id', 'approval_status');
+  if (!lockedSheet) throw new NotFoundError('Time sheet not found');
+  await assertTransitionCapability(trx, lockedSheet, descriptor, context);
+  resolveTransition(lockedSheet, target);
+  await applyTransition(trx, lockedSheet, descriptor, context, payload);
 }
