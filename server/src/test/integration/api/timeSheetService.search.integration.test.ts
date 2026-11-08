@@ -148,6 +148,24 @@ describe('TimeSheetService.search (real Postgres)', () => {
     expect(await service.search(parse({ query: 'zebra', date_to: '2026-01-10' }), ctx)).toEqual([]);
   });
 
+  it('searches migrated note history without requiring a removed time_sheets.notes column', async () => {
+    const f = await seed();
+    await tenantTable(f.tenantId, 'time_sheet_notes').insert({
+      tenant: f.tenantId,
+      time_sheet_id: f.aliceDraft,
+      kind: 'legacy',
+      note: 'Quarterly inventory reconciliation',
+      detail: 'Migrated legacy note',
+      created_by: null,
+    });
+    const service = serviceFor(f.tenantId);
+    const ctx = { tenant: f.tenantId, userId: f.alice } as any;
+
+    const matches = await service.search(parse({ query: 'inventory', fields: 'note' }), ctx);
+    expect(matches.map((row) => row.id)).toEqual([f.aliceDraft]);
+    expect(matches[0]).not.toHaveProperty('notes');
+  });
+
   it('every real result row matches the documented response row schema (no drift)', async () => {
     const f = await seed();
     const ctx = { tenant: f.tenantId, userId: f.alice } as any;
