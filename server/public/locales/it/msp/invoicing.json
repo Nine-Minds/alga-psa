@@ -1558,15 +1558,15 @@
           "tooltip": "Raggruppa alla fine"
         },
         "between": {
-          "label": "Spazio tra gli elementi",
+          "label": "Spazio tra",
           "tooltip": "Distribuisci con spazio tra gli elementi"
         },
         "around": {
-          "label": "Spazio attorno agli elementi",
+          "label": "Spazio attorno",
           "tooltip": "Distribuisci con spazio attorno agli elementi"
         },
         "evenly": {
-          "label": "Spaziatura uniforme",
+          "label": "Spazio uniforme",
           "tooltip": "Distribuisci con spaziatura uniforme"
         }
       },
@@ -1683,9 +1683,9 @@
         "widthLower": "larghezza",
         "heightLower": "altezza"
       },
-      "flexItemHint": "In questa pila ({{direction}}), queste impostazioni controllano come l'elemento condivide la dimensione {{axis}} con gli altri elementi.",
-      "flexBehavior": "{{axis}}: comportamento",
-      "flexBehaviorAria": "{{axis}}: comportamento: {{preset}}",
+      "flexItemHint": "In questa pila ({{direction}}), queste impostazioni controllano come l'elemento condivide la {{axis}} con gli altri elementi.",
+      "flexBehavior": "Comportamento ({{axis}})",
+      "flexBehaviorAria": "Comportamento in {{axis}}: {{preset}}",
       "flexCustomNotice": "Questo elemento ha valori flex personalizzati. Scegli un preset per semplificarli oppure modifica i valori avanzati qui sotto.",
       "advancedFlexValues": "Valori flex avanzati",
       "flexGrow": "Occupa lo spazio aggiuntivo",
@@ -1717,8 +1717,8 @@
       "media": {
         "altText": "Testo alternativo",
         "aspectRatio": "Proporzioni",
-        "fitParentSection": "Adatta la sezione contenitore al contenuto multimediale",
-        "reflowsPrefix": "Ridisponi",
+        "fitParentSection": "Adatta sezione al contenuto multimediale",
+        "reflowsPrefix": "Ridispone",
         "reflowsSuffix": "per rimuovere lo spazio vuoto in eccesso.",
         "notInSection": "Questo blocco multimediale non si trova all'interno di una sezione."
       }
@@ -2340,7 +2340,7 @@
       "dropIncompatibleComponent": "La destinazione di rilascio non è compatibile con questo componente.",
       "dropIncompatible": "La destinazione di rilascio non è compatibile.",
       "dropIncompatiblePreset": "La destinazione di rilascio non è compatibile con questo preset.",
-      "dropOnCanvas": "Rilascia sull'area di lavoro per aggiungere questo componente.",
+      "dropOnCanvas": "Rilascia sulla tela per aggiungere questo componente.",
       "addComponentFailed": "Impossibile aggiungere questo componente nel contesto attuale.",
       "presetUnavailable": "La definizione del preset non è disponibile.",
       "presetPlacementUnresolved": "Impossibile determinare dove posizionare questo preset.",
