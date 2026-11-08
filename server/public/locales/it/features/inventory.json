@@ -598,6 +598,7 @@
       "warrantyLocationRequired": "Scegli dove si trova ora il dispositivo, così da poterlo ricevere.",
       "warrantyInvalidTransition": "Questo passaggio non è disponibile nello stato attuale dell'RMA. Aggiorna e riprova.",
       "warrantyReviewClose": "Approva o rifiuta la richiesta prima di chiuderla.",
+      "warrantyWrongTrack": "Questo passaggio vale solo per le richieste con sostituzione anticipata.",
       "duplicateReference": "Questo riferimento o numero RMA è già in uso.",
       "checkViolation": "Questo valore non è consentito per questo RMA.",
       "ticketNotFound": "Ticket non trovato.",
@@ -1324,6 +1325,7 @@
       "replacementReceived": "Sostituzione ricevuta",
       "replacementDeployed": "Sostituzione distribuita",
       "deadUnitOwed": "Unità guasta dovuta",
+      "deadUnitToVendor": "Unità guasta al fornitore",
       "deadUnitReturned": "Unità guasta resa",
       "replaced": "Sostituito",
       "credited": "Accreditato",
@@ -1373,6 +1375,11 @@
       "noEvents": "Nessuna cronologia al momento.",
       "confirmReceived": "Conferma che il dispositivo è in ufficio. La sua custodia deve essere in ufficio.",
       "confirmCredit": "Registra che il fornitore ha accreditato questo dispositivo. Il periodo di custodia viene chiuso come smaltito.",
+      "confirmShipDeadUnit": "Rispedisci l'unità guasta al fornitore. Il dispositivo in custodia viene registrato come presso il fornitore.",
+      "confirmVendorReceipt": "Conferma che il fornitore ha ricevuto l'unità guasta. Il caso viene chiuso come risolto e la custodia come restituita al fornitore.",
+      "deadUnitNotShipped": "Unità guasta non ancora spedita, scadenza {{date}}",
+      "deadUnitShippedLate": "Unità guasta spedita in ritardo, scadenza {{date}}",
+      "returnByHint": "La data entro cui il fornitore richiede la spedizione dell'unità guasta, calcolata dalla consegna di questa sostituzione. Lasciala invariata per mantenere la data dell'approvazione.",
       "actions": {
         "approveStandard": "Approva (standard)",
         "approveAdvance": "Approva (sostituzione anticipata)",
@@ -1384,6 +1391,8 @@
         "recordRepair": "Registra riparazione",
         "recordCredit": "Registra accredito del fornitore",
         "returnToClient": "Restituisci al cliente",
+        "shipDeadUnitToVendor": "Spedisci l'unità guasta al fornitore",
+        "confirmVendorReceipt": "Il fornitore ha ricevuto l'unità guasta",
         "close": "Chiudi RMA"
       },
       "events": {
@@ -1397,6 +1406,8 @@
         "repairReceived": "Riparazione ricevuta",
         "vendorCredited": "Accreditato dal fornitore",
         "returnedToClient": "Restituito al cliente",
+        "deadUnitShipped": "Unità guasta spedita al fornitore",
+        "vendorReceiptConfirmed": "Il fornitore ha ricevuto l'unità guasta",
         "closed": "Chiuso",
         "note": "Nota"
       },

@@ -17,6 +17,7 @@ import { IDS, NOW, EARLIER } from '../fixtures';
 const NINJA_CALLBACK = 'ee/server/src/app/api/integrations/ninjaone/callback/route.ts';
 const NINJA_ACTIONS = 'ee/server/src/lib/actions/integrations/ninjaoneActions.ts';
 const LEVEL_ACTIONS = 'ee/server/src/lib/actions/integrations/levelIoActions.ts';
+const UNIFI_ACTIONS = 'ee/server/src/lib/actions/integrations/uniFiActions.ts';
 const SYNC_ENGINE = 'ee/server/src/lib/integrations/ninjaone/sync/syncEngine.ts';
 const NINJA_CLIENT = 'ee/server/src/lib/integrations/ninjaone/ninjaOneClient.ts';
 const PROACTIVE = 'ee/server/src/lib/integrations/ninjaone/proactiveRefresh.ts';
@@ -91,6 +92,19 @@ export const integrationContracts = {
           buildIntegrationDisconnectedPayload({
             integrationId: IDS.integration,
             provider: 'level',
+            connectionId: IDS.integration,
+            disconnectedAt: NOW,
+            disconnectedByUserId: IDS.user,
+            reason: 'user_requested',
+          }),
+      },
+      {
+        site: `${UNIFI_ACTIONS}#disconnectUniFiIntegration`,
+        ctx: user,
+        build: () =>
+          buildIntegrationDisconnectedPayload({
+            integrationId: IDS.integration,
+            provider: 'unifi',
             connectionId: IDS.integration,
             disconnectedAt: NOW,
             disconnectedByUserId: IDS.user,

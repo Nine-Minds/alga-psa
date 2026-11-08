@@ -4,7 +4,7 @@ import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { aggregateReactions, validateEmoji } from '@alga-psa/types';
 import type { IReactionsBatchResult } from '@alga-psa/types';
-import { authorizeTicketRecordAccessConcealed } from '../../lib/ticketRecordAuthorization';
+import { resolveReactionTargets } from '../../lib/commentReactionAccess';
 import { publishTicketUpdate } from '../../lib/liveUpdates';
 
 function formatLiveUpdateDisplayName(user: any): string {
@@ -26,24 +26,11 @@ export const toggleCommentReaction = withAuth(async (
   const userId = user.user_id;
 
   return withTransaction(db, async (trx) => {
-    const comment = await tenantDb(trx, tenant).table('comments')
-      .where({ comment_id: commentId })
-      .first();
-
-    // Reacting writes to the ticket's thread: every principal (MSP or client) must be able to access that
-    // ticket for update, matching createComment/updateComment/deleteComment. Missing comment and
-    // inaccessible ticket look the same to the caller.
-    // LEVERAGE: pattern ticket-comment-record-authz — same guard as createComment / assertMayChangeComment.
-    if (!comment) throw new Error('Permission denied: Cannot access ticket');
-    if (comment.ticket_id) {
-      await authorizeTicketRecordAccessConcealed({
-        trx, tenant, user: user as any, ticketId: comment.ticket_id, action: 'update',
-      });
-    }
-
-    if (!comment) {
-      throw new Error('Comment not found');
-    }
+// The target resolver applies ticket record authorization and client-visible comment/thread
+    // rules in one batched path; missing, hidden and unauthorized comments share one denial.
+    const { authorized } = await resolveReactionTargets(trx, tenant, user as any, [commentId], 'update');
+    const target = authorized.get(commentId);
+    if (!target) throw new Error('Permission denied: Cannot access ticket');
 
     const existing = await tenantDb(trx, tenant).table('comment_reactions')
       .where({ comment_id: commentId, user_id: userId, emoji })
@@ -62,7 +49,7 @@ export const toggleCommentReaction = withAuth(async (
 
     await publishTicketUpdate({
       tenantId: tenant,
-      ticketId: comment.ticket_id,
+      ticketId: target.ticket_id,
       updatedFields: ['comment_reactions'],
       updatedBy: {
         userId,
@@ -89,8 +76,11 @@ export const getCommentsReactionsBatch = withAuth(async (
   const { knex: db } = await createTenantKnex();
   const currentUserId = user.user_id;
 
+  // Only reactions on comments the caller may read; hidden/missing IDs are silently omitted.
+  const { authorized } = await resolveReactionTargets(db, tenant, user as any, commentIds, 'read');
+  if (authorized.size === 0) return { reactions: {}, userNames: {} };
   const rows = await tenantDb(db, tenant).table('comment_reactions')
-    .whereIn('comment_id', commentIds)
+    .whereIn('comment_id', [...authorized.keys()])
     .select('comment_id', 'emoji', 'user_id')
     .orderBy('created_at', 'asc');
 

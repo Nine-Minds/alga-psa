@@ -2,7 +2,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { loadAuthorizationEvaluationSnapshot } from '@alga-psa/authorization/bundles/service';
-import { authorizeTicketRecordAccess, createTicketAuthorizationContext } from './ticketRecordAuthorization';
+import { authorizeTicketRecordAccess, authorizeTicketRecordAccessConcealed, createTicketAuthorizationContext } from './ticketRecordAuthorization';
 
 const getVisibilityMock = vi.fn();
 
@@ -16,8 +16,9 @@ vi.mock('@alga-psa/authorization/bundles/service', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@alga-psa/authorization/bundles/service')>()),
   resolveBundleNarrowingRulesForEvaluation: vi.fn(async () => []),
   authorizationEvaluationSnapshotQuery: vi.fn(() => ({ as: () => null })),
-  loadAuthorizationEvaluationSnapshot: vi.fn(async () => ({
-    roleIds: [], teamIds: [], managedUserIds: [], rules: [],
+  loadAuthorizationEvaluationSnapshot: vi.fn(async (trx: any, input: any) => ({
+    roleIds: [], teamIds: [], managedUserIds: [],
+    rules: await (await import('@alga-psa/authorization/bundles/service')).resolveBundleNarrowingRulesForEvaluation(trx, input),
   })),
 }));
 
@@ -105,5 +106,60 @@ describe('authorizeTicketRecordAccess (client principals)', () => {
 
   it('reports a missing ticket as not found', async () => {
     await expect(run(null)).rejects.toThrow('Ticket not found');
+  });
+});
+
+describe('authorizeTicketRecordAccessConcealed conceal option', () => {
+  const internal = { user_id: 'i1', user_type: 'internal', roles: [{ role_id: 'r' }] } as any;
+  const row = { ticket_id: 't1', client_id: 'c', board_id: 'b', assigned_to: null, entered_by: null, assigned_team_id: null };
+
+  const run = (user: any, ticket: any, extra: Record<string, unknown> = {}) =>
+    authorizeTicketRecordAccessConcealed({ trx: fakeTrx(ticket), tenant: 'tenant-1', user, ticketId: 't1', action: 'read', ...extra });
+
+  // Internal users are only denied by a bundle rule; simulate via the bundle service.
+  const denyAll = async () => {
+    const svc = await import('@alga-psa/authorization/bundles/service');
+    vi.mocked(loadAuthorizationEvaluationSnapshot).mockResolvedValue({
+      roleIds: [], teamIds: [], managedUserIds: [],
+      rules: [{ rule_id: 'rule-1', resource_type: 'ticket', action: 'read', template_key: 'selected_boards', constraint_key: null, config: { selectedBoardIds: ['other-board'] } }],
+    } as any);
+  };
+
+  beforeEach(async () => {
+    getVisibilityMock.mockReset();
+    // denyAll() overrides this; restore the file-level default ([]) so it cannot leak.
+    const svc = await import('@alga-psa/authorization/bundles/service');
+    (svc.resolveBundleNarrowingRulesForEvaluation as any).mockReset().mockResolvedValue([]);
+    vi.mocked(loadAuthorizationEvaluationSnapshot).mockImplementation(async () => ({
+      roleIds: [], teamIds: [], managedUserIds: [], rules: [],
+    } as any));
+  });
+
+  it('default and "client" keep the kernel denial message for internal users', async () => {
+    await denyAll();
+    await expect(run(internal, row)).rejects.toThrow('Permission denied: Cannot access ticket');
+    await expect(run(internal, row, { conceal: 'client' })).rejects.toThrow('Permission denied: Cannot access ticket');
+  });
+
+  it('"all" maps an internal kernel denial to Ticket not found', async () => {
+    await denyAll();
+    await expect(run(internal, row, { conceal: 'all' })).rejects.toThrow('Ticket not found');
+  });
+
+  it('"all" still reports a missing ticket as Ticket not found for internal users', async () => {
+    await expect(run(internal, null, { conceal: 'all' })).rejects.toThrow('Ticket not found');
+  });
+
+  it('"all" keeps client principals on Permission denied', async () => {
+    getVisibilityMock.mockResolvedValue(scope());
+    await expect(run(client, null, { conceal: 'all' })).rejects.toThrow('Permission denied: Cannot access ticket');
+    await expect(run(client, null)).rejects.toThrow('Permission denied: Cannot access ticket');
+  });
+
+  it('"all" passes unrelated errors through unchanged', async () => {
+    const trx = (() => { throw new Error('db exploded'); }) as any;
+    await expect(
+      authorizeTicketRecordAccessConcealed({ trx, tenant: 'tenant-1', user: internal, ticketId: 't1', action: 'read', conceal: 'all' }),
+    ).rejects.toThrow('db exploded');
   });
 });

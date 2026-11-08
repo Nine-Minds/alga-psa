@@ -52,6 +52,15 @@ async function start() {
       logger.error('Failed to install co-managed write admission:', error);
     }
 
+    // CM L5: this process runs processInboundEmailInApp, so it registers the delivery seam and the
+    // inbound reply writer. Best-effort like L0c: the service still boots without @alga-psa/co-managed,
+    // and a cm token is then retried (never dropped or written natively) by the in-app processor.
+    try {
+      await import('@alga-psa/co-managed/deliveryRegistration');
+    } catch (error) {
+      logger.error('Failed to register the co-managed delivery provider:', error);
+    }
+
     // Metrics: install the sink before anything can record. Only this process
     // gets a real registry; server/temporal-worker keep the shared no-op.
     const metrics = createInboundEmailMetrics({ durableMode: getInboundDurableMode() });

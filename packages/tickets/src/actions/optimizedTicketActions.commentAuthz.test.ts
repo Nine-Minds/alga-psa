@@ -3,6 +3,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { addTicketCommentInTransaction, addTicketCommentWithCache } from './optimizedTicketActions';
+import { bulkUpdateTicketStatus } from './ticketActions';
+import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 // Real authorization kernel + real ticketRecordAuthorization; only the DB and the
 // contact-visibility resolver are faked.
@@ -11,10 +13,13 @@ let currentUser: any;
 let ticketRow: Record<string, unknown> | null;
 let visibilityByContact: Record<string, any>;
 let inserts: Array<{ table: string; row: any }>;
+let updates: Array<{ table: string; patch: any }>;
 
 const hasPermissionMock = vi.fn();
 const createTenantKnexMock = vi.fn();
 const withTransactionMock = vi.fn();
+const registerAfterCommitMock = vi.fn();
+const resolveBundleRulesMock = vi.fn();
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
@@ -23,6 +28,7 @@ vi.mock('@alga-psa/auth', () => ({
     action(currentUser, { tenant: 'tenant-1' }, ...args),
   hasPermission: vi.fn(async () => true),
   getCurrentUser: vi.fn(async () => null),
+  localizeActionError: async (result: unknown) => result,
 }));
 vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: (...args: any[]) => hasPermissionMock(...args),
@@ -37,7 +43,17 @@ function makeBuilder(table: string) {
         return (resolve: any) => resolve([]);
       }
       if (prop === 'first') {
-        return async () => (table === 'tickets' ? ticketRow ?? undefined : undefined);
+        return async () => {
+          if (table === 'tickets') return ticketRow ?? undefined;
+          if (table === 'statuses') return { status_id: 'status-closed', is_closed: true };
+          return undefined;
+        };
+      }
+      if (prop === 'update') {
+        return (patch: any) => {
+          updates.push({ table, patch });
+          return builder;
+        };
       }
       if (prop === 'insert') {
         return (row: any) => {
@@ -62,7 +78,7 @@ function makeTrx() {
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnexMock(...args),
-  registerAfterCommit: vi.fn(),
+  registerAfterCommit: (...args: any[]) => registerAfterCommitMock(...args),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
   tenantDb: (conn: any) => ({
     table: (table: string) => conn(table),
@@ -106,13 +122,20 @@ vi.mock('../lib/clientPortalVisibility.server', () => ({
     return ctx;
   },
 }));
-vi.mock('@alga-psa/authorization/bundles/service', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@alga-psa/authorization/bundles/service')>()),
-  resolveBundleNarrowingRulesForEvaluation: vi.fn(async () => []),
+vi.mock('@alga-psa/authorization/bundles/service', () => ({
+  resolveBundleNarrowingRulesForEvaluation: (...args: any[]) => resolveBundleRulesMock(...args),
   authorizationEvaluationSnapshotQuery: vi.fn(() => ({ as: () => null })),
-  loadAuthorizationEvaluationSnapshot: vi.fn(async () => ({
-    roleIds: [], teamIds: [], managedUserIds: [], rules: [],
+  loadAuthorizationEvaluationSnapshot: vi.fn(async (_trx: any, input: any) => ({
+    roleIds: [], teamIds: [], managedUserIds: [], rules: (await resolveBundleRulesMock(input)).map((rule: any) => ({
+      rule_id: rule.id, resource_type: rule.resource, action: rule.action, template_key: rule.templateKey,
+      constraint_key: rule.constraintKey ?? null, config: { selectedBoardIds: rule.selectedBoardIds },
+    })),
   })),
+  bundleNarrowingRuleFromRow: (rule: any) => ({
+    id: rule.rule_id, resource: rule.resource_type, action: rule.action, templateKey: rule.template_key,
+    constraintKey: rule.constraint_key ?? null, constraints: rule.config?.constraints ?? [],
+    selectedBoardIds: rule.config?.selectedBoardIds ?? [],
+  }),
 }));
 
 const CONTENT = JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'hi' }] }]);
@@ -173,11 +196,15 @@ const writtenTables = () => inserts.map((i) => i.table);
 describe('addTicketCommentInTransaction record-level authorization', () => {
   beforeEach(() => {
     inserts = [];
+    updates = [];
+    registerAfterCommitMock.mockClear();
+    vi.mocked(persistCommentPublication).mockClear();
+    resolveBundleRulesMock.mockReset().mockResolvedValue([]);
     ticketRow = ticket();
     visibilityByContact = { 'contact-1': visibility() };
     currentUser = clientUser();
     hasPermissionMock.mockReset().mockResolvedValue(true);
-    createTenantKnexMock.mockReset().mockResolvedValue({ knex: {}, tenant: 'tenant-1' });
+    createTenantKnexMock.mockReset().mockResolvedValue({ knex: makeTrx(), tenant: 'tenant-1' });
     withTransactionMock.mockReset().mockImplementation(async (_knex: any, cb: any) => cb(makeTrx()));
   });
 
@@ -279,19 +306,31 @@ describe('addTicketCommentInTransaction record-level authorization', () => {
     expect(writtenTables()).toEqual([]);
   });
 
-  it('gates the bulk status path (ticketActions.ts) because it calls the same helper', async () => {
-    const { readFileSync } = await import('node:fs');
-    const { resolve } = await import('node:path');
-    const source = readFileSync(resolve(__dirname, 'ticketActions.ts'), 'utf8');
-    expect(source).toContain("addTicketCommentInTransaction(trx, user as IUserWithRoles, tenant, {");
-    // And the helper authorizes before its first write.
-    const helper = readFileSync(resolve(__dirname, 'optimizedTicketActions.ts'), 'utf8');
-    const start = helper.indexOf('export async function addTicketCommentInTransaction');
-    const body = helper.slice(start, helper.indexOf('export const addTicketCommentWithCache'));
-    const authz = body.indexOf('authorizeTicketRecordAccess(');
-    expect(authz).toBeGreaterThan(-1);
-    for (const write of ["table('comment_threads').insert", "table<IComment>('comments').insert", 'updateTicketResponseStateFromComment(']) {
-      expect(body.indexOf(write)).toBeGreaterThan(authz);
-    }
+  it('denies a bulk resolution outside the MSP user\'s board grant before any write or event', async () => {
+    currentUser = internalUser;
+    ticketRow = ticket({ response_state: 'awaiting_internal' });
+    resolveBundleRulesMock.mockResolvedValue([{
+      id: 'board-grant',
+      resource: 'ticket',
+      action: 'update',
+      templateKey: 'selected_boards',
+      selectedBoardIds: ['board-other'],
+    }]);
+
+    const result = await bulkUpdateTicketStatus(['ticket-1'], 'status-closed', {
+      resolutionComment: { text: 'Resolved.', isInternal: false },
+    });
+
+    expect(withTransactionMock).toHaveBeenCalledTimes(1);
+    expect(resolveBundleRulesMock).toHaveBeenCalled();
+    expect(result.updatedIds).toEqual([]);
+    expect(result.failed).toEqual([expect.objectContaining({
+      ticketId: 'ticket-1',
+      message: 'Permission denied: Cannot access ticket',
+    })]);
+    expect(inserts).toEqual([]);
+    expect(updates).toEqual([]);
+    expect(persistCommentPublication).not.toHaveBeenCalled();
+    expect(registerAfterCommitMock).not.toHaveBeenCalled();
   });
 });

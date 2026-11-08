@@ -772,7 +772,10 @@
       "deleteError": "Falha ao excluir usuário",
       "reportsTo": "Reporta a",
       "noManager": "Sem gestor",
-      "reportsToHelp": "Um gestor pode ver os tickets, dispositivos e projetos das pessoas que se reportam a ele, quando o grupo de visibilidade dele está limitado aos próprios registros."
+      "reportsToHelp": "Um gestor pode ver os tickets, dispositivos e projetos das pessoas que se reportam a ele, quando o grupo de visibilidade dele está limitado aos próprios registros.",
+      "locations": "Localizações",
+      "primaryLocation": "Principal",
+      "remote": "Remoto"
     },
     "messages": {
       "saveChanges": "Salvar alterações",

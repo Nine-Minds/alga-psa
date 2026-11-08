@@ -61,8 +61,10 @@ vi.mock('@alga-psa/auth', async (original) => ({
         ...args
       ),
 }));
+// The portal billing-read rule lives in billing (shared by the portal read paths and the
+// quote decision service); clientBillingPermissions only re-exports it.
 vi.mock(
-  '../../../../packages/client-portal/src/actions/client-portal-actions/clientBillingPermissions',
+  '../../../../packages/billing/src/lib/clientPortalAccess',
   async (original) => ({
     ...(await original<any>()),
     hasClientBillingReadPermission: async () => true,
@@ -190,6 +192,9 @@ describe('quote lifecycle operational paths', () => {
       last_name: 'Admin',
       hashed_password: 'x',
       user_type: 'internal',
+      // The portal paths authorise from users.contact_id (the decision service reads it
+      // from the row, not the session), so the session user carries its contact link.
+      contact_id: contactId,
     });
     sink = createServer(async (req, res) => {
       let body = '';

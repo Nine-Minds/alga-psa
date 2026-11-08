@@ -28,32 +28,32 @@ import {
   Repeat,
   Stethoscope,
 } from 'lucide-react';
-import type { EmailProvider } from './types';
+import type { PublicEmailProvider } from './types';
 import { INBOUND_DEFAULTS_WARNING, providerNeedsInboundDefaults } from './emailProviderDefaults';
 
 interface EmailProviderCardProps {
-  provider: EmailProvider;
+  provider: PublicEmailProvider;
   reconnecting?: boolean;
   defaultsOptions: { value: string; label: string }[];
   updatingProviderId: string | null;
   busy?: boolean;
   busyAction?: 'test' | 'resync' | 'pause' | 'resume' | null;
-  onEdit: (provider: EmailProvider) => void;
+  onEdit: (provider: PublicEmailProvider) => void;
   onDelete: (providerId: string) => void;
-  onTestConnection: (provider: EmailProvider) => void | Promise<void>;
-  onRefreshWatchSubscription: (provider: EmailProvider) => void;
-  onRetryRenewal: (provider: EmailProvider) => void;
-  onReconnectOAuth?: (provider: EmailProvider) => void;
-  onResyncProvider?: (provider: EmailProvider) => void | Promise<void>;
-  onRunDiagnostics: (provider: EmailProvider) => void;
-  onChangeDefaults: (provider: EmailProvider, defaultsId?: string) => void | Promise<void>;
-  onTogglePause: (provider: EmailProvider) => void | Promise<void>;
+  onTestConnection: (provider: PublicEmailProvider) => void | Promise<void>;
+  onRefreshWatchSubscription: (provider: PublicEmailProvider) => void;
+  onRetryRenewal: (provider: PublicEmailProvider) => void;
+  onReconnectOAuth?: (provider: PublicEmailProvider) => void;
+  onResyncProvider?: (provider: PublicEmailProvider) => void | Promise<void>;
+  onRunDiagnostics: (provider: PublicEmailProvider) => void;
+  onChangeDefaults: (provider: PublicEmailProvider, defaultsId?: string) => void | Promise<void>;
+  onTogglePause: (provider: PublicEmailProvider) => void | Promise<void>;
   /**
    * Provider-specific reconnect dispatch for providers auto-paused on
    * repeated auth failures. Threaded from EmailProviderConfiguration so the
    * card never owns OAuth logic.
    */
-  onReconnect: (provider: EmailProvider) => void;
+  onReconnect: (provider: PublicEmailProvider) => void;
 }
 
 const getProviderIcon = (providerType: string) => {
@@ -126,7 +126,7 @@ export function EmailProviderCard({
     };
   };
 
-  const getStatusIcon = (status: EmailProvider['status']) => {
+  const getStatusIcon = (status: PublicEmailProvider['status']) => {
     if (reconnecting) {
       return <Clock className="h-4 w-4 text-[rgb(var(--badge-warning-text))]" />;
     }
@@ -146,7 +146,7 @@ export function EmailProviderCard({
   };
 
   const getStatusBadge = (
-    status: EmailProvider['status'],
+    status: PublicEmailProvider['status'],
     isActive: boolean,
     isPaused: boolean
   ) => {

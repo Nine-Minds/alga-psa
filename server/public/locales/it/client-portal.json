@@ -726,7 +726,10 @@
       "reportsToCycle": "Questo creerebbe una catena di riporto circolare",
       "reportsTo": "Riporta a",
       "noManager": "Nessun responsabile",
-      "reportsToHelp": "Un responsabile può vedere i ticket, i dispositivi e i progetti delle persone che riportano a lui, quando il suo gruppo di visibilità è limitato ai propri dati."
+      "reportsToHelp": "Un responsabile può vedere i ticket, i dispositivi e i progetti delle persone che riportano a lui, quando il suo gruppo di visibilità è limitato ai propri dati.",
+      "locations": "Sedi",
+      "primaryLocation": "Principale",
+      "remote": "Remota"
     },
     "visibilityGroups": {
       "title": "Gruppi di visibilità",

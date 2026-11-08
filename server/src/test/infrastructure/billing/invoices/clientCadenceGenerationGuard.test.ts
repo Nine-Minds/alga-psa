@@ -3,6 +3,7 @@ import '../../../../../test-utils/nextApiMock';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import {
   generateInvoiceForSelectionInput,
+  generateInvoiceForSelectionInputs,
   previewInvoiceForSelectionInput,
 } from '@alga-psa/billing/actions/invoiceGeneration';
 import { getAvailableRecurringDueWork } from '@alga-psa/billing/actions/billingAndTax';
@@ -20,6 +21,7 @@ import {
   createTestService,
   ensureClientPlanBundlesTable,
   unwrapInvoiceResult,
+  generateInvoiceForCycle,
 } from '../../../../../test-utils/billingTestHelpers';
 
 process.env.DB_PORT = process.env.DB_PORT === '6432' ? '5432' : process.env.DB_PORT;
@@ -258,6 +260,81 @@ describe('Client-cadence generation guard follows the contract-scoped billed bou
     const invoice = unwrapInvoiceResult(await generateInvoiceForSelectionInput(selectorInput));
     expect(invoice).toMatchObject({ subtotal: 1700 });
   });
+
+  it('second contract starting mid-cycle in an already-billed cycle bills its own prorated draft through the cycle helper, with no duplicate error', async () => {
+    await seedCycles([['2026-03-01', '2026-04-01'], ['2026-04-01', '2026-05-01']]);
+    const marchCycle = await context.db('client_billing_cycles')
+      .where({ tenant: context.tenantId, client_id: context.clientId, period_start_date: '2026-03-01' })
+      .first();
+    const marchCycleId = marchCycle.billing_cycle_id as string;
+    const serviceId = await createTestService(context, {
+      service_name: 'Managed Service', billing_method: 'fixed', default_rate: 3100, tax_region: 'US-NY',
+    });
+
+    // 1-2. Contract A is billed for real, so the duplicate guard has an invoice linkage to trip on.
+    const a = await createFixedPlanAssignment(context, serviceId, {
+      planName: 'Contract A', billingTiming: 'advance', baseRateCents: 3100, startDate: '2026-01-01',
+      materializeServicePeriods: true,
+    });
+    const dueWork = await getAvailableRecurringDueWork({ page: 1, pageSize: 500 });
+    if ('permissionError' in dueWork) throw new Error(JSON.stringify(dueWork));
+    const aSelectorInputs = dueWork.invoiceCandidates
+      .filter((candidate) => candidate.windowStart === '2026-03-01' && candidate.windowEnd === '2026-04-01')
+      .flatMap((candidate) => candidate.members.map((member) => member.selectorInput));
+    expect(aSelectorInputs.length).toBeGreaterThan(0);
+
+    const invoiceA = unwrapInvoiceResult(await generateInvoiceForCycle(marchCycleId));
+    expect(invoiceA).toMatchObject({ subtotal: 3100 });
+
+    // 3. Contract B starts mid-cycle; its first period lands in the already-billed March window.
+    const b = await createFixedPlanAssignment(context, serviceId, {
+      planName: 'Contract B', billingTiming: 'advance', baseRateCents: 3100, startDate: '2026-03-15',
+      enableProration: true, billingCycleAlignment: 'prorated', materializeServicePeriods: true,
+    });
+    const bPeriod = (await activePeriods(b.contractLineId))[0];
+    expect(dateOnly(bPeriod.invoice_window_start)).toBe('2026-03-01');
+    expect(dateOnly(bPeriod.invoice_window_end)).toBe('2026-04-01');
+
+    // 4. The cycle helper bills only B's prorated period, with no duplicate error.
+    const invoiceB = unwrapInvoiceResult(await generateInvoiceForCycle(marchCycleId));
+    expect(invoiceB.invoice_id).not.toBe(invoiceA.invoice_id);
+    expect(invoiceB.subtotal).toBe(1700); // 3100 * 17/31
+    const storedB = await context.db('invoices')
+      .where({ tenant: context.tenantId, invoice_id: invoiceB.invoice_id }).first();
+    expect(storedB.billing_cycle_id).toBe(marchCycleId);
+    const invoiceIdForPeriod = async (period: any) => (await context.db('invoice_charge_details as icd')
+      .join('invoice_charges as ic', function join() {
+        this.on('ic.tenant', 'icd.tenant').andOn('ic.item_id', 'icd.item_id');
+      })
+      .where({ 'icd.tenant': context.tenantId, 'icd.item_detail_id': period.invoice_charge_detail_id })
+      .first('ic.invoice_id'))?.invoice_id;
+    // Invoice B's charges reference only B's contract line: B's period is linked to it.
+    const bBilled = (await activePeriods(b.contractLineId))[0];
+    expect(bBilled.lifecycle_state).toBe('billed');
+    expect(await invoiceIdForPeriod(bBilled)).toBe(invoiceB.invoice_id);
+    const chargeCount = await context.db('invoice_charges')
+      .where({ tenant: context.tenantId, invoice_id: invoiceB.invoice_id }).count<{ count: string }[]>('* as count');
+    expect(Number(chargeCount[0].count)).toBe(1);
+
+    // 5. Two invoices; A's March period still links to invoice A.
+    const invoices = await context.db('invoices')
+      .where({ tenant: context.tenantId, client_id: context.clientId });
+    expect(invoices).toHaveLength(2);
+    const aMarch = (await activePeriods(a.contractLineId))
+      .find((row: any) => dateOnly(row.service_period_start) === '2026-03-01');
+    expect(aMarch.lifecycle_state).toBe('billed');
+    expect(await invoiceIdForPeriod(aMarch)).toBe(invoiceA.invoice_id);
+
+    // 6. Control: the duplicate guard is intact. Re-submitting A's captured selectors is rejected.
+    const duplicate = await generateInvoiceForSelectionInputs(aSelectorInputs, {}, { billingCycleId: marchCycleId }) as any;
+    expect(duplicate.actionError).toMatch(/already exists/);
+
+    // 7. Nothing left: a third run reports NO_DUE_RECURRING_WORK and creates nothing.
+    const third = await generateInvoiceForCycle(marchCycleId) as any;
+    expect(third.code).toBe('NO_DUE_RECURRING_WORK');
+    expect(third.actionError).toContain(marchCycleId);
+    expect(await context.db('invoices').where({ tenant: context.tenantId, client_id: context.clientId })).toHaveLength(2);
+  }, 120000);
 
   it('arrears: an add-on line on a billed contract is expected one window later than its assignment start implies', async () => {
     await seedCycles([['2026-03-01', '2026-04-01'], ['2026-04-01', '2026-05-01'], ['2026-05-01', '2026-06-01']]);

@@ -778,7 +778,10 @@
       "deleteError": "Failed to delete user",
       "reportsTo": "Reports to",
       "noManager": "No manager",
-      "reportsToHelp": "A manager can see the tickets, devices and projects of the people who report to them, when their visibility group is limited to their own records."
+      "reportsToHelp": "A manager can see the tickets, devices and projects of the people who report to them, when their visibility group is limited to their own records.",
+      "locations": "Locations",
+      "primaryLocation": "Primary",
+      "remote": "Remote"
     },
     "messages": {
       "saveChanges": "Save Changes",

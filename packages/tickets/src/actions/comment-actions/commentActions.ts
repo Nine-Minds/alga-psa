@@ -131,7 +131,7 @@ async function assertCanCreateComment(
   // billing-profile narrowing for clients), the same gate every other comment mutation uses. A missing
   // and an invisible ticket produce the identical denial, and it runs before any lookup that could probe
   // records the caller cannot see (e.g. the parent thread below) and before any write.
-  await authorizeTicketRecordAccessConcealed({ trx, tenant, user, ticketId: comment.ticket_id, action: 'update' });
+  await authorizeTicketRecordAccessConcealed({ trx, tenant, user, ticketId: comment.ticket_id, action: 'update', conceal: 'all' });
 
   if (!isClientUserType(user?.user_type)) {
     return;
@@ -646,7 +646,7 @@ async function assertMayChangeComment(trx: Knex.Transaction, user: { user_id: st
   // (e.g. a row written before the write path was guarded) does not grant access.
   // LEVERAGE: pattern ticket-comment-record-authz — same guard as createComment / toggleCommentReaction.
   if (existing.ticket_id) {
-    await authorizeTicketRecordAccessConcealed({ trx, tenant, user: user as any, ticketId: existing.ticket_id, action: 'update' });
+    await authorizeTicketRecordAccessConcealed({ trx, tenant, user: user as any, ticketId: existing.ticket_id, action: 'update', conceal: 'all' });
   }
   if (existing.actor_reference_id) throw new Error('This comment belongs to a co-managed collaborator and cannot be changed here.');
   if (existing.user_id === user.user_id) return;

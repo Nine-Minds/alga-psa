@@ -31,6 +31,7 @@ import {
 } from '@alga-psa/integrations/lib/xero/xeroServiceMappingTarget';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { lockInvoiceForExternalSync } from '../../lib/invoiceExternalSyncLock';
+import { discountTaxDonorItemId } from '../../lib/billing/invoiceDiscountPools';
 import { AccountingMappingResolver, MappingResolution } from '../../services/accountingMappingResolver';
 import { CompanyAccountingSyncService } from '../../services/companySync/companySyncService';
 import { KnexCompanyMappingRepository } from '../../services/companySync/companyMappingRepository';
@@ -93,6 +94,12 @@ type DbCharge = {
   tax_amount?: number | null;
   tax_region?: string | null;
   is_discount?: boolean | null;
+  is_taxable?: boolean | null;
+  adjustment_source_kind?: string | null;
+  applies_to_item_id?: string | null;
+  applies_to_service_id?: string | null;
+  manual_line_metadata?: unknown;
+  is_manual?: boolean | null;
 };
 
 type DbClient = {
@@ -673,6 +680,29 @@ export class XeroAdapter implements AccountingExportAdapter {
         invoiceTotal += netAmountCents;
       }
 
+      // A discount row stores no tax identity. Without a TaxType Xero applies
+      // the discount account's default (usually none), so it would tax the
+      // pre-discount amount whenever Xero computes tax (delegation). Give the
+      // discount line the TaxType of the taxable charge it reduces; its own
+      // explicit TaxAmount (0) still governs when Alga is the tax authority.
+      const allChargeRows = [...chargesById.values()].filter((row: any) => row.invoice_id === invoiceId);
+      const xeroComputesTax = context.excludeTaxFromExport || context.taxDelegationMode === 'delegate';
+      lineItems.forEach((payload, index) => {
+        // When Xero computes the tax, the discount line's own (mapping-level)
+        // TaxType would exempt it, so the donor's type wins. When Alga sends
+        // explicit TaxAmounts, only a missing type is filled.
+        if (payload.taxType && !xeroComputesTax) return;
+        const charge = chargesById.get(chargeIds[index]);
+        if (!charge?.is_discount) return;
+        const donorId = discountTaxDonorItemId(charge as any, allChargeRows as any);
+        if (!donorId) return;
+        const donorIndex = lineItems.findIndex(
+          (_, j) => chargeLineage[j]?.parentChargeId === donorId || chargeIds[j] === donorId,
+        );
+        const donorTaxType = donorIndex >= 0 ? lineItems[donorIndex].taxType : undefined;
+        if (donorTaxType) payload.taxType = donorTaxType;
+      });
+
       if (lineItems.length === 0) {
         logger.warn('[XeroAdapter] skipping invoice with no exportable lines', {
           tenant: tenantId,
@@ -918,7 +948,11 @@ export class XeroAdapter implements AccountingExportAdapter {
         'tax_amount',
         'tax_region',
         'is_discount',
-        'adjustment_source_kind'
+        'is_taxable',
+        'adjustment_source_kind',
+        'applies_to_item_id',
+        'applies_to_service_id',
+        'manual_line_metadata'
       )
       .whereIn('item_id', chargeIds);
 

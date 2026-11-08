@@ -3,6 +3,7 @@
 import React from 'react';
 import {
   currencyFractionDigits,
+  displayCurrencySymbol,
   formatCurrencyFromMinorUnits,
 } from '@alga-psa/core';
 import { useOptionalI18n } from '../i18n/client';
@@ -73,15 +74,8 @@ export function useCurrencyFormat(): CurrencyFormat {
       },
       fractionDigits: (currencyOverride?: string) =>
         currencyFractionDigits(resolveCurrency(currencyOverride), locale),
-      symbol: (currencyOverride?: string) => {
-        const currency = resolveCurrency(currencyOverride);
-        try {
-          const parts = new Intl.NumberFormat(locale, { style: 'currency', currency }).formatToParts(0);
-          return parts.find((part) => part.type === 'currency')?.value ?? currency;
-        } catch {
-          return currency;
-        }
-      },
+      symbol: (currencyOverride?: string) =>
+        displayCurrencySymbol(resolveCurrency(currencyOverride), locale),
     };
   }, [currencyCode, locale]);
 }
