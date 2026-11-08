@@ -56,7 +56,7 @@ import { filterAuthorizedTicketIds } from './projectTaskActions';
 import { applyTicketLinkRestriction } from '../lib/taskTicketMapping';
 import { revalidatePath } from 'next/cache';
 import { createProjectReadAuthorizer } from '../lib/projectReadAuthorization';
-import { assertProjectFieldsWritable, authorizeAndProjectProjectRecords, authorizeProjectRecordsForDisplay } from '../lib/projectReadProjection';
+import { assertProjectFieldsWritable, authorizeAndProjectProjectRecords, authorizeProjectRecordsForDisplay, isProjectFieldRedacted, isWholeProjectRedacted, PROJECT_SEARCH_INDEX_FIELD_SOURCES, PROJECT_SEARCH_INDEX_TYPES } from '../lib/projectReadProjection';
 import { countActiveStockClaims } from '@alga-psa/inventory/lib/staging';
 
 type ProjectActionError = ActionMessageError | ActionPermissionError;
@@ -129,7 +129,7 @@ export type ProjectUpdateResult = IProject & {
 
 const PROJECT_LIST_SEARCH_TSQUERY_UNSAFE_RE = /[^\p{L}\p{N}\s]+/gu;
 const PROJECT_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN = /\b[A-Z]+-?\d+\b/i;
-const PROJECT_LIST_SEARCH_TYPES = ['project', 'project_phase', 'project_task', 'project_task_comment'] as const;
+const PROJECT_LIST_SEARCH_TYPES = PROJECT_SEARCH_INDEX_TYPES;
 
 const EXPECTED_PROJECT_ACTION_ERROR_PREFIXES = [
     'No projects available with valid phases',
@@ -566,7 +566,23 @@ export const searchProjectListIds = withAuth(async (
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     const scopedDb = tenantDb(trx, tenant);
+    const projectRows = await tenantScopedTable(trx, 'projects', tenant)
+      .select<IProject[]>('project_id', 'project_name', 'project_number', 'assigned_to', 'client_id');
+    const authorizeProjectRead = await createProjectReadAuthorizer(trx, tenant, user as IUserWithRoles);
+    const decisions = await Promise.all(projectRows.map((project) => authorizeProjectRead(project)));
+    const allowedProjects = projectRows.flatMap((project, index) => {
+      const decision = decisions[index];
+      return decision?.allowed && !isWholeProjectRedacted(decision.redactedFields ?? []) ? [{ project, decision }] : [];
+    });
+    const allowedProjectIds = allowedProjects.map(({ project }) => project.project_id).filter((id): id is string => Boolean(id));
+    if (allowedProjectIds.length === 0) return [];
+    const hiddenProjectNameIds = allowedProjects.flatMap(({ project, decision }) =>
+      isProjectFieldRedacted(decision.redactedFields, 'project_name') && project.project_id ? [project.project_id] : []);
+    const hiddenProjectNumberIds = allowedProjects.flatMap(({ project, decision }) =>
+      isProjectFieldRedacted(decision.redactedFields, 'project_number') && project.project_id ? [project.project_id] : []);
+
     const searchIndex = tenantScopedDerivedTableSql(scopedDb, 'app_search_index', 'si');
+    const projects = tenantScopedDerivedTableSql(scopedDb, 'projects', 'p');
     const projectTasks = tenantScopedDerivedTableSql(scopedDb, 'project_tasks', 'pt');
     const projectPhases = tenantScopedDerivedTableSql(scopedDb, 'project_phases', 'ph');
     const projectTaskCommentJoin = tenantJoinSubquerySql(
@@ -596,6 +612,24 @@ export const searchProjectListIds = withAuth(async (
         joinedTenantColumn: 'ph.tenant',
       }
     );
+    const projectIdExpression = `CASE
+      WHEN si.object_type = 'project' THEN si.object_id
+      WHEN si.object_type = 'project_task_comment' THEN ph.project_id::text
+      ELSE si.parent_id
+    END`;
+    const indexTextFields = [...new Set(PROJECT_LIST_SEARCH_TYPES.flatMap((type) =>
+      Object.keys(PROJECT_SEARCH_INDEX_FIELD_SOURCES[type]).filter((field) =>
+        PROJECT_SEARCH_INDEX_FIELD_SOURCES[type][field].includes('project_name'))))];
+    const effectiveTextColumns = indexTextFields.map((field) => ({
+      field,
+      sql: `CASE WHEN p.project_id = ANY(?::uuid[]) AND COALESCE(p.project_name, '') <> ''
+        THEN replace(lower(COALESCE(si.${field}, '')), lower(p.project_name), ' ')
+        ELSE si.${field} END`,
+      bindings: [hiddenProjectNameIds],
+    }));
+    const effectiveVector = `setweight(public.process_large_lexemes(COALESCE(effective_title, '')), 'A')
+      || setweight(public.process_large_lexemes(COALESCE(effective_subtitle, '')), 'B')
+      || setweight(public.process_large_lexemes(COALESCE(effective_body, '')), 'C')`;
     const result = await trx.raw<{ rows: Array<{ project_id: string }> }>(
       `
         WITH q AS (
@@ -605,37 +639,46 @@ export const searchProjectListIds = withAuth(async (
             ?::text AS raw,
             ?::text AS identifier
         ),
-        matched AS (
-          SELECT DISTINCT
-            CASE
-              WHEN si.object_type = 'project' THEN si.object_id
-              WHEN si.object_type IN ('project_phase', 'project_task') THEN si.parent_id
-              WHEN si.object_type = 'project_task_comment' THEN ph.project_id::text
-            END AS project_id
+        searchable AS (
+          SELECT
+            si.*,
+            p.project_id AS owning_project_id,
+            p.project_number AS project_number,
+            ${effectiveTextColumns.map(({ field, sql }) => `${sql} AS effective_${field}`).join(',\n            ')},
+            ${effectiveVector} AS effective_search_vector
           FROM ${searchIndex.sql}
-          CROSS JOIN q
           ${projectTaskCommentJoin.sql}
           ${projectPhaseJoin.sql}
-          WHERE si.object_type = ANY(?::text[])
+          JOIN ${projects.sql} ON p.tenant = si.tenant AND p.project_id::text = ${projectIdExpression}
+        ),
+        matched AS (
+          SELECT DISTINCT
+            si.owning_project_id::text AS project_id
+          FROM searchable si
+          CROSS JOIN q
+          WHERE si.owning_project_id = ANY(?::uuid[])
+            AND si.object_type = ANY(?::text[])
             AND (si.required_permission IS NULL OR si.required_permission = ANY(?::text[]))
             AND (cardinality(si.visible_to_user_ids) = 0 OR si.visible_to_user_ids && ARRAY[?]::uuid[])
             AND (si.is_internal_only = false OR ?::boolean = true)
             AND (si.is_private = false OR si.visible_to_user_ids && ARRAY[?]::uuid[])
             AND ${clientScopePredicate}
             AND (
-              si.search_vector @@ q.tsq
-              OR (q.prefix_tsq IS NOT NULL AND si.search_vector @@ q.prefix_tsq)
-              OR si.title ILIKE '%' || q.raw || '%'
-              OR coalesce(si.subtitle, '') ILIKE '%' || q.raw || '%'
-              OR si.title % q.raw
-              OR coalesce(si.subtitle, '') % q.raw
+              si.effective_search_vector @@ q.tsq
+              OR (q.prefix_tsq IS NOT NULL AND si.effective_search_vector @@ q.prefix_tsq)
+              OR si.effective_title ILIKE '%' || q.raw || '%'
+              OR coalesce(si.effective_subtitle, '') ILIKE '%' || q.raw || '%'
+              OR si.effective_title % q.raw
+              OR coalesce(si.effective_subtitle, '') % q.raw
               OR (
                 q.identifier IS NOT NULL
-                AND lower(coalesce(si.metadata->>'identifier', '')) = q.identifier
+                AND si.owning_project_id <> ALL(?::uuid[])
+                AND lower(coalesce(si.project_number, '')) = q.identifier
               )
               OR (
                 q.identifier IS NOT NULL
-                AND lower(coalesce(si.metadata->>'identifier', '')) LIKE q.identifier || '%'
+                AND si.owning_project_id <> ALL(?::uuid[])
+                AND lower(coalesce(si.project_number, '')) LIKE q.identifier || '%'
               )
             )
         )
@@ -649,30 +692,23 @@ export const searchProjectListIds = withAuth(async (
         prefixTsquery,
         rawSearch,
         identifier,
+        ...effectiveTextColumns.flatMap(({ bindings }) => bindings),
         ...searchIndex.bindings,
         ...projectTaskCommentJoin.bindings,
         ...projectPhaseJoin.bindings,
+        ...projects.bindings,
+        allowedProjectIds,
         [...PROJECT_LIST_SEARCH_TYPES],
         ['project:read'],
         user.user_id,
         isInternalUser,
         user.user_id,
         ...clientScopeBindings,
+        hiddenProjectNumberIds,
+        hiddenProjectNumberIds,
       ]
     );
-
-    const projectIds = result.rows.map((row) => row.project_id);
-    if (projectIds.length === 0) {
-      return [];
-    }
-
-    const matchedProjects = await tenantScopedTable(trx, 'projects', tenant)
-      .whereIn('project_id', projectIds)
-      .select<IProject[]>('project_id', 'assigned_to', 'client_id');
-    const authorizedProjects = await filterAuthorizedProjects(trx, tenant, user as IUserWithRoles, matchedProjects);
-    const authorizedProjectIds = new Set(authorizedProjects.map((project) => project.project_id).filter(Boolean));
-
-    return projectIds.filter((projectId) => authorizedProjectIds.has(projectId));
+    return result.rows.map((row) => row.project_id);
   });
 });
 

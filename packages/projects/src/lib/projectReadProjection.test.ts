@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import ProjectModel from '../models/project';
-import { assertProjectFieldsWritable, authorizeAndProjectProjectRecords, authorizeProjectRecordsForDisplay, projectRecord } from './projectReadProjection';
+import { assertProjectFieldsWritable, authorizeAndProjectProjectRecords, authorizeProjectRecordsForDisplay, projectRecord, projectSearchIndexText, PROJECT_SEARCH_INDEX_FIELD_SOURCES, PROJECT_SEARCH_INDEX_TYPES } from './projectReadProjection';
 
 const rows = [
   {
@@ -23,6 +23,23 @@ const rows = [
 ];
 
 describe('project read projection', () => {
+  it('removes hidden project-name copies from every searchable field source while retaining visible child text', () => {
+    const name = 'Project Nacre Lantern';
+    for (const type of PROJECT_SEARCH_INDEX_TYPES) {
+      const fields = Object.keys(PROJECT_SEARCH_INDEX_FIELD_SOURCES[type]).filter((field) =>
+        PROJECT_SEARCH_INDEX_FIELD_SOURCES[type][field].includes('project_name'));
+      expect(fields).toEqual(['title', 'subtitle', 'body']);
+      for (const field of fields) {
+        const source = field === 'title' ? `Visible task ${name}` : field === 'subtitle' ? name : `Comment repeats ${name}`;
+        const projected = projectSearchIndexText(source, name, true) ?? '';
+        expect(projected).not.toContain('nacre');
+        expect(projected).toContain(field === 'title' ? 'visible task' : field === 'body' ? 'comment repeats' : ' ');
+      }
+    }
+    expect(projectSearchIndexText(name, name, false)).toBe(name);
+    expect(projectSearchIndexText('PRJ-9162', name, true)).toBe('prj-9162');
+  });
+
   it('projects allowed-but-redacted list and detail records and removes derived values', async () => {
     const authorize = async (row: (typeof rows)[number]) => ({
       allowed: row.project_id === 'p1',

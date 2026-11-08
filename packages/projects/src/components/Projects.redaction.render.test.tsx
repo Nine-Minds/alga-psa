@@ -5,6 +5,8 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { IProject } from '@alga-psa/types';
 
+const searchState = vi.hoisted(() => ({ result: [] as string[] }));
+
 vi.mock('next/link', () => ({ default: ({ href, children, ...props }: any) => <a href={href} {...props}>{children}</a> }));
 vi.mock('@alga-psa/ui/components/DataTable', () => ({
   DataTable: ({ data, columns }: any) => {
@@ -41,7 +43,7 @@ vi.mock('@alga-psa/ui/lib/errorHandling', () => ({ handleError: vi.fn(), isActio
 vi.mock('@alga-psa/ui/keyboard-shortcuts', () => ({ ShortcutActiveRegion: ({ children }: any) => <>{children}</>, usePageCreateShortcut: vi.fn() }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useFormatters: () => ({ formatDate: () => 'date' }) }));
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (_key: string, options?: any) => options?.defaultValue ?? _key }) }));
-vi.mock('@alga-psa/projects/actions/projectActions', () => ({ deleteProject: vi.fn(), loadProjectListItemsByIds: vi.fn(), searchProjectListIds: vi.fn().mockResolvedValue([]) }));
+vi.mock('@alga-psa/projects/actions/projectActions', () => ({ deleteProject: vi.fn(), loadProjectListItemsByIds: vi.fn(), searchProjectListIds: vi.fn(async () => searchState.result) }));
 vi.mock('@alga-psa/user-composition/actions', () => ({ findUserById: vi.fn(), getAllUsersBasic: vi.fn().mockResolvedValue([]), getUserAvatarUrlsBatchAction: vi.fn() }));
 vi.mock('@alga-psa/tags/actions', () => ({ findTagsByEntityIds: vi.fn().mockResolvedValue([]), findAllTagsByType: vi.fn().mockResolvedValue([]), isTagActionError: () => false }));
 vi.mock('@alga-psa/tags/components', () => ({ TagManager: () => null }));
@@ -64,6 +66,7 @@ vi.mock('@alga-psa/list-views/components', () => ({ ListViewPicker: () => null }
 vi.mock('@enterprise/components/smartSearch/SmartSearchResults', () => ({ SmartSearchResults: () => null }));
 
 import Projects from './Projects';
+import { searchProjectListIds } from '../actions/projectActions';
 
 afterEach(cleanup);
 
@@ -85,5 +88,31 @@ describe('Projects consumer with redacted project records', () => {
     expect(links.map((link) => link.textContent)).toEqual(['Project name hidden', 'Visible project']);
     expect(links[0].getAttribute('href')).toBe('/msp/projects/p2');
     expect(document.body.textContent).not.toContain('Secret project name');
+  });
+
+  it('renders no row for a hidden-name search result and preserves visible project-number search', async () => {
+    vi.useFakeTimers();
+    const hiddenName = 'Project Nacre-9162 Lantern';
+    const project = { project_id: 'p-hidden', project_number: 'PRJ-9163', is_inactive: false } as IProject;
+
+    searchState.result = [];
+    const view = render(<Projects initialProjects={[project]} clients={[]} initialFilters={{ status: 'all', projectStatus: 'all', searchQuery: hiddenName }} />);
+    await vi.advanceTimersByTimeAsync(350);
+    expect(searchProjectListIds).toHaveBeenCalledWith(hiddenName);
+    expect(screen.queryByTestId('project-row')).toBeNull();
+
+    view.unmount();
+    const fragmentView = render(<Projects initialProjects={[project]} clients={[]} initialFilters={{ status: 'all', projectStatus: 'all', searchQuery: 'Nacre-9162' }} />);
+    await vi.advanceTimersByTimeAsync(350);
+    expect(searchProjectListIds).toHaveBeenLastCalledWith('Nacre-9162');
+    expect(screen.queryByTestId('project-row')).toBeNull();
+
+    searchState.result = ['p-hidden'];
+    fragmentView.unmount();
+    render(<Projects initialProjects={[project]} clients={[]} initialFilters={{ status: 'all', projectStatus: 'all', searchQuery: 'PRJ-9163' }} />);
+    await vi.advanceTimersByTimeAsync(350);
+    expect(screen.getByTestId('project-row')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Project name hidden' })).toBeTruthy();
+    vi.useRealTimers();
   });
 });
