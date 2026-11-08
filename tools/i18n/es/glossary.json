@@ -2432,7 +2432,8 @@
       "ticket",
       "tickets",
       "Firmware",
-      "Natural"
+      "Natural",
+      "Ticket {{number}}"
     ],
     "caseInsensitive": [
       "api",
