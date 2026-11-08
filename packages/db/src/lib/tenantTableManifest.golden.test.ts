@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import {
   TENANT_TABLE_MANIFEST,
   TenantManifestCycleError,
@@ -9,14 +11,58 @@ import {
 } from './tenantTableManifest';
 import type { TenantTableForeignKey } from './tenantTableForeignKeys';
 
-describe('shared tenant table manifest', () => {
-  it('preserves the declared deletion order with no restrictive FK violations', () => {
-    const order = tenantDeletionOrder();
-    const computed = computeTenantDeletionOrder(TENANT_TABLE_MANIFEST);
+const ACTIVITY = path.resolve(__dirname, '../../../../ee/temporal-workflows/src/activities/tenant-deletion-activities.ts');
+
+function parseActivityLiteral(): string[] {
+  const content = readFileSync(ACTIVITY, 'utf-8');
+  const match = content.match(/const\s+TENANT_TABLES_DELETION_ORDER\s*:\s*string\[\]\s*=\s*\[([\s\S]*?)\n\];/);
+  if (!match) throw new Error('TENANT_TABLES_DELETION_ORDER not found');
+  return [...match[1].replace(/\/\/.*$/gm, '').matchAll(/'([a-z_0-9]+)'/g)].map(m => m[1]);
+}
+
+describe('tenant table manifest golden order', () => {
+  it('shared manifest order matches shared entries in the activity literal', () => {
+    const literal = parseActivityLiteral();
+    const computed = computeTenantDeletionOrder();
+    const sharedTables = new Set(TENANT_TABLE_MANIFEST.map(entry => entry.table));
     expect(computed.violations).toEqual([]);
-    expect(computed.order).toEqual(order);
-    expect(order).toHaveLength(603);
-    expect(new Set(order).size).toBe(order.length);
+    expect(computed.order).toEqual(literal.filter(table => sharedTables.has(table)));
+    expect(computeTenantDeletionOrder(TENANT_TABLE_MANIFEST)).toEqual(computed);
+    expect(tenantDeletionOrder()).toEqual(computed.order);
+  });
+
+  it('has 609 unique ordered names', () => {
+    const order = tenantDeletionOrder();
+    expect(order).toHaveLength(609);
+    expect(new Set(order).size).toBe(609);
+  });
+
+  it('declares the eight breakCircularDependencies FKs as null-before-delete', () => {
+    const declared = TENANT_TABLE_MANIFEST.flatMap(e => (e.references ?? []).map(r => `${e.table}.${r.column}->${r.table}`)).sort();
+    expect(declared).toEqual([
+      'assets.stock_unit_id->stock_units',
+      'authorization_bundles.published_revision_id->authorization_bundle_revisions',
+      'clients.account_manager_id->users',
+      'contacts.client_id->clients',
+      'inbound_ticket_defaults.client_id->clients',
+      'opportunities.suggestion_id->opportunity_suggestions',
+      'statuses.board_id->boards',
+      'stock_units.allocated_staging_line_id->project_staging_lines',
+    ]);
+  });
+
+  it('keeps the eight declarations in step with the breakCircularDependencies source', () => {
+    const src = readFileSync(ACTIVITY, 'utf-8');
+    const start = src.indexOf('breakCircularDependencies');
+    expect(start).toBeGreaterThan(-1);
+    const body = src.slice(start);
+    for (const [table, column] of [
+      ['assets', 'stock_unit_id'], ['authorization_bundles', 'published_revision_id'], ['clients', 'account_manager_id'],
+      ['contacts', 'client_id'], ['inbound_ticket_defaults', 'client_id'], ['opportunities', 'suggestion_id'],
+      ['statuses', 'board_id'], ['stock_units', 'allocated_staging_line_id'],
+    ]) {
+      expect(body, `${table}.${column}`).toMatch(new RegExp(`${table}[\\s\\S]{0,400}${column}`));
+    }
   });
 });
 

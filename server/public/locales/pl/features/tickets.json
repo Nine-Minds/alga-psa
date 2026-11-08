@@ -256,6 +256,7 @@
     "tagModeAny": "Dowolny z",
     "tagModeNone": "Żaden z",
     "droppedFromLink": "Niektóre filtry w tym łączu są nieprawidłowe i zostały zignorowane.",
+    "clearFilters": "Wyczyść filtry",
     "location": "Lokalizacja",
     "requesterLocation": "Lokalizacja zgłaszającego",
     "selectStatus": "Wybierz status"
@@ -404,7 +405,9 @@
     "createTemplate": "Utwórz szablon ze zgłoszenia",
     "createWorkflowFromTicket": "Utwórz workflow ze zgłoszenia",
     "printWorkTag": "Drukuj etykietę roboczą",
-    "retry": "Ponów"
+    "retry": "Ponów",
+    "duplicateMultiple": "Duplikuj wielokrotnie…",
+    "duplicateOptions": "Więcej opcji duplikowania"
   },
   "messages": {
     "noTickets": "Brak zgłoszeń",
@@ -1826,7 +1829,9 @@
       "missingFieldNamed": "Brakuje wymaganego pola zgłoszenia: {{field}}.",
       "referenceMissing": "Jeden z wybranych rekordów zgłoszenia już nie istnieje. Odśwież stronę i spróbuj ponownie.",
       "conflict": "Ta zmiana zgłoszenia koliduje z istniejącym rekordem. Odśwież stronę i spróbuj ponownie.",
-      "valueNotAllowed": "Jedna z wartości zgłoszenia jest niedozwolona. Sprawdź formularz i spróbuj ponownie."
+      "valueNotAllowed": "Jedna z wartości zgłoszenia jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
+      "priorityItilBoardCustom": "Priorytet „{{priority}}” jest priorytetem ITIL, ale tablica „{{board}}” używa priorytetów niestandardowych.",
+      "priorityCustomBoardItil": "Priorytet „{{priority}}” jest priorytetem niestandardowym, ale tablica „{{board}}” używa priorytetów ITIL."
     },
     "board": {
       "invalidReference": "Wybrana tablica, status lub reguła jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
@@ -1853,7 +1858,9 @@
       "valueNotAllowed": "Jedna z wartości materiału jest niedozwolona. Sprawdź formularz i spróbuj ponownie."
     },
     "settings": {
-      "updateDenied": "Odmowa uprawnień: nie można aktualizować ustawień zgłoszeń"
+      "createDenied": "Odmowa uprawnień: nie można tworzyć tablic",
+      "updateDenied": "Odmowa uprawnień: nie można aktualizować ustawień zgłoszeń",
+      "deleteDenied": "Odmowa uprawnień: nie można usuwać tablic"
     },
     "list": {
       "filtersInvalid": "Filtry listy zgłoszeń nie są już prawidłowe. Odśwież stronę i spróbuj ponownie."
@@ -2836,15 +2843,17 @@
       "fromTicket": "Wstępnie wypełniono ze zgłoszenia #{{number}}. Nic nie zostanie zapisane, dopóki nie klikniesz Zapisz.",
       "inlineImages": "Opis zawiera obrazy należące do zgłoszenia źródłowego. Mogą przestać się wyświetlać po usunięciu tego zgłoszenia. Usuń je lub wgraj ponownie, jeśli szablon ma przetrwać zgłoszenie.",
       "viewOnly": "Możesz wyświetlić ten szablon, ale nie możesz go zmieniać.",
-      "referenceProblems": "Niektóre pola tego szablonu wskazują elementy, które już nie istnieją. Przy użyciu szablonu pozostaną puste. Popraw je i zapisz:",
+      "referenceProblems": "Niektóre pola tego szablonu są nieprawidłowe: odwołują się do elementów, które już nie istnieją, lub nie pasują do siebie (na przykład priorytet niezgodny z tablicą). Popraw je i zapisz:",
       "inactiveWarning": "Nieaktywny: ukryty w selektorze szablonów; nadal używany przez {{count}} harmonogramów.",
       "sharedWarning": "Zmiany dotyczą każdego cyklicznego harmonogramu używającego tego szablonu, od następnego utworzonego zgłoszenia.",
-      "boardChangeWarning": "Zmiana tablicy czyści priorytet i kategorię i może unieważnić status harmonogramów używających tego szablonu. Te harmonogramy kończą się błędem, dopóki ich nie edytujesz. Dotknięte harmonogramy: {{schedules}}."
+      "boardChangeWarning": "Zmiana tablicy czyści priorytet i kategorię i może unieważnić status harmonogramów używających tego szablonu. Te harmonogramy kończą się błędem, dopóki ich nie edytujesz. Dotknięte harmonogramy: {{schedules}}.",
+      "priorityTypeMismatchItil": "Priorytet ‘{{priority}}’ jest priorytetem ITIL, ale tablica ‘{{board}}’ używa priorytetów niestandardowych. Zapis zostanie odrzucony, dopóki nie zmienisz priorytetu lub tablicy.",
+      "priorityTypeMismatchCustom": "Priorytet ‘{{priority}}’ jest priorytetem niestandardowym, ale tablica ‘{{board}}’ używa priorytetów ITIL. Zapis zostanie odrzucony, dopóki nie zmienisz priorytetu lub tablicy."
     },
     "errors": {
       "notFound": "Nie znaleziono szablonu zgłoszenia",
       "duplicateName": "Szablon o nazwie {{name}} już istnieje",
-      "invalidReferences": "Szablon odwołuje się do tablicy, kategorii lub priorytetu, który jest niedostępny",
+      "invalidReferences": "{{problems}}",
       "notAvailable": "Szablony zgłoszeń są niedostępne",
       "subcategoryNeedsCategory": "Podkategoria wymaga kategorii",
       "inUseBySchedules": "Używany przez {{count}} cykliczny(ch) harmonogram(ów): {{schedules}}. Najpierw wskaż im inny szablon lub zarchiwizuj je."
@@ -3000,6 +3009,87 @@
       "notAvailable": "Ta gotowa odpowiedź nie jest dostępna dla tego zgłoszenia.",
       "notATeamMember": "Możesz zarządzać odpowiedziami zespołu tylko dla zespołów, do których należysz."
     }
+  },
+  "batchDuplicate": {
+    "title": "Duplikuj #{{number}} dla kontaktów",
+    "titleLoading": "Duplikuj dla kontaktów",
+    "loading": "Ładowanie…",
+    "loadFailed": "Nie udało się wczytać zgłoszenia do zduplikowania. Spróbuj ponownie.",
+    "createFailed": "Nie udało się utworzyć kopii. Spróbuj ponownie.",
+    "templateLabel": "Szablon tytułu",
+    "insertToken": "Wstaw:",
+    "nameHint": "Zastąp „{{name}}” tokenem {{token}}, aby spersonalizować każdą kopię.",
+    "replace": "Zastąp",
+    "contactsLabel": "Kontakty",
+    "contactsPlaceholder": "Wybierz kontakty…",
+    "addBlankRow": "Dodaj kopię bez kontaktu",
+    "count": "{{count}} z {{max}}",
+    "capReached": "Maksymalnie {{max}} kopii w jednej partii.",
+    "columns": {
+      "contact": "Kontakt",
+      "title": "Tytuł"
+    },
+    "resetRow": "Przywróć szablon",
+    "removeRow": "Usuń kopię",
+    "copyChecklist": "Kopiuj pozycje listy kontrolnej (niezaznaczone)",
+    "cancel": "Anuluj",
+    "review": "Przejrzyj",
+    "back": "Wstecz",
+    "create_one": "Utwórz {{count}} zgłoszenie",
+    "create_few": "Utwórz {{count}} zgłoszenia",
+    "create_many": "Utwórz {{count}} zgłoszeń",
+    "create_other": "Utwórz {{count}} zgłoszenia",
+    "creating_one": "Tworzenie {{count}} zgłoszenia…",
+    "creating_few": "Tworzenie {{count}} zgłoszeń…",
+    "creating_many": "Tworzenie {{count}} zgłoszeń…",
+    "creating_other": "Tworzenie {{count}} zgłoszenia…",
+    "done": "Gotowe",
+    "retryFailed_one": "Ponów nieudane ({{count}})",
+    "retryFailed_few": "Ponów nieudane ({{count}})",
+    "retryFailed_many": "Ponów nieudane ({{count}})",
+    "retryFailed_other": "Ponów nieudane ({{count}})",
+    "errors": {
+      "contactRequired": "Ten tytuł używa {{token}}, ale kopia nie ma kontaktu.",
+      "unknownToken": "Nieznany token: {{tokens}}",
+      "empty": "Tytuł nie może być pusty.",
+      "unresolvedToken": "Tytuł nadal zawiera token {{placeholder}}."
+    },
+    "summary": {
+      "client": "Klient",
+      "board": "Tablica",
+      "category": "Kategoria",
+      "priority": "Priorytet",
+      "assignee": "Przypisany",
+      "team": "Zespół",
+      "additionalAgents": "Dodatkowi agenci",
+      "tags": "Tagi",
+      "checklist": "Lista kontrolna",
+      "checklistCopy_one": "Kopiuj {{count}} pozycję (niezaznaczoną)",
+      "checklistCopy_few": "Kopiuj {{count}} pozycje (niezaznaczone)",
+      "checklistCopy_many": "Kopiuj {{count}} pozycji (niezaznaczonych)",
+      "checklistCopy_other": "Kopiuj {{count}} pozycji (niezaznaczonych)",
+      "checklistSkip": "Nie kopiowana",
+      "customFields": "Pola niestandardowe",
+      "status": "Status",
+      "statusBoardDefault": "Domyślny dla tablicy",
+      "none": "Brak",
+      "notCopied": "Komentarze, wpisy czasu, załączniki i termin wykonania nie są kopiowane.",
+      "unresolved": "Nazwa niedostępna"
+    },
+    "results": {
+      "created_one": "Utworzono {{count}} zgłoszenie",
+      "created_few": "Utworzono {{count}} zgłoszenia",
+      "created_many": "Utworzono {{count}} zgłoszeń",
+      "created_other": "Utworzono {{count}} zgłoszenia",
+      "failed_one": "Nie udało się utworzyć {{count}} kopii",
+      "failed_few": "Nie udało się utworzyć {{count}} kopii",
+      "failed_many": "Nie udało się utworzyć {{count}} kopii",
+      "failed_other": "Nie udało się utworzyć {{count}} kopii"
+    },
+    "discardTitle": "Odrzucić te kopie?",
+    "discardMessage": "Skonfigurowane kopie nie zostały jeszcze utworzone. Odrzucić je i zamknąć?",
+    "discardConfirm": "Odrzuć",
+    "discardKeep": "Kontynuuj edycję"
   },
   "sharedSla": {
     "title": "Poziom usług",

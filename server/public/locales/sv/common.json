@@ -56,12 +56,27 @@
     "manageLicense": "Hantera licens",
     "ariaLabel": "Licensstatus",
     "dismiss": "Stäng",
-    "licenseExpiresIn_few": "Licensen går ut om {{count}} dagar. Förnya den för att undvika avbrott i tjänsten.",
+
+    "subscriptionEnding": "Din Pro-prenumeration har avslutats. Pro upphör den {{date}}. Teckna prenumerationen igen för att behålla Pro.",
+    "subscriptionEndingNoDate": "Din Pro-prenumeration har avslutats. Teckna prenumerationen igen för att behålla Pro.",
+    "subscriptionLapsed": "Du använder nu den kostnadsfria utgåvan. Teckna prenumerationen igen för att återställa Pro.",
+    "resubscribe": "Teckna igen",
+    "termEnds": "Din Pro-åtkomst upphör den {{date}}. Förnya för att behålla Pro.",
+    "termEndsNoDate": "Din Pro-period håller på att ta slut. Förnya för att behålla Pro.",
+    "paymentFailed": "Betalningen misslyckades — vi försöker igen den {{date}}. Uppdatera din betalningsmetod för att behålla Pro.",
+    "paymentFailedNoRetry": "Betalningen misslyckades. Uppdatera din betalningsmetod för att behålla Pro.",
+    "paymentFailedEndsOn": "Pro upphör den {{date}} om betalningen fortsätter att misslyckas.",
+    "paymentFailedEnded": "Pro har upphört — betalningen misslyckades. Din appliance kör Essentials.",
+    "paymentFailedEndedEnding": "Din Pro-prenumeration har upphört — betalningen misslyckades. Pro förblir aktivt till {{date}}. Prenumerera igen för att behålla Pro.",
+    "paymentFailedEndedEndingNoDate": "Din Pro-prenumeration har upphört — betalningen misslyckades. Prenumerera igen för att behålla Pro.",
+    "updatePaymentMethod": "Uppdatera betalningsmetod",
+"licenseExpiresIn_few": "Licensen går ut om {{count}} dagar. Förnya den för att undvika avbrott i tjänsten.",
     "licenseExpiresIn_many": "Licensen går ut om {{count}} dagar. Förnya den för att undvika avbrott i tjänsten.",
     "trialDaysRemaining_few": "Provperioden för Pro är aktiv – {{count}} dagar kvar.",
     "trialDaysRemaining_many": "Provperioden för Pro är aktiv – {{count}} dagar kvar.",
     "trialExpiresIn_few": "Provperioden för Pro går ut om {{count}} dagar. Ange en licensnyckel för att behålla Pro-funktionerna.",
     "trialExpiresIn_many": "Provperioden för Pro går ut om {{count}} dagar. Ange en licensnyckel för att behålla Pro-funktionerna."
+
   },
   "nav": {
     "dashboard": "Översikt",

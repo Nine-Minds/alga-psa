@@ -598,6 +598,7 @@
       "warrantyLocationRequired": "Wählen Sie, wo sich das Gerät aktuell befindet, damit es zurückgenommen werden kann.",
       "warrantyInvalidTransition": "Dieser Schritt ist im aktuellen Status der RMA nicht verfügbar. Aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "warrantyReviewClose": "Genehmigen oder lehnen Sie den Anspruch ab, bevor Sie ihn schließen.",
+      "warrantyWrongTrack": "Dieser Schritt gilt nur für Vorabaustausch-Ansprüche.",
       "duplicateReference": "Diese RMA-Referenz oder -Nummer wird bereits verwendet.",
       "checkViolation": "Dieser Wert ist für diese RMA nicht zulässig.",
       "ticketNotFound": "Ticket nicht gefunden.",
@@ -1324,6 +1325,7 @@
       "replacementReceived": "Ersatz erhalten",
       "replacementDeployed": "Ersatz bereitgestellt",
       "deadUnitOwed": "Defektgerät ausstehend",
+      "deadUnitToVendor": "Defekte Einheit an Hersteller",
       "deadUnitReturned": "Defektgerät zurückgegeben",
       "replaced": "Ersetzt",
       "credited": "Gutgeschrieben",
@@ -1373,6 +1375,11 @@
       "noEvents": "Noch kein Verlauf vorhanden.",
       "confirmReceived": "Bestätigen Sie, dass sich das Gerät im Büro befindet. Es muss sich im Büro in Obhut befinden.",
       "confirmCredit": "Erfassen Sie, dass der Lieferant dieses Gerät gutgeschrieben hat. Die Obhutsphase wird als entsorgt abgeschlossen.",
+      "confirmShipDeadUnit": "Senden Sie die defekte Einheit an den Hersteller zurück. Das Gerät in der Obhut wird als beim Hersteller erfasst.",
+      "confirmVendorReceipt": "Bestätigen Sie, dass der Hersteller die defekte Einheit erhalten hat. Der Fall wird als gelöst und die Obhut als an den Hersteller zurückgegeben geschlossen.",
+      "deadUnitNotShipped": "Defekte Einheit noch nicht versandt, fällig am {{date}}",
+      "deadUnitShippedLate": "Defekte Einheit verspätet versandt, fällig am {{date}}",
+      "returnByHint": "Das Datum, bis zu dem der Hersteller die defekte Einheit versandt haben muss, ab Lieferung dieses Ersatzes gerechnet. Unverändert lassen, um das Datum aus der Genehmigung zu behalten.",
       "actions": {
         "approveStandard": "Genehmigen (Standard)",
         "approveAdvance": "Genehmigen (Vorabaustausch)",
@@ -1384,6 +1391,8 @@
         "recordRepair": "Reparatur erfassen",
         "recordCredit": "Lieferantengutschrift erfassen",
         "returnToClient": "An Kunden zurückgeben",
+        "shipDeadUnitToVendor": "Defekte Einheit an Hersteller senden",
+        "confirmVendorReceipt": "Hersteller hat defekte Einheit erhalten",
         "close": "RMA schließen"
       },
       "events": {
@@ -1397,6 +1406,8 @@
         "repairReceived": "Reparatur erhalten",
         "vendorCredited": "Vom Lieferanten gutgeschrieben",
         "returnedToClient": "An Kunden zurückgegeben",
+        "deadUnitShipped": "Defekte Einheit an Hersteller gesendet",
+        "vendorReceiptConfirmed": "Hersteller hat defekte Einheit erhalten",
         "closed": "Geschlossen",
         "note": "Notiz"
       },

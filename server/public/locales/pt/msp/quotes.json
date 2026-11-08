@@ -499,6 +499,13 @@
     },
     "availability": {
       "onHand": "Em estoque: {{count}}"
+    },
+    "activity": {
+      "viewedViaEmailLink": {
+        "description": "Proposta visualizada por link de e-mail",
+        "descriptionWithRecipient": "Proposta visualizada por {{email}} por link de e-mail",
+        "type": "Visualizada por link de e-mail"
+      }
     }
   },
   "quoteLineItems": {
@@ -722,6 +729,12 @@
       "draftDescription": "Você é o único usuário que pode aprovar cotações. Depois de enviar esta cotação para aprovação, você poderá aprová-la você mesmo e depois enviá-la.",
       "pendingDescription": "Você é o único usuário que pode aprovar cotações, então pode aprovar esta cotação você mesmo. Escolha Aprovar para deixá-la pronta para envio.",
       "dialogNote": "Você é o único aprovador, então aprovar a sua própria cotação é permitido. A aprovação é registrada como autoaprovação."
+    },
+    "emailLinkReview": {
+      "label": "Permitir que os clientes revisem e aprovem cotações pelo link do e-mail sem iniciar sessão",
+      "lifetimeLabel": "Duração do link (horas)",
+      "lifetimePlaceholder": "Padrão: até a cotação expirar",
+      "lifetimeHelp": "Entre 24 e 2160 horas. Deixe vazio para usar a data de validade da cotação (30 dias se não houver)."
     }
   },
   "quoteTemplates": {
@@ -891,6 +904,21 @@
       "missingFieldNamed": "Falta um campo obrigatório da cotação: {{field}}.",
       "templateCannotBeAccepted": "Modelos de cotação não podem ser marcados como aceitos",
       "onlySentCanBeAccepted": "Somente cotações enviadas podem ser marcadas como aceitas"
+    },
+    "emailLinkReview": {
+      "invalidLifetime": "A duração do link deve ser um número inteiro de horas entre 24 e 2160"
     }
+  },
+  "quoteDecision": {
+    "accepted": {
+      "emailLink": "Aceito por {{signer}} por link de e-mail, {{date}}",
+      "portal": "Aceito por {{signer}} pelo portal do cliente, {{date}}",
+      "mspMarked": "Marcado como aceito pelo MSP em nome do cliente, {{date}}"
+    },
+    "rejected": {
+      "emailLink": "Rejeitado por {{signer}} por link de e-mail, {{date}}",
+      "portal": "Rejeitado por {{signer}} pelo portal do cliente, {{date}}"
+    },
+    "title": "({{title}})"
   }
 }

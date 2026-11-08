@@ -27,3 +27,4 @@ export * from './lib/tenant-license-state';
 export * from './lib/hosted-psa-upgrade';
 export * from './lib/ai-gateway-auth';
 export { LICENSE_PUBLIC_KEYS } from './lib/license-keys';
+export * from './lib/license-check-in';

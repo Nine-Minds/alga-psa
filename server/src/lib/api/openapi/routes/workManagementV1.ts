@@ -24,6 +24,11 @@ import {
   stopwatchSessionResponseSchema,
   updateStopwatchSchema,
 } from '../../schemas/stopwatch';
+import {
+  createTimePeriodSettingsSchema,
+  timePeriodSettingsResponseSchema,
+  updateTimePeriodSettingsSchema,
+} from '../../schemas/timeSheet';
 
 export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   const tag = 'Work Management v1';
@@ -207,6 +212,15 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
         actor: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).nullable().optional(),
         external_status: zOpenApi.string().nullable().optional(),
       })).optional().describe('Ticket-level external references written in the same transaction as the ticket. A conflicting link rolls back the create.'),
+      entered_at: zOpenApi.string().datetime({ offset: true }).optional().describe(
+        'Historical import. ISO 8601 datetime with an offset, not in the future. Supplying it stores the ticket with this open date and marks it a historical record: created silently with source=api_import, no SLA clock, no TICKET_CREATED, and no notifications, webhooks or workflows. Requires an internal MSP user with ticket:create permission.',
+      ),
+      closed_at: zOpenApi.string().datetime({ offset: true }).optional().describe(
+        'Historical import only (requires entered_at). Required for a closed status, rejected for an open status, and must satisfy entered_at <= closed_at <= now. The ticket is stored closed without firing TICKET_CLOSED.',
+      ),
+      closed_by: zOpenApi.string().guid().optional().describe(
+        'Historical import only (requires closed_at). User recorded as the closer; defaults to the API user.',
+      ),
       asset_ids: zOpenApi.array(zOpenApi.string().uuid()).max(50).optional().describe(
         'Assets the ticket is raised against, linked in the same transaction as the ticket; an unknown asset rejects the whole create. The first asset also makes the ticket inherit that asset\'s billing profile when billing_profile_id is omitted, as POST /tickets/from-asset and the web create do.',
       ),
@@ -218,6 +232,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'WorkV1TicketUpdateBody',
     zOpenApi.object({
       title: zOpenApi.string().min(1).max(255).optional(),
+      entered_at: zOpenApi.string().datetime({ offset: true }).optional().describe(
+        'Correct the ticket open date. Requires an internal MSP user with ticket:update permission. Must not be in the future or after the ticket closure or earliest comment. A date-only correction does not publish TICKET_UPDATED or start SLA timers.',
+      ),
       url: zOpenApi.string().url().optional(),
       board_id: zOpenApi.string().guid().optional(),
       client_id: zOpenApi.string().guid().optional(),
@@ -243,8 +260,8 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'WorkV1TicketStatusUpdateBody',
     zOpenApi.object({
       status_id: zOpenApi.string().guid(),
-      closed_at: zOpenApi.string().datetime().optional(),
-      closed_by: zOpenApi.string().guid().optional(),
+      closed_at: zOpenApi.string().datetime().optional().describe('Honored when this update closes the ticket (open to closed): stored as the close time instead of now. Must not be in the future or before entered_at. TICKET_CLOSED still fires; use suppression flags to silence notifications. Use historical create fields to import an already-closed ticket silently.'),
+      closed_by: zOpenApi.string().guid().optional().describe('Honored with closed_at when this update closes the ticket; defaults to the API user.'),
       override_close_rules: zOpenApi.boolean().optional(),
       override_close_rules_reason: zOpenApi.string().nullable().optional(),
       propagateToChildren: zOpenApi.boolean().optional().describe(
@@ -275,6 +292,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       scheduled_publish_tz: zOpenApi.string().max(64).optional().describe('IANA time zone the author scheduled in, e.g. America/New_York.'),
       cc: zOpenApi.array(zOpenApi.string().email()).max(20).optional().describe('One-off Cc recipients for this comment\'s email only. They are never added to the ticket watch list and receive no later comments. Not allowed with is_internal. Max 20 cc + bcc combined.'),
       bcc: zOpenApi.array(zOpenApi.string().email()).max(20).optional().describe('One-off Bcc recipients for this comment\'s email only. Never returned to client-portal callers. Not allowed with is_internal. Max 20 cc + bcc combined.'),
+      created_at: zOpenApi.string().datetime({ offset: true }).optional().describe(
+        'Historical import. Requires an internal MSP user with ticket:update permission. ISO 8601 datetime with an offset (date-only is rejected), not in the future and not before the ticket\'s entered_at (a reply: not before its parent comment). The comment is stored with this timestamp and is silent: no TICKET_COMMENT_ADDED, no notifications, webhooks, workflows, SLA first response or response-state change. Cannot be combined with scheduled_publish_at, scheduled_publish_tz, cc or bcc.',
+      ),
       ...ticketNotificationSuppressionProperties,
     }).describe('Comment to add. Silent flags suppress the comment notification while preserving the comment and audit history. Set scheduled_publish_at + scheduled_publish_tz to schedule a client-visible comment: it is stored with publish_state=scheduled, hidden from client-portal callers, and published by a background job. cc/bcc add one-off recipients to this comment\'s email without touching the watch list.'),
   );
@@ -468,8 +488,8 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'get', path: '/api/v1/time-sheets', summary: 'List time sheets', description: 'Lists time sheets via ApiTimeSheetController.list().', family: 'time_sheet' },
     { method: 'post', path: '/api/v1/time-sheets', summary: 'Create time sheet', description: 'Creates a time sheet. A time sheet is unique per tenant, effective owner (`user_id`, defaulting to the caller) and `period_id`, in every approval status. The first request returns 201 with a DRAFT sheet; a request for a user and period that already has a sheet returns 409 CONFLICT ("A time sheet already exists for this user and period") and changes nothing. To recover, GET /api/v1/time-sheets filtered by `user_id` and `period_id`.', family: 'time_sheet' },
     { method: 'post', path: '/api/v1/time-sheets/bulk', summary: 'Bulk time sheet operation', description: 'Current route delegates to ApiTimeSheetController.list() (read path) instead of bulk approval/update logic.', family: 'time_sheet' },
-    { method: 'get', path: '/api/v1/time-sheets/export', summary: 'Export time sheets', description: 'Exports time sheets using ApiTimeSheetController.export().', family: 'time_sheet' },
-    { method: 'get', path: '/api/v1/time-sheets/search', summary: 'Search time sheets', description: 'Searches time sheets via ApiTimeSheetController.search(). `query` is required and is matched as a case-insensitive substring against the sheet owner\'s full name (first name + space + last name). `user_name` is the only searchable field and the default. Optional filters narrow by approval status, user, period and period date range. Array params (`fields`, `approval_statuses`, `user_ids`, `period_ids`) accept repeated params or comma-separated values. `include_entries=true` adds each sheet\'s `time_entries`. Returns at most `limit` sheets (default 25, max 100).', family: 'time_sheet' },
+    { method: 'get', path: '/api/v1/time-sheets/export', summary: 'Export time sheets', description: 'Exports every time sheet matching the filters (not one page) using ApiTimeSheetController.export(). Array filters approval_statuses, user_ids, period_ids and fields accept repeated keys or comma-separated values.', family: 'time_sheet' },
+    { method: 'get', path: '/api/v1/time-sheets/search', summary: 'Search time sheets', description: 'Searches time sheets via ApiTimeSheetController.search(). `query` is required and is matched against the owner name and time_sheet_notes text. Array filters accept repeated keys or comma-separated values.', family: 'time_sheet' },
     { method: 'delete', path: '/api/v1/time-sheets/{id}', summary: 'Delete time sheet', description: 'Deletes time sheet UUID via ApiBase delete path.', family: 'time_sheet' },
     { method: 'get', path: '/api/v1/time-sheets/{id}', summary: 'Get time sheet', description: 'Gets time sheet UUID with details via getWithDetails().', family: 'time_sheet' },
     { method: 'put', path: '/api/v1/time-sheets/{id}', summary: 'Update time sheet', description: 'Updates time sheet UUID.', family: 'time_sheet' },
@@ -1692,5 +1712,124 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     request: { params: IdParam, body: { schema: TicketMaterialBody } },
     responses: ticketStdResponses({ code: 201, description: 'Material added.' }),
     extensions: ticketExt('update'), edition: 'both',
+  });
+
+  // ==========================================================================
+  // Time period settings - /api/v1/time-period-settings
+  // ==========================================================================
+  const TimePeriodSettingsSchema = registry.registerSchema('WorkV1TimePeriodSettings', timePeriodSettingsResponseSchema);
+  const TimePeriodSettingsResponse = registry.registerSchema(
+    'WorkV1TimePeriodSettingsResponse',
+    zOpenApi.object({ data: TimePeriodSettingsSchema }),
+  );
+  const TimePeriodSettingsListResponse = registry.registerSchema(
+    'WorkV1TimePeriodSettingsListResponse',
+    zOpenApi.object({ data: zOpenApi.array(TimePeriodSettingsSchema) }),
+  );
+  const TimePeriodSettingsCreateBody = registry.registerSchema('WorkV1TimePeriodSettingsCreateBody', createTimePeriodSettingsSchema);
+  const TimePeriodSettingsUpdateBody = registry.registerSchema('WorkV1TimePeriodSettingsUpdateBody', updateTimePeriodSettingsSchema);
+
+  const timePeriodSettingsExtensions = (action: 'read' | 'manage') => ({
+    'x-tenant-scoped': true,
+    'x-auth-mechanism': 'x-api-key validated in ApiTimeSheetController',
+    'x-tenant-header': 'x-tenant-id (optional; inferred from API key when omitted)',
+    'x-rbac-resource': 'time_period',
+    'x-rbac-action': action,
+  });
+  const timePeriodSettingsCommonErrors = {
+    401: { description: 'API key missing/invalid or associated user missing.', schema: ApiError },
+    403: { description: 'Permission denied (time_period:manage for writes, time_period:read for reads).', schema: ApiError },
+    500: { description: 'Unexpected failure.', schema: ApiError },
+  };
+  const timePeriodSettingsNotFound = { description: 'Time period settings not found.', schema: ApiError };
+  const timePeriodSettingsOverlap = {
+    description: 'The setting overlaps an active setting (same or conflicting period cells over intersecting effective dates). Nothing is written; explicit dates are never adjusted.',
+    schema: ApiError,
+  };
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/time-period-settings',
+    summary: 'List time period settings',
+    description: 'Returns every time period setting for the tenant, active or not, newest effective_from first. Settings drive time period generation.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    responses: {
+      200: { description: 'Time period settings.', schema: TimePeriodSettingsListResponse },
+      ...timePeriodSettingsCommonErrors,
+    },
+    extensions: timePeriodSettingsExtensions('read'),
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/time-period-settings',
+    summary: 'Create time period settings',
+    description: 'Creates an active time period setting. When effective_from is omitted it defaults to the start of the period containing today in the caller\'s timezone; if an earlier setting ended on or after that day, the new setting starts the day after it ended (the default may then be in the future). An explicit effective_from is used as given. Returns 409 when the setting overlaps an active setting.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { body: { schema: TimePeriodSettingsCreateBody } },
+    responses: {
+      201: { description: 'Setting created.', schema: TimePeriodSettingsResponse },
+      400: { description: 'Validation failure (field ranges, effective_to before effective_from).', schema: ApiError },
+      409: timePeriodSettingsOverlap,
+      ...timePeriodSettingsCommonErrors,
+    },
+    extensions: timePeriodSettingsExtensions('manage'),
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/time-period-settings/{id}',
+    summary: 'Get time period settings',
+    description: 'Gets one time period setting by time_period_settings_id.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam },
+    responses: {
+      200: { description: 'Time period setting.', schema: TimePeriodSettingsResponse },
+      404: timePeriodSettingsNotFound,
+      ...timePeriodSettingsCommonErrors,
+    },
+    extensions: timePeriodSettingsExtensions('read'),
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'put',
+    path: '/api/v1/time-period-settings/{id}',
+    summary: 'Update time period settings',
+    description: 'Applies a partial update. The merged setting is validated like a create and returns 409 when it overlaps another active setting. effective_to: null clears the end date; is_active: false takes the setting out of period generation and overlap checks.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam, body: { schema: TimePeriodSettingsUpdateBody } },
+    responses: {
+      200: { description: 'Updated setting.', schema: TimePeriodSettingsResponse },
+      400: { description: 'Validation failure.', schema: ApiError },
+      404: timePeriodSettingsNotFound,
+      409: timePeriodSettingsOverlap,
+      ...timePeriodSettingsCommonErrors,
+    },
+    extensions: timePeriodSettingsExtensions('manage'),
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'delete',
+    path: '/api/v1/time-period-settings/{id}',
+    summary: 'Delete time period settings',
+    description: 'Deletes a time period setting. Time periods it already generated are kept.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam },
+    responses: {
+      204: { description: 'Deleted.', emptyBody: true },
+      404: timePeriodSettingsNotFound,
+      ...timePeriodSettingsCommonErrors,
+    },
+    extensions: timePeriodSettingsExtensions('manage'),
+    edition: 'both',
   });
 }

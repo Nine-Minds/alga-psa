@@ -56,12 +56,27 @@
     "manageLicense": "Licentie beheren",
     "ariaLabel": "Licentiestatus",
     "dismiss": "Sluiten",
-    "licenseExpiresIn_few": "De licentie verloopt over {{count}} dagen. Verleng om serviceonderbreking te voorkomen.",
+
+    "subscriptionEnding": "Uw Pro-abonnement is opgezegd. Pro eindigt op {{date}}. Abonneer opnieuw om Pro te behouden.",
+    "subscriptionEndingNoDate": "Uw Pro-abonnement is opgezegd. Abonneer opnieuw om Pro te behouden.",
+    "subscriptionLapsed": "U gebruikt nu de gratis editie. Abonneer opnieuw om Pro te herstellen.",
+    "resubscribe": "Opnieuw abonneren",
+    "termEnds": "Uw Pro-toegang eindigt op {{date}}. Verleng om Pro te behouden.",
+    "termEndsNoDate": "Uw Pro-periode loopt af. Verleng om Pro te behouden.",
+    "paymentFailed": "Betaling mislukt — we proberen het opnieuw op {{date}}. Werk uw betaalmethode bij om Pro te behouden.",
+    "paymentFailedNoRetry": "Betaling mislukt. Werk uw betaalmethode bij om Pro te behouden.",
+    "paymentFailedEndsOn": "Pro eindigt op {{date}} als de betaling blijft mislukken.",
+    "paymentFailedEnded": "Pro is beëindigd — betaling mislukt. Uw appliance draait Essentials.",
+    "paymentFailedEndedEnding": "Uw Pro-abonnement is beëindigd — betaling mislukt. Pro blijft actief tot {{date}}. Abonneer opnieuw om Pro te behouden.",
+    "paymentFailedEndedEndingNoDate": "Uw Pro-abonnement is beëindigd — betaling mislukt. Abonneer opnieuw om Pro te behouden.",
+    "updatePaymentMethod": "Betaalmethode bijwerken",
+"licenseExpiresIn_few": "De licentie verloopt over {{count}} dagen. Verleng om serviceonderbreking te voorkomen.",
     "licenseExpiresIn_many": "De licentie verloopt over {{count}} dagen. Verleng om serviceonderbreking te voorkomen.",
     "trialDaysRemaining_few": "Pro-proefperiode actief — nog {{count}} dagen.",
     "trialDaysRemaining_many": "Pro-proefperiode actief — nog {{count}} dagen.",
     "trialExpiresIn_few": "De Pro-proefperiode verloopt over {{count}} dagen. Voer een licentiesleutel in om Pro-functies te behouden.",
     "trialExpiresIn_many": "De Pro-proefperiode verloopt over {{count}} dagen. Voer een licentiesleutel in om Pro-functies te behouden."
+
   },
   "nav": {
     "dashboard": "Dashboard",

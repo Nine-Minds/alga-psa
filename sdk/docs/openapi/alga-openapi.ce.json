@@ -2805,7 +2805,7 @@
           "associationId": {
             "type": "string",
             "format": "uuid",
-            "description": "Document association UUID from document_associations.association_id."
+            "description": "Asset document association UUID returned by the API; new API associations use document_associations.association_id and may also resolve asset_document_associations IDs."
           }
         },
         "required": [
@@ -2822,7 +2822,7 @@
           },
           "notes": {
             "type": "string",
-            "description": "Optional notes stored on document_associations.notes."
+            "description": "Optional notes stored on asset_document_associations.notes."
           }
         },
         "required": [
@@ -3202,36 +3202,41 @@
           "association_id": {
             "type": "string",
             "format": "uuid",
-            "description": "Primary key from document_associations.association_id."
+            "description": "Association UUID from document_associations.association_id."
           },
           "entity_type": {
             "type": "string",
             "enum": [
               "asset"
             ],
-            "description": "Entity type stored on document_associations; always asset for these routes."
+            "description": "Legacy entity type for this asset document association."
           },
           "entity_id": {
             "type": "string",
             "format": "uuid",
-            "description": "Asset UUID from document_associations.entity_id."
+            "description": "Legacy asset UUID field from document_associations.entity_id."
+          },
+          "asset_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Asset UUID linked by the association."
           },
           "document_id": {
             "type": "string",
             "format": "uuid",
-            "description": "Document UUID from document_associations.document_id."
+            "description": "Document UUID linked by the association."
           },
           "notes": {
             "type": [
               "string",
               "null"
             ],
-            "description": "Optional association notes."
+            "description": "Optional association notes stored on asset_document_associations.notes."
           },
           "tenant": {
             "type": "string",
             "format": "uuid",
-            "description": "Tenant UUID from document_associations.tenant."
+            "description": "Tenant UUID for the association."
           },
           "created_at": {
             "type": "string",
@@ -3240,27 +3245,69 @@
           },
           "original_filename": {
             "type": "string",
-            "description": "Original filename from the joined documents table, present on list responses."
+            "description": "Legacy document filename field, included on list responses."
           },
           "file_size": {
-            "type": "number",
-            "description": "File size in bytes from the joined documents table, present on list responses."
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Legacy document size field in bytes, included on list responses."
           },
           "mime_type": {
-            "type": "string",
-            "description": "MIME type from the joined documents table, present on list responses."
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Legacy document MIME type field, included on list responses."
           },
           "uploaded_at": {
             "type": "string",
             "format": "date-time",
-            "description": "Document upload timestamp from the joined documents table, present on list responses."
+            "description": "Legacy document upload timestamp field, included on list responses."
+          },
+          "document": {
+            "type": "object",
+            "properties": {
+              "document_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "original_filename": {
+                "type": "string"
+              },
+              "file_size": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "mime_type": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "uploaded_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "document_id",
+              "original_filename",
+              "uploaded_at"
+            ],
+            "description": "Document details joined for list responses."
           }
         },
         "required": [
           "association_id",
           "entity_type",
           "entity_id",
+          "asset_id",
           "document_id",
+          "notes",
           "tenant"
         ]
       },
@@ -3272,7 +3319,7 @@
             "items": {
               "$ref": "#/components/schemas/AssetDocumentAssociationRow"
             },
-            "description": "Document association rows for the asset. Empty when no associations exist or the asset is not found."
+            "description": "Document association rows for the authorized asset."
           },
           "_links": {
             "type": "object",
@@ -3339,7 +3386,7 @@
                 "$ref": "#/components/schemas/AssetDocumentAssociationRow"
               },
               {
-                "description": "Inserted document association row returned from document_associations.returning(*)."
+                "description": "Asset document association returned by the API with notes from the asset-specific association record."
               }
             ]
           }
@@ -3917,8 +3964,7 @@
         "properties": {
           "relationshipId": {
             "type": "string",
-            "format": "uuid",
-            "description": "Asset relationship UUID from asset_relationships.relationship_id."
+            "description": "Composite asset relationship identity: parent_asset_id:child_asset_id."
           }
         },
         "required": [
@@ -4648,18 +4694,27 @@
         "properties": {
           "relationship_id": {
             "type": "string",
-            "format": "uuid",
-            "description": "Primary key from asset_relationships.relationship_id."
+            "description": "Composite route identity: parent_asset_id:child_asset_id."
           },
           "asset_id": {
             "type": "string",
             "format": "uuid",
-            "description": "Source asset UUID from asset_relationships.asset_id."
+            "description": "Compatibility alias for parent_asset_id."
+          },
+          "parent_asset_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Parent asset UUID from asset_relationships.parent_asset_id."
+          },
+          "child_asset_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Child asset UUID from asset_relationships.child_asset_id."
           },
           "related_asset_id": {
             "type": "string",
             "format": "uuid",
-            "description": "Related asset UUID from asset_relationships.related_asset_id."
+            "description": "Other endpoint asset UUID, present in relationship list responses."
           },
           "relationship_type": {
             "type": "string",
@@ -4695,6 +4750,8 @@
         "required": [
           "relationship_id",
           "asset_id",
+          "parent_asset_id",
+          "child_asset_id",
           "related_asset_id",
           "relationship_type",
           "tenant"
@@ -6828,7 +6885,7 @@
         "properties": {
           "provider": {
             "type": "string",
-            "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing."
+            "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, unifi, or huntress. Scheduled device sync is available for all but huntress, which exposes no device listing."
           }
         },
         "required": [
@@ -11019,6 +11076,22 @@
             "minLength": 1,
             "maxLength": 255
           },
+          "invoice_line_description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 500,
+            "description": "Invoice title for a Fixed line (the bundle row title); falls back to the line name when null."
+          },
+          "invoice_line_subtitle": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 500,
+            "description": "Muted second line under a Fixed bundle title on invoices; null = none."
+          },
           "billing_frequency": {
             "type": "string",
             "enum": [
@@ -11111,6 +11184,22 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 255
+          },
+          "invoice_line_description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 500,
+            "description": "Invoice title for a Fixed line (the bundle row title); falls back to the line name when null."
+          },
+          "invoice_line_subtitle": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 500,
+            "description": "Muted second line under a Fixed bundle title on invoices; null = none."
           },
           "billing_frequency": {
             "type": "string",
@@ -17951,6 +18040,7 @@
         "required": [
           "board_name"
         ],
+        "additionalProperties": false,
         "description": "Payload for creating a new board."
       },
       "BoardUpdateRequest": {
@@ -18006,6 +18096,7 @@
             "type": "boolean"
           }
         },
+        "additionalProperties": false,
         "description": "Payload for updating a board. All fields are optional."
       },
       "StatusIdParams": {
@@ -24257,6 +24348,21 @@
             },
             "description": "Ticket-level external references written in the same transaction as the ticket. A conflicting link rolls back the create."
           },
+          "entered_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Historical import. ISO 8601 datetime with an offset, not in the future. Supplying it stores the ticket with this open date and marks it a historical record: created silently with source=api_import, no SLA clock, no TICKET_CREATED, and no notifications, webhooks or workflows. Requires an internal MSP user with ticket:create permission."
+          },
+          "closed_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Historical import only (requires entered_at). Required for a closed status, rejected for an open status, and must satisfy entered_at <= closed_at <= now. The ticket is stored closed without firing TICKET_CLOSED."
+          },
+          "closed_by": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Historical import only (requires closed_at). User recorded as the closer; defaults to the API user."
+          },
           "asset_ids": {
             "type": "array",
             "items": {
@@ -24284,6 +24390,11 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 255
+          },
+          "entered_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Correct the ticket open date. Requires an internal MSP user with ticket:update permission. Must not be in the future or after the ticket closure or earliest comment. A date-only correction does not publish TICKET_UPDATED or start SLA timers."
           },
           "url": {
             "type": "string",
@@ -24385,11 +24496,13 @@
           },
           "closed_at": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "Honored when this update closes the ticket (open to closed): stored as the close time instead of now. Must not be in the future or before entered_at. TICKET_CLOSED still fires; use suppression flags to silence notifications. Use historical create fields to import an already-closed ticket silently."
           },
           "closed_by": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Honored with closed_at when this update closes the ticket; defaults to the API user."
           },
           "override_close_rules": {
             "type": "boolean"
@@ -24492,6 +24605,11 @@
             },
             "maxItems": 20,
             "description": "One-off Bcc recipients for this comment's email only. Never returned to client-portal callers. Not allowed with is_internal. Max 20 cc + bcc combined."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Historical import. Requires an internal MSP user with ticket:update permission. ISO 8601 datetime with an offset (date-only is rejected), not in the future and not before the ticket's entered_at (a reply: not before its parent comment). The comment is stored with this timestamp and is silent: no TICKET_COMMENT_ADDED, no notifications, webhooks, workflows, SLA first response or response-state change. Cannot be combined with scheduled_publish_at, scheduled_publish_tz, cc or bcc."
           },
           "suppressContactNotifications": {
             "type": "boolean",
@@ -25571,12 +25689,6 @@
                   ],
                   "format": "uuid"
                 },
-                "notes": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                },
                 "user_name": {
                   "type": "string"
                 },
@@ -25821,7 +25933,6 @@
                 "submitted_at",
                 "approved_at",
                 "approved_by",
-                "notes",
                 "user_name"
               ]
             }
@@ -27250,6 +27361,256 @@
           "email"
         ]
       },
+      "WorkV1TimePeriodSettings": {
+        "type": "object",
+        "properties": {
+          "time_period_settings_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "frequency": {
+            "type": "number"
+          },
+          "frequency_unit": {
+            "type": "string",
+            "enum": [
+              "day",
+              "week",
+              "month",
+              "year"
+            ]
+          },
+          "start_day": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "end_day": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "start_month": {
+            "type": "number"
+          },
+          "start_day_of_month": {
+            "type": "number"
+          },
+          "end_month": {
+            "type": "number"
+          },
+          "end_day_of_month": {
+            "type": "number"
+          },
+          "effective_from": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "effective_to": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tenant": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "time_period_settings_id",
+          "frequency",
+          "frequency_unit",
+          "start_day",
+          "end_day",
+          "start_month",
+          "start_day_of_month",
+          "end_month",
+          "end_day_of_month",
+          "effective_from",
+          "is_active",
+          "created_at",
+          "updated_at",
+          "tenant"
+        ]
+      },
+      "WorkV1TimePeriodSettingsResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WorkV1TimePeriodSettings"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "WorkV1TimePeriodSettingsListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkV1TimePeriodSettings"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "WorkV1TimePeriodSettingsCreateBody": {
+        "type": "object",
+        "properties": {
+          "frequency": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "Number of frequency_unit units per period (e.g. 1 with week = weekly)."
+          },
+          "frequency_unit": {
+            "type": "string",
+            "enum": [
+              "day",
+              "week",
+              "month",
+              "year"
+            ]
+          },
+          "start_day": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 31,
+            "description": "week: first weekday (1=Monday … 7=Sunday); month: first day of the month. Defaults to 1."
+          },
+          "end_day": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 31,
+            "description": "month: last day of the period, or 0 for the end of the month. Defaults to 0."
+          },
+          "start_month": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12,
+            "description": "year: first month. Defaults to 1."
+          },
+          "start_day_of_month": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 31,
+            "description": "year: first day of start_month. Defaults to 1."
+          },
+          "end_month": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12,
+            "description": "year: last month. Defaults to 12."
+          },
+          "end_day_of_month": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 31,
+            "description": "year: last day of end_month, or 0 for the end of the month. Defaults to 0."
+          },
+          "effective_from": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "description": "First day the setting is in force. When omitted, defaults to the start of the period containing today in the caller's timezone; if an earlier setting ended on or after that day, it starts the day after that setting ended."
+          },
+          "effective_to": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "description": "Last day the setting is in force (inclusive). Omit for open-ended."
+          }
+        },
+        "required": [
+          "frequency",
+          "frequency_unit"
+        ]
+      },
+      "WorkV1TimePeriodSettingsUpdateBody": {
+        "type": "object",
+        "properties": {
+          "frequency": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "Number of frequency_unit units per period (e.g. 1 with week = weekly)."
+          },
+          "frequency_unit": {
+            "type": "string",
+            "enum": [
+              "day",
+              "week",
+              "month",
+              "year"
+            ]
+          },
+          "start_day": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 31,
+            "description": "week: first weekday (1=Monday … 7=Sunday); month: first day of the month. Defaults to 1."
+          },
+          "end_day": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 31,
+            "description": "month: last day of the period, or 0 for the end of the month. Defaults to 0."
+          },
+          "start_month": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12,
+            "description": "year: first month. Defaults to 1."
+          },
+          "start_day_of_month": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 31,
+            "description": "year: first day of start_month. Defaults to 1."
+          },
+          "end_month": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12,
+            "description": "year: last month. Defaults to 12."
+          },
+          "end_day_of_month": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 31,
+            "description": "year: last day of end_month, or 0 for the end of the month. Defaults to 0."
+          },
+          "effective_from": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "description": "First day the setting is in force. When omitted, defaults to the start of the period containing today in the caller's timezone; if an earlier setting ended on or after that day, it starts the day after that setting ended."
+          },
+          "effective_to": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "description": "Last day the setting is in force (inclusive); null clears it."
+          },
+          "is_active": {
+            "type": "boolean",
+            "description": "Inactive settings are ignored by period generation and overlap checks."
+          }
+        }
+      },
       "QuoteIdParamV1": {
         "type": "object",
         "properties": {
@@ -28420,6 +28781,20 @@
               "string",
               "null"
             ]
+          },
+          "refType": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "refId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
           }
         },
         "required": [
@@ -40152,7 +40527,7 @@
     "/api/v1/assets/documents/{associationId}": {
       "delete": {
         "summary": "Remove asset document association",
-        "description": "Removes a document association row by document_associations.association_id for the authenticated tenant. The service deletes rows where association_id and tenant match and does not verify entity_type in this method. The controller intends to return an empty success response after deletion, but currently calls createApiResponse(null, 204) inside NextResponse.json, which can throw because JSON responses cannot use status 204 with a body.",
+        "description": "Removes a document association by its API association ID within the authenticated tenant and verifies it belongs to an asset before authorization. The asset is resolved within the tenant before the caller’s update permission and record-level scope are checked; foreign-tenant IDs return 404. The generic document link and any asset-specific notes record are deleted together.",
         "tags": [
           "Assets"
         ],
@@ -40177,10 +40552,10 @@
             "schema": {
               "type": "string",
               "format": "uuid",
-              "description": "Document association UUID from document_associations.association_id."
+              "description": "Asset document association UUID returned by the API; new API associations use document_associations.association_id and may also resolve asset_document_associations IDs."
             },
             "required": true,
-            "description": "Document association UUID from document_associations.association_id.",
+            "description": "Asset document association UUID returned by the API; new API associations use document_associations.association_id and may also resolve asset_document_associations IDs.",
             "name": "associationId",
             "in": "path"
           }
@@ -40586,11 +40961,10 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid",
-              "description": "Asset relationship UUID from asset_relationships.relationship_id."
+              "description": "Composite asset relationship identity: parent_asset_id:child_asset_id."
             },
             "required": true,
-            "description": "Asset relationship UUID from asset_relationships.relationship_id.",
+            "description": "Composite asset relationship identity: parent_asset_id:child_asset_id.",
             "name": "relationshipId",
             "in": "path"
           }
@@ -41183,7 +41557,7 @@
     "/api/v1/assets/{id}/documents": {
       "get": {
         "summary": "List asset document associations",
-        "description": "Returns document_associations rows for an asset in the authenticated tenant where entity_type is asset and entity_id is the path asset ID. The service joins documents to add original_filename, file_size, mime_type, and uploaded_at. It does not check whether the asset exists first, so nonexistent or cross-tenant asset IDs return 200 with an empty array. Response links currently point at /api/v2/assets paths.",
+        "description": "Returns document associations for the asset in the authenticated tenant. Controller authorization resolves and authorizes the asset first; nonexistent or cross-tenant asset IDs return 404, while in-tenant permission denials return 403. Document details are joined from documents/external_files, legacy filename, size, MIME type, and upload-time fields remain at the response top level, and optional association notes come from asset_document_associations. Response links currently point at /api/v2/assets paths.",
         "tags": [
           "Assets"
         ],
@@ -41198,7 +41572,7 @@
           "x-current-auth-wiring-missing": true,
           "x-rbac-resource": "asset",
           "x-rbac-action": "read",
-          "x-no-asset-existence-check": true,
+          "x-no-asset-existence-check": false,
           "x-response-links-path-version": "v2"
         },
         "x-alga-products": [
@@ -41219,7 +41593,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Document associations returned successfully. Empty when no associations exist or the asset is not found.",
+            "description": "Document associations returned successfully for an authorized asset; an asset with no associations returns an empty array.",
             "content": {
               "application/json": {
                 "schema": {
@@ -41262,7 +41636,7 @@
       },
       "post": {
         "summary": "Associate document with asset",
-        "description": "Creates a document_associations row that links the path asset ID to the supplied document_id. The body is validated with createAssetDocumentSchema; document_id is required and notes is optional. The service inserts entity_type=asset, entity_id from the path, document_id, notes, tenant from context, and created_at, then returns the inserted row. It does not verify that the asset or document belongs to the same tenant before insert, does not set created_by, and publishes no event. Foreign-key or unique constraint errors surface through handleApiError.",
+        "description": "Creates the tenant-scoped document link for the path asset and supplied document_id, while storing optional notes and authenticated created_by in asset_document_associations. The body is validated with createAssetDocumentSchema; document_id is required and notes is optional. Both association records are written transactionally so document workflows and the asset API stay consistent. Tenant-scoped asset and document checks run before insert; database persistence errors are surfaced through handleApiError.",
         "tags": [
           "Assets"
         ],
@@ -45930,10 +46304,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing."
+              "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, unifi, or huntress. Scheduled device sync is available for all but huntress, which exposes no device listing."
             },
             "required": true,
-            "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing.",
+            "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, unifi, or huntress. Scheduled device sync is available for all but huntress, which exposes no device listing.",
             "name": "provider",
             "in": "path"
           }
@@ -45986,10 +46360,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing."
+              "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, unifi, or huntress. Scheduled device sync is available for all but huntress, which exposes no device listing."
             },
             "required": true,
-            "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing.",
+            "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, unifi, or huntress. Scheduled device sync is available for all but huntress, which exposes no device listing.",
             "name": "provider",
             "in": "path"
           }
@@ -46052,10 +46426,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing."
+              "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, unifi, or huntress. Scheduled device sync is available for all but huntress, which exposes no device listing."
             },
             "required": true,
-            "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing.",
+            "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, unifi, or huntress. Scheduled device sync is available for all but huntress, which exposes no device listing.",
             "name": "provider",
             "in": "path"
           }
@@ -103519,7 +103893,7 @@
     "/api/v1/time-sheets/export": {
       "get": {
         "summary": "Export time sheets",
-        "description": "Exports time sheets using ApiTimeSheetController.export().",
+        "description": "Exports every time sheet matching the filters (not one page) using ApiTimeSheetController.export(). Array filters approval_statuses, user_ids, period_ids and fields accept repeated keys or comma-separated values.",
         "tags": [
           "Work Management v1"
         ],
@@ -103656,7 +104030,7 @@
     "/api/v1/time-sheets/search": {
       "get": {
         "summary": "Search time sheets",
-        "description": "Searches time sheets via ApiTimeSheetController.search(). `query` is required and is matched as a case-insensitive substring against the sheet owner's full name (first name + space + last name). `user_name` is the only searchable field and the default. Optional filters narrow by approval status, user, period and period date range. Array params (`fields`, `approval_statuses`, `user_ids`, `period_ids`) accept repeated params or comma-separated values. `include_entries=true` adds each sheet's `time_entries`. Returns at most `limit` sheets (default 25, max 100).",
+        "description": "Searches time sheets via ApiTimeSheetController.search(). `query` is required and is matched against the owner name and time_sheet_notes text. Array filters accept repeated keys or comma-separated values.",
         "tags": [
           "Work Management v1"
         ],
@@ -109979,6 +110353,452 @@
           },
           "500": {
             "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/time-period-settings": {
+      "get": {
+        "summary": "List time period settings",
+        "description": "Returns every time period setting for the tenant, active or not, newest effective_from first. Settings drive time period generation.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiTimeSheetController",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "time_period",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "responses": {
+          "200": {
+            "description": "Time period settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1TimePeriodSettingsListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or associated user missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (time_period:manage for writes, time_period:read for reads).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create time period settings",
+        "description": "Creates an active time period setting. When effective_from is omitted it defaults to the start of the period containing today in the caller's timezone; if an earlier setting ended on or after that day, the new setting starts the day after it ended (the default may then be in the future). An explicit effective_from is used as given. Returns 409 when the setting overlaps an active setting.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiTimeSheetController",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "time_period",
+          "x-rbac-action": "manage"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkV1TimePeriodSettingsCreateBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Setting created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1TimePeriodSettingsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failure (field ranges, effective_to before effective_from).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or associated user missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (time_period:manage for writes, time_period:read for reads).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The setting overlaps an active setting (same or conflicting period cells over intersecting effective dates). Nothing is written; explicit dates are never adjusted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/time-period-settings/{id}": {
+      "get": {
+        "summary": "Get time period settings",
+        "description": "Gets one time period setting by time_period_settings_id.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiTimeSheetController",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "time_period",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "UUID path identifier from underlying resource tables."
+            },
+            "required": true,
+            "description": "UUID path identifier from underlying resource tables.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Time period setting.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1TimePeriodSettingsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or associated user missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (time_period:manage for writes, time_period:read for reads).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Time period settings not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update time period settings",
+        "description": "Applies a partial update. The merged setting is validated like a create and returns 409 when it overlaps another active setting. effective_to: null clears the end date; is_active: false takes the setting out of period generation and overlap checks.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiTimeSheetController",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "time_period",
+          "x-rbac-action": "manage"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "UUID path identifier from underlying resource tables."
+            },
+            "required": true,
+            "description": "UUID path identifier from underlying resource tables.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkV1TimePeriodSettingsUpdateBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated setting.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1TimePeriodSettingsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or associated user missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (time_period:manage for writes, time_period:read for reads).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Time period settings not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The setting overlaps an active setting (same or conflicting period cells over intersecting effective dates). Nothing is written; explicit dates are never adjusted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete time period settings",
+        "description": "Deletes a time period setting. Time periods it already generated are kept.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiTimeSheetController",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "time_period",
+          "x-rbac-action": "manage"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "UUID path identifier from underlying resource tables."
+            },
+            "required": true,
+            "description": "UUID path identifier from underlying resource tables.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted."
+          },
+          "401": {
+            "description": "API key missing/invalid or associated user missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (time_period:manage for writes, time_period:read for reads).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Time period settings not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure.",
             "content": {
               "application/json": {
                 "schema": {

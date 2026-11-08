@@ -872,7 +872,10 @@ export const deadUnitsOwedReport = withAuth(async (user, { tenant }): Promise<De
         .leftJoin('stock_units as su', function () {
           this.on('r.returned_unit_id', '=', 'su.unit_id').andOn('r.tenant', '=', 'su.tenant');
         })
+        // Stock-unit track only: a warranty case in dead_unit_owed is a client-asset dead unit owed to the VENDOR,
+        // not a stock unit owed by a client, and it has no unit/cost/product to report.
         .where({ 'r.tenant': tenant, 'r.status': 'dead_unit_owed' })
+        .whereNotNull('r.returned_unit_id')
         .select(
           'r.*',
           'c.client_name',

@@ -254,6 +254,7 @@
     "tagModeAny": "Any of",
     "tagModeNone": "None of",
     "droppedFromLink": "Some filters in this link are not valid and were ignored.",
+    "clearFilters": "Clear filters",
     "location": "Location",
     "requesterLocation": "Requester location",
     "selectStatus": "Select Status"
@@ -402,7 +403,9 @@
     "createTemplate": "Create template from ticket",
     "createWorkflowFromTicket": "Create workflow from ticket",
     "printWorkTag": "Print work tag",
-    "retry": "Retry"
+    "retry": "Retry",
+    "duplicateMultiple": "Duplicate multiple…",
+    "duplicateOptions": "More duplicate options"
   },
   "messages": {
     "noTickets": "No tickets found",
@@ -1824,7 +1827,9 @@
       "missingFieldNamed": "Missing required ticket field: {{field}}.",
       "referenceMissing": "One of the selected ticket records no longer exists. Please refresh and try again.",
       "conflict": "This ticket change conflicts with an existing record. Please refresh and try again.",
-      "valueNotAllowed": "One of the ticket values is not allowed. Please review the form and try again."
+      "valueNotAllowed": "One of the ticket values is not allowed. Please review the form and try again.",
+      "priorityItilBoardCustom": "Priority ‘{{priority}}’ is an ITIL priority but board ‘{{board}}’ uses custom priorities.",
+      "priorityCustomBoardItil": "Priority ‘{{priority}}’ is a custom priority but board ‘{{board}}’ uses ITIL priorities."
     },
     "board": {
       "invalidReference": "The selected board, status, or rule is invalid. Please refresh and try again.",
@@ -1851,7 +1856,9 @@
       "valueNotAllowed": "One of the material values is not allowed. Please review the form and try again."
     },
     "settings": {
-      "updateDenied": "Permission denied: Cannot update ticket settings"
+      "createDenied": "Permission denied: Cannot create boards",
+      "updateDenied": "Permission denied: Cannot update ticket settings",
+      "deleteDenied": "Permission denied: Cannot delete boards"
     },
     "list": {
       "filtersInvalid": "Ticket list filters are no longer valid. Refresh the page and try again."
@@ -2834,15 +2841,17 @@
       "fromTicket": "Prefilled from ticket #{{number}}. Nothing is saved until you click Save.",
       "inlineImages": "The description contains images that belong to the source ticket. They may stop displaying if that ticket is deleted. Remove them or re-upload them if the template should outlive the ticket.",
       "viewOnly": "You can view this template but not change it.",
-      "referenceProblems": "Some fields in this template point at things that no longer exist. They are left blank when the template is used. Fix them and save:",
+      "referenceProblems": "Some fields in this template are not valid: they refer to something that no longer exists, or do not fit together (for example a priority that does not match the board). Fix them and save:",
       "inactiveWarning": "Inactive: hidden from the template picker; still used by {{count}} schedules.",
       "sharedWarning": "Changes here apply to every recurring schedule that uses this template, from the next ticket each one creates.",
-      "boardChangeWarning": "Changing the board clears priority and category, and can make the status of schedules that use this template invalid. Those schedules fail until you edit them. Affected schedules: {{schedules}}."
+      "boardChangeWarning": "Changing the board clears priority and category, and can make the status of schedules that use this template invalid. Those schedules fail until you edit them. Affected schedules: {{schedules}}.",
+      "priorityTypeMismatchItil": "Priority ‘{{priority}}’ is an ITIL priority but board ‘{{board}}’ uses custom priorities. Saving is refused until you change the priority or the board.",
+      "priorityTypeMismatchCustom": "Priority ‘{{priority}}’ is a custom priority but board ‘{{board}}’ uses ITIL priorities. Saving is refused until you change the priority or the board."
     },
     "errors": {
       "notFound": "Ticket template not found",
       "duplicateName": "A template named {{name}} already exists",
-      "invalidReferences": "The template refers to a board, category or priority that is not available",
+      "invalidReferences": "{{problems}}",
       "notAvailable": "Ticket templates are not available",
       "subcategoryNeedsCategory": "A subcategory requires a category",
       "inUseBySchedules": "Used by {{count}} recurring schedule(s): {{schedules}}. Point them at another template or archive them first."
@@ -2998,6 +3007,75 @@
       "notAvailable": "This canned response is not available for this ticket.",
       "notATeamMember": "You can only manage team responses for teams you belong to."
     }
+  },
+  "batchDuplicate": {
+    "title": "Duplicate #{{number}} for contacts",
+    "titleLoading": "Duplicate for contacts",
+    "loading": "Loading…",
+    "loadFailed": "The ticket to duplicate could not be loaded. Please try again.",
+    "createFailed": "The copies could not be created. Please try again.",
+    "templateLabel": "Title template",
+    "insertToken": "Insert:",
+    "nameHint": "Replace \"{{name}}\" with {{token}} to personalise each copy.",
+    "replace": "Replace",
+    "contactsLabel": "Contacts",
+    "contactsPlaceholder": "Select contacts…",
+    "addBlankRow": "Add copy without contact",
+    "count": "{{count}} of {{max}}",
+    "capReached": "Maximum of {{max}} copies per batch.",
+    "columns": {
+      "contact": "Contact",
+      "title": "Title"
+    },
+    "resetRow": "Reset to template",
+    "removeRow": "Remove copy",
+    "copyChecklist": "Copy checklist items (unchecked)",
+    "cancel": "Cancel",
+    "review": "Review",
+    "back": "Back",
+    "create_one": "Create {{count}} ticket",
+    "create_other": "Create {{count}} tickets",
+    "creating_one": "Creating {{count}} ticket…",
+    "creating_other": "Creating {{count}} tickets…",
+    "done": "Done",
+    "retryFailed_one": "Retry failed ({{count}})",
+    "retryFailed_other": "Retry failed ({{count}})",
+    "errors": {
+      "contactRequired": "This title uses {{token}} but the copy has no contact.",
+      "unknownToken": "Unknown token: {{tokens}}",
+      "empty": "The title cannot be empty.",
+      "unresolvedToken": "The title still contains a {{placeholder}} placeholder."
+    },
+    "summary": {
+      "client": "Client",
+      "board": "Board",
+      "category": "Category",
+      "priority": "Priority",
+      "assignee": "Assignee",
+      "team": "Team",
+      "additionalAgents": "Additional agents",
+      "tags": "Tags",
+      "checklist": "Checklist",
+      "checklistCopy_one": "Copy {{count}} item (unchecked)",
+      "checklistCopy_other": "Copy {{count}} items (unchecked)",
+      "checklistSkip": "Not copied",
+      "customFields": "Custom fields",
+      "status": "Status",
+      "statusBoardDefault": "Board default",
+      "none": "None",
+      "notCopied": "Comments, time entries, attachments and due date are not copied.",
+      "unresolved": "Name unavailable"
+    },
+    "results": {
+      "created_one": "{{count}} ticket created",
+      "created_other": "{{count}} tickets created",
+      "failed_one": "{{count}} copy failed",
+      "failed_other": "{{count}} copies failed"
+    },
+    "discardTitle": "Discard these copies?",
+    "discardMessage": "The copies you set up have not been created yet. Discard them and close?",
+    "discardConfirm": "Discard",
+    "discardKeep": "Keep editing"
   },
   "sharedSla": {
     "title": "Service level",

@@ -17,6 +17,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useFormatters: () => ({
     formatCurrency: (value: number) => `$${value}`,
     formatDate: (value: string) => value,
+    formatCalendarDate: (value: string) => value,
   }),
 }));
 

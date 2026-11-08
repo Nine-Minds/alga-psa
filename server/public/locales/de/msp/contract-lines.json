@@ -62,7 +62,10 @@
         "invoiceLineDescriptionLabel": "Beschreibung der Rechnungszeile",
         "invoiceLineDescriptionPlaceholder": "z.B. Monatliche Wartung der Telefonanlage gemäß Vertrag von 2019",
         "nameLabel": "Name der Vertragszeile *",
-        "namePlaceholder": "z.B. Verwalteter Support – Gold"
+        "namePlaceholder": "z.B. Verwalteter Support – Gold",
+        "invoiceLineSubtitleLabel": "Untertitel der Rechnungszeile",
+        "invoiceLineSubtitlePlaceholder": "z. B. Verwaltete Endgeräte und Backup",
+        "invoiceLineSubtitleHelp": "Wird als gedämpfte zweite Zeile unter dem Titel angezeigt, wenn diese Pauschalposition auf einer Rechnung erscheint."
       },
       "cardTitle": "Vertragszeile bearbeiten: {{name}} (behoben)",
       "errors": {

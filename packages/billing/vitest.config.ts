@@ -35,6 +35,9 @@ export default defineConfig({
       // covers the stale-source comparison, not only the server-wide glob.
       'src/lib/billing/recurringPricingIdentity.test.ts',
       'src/schemas/**/*.test.ts',
+      'src/services/quoteAccessLinks.test.ts',
+      'src/services/quoteAccessLinks.revoke.test.ts',
+      'src/services/publicQuoteView.test.ts',
       'src/constants/billingQuoteValidity.test.ts',
       // Colocated suites for the document-preview tenant-branding seam. Most
       // src/ tests are reached only through server/vitest.config.ts (which globs
@@ -106,10 +109,21 @@ export default defineConfig({
       // alongside the server-wide glob.
       'src/lib/quoteTermsContent.test.ts',
       'src/components/invoice-designer/ast/workspaceAst.richText.test.ts',
+      'src/components/invoice-designer/ast/workspaceAst.childRows.test.ts',
+      'src/components/invoice-designer/inspector/widgets/BundleComponentRowsWidget.test.tsx',
+      'src/components/invoice-designer/preview/sampleScenarios.bundles.test.ts',
+      'src/components/billing-dashboard/contracts/template-wizard/steps/TemplateFixedFeeServicesStep.invoiceText.test.tsx',
+      'src/components/invoice-designer/canvas/DesignCanvas.bundleRows.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteForm.terms.test.tsx',
+      'src/components/billing-dashboard/quotes/QuoteDecisionLine.test.tsx',
       // Timezone-safe date-only rendering: the renderer and field formatting
       // share one UTC-pinned formatter — listed for the same reason as above.
       'src/lib/invoice-template-ast/fieldFormatting.test.ts',
+      'src/lib/invoice-template-ast/childRows.test.ts',
+      'src/lib/invoice-template-ast/bundleChildRows.test.ts',
+      'src/lib/invoice-template-ast/standardTemplates.bundleQuantities.test.ts',
+      'src/lib/invoice-template-ast/bundleRows.pdf.test.ts',
+      'src/lib/invoiceBundleComponents/**/*.test.ts',
       'src/lib/invoice-template-ast/react-renderer.test.tsx',
       'src/lib/invoice-template-ast/server-render.inlineImages.test.ts',
       // Invoice discount render model (alga0002295): unformatted-field behaviour,

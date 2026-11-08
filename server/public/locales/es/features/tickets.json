@@ -254,6 +254,7 @@
     "tagModeAny": "Cualquiera de",
     "tagModeNone": "Ninguna de",
     "droppedFromLink": "Algunos filtros de este enlace no son válidos y se ignoraron.",
+    "clearFilters": "Limpiar filtros",
     "location": "Ubicación",
     "requesterLocation": "Ubicación del solicitante",
     "selectStatus": "Seleccionar estado"
@@ -402,7 +403,9 @@
     "createTemplate": "Crear plantilla desde el ticket",
     "createWorkflowFromTicket": "Crear flujo de trabajo desde el ticket",
     "printWorkTag": "Imprimir etiqueta de trabajo",
-    "retry": "Reintentar"
+    "retry": "Reintentar",
+    "duplicateMultiple": "Duplicar varias veces…",
+    "duplicateOptions": "Más opciones de duplicado"
   },
   "messages": {
     "noTickets": "No se encontraron tickets",
@@ -1824,7 +1827,9 @@
       "missingFieldNamed": "Falta un campo obligatorio del ticket: {{field}}.",
       "referenceMissing": "Uno de los registros de ticket seleccionados ya no existe. Actualice la página e inténtelo de nuevo.",
       "conflict": "Este cambio del ticket entra en conflicto con un registro existente. Actualice la página e inténtelo de nuevo.",
-      "valueNotAllowed": "Uno de los valores del ticket no está permitido. Revise el formulario e inténtelo de nuevo."
+      "valueNotAllowed": "Uno de los valores del ticket no está permitido. Revise el formulario e inténtelo de nuevo.",
+      "priorityItilBoardCustom": "La prioridad ‘{{priority}}’ es una prioridad ITIL, pero el tablero ‘{{board}}’ usa prioridades personalizadas.",
+      "priorityCustomBoardItil": "La prioridad ‘{{priority}}’ es una prioridad personalizada, pero el tablero ‘{{board}}’ usa prioridades ITIL."
     },
     "board": {
       "invalidReference": "El tablero, el estado o la regla seleccionados no son válidos. Actualice la página e inténtelo de nuevo.",
@@ -1851,7 +1856,9 @@
       "valueNotAllowed": "Uno de los valores del material no está permitido. Revise el formulario e inténtelo de nuevo."
     },
     "settings": {
-      "updateDenied": "Permiso denegado: no se puede actualizar la configuración de tickets"
+      "createDenied": "Permiso denegado: no se pueden crear tableros",
+      "updateDenied": "Permiso denegado: no se puede actualizar la configuración de tickets",
+      "deleteDenied": "Permiso denegado: no se pueden eliminar tableros"
     },
     "list": {
       "filtersInvalid": "Los filtros de la lista de tickets ya no son válidos. Actualice la página e inténtelo de nuevo."
@@ -2834,15 +2841,17 @@
       "fromTicket": "Rellenado desde el ticket #{{number}}. No se guarda nada hasta que haga clic en Guardar.",
       "inlineImages": "La descripción contiene imágenes que pertenecen al ticket de origen. Pueden dejar de mostrarse si ese ticket se elimina. Quítelas o vuelva a subirlas si la plantilla debe sobrevivir al ticket.",
       "viewOnly": "Puede ver esta plantilla pero no modificarla.",
-      "referenceProblems": "Algunos campos de esta plantilla apuntan a elementos que ya no existen. Se dejan en blanco al usar la plantilla. Corríjalos y guarde:",
+      "referenceProblems": "Algunos campos de esta plantilla no son válidos: hacen referencia a elementos que ya no existen o no son compatibles entre sí (por ejemplo, una prioridad que no coincide con el tablero). Corríjalos y guarde:",
       "inactiveWarning": "Inactiva: oculta en el selector de plantillas; todavía la usan {{count}} programaciones.",
       "sharedWarning": "Los cambios se aplican a cada programación recurrente que use esta plantilla, a partir del siguiente ticket que cree.",
-      "boardChangeWarning": "Cambiar el tablero borra la prioridad y la categoría, y puede invalidar el estado de las programaciones que usan esta plantilla. Esas programaciones fallan hasta que las edite. Programaciones afectadas: {{schedules}}."
+      "boardChangeWarning": "Cambiar el tablero borra la prioridad y la categoría, y puede invalidar el estado de las programaciones que usan esta plantilla. Esas programaciones fallan hasta que las edite. Programaciones afectadas: {{schedules}}.",
+      "priorityTypeMismatchItil": "La prioridad ‘{{priority}}’ es una prioridad ITIL, pero el tablero ‘{{board}}’ usa prioridades personalizadas. No se podrá guardar hasta que cambie la prioridad o el tablero.",
+      "priorityTypeMismatchCustom": "La prioridad ‘{{priority}}’ es una prioridad personalizada, pero el tablero ‘{{board}}’ usa prioridades ITIL. No se podrá guardar hasta que cambie la prioridad o el tablero."
     },
     "errors": {
       "notFound": "Plantilla de ticket no encontrada",
       "duplicateName": "Ya existe una plantilla llamada {{name}}",
-      "invalidReferences": "La plantilla hace referencia a un tablero, una categoría o una prioridad que no está disponible",
+      "invalidReferences": "{{problems}}",
       "notAvailable": "Las plantillas de tickets no están disponibles",
       "subcategoryNeedsCategory": "Una subcategoría requiere una categoría",
       "inUseBySchedules": "Usada por {{count}} programación(es) recurrente(s): {{schedules}}. Asígneles otra plantilla o archívelas primero."
@@ -2998,6 +3007,75 @@
       "notAvailable": "Esta respuesta predefinida no está disponible para este ticket.",
       "notATeamMember": "Solo puede administrar respuestas de equipo de los equipos a los que pertenece."
     }
+  },
+  "batchDuplicate": {
+    "title": "Duplicar #{{number}} para contactos",
+    "titleLoading": "Duplicar para contactos",
+    "loading": "Cargando…",
+    "loadFailed": "No se pudo cargar el ticket que se va a duplicar. Inténtalo de nuevo.",
+    "createFailed": "No se pudieron crear las copias. Inténtalo de nuevo.",
+    "templateLabel": "Plantilla de título",
+    "insertToken": "Insertar:",
+    "nameHint": "Sustituye «{{name}}» por {{token}} para personalizar cada copia.",
+    "replace": "Sustituir",
+    "contactsLabel": "Contactos",
+    "contactsPlaceholder": "Seleccionar contactos…",
+    "addBlankRow": "Añadir copia sin contacto",
+    "count": "{{count}} de {{max}}",
+    "capReached": "Máximo de {{max}} copias por lote.",
+    "columns": {
+      "contact": "Contacto",
+      "title": "Título"
+    },
+    "resetRow": "Restablecer a la plantilla",
+    "removeRow": "Quitar copia",
+    "copyChecklist": "Copiar elementos de la lista de verificación (sin marcar)",
+    "cancel": "Cancelar",
+    "review": "Revisar",
+    "back": "Atrás",
+    "create_one": "Crear {{count}} ticket",
+    "create_other": "Crear {{count}} tickets",
+    "creating_one": "Creando {{count}} ticket…",
+    "creating_other": "Creando {{count}} tickets…",
+    "done": "Hecho",
+    "retryFailed_one": "Reintentar fallidas ({{count}})",
+    "retryFailed_other": "Reintentar fallidas ({{count}})",
+    "errors": {
+      "contactRequired": "Este título usa {{token}}, pero la copia no tiene contacto.",
+      "unknownToken": "Marcador desconocido: {{tokens}}",
+      "empty": "El título no puede estar vacío.",
+      "unresolvedToken": "El título aún contiene un marcador {{placeholder}}."
+    },
+    "summary": {
+      "client": "Cliente",
+      "board": "Tablero",
+      "category": "Categoría",
+      "priority": "Prioridad",
+      "assignee": "Asignado a",
+      "team": "Equipo",
+      "additionalAgents": "Agentes adicionales",
+      "tags": "Etiquetas",
+      "checklist": "Lista de verificación",
+      "checklistCopy_one": "Copiar {{count}} elemento (sin marcar)",
+      "checklistCopy_other": "Copiar {{count}} elementos (sin marcar)",
+      "checklistSkip": "No se copia",
+      "customFields": "Campos personalizados",
+      "status": "Estado",
+      "statusBoardDefault": "Predeterminado del tablero",
+      "none": "Ninguno",
+      "notCopied": "Los comentarios, las entradas de tiempo, los archivos adjuntos y la fecha de vencimiento no se copian.",
+      "unresolved": "Nombre no disponible"
+    },
+    "results": {
+      "created_one": "{{count}} ticket creado",
+      "created_other": "{{count}} tickets creados",
+      "failed_one": "Falló {{count}} copia",
+      "failed_other": "Fallaron {{count}} copias"
+    },
+    "discardTitle": "¿Descartar estas copias?",
+    "discardMessage": "Las copias configuradas aún no se han creado. ¿Descartarlas y cerrar?",
+    "discardConfirm": "Descartar",
+    "discardKeep": "Seguir editando"
   },
   "sharedSla": {
     "title": "Nivel de servicio",

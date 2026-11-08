@@ -801,7 +801,7 @@
       "id": "inactive",
       "en-term": "Inactive",
       "term": "Inactif",
-      "notes": "Pack-consistent: 49 uses across 18 namespaces (mined 2026-08-28, pending native review)."
+      "notes": "Inactif au masculin ; inactive au féminin, notamment pour une clé API. La forme féminine isolée est identique à l’anglais."
     },
     {
       "id": "industry",
@@ -2093,6 +2093,7 @@
       "contact",
       "{{actor}} • {{eventType}}",
       "Source",
+      "Inactive",
       "1 contact",
       "Conversation",
       "{{from}} → {{to}}",

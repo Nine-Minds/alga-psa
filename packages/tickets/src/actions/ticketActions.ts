@@ -34,6 +34,7 @@ import { getTicketAttributes } from '@alga-psa/auth/actions/policyActions';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { Knex } from 'knex';
+import { v4 as uuidv4 } from 'uuid';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { deleteTicketChildRecords } from '../lib/deleteTicketChildRecords';
 import { createTagsForEntityWithTransaction, findTagsByEntityIds } from '@alga-psa/tags/actions/tagActions';
@@ -60,6 +61,7 @@ import {
 } from '@alga-psa/event-bus/events';
 
 import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
+import { findPriorityBoardTypeProblem, findTicketUpdatePriorityBoardTypeProblem, PriorityBoardTypeError } from '../lib/ticketFieldReferences';
 import { TicketModel, CreateTicketInput } from '@alga-psa/shared/models/ticketModel';
 import { resolveAssetBillingProfileIdForClient } from '@alga-psa/shared/models/assetBillingProfileModel';
 import {
@@ -74,6 +76,7 @@ import {
   writeTicketActivity,
 } from '@alga-psa/shared/lib/ticketActivity';
 import { TicketModelEventPublisher } from '@alga-psa/shared/services/tickets/ticketModelEventPublisher';
+import { createTicketWithSideEffects } from '@alga-psa/shared/services/tickets/createTicketWithSideEffects';
 import { TicketModelAnalyticsTracker } from '../lib/adapters/TicketModelAnalyticsTracker';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { enforceTicketCloseRules, TicketCloseValidationError, type CloseRuleFailure } from '../lib/validateTicketClosure';
@@ -97,13 +100,15 @@ import {
   buildTicketUpdatedPayload,
 } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { buildTicketCommunicationWorkflowEvents, publishTicketCommunicationWorkflowEvent } from '../lib/workflowTicketCommunicationEvents';
+import { validateDuplicateTitle } from '../lib/duplicateTitle';
 import { applyCreatedFromTemplateEffects } from '@alga-psa/shared/services/tickets/createTicketWithSideEffects';
 import { getTicketOrigin, type ResolvedTicketOrigin } from '../lib/ticketOrigin';
 import type { TicketWorkflowBlueprint } from '@alga-psa/shared/workflow/runtime/designer/draftFromTicket';
 import {
-  copyChecklistFromSource,
   countDuplicableCustomFields,
   pickDuplicableAttributes,
+  duplicateCreateInputPatch,
+  recordDuplicateCopy,
   type TicketDuplicateSource,
 } from '../lib/ticketDuplicate';
 import {
@@ -125,6 +130,7 @@ import {
   type UpdateTicketInTransactionOptions,
 } from './optimizedTicketActions';
 import { createTicketRichTextParagraph } from '../lib/ticketRichText';
+import { assertAllowedTicketUpdateOptions } from '../lib/ticketUpdateAuthorization';
 import { revertBundlePropagationForChild } from './ticketBundleUtils';
 import {
   buildTicketResolutionSlaStageCompletionEvent,
@@ -137,7 +143,7 @@ import {
 } from '../lib/ticketStatusFilter';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
 import { assertBoardAcceptsTickets } from './ticketBoardGuards';
-import { permissionError } from '@alga-psa/ui/lib/errorHandling';
+import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 // SLA cancellation is injected by the composition layer to avoid tickets→sla cross-package violation
 let _cancelSlaFn: ((tenantId: string, ticketId: string) => Promise<void>) | null = null;
 
@@ -198,6 +204,13 @@ export type TicketBulkStatusOptions = TicketNotificationSuppressionOptions & {
     isInternal?: boolean;
   };
 };
+
+const TICKET_NOTIFICATION_OPTION_KEYS = ['suppressContactNotifications', 'suppressInternalNotifications'] as const;
+const TICKET_BULK_STATUS_OPTION_KEYS = [
+  ...TICKET_NOTIFICATION_OPTION_KEYS,
+  'propagateToChildren',
+  'resolutionComment',
+] as const;
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
@@ -523,6 +536,9 @@ export const createTicketFromAsset = withAuth(async (user, { tenant }, data: Cre
                 throw new Error('Permission denied: Cannot create ticket');
             }
 
+            const assetPriorityProblem = await findPriorityBoardTypeProblem(trx, tenant, data.board_id, data.priority_id);
+            if (assetPriorityProblem) throw new PriorityBoardTypeError(assetPriorityProblem);
+
             // Server-specific: Create adapters for dependency injection.
             // Passing trx defers event publishing until the commit.
             const eventPublisher = new TicketModelEventPublisher(trx);
@@ -677,6 +693,12 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         }
       }
 
+      const addBoardId = data.get('board_id') as string;
+      if (addBoardId && finalPriorityId) {
+        const priorityProblem = await findPriorityBoardTypeProblem(trx, tenant, addBoardId, finalPriorityId);
+        if (priorityProblem) throw new PriorityBoardTypeError(priorityProblem);
+      }
+
       // Convert FormData to CreateTicketInput format
       const createTicketInput: CreateTicketInput = {
         title: data.get('title') as string,
@@ -739,8 +761,7 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
           user as IUserWithRoles,
           duplicateOfTicketId
         );
-        createTicketInput.duplicated_from_ticket_id = duplicateSourceTicket.ticket_id;
-        createTicketInput.attributes = pickDuplicableAttributes(duplicateSourceTicket.attributes);
+        Object.assign(createTicketInput, duplicateCreateInputPatch(duplicateSourceTicket));
       }
 
       // Template path: authorize and load the template before creating anything, so a refused
@@ -892,47 +913,12 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       });
 
       if (duplicateSourceTicket) {
-        const checklistItemsCopied = copyChecklistFromDuplicate
-          ? await copyChecklistFromSource(trx, tenant, {
-              sourceTicketId: duplicateSourceTicket.ticket_id,
-              targetTicketId: ticketResult.ticket_id,
-              userId: user.user_id,
-            })
-          : 0;
-
-        await writeTicketActivity(trx, {
-          tenant,
-          ticketId: ticketResult.ticket_id,
-          eventType: TICKET_ACTIVITY_EVENT.DUPLICATED_FROM,
-          entityType: TICKET_ACTIVITY_ENTITY.TICKET,
-          entityId: ticketResult.ticket_id,
-          actor: {
-            actorType: TICKET_ACTIVITY_ACTOR.USER,
-            userId: user.user_id,
-          },
-          source: TICKET_ACTIVITY_SOURCE.UI,
-          details: {
-            source_ticket_id: duplicateSourceTicket.ticket_id,
-            source_ticket_number: duplicateSourceTicket.ticket_number,
-            checklist_items_copied: checklistItemsCopied,
-            custom_fields_copied: countDuplicableCustomFields(duplicateSourceTicket.attributes),
-          },
-        });
-        await writeTicketActivity(trx, {
-          tenant,
-          ticketId: duplicateSourceTicket.ticket_id,
-          eventType: TICKET_ACTIVITY_EVENT.DUPLICATED_TO,
-          entityType: TICKET_ACTIVITY_ENTITY.TICKET,
-          entityId: duplicateSourceTicket.ticket_id,
-          actor: {
-            actorType: TICKET_ACTIVITY_ACTOR.USER,
-            userId: user.user_id,
-          },
-          source: TICKET_ACTIVITY_SOURCE.UI,
-          details: {
-            duplicate_ticket_id: ticketResult.ticket_id,
-            duplicate_ticket_number: fullTicket.ticket_number,
-          },
+        await recordDuplicateCopy(trx, tenant, {
+          source: duplicateSourceTicket,
+          targetTicketId: ticketResult.ticket_id,
+          targetTicketNumber: fullTicket.ticket_number,
+          actorUserId: user.user_id,
+          copyChecklist: copyChecklistFromDuplicate,
         });
       }
 
@@ -1013,7 +999,29 @@ async function loadTicketCloneSource(
   tenant: string,
   source: ITicket & { ticket_id: string }
 ): Promise<{ duplicate: TicketDuplicateSource; checklistRows: CloneSourceChecklistRow[] }> {
-  const [client, contact, additionalAgentRows, { tagRows, checklistRows }] = await Promise.all([
+  const nameOf = async (
+    table: string,
+    idColumn: string,
+    nameColumn: string,
+    id: string | null | undefined
+  ): Promise<string | null> => {
+    if (!id) return null;
+    const row = await tenantScopedTable(trx, table, tenant).where({ [idColumn]: id }).select(nameColumn).first();
+    return (row?.[nameColumn] as string | undefined) ?? null;
+  };
+
+  const [
+    client,
+    contact,
+    additionalAgentRows,
+    { tagRows, checklistRows },
+    boardName,
+    categoryName,
+    subcategoryName,
+    priorityName,
+    assignee,
+    teamName,
+  ] = await Promise.all([
     tenantScopedTable(trx, 'clients', tenant)
       .where({ client_id: source.client_id })
       .select('client_id', 'client_name', 'client_type')
@@ -1033,7 +1041,21 @@ async function loadTicketCloneSource(
         .select('tr.additional_user_id as user_id', 'u.first_name', 'u.last_name');
     })(),
     loadTicketCopySources(trx, tenant, source.ticket_id),
+    nameOf('boards', 'board_id', 'board_name', source.board_id),
+    nameOf('categories', 'category_id', 'category_name', source.category_id),
+    nameOf('categories', 'category_id', 'category_name', source.subcategory_id),
+    nameOf('priorities', 'priority_id', 'priority_name', source.priority_id),
+    source.assigned_to
+      ? tenantScopedTable(trx, 'users', tenant)
+          .where({ user_id: source.assigned_to })
+          .select('first_name', 'last_name')
+          .first()
+      : Promise.resolve(undefined),
+    nameOf('teams', 'team_id', 'team_name', source.assigned_team_id),
   ]);
+  const assigneeName = assignee
+    ? `${assignee.first_name ?? ''} ${assignee.last_name ?? ''}`.trim() || null
+    : null;
 
   const attributes = (source.attributes ?? {}) as Record<string, unknown>;
 
@@ -1059,6 +1081,12 @@ async function loadTicketCloneSource(
     itil_urgency: source.itil_urgency ?? null,
     assigned_to: source.assigned_to ?? null,
     assigned_team_id: source.assigned_team_id ?? null,
+    board_name: boardName,
+    category_name: categoryName,
+    subcategory_name: subcategoryName,
+    priority_name: priorityName,
+    assignee_name: assigneeName,
+    assigned_team_name: teamName,
     additional_agents: additionalAgentRows.map((row: { user_id: string; first_name: string | null; last_name: string | null }) => ({
       user_id: row.user_id,
       first_name: row.first_name ?? null,
@@ -1115,6 +1143,176 @@ export const getTicketDuplicateSource = withAuth(async (
       return expected;
     }
     console.error('Error in getTicketDuplicateSource:', error);
+    throw error;
+  }
+});
+
+export interface TicketDuplicateBatchCopy {
+  /** Client-assigned row key; echoed back so the UI can match results to rows. */
+  key: string;
+  contactId: string | null;
+  /** Final, already-rendered title. */
+  title: string;
+}
+
+export interface TicketDuplicateBatchResult {
+  batchId: string;
+  created: Array<{ key: string; ticketId: string; ticketNumber: string; title: string }>;
+  failed: Array<{ key: string; message: string }>;
+}
+
+const MAX_DUPLICATE_BATCH_COPIES = 50;
+
+function duplicateBatchValidationError(message: string): TicketActionError {
+  return actionError(message);
+}
+
+/**
+ * Creates one copy of the source ticket per requested row (contact + title), each in its
+ * own transaction so one failing copy never rolls back the others. A preflight
+ * transaction refuses the whole request (nothing created) when the caller may not
+ * duplicate the source. Copies come from the same shared helpers as single Duplicate.
+ */
+export const duplicateTicketBatch = withAuth(async (
+  user,
+  { tenant },
+  sourceTicketId: string,
+  copies: TicketDuplicateBatchCopy[],
+  options: { copyChecklist: boolean }
+): Promise<TicketDuplicateBatchResult | TicketActionError> => {
+  try {
+    if (user.user_type !== 'internal') {
+      return permissionError('Permission denied: operation not available in client portal');
+    }
+
+    if (!Array.isArray(copies) || copies.length < 1) {
+      return duplicateBatchValidationError('Select at least one copy to create.');
+    }
+    if (copies.length > MAX_DUPLICATE_BATCH_COPIES) {
+      return duplicateBatchValidationError(`You can create at most ${MAX_DUPLICATE_BATCH_COPIES} copies at a time.`);
+    }
+    const seenKeys = new Set<string>();
+    for (const copy of copies) {
+      if (!copy || typeof copy.key !== 'string' || copy.key.length === 0 || seenKeys.has(copy.key)) {
+        return duplicateBatchValidationError('Each copy needs a unique key.');
+      }
+      seenKeys.add(copy.key);
+      if (copy.contactId !== null && (typeof copy.contactId !== 'string' || !UUID_PATTERN.test(copy.contactId))) {
+        return duplicateBatchValidationError('Invalid contact.');
+      }
+      if (typeof copy.title !== 'string') {
+        return duplicateBatchValidationError('Invalid title.');
+      }
+    }
+
+    const { knex: db } = await createTenantKnex();
+    const batchId = uuidv4();
+
+    // Preflight: nothing is created unless the caller may read the source and create tickets.
+    const { draft, allowedContactIds } = await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        throw new Error('Permission denied: Cannot view ticket');
+      }
+      if (!await hasPermission(user, 'ticket', 'create', trx)) {
+        throw new Error('Permission denied: Cannot create ticket');
+      }
+      const source = await loadAuthorizedDuplicateSourceRow(trx, tenant, user as IUserWithRoles, sourceTicketId);
+      const sourceDraft = (await loadTicketCloneSource(trx, tenant, source)).duplicate;
+
+      const requestedContactIds = Array.from(
+        new Set(copies.map((copy) => copy.contactId).filter((id): id is string => id !== null))
+      );
+      const allowed = requestedContactIds.length
+        ? await tenantScopedTable(trx, 'contacts', tenant)
+            .where({ client_id: source.client_id })
+            .whereIn('contact_name_id', requestedContactIds)
+            .select('contact_name_id')
+        : [];
+      return {
+        draft: sourceDraft,
+        allowedContactIds: new Set<string>(allowed.map((row: { contact_name_id: string }) => row.contact_name_id)),
+      };
+    });
+
+    const created: TicketDuplicateBatchResult['created'] = [];
+    const failed: TicketDuplicateBatchResult['failed'] = [];
+
+    for (const copy of copies) {
+      try {
+        if (validateDuplicateTitle(copy.title) !== null) {
+          throw new Error('Title is empty or contains an unresolved {{token}}');
+        }
+        if (copy.contactId !== null && !allowedContactIds.has(copy.contactId)) {
+          throw new Error(`Contact does not belong to ${draft.client.name || 'the source client'}`);
+        }
+
+        const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+          // Re-authorize inside this copy's transaction: a source deleted mid-batch fails the rest cleanly.
+          const source = await loadAuthorizedDuplicateSourceRow(trx, tenant, user as IUserWithRoles, sourceTicketId);
+
+          // LEVERAGE: pattern ticket-create-composition — single Duplicate still composes creation by hand in addTicket; moving it onto createTicketWithSideEffects removes this second composition (batch-duplicate plan, R1)
+          const createdTicket = await createTicketWithSideEffects(trx, tenant, {
+            actor: { type: 'user', userId: user.user_id },
+            ticket: {
+              title: copy.title,
+              client_id: source.client_id as string,
+              contact_id: copy.contactId ?? undefined,
+              board_id: source.board_id ?? undefined,
+              location_id: source.location_id ?? undefined,
+              category_id: source.category_id ?? undefined,
+              subcategory_id: source.subcategory_id ?? undefined,
+              priority_id: source.priority_id ?? undefined,
+              itil_impact: source.itil_impact ?? undefined,
+              itil_urgency: source.itil_urgency ?? undefined,
+              assigned_to: source.assigned_to ?? undefined,
+              description: draft.description,
+              source: 'web_app',
+              ticket_origin: TICKET_ORIGINS.INTERNAL,
+              ...duplicateCreateInputPatch(source),
+            },
+            teamId: draft.assigned_team_id,
+            additionalAgentIds: draft.additional_agents.map((agent) => agent.user_id),
+            tags: draft.tags.map((tag) => tag.tag_text),
+            analyticsTracker: new TicketModelAnalyticsTracker(),
+          });
+
+          await recordDuplicateCopy(trx, tenant, {
+            source,
+            targetTicketId: createdTicket.ticketId,
+            targetTicketNumber: createdTicket.ticketNumber,
+            actorUserId: user.user_id,
+            copyChecklist: options.copyChecklist,
+            batchId,
+          });
+          return createdTicket;
+        });
+
+        created.push({
+          key: copy.key,
+          ticketId: result.ticketId,
+          ticketNumber: result.ticketNumber,
+          title: copy.title,
+        });
+      } catch (error: unknown) {
+        console.error('Error creating batch duplicate copy:', error);
+        failed.push({
+          key: copy.key,
+          message: await ticketBulkFailureMessage(error, 'Failed to create copy'),
+        });
+      }
+    }
+
+    if (created.length > 0) {
+      revalidatePath('/msp/tickets');
+    }
+
+    return { batchId, created, failed };
+  } catch (error) {
+    const expected = ticketActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    console.error('Error in duplicateTicketBatch:', error);
     throw error;
   }
 });
@@ -1387,6 +1585,11 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
           }
         }
       }
+
+      // The priority family must match the board's priority_type. Checked only when this patch changes
+      // the priority or board, so an unrelated update still works on legacy mismatched tickets.
+      const priorityProblem = await findTicketUpdatePriorityBoardTypeProblem(trx, tenant, currentTicket, updateData);
+      if (priorityProblem) throw new PriorityBoardTypeError(priorityProblem);
 
       // Validate location belongs to the client if provided
       if ('location_id' in updateData && updateData.location_id) {
@@ -2323,6 +2526,7 @@ export const moveTicketsToBoard = withAuth(async (
   movedIds: string[];
   failed: Array<{ ticketId: string; message: string }>;
 }> => {
+  assertAllowedTicketUpdateOptions(options, TICKET_NOTIFICATION_OPTION_KEYS);
   const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
 
   if (uniqueIds.length === 0) {
@@ -2424,6 +2628,7 @@ export const bulkAssignTickets = withAuth(async (
   updatedIds: string[];
   failed: Array<{ ticketId: string; message: string }>;
 }> => {
+  assertAllowedTicketUpdateOptions(options, TICKET_NOTIFICATION_OPTION_KEYS);
   const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
 
   if (uniqueIds.length === 0) {
@@ -2569,6 +2774,7 @@ export const bulkUpdateTicketDueDate = withAuth(async (
   updatedIds: string[];
   failed: Array<{ ticketId: string; message: string }>;
 }> => {
+  assertAllowedTicketUpdateOptions(options, TICKET_NOTIFICATION_OPTION_KEYS);
   const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
 
   if (uniqueIds.length === 0) {
@@ -2619,6 +2825,7 @@ export const bulkUpdateTicketStatus = withAuth(async (
   updatedIds: string[];
   failed: Array<{ ticketId: string; message: string; closeRuleFailures?: CloseRuleFailure[] }>;
 }> => {
+  assertAllowedTicketUpdateOptions(options, TICKET_BULK_STATUS_OPTION_KEYS);
   const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
 
   if (uniqueIds.length === 0) {
@@ -2721,6 +2928,7 @@ export const bulkUpdateTicketPriority = withAuth(async (
   updatedIds: string[];
   failed: Array<{ ticketId: string; message: string }>;
 }> => {
+  assertAllowedTicketUpdateOptions(options, TICKET_NOTIFICATION_OPTION_KEYS);
   const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
 
   if (uniqueIds.length === 0) {

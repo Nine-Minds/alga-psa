@@ -6537,7 +6537,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/documents/{associationId}",
     "displayName": "Remove asset document association",
     "summary": "Remove asset document association",
-    "description": "Removes a document association row by document_associations.association_id for the authenticated tenant. The service deletes rows where association_id and tenant match and does not verify entity_type in this method. The controller intends to return an empty success response after deletion, but currently calls createApiResponse(null, 204) inside NextResponse.json, which can throw because JSON responses cannot use status 204 with a body.",
+    "description": "Removes a document association by its API association ID within the authenticated tenant and verifies it belongs to an asset before authorization. The asset is resolved within the tenant before the caller’s update permission and record-level scope are checked; foreign-tenant IDs return 404. The generic document link and any asset-specific notes record are deleted together.",
     "tags": [
       "Assets"
     ],
@@ -6547,11 +6547,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "associationId",
         "in": "path",
         "required": true,
-        "description": "Document association UUID from document_associations.association_id.",
+        "description": "Asset document association UUID returned by the API; new API associations use document_associations.association_id and may also resolve asset_document_associations IDs.",
         "schema": {
           "type": "string",
           "format": "uuid",
-          "description": "Document association UUID from document_associations.association_id."
+          "description": "Asset document association UUID returned by the API; new API associations use document_associations.association_id and may also resolve asset_document_associations IDs."
         }
       },
       {
@@ -6895,11 +6895,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "relationshipId",
         "in": "path",
         "required": true,
-        "description": "Asset relationship UUID from asset_relationships.relationship_id.",
+        "description": "Composite asset relationship identity: parent_asset_id:child_asset_id.",
         "schema": {
           "type": "string",
-          "format": "uuid",
-          "description": "Asset relationship UUID from asset_relationships.relationship_id."
+          "description": "Composite asset relationship identity: parent_asset_id:child_asset_id."
         }
       },
       {
@@ -7403,7 +7402,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/{id}/documents",
     "displayName": "List asset document associations",
     "summary": "List asset document associations",
-    "description": "Returns document_associations rows for an asset in the authenticated tenant where entity_type is asset and entity_id is the path asset ID. The service joins documents to add original_filename, file_size, mime_type, and uploaded_at. It does not check whether the asset exists first, so nonexistent or cross-tenant asset IDs return 200 with an empty array. Response links currently point at /api/v2/assets paths.",
+    "description": "Returns document associations for the asset in the authenticated tenant. Controller authorization resolves and authorizes the asset first; nonexistent or cross-tenant asset IDs return 404, while in-tenant permission denials return 403. Document details are joined from documents/external_files, legacy filename, size, MIME type, and upload-time fields remain at the response top level, and optional association notes come from asset_document_associations. Response links currently point at /api/v2/assets paths.",
     "tags": [
       "Assets"
     ],
@@ -7474,7 +7473,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/{id}/documents",
     "displayName": "Associate document with asset",
     "summary": "Associate document with asset",
-    "description": "Creates a document_associations row that links the path asset ID to the supplied document_id. The body is validated with createAssetDocumentSchema; document_id is required and notes is optional. The service inserts entity_type=asset, entity_id from the path, document_id, notes, tenant from context, and created_at, then returns the inserted row. It does not verify that the asset or document belongs to the same tenant before insert, does not set created_by, and publishes no event. Foreign-key or unique constraint errors surface through handleApiError.",
+    "description": "Creates the tenant-scoped document link for the path asset and supplied document_id, while storing optional notes and authenticated created_by in asset_document_associations. The body is validated with createAssetDocumentSchema; document_id is required and notes is optional. Both association records are written transactionally so document workflows and the asset API stay consistent. Tenant-scoped asset and document checks run before insert; database persistence errors are surfaced through handleApiError.",
     "tags": [
       "Assets"
     ],
@@ -7513,7 +7512,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "notes": {
           "type": "string",
-          "description": "Optional notes stored on document_associations.notes."
+          "description": "Optional notes stored on asset_document_associations.notes."
         }
       },
       "required": [
@@ -11971,10 +11970,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "provider",
         "in": "path",
         "required": true,
-        "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing.",
+        "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, unifi, or huntress. Scheduled device sync is available for all but huntress, which exposes no device listing.",
         "schema": {
           "type": "string",
-          "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing."
+          "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, unifi, or huntress. Scheduled device sync is available for all but huntress, which exposes no device listing."
         }
       },
       {
@@ -12085,10 +12084,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "provider",
         "in": "path",
         "required": true,
-        "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing.",
+        "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, unifi, or huntress. Scheduled device sync is available for all but huntress, which exposes no device listing.",
         "schema": {
           "type": "string",
-          "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing."
+          "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, unifi, or huntress. Scheduled device sync is available for all but huntress, which exposes no device listing."
         }
       },
       {
@@ -12217,10 +12216,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "provider",
         "in": "path",
         "required": true,
-        "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing.",
+        "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, unifi, or huntress. Scheduled device sync is available for all but huntress, which exposes no device listing.",
         "schema": {
           "type": "string",
-          "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing."
+          "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, unifi, or huntress. Scheduled device sync is available for all but huntress, which exposes no device listing."
         }
       },
       {
@@ -17829,6 +17828,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "minLength": 1,
           "maxLength": 255
         },
+        "invoice_line_description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 500,
+          "description": "Invoice title for a Fixed line (the bundle row title); falls back to the line name when null."
+        },
+        "invoice_line_subtitle": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 500,
+          "description": "Muted second line under a Fixed bundle title on invoices; null = none."
+        },
         "billing_frequency": {
           "type": "string",
           "enum": [
@@ -18087,6 +18102,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string",
           "minLength": 1,
           "maxLength": 255
+        },
+        "invoice_line_description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 500,
+          "description": "Invoice title for a Fixed line (the bundle row title); falls back to the line name when null."
+        },
+        "invoice_line_subtitle": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 500,
+          "description": "Muted second line under a Fixed bundle title on invoices; null = none."
         },
         "billing_frequency": {
           "type": "string",
@@ -41194,6 +41225,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "boolean"
         }
       },
+      "additionalProperties": false,
       "description": "Payload for updating a board. All fields are optional."
     },
     "responseBodySchema": {
@@ -54371,7 +54403,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets",
     "displayName": "Create Ticket",
     "summary": "Create a new ticket",
-    "description": "Creates a new ticket on a specified board with the desired status and priority. Requires the user to have ticket create permissions. Do not invoke this until you have gathered valid UUIDs for board_id, client_id, status_id, and priority_id from prior lookup calls. IMPORTANT: status_id must belong to the same board as board_id — use GET /api/v1/statuses?type=ticket&board_id=... to discover valid statuses for the chosen board. Set suppressContactNotifications=true to create the ticket silently — no customer-facing ticket-created email (which otherwise falls back to the client's address when the ticket has no contact) and no portal notifications. Add suppressInternalNotifications=true to also skip agent and watcher notifications; internal suppression requires customer suppression. Silent creations still create normal audit, workflow, and webhook records.",
+    "description": "Creates a new ticket on a specified board with the desired status and priority. Requires ticket create permission. IMPORTANT: status_id must belong to board_id. HISTORICAL IMPORT: send entered_at (ISO 8601 with offset, not in the future) to create a silent source=api_import record with no SLA clock, TICKET_CREATED, notifications, webhooks or workflows. For already-closed history, use a closed status and closed_at (entered_at <= closed_at <= now), optionally closed_by; no TICKET_CLOSED fires. Then create comments with created_at after their ticket and parent. Historical dates require an internal (MSP) user with the corresponding ticket create/update permission. Use PUT /tickets/{id} with entered_at to correct an existing open date. Notification suppression fields also apply to live creates; suppressed live creations retain their normal audit, workflow and webhook behavior.",
     "tags": [
       "Work Management v1"
     ],
@@ -54523,13 +54555,28 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           },
           "description": "Optional labels to associate with the ticket. Discover existing tag values via GET /api/v1/tags or GET /api/v1/tags/search before reusing them."
         },
+        "entered_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Historical import. ISO 8601 datetime with offset; not in the future. Stores the ticket with this open date and marks it historical: silent, source=api_import, no SLA clock, TICKET_CREATED, notifications, webhooks or workflows. Requires an internal MSP user with ticket:create permission."
+        },
+        "closed_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Historical import only (requires entered_at). Required for a closed status and rejected for an open status. Must satisfy entered_at <= closed_at <= now. Stored closed without TICKET_CLOSED."
+        },
+        "closed_by": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Historical import only (requires closed_at). Defaults to the API user."
+        },
         "suppressContactNotifications": {
           "type": "boolean",
-          "description": "Suppress the customer-facing ticket-created email and portal notifications for this creation. Use it for machine-generated tickets that should not reach the client."
+          "description": "Suppress customer-facing ticket-created email and portal notifications for this operation."
         },
         "suppressInternalNotifications": {
           "type": "boolean",
-          "description": "Also suppress agent and watcher email, in-app, and push notifications. Requires suppressContactNotifications=true."
+          "description": "Also suppress agent and watcher notifications. Requires suppressContactNotifications=true."
         }
       },
       "required": [
@@ -55056,6 +55103,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "minLength": 1,
           "maxLength": 255
         },
+        "entered_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Correct the ticket open date. ISO 8601 datetime with an offset; requires an internal MSP user with ticket:update permission. Must not be in the future or after closure or the earliest comment. A date-only correction does not publish TICKET_UPDATED or start SLA timers."
+        },
         "url": {
           "type": "string",
           "format": "uri"
@@ -55552,6 +55604,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           },
           "maxItems": 20,
           "description": "One-off Bcc recipients for this comment's email only. Never returned to client-portal callers. Not allowed with is_internal. Max 20 cc + bcc combined."
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Historical import. Requires an internal MSP user with ticket:update permission. ISO 8601 datetime with an offset (date-only is rejected), not in the future, and not before the ticket's entered_at (for a reply, not before the parent comment). The comment is stored with this timestamp and is silent: no TICKET_COMMENT_ADDED, notifications, webhooks, workflows, SLA first response or response-state change. Cannot be combined with scheduled_publish_at, scheduled_publish_tz, cc or bcc."
         }
       },
       "required": [
@@ -55630,11 +55687,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "closed_at": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Honored when this update closes the ticket (open to closed): stored as the close time instead of now. Must not be in the future or before entered_at. TICKET_CLOSED still fires; use suppression flags to silence notifications. Use historical create fields to import an already-closed ticket silently."
         },
         "closed_by": {
           "type": "string",
-          "format": "uuid"
+          "format": "uuid",
+          "description": "Honored with closed_at when this update closes the ticket; defaults to the API user."
         },
         "override_close_rules": {
           "type": "boolean"
@@ -59015,7 +59074,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-sheets/export",
     "displayName": "Export time sheets",
     "summary": "Export time sheets",
-    "description": "Exports time sheets using ApiTimeSheetController.export().",
+    "description": "Exports every time sheet matching the filters (not one page) using ApiTimeSheetController.export(). Array filters approval_statuses, user_ids, period_ids and fields accept repeated keys or comma-separated values.",
     "tags": [
       "Work Management v1"
     ],
@@ -59151,7 +59210,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-sheets/search",
     "displayName": "Search time sheets",
     "summary": "Search time sheets",
-    "description": "Searches time sheets via ApiTimeSheetController.search(). `query` is required and is matched as a case-insensitive substring against the sheet owner's full name (first name + space + last name). `user_name` is the only searchable field and the default. Optional filters narrow by approval status, user, period and period date range. Array params (`fields`, `approval_statuses`, `user_ids`, `period_ids`) accept repeated params or comma-separated values. `include_entries=true` adds each sheet's `time_entries`. Returns at most `limit` sheets (default 25, max 100).",
+    "description": "Searches time sheets via ApiTimeSheetController.search(). `query` is required and is matched against the owner name and time_sheet_notes text. Array filters accept repeated keys or comma-separated values.",
     "tags": [
       "Work Management v1"
     ],
@@ -59317,12 +59376,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "null"
                 ],
                 "format": "uuid"
-              },
-              "notes": {
-                "type": [
-                  "string",
-                  "null"
-                ]
               },
               "user_name": {
                 "type": "string"
@@ -59568,7 +59621,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "submitted_at",
               "approved_at",
               "approved_by",
-              "notes",
               "user_name"
             ]
           }
@@ -64469,6 +64521,352 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "get-_api_v1_timeperiodsettings",
+    "method": "get",
+    "path": "/api/v1/time-period-settings",
+    "displayName": "List time period settings",
+    "summary": "List time period settings",
+    "description": "Returns every time period setting for the tenant, active or not, newest effective_from first. Settings drive time period generation.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/WorkV1TimePeriodSettings"
+          }
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_timeperiodsettings",
+    "method": "post",
+    "path": "/api/v1/time-period-settings",
+    "displayName": "Create time period settings",
+    "summary": "Create time period settings",
+    "description": "Creates an active time period setting. When effective_from is omitted it defaults to the start of the period containing today in the caller's timezone; if an earlier setting ended on or after that day, the new setting starts the day after it ended (the default may then be in the future). An explicit effective_from is used as given. Returns 409 when the setting overlaps an active setting.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "frequency": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "description": "Number of frequency_unit units per period (e.g. 1 with week = weekly)."
+        },
+        "frequency_unit": {
+          "type": "string",
+          "enum": [
+            "day",
+            "week",
+            "month",
+            "year"
+          ]
+        },
+        "start_day": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 31,
+          "description": "week: first weekday (1=Monday … 7=Sunday); month: first day of the month. Defaults to 1."
+        },
+        "end_day": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 31,
+          "description": "month: last day of the period, or 0 for the end of the month. Defaults to 0."
+        },
+        "start_month": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12,
+          "description": "year: first month. Defaults to 1."
+        },
+        "start_day_of_month": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 31,
+          "description": "year: first day of start_month. Defaults to 1."
+        },
+        "end_month": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12,
+          "description": "year: last month. Defaults to 12."
+        },
+        "end_day_of_month": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 31,
+          "description": "year: last day of end_month, or 0 for the end of the month. Defaults to 0."
+        },
+        "effective_from": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "First day the setting is in force. When omitted, defaults to the start of the period containing today in the caller's timezone; if an earlier setting ended on or after that day, it starts the day after that setting ended."
+        },
+        "effective_to": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "Last day the setting is in force (inclusive). Omit for open-ended."
+        }
+      },
+      "required": [
+        "frequency",
+        "frequency_unit"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/WorkV1TimePeriodSettings"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_timeperiodsettings_id",
+    "method": "get",
+    "path": "/api/v1/time-period-settings/{id}",
+    "displayName": "Get time period settings",
+    "summary": "Get time period settings",
+    "description": "Gets one time period setting by time_period_settings_id.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      },
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/WorkV1TimePeriodSettings"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_timeperiodsettings_id",
+    "method": "put",
+    "path": "/api/v1/time-period-settings/{id}",
+    "displayName": "Update time period settings",
+    "summary": "Update time period settings",
+    "description": "Applies a partial update. The merged setting is validated like a create and returns 409 when it overlaps another active setting. effective_to: null clears the end date; is_active: false takes the setting out of period generation and overlap checks.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      },
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "frequency": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "description": "Number of frequency_unit units per period (e.g. 1 with week = weekly)."
+        },
+        "frequency_unit": {
+          "type": "string",
+          "enum": [
+            "day",
+            "week",
+            "month",
+            "year"
+          ]
+        },
+        "start_day": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 31,
+          "description": "week: first weekday (1=Monday … 7=Sunday); month: first day of the month. Defaults to 1."
+        },
+        "end_day": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 31,
+          "description": "month: last day of the period, or 0 for the end of the month. Defaults to 0."
+        },
+        "start_month": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12,
+          "description": "year: first month. Defaults to 1."
+        },
+        "start_day_of_month": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 31,
+          "description": "year: first day of start_month. Defaults to 1."
+        },
+        "end_month": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12,
+          "description": "year: last month. Defaults to 12."
+        },
+        "end_day_of_month": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 31,
+          "description": "year: last day of end_month, or 0 for the end of the month. Defaults to 0."
+        },
+        "effective_from": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "First day the setting is in force. When omitted, defaults to the start of the period containing today in the caller's timezone; if an earlier setting ended on or after that day, it starts the day after that setting ended."
+        },
+        "effective_to": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "Last day the setting is in force (inclusive); null clears it."
+        },
+        "is_active": {
+          "type": "boolean",
+          "description": "Inactive settings are ignored by period generation and overlap checks."
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/WorkV1TimePeriodSettings"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_timeperiodsettings_id",
+    "method": "delete",
+    "path": "/api/v1/time-period-settings/{id}",
+    "displayName": "Delete time period settings",
+    "summary": "Delete time period settings",
+    "description": "Deletes a time period setting. Time periods it already generated are kept.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      },
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
+      }
+    ]
+  },
+  {
     "id": "get-_api_v1_quotes",
     "method": "get",
     "path": "/api/v1/quotes",
@@ -68936,6 +69334,20 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "string",
             "null"
           ]
+        },
+        "refType": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "refId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
         }
       },
       "required": [

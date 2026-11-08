@@ -21,7 +21,8 @@ export interface AssetRelationship {
 }
 
 // RMM Provider types
-export type RmmProvider = 'ninjaone' | 'tacticalrmm' | 'tanium' | 'levelio' | 'datto' | 'connectwise_automate' | 'huntress';
+// LEVERAGE: pattern rmm-provider-union — RmmProvider is duplicated in three files; every new provider edits all of them
+export type RmmProvider = 'ninjaone' | 'tacticalrmm' | 'tanium' | 'levelio' | 'unifi' | 'datto' | 'connectwise_automate' | 'huntress';
 export type RmmAgentStatus = 'online' | 'offline' | 'overdue' | 'unknown';
 export interface AssetRemoteAccessLink {
   link_id: string;

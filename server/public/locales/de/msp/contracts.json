@@ -800,6 +800,9 @@
       "cost": "Kosten: {{cost}}",
       "costInCurrency": "Kosten in {{currency}}: {{cost}}",
       "margin": "Marge: {{margin}} pro Einheit"
+    },
+    "invoiceText": {
+      "subtitleLabel": "Rechnungsuntertitel"
     }
   },
   "contractLineEdit": {
@@ -816,7 +819,9 @@
       "rate": "Tarif",
       "invoiceText": "Rechnungspositionstext",
       "invoiceTextPlaceholder": "Wird auf der Rechnung gedruckt; standardmäßig der Zeilenname",
-      "invoiceTextHelp": "Dieser Text wird wörtlich auf der wiederkehrenden Rechnungsposition gedruckt."
+      "invoiceTextHelp": "Dieser Text wird wörtlich auf der wiederkehrenden Rechnungsposition gedruckt.",
+      "invoiceSubtitle": "Rechnungsuntertitel",
+      "invoiceSubtitleHelp": "Eine abgeschwächte zweite Zeile unter dem Rechnungspositionstext."
     },
     "sections": {
       "billingTiming": "Abrechnungszeitpunkt",
@@ -1647,7 +1652,11 @@
       "nameLabel": "Positionsname (optional)",
       "namePlaceholder": "Feste Position {{number}}",
       "removeLine": "Feste Position entfernen",
-      "noServiceWarning": "Diese Position hat einen wiederkehrenden Betrag, aber keinen Service, auf dem er abgerechnet werden kann. Fügen Sie vor dem Abschluss einen Service hinzu; als Entwurf können Sie sie weiterhin speichern."
+      "noServiceWarning": "Diese Position hat einen wiederkehrenden Betrag, aber keinen Service, auf dem er abgerechnet werden kann. Fügen Sie vor dem Abschluss einen Service hinzu; als Entwurf können Sie sie weiterhin speichern.",
+      "invoiceTitleLabel": "Rechnungstitel (optional)",
+      "invoiceTitlePlaceholder": "Standardmäßig der Positionsname",
+      "invoiceSubtitleLabel": "Rechnungsuntertitel (optional)",
+      "invoiceSubtitlePlaceholder": "z. B. Verwaltete Endgeräte und Backup"
     },
     "recurringChange": {
       "title": "Änderung der wiederkehrenden Summe bestätigen",
@@ -2286,7 +2295,11 @@
     },
     "actions": {
       "addService": "Service hinzufügen"
-    }
+    },
+    "invoiceTitleLabel": "Rechnungstitel (optional)",
+    "invoiceTitlePlaceholder": "Standardmäßig der Positionsname",
+    "invoiceSubtitleLabel": "Rechnungsuntertitel (optional)",
+    "invoiceSubtitlePlaceholder": "z. B. Verwaltete Endgeräte und Backup"
   },
   "templateProducts": {
     "heading": "Produkte",

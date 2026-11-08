@@ -122,6 +122,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'marketing_suppressions',
   'marketing_channels',
   'marketing_campaigns',
+  // Interactions reference opportunities and must be removed before the sales chain.
   'interactions',
   'interaction_types',
   'task_checklist_items',
@@ -139,12 +140,16 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'project_template_tasks',
   'project_template_phases',
   'project_templates',
+  // Quote decisions and email access links are children of quotes.
   'quote_activities',
+  'quote_access_links',
+  'quote_decisions',
   'quote_items',
   'quote_document_template_assignments',
   'quote_document_templates',
   'standard_quote_document_templates',
   'quotes',
+  // Opportunity details precede their parents.
   'opportunity_meeting_reviews',
   'opportunity_commitments',
   'opportunity_steps',
@@ -174,9 +179,11 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'hour_block_time_allocations',
   'hour_blocks',
   'contract_line_block_issuances',
+  // Time tracking. Notes are children of time_sheets and must be deleted first.
   'time_tracking_session_segments',
   'time_tracking_sessions',
   'time_entry_suggestion_dismissals',
+  'time_sheet_notes',
   'time_sheet_comments',
   'time_entry_change_requests',
   // Provenance rows of MSP time on shared work restrict the entries they describe.
@@ -203,6 +210,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'email_processed_messages',
   'email_sending_logs',
   'email_rate_limits',
+  'email_oauth_grants',
   'msp_sso_domain_verification_challenges',
   'msp_sso_tenant_login_domains',
   'microsoft_profile_consumer_bindings',
@@ -319,6 +327,8 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'asset_audit_items',
   'asset_audits',
   'software_catalog',
+  'rmm_condition_transitions',
+  'rmm_condition_states',
   'rmm_webhook_events',
   'rmm_maintenance_windows',
   'rmm_alert_rules',

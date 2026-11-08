@@ -56,12 +56,27 @@
     "manageLicense": "Manage License",
     "ariaLabel": "License status",
     "dismiss": "Dismiss",
-    "licenseExpiresIn_few": "License expires in {{count}} days. Renew to avoid service interruption.",
+
+    "subscriptionEnding": "Your Pro subscription has been cancelled. Pro ends on {{date}}. Resubscribe to keep Pro.",
+    "subscriptionEndingNoDate": "Your Pro subscription has been cancelled. Resubscribe to keep Pro.",
+    "subscriptionLapsed": "You're now on the free edition. Resubscribe to restore Pro.",
+    "resubscribe": "Resubscribe",
+    "termEnds": "Your Pro access ends on {{date}}. Renew to keep Pro.",
+    "termEndsNoDate": "Your Pro term is ending. Renew to keep Pro.",
+    "paymentFailed": "Payment failed — we'll retry on {{date}}. Update your payment method to keep Pro.",
+    "paymentFailedNoRetry": "Payment failed. Update your payment method to keep Pro.",
+    "paymentFailedEndsOn": "Pro ends on {{date}} if payment keeps failing.",
+    "paymentFailedEnded": "Pro ended — payment failed. Your appliance runs Essentials.",
+    "paymentFailedEndedEnding": "Your Pro subscription ended — payment failed. Pro stays active until {{date}}. Resubscribe to keep Pro.",
+    "paymentFailedEndedEndingNoDate": "Your Pro subscription ended — payment failed. Resubscribe to keep Pro.",
+    "updatePaymentMethod": "Update payment method",
+"licenseExpiresIn_few": "License expires in {{count}} days. Renew to avoid service interruption.",
     "licenseExpiresIn_many": "License expires in {{count}} days. Renew to avoid service interruption.",
     "trialDaysRemaining_few": "Pro trial active — {{count}} days remaining.",
     "trialDaysRemaining_many": "Pro trial active — {{count}} days remaining.",
     "trialExpiresIn_few": "Pro trial expires in {{count}} days. Enter a license key to keep Pro features.",
     "trialExpiresIn_many": "Pro trial expires in {{count}} days. Enter a license key to keep Pro features."
+
   },
   "nav": {
     "dashboard": "Dashboard",

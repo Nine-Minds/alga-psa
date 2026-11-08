@@ -254,6 +254,7 @@
     "tagModeAny": "Almeno uno tra",
     "tagModeNone": "Nessuno tra",
     "droppedFromLink": "Alcuni filtri di questo link non sono validi e sono stati ignorati.",
+    "clearFilters": "Pulisci filtri",
     "location": "Sede",
     "requesterLocation": "Sede del richiedente",
     "selectStatus": "Seleziona stato"
@@ -402,7 +403,9 @@
     "createTemplate": "Crea modello dal ticket",
     "createWorkflowFromTicket": "Crea workflow dal ticket",
     "printWorkTag": "Stampa etichetta di lavoro",
-    "retry": "Riprova"
+    "retry": "Riprova",
+    "duplicateMultiple": "Duplica più volte…",
+    "duplicateOptions": "Altre opzioni di duplicazione"
   },
   "messages": {
     "noTickets": "Nessun ticket trovato",
@@ -1824,7 +1827,9 @@
       "missingFieldNamed": "Manca un campo obbligatorio del ticket: {{field}}.",
       "referenceMissing": "Uno dei record del ticket selezionati non esiste più. Aggiornare la pagina e riprovare.",
       "conflict": "Questa modifica del ticket è in conflitto con un record esistente. Aggiornare la pagina e riprovare.",
-      "valueNotAllowed": "Uno dei valori del ticket non è consentito. Controllare il modulo e riprovare."
+      "valueNotAllowed": "Uno dei valori del ticket non è consentito. Controllare il modulo e riprovare.",
+      "priorityItilBoardCustom": "La priorità ‘{{priority}}’ è una priorità ITIL, ma la bacheca ‘{{board}}’ usa priorità personalizzate.",
+      "priorityCustomBoardItil": "La priorità ‘{{priority}}’ è una priorità personalizzata, ma la bacheca ‘{{board}}’ usa priorità ITIL."
     },
     "board": {
       "invalidReference": "La bacheca, lo stato o la regola selezionati non sono validi. Aggiornare la pagina e riprovare.",
@@ -1851,7 +1856,9 @@
       "valueNotAllowed": "Uno dei valori del materiale non è consentito. Controllare il modulo e riprovare."
     },
     "settings": {
-      "updateDenied": "Autorizzazione negata: impossibile aggiornare le impostazioni dei ticket"
+      "createDenied": "Autorizzazione negata: impossibile creare bacheche",
+      "updateDenied": "Autorizzazione negata: impossibile aggiornare le impostazioni dei ticket",
+      "deleteDenied": "Autorizzazione negata: impossibile eliminare bacheche"
     },
     "list": {
       "filtersInvalid": "I filtri dell’elenco ticket non sono più validi. Aggiornare la pagina e riprovare."
@@ -2834,15 +2841,17 @@
       "fromTicket": "Precompilato dal ticket #{{number}}. Non viene salvato nulla finché non fai clic su Salva.",
       "inlineImages": "La descrizione contiene immagini che appartengono al ticket di origine. Potrebbero non essere più visualizzate se quel ticket viene eliminato. Rimuovile o ricaricale se il modello deve sopravvivere al ticket.",
       "viewOnly": "Puoi visualizzare questo modello ma non modificarlo.",
-      "referenceProblems": "Alcuni campi di questo modello puntano a elementi che non esistono più. Restano vuoti quando il modello viene usato. Correggili e salva:",
+      "referenceProblems": "Alcuni campi di questo modello non sono validi: fanno riferimento a elementi che non esistono più o non sono compatibili tra loro (ad esempio una priorità che non corrisponde alla bacheca). Correggili e salva:",
       "inactiveWarning": "Inattivo: nascosto nel selettore dei modelli; ancora usato da {{count}} pianificazioni.",
       "sharedWarning": "Le modifiche si applicano a ogni pianificazione ricorrente che usa questo modello, a partire dal prossimo ticket creato.",
-      "boardChangeWarning": "Cambiare la bacheca azzera priorità e categoria e può rendere non valido lo stato delle pianificazioni che usano questo modello. Tali pianificazioni falliscono finché non le modifichi. Pianificazioni interessate: {{schedules}}."
+      "boardChangeWarning": "Cambiare la bacheca azzera priorità e categoria e può rendere non valido lo stato delle pianificazioni che usano questo modello. Tali pianificazioni falliscono finché non le modifichi. Pianificazioni interessate: {{schedules}}.",
+      "priorityTypeMismatchItil": "La priorità ‘{{priority}}’ è una priorità ITIL, ma la bacheca ‘{{board}}’ usa priorità personalizzate. Il salvataggio verrà rifiutato finché non cambi la priorità o la bacheca.",
+      "priorityTypeMismatchCustom": "La priorità ‘{{priority}}’ è una priorità personalizzata, ma la bacheca ‘{{board}}’ usa priorità ITIL. Il salvataggio verrà rifiutato finché non cambi la priorità o la bacheca."
     },
     "errors": {
       "notFound": "Modello di ticket non trovato",
       "duplicateName": "Esiste già un modello chiamato {{name}}",
-      "invalidReferences": "Il modello fa riferimento a una bacheca, una categoria o una priorità non disponibile",
+      "invalidReferences": "{{problems}}",
       "notAvailable": "I modelli di ticket non sono disponibili",
       "subcategoryNeedsCategory": "Una sottocategoria richiede una categoria",
       "inUseBySchedules": "Usato da {{count}} pianificazione/i ricorrente/i: {{schedules}}. Assegna prima un altro modello o archiviale."
@@ -2998,6 +3007,75 @@
       "notAvailable": "Questa risposta predefinita non è disponibile per questo ticket.",
       "notATeamMember": "Puoi gestire le risposte di team solo per i team di cui fai parte."
     }
+  },
+  "batchDuplicate": {
+    "title": "Duplica #{{number}} per i contatti",
+    "titleLoading": "Duplica per i contatti",
+    "loading": "Caricamento…",
+    "loadFailed": "Impossibile caricare il ticket da duplicare. Riprova.",
+    "createFailed": "Impossibile creare le copie. Riprova.",
+    "templateLabel": "Modello del titolo",
+    "insertToken": "Inserisci:",
+    "nameHint": "Sostituisci \"{{name}}\" con {{token}} per personalizzare ogni copia.",
+    "replace": "Sostituisci",
+    "contactsLabel": "Contatti",
+    "contactsPlaceholder": "Seleziona contatti…",
+    "addBlankRow": "Aggiungi copia senza contatto",
+    "count": "{{count}} di {{max}}",
+    "capReached": "Massimo {{max}} copie per lotto.",
+    "columns": {
+      "contact": "Contatto",
+      "title": "Titolo"
+    },
+    "resetRow": "Ripristina il modello",
+    "removeRow": "Rimuovi copia",
+    "copyChecklist": "Copia le voci della checklist (non spuntate)",
+    "cancel": "Annulla",
+    "review": "Rivedi",
+    "back": "Indietro",
+    "create_one": "Crea {{count}} ticket",
+    "create_other": "Crea {{count}} ticket",
+    "creating_one": "Creazione di {{count}} ticket…",
+    "creating_other": "Creazione di {{count}} ticket…",
+    "done": "Fatto",
+    "retryFailed_one": "Riprova quelle non riuscite ({{count}})",
+    "retryFailed_other": "Riprova quelle non riuscite ({{count}})",
+    "errors": {
+      "contactRequired": "Questo titolo usa {{token}} ma la copia non ha un contatto.",
+      "unknownToken": "Segnaposto sconosciuto: {{tokens}}",
+      "empty": "Il titolo non può essere vuoto.",
+      "unresolvedToken": "Il titolo contiene ancora un segnaposto {{placeholder}}."
+    },
+    "summary": {
+      "client": "Cliente",
+      "board": "Bacheca",
+      "category": "Categoria",
+      "priority": "Priorità",
+      "assignee": "Assegnatario",
+      "team": "Team",
+      "additionalAgents": "Agenti aggiuntivi",
+      "tags": "Tag",
+      "checklist": "Elenco di controllo",
+      "checklistCopy_one": "Copia {{count}} voce (non spuntata)",
+      "checklistCopy_other": "Copia {{count}} voci (non spuntate)",
+      "checklistSkip": "Non copiata",
+      "customFields": "Campi personalizzati",
+      "status": "Stato",
+      "statusBoardDefault": "Predefinito della bacheca",
+      "none": "Nessuno",
+      "notCopied": "Commenti, registrazioni di tempo, allegati e scadenza non vengono copiati.",
+      "unresolved": "Nome non disponibile"
+    },
+    "results": {
+      "created_one": "{{count}} ticket creato",
+      "created_other": "{{count}} ticket creati",
+      "failed_one": "{{count}} copia non riuscita",
+      "failed_other": "{{count}} copie non riuscite"
+    },
+    "discardTitle": "Annullare queste copie?",
+    "discardMessage": "Le copie impostate non sono ancora state create. Annullarle e chiudere?",
+    "discardConfirm": "Annulla copie",
+    "discardKeep": "Continua a modificare"
   },
   "sharedSla": {
     "title": "Livello di servizio",

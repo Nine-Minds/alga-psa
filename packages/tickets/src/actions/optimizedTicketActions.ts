@@ -54,6 +54,7 @@ import {
   type TenantScopedQuery,
 } from '@alga-psa/db';
 import { Knex } from 'knex';
+import { findTicketUpdatePriorityBoardTypeProblem, PriorityBoardTypeError } from '../lib/ticketFieldReferences';
 import { safeRevalidatePath as revalidatePath } from '../lib/safeRevalidate';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { z } from 'zod';
@@ -105,6 +106,7 @@ import {
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { authorizeTicketRecordAccess, type TicketRecordRow } from '../lib/ticketRecordAuthorization';
+import { assertAllowedTicketUpdateOptions, AUTO_CLOSE_TICKET_AUTHORIZATION } from '../lib/ticketUpdateAuthorization';
 import { createTicketRelationshipSqlAdapter } from '../lib/ticketAuthorizationSql';
 import { compilePredicateFragment } from '@alga-psa/predicates/sql';
 import type { PredicateGroup } from '@alga-psa/predicates';
@@ -142,6 +144,7 @@ import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import { resolveBoardStopwatchEnabled } from '../lib/boardLiveTicketTimer';
 import { scheduleJobAt as scheduleBackgroundJobAt } from '@alga-psa/core';
 import { authorizeAndRedactDocuments } from '@shared/lib/documentAuthorization';
+import { attachViaPrincipalNames } from '@alga-psa/shared/lib/viaPrincipal/viaPrincipalNames';
 
 const SCHEDULED_COMMENT_JOB = 'publish-scheduled-comment';
 type ScheduledCommentPublication = { publishAt: string; timeZone: string };
@@ -490,7 +493,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
 
     // Fetch all related data in parallel
     const [
-      comments,
+      rawComments,
       documentRows,
       resources,
       rawUsers,
@@ -544,32 +547,13 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       tenantScopedTable(trx, 'boards', tenant)
         .orderBy('board_name', 'asc'),
       
-      // Priorities for the ticket's current board. Mirrors the categories fetch
-      // below: a board only offers the priority family its priority_type declares,
-      // so a custom board never lists leftover ITIL priorities.
-      (async () => {
-        const boardPriorities = () => tenantScopedTable(trx, 'priorities', tenant)
-          .where({ item_type: 'ticket' })
-          .orderBy('priority_name', 'asc');
-
-        if (!ticket.board_id) {
-          return boardPriorities();
-        }
-
-        const ticketBoard = await tenantScopedTable(trx, 'boards', tenant)
-          .where({ board_id: ticket.board_id })
-          .select('priority_type')
-          .first();
-
-        if (ticketBoard?.priority_type === 'itil') {
-          return boardPriorities().where('is_from_itil_standard', true);
-        }
-
-        return boardPriorities()
-          .where((builder: Knex.QueryBuilder) => {
-            builder.where('is_from_itil_standard', false).orWhereNull('is_from_itil_standard');
-          });
-      })(),
+      // All ticket priorities, both families. The client filters by the effective
+      // board's priority_type (the ticket's board can change before saving, and a
+      // cross-family move must offer the destination board's family).
+      tenantScopedTable(trx, 'priorities', tenant)
+        .where({ item_type: 'ticket' })
+        .select('*')
+        .orderBy('priority_name', 'asc'),
 
       // Categories for the ticket's current board. This must match
       // getTicketCategoriesByBoard so the hydrated dropdown doesn't briefly
@@ -745,6 +729,9 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     // the agent pickers only offer assignable agents. Comment authors are not
     // bound by that: client-portal repliers and deactivated agents also write
     // comments, so fetch the missing authors separately for display purposes only.
+    // "<human> via <principal>" needs the principal's display name (EE only; a no-op elsewhere).
+    const comments = await attachViaPrincipalNames(trx, tenant, rawComments as any[], 'created_via_principal_id');
+
     const pickerUserIds = new Set((users as Array<{ user_id: string }>).map((agent) => agent.user_id));
     const extraAuthorIds = Array.from(
       new Set(
@@ -2498,9 +2485,9 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
 /**
  * Core ticket-update logic, executed inside a caller-provided transaction.
  *
- * Intentionally does NOT check permissions — callers must authorize first. The public
- * `updateTicketWithCache` wrapper performs the `ticket:update` check; bulk callers hoist
- * a single check and reuse this core per ticket, avoiding one permission lookup per row.
+ * Public wrappers check coarse `ticket:update` RBAC. This shared boundary also enforces
+ * per-record update access for ordinary actors; admitted collaboration and system actors
+ * carry their respective explicit authorization contexts.
  */
 export interface UpdateTicketInTransactionOptions {
   /** Close despite unmet close rules; honored only with ticket:close_override. */
@@ -2518,13 +2505,6 @@ export interface UpdateTicketInTransactionOptions {
    * only, undefined raises BundlePropagationConfirmationRequiredError.
    */
   propagateToChildren?: boolean;
-  /**
-   * Attribute the change to the system rather than `user` (auto-close engine):
-   * closed_by stays null, events carry a SYSTEM actor, and the audit row is
-   * system-sourced. `user` is still required for the call signature but is not
-   * referenced for attribution.
-   */
-  systemActor?: boolean;
 }
 
 export async function updateTicketInTransaction(
@@ -2535,10 +2515,19 @@ export async function updateTicketInTransaction(
   data: Partial<ITicket>,
   options?: UpdateTicketInTransactionOptions,
   collaboration?: TicketMutationCollaborationContext,
+  authorizationContext?: typeof AUTO_CLOSE_TICKET_AUTHORIZATION,
 ): Promise<'success'> {
     try {
       // Validate update data
       const validatedData = validateData(ticketUpdateSchema, data);
+      assertAllowedTicketUpdateOptions(options, [
+        'overrideCloseRules',
+        'overrideCloseRulesReason',
+        'suppressContactNotifications',
+        'suppressInternalNotifications',
+        'bypassCloseRules',
+        'propagateToChildren',
+      ]);
       const suppressContactNotifications = options?.suppressContactNotifications === true;
       const suppressInternalNotifications = options?.suppressInternalNotifications === true;
 
@@ -2549,7 +2538,10 @@ export async function updateTicketInTransaction(
     // Co-managed collaborator edits (admitted by the shared-work domain). Every
     // statement in this block is conditional on `collaboration`: a native caller
     // issues exactly the queries it issued before, and takes no additional lock.
-    const isSystemActor = options?.systemActor === true;
+    if (authorizationContext !== undefined && authorizationContext !== AUTO_CLOSE_TICKET_AUTHORIZATION) {
+      throw new Error('Invalid ticket update authorization context');
+    }
+    const isSystemActor = authorizationContext === AUTO_CLOSE_TICKET_AUTHORIZATION;
     if (collaboration && (isSystemActor || options?.overrideCloseRules || options?.bypassCloseRules ||
         suppressContactNotifications || suppressInternalNotifications)) {
       throw new Error('Shared ticket edits cannot override closure or notification policy');
@@ -2562,6 +2554,19 @@ export async function updateTicketInTransaction(
       const allowed = new Set(['title', 'url', 'status_id', 'priority_id', 'due_date', 'response_state', 'category_id', 'subcategory_id', 'attributes']);
       if (Object.keys(data).some((key) => !allowed.has(key))) throw new Error('Unsupported shared ticket edit fields');
       await collaboration.assertWriteAuthority(trx);
+    } else if (!isSystemActor) {
+      // Coarse ticket:update permission is checked by public wrappers, but it
+      // does not establish that this principal can mutate this particular row.
+      // Keep this gate in the shared action boundary so bulk and other public
+      // callers receive the same record-level policy before the update core
+      // loads or changes the ticket.
+      await authorizeTicketRecordAccess({
+        trx,
+        tenant,
+        user,
+        ticketId: id,
+        action: 'update',
+      });
     }
 
     // Get current ticket state before update
@@ -2667,6 +2672,10 @@ export async function updateTicketInTransaction(
       'board_id' in updateData &&
       !!updateData.board_id &&
       updateData.board_id !== currentTicket.board_id;
+
+    // Priority family must match the board's priority_type; only checked when the patch changes either.
+    const priorityProblem = await findTicketUpdatePriorityBoardTypeProblem(trx, tenant, currentTicket, updateData);
+    if (priorityProblem) throw new PriorityBoardTypeError(priorityProblem);
 
     if (isBoardChange && !updateData.status_id) {
       throw new Error('Changing the board requires selecting a status for the destination board');
@@ -3199,7 +3208,7 @@ export async function updateTicketInTransaction(
           ctx: {
             tenantId: tenant,
             occurredAt,
-            // Native callers (including systemActor, e.g. auto-close) keep the USER actor they always had.
+            // Native callers (including trusted auto-close) keep the USER actor they always had.
             actor: collaborator ? workflowCtx.actor : { actorType: 'USER', actorUserId: user.user_id },
           },
         }),
@@ -3263,6 +3272,13 @@ export const updateTicketWithCache = withAuth(async (
   >,
 ): Promise<'success' | TicketActionError> => {
   try {
+    assertAllowedTicketUpdateOptions(options, [
+      'overrideCloseRules',
+      'overrideCloseRulesReason',
+      'suppressContactNotifications',
+      'suppressInternalNotifications',
+      'propagateToChildren',
+    ]);
     // MSP cached ticket write surface. A client-portal session must not reach it;
     // reject before the permission lookup or any ticket mutation.
     if (user.user_type !== 'internal') {

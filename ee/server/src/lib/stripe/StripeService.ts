@@ -90,6 +90,7 @@ const APPLIANCE_LIFECYCLE_EVENT_TYPES = new Set<string>([
   'customer.subscription.updated',
   'customer.subscription.deleted',
   'invoice.payment_failed',
+  'invoice.paid',
 ]);
 
 /**
@@ -1551,6 +1552,10 @@ export class StripeService {
         syncSeats: async (applianceTenantId, seats) => {
           const { updateApplianceEntitlementSeats } = await import('@ee/lib/applianceConsole/algaLicenseAdminClient');
           return updateApplianceEntitlementSeats(applianceTenantId, seats);
+        },
+        setPaymentState: async (stripeSubId, payment) => {
+          const { setApplianceEntitlementPaymentState } = await import('@ee/lib/applianceConsole/algaLicenseAdminClient');
+          return setApplianceEntitlementPaymentState(stripeSubId, payment);
         },
         syncState: async (stripeSubId, state) => {
           const { syncApplianceSubscriptionState } = await import('@ee/lib/applianceConsole/algaLicenseAdminClient');

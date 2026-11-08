@@ -8,6 +8,8 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 
+import { PriorityBoardTypeError } from '../lib/ticketFieldReferences';
+
 export type TicketActionError = ActionMessageError | ActionPermissionError;
 
 /**
@@ -62,6 +64,7 @@ export const TICKET_NOT_FOUND_MESSAGE_KEY = TICKET_CODE_MESSAGE_KEYS.TICKET_NOT_
  */
 const EXPECTED_TICKET_MESSAGE_PREFIXES = [
   'Client users can only create their own comments',
+  'Contact does not belong to',
   'Client users cannot create internal comments',
   'Bundle settings not found',
   'Cannot add children to a bundled child ticket',
@@ -110,6 +113,7 @@ const EXPECTED_TICKET_MESSAGE_PREFIXES = [
   'Ticket is already bundled',
   'Ticket is not bundled',
   'Ticket cannot be closed',
+  'Title is empty or contains an unresolved',
   'Ticket status does not belong to the selected board',
   'Ticket not found',
   'Ticket resource not found',
@@ -148,6 +152,10 @@ function ticketErrorCodeOf(error: unknown): TicketErrorCode | undefined {
 export function ticketActionErrorFrom(error: unknown): TicketActionError | null {
   if (isAuthorizationThrow(error)) {
     return permissionError(error instanceof Error ? error.message : String(error));
+  }
+
+  if (error instanceof PriorityBoardTypeError) {
+    return actionError(error.message, error.messageKey, error.messageParams);
   }
 
   const audienceCode = (error as { code?: unknown } | null)?.code;

@@ -1,6 +1,16 @@
 [
   {
     "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/WorkV1TimeSheetSearchResponse/properties/data/items/properties/notes",
+    "reason": "The time-sheets.notes database column was retired after its values were migrated into time_sheet_notes history. Search returns actual time_sheets columns and searches note history through fields=note; it does not return a nonexistent notes column. The real-Postgres search regression test verifies both history search and the response shape."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/WorkV1TimeSheetSearchResponse/properties/data/items/properties/notes",
+    "reason": "The time-sheets.notes database column was retired after its values were migrated into time_sheet_notes history. Search returns actual time_sheets columns and searches note history through fields=note; it does not return a nonexistent notes column. The real-Postgres search regression test verifies both history search and the response shape."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
     "pointer": "/paths/~1api~1v1~1assets/get/extensions/x-unapplied-validated-filters",
     "reason": "Mobile 2.0 (alga-2026-0002627): the assets list `search` filter is now actually applied, so it drops out of this metadata list. The list names validated filters the service ignores; an entry only ever leaves it when the filter starts working, which widens behaviour instead of breaking a caller."
   },
@@ -153,6 +163,56 @@
     "doc": "sdk/docs/openapi/alga-openapi.ce.json",
     "pointer": "/paths/~1api~1v1~1products/post/requestBody/content/application~1json/schema/properties/barcode/anyOf/2",
     "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1assets~1relationships~1{relationshipId}/delete/parameters/path:relationshipId/schema/format",
+    "reason": "The existing asset API uses a composite parent_asset_id:child_asset_id relationship identity, so this path value is not a UUID."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/AssetDocumentAssociationRow/properties/file_size/type",
+    "reason": "The existing document schema and runtime permit file_size to be null for documents without stored file-size metadata."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/AssetDocumentAssociationRow/properties/mime_type/type",
+    "reason": "The existing document schema and runtime permit mime_type to be null for documents without stored MIME metadata."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/AssetRelationshipParams/properties/relationshipId/format",
+    "reason": "The existing asset API uses a composite parent_asset_id:child_asset_id relationship identity, so this path value is not a UUID."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/AssetRelationshipRow/properties/relationship_id/format",
+    "reason": "The existing asset API uses a composite parent_asset_id:child_asset_id relationship identity, so this value is not a UUID."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1assets~1relationships~1{relationshipId}/delete/parameters/path:relationshipId/schema/format",
+    "reason": "The existing asset API uses a composite parent_asset_id:child_asset_id relationship identity, so this path value is not a UUID."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/AssetDocumentAssociationRow/properties/file_size/type",
+    "reason": "The existing document schema and runtime permit file_size to be null for documents without stored file-size metadata."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/AssetDocumentAssociationRow/properties/mime_type/type",
+    "reason": "The existing document schema and runtime permit mime_type to be null for documents without stored MIME metadata."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/AssetRelationshipParams/properties/relationshipId/format",
+    "reason": "The existing asset API uses a composite parent_asset_id:child_asset_id relationship identity, so this path value is not a UUID."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/AssetRelationshipRow/properties/relationship_id/format",
+    "reason": "The existing asset API uses a composite parent_asset_id:child_asset_id relationship identity, so this value is not a UUID."
   },
   {
     "doc": "sdk/docs/openapi/alga-openapi.ce.json",

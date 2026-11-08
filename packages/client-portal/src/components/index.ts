@@ -12,6 +12,9 @@ export { RequestAppointmentModal } from './appointments/RequestAppointmentModal'
 
 export { default as BillingOverview } from './billing/BillingOverview';
 export { default as QuoteDetailPage } from './billing/QuoteDetailPage';
+export { default as QuoteLinkDecisionPanel, type QuoteLinkDecisionPanelProps, type QuoteLinkAgreement } from './billing/QuoteLinkDecisionPanel';
+export { QuoteDocumentView } from './billing/QuoteDocumentView';
+export { PublicQuoteReview } from './billing/PublicQuoteReview';
 
 export { default as ClientDocumentsPage } from './documents/ClientDocumentsPage';
 export { PaymentRedirect } from './billing/PaymentRedirect';
