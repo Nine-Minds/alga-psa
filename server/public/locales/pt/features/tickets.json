@@ -151,8 +151,8 @@
       "skipUnassigned": "Ignorar (deixar sem responsável)",
       "skipNoTeam": "Ignorar (sem equipe atribuída)",
       "skipLeaveBlank": "Ignorar (deixar em branco)",
-      "clientTypeCompany": "Pessoa jurídica",
-      "clientTypeIndividual": "Pessoa física",
+      "clientTypeCompany": "Empresa",
+      "clientTypeIndividual": "Individual",
       "clientTypePlaceholder": "Tipo de cliente",
       "selectClient": "Selecione um cliente...",
       "selectPriority": "Selecione uma prioridade...",
@@ -256,7 +256,7 @@
     "droppedFromLink": "Alguns filtros deste link não são válidos e foram ignorados.",
     "location": "Localização",
     "requesterLocation": "Localização do solicitante",
-    "selectStatus": "Selecionar status"
+    "selectStatus": "Selecione o status"
   },
   "create": {
     "title": "Criar ticket de suporte",
@@ -2886,7 +2886,7 @@
       "paused": "SLA pausado",
       "atRisk": "Em risco",
       "onTrack": "Dentro do prazo",
-      "remaining": "Tempo restante: {{magnitude}}"
+      "remaining": "Restante: {{magnitude}}"
     }
   },
   "cannedResponses": {
@@ -3070,10 +3070,10 @@
       "closed": "{{actor}} fechou o ticket",
       "reopened": "{{actor}} reabriu o ticket",
       "reopenedByEmail": "Acionado por uma resposta recebida por email",
-      "bundleReopened": "Ticket principal do agrupamento reaberto",
-      "bundleReopenedSubtitle": "Acionado por uma resposta a um ticket secundário",
-      "bundleStatusNotPropagated": "{{actor}} alterou o status do ticket principal do agrupamento (tickets secundários não atualizados)",
-      "bundleStatusPropagated": "{{actor}} {{action}} o ticket principal do agrupamento e {{count}} ticket(s) secundário(s)",
+      "bundleReopened": "Ticket principal do pacote reaberto",
+      "bundleReopenedSubtitle": "Acionado por uma resposta em um ticket filho",
+      "bundleStatusNotPropagated": "{{actor}} alterou o status do ticket principal do pacote (tickets filhos não atualizados)",
+      "bundleStatusPropagated": "{{actor}} {{action}} o ticket principal do pacote e {{count}} ticket(s) filho(s)",
       "bundleAction": {
         "reopened": "reabriu",
         "closed": "fechou"
@@ -3097,7 +3097,7 @@
       "inboundEmailReceived": "Email recebido",
       "updated": "{{actor}} atualizou o ticket",
       "externalLinkAdded": "{{actor}} vinculou {{reference}}",
-      "externalLinkUpdated": "{{actor}} atualizou o vínculo de {{reference}}",
+      "externalLinkUpdated": "{{actor}} atualizou o link de {{reference}}",
       "externalLinkRemoved": "{{actor}} desvinculou {{reference}}",
       "fallback": "{{actor}} • {{eventType}}"
     },
@@ -3132,8 +3132,8 @@
         "createdFromTemplate": "Criado a partir de modelo",
         "duplicatedFrom": "Duplicado de",
         "duplicatedTo": "Duplicado para",
-        "bundleReopened": "Agrupamento reaberto",
-        "bundleStatusPropagated": "Status do agrupamento propagado"
+        "bundleReopened": "Pacote reaberto",
+        "bundleStatusPropagated": "Status do pacote propagado"
       },
       "sources": {
         "all": "Todas as origens",
@@ -3182,7 +3182,7 @@
     }
   },
   "bundle": {
-    "toggleChildren": "Mostrar/ocultar tickets secundários do agrupamento",
+    "toggleChildren": "Mostrar/ocultar tickets filhos do pacote",
     "bundledTo": "Agrupado → {{ticketNumber}}",
     "master": "Principal",
     "openChildrenShort": "abertos"
