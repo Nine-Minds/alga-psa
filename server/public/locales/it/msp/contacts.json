@@ -71,6 +71,7 @@
       "message_other": "I seguenti tipi di telefono personalizzati non sono più usati da alcun contatto: {{labels}}. Eliminare le definizioni dei tipi o mantenerle per un uso futuro?",
       "deleteType": "Elimina tipo",
       "keepType": "Mantieni tipo",
+      "message_few": "I seguenti tipi di telefono personalizzati non sono più usati da alcun contatto: {{labels}}. Eliminare le definizioni dei tipi o mantenerle per un uso futuro?",
       "message_many": "I seguenti tipi di telefono personalizzati non sono più usati da alcun contatto: {{labels}}. Eliminare le definizioni dei tipi o mantenerle per un uso futuro?"
     },
     "print": {
@@ -463,8 +464,9 @@
         "invitationNotFound": "Invito non trovato o già utilizzato."
       },
       "userNotFound": "Utente cliente non trovato",
-      "validationErrorTitle": "Errore di validazione"
+      "validationErrorTitle": "Errore di convalida"
     },
+    "boardCount_few": "{{count}} bacheche",
     "boardCount_many": "{{count}} bacheche"
   },
   "quickAddContact": {
@@ -729,7 +731,7 @@
     "relative": {
       "today": "oggi",
       "yesterday": "ieri",
-      "daysAgo": "{{count}} g fa"
+      "daysAgo": "{{count}} gg fa"
     },
     "emailType": {
       "primary": "Principale",
@@ -760,7 +762,7 @@
     "editContact": "Modifica contatto",
     "openFullPage": "Apri pagina completa",
     "viewAll": "Visualizza tutto",
-    "viewAllCount": "Visualizza tutto ({{count}})",
+    "viewAllCount": "Visualizza tutti ({{count}})",
     "reach": {
       "title": "Recapiti",
       "add": "Aggiungi email o telefono",
@@ -775,8 +777,8 @@
     "portalChip": {
       "deactivated": "Portale · disattivato",
       "signedIn": "Portale · ultimo accesso {{when}}",
-      "neverSignedIn": "Portale · nessun accesso effettuato",
-      "invited": "Portale · invito inviato",
+      "neverSignedIn": "Portale · accesso mai effettuato",
+      "invited": "Portale · invitato",
       "noAccess": "Nessun accesso al portale"
     },
     "portal": {
@@ -818,7 +820,7 @@
       "dialogTitle": "Documenti del contatto"
     },
     "relatedWork": {
-      "title": "Attività correlate",
+      "title": "Lavori correlati",
       "projects": "Progetti",
       "quotes": "Preventivi",
       "noProjects": "Nessun progetto",
@@ -948,6 +950,7 @@
       "scopeSummaryOwn": "Propri",
       "managerScopeNote_one": "La sua vista include anche i dati di {{count}} persona che riporta a lei.",
       "managerScopeNote_other": "La sua vista include anche i dati di {{count}} persone che riportano a lei.",
+      "managerScopeNote_few": "La sua vista include anche i dati di {{count}} persone che riportano a lei.",
       "managerScopeNote_many": "La sua vista include anche i dati di {{count}} di persone che riportano a lei.",
       "assignmentLabel": "Gruppo di visibilità dei ticket",
       "assignmentPlaceholder": "Seleziona assegnazione di visibilità",
