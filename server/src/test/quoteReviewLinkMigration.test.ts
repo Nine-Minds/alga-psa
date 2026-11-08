@@ -2,9 +2,9 @@ import { createRequire } from 'node:module';
 import { describe, expect, it, vi } from 'vitest';
 
 const require = createRequire(import.meta.url);
-const migration = require('../../../../server/migrations/20261031090000_add_quote_review_link_to_email_templates.cjs');
-const quoteEmail = require('../../../../server/migrations/utils/templates/email/quotes/quoteEmail.cjs');
-const quoteReminder = require('../../../../server/migrations/utils/templates/email/quotes/quoteReminder.cjs');
+const migration = require('../../migrations/20261031090000_add_quote_review_link_to_email_templates.cjs');
+const quoteEmail = require('../../migrations/utils/templates/email/quotes/quoteEmail.cjs');
+const quoteReminder = require('../../migrations/utils/templates/email/quotes/quoteReminder.cjs');
 
 // Minimal knex double capturing system_email_templates upserts.
 function fakeKnex() {
