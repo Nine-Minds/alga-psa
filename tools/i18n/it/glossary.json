@@ -2372,7 +2372,9 @@
       "Asset: {{name}}",
       "Ticket: {{number}}",
       "RMA {{number}} · {{status}}",
-      "Markdown"
+      "Markdown",
+      "ticket",
+      "Firmware"
     ],
     "caseInsensitive": [
       "account",
