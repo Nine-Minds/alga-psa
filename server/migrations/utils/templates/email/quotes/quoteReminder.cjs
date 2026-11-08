@@ -43,6 +43,7 @@ const COPY = {
     validUntilLabel: 'Valid Until',
     customMessageLabel: 'Note from {{company.name}}',
     portalLinkLabel: 'Review this quote in the client portal',
+    reviewCta: 'Review and approve quote',
     closingNote: 'If you have any questions about this quote, please don\'t hesitate to contact us.',
     thankYou: 'Thank you,',
     footer: 'Powered by AlgaPSA',
@@ -61,6 +62,7 @@ const COPY = {
     validUntilLabel: 'Valable jusqu\'au',
     customMessageLabel: 'Message de {{company.name}}',
     portalLinkLabel: 'Consulter ce devis dans le portail client',
+    reviewCta: 'Examiner et approuver le devis',
     closingNote: 'Si vous avez des questions concernant ce devis, n\'hésitez pas à nous contacter.',
     thankYou: 'Cordialement,',
     footer: 'Powered by AlgaPSA &middot; Gardons les équipes alignées',
@@ -79,6 +81,7 @@ const COPY = {
     validUntilLabel: 'Válida hasta',
     customMessageLabel: 'Mensaje de {{company.name}}',
     portalLinkLabel: 'Revisar esta cotización en el portal de clientes',
+    reviewCta: 'Revisar y aprobar la cotización',
     closingNote: 'Si tiene alguna pregunta sobre esta cotización, no dude en contactarnos.',
     thankYou: 'Atentamente,',
     footer: 'Powered by AlgaPSA &middot; Manteniendo a los equipos alineados',
@@ -97,6 +100,7 @@ const COPY = {
     validUntilLabel: 'Gültig bis',
     customMessageLabel: 'Nachricht von {{company.name}}',
     portalLinkLabel: 'Dieses Angebot im Kundenportal ansehen',
+    reviewCta: 'Angebot prüfen und genehmigen',
     closingNote: 'Bei Fragen zu diesem Angebot können Sie uns gerne kontaktieren.',
     thankYou: 'Mit freundlichen Grüßen,',
     footer: 'Powered by AlgaPSA &middot; Teams auf Kurs halten',
@@ -115,6 +119,7 @@ const COPY = {
     validUntilLabel: 'Geldig tot',
     customMessageLabel: 'Bericht van {{company.name}}',
     portalLinkLabel: 'Bekijk deze offerte in het klantenportaal',
+    reviewCta: 'Offerte bekijken en goedkeuren',
     closingNote: 'Als u vragen heeft over deze offerte, aarzel dan niet om contact met ons op te nemen.',
     thankYou: 'Met vriendelijke groet,',
     footer: 'Powered by AlgaPSA &middot; Teams op één lijn houden',
@@ -133,6 +138,7 @@ const COPY = {
     validUntilLabel: 'Valido fino al',
     customMessageLabel: 'Messaggio da {{company.name}}',
     portalLinkLabel: 'Consulta questo preventivo nel portale clienti',
+    reviewCta: 'Rivedi e approva il preventivo',
     closingNote: 'Per qualsiasi domanda su questo preventivo, non esiti a contattarci.',
     thankYou: 'Cordiali saluti,',
     footer: 'Powered by AlgaPSA &middot; Manteniamo i team allineati',
@@ -151,6 +157,7 @@ const COPY = {
     validUntilLabel: 'Ważna do',
     customMessageLabel: 'Wiadomość od {{company.name}}',
     portalLinkLabel: 'Zobacz tę wycenę w portalu klienta',
+    reviewCta: 'Przejrzyj i zatwierdź wycenę',
     closingNote: 'W razie pytań dotyczących tej wyceny prosimy o kontakt.',
     thankYou: 'Z poważaniem,',
     footer: 'Powered by AlgaPSA',
@@ -169,6 +176,7 @@ const COPY = {
     validUntilLabel: 'Válida até',
     customMessageLabel: 'Observação de {{company.name}}',
     portalLinkLabel: 'Consultar esta cotação no portal do cliente',
+    reviewCta: 'Revisar e aprovar a cotação',
     closingNote: 'Se tiver alguma dúvida sobre esta cotação, entre em contato conosco.',
     thankYou: 'Atenciosamente,',
     footer: 'Powered by AlgaPSA',
@@ -187,6 +195,7 @@ const COPY = {
     validUntilLabel: 'Giltig till',
     customMessageLabel: 'Meddelande från {{company.name}}',
     portalLinkLabel: 'Granska denna offert i kundportalen',
+    reviewCta: 'Granska och godkänn offert',
     closingNote: 'Kontakta oss om du har några frågor om denna offert.',
     thankYou: 'Med vänliga hälsningar,',
     footer: 'Drivs av AlgaPSA',
@@ -197,7 +206,26 @@ const COPY = {
 };
 /* eslint-enable max-len */
 
-function buildBodyHtml(c) {
+function linkBlockHtml(c, withReviewLink) {
+  const portalBlock = `{{#if portalLink}}
+                <p style="margin:24px 0 0 0;font-size:15px;line-height:1.5;"><a href="{{portalLink}}" style="color:${BRAND_PRIMARY};font-weight:600;">${c.portalLinkLabel}</a></p>
+                {{/if}}`;
+  if (!withReviewLink) {
+    return portalBlock;
+  }
+  // The per-recipient review link is the primary call to action; the portal
+  // link is secondary and only present when the recipient has portal access.
+  return `{{#if quoteReviewLink}}
+                <p style="margin:24px 0 0 0;font-size:15px;line-height:1.5;"><a href="{{quoteReviewLink}}" style="display:inline-block;padding:12px 24px;border-radius:8px;background:${BRAND_PRIMARY};color:#ffffff;font-weight:600;text-decoration:none;">${c.reviewCta}</a></p>
+                {{#if portalLink}}
+                <p style="margin:16px 0 0 0;font-size:14px;line-height:1.5;"><a href="{{portalLink}}" style="color:${BRAND_PRIMARY};">${c.portalLinkLabel}</a></p>
+                {{/if}}
+                {{else}}
+                ${portalBlock}
+                {{/if}}`;
+}
+
+function buildBodyHtml(c, withReviewLink) {
   return `<p style="margin:0 0 16px 0;font-size:15px;color:#1f2933;line-height:1.5;">${c.greeting}</p>
                 <p style="margin:0 0 16px 0;font-size:15px;color:#1f2933;line-height:1.5;">${c.intro}</p>
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;color:#1f2933;margin:24px 0;">
@@ -224,14 +252,29 @@ function buildBodyHtml(c) {
                   <div style="color:#475467;line-height:1.5;">{{customMessage}}</div>
                 </div>
                 {{/if}}
-                {{#if portalLink}}
-                <p style="margin:24px 0 0 0;font-size:15px;line-height:1.5;"><a href="{{portalLink}}" style="color:${BRAND_PRIMARY};font-weight:600;">${c.portalLinkLabel}</a></p>
-                {{/if}}
+                ${linkBlockHtml(c, withReviewLink)}
                 <p style="margin:24px 0 16px 0;font-size:15px;color:#1f2933;line-height:1.5;">${c.closingNote}</p>
                 <p style="margin:16px 0 0 0;font-size:15px;color:#1f2933;line-height:1.5;">${c.thankYou}<br><strong>{{company.name}}</strong></p>`;
 }
 
-function buildText(c) {
+function linkBlockText(c, withReviewLink) {
+  const portalBlock = `{{#if portalLink}}
+${c.portalLinkLabel}: {{portalLink}}
+{{/if}}`;
+  if (!withReviewLink) {
+    return portalBlock;
+  }
+  return `{{#if quoteReviewLink}}
+${c.reviewCta}: {{quoteReviewLink}}
+{{#if portalLink}}
+${c.portalLinkLabel}: {{portalLink}}
+{{/if}}
+{{else}}
+${portalBlock}
+{{/if}}`;
+}
+
+function buildText(c, withReviewLink) {
   return `${c.textHeader}
 
 ${c.greeting}
@@ -246,9 +289,7 @@ ${c.textDetailsHeader}
 {{#if customMessage}}
 ${c.textNoteLabel}: {{customMessage}}
 {{/if}}
-{{#if portalLink}}
-${c.portalLinkLabel}: {{portalLink}}
-{{/if}}
+${linkBlockText(c, withReviewLink)}
 
 ${c.closingNote}
 
@@ -256,7 +297,12 @@ ${c.thankYou}
 {{company.name}}`;
 }
 
-function getTemplate() {
+/**
+ * @param {{ reviewLink?: boolean }} [options] reviewLink (default true) adds the
+ *   per-recipient `quoteReviewLink` call to action. `false` reproduces the
+ *   pre-review-link bodies exactly (used by the migration's down()).
+ */
+function getTemplate({ reviewLink = true } = {}) {
   return {
     templateName: TEMPLATE_NAME,
     subtypeName: SUBTYPE_NAME,
@@ -268,10 +314,10 @@ function getTemplate() {
         headerLabel: copy.headerLabel,
         headerTitle: '{{quote.number}}',
         headerMeta: copy.headerMeta,
-        bodyHtml: buildBodyHtml(copy),
+        bodyHtml: buildBodyHtml(copy, reviewLink),
         footerText: copy.footer,
       }),
-      textContent: buildText(copy),
+      textContent: buildText(copy, reviewLink),
     })),
   };
 }

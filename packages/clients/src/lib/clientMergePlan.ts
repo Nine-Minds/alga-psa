@@ -18,6 +18,7 @@ export type MergeBlockerCode =
   | 'SOURCE_IS_TENANT_DEFAULT'
   | 'PARENT_LINK_CYCLE'
   | 'INVALID_CONTRACT_CUTOVER'
+  | 'INVALID_CONTACT_LOCATION'
   | 'SOURCE_HAS_CO_MANAGEMENT';
 
 export interface MergeBlocker {
@@ -53,6 +54,36 @@ const blocker = (code: MergeBlockerCode, message: string, i18nKey: string): Merg
   message,
   i18nKey,
 });
+
+/**
+ * A chosen contact location has to be one of the merged client's own: a source location (which the
+ * merge moves to the target) or a target location. Anything else would leave a link straddling two
+ * clients, which the engine refuses at write time — the dry run runs this same check so the
+ * operator reads it before they commit rather than after.
+ */
+export function evaluateContactLocationChoices(input: {
+  assignments: ReadonlyArray<{ contactNameId: string; locations: ReadonlyArray<{ locationId: string }> }>;
+  /** Contacts the merge moves; an assignment for anyone else is ignored, not refused. */
+  sourceContactIds: ReadonlySet<string>;
+  /** Locations of the source and the target, the two sets that end up on the merged client. */
+  allowedLocationIds: ReadonlySet<string>;
+}): MergeBlocker[] {
+  const blockers: MergeBlocker[] = [];
+  for (const assignment of input.assignments) {
+    if (!input.sourceContactIds.has(assignment.contactNameId)) continue;
+    for (const choice of assignment.locations) {
+      if (input.allowedLocationIds.has(choice.locationId)) continue;
+      blockers.push(blocker(
+        'INVALID_CONTACT_LOCATION',
+        'CLIENT_MERGE_ERROR: contact '
+        + `${assignment.contactNameId} cannot be linked to location ${choice.locationId}: `
+        + 'it belongs to neither the source nor the destination client',
+        'msp/clients:errors.clientMerge.invalidContactLocation',
+      ));
+    }
+  }
+  return blockers;
+}
 
 export function evaluateMergeGuards(input: MergeGuardInput): MergeBlocker[] {
   const blockers: MergeBlocker[] = [];
@@ -375,11 +406,16 @@ export const CLIENT_OWNED_MOVE_TABLES: ClientOwnedMoveTable[] = [
   // moves, so its custody (open or closed) follows; one open record per asset,
   // not per client, so a move cannot collide.
   { table: 'asset_custody', label: 'equipment custody record' },
+  // A site audit is a record of walking one client's location. The location and
+  // the audited assets both move, so the audit follows them; audits are keyed by
+  // audit_id alone, so nothing can collide. Its items are keyed by audit, not client.
+  { table: 'asset_audits', label: 'site audit' },
   { table: 'client_locations', label: 'location' },
   { table: 'client_inbound_email_domains', label: 'inbound email domain' },
   { table: 'client_name_aliases', label: 'name alias' },
-  // Client-scoped checklist templates keep applying to the surviving client's tickets.
+  // Client-scoped checklist and ticket templates keep applying to the surviving client's tickets.
   { table: 'checklist_templates', label: 'checklist template' },
+  { table: 'ticket_templates', label: 'ticket template' },
   { table: 'ticket_materials', label: 'ticket material' },
   { table: 'project_materials', label: 'project material' },
   { table: 'survey_invitations', label: 'survey invitation' },
@@ -508,6 +544,13 @@ export const CLIENT_KEYED_TABLES_LEFT_BEHIND: Array<{ table: string; reason: str
       + 'misattribute the record (and collide with the target\'s own row on the per-client unique key).',
   },
   {
+    table: 'co_managed_archive_files',
+    reason:
+      'An immutable copy-on-retain snapshot of a customer attachment owned by the sponsor tenant. '
+      + 'Its client_id records the original relationship provenance, not a live client write target; '
+      + 'archive storage and reads use tenant and archive_file_id. Re-pointing it would rewrite retained history.',
+  },
+  {
     table: 'co_managed_participation_evidence',
     reason:
       'Append-only audit of who touched shared work for this client, kept so access reduction cannot '
@@ -521,6 +564,14 @@ export const CLIENT_KEYED_TABLES_LEFT_BEHIND: Array<{ table: string; reason: str
       + 'a merge here cannot re-stamp. Participation and queue lookups match the reference on that pair, so '
       + 'moving the row would detach it from its relationship. A live relationship already refuses the merge '
       + '(SOURCE_HAS_CO_MANAGEMENT); what remains afterwards is retained history pinned to the original client.',
+  },
+  {
+    table: 'co_managed_time_work_references',
+    reason:
+      'Billing provenance of one MSP time entry booked against shared customer work. Its client_id is '
+      + "the relationship's sponsor_client_id captured at booking, and co-managed effort totals match it "
+      + 'against that relationship; the merge does not re-point relationships, so moving the row would drop '
+      + 'the entry from the shared-work totals it describes.',
   },
   {
     table: 'co_managed_ticket_references',

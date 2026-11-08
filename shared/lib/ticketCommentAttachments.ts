@@ -2,7 +2,7 @@ import type { Knex } from 'knex';
 import { tenantDb, getConnection, registerAfterCommit } from '@alga-psa/db';
 import { randomUUID } from 'node:crypto';
 import { resolveTicketEventActor, scrubLegacyTicketIdActor, ticketEventActorFields } from '@alga-psa/event-schemas';
-import { isClientUserType } from '@alga-psa/types';
+import { canReadTicket, canWriteTicket } from '@alga-psa/authorization/portal/ticketAccess.server';
 
 type Connection = Knex | Knex.Transaction;
 
@@ -120,24 +120,13 @@ export function commentAttachmentFileIds(note: unknown): string[] {
   return [...new Set(Array.from(matches, match => match[1].toLowerCase()))];
 }
 
-export async function canAccessAttachmentTicket(conn: Connection, tenant: string, userId: string, ticketId: string): Promise<boolean> {
-  const db = tenantDb(conn, tenant);
-  const user = await db.table('users').where({ user_id: userId, is_inactive: false }).first();
-  const ticket = await db.table('tickets').where({ ticket_id: ticketId }).first();
-  if (!user || !ticket) return false;
-  if (user.user_type === 'internal') return true;
-  if (!isClientUserType(user.user_type) || !user.contact_id) return false;
-  const contact = await db.table('contacts').where({ contact_name_id: user.contact_id }).first();
-  if (!contact?.client_id || contact.client_id !== ticket.client_id) return false;
-  if (!contact.portal_visibility_group_id) return true;
-  const group = await db.table('client_portal_visibility_groups').where({
-    group_id: contact.portal_visibility_group_id, client_id: contact.client_id,
-  }).first();
-  if (!group) return false;
-  return Boolean(await db.table('client_portal_visibility_group_boards').where({
-    group_id: group.group_id, board_id: ticket.board_id,
-  }).first());
-}
+/** Thin adapters over the canonical record-scope ticket predicates; see portal/ticketAccess.server. */
+export const canAccessAttachmentTicket = (conn: Connection, tenant: string, userId: string, ticketId: string): Promise<boolean> =>
+  canReadTicket(conn, tenant, userId, ticketId);
+
+/** Write-side gate: attaching, uploading and reconciling need the ticket's update scope, not just read. */
+export const canWriteAttachmentTicket = (conn: Connection, tenant: string, userId: string, ticketId: string): Promise<boolean> =>
+  canWriteTicket(conn, tenant, userId, ticketId);
 
 export async function isPublicAttachmentComment(conn: Connection, tenant: string, commentId: string, ticketId: string): Promise<boolean> {
   const db = tenantDb(conn, tenant);
@@ -161,7 +150,7 @@ export async function reconcileCommentAttachments(trx: Connection, tenant: strin
     if (documentIds.length) builder.orWhereIn('document_id', documentIds);
   }).orderBy('attachment_id').forUpdate();
   if (!rows.length) return;
-  if (!await canAccessAttachmentTicket(trx, tenant, actorId, comment.ticket_id)) throw new Error('Attachment ticket access denied');
+  if (!await canWriteAttachmentTicket(trx, tenant, actorId, comment.ticket_id)) throw new Error('Attachment ticket access denied');
   for (const row of rows) {
     const retained = documentIds.includes(row.document_id) && !comment.deleted_at && comment.publish_state !== 'canceled';
     if (retained) {
@@ -179,11 +168,17 @@ export async function reconcileCommentAttachments(trx: Connection, tenant: strin
 }
 
 /** An additional gate, never an alternative to existing document authorization. */
-export async function canReadCommentAttachment(conn: Connection, tenant: string, userId: string, documentId: string): Promise<boolean> {
+export async function canReadCommentAttachment(conn: Connection, tenant: string, userId: string, documentId: string, ticketAccess?: Map<string, Promise<boolean>>): Promise<boolean> {
   const db = tenantDb(conn, tenant);
   const row = await db.table('ticket_comment_attachments').where({ document_id: documentId }).first();
   if (!row) return true; // Existing Documents uploads retain their original policy.
-  if (!await canAccessAttachmentTicket(conn, tenant, userId, row.ticket_id)) return false;
+  // Callers filtering many attachments share one decision per ticket.
+  let access = ticketAccess?.get(row.ticket_id);
+  if (!access) {
+    access = canAccessAttachmentTicket(conn, tenant, userId, row.ticket_id);
+    ticketAccess?.set(row.ticket_id, access);
+  }
+  if (!await access) return false;
   const user = await db.table('users').where({ user_id: userId }).first();
   if (row.state === 'draft') return row.created_by === userId && new Date(row.expires_at).getTime() > Date.now();
   if (row.state !== 'attached' || !row.comment_id) return false;
@@ -207,7 +202,8 @@ export async function expireCommentAttachmentDrafts(conn: Connection, tenant: st
 }
 
 export async function filterReadableCommentAttachments<T extends { document_id: string }>(conn: Connection, tenant: string, userId: string, documents: T[]): Promise<T[]> {
-  const allowed = await Promise.all(documents.map(doc => canReadCommentAttachment(conn, tenant, userId, doc.document_id)));
+  const ticketAccess = new Map<string, Promise<boolean>>();
+  const allowed = await Promise.all(documents.map(doc => canReadCommentAttachment(conn, tenant, userId, doc.document_id, ticketAccess)));
   return documents.filter((_, index) => allowed[index]);
 }
 

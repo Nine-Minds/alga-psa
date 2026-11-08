@@ -3,6 +3,7 @@ import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing/lifecycle';
 import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
+import { dispatchTicketLifecycle } from '@alga-psa/tickets/lib/ticketLifecycleHooks';
 import { lockCoManagedCustomerPolicy } from './policy';
 import { withCoManagedCustomerTicket } from './customerWork';
 import { enqueueCoManagedRouting } from './routingOutbox';
@@ -156,6 +157,11 @@ async function transitionTicket(context: CoManagedSharedWorkContext, request: Co
   await enqueueCoManagedRouting(trx, { customerTenant: resource.tenant, sponsorTenant: relationship.sponsor_tenant, relationshipId: resource.relationshipId,
     ticketId: resource.id, operationId: request.operationId, event: transition === 'escalated' ? 'escalation_received' : 'escalation_returned',
     actorName: event.actor_name, actorOrganization: event.actor_organization });
+  // The organization SLA clock follows responsibility: the registered handler runs in this admitted transaction.
+  // Null only for the ticket's first escalation: a non-null value without an obligation means pre-migration work.
+  const priorEscalation: Date | null = work?.first_escalated_at ?? null;
+  await dispatchTicketLifecycle(trx, { kind: 'handoff', tenant: resource.tenant, ticketId: resource.id, relationshipId: resource.relationshipId,
+    workId, operationId: request.operationId, transition, firstEscalatedAt: priorEscalation ? new Date(priorEscalation).toISOString() : null, occurredAt: new Date(occurredAt).toISOString() });
   await retainCoManagedParticipationEvidence(context, 'ticket_handoff', request.operationId);
   await assertCoManagedSessionUnexpired(trx, { ...actor, kind: 'session', sessionId: context.sessionId });
   if (transition !== 'access_revoked') await assertCoManagedOperationalWrite(trx, resource.tenant);
