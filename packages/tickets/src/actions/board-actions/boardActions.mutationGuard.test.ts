@@ -168,7 +168,9 @@ describe('board mutation guard', () => {
       const result = await createBoard({ board_name: 'X', ...extra } as any);
       expect(result).toMatchObject({ actionError: expect.stringContaining('Invalid board input') });
       expect(withTransactionMock).not.toHaveBeenCalled();
+      expect(reads).toHaveLength(0);
       expect(writes).toHaveLength(0);
+      expect(refusedBy()).toEqual([]);
     });
   });
 

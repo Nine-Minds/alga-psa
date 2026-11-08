@@ -2,7 +2,7 @@ import Handlebars from 'handlebars';
 import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type { IQuote } from '@alga-psa/types';
-import { formatCurrency } from '@alga-psa/core/lib/formatters';
+import { formatCurrency } from '@alga-psa/core/formatters';
 import {
   buildQuoteAcceptedConfirmationEmailTemplate,
   buildQuoteReminderEmailTemplate,

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { IQuote } from '@alga-psa/types';
 
-vi.mock('@alga-psa/core/lib/formatters', () => ({
+vi.mock('@alga-psa/core/formatters', () => ({
   formatCurrency: (value: number, locale: string, currency: string) =>
     new Intl.NumberFormat(locale || 'en-US', { style: 'currency', currency: currency || 'USD' }).format(value),
 }));
@@ -151,6 +151,7 @@ describe('quote-email-templates', () => {
         companyName: 'Acme Corp',
       });
       expect(html).toContain('March 15, 2026');
+      expect(html).toContain('$10,000.00');
     });
 
     it('T262: accepted confirmation shows N/A when accepted_at is missing', () => {

@@ -1,4 +1,4 @@
-import { formatCurrency } from '@alga-psa/core/lib/formatters';
+import { formatCurrency } from '@alga-psa/core/formatters';
 import { formatLocalizedCalendarDate } from '@alga-psa/core';
 import type { IQuote } from '@alga-psa/types';
 
