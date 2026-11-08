@@ -20,6 +20,11 @@
       "types": "./src/actions/interactionCreateHelper.ts",
       "import": "./src/actions/interactionCreateHelper.ts"
     },
+    "./actions/interactionActions": {
+      "types": "./src/actions/interactionActions.ts",
+      "import": "./dist/actions/interactionActions.js",
+      "require": "./dist/actions/interactionActions.js"
+    },
     "./actions/clientNoteActions": {
       "types": "./src/actions/clientNoteActions.ts",
       "import": "./src/actions/clientNoteActions.ts"
@@ -28,6 +33,11 @@
       "types": "./src/components/index.ts",
       "import": "./dist/components/index.js",
       "require": "./dist/components/index.js"
+    },
+    "./components/interactions/InteractionDetails": {
+      "types": "./src/components/interactions/InteractionDetails.tsx",
+      "import": "./dist/components/interactions/InteractionDetails.js",
+      "require": "./dist/components/interactions/InteractionDetails.js"
     },
     "./models": {
       "types": "./src/models/index.ts",

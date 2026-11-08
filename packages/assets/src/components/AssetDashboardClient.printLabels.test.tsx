@@ -20,7 +20,6 @@ import { MAX_LABELS_PER_REQUEST } from '@alga-psa/types';
 const mockListAssets = vi.fn();
 const mockGetClientMaintenanceSummaries = vi.fn();
 const mockGetAssetTypes = vi.fn();
-const mockGetAssetCountsByType = vi.fn();
 
 vi.mock('./custody/CustodyBadge', () => ({ useCustodyBadges: () => new Map(), CustodyBadge: () => null }));
 vi.mock('./warranty/RmaBadge', () => ({ useRmaBadges: () => new Map(), RmaBadge: () => null }));
@@ -44,7 +43,7 @@ vi.mock('../actions/assetDrawerActions', () => ({
 
 vi.mock('../actions/clientLookupActions', () => ({
   getVendorOptionsForAssets: vi.fn(async () => []),
-  getAllClientsForAssets: vi.fn(async () => []),
+  getClientByIdForAssets: vi.fn(async () => null),
   getClientLocationsForAssets: vi.fn(async () => []),
 }));
 
@@ -59,10 +58,6 @@ vi.mock('../actions/assetStatusActions', () => ({
   ]),
 }));
 
-vi.mock('../actions/assetStatisticsActions', () => ({
-  getAssetCountsByType: (...args: unknown[]) => mockGetAssetCountsByType(...args),
-}));
-
 vi.mock('../context/AssetCrossFeatureContext', () => ({
   useAssetCrossFeature: () => ({ renderQuickAddTicket: () => null }),
 }));
@@ -70,7 +65,7 @@ vi.mock('../context/AssetCrossFeatureContext', () => ({
 // Named views have their own tests; here they only need to stay out of the way
 // (the real hook reaches the server actions and the auth stack).
 vi.mock('@alga-psa/list-views/hooks', () => ({
-  useListViews: () => ({}),
+  useListViews: () => ({ isLoading: false, views: [] }),
 }));
 vi.mock('@alga-psa/list-views/components', () => ({ ListViewPicker: () => null }));
 vi.mock('./QuickAddAsset', () => ({ QuickAddAsset: () => null }));
@@ -264,8 +259,11 @@ const pick = (id: string) => waitFor(() => {
 
 function setup(count: number) {
   const all = Array.from({ length: count }, (_, i) => asset(`a${i}`));
-  mockListAssets.mockResolvedValue({ assets: all, total: all.length, page: 1, limit: count });
-  render(<AssetDashboardClient initialAssets={{ assets: all, total: all.length, page: 1, limit: count } as AssetListResponse} />);
+  const response: AssetListResponse = {
+    assets: all, total: all.length, page: 1, limit: count, asset_type_counts: { workstation: count },
+  };
+  mockListAssets.mockResolvedValue(response);
+  render(<AssetDashboardClient initialAssets={response} />);
   return all;
 }
 
@@ -276,8 +274,6 @@ describe('AssetDashboardClient bulk print labels', () => {
     mockGetClientMaintenanceSummaries.mockResolvedValue({});
     mockGetAssetTypes.mockReset();
     mockGetAssetTypes.mockResolvedValue([]);
-    mockGetAssetCountsByType.mockReset();
-    mockGetAssetCountsByType.mockResolvedValue({});
   });
   afterEach(cleanup);
 

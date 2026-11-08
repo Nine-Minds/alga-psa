@@ -61,7 +61,9 @@ const hasQuoteBindingCatalog = (bindings: unknown): boolean => {
         'clientName' in values ||
         'contactName' in values ||
         'tenantName' in values ||
-        'discountTotal' in values ||
+        // LEVERAGE: friction document-kind-by-binding-id — kind is guessed from which binding ids exist, so sharing an id across document types breaks detection
+        // `discountTotal` is deliberately not a discriminator: invoices publish a binding with
+        // that id too (alga0002295), and every quote catalog already carries `quoteNumber`.
         'serviceSubtotal' in values ||
         'productSubtotal' in values
       )

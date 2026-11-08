@@ -32,9 +32,11 @@ import { OPTIONAL_INCLUDED_LABEL, OPTIONAL_PENDING_LABEL, mapDbQuoteToViewModel 
 import { mapDbSalesOrderToViewModel } from '../lib/adapters/salesOrderAdapters';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { evaluateTemplateAst } from '../lib/invoice-template-ast/evaluator';
+import { templateUsesComponentPricing } from '../lib/invoice-template-ast/componentPricing';
 import { INVOICE_TEMPLATE_BINDING_ALIASES } from '../lib/invoice-template-ast/bindingAliases';
 import { localizeTemplateAstForLocale, DOCUMENT_LABEL_NAMESPACE } from '../lib/invoice-template-ast/i18nLabels';
 import { cadenceI18nKey } from '../lib/quoteItemCadence';
+import { PDF_FONT_FACE_CSS } from '../lib/pdf-fonts';
 import { resolvePdfPrintOptionsFromAst } from '../lib/invoice-template-ast/printSettings';
 import { renderEvaluatedTemplateAst } from '../lib/invoice-template-ast/react-renderer';
 import { renderTemplateAstHtmlDocument } from '../lib/invoice-template-ast/server-render';
@@ -870,7 +872,8 @@ export class PDFGenerationService {
       }
 
       const renderLocale = await this.resolveRenderLocale({ invoiceId: options.invoiceId });
-      const enrichedData = await this.enrichWithTenantClient(knex, dbInvoiceData);
+      const pricedInvoiceData = await this.withTemplatePricing(knex, options.invoiceId, dbInvoiceData, templateAst);
+      const enrichedData = await this.enrichWithTenantClient(knex, pricedInvoiceData);
       // The service-period label is built here, in named months, so the mapper
       // needs the recipient's language too.
       const invoiceViewModel = mapDbInvoiceToWasmViewModel(enrichedData, renderLocale);
@@ -994,7 +997,8 @@ export class PDFGenerationService {
         throw new Error(`Template ${templateId} does not have a templateAst payload.`);
       }
 
-      const enrichedData = await this.enrichWithTenantClient(knex, dbInvoiceData);
+      const pricedInvoiceData = await this.withTemplatePricing(knex, invoiceId, dbInvoiceData, templateAst);
+      const enrichedData = await this.enrichWithTenantClient(knex, pricedInvoiceData);
       // Named-month service periods follow the recipient's language.
       const invoiceViewModel = mapDbInvoiceToWasmViewModel(enrichedData, locale);
 
@@ -1069,9 +1073,32 @@ export class PDFGenerationService {
     }
   }
 
-  private async getInvoiceForRendering(knex: Knex | Knex.Transaction, invoiceId: string): Promise<any> {
-    const invoice = await Invoice.getFullInvoiceById(knex, this.tenant, invoiceId);
+  /**
+   * Bundle component names/quantities always load; component prices load only
+   * when the resolved template binds one (see templateUsesComponentPricing), so
+   * a template that shows quantities only never has prices in its view model.
+   */
+  private async getInvoiceForRendering(
+    knex: Knex | Knex.Transaction,
+    invoiceId: string,
+    templateAst?: TemplateAst | null,
+  ): Promise<any> {
+    const invoice = await Invoice.getFullInvoiceById(knex, this.tenant, invoiceId, {
+      includeBundlePresentation: true,
+      includeBundleComponentAmounts: templateAst ? templateUsesComponentPricing(templateAst) : false,
+    });
     return invoice ? enrichContractChangeDescriptions(knex, this.tenant, invoiceId, invoice) : invoice;
+  }
+
+  private async withTemplatePricing(
+    knex: Knex | Knex.Transaction,
+    invoiceId: string,
+    loaded: any,
+    templateAst: TemplateAst,
+  ): Promise<any> {
+    return templateUsesComponentPricing(templateAst)
+      ? this.getInvoiceForRendering(knex, invoiceId, templateAst)
+      : loaded;
   }
 
   private async getInvoiceTemplates(knex: Knex | Knex.Transaction): Promise<any[]> {
@@ -1243,7 +1270,8 @@ export class PDFGenerationService {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${escapedTitle}</title>
     <style>
-      body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; margin: 0; padding: 5mm; }
+${PDF_FONT_FACE_CSS}
+      body { font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif; margin: 0; padding: 5mm; }
       pre { white-space: pre-wrap; word-wrap: break-word; }
       h1, h2, h3, h4, h5, h6 { margin-top: 1em; margin-bottom: 0.5em; }
       .document-title { margin-top: 0; padding-bottom: 0.4em; border-bottom: 1px solid #e2e8f0; font-size: 1.8em; }
@@ -1254,6 +1282,7 @@ export class PDFGenerationService {
       blockquote { border-left: 3px solid #ddd; margin: 0 0 1em; padding: 0.5em 1em; color: #555; }
       img { max-width: 100%; height: auto; }
       a { color: #1e40af; text-decoration: underline; }
+      code, pre { font-family: 'JetBrains Mono', ui-monospace, monospace; }
       code { background-color: #f1f5f9; padding: 1px 4px; border-radius: 3px; font-size: 0.9em; }
       pre code { background: none; padding: 0; }
       pre { background-color: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; }

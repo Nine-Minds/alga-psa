@@ -14,6 +14,7 @@ tags:
   - name: Accounting Exports
   - name: Activities v1
   - name: Admin
+  - name: Asset audits
   - name: Assets
   - name: Auth
   - name: Billing
@@ -77,9 +78,11 @@ tags:
   - name: auth
   - name: billing
   - name: calendar
+  - name: capabilities
   - name: chat
   - name: client-portal
   - name: clients
+  - name: co-management
   - name: documents
   - name: email
   - name: ext
@@ -91,15 +94,19 @@ tags:
   - name: integrations
   - name: internal
   - name: inventory
+  - name: labels
   - name: marketing
   - name: mcp
   - name: meta
   - name: migrations
   - name: mobile
+  - name: notifications
   - name: online-meetings
   - name: platform-feature-flags
   - name: platform-notifications
   - name: platform-reports
+  - name: portal-domain
+  - name: projects
   - name: public
   - name: scim
   - name: secrets
@@ -111,6 +118,7 @@ tags:
   - name: tenant-management
   - name: ticket-comment-attachments
   - name: tickets
+  - name: time-entries
   - name: webhooks
 components:
   securitySchemes:
@@ -1778,8 +1786,9 @@ components:
           description: Sort direction. Defaults to desc.
         search:
           type: string
-          description: General search filter accepted by the shared filter schema. The
-            current AssetService.list implementation does not apply this filter.
+          description: Case-insensitive substring match across asset_tag, name,
+            serial_number, location, manufacturer and model. Applied to both the
+            returned rows and the pagination total.
         created_from:
           type: string
           format: date-time
@@ -1921,7 +1930,9 @@ components:
         associationId:
           type: string
           format: uuid
-          description: Document association UUID from document_associations.association_id.
+          description: Asset document association UUID returned by the API; new API
+            associations use document_associations.association_id and may also
+            resolve asset_document_associations IDs.
       required:
         - associationId
     AssetDocumentAssociationRequest:
@@ -1933,7 +1944,7 @@ components:
           description: Document UUID from documents.document_id to associate with the asset.
         notes:
           type: string
-          description: Optional notes stored on document_associations.notes.
+          description: Optional notes stored on asset_document_associations.notes.
       required:
         - document_id
     AssetExtensionData:
@@ -2227,55 +2238,86 @@ components:
         association_id:
           type: string
           format: uuid
-          description: Primary key from document_associations.association_id.
+          description: Association UUID from document_associations.association_id.
         entity_type:
           type: string
           enum:
             - asset
-          description: Entity type stored on document_associations; always asset for these
-            routes.
+          description: Legacy entity type for this asset document association.
         entity_id:
           type: string
           format: uuid
-          description: Asset UUID from document_associations.entity_id.
+          description: Legacy asset UUID field from document_associations.entity_id.
+        asset_id:
+          type: string
+          format: uuid
+          description: Asset UUID linked by the association.
         document_id:
           type: string
           format: uuid
-          description: Document UUID from document_associations.document_id.
+          description: Document UUID linked by the association.
         notes:
           type:
             - string
             - "null"
-          description: Optional association notes.
+          description: Optional association notes stored on
+            asset_document_associations.notes.
         tenant:
           type: string
           format: uuid
-          description: Tenant UUID from document_associations.tenant.
+          description: Tenant UUID for the association.
         created_at:
           type: string
           format: date-time
           description: Association creation timestamp.
         original_filename:
           type: string
-          description: Original filename from the joined documents table, present on list
-            responses.
+          description: Legacy document filename field, included on list responses.
         file_size:
-          type: number
-          description: File size in bytes from the joined documents table, present on list
-            responses.
+          type:
+            - number
+            - "null"
+          description: Legacy document size field in bytes, included on list responses.
         mime_type:
-          type: string
-          description: MIME type from the joined documents table, present on list responses.
+          type:
+            - string
+            - "null"
+          description: Legacy document MIME type field, included on list responses.
         uploaded_at:
           type: string
           format: date-time
-          description: Document upload timestamp from the joined documents table, present
-            on list responses.
+          description: Legacy document upload timestamp field, included on list responses.
+        document:
+          type: object
+          properties:
+            document_id:
+              type: string
+              format: uuid
+            original_filename:
+              type: string
+            file_size:
+              type:
+                - number
+                - "null"
+            mime_type:
+              type:
+                - string
+                - "null"
+            uploaded_at:
+              type: string
+              format: date-time
+          required:
+            - document_id
+            - original_filename
+            - uploaded_at
+          description: Document details joined for list responses.
       required:
         - association_id
         - entity_type
         - entity_id
+        - asset_id
         - document_id
+        - notes
         - tenant
     AssetDocumentListPayload:
       type: object
@@ -2284,8 +2326,7 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AssetDocumentAssociationRow"
-          description: Document association rows for the asset. Empty when no associations
-            exist or the asset is not found.
+          description: Document association rows for the authorized asset.
         _links:
           type: object
           properties:
@@ -2330,8 +2371,8 @@ components:
         data:
           allOf:
             - $ref: "#/components/schemas/AssetDocumentAssociationRow"
-            - description: Inserted document association row returned from
-                document_associations.returning(*).
+            - description: Asset document association returned by the API with notes from the
+                asset-specific association record.
       required:
         - data
     AssetDocumentAssociationResponse:
@@ -2744,8 +2785,8 @@ components:
       properties:
         relationshipId:
           type: string
-          format: uuid
-          description: Asset relationship UUID from asset_relationships.relationship_id.
+          description: "Composite asset relationship identity:
+            parent_asset_id:child_asset_id."
       required:
         - relationshipId
     AssetMaintenanceScheduleUpdateRequest:
@@ -3322,16 +3363,23 @@ components:
       properties:
         relationship_id:
           type: string
-          format: uuid
-          description: Primary key from asset_relationships.relationship_id.
+          description: "Composite route identity: parent_asset_id:child_asset_id."
         asset_id:
           type: string
           format: uuid
-          description: Source asset UUID from asset_relationships.asset_id.
+          description: Compatibility alias for parent_asset_id.
+        parent_asset_id:
+          type: string
+          format: uuid
+          description: Parent asset UUID from asset_relationships.parent_asset_id.
+        child_asset_id:
+          type: string
+          format: uuid
+          description: Child asset UUID from asset_relationships.child_asset_id.
         related_asset_id:
           type: string
           format: uuid
-          description: Related asset UUID from asset_relationships.related_asset_id.
+          description: Other endpoint asset UUID, present in relationship list responses.
         relationship_type:
           type: string
           description: Free-form relationship type.
@@ -3362,6 +3410,8 @@ components:
       required:
         - relationship_id
         - asset_id
+        - parent_asset_id
+        - child_asset_id
         - related_asset_id
         - relationship_type
         - tenant
@@ -4487,14 +4537,420 @@ components:
             - "null"
         open_tickets_count:
           type: number
+    AssetAuditIdParams:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Audit UUID from asset_audits.audit_id.
+      required:
+        - id
+    AssetAuditItemParams:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Audit UUID from asset_audits.audit_id.
+        assetId:
+          type: string
+          format: uuid
+          description: Asset UUID from assets.asset_id.
+      required:
+        - id
+        - assetId
+    AssetAuditListQuery:
+      type: object
+      properties:
+        page:
+          type: string
+          description: Page number. Defaults to 1.
+        limit:
+          type: string
+          description: Page size, 1 through 100. Defaults to 25.
+        client_id:
+          type: string
+          format: uuid
+          description: Only audits of this client.
+    CreateAssetAuditRequest:
+      type: object
+      properties:
+        client_id:
+          type: string
+          format: uuid
+          description: Client whose assets are audited.
+        location_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Client location in scope. null or omitted audits the client assets
+            that have no location.
+        statuses:
+          type: array
+          items:
+            type: string
+          description: Asset status slugs in scope. Omitted means every status.
+        notes:
+          type: string
+          maxLength: 2000
+      required:
+        - client_id
+    MarkAssetAuditItemRequest:
+      type: object
+      properties:
+        asset_id:
+          type: string
+          format: uuid
+          description: Asset being marked.
+        result:
+          type: string
+          enum:
+            - present
+            - unexpected
+          description: Caller intent; an asset outside the snapshot is stored as
+            unexpected regardless. Defaults to present.
+        method:
+          type: string
+          enum:
+            - scan
+            - manual
+            - register
+          description: How the asset was marked. Defaults to manual.
+      required:
+        - asset_id
+    AssetAuditResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            audit_id:
+              type: string
+              format: uuid
+            tenant:
+              type: string
+              format: uuid
+            client_id:
+              type: string
+              format: uuid
+            location_id:
+              type:
+                - string
+                - "null"
+              format: uuid
+            status:
+              type: string
+              enum:
+                - in_progress
+                - completed
+                - cancelled
+            started_by:
+              type: string
+              format: uuid
+            started_at:
+              type: string
+            completed_at:
+              type:
+                - string
+                - "null"
+            expected_count:
+              type: integer
+            present_count:
+              type: integer
+            missing_count:
+              type: integer
+            unexpected_count:
+              type: integer
+            statuses:
+              type:
+                - array
+                - "null"
+              items:
+                type: string
+            notes:
+              type:
+                - string
+                - "null"
+            client_name:
+              type:
+                - string
+                - "null"
+            location_name:
+              type:
+                - string
+                - "null"
+            items:
+              type: array
+              items:
+                type: object
+                properties:
+                  asset_id:
+                    type: string
+                    format: uuid
+                  result:
+                    type: string
+                    enum:
+                      - expected
+                      - present
+                      - missing
+                      - unexpected
+                  method:
+                    type:
+                      - string
+                      - "null"
+                    enum:
+                      - scan
+                      - manual
+                      - register
+                      - null
+                  marked_at:
+                    type:
+                      - string
+                      - "null"
+                  marked_by:
+                    type:
+                      - string
+                      - "null"
+                    format: uuid
+                  asset_name:
+                    type:
+                      - string
+                      - "null"
+                  asset_tag:
+                    type:
+                      - string
+                      - "null"
+                  serial_number:
+                    type:
+                      - string
+                      - "null"
+                  client_id:
+                    type:
+                      - string
+                      - "null"
+                    format: uuid
+                  location_id:
+                    type:
+                      - string
+                      - "null"
+                    format: uuid
+                  location:
+                    type:
+                      - string
+                      - "null"
+                required:
+                  - asset_id
+                  - result
+                  - method
+                  - marked_at
+                  - marked_by
+          required:
+            - audit_id
+            - tenant
+            - client_id
+            - location_id
+            - status
+            - started_by
+            - started_at
+            - completed_at
+            - expected_count
+            - present_count
+            - missing_count
+            - unexpected_count
+      required:
+        - success
+        - data
+    AssetAuditListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              audit_id:
+                type: string
+                format: uuid
+              tenant:
+                type: string
+                format: uuid
+              client_id:
+                type: string
+                format: uuid
+              location_id:
+                type:
+                  - string
+                  - "null"
+                format: uuid
+              status:
+                type: string
+                enum:
+                  - in_progress
+                  - completed
+                  - cancelled
+              started_by:
+                type: string
+                format: uuid
+              started_at:
+                type: string
+              completed_at:
+                type:
+                  - string
+                  - "null"
+              expected_count:
+                type: integer
+              present_count:
+                type: integer
+              missing_count:
+                type: integer
+              unexpected_count:
+                type: integer
+              statuses:
+                type:
+                  - array
+                  - "null"
+                items:
+                  type: string
+              notes:
+                type:
+                  - string
+                  - "null"
+              client_name:
+                type:
+                  - string
+                  - "null"
+              location_name:
+                type:
+                  - string
+                  - "null"
+              items:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    asset_id:
+                      type: string
+                      format: uuid
+                    result:
+                      type: string
+                      enum:
+                        - expected
+                        - present
+                        - missing
+                        - unexpected
+                    method:
+                      type:
+                        - string
+                        - "null"
+                      enum:
+                        - scan
+                        - manual
+                        - register
+                        - null
+                    marked_at:
+                      type:
+                        - string
+                        - "null"
+                    marked_by:
+                      type:
+                        - string
+                        - "null"
+                      format: uuid
+                    asset_name:
+                      type:
+                        - string
+                        - "null"
+                    asset_tag:
+                      type:
+                        - string
+                        - "null"
+                    serial_number:
+                      type:
+                        - string
+                        - "null"
+                    client_id:
+                      type:
+                        - string
+                        - "null"
+                      format: uuid
+                    location_id:
+                      type:
+                        - string
+                        - "null"
+                      format: uuid
+                    location:
+                      type:
+                        - string
+                        - "null"
+                  required:
+                    - asset_id
+                    - result
+                    - method
+                    - marked_at
+                    - marked_by
+            required:
+              - audit_id
+              - tenant
+              - client_id
+              - location_id
+              - status
+              - started_by
+              - started_at
+              - completed_at
+              - expected_count
+              - present_count
+              - missing_count
+              - unexpected_count
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+            limit:
+              type: integer
+            total:
+              type: integer
+            totalPages:
+              type: integer
+          required:
+            - page
+            - limit
+            - total
+            - totalPages
+      required:
+        - success
+        - data
+        - pagination
+    AssetAuditErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details: {}
+          required:
+            - code
+            - message
+      required:
+        - error
     RmmProviderParam:
       type: object
       properties:
         provider:
           type: string
           description: "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto,
-            or huntress. Scheduled device sync is available for the first five;
-            huntress exposes no device listing."
+            unifi, or huntress. Scheduled device sync is available for all but
+            huntress, which exposes no device listing."
       required:
         - provider
     RmmIntegrationStatus:
@@ -5111,6 +5567,16 @@ components:
             - "false"
         client_name:
           type: string
+        location_id:
+          type: string
+          format: uuid
+          description: Contacts linked to this client location in any role, primary or not.
+        work_arrangement:
+          type: string
+          enum:
+            - on_site
+            - hybrid
+            - remote
     ContactBody:
       type: object
       properties:
@@ -5289,6 +5755,27 @@ components:
         is_inactive:
           type: boolean
           default: false
+        work_arrangement:
+          type:
+            - string
+            - "null"
+          enum:
+            - on_site
+            - hybrid
+            - remote
+            - null
+        locations:
+          type: array
+          items:
+            type: object
+            properties:
+              location_id:
+                type: string
+                format: uuid
+              is_primary:
+                type: boolean
+            required:
+              - location_id
         tags:
           type: array
           items:
@@ -5467,6 +5954,27 @@ components:
           type: string
         is_inactive:
           type: boolean
+        work_arrangement:
+          type:
+            - string
+            - "null"
+          enum:
+            - on_site
+            - hybrid
+            - remote
+            - null
+        locations:
+          type: array
+          items:
+            type: object
+            properties:
+              location_id:
+                type: string
+                format: uuid
+              is_primary:
+                type: boolean
+            required:
+              - location_id
         tags:
           type: array
           items:
@@ -5620,6 +6128,57 @@ components:
             - message
       required:
         - error
+    ContactLocationLink:
+      type: object
+      properties:
+        location_id:
+          type: string
+          format: uuid
+        location_name:
+          type:
+            - string
+            - "null"
+        is_primary:
+          type: boolean
+        is_active:
+          type: boolean
+        address_line1:
+          type:
+            - string
+            - "null"
+        address_line2:
+          type:
+            - string
+            - "null"
+        address_line3:
+          type:
+            - string
+            - "null"
+        city:
+          type:
+            - string
+            - "null"
+        state_province:
+          type:
+            - string
+            - "null"
+        postal_code:
+          type:
+            - string
+            - "null"
+        country_code:
+          type:
+            - string
+            - "null"
+        country_name:
+          type:
+            - string
+            - "null"
+      required:
+        - location_id
+        - location_name
+        - is_primary
+        - is_active
     ContactResource:
       type: object
       properties:
@@ -5749,6 +6308,19 @@ components:
           type:
             - string
             - "null"
+        work_arrangement:
+          type:
+            - string
+            - "null"
+          enum:
+            - on_site
+            - hybrid
+            - remote
+            - null
+        locations:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContactLocationLink"
         avatarUrl:
           type:
             - string
@@ -5876,6 +6448,14 @@ components:
           type:
             - string
             - "null"
+        work_arrangement:
+          type:
+            - string
+            - "null"
+        locations:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContactLocationLink"
       required:
         - contact_name_id
         - full_name
@@ -6517,6 +7097,9 @@ components:
                   - "null"
               is_active:
                 type: boolean
+              contact_count:
+                type: integer
+                minimum: 0
               created_at:
                 type: string
                 format: date-time
@@ -6631,6 +7214,9 @@ components:
                 - "null"
             is_active:
               type: boolean
+            contact_count:
+              type: integer
+              minimum: 0
             created_at:
               type: string
               format: date-time
@@ -7371,6 +7957,20 @@ components:
           type: string
           minLength: 1
           maxLength: 255
+        invoice_line_description:
+          type:
+            - string
+            - "null"
+          maxLength: 500
+          description: Invoice title for a Fixed line (the bundle row title); falls back
+            to the line name when null.
+        invoice_line_subtitle:
+          type:
+            - string
+            - "null"
+          maxLength: 500
+          description: Muted second line under a Fixed bundle title on invoices; null =
+            none.
         billing_frequency:
           type: string
           enum:
@@ -7439,6 +8039,20 @@ components:
           type: string
           minLength: 1
           maxLength: 255
+        invoice_line_description:
+          type:
+            - string
+            - "null"
+          maxLength: 500
+          description: Invoice title for a Fixed line (the bundle row title); falls back
+            to the line name when null.
+        invoice_line_subtitle:
+          type:
+            - string
+            - "null"
+          maxLength: 500
+          description: Muted second line under a Fixed bundle title on invoices; null =
+            none.
         billing_frequency:
           type: string
           enum:
@@ -7655,6 +8269,13 @@ components:
           maxItems: 50
       required:
         - contract_line_ids
+    BulkDeleteContractLinesQuery:
+      type: object
+      properties:
+        contract_line_ids:
+          type: string
+          description: Comma-separated contract line UUIDs. DELETE-only alternative to the
+            request body, for clients that cannot send a body on DELETE.
     BulkAddServicesBody:
       type: object
       properties:
@@ -7686,6 +8307,17 @@ components:
       required:
         - contract_line_id
         - service_ids
+    BulkRemoveServicesQuery:
+      type: object
+      properties:
+        contract_line_id:
+          type: string
+          format: uuid
+          description: Contract line UUID. DELETE-only alternative to the request body.
+        service_ids:
+          type: string
+          description: Comma-separated service UUIDs. DELETE-only alternative to the
+            request body, for clients that cannot send a body on DELETE.
     CreateContractLineTemplateBody:
       type: object
       properties:
@@ -9666,8 +10298,6 @@ components:
             - pending
             - prepayment
             - partially_applied
-        finalized_at:
-          type: string
       required:
         - invoice_ids
         - status
@@ -12359,6 +12989,7 @@ components:
           type: boolean
       required:
         - board_name
+      additionalProperties: false
       description: Payload for creating a new board.
     BoardUpdateRequest:
       type: object
@@ -12400,6 +13031,7 @@ components:
             already running keeps running. Defaults to true.
         client_portal_visible:
           type: boolean
+      additionalProperties: false
       description: Payload for updating a board. All fields are optional.
     StatusIdParams:
       type: object
@@ -16387,7 +17019,9 @@ components:
         description:
           type: string
         assigned_to:
-          type: string
+          type:
+            - string
+            - "null"
           format: uuid
         estimated_hours:
           type: number
@@ -16396,10 +17030,14 @@ components:
           type: string
           format: date-time
         due_date:
-          type: string
+          type:
+            - string
+            - "null"
           format: date-time
         priority_id:
-          type: string
+          type:
+            - string
+            - "null"
           format: uuid
         task_type_key:
           type: string
@@ -16492,12 +17130,15 @@ components:
             - "null"
           format: uuid
         user_id:
-          type: string
+          type:
+            - string
+            - "null"
           format: uuid
         author_type:
           type: string
           enum:
             - internal
+            - client
         note:
           type: string
         markdown_content:
@@ -16524,7 +17165,9 @@ components:
             - "null"
           properties:
             user_id:
-              type: string
+              type:
+                - string
+                - "null"
               format: uuid
             first_name:
               type:
@@ -16548,6 +17191,23 @@ components:
             - last_name
             - email
             - avatar_url
+        organization_name:
+          type:
+            - string
+            - "null"
+        author_kind:
+          type: string
+          enum:
+            - user
+            - contact
+        audience:
+          type: string
+          enum:
+            - requester
+            - shared_it
+            - organization_private
+        collaboration_revision:
+          type: integer
         reactions:
           type: array
           items:
@@ -17014,6 +17674,38 @@ components:
               - external_id
           description: Ticket-level external references written in the same transaction as
             the ticket. A conflicting link rolls back the create.
+        entered_at:
+          type: string
+          format: date-time
+          description: "Historical import. ISO 8601 datetime with an offset, not in the
+            future. Supplying it stores the ticket with this open date and marks
+            it a historical record: created silently with source=api_import, no
+            SLA clock, no TICKET_CREATED, and no notifications, webhooks or
+            workflows. Requires an internal MSP user with ticket:create
+            permission."
+        closed_at:
+          type: string
+          format: date-time
+          description: Historical import only (requires entered_at). Required for a closed
+            status, rejected for an open status, and must satisfy entered_at <=
+            closed_at <= now. The ticket is stored closed without firing
+            TICKET_CLOSED.
+        closed_by:
+          type: string
+          format: uuid
+          description: Historical import only (requires closed_at). User recorded as the
+            closer; defaults to the API user.
+        asset_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 50
+          description: Assets the ticket is raised against, linked in the same transaction
+            as the ticket; an unknown asset rejects the whole create. The first
+            asset also makes the ticket inherit that asset's billing profile
+            when billing_profile_id is omitted, as POST /tickets/from-asset and
+            the web create do.
         suppressContactNotifications:
           type: boolean
           description: When true, suppresses customer-facing email and portal
@@ -17031,6 +17723,13 @@ components:
           type: string
           minLength: 1
           maxLength: 255
+        entered_at:
+          type: string
+          format: date-time
+          description: Correct the ticket open date. Requires an internal MSP user with
+            ticket:update permission. Must not be in the future or after the
+            ticket closure or earliest comment. A date-only correction does not
+            publish TICKET_UPDATED or start SLA timers.
         url:
           type: string
           format: uri
@@ -17052,11 +17751,18 @@ components:
           type: string
           format: uuid
         category_id:
-          type: string
+          type:
+            - string
+            - "null"
           format: uuid
+          description: Parent category, or null to clear the classification.
         subcategory_id:
-          type: string
+          type:
+            - string
+            - "null"
           format: uuid
+          description: Child of category_id, or null when the selected category has no
+            subcategory.
         assigned_to:
           type:
             - string
@@ -17105,9 +17811,16 @@ components:
         closed_at:
           type: string
           format: date-time
+          description: "Honored when this update closes the ticket (open to closed):
+            stored as the close time instead of now. Must not be in the future
+            or before entered_at. TICKET_CLOSED still fires; use suppression
+            flags to silence notifications. Use historical create fields to
+            import an already-closed ticket silently."
         closed_by:
           type: string
           format: uuid
+          description: Honored with closed_at when this update closes the ticket; defaults
+            to the API user.
         override_close_rules:
           type: boolean
         override_close_rules_reason:
@@ -17196,6 +17909,17 @@ components:
           description: One-off Bcc recipients for this comment's email only. Never
             returned to client-portal callers. Not allowed with is_internal. Max
             20 cc + bcc combined.
+        created_at:
+          type: string
+          format: date-time
+          description: "Historical import. Requires an internal MSP user with
+            ticket:update permission. ISO 8601 datetime with an offset
+            (date-only is rejected), not in the future and not before the
+            ticket's entered_at (a reply: not before its parent comment). The
+            comment is stored with this timestamp and is silent: no
+            TICKET_COMMENT_ADDED, no notifications, webhooks, workflows, SLA
+            first response or response-state change. Cannot be combined with
+            scheduled_publish_at, scheduled_publish_tz, cc or bcc."
         suppressContactNotifications:
           type: boolean
           description: When true, suppresses customer-facing email and portal
@@ -17241,6 +17965,7 @@ components:
             - non_billable_category
             - ad_hoc
             - interaction
+            - co_managed
         start_time:
           type: string
           format: date-time
@@ -17300,6 +18025,7 @@ components:
             - non_billable_category
             - ad_hoc
             - interaction
+            - co_managed
         start_time:
           type: string
           format: date-time
@@ -17358,6 +18084,7 @@ components:
                   - non_billable_category
                   - ad_hoc
                   - interaction
+                  - co_managed
               start_time:
                 type: string
                 format: date-time
@@ -17432,6 +18159,7 @@ components:
                       - non_billable_category
                       - ad_hoc
                       - interaction
+                      - co_managed
                   start_time:
                     type: string
                     format: date-time
@@ -17793,6 +18521,7 @@ components:
                   - non_billable_category
                   - ad_hoc
                   - interaction
+                  - co_managed
                   - null
               approval_status:
                 type:
@@ -18035,10 +18764,6 @@ components:
                   - string
                   - "null"
                 format: uuid
-              notes:
-                type:
-                  - string
-                  - "null"
               user_name:
                 type: string
               time_entries:
@@ -18086,6 +18811,7 @@ components:
                         - non_billable_category
                         - ad_hoc
                         - interaction
+                        - co_managed
                         - null
                     approval_status:
                       type:
@@ -18224,7 +18950,6 @@ components:
               - submitted_at
               - approved_at
               - approved_by
-              - notes
               - user_name
       required:
         - data
@@ -18581,6 +19306,13 @@ components:
           type: string
           format: uuid
           description: Filter statuses to this board.
+    WorkV1TicketCategoriesQuery:
+      type: object
+      properties:
+        board_id:
+          type: string
+          format: uuid
+          description: Filter categories to this board.
     WorkV1TicketCommentUpdateBody:
       type: object
       properties:
@@ -18825,6 +19557,341 @@ components:
       required:
         - system
         - external_id
+    WorkV1TicketTemplateParams:
+      type: object
+      properties:
+        templateId:
+          type: string
+          format: uuid
+          description: Ticket template UUID from ticket_templates.template_id.
+      required:
+        - templateId
+    WorkV1TicketTemplateListQuery:
+      type: object
+      properties:
+        page:
+          type: string
+          description: 1-based page number. Default 1.
+        limit:
+          type: string
+          description: Page size, 1-100. Default 25.
+        client_id:
+          type: string
+          format: uuid
+          description: "Templates this client can use: the ones bound to it plus every
+            tenant-wide template. Resolve the UUID with GET /api/v1/clients
+            first."
+        is_active:
+          type: string
+          enum:
+            - "true"
+            - "false"
+          description: "Omitted or 'true': active templates only (the default). 'false':
+            the inactive ones."
+        search:
+          type: string
+          description: Case-insensitive substring of the template name or of the ticket
+            title it produces.
+    WorkV1TicketTemplateCreateBody:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Template name, unique among active templates in the tenant.
+        notes:
+          type:
+            - string
+            - "null"
+          maxLength: 2000
+          description: Note for your team; never copied onto tickets.
+        title:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Title the created ticket gets. May contain {{client}}, {{contact}},
+            {{due_date}}, {{month}} and {{year}}, which are filled in per
+            ticket; any other {{token}} is rejected.
+        description:
+          type:
+            - string
+            - "null"
+          description: Ticket description (plain text or serialized BlockNote JSON).
+        client_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Client the template belongs to. Omit or null to offer it for every
+            client; set it to offer the template only on that client’s tickets.
+            Resolve the UUID with GET /api/v1/clients first.
+        board_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Board the created ticket lands on. Resolve with GET /api/v1/boards
+            first.
+        category_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Category on that board; a subcategory requires its parent category.
+        subcategory_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        priority_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Priority. Resolve with GET /api/v1/tickets/priorities first.
+        itil_impact:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+          maximum: 5
+        itil_urgency:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+          maximum: 5
+        tags:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 100
+          maxItems: 50
+          description: Tag text applied to the created ticket (tag definitions are created
+            as needed).
+        custom_fields:
+          type: object
+          additionalProperties: {}
+          description: Custom field values copied onto the ticket.
+        offer_for_manual_use:
+          type: boolean
+          description: Whether the template is offered for manual ticket creation.
+            Defaults to true; turn it off for templates only recurring schedules
+            use.
+        checklist:
+          type: array
+          items:
+            type: object
+            properties:
+              item_name:
+                type: string
+                minLength: 1
+                maxLength: 500
+                description: Checklist item text.
+              description:
+                type:
+                  - string
+                  - "null"
+              is_required:
+                type: boolean
+                description: Whether the item gates ticket closure.
+              checklist_template_id:
+                type:
+                  - string
+                  - "null"
+                format: uuid
+                description: Checklist template the item came from; leave null for a plain item.
+            required:
+              - item_name
+              - is_required
+          maxItems: 200
+          description: The whole checklist, in order. On update this list replaces the
+            stored items.
+      required:
+        - name
+        - title
+    WorkV1TicketTemplateUpdateBody:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Template name, unique among active templates in the tenant.
+        notes:
+          type:
+            - string
+            - "null"
+          maxLength: 2000
+          description: Note for your team; never copied onto tickets.
+        title:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Title the created ticket gets. May contain {{client}}, {{contact}},
+            {{due_date}}, {{month}} and {{year}}, which are filled in per
+            ticket; any other {{token}} is rejected.
+        description:
+          type:
+            - string
+            - "null"
+          description: Ticket description (plain text or serialized BlockNote JSON).
+        client_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Client the template belongs to. Omit or null to offer it for every
+            client; set it to offer the template only on that client’s tickets.
+            Resolve the UUID with GET /api/v1/clients first.
+        board_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Board the created ticket lands on. Resolve with GET /api/v1/boards
+            first.
+        category_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Category on that board; a subcategory requires its parent category.
+        subcategory_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        priority_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Priority. Resolve with GET /api/v1/tickets/priorities first.
+        itil_impact:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+          maximum: 5
+        itil_urgency:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+          maximum: 5
+        tags:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 100
+          maxItems: 50
+          description: Tag text applied to the created ticket (tag definitions are created
+            as needed).
+        custom_fields:
+          type: object
+          additionalProperties: {}
+          description: Custom field values copied onto the ticket.
+        offer_for_manual_use:
+          type: boolean
+          description: Whether the template is offered for manual ticket creation.
+            Defaults to true; turn it off for templates only recurring schedules
+            use.
+        checklist:
+          type: array
+          items:
+            type: object
+            properties:
+              item_name:
+                type: string
+                minLength: 1
+                maxLength: 500
+                description: Checklist item text.
+              description:
+                type:
+                  - string
+                  - "null"
+              is_required:
+                type: boolean
+                description: Whether the item gates ticket closure.
+              checklist_template_id:
+                type:
+                  - string
+                  - "null"
+                format: uuid
+                description: Checklist template the item came from; leave null for a plain item.
+            required:
+              - item_name
+              - is_required
+          maxItems: 200
+          description: The whole checklist, in order. On update this list replaces the
+            stored items.
+        is_active:
+          type: boolean
+          description: Activate or deactivate the template. Deactivating only hides it
+            from manual use; recurring schedules keep running.
+      required:
+        - name
+        - title
+    WorkV1TicketTemplateInstantiateBody:
+      type: object
+      properties:
+        client_id:
+          type: string
+          format: uuid
+          description: Client the ticket is for. A template bound to another client is
+            refused with 400.
+        contact_name_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Requester contact; must belong to client_id. Also fills the
+            {{contact}} title token.
+        location_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Client location; must belong to client_id.
+        asset_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 50
+          description: Assets to link to the ticket; each must belong to client_id.
+        assigned_to:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Primary assignee. Defaults to unassigned.
+        status_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Status for the new ticket; must belong to the template's board.
+            Defaults to that board's default status.
+        due_date:
+          type:
+            - string
+            - "null"
+          description: Due date, ISO date (YYYY-MM-DD) or date-time. Also fills the
+            {{due_date}}, {{month}} and {{year}} title tokens.
+        suppressContactNotifications:
+          type: boolean
+          description: Create the ticket without notifying the customer.
+        suppressInternalNotifications:
+          type: boolean
+          description: Also skip internal notifications. Requires
+            suppressContactNotifications=true.
+      required:
+        - client_id
     WorkV1TicketAgentParams:
       type: object
       properties:
@@ -18958,6 +20025,212 @@ components:
           description: Request-scoped. "true" suppresses notifications for this removal.
       required:
         - email
+    WorkV1TimePeriodSettings:
+      type: object
+      properties:
+        time_period_settings_id:
+          type: string
+          format: uuid
+        frequency:
+          type: number
+        frequency_unit:
+          type: string
+          enum:
+            - day
+            - week
+            - month
+            - year
+        start_day:
+          type:
+            - number
+            - "null"
+        end_day:
+          type:
+            - number
+            - "null"
+        start_month:
+          type: number
+        start_day_of_month:
+          type: number
+        end_month:
+          type: number
+        end_day_of_month:
+          type: number
+        effective_from:
+          type: string
+          pattern: ^\d{4}-\d{2}-\d{2}$
+        effective_to:
+          type: string
+          pattern: ^\d{4}-\d{2}-\d{2}$
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        tenant:
+          type: string
+          format: uuid
+      required:
+        - time_period_settings_id
+        - frequency
+        - frequency_unit
+        - start_day
+        - end_day
+        - start_month
+        - start_day_of_month
+        - end_month
+        - end_day_of_month
+        - effective_from
+        - is_active
+        - created_at
+        - updated_at
+        - tenant
+    WorkV1TimePeriodSettingsResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/WorkV1TimePeriodSettings"
+      required:
+        - data
+    WorkV1TimePeriodSettingsListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkV1TimePeriodSettings"
+      required:
+        - data
+    WorkV1TimePeriodSettingsCreateBody:
+      type: object
+      properties:
+        frequency:
+          type: integer
+          exclusiveMinimum: 0
+          description: Number of frequency_unit units per period (e.g. 1 with week =
+            weekly).
+        frequency_unit:
+          type: string
+          enum:
+            - day
+            - week
+            - month
+            - year
+        start_day:
+          type: integer
+          minimum: 1
+          maximum: 31
+          description: "week: first weekday (1=Monday … 7=Sunday); month: first day of the
+            month. Defaults to 1."
+        end_day:
+          type: integer
+          minimum: 0
+          maximum: 31
+          description: "month: last day of the period, or 0 for the end of the month.
+            Defaults to 0."
+        start_month:
+          type: integer
+          minimum: 1
+          maximum: 12
+          description: "year: first month. Defaults to 1."
+        start_day_of_month:
+          type: integer
+          minimum: 1
+          maximum: 31
+          description: "year: first day of start_month. Defaults to 1."
+        end_month:
+          type: integer
+          minimum: 1
+          maximum: 12
+          description: "year: last month. Defaults to 12."
+        end_day_of_month:
+          type: integer
+          minimum: 0
+          maximum: 31
+          description: "year: last day of end_month, or 0 for the end of the month.
+            Defaults to 0."
+        effective_from:
+          type: string
+          pattern: ^\d{4}-\d{2}-\d{2}$
+          description: First day the setting is in force. When omitted, defaults to the
+            start of the period containing today in the caller's timezone; if an
+            earlier setting ended on or after that day, it starts the day after
+            that setting ended.
+        effective_to:
+          type: string
+          pattern: ^\d{4}-\d{2}-\d{2}$
+          description: Last day the setting is in force (inclusive). Omit for open-ended.
+      required:
+        - frequency
+        - frequency_unit
+    WorkV1TimePeriodSettingsUpdateBody:
+      type: object
+      properties:
+        frequency:
+          type: integer
+          exclusiveMinimum: 0
+          description: Number of frequency_unit units per period (e.g. 1 with week =
+            weekly).
+        frequency_unit:
+          type: string
+          enum:
+            - day
+            - week
+            - month
+            - year
+        start_day:
+          type: integer
+          minimum: 1
+          maximum: 31
+          description: "week: first weekday (1=Monday … 7=Sunday); month: first day of the
+            month. Defaults to 1."
+        end_day:
+          type: integer
+          minimum: 0
+          maximum: 31
+          description: "month: last day of the period, or 0 for the end of the month.
+            Defaults to 0."
+        start_month:
+          type: integer
+          minimum: 1
+          maximum: 12
+          description: "year: first month. Defaults to 1."
+        start_day_of_month:
+          type: integer
+          minimum: 1
+          maximum: 31
+          description: "year: first day of start_month. Defaults to 1."
+        end_month:
+          type: integer
+          minimum: 1
+          maximum: 12
+          description: "year: last month. Defaults to 12."
+        end_day_of_month:
+          type: integer
+          minimum: 0
+          maximum: 31
+          description: "year: last day of end_month, or 0 for the end of the month.
+            Defaults to 0."
+        effective_from:
+          type: string
+          pattern: ^\d{4}-\d{2}-\d{2}$
+          description: First day the setting is in force. When omitted, defaults to the
+            start of the period containing today in the caller's timezone; if an
+            earlier setting ended on or after that day, it starts the day after
+            that setting ended.
+        effective_to:
+          type:
+            - string
+            - "null"
+          pattern: ^\d{4}-\d{2}-\d{2}$
+          description: Last day the setting is in force (inclusive); null clears it.
+        is_active:
+          type: boolean
+          description: Inactive settings are ignored by period generation and overlap
+            checks.
     QuoteIdParamV1:
       type: object
       properties:
@@ -19066,16 +20339,173 @@ components:
         client_id:
           type: string
           format: uuid
+          description: REQUIRED. Owning client (owner_client_id is accepted as an alias).
+            A contract is always client-owned; creating without a client is
+            rejected with 400 so no unassigned, UI-invisible contract can be
+            created.
         contract_name:
           type: string
-        start_date:
-          type: string
-        end_date:
+          minLength: 1
+        contract_description:
           type: string
         billing_frequency:
           type: string
+          description: monthly | quarterly | semi-annually | annually.
+        start_date:
+          type: string
+          description: "YYYY-MM-DD (or ISO datetime). Required: it is the assignment start
+            date."
+        end_date:
+          type:
+            - string
+            - "null"
+        status:
+          type: string
+          enum:
+            - active
+            - draft
+            - terminated
+            - expired
+            - published
+            - archived
+          description: "Defaults to draft semantics: a draft contract gets an inactive
+            assignment."
+        is_active:
+          type: boolean
+        billing_profile_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        po_required:
+          type: boolean
+        po_number:
+          type:
+            - string
+            - "null"
+        po_amount:
+          type:
+            - number
+            - "null"
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              contract_line_id:
+                type: string
+                format: uuid
+              custom_rate:
+                type: number
+                minimum: 0
+            required:
+              - contract_line_id
+          description: Optional contract lines attached in the same transaction. Any
+            invalid line rolls back the header, the assignment and all lines.
       required:
         - client_id
+        - contract_name
+        - billing_frequency
+        - start_date
+    UpdateContractBodyV1:
+      type: object
+      properties:
+        contract_name:
+          type: string
+          minLength: 1
+        contract_description:
+          type:
+            - string
+            - "null"
+        billing_frequency:
+          type: string
+        status:
+          type: string
+          enum:
+            - active
+            - draft
+            - terminated
+            - expired
+            - published
+            - archived
+        is_active:
+          type: boolean
+    ContractAssignmentParamsV1:
+      type: object
+      properties:
+        contractId:
+          type: string
+          format: uuid
+          description: Contract UUID from contracts.contract_id.
+        clientContractId:
+          type: string
+          format: uuid
+          description: Assignment UUID from client_contracts.client_contract_id.
+      required:
+        - contractId
+        - clientContractId
+    CreateContractAssignmentBodyV1:
+      type: object
+      properties:
+        client_id:
+          type: string
+          format: uuid
+          description: Defaults to the contract owner; must equal it when supplied.
+        start_date:
+          type: string
+        end_date:
+          type:
+            - string
+            - "null"
+        is_active:
+          type: boolean
+          description: Defaults to true only when the contract header is active and not
+            draft.
+        billing_profile_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        po_required:
+          type: boolean
+        po_number:
+          type:
+            - string
+            - "null"
+        po_amount:
+          type:
+            - number
+            - "null"
+      required:
+        - start_date
+    UpdateContractAssignmentBodyV1:
+      type: object
+      properties:
+        start_date:
+          type: string
+        end_date:
+          type:
+            - string
+            - "null"
+        is_active:
+          type: boolean
+          description: true activates the assignment and its contract header (UI "Set to
+            Active").
+        billing_profile_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        po_required:
+          type: boolean
+        po_number:
+          type:
+            - string
+            - "null"
+        po_amount:
+          type:
+            - number
+            - "null"
     QuotesContractsApiErrorV1:
       type: object
       properties:
@@ -19662,6 +21092,16 @@ components:
           type:
             - string
             - "null"
+        refType:
+          type:
+            - string
+            - "null"
+          minLength: 1
+        refId:
+          type:
+            - string
+            - "null"
+          format: uuid
       required:
         - checkpoint
     CorrectOpportunityEvidenceBodyV1:
@@ -21096,6 +22536,13 @@ components:
                 projects:
                   type: boolean
                   description: Project tasks on mobile (project:read; PSA product only).
+                assets:
+                  type: boolean
+                  description: Asset browsing on mobile (asset:read; PSA product only).
+                assetAudit:
+                  type: boolean
+                  description: Site audits on mobile (asset:read AND asset:update; PSA product
+                    only).
                 clientsCreate:
                   type: boolean
                 clientsUpdate:
@@ -21104,15 +22551,22 @@ components:
                   type: boolean
                 contactsUpdate:
                   type: boolean
+                dontNotifyCustomerDefault:
+                  type: boolean
+                  description: "Tenant setting: every \"Don't notify the customer\" checkbox
+                    starts ticked."
               required:
                 - inventory
                 - opportunities
                 - opportunitiesCreate
                 - projects
+                - assets
+                - assetAudit
                 - clientsCreate
                 - clientsUpdate
                 - contactsCreate
                 - contactsUpdate
+                - dontNotifyCustomerDefault
             formatting:
               type: object
               properties:
@@ -27184,7 +28638,6 @@ paths:
         x-unapplied-validated-filters:
           - maintenance_due
           - is_active
-          - search
           - created_from
           - created_to
           - updated_from
@@ -27227,12 +28680,13 @@ paths:
           in: query
         - schema:
             type: string
-            description: General search filter accepted by the shared filter schema. The
-              current AssetService.list implementation does not apply this
-              filter.
+            description: Case-insensitive substring match across asset_tag, name,
+              serial_number, location, manufacturer and model. Applied to both
+              the returned rows and the pagination total.
           required: false
-          description: General search filter accepted by the shared filter schema. The
-            current AssetService.list implementation does not apply this filter.
+          description: Case-insensitive substring match across asset_tag, name,
+            serial_number, location, manufacturer and model. Applied to both the
+            returned rows and the pagination total.
           name: search
           in: query
         - schema:
@@ -27638,13 +29092,12 @@ paths:
   /api/v1/assets/documents/{associationId}:
     delete:
       summary: Remove asset document association
-      description: Removes a document association row by
-        document_associations.association_id for the authenticated tenant. The
-        service deletes rows where association_id and tenant match and does not
-        verify entity_type in this method. The controller intends to return an
-        empty success response after deletion, but currently calls
-        createApiResponse(null, 204) inside NextResponse.json, which can throw
-        because JSON responses cannot use status 204 with a body.
+      description: Removes a document association by its API association ID within the
+        authenticated tenant and verifies it belongs to an asset before
+        authorization. The asset is resolved within the tenant before the
+        caller’s update permission and record-level scope are checked;
+        foreign-tenant IDs return 404. The generic document link and any
+        asset-specific notes record are deleted together.
       tags:
         - Assets
       security:
@@ -27662,10 +29115,13 @@ paths:
         - schema:
             type: string
             format: uuid
-            description: Document association UUID from
-              document_associations.association_id.
+            description: Asset document association UUID returned by the API; new API
+              associations use document_associations.association_id and may also
+              resolve asset_document_associations IDs.
           required: true
-          description: Document association UUID from document_associations.association_id.
+          description: Asset document association UUID returned by the API; new API
+            associations use document_associations.association_id and may also
+            resolve asset_document_associations IDs.
           name: associationId
           in: path
       responses:
@@ -27980,10 +29436,11 @@ paths:
       parameters:
         - schema:
             type: string
-            format: uuid
-            description: Asset relationship UUID from asset_relationships.relationship_id.
+            description: "Composite asset relationship identity:
+              parent_asset_id:child_asset_id."
           required: true
-          description: Asset relationship UUID from asset_relationships.relationship_id.
+          description: "Composite asset relationship identity:
+            parent_asset_id:child_asset_id."
           name: relationshipId
           in: path
       responses:
@@ -28419,13 +29876,14 @@ paths:
   /api/v1/assets/{id}/documents:
     get:
       summary: List asset document associations
-      description: Returns document_associations rows for an asset in the
-        authenticated tenant where entity_type is asset and entity_id is the
-        path asset ID. The service joins documents to add original_filename,
-        file_size, mime_type, and uploaded_at. It does not check whether the
-        asset exists first, so nonexistent or cross-tenant asset IDs return 200
-        with an empty array. Response links currently point at /api/v2/assets
-        paths.
+      description: Returns document associations for the asset in the authenticated
+        tenant. Controller authorization resolves and authorizes the asset
+        first; nonexistent or cross-tenant asset IDs return 404, while in-tenant
+        permission denials return 403. Document details are joined from
+        documents/external_files, legacy filename, size, MIME type, and
+        upload-time fields remain at the response top level, and optional
+        association notes come from asset_document_associations. Response links
+        currently point at /api/v2/assets paths.
       tags:
         - Assets
       security:
@@ -28436,7 +29894,7 @@ paths:
         x-current-auth-wiring-missing: true
         x-rbac-resource: asset
         x-rbac-action: read
-        x-no-asset-existence-check: true
+        x-no-asset-existence-check: false
         x-response-links-path-version: v2
       x-alga-products:
         - psa
@@ -28451,8 +29909,8 @@ paths:
           in: path
       responses:
         "200":
-          description: Document associations returned successfully. Empty when no
-            associations exist or the asset is not found.
+          description: Document associations returned successfully for an authorized
+            asset; an asset with no associations returns an empty array.
           content:
             application/json:
               schema:
@@ -28478,15 +29936,14 @@ paths:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
     post:
       summary: Associate document with asset
-      description: Creates a document_associations row that links the path asset ID to
-        the supplied document_id. The body is validated with
+      description: Creates the tenant-scoped document link for the path asset and
+        supplied document_id, while storing optional notes and authenticated
+        created_by in asset_document_associations. The body is validated with
         createAssetDocumentSchema; document_id is required and notes is
-        optional. The service inserts entity_type=asset, entity_id from the
-        path, document_id, notes, tenant from context, and created_at, then
-        returns the inserted row. It does not verify that the asset or document
-        belongs to the same tenant before insert, does not set created_by, and
-        publishes no event. Foreign-key or unique constraint errors surface
-        through handleApiError.
+        optional. Both association records are written transactionally so
+        document workflows and the asset API stay consistent. Tenant-scoped
+        asset and document checks run before insert; database persistence errors
+        are surfaced through handleApiError.
       tags:
         - Assets
       security:
@@ -31077,6 +32534,497 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
+  /api/v1/asset-audits:
+    post:
+      summary: Start a site audit
+      description: Snapshots the assets expected for the client, location and status
+        slugs in scope as expected items and opens the audit. Needs asset:update
+        because completing the audit writes asset history.
+      tags:
+        - Asset audits
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-rbac-resource: asset
+        x-rbac-action: update
+        x-not-paginated: true
+      x-alga-products:
+        - psa
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAssetAuditRequest"
+      responses:
+        "201":
+          description: Audit started, with its expected items.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditResponse"
+        "400":
+          description: Request body or query failed validation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "401":
+          description: x-api-key is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "403":
+          description: Caller lacks the required asset permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "404":
+          description: Audit or asset not found in this tenant.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+    get:
+      summary: List site audits
+      description: Returns the tenant audits newest first, optionally narrowed to one
+        client.
+      tags:
+        - Asset audits
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-rbac-resource: asset
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            description: Page number. Defaults to 1.
+          required: false
+          description: Page number. Defaults to 1.
+          name: page
+          in: query
+        - schema:
+            type: string
+            description: Page size, 1 through 100. Defaults to 25.
+          required: false
+          description: Page size, 1 through 100. Defaults to 25.
+          name: limit
+          in: query
+        - schema:
+            type: string
+            format: uuid
+            description: Only audits of this client.
+          required: false
+          description: Only audits of this client.
+          name: client_id
+          in: query
+      responses:
+        "200":
+          description: Paginated audit list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditListResponse"
+        "400":
+          description: Request body or query failed validation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "401":
+          description: x-api-key is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "403":
+          description: Caller lacks the required asset permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "404":
+          description: Audit or asset not found in this tenant.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+  /api/v1/asset-audits/{id}:
+    get:
+      summary: Get a site audit
+      description: Returns the audit with its items joined to each asset name, tag,
+        serial and location.
+      tags:
+        - Asset audits
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-rbac-resource: asset
+        x-rbac-action: read
+        x-not-paginated: true
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Audit UUID from asset_audits.audit_id.
+          required: true
+          description: Audit UUID from asset_audits.audit_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Audit returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditResponse"
+        "400":
+          description: Request body or query failed validation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "401":
+          description: x-api-key is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "403":
+          description: Caller lacks the required asset permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "404":
+          description: Audit or asset not found in this tenant.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+  /api/v1/asset-audits/{id}/items:
+    post:
+      summary: Mark an asset in a site audit
+      description: "Marks the asset present, or unexpected when it is not in the audit
+        snapshot. Idempotent per asset: a second mark keeps the first
+        marked_at."
+      tags:
+        - Asset audits
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-rbac-resource: asset
+        x-rbac-action: update
+        x-not-paginated: true
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Audit UUID from asset_audits.audit_id.
+          required: true
+          description: Audit UUID from asset_audits.audit_id.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarkAssetAuditItemRequest"
+      responses:
+        "200":
+          description: Audit with the updated items.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditResponse"
+        "400":
+          description: Request body or query failed validation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "401":
+          description: x-api-key is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "403":
+          description: Caller lacks the required asset permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "404":
+          description: Audit or asset not found in this tenant.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "409":
+          description: The audit is already completed or cancelled.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+  /api/v1/asset-audits/{id}/items/{assetId}:
+    delete:
+      summary: Undo a site audit mark
+      description: Returns an expected asset to the remaining list; an unexpected
+        asset was never in scope, so its item is removed.
+      tags:
+        - Asset audits
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-rbac-resource: asset
+        x-rbac-action: update
+        x-not-paginated: true
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Audit UUID from asset_audits.audit_id.
+          required: true
+          description: Audit UUID from asset_audits.audit_id.
+          name: id
+          in: path
+        - schema:
+            type: string
+            format: uuid
+            description: Asset UUID from assets.asset_id.
+          required: true
+          description: Asset UUID from assets.asset_id.
+          name: assetId
+          in: path
+      responses:
+        "200":
+          description: Audit with the updated items.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditResponse"
+        "400":
+          description: Request body or query failed validation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "401":
+          description: x-api-key is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "403":
+          description: Caller lacks the required asset permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "404":
+          description: Audit or asset not found in this tenant.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "409":
+          description: The audit is already completed or cancelled.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+  /api/v1/asset-audits/{id}/complete:
+    post:
+      summary: Complete a site audit
+      description: Turns every still-expected item into missing, writes the counts,
+        and records one asset_history row (change_type audit) plus
+        assets.last_audited_at and last_audit_result for each present and
+        missing asset, in one transaction.
+      tags:
+        - Asset audits
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-rbac-resource: asset
+        x-rbac-action: update
+        x-not-paginated: true
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Audit UUID from asset_audits.audit_id.
+          required: true
+          description: Audit UUID from asset_audits.audit_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Completed audit with its summary.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditResponse"
+        "400":
+          description: Request body or query failed validation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "401":
+          description: x-api-key is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "403":
+          description: Caller lacks the required asset permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "404":
+          description: Audit or asset not found in this tenant.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "409":
+          description: The audit is already completed or cancelled.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+  /api/v1/asset-audits/{id}/cancel:
+    post:
+      summary: Cancel a site audit
+      description: Abandons an open audit; it writes no asset history.
+      tags:
+        - Asset audits
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-rbac-resource: asset
+        x-rbac-action: update
+        x-not-paginated: true
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Audit UUID from asset_audits.audit_id.
+          required: true
+          description: Audit UUID from asset_audits.audit_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Cancelled audit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditResponse"
+        "400":
+          description: Request body or query failed validation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "401":
+          description: x-api-key is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "403":
+          description: Caller lacks the required asset permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "404":
+          description: Audit or asset not found in this tenant.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "409":
+          description: The audit is already completed or cancelled.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAuditErrorResponse"
   /api/v1/integrations/rmm:
     get:
       summary: List RMM integrations
@@ -31124,12 +33072,12 @@ paths:
         - schema:
             type: string
             description: "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto,
-              or huntress. Scheduled device sync is available for the first
-              five; huntress exposes no device listing."
+              unifi, or huntress. Scheduled device sync is available for all but
+              huntress, which exposes no device listing."
           required: true
           description: "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto,
-            or huntress. Scheduled device sync is available for the first five;
-            huntress exposes no device listing."
+            unifi, or huntress. Scheduled device sync is available for all but
+            huntress, which exposes no device listing."
           name: provider
           in: path
       responses:
@@ -31167,12 +33115,12 @@ paths:
         - schema:
             type: string
             description: "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto,
-              or huntress. Scheduled device sync is available for the first
-              five; huntress exposes no device listing."
+              unifi, or huntress. Scheduled device sync is available for all but
+              huntress, which exposes no device listing."
           required: true
           description: "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto,
-            or huntress. Scheduled device sync is available for the first five;
-            huntress exposes no device listing."
+            unifi, or huntress. Scheduled device sync is available for all but
+            huntress, which exposes no device listing."
           name: provider
           in: path
       requestBody:
@@ -31217,12 +33165,12 @@ paths:
         - schema:
             type: string
             description: "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto,
-              or huntress. Scheduled device sync is available for the first
-              five; huntress exposes no device listing."
+              unifi, or huntress. Scheduled device sync is available for all but
+              huntress, which exposes no device listing."
           required: true
           description: "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto,
-            or huntress. Scheduled device sync is available for the first five;
-            huntress exposes no device listing."
+            unifi, or huntress. Scheduled device sync is available for all but
+            huntress, which exposes no device listing."
           name: provider
           in: path
       requestBody:
@@ -32089,7 +34037,9 @@ paths:
     get:
       summary: List contacts for client
       description: Returns paginated contacts filtered by client_id after client
-        existence check.
+        existence check. Each row carries work_arrangement and locations[];
+        accepts the same location_id and work_arrangement filters as
+        /api/v1/contacts (a client_id in the query is ignored — the path wins).
       tags:
         - Clients
       security:
@@ -32108,6 +34058,123 @@ paths:
           required: true
           name: id
           in: path
+        - schema:
+            type: string
+          required: false
+          name: page
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: sort
+          in: query
+        - schema:
+            type: string
+            enum:
+              - asc
+              - desc
+          required: false
+          name: order
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: search
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: created_from
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: created_to
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: updated_from
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: updated_to
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: full_name
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: email
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: phone_number
+          in: query
+        - schema:
+            type: string
+            format: uuid
+          required: false
+          name: client_id
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: role
+          in: query
+        - schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          required: false
+          name: is_inactive
+          in: query
+        - schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          required: false
+          name: has_client
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: client_name
+          in: query
+        - schema:
+            type: string
+            format: uuid
+            description: Contacts linked to this client location in any role, primary or
+              not.
+          required: false
+          description: Contacts linked to this client location in any role, primary or not.
+          name: location_id
+          in: query
+        - schema:
+            type: string
+            enum:
+              - on_site
+              - hybrid
+              - remote
+          required: false
+          name: work_arrangement
+          in: query
       responses:
         "200":
           description: Client contacts returned.
@@ -32148,7 +34215,9 @@ paths:
   /api/v1/clients/{id}/locations:
     get:
       summary: List client locations
-      description: Returns locations associated with client_id after client existence check.
+      description: "Returns locations associated with client_id after client existence
+        check. Each row carries contact_count: how many contacts work at that
+        location, which is also why deleting it would be refused."
       tags:
         - Clients
       security:
@@ -32957,7 +35026,11 @@ paths:
   /api/v1/contacts:
     get:
       summary: List contacts
-      description: Inherited ApiBaseController list route for contacts.
+      description: Inherited ApiBaseController list route for contacts. Each row
+        carries work_arrangement (on_site | hybrid | remote) and locations[] —
+        the client locations the person works at, primary first, with the
+        address fields read through from the client. Filterable by location_id
+        (contacts linked to that location in any role) and work_arrangement.
       tags:
         - Contacts
       security:
@@ -33069,6 +35142,24 @@ paths:
           required: false
           name: client_name
           in: query
+        - schema:
+            type: string
+            format: uuid
+            description: Contacts linked to this client location in any role, primary or
+              not.
+          required: false
+          description: Contacts linked to this client location in any role, primary or not.
+          name: location_id
+          in: query
+        - schema:
+            type: string
+            enum:
+              - on_site
+              - hybrid
+              - remote
+          required: false
+          name: work_arrangement
+          in: query
       responses:
         "200":
           description: Paginated contacts returned.
@@ -33102,7 +35193,11 @@ paths:
                 $ref: "#/components/schemas/ClientContactApiError"
     post:
       summary: Create contact
-      description: Inherited ApiBaseController create route for contacts.
+      description: Inherited ApiBaseController create route for contacts. Accepts
+        work_arrangement and locations[{location_id, is_primary}]; every
+        location must belong to the contact's client (a location of another
+        client returns 400 contact_location_client_mismatch) and at most one may
+        be primary. A single link is made primary automatically.
       tags:
         - Contacts
       security:
@@ -33155,6 +35250,9 @@ paths:
     get:
       summary: Get contact
       description: Inherited ApiBaseController get route for one contact_name_id.
+        Carries work_arrangement and locations[] (location_id, location_name,
+        is_primary, is_active and the address fields); an unlinked contact
+        returns an empty array.
       tags:
         - Contacts
       security:
@@ -33213,6 +35311,9 @@ paths:
     put:
       summary: Update contact
       description: Inherited ApiBaseController update route for one contact_name_id.
+        work_arrangement and locations[] behave as on create; locations omitted
+        leaves the links untouched, an empty array removes them all, and
+        changing client_id removes them (a location never crosses clients).
       tags:
         - Contacts
       security:
@@ -33456,7 +35557,8 @@ paths:
     get:
       summary: Search contacts
       description: Runs advanced contact search with explicit API-key auth and
-        contact:read permission check.
+        contact:read permission check. Rows carry work_arrangement and
+        locations[] like the list response.
       tags:
         - Contacts
       security:
@@ -33537,7 +35639,9 @@ paths:
     get:
       summary: Export contacts
       description: Exports contacts as CSV or JSON using explicit API-key auth and
-        contact:read permission.
+        contact:read permission. CSV gains Work Arrangement, Locations
+        ("Warehouse; Head office") and Primary Location columns; JSON rows carry
+        work_arrangement and locations[].
       tags:
         - Contacts
       security:
@@ -34389,7 +36493,9 @@ paths:
     delete:
       summary: Bulk delete contract lines
       description: Alias route to bulkDeleteContractLines; deletes multiple contract
-        lines by ID list.
+        lines by ID list. The ids may come from the request body or, for clients
+        that cannot send a body on DELETE, from the `contract_line_ids` query
+        parameter.
       tags:
         - Contract Lines
       security:
@@ -34401,8 +36507,18 @@ paths:
         x-request-context-wiring-gap: true
       x-alga-products:
         - psa
+      parameters:
+        - schema:
+            type: string
+            description: Comma-separated contract line UUIDs. DELETE-only alternative to the
+              request body, for clients that cannot send a body on DELETE.
+          required: false
+          description: Comma-separated contract line UUIDs. DELETE-only alternative to the
+            request body, for clients that cannot send a body on DELETE.
+          name: contract_line_ids
+          in: query
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
@@ -34415,7 +36531,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/ContractLineApiSuccess"
         "400":
-          description: Invalid request payload.
+          description: Invalid, unparseable or missing request payload (no body and no
+            `contract_line_ids` query parameter).
           content:
             application/json:
               schema:
@@ -34527,7 +36644,67 @@ paths:
   /api/v1/contract-lines/bulk/delete:
     delete:
       summary: Bulk delete contract lines (explicit route)
-      description: Same controller behavior as DELETE /api/v1/contract-lines/bulk.
+      description: Same controller behavior as DELETE /api/v1/contract-lines/bulk. The
+        ids may come from the request body or from the `contract_line_ids` query
+        parameter.
+      tags:
+        - Contract Lines
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-source: middleware API-key presence + request context requirement in controller
+        x-request-context-required: true
+        x-request-context-wiring-gap: true
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            description: Comma-separated contract line UUIDs. DELETE-only alternative to the
+              request body, for clients that cannot send a body on DELETE.
+          required: false
+          description: Comma-separated contract line UUIDs. DELETE-only alternative to the
+            request body, for clients that cannot send a body on DELETE.
+          name: contract_line_ids
+          in: query
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkDeleteContractLinesBody"
+      responses:
+        "200":
+          description: Bulk delete completed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiSuccess"
+        "400":
+          description: Invalid, unparseable or missing request payload (no body and no
+            `contract_line_ids` query parameter).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "401":
+          description: x-api-key missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "500":
+          description: Request context missing or delete blocked by dependency rules.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+    post:
+      summary: Bulk delete contract lines (POST alias)
+      description: Same controller behavior as DELETE
+        /api/v1/contract-lines/bulk/delete, for clients that cannot send a body
+        on DELETE.
       tags:
         - Contract Lines
       security:
@@ -34553,7 +36730,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ContractLineApiSuccess"
         "400":
-          description: Invalid request payload.
+          description: Invalid, unparseable or missing request payload.
           content:
             application/json:
               schema:
@@ -34622,7 +36799,76 @@ paths:
     delete:
       summary: Bulk remove services from contract line
       description: Removes multiple services from one contract_line_id and returns
-        per-service success/failure results.
+        per-service success/failure results. The ids may come from the request
+        body or, for clients that cannot send a body on DELETE, from the
+        `contract_line_id` + `service_ids` query parameters.
+      tags:
+        - Contract Lines
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-source: middleware API-key presence + request context requirement in controller
+        x-request-context-required: true
+        x-request-context-wiring-gap: true
+        x-partial-failures-in-response: true
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Contract line UUID. DELETE-only alternative to the request body.
+          required: false
+          description: Contract line UUID. DELETE-only alternative to the request body.
+          name: contract_line_id
+          in: query
+        - schema:
+            type: string
+            description: Comma-separated service UUIDs. DELETE-only alternative to the
+              request body, for clients that cannot send a body on DELETE.
+          required: false
+          description: Comma-separated service UUIDs. DELETE-only alternative to the
+            request body, for clients that cannot send a body on DELETE.
+          name: service_ids
+          in: query
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkRemoveServicesBody"
+      responses:
+        "200":
+          description: Bulk service removal completed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiSuccess"
+        "400":
+          description: Invalid, unparseable or missing request payload (no body and no
+            `contract_line_id` + `service_ids` query parameters).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "401":
+          description: x-api-key missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "500":
+          description: Request context missing or unhandled service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+    post:
+      summary: Bulk remove services from contract line (POST alias)
+      description: Same controller behavior as DELETE
+        /api/v1/contract-lines/bulk/remove-services, for clients that cannot
+        send a body on DELETE.
       tags:
         - Contract Lines
       security:
@@ -34649,7 +36895,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ContractLineApiSuccess"
         "400":
-          description: Invalid request payload.
+          description: Invalid, unparseable or missing request payload.
           content:
             application/json:
               schema:
@@ -39969,6 +42215,9 @@ paths:
     post:
       summary: Bulk update invoice status
       description: Bulk status transition route using bulkInvoiceStatusUpdateSchema.
+        Only metadata transitions are applied; paid, cancelled and finalize
+        transitions are reported as per-invoice errors naming the dedicated
+        command. finalized_at is not accepted.
       tags:
         - Invoices
       security:
@@ -69152,7 +71401,13 @@ paths:
                 $ref: "#/components/schemas/WorkV1ApiError"
     post:
       summary: Create time sheet
-      description: Creates time sheet via create() path.
+      description: Creates a time sheet. A time sheet is unique per tenant, effective
+        owner (`user_id`, defaulting to the caller) and `period_id`, in every
+        approval status. The first request returns 201 with a DRAFT sheet; a
+        request for a user and period that already has a sheet returns 409
+        CONFLICT ("A time sheet already exists for this user and period") and
+        changes nothing. To recover, GET /api/v1/time-sheets filtered by
+        `user_id` and `period_id`.
       tags:
         - Work Management v1
       security:
@@ -69198,6 +71453,15 @@ paths:
                 $ref: "#/components/schemas/WorkV1ApiError"
         "403":
           description: RBAC denied for time_sheet resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "409":
+          description: 'Conflict: a time sheet already exists for this user and period
+            (any approval status). Body:
+            {"error":{"code":"CONFLICT","message":"A time sheet already exists
+            for this user and period"}}. The existing sheet is unchanged.'
           content:
             application/json:
               schema:
@@ -69272,7 +71536,10 @@ paths:
   /api/v1/time-sheets/export:
     get:
       summary: Export time sheets
-      description: Exports time sheets using ApiTimeSheetController.export().
+      description: Exports every time sheet matching the filters (not one page) using
+        ApiTimeSheetController.export(). Array filters approval_statuses,
+        user_ids, period_ids and fields accept repeated keys or comma-separated
+        values.
       tags:
         - Work Management v1
       security:
@@ -69359,14 +71626,8 @@ paths:
     get:
       summary: Search time sheets
       description: Searches time sheets via ApiTimeSheetController.search(). `query`
-        is required and is matched as a case-insensitive substring against the
-        sheet owner's full name (first name + space + last name). `user_name` is
-        the only searchable field and the default. Optional filters narrow by
-        approval status, user, period and period date range. Array params
-        (`fields`, `approval_statuses`, `user_ids`, `period_ids`) accept
-        repeated params or comma-separated values. `include_entries=true` adds
-        each sheet's `time_entries`. Returns at most `limit` sheets (default 25,
-        max 100).
+        is required and is matched against the owner name and time_sheet_notes
+        text. Array filters accept repeated keys or comma-separated values.
       tags:
         - Work Management v1
       security:
@@ -70987,6 +73248,64 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WorkV1ApiError"
+  /api/v1/tickets/categories:
+    get:
+      summary: List ticket categories
+      description: Returns the tenant ticket categories (parents and children via
+        parent_category), optionally filtered by board_id, sorted by
+        display_order then name. Read surface for classifying a ticket;
+        configuring categories stays on /api/v1/categories/ticket.
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: ticket
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Filter categories to this board.
+          required: false
+          description: Filter categories to this board.
+          name: board_id
+          in: query
+      responses:
+        "200":
+          description: Ticket categories.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiSuccess"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for ticket resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
   /api/v1/tickets/{id}/comments/{commentId}:
     put:
       summary: Update a ticket comment
@@ -71532,6 +73851,460 @@ paths:
                 $ref: "#/components/schemas/WorkV1ApiError"
         "404":
           description: Ticket or sub-resource not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+  /api/v1/tickets/templates:
+    get:
+      summary: List ticket templates
+      description: "Returns the tenant ticket templates: the ticket fields, tags,
+        custom fields and checklist each one produces, with how many recurring
+        schedules and tickets use it. Filter with client_id to see what one
+        client can use (its own templates plus the tenant-wide ones). Use a
+        template with POST /api/v1/tickets/templates/{templateId}/instantiate
+        instead of creating a ticket and then adding its checklist item by
+        item."
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: ticket_template
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            description: 1-based page number. Default 1.
+          required: false
+          description: 1-based page number. Default 1.
+          name: page
+          in: query
+        - schema:
+            type: string
+            description: Page size, 1-100. Default 25.
+          required: false
+          description: Page size, 1-100. Default 25.
+          name: limit
+          in: query
+        - schema:
+            type: string
+            format: uuid
+            description: "Templates this client can use: the ones bound to it plus every
+              tenant-wide template. Resolve the UUID with GET /api/v1/clients
+              first."
+          required: false
+          description: "Templates this client can use: the ones bound to it plus every
+            tenant-wide template. Resolve the UUID with GET /api/v1/clients
+            first."
+          name: client_id
+          in: query
+        - schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+            description: "Omitted or 'true': active templates only (the default). 'false':
+              the inactive ones."
+          required: false
+          description: "Omitted or 'true': active templates only (the default). 'false':
+            the inactive ones."
+          name: is_active
+          in: query
+        - schema:
+            type: string
+            description: Case-insensitive substring of the template name or of the ticket
+              title it produces.
+          required: false
+          description: Case-insensitive substring of the template name or of the ticket
+            title it produces.
+          name: search
+          in: query
+      responses:
+        "200":
+          description: Ticket templates.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiPaginated"
+        "400":
+          description: Query validation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for ticket_template read.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+    post:
+      summary: Create a ticket template
+      description: Creates a reusable ticket template with its whole checklist in one
+        request. Resolve client_id, board_id, category_id and priority_id to
+        UUIDs first (GET /api/v1/clients, /api/v1/boards, /api/v1/categories,
+        /api/v1/tickets/priorities); a reference that does not exist is refused
+        with 400. Leave client_id out for a template every client can use. A
+        second active template with the same name returns 409.
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: ticket_template
+        x-rbac-action: create
+      x-alga-products:
+        - psa
+        - algadesk
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkV1TicketTemplateCreateBody"
+      responses:
+        "201":
+          description: Ticket template created, with its checklist.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiSuccess"
+        "400":
+          description: Validation failure or a field that points at something that does
+            not exist.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for ticket_template create.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "409":
+          description: Another active template already has this name.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+  /api/v1/tickets/templates/{templateId}:
+    get:
+      summary: Get a ticket template
+      description: "Returns one ticket template with its checklist items in order, its
+        client scope, usage counts, and referenceProblems: fields pointing at a
+        board, category or priority that no longer exists (they are left blank
+        when the template is applied)."
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: ticket_template
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Ticket template UUID from ticket_templates.template_id.
+          required: true
+          description: Ticket template UUID from ticket_templates.template_id.
+          name: templateId
+          in: path
+      responses:
+        "200":
+          description: The ticket template.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiSuccess"
+        "400":
+          description: Invalid template id.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for ticket_template read.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Ticket template not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+    put:
+      summary: Update a ticket template
+      description: "Replaces the template wholesale: omitted fields are reset and the
+        checklist you send replaces the stored items, so GET the template first
+        and send it back edited. `is_active` activates or deactivates it
+        (deactivating only hides it from manual use; recurring schedules keep
+        running). Changes apply to every schedule that uses the template, from
+        the next ticket each one creates."
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: ticket_template
+        x-rbac-action: update
+        x-chat-approval-required: true
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Ticket template UUID from ticket_templates.template_id.
+          required: true
+          description: Ticket template UUID from ticket_templates.template_id.
+          name: templateId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkV1TicketTemplateUpdateBody"
+      responses:
+        "200":
+          description: The updated ticket template.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiSuccess"
+        "400":
+          description: Validation failure or a field that points at something that does
+            not exist.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for ticket_template update.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Ticket template not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "409":
+          description: Another active template already has this name.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+    delete:
+      summary: Delete a ticket template
+      description: Deletes the template and its checklist items. Tickets already
+        created from it are not changed. Refused with 409 while any non-archived
+        recurring schedule still uses it; point those schedules at another
+        template or archive them first, or deactivate the template instead (PUT
+        with is_active=false).
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: ticket_template
+        x-rbac-action: delete
+        x-chat-approval-required: true
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Ticket template UUID from ticket_templates.template_id.
+          required: true
+          description: Ticket template UUID from ticket_templates.template_id.
+          name: templateId
+          in: path
+      responses:
+        "204":
+          description: Ticket template deleted; no content.
+        "400":
+          description: Invalid template id.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for ticket_template delete.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Ticket template not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "409":
+          description: Recurring schedules still use the template.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+  /api/v1/tickets/templates/{templateId}/instantiate:
+    post:
+      summary: Create a ticket from a ticket template
+      description: Creates one ticket from the template and returns it, exactly as
+        POST /api/v1/tickets does. The template supplies the title (with its
+        {{client}}/{{contact}}/{{due_date}} tokens filled in), description,
+        board, category, priority, ITIL values, tags, custom fields and every
+        checklist item, and the ticket records created_from_template_id. Prefer
+        this over POST /api/v1/tickets followed by one POST
+        /api/v1/tickets/{id}/checklist per item whenever a template exists.
+        Requires ticket:create as well as ticket_template:read. Resolve
+        client_id (and contact_name_id, location_id, assigned_to) to UUIDs
+        first; a contact, location or asset that does not belong to client_id, a
+        status that is not on the template’s board, or a template bound to a
+        different client are all refused with 400.
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: ticket_template
+        x-rbac-action: read
+        x-rbac-additional-required: ticket:create
+        x-chat-approval-required: true
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Ticket template UUID from ticket_templates.template_id.
+          required: true
+          description: Ticket template UUID from ticket_templates.template_id.
+          name: templateId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkV1TicketTemplateInstantiateBody"
+      responses:
+        "201":
+          description: The created ticket.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiSuccess"
+        "400":
+          description: Validation failure, a reference that does not belong to the client,
+            or a template bound to another client.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for ticket create or ticket_template read.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Ticket template or client not found.
           content:
             application/json:
               schema:
@@ -73018,6 +75791,305 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WorkV1ApiError"
+  /api/v1/time-period-settings:
+    get:
+      summary: List time period settings
+      description: Returns every time period setting for the tenant, active or not,
+        newest effective_from first. Settings drive time period generation.
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiTimeSheetController
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: time_period
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: Time period settings.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1TimePeriodSettingsListResponse"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: Permission denied (time_period:manage for writes, time_period:read
+            for reads).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+    post:
+      summary: Create time period settings
+      description: Creates an active time period setting. When effective_from is
+        omitted it defaults to the start of the period containing today in the
+        caller's timezone; if an earlier setting ended on or after that day, the
+        new setting starts the day after it ended (the default may then be in
+        the future). An explicit effective_from is used as given. Returns 409
+        when the setting overlaps an active setting.
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiTimeSheetController
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: time_period
+        x-rbac-action: manage
+      x-alga-products:
+        - psa
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkV1TimePeriodSettingsCreateBody"
+      responses:
+        "201":
+          description: Setting created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1TimePeriodSettingsResponse"
+        "400":
+          description: Validation failure (field ranges, effective_to before
+            effective_from).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: Permission denied (time_period:manage for writes, time_period:read
+            for reads).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "409":
+          description: The setting overlaps an active setting (same or conflicting period
+            cells over intersecting effective dates). Nothing is written;
+            explicit dates are never adjusted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+  /api/v1/time-period-settings/{id}:
+    get:
+      summary: Get time period settings
+      description: Gets one time period setting by time_period_settings_id.
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiTimeSheetController
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: time_period
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: UUID path identifier from underlying resource tables.
+          required: true
+          description: UUID path identifier from underlying resource tables.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Time period setting.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1TimePeriodSettingsResponse"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: Permission denied (time_period:manage for writes, time_period:read
+            for reads).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Time period settings not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+    put:
+      summary: Update time period settings
+      description: "Applies a partial update. The merged setting is validated like a
+        create and returns 409 when it overlaps another active setting.
+        effective_to: null clears the end date; is_active: false takes the
+        setting out of period generation and overlap checks."
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiTimeSheetController
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: time_period
+        x-rbac-action: manage
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: UUID path identifier from underlying resource tables.
+          required: true
+          description: UUID path identifier from underlying resource tables.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkV1TimePeriodSettingsUpdateBody"
+      responses:
+        "200":
+          description: Updated setting.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1TimePeriodSettingsResponse"
+        "400":
+          description: Validation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: Permission denied (time_period:manage for writes, time_period:read
+            for reads).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Time period settings not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "409":
+          description: The setting overlaps an active setting (same or conflicting period
+            cells over intersecting effective dates). Nothing is written;
+            explicit dates are never adjusted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+    delete:
+      summary: Delete time period settings
+      description: Deletes a time period setting. Time periods it already generated
+        are kept.
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiTimeSheetController
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: time_period
+        x-rbac-action: manage
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: UUID path identifier from underlying resource tables.
+          required: true
+          description: UUID path identifier from underlying resource tables.
+          name: id
+          in: path
+      responses:
+        "204":
+          description: Deleted.
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: Permission denied (time_period:manage for writes, time_period:read
+            for reads).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Time period settings not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
   /api/v1/quotes:
     get:
       summary: List quotes
@@ -74043,6 +77115,82 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+  /api/v1/quotes/{id}/cancel:
+    post:
+      summary: Cancel quote
+      description: Cancels quote via cancel(); requires billing:update. Quote status
+        is not editable through PUT /api/v1/quotes/{id}.
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: quote
+        x-read-authorization-resource: billing
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Quote UUID from quotes.quote_id.
+          required: true
+          description: Quote UUID from quotes.quote_id.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuotesContractsGenericBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "201":
+          description: Create-like operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for quote resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
   /api/v1/quotes/{id}/remind:
     post:
       summary: Send quote reminder
@@ -74659,8 +77807,10 @@ paths:
                 $ref: "#/components/schemas/QuotesContractsApiErrorV1"
     post:
       summary: Create contract
-      description: Creates contract via ApiContractLineController.createContract() (v2
-        controller mounted under v1 route).
+      description: "Creates a client-owned contract the way the UI wizard does: header
+        + client_contracts assignment (+ optional lines) in ONE transaction, so
+        the contract appears in the product. client_id is required (400
+        otherwise). Responds 201."
       tags:
         - Quotes & Contracts v1
       security:
@@ -74764,6 +77914,841 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "409":
+          description: Conflicts with current state (invoices exist, already assigned,
+            mixed currency).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "422":
+          description: Refused by business rule (system-managed contract).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+  /api/v1/contracts/{contractId}:
+    get:
+      summary: Get contract
+      description: Gets a contract with its assignments and contract lines.
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: contract_line
+        x-controller-origin: ApiContractLineController (v2) mounted under v1 routes
+        x-request-context-wiring-gap: Controller requires req.context via
+          requireRequestContext(req); v1 route lacks explicit withApiKeyAuth
+          wrapper.
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Contract UUID from contracts.contract_id.
+          required: true
+          description: Contract UUID from contracts.contract_id.
+          name: contractId
+          in: path
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for contract resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+    put:
+      summary: Update contract
+      description: "Updates contract header fields with the UI rules (system-managed
+        contracts: 422; invoiced/expired restrictions: 409)."
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: contract_line
+        x-controller-origin: ApiContractLineController (v2) mounted under v1 routes
+        x-request-context-wiring-gap: Controller requires req.context via
+          requireRequestContext(req); v1 route lacks explicit withApiKeyAuth
+          wrapper.
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Contract UUID from contracts.contract_id.
+          required: true
+          description: Contract UUID from contracts.contract_id.
+          name: contractId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateContractBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for contract resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "409":
+          description: Conflicts with current state (invoices exist, already assigned,
+            mixed currency).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "422":
+          description: Refused by business rule (system-managed contract).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+    patch:
+      summary: Patch contract
+      description: Alias of PUT (partial header update).
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: contract_line
+        x-controller-origin: ApiContractLineController (v2) mounted under v1 routes
+        x-request-context-wiring-gap: Controller requires req.context via
+          requireRequestContext(req); v1 route lacks explicit withApiKeyAuth
+          wrapper.
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Contract UUID from contracts.contract_id.
+          required: true
+          description: Contract UUID from contracts.contract_id.
+          name: contractId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateContractBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for contract resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "409":
+          description: Conflicts with current state (invoices exist, already assigned,
+            mixed currency).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "422":
+          description: Refused by business rule (system-managed contract).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+    delete:
+      summary: Delete contract
+      description: "Deletes a contract with the UI rules: 404 not found, 422
+        system-managed, 409 has invoices. 204 on success."
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: contract_line
+        x-controller-origin: ApiContractLineController (v2) mounted under v1 routes
+        x-request-context-wiring-gap: Controller requires req.context via
+          requireRequestContext(req); v1 route lacks explicit withApiKeyAuth
+          wrapper.
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Contract UUID from contracts.contract_id.
+          required: true
+          description: Contract UUID from contracts.contract_id.
+          name: contractId
+          in: path
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "204":
+          description: Delete-like operation can return no content.
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for contract resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "409":
+          description: Conflicts with current state (invoices exist, already assigned,
+            mixed currency).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "422":
+          description: Refused by business rule (system-managed contract).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+  /api/v1/contracts/{contractId}/assignments:
+    get:
+      summary: List contract assignments
+      description: Lists client_contracts rows for the contract.
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: contract_line
+        x-controller-origin: ApiContractLineController (v2) mounted under v1 routes
+        x-request-context-wiring-gap: Controller requires req.context via
+          requireRequestContext(req); v1 route lacks explicit withApiKeyAuth
+          wrapper.
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Contract UUID from contracts.contract_id.
+          required: true
+          description: Contract UUID from contracts.contract_id.
+          name: contractId
+          in: path
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for contract resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+    post:
+      summary: Create contract assignment
+      description: Assigns an existing contract to its owning client (e.g. repairs a
+        contract with no client_contracts row). 409 if already assigned, 422 if
+        system-managed or client is not the owner.
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: contract_line
+        x-controller-origin: ApiContractLineController (v2) mounted under v1 routes
+        x-request-context-wiring-gap: Controller requires req.context via
+          requireRequestContext(req); v1 route lacks explicit withApiKeyAuth
+          wrapper.
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Contract UUID from contracts.contract_id.
+          required: true
+          description: Contract UUID from contracts.contract_id.
+          name: contractId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateContractAssignmentBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "201":
+          description: Create-like operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for contract resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "409":
+          description: Conflicts with current state (invoices exist, already assigned,
+            mixed currency).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "422":
+          description: Refused by business rule (system-managed contract).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+  /api/v1/contracts/{contractId}/assignments/{clientContractId}:
+    get:
+      summary: Get contract assignment
+      description: Gets one assignment.
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: contract_line
+        x-controller-origin: ApiContractLineController (v2) mounted under v1 routes
+        x-request-context-wiring-gap: Controller requires req.context via
+          requireRequestContext(req); v1 route lacks explicit withApiKeyAuth
+          wrapper.
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Contract UUID from contracts.contract_id.
+          required: true
+          description: Contract UUID from contracts.contract_id.
+          name: contractId
+          in: path
+        - schema:
+            type: string
+            format: uuid
+            description: Assignment UUID from client_contracts.client_contract_id.
+          required: true
+          description: Assignment UUID from client_contracts.client_contract_id.
+          name: clientContractId
+          in: path
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for contract resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+    put:
+      summary: Update contract assignment
+      description: Updates dates/terms; is_active:true activates the assignment and
+        contract.
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: contract_line
+        x-controller-origin: ApiContractLineController (v2) mounted under v1 routes
+        x-request-context-wiring-gap: Controller requires req.context via
+          requireRequestContext(req); v1 route lacks explicit withApiKeyAuth
+          wrapper.
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Contract UUID from contracts.contract_id.
+          required: true
+          description: Contract UUID from contracts.contract_id.
+          name: contractId
+          in: path
+        - schema:
+            type: string
+            format: uuid
+            description: Assignment UUID from client_contracts.client_contract_id.
+          required: true
+          description: Assignment UUID from client_contracts.client_contract_id.
+          name: clientContractId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateContractAssignmentBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for contract resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "409":
+          description: Conflicts with current state (invoices exist, already assigned,
+            mixed currency).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "422":
+          description: Refused by business rule (system-managed contract).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+    patch:
+      summary: Patch contract assignment
+      description: Alias of PUT.
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: contract_line
+        x-controller-origin: ApiContractLineController (v2) mounted under v1 routes
+        x-request-context-wiring-gap: Controller requires req.context via
+          requireRequestContext(req); v1 route lacks explicit withApiKeyAuth
+          wrapper.
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Contract UUID from contracts.contract_id.
+          required: true
+          description: Contract UUID from contracts.contract_id.
+          name: contractId
+          in: path
+        - schema:
+            type: string
+            format: uuid
+            description: Assignment UUID from client_contracts.client_contract_id.
+          required: true
+          description: Assignment UUID from client_contracts.client_contract_id.
+          name: clientContractId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateContractAssignmentBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for contract resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "409":
+          description: Conflicts with current state (invoices exist, already assigned,
+            mixed currency).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "422":
+          description: Refused by business rule (system-managed contract).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+    delete:
+      summary: Delete contract assignment
+      description: Removes an assignment unless invoices reference it (409; end it
+        with an update instead). 204 on success.
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: contract_line
+        x-controller-origin: ApiContractLineController (v2) mounted under v1 routes
+        x-request-context-wiring-gap: Controller requires req.context via
+          requireRequestContext(req); v1 route lacks explicit withApiKeyAuth
+          wrapper.
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Contract UUID from contracts.contract_id.
+          required: true
+          description: Contract UUID from contracts.contract_id.
+          name: contractId
+          in: path
+        - schema:
+            type: string
+            format: uuid
+            description: Assignment UUID from client_contracts.client_contract_id.
+          required: true
+          description: Assignment UUID from client_contracts.client_contract_id.
+          name: clientContractId
+          in: path
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "204":
+          description: Delete-like operation can return no content.
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for contract resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "409":
+          description: Conflicts with current state (invoices exist, already assigned,
+            mixed currency).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "422":
+          description: Refused by business rule (system-managed contract).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
         "500":
           description: Unexpected controller/service failure.
           content:
@@ -74851,6 +78836,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "409":
+          description: Conflicts with current state (invoices exist, already assigned,
+            mixed currency).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "422":
+          description: Refused by business rule (system-managed contract).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
         "500":
           description: Unexpected controller/service failure.
           content:
@@ -74886,6 +78884,14 @@ paths:
           description: Contract UUID from contracts.contract_id.
           name: contractId
           in: path
+        - schema:
+            type: string
+            format: uuid
+            description: Contract line UUID from contract_lines.contract_line_id.
+          required: true
+          description: Contract line UUID from contract_lines.contract_line_id.
+          name: contractLineId
+          in: path
       responses:
         "200":
           description: Operation succeeded.
@@ -74915,6 +78921,19 @@ paths:
                 $ref: "#/components/schemas/QuotesContractsApiErrorV1"
         "404":
           description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "409":
+          description: Conflicts with current state (invoices exist, already assigned,
+            mixed currency).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "422":
+          description: Refused by business rule (system-managed contract).
           content:
             application/json:
               schema:
@@ -81392,7 +85411,8 @@ paths:
       extensions:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate()
-        x-rbac-resource: inventory/read and opportunities/read/create
+        x-rbac-resource: inventory/read, opportunities/read/create, project/read and
+          asset/read/update
       x-alga-products:
         - psa
         - algadesk
@@ -84892,6 +88912,37 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/client-portal/conversation-attachments/{attachmentId}:
+    get:
+      summary: GET client-portal
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - client-portal
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/client-portal/documents/{documentId}/export:
     get:
       summary: GET client-portal
@@ -85037,6 +89088,104 @@ paths:
         - psa
       responses:
         "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/co-management/archive-files/{archiveFileId}:
+    get:
+      summary: GET co-management
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - co-management
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products: []
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/co-management/attachments/{attachmentId}:
+    get:
+      summary: GET co-management
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - co-management
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products: []
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/co-management/export:
+    post:
+      summary: POST co-management
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - co-management
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products: []
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            description: Placeholder request body
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+      responses:
+        "201":
           description: Placeholder success response
           content:
             application/json:
@@ -87401,6 +91550,37 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/inventory/rma/{id}/document:
+    get:
+      summary: GET inventory
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - inventory
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/inventory/sales-orders/{id}/document:
     get:
       summary: GET inventory
@@ -87454,6 +91634,104 @@ paths:
               $ref: "#/components/schemas/PlaceholderObject"
       responses:
         "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/labels/linked-assets:
+    get:
+      summary: GET labels
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - labels
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products: []
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/labels/pdf:
+    post:
+      summary: POST labels
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - labels
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products: []
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            description: Placeholder request body
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/labels/templates:
+    get:
+      summary: GET labels
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - labels
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products: []
+      responses:
+        "200":
           description: Placeholder success response
           content:
             application/json:
@@ -87988,6 +92266,67 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/notifications/live-token:
+    get:
+      summary: GET notifications
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - notifications
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products: []
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/online-meetings/artifacts/{artifactId}:
+    get:
+      summary: GET online-meetings
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - online-meetings
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/online-meetings/recordings/{artifactId}:
     get:
       summary: GET online-meetings
@@ -87995,6 +92334,68 @@ paths:
         inventory. Replace with canonical OpenAPI metadata.
       tags:
         - online-meetings
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/portal-domain/surface:
+    get:
+      summary: GET portal-domain
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - portal-domain
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/projects/staging/containers/{id}/manifest:
+    get:
+      summary: GET projects
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - projects
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -89872,6 +94273,37 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/tickets/{id}/email-html:
+    get:
+      summary: GET tickets
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - tickets
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/tickets/{id}/live-token:
     get:
       summary: GET tickets
@@ -90075,6 +94507,36 @@ paths:
         x-placeholder: true
       x-alga-products:
         - psa
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/capabilities/co-managed:
+    get:
+      summary: GET v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - capabilities
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products: []
       responses:
         "200":
           description: Placeholder success response
@@ -93532,6 +97994,45 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/time-entries/cancel-tracking/{sessionId}:
+    post:
+      summary: POST v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - time-entries
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products:
+        - psa
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            description: Placeholder request body
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/webhooks/ai-gateway:
     options:
       summary: OPTIONS webhooks
@@ -93604,6 +98105,75 @@ paths:
   /api/webhooks/alternative-payments:
     get:
       summary: GET webhooks
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - webhooks
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      summary: POST webhooks
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - webhooks
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products:
+        - psa
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            description: Placeholder request body
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/webhooks/datto:
+    options:
+      summary: OPTIONS webhooks
       description: This operation was generated automatically from the route
         inventory. Replace with canonical OpenAPI metadata.
       tags:

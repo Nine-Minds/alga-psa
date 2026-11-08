@@ -111,6 +111,7 @@
     "@alga-psa/user-composition": "*",
     "@alga-psa/validation": "*",
     "@alga-psa/workflow-streams": "*",
+    "dompurify": ">=3.4.17",
     "jsdom": "^25.0.1",
     "postcss": "^8.5.23",
     "postcss-value-parser": "^4.2.0",

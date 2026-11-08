@@ -103,6 +103,12 @@ interface TextEditorProps {
    * the editor is unchanged.
    */
   snippets?: EditorSnippetsConfig;
+  /**
+   * Whether the document can be edited. Defaults to true. When false the surface renders
+   * contenteditable="false" (and aria-readonly), leaves the tab order, and the editing affordances
+   * (attach files, slash/mention/emoji menus, snippets, formatting toolbar) are not offered.
+   */
+  editable?: boolean;
 }
 
 const SLASH_SNIPPET_LIMIT = 6;
@@ -229,6 +235,7 @@ export default function TextEditor({
   footerActions,
   maxHeight,
   snippets,
+  editable = true,
 }: TextEditorProps) {
   useShortcutScope('editor');
   const { t } = useTranslation('common');
@@ -299,7 +306,8 @@ export default function TextEditor({
     domAttributes: {
       editor: {
         class: 'block-note-editor',
-        contenteditable: 'true'
+        contenteditable: editable ? 'true' : 'false',
+        ...(editable ? {} : { 'aria-readonly': 'true' })
       }
     },
     _tiptapOptions: {
@@ -550,6 +558,20 @@ export default function TextEditor({
     };
   }, [editor, editorRef]);
 
+  // Keep the editor's editable state in step with the prop. domAttributes are fixed at creation,
+  // so the contenteditable attribute is mirrored onto the DOM directly when the prop changes.
+  useEffect(() => {
+    if (editor.isEditable !== editable) {
+      editor.isEditable = editable;
+    }
+    const dom = editor.domElement as HTMLElement | undefined;
+    if (dom) {
+      dom.setAttribute('contenteditable', editable ? 'true' : 'false');
+      if (editable) dom.removeAttribute('aria-readonly');
+      else dom.setAttribute('aria-readonly', 'true');
+    }
+  }, [editor, editable]);
+
   useEffect(() => {
     if (!autoFocus) return;
 
@@ -620,7 +642,7 @@ export default function TextEditor({
       } : undefined}
     >
       {children}
-      {allowFileAttachments && uploadFile && <div className="mb-2 flex items-center gap-2">
+      {editable && allowFileAttachments && uploadFile && <div className="mb-2 flex items-center gap-2">
         <input id={`${id}-attachment-input`} ref={filePickerRef} type="file" multiple hidden onChange={async event => {
           const files = Array.from(event.target.files || []);
           event.target.value = '';
@@ -646,7 +668,7 @@ export default function TextEditor({
       </div>}
       {/* Without the attachment row there is no footer yet; render one so the
           slot still has a home. Omitting the slot leaves the layout unchanged. */}
-      {(footerActions || snippetButton) && !(allowFileAttachments && uploadFile) && (
+      {editable && (footerActions || snippetButton) && !(allowFileAttachments && uploadFile) && (
         <div className="mb-2 flex items-center gap-2">{snippetButton}{footerActions}</div>
       )}
       <div
@@ -665,30 +687,35 @@ export default function TextEditor({
           editor={editor}
           theme={blockNoteTheme}
           emojiPicker={false}
-          slashMenu={!snippets}
+          slashMenu={editable && !snippets}
           className="w-full min-w-0 [&_.ProseMirror]:break-words [&_.ProseMirror]:max-w-full [&_.ProseMirror]:min-w-0 [&_.ProseMirror_a]:text-[rgb(var(--badge-info-text))] [&_.ProseMirror_a]:font-medium [&_.ProseMirror_a]:underline [&_.ProseMirror_a]:decoration-[rgb(var(--badge-info-text)/0.4)] [&_.ProseMirror_a]:underline-offset-2 [&_.ProseMirror_a:hover]:decoration-[rgb(var(--badge-info-text))]"
-          editable={true}
+          editable={editable}
+          formattingToolbar={editable}
           style={{
             overflowWrap: 'break-word',
             minWidth: 0
           }}
         >
-          <SuggestionMenuController
-            triggerCharacter="@"
-            getItems={async (query) => getMentionMenuItems(query)}
-          />
-          {snippets && (
+          {editable && (
+            <SuggestionMenuController
+              triggerCharacter="@"
+              getItems={async (query) => getMentionMenuItems(query)}
+            />
+          )}
+          {editable && snippets && (
             <SuggestionMenuController
               triggerCharacter="/"
               getItems={getSlashMenuItems}
             />
           )}
-          <GridSuggestionMenuController
-            triggerCharacter=":"
-            columns={10}
-            minQueryLength={2}
-            gridSuggestionMenuComponent={EmojiGrid}
-          />
+          {editable && (
+            <GridSuggestionMenuController
+              triggerCharacter=":"
+              columns={10}
+              minQueryLength={2}
+              gridSuggestionMenuComponent={EmojiGrid}
+            />
+          )}
         </BlockNoteView>
       </div>
       {snippets && (

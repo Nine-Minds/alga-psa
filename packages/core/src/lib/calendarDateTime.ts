@@ -1,6 +1,18 @@
 import { zonedWallTimeToUtc } from './dateTimeUtils';
 import { windowsTimeZones } from './windowsTimeZones';
 
+/**
+ * Normalize a provider zone name to IANA. Graph names recurrence zones in
+ * Windows form ("Eastern Standard Time"); Google already uses IANA.
+ */
+export function toIanaTimeZone(timeZone?: string | null): string | undefined {
+  const name = timeZone?.trim();
+  if (!name) return undefined;
+  return Object.prototype.hasOwnProperty.call(windowsTimeZones, name)
+    ? windowsTimeZones[name]
+    : name;
+}
+
 /** Convert a provider's timed value to an instant without using the worker timezone. */
 export function parseCalendarDateTime(dateTime: string, timeZone?: string): Date {
   const match = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,9}))?([zZ]|[+-]\d{2}:?\d{2})?$/.exec(dateTime);
