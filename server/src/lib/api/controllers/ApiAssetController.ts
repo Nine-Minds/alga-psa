@@ -47,6 +47,7 @@ import {
 } from '@alga-psa/co-managed/recordProjection';
 import { resolveAssetAuthorizationRecords } from '@alga-psa/assets/lib/assetReadAuthorization';
 import { buildProjectedPage } from '@alga-psa/authorization/pagination';
+import type { AuthorizationRecord } from '@alga-psa/authorization/kernel/contracts';
 
 type AssetAction = { resource: 'asset' | 'ticket'; action: 'read' | 'create' | 'update' | 'delete' };
 type AssetChecks = readonly [AssetAction, ...AssetAction[]];
@@ -315,6 +316,7 @@ export class ApiAssetController {
 
     const result = await this.updateAuthorizedAssets(context, [{ assetId: params.id, data: validation.data }]);
     if (result.denied) return result.denied;
+    if (result.assets === null) return createApiResponse(null);
     const [projection] = result.assets;
     
     return createApiResponse({
@@ -360,7 +362,8 @@ export class ApiAssetController {
    * cannot tell the difference between "no history" and "not yours".
    */
   async listAssignments(req: NextRequest, params: { id: string }): Promise<NextResponse> {
-    const context = await this.requireAllowedContext(req);
+    const { context, denied: authDenied } = await this.authorize(req, ASSET_TICKET_READ);
+    if (authDenied) return authDenied;
     const { projection: asset, denied } = await readAssetProjection(
       context,
       params.id,
@@ -427,16 +430,34 @@ export class ApiAssetController {
   /** Authorize every target before any mutation; callers must first enforce asset:update RBAC. */
   private async authorizeAssetUpdateTargets(
     context: ApiContext,
-    assetIds: readonly string[],
+    updates: ReadonlyArray<{ assetId: string; data: Record<string, any> }>,
   ): Promise<{
     denied: NextResponse | null;
-    gates: Map<string, AuthorizedProjection<Record<string, any>>>;
+    gates: Map<string, AuthorizedProjection<Record<string, any>>> | null;
   }> {
     const knex = await getConnection(context.tenant);
-    const uniqueIds = [...new Set(assetIds)];
+    const uniqueIds = [...new Set(updates.map(({ assetId }) => assetId))];
     const records = await Promise.all(uniqueIds.map((id) => this.assetService.getAuthorizationRecord(id, context)));
     if (records.some((record) => record === null)) {
       return { denied: createErrorResponse('Asset not found', 404, 'NOT_FOUND'), gates: new Map() };
+    }
+
+    const byId = new Map(uniqueIds.map((id, index) => [id, records[index]!]));
+    for (const { assetId, data } of updates) {
+      const current = byId.get(assetId)!;
+      // Check every transition before any single/bulk write. Read access cannot
+      // stand in for update scope, including at a proposed destination client.
+      const contexts = data.client_id === undefined ? [current] : [current, { ...current, clientId: data.client_id }];
+      for (const record of contexts) {
+        const denied = await this.authorizeRecordContext(context, 'update', record);
+        if (denied) return { denied, gates: new Map() };
+      }
+    }
+
+    // A mutation grant does not imply a read grant. Update-only callers receive
+    // an acknowledgment; no stored fields or links are serialized for them.
+    if (!(await hasApiContextPermission(context, 'asset', 'read', knex))) {
+      return { denied: null, gates: null };
     }
 
     const gates = await Promise.all(uniqueIds.map((id, index) => projectApiResourceRead({
@@ -458,15 +479,15 @@ export class ApiAssetController {
     };
   }
 
-  /** Shared single/bulk write path: all policy gates precede writes, and only projected rows are returned. */
+  /** Shared single/bulk write path: all policy gates precede writes; representations require read access. */
   private async updateAuthorizedAssets(
     context: ApiContext,
     updates: Array<{ assetId: string; data: Record<string, any> }>,
   ): Promise<{
     denied: NextResponse | null;
-    assets: AuthorizedProjection<Record<string, any>>[];
+    assets: AuthorizedProjection<Record<string, any>>[] | null;
   }> {
-    const authorization = await this.authorizeAssetUpdateTargets(context, updates.map(({ assetId }) => assetId));
+    const authorization = await this.authorizeAssetUpdateTargets(context, updates);
     if (authorization.denied) return { denied: authorization.denied, assets: [] };
 
     const updatedRows = await Promise.all(updates.map(({ assetId, data }) =>
@@ -475,8 +496,10 @@ export class ApiAssetController {
       return { denied: createErrorResponse('Asset not found', 404, 'NOT_FOUND'), assets: [] };
     }
 
+    const gates = authorization.gates;
+    if (gates === null) return { denied: null, assets: null };
     const assets = updatedRows.map((row, index) => {
-      const gate = authorization.gates.get(updates[index].assetId);
+      const gate = gates.get(updates[index].assetId);
       return gate && row ? reprojectUnderDecision(gate, row, ASSET_RECORD_SOURCE) : null;
     });
     if (assets.some((asset) => asset === null)) {
@@ -733,8 +756,12 @@ export class ApiAssetController {
 
     const existing = await this.assetService.getMaintenanceScheduleForUpdate(params.scheduleId, context);
     if (!existing) return createErrorResponse('Maintenance schedule not found', 404, 'NOT_FOUND');
-    const authorization = await this.authorizeAssetUpdateTargets(context, [existing.asset_id]);
+    const authorization = await this.authorizeAssetUpdateTargets(context, [{ assetId: existing.asset_id, data: {} }]);
     if (authorization.denied) return authorization.denied;
+    if (authorization.gates === null) {
+      await this.assetService.updateMaintenanceSchedule(params.scheduleId, validation.data, context);
+      return createApiResponse(null);
+    }
     const assetGate = authorization.gates.get(existing.asset_id);
     const existingProjection = assetGate
       ? reprojectUnderDecision(assetGate, existing, ASSET_MAINTENANCE_SCHEDULE_SOURCE)
@@ -958,7 +985,7 @@ export class ApiAssetController {
       ({ assetId: asset_id, data: updateData })));
     if (result.denied) return result.denied;
 
-    return createApiResponse(result.assets, 200, { message: `Updated ${result.assets.length} assets` });
+    return createApiResponse(result.assets, 200, { message: `Updated ${validation.data.assets.length} assets` });
   }
 
   /**
@@ -981,7 +1008,7 @@ export class ApiAssetController {
       ({ assetId, data: { status: validation.data.status } })));
     if (result.denied) return result.denied;
 
-    return createApiResponse(result.assets, 200, { message: `Updated status for ${result.assets.length} assets` });
+    return createApiResponse(result.assets, 200, { message: `Updated status for ${validation.data.asset_ids.length} assets` });
   }
 
   // Helper method to convert data to CSV

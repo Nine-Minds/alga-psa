@@ -187,6 +187,7 @@ export async function readAssetGateForRequest(
       assetId,
       new AssetService(),
     );
-    return gate.denied ? { ...gate, context: null } : { ...gate, context };
+    if (gate.denied !== null) return { projection: null, context: null, denied: gate.denied };
+    return { projection: gate.projection, context, denied: null };
   });
 }

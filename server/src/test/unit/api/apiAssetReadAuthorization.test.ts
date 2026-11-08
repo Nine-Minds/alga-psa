@@ -53,7 +53,11 @@ vi.mock('@/lib/auth/rbac', () => ({
   }),
 }));
 
-vi.mock('@/lib/db/db', () => ({ getConnection: vi.fn(async () => ({})) }));
+vi.mock('@/lib/db/db', () => ({ getConnection: vi.fn(async () => () => {
+  // This fixture has no persisted roles, team memberships, or direct reports.
+  const query = { where: () => query, select: async () => [] };
+  return query;
+}) }));
 
 vi.mock('server/src/lib/authorization/kernel', () => ({
   getAuthorizationKernel: vi.fn(async () => ({

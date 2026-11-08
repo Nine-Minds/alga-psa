@@ -13,7 +13,11 @@ vi.mock('@/lib/productAccess', () => ({
 }));
 vi.mock('@/lib/productSurfaceRegistry', () => ({ resolveProductApiBehavior: () => 'allowed' }));
 vi.mock('@/lib/auth/rbac', () => ({ hasPermission: vi.fn(async () => true) }));
-vi.mock('@/lib/db/db', () => ({ getConnection: vi.fn(async () => ({})) }));
+vi.mock('@/lib/db/db', () => ({ getConnection: vi.fn(async () => () => {
+  // The authorization fixture has no stored roles, teams, or direct reports.
+  const query = { where: () => query, select: async () => [] };
+  return query;
+}) }));
 vi.mock('@/lib/api/services/AssetService', () => ({
   AssetService: class {
     async getAuthorizationRecord(id: string) { return { id, clientId: 'review-client' }; }

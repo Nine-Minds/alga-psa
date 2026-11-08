@@ -303,7 +303,18 @@ export async function projectApiResourceRead<T extends Record<string, any>>(
     throw new Error(`projectApiResourceRead: a recordContext is required for kind "${input.kind}"`);
   }
 
-  const subject = resolveReadSubject(input);
+  const principal = resolveReadSubject(input);
+  // Asset relationship templates require the same database-backed membership
+  // as mutation admission and SQL scoping, not just the API user's role snapshot.
+  const subject = principal && input.kind === 'asset'
+    ? { ...await resolveAuthorizationSubjectForUser(input.knex, input.tenant, {
+      user_id: principal.userId,
+      user_type: principal.userType,
+      role_ids: principal.roleIds,
+      clientId: principal.clientId,
+      portfolioClientIds: principal.portfolioClientIds,
+    }, principal.apiKeyId ?? undefined), apiKeyId: principal.apiKeyId }
+    : principal;
   let redactedFields: readonly string[] = [];
   if (subject) {
     const kernel = await getAuthorizationKernel();

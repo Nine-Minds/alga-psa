@@ -43,12 +43,11 @@ vi.mock('@/lib/auth/rbac', () => ({
   hasPermission: vi.fn(async () => true),
 }));
 
-vi.mock('@/lib/api/controllers/authorizationKernel', () => ({
-  authorizeApiResource: vi.fn(async () => true),
-}));
-
 vi.mock('@/lib/db/db', () => ({
-  getConnection: vi.fn(async () => ({})),
+  getConnection: vi.fn(async () => () => {
+    const query = { where: () => query, select: async () => [] };
+    return query;
+  }),
 }));
 
 const { ApiAssetController } = await import('@/lib/api/controllers/ApiAssetController');

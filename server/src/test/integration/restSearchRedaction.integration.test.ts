@@ -49,9 +49,7 @@ vi.mock('@alga-psa/db/tenant', async (importOriginal) => {
   };
 });
 
-vi.mock('server/src/lib/authorization/kernel', async () => {
-  const { createAuthorizationKernel, BuiltinAuthorizationKernelProvider, BundleAuthorizationKernelProvider } =
-    await import('@alga-psa/authorization/kernel');
+function rulesForInput(input: any) {
   const hide = (id: string, resource: string, redactedFields: string[], extra: Record<string, unknown> = {}) =>
     ({ id, resource, action: 'read', templateKey: null, constraintKey: 'hide_sensitive_fields', redactedFields, ...extra });
   const restricted = [
@@ -60,17 +58,28 @@ vi.mock('server/src/lib/authorization/kernel', async () => {
     hide('r-ticket', 'ticket', ['title', 'assigned_to']),
     hide('r-quote', 'billing', ['title']),
   ];
+  if (input.subject.apiKeyId === 'key-restricted') return restricted;
+  if (input.subject.apiKeyId === 'key-scoped') {
+    return [
+      hide('s-project', 'project', ['description'], { templateKey: 'selected_clients', selectedClientIds: [state.emeraldClient] }),
+      hide('s-asset', 'asset', ['serial_number'], { templateKey: 'selected_clients', selectedClientIds: [state.emeraldClient] }),
+    ];
+  }
+  return [];
+}
+
+vi.mock('@alga-psa/authorization/bundles/service', () => ({
+  resolveBundleNarrowingRulesForEvaluation: async (_knex: Knex, input: any) => rulesForInput(input),
+}));
+
+vi.mock('server/src/lib/authorization/kernel', async () => {
+  const { createAuthorizationKernel, BuiltinAuthorizationKernelProvider, BundleAuthorizationKernelProvider } =
+    await import('@alga-psa/authorization/kernel');
   const kernel = createAuthorizationKernel({
     rbacEvaluator: async () => true,
     builtinProvider: new BuiltinAuthorizationKernelProvider({ relationshipRules: [] }),
     bundleProvider: new BundleAuthorizationKernelProvider({
-      resolveRules: async (input) => {
-        if (input.subject.apiKeyId === 'key-restricted') return restricted;
-        if (input.subject.apiKeyId === 'key-scoped') {
-          return [hide('s-project', 'project', ['description'], { templateKey: 'selected_clients', selectedClientIds: [state.emeraldClient] })];
-        }
-        return [];
-      },
+      resolveRules: async (input) => rulesForInput(input),
     }),
   });
   return { getAuthorizationKernel: vi.fn(async () => kernel) };
@@ -211,6 +220,24 @@ describe('projects: search predicates honor field redactions', () => {
 });
 
 describe('assets: search predicates honor field redactions', () => {
+  it('composes field hiding with client scope in SQL searches and totals', async () => {
+    const { AssetService } = await import('../../lib/api/services/AssetService');
+    const service = new AssetService();
+    await t('assets').where({ asset_id: id.assetB }).update({ client_id: id.oz });
+    try {
+      const visible = await service.search({ query: 'Laptop' } as any, ctx(SCOPED) as any);
+      expect(visible.map((row: any) => row.asset_id)).toEqual([id.assetA]);
+      expect(await service.search({ query: 'QUOKKA' } as any, ctx(SCOPED) as any)).toEqual([]);
+      const list = await service.list({ page: 1, limit: 25 }, ctx(SCOPED) as any);
+      expect(list.total).toBe(1);
+      expect(list.data.map((row: any) => row.asset_id)).toEqual([id.assetA]);
+      const control = await service.list({ page: 1, limit: 25 }, ctx(CONTROL) as any);
+      expect(control.total).toBe(2);
+    } finally {
+      await t('assets').where({ asset_id: id.assetB }).update({ client_id: id.emerald });
+    }
+  });
+
   it('/assets/search: hidden serial_number matches nothing for the restricted key, control matches', async () => {
     const { AssetService } = await import('../../lib/api/services/AssetService');
     const svc = new AssetService();

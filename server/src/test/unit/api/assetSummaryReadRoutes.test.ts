@@ -23,7 +23,8 @@ const h = vi.hoisted(() => {
     };
   };
   const table = (name: string) => {
-    state.loaded.push(name);
+    // Subject membership queries precede the gate; only resource/metric loads belong in this inventory.
+    if (!['user_roles', 'team_members', 'users'].includes(name)) state.loaded.push(name);
     const root = name.split(' as ')[0];
     let rows = root === 'assets' ? [state.asset]
       : root === 'asset_associations' ? state.tickets
