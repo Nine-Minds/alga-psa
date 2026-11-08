@@ -25630,12 +25630,6 @@
                   ],
                   "format": "uuid"
                 },
-                "notes": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                },
                 "user_name": {
                   "type": "string"
                 },
@@ -25880,7 +25874,6 @@
                 "submitted_at",
                 "approved_at",
                 "approved_by",
-                "notes",
                 "user_name"
               ]
             }
@@ -103842,7 +103835,7 @@
     "/api/v1/time-sheets/export": {
       "get": {
         "summary": "Export time sheets",
-        "description": "Exports time sheets using ApiTimeSheetController.export().",
+        "description": "Exports every time sheet matching the filters (not one page) using ApiTimeSheetController.export(). Array filters approval_statuses, user_ids, period_ids and fields accept repeated keys or comma-separated values.",
         "tags": [
           "Work Management v1"
         ],
@@ -103979,7 +103972,7 @@
     "/api/v1/time-sheets/search": {
       "get": {
         "summary": "Search time sheets",
-        "description": "Searches time sheets via ApiTimeSheetController.search(). `query` is required and is matched as a case-insensitive substring against the sheet owner's full name (first name + space + last name). `user_name` is the only searchable field and the default. Optional filters narrow by approval status, user, period and period date range. Array params (`fields`, `approval_statuses`, `user_ids`, `period_ids`) accept repeated params or comma-separated values. `include_entries=true` adds each sheet's `time_entries`. Returns at most `limit` sheets (default 25, max 100).",
+        "description": "Searches time sheets via ApiTimeSheetController.search(). `query` is required and is matched against the owner name and time_sheet_notes text. Array filters accept repeated keys or comma-separated values.",
         "tags": [
           "Work Management v1"
         ],

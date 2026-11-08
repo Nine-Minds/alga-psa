@@ -56,6 +56,7 @@ import {
 import { assertCanActOnBehalf } from '@alga-psa/scheduling/actions/timeEntryDelegationAuth';
 import { loadVisibleCalendars } from '@alga-psa/scheduling/lib/visibleCalendars';
 import type { IVisibleCalendar } from '@alga-psa/types';
+import { assertTransitionTarget, transitionTimeSheet } from './timeSheetStatus';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 
 /**
@@ -212,6 +213,21 @@ export class TimeSheetService extends BaseService<any> {
     };
   }
 
+  /**
+   * Shape a time_sheets row (plus the joins list()/getById() add) for the API.
+   * pg hands back numeric aggregates as strings and DATE columns as Date objects.
+   */
+  private toApiTimeSheetRow(row: any): any {
+    if (!row) return row;
+    const out = { ...row };
+    if ('period_start' in out && out.period_start != null) out.period_start = formatDbDate(out.period_start);
+    if ('period_end' in out && out.period_end != null) out.period_end = formatDbDate(out.period_end);
+    for (const key of ['total_hours', 'billable_hours', 'entry_count'] as const) {
+      if (key in out) out[key] = out[key] == null ? 0 : Number(out[key]);
+    }
+    return out;
+  }
+
   async list(options: ListOptions, context: ServiceContext, filters?: TimeSheetFilterData): Promise<ListResult<any>> {
     // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'list', [options, context, filters]);
@@ -309,7 +325,7 @@ export class TimeSheetService extends BaseService<any> {
       ]);
   
       return {
-        data,
+        data: data.map((row: any) => this.toApiTimeSheetRow(row)),
         total: parseInt(count as string)
       };
     }
@@ -338,7 +354,7 @@ export class TimeSheetService extends BaseService<any> {
         )
         .first();
   
-      return timeSheet || null;
+      return timeSheet ? this.toApiTimeSheetRow(timeSheet) : null;
     }
 
 
@@ -349,12 +365,13 @@ export class TimeSheetService extends BaseService<any> {
     const timeSheet = await this.getById(id, context);
     if (!timeSheet) return null;
 
-    const [user, approvedByUser, timePeriod, timeEntries, comments, summary] = await Promise.all([
+    const [user, approvedByUser, timePeriod, timeEntries, comments, notes, summary] = await Promise.all([
       this.getTimeSheetUser(timeSheet.user_id, context),
       timeSheet.approved_by ? this.getTimeSheetUser(timeSheet.approved_by, context) : null,
       this.getTimePeriod(timeSheet.period_id, context),
       this.getTimeSheetEntries(id, context),
       this.getTimeSheetComments(id, context),
+      this.getTimeSheetNotes(id, context),
       this.getTimeSheetSummary(id, context)
     ]);
 
@@ -365,6 +382,7 @@ export class TimeSheetService extends BaseService<any> {
       time_period: timePeriod,
       time_entries: timeEntries,
       comments,
+      notes,
       summary
     };
   }
@@ -382,34 +400,22 @@ export class TimeSheetService extends BaseService<any> {
           try {
             await assertCanActOnBehalf(context.user, context.tenant, data.user_id, trx);
           } catch (error) {
-            if (error instanceof Error && error.message.includes('Permission denied:')) {
-              throw new ForbiddenError(error.message);
-            }
+            if (error instanceof Error && error.message.includes('Permission denied:')) throw new ForbiddenError(error.message);
             throw error;
           }
         }
-        // Human-work guard: an explicit owner must be a licensed user; a defaulted owner
-        // (the caller) must be one too.
-        if (data.user_id) {
-          await assertHumanWorkAssignee(trx, context.tenant, [data.user_id]);
-        } else {
-          await assertHumanWorkOwner(trx, context.tenant, context.userId, 'user_id');
-        }
-        // A sheet's identity is (tenant, effective owner, period) in every approval status.
+        if (data.user_id) await assertHumanWorkAssignee(trx, context.tenant, [data.user_id]);
+        else await assertHumanWorkOwner(trx, context.tenant, context.userId, 'user_id');
+
         const ownerId = data.user_id ?? context.userId;
         const db = tenantDb(trx, context.tenant);
-        const duplicate = () =>
-          new ConflictError('A time sheet already exists for this user and period');
+        const duplicate = () => new ConflictError('A time sheet already exists for this user and period');
+        const existing = await db.table(this.tableName).where({ user_id: ownerId, period_id: data.period_id }).first();
+        if (existing) throw duplicate();
 
-        const existing = await db.table(this.tableName)
-          .where({ user_id: ownerId, period_id: data.period_id })
-          .first();
-        if (existing) {
-          throw duplicate();
-        }
-
+        // time_sheets has exactly the lifecycle columns; caller fields cannot leak into SQL.
         const timeSheetData = {
-          ...data,
+          period_id: data.period_id,
           user_id: ownerId,
           approval_status: 'DRAFT',
           tenant: context.tenant
@@ -471,12 +477,13 @@ export class TimeSheetService extends BaseService<any> {
           throw new ConflictError('Cannot modify approved time sheets');
         }
   
-        // time_sheets has no updated_at column: write only the caller's fields.
-        const updateData = { ...data };
-  
-        await this.buildTenantScopedQuery(trx, context)
-          .where({ [this.primaryKey]: id })
-          .update(updateData);
+        if (data.approval_status !== undefined && data.approval_status !== existing.approval_status) {
+          assertTransitionTarget(data.approval_status);
+          await transitionTimeSheet(trx, id, data.approval_status, context, {
+            change_reason: data.change_reason,
+            detailed_feedback: data.detailed_feedback,
+          });
+        }
   
       });
 
@@ -546,35 +553,15 @@ export class TimeSheetService extends BaseService<any> {
       const { knex } = await this.getKnex();
       
       await withTransaction(knex, async (trx) => {
-        const timeSheet = await this.getById(id, context);
+        const timeSheet = await tenantDb(trx, context.tenant).table(this.tableName)
+          .where({ id })
+          .forUpdate()
+          .first();
         if (!timeSheet) {
           throw new NotFoundError('Time sheet not found');
         }
   
-        // Check permissions
-        if (timeSheet.user_id !== context.userId) {
-          throw new ForbiddenError('Permission denied: Can only submit your own time sheets');
-        }
-  
-        // Check current status
-        if (timeSheet.approval_status !== 'DRAFT' && timeSheet.approval_status !== 'CHANGES_REQUESTED') {
-          throw new ConflictError('Time sheet can only be submitted from DRAFT or CHANGES_REQUESTED status');
-        }
-  
-        // Validate time sheet has entries
-        const hasEntries = await this.hasTimeEntries(id, context);
-        if (!hasEntries) {
-          throw new ConflictError('Cannot submit time sheet without time entries');
-        }
-  
-        await this.buildTenantScopedQuery(trx, context)
-          .where({ id })
-          .update({
-            approval_status: 'SUBMITTED',
-            submitted_at: new Date(),
-            submission_notes: data.submission_notes,
-            updated_at: new Date()
-          });
+        await transitionTimeSheet(trx, id, 'SUBMITTED', context, { submission_notes: data.submission_notes });
   
       });
 
@@ -607,49 +594,7 @@ export class TimeSheetService extends BaseService<any> {
           throw new NotFoundError('Time sheet not found');
         }
   
-        // Check permissions
-        if (!await this.canApproveTimeSheets(context)) {
-          throw new ForbiddenError('Permission denied: Cannot approve time sheets');
-        }
-  
-        // Check current status
-        if (timeSheet.approval_status !== 'SUBMITTED') {
-          throw new ConflictError('Time sheet must be submitted before approval');
-        }
-
-        // Human-work guard: approval requires a human approver.
-        await assertHumanWorkOwner(trx, context.tenant, context.userId, 'approved_by');
-  
-        await this.buildTenantScopedQuery(trx, context)
-          .where({ id })
-          .update(withViaPrincipal(context, {
-            approval_status: 'APPROVED',
-            approved_at: new Date(),
-            approved_by: context.userId
-          }, 'approved_via_principal_id'));
-
-        // time_sheets has neither approval_notes nor updated_at; keep the notes as an approver comment
-        // using the real time_sheet_comments columns (same shape the workflow runtime writes).
-        if (data.approval_notes) {
-          await tenantDb(trx, context.tenant).table('time_sheet_comments').insert({
-            comment_id: uuidv4(),
-            time_sheet_id: id,
-            user_id: context.userId,
-            comment: data.approval_notes,
-            is_approver: true,
-            created_at: trx.fn.now(),
-            tenant: context.tenant
-          });
-        }
-  
-        // Update all time entries to approved status. time_entries has no approved_at/approved_by
-        // columns (they live on time_sheets), so only approval_status/updated_at are written.
-        await tenantDb(trx, context.tenant).table('time_entries')
-          .where({ time_sheet_id: id })
-          .update({
-            approval_status: 'APPROVED',
-            updated_at: new Date()
-          });
+        await transitionTimeSheet(trx, id, 'APPROVED', context, { approval_notes: data.approval_notes });
   
       });
 
@@ -682,29 +627,10 @@ export class TimeSheetService extends BaseService<any> {
           throw new NotFoundError('Time sheet not found');
         }
   
-        // Check permissions
-        if (!await this.canApproveTimeSheets(context)) {
-          throw new ForbiddenError('Permission denied: Cannot request changes to time sheets');
-        }
-  
-        // Check current status
-        if (timeSheet.approval_status !== 'SUBMITTED') {
-          throw new ConflictError('Time sheet must be submitted before requesting changes');
-        }
-  
-        await this.buildTenantScopedQuery(trx, context)
-          .where({ id })
-          .update({
-            approval_status: 'CHANGES_REQUESTED',
-            change_reason: data.change_reason,
-            detailed_feedback: data.detailed_feedback,
-            updated_at: new Date()
-          });
-  
-        // Add comment with feedback
-        await this.addComment(id, {
-          comment_text: `Changes requested: ${data.change_reason}${data.detailed_feedback ? `\n\nDetails: ${data.detailed_feedback}` : ''}`
-        }, context);
+        await transitionTimeSheet(trx, id, 'CHANGES_REQUESTED', context, {
+          change_reason: data.change_reason,
+          detailed_feedback: data.detailed_feedback,
+        });
   
       });
 
@@ -753,7 +679,10 @@ export class TimeSheetService extends BaseService<any> {
       const { knex } = await this.getKnex();
       
       await withTransaction(knex, async (trx) => {
-        const timeSheet = await this.getById(id, context);
+        const timeSheet = await tenantDb(trx, context.tenant).table(this.tableName)
+          .where({ id })
+          .forUpdate()
+          .first();
         if (!timeSheet) {
           throw new NotFoundError('Time sheet not found');
         }
@@ -779,26 +708,22 @@ export class TimeSheetService extends BaseService<any> {
           .update({
             approval_status: 'CHANGES_REQUESTED',
             approved_at: null,
-            approved_by: null,
-            reversal_reason: data.reversal_reason,
-            reversed_at: new Date(),
-            reversed_by: context.userId,
-            updated_at: new Date()
+            approved_by: null
           });
   
-        // Revert time entries to changes requested status
+        await this.recordNote(trx, id, 'reverse_approval', { note: data.reversal_reason }, context);
+  
+        // Revert time entries to changes requested status (time_entries has no approved_at/approved_by)
         await tenantDb(trx, context.tenant).table('time_entries')
           .where({ time_sheet_id: id })
           .update({
             approval_status: 'CHANGES_REQUESTED',
-            approved_at: null,
-            approved_by: null,
             updated_at: new Date()
           });
   
         // Add comment with reversal reason
-        await this.addComment(id, {
-          comment_text: `Approval reversed: ${data.reversal_reason}`
+        await this.insertComment(trx, id, {
+          comment: `Approval reversed: ${data.reversal_reason}`
         }, context);
   
       });
@@ -821,7 +746,66 @@ export class TimeSheetService extends BaseService<any> {
     }
 
 
+  // Time sheet notes (submission / approval history)
+  private async recordNote(
+    trx: Knex.Transaction,
+    timeSheetId: string,
+    kind: 'submission' | 'approval' | 'request_changes' | 'reverse_approval',
+    body: { note?: string | null; detail?: string | null },
+    context: ServiceContext
+  ): Promise<any> {
+    const [note] = await tenantDb(trx, context.tenant).table('time_sheet_notes')
+      .insert({
+        tenant: context.tenant,
+        time_sheet_id: timeSheetId,
+        kind,
+        note: body.note ?? null,
+        detail: body.detail ?? null,
+        created_by: context.userId,
+        created_at: new Date()
+      })
+      .returning('*');
+    return note;
+  }
+
+  async getTimeSheetNotes(timeSheetId: string, context: ServiceContext): Promise<any[]> {
+    const { knex } = await this.getKnex();
+    const db = tenantDb(knex, context.tenant);
+    const query = db.table('time_sheet_notes');
+
+    db.tenantJoin(query, 'users', 'time_sheet_notes.created_by', 'users.user_id', { type: 'left' });
+
+    return query
+      .where({ 'time_sheet_notes.time_sheet_id': timeSheetId })
+      .select(
+        'time_sheet_notes.*',
+        knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`)
+      )
+      .orderBy('time_sheet_notes.created_at', 'desc')
+      .orderBy('time_sheet_notes.note_id', 'asc');
+  }
+
   // Time sheet comments
+  private async insertComment(
+    trx: Knex | Knex.Transaction,
+    id: string,
+    data: CreateTimeSheetCommentData,
+    context: ServiceContext
+  ): Promise<any> {
+    // time_sheet_comments columns: comment_id, time_sheet_id, user_id, comment, created_at, is_approver, tenant
+    const [comment] = await tenantDb(trx, context.tenant).table('time_sheet_comments')
+      .insert({
+        time_sheet_id: id,
+        comment: data.comment,
+        user_id: context.userId,
+        is_approver: await this.canApproveTimeSheets(context),
+        tenant: context.tenant,
+        created_at: new Date()
+      })
+      .returning('*');
+    return comment;
+  }
+
   async addComment(id: string, data: CreateTimeSheetCommentData, context: ServiceContext): Promise<any> {
     // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'addComment', [id, data, context]);
@@ -829,18 +813,7 @@ export class TimeSheetService extends BaseService<any> {
       const { knex } = await this.getKnex();
       
       return withTransaction(knex, async (trx) => {
-        const commentData = {
-          time_sheet_id: id,
-          comment_text: data.comment_text,
-          user_id: context.userId,
-          user_role: await this.getUserRole(context.userId, context),
-          tenant: context.tenant,
-          created_at: new Date()
-        };
-  
-        const [comment] = await tenantDb(trx, context.tenant).table('time_sheet_comments')
-          .insert(commentData)
-          .returning('*');
+        const comment = await this.insertComment(trx, id, data, context);
   
         return {
           ...comment,
@@ -866,17 +839,9 @@ export class TimeSheetService extends BaseService<any> {
           'time_sheet_comments.*',
           knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`)
         )
-        .orderBy('created_at', 'desc');
+        .orderBy('time_sheet_comments.created_at', 'desc');
   
-      return comments.map(comment => ({
-        ...comment,
-        user: {
-          user_id: comment.user_id,
-          first_name: comment.first_name,
-          last_name: comment.last_name,
-          email: comment.email
-        }
-      }));
+      return comments;
     }
 
 
@@ -1531,11 +1496,19 @@ export class TimeSheetService extends BaseService<any> {
       
       const query = this.buildTenantScopedQuery(knex, context);
   
-      // Join users first: the name match below references users.*.
-      // `user_name` is the only searchable field; no column name derived from input reaches SQL.
+      const fields = searchData.fields && searchData.fields.length > 0 ? searchData.fields : ['user_name', 'note'];
+      const pattern = `%${searchData.query}%`;
+      const noteMatches = tenantDb(knex, context.tenant).table('time_sheet_notes')
+        .where('time_sheet_notes.time_sheet_id', knex.raw(`${tableName}.id`))
+        .where('time_sheet_notes.note', 'ilike', pattern)
+        .select(knex.raw('1'));
       db.tenantJoin(query, 'users', 'time_sheets.user_id', 'users.user_id', { type: 'left' });
-      query.where(knex.raw(`CONCAT(users.first_name, ' ', users.last_name)`), 'ilike', `%${searchData.query}%`);
-
+      query.where(function() {
+        for (const field of fields) {
+          if (field === 'user_name') this.orWhere(knex.raw(`CONCAT(users.first_name, ' ', users.last_name)`), 'ilike', pattern);
+          else if (field === 'note') this.orWhereExists(noteMatches);
+        }
+      });
       // Apply filters
       if (searchData.approval_statuses && searchData.approval_statuses.length > 0) {
         query.whereIn(`${tableName}.approval_status`, searchData.approval_statuses);
@@ -1558,12 +1531,19 @@ export class TimeSheetService extends BaseService<any> {
       }
   
       query.select(
-          `${tableName}.*`,
+          `${tableName}.tenant`,
+          `${tableName}.id`,
+          `${tableName}.user_id`,
+          `${tableName}.period_id`,
+          `${tableName}.approval_status`,
+          `${tableName}.submitted_at`,
+          `${tableName}.approved_at`,
+          `${tableName}.approved_by`,
           knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`)
         )
         .limit(searchData.limit || 25);
   
-      const timeSheets = await query;
+      const timeSheets = (await query).map((row: any) => this.toApiTimeSheetRow(row));
   
       // Include entries if requested
       if (searchData.include_entries) {
@@ -1577,6 +1557,77 @@ export class TimeSheetService extends BaseService<any> {
     }
 
 
+
+  /**
+   * Every time sheet matching the export filters — no pagination. Export is an offline dump,
+   * so the caller gets the whole result set rather than page 1 of list().
+   */
+  // LEVERAGE: pattern time-sheet-list-query — list(), search() and exportTimeSheets() each rebuild the same
+  // joins + computed-hours select over time_sheets; a shared query builder is missing below this layer.
+  async exportTimeSheets(params: TimeSheetExportQuery, context: ServiceContext): Promise<any[]> {
+      const { knex } = await this.getKnex();
+      const db = tenantDb(knex, context.tenant);
+      const tableName = this.tableName;
+
+      const query = this.buildTenantScopedQuery(knex, context);
+
+      if (params.approval_statuses && params.approval_statuses.length > 0) {
+        query.whereIn(`${tableName}.approval_status`, params.approval_statuses);
+      }
+      if (params.user_ids && params.user_ids.length > 0) {
+        query.whereIn(`${tableName}.user_id`, params.user_ids);
+      }
+      if (params.period_ids && params.period_ids.length > 0) {
+        query.whereIn(`${tableName}.period_id`, params.period_ids);
+      }
+
+      db.tenantJoin(query, 'users', 'time_sheets.user_id', 'users.user_id', { type: 'left' });
+      db.tenantJoin(query, 'users as approvers', 'time_sheets.approved_by', 'approvers.user_id', { type: 'left' });
+      db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id', { type: 'left' });
+
+      if (params.date_from) {
+        query.where('time_periods.start_date', '>=', params.date_from);
+      }
+      if (params.date_to) {
+        query.where('time_periods.end_date', '<=', params.date_to);
+      }
+
+      // One correlated scalar subquery per aggregate (each selects exactly one column).
+      const entryAggregate = (expression: string) =>
+        tenantDb(knex, context.tenant).table('time_entries')
+          .where('time_entries.time_sheet_id', knex.raw(`${tableName}.id`))
+          .select(knex.raw(expression))
+          .toQuery();
+
+      query.select(
+          `${tableName}.*`,
+          knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
+          knex.raw(`CONCAT(approvers.first_name, ' ', approvers.last_name) as approver_name`),
+          'time_periods.start_date as period_start',
+          'time_periods.end_date as period_end',
+          knex.raw(`(${entryAggregate('SUM(billable_duration) / 60.0')}) as total_hours`),
+          knex.raw(`(${entryAggregate('SUM(CASE WHEN billable_duration > 0 THEN billable_duration ELSE 0 END) / 60.0')}) as billable_hours`),
+          knex.raw(`(${entryAggregate('COUNT(*)')}) as entry_count`)
+      );
+      query.orderBy('time_periods.start_date', 'desc').orderBy(`${tableName}.id`, 'asc');
+
+      const rows = (await query).map((row: any) => this.toApiTimeSheetRow(row));
+
+      if (!params.include_time_entries && !params.include_comments) {
+        return this.projectExportFields(rows, params.fields);
+      }
+      const expandedRows = await Promise.all(rows.map(async (row: any) => ({
+        ...row,
+        ...(params.include_time_entries ? { time_entries: await this.getTimeSheetEntries(row.id, context) } : {}),
+        ...(params.include_comments ? { comments: await this.getTimeSheetComments(row.id, context) } : {})
+      })));
+      return this.projectExportFields(expandedRows, params.fields);
+    }
+
+  private projectExportFields(rows: any[], fields?: string[]): any[] {
+    if (!fields?.length) return rows;
+    return rows.map((row) => Object.fromEntries(fields.filter((field) => Object.hasOwn(row, field)).map((field) => [field, row[field]])));
+  }
 
   async getStatistics(context: ServiceContext, filters?: TimeSheetFilterData): Promise<any> {
     // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
@@ -1609,13 +1660,15 @@ export class TimeSheetService extends BaseService<any> {
   }
 
   private async canManageTimeSheets(context: ServiceContext): Promise<boolean> {
-    // Check RBAC permissions
-    return false; // Simplified for now
+    if (!context.user) return false;
+    const { knex } = await this.getKnex();
+    return hasApiContextPermission(context, 'time_sheet', 'manage', knex);
   }
 
   private async canApproveTimeSheets(context: ServiceContext): Promise<boolean> {
-    // Check RBAC permissions
-    return false; // Simplified for now
+    if (!context.user) return false;
+    const { knex } = await this.getKnex();
+    return hasApiContextPermission(context, 'time_sheet', 'approve', knex);
   }
 
   /**
@@ -1684,16 +1737,6 @@ export class TimeSheetService extends BaseService<any> {
     const { knex } = await this.getKnex();
     return hasApiContextPermission(context, 'user_schedule', action, knex);
   }
-
-  private async getUserRole(userId: string, context: ServiceContext): Promise<string> {
-      const { knex } = await this.getKnex();
-      
-      const user = await tenantDb(knex, context.tenant).table('users')
-        .where({ user_id: userId })
-        .first();
-      return user?.role || 'user';
-    }
-
 
   private async getTimeSheetUser(userId: string, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();

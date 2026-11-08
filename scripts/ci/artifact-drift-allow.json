@@ -1,6 +1,16 @@
 [
   {
     "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/WorkV1TimeSheetSearchResponse/properties/data/items/properties/notes",
+    "reason": "The time-sheets.notes database column was retired after its values were migrated into time_sheet_notes history. Search returns actual time_sheets columns and searches note history through fields=note; it does not return a nonexistent notes column. The real-Postgres search regression test verifies both history search and the response shape."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/WorkV1TimeSheetSearchResponse/properties/data/items/properties/notes",
+    "reason": "The time-sheets.notes database column was retired after its values were migrated into time_sheet_notes history. Search returns actual time_sheets columns and searches note history through fields=note; it does not return a nonexistent notes column. The real-Postgres search regression test verifies both history search and the response shape."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
     "pointer": "/paths/~1api~1v1~1assets/get/extensions/x-unapplied-validated-filters",
     "reason": "Mobile 2.0 (alga-2026-0002627): the assets list `search` filter is now actually applied, so it drops out of this metadata list. The list names validated filters the service ignores; an entry only ever leaves it when the filter starts working, which widens behaviour instead of breaking a caller."
   },
