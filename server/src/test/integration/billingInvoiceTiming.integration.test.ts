@@ -3497,7 +3497,8 @@ it('T017/T019/T050/T077/T080/T084: recurring contract-cadence preview, generatio
   });
   expect(dueRow?.executionIdentityKey).toBe(selectorInput.executionWindow.identityKey);
 
-  const preview = await previewInvoiceForSelectionInputAction(dueRow!.selectorInput);
+  // Exercise the per-service preview used by Automatic Invoices and REST.
+  const preview = await previewInvoiceForSelectionInputAction(dueRow!.selectorInput, { consolidateFixedBundles: false });
   expect(preview).toMatchObject({ success: true });
   expect(preview.data?.items).toEqual(
     expect.arrayContaining([
@@ -3748,7 +3749,8 @@ it('T016/T018/T049/T076/T080/T087: recurring client-cadence preview, generation,
     invoiceWindowEnd: nextPeriodStart,
   });
 
-  const preview = await previewInvoiceForSelectionInputAction(dueRow!.selectorInput);
+  // Exercise the per-service preview used by Automatic Invoices and REST.
+  const preview = await previewInvoiceForSelectionInputAction(dueRow!.selectorInput, { consolidateFixedBundles: false });
   expect(preview).toMatchObject({ success: true });
   expect(preview.data?.items).toEqual(
     expect.arrayContaining([

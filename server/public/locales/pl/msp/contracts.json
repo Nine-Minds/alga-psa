@@ -786,6 +786,9 @@
       "cost": "Koszt: {{cost}}",
       "costInCurrency": "Koszt w {{currency}}: {{cost}}",
       "margin": "Marża: {{margin}} za jednostkę"
+    },
+    "invoiceText": {
+      "subtitleLabel": "Podtytuł faktury"
     }
   },
   "contractLineEdit": {
@@ -802,7 +805,9 @@
       "rate": "Stawka",
       "invoiceText": "Tekst wiersza faktury",
       "invoiceTextPlaceholder": "Drukowany na fakturze; domyślnie nazwa wiersza",
-      "invoiceTextHelp": "Ten tekst jest drukowany dosłownie w wierszu faktury cyklicznej."
+      "invoiceTextHelp": "Ten tekst jest drukowany dosłownie w wierszu faktury cyklicznej.",
+      "invoiceSubtitle": "Podtytuł faktury",
+      "invoiceSubtitleHelp": "Wyciszony drugi wiersz pod tekstem pozycji faktury."
     },
     "sections": {
       "billingTiming": "Termin rozliczeń",
@@ -1633,7 +1638,11 @@
       "nameLabel": "Nazwa linii (opcjonalnie)",
       "namePlaceholder": "Linia stała {{number}}",
       "removeLine": "Usuń linię stałą",
-      "noServiceWarning": "Ta linia ma kwotę cykliczną, ale nie ma usługi, na której można ją rozliczyć. Dodaj usługę przed zakończeniem; nadal możesz zapisać ją jako wersję roboczą."
+      "noServiceWarning": "Ta linia ma kwotę cykliczną, ale nie ma usługi, na której można ją rozliczyć. Dodaj usługę przed zakończeniem; nadal możesz zapisać ją jako wersję roboczą.",
+      "invoiceTitleLabel": "Tytuł faktury (opcjonalnie)",
+      "invoiceTitlePlaceholder": "Domyślnie nazwa pozycji",
+      "invoiceSubtitleLabel": "Podtytuł faktury (opcjonalnie)",
+      "invoiceSubtitlePlaceholder": "np. Zarządzane stacje końcowe i kopie zapasowe"
     },
     "recurringChange": {
       "title": "Potwierdź zmianę sumy cyklicznej",
@@ -2282,7 +2291,11 @@
     },
     "actions": {
       "addService": "Dodaj usługę"
-    }
+    },
+    "invoiceTitleLabel": "Tytuł faktury (opcjonalnie)",
+    "invoiceTitlePlaceholder": "Domyślnie nazwa pozycji",
+    "invoiceSubtitleLabel": "Podtytuł faktury (opcjonalnie)",
+    "invoiceSubtitlePlaceholder": "np. Zarządzane stacje końcowe i kopie zapasowe"
   },
   "templateProducts": {
     "heading": "Produkty",

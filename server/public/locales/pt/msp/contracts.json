@@ -786,6 +786,9 @@
       "cost": "Custo: {{cost}}",
       "costInCurrency": "Custo em {{currency}}: {{cost}}",
       "margin": "Margem: {{margin}} por unidade"
+    },
+    "invoiceText": {
+      "subtitleLabel": "Subtítulo da fatura"
     }
   },
   "contractLineEdit": {
@@ -802,7 +805,9 @@
       "rate": "Avaliar",
       "invoiceText": "Texto da linha da fatura",
       "invoiceTextPlaceholder": "Impresso na fatura; por padrão, o nome da linha",
-      "invoiceTextHelp": "Este texto é impresso literalmente na linha de fatura recorrente."
+      "invoiceTextHelp": "Este texto é impresso literalmente na linha de fatura recorrente.",
+      "invoiceSubtitle": "Subtítulo da fatura",
+      "invoiceSubtitleHelp": "Uma segunda linha esmaecida sob o texto da linha da fatura."
     },
     "sections": {
       "billingTiming": "Tempo de faturamento",
@@ -1633,7 +1638,11 @@
       "nameLabel": "Nome da linha (opcional)",
       "namePlaceholder": "Linha fixa {{number}}",
       "removeLine": "Remover linha fixa",
-      "noServiceWarning": "Esta linha tem um valor recorrente mas nenhum serviço sobre o qual faturá-lo. Adicione um serviço antes de concluir; ainda pode guardá-la como rascunho."
+      "noServiceWarning": "Esta linha tem um valor recorrente mas nenhum serviço sobre o qual faturá-lo. Adicione um serviço antes de concluir; ainda pode guardá-la como rascunho.",
+      "invoiceTitleLabel": "Título da fatura (opcional)",
+      "invoiceTitlePlaceholder": "Por predefinição, o nome da linha",
+      "invoiceSubtitleLabel": "Subtítulo da fatura (opcional)",
+      "invoiceSubtitlePlaceholder": "p. ex. Endpoints gerenciados e backup"
     },
     "recurringChange": {
       "title": "Confirmar a alteração do total recorrente",
@@ -2272,7 +2281,11 @@
     },
     "actions": {
       "addService": "Adicionar serviço"
-    }
+    },
+    "invoiceTitleLabel": "Título da fatura (opcional)",
+    "invoiceTitlePlaceholder": "Por predefinição, o nome da linha",
+    "invoiceSubtitleLabel": "Subtítulo da fatura (opcional)",
+    "invoiceSubtitlePlaceholder": "p. ex. Endpoints gerenciados e backup"
   },
   "templateProducts": {
     "heading": "Produtos",

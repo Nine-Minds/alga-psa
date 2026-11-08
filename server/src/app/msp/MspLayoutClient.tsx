@@ -207,6 +207,9 @@ export function MspLayoutClient({
   }, [needsOnboarding, isOnboardingPage, sessionTenant, onboardingResolvedServerSide, canRunProductOnboarding]);
 
   const isAlgaDesk = productCode === 'algadesk';
+  // Rendered by the shell inside its flex column: the shell root is `fixed inset-0`
+  // and would paint over a banner placed beside it.
+  const licenseBanner = canShowLicenseBanner ? <LicenseBanner /> : null;
 
   const content = shouldForceOnboarding && !isOnboardingPage ? (
     <OnboardingRedirectFallback />
@@ -218,7 +221,6 @@ export function MspLayoutClient({
         <TierProvider selfHostLicensing={selfHostLicensing}>
           <MspCallLinkProvider>
           <IncomingCallProvider tenant={session?.user?.tenant} userId={session?.user?.id}>
-          {canShowLicenseBanner && <LicenseBanner />}
           <PostHogUserIdentifier />
           <TagProvider>
             <ClientUIStateProvider
@@ -249,7 +251,7 @@ export function MspLayoutClient({
                     <CoManagedCustomerShell><CoManagedWorkspaceNotice notice={workspaceNotice} />{routeBehavior === 'allowed' ? children : <ProductRouteBoundary behavior={routeBehavior} scope="msp" />}</CoManagedCustomerShell>
                   ) : isAlgaDesk ? (
                     routeBehavior === 'allowed' ? (
-                      <AlgaDeskMspShell initialSidebarCollapsed={initialSidebarCollapsed}>
+                      <AlgaDeskMspShell initialSidebarCollapsed={initialSidebarCollapsed} topBanner={licenseBanner}>
                         {children}
                       </AlgaDeskMspShell>
                     ) : (
@@ -257,7 +259,7 @@ export function MspLayoutClient({
                     )
                   ) : (
                     <AIChatContextProvider>
-                      <DefaultLayout initialSidebarCollapsed={initialSidebarCollapsed}>
+                      <DefaultLayout initialSidebarCollapsed={initialSidebarCollapsed} topBanner={licenseBanner}>
                         {children}
                       </DefaultLayout>
                     </AIChatContextProvider>

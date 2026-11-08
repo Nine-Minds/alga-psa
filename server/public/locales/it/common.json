@@ -56,12 +56,27 @@
     "manageLicense": "Gestisci licenza",
     "ariaLabel": "Stato della licenza",
     "dismiss": "Chiudi",
-    "licenseExpiresIn_few": "La licenza scade tra {{count}} giorni. Rinnova per evitare interruzioni del servizio.",
+
+    "subscriptionEnding": "Il tuo abbonamento Pro è stato annullato. Pro termina il {{date}}. Riabbonati per mantenere Pro.",
+    "subscriptionEndingNoDate": "Il tuo abbonamento Pro è stato annullato. Riabbonati per mantenere Pro.",
+    "subscriptionLapsed": "Ora stai usando l'edizione gratuita. Riabbonati per ripristinare Pro.",
+    "resubscribe": "Riabbonati",
+    "termEnds": "Il tuo accesso a Pro termina il {{date}}. Rinnova per mantenere Pro.",
+    "termEndsNoDate": "Il tuo periodo Pro sta per terminare. Rinnova per mantenere Pro.",
+    "paymentFailed": "Pagamento non riuscito — riproveremo il {{date}}. Aggiorna il metodo di pagamento per mantenere Pro.",
+    "paymentFailedNoRetry": "Pagamento non riuscito. Aggiorna il metodo di pagamento per mantenere Pro.",
+    "paymentFailedEndsOn": "Pro termina il {{date}} se il pagamento continua a non riuscire.",
+    "paymentFailedEnded": "Pro è terminato — pagamento non riuscito. La tua appliance funziona con Essentials.",
+    "paymentFailedEndedEnding": "Il tuo abbonamento Pro è terminato — pagamento non riuscito. Pro resta attivo fino al {{date}}. Riabbonati per mantenere Pro.",
+    "paymentFailedEndedEndingNoDate": "Il tuo abbonamento Pro è terminato — pagamento non riuscito. Riabbonati per mantenere Pro.",
+    "updatePaymentMethod": "Aggiorna il metodo di pagamento",
+"licenseExpiresIn_few": "La licenza scade tra {{count}} giorni. Rinnova per evitare interruzioni del servizio.",
     "licenseExpiresIn_many": "La licenza scade tra {{count}} giorni. Rinnova per evitare interruzioni del servizio.",
     "trialDaysRemaining_few": "Prova Pro attiva — {{count}} giorni rimanenti.",
     "trialDaysRemaining_many": "Prova Pro attiva — {{count}} giorni rimanenti.",
     "trialExpiresIn_few": "La prova Pro scade tra {{count}} giorni. Inserisci una chiave di licenza per mantenere le funzionalità Pro.",
     "trialExpiresIn_many": "La prova Pro scade tra {{count}} giorni. Inserisci una chiave di licenza per mantenere le funzionalità Pro."
+
   },
   "nav": {
     "dashboard": "Dashboard",

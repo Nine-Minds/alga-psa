@@ -15,10 +15,11 @@ import {
   AlgaLicenseHttpError,
   reactivateApplianceEntitlement,
   revokeApplianceEntitlement,
+  setApplianceEntitlementPaymentState,
   syncApplianceSubscriptionState,
   updateApplianceEntitlementSeats,
-  type ApplianceSubscriptionState,
 } from './algaLicenseAdminClient';
+import type { ApplianceSubscriptionPaymentState, ApplianceSubscriptionState } from './algaLicenseAdminClient';
 import { findPerSeatItem } from './stripeBilling';
 
 export const APPLIANCE_DEPLOYMENT_TYPE = 'appliance';
@@ -28,14 +29,38 @@ const LAPSED_STATUSES = new Set<string>(['unpaid', 'canceled', 'incomplete_expir
 /** Sub statuses that mean "paying" for entitlement purposes. */
 const LIVE_STATUSES = new Set<string>(['active', 'trialing']);
 
-export type LifecycleAction = 'revoke' | 'reactivate' | 'sync-seats' | 'none';
+/**
+ *  - `mark-payment-failed` records "renewal payment failing" for the check-in
+ *    banner. It NEVER revokes: Pro keeps running while Stripe retries.
+ *  - `clear-payment-failed` records recovery (payment went through).
+ */
+export type ApplianceLifecycleAction = 'revoke' | 'reactivate' | 'sync-seats' | 'mark-payment-failed' | 'clear-payment-failed' | 'none';
+
+export interface ApplianceLifecycleDecision {
+  action: ApplianceLifecycleAction;
+  seats?: number;
+  /** Set for subscription.* events: the state to mirror to C4. */
+  state?: ApplianceSubscriptionState;
+  /**
+   * `revoke` only: the end followed failed payments (unpaid, or cancelled by
+   * Stripe for non-payment). The handler records it, then revokes as before, so
+   * the check-in says "Pro ended — payment failed" instead of "cancelled".
+   */
+  endReason?: 'payment_failed';
+  /** `mark-payment-failed` only: Stripe's next retry (unix seconds) / hosted invoice URL, when the event carries them. */
+  nextRetryAt?: number | null;
+  updatePaymentUrl?: string | null;
+  /** `sync-seats` only: the subscription also recovered from a failing payment. */
+  clearsPaymentFailure?: boolean;
+}
 
 export interface ApplianceLifecycleOutcome {
   handled: boolean;
   tenantId: string | null;
   subscriptionId: string | null;
-  action: LifecycleAction;
+  action: ApplianceLifecycleAction;
   seats?: number;
+  endReason?: 'payment_failed';
   /** Set for subscription.* events: the state mirrored to C4. */
   state?: ApplianceSubscriptionState;
 }
@@ -45,6 +70,7 @@ export interface ApplianceLifecycleDeps {
   /** Re-enable a revoked entitlement, keyed by subscription id (idempotent in C4). */
   reactivate: (stripeSubId: string) => Promise<unknown>;
   syncSeats: (tenantId: string, seats: number) => Promise<unknown>;
+  setPaymentState: (stripeSubId: string, payment: ApplianceSubscriptionPaymentState) => Promise<unknown>;
   /** Mirror the subscription snapshot onto the C4 entitlement (display only, never revokes). */
   syncState: (stripeSubId: string, state: ApplianceSubscriptionState) => Promise<unknown>;
   audit?: (details: Record<string, unknown>) => Promise<void>;
@@ -54,6 +80,7 @@ const defaultDeps: ApplianceLifecycleDeps = {
   revoke: revokeApplianceEntitlement,
   reactivate: reactivateApplianceEntitlement,
   syncSeats: updateApplianceEntitlementSeats,
+  setPaymentState: setApplianceEntitlementPaymentState,
   syncState: syncApplianceSubscriptionState,
 };
 
@@ -78,11 +105,21 @@ export async function resolveApplianceSubscription(
   event: Stripe.Event,
   stripe: Pick<Stripe, 'subscriptions'>,
 ): Promise<Stripe.Subscription | null> {
-  const object = event.data.object as { object?: string; subscription?: string | { id: string } | null; metadata?: Stripe.Metadata | null };
+  const object = event.data.object as {
+    object?: string;
+    subscription?: string | { id: string } | null;
+    metadata?: Stripe.Metadata | null;
+    subscription_details?: { metadata?: Stripe.Metadata | null } | null;
+  };
   if (object.object === 'subscription') {
     return isApplianceSubscription(object) ? (object as unknown as Stripe.Subscription) : null;
   }
   if (object.object === 'invoice' && object.subscription) {
+    // Invoices snapshot the subscription's metadata. When it is there and says
+    // "not an appliance" (every hosted renewal, incl. each invoice.paid), skip
+    // the Stripe retrieve: hosted processing must not pay for this path.
+    const snapshot = object.subscription_details?.metadata;
+    if (snapshot && typeof snapshot === 'object' && !isApplianceSubscription({ metadata: snapshot })) return null;
     const id = typeof object.subscription === 'string' ? object.subscription : object.subscription.id;
     const sub = await stripe.subscriptions.retrieve(id);
     return isApplianceSubscription(sub) ? sub : null;
@@ -138,59 +175,79 @@ const isSubscriptionEvent = (event: Stripe.Event) => event.type.startsWith('cust
  * `updated(active, prev unpaid)` whose fresh status is canceled revokes instead
  * of reactivating.
  */
+function decideLifecycleActionCore(
+  event: Stripe.Event,
+  sub: Stripe.Subscription,
+  env: NodeJS.ProcessEnv = process.env,
+): ApplianceLifecycleDecision {
+  // Stripe ended it for non-payment (retries exhausted → unpaid, or cancelled by dunning settings).
+  const endedForPayment =
+    sub.status === 'unpaid' || sub.cancellation_details?.reason === 'payment_failed';
+  const revoke = (): ApplianceLifecycleDecision =>
+    endedForPayment ? { action: 'revoke', endReason: 'payment_failed' } : { action: 'revoke' };
+
+  if (event.type === 'customer.subscription.deleted') return revoke();
+
+  if (event.type === 'customer.subscription.updated') {
+    if (LAPSED_STATUSES.has(sub.status)) return revoke();
+
+    // Payment failing, Stripe still retrying: tell the appliance, keep Pro.
+    // (The subscription event carries no retry date; invoice.payment_failed does.)
+    if (sub.status === 'past_due') return { action: 'mark-payment-failed' };
+
+    const previous = (event.data.previous_attributes ?? {}) as { status?: string; items?: unknown };
+    const seats = findPerSeatItem(sub, env)?.quantity ?? null;
+    const cameBackToLife =
+      LIVE_STATUSES.has(sub.status) && typeof previous.status === 'string' && LAPSED_STATUSES.has(previous.status);
+    const quantityChanged = previous.items !== undefined;
+    const recoveredFromPaymentFailure = LIVE_STATUSES.has(sub.status) && previous.status === 'past_due';
+
+    if (cameBackToLife) {
+      // Re-enable an actually lapsed entitlement before syncing its seats. Recoveries
+      // from past_due/incomplete never revoked an entitlement and must not undo an operator revoke.
+      return { action: 'reactivate', ...(seats != null ? { seats } : {}), clearsPaymentFailure: true };
+    }
+    if (recoveredFromPaymentFailure && quantityChanged && seats != null) {
+      return { action: 'sync-seats', seats, clearsPaymentFailure: true };
+    }
+    if (recoveredFromPaymentFailure) return { action: 'clear-payment-failed' };
+    if (quantityChanged && seats != null) return { action: 'sync-seats', seats };
+    return { action: 'none' };
+  }
+
+  if (event.type === 'invoice.payment_failed') {
+    const invoice = event.data.object as { next_payment_attempt?: number | null; hosted_invoice_url?: string | null };
+    return {
+      action: 'mark-payment-failed',
+      // null = Stripe has no further retry scheduled.
+      nextRetryAt: typeof invoice.next_payment_attempt === 'number' ? invoice.next_payment_attempt : null,
+      ...(invoice.hosted_invoice_url ? { updatePaymentUrl: invoice.hosted_invoice_url } : {}),
+    };
+  }
+
+  // A payment went through (any invoice on this subscription).
+  if (event.type === 'invoice.paid') return { action: 'clear-payment-failed' };
+
+  return { action: 'none' };
+}
+
 export function decideLifecycleAction(
   event: Stripe.Event,
   sub: Stripe.Subscription,
   env: NodeJS.ProcessEnv = process.env,
-): { action: LifecycleAction; seats?: number; state?: ApplianceSubscriptionState } {
-  const state = isSubscriptionEvent(event) ? subscriptionStateSnapshot(event, sub) : undefined;
-  const decision = decideAction(event, sub, env);
-  return state ? { ...decision, state } : decision;
-}
-
-function decideAction(
-  event: Stripe.Event,
-  sub: Stripe.Subscription,
-  env: NodeJS.ProcessEnv,
-): { action: LifecycleAction; seats?: number } {
-  if (event.type === 'customer.subscription.deleted') return { action: 'revoke' };
-
-  if (event.type === 'customer.subscription.updated') {
-    if (LAPSED_STATUSES.has(sub.status)) return { action: 'revoke' };
-
-    const previous = (event.data.previous_attributes ?? {}) as { status?: string; items?: unknown };
-    const seats = findPerSeatItem(sub, env)?.quantity ?? null;
-
-    const cameBackToLife =
-      LIVE_STATUSES.has(sub.status) && typeof previous.status === 'string' && LAPSED_STATUSES.has(previous.status);
-    if (cameBackToLife) {
-      // C4's seat PATCH only updates an ACTIVE entitlement (404 not_found otherwise), so the
-      // entitlement is re-enabled first; `seats` (if any) is synced afterwards.
-      return seats != null ? { action: 'reactivate', seats } : { action: 'reactivate' };
-    }
-
-    const quantityChanged = previous.items !== undefined;
-    if (LIVE_STATUSES.has(sub.status) && quantityChanged && seats != null) return { action: 'sync-seats', seats };
-    return { action: 'none' };
-  }
-
-  // invoice.payment_failed: Stripe retries on its own schedule; the subscription
-  // status flips to past_due/unpaid and the `updated` event above handles the lapse.
-  return { action: 'none' };
+): ApplianceLifecycleDecision {
+  const decision = decideLifecycleActionCore(event, sub, env);
+  return isSubscriptionEvent(event) ? { ...decision, state: subscriptionStateSnapshot(event, sub) } : decision;
 }
 
 /**
  * True only for alga-license's real "no entitlement" answer: 404 with the JSON
- * body code `not_found` (e.g. operator soft-revoke, or not provisioned yet). A
- * retry cannot fix that, so it is tolerated. A 404 WITHOUT the code is Fastify's
- * unknown-route reply: the deployed alga-license lacks the route, which a retry
- * (after deploying alga-license) does fix, so it must propagate.
+ * body code `not_found`. A retry cannot fix that, but a missing route can.
  */
 export function isEntitlementNotFound(err: unknown): boolean {
   return err instanceof AlgaLicenseHttpError && err.status === 404 && err.code === 'not_found';
 }
 
-/** Log an alga-license failure that looks like a missing route, so the cause is obvious. */
 function logIfRouteMissing(err: unknown, what: string, subId: string): void {
   if (err instanceof AlgaLicenseHttpError && err.status === 404 && !isEntitlementNotFound(err)) {
     logger.error(
@@ -199,12 +256,6 @@ function logIfRouteMissing(err: unknown, what: string, subId: string): void {
   }
 }
 
-/**
- * Seat sync that tolerates only a real entitlement-not-found 404 (see
- * isEntitlementNotFound), which a retry cannot fix and would otherwise make
- * Stripe redeliver forever. Every other error, including a route-missing 404,
- * rethrows so Stripe retries. Returns false when skipped.
- */
 async function syncSeatsTolerantOfNotFound(
   deps: ApplianceLifecycleDeps,
   tenantId: string,
@@ -248,6 +299,7 @@ export async function handleApplianceSubscriptionEvent(
     subscriptionId: sub.id,
     action: decision.action,
     seats: decision.seats,
+    endReason: decision.endReason,
     state: decision.state,
   };
 
@@ -255,16 +307,16 @@ export async function handleApplianceSubscriptionEvent(
 
   if (decision.action === 'revoke') {
     await deps.revoke(sub.id);
+    // Record the payment-related end after revoking, so a state-write failure cannot prevent the lapse.
+    if (decision.endReason) {
+      await deps.setPaymentState(sub.id, { state: 'failed', next_retry_at: null });
+    }
   } else if (decision.action === 'reactivate') {
-    // Keyed by subscription id: no tenant id needed.
+    // Re-enable only on a lapsed→live transition; an absent entitlement is not retryable.
     let reactivated = true;
     try {
       await deps.reactivate(sub.id);
     } catch (err) {
-      // C4 says it has no entitlement for this sub (404 + code not_found, e.g.
-      // not provisioned yet): nothing to re-enable, and retrying would only fail
-      // again. Anything else (5xx, network, or a 404 from a missing route) is a
-      // real failure and must propagate so Stripe retries.
       if (!isEntitlementNotFound(err)) {
         logIfRouteMissing(err, 'reactivate', sub.id);
         throw err;
@@ -278,20 +330,28 @@ export async function handleApplianceSubscriptionEvent(
       if (!tenantId) {
         logger.warn(`[ApplianceLifecycle] cannot sync seats for ${sub.id}: no tenant id in subscription metadata`);
         outcome.seats = undefined;
-      } else {
-        if (!(await syncSeatsTolerantOfNotFound(deps, tenantId, sub.id, decision.seats))) outcome.seats = undefined;
+      } else if (!(await syncSeatsTolerantOfNotFound(deps, tenantId, sub.id, decision.seats))) {
+        outcome.seats = undefined;
       }
     }
+    if (reactivated && decision.clearsPaymentFailure) await deps.setPaymentState(sub.id, { state: 'ok' });
   } else if (decision.action === 'sync-seats') {
     if (!tenantId) {
       logger.warn(`[ApplianceLifecycle] cannot sync seats for ${sub.id}: no tenant id in subscription metadata`);
       outcome.action = 'none';
-    } else {
-      if (!(await syncSeatsTolerantOfNotFound(deps, tenantId, sub.id, decision.seats!))) {
-        outcome.action = 'none';
-        outcome.seats = undefined;
-      }
+    } else if (!(await syncSeatsTolerantOfNotFound(deps, tenantId, sub.id, decision.seats!))) {
+      outcome.action = 'none';
+      outcome.seats = undefined;
     }
+    if (decision.clearsPaymentFailure) await deps.setPaymentState(sub.id, { state: 'ok' });
+  } else if (decision.action === 'mark-payment-failed') {
+    await deps.setPaymentState(sub.id, {
+      state: 'failed',
+      ...(decision.nextRetryAt !== undefined ? { next_retry_at: decision.nextRetryAt } : {}),
+      ...(decision.updatePaymentUrl !== undefined ? { update_payment_url: decision.updatePaymentUrl } : {}),
+    });
+  } else if (decision.action === 'clear-payment-failed') {
+    await deps.setPaymentState(sub.id, { state: 'ok' });
   }
 
   // Mirror on every subscription event (not just transitions) so C4 self-heals.
@@ -313,6 +373,7 @@ export async function handleApplianceSubscriptionEvent(
       subscription_id: sub.id,
       tenant_id: tenantId,
       action: outcome.action,
+      end_reason: outcome.endReason ?? null,
       seats: outcome.seats ?? null,
       status: sub.status,
       cancel_at_period_end: decision.state?.cancel_at_period_end ?? null,

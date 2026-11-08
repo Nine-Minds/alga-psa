@@ -13,6 +13,7 @@ const c4 = vi.hoisted(() => ({
   revokeApplianceEntitlement: vi.fn(),
   reactivateApplianceEntitlement: vi.fn(),
   updateApplianceEntitlementSeats: vi.fn(),
+  setApplianceEntitlementPaymentState: vi.fn(),
   syncApplianceSubscriptionState: vi.fn(),
 }));
 
@@ -55,13 +56,14 @@ function deps() {
     revoke: c4.revokeApplianceEntitlement,
     reactivate: c4.reactivateApplianceEntitlement,
     syncSeats: c4.updateApplianceEntitlementSeats,
+    setPaymentState: c4.setApplianceEntitlementPaymentState,
     syncState: c4.syncApplianceSubscriptionState,
   };
 }
 
 // The decision also carries the state mirror; these branch tests assert the action only.
 const decideAction = (e: any, sub: any) => {
-  const { state: _state, ...rest } = decideLifecycleAction(e, sub);
+  const { state: _state, clearsPaymentFailure: _clearsPaymentFailure, ...rest } = decideLifecycleAction(e, sub);
   return rest;
 };
 
@@ -75,6 +77,7 @@ describe('appliance subscription lifecycle', () => {
     // Stripe state "now" defaults to echoing the event's own subscription.
     stripe.subscriptions.retrieve.mockReset();
     c4.updateApplianceEntitlementSeats.mockResolvedValue({ stripe_sub_id: 'sub_app', tier: 'pro', seats: 5 });
+    c4.setApplianceEntitlementPaymentState.mockResolvedValue({ updated: true });
     c4.syncApplianceSubscriptionState.mockResolvedValue({ updated: true });
   });
 
@@ -88,6 +91,38 @@ describe('appliance subscription lifecycle', () => {
     expect(decideLifecycleAction(event('customer.subscription.deleted', subscription()), subscription())).toMatchObject({ action: 'revoke' });
     const lapsed = subscription({ status: 'unpaid' });
     expect(decideLifecycleAction(event('customer.subscription.updated', lapsed, { status: 'past_due' }), lapsed)).toMatchObject({ action: 'revoke' });
+  });
+
+  describe('payment failure', () => {
+    it('invoice.payment_failed stores retry details and never revokes', async () => {
+      const invoice = { object: 'invoice', subscription: 'sub_app', next_payment_attempt: 1_790_000_000, hosted_invoice_url: 'https://pay.stripe.test/i/1' };
+      stripe.subscriptions.retrieve.mockResolvedValue(subscription());
+      expect(decideLifecycleAction(event('invoice.payment_failed', invoice), subscription())).toMatchObject({ action: 'mark-payment-failed', nextRetryAt: 1_790_000_000, updatePaymentUrl: invoice.hosted_invoice_url });
+      const outcome = await handleApplianceSubscriptionEvent(event('invoice.payment_failed', invoice), stripe, deps());
+      expect(outcome.action).toBe('mark-payment-failed');
+      expect(c4.setApplianceEntitlementPaymentState).toHaveBeenCalledWith('sub_app', { state: 'failed', next_retry_at: 1_790_000_000, update_payment_url: invoice.hosted_invoice_url });
+      expect(c4.revokeApplianceEntitlement).not.toHaveBeenCalled();
+    });
+
+    it('past_due records failure; recovery and invoice.paid clear it', async () => {
+      const pastDue = subscription({ status: 'past_due' });
+      stripe.subscriptions.retrieve.mockResolvedValue(subscription());
+      expect(decideLifecycleAction(event('customer.subscription.updated', pastDue, { status: 'active' }), pastDue)).toMatchObject({ action: 'mark-payment-failed' });
+      const active = subscription();
+      await handleApplianceSubscriptionEvent(event('customer.subscription.updated', active, { status: 'past_due' }), stripe, deps());
+      expect(c4.setApplianceEntitlementPaymentState).toHaveBeenLastCalledWith('sub_app', { state: 'ok' });
+      await handleApplianceSubscriptionEvent(event('invoice.paid', { object: 'invoice', subscription: 'sub_app' }), stripe, deps());
+      expect(c4.setApplianceEntitlementPaymentState).toHaveBeenLastCalledWith('sub_app', { state: 'ok' });
+      expect(c4.reactivateApplianceEntitlement).not.toHaveBeenCalled();
+    });
+
+    it('unpaid after failed payment revokes and clears the retry date', async () => {
+      const unpaid = subscription({ status: 'unpaid' });
+      stripe.subscriptions.retrieve.mockResolvedValue(unpaid);
+      const outcome = await handleApplianceSubscriptionEvent(event('customer.subscription.updated', unpaid, { status: 'past_due' }), stripe, deps());
+      expect(outcome).toMatchObject({ action: 'revoke', endReason: 'payment_failed' });
+      expect(c4.setApplianceEntitlementPaymentState).toHaveBeenCalledWith('sub_app', { state: 'failed', next_retry_at: null });
+    });
   });
 
   it('reactivates only on a lapsed→live transition, carrying seats when there is a per-seat item', () => {
@@ -115,9 +150,11 @@ describe('appliance subscription lifecycle', () => {
     expect(decideAction(event('customer.subscription.updated', sub, { metadata: {} }), sub)).toEqual({ action: 'none' });
   });
 
-  it('does nothing for non-lapsed, non-live statuses such as past_due', () => {
-    const pastDue = subscription({ status: 'past_due' });
-    expect(decideAction(event('customer.subscription.updated', pastDue, { status: 'active' }), pastDue)).toEqual({ action: 'none' });
+  it('clears payment failure when a subscription returns from past_due without reactivating', () => {
+    const active = subscription();
+    expect(decideLifecycleAction(event('customer.subscription.updated', active, { status: 'past_due' }), active)).toMatchObject({ action: 'clear-payment-failed' });
+    const flat = subscription({ items: { data: [] } });
+    expect(decideLifecycleAction(event('customer.subscription.updated', flat, { status: 'past_due' }), flat)).toMatchObject({ action: 'clear-payment-failed' });
   });
 
   describe('reactivation gate: previous status must be one this handler revokes on', () => {
@@ -125,16 +162,19 @@ describe('appliance subscription lifecycle', () => {
     const decide = (sub: any, prev: Record<string, unknown>) =>
       decideAction(event('customer.subscription.updated', sub, prev), sub);
 
-    it.each(['past_due', 'incomplete', 'paused'])('%s → active with no item change is none', (from) => {
+    it.each(['incomplete', 'paused'])('%s → active with no item change is none', (from) => {
       expect(decide(subscription(), { status: from })).toEqual({ action: 'none' });
+    });
+    it('past_due → active with no item change clears payment failure only', () => {
+      expect(decide(subscription(), { status: 'past_due' })).toEqual({ action: 'clear-payment-failed' });
     });
 
     it.each(['past_due', 'incomplete', 'paused'])('%s → active with items changed and a seat line is sync-seats, not reactivate', (from) => {
       expect(decide(subscription({ items: seatItems }), { status: from, items: {} })).toEqual({ action: 'sync-seats', seats: 5 });
     });
 
-    it('past_due → active with items changed but no seat line is none', () => {
-      expect(decide(subscription({ items: { data: [] } }), { status: 'past_due', items: {} })).toEqual({ action: 'none' });
+    it('past_due → active with items changed but no seat line clears payment failure only', () => {
+      expect(decide(subscription({ items: { data: [] } }), { status: 'past_due', items: {} })).toEqual({ action: 'clear-payment-failed' });
     });
 
     it.each(['unpaid', 'canceled', 'incomplete_expired'])('%s → active reactivates with and without a seat line', (from) => {
@@ -146,7 +186,7 @@ describe('appliance subscription lifecycle', () => {
       const active = subscription();
       stripe.subscriptions.retrieve.mockResolvedValue(active);
       const outcome = await handleApplianceSubscriptionEvent(event('customer.subscription.updated', active, { status: 'past_due' }), stripe, deps());
-      expect(outcome.action).toBe('none');
+      expect(outcome.action).toBe('clear-payment-failed');
       expect(c4.reactivateApplianceEntitlement).not.toHaveBeenCalled();
       expect(c4.updateApplianceEntitlementSeats).not.toHaveBeenCalled();
     });
@@ -170,12 +210,13 @@ describe('appliance subscription lifecycle', () => {
     expect(audit).toHaveBeenCalledWith(expect.objectContaining({ action: 'revoke', subscription_id: 'sub_app', tenant_id: TENANT }));
   });
 
-  it('resolves the subscription for invoice events without acting on payment_failed', async () => {
+  it('resolves the subscription for invoice payment failures and records payment state', async () => {
     stripe.subscriptions.retrieve.mockResolvedValue(subscription());
     const invoiceEvent = event('invoice.payment_failed', { object: 'invoice', subscription: 'sub_app' });
     const outcome = await handleApplianceSubscriptionEvent(invoiceEvent, stripe, deps());
     expect(stripe.subscriptions.retrieve).toHaveBeenCalledWith('sub_app');
-    expect(outcome).toMatchObject({ handled: true, action: 'none' });
+    expect(outcome).toMatchObject({ handled: true, action: 'mark-payment-failed' });
+    expect(c4.setApplianceEntitlementPaymentState).toHaveBeenCalledWith('sub_app', { state: 'failed', next_retry_at: null });
     expect(c4.reactivateApplianceEntitlement).not.toHaveBeenCalled();
   });
 
