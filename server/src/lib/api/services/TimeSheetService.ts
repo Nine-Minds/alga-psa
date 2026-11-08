@@ -1555,7 +1555,14 @@ export class TimeSheetService extends BaseService<any> {
       }
   
       query.select(
-          `${tableName}.*`,
+          `${tableName}.tenant`,
+          `${tableName}.id`,
+          `${tableName}.user_id`,
+          `${tableName}.period_id`,
+          `${tableName}.approval_status`,
+          `${tableName}.submitted_at`,
+          `${tableName}.approved_at`,
+          `${tableName}.approved_by`,
           knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`)
         )
         .limit(searchData.limit || 25);

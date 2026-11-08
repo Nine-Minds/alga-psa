@@ -148,8 +148,11 @@ describe('TimeSheetService.search (real Postgres)', () => {
     expect(await service.search(parse({ query: 'zebra', date_to: '2026-01-10' }), ctx)).toEqual([]);
   });
 
-  it('searches migrated note history without requiring a removed time_sheets.notes column', async () => {
+  it('searches note history without exposing the retained time_sheets.notes compatibility column', async () => {
     const f = await seed();
+    await tenantTable(f.tenantId, 'time_sheets').where({ id: f.aliceDraft }).update({
+      notes: 'N-1 compatibility value',
+    });
     await tenantTable(f.tenantId, 'time_sheet_notes').insert({
       tenant: f.tenantId,
       time_sheet_id: f.aliceDraft,
