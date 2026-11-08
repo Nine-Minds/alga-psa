@@ -1,5 +1,5 @@
 import puppeteer, { Browser } from 'puppeteer';
-import { ISOLATED_RENDERER_BROWSER_ARGS } from '@alga-psa/documents/lib/renderHtmlToPng';
+import { ISOLATED_RENDERER_BROWSER_ARGS } from '@alga-psa/core/rendering/isolatedRendering';
 
 const MAX_BROWSERS = 5;
 

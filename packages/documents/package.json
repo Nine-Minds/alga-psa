@@ -113,8 +113,6 @@
     "@alga-psa/workflow-streams": "*",
     "dompurify": ">=3.4.17",
     "jsdom": "^25.0.1",
-    "postcss": "^8.5.23",
-    "postcss-value-parser": "^4.2.0",
     "zod": "^4.6.7"
   },
   "peerDependencies": {

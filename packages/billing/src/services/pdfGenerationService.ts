@@ -22,7 +22,7 @@ import {
   getUserInfoForEmail,
   resolveEmailLocale,
 } from '@alga-psa/notifications/notifications/emailLocaleResolver';
-import { configureIsolatedPage, prepareHtmlForIsolatedRendering } from '@alga-psa/documents/lib/renderHtmlToPng';
+import { configureIsolatedPage, prepareHtmlForIsolatedRendering } from '@alga-psa/core/rendering/isolatedRendering';
 import { sanitizeEmailHtml } from '@alga-psa/shared/lib/email/sanitizeEmailHtml';
 
 import { enrichContractChangeDescriptions } from '../lib/billing/contractChangeInvoiceProjection.server';

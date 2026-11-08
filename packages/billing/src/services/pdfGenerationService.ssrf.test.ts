@@ -7,7 +7,7 @@ import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Browser } from 'puppeteer';
 import { JSDOM } from 'jsdom';
-import { configureIsolatedPage, prepareHtmlForIsolatedRendering } from '@alga-psa/documents/lib/renderHtmlToPng';
+import { configureIsolatedPage, prepareHtmlForIsolatedRendering } from '@alga-psa/core/rendering/isolatedRendering';
 import { browserPoolService } from './browserPoolService';
 
 const INTERNAL_SECRET = 'internal-loopback-response-4bfca1';
