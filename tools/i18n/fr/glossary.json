@@ -2278,7 +2278,10 @@
       "Migrations",
       "{{count}} action",
       "{{count}} actions",
-      "Date *"
+      "Date *",
+      "Vertical",
+      "Horizontal",
+      "Direction"
     ],
     "caseInsensitive": [
       "api",
