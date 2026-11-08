@@ -2737,7 +2737,10 @@
       "tickets",
       "CPU",
       "RAM",
-      "Firmware"
+      "Firmware",
+      "{{count}} ticket(s)",
+      "status",
+      "{{actor}} • {{eventType}}"
     ],
     "caseInsensitive": [
       "api",
