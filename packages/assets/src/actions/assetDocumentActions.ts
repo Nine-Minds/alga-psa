@@ -7,7 +7,7 @@ import type { IDocument, IDocumentAssociation, IDocumentAssociationInput } from 
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import { authorizeAndRedactDocuments } from '@shared/lib/documentAuthorization';
-import { createAssetReadContext, isAssetReadAllowed } from '../lib/assetReadAuthorization';
+import { createAssetReadContext, isAssetActionAllowed, isAssetReadAllowed } from '../lib/assetReadAuthorization';
 import {
     assetActionErrorFrom,
     type AssetActionError,
@@ -15,6 +15,21 @@ import {
 
 function tenantScopedTable(conn: Knex | Knex.Transaction, tenant: string, table: string): Knex.QueryBuilder<any, any> {
     return tenantDb(conn, tenant).table(table) as Knex.QueryBuilder<any, any>;
+}
+
+/** Record-level `asset:update` decision, made inside the write transaction before the write. */
+async function assertAssetUpdateAllowed(trx: Knex.Transaction, tenant: string, user: unknown, asset_id: string): Promise<void> {
+    const asset = await tenantScopedTable(trx, tenant, 'assets').where({ asset_id }).select('asset_id', 'client_id').first();
+    if (!asset) {
+        throw new Error('Asset not found');
+    }
+    const context = await createAssetReadContext(trx, tenant, user as any);
+    if (!await isAssetReadAllowed(trx, tenant, context, asset)) {
+        throw new Error('Asset not found');
+    }
+    if (!await isAssetActionAllowed(trx, tenant, context, asset, 'update')) {
+        throw new Error('Permission denied: Cannot update assets');
+    }
 }
 
 export const associateDocumentWithAsset = withAuth(async (
@@ -32,6 +47,7 @@ export const associateDocumentWithAsset = withAuth(async (
     try {
         // Create association in the standard document_associations table
         const [association] = await withTransaction(knex, async (trx: Knex.Transaction) => {
+            await assertAssetUpdateAllowed(trx, tenant, user, input.entity_id);
             return await tenantScopedTable(trx, tenant, 'document_associations')
                 .insert({
                     tenant,
@@ -63,8 +79,8 @@ export const removeDocumentFromAsset = withAuth(async (
 ): Promise<void | AssetActionError> => {
     const { knex } = await createTenantKnex();
 
-    // Check permission for asset deletion
-    if (!await hasPermission(user, 'asset', 'delete')) {
+    // Removing a document association edits the asset's related data.
+    if (!await hasPermission(user, 'asset', 'update')) {
         return permissionError('Permission denied: Cannot remove documents from assets', 'msp/assets:errors.permissions.removeDocuments');
     }
 
@@ -76,6 +92,9 @@ export const removeDocumentFromAsset = withAuth(async (
                 .first();
 
             if (association) {
+                if (association.entity_type === 'asset') {
+                    await assertAssetUpdateAllowed(trx, tenant, user, association.entity_id);
+                }
                 // Then delete the association
                 await tenantScopedTable(trx, tenant, 'document_associations')
                     .where({ association_id })
