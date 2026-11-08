@@ -2,7 +2,6 @@
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Quote lifecycle spans opportunities/documents in server action context */
 
 import { isMspPrincipalUserType } from '@alga-psa/types';
-import Handlebars from 'handlebars';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth/withAuth';
@@ -18,9 +17,10 @@ import QuoteItem from '../models/quoteItem';
 import { recalculateQuoteFinancials } from '../services/quoteCalculationService';
 import { resolveInvoiceBillingRecipient } from '../services/invoiceBillingRecipientService';
 import { decideQuote, listQuoteDecisions } from '../services/quoteDecisionService';
-import { buildQuoteReminderEmailTemplate, buildQuoteSentEmailTemplate, formatQuoteDate } from '../lib/quote-email-templates';
+import { renderResolvedQuoteEmail, resolveQuoteEmail, type QuoteTemplateName } from '../lib/quoteEmailRendering';
+import { loadQuoteAcceptance } from '../lib/quoteAcceptance';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
-import { mapLoadedQuoteToViewModel } from '../lib/adapters/quoteAdapters';
+import { mapLoadedQuoteToViewModel, resolveQuoteAcceptedByName } from '../lib/adapters/quoteAdapters';
 import { buildTenantPortalUrl } from '@alga-psa/tenancy/server';
 import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { getQuoteApprovalWorkflowSettings as loadQuoteApprovalWorkflowSettings, setQuoteApprovalWorkflowRequired as persistQuoteApprovalWorkflowRequired, getQuoteEmailLinkReviewSettings as loadQuoteEmailLinkReviewSettings, setQuoteEmailLinkReviewSettings as persistQuoteEmailLinkReviewSettings, type QuoteApprovalWorkflowSettings, type QuoteEmailLinkReviewSettings, validateQuoteEmailLinkLifetimeHours } from '../lib/quoteApprovalSettings';
@@ -41,7 +41,6 @@ import {
 import { SELF_APPROVAL_AUDIT_METADATA, allowSelfQuoteApproval, resolveAllowSelfApprovalFlag } from '@alga-psa/authorization/quoteSelfApproval';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
-import { formatCurrency } from '@alga-psa/core/lib/formatters';
 import { getQuotePdfFileName } from '../lib/quoteFileNames';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { onQuoteSent } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
@@ -482,45 +481,6 @@ const storeQuotePdf = async (
   return fileRecord.file_id;
 };
 
-type QuoteTemplateName = 'quote-email' | 'quote-reminder-email';
-
-interface QuoteEmailTemplate {
-  subject: string;
-  html_content: string;
-  text_content: string;
-}
-
-// Resolves the quote email template with the same precedence as invoices:
-// tenant override (locale, then English) before the system template, so
-// customisations made in Notification Settings > Email Templates are honoured.
-const getQuoteEmailTemplate = async (
-  knex: Knex | Knex.Transaction,
-  tenant: string,
-  name: QuoteTemplateName,
-  locale: string = 'en'
-): Promise<QuoteEmailTemplate | null> => {
-  const db = tenantDb(knex, tenant);
-  const languages = locale === 'en' ? ['en'] : [locale, 'en'];
-
-  for (const table of ['tenant_email_templates', 'system_email_templates']) {
-    for (const language_code of languages) {
-      const template = await db.table(table)
-        .where({ name, language_code })
-        .first<QuoteEmailTemplate | undefined>();
-
-      if (template) {
-        return {
-          subject: template.subject,
-          html_content: template.html_content,
-          text_content: template.text_content,
-        };
-      }
-    }
-  }
-
-  return null;
-};
-
 // Resolves the locale of the quote's primary recipient so the template lookup
 // matches the invoice send path; contacts are client-portal users, so the
 // client's default locale applies when the contact has no preference.
@@ -555,130 +515,6 @@ const buildQuotePortalLink = async (tenant: string, quoteId: string): Promise<st
     // A link lookup must never block sending the quote itself.
     return undefined;
   }
-};
-
-const REVIEW_LINK_VARIABLE = 'quoteReviewLink';
-
-// True when the Handlebars source references `{{quoteReviewLink}}` as a path
-// expression. Parsed, not substring-matched, so mentions in comments or plain
-// text do not count. A source that does not parse is treated as not
-// referencing it (rendering it would fail anyway).
-const templateReferencesReviewLink = (source: string): boolean => {
-  let ast: unknown;
-  try {
-    ast = Handlebars.parse(source);
-  } catch {
-    return false;
-  }
-  const visit = (node: unknown): boolean => {
-    if (Array.isArray(node)) {
-      return node.some(visit);
-    }
-    if (!node || typeof node !== 'object') {
-      return false;
-    }
-    const record = node as Record<string, unknown>;
-    if (record.type === 'PathExpression' && !record.data && Array.isArray(record.parts) && record.parts[0] === REVIEW_LINK_VARIABLE) {
-      return true;
-    }
-    return Object.values(record).some((value) => typeof value === 'object' && value !== null && visit(value));
-  };
-  return visit(ast);
-};
-
-/**
- * The template that will render for a recipient, resolved before any token is
- * touched. `template` is null when the fallback builder renders (which always
- * shows the review link). The per-part flags say which parts of a tenant or
- * system template reference `{{quoteReviewLink}}`.
- */
-interface ResolvedQuoteEmail {
-  templateName: QuoteTemplateName;
-  locale: string;
-  template: QuoteEmailTemplate | null;
-  htmlRendersReviewLink: boolean;
-  textRendersReviewLink: boolean;
-  /** True when the email will show a review link if one is supplied. */
-  rendersReviewLink: boolean;
-}
-
-const resolveQuoteEmail = async (
-  knex: Knex | Knex.Transaction,
-  tenant: string,
-  templateName: QuoteTemplateName,
-  locale: string
-): Promise<ResolvedQuoteEmail> => {
-  const template = await getQuoteEmailTemplate(knex, tenant, templateName, locale);
-  if (!template) {
-    return { templateName, locale, template: null, htmlRendersReviewLink: true, textRendersReviewLink: true, rendersReviewLink: true };
-  }
-  const htmlRendersReviewLink = templateReferencesReviewLink(template.html_content);
-  const textRendersReviewLink = templateReferencesReviewLink(template.text_content);
-  return {
-    templateName,
-    locale,
-    template,
-    htmlRendersReviewLink,
-    textRendersReviewLink,
-    rendersReviewLink: htmlRendersReviewLink || textRendersReviewLink,
-  };
-};
-
-const renderQuoteEmail = ({
-  resolved,
-  quote,
-  companyName,
-  portalLink,
-  quoteReviewLink,
-  hasPortalAccess,
-  customMessage,
-}: {
-  resolved: ResolvedQuoteEmail;
-  quote: IQuote;
-  companyName: string;
-  portalLink?: string;
-  quoteReviewLink?: string;
-  hasPortalAccess?: boolean;
-  customMessage?: string;
-}): { subject: string; html: string; text: string } => {
-  const { template, templateName, locale } = resolved;
-
-  if (!template) {
-    const buildFallback = templateName === 'quote-reminder-email'
-      ? buildQuoteReminderEmailTemplate
-      : buildQuoteSentEmailTemplate;
-    return buildFallback({ quote, companyName, portalLink, quoteReviewLink, hasPortalAccess, customMessage, locale });
-  }
-
-  const baseContext = {
-    quote: {
-      number: quote.quote_number ?? quote.quote_id,
-      // LEVERAGE: pattern currency-minor-units — hard-coded /100 assumes a 2-digit currency; display/compute formatting should go through formatCurrencyFromMinorUnits (alga0002091 follow-up)
-      amount: formatCurrency((quote.total_amount ?? 0) / 100, locale, quote.currency_code || 'USD'),
-      validUntil: formatQuoteDate(quote.valid_until ?? null, locale),
-    },
-    company: {
-      name: companyName,
-    },
-    quoteReviewLink: quoteReviewLink?.trim() || '',
-    customMessage: customMessage?.trim() || '',
-  };
-  // With a review link the portal link is secondary and only for recipients
-  // with portal access - but a part is only changed when that part actually
-  // renders the review link, so a part without it keeps a way to the quote.
-  const contextFor = (partRendersReviewLink: boolean) => ({
-    ...baseContext,
-    portalLink: (quoteReviewLink && hasPortalAccess === false && partRendersReviewLink ? '' : portalLink?.trim()) || '',
-  });
-
-  // Subject and plain-text are not HTML — disable Handlebars' HTML escape so
-  // characters like `"` in quote titles don't render as `&quot;`. The subject
-  // never blanks the portal link.
-  return {
-    subject: Handlebars.compile(template.subject, { noEscape: true })(contextFor(false)),
-    html: Handlebars.compile(template.html_content)(contextFor(resolved.htmlRendersReviewLink)),
-    text: Handlebars.compile(template.text_content, { noEscape: true })(contextFor(resolved.textRendersReviewLink)),
-  };
 };
 
 const sendQuoteEmailWithAttachment = async ({
@@ -825,7 +661,7 @@ const deliverQuoteEmails = async ({
   if (!linkSettings.enabled) {
     try {
     const recipientLocale = await resolveQuoteRecipientLocale(tenant, quote, recipients[0]);
-    const renderedEmail = renderQuoteEmail({
+    const renderedEmail = renderResolvedQuoteEmail({
       resolved: await resolveQuoteEmail(knex, tenant, templateName, recipientLocale),
       quote,
       companyName,
@@ -896,7 +732,7 @@ const deliverQuoteEmails = async ({
         }
       }
 
-      const renderedEmail = renderQuoteEmail({
+      const renderedEmail = renderResolvedQuoteEmail({
         resolved,
         quote,
         companyName,
@@ -1127,27 +963,18 @@ export const getQuote = withAuth(async (
   const quote = await getAuthorizedQuoteForRead(knex, tenant, user as BillingAuthUser, quoteId);
   if (!quote) return null;
 
-  // Resolve accepted_by UUID to a display name
-  if (quote.accepted_by) {
-    try {
-      const contact = await tenantDb(knex, tenant).table('contacts')
-        .select('full_name')
-        .where({ contact_name_id: quote.accepted_by })
-        .first<{ full_name?: string }>();
-      if (contact?.full_name) {
-        quote.accepted_by_name = contact.full_name;
-      } else {
-        const user = await tenantDb(knex, tenant).table('users')
-          .select('first_name', 'last_name')
-          .where({ user_id: quote.accepted_by })
-          .first<{ first_name?: string; last_name?: string }>();
-        if (user) {
-          quote.accepted_by_name = [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || null;
-        }
-      }
-    } catch {
-      // Non-blocking
-    }
+  // The signer's display name through the one shared resolver: the recorded
+  // decision names a contact who signed through an emailed link (no users row,
+  // so accepted_by is null); accepted_by covers portal and MSP acceptances.
+  if (quote.accepted_at || quote.accepted_by) {
+    const recorded = quote.accepted_at
+      ? await loadQuoteAcceptance(knex, tenant, quote.quote_id).catch(() => null)
+      : null;
+    quote.accepted_by_name = await resolveQuoteAcceptedByName(knex, tenant, {
+      acceptedBy: quote.accepted_by,
+      signerName: recorded?.signerName,
+      signerContactId: recorded?.signerContactId,
+    });
   }
 
   // Who signed comes from quote_decisions: an email-link signer has no users row.
