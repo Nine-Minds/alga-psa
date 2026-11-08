@@ -731,7 +731,7 @@
     },
     "emailType": {
       "primary": "Primär",
-      "other": "sonstige"
+      "other": "Sonstiges"
     },
     "phoneType": {
       "other": "Sonstiges"
@@ -772,7 +772,7 @@
     },
     "portalChip": {
       "deactivated": "Portal · deaktiviert",
-      "signedIn": "Portal · angemeldet {{when}}",
+      "signedIn": "Portal · angemeldet: {{when}}",
       "neverSignedIn": "Portal · noch nie angemeldet",
       "invited": "Portal · eingeladen",
       "noAccess": "Kein Portalzugriff"
