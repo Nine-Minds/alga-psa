@@ -22,7 +22,7 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 vi.mock('@/lib/auth/rbac', () => ({ hasPermission: async () => routeSession.permitted }));
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import {
-  canReadCommentAttachment, reconcileCommentAttachments, expireCommentAttachmentDrafts,
+  canReadCommentAttachment, canWriteAttachmentTicket, canAccessAttachmentTicket, reconcileCommentAttachments, expireCommentAttachmentDrafts,
   listPublishedCommentAttachments, filterReadableCommentAttachments, dispatchCommentPublication, persistCommentPublication,
 } from '@shared/lib/ticketCommentAttachments';
 import { signAttachmentLink, verifyAttachmentLink } from '@shared/lib/ticketCommentAttachmentToken';
@@ -1270,6 +1270,133 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
       await table('documents').where({document_id:pdf.document}).update({is_client_visible:false});
       expect((await POST(post('send'))).status).toBe(403);expect(send).toHaveBeenCalledOnce();
     } finally {connection.mockRestore();storage.mockRestore();send.mockRestore();}
+  });
+
+  describe('record-scoped ticket authorization', () => {
+    let board: string, ownContact: string, siblingContact: string, group: string, ownTicket: string, siblingTicket: string;
+    let ownUser: string;
+    const mkUser = async (contactId: string | null, type = 'client') => {
+      const id = randomUUID();
+      await table('users').insert({tenant,user_id:id,username:id,email:`${id}@example.test`,hashed_password:'unused',user_type:type,contact_id:contactId,is_inactive:false});
+      return id;
+    };
+    const mkTicket = async (contact: string | null, extra: Record<string, unknown> = {}) => {
+      const id = randomUUID();
+      await table('tickets').insert({tenant,ticket_id:id,ticket_number:`SC-${id.slice(0,6)}`,client_id:client,board_id:board,contact_name_id:contact,title:'scoped',entered_by:actor,...extra});
+      return id;
+    };
+    /** A published public comment with one attached file on the given ticket. */
+    const publicAttachment = async (ticketId: string) => {
+      const comment = randomUUID(), thread = randomUUID(), document = randomUUID(), file = randomUUID();
+      await table('comment_threads').insert({tenant,thread_id:thread,ticket_id:ticketId,root_comment_id:comment,is_internal:false,created_by:actor});
+      await table('comments').insert({tenant,comment_id:comment,thread_id:thread,ticket_id:ticketId,user_id:actor,author_type:'internal',note:'[]',is_internal:false,is_resolution:false});
+      await table('external_files').insert({tenant,file_id:file,file_name:'a.pdf',original_name:'a.pdf',mime_type:'application/pdf',file_size:12,storage_path:`/test/${file}`,uploaded_by_id:actor});
+      await table('documents').insert({tenant,document_id:document,file_id:file,document_name:'a.pdf',mime_type:'application/pdf',file_size:12,user_id:actor,created_by:actor,is_client_visible:true});
+      await table('document_associations').insert({tenant,document_id:document,entity_type:'ticket',entity_id:ticketId});
+      await table('ticket_comment_attachments').insert({tenant,document_id:document,ticket_id:ticketId,comment_id:comment,state:'attached',created_by:actor,expires_at:new Date(Date.now()+86400000)});
+      return {document,file,comment};
+    };
+    const asClient = async (userId: string) => ({ ...await table('users').where({user_id:userId}).first(), clientId:client });
+    beforeEach(async () => {
+      board = randomUUID(); ownContact = randomUUID(); siblingContact = randomUUID(); group = randomUUID();
+      await table('boards').insert({tenant,board_id:board,board_name:'Support'});
+      await table('contacts').insert([
+        {tenant,contact_name_id:ownContact,client_id:client,full_name:'Own',email:'own@example.test'},
+        {tenant,contact_name_id:siblingContact,client_id:client,full_name:'Sibling',email:'sib@example.test'},
+      ]);
+      await table('client_portal_visibility_groups').insert({tenant,group_id:group,client_id:client,name:'Own tickets',ticket_scope:'contact'});
+      await table('client_portal_visibility_group_boards').insert({tenant,group_id:group,board_id:board});
+      await table('contacts').where({contact_name_id:ownContact}).update({portal_visibility_group_id:group});
+      ownUser = await mkUser(ownContact);
+      ownTicket = await mkTicket(ownContact); siblingTicket = await mkTicket(siblingContact);
+    });
+
+    it('denies a contact-scoped client a sibling contact ticket attachment, through both the attachment and document paths', async () => {
+      const sibling = await publicAttachment(siblingTicket), own = await publicAttachment(ownTicket);
+      expect(await canReadCommentAttachment(trx,tenant,ownUser,sibling.document)).toBe(false);
+      const user = await asClient(ownUser);
+      expect(await getAuthorizedDocumentByFileId(trx,tenant,user,sibling.file)).toBeNull();
+      expect(await getAuthorizedDocumentById(trx,tenant,user,sibling.document)).toBeNull();
+      expect(await filterReadableCommentAttachments(trx,tenant,ownUser,[{document_id:sibling.document},{document_id:own.document}]))
+        .toEqual([{document_id:own.document}]);
+      // Their own ticket is still readable.
+      expect(await canReadCommentAttachment(trx,tenant,ownUser,own.document)).toBe(true);
+      expect(await getAuthorizedDocumentByFileId(trx,tenant,user,own.file)).toMatchObject({ document_id: own.document });
+    });
+
+    it('allows client scope, manager, watcher and billing-profile grants where the visibility predicate does', async () => {
+      const sibling = await publicAttachment(siblingTicket);
+      // client-scoped contact sees the sibling ticket
+      const clientScopedContact = randomUUID();
+      await table('client_portal_visibility_groups').where({group_id:group}).update({ticket_scope:'client'});
+      await table('contacts').insert({tenant,contact_name_id:clientScopedContact,client_id:client,full_name:'CS',email:'cs@example.test',portal_visibility_group_id:group});
+      const csUser = await mkUser(clientScopedContact);
+      expect(await canReadCommentAttachment(trx,tenant,csUser,sibling.document)).toBe(true);
+      await table('client_portal_visibility_groups').where({group_id:group}).update({ticket_scope:'contact'});
+      expect(await canReadCommentAttachment(trx,tenant,csUser,sibling.document)).toBe(false);
+      // manager grant: the sibling reports to the own contact
+      await table('contacts').where({contact_name_id:siblingContact}).update({manager_contact_id:clientScopedContact});
+      expect(await canReadCommentAttachment(trx,tenant,csUser,sibling.document)).toBe(true);
+      await table('contacts').where({contact_name_id:siblingContact}).update({manager_contact_id:null});
+      // watcher grant
+      await table('tickets').where({ticket_id:siblingTicket}).update({attributes:JSON.stringify({watch_list:[{entity_type:'contact',entity_id:clientScopedContact,active:true}]})});
+      expect(await canReadCommentAttachment(trx,tenant,csUser,sibling.document)).toBe(true);
+      await table('tickets').where({ticket_id:siblingTicket}).update({attributes:JSON.stringify({watch_list:[{entity_type:'contact',entity_id:clientScopedContact,active:false}]})});
+      expect(await canReadCommentAttachment(trx,tenant,csUser,sibling.document)).toBe(false);
+    });
+
+    it('denies a client a ticket on a board outside its visibility group', async () => {
+      const other = randomUUID();
+      await table('boards').insert({tenant,board_id:other,board_name:'Hidden'});
+      const hidden = await mkTicket(ownContact, { board_id: other });
+      expect(await canAccessAttachmentTicket(trx,tenant,ownUser,hidden)).toBe(false);
+      expect(await canWriteAttachmentTicket(trx,tenant,ownUser,hidden)).toBe(false);
+      expect(await canAccessAttachmentTicket(trx,tenant,ownUser,ownTicket)).toBe(true);
+    });
+
+    it('record-restricted MSP users are denied; unrestricted internal users are allowed', async () => {
+      const sibling = await publicAttachment(siblingTicket);
+      const restricted = await mkUser(null, 'internal');
+      expect(await canReadCommentAttachment(trx,tenant,restricted,sibling.document)).toBe(true);
+      const otherClient = randomUUID();
+      await table('clients').insert({tenant,client_id:otherClient,client_name:'Allowed only'});
+      const bundle = randomUUID(), revision = randomUUID();
+      await table('authorization_bundles').insert({tenant,bundle_id:bundle,bundle_key:`att-${bundle.slice(0,8)}`,name:'Other client only',is_system:false,status:'active'});
+      await table('authorization_bundle_revisions').insert({tenant,revision_id:revision,bundle_id:bundle,revision_number:1,lifecycle_state:'published'});
+      await table('authorization_bundles').where({bundle_id:bundle}).update({published_revision_id:revision});
+      for (const action of ['read','update']) {
+        await table('authorization_bundle_rules').insert({tenant,bundle_id:bundle,revision_id:revision,resource_type:'ticket',action,template_key:'selected_clients',
+          effect:'narrow',config:JSON.stringify({selectedClientIds:[otherClient]}),position:action==='read'?0:1});
+      }
+      await table('authorization_bundle_assignments').insert({tenant,bundle_id:bundle,target_type:'user',target_id:restricted,status:'active'});
+      expect(await canReadCommentAttachment(trx,tenant,restricted,sibling.document)).toBe(false);
+      expect(await canAccessAttachmentTicket(trx,tenant,restricted,siblingTicket)).toBe(false);
+      expect(await canWriteAttachmentTicket(trx,tenant,restricted,siblingTicket)).toBe(false);
+      const internalUser = { ...await table('users').where({user_id:restricted}).first() };
+      expect(await getAuthorizedDocumentByFileId(trx,tenant,internalUser,sibling.file)).toBeNull();
+      expect(await canReadCommentAttachment(trx,tenant,actor,sibling.document)).toBe(true);
+      expect(await canWriteAttachmentTicket(trx,tenant,actor,siblingTicket)).toBe(true);
+    });
+
+    it('write gate follows the same record scope; draft rows stay creator-only', async () => {
+      // Client write == visibility predicate (the portal comment gate evaluates the same template).
+      expect(await canWriteAttachmentTicket(trx,tenant,ownUser,siblingTicket)).toBe(false);
+      expect(await canWriteAttachmentTicket(trx,tenant,ownUser,ownTicket)).toBe(true);
+      // Reconcile must refuse an actor outside the ticket's record scope.
+      const draft = randomUUID(), file = randomUUID(), cid = randomUUID(), thread = randomUUID();
+      await table('comment_threads').insert({tenant,thread_id:thread,ticket_id:siblingTicket,root_comment_id:cid,is_internal:false,created_by:actor});
+      await table('external_files').insert({tenant,file_id:file,file_name:'d.pdf',original_name:'d.pdf',mime_type:'application/pdf',file_size:1,storage_path:`/test/${file}`,uploaded_by_id:actor});
+      await table('documents').insert({tenant,document_id:draft,file_id:file,document_name:'d.pdf',mime_type:'application/pdf',file_size:1,user_id:ownUser,created_by:ownUser,is_client_visible:true});
+      await table('ticket_comment_attachments').insert({tenant,document_id:draft,ticket_id:siblingTicket,created_by:ownUser,expires_at:new Date(Date.now()+86400000)});
+      await table('comments').insert({tenant,comment_id:cid,thread_id:thread,ticket_id:siblingTicket,user_id:ownUser,author_type:'client',note:note(file),is_internal:false,is_resolution:false});
+      await expect(reconcileCommentAttachments(trx,tenant,cid,ownUser)).rejects.toThrow('Attachment ticket access denied');
+      // Drafts on an accessible ticket remain visible to the creator only.
+      const mine = await upload();
+      await table('ticket_comment_attachments').where({document_id:mine.document}).update({created_by:actor});
+      expect(await canReadCommentAttachment(trx,tenant,actor,mine.document)).toBe(true);
+      const second = await mkUser(null, 'internal');
+      expect(await canReadCommentAttachment(trx,tenant,second,mine.document)).toBe(false);
+    });
   });
 
 });

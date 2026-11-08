@@ -26,6 +26,9 @@ vi.mock('../../../../../server/src/lib/auth/rbac', () => ({
 }));
 vi.mock('@alga-psa/licensing', () => ({ getLicenseStateRow: vi.fn(), verifyLicense: vi.fn() }));
 
+vi.mock('server/src/lib/tier-gating/assertTierAccess', () => ({
+  assertTenantTierAccess: vi.fn(async () => undefined),
+}));
 import {
   mapServicePrincipalError,
   resolveServicePrincipalApiContext,

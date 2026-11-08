@@ -6,6 +6,11 @@ import { i18nMiddleware, shouldSkipI18n } from './middleware/i18n';
 import { resolveDeploymentCapabilities, type DeploymentCapabilities } from './lib/deployment/deploymentProfile';
 import { resolveRequestHost, resolveRequestOrigin, detectForwardedHostRewrite } from './lib/deployment/requestHost';
 import { MIGRATED_SETTINGS_TAB_IDS } from './components/settings/settingsTabsRegistry';
+import {
+  PUBLIC_QUOTE_DECISION_PATTERN,
+  PUBLIC_QUOTE_PAGE_PATTERN,
+  PUBLIC_QUOTE_PDF_PATTERN,
+} from './lib/quote/publicQuotePaths';
 import { resolveHostSurface } from './lib/portal-domains/hostSurface';
 import { portalDomainServes, surfaceForPath, type PortalDomainSurface } from '@alga-psa/shared/core/portalDomainSurface';
 
@@ -60,6 +65,36 @@ const PUBLIC_PAY_LINK_PATH = /^\/pay\/[A-Za-z0-9_-]{1,512}$/;
 
 export function isPublicPagePath(pathname: string): boolean {
   return publicPagePaths.has(pathname) || PUBLIC_PAY_LINK_PATH.test(pathname);
+}
+
+/**
+ * Public, session-less quote review (alga-2026-0002820); shapes live in
+ * lib/quote/publicQuotePaths. Authorization is the token itself, checked in the
+ * page / route handler.
+ */
+
+export function isPublicQuotePagePath(pathname: string): boolean {
+  return PUBLIC_QUOTE_PAGE_PATTERN.test(pathname);
+}
+
+export function isPublicQuotePdfPath(pathname: string): boolean {
+  return PUBLIC_QUOTE_PDF_PATTERN.test(pathname);
+}
+
+export function isPublicQuoteDecisionPath(pathname: string): boolean {
+  return PUBLIC_QUOTE_DECISION_PATTERN.test(pathname);
+}
+
+export function isPublicQuoteReviewPath(pathname: string): boolean {
+  return isPublicQuotePagePath(pathname) || isPublicQuotePdfPath(pathname) || isPublicQuoteDecisionPath(pathname);
+}
+
+/** The token is a bearer secret in the URL: never leak it via Referer, never index it. */
+export function applyPublicQuoteReviewHeaders<T extends { headers: Headers }>(response: T): T {
+  response.headers.set('Referrer-Policy', 'no-referrer');
+  response.headers.set('X-Robots-Tag', 'noindex, nofollow');
+  response.headers.set('Cache-Control', 'private, no-store');
+  return response;
 }
 
 export interface ClientPortalThemeRequestContext {
@@ -244,6 +279,10 @@ const exactApiKeySkipPaths = [
 
 export function shouldSkipApiKeyAuth(pathname: string): boolean {
   return pathname === '/api/ticket-comment-attachments/download' ||
+    // Public quote PDF: authorized by the path token, resolved in the route handler.
+    isPublicQuotePdfPath(pathname) ||
+    // Public quote decision (POST): the token is re-verified inside the decision transaction.
+    isPublicQuoteDecisionPath(pathname) ||
     // Client portal document handlers authenticate the portal session and run
     // the shared tenant/client visibility resolver before serving content.
     /^\/api\/client-portal\/documents\/[^/]+\/(?:file|export)$/.test(pathname) ||
@@ -432,6 +471,10 @@ const _middleware = auth(async (request) => {
 
   // Handle CORS preflight requests early
   if (request.method === 'OPTIONS') {
+    // Token routes are same-origin only: no permissive CORS, not even on preflight.
+    if (isPublicQuoteReviewPath(pathname)) {
+      return applyPublicQuoteReviewHeaders(new NextResponse(null, { status: 204 }));
+    }
     return corsPreflightResponse(origin);
   }
 
@@ -533,6 +576,10 @@ const _middleware = auth(async (request) => {
     response.headers.set('x-pathname', pathname);
   }
 
+  if (isPublicQuoteReviewPath(pathname)) {
+    applyPublicQuoteReviewHeaders(response);
+  }
+
   // Only handle API routes that need API key authentication
   if (pathname.startsWith('/api/') && !pathname.startsWith('/api/auth/')) {
     const apiKey = request.headers.get('x-api-key');
@@ -552,7 +599,7 @@ const _middleware = auth(async (request) => {
     }
 
     if (shouldSkipApiKeyAuth(pathname)) {
-      return applyCorsHeaders(response, origin);
+      return isPublicQuotePdfPath(pathname) ? response : applyCorsHeaders(response, origin);
     }
 
     // For API routes that need authentication, check for API key presence only;
@@ -571,6 +618,11 @@ const _middleware = auth(async (request) => {
   // Skip auth pages to prevent redirect loops
   const isAuthPage = pathname.startsWith('/auth/');
 
+  // Public Stripe Checkout return page verifies its opaque session context itself.
+  if (isPublicQuotePagePath(pathname)) {
+    // Same-origin only: never the permissive CORS headers on a bearer-token page.
+    return response;
+  }
   // Public Stripe Checkout return page and the emailed /pay/<token> link verify
   // their opaque signed context themselves.
   if (isPublicPagePath(pathname)) {

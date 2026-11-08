@@ -108,6 +108,8 @@ const nodeAliases = [
   { find: /^@alga-psa\/db\/models\/(.*)$/, replacement: `${path.resolve(__dirname, '../db/src/models')}/$1` },
   { find: /^@alga-psa\/db\/(.*)$/, replacement: `${path.resolve(__dirname, '../db/src/lib')}/$1` },
   { find: /^@alga-psa\/db$/, replacement: path.resolve(__dirname, '../db/src/index.ts') },
+  // workflow-streams publishes from dist (unbuilt in tests); behavioural action tests mock it.
+  { find: /^@alga-psa\/workflow-streams$/, replacement: path.resolve(__dirname, '../workflow-streams/src/streams/index.ts') },
 ];
 
 export default defineConfig({
@@ -119,7 +121,12 @@ export default defineConfig({
           name: 'documents-node',
           globals: true,
           environment: 'node',
-          include: ['tests/**/*.test.ts', 'src/lib/renderHtmlToPng.test.ts'],
+          include: [
+            'tests/**/*.test.ts',
+            'src/lib/renderHtmlToPng.test.ts',
+            'src/lib/renderHtmlToPng.failure.test.ts',
+            'src/handlers/GenericFileDocumentHandler.previewSsrf.test.ts',
+          ],
           testTimeout: 10000,
           server: { deps: { inline: ['next-auth', '@auth/core', 'next'] } },
         },

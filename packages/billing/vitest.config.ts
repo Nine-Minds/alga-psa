@@ -36,6 +36,8 @@ export default defineConfig({
       'src/lib/billing/recurringPricingIdentity.test.ts',
       'src/schemas/**/*.test.ts',
       'src/services/quoteAccessLinks.test.ts',
+      'src/services/quoteAccessLinks.revoke.test.ts',
+      'src/services/publicQuoteView.test.ts',
       'src/constants/billingQuoteValidity.test.ts',
       // Colocated suites for the document-preview tenant-branding seam. Most
       // src/ tests are reached only through server/vitest.config.ts (which globs
@@ -113,6 +115,7 @@ export default defineConfig({
       'src/components/billing-dashboard/contracts/template-wizard/steps/TemplateFixedFeeServicesStep.invoiceText.test.tsx',
       'src/components/invoice-designer/canvas/DesignCanvas.bundleRows.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteForm.terms.test.tsx',
+      'src/components/billing-dashboard/quotes/QuoteDecisionLine.test.tsx',
       // Timezone-safe date-only rendering: the renderer and field formatting
       // share one UTC-pinned formatter — listed for the same reason as above.
       'src/lib/invoice-template-ast/fieldFormatting.test.ts',

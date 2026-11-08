@@ -32,6 +32,7 @@ export async function requireWarrantyPerm(user: any, action: 'create' | 'read' |
 }
 
 const CODE_MESSAGES: Record<string, [string, string]> = {
+  ticket_not_found: ['Ticket not found.', 'features/inventory:errors.rma.ticketNotFound'],
   not_found: ['RMA case not found. It may have been updated or deleted. Please refresh and try again.', 'features/inventory:errors.rma.caseNotFound'],
   unit_tracked: ['This RMA is for a stock unit. Use the stock-unit RMA actions.', 'features/inventory:errors.rma.warrantyUnitTracked'],
   stock_tracked_asset: ['This device was sold from stock. Open an RMA from its stock unit instead.', 'features/inventory:errors.rma.warrantyStockTrackedAsset'],
