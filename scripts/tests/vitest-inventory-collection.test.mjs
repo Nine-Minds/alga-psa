@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync, rmSync, realpathSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, rmSync, realpathSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { collectVitestInventory } from '../lib/vitest-inventory-collection.mjs';
+import { collectVitestInventory, hasCurrentManualRunnerReview } from '../lib/vitest-inventory-collection.mjs';
 import { readRunnerCollection } from '../lib/read-runner-collection.mjs';
 import { isAdditionalWorkspaceTest, reconcileDiscovery } from '../lib/test-discovery.mjs';
 
@@ -38,6 +38,21 @@ for (const name of ['maintenance-fanout-activities', 'tenant-deletion-prepaid-bl
     assert.equal(discovery.status, 'passed', discovery.failures.join('\n'));
   });
 }
+
+test('manual Vitest runner reviews remain valid through their stated expiry date', t => {
+  const root = fileURLToPath(new URL('../../', import.meta.url));
+  const runners = JSON.parse(readFileSync(path.join(root, 'scripts/manual-vitest-runners.json'), 'utf8'));
+  const today = new Date('2026-11-08T00:00:00Z');
+  const manualRunners = runners.filter(runner => runner.mandatory === false);
+
+  assert.ok(manualRunners.length > 0);
+  for (const runner of manualRunners) {
+    assert.equal(hasCurrentManualRunnerReview(runner, today), true, `${runner.runner} review must be current`);
+  }
+  assert.equal(hasCurrentManualRunnerReview({ reason: 'reviewed', issue: 'issue', expires: '2026-11-07' }, today), false);
+  assert.equal(hasCurrentManualRunnerReview({ reason: 'reviewed', issue: 'issue', expires: '2026-11-08' }, today), true);
+  assert.equal(hasCurrentManualRunnerReview({ reason: 'reviewed', issue: 'issue', expires: '2026-11-09' }, today), true);
+});
 
 test('real Vitest inventory loads cases without executing bodies and rejects empty or broken modules', t => {
   const root = realpathSync(mkdtempSync(path.join(tmpdir(), 'vitest-inventory-')));
