@@ -125,10 +125,8 @@ async function assertValidReferences(trx: Knex.Transaction, tenant: string, inpu
     if (!client) problems.push({ field: 'client_id', message: 'The selected client no longer exists' });
   }
   if (problems.length > 0) {
-    throw new TicketTemplateError(
-      problems.map((problem) => problem.message).join('. '),
-      'INVALID_REFERENCES'
-    );
+    const joined = problems.map((problem) => problem.message).join('. ');
+    throw new TicketTemplateError(joined, 'INVALID_REFERENCES', { problems: joined });
   }
 }
 
