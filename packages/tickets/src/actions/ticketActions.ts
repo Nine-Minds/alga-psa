@@ -37,6 +37,7 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { deleteTicketChildRecords } from '../lib/deleteTicketChildRecords';
+import { authorizeTicketRecordAccessConcealed } from '../lib/ticketRecordAuthorization';
 import { createTagsForEntityWithTransaction, findTagsByEntityIds } from '@alga-psa/tags/actions/tagActions';
 import TagMapping from '@alga-psa/tags/models/tagMapping';
 import { isTagActionError } from '@alga-psa/tags/actions/tagActionErrors';
@@ -2393,11 +2394,9 @@ async function performTicketDelete(
   trx: Knex.Transaction,
   ticketId: string,
   tenant: string,
-  user: IUser
+  user: IUserWithRoles
 ): Promise<void> {
-  if (!await hasPermission(user, 'ticket', 'delete', trx)) {
-    throw new Error('Permission denied: Cannot delete ticket');
-  }
+  await authorizeTicketRecordAccessConcealed({ trx, tenant, user, ticketId, action: 'delete' });
 
   const ticket = await tenantScopedTable(trx, 'tickets', tenant)
     .where({
@@ -2441,6 +2440,7 @@ export const deleteTicket = withAuth(async (
 ): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
   try {
     const { knex } = await createTenantKnex();
+    await authorizeTicketRecordAccessConcealed({ trx: knex, tenant, user, ticketId, action: 'delete' });
     const result = await deleteEntityWithValidation('ticket', ticketId, knex, tenant, async (trx, tenantId) => {
       await performTicketDelete(trx, ticketId, tenantId, user);
     });
@@ -2491,6 +2491,13 @@ export const deleteTickets = withAuth(async (user, { tenant }, ticketIds: string
 
   for (const ticketId of uniqueIds) {
     try {
+      await authorizeTicketRecordAccessConcealed({
+        trx: ticketKnex,
+        tenant,
+        user,
+        ticketId,
+        action: 'delete',
+      });
       const result = await deleteEntityWithValidation('ticket', ticketId, ticketKnex, tenant, async (trx, tenantId) => {
         await performTicketDelete(trx, ticketId, tenantId, user);
       });
