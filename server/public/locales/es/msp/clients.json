@@ -1469,7 +1469,7 @@
       "status": {
         "noRecording": "Sin grabación",
         "recordingReady": "Grabación lista",
-        "cancelled": "Cancelado",
+        "cancelled": "Reunión cancelada",
         "failed": "Grabación no disponible",
         "recordingPending": "Grabación pendiente"
       }
@@ -1535,7 +1535,7 @@
       "endBeforeStart": "La hora de finalización debe ser igual o posterior a la hora de inicio.",
       "endBeforeStartShort": "La hora de finalización debe ser igual o posterior a la hora de inicio",
       "rangeTooLong": "Las interacciones no pueden durar más de 24 horas.",
-      "reflectionLabel": "Agregar interacción rápidamente",
+      "reflectionLabel": "Creación rápida de interacción",
       "validationIntro": "Corrija los siguientes errores:",
       "loadingEditor": "Cargando editor...",
       "dialog": {
