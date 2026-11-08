@@ -4,21 +4,21 @@
  * every page and never strands a bundle row at the foot of a page away from
  * its first component row.
  *
- * Opt-in: needs a local Chrome. Run with `RUN_PDF_TESTS=1` (and optionally
- * `CHROME_PATH`).
+ * Requires Puppeteer's Chromium (or `PUPPETEER_EXECUTABLE_PATH`) and
+ * `pdftotext` from poppler, as provided by both CI unit lanes.
  */
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
+import { browserPoolService } from '../../services/browserPoolService';
 import { evaluateTemplateAst } from './evaluator';
+import { resolvePdfPrintOptionsFromAst } from './printSettings';
 import { renderTemplateAstHtmlDocument } from './server-render';
 import { getStandardTemplateAstByCode } from './standardTemplates';
 
-const chromePath = process.env.CHROME_PATH
-  ?? ['/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser'].find((candidate) => fs.existsSync(candidate));
-const enabled = process.env.RUN_PDF_TESTS === '1' && Boolean(chromePath);
+afterAll(() => browserPoolService.cleanup());
 
 const bundle = (n: number) => ({
   id: `bundle-${n}`,
@@ -28,7 +28,7 @@ const bundle = (n: number) => ({
   components: [1, 2, 3, 4].map((c) => ({ name: `B${n} service ${c}`, quantity: 10 * c, quantityChange: c % 2 ? c : -c, pricingBasis: 'unit' })),
 });
 
-describe.skipIf(!enabled)('bundle child rows across PDF page breaks (T013)', () => {
+describe('bundle child rows across PDF page breaks (T013)', () => {
   it('repeats headers and keeps each bundle row with its first component row', async () => {
     const ast = getStandardTemplateAstByCode('standard-bundle-quantities')!;
     const items = Array.from({ length: 24 }, (_, i) => bundle(i + 1));
@@ -39,11 +39,20 @@ describe.skipIf(!enabled)('bundle child rows across PDF page breaks (T013)', () 
     };
     const html = await renderTemplateAstHtmlDocument(ast, evaluateTemplateAst(ast, model as unknown as Record<string, unknown>), { locale: 'en-US' });
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bundle-pdf-'));
-    const htmlPath = path.join(dir, 'invoice.html');
     const pdfPath = path.join(dir, 'invoice.pdf');
-    fs.writeFileSync(htmlPath, html);
     try {
-      execFileSync(chromePath!, ['--headless=new', '--no-sandbox', '--disable-gpu', `--print-to-pdf=${pdfPath}`, '--no-pdf-header-footer', `file://${htmlPath}`], { stdio: 'ignore', timeout: 60_000 });
+      const browser = await browserPoolService.getBrowser();
+      try {
+        const page = await browser.newPage();
+        try {
+          await page.setContent(html, { waitUntil: 'load' });
+          await page.pdf({ ...resolvePdfPrintOptionsFromAst(ast), path: pdfPath });
+        } finally {
+          await page.close();
+        }
+      } finally {
+        await browserPoolService.releaseBrowser(browser);
+      }
       const text = execFileSync('pdftotext', ['-layout', pdfPath, '-'], { encoding: 'utf8' });
       const pages = text.split('\f').filter((page) => page.trim().length > 0);
       expect(pages.length).toBeGreaterThan(1);
@@ -52,12 +61,15 @@ describe.skipIf(!enabled)('bundle child rows across PDF page breaks (T013)', () 
       for (const page of pages.filter((page) => /Managed bundle \d+|B\d+ service \d/.test(page))) {
         expect(page).toMatch(/Description/);
       }
-      pages.forEach((page, index) => {
-        const lines = page.split('\n').map((line) => line.trim()).filter(Boolean);
-        const last = lines.filter((line) => /Managed bundle \d+|service \d/.test(line)).pop() ?? '';
-        // The last body line on a page is never a bundle parent row stranded from its components.
-        expect(last, `page ${index + 1} ends on a stranded bundle row`).not.toMatch(/^Managed bundle \d+\s/);
-      });
+      for (let n = 1; n <= items.length; n++) {
+        const parent = new RegExp(`Managed bundle ${n}\\b`);
+        const parentPages = pages.filter((page) => parent.test(page));
+        expect(parentPages, `bundle ${n} must appear on exactly one page`).toHaveLength(1);
+        expect(parentPages[0], `bundle ${n} must share a page with its first component`).toMatch(new RegExp(`B${n} service 1\\b`));
+        for (let c = 1; c <= 4; c++) {
+          expect(text.match(new RegExp(`B${n} service ${c}\\b`, 'g')), `bundle ${n} component ${c} must print exactly once`).toHaveLength(1);
+        }
+      }
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
