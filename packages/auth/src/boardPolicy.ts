@@ -65,7 +65,7 @@ export async function evaluateBoardMutationPolicy(
     decision = { allowed: false, code: BOARD_DENIAL_CODES.permission, permission };
   }
 
-  if (!decision.allowed) {
+  if (decision.allowed === false) {
     console.warn('[boards] mutation refused', {
       code: decision.code,
       action,

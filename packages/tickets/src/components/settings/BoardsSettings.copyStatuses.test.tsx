@@ -129,7 +129,7 @@ vi.mock('@alga-psa/teams/actions/team-actions/teamActionErrors', () => ({
   isTeamActionError: () => false,
 }));
 
-vi.mock('@alga-psa/auth/actions', () => ({
+vi.mock('@alga-psa/auth/actions/permissionActions', () => ({
   checkCurrentUserPermissions: (...args: [Array<{ resource: string; action: string }>]) =>
     checkCurrentUserPermissionsMock(...args),
 }));

@@ -2,7 +2,7 @@
 
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { checkCurrentUserPermissions } from '@alga-psa/auth/actions';
+import { checkCurrentUserPermissions } from '@alga-psa/auth/actions/permissionActions';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, MoreVertical, HelpCircle, ChevronDown, ArrowLeft, AlertTriangle, CheckCircle2, Settings2, Users, ListChecks, Mail, Zap, Clock, Search, Inbox, Star, LayoutGrid, EyeOff, Bell, Trash2 } from "lucide-react";
 import { IBoard, ITeam, CategoryType, PriorityType, IPriority, IUser, DeletionValidationResult, DeletionDependency, isSenderActionFailure, type SenderActionFailure } from '@alga-psa/types';

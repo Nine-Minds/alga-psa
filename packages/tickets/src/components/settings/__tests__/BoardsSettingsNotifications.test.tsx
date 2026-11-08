@@ -128,7 +128,7 @@ vi.mock('@alga-psa/teams/actions/team-actions/teamActionErrors', () => ({
   isTeamActionError: () => false,
 }));
 
-vi.mock('@alga-psa/auth/actions', () => ({
+vi.mock('@alga-psa/auth/actions/permissionActions', () => ({
   checkCurrentUserPermissions: async (checks: Array<{ resource: string; action: string }>) =>
     checks.map((c) => ({ ...c, granted: true })),
 }));
