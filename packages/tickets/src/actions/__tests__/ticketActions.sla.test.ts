@@ -28,7 +28,7 @@ const {
   deleteEntityWithValidationMock: vi.fn(),
   resolveBundleRulesMock: vi.fn(async (..._args: any[]): Promise<any[]> => []),
   deleteTicketChildRecordsMock: vi.fn(),
-  getClientContactVisibilityContextMock: vi.fn(async () => ({
+  getClientContactVisibilityContextMock: vi.fn<typeof import('@alga-psa/authorization/portal/visibility.server').getClientContactVisibilityContext>(async () => ({
     effectiveTicketScope: 'contact', ticketScope: 'contact', contactId: 'contact-1', clientId: 'client-1',
     visibleBoardIds: ['board-1'], isClientAdmin: false, visibilityGroupId: null,
   })),
@@ -68,7 +68,7 @@ vi.mock('@alga-psa/authorization/bundles/service', () => ({
 }));
 
 vi.mock('@alga-psa/authorization/portal/visibility.server', () => ({
-  getClientContactVisibilityContext: (...args: unknown[]) => getClientContactVisibilityContextMock(...args),
+  getClientContactVisibilityContext: getClientContactVisibilityContextMock,
 }));
 
 vi.mock('../../lib/deleteTicketChildRecords', () => ({

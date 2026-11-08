@@ -9,7 +9,7 @@ import {
 
 const getVisibilityMock = vi.fn<(...args: any[]) => Promise<any>>();
 const hasPermissionMock = vi.hoisted(() => vi.fn<(...args: any[]) => Promise<boolean>>(async () => true));
-const resolveBundleRulesMock = vi.hoisted(() => vi.fn(async () => [] as any[]));
+const resolveBundleRulesMock = vi.hoisted(() => vi.fn<typeof import('@alga-psa/authorization/bundles/service').resolveBundleNarrowingRulesForEvaluation>(async () => []));
 
 vi.mock('@alga-psa/db', () => ({
   tenantDb: (conn: any) => ({ table: (t: string) => conn(t) }),
@@ -19,7 +19,7 @@ vi.mock('@alga-psa/authorization/portal/visibility.server', () => ({
   getClientContactVisibilityContext: (...args: any[]) => getVisibilityMock(...args),
 }));
 vi.mock('@alga-psa/authorization/bundles/service', () => ({
-  resolveBundleNarrowingRulesForEvaluation: (...args: any[]) => resolveBundleRulesMock(...args),
+  resolveBundleNarrowingRulesForEvaluation: resolveBundleRulesMock,
 }));
 
 function fakeTrx(ticket: Record<string, unknown> | null = null) {
@@ -127,11 +127,16 @@ describe('authorizeTicketRecordAccess (client principals)', () => {
 
   it('fails closed when bundle policy resolution fails during deletion', async () => {
     const internal = { user_id: 'internal-1', user_type: 'internal', roles: [{ role_id: 'r1' }] } as any;
+    const trx = fakeTrx(row());
     resolveBundleRulesMock.mockRejectedValueOnce(new Error('bundle policy database unavailable'));
 
     await expect(authorizeTicketRecordAccess({
-      trx: fakeTrx(row()), tenant: 'tenant-1', user: internal, ticketId: 't1', action: 'delete',
+      trx, tenant: 'tenant-1', user: internal, ticketId: 't1', action: 'delete',
     })).rejects.toThrow('bundle policy database unavailable');
+    expect(resolveBundleRulesMock).toHaveBeenCalledExactlyOnceWith(trx, expect.objectContaining({
+      subject: expect.objectContaining({ tenant: 'tenant-1', userId: 'internal-1' }),
+      resource: { type: 'ticket', action: 'delete', id: 't1' },
+    }));
     expect(hasPermissionMock).not.toHaveBeenCalled();
   });
 
