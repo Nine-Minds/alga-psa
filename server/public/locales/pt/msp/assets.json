@@ -1531,7 +1531,7 @@
       "allPlanTypes": "Todos os tipos de plano",
       "due": "Vencimento",
       "clearAll": "Limpar tudo",
-      "done": "Concluído",
+      "done": "Feito",
       "clientChip": "Cliente"
     },
     "viewMode": {
@@ -1565,7 +1565,7 @@
     "calendar": {
       "dueCount": "{{count}} com vencimento",
       "today": "Hoje",
-      "moreCount": "+{{count}} adicionais",
+      "moreCount": "+{{count}} mais",
       "legend": "Legenda",
       "scheduled": "Agendadas"
     },
