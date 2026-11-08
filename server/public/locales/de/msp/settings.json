@@ -2647,7 +2647,7 @@
           "serviceTypeHelp": "Produkte, deren SKU bereits existiert, werden zugeordnet und nicht verändert; nur neue Produkte werden diesem Servicetyp zugeordnet."
         },
         "title": "Migration konfigurieren",
-        "description": "Ordnen Sie die Referenzdaten des Pakets diesem Mandanten zu. Die Vorprüfung überprüft jede Zuordnung, bevor die Migration ausgeführt werden kann.",
+        "description": "Ordnen Sie die Referenzdaten des Pakets diesem Mandanten zu. Die Vorprüfung validiert jede Zuordnung, bevor die Migration ausgeführt werden kann.",
         "errors": {
           "loadOptions": "Konfigurationsoptionen konnten nicht geladen werden.",
           "save": "Die Konfiguration konnte nicht gespeichert werden.",
@@ -2687,7 +2687,7 @@
           "defaultClient": "Standardkunde für verwaiste Datensätze",
           "defaultClientHelp": "Kontakte und Assets, deren Organisation nicht ermittelt werden kann, werden diesem Kunden zugeordnet."
         },
-        "saved": "Konfiguration gespeichert. Führen Sie die Vorprüfung aus, um sie anhand der bereitgestellten Datensätze zu überprüfen.",
+        "saved": "Konfiguration gespeichert. Führen Sie die Vorprüfung aus, um sie anhand der bereitgestellten Datensätze zu validieren.",
         "saving": "Wird gespeichert…",
         "save": "Konfiguration speichern"
       },
@@ -3288,7 +3288,7 @@
     "addOnRequired": {
       "heading": "{{featureName}} erfordert das Add-on {{addOnName}}",
       "manageAddOns": "Add-ons verwalten",
-      "entraDescription": "Erwerben Sie das Enterprise-Add-on, um Microsoft Entra Sync zu aktivieren, einschließlich Mandantenerkennung, Kundenzuordnung, Kontaktsynchronisierung und Abgleich-Workflows."
+      "entraDescription": "Erwerben Sie das Enterprise-Add-on, um Microsoft Entra Sync zu aktivieren, einschließlich Mandantenerkennung, Kundenzuordnung, Kontaktsynchronisation und Abgleich-Workflows."
     }
   },
   "orgChart": {
