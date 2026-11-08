@@ -4908,8 +4908,8 @@ components:
         provider:
           type: string
           description: "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto,
-            or huntress. Scheduled device sync is available for the first five;
-            huntress exposes no device listing."
+            unifi, or huntress. Scheduled device sync is available for all but
+            huntress, which exposes no device listing."
       required:
         - provider
     RmmIntegrationStatus:
@@ -32741,12 +32741,12 @@ paths:
         - schema:
             type: string
             description: "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto,
-              or huntress. Scheduled device sync is available for the first
-              five; huntress exposes no device listing."
+              unifi, or huntress. Scheduled device sync is available for all but
+              huntress, which exposes no device listing."
           required: true
           description: "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto,
-            or huntress. Scheduled device sync is available for the first five;
-            huntress exposes no device listing."
+            unifi, or huntress. Scheduled device sync is available for all but
+            huntress, which exposes no device listing."
           name: provider
           in: path
       responses:
@@ -32784,12 +32784,12 @@ paths:
         - schema:
             type: string
             description: "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto,
-              or huntress. Scheduled device sync is available for the first
-              five; huntress exposes no device listing."
+              unifi, or huntress. Scheduled device sync is available for all but
+              huntress, which exposes no device listing."
           required: true
           description: "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto,
-            or huntress. Scheduled device sync is available for the first five;
-            huntress exposes no device listing."
+            unifi, or huntress. Scheduled device sync is available for all but
+            huntress, which exposes no device listing."
           name: provider
           in: path
       requestBody:
@@ -32834,12 +32834,12 @@ paths:
         - schema:
             type: string
             description: "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto,
-              or huntress. Scheduled device sync is available for the first
-              five; huntress exposes no device listing."
+              unifi, or huntress. Scheduled device sync is available for all but
+              huntress, which exposes no device listing."
           required: true
           description: "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto,
-            or huntress. Scheduled device sync is available for the first five;
-            huntress exposes no device listing."
+            unifi, or huntress. Scheduled device sync is available for all but
+            huntress, which exposes no device listing."
           name: provider
           in: path
       requestBody:
