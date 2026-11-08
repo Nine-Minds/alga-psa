@@ -78,6 +78,10 @@ const createMockTransaction = (mockData: MockData = {
   // Add fn.now() to the mock transaction itself
   (mockTrx as any).fn = { now: vi.fn().mockReturnValue('NOW()') };
   (mockTrx as any).raw = vi.fn((sql) => sql);
+  // Model the owning-transaction surface required by withSavepoint.
+  (mockTrx as any).isTransaction = true;
+  (mockTrx as any).transaction = vi.fn(async (callback: (trx: Knex.Transaction) => Promise<unknown>) =>
+    callback(mockTrx));
 
   return {
     trx: mockTrx,
@@ -870,13 +874,14 @@ describe('escalateTicket', () => {
       mockTrx.tableBuilders['sla_audit_log'] = builder(overrides.audit);
     };
 
-    it('returns success=false when adding the manager resource fails', async () => {
+    it('continues escalation notifications when adding the manager resource fails', async () => {
       arrange({ resources: { insert: vi.fn().mockRejectedValue(new Error('insert failed')) } });
 
       const result = await escalateTicket(mockTrx.trx, TENANT, TICKET_ID, 1);
 
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('insert failed');
+      expect(result.success).toBe(true);
+      expect(result.resourceAdded).toBe(false);
+      expect(result.notificationsSent.inApp).toBe(true);
     });
 
     it('returns success=false when the in-app notification path throws', async () => {
@@ -986,6 +991,23 @@ describe('checkEscalationNeeded', () => {
   });
 
   describe('escalation threshold checks', () => {
+    it('makes each configured level eligible only at its own percentage boundary', async () => {
+      configureEligibilityRows(mockTrx, {
+        sla_policy_id: SLA_POLICY_ID,
+        priority_id: PRIORITY_ID,
+        escalation_level: null,
+      }, {
+        escalation_1_percent: 70,
+        escalation_2_percent: 90,
+        escalation_3_percent: 110,
+      });
+
+      expect(await checkEscalationNeeded(mockTrx.trx, TENANT, TICKET_ID, 69.999)).toBeNull();
+      expect(await checkEscalationNeeded(mockTrx.trx, TENANT, TICKET_ID, 70)).toBe(1);
+      expect(await checkEscalationNeeded(mockTrx.trx, TENANT, TICKET_ID, 89.999)).toBe(1);
+      expect(await checkEscalationNeeded(mockTrx.trx, TENANT, TICKET_ID, 90)).toBe(2);
+    });
+
     it('checks each requested coincident level at its own configured threshold', async () => {
       const ticketData = {
         sla_policy_id: SLA_POLICY_ID,
