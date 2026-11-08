@@ -69,3 +69,42 @@ export function buildContentDisposition(disposition: DocumentDisposition, filena
   const ascii = filename.replace(/[^\x20-\x7e]/g, '_').replace(/["\\;]/g, '_').replace(/[\r\n]/g, '_');
   return `${disposition}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
 }
+
+/**
+ * The only MIME types a *derived* preview/thumbnail may be stored or served as
+ * inline. Generators always emit JPEG; PNG/WebP are tolerated. SVG, HTML and
+ * unknown types are never in this set.
+ */
+export const RASTER_IMAGE_MIME_TYPES: ReadonlySet<string> = new Set(['image/png', 'image/jpeg', 'image/webp']);
+
+export function isRasterImageMime(mimeType?: string | null): boolean {
+  return RASTER_IMAGE_MIME_TYPES.has(normalizeMimeType(mimeType));
+}
+
+const NEUTRALISED_PREVIEW_CSP = "default-src 'none'; sandbox";
+
+/**
+ * Response headers for any derived preview or thumbnail response (200 and 304).
+ * Raster images are served inline under the document serving policy. Anything
+ * else (SVG, HTML, unknown, or legacy rows where the preview aliased the
+ * uploaded original) is neutralised: opaque type, attachment, locked-down CSP.
+ */
+export function buildDocumentPreviewHeaders(
+  mimeType?: string | null,
+  filename?: string | null
+): Record<string, string> {
+  if (isRasterImageMime(mimeType)) {
+    const policy = resolveDocumentServingPolicy(mimeType);
+    return {
+      'Content-Type': policy.mimeType,
+      'Content-Disposition': buildContentDisposition('inline', filename),
+      ...policy.headers,
+    };
+  }
+  return {
+    'Content-Type': 'application/octet-stream',
+    'Content-Disposition': buildContentDisposition('attachment', filename),
+    'X-Content-Type-Options': 'nosniff',
+    'Content-Security-Policy': NEUTRALISED_PREVIEW_CSP,
+  };
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { evaluateAlertRules } from '@alga-psa/shared/rmm/alerts';
+import { evaluateAlertRules, normalizeRmmAlertConditions, rmmAlertRuleConditionsSchema } from '@alga-psa/shared/rmm/alerts';
 import type { NormalizedRmmAlertEvent, RmmAlertRuleRow } from '@alga-psa/shared/rmm/alerts';
 
 const TENANT = '00000000-0000-0000-0000-000000000001';
@@ -81,6 +81,64 @@ describe('evaluateAlertRules condition matrix', () => {
   it('messagePattern matches as a regex', () => {
     expect(evaluateAlertRules([rule({ messagePattern: 'at 9[0-9]% capacity' })], event()).rule).not.toBeNull();
     expect(evaluateAlertRules([rule({ messagePattern: '^Memory' })], event()).rule).toBeNull();
+  });
+
+  it('round-trips a legacy regex through editing and still evaluates it as a root condition', () => {
+    const loaded = rmmAlertRuleConditionsSchema.parse({ messagePattern: 'Sentinel.*' });
+    const edited = { ...loaded, clauses: [...loaded.clauses, { path: 'severity', operator: 'equals' as const, value: 'major' }] };
+    const saved = JSON.stringify(edited);
+    const reloaded = normalizeRmmAlertConditions(saved);
+    expect(reloaded.legacyMessagePattern).toBe('Sentinel.*');
+    const existing = rule(reloaded);
+    expect(evaluateAlertRules([existing], event({ message: 'Sentinel service stopped' })).rule).toBe(existing);
+    expect(evaluateAlertRules([existing], event({ message: 'Disk service stopped' })).rule).toBeNull();
+    expect(rmmAlertRuleConditionsSchema.parse(reloaded)).toEqual(reloaded);
+  });
+
+  it('keeps regex outside arbitrary OR group semantics', () => {
+    const edited = rmmAlertRuleConditionsSchema.parse({
+      messagePattern: 'Sentinel.*',
+      alertClasses: ['OTHER'],
+      keywords: ['disk'],
+    });
+    const existing = rule(edited);
+    expect(evaluateAlertRules([existing], event({ alertClass: 'OTHER', message: 'Sentinel service stopped' })).rule).toBeNull();
+    expect(evaluateAlertRules([existing], event({ alertClass: 'OTHER', message: 'Disk Sentinel service stopped' })).rule).toBe(existing);
+  });
+
+  it('matches text supplied only in details with the real Level event shape', () => {
+    const level = event({
+      provider: 'levelio', alertClass: 'Critical Service Crashed', deviceName: 'GLICK-PC7',
+      message: 'Critical Service Crashed: Event ID 7031 occured 5 times within 1 hour',
+      details: 'The Sentinel Agent service terminated unexpectedly. It has done this 532 time(s)',
+    });
+    const sentinel = rule({ join: 'and', clauses: [
+      { path: 'alertClass', operator: 'equals', value: 'Critical Service Crashed' },
+      { path: 'text', operator: 'contains_ci', value: 'Sentinel Agent service terminated' },
+      { path: 'deviceName', operator: 'equals', value: 'GLICK-PC7' },
+    ] });
+    expect(evaluateAlertRules([sentinel], level).rule).toBe(sentinel);
+    expect(evaluateAlertRules([sentinel], { ...level, details: null }).rule).toBeNull();
+  });
+
+  it('lets an exclusion veto its rule and falls through to the catch-all', () => {
+    const excluded = rule({ join: 'and', clauses: [
+      { path: 'alertClass', operator: 'equals', value: 'Critical Service Crashed' },
+      { path: 'text', operator: 'not_contains_ci', value: 'Sentinel Agent' },
+    ] });
+    const catchAll = rule({ join: 'and', clauses: [] });
+    const result = evaluateAlertRules([excluded, catchAll], event({ details: 'Sentinel Agent service terminated' }));
+    expect(result.rule).toBe(catchAll);
+    expect(catchAll.actions.createTicket).toBe(true);
+  });
+
+  it('scopes rules by device name and external device ID', () => {
+    const scoped = rule({ join: 'and', clauses: [
+      { path: 'deviceName', operator: 'equals', value: 'GLICK-PC7' },
+      { path: 'externalDeviceId', operator: 'equals', value: 'device-7' },
+    ] });
+    expect(evaluateAlertRules([scoped], event({ deviceName: 'GLICK-PC7', externalDeviceId: 'device-7' })).rule).toBe(scoped);
+    expect(evaluateAlertRules([scoped], event({ deviceName: 'OTHER-PC', externalDeviceId: 'device-7' })).rule).toBeNull();
   });
 
   it('requires every present condition field to match', () => {

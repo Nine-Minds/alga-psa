@@ -309,7 +309,19 @@ export function RecurringClientOverridesDialog({
                   clientId={client.client_id}
                   buttonWidth="full"
                   placeholder={t('recurring.overrides.contactPlaceholder', 'No contact')}
-                  onValueChange={(contactId) => setDraft({ ...draft, contactId })}
+                  onValueChange={(contactId) => {
+                    // An empty Location is a question nobody answered, so the chosen person's own
+                    // site answers it. A location already picked here is left alone.
+                    const picked = contacts.find((contact) => contact.contact_name_id === contactId);
+                    const links = picked?.locations ?? [];
+                    const primary = links.find((link) => link.is_primary)
+                      ?? (links.length === 1 ? links[0] : null);
+                    setDraft({
+                      ...draft,
+                      contactId,
+                      locationId: draft.locationId || (primary?.location_id ?? ''),
+                    });
+                  }}
                 />
               </div>
               <div>

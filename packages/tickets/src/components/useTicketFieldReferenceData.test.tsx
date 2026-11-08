@@ -17,10 +17,10 @@ import { getAllUsers } from '@alga-psa/user-composition/actions/userQueryActions
 import { getTeams } from '@alga-psa/teams/actions/team-actions/teamActions';
 import { getAllBoards } from '../actions/board-actions';
 import { getChecklistTemplateOptionsForEditor } from '../actions/checklists/checklistTemplateActions';
-import { useTicketFieldReferenceData } from './useTicketFieldReferenceData';
+import { useTicketFieldReferenceData, type TicketReferenceChecklistTemplate } from './useTicketFieldReferenceData';
 
-const wide = { template_id: 'wide', name: 'Tenant checklist', client_id: null, client_name: null };
-const scoped = { template_id: 'scoped', name: 'Client checklist', client_id: 'client-a', client_name: 'Client A' };
+const wide: TicketReferenceChecklistTemplate = { template_id: 'wide', name: 'Tenant checklist', client_id: null, client_name: null };
+const scoped: TicketReferenceChecklistTemplate = { template_id: 'scoped', name: 'Client checklist', client_id: 'client-a', client_name: 'Client A' };
 
 afterEach(cleanup);
 beforeEach(() => {
@@ -44,7 +44,7 @@ describe('ticket editor reference loading', () => {
 
   it('reloads scoped choices when a recurring client override changes client', async () => {
     const { result, rerender } = renderHook(({ clientId }: { clientId: string | null }) =>
-      useTicketFieldReferenceData('recurring_ticket', clientId), { initialProps: { clientId: null } });
+      useTicketFieldReferenceData('recurring_ticket', clientId), { initialProps: { clientId: null as string | null } });
     await waitFor(() => expect(result.current.checklistTemplates).toEqual([wide]));
     rerender({ clientId: 'client-a' });
     await waitFor(() => expect(result.current.checklistTemplates).toEqual([wide, scoped]));

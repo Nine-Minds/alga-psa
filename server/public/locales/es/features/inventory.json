@@ -598,6 +598,7 @@
       "warrantyLocationRequired": "Elija dónde está ahora el dispositivo para poder recibirlo de vuelta.",
       "warrantyInvalidTransition": "Ese paso no está disponible en el estado actual del RMA. Actualice e inténtelo de nuevo.",
       "warrantyReviewClose": "Apruebe o rechace la reclamación antes de cerrarla.",
+      "warrantyWrongTrack": "Este paso solo corresponde a reclamaciones con reemplazo anticipado.",
       "duplicateReference": "Esa referencia o número de RMA ya está en uso.",
       "checkViolation": "Ese valor no está permitido para este RMA.",
       "ticketNotFound": "Ticket no encontrado.",
@@ -1324,6 +1325,7 @@
       "replacementReceived": "Reemplazo recibido",
       "replacementDeployed": "Reemplazo desplegado",
       "deadUnitOwed": "Unidad defectuosa pendiente",
+      "deadUnitToVendor": "Unidad averiada al proveedor",
       "deadUnitReturned": "Unidad defectuosa devuelta",
       "replaced": "Reemplazado",
       "credited": "Acreditado",
@@ -1373,6 +1375,11 @@
       "noEvents": "Aún no hay historial.",
       "confirmReceived": "Confirme que el dispositivo está en la oficina. Su custodia debe estar en la oficina.",
       "confirmCredit": "Registre que el proveedor acreditó este dispositivo. El periodo de custodia se cierra como desechado.",
+      "confirmShipDeadUnit": "Envíe la unidad averiada de vuelta al proveedor. El equipo en custodia se registra como en poder del proveedor.",
+      "confirmVendorReceipt": "Confirme que el proveedor recibió la unidad averiada. El caso se cierra como resuelto y la custodia como devuelta al proveedor.",
+      "deadUnitNotShipped": "Unidad averiada aún sin enviar, vencía el {{date}}",
+      "deadUnitShippedLate": "Unidad averiada enviada tarde, vencía el {{date}}",
+      "returnByHint": "La fecha límite para enviar la unidad averiada al proveedor, contada desde la entrega de este reemplazo. Déjela como está para conservar la fecha de la aprobación.",
       "actions": {
         "approveStandard": "Aprobar (estándar)",
         "approveAdvance": "Aprobar (reemplazo anticipado)",
@@ -1384,6 +1391,8 @@
         "recordRepair": "Registrar reparación",
         "recordCredit": "Registrar crédito del proveedor",
         "returnToClient": "Devolver al cliente",
+        "shipDeadUnitToVendor": "Enviar unidad averiada al proveedor",
+        "confirmVendorReceipt": "El proveedor recibió la unidad averiada",
         "close": "Cerrar RMA"
       },
       "events": {
@@ -1397,6 +1406,8 @@
         "repairReceived": "Reparación recibida",
         "vendorCredited": "Acreditado por el proveedor",
         "returnedToClient": "Devuelto al cliente",
+        "deadUnitShipped": "Unidad averiada enviada al proveedor",
+        "vendorReceiptConfirmed": "El proveedor recibió la unidad averiada",
         "closed": "Cerrado",
         "note": "Nota"
       },

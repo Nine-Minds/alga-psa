@@ -387,6 +387,8 @@ Shipped without the vendor-conversation link because the ticket-conversations br
 
 ## Follow-up: advance-replacement dead-unit shipping
 
+> **Update:** this follow-up has been built; see `ee/docs/plans/2026-10-29-advance-replacement-dead-unit/PRD.md`. Corrections to the text below: a migration *was* needed (custody `close_reason` and `rma_events` event-type CHECKs), and there is no tracking-correction event.
+
 Shipped on the assumption, never stated outright until a review caught it, that the vendor's return
 logistics for the dead unit in the advance-replacement track **bypass Alga's custody entirely** (a prepaid
 label, the client deals with the vendor directly). That assumption is baked into "Integration with C4"

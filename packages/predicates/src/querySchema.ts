@@ -98,7 +98,7 @@ export interface QuerySchema {
 export const tenantColumnOf = (schema: QuerySchema): string => schema.tenantColumn ?? 'tenant';
 
 export const OPERATORS_BY_TYPE: Record<AttributeType, readonly PredicateOperator[]> = {
-  string: ['equals', 'not_equals', 'in', 'not_in', 'contains', 'starts_with', 'ends_with', 'not_contains', 'not_starts_with', 'not_ends_with', 'is_empty', 'is_not_empty'],
+  string: ['equals', 'not_equals', 'in', 'not_in', 'contains', 'not_contains', 'contains_ci', 'not_contains_ci', 'starts_with', 'not_starts_with', 'ends_with', 'not_ends_with', 'is_empty', 'is_not_empty'],
   number: ['equals', 'not_equals', 'in', 'not_in', 'gt', 'gte', 'lt', 'lte', 'is_empty', 'is_not_empty'],
   timestamp: ['equals', 'not_equals', 'gt', 'gte', 'lt', 'lte', 'is_empty', 'is_not_empty'],
   boolean: ['equals', 'not_equals', 'is_empty', 'is_not_empty'],
