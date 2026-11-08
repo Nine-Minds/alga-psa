@@ -51,6 +51,7 @@ import {
   removeKitComponent,
   updateKitProduct,
 } from '../actions';
+import { formatCurrencyWithSymbol } from '@alga-psa/core/formatters';
 
 interface KitManagerProps {
   initialKits: KitSummary[];
@@ -146,10 +147,7 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
 
   const money = useCallback(
     (cents: number | null | undefined) =>
-      new Intl.NumberFormat(undefined, {
-        style: 'currency',
-        currency,
-      }).format(Number(cents ?? 0) / 100),
+      formatCurrencyWithSymbol(Number(cents ?? 0) / 100, undefined, currency),
     [currency],
   );
 

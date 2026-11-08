@@ -4,7 +4,7 @@ const mocks = vi.hoisted(() => ({
   aiGatewayFetchAccount: vi.fn(),
   aiGatewayGrantConsent: vi.fn(),
   aiGatewayRevokeConsent: vi.fn(),
-  checkAccountManagementPermission: vi.fn(),
+  checkAccountManagementUpdatePermission: vi.fn(),
   getSession: vi.fn(),
   isSelfHostLicensing: vi.fn(),
 }));
@@ -14,7 +14,7 @@ vi.mock('@alga-psa/auth', () => ({
 }));
 
 vi.mock('@alga-psa/auth/actions', () => ({
-  checkAccountManagementPermission: mocks.checkAccountManagementPermission,
+  checkAccountManagementUpdatePermission: mocks.checkAccountManagementUpdatePermission,
 }));
 
 vi.mock('@alga-psa/licensing', () => ({
@@ -40,7 +40,7 @@ describe('AI consent actions', () => {
       },
     });
     mocks.isSelfHostLicensing.mockResolvedValue(true);
-    mocks.checkAccountManagementPermission.mockResolvedValue(true);
+    mocks.checkAccountManagementUpdatePermission.mockResolvedValue(true);
     mocks.aiGatewayFetchAccount.mockResolvedValue({
       consentStatus: 'granted',
       consent: {
@@ -71,7 +71,7 @@ describe('AI consent actions', () => {
       grantedAt: '2026-07-01T00:00:00.000Z',
     });
     expect(mocks.aiGatewayFetchAccount).toHaveBeenCalledWith('tenant-appliance');
-    expect(mocks.checkAccountManagementPermission).not.toHaveBeenCalled();
+    expect(mocks.checkAccountManagementUpdatePermission).not.toHaveBeenCalled();
   });
 
   it('surfaces an unreachable gateway account error', async () => {
@@ -83,7 +83,7 @@ describe('AI consent actions', () => {
   it('grants consent with the session email and normalized terms version', async () => {
     await actions.grantAiConsent(' 2026-07 ');
 
-    expect(mocks.checkAccountManagementPermission).toHaveBeenCalledOnce();
+    expect(mocks.checkAccountManagementUpdatePermission).toHaveBeenCalledOnce();
     expect(mocks.aiGatewayGrantConsent).toHaveBeenCalledWith(
       'tenant-appliance',
       'admin@example.test',
@@ -112,12 +112,12 @@ describe('AI consent actions', () => {
   it('revokes consent for the session tenant', async () => {
     await actions.revokeAiConsent();
 
-    expect(mocks.checkAccountManagementPermission).toHaveBeenCalledOnce();
+    expect(mocks.checkAccountManagementUpdatePermission).toHaveBeenCalledOnce();
     expect(mocks.aiGatewayRevokeConsent).toHaveBeenCalledWith('tenant-appliance');
   });
 
   it('rejects consent mutations without account-management permission', async () => {
-    mocks.checkAccountManagementPermission.mockResolvedValue(false);
+    mocks.checkAccountManagementUpdatePermission.mockResolvedValue(false);
 
     await expect(actions.grantAiConsent('2026-07')).rejects.toThrow(
       'You do not have permission to manage AI consent',

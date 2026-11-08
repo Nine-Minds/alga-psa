@@ -167,7 +167,7 @@ describe('ClientCommandCenter', () => {
     getClientPulseMock.mockResolvedValue(pulse({ locations: [{
       location_id: 'loc-1', location_name: 'HQ', address_line1: null, city: null,
       phone: '+13202521658', phone_extension: '42', country_code: 'US', email: null,
-      is_default: true, is_billing: false, is_shipping: false,
+      is_default: true, is_billing: false, is_shipping: false, contact_count: 0,
     }] }));
     renderCenter();
     expect(await screen.findAllByText('+1 320 252 1658 ext. 42')).toHaveLength(2);

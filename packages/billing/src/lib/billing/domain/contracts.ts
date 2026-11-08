@@ -169,6 +169,9 @@ export type ResolvedContractBillingChargeFacts =
         ticketTitle?: string | null;
         ticketDescription?: string | null;
         projectTaskName?: string | null;
+        /** Retained source evidence of contributed (shared) work; absent for native time. */
+        workSourceKind?: string | null;
+        workSourceId?: string | null;
         projectId?: string | null;
         projectPhaseId?: string | null;
         phaseRateOverride?: TimeBasedPhaseRateOverride | null;

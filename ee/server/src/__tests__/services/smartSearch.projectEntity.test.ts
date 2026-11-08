@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@alga-psa/projects/actions/projectActions', () => ({
-  authorizeProjectIds: vi.fn(),
+  authorizeProjectIdsWithRedactions: vi.fn(),
   loadProjectListItemsByIds: vi.fn(),
 }));
 vi.mock('@alga-psa/search/acl', () => ({ aclPredicateSql: vi.fn(), resolveSearchAclPrincipal: vi.fn() }));
@@ -13,7 +13,7 @@ import {
   projectSmartSearch,
   projectSmartSearchScopeSchema,
 } from '../../services/smartSearch/entities/project';
-import { authorizeProjectIds, loadProjectListItemsByIds } from '@alga-psa/projects/actions/projectActions';
+import { authorizeProjectIdsWithRedactions, loadProjectListItemsByIds } from '@alga-psa/projects/actions/projectActions';
 
 const row = {
   project_id: 'pid',
@@ -119,11 +119,11 @@ describe('projectSmartSearch definition', () => {
   });
 
   it('dedupes the ids and re-authorizes them through the projects action', async () => {
-    vi.mocked(authorizeProjectIds).mockResolvedValue(['a']);
+    vi.mocked(authorizeProjectIdsWithRedactions).mockResolvedValue([{ projectId: 'a', redactedFields: [] }]);
     const scope = projectSmartSearch.normalizeScope({ projectIds: ['a', 'a', 'b', ''] });
     expect(scope).toEqual({ projectIds: ['a', 'b'] });
-    await expect(projectSmartSearch.enumerate(scope)).resolves.toEqual(['a']);
-    expect(authorizeProjectIds).toHaveBeenCalledWith(['a', 'b']);
+    await expect(projectSmartSearch.enumerate(scope)).resolves.toEqual([{ id: 'a', redactedFields: [] }]);
+    expect(authorizeProjectIdsWithRedactions).toHaveBeenCalledWith(['a', 'b']);
   });
 
   it('hydrates rows through the project by-id loader and reshapes the result', async () => {
@@ -131,11 +131,11 @@ describe('projectSmartSearch definition', () => {
       projects: [{ project_id: 'a' } as never],
       metadata: { projectTags: { a: [] } },
     });
-    await expect(projectSmartSearch.hydrateRows({ projectIds: ['a'] }, ['a'])).resolves.toEqual({
+    await expect(projectSmartSearch.hydrateRows({ projectIds: ['a'] }, ['a'], new Map())).resolves.toEqual({
       rows: [{ project_id: 'a' }],
       metadata: { projectTags: { a: [] } },
     });
-    expect(loadProjectListItemsByIds).toHaveBeenCalledWith(['a']);
+    expect(loadProjectListItemsByIds).toHaveBeenCalledWith(['a'], {});
     expect(projectSmartSearch.rowId({ project_id: 'z' } as never)).toBe('z');
   });
 

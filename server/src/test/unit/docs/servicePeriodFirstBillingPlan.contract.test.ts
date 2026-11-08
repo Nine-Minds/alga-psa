@@ -154,6 +154,14 @@ const billingCycleAlignmentPostInventoryRemovals = new Set([
 const servicePeriodPostInventoryRefs = new Set([
   // alga-2026-0003012: shared invoice field policy classifies service-period fields for create and update.
   'server/src/lib/api/schemas/invoiceFieldPolicy.ts',
+  // Bundle presentation compares component quantities across billed periods.
+  'packages/billing/src/lib/invoiceBundleComponents/bundleComponents.test.ts',
+  'packages/billing/src/lib/invoiceBundleComponents/components.ts',
+  'packages/billing/src/lib/invoiceBundleComponents/preview.ts',
+  'packages/billing/src/lib/invoiceBundleComponents/previousPeriod.ts',
+  'packages/billing/src/lib/invoiceBundleComponents/snapshot.ts',
+  'packages/client-portal/src/components/billing/InvoiceDetailsDialog.bundleRows.test.tsx',
+  'server/src/test/integration/billing/invoiceBundleComponentRows.integration.test.ts',
   // alga-2026-0002883 (CM T0-2): late approved hourly time loader reads persisted service-period fields.
   'packages/billing/src/lib/billing/lateHourlyTime.ts',
   // alga-2026-0002883 (CM T0-2): late approved hourly time integration test seeds persisted service-period fields.

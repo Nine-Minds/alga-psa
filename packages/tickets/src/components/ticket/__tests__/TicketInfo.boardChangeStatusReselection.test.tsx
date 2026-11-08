@@ -5,6 +5,7 @@ import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import TicketInfo from '../TicketInfo';
+import { getTicketCategoriesByBoard } from '../../../actions/ticketCategoryActions';
 
 const getTicketStatusesMock = vi.fn();
 
@@ -69,7 +70,12 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/tickets/PrioritySelect', () => ({
-  PrioritySelect: () => <div data-testid="priority-select" />,
+  PrioritySelect: ({ value, options, onValueChange }: { value?: string | null; options: Array<{ value: string; label: string }>; onValueChange: (value: string) => void }) => (
+    <select data-testid="priority-select" value={value ?? ''} onChange={(event) => onValueChange(event.target.value)}>
+      <option value="" />
+      {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+    </select>
+  ),
 }));
 
 vi.mock('@alga-psa/ui/components/UserPicker', () => ({
@@ -166,8 +172,8 @@ vi.mock('@alga-psa/reference-data/actions', () => ({
 }));
 
 vi.mock('../../../actions/ticketCategoryActions', () => ({
-  getTicketCategories: vi.fn().mockResolvedValue({ categories: [], boardConfig: { category_type: 'none', priority_type: 'custom', display_itil_impact: false, display_itil_urgency: false } }),
-  getTicketCategoriesByBoard: vi.fn().mockResolvedValue({ categories: [], boardConfig: { category_type: 'none', priority_type: 'custom', display_itil_impact: false, display_itil_urgency: false } }),
+  getTicketCategories: vi.fn().mockResolvedValue({ categories: [], boardConfig: { category_type: 'custom', priority_type: 'custom', display_itil_impact: false, display_itil_urgency: false } }),
+  getTicketCategoriesByBoard: vi.fn().mockResolvedValue({ categories: [], boardConfig: { category_type: 'custom', priority_type: 'custom', display_itil_impact: false, display_itil_urgency: false } }),
 }));
 
 vi.mock('../../../lib/ticketRichText', () => ({
@@ -190,6 +196,7 @@ vi.mock('../useTicketRichTextUploadSession', () => ({
 describe('TicketInfo board change status reselection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getTicketCategoriesByBoard).mockResolvedValue({ categories: [], boardConfig: { category_type: 'custom', priority_type: 'custom', display_itil_impact: false, display_itil_urgency: false } });
   });
 
   const baseTicket = {
@@ -214,6 +221,56 @@ describe('TicketInfo board change status reselection', () => {
     sla_started_at: null,
     entered_at: new Date('2026-03-14T10:00:00.000Z').toISOString(),
   } as any;
+
+  it('shows a cleared priority after moving from an ITIL board to a custom board', async () => {
+    getTicketStatusesMock.mockImplementation(async (boardId: string) => [
+      { status_id: boardId === 'board-a' ? 'status-a' : 'status-b', name: 'Open', is_closed: false },
+    ]);
+    vi.mocked(getTicketCategoriesByBoard).mockImplementation(async (boardId: string) => ({
+      categories: [],
+      boardConfig: {
+        category_type: 'custom',
+        priority_type: boardId === 'board-a' ? 'itil' : 'custom',
+        display_itil_impact: false,
+        display_itil_urgency: false,
+      },
+    }));
+    const onSaveChanges = vi.fn().mockResolvedValue(true);
+    render(
+      <TicketInfo
+        id="ticket-info"
+        ticket={baseTicket}
+        conversations={[]}
+        statusOptions={[]}
+        agentOptions={[]}
+        boardOptions={[
+          { value: 'board-a', label: 'Board A' },
+          { value: 'board-b', label: 'Board B' },
+        ]}
+        priorityOptions={[
+          { value: 'priority-1', label: 'ITIL Priority', is_from_itil_standard: true },
+          { value: 'priority-custom', label: 'Custom Priority', is_from_itil_standard: false },
+        ]}
+        onSelectChange={vi.fn()}
+        onSaveChanges={onSaveChanges}
+        responseStateTrackingEnabled={false}
+      />
+    );
+    await waitFor(() => expect(screen.queryByTestId('priority-select')).not.toBeInTheDocument());
+    const boardSelect = screen.getByRole('option', { name: 'Board A' }).closest('select')!;
+    fireEvent.change(boardSelect, { target: { value: 'board-b' } });
+    const prioritySelect = await screen.findByTestId('priority-select');
+    await waitFor(() => expect(prioritySelect).toHaveValue(''));
+    expect(prioritySelect.querySelector('option[value="priority-1"]')).toBeNull();
+    expect(screen.getByRole('option', { name: 'Custom Priority' })).toBeInTheDocument();
+    const statusSelect = screen.getAllByRole('combobox')[0];
+    await waitFor(() => expect(statusSelect.querySelector('option[value="status-b"]')).not.toBeNull());
+    fireEvent.change(statusSelect, { target: { value: 'status-b' } });
+    fireEvent.click(screen.getByTestId('ticket-info-save-changes-btn'));
+    await waitFor(() => {
+      expect(onSaveChanges).toHaveBeenCalledWith(expect.objectContaining({ board_id: 'board-b', priority_id: null }));
+    });
+  });
 
   it('T027: loads ticket status options only for the selected board', async () => {
     getTicketStatusesMock.mockImplementation(async (boardId: string) => {

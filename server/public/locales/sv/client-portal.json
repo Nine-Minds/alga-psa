@@ -778,7 +778,10 @@
       "deleteError": "Det gick inte att radera användaren",
       "reportsTo": "Rapporterar till",
       "noManager": "Ingen chef",
-      "reportsToHelp": "En chef kan se ärenden, enheter och projekt för personer som rapporterar till dem när deras synlighetsgrupp är begränsad till egna poster."
+      "reportsToHelp": "En chef kan se ärenden, enheter och projekt för personer som rapporterar till dem när deras synlighetsgrupp är begränsad till egna poster.",
+      "locations": "Platser",
+      "primaryLocation": "Primär",
+      "remote": "Distans"
     },
     "messages": {
       "saveChanges": "Spara ändringar",

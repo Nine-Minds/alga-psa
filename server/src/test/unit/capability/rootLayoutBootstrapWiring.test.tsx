@@ -17,12 +17,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
  * Only the request environment and unrelated tenant lookups are stubbed.
  */
 
-const env = vi.hoisted(() => ({ tenant: 'internal' as string | null }));
+const env = vi.hoisted(() => ({ tenant: 'internal' as string | null, pathname: '/msp/projects' }));
 const flagChecker = vi.hoisted(() => vi.fn(async () => true));
+const resolvePublicQuoteRequest = vi.hoisted(() => vi.fn(async () => ({ reader: { locale: 'de' } })));
 
 vi.mock('next/font/local', () => ({ default: () => ({ className: 'font', variable: '--font' }) }));
 vi.mock('next/headers.js', () => ({
-  headers: async () => new Headers({ host: 'localhost:3000', 'x-pathname': '/msp/projects' }),
+  headers: async () => new Headers({ host: 'localhost:3000', 'x-pathname': env.pathname }),
   cookies: async () => ({ get: () => undefined, getAll: () => [] }),
 }));
 vi.mock('@alga-psa/tenancy/actions/coreTenantActions', () => ({ getCurrentTenant: async () => env.tenant }));
@@ -36,11 +37,8 @@ vi.mock('@alga-psa/tenancy/actions/tenant-actions/tenantThemeActions', () => ({
 }));
 vi.mock('@alga-psa/tenancy/actions/locale-actions/getHierarchicalLocale', () => ({ getHierarchicalLocaleAction: async () => 'en' }));
 vi.mock('@alga-psa/tenancy', () => ({ generateBrandingStyles: () => '' }));
-vi.mock('@alga-psa/ui/lib/i18n/serverOnly', () => ({
-  getServerLocale: async () => 'en',
-  getServerTranslation: async () => ({ t: (k: string) => k }),
-  registerServerLocaleResolver: () => {},
-}));
+// Keep locale registration and resolution real; stub only the recipient lookup.
+vi.mock('../../../lib/quote/publicQuoteRequest', () => ({ resolvePublicQuoteRequest }));
 vi.mock('react', async (orig) => ({ ...(await orig<typeof import('react')>()), cache: <T,>(fn: T) => fn }));
 vi.mock('@alga-psa/core/logger', () => ({ default: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } }));
 // Client side of the provider: PostHog itself is off (usage stats disabled), as when posthog-js is blocked.
@@ -82,8 +80,9 @@ function findElement(node: ReactNode, type: unknown): ReactElement | null {
   return findElement((node.props as { children?: ReactNode }).children, type);
 }
 
-async function renderLayoutProvider(): Promise<{ capability: Record<string, boolean>; flag: Record<string, boolean> }> {
+async function renderLayoutProvider(expectedLocale = 'en'): Promise<{ capability: Record<string, boolean>; flag: Record<string, boolean> }> {
   const tree = await RootLayout({ children: null });
+  expect(tree.props.lang).toBe(expectedLocale);
   const provider = findElement(tree, PostHogProvider);
   expect(provider, 'RootLayout must render PostHogProvider').not.toBeNull();
   const { children: _layoutChildren, ...props } = provider!.props as { children?: ReactNode };
@@ -94,6 +93,8 @@ async function renderLayoutProvider(): Promise<{ capability: Record<string, bool
 describe('root layout -> PostHogProvider bootstrap wiring', () => {
   beforeEach(() => {
     env.tenant = 'internal';
+    env.pathname = '/msp/projects';
+    resolvePublicQuoteRequest.mockClear();
     delete process.env.FORCE_CAPABILITIES;
     delete process.env.DISABLE_FEATURE_FLAGS;
     delete process.env.NEXT_PUBLIC_DISABLE_FEATURE_FLAGS;
@@ -126,5 +127,15 @@ describe('root layout -> PostHogProvider bootstrap wiring', () => {
     const state = await renderLayoutProvider();
     expect(state.capability).toEqual({ enabled: false, admitted: false, resolved: false });
     expect(flagChecker).not.toHaveBeenCalled();
+  });
+
+  it('uses the public quote recipient language while preserving the signed-in tenant bootstrap', async () => {
+    const token = 'a'.repeat(43);
+    env.pathname = `/quote/${token}`;
+    const state = await renderLayoutProvider('de');
+    expect(resolvePublicQuoteRequest).toHaveBeenCalledWith(token);
+    expect(state.capability).toEqual({ enabled: false, admitted: false, resolved: true });
+    expect(state.flag).toEqual({ enabled: true, resolved: true });
+    expect(flagChecker).toHaveBeenCalledWith('release-v2-0-feature', { tenantId: 'internal' });
   });
 });

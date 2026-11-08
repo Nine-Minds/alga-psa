@@ -396,6 +396,8 @@ const ContractLineMapping = {
             'lines.invoice_line_description',
             'lines.created_at',
             'lines.template_line_name as contract_line_name',
+            'lines.invoice_line_description',
+            'lines.invoice_line_subtitle',
             'lines.billing_frequency',
             'lines.billing_timing',
             db.raw('false as is_custom'),
@@ -403,7 +405,9 @@ const ContractLineMapping = {
             'lines.minimum_billable_time',
             'lines.round_up_to_nearest',
             'tfc.base_rate as default_rate',
-            db.raw('NULL::uuid as location_id')
+            db.raw('NULL::uuid as location_id'),
+            // contract_template_lines has no billing-profile column; profiles are a per-client concept.
+            db.raw('NULL::uuid as billing_profile_id')
           )
           .orderBy('lines.display_order', 'asc');
       }
@@ -427,6 +431,8 @@ const ContractLineMapping = {
           'cl.end_date',
           'cl.created_at',
           'cl.contract_line_name',
+          'cl.invoice_line_description',
+          'cl.invoice_line_subtitle',
           'cl.billing_frequency',
           'cl.billing_timing',
           'cl.is_custom',
@@ -434,7 +440,8 @@ const ContractLineMapping = {
           'cl.minimum_billable_time',
           'cl.round_up_to_nearest',
           'cl.custom_rate as default_rate',
-          'cl.location_id'
+          'cl.location_id',
+          'cl.billing_profile_id'
         )
         .orderBy('cl.display_order', 'asc');
     } catch (error) {

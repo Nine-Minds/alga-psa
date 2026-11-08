@@ -434,7 +434,6 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
     zOpenApi.object({
       invoice_ids: zOpenApi.array(zOpenApi.string().guid()).min(1).max(100),
       status: zOpenApi.enum(['draft', 'sent', 'paid', 'overdue', 'cancelled', 'pending', 'prepayment', 'partially_applied']),
-      finalized_at: zOpenApi.string().optional(),
     }),
   );
 
@@ -992,7 +991,7 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
     method: 'post',
     path: '/api/v1/invoices/bulk',
     summary: 'Bulk update invoice status',
-    description: 'Bulk status transition route using bulkInvoiceStatusUpdateSchema.',
+    description: 'Bulk status transition route using bulkInvoiceStatusUpdateSchema. Only metadata transitions are applied; paid, cancelled and finalize transitions are reported as per-invoice errors naming the dedicated command. finalized_at is not accepted.',
     tags: [invoiceTag],
     security: [{ ApiKeyAuth: [] }],
     request: { body: { schema: InvoiceBulkStatusBody } },

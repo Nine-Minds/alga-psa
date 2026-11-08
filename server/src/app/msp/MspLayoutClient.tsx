@@ -38,6 +38,7 @@ import {
   DATA_TABLE_PAGE_SIZES_PREFERENCE_KEY,
   type DataTablePageSizes,
 } from '@alga-psa/ui/components/DataTablePreferences';
+import { TicketNotificationDefaultsProvider } from '@alga-psa/tickets/lib/notificationSuppressionDefaults';
 
 interface Props {
   children: React.ReactNode;
@@ -48,6 +49,8 @@ interface Props {
   currencyCode?: string;
   /** Date shape resolved from the tenant's country, for DateFormatProvider. */
   dateFormat?: CountryDateFormat | null;
+  /** notification_settings.default_dont_notify_customer, seeding ticket notification checkboxes. */
+  dontNotifyCustomerDefault?: boolean;
   productCode: ProductCode;
   needsOnboarding: boolean;
   /** Whether this user may run workspace setup; only they are sent to it. */
@@ -98,6 +101,7 @@ export function MspLayoutClient({
   session,
   currencyCode,
   dateFormat,
+  dontNotifyCustomerDefault = false,
   productCode,
   needsOnboarding,
   canRunOnboarding = false,
@@ -203,6 +207,9 @@ export function MspLayoutClient({
   }, [needsOnboarding, isOnboardingPage, sessionTenant, onboardingResolvedServerSide, canRunProductOnboarding]);
 
   const isAlgaDesk = productCode === 'algadesk';
+  // Rendered by the shell inside its flex column: the shell root is `fixed inset-0`
+  // and would paint over a banner placed beside it.
+  const licenseBanner = canShowLicenseBanner ? <LicenseBanner /> : null;
 
   const content = shouldForceOnboarding && !isOnboardingPage ? (
     <OnboardingRedirectFallback />
@@ -214,7 +221,6 @@ export function MspLayoutClient({
         <TierProvider selfHostLicensing={selfHostLicensing}>
           <MspCallLinkProvider>
           <IncomingCallProvider tenant={session?.user?.tenant} userId={session?.user?.id}>
-          {canShowLicenseBanner && <LicenseBanner />}
           <PostHogUserIdentifier />
           <TagProvider>
             <ClientUIStateProvider
@@ -245,7 +251,7 @@ export function MspLayoutClient({
                     <CoManagedCustomerShell><CoManagedWorkspaceNotice notice={workspaceNotice} />{routeBehavior === 'allowed' ? children : <ProductRouteBoundary behavior={routeBehavior} scope="msp" />}</CoManagedCustomerShell>
                   ) : isAlgaDesk ? (
                     routeBehavior === 'allowed' ? (
-                      <AlgaDeskMspShell initialSidebarCollapsed={initialSidebarCollapsed}>
+                      <AlgaDeskMspShell initialSidebarCollapsed={initialSidebarCollapsed} topBanner={licenseBanner}>
                         {children}
                       </AlgaDeskMspShell>
                     ) : (
@@ -253,7 +259,7 @@ export function MspLayoutClient({
                     )
                   ) : (
                     <AIChatContextProvider>
-                      <DefaultLayout initialSidebarCollapsed={initialSidebarCollapsed}>
+                      <DefaultLayout initialSidebarCollapsed={initialSidebarCollapsed} topBanner={licenseBanner}>
                         {children}
                       </DefaultLayout>
                     </AIChatContextProvider>
@@ -277,7 +283,9 @@ export function MspLayoutClient({
     <I18nWrapper portal="msp" initialLocale={initialLocale || undefined} preloadedResources={preloadedLocaleResources}>
       <CurrencyFormatProvider currencyCode={currencyCode || 'USD'}>
         <DateFormatProvider dateFormat={dateFormat}>
-          {content}
+          <TicketNotificationDefaultsProvider dontNotifyCustomer={dontNotifyCustomerDefault}>
+            {content}
+          </TicketNotificationDefaultsProvider>
         </DateFormatProvider>
       </CurrencyFormatProvider>
     </I18nWrapper>

@@ -28,7 +28,7 @@ vi.mock('@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee', () => ({
   assertHumanWorkOwner: vi.fn(async () => undefined),
 }));
 
-vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: mocks.hasPermission }));
+vi.mock('../../../lib/auth/rbac', () => ({ hasPermission: mocks.hasPermission }));
 
 import { InteractionService } from '../../../lib/api/services/InteractionService';
 
@@ -79,7 +79,7 @@ describe('InteractionService', () => {
 
   it.each([undefined, [], ['user-1']])('books self without a schedule permission check (%j)', async (ids) => {
     const publish = vi.fn();
-    mocks.createInteractionScheduleEntry.mockResolvedValue({ publishScheduleEntryCreated: publish });
+    mocks.createInteractionScheduleEntry.mockResolvedValue({ entry: { entry_id: 'entry-1' }, publishScheduleEntryCreated: publish });
     await new InteractionService().create({ ...scheduleInput, schedule_assigned_user_ids: ids }, context);
     expect(mocks.hasPermission).not.toHaveBeenCalled();
     expect(mocks.createInteractionScheduleEntry).toHaveBeenCalledWith({
