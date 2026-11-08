@@ -2263,7 +2263,8 @@
       "Stable",
       "Code 128",
       "RMA {{number}} · {{status}}",
-      "Page {{page}}"
+      "Page {{page}}",
+      "Audit"
     ],
     "caseInsensitive": [
       "api",
