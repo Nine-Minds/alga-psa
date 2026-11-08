@@ -1488,7 +1488,7 @@
       "refresh": "Aktualisieren",
       "newPlan": "Neuer Wartungsplan",
       "skip": "Überspringen",
-      "skipTooltip": "Mit Angabe eines Grundes überspringen — der Plan rückt zum nächsten Wartungstermin vor",
+      "skipTooltip": "Mit Pflichtangabe eines Grundes überspringen — der Plan rückt zum nächsten Wartungstermin vor",
       "complete": "Wartung abschließen",
       "createTicket": "Ticket erstellen",
       "openTicket": "Ticket öffnen ↗",
@@ -1521,7 +1521,7 @@
     },
     "filters": {
       "searchPlaceholder": "Pläne, Assets oder Kunden suchen",
-      "actionable": "Bearbeitbar",
+      "actionable": "Zu erledigen",
       "allStatuses": "Alle Status",
       "completed": "Abgeschlossen",
       "skipped": "Übersprungen",
@@ -1539,7 +1539,7 @@
       "calendar": "Kalender"
     },
     "queue": {
-      "actionableTitle": "Bearbeitbare Wartungstermine",
+      "actionableTitle": "Zu erledigende Wartungstermine",
       "plansTitle": "Aktive Planliste (mit Wartungsterminen)",
       "loading": "Wartungen werden geladen…",
       "empty": "Keine Wartungstermine entsprechen diesen Filtern.",
@@ -1581,7 +1581,7 @@
     },
     "detail": {
       "noSelection": "Kein Wartungstermin ausgewählt",
-      "noSelectionHint": "Wählen Sie einen Wartungstermin aus der Arbeitsliste aus, um das Asset, den Plan, das verknüpfte Ticket und die Ausführungsaktionen anzuzeigen — oder setzen Sie die Filter zurück, um weitere Arbeit anzuzeigen.",
+      "noSelectionHint": "Wählen Sie einen Wartungstermin aus der Arbeitsliste aus, um das zugehörige Asset, den Plan, das verknüpfte Ticket und die Aktionen zur Durchführung zu sehen — oder setzen Sie die Filter zurück, um weitere Arbeit anzuzeigen.",
       "unassignedClient": "Kein Kunde zugewiesen",
       "dueSuffix": "· fällig am {{date}}",
       "nextDueTooltip": "Die nächste Fälligkeit wird ab dem tatsächlichen Abschlussdatum berechnet.",
@@ -1612,8 +1612,8 @@
       "checklist": "Checkliste:",
       "skipTitle": "Nachweis des Überspringens",
       "reason": "Grund:",
-      "closedBy": "Abgeschlossen von:",
-      "closed": "Abgeschlossen am:"
+      "closedBy": "Geschlossen von:",
+      "closed": "Geschlossen am:"
     },
     "skip": {
       "title": "Wartung überspringen",
