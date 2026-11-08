@@ -13,7 +13,7 @@ import {
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 
 /**
- * Require both the coarse asset permission and an explicit per-verb policy
+ * Require both the coarse asset permission and the kernel's per-verb policy
  * decision before a caller touches an asset or data owned by it. Resolve the
  * asset in the same transaction so authorization and note access share a view.
  */
@@ -46,10 +46,8 @@ export async function assertAssetAccess(
   } catch {
     throw new Error('Asset not found');
   }
-  if (!rules.some((rule) => rule.resource === 'asset' && rule.action === action)) {
-    throw new Error('Asset not found');
-  }
-
+  // Bundle rules narrow RBAC grants. The kernel also enforces built-in client
+  // scope when no bundle rule applies to this action.
   const context = await createAssetReadContextWithRules(trx, subject, rules);
   if (!await isAssetActionAllowed(trx, tenant, context, asset, action)) {
     throw new Error('Asset not found');

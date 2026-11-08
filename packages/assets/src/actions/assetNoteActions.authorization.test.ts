@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 type Row = Record<string, any>;
 const h = vi.hoisted(() => ({
   allowed: true,
+  hasNarrowing: true,
   tables: {} as Record<string, Row[]>,
   authorizationCalls: [] as string[],
 }));
@@ -36,6 +37,7 @@ vi.mock('@alga-psa/db', () => ({
 vi.mock('@alga-psa/authorization/bundles/service', () => ({
   resolveBundleNarrowingRulesForEvaluation: vi.fn(async (_trx: unknown, input: any) => {
     h.authorizationCalls.push(input.resource.action);
+    if (!h.hasNarrowing) return [];
     return [{
       id: `asset-${input.resource.action}-rule`, resource: 'asset', action: input.resource.action,
       templateKey: 'selected_clients', selectedClientIds: h.allowed ? ['client-1'] : ['client-outside-policy'],
@@ -50,6 +52,7 @@ import { deleteAssetNote, getAssetNoteContent, saveAssetNote } from './assetNote
 
 function seedNotes() {
   h.allowed = true;
+  h.hasNarrowing = true;
   h.authorizationCalls = [];
   h.tables = {
     assets: [{ asset_id: 'asset-1', client_id: 'client-1', name: 'Device', notes_document_id: 'doc-1' }],
@@ -100,5 +103,22 @@ describe('asset note actions authorization', () => {
     await expect(saveAssetNote('asset-1', next)).resolves.toEqual({ document_id: 'doc-1' });
     expect(h.tables.document_block_content[0].block_data).toBe(JSON.stringify(next));
     expect(h.authorizationCalls).toEqual(['read', 'update']);
+  });
+
+  it('reads, saves and deletes notes with asset permissions and no bundle narrowing', async () => {
+    h.hasNarrowing = false;
+    await expect(getAssetNoteContent('asset-1')).resolves.toMatchObject({
+      document: { document_id: 'doc-1' }, blockData: [{ type: 'paragraph' }],
+    });
+    const next = [{ type: 'paragraph', content: [{ type: 'text', text: 'updated' }] }];
+    await expect(saveAssetNote('asset-1', next)).resolves.toEqual({ document_id: 'doc-1' });
+    expect(h.tables.document_block_content[0].block_data).toBe(JSON.stringify(next));
+
+    await expect(deleteAssetNote('asset-1', true)).resolves.toBeUndefined();
+    expect(h.tables.assets[0].notes_document_id).toBeNull();
+    expect(h.tables.documents).toEqual([]);
+    expect(h.tables.document_block_content).toEqual([]);
+    expect(h.tables.document_associations).toEqual([]);
+    expect(h.authorizationCalls).toEqual(['read', 'update', 'delete']);
   });
 });

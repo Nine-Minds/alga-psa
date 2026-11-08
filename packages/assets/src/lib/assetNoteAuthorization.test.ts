@@ -89,10 +89,28 @@ describe('assertAssetAccess with the authorization kernel', () => {
     expect(h.resolverCalls).toBe(1);
   });
 
-  it('denies when the requested verb has no rule', async () => {
-    await expect(assertAssetAccess({} as any, 'tenant-1', user, 'asset-1', 'delete'))
-      .rejects.toThrow('Asset not found');
+  it.each(['read', 'update', 'delete'] as const)('allows an RBAC-authorized %s without bundle narrowing', async (action) => {
+    h.rules = [];
+    await expect(assertAssetAccess({} as any, 'tenant-1', user, 'asset-1', action))
+      .resolves.toEqual({ asset_id: 'asset-1', client_id: 'client-1' });
+    expect(h.permissionCalls[0]).toEqual([user, 'asset', action, {}]);
     expect(h.resolverCalls).toBe(1);
+  });
+
+  it('does not apply a read narrowing rule to an authorized delete', async () => {
+    h.rules = selectedClients('read', ['client-outside-policy']);
+    await expect(assertAssetAccess({} as any, 'tenant-1', user, 'asset-1', 'delete'))
+      .resolves.toEqual({ asset_id: 'asset-1', client_id: 'client-1' });
+    expect(h.resolverCalls).toBe(1);
+  });
+
+  it('enforces client portal scope even without bundle narrowing', async () => {
+    h.rules = [];
+    const clientUser = { user_id: 'portal-1', user_type: 'client' as const, clientId: 'client-1' };
+    await expect(assertAssetAccess({} as any, 'tenant-1', clientUser, 'asset-1', 'read'))
+      .resolves.toEqual({ asset_id: 'asset-1', client_id: 'client-1' });
+    await expect(assertAssetAccess({} as any, 'tenant-1', { ...clientUser, clientId: 'other-client' }, 'asset-1', 'read'))
+      .rejects.toThrow('Asset not found');
   });
 
   it('fails closed when policy resolution throws', async () => {
@@ -102,9 +120,10 @@ describe('assertAssetAccess with the authorization kernel', () => {
     expect(h.resolverCalls).toBe(1);
   });
 
-  it('denies when the coarse asset permission is missing', async () => {
+  it.each(['read', 'update', 'delete'] as const)('denies %s when the coarse asset permission is missing', async (action) => {
     h.permission = false;
-    await expect(assertAssetAccess({} as any, 'tenant-1', user, 'asset-1', 'update'))
+    h.rules = [];
+    await expect(assertAssetAccess({} as any, 'tenant-1', user, 'asset-1', action))
       .rejects.toThrow('Asset not found');
     expect(h.resolverCalls).toBe(0);
   });
