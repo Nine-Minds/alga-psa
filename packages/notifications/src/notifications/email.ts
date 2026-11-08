@@ -26,6 +26,21 @@ import type { SupportedLocale } from '@alga-psa/core/i18n/config';
 export type EmailNotificationResult =
   | { status: 'sent'; messageId?: string }
   | { status: 'skipped'; reason: string };
+/**
+ * Settings and templates arrive from a server action as a whole object, so the
+ * columns the UI never offers — identity, language key, the system template a
+ * row shadows — are allow-listed out instead of trusted.
+ */
+const SETTINGS_WRITABLE_COLUMNS = ['is_enabled', 'default_dont_notify_customer', 'rate_limit_per_minute'] as const;
+const TEMPLATE_WRITABLE_COLUMNS = ['subject', 'html_content', 'text_content', 'language_code'] as const;
+
+function pickDefined<T extends object>(source: T, columns: readonly (keyof T & string)[]): Partial<T> {
+  const picked: Partial<T> = {};
+  for (const column of columns) {
+    if (source?.[column] !== undefined) picked[column] = source[column];
+  }
+  return picked;
+}
 
 export class EmailNotificationService implements NotificationService {
   constructor(
@@ -78,7 +93,7 @@ export class EmailNotificationService implements NotificationService {
   async updateSettings(tenant: string, settings: Partial<NotificationSettings>): Promise<NotificationSettings> {
     const knex = await this.getTenantKnex();
     const [updated] = await this.tenantScopedTable(knex, 'notification_settings', tenant)
-      .update(settings)
+      .update(pickDefined(settings, SETTINGS_WRITABLE_COLUMNS))
       .returning('*');
     return updated;
   }
@@ -142,9 +157,12 @@ export class EmailNotificationService implements NotificationService {
       }
     }
 
+    const { id: _id, tenant: _tenant, created_at: _createdAt, updated_at: _updatedAt, ...insertable } =
+      template as Partial<TenantEmailTemplate>;
+
     const [created] = await tenantDb(knex, tenant).table<TenantEmailTemplate>('tenant_email_templates')
       .insert({
-        ...template,
+        ...insertable,
         tenant,
       })
       .returning('*');
@@ -160,7 +178,7 @@ export class EmailNotificationService implements NotificationService {
     const knex = await this.getTenantKnex();
     const [updated] = await this.tenantScopedTable(knex, 'tenant_email_templates', tenant)
       .where({ id })
-      .update(template)
+      .update(pickDefined(template, TEMPLATE_WRITABLE_COLUMNS))
       .returning('*');
     return updated;
   }

@@ -41,6 +41,7 @@ export default defineConfig({
       { find: /^@alga-psa\/event-schemas$/, replacement: path.resolve(__dirname, '../event-schemas/src/index.ts') },
       { find: /^@alga-psa\/event-schemas\/(.*)$/, replacement: path.resolve(__dirname, '../event-schemas/src/$1') },
       { find: /^@alga-psa\/db$/, replacement: path.resolve(__dirname, '../db/src/index.ts') },
+      { find: /^@alga-psa\/db\/commentEventRegistry$/, replacement: path.resolve(__dirname, '../db/src/lib/commentEventRegistry.ts') },
       { find: /^@alga-psa\/db\/admin$/, replacement: path.resolve(__dirname, '../db/src/lib/admin.ts') },
       // tenantDb (like admin above) lives under src/lib, not src directly, so
       // it needs its own rule ahead of the generic one below.

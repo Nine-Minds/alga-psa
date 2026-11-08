@@ -129,7 +129,7 @@ export type DesignerInspectorField =
   | {
       kind: 'widget';
       id: string;
-      widget: 'table-editor';
+      widget: 'table-editor' | 'bundle-component-rows';
       domId?: string;
       visibleWhen?: DesignerInspectorVisibleWhen;
     }

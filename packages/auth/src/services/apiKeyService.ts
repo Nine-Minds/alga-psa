@@ -19,6 +19,7 @@ interface ApiKey {
   metadata: Record<string, unknown> | null;
   usage_limit: number | null;
   usage_count: number;
+  agent_id?: string | null;
 }
 
 /** Writing last_used_at on every request made each API call a DB write; once a minute is plenty for the admin UI. */
@@ -45,13 +46,20 @@ export class ApiKeyService {
     knex: Knex,
     tenant: string,
     userId: string
-  ): Promise<'user_inactive' | 'client_owner' | 'tenant_suspended' | null> {
+  ): Promise<'user_inactive' | 'client_owner' | 'owner_type_rejected' | 'tenant_suspended' | null> {
     const user = await tenantDb(knex, tenant)
       .table('users')
       .where({ user_id: userId })
       .first('is_inactive', 'user_type');
     if (!user || user.is_inactive) return 'user_inactive';
     if (user.user_type === 'client') return 'client_owner';
+    // Allow-list: an active internal owner passes. Any other owner type is
+    // admitted only if the edition boundary approves it (the CE stub never does).
+    if (user.user_type !== 'internal') {
+      const { servicePrincipalKeyGate } = await import('@product/service-principals/entry');
+      const approved = await servicePrincipalKeyGate({ ...user, user_id: userId, tenant });
+      if (!approved) return 'owner_type_rejected';
+    }
     if (await isTenantSuspended(knex, tenant)) return 'tenant_suspended';
     return null;
   }

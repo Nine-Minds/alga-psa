@@ -210,8 +210,9 @@ describe('TaskForm "My group" host', () => {
     vi.mocked(getTaskResourcesAction).mockResolvedValue([{ assignment_id: 'a1', additional_user_id: 'user-b' }] as any);
   });
 
-  it('renders and does not throw without a cross-feature provider (AlgaDesk)', () => {
+  it('renders and does not throw without a cross-feature provider (AlgaDesk)', async () => {
     renderForm('edit', null);
+    await waitFor(() => expect(getTaskResourcesAction).toHaveBeenCalled());
     expect(screen.queryByTestId('group-control')).toBeNull();
     expect(screen.getByText('Task Name *')).toBeTruthy();
   });

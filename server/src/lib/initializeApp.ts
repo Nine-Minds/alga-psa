@@ -48,7 +48,7 @@ export async function initializeApp() {
     // packages (@alga-psa/integrations, @alga-psa/clients, etc.) can check
     // feature flags via @alga-psa/core without importing from server.
     const { featureFlags } = await import('./feature-flags/featureFlags');
-    registerFeatureFlagChecker((flag, ctx) => featureFlags.isEnabled(flag, ctx));
+    registerFeatureFlagChecker((flag, ctx) => featureFlags.evaluate(flag, ctx));
 
     await bootstrapInboundWebhookActions();
     logger.info('Inbound webhook actions bootstrapped');

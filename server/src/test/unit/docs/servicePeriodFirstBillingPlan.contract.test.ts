@@ -152,6 +152,14 @@ const billingCycleAlignmentPostInventoryRemovals = new Set([
 // pass-0 inventory snapshot was taken (recurring service-period ledger work
 // landed after the inventory was captured).
 const servicePeriodPostInventoryRefs = new Set([
+  // Bundle presentation compares component quantities across billed periods.
+  'packages/billing/src/lib/invoiceBundleComponents/bundleComponents.test.ts',
+  'packages/billing/src/lib/invoiceBundleComponents/components.ts',
+  'packages/billing/src/lib/invoiceBundleComponents/preview.ts',
+  'packages/billing/src/lib/invoiceBundleComponents/previousPeriod.ts',
+  'packages/billing/src/lib/invoiceBundleComponents/snapshot.ts',
+  'packages/client-portal/src/components/billing/InvoiceDetailsDialog.bundleRows.test.tsx',
+  'server/src/test/integration/billing/invoiceBundleComponentRows.integration.test.ts',
   // alga-2026-0002945: invoice REST update field classification lists recurring service-period columns as lifecycle-owned.
   'server/src/lib/api/schemas/invoiceUpdateFields.ts',
   // alga-2026-0002883 (CM T0-2): late approved hourly time loader reads persisted service-period fields.
