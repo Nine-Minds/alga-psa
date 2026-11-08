@@ -329,7 +329,8 @@
       "empty": "〖Ƞȯ ƈŀīḗƞŧ-şƥḗƈīƒīƈ ƈħḗƈķŀīşŧ ŧḗḿƥŀȧŧḗş. ················〗",
       "loadFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƈħḗƈķŀīşŧ ŧḗḿƥŀȧŧḗş ··············〗",
       "retry": "〖Řḗŧřẏ ··〗"
-    }
+    },
+    "audits": "〖Ȧŭḓīŧş ···〗"
   },
   "clientCommandCenter": {
     "cards": {
@@ -383,7 +384,12 @@
       "warrantyExpired_other": "〖{{count}} ȯŭŧ ȯƒ ẇȧřřȧƞŧẏ ··········〗",
       "warrantyExpiring_one": "〖1 ḗẋƥīřīƞɠ ≤90ḓ ······〗",
       "warrantyExpiring_other": "〖{{count}} ḗẋƥīřīƞɠ ≤90ḓ ··········〗",
-      "warrantyTracked": "〖 (ȯƒ {{count}} ŧřȧƈķḗḓ) ··········〗"
+      "warrantyTracked": "〖 (ȯƒ {{count}} ŧřȧƈķḗḓ) ··········〗",
+      "auditsLink": "〖Şīŧḗ ȧŭḓīŧş ·····〗",
+      "lastAudit": "〖Ŀȧşŧ ȧŭḓīŧ {{date}} ········〗",
+      "lastAuditMissing_one": "〖1 ḿīşşīƞɠ ····〗",
+      "lastAuditMissing_other": "〖{{count}} ḿīşşīƞɠ ·······〗",
+      "neverAudited": "〖Ƞḗṽḗř ȧŭḓīŧḗḓ ······〗"
     },
     "locations": {
       "billing": "〖Ɓīŀŀīƞɠ ···〗",
@@ -392,7 +398,9 @@
       "manage": "〖Ḿȧƞȧɠḗ ···〗",
       "more": "〖+{{count}} ḿȯřḗ ······〗",
       "none": "〖Ƞȯ ŀȯƈȧŧīȯƞş ẏḗŧ. ·······〗",
-      "shipping": "〖Şħīƥƥīƞɠ ····〗"
+      "shipping": "〖Şħīƥƥīƞɠ ····〗",
+      "lastAudit": "〖Ȧŭḓīŧḗḓ {{date}} ·······〗",
+      "neverAudited": "〖Ƞḗṽḗř ȧŭḓīŧḗḓ ······〗"
     },
     "money": {
       "activeContracts": "〖Ȧƈŧīṽḗ ƈȯƞŧřȧƈŧş ·······〗",
@@ -1698,7 +1706,8 @@
           "members": "〖Ḿḗḿƀḗřş ···〗",
           "people": "〖Ƥḗȯƥŀḗ ···〗"
         }
-      }
+      },
+      "startAudit": "〖Şŧȧřŧ ȧŭḓīŧ ·····〗"
     },
     "tickets": {
       "addTicket": "〖Ȧḓḓ Ŧīƈķḗŧ ····〗",
