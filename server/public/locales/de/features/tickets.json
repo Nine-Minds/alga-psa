@@ -89,7 +89,7 @@
       },
       "unmatchedCount": "{{count}} Wert(e)",
       "unmatchedIntro": "aus Ihrer CSV-Datei stimmen nicht mit vorhandenen Daten überein",
-      "unmatchedNextStep": "Sie klären diese im nächsten Schritt.",
+      "unmatchedNextStep": "Diese klären Sie im nächsten Schritt.",
       "invalidRowCount": "{{count}} Zeile(n)",
       "invalidRowsHelp": "enthalten Validierungsfehler. Aktivieren Sie „Ungültige Zeilen überspringen“, um fortzufahren, oder gehen Sie zurück und korrigieren Sie Ihre CSV-Datei."
     },
@@ -2942,7 +2942,7 @@
       "responseStateUpdated": "{{actor}} hat den Antwortstatus aktualisiert",
       "internalNoteAdded": "{{actor}} hat eine interne Notiz hinzugefügt",
       "replied": "{{actor}} hat geantwortet",
-      "repliedViaEmail": "Per eingehender E-Mail empfangen",
+      "repliedViaEmail": "Über eingehende E-Mail empfangen",
       "repliedViaPortal": "Über das Kundenportal empfangen",
       "commentAdded": "{{actor}} hat einen Kommentar hinzugefügt",
       "commentEdited": "{{actor}} hat einen Kommentar bearbeitet",
@@ -2960,7 +2960,7 @@
       "internalNoteAdded": "Interne Notiz hinzugefügt",
       "customerReply": "Kundenantwort",
       "inboundEmailReply": "Eingehende E-Mail-Antwort",
-      "actor": "Siehe Registerkarte „Konversation“"
+      "actor": "Siehe Registerkarte „Unterhaltung“"
     },
     "filters": {
       "events": {
@@ -2972,7 +2972,7 @@
         "reopened": "Wieder geöffnet",
         "priorityChanged": "Priorität geändert",
         "assigned": "Zugewiesen",
-        "unassigned": "Nicht zugewiesen",
+        "unassigned": "Zuweisung aufgehoben",
         "boardMoved": "In anderes Board verschoben",
         "responseState": "Antwortstatus",
         "messageAdded": "Kommentar hinzugefügt",
@@ -2984,7 +2984,7 @@
         "documentRemoved": "Dokument entfernt",
         "inboundEmail": "Eingehende E-Mail",
         "createdFromTemplate": "Aus Vorlage erstellt",
-        "duplicatedFrom": "Dupliziert von",
+        "duplicatedFrom": "Duplikat von",
         "duplicatedTo": "Dupliziert als",
         "bundleReopened": "Bündel wieder geöffnet",
         "bundleStatusPropagated": "Bündelstatus übertragen"
