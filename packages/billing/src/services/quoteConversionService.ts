@@ -18,6 +18,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { isPendingOptional, isQuoteItemIncluded } from '../lib/quoteItemInclusion';
 import { resolveFixedMemberRatePair } from '@alga-psa/shared/billingClients/fixedMemberRate';
+import { getEffectiveTaxSourceForClient } from '@alga-psa/shared/billingClients/taxSettings';
 import { resolveInvoiceBillingTerms } from '../lib/billing/invoiceDueDate';
 import {
   allocatedOneTimeAmountFor,
@@ -323,6 +324,35 @@ async function resolveProductServiceIds(
     .select('service_id');
 
   return new Set(rows.map((row) => row.service_id as string));
+}
+
+/**
+ * Service category per quoted service. Converted contract lines must carry the
+ * catalog category so category-based billing splits see them like any other line.
+ */
+async function resolveServiceCategoryIds(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  items: IQuoteItem[]
+): Promise<Map<string, string | null>> {
+  const serviceIds = Array.from(
+    new Set(
+      items
+        .map((item) => item.service_id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0)
+    )
+  );
+
+  if (serviceIds.length === 0) {
+    return new Map();
+  }
+
+  const rows = await knexOrTrx('service_catalog')
+    .where({ tenant })
+    .whereIn('service_id', serviceIds)
+    .select('service_id', 'category_id');
+
+  return new Map(rows.map((row) => [row.service_id as string, (row.category_id as string | null) ?? null]));
 }
 
 function isProductQuoteItem(item: IQuoteItem, productServiceIds: Set<string>): boolean {
@@ -673,6 +703,7 @@ async function convertQuoteToDraftContractRecords(
 
   const nowIso = new Date().toISOString();
   const productServiceIds = await resolveProductServiceIds(knexOrTrx, tenant, recurringItems);
+  const categoryByServiceId = await resolveServiceCategoryIds(knexOrTrx, tenant, recurringItems);
   const contractLineMappings: ContractLineMapping[] = recurringItems.map((item) => {
     const contractLineType = mapQuoteItemToContractLineType(item);
     return {
@@ -696,6 +727,7 @@ async function convertQuoteToDraftContractRecords(
       contract_line_type: contractLineType,
       billing_timing: getContractLineBillingTiming(item),
       display_order: index,
+      service_category: item.service_id ? (categoryByServiceId.get(item.service_id) ?? null) : null,
       // A per-unit line has no bundle total: quantity x unit rate is the charge.
       // A bundle-priced row bills the line rate once, so the line carries the quoted recurring
       // amount (quantity x unit price), not the unit price alone.
@@ -1133,6 +1165,19 @@ async function convertQuoteToDraftInvoiceRecords(
     invoiceDate,
   );
   const quoteBillingProfileId = billingTerms.billingProfileId;
+  // A quote always estimates tax internally (quotes never reach the accounting
+  // system), but the invoice it becomes must honour the client's effective tax
+  // source like every other invoice path: the client decides, not the quote.
+  // External clients start 'pending_external' with zero tax so the accounting
+  // import fills it after export; internal clients keep the quote's tax so the
+  // invoice matches the accepted quote line for line.
+  const { taxSource: clientTaxSource } = await getEffectiveTaxSourceForClient(
+    knexOrTrx,
+    tenant,
+    quote.client_id,
+  );
+  const taxIsExternal = clientTaxSource === 'external';
+  const invoiceTaxSource = taxIsExternal ? 'pending_external' : 'internal';
   await db.table('invoices').insert({
     tenant,
     invoice_id: invoiceId,
@@ -1150,7 +1195,7 @@ async function convertQuoteToDraftInvoiceRecords(
     invoice_number: invoiceNumber,
     credit_applied: 0,
     is_manual: true,
-    tax_source: quote.tax_source ?? 'internal',
+    tax_source: invoiceTaxSource,
   });
 
   const invoiceItemIdsByQuoteItemId = new Map<string, string>();
@@ -1177,7 +1222,9 @@ async function convertQuoteToDraftInvoiceRecords(
     }
 
     const isDiscount = source.is_discount === true;
-    const taxAmount = isDiscount ? 0 : Number(source.tax_amount ?? 0);
+    // An external-tax invoice carries no tax of its own: the accounting system
+    // computes it and the import writes it back after export.
+    const taxAmount = isDiscount || taxIsExternal ? 0 : Number(source.tax_amount ?? 0);
     const unit = resolveUnitOfMeasure({ catalog: { code: source.unit_code, label: source.unit_of_measure }, fallback: 'C62' });
 
     return {
@@ -1196,7 +1243,7 @@ async function convertQuoteToDraftInvoiceRecords(
       net_amount: netAmount,
       tax_amount: taxAmount,
       tax_region: source.tax_region ?? null,
-      tax_rate: isDiscount ? 0 : (source.tax_rate ?? 0),
+      tax_rate: isDiscount || taxIsExternal ? 0 : (source.tax_rate ?? 0),
       total_price: netAmount + taxAmount,
       is_manual: true,
       is_taxable: isDiscount ? false : (source.is_taxable ?? true),

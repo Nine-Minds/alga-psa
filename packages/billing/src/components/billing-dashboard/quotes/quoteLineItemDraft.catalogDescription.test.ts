@@ -80,6 +80,24 @@ describe('quote line item draft catalog-description snapshots', () => {
     expect(legacy.catalog_description).toBeNull();
   });
 
+  // alga-2026-0002902: the draft used to start every catalog line taxable, so
+  // the editor previewed tax the service could never carry.
+  it('derives the draft tax treatment from the service tax rate', () => {
+    const noRate = createDraftQuoteItemFromService(pickerItem({ tax_rate_id: null }));
+    expect(noRate.is_taxable).toBe(false);
+
+    const withRate = createDraftQuoteItemFromService(
+      pickerItem({ tax_rate_id: '22222222-2222-2222-2222-222222222222' }),
+    );
+    expect(withRate.is_taxable).toBe(true);
+  });
+
+  it('keeps custom lines taxable and reopens a persisted line on its stored value', () => {
+    expect(createCustomDraftQuoteItem({ description: 'Project kickoff' }).is_taxable).toBe(true);
+    expect(createDraftQuoteItemFromQuoteItem(persistedItem({ is_taxable: false }) as never).is_taxable).toBe(false);
+    expect(createDraftQuoteItemFromQuoteItem(persistedItem({ is_taxable: true }) as never).is_taxable).toBe(true);
+  });
+
   it('keeps custom and discount line snapshots cleanly null', () => {
     const custom = createCustomDraftQuoteItem({ description: 'Project kickoff' });
     expect(custom.service_id).toBeNull();

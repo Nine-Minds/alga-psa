@@ -33,6 +33,8 @@
     "readOnly": "This entry is read-only on mobile.",
     "readOnlyRecurring": "Recurring entries are read-only on mobile.",
     "openTicket": "Open ticket",
+    "openProjectTask": "Open task",
+    "manageOnSchedule": "Open in Schedule",
     "edit": "Edit",
     "delete": "Delete",
     "deleting": "Deleting…",

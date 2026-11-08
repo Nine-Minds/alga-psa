@@ -81,6 +81,56 @@ export function formatExactCurrencyFromMinorUnits(value: number | string, curren
   }).formatToParts(minor / scale).map(part => part.type === 'fraction' ? fraction : part.value).join('');
 }
 
+function listedCurrencySymbol(code: string): string | null {
+  return CURRENCY_OPTIONS.find(option => option.value === code)?.symbol ?? null;
+}
+
+/**
+ * The glyph to show for a currency: the product's own symbol table, so a rendered
+ * amount agrees with the picker that offered it ("ZAR (R)" → "R", not "ZAR").
+ * Currencies outside that table keep whatever `Intl` names them.
+ */
+export function displayCurrencySymbol(code: string, locale: string = 'en-US'): string {
+  const listed = listedCurrencySymbol(code);
+  if (listed) return listed;
+  try {
+    return new Intl.NumberFormat(locale, { style: 'currency', currency: code })
+      .formatToParts(0).find(part => part.type === 'currency')?.value ?? code;
+  } catch {
+    return code;
+  }
+}
+
+/**
+ * Join `Intl` parts with the product's symbol swapped in for Intl's currency text.
+ * Only that one part changes, so the locale keeps deciding symbol position and
+ * separators ("R 1,234.50" under en, "1.234,50 R" under de).
+ */
+function joinWithDisplaySymbol(parts: Intl.NumberFormatPart[], currency: string): string {
+  const listed = listedCurrencySymbol(currency);
+  return parts.map(part => (listed && part.type === 'currency' ? listed : part.value)).join('');
+}
+
+/**
+ * The seam every money-display formatter should route through: locale currency
+ * text with the product's symbol swapped in for Intl's currency wording, so a
+ * ZAR amount reads "R 12.34" rather than Intl's en-US "ZAR 12.34".
+ *
+ * `locale` may be `undefined` to follow the runtime's own locale, exactly as a
+ * bare `Intl.NumberFormat(undefined, …)` would. An explicit `currencyDisplay`
+ * of 'code' or 'name' is left alone — those callers asked for the ISO wording.
+ */
+export function formatCurrencyWithSymbol(
+  value: number,
+  locale: string | undefined,
+  currency: string,
+  options?: Intl.NumberFormatOptions,
+): string {
+  const parts = new Intl.NumberFormat(locale, { style: 'currency', currency, ...options }).formatToParts(value);
+  const wantsIsoWording = options?.currencyDisplay === 'code' || options?.currencyDisplay === 'name';
+  return wantsIsoWording ? parts.map(part => part.value).join('') : joinWithDisplaySymbol(parts, currency);
+}
+
 /**
  * Format a number as currency
  * @param value The number to format
@@ -89,12 +139,10 @@ export function formatExactCurrencyFromMinorUnits(value: number | string, curren
  * @returns Formatted currency string
  */
 export function formatCurrency(value: number, locale: string = 'en-US', currency: string = 'USD'): string {
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency,
+  return formatCurrencyWithSymbol(value, locale, currency, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(value);
+  });
 }
 
 /**
@@ -109,12 +157,10 @@ export function formatCurrencyFromMinorUnits(
   const resolved = new Intl.NumberFormat(locale, { style: 'currency', currency }).resolvedOptions();
   const fractionDigits = resolved.maximumFractionDigits ?? 2;
   const value = minorUnits / Math.pow(10, fractionDigits);
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency,
+  return formatCurrencyWithSymbol(value, locale, currency, {
     minimumFractionDigits: fractionDigits,
     maximumFractionDigits: fractionDigits,
-  }).format(value);
+  });
 }
 
 /**

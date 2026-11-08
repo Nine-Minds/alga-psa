@@ -4,7 +4,7 @@ import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type { IClient, IClientLocation, IContact } from '@alga-psa/types';
 import { hasPermission, withAuth } from '@alga-psa/auth';
-import { getClientLogoUrl, getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
+import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
 import { assertPsaOnlyTenantAccess } from '@shared/services/productAccessGuard';
 
 function tenantScopedTable(conn: Knex | Knex.Transaction, tenant: string, table: string): Knex.QueryBuilder<any, any> {
@@ -22,35 +22,6 @@ function withClientSinceDateString<T extends Record<string, any>>(row: T): T {
   const pad = (part: number) => String(part).padStart(2, '0');
   return { ...row, client_since: `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}` };
 }
-
-export const getAllClientsForAssets = withAuth(async (
-  _user,
-  { tenant },
-  includeInactive: boolean = true
-): Promise<IClient[]> => {
-  await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
-  const { knex } = await createTenantKnex();
-
-  const clients = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const query = tenantScopedTable(trx, tenant, 'clients')
-      .select('*')
-      .orderBy('client_name', 'asc');
-
-    if (!includeInactive) {
-      query.andWhere({ is_inactive: false });
-    }
-
-    return query;
-  }) as unknown as IClient[];
-
-  if (clients.length === 0) {
-    return clients;
-  }
-
-  // Batch-resolve logo URLs once (no N+1) so the assets table can show real logos.
-  const logoUrlsMap = await getClientLogoUrlsBatch(clients.map((c) => c.client_id), tenant);
-  return clients.map((c) => withClientSinceDateString({ ...c, logoUrl: logoUrlsMap.get(c.client_id) ?? null }));
-});
 
 export const getClientByIdForAssets = withAuth(async (
   _user,

@@ -78,9 +78,18 @@ describe('createTicketCommentSchema parent_comment_id', () => {
     });
 
     expect(parsed.parent_comment_id).toBe(PARENT_ID);
-    // is_internal still defaults to false on the schema; the service ignores
-    // it for replies and inherits the thread root's visibility.
+    // Visibility stays unspecified so the service can apply the caller/thread policy.
+    expect(parsed.is_internal).toBeUndefined();
+  });
+
+  it('preserves explicit public visibility and collaboration audience', () => {
+    const parsed = createTicketCommentSchema.parse({
+      comment_text: 'A public comment',
+      is_internal: false,
+      collaboration_audience: 'requester',
+    });
     expect(parsed.is_internal).toBe(false);
+    expect(parsed.collaboration_audience).toBe('requester');
   });
 
   it('T004: accepts a create payload with no parent_comment_id', () => {

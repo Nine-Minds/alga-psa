@@ -18,6 +18,7 @@ import {
   approveWarrantyClaim,
   cancelWarrantyClaim,
   closeWarrantyRma,
+  confirmVendorReceipt,
   denyWarrantyClaim,
   listRmaCaseEvents,
   markDeviceReceived,
@@ -25,6 +26,7 @@ import {
   recordVendorCredit,
   recordVendorRepair,
   returnDeviceToClient,
+  shipDeadUnitToVendor,
   shipToVendor,
   type IRmaEventView,
 } from '../../actions';
@@ -35,11 +37,53 @@ const RMA_TAG_CLASS: LabelClass = 'rma-work-tag';
 /** Calendar-date helpers: the server wants YYYY-MM-DD, the DatePicker wants a local Date. */
 export const toYmd = (d?: Date): string =>
   d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : '';
+/**
+ * `rma_cases.return_by` is a Postgres DATE and no type parser is registered, so at runtime it arrives as a Date at
+ * server-local midnight (or an ISO timestamp once serialised), not the typed 'YYYY-MM-DD'. Normalise to the calendar day.
+ */
+export const calendarYmd = (v?: string | Date | null): string => {
+  if (!v) return '';
+  if (v instanceof Date) return Number.isNaN(v.getTime()) ? '' : toYmd(v);
+  return /^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : '';
+};
 export const fromYmd = (s?: string | null): Date | undefined => {
   if (!s) return undefined;
   const [y, m, d] = s.split('-').map(Number);
   return y && m && d ? new Date(y, m - 1, d) : undefined;
 };
+
+/** A timestamp (`outbound_shipped_at`) as the viewer's calendar day. Never compare raw instants against a DATE. */
+const timestampYmd = (v?: string | Date | null): string => {
+  if (!v) return '';
+  const d = v instanceof Date ? v : new Date(v);
+  return Number.isNaN(d.getTime()) ? '' : toYmd(d);
+};
+
+export type DeadUnitDeadlineBadge = { kind: 'not_shipped' | 'shipped_late'; dueYmd: string };
+
+/**
+ * `return_by` is the vendor's SHIP-BY date for the dead unit, so the risk is a dead unit still on the shelf (PRD §2.4).
+ * Advance track only. Calendar days throughout: `return_by` is a DATE, `outbound_shipped_at` is reduced to its day.
+ * On the advance track `outbound_shipped_at` is only ever written by the dead-unit shipment (`ship_to_vendor` needs
+ * `returned`, which only the standard track reaches), so in `dead_unit_owed` it is the dead unit's ship time.
+ * A warning only: nothing happens automatically and `close` stays available.
+ */
+export function deadUnitDeadlineBadge(
+  rma: Pick<IRmaCase, 'rma_type' | 'status' | 'return_by' | 'outbound_shipped_at'>,
+  today: Date = new Date()
+): DeadUnitDeadlineBadge | null {
+  if (rma.rma_type !== 'advance_replacement') return null;
+  const dueYmd = calendarYmd(rma.return_by as string | Date | null);
+  if (!dueYmd) return null;
+  if (rma.status === 'replaced' || rma.status === 'repaired') {
+    return dueYmd < toYmd(today) ? { kind: 'not_shipped', dueYmd } : null;
+  }
+  if (rma.status === 'dead_unit_owed') {
+    const shippedYmd = timestampYmd(rma.outbound_shipped_at as string | Date | null);
+    return shippedYmd && shippedYmd > dueYmd ? { kind: 'shipped_late', dueYmd } : null;
+  }
+  return null;
+}
 
 interface ActionForm {
   vendor_id: string;
@@ -63,7 +107,7 @@ interface ActionForm {
 const emptyForm = (rma: IRmaCase, locations: IStockLocation[]): ActionForm => ({
   vendor_id: rma.vendor_id ?? '',
   rma_reference: rma.rma_reference ?? '',
-  return_by: rma.return_by ?? '',
+  return_by: calendarYmd(rma.return_by as string | Date | null),
   return_ship_to: rma.return_ship_to ?? rma.vendor_name ?? '',
   reason: '',
   carrier: '',
@@ -139,6 +183,8 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
     record_repair: t('rma.warranty.actions.recordRepair', 'Record repair'),
     record_credit: t('rma.warranty.actions.recordCredit', 'Record vendor credit'),
     return_to_client: t('rma.warranty.actions.returnToClient', 'Return to client'),
+    ship_dead_unit_to_vendor: t('rma.warranty.actions.shipDeadUnitToVendor', 'Ship dead unit to vendor'),
+    confirm_vendor_receipt: t('rma.warranty.actions.confirmVendorReceipt', 'Vendor received dead unit'),
     close: t('rma.warranty.actions.close', 'Close RMA'),
   };
 
@@ -153,6 +199,8 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
     repair_received: t('rma.warranty.events.repairReceived', 'Repair received'),
     vendor_credited: t('rma.warranty.events.vendorCredited', 'Vendor credited'),
     returned_to_client: t('rma.warranty.events.returnedToClient', 'Returned to client'),
+    dead_unit_shipped: t('rma.warranty.events.deadUnitShipped', 'Dead unit shipped to vendor'),
+    vendor_receipt_confirmed: t('rma.warranty.events.vendorReceiptConfirmed', 'Vendor received dead unit'),
     closed: t('rma.warranty.events.closed', 'Closed'),
     note: t('rma.warranty.events.note', 'Note'),
   };
@@ -171,11 +219,17 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
     vendor_credited: t('rma.warranty.closeReason.vendorCredited', 'Vendor credited'),
   };
 
-  const allowed = useMemo(() => allowedWarrantyActions(rma.status), [rma.status]);
+  const allowed = useMemo(() => allowedWarrantyActions(rma.status, rma.rma_type), [rma.status, rma.rma_type]);
+  const deadlineBadge = deadUnitDeadlineBadge(rma);
   const fmtDate = (v?: string | Date | null): string => {
     if (!v) return dash;
     if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return fromYmd(v)!.toLocaleDateString();
     return new Date(v).toLocaleDateString();
+  };
+  /** DATE columns (return_by): render the calendar day, never a timezone-shifted instant. */
+  const fmtCalendarDate = (v?: string | Date | null): string => {
+    const ymd = calendarYmd(v);
+    return ymd ? fromYmd(ymd)!.toLocaleDateString() : dash;
   };
   const shipping = (carrier?: string | null, tracking?: string | null): string =>
     [carrier, tracking].filter(Boolean).join(' · ') || dash;
@@ -243,6 +297,7 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
             model: form.model,
             manufacturer: form.manufacturer,
             warranty_end_date: form.warranty_end_date || null,
+            ...(rma.rma_type === 'advance_replacement' ? { return_by: form.return_by || null } : {}),
             ...inbound,
             note,
           });
@@ -255,6 +310,17 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
           break;
         case 'return_to_client':
           result = await returnDeviceToClient(id, { counterparty: form.counterparty, note });
+          break;
+        case 'ship_dead_unit_to_vendor':
+          result = await shipDeadUnitToVendor(id, {
+            carrier: form.carrier,
+            tracking_number: form.tracking_number,
+            return_by: form.return_by || null,
+            note,
+          });
+          break;
+        case 'confirm_vendor_receipt':
+          result = await confirmVendorReceipt(id, { note });
           break;
         case 'close':
           result = await closeWarrantyRma(id, { reason: (form.reason || undefined) as any, note });
@@ -304,7 +370,7 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
     ...(rma.denial_reason ? [[t('rma.warranty.fields.denialReason', 'Denial reason'), rma.denial_reason] as [string, React.ReactNode]] : []),
     [t('rma.columns.vendor', 'Vendor'), rma.vendor_name || dash],
     [t('rma.warranty.fields.vendorRef', 'Vendor RMA reference'), rma.rma_reference || dash],
-    [t('rma.warranty.fields.returnBy', 'Return by'), fmtDate(rma.return_by)],
+    [t('rma.warranty.fields.returnBy', 'Return by'), fmtCalendarDate(rma.return_by as string | Date | null)],
     [t('rma.warranty.fields.outbound', 'Outbound shipment'), shipping(rma.outbound_carrier, rma.outbound_tracking_number)],
     [t('rma.warranty.fields.inbound', 'Inbound shipment'), shipping(rma.inbound_carrier, rma.inbound_tracking_number)],
     [t('rma.warranty.fields.replacementSerial', 'Replacement serial'), rma.replacement_serial_number || dash],
@@ -389,6 +455,17 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
             <TextArea id="rma-warranty-ship-to" label={t('rma.warranty.fields.returnShipTo', 'Return ship-to')} value={form.return_ship_to} onChange={(e) => set('return_ship_to', e.target.value)} />
           </>
         );
+      case 'ship_dead_unit_to_vendor':
+        return (
+          <>
+            <p className="text-sm text-gray-600">{t('rma.warranty.confirmShipDeadUnit', 'Ship the dead unit back to the vendor. The device in custody is recorded as with the vendor.')}</p>
+            <Input id="rma-warranty-carrier" label={t('rma.warranty.fields.carrier', 'Carrier')} required value={form.carrier} onChange={(e) => set('carrier', e.target.value)} />
+            <Input id="rma-warranty-tracking" label={t('rma.warranty.fields.tracking', 'Tracking number')} required value={form.tracking_number} onChange={(e) => set('tracking_number', e.target.value)} />
+            {dateField('rma-warranty-return-by', t('rma.warranty.fields.returnBy', 'Return by'), 'return_by')}
+          </>
+        );
+      case 'confirm_vendor_receipt':
+        return <p className="text-sm text-gray-600">{t('rma.warranty.confirmVendorReceipt', 'Confirm the vendor received the dead unit. The case is closed as resolved and the custody episode as returned to the vendor.')}</p>;
       case 'receive_replacement':
         return (
           <>
@@ -396,6 +473,14 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
             <Input id="rma-warranty-model" label={t('rma.warranty.fields.model', 'Model')} value={form.model} onChange={(e) => set('model', e.target.value)} />
             <Input id="rma-warranty-manufacturer" label={t('rma.warranty.fields.manufacturer', 'Manufacturer')} value={form.manufacturer} onChange={(e) => set('manufacturer', e.target.value)} />
             {dateField('rma-warranty-warranty-end', t('rma.warranty.fields.warrantyEnd', 'Warranty end date'), 'warranty_end_date')}
+            {rma.rma_type === 'advance_replacement' && (
+              <div className="space-y-1">
+                {/* DatePicker's `label` is accessibility-only, so name the field visibly. */}
+                <div className="text-sm font-medium text-gray-700">{t('rma.warranty.fields.returnBy', 'Return by')}</div>
+                {dateField('rma-warranty-return-by', t('rma.warranty.fields.returnBy', 'Return by'), 'return_by')}
+                <p className="text-xs text-gray-500">{t('rma.warranty.returnByHint', 'The date the vendor needs the dead unit shipped by, counted from delivery of this replacement. Leave it as is to keep the date from approval.')}</p>
+              </div>
+            )}
             {inboundFields}
             {locationField}
           </>
@@ -447,6 +532,16 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
           </div>
         ))}
       </div>
+
+      {deadlineBadge && (
+        <div id={deadlineBadge.kind === 'not_shipped' ? 'rma-warranty-dead-unit-not-shipped' : 'rma-warranty-dead-unit-shipped-late'}>
+          <Badge variant="warning" size="sm">
+            {deadlineBadge.kind === 'not_shipped'
+              ? t('rma.warranty.deadUnitNotShipped', 'Dead unit not yet shipped, was due {{date}}', { date: fmtCalendarDate(deadlineBadge.dueYmd) })
+              : t('rma.warranty.deadUnitShippedLate', 'Dead unit shipped late, was due {{date}}', { date: fmtCalendarDate(deadlineBadge.dueYmd) })}
+          </Badge>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2" id="rma-warranty-actions">
         {allowed.map((a) => (

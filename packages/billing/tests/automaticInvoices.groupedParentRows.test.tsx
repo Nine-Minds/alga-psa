@@ -378,6 +378,42 @@ describe('AutomaticInvoices grouped parent rows', () => {
     ).toHaveTextContent('PO scope differs');
   });
 
+  it('flags a group whose lines land on different invoice profiles as not combinable', async () => {
+    mockDueWorkResponse.invoiceCandidates[0].members[0].invoiceBillingProfileId = 'profile-default';
+    mockDueWorkResponse.invoiceCandidates[0].members[1].invoiceBillingProfileId = 'profile-separate';
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+
+    await waitFor(() => {
+      const checkbox = document.getElementById(
+        'select-parent-group:client-1:2026-03-01:2026-04-01',
+      ) as HTMLInputElement | null;
+      expect(checkbox).not.toBeNull();
+      expect(checkbox?.disabled).toBe(true);
+    });
+
+    expect(
+      screen.getByTestId('combinability-reasons-parent-group:client-1:2026-03-01:2026-04-01'),
+    ).toHaveTextContent('Invoice profile differs');
+  });
+
+  it('keeps a group combinable when all lines land on the same invoice profile', async () => {
+    mockDueWorkResponse.invoiceCandidates[0].members[0].invoiceBillingProfileId = 'profile-default';
+    mockDueWorkResponse.invoiceCandidates[0].members[1].invoiceBillingProfileId = 'profile-default';
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+
+    await waitFor(() => {
+      const checkbox = document.getElementById(
+        'select-parent-group:client-1:2026-03-01:2026-04-01',
+      ) as HTMLInputElement | null;
+      expect(checkbox).not.toBeNull();
+      expect(checkbox?.disabled).toBe(false);
+    });
+
+    expect(
+      screen.queryByTestId('combinability-reasons-parent-group:client-1:2026-03-01:2026-04-01'),
+    ).not.toBeInTheDocument();
+  });
+
   it('shows currency incompatibility reason when child currency differs (T006)', async () => {
     mockDueWorkResponse.invoiceCandidates[0].members[1].currencyCode = 'EUR';
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);

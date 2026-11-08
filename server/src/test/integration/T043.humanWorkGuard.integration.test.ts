@@ -167,13 +167,13 @@ describe('T043/T021/T022 human-work guard', () => {
     it('addTicketResourceCore rejects a service id (additional agent and promoted primary)', async () => {
       await rolledBack(async (trx) => {
         const promote = await insertTicket(trx, null);
-        await expect(addTicketResourceCore(trx, tenant, internalId, promote, serviceId, 'support'))
+        await expect(addTicketResourceCore(trx, tenant, internalId, promote, serviceId, 'support', { kind: 'system' }))
           .rejects.toBeInstanceOf(HumanWorkAssigneeInvalidError);
         const assigned = await insertTicket(trx, internalId);
-        await expect(addTicketResourceCore(trx, tenant, internalId, assigned, serviceId, 'support'))
+        await expect(addTicketResourceCore(trx, tenant, internalId, assigned, serviceId, 'support', { kind: 'system' }))
           .rejects.toBeInstanceOf(HumanWorkAssigneeInvalidError);
         const agent = await insertUser(trx);
-        const ok = await addTicketResourceCore(trx, tenant, internalId, assigned, agent, 'support');
+        const ok = await addTicketResourceCore(trx, tenant, internalId, assigned, agent, 'support', { kind: 'system' });
         expect(ok.resource?.additional_user_id).toBe(agent);
       });
     });

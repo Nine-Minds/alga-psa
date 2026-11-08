@@ -122,6 +122,7 @@ export interface FindContactByEmailOutput {
   email: string;
   matched_email?: string;
   client_id: string;
+  is_inactive: boolean;
   user_id?: string;
   user_type?: 'internal' | 'client';
   client_name: string;
@@ -274,6 +275,7 @@ export async function findContactByEmail(
           email: normalizeEmailAddress(internalUser.email) ?? normalizedEmail,
           matched_email: normalizedEmail,
           client_id: '',
+          is_inactive: false,
           user_id: internalUser.user_id,
           user_type: 'internal' as const,
           client_name: '',
@@ -287,6 +289,7 @@ export async function findContactByEmail(
           'contacts.full_name as name',
           'contacts.email',
           'contacts.client_id',
+          'contacts.is_inactive',
           db.subquery('users')
             .select('users.user_id')
             .whereRaw('users.contact_id = contacts.contact_name_id')
@@ -1671,24 +1674,18 @@ export async function createCommentFromEmail(
         )
       }, tenant, trx, eventPublisher, analyticsTracker, userId);
 
-      // Only update response state if tracking is enabled for this tenant
-      const tenantSettingsRow = await db.table('tenant_settings')
-        .select('ticket_display_settings')
-        .first();
-      const responseStateEnabled = (tenantSettingsRow?.ticket_display_settings as any)?.responseStateTrackingEnabled ?? true;
-
-      // D3: response state follows the comment's final stored visibility, never the
-      // requested flag or the parent thread's. An internal comment must not flip it.
-      if (responseStateEnabled && !result.is_internal) {
-        if (normalizedAuthorType === 'client') {
-          await db.table('tickets')
-            .where({ ticket_id: commentData.ticket_id })
-            .update({ response_state: 'awaiting_internal' });
-        } else if (normalizedAuthorType === 'internal') {
-          await db.table('tickets')
-            .where({ ticket_id: commentData.ticket_id })
-            .update({ response_state: 'awaiting_client' });
-        }
+      // Apply the shared response-state rules to the comment's final visibility.
+      // The announcer writes to the durable outbox on inbound-email paths.
+      if (normalizedAuthorType === 'client' || normalizedAuthorType === 'internal') {
+        const { applyCommentResponseState, announcerFor } = await import('../../lib/tickets/responseState');
+        await applyCommentResponseState(trx, {
+          tenant,
+          ticketId: commentData.ticket_id,
+          authorType: normalizedAuthorType,
+          isInternal: result.is_internal,
+          userId: commentData.author_id ?? userId ?? null,
+          announce: announcerFor(eventPublisher),
+        });
       }
 
       // Activity row for the inbound-email comment. Source is always
@@ -1878,7 +1875,7 @@ export async function parseEmailReplyBody(
 export async function findTicketByReplyToken(
   token: string,
   tenant: string
-): Promise<{ ticketId?: string; commentId?: string; projectId?: string; metadata?: unknown } | null> {
+): Promise<{ ticketId?: string; commentId?: string; projectId?: string; metadata?: unknown; expiryValid: boolean } | null> {
   if (!token) {
     return null;
   }
@@ -1894,11 +1891,26 @@ export async function findTicketByReplyToken(
       return null;
     }
 
+    const expiry = record.expires_at instanceof Date
+      ? record.expires_at.getTime()
+      : typeof record.expires_at === 'string'
+        ? Date.parse(record.expires_at)
+        : Number.NaN;
+    const expiryValid = Number.isFinite(expiry) && expiry > Date.now();
+
+    // Expired native tokens are ordinary misses. Keep a known co-managed token
+    // visible to admission so an expired credential cannot fall through to a
+    // matching thread header or new-ticket creation.
+    if (!expiryValid && !token.trim().toLowerCase().startsWith('cm1:') && !token.trim().toLowerCase().startsWith('cm2:')) {
+      return null;
+    }
+
     return {
       ticketId: record.ticket_id || undefined,
       commentId: record.comment_id || undefined,
       projectId: record.project_id || undefined,
       metadata: record.metadata ?? undefined,
+      expiryValid,
     };
   });
 }
