@@ -81,7 +81,7 @@ export function createTicketActionsColumn({
                   }}
                 >
                   <Users className="h-4 w-4 mr-2" />
-                  {t('actions.duplicateForContacts', 'Duplicate for contacts…')}
+                  {t('actions.duplicateMultiple', 'Duplicate multiple…')}
                 </DropdownMenuItem>
               )}
               {canCreateTemplate && onCreateTemplate && (

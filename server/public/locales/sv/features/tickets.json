@@ -266,7 +266,7 @@
     "createWorkflowFromTicket": "Skapa arbetsflöde från ärende",
     "printWorkTag": "Skriv ut arbetsetikett",
     "retry": "Försök igen",
-    "duplicateForContacts": "Duplicera för kontakter …",
+    "duplicateMultiple": "Duplicera flera gånger …",
     "duplicateOptions": "Fler dupliceringsalternativ"
   },
   "messages": {

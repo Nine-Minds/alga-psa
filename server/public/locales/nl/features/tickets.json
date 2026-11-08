@@ -258,7 +258,7 @@
     "createWorkflowFromTicket": "Workflow maken van ticket",
     "printWorkTag": "Werklabel afdrukken",
     "retry": "Opnieuw proberen",
-    "duplicateForContacts": "Dupliceren voor contacten…",
+    "duplicateMultiple": "Meerdere keren dupliceren…",
     "duplicateOptions": "Meer dupliceeropties"
   },
   "messages": {

@@ -1,5 +1,5 @@
 /**
- * Title tokens for "Duplicate for contacts".
+ * Title tokens for "Duplicate multiple…" (one copy per selected contact).
  *
  *   {{contact}}  the copy's contact (full name)
  *   {{client}}   the source ticket's client name

@@ -28,7 +28,7 @@ describe('ticket row actions: batch duplicate item', () => {
     const column = createTicketActionsColumn({ t, onDuplicate, onBatchDuplicate });
     render(<div onClick={onRowClick}>{column.render!(null, record, 0)}</div>);
 
-    fireEvent.click(screen.getByText('Duplicate for contacts…'));
+    fireEvent.click(screen.getByText('Duplicate multiple…'));
     expect(onBatchDuplicate).toHaveBeenCalledWith('ticket-1');
     expect(onDuplicate).not.toHaveBeenCalled();
     expect(onRowClick).not.toHaveBeenCalled();
@@ -45,7 +45,7 @@ describe('ticket row actions: batch duplicate item', () => {
     });
     const { rerender } = render(<div onClick={onRowClick}>{column.render!(null, record, 0)}</div>);
 
-    fireEvent.click(screen.getByText('Duplicate for contacts…'));
+    fireEvent.click(screen.getByText('Duplicate multiple…'));
     expect(onBatchDuplicate).toHaveBeenCalledExactlyOnceWith('ticket-1');
     expect(onCreateTemplate).not.toHaveBeenCalled();
     fireEvent.click(screen.getByText('Create template from ticket'));
@@ -59,7 +59,7 @@ describe('ticket row actions: batch duplicate item', () => {
     });
     rerender(<div>{restricted.render!(null, record, 0)}</div>);
     expect(screen.queryByText('Create template from ticket')).toBeNull();
-    expect(screen.getByText('Duplicate for contacts…')).toBeTruthy();
+    expect(screen.getByText('Duplicate multiple…')).toBeTruthy();
   });
 
   it('keeps the single Duplicate item and omits the batch item when no handler is given', () => {

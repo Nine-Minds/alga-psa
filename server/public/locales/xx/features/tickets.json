@@ -266,7 +266,7 @@
     "createWorkflowFromTicket": "⟦Ƈřḗȧŧḗ ẇȯřķƒŀȯẇ ƒřȯḿ ŧīƈķḗŧ⟧",
     "printWorkTag": "⟦Ƥřīƞŧ ẇȯřķ ŧȧɠ⟧",
     "retry": "⟦Řḗŧřẏ⟧",
-    "duplicateForContacts": "⟦Ḓŭƥŀīƈȧŧḗ ƒȯř ƈȯƞŧȧƈŧş…⟧",
+    "duplicateMultiple": "⟦Ḓŭƥŀīƈȧŧḗ ḿŭŀŧīƥŀḗ…⟧",
     "duplicateOptions": "⟦Ḿȯřḗ ḓŭƥŀīƈȧŧḗ ȯƥŧīȯƞş⟧"
   },
   "messages": {

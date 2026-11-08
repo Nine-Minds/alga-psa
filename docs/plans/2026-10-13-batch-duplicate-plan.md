@@ -4,7 +4,7 @@ Driver: PSA ticket alga-2026-0002502 (Joymode Business Solutions, Munjal Thakkar
 
 ## Outcome
 
-A **Duplicate for contacts…** action, available from the ticket detail header and from the ticket list row menu, opens a dialog for the source ticket. The technician:
+A **Duplicate multiple…** action, available from the ticket detail header and from the ticket list row menu next to single **Duplicate**, opens a dialog for the source ticket (titled "Duplicate #N for contacts" while contacts are the only target). The technician:
 
 1. picks contacts of the source's client (multi-select);
 2. edits a title template that starts as the source title, for example changing `Onboard John Smith` to `Onboard {{contact}}`;
@@ -32,6 +32,7 @@ Each copy gets the same copy set, exclusions, provenance (`duplicated_from_ticke
 | B12 | **No bulk-bar entry in v1.** | The bulk bar acts on N selected *source* tickets. This feature is one source to N contacts. "Duplicate each selected ticket once" is a different feature with no driver behind it. |
 | B13 | **Retry resends only the failed rows, with the same keys.** Rows that were created are locked. | No duplicate tickets on retry. The keys let the UI match results to rows. |
 | B14 | **Internal users only**, with the same guard as single Duplicate (`user.user_type !== 'internal'` → permission error). | The MSP surface. The copied checklist is internal data. |
+| B15 | **Two menu entries, not one: Duplicate and Duplicate multiple….** Single **Duplicate** stays as it is: it opens `QuickAddTicket` prefilled, with every field editable. The batch dialog is labelled **Duplicate multiple…**, not "Duplicate for contacts…". The target type (contacts in v1, devices later) is chosen inside the dialog, not by adding more menu items. The dialog title still says "for contacts". The i18n key is `actions.duplicateMultiple`. | The two tools do different jobs. Single Duplicate is the common case and needs the editable form. Batch fixes the shared fields (B2) and varies only the target and the title. Merging them would either remove editing from the one-copy case or add a batch mode to `QuickAddTicket`, which B2 rules out. A label tied to the target would need a new menu item for each target type ("for devices…", and so on). A neutral label keeps the menu at two items however many target types the dialog gains. It is also the customer's own wording ("Duplicate Multiple"). Plain quantity stays covered by blank rows (B1). |
 
 ## Changes, in order
 
@@ -160,9 +161,9 @@ New `packages/tickets/src/components/ticket/BatchDuplicateTicketDialog.tsx`, usi
 
 ### 6. Entry points
 
-- **Ticket detail header** (`packages/tickets/src/components/ticket/TicketDetails.tsx:3651-3663`). Keep the one-click **Duplicate** button exactly as it is, because the single-copy loop must not get slower. Next to it, add a narrow outline `Button` with a `ChevronDown` that opens a `DropdownMenu` with one item, **Duplicate for contacts…** (`Users` icon, `id={`${id}-batch-duplicate-menu-item`}`). The ui package has no split-button component. Add `const [batchDuplicateOpen, setBatchDuplicateOpen] = useState(false)` and render `<BatchDuplicateTicketDialog sourceTicketId={ticket.ticket_id} …/>`. In `onCompleted`, refresh the activity timeline (the source has new `DUPLICATED_TO` rows) through the same refresh the page uses after other mutations.
+- **Ticket detail header** (`packages/tickets/src/components/ticket/TicketDetails.tsx`). Main's header redesign moved actions into one capability-aware actions menu, so the original split-button plan no longer applies. Both entries sit next to each other in that menu, gated by `capabilities.duplicate`: **Duplicate** (`Copy` icon, unchanged) followed by **Duplicate multiple…** (`Users` icon, `id={`${id}-batch-duplicate-menu-item`}`, B15). Add `const [batchDuplicateOpen, setBatchDuplicateOpen] = useState(false)` and render `<BatchDuplicateTicketDialog sourceTicketId={ticket.ticket_id} …/>`. In `onCompleted`, refresh the activity timeline (the source has new `DUPLICATED_TO` rows) through the same refresh the page uses after other mutations.
 - **Ticket list row menu** (`packages/tickets/src/components/ticketActionsColumn.tsx`):
-  - Add `onBatchDuplicate: (ticketId) => void` to the options and a second `DropdownMenuItem` with `id="batch-duplicate-ticket-menu-item"`. Keep the click `stopPropagation`, for the same reason documented at `:57-59`.
+  - Add `onBatchDuplicate: (ticketId) => void` to the options and a second `DropdownMenuItem`, **Duplicate multiple…**, with `id="batch-duplicate-ticket-menu-item"`. Keep the click `stopPropagation`, for the same reason documented at `:57-59`.
   - In `TicketingDashboard.tsx:1643-1650`, wire it to `setBatchDuplicateSourceId(ticketId)`, render the dialog once at dashboard level, and add the setter to the memo deps.
   - In `onCompleted`, refresh the list the same way the bulk dialogs do after a bulk action.
   - `ticketActionsColumn.columnFit.test.tsx` must stay green: the column width does not change.
@@ -248,12 +249,12 @@ New `packages/tickets/src/components/ticket/BatchDuplicateTicketDialog.tsx`, usi
 - `TicketingDashboard.i18n.test.ts`;
 - `ticketActionsColumn.columnFit.test.tsx`.
 
-**Manual smoke** (dev server at the card's `devOrigin`): from a Joymode-like source with a checklist, run Duplicate for contacts with 12 contacts and `{{contact}}`, then open three copies and check the contact, title, unchecked checklist and "Duplicated from #N". Run it again from the list row menu. Force a failure: pick a contact, delete it from another tab, then press Create. That copy fails with the contact error and the rest are created. Use Retry after removing the row. Check that single Duplicate still works in one click.
+**Manual smoke** (dev server at the card's `devOrigin`): from a Joymode-like source with a checklist, run Duplicate multiple… with 12 contacts and `{{contact}}`, then open three copies and check the contact, title, unchecked checklist and "Duplicated from #N". Run it again from the list row menu. Force a failure: pick a contact, delete it from another tab, then press Create. That copy fails with the contact error and the rest are created. Use Retry after removing the row. Check that single Duplicate still works in one click.
 
 ## Not doing (follow-ups)
 
 - **Moving `addTicket` onto `createTicketWithSideEffects`**, which would put single Duplicate's team, agents and tags into the same transaction. Single Duplicate does not need it for this feature. `addTicket` is pinned by source-text contract tests and drives every quick-add, so the move needs its own change. The existing `LEVERAGE: pattern ticket-create-composition` marker stays.
-- **Per-copy devices (assets) or internal users.** The row model leaves room for `assetId`. Add it when there is a driver for "one per device".
+- **Per-copy devices (assets) or internal users.** The row model leaves room for `assetId`. Add it when there is a driver for "one per device". It goes in as a target choice inside the Duplicate multiple… dialog, not as a new menu item (B15).
 - **Tokens in the description** (B5).
 - **Editing shared fields in the batch dialog** (B2).
 - **Duplicating a ticket into a different client.**

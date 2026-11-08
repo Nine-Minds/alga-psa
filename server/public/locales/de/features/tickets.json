@@ -258,7 +258,7 @@
     "createWorkflowFromTicket": "Workflow aus Ticket erstellen",
     "printWorkTag": "Arbeitsetikett drucken",
     "retry": "Erneut versuchen",
-    "duplicateForContacts": "Für Kontakte duplizieren …",
+    "duplicateMultiple": "Mehrfach duplizieren …",
     "duplicateOptions": "Weitere Duplizierungsoptionen"
   },
   "messages": {

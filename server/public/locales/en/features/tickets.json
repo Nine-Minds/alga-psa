@@ -266,7 +266,7 @@
     "createWorkflowFromTicket": "Create workflow from ticket",
     "printWorkTag": "Print work tag",
     "retry": "Retry",
-    "duplicateForContacts": "Duplicate for contacts…",
+    "duplicateMultiple": "Duplicate multiple…",
     "duplicateOptions": "More duplicate options"
   },
   "messages": {

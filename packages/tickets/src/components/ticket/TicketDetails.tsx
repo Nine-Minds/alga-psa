@@ -3845,7 +3845,7 @@ const handleClose = () => {
                         onSelect={() => setBatchDuplicateOpen(true)}
                     >
                         <Users className="h-4 w-4 mr-2" />
-                        {t('actions.duplicateForContacts', { defaultValue: 'Duplicate for contacts…' })}
+                        {t('actions.duplicateMultiple', { defaultValue: 'Duplicate multiple…' })}
                     </DropdownMenuItem>
                 ) : null}
                 {capabilities.createTemplate && templatePermissions.create ? (

@@ -258,7 +258,7 @@
     "createWorkflowFromTicket": "Utwórz workflow ze zgłoszenia",
     "printWorkTag": "Drukuj etykietę roboczą",
     "retry": "Ponów",
-    "duplicateForContacts": "Duplikuj dla kontaktów…",
+    "duplicateMultiple": "Duplikuj wielokrotnie…",
     "duplicateOptions": "Więcej opcji duplikowania"
   },
   "messages": {
