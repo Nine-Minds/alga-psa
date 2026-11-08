@@ -56,6 +56,13 @@ export function ServicePrincipalsSettingsTab() {
   const [keysFor, setKeysFor] = useState<ServicePrincipalRow | null>(null);
   const [pendingDelete, setPendingDelete] = useState<ServicePrincipalRow | null>(null);
 
+  useEffect(() => {
+    if (!hasPro) {
+      setDialog({ open: false, principal: null });
+      setKeysFor(null);
+    }
+  }, [hasPro]);
+
   const load = useCallback(async () => {
     try {
       const [list, currentUsage, formOptions] = await Promise.all([
@@ -300,7 +307,7 @@ export function ServicePrincipalsSettingsTab() {
       <DataTable id="service-principals-table" data={activeRows} columns={columns} pagination={false} />
 
       <ServicePrincipalDialog
-        isOpen={dialog.open}
+        isOpen={hasPro && dialog.open}
         principal={dialog.principal}
         roles={options.roles}
         rateLimitCeiling={options.rateLimitCeiling}
@@ -310,12 +317,14 @@ export function ServicePrincipalsSettingsTab() {
           void load();
         }}
       />
-      <ServicePrincipalKeysDialog
-        principal={keysFor}
-        canIssue={hasPro}
-        onClose={() => setKeysFor(null)}
-        onChanged={() => void load()}
-      />
+      {hasPro && keysFor && (
+        <ServicePrincipalKeysDialog
+          principal={keysFor}
+          canIssue
+          onClose={() => setKeysFor(null)}
+          onChanged={() => void load()}
+        />
+      )}
       <ConfirmationDialog
         id="service-principal-delete-confirm"
         isOpen={Boolean(pendingDelete)}

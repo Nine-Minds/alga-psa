@@ -19,6 +19,9 @@ const m = vi.hoisted(() => ({
   remove: vi.fn(),
   setRoles: vi.fn(),
   keys: vi.fn(),
+  issueKey: vi.fn(),
+  rotateKey: vi.fn(),
+  revokeKey: vi.fn(),
 }));
 
 vi.mock('server/src/context/TierContext', () => ({
@@ -54,9 +57,9 @@ vi.mock('../../../lib/actions/service-principal-actions', () => ({
   deleteServicePrincipalAction: m.remove,
   setServicePrincipalRolesAction: m.setRoles,
   listServicePrincipalKeysAction: m.keys,
-  issueServicePrincipalKeyAction: vi.fn(),
-  rotateServicePrincipalKeyAction: vi.fn(),
-  revokeServicePrincipalKeyAction: vi.fn(),
+  issueServicePrincipalKeyAction: m.issueKey,
+  rotateServicePrincipalKeyAction: m.rotateKey,
+  revokeServicePrincipalKeyAction: m.revokeKey,
 }));
 
 import { ServicePrincipalsSettingsTab } from '../../../components/service-principals/ServicePrincipalsSettingsTab';
@@ -79,6 +82,14 @@ beforeEach(() => {
     makeRow(),
     makeRow({ user_id: 'user-2', kind: 'mcp_agent', name: 'Support agent', role_names: [] }),
   ]);
+  m.keys.mockResolvedValue([{
+    api_key_id: 'key-1',
+    description: 'CI key',
+    active: true,
+    expires_at: null,
+    last_used_at: null,
+    created_at: '2026-10-01T00:00:00.000Z',
+  }]);
   m.create.mockResolvedValue({});
 });
 afterEach(cleanup);
@@ -251,5 +262,66 @@ describe('T036 tier changes', () => {
     expect(screen.getAllByRole('button', { name: 'Keys' })).toHaveLength(2);
     expect(screen.getByTestId('service-principal-usage').textContent).toBe('2 of 5 service principals');
     expect(screen.getByText('Billing sync')).toBeTruthy();
+  });
+
+  it('closes a create dialog on downgrade and does not reopen it or save after upgrade', async () => {
+    const { rerender } = render(<ServicePrincipalsSettingsTab />);
+    await screen.findByText('Billing sync');
+    fireEvent.click(screen.getByRole('button', { name: 'New service principal' }));
+    expect(await screen.findByRole('dialog')).toBeTruthy();
+
+    m.hasFeature.mockReturnValue(false);
+    rerender(<ServicePrincipalsSettingsTab />);
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(screen.getByTestId('service-principal-blocked-notice')).toBeTruthy();
+
+    m.hasFeature.mockReturnValue(true);
+    rerender(<ServicePrincipalsSettingsTab />);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(m.create).not.toHaveBeenCalled();
+  });
+
+  it('closes an edit dialog on downgrade and cannot submit it after upgrade', async () => {
+    const { rerender } = render(<ServicePrincipalsSettingsTab />);
+    await screen.findByText('Billing sync');
+    fireEvent.click(screen.getAllByRole('button', { name: 'Edit' })[0]);
+    expect(await screen.findByRole('dialog')).toBeTruthy();
+
+    m.hasFeature.mockReturnValue(false);
+    rerender(<ServicePrincipalsSettingsTab />);
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+
+    m.hasFeature.mockReturnValue(true);
+    rerender(<ServicePrincipalsSettingsTab />);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+    expect(m.update).not.toHaveBeenCalled();
+    expect(m.setRoles).not.toHaveBeenCalled();
+  });
+
+  it('unmounts key management and nested confirmations on downgrade and does not restore them after upgrade', async () => {
+    const { rerender } = render(<ServicePrincipalsSettingsTab />);
+    await screen.findByText('Billing sync');
+    fireEvent.click(screen.getAllByRole('button', { name: 'Keys' })[0]);
+    expect(await screen.findByRole('dialog')).toBeTruthy();
+    await screen.findByText('CI key');
+    fireEvent.click(screen.getByRole('button', { name: 'Revoke' }));
+    expect(await screen.findByText('Revoke API key?')).toBeTruthy();
+
+    m.hasFeature.mockReturnValue(false);
+    rerender(<ServicePrincipalsSettingsTab />);
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(m.issueKey).not.toHaveBeenCalled();
+    expect(m.rotateKey).not.toHaveBeenCalled();
+    expect(m.revokeKey).not.toHaveBeenCalled();
+
+    m.hasFeature.mockReturnValue(true);
+    rerender(<ServicePrincipalsSettingsTab />);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Create key' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Rotate' })).toBeNull();
+    expect(m.issueKey).not.toHaveBeenCalled();
+    expect(m.rotateKey).not.toHaveBeenCalled();
+    expect(m.revokeKey).not.toHaveBeenCalled();
   });
 });
