@@ -51,7 +51,7 @@ describe('external links tenant facade contract', () => {
   });
 
   it('authorizes every link read/mutation through the per-record ticket policy', () => {
-    const authorizationSource = readRepoFile('packages/tickets/src/lib/ticketRecordAuthorization.ts');
+    const authorizationSource = readRepoFile('packages/authorization/src/ticketRecordAuthorization.ts');
 
     // Actions resolve the owning ticket and evaluate the same kernel policy as
     // ticketActions.getTicketById, not just coarse ticket:read/update.
