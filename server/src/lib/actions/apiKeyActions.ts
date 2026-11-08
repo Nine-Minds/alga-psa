@@ -42,6 +42,7 @@ interface AdminApiKeyListView extends ApiKeyListView {
   username: string;
   first_name: string | null;
   last_name: string | null;
+  user_type: string | null;
 }
 
 /**
@@ -190,6 +191,7 @@ export const adminListApiKeys = withAuth(async (
     username: key.username,
     first_name: key.first_name,
     last_name: key.last_name,
+    user_type: key.user_type,
     created_at: key.created_at,
     last_used_at: key.last_used_at,
     expires_at: key.expires_at,
