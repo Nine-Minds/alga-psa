@@ -2264,7 +2264,11 @@
       "Stable",
       "Code 128",
       "RMA {{number}} · {{status}}",
-      "Page {{page}}"
+      "Page {{page}}",
+      "ticket",
+      "tickets",
+      "RAM",
+      "Ports"
     ],
     "caseInsensitive": [
       "api",
