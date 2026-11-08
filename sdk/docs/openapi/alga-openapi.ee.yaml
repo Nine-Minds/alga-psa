@@ -112573,6 +112573,129 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+  /api/v1/quotes/{id}/cancel:
+    post:
+      summary: Cancel quote
+      description: Cancels quote via cancel(); requires billing:update. Quote status
+        is not editable through PUT /api/v1/quotes/{id}.
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: quote
+        x-read-authorization-resource: billing
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Quote UUID from quotes.quote_id.
+          required: true
+          description: Quote UUID from quotes.quote_id.
+          name: id
+          in: path
+        - schema:
+            type: string
+            format: uuid
+            description: Service-principal keys only. The user id of an active internal user
+              to act as. The request then runs as that user (the effective user,
+              recorded as author/actor) with the principal recorded as the
+              delegating principal; permissions are the intersection of the
+              principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the
+              principal is not allowed to act as, ACT_AS_INVALID_TARGET for a
+              missing, inactive, client or service target, and
+              ACT_AS_NOT_SUPPORTED when sent with a human-owned key.
+          required: false
+          description: Service-principal keys only. The user id of an active internal user
+            to act as. The request then runs as that user (the effective user,
+            recorded as author/actor) with the principal recorded as the
+            delegating principal; permissions are the intersection of the
+            principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the
+            principal is not allowed to act as, ACT_AS_INVALID_TARGET for a
+            missing, inactive, client or service target, and
+            ACT_AS_NOT_SUPPORTED when sent with a human-owned key.
+          name: X-Alga-Act-As
+          in: header
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuotesContractsGenericBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "201":
+          description: Create-like operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "400":
+          description: "Validation or request parsing failure. ACT_AS_NOT_SUPPORTED: the
+            act-as header was sent with a key that cannot act as another user."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: "RBAC denied for quote resource action. ACT_AS_NOT_ALLOWED: the
+            service principal is not allowed to act as users."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "422":
+          description: "ACT_AS_REQUIRED: a service principal performed human work without
+            the act-as header; ACT_AS_INVALID_TARGET: the act-as user is
+            missing, inactive, client or service; HUMAN_WORK_ASSIGNEE_INVALID: a
+            service user was given as assignee/resource."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details: {}
+                    required:
+                      - code
+                      - message
+                required:
+                  - error
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
   /api/v1/quotes/{id}/remind:
     post:
       summary: Send quote reminder

@@ -29,7 +29,9 @@ vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
   const { formatCalendarDateValue, formatDateValue } = await import('@alga-psa/ui/lib/i18n/formatDateValue');
   const { countryDateFormat } = await import('@alga-psa/core/i18n/countryDateFormat');
   return {
-    useTranslation: () => ({ t: (_key: string, options: { defaultValue: string }) => options.defaultValue }),
+    // UI primitives such as Input also use this shared translation mock and may
+    // call t(key) without interpolation or a defaultValue.
+    useTranslation: () => ({ t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key }),
     useFormatters: () => ({
       formatCurrency: (value: number, currency: string) =>
         new Intl.NumberFormat(formatting.locale, { style: 'currency', currency }).format(value),

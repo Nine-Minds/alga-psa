@@ -13,7 +13,6 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { addTicket, updateTicket } from '../actions/ticketActions';
-import { addTicketResource } from '../actions/ticketResourceActions';
 import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import { searchUsersForMentions } from '@alga-psa/user-composition/actions/searchUsersForMentions';
@@ -1353,6 +1352,9 @@ export function QuickAddTicket({
       if (watcherIds.length > 0) {
         formData.append('watcher_ids', JSON.stringify(watcherIds));
       }
+      if (tempAdditionalAgents.length > 0) {
+        formData.append('additional_agent_ids', JSON.stringify(tempAdditionalAgents.map((agent) => agent.user_id)));
+      }
 
       // Add ITIL Impact and Urgency for calculation (if provided)
       if (itilImpact) {
@@ -1427,20 +1429,6 @@ export function QuickAddTicket({
           toast.error(teamError instanceof Error
             ? teamError.message
             : t('quickAdd.teamAssignmentPartialFailure', 'Ticket created but team assignment failed'));
-        }
-      }
-
-      // Add additional agents as ticket resources
-      if (tempAdditionalAgents.length > 0 && newTicket.ticket_id) {
-        for (const agent of tempAdditionalAgents) {
-          try {
-            const resourceResult = await addTicketResource(newTicket.ticket_id, agent.user_id, 'support');
-            if (isReturnedActionError(resourceResult)) {
-              throw new Error(getErrorMessage(resourceResult));
-            }
-          } catch (agentError) {
-            console.error(`Failed to add additional agent ${agent.user_id}:`, agentError);
-          }
         }
       }
 

@@ -164,3 +164,36 @@ describe('api authorization kernel helper', () => {
     expect(b.subject.apiKeyId).toBeUndefined();
   });
 });
+
+describe('authorizeApiResourceAction', () => {
+  it('asks the kernel for the requested action, and authorizeApiResourceRead delegates with read', async () => {
+    const { vi: v } = await import('vitest');
+    const authorizeResource = v.fn(async () => ({ allowed: true }));
+    v.doMock('server/src/lib/authorization/kernel', () => ({
+      getAuthorizationKernel: async () => ({ authorizeResource }),
+    }));
+    v.doMock('@alga-psa/authorization/assetReadAuthorization', () => ({
+      resolveAuthorizationSubjectForUser: async (_knex: unknown, tenant: string, user: any, apiKeyId?: string) => ({
+        tenant,
+        userId: user.user_id,
+        userType: user.user_type,
+        roleIds: user.role_ids ?? [],
+        teamIds: [],
+        managedUserIds: [],
+        portfolioClientIds: [],
+        ...(apiKeyId ? { apiKeyId } : {}),
+      }),
+    }));
+    v.resetModules();
+    const mod = await import('../../../lib/api/controllers/authorizationKernel');
+    const base = { knex: {} as any, tenant: 't', user: { user_id: 'u' }, resource: 'ticket', recordContext: { id: 'x' } as any };
+    await mod.authorizeApiResourceAction({ ...base, action: 'update' });
+    await mod.authorizeApiResourceRead(base);
+    expect((authorizeResource.mock.calls as any[]).map(([a]) => a.resource)).toEqual([
+      { type: 'ticket', action: 'update' },
+      { type: 'ticket', action: 'read' },
+    ]);
+    v.doUnmock('server/src/lib/authorization/kernel');
+    v.doUnmock('@alga-psa/authorization/assetReadAuthorization');
+  });
+});
