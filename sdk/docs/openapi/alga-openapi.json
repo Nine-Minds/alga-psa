@@ -6828,7 +6828,7 @@
         "properties": {
           "provider": {
             "type": "string",
-            "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing."
+            "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, unifi, or huntress. Scheduled device sync is available for all but huntress, which exposes no device listing."
           }
         },
         "required": [
@@ -28413,6 +28413,20 @@
               "string",
               "null"
             ]
+          },
+          "refType": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "refId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
           }
         },
         "required": [
@@ -45923,10 +45937,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing."
+              "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, unifi, or huntress. Scheduled device sync is available for all but huntress, which exposes no device listing."
             },
             "required": true,
-            "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing.",
+            "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, unifi, or huntress. Scheduled device sync is available for all but huntress, which exposes no device listing.",
             "name": "provider",
             "in": "path"
           }
@@ -45979,10 +45993,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing."
+              "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, unifi, or huntress. Scheduled device sync is available for all but huntress, which exposes no device listing."
             },
             "required": true,
-            "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing.",
+            "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, unifi, or huntress. Scheduled device sync is available for all but huntress, which exposes no device listing.",
             "name": "provider",
             "in": "path"
           }
@@ -46045,10 +46059,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing."
+              "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, unifi, or huntress. Scheduled device sync is available for all but huntress, which exposes no device listing."
             },
             "required": true,
-            "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing.",
+            "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, unifi, or huntress. Scheduled device sync is available for all but huntress, which exposes no device listing.",
             "name": "provider",
             "in": "path"
           }

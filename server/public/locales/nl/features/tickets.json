@@ -117,6 +117,7 @@
     "tagModeAny": "Een van",
     "tagModeNone": "Geen van",
     "droppedFromLink": "Sommige filters in deze link zijn ongeldig en zijn genegeerd.",
+    "clearFilters": "Filters wissen",
     "location": "Locatie",
     "requesterLocation": "Locatie van aanvrager"
   },
@@ -258,7 +259,9 @@
     "createTemplate": "Sjabloon maken van ticket",
     "createWorkflowFromTicket": "Workflow maken van ticket",
     "printWorkTag": "Werklabel afdrukken",
-    "retry": "Opnieuw proberen"
+    "retry": "Opnieuw proberen",
+    "duplicateMultiple": "Meerdere keren dupliceren…",
+    "duplicateOptions": "Meer dupliceeropties"
   },
   "messages": {
     "noTickets": "Geen tickets gevonden",
@@ -2855,6 +2858,75 @@
       "notAvailable": "Dit standaardantwoord is niet beschikbaar voor dit ticket.",
       "notATeamMember": "U kunt teamantwoorden alleen beheren voor teams waartoe u behoort."
     }
+  },
+  "batchDuplicate": {
+    "title": "#{{number}} dupliceren voor contacten",
+    "titleLoading": "Dupliceren voor contacten",
+    "loading": "Laden…",
+    "loadFailed": "Het te dupliceren ticket kon niet worden geladen. Probeer het opnieuw.",
+    "createFailed": "De kopieën konden niet worden aangemaakt. Probeer het opnieuw.",
+    "templateLabel": "Titelsjabloon",
+    "insertToken": "Invoegen:",
+    "nameHint": "Vervang \"{{name}}\" door {{token}} om elke kopie te personaliseren.",
+    "replace": "Vervangen",
+    "contactsLabel": "Contacten",
+    "contactsPlaceholder": "Selecteer contacten…",
+    "addBlankRow": "Kopie zonder contact toevoegen",
+    "count": "{{count}} van {{max}}",
+    "capReached": "Maximaal {{max}} kopieën per batch.",
+    "columns": {
+      "contact": "Contact",
+      "title": "Titel"
+    },
+    "resetRow": "Terugzetten naar sjabloon",
+    "removeRow": "Kopie verwijderen",
+    "copyChecklist": "Checklistitems kopiëren (niet aangevinkt)",
+    "cancel": "Annuleren",
+    "review": "Controleren",
+    "back": "Terug",
+    "create_one": "{{count}} ticket aanmaken",
+    "create_other": "{{count}} tickets aanmaken",
+    "creating_one": "{{count}} ticket wordt aangemaakt…",
+    "creating_other": "{{count}} tickets worden aangemaakt…",
+    "done": "Klaar",
+    "retryFailed_one": "Mislukte opnieuw proberen ({{count}})",
+    "retryFailed_other": "Mislukte opnieuw proberen ({{count}})",
+    "errors": {
+      "contactRequired": "Deze titel gebruikt {{token}}, maar de kopie heeft geen contact.",
+      "unknownToken": "Onbekende tokens: {{tokens}}",
+      "empty": "De titel mag niet leeg zijn.",
+      "unresolvedToken": "De titel bevat nog een token {{placeholder}}."
+    },
+    "summary": {
+      "client": "Klant",
+      "board": "Bord",
+      "category": "Categorie",
+      "priority": "Prioriteit",
+      "assignee": "Toegewezen aan",
+      "team": "Team",
+      "additionalAgents": "Extra medewerkers",
+      "tags": "Labels",
+      "checklist": "Controlelijst",
+      "checklistCopy_one": "{{count}} item kopiëren (niet aangevinkt)",
+      "checklistCopy_other": "{{count}} items kopiëren (niet aangevinkt)",
+      "checklistSkip": "Niet gekopieerd",
+      "customFields": "Aangepaste velden",
+      "status": "Status",
+      "statusBoardDefault": "Standaard van het bord",
+      "none": "Geen",
+      "notCopied": "Opmerkingen, tijdregistraties, bijlagen en de vervaldatum worden niet gekopieerd.",
+      "unresolved": "Naam niet beschikbaar"
+    },
+    "results": {
+      "created_one": "{{count}} ticket aangemaakt",
+      "created_other": "{{count}} tickets aangemaakt",
+      "failed_one": "{{count}} kopie mislukt",
+      "failed_other": "{{count}} kopieën mislukt"
+    },
+    "discardTitle": "Deze kopieën verwerpen?",
+    "discardMessage": "De ingestelde kopieën zijn nog niet aangemaakt. Verwerpen en sluiten?",
+    "discardConfirm": "Verwerpen",
+    "discardKeep": "Verder bewerken"
   },
   "sharedSla": {
     "title": "Serviceniveau",

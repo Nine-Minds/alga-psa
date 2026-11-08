@@ -117,6 +117,7 @@
     "tagModeAny": "Almeno uno tra",
     "tagModeNone": "Nessuno tra",
     "droppedFromLink": "Alcuni filtri di questo link non sono validi e sono stati ignorati.",
+    "clearFilters": "Pulisci filtri",
     "location": "Sede",
     "requesterLocation": "Sede del richiedente"
   },
@@ -258,7 +259,9 @@
     "createTemplate": "Crea modello dal ticket",
     "createWorkflowFromTicket": "Crea workflow dal ticket",
     "printWorkTag": "Stampa etichetta di lavoro",
-    "retry": "Riprova"
+    "retry": "Riprova",
+    "duplicateMultiple": "Duplica più volte…",
+    "duplicateOptions": "Altre opzioni di duplicazione"
   },
   "messages": {
     "noTickets": "Nessun ticket trovato",
@@ -2855,6 +2858,75 @@
       "notAvailable": "Questa risposta predefinita non è disponibile per questo ticket.",
       "notATeamMember": "Puoi gestire le risposte di team solo per i team di cui fai parte."
     }
+  },
+  "batchDuplicate": {
+    "title": "Duplica #{{number}} per i contatti",
+    "titleLoading": "Duplica per i contatti",
+    "loading": "Caricamento…",
+    "loadFailed": "Impossibile caricare il ticket da duplicare. Riprova.",
+    "createFailed": "Impossibile creare le copie. Riprova.",
+    "templateLabel": "Modello del titolo",
+    "insertToken": "Inserisci:",
+    "nameHint": "Sostituisci \"{{name}}\" con {{token}} per personalizzare ogni copia.",
+    "replace": "Sostituisci",
+    "contactsLabel": "Contatti",
+    "contactsPlaceholder": "Seleziona contatti…",
+    "addBlankRow": "Aggiungi copia senza contatto",
+    "count": "{{count}} di {{max}}",
+    "capReached": "Massimo {{max}} copie per lotto.",
+    "columns": {
+      "contact": "Contatto",
+      "title": "Titolo"
+    },
+    "resetRow": "Ripristina il modello",
+    "removeRow": "Rimuovi copia",
+    "copyChecklist": "Copia le voci della checklist (non spuntate)",
+    "cancel": "Annulla",
+    "review": "Rivedi",
+    "back": "Indietro",
+    "create_one": "Crea {{count}} ticket",
+    "create_other": "Crea {{count}} ticket",
+    "creating_one": "Creazione di {{count}} ticket…",
+    "creating_other": "Creazione di {{count}} ticket…",
+    "done": "Fatto",
+    "retryFailed_one": "Riprova quelle non riuscite ({{count}})",
+    "retryFailed_other": "Riprova quelle non riuscite ({{count}})",
+    "errors": {
+      "contactRequired": "Questo titolo usa {{token}} ma la copia non ha un contatto.",
+      "unknownToken": "Segnaposto sconosciuto: {{tokens}}",
+      "empty": "Il titolo non può essere vuoto.",
+      "unresolvedToken": "Il titolo contiene ancora un segnaposto {{placeholder}}."
+    },
+    "summary": {
+      "client": "Cliente",
+      "board": "Bacheca",
+      "category": "Categoria",
+      "priority": "Priorità",
+      "assignee": "Assegnatario",
+      "team": "Team",
+      "additionalAgents": "Agenti aggiuntivi",
+      "tags": "Tag",
+      "checklist": "Elenco di controllo",
+      "checklistCopy_one": "Copia {{count}} voce (non spuntata)",
+      "checklistCopy_other": "Copia {{count}} voci (non spuntate)",
+      "checklistSkip": "Non copiata",
+      "customFields": "Campi personalizzati",
+      "status": "Stato",
+      "statusBoardDefault": "Predefinito della bacheca",
+      "none": "Nessuno",
+      "notCopied": "Commenti, registrazioni di tempo, allegati e scadenza non vengono copiati.",
+      "unresolved": "Nome non disponibile"
+    },
+    "results": {
+      "created_one": "{{count}} ticket creato",
+      "created_other": "{{count}} ticket creati",
+      "failed_one": "{{count}} copia non riuscita",
+      "failed_other": "{{count}} copie non riuscite"
+    },
+    "discardTitle": "Annullare queste copie?",
+    "discardMessage": "Le copie impostate non sono ancora state create. Annullarle e chiudere?",
+    "discardConfirm": "Annulla copie",
+    "discardKeep": "Continua a modificare"
   },
   "sharedSla": {
     "title": "Livello di servizio",
