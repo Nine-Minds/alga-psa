@@ -801,7 +801,7 @@
       "id": "inactive",
       "en-term": "Inactive",
       "term": "Inactif",
-      "notes": "Pack-consistent: 49 uses across 18 namespaces (mined 2026-08-28, pending native review)."
+      "notes": "Inactif au masculin ; inactive au féminin, notamment pour une clé API. La forme féminine isolée est identique à l’anglais."
     },
     {
       "id": "industry",
@@ -2081,6 +2081,8 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "Inactive",
+      "1 contact",
       "Conversation",
       "{{from}} → {{to}}",
       "RMA {{id}}",
@@ -2261,7 +2263,8 @@
       "Extensions (Pro)",
       "Stable",
       "Code 128",
-      "RMA {{number}} · {{status}}"
+      "RMA {{number}} · {{status}}",
+      "Page {{page}}"
     ],
     "caseInsensitive": [
       "api",
@@ -2472,6 +2475,6 @@
       "^Client \\*$",
       "^• (?:VPN|Wi-Fi)$"
     ],
-    "notes": "Cette liste d’autorisation est volontairement prudente ; l’outil d’audit doit signaler tout anglais identique qui ne correspond pas à l’une de ces valeurs exactes, à l’un de ces emprunts insensibles à la casse ou à l’un de ces motifs techniques. Duration templates use the unit symbols h and min in this locale as in English; only the exact symbol-only templates are allowed."
+    "notes": "Cette liste d’autorisation est volontairement prudente ; l’outil d’audit doit signaler tout anglais identique qui ne correspond pas à l’une de ces valeurs exactes, à l’un de ces emprunts insensibles à la casse ou à l’un de ces motifs techniques. Duration templates use the unit symbols h and min in this locale as in English; only the exact symbol-only templates are allowed. Page {{page}} is an identical French UI pagination label with a preserved interpolation placeholder."
   }
 }

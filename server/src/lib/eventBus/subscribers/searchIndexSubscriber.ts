@@ -110,6 +110,15 @@ function extractObjectId(event: Event, objectType: SearchObjectType): string | u
   return undefined;
 }
 
+function extractLocationId(event: Event): string | undefined {
+  const payload = payloadRecord(event);
+  for (const field of ['locationId', 'location_id']) {
+    const value = payload[field];
+    if (typeof value === 'string' && value.length > 0) return value;
+  }
+  return undefined;
+}
+
 function isDeleteEvent(eventType: EventType): boolean {
   return eventType.endsWith('_DELETED') || eventType === 'TAG_DEFINITION_DELETED';
 }
@@ -137,6 +146,37 @@ async function reindexTicketComments(knex: Knex, tenant: string, ticketId: strin
     } else {
       // Deleted/unpublished comments must not linger in the index.
       await deleteSearchDoc(knex, tenant, 'ticket_comment', row.comment_id);
+    }
+  }
+
+  return rows.length;
+}
+
+/**
+ * A contact's indexed subtitle and body carry its locations' names and cities, so renaming or
+ * deactivating a location leaves every linked contact stale in the index — "warehouse" would keep
+ * finding people at a site now called Depot. Re-index them the way a renamed ticket re-indexes its
+ * comments. (A delete cannot reach here: contact_locations is ON DELETE RESTRICT, so a location
+ * with links cannot be deleted at all.)
+ */
+async function reindexContactsAtLocation(knex: Knex, tenant: string, locationId: string): Promise<number> {
+  const contactIndexer = getIndexer('contact');
+  if (!contactIndexer) {
+    logger.warn('[SearchIndexSubscriber] Contact indexer is not registered');
+    return 0;
+  }
+
+  const rows = await tenantScopedTable<{ contact_name_id: string }>(knex, tenant, 'contact_locations')
+    .select('contact_name_id')
+    .where('location_id', locationId)
+    .orderBy('contact_name_id', 'asc');
+
+  for (const row of rows) {
+    const doc = await contactIndexer.loadOne(knex, tenant, row.contact_name_id);
+    if (doc) {
+      await upsertSearchDoc(knex, doc);
+    } else {
+      await deleteSearchDoc(knex, tenant, 'contact', row.contact_name_id);
     }
   }
 
@@ -516,6 +556,30 @@ async function dispatchSearchIndexEvent(
   }
 
   for (const indexer of indexers) {
+    // A location event names a location, not a contact: the cascade is the whole point of
+    // subscribing, so it runs instead of the usual single-object upsert.
+    if (
+      (event.eventType === 'CLIENT_LOCATION_UPDATED' || event.eventType === 'CLIENT_LOCATION_DEACTIVATED')
+      && indexer.objectType === 'contact'
+    ) {
+      const locationId = extractLocationId(event);
+      if (!locationId) {
+        logger.warn('[SearchIndexSubscriber] Location event payload missing location id', {
+          eventType: event.eventType,
+          eventId: event.id,
+        });
+        continue;
+      }
+      const count = await reindexContactsAtLocation(knex, tenant, locationId);
+      logger.debug('[SearchIndexSubscriber] Cascaded contact re-index for a location change', {
+        eventType: event.eventType,
+        eventId: event.id,
+        locationId,
+        count,
+      });
+      continue;
+    }
+
     const objectId = extractObjectId(event, indexer.objectType);
     if (!objectId) {
       logger.warn('[SearchIndexSubscriber] Event payload missing source object id', {

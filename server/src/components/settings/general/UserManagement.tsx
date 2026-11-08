@@ -603,7 +603,7 @@ const fetchContacts = async (): Promise<void> => {
         });
 
         if (!result.success) {
-          const keysByCode: Record<typeof result.code, string> = {
+          const keysByCode: Partial<Record<typeof result.code, string>> = {
             ROLE_REQUIRED: 'users.messages.error.roleRequired',
             INVALID_ROLE: 'users.messages.error.invalidRole',
             ROLE_MSP_NOT_ALLOWED_FOR_CLIENT: 'users.messages.error.selectAppropriateRole',
@@ -614,7 +614,7 @@ const fetchContacts = async (): Promise<void> => {
             PERMISSION_DENIED: 'users.messages.error.permissionDenied',
             USER_CREATE_FAILED: 'users.messages.error.createUser',
           };
-          const message = t(keysByCode[result.code], { defaultValue: result.error });
+          const message = (keysByCode[result.code] ? t(keysByCode[result.code] as string, { defaultValue: result.error }) : result.error);
           toast.error(message);
           setError(message);
           return;

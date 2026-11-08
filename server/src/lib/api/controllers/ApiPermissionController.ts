@@ -3,6 +3,7 @@
  * Simplified version with proper API key authentication
  */
 
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiBaseController } from './ApiBaseController';
 import { PermissionRoleService } from '../services/PermissionRoleService';
@@ -15,7 +16,6 @@ import {
   runWithTenant
 } from '../../db';
 import { getConnection } from '../../db/db';
-import { hasPermission } from '../../auth/rbac';
 import {
   ApiRequest,
   AuthenticatedApiRequest,
@@ -112,7 +112,7 @@ export class ApiPermissionController extends ApiBaseController {
 
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           const knex = await getConnection(apiRequest.context!.tenant);
-          if (!(await hasPermission(apiRequest.context!.user!, 'role', 'read', knex))) {
+          if (!(await hasApiContextPermission(apiRequest.context!, 'role', 'read', knex))) {
             throw new ForbiddenError('Permission denied: Cannot read role');
           }
 

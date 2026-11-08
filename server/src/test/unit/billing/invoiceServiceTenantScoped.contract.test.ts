@@ -117,6 +117,11 @@ describe('invoiceService tenant-scoped query contract', () => {
     expect(taxReadSection).not.toContain("tx('invoice_charge_fixed_details as iifd')");
   });
 
+  it('selects per-member tax flags from the fixed details so bundles are taxed per member', () => {
+    expect(taxReadSection).toContain("'iifd.is_taxable as detail_is_taxable'");
+    expect(taxReadSection).toContain("'iifd.tax_region as detail_tax_region'");
+  });
+
   it('uses structural tenant scoping for invoice tax writeback and total update roots', () => {
     expect(taxWriteSection).toContain("tenantScopedTable(tx, tenant, 'invoice_charge_fixed_details')");
     expect(taxWriteSection).toContain("tenantScopedTable(tx, tenant, 'invoice_charges')");

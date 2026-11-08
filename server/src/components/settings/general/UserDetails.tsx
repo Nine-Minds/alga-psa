@@ -321,7 +321,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
 
         const result = await updateUser(user.user_id, updatedUserData);
         if (!result.success) {
-          const errorKeys: Record<typeof result.code, string> = {
+          const errorKeys: Partial<Record<typeof result.code, string>> = {
             EMAIL_ALREADY_EXISTS: 'userDetails.messages.error.emailAlreadyExists',
             REPORTS_TO_SELF: 'userDetails.messages.error.reportsToSelf',
             REPORTS_TO_CYCLE: 'userDetails.messages.error.reportsToCycle',
@@ -333,7 +333,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
             SOLO_PLAN_LIMIT: 'users.messages.error.soloPlanLimit',
             USER_UPDATE_FAILED: 'userDetails.messages.error.updateFailed',
           };
-          toast.error(t(errorKeys[result.code], { defaultValue: result.error }));
+          toast.error((errorKeys[result.code] ? t(errorKeys[result.code] as string, { defaultValue: result.error }) : result.error));
           return;
         }
         if (result.user) {
