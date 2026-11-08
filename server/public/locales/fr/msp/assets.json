@@ -2209,10 +2209,10 @@
       "unexpected": "non attendus"
     },
     "segments": {
-      "remaining": "Restant",
-      "present": "Présent",
-      "missing": "Manquant",
-      "unexpected": "Non attendu",
+      "remaining": "Restants",
+      "present": "Présents",
+      "missing": "Manquants",
+      "unexpected": "Non attendus",
       "all": "Tous"
     },
     "start": {
@@ -2255,7 +2255,7 @@
       "completeConfirm_one": "1 appareil non pointé sera enregistré comme manquant.",
       "completeConfirm_other": "{{count}} appareils non pointés seront enregistrés comme manquants.",
       "cancelAudit": "Annuler l’audit",
-      "cancelConfirm": "L’audit est abandonné et aucune donnée n’est enregistrée sur les actifs. Cette action est irréversible.",
+      "cancelConfirm": "L’audit sera abandonné et aucune donnée ne sera enregistrée sur les actifs. Cette action est irréversible.",
       "keepAudit": "Poursuivre l’audit"
     },
     "items": {
@@ -2272,9 +2272,9 @@
       "searchPlaceholder": "Rechercher par nom, étiquette ou numéro de série",
       "empty": "Aucun actif dans cette vue.",
       "markPresent": "Pointer comme présent",
-      "undoMark": "Annuler",
+      "undoMark": "Annuler le pointage",
       "createTicket": "Créer un ticket",
-      "ticketTitle": "Manquant lors de l’audit sur site : {{asset}}",
+      "ticketTitle": "Actif manquant lors de l’audit sur site : {{asset}}",
       "ticketDescription": "Introuvable lors de l’audit sur site démarré le {{date}}."
     }
   }
