@@ -1,8 +1,35 @@
 /**
  * Recurrence pattern converter utilities.
+ *
+ * Day numbering matches the schedule UI and generateOccurrences: Monday = 0 …
+ * Sunday = 6. (An earlier Sunday-first list shifted every imported weekly
+ * series by one day.)
  */
 
 import type { IRecurrencePattern } from '@alga-psa/types';
+
+const DAY_NAMES = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'] as const;
+const WEEKDAY_INDEXES = [0, 1, 2, 3, 4];
+const SUPPORTED_FREQUENCIES = ['daily', 'weekly', 'monthly', 'yearly'] as const;
+const SUPPORTED_ORDINALS = [1, 2, 3, 4, -1];
+
+export interface RecurrencePatternResult {
+  unsupported?: false;
+  pattern: IRecurrencePattern;
+}
+
+export interface UnsupportedRecurrenceResult {
+  unsupported: true;
+  reason: string;
+}
+
+export type RecurrenceConversion = RecurrencePatternResult | UnsupportedRecurrenceResult;
+
+export function isUnsupportedRecurrence(
+  conversion: RecurrenceConversion | null
+): conversion is UnsupportedRecurrenceResult {
+  return conversion?.unsupported === true;
+}
 
 export function convertRecurrencePatternToRRULE(pattern: IRecurrencePattern): string | null {
   if (!pattern || !pattern.frequency) {
@@ -18,9 +45,15 @@ export function convertRecurrencePatternToRRULE(pattern: IRecurrencePattern): st
   }
 
   if (pattern.daysOfWeek && pattern.daysOfWeek.length > 0) {
-    const dayNames = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
-    const byday = pattern.daysOfWeek.map((day) => dayNames[day]).join(',');
-    parts.push(`BYDAY=${byday}`);
+    const ordinal = pattern.weekOfMonth ? String(pattern.weekOfMonth) : '';
+    const byday = pattern.daysOfWeek
+      .map((day) => DAY_NAMES[day])
+      .filter((name): name is (typeof DAY_NAMES)[number] => Boolean(name))
+      .map((name) => `${ordinal}${name}`)
+      .join(',');
+    if (byday) {
+      parts.push(`BYDAY=${byday}`);
+    }
   }
 
   if (pattern.dayOfMonth) {
@@ -75,57 +108,193 @@ export function convertRecurrencePatternToRRULE(pattern: IRecurrencePattern): st
   return parts.join(';');
 }
 
-export function convertRRULEToRecurrencePattern(
-  rrule: string,
-  startDate: Date
-): IRecurrencePattern | null {
-  if (!rrule || !rrule.trim()) {
+/**
+ * Convert a provider `recurrence[]` array (Google) or a single RRULE string into
+ * an Alga pattern. Rules Alga cannot express come back as an explicit
+ * `unsupported` result so the caller can fall back deliberately instead of
+ * importing a mangled (or empty) pattern.
+ */
+export function convertRecurrenceLinesToPattern(
+  lines: string[] | string | undefined | null,
+  startDate: Date,
+  timeZone?: string
+): RecurrenceConversion | null {
+  const rawLines = (Array.isArray(lines) ? lines : lines ? [lines] : [])
+    .filter((line): line is string => typeof line === 'string' && line.trim().length > 0);
+
+  if (rawLines.length === 0) {
     return null;
   }
 
-  const pattern: Partial<IRecurrencePattern> = {
-    startDate,
-    interval: 1,
-  };
+  const rruleBodies: string[] = [];
+  const exceptions: Date[] = [];
 
-  const components = rrule.split(';');
-  const rruleMap: Record<string, string> = {};
+  for (const rawLine of rawLines) {
+    const line = rawLine.trim();
+    // "RRULE:FREQ=…", "EXDATE;TZID=America/New_York:20261203T101500", or a bare
+    // RRULE body (the shape Alga itself emits).
+    const named = /^([A-Za-z][A-Za-z0-9-]*)(?:;[^:]*)?:(.*)$/.exec(line);
+    const name = named
+      ? named[1].toUpperCase()
+      : line.toUpperCase().includes('FREQ=')
+        ? 'RRULE'
+        : '';
+    const value = named ? named[2] : line;
 
-  for (const component of components) {
-    const [key, value] = component.split('=');
-    if (key && value) {
-      rruleMap[key.toUpperCase()] = value;
+    switch (name) {
+      case 'RRULE':
+        rruleBodies.push(value);
+        break;
+      case 'EXDATE':
+        for (const part of value.split(',')) {
+          const parsed = parseRRULEDate(part.trim());
+          if (parsed) exceptions.push(parsed);
+        }
+        break;
+      case 'RDATE':
+        return { unsupported: true, reason: 'RDATE lines are not supported' };
+      case 'DTSTART':
+      case 'DTEND':
+      case 'DURATION':
+        break;
+      default:
+        // Unknown component: ignore rather than fail the whole series.
+        break;
     }
   }
 
-  const freq = rruleMap['FREQ']?.toLowerCase();
-  if (!freq || !['daily', 'weekly', 'monthly', 'yearly'].includes(freq)) {
+  if (rruleBodies.length === 0) {
     return null;
   }
-  pattern.frequency = freq as 'daily' | 'weekly' | 'monthly' | 'yearly';
+  if (rruleBodies.length > 1) {
+    return { unsupported: true, reason: 'Multiple RRULE lines are not supported' };
+  }
+
+  return parseRRULEBody(rruleBodies[0], startDate, exceptions, timeZone);
+}
+
+function parseRRULEBody(
+  body: string,
+  startDate: Date,
+  extraExceptions: Date[],
+  timeZone?: string
+): RecurrenceConversion {
+  const rruleMap: Record<string, string> = {};
+  for (const component of body.split(';')) {
+    const index = component.indexOf('=');
+    if (index <= 0) continue;
+    rruleMap[component.slice(0, index).trim().toUpperCase()] = component.slice(index + 1).trim();
+  }
+
+  const freq = rruleMap['FREQ']?.toLowerCase();
+  if (!freq) {
+    return { unsupported: true, reason: 'RRULE has no FREQ' };
+  }
+  if (!SUPPORTED_FREQUENCIES.includes(freq as (typeof SUPPORTED_FREQUENCIES)[number])) {
+    return { unsupported: true, reason: `FREQ=${freq.toUpperCase()} is not supported` };
+  }
+
+  for (const unsupportedKey of ['BYWEEKNO', 'BYYEARDAY', 'BYHOUR', 'BYMINUTE', 'BYSECOND']) {
+    if (rruleMap[unsupportedKey]) {
+      return { unsupported: true, reason: `${unsupportedKey} is not supported` };
+    }
+  }
+
+  const pattern: IRecurrencePattern = {
+    frequency: freq as IRecurrencePattern['frequency'],
+    interval: 1,
+    startDate,
+  };
 
   if (rruleMap['INTERVAL']) {
     pattern.interval = parseInt(rruleMap['INTERVAL'], 10) || 1;
   }
 
+  let bydayOrdinal: number | undefined;
   if (rruleMap['BYDAY']) {
-    const dayNames = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
-    const days = rruleMap['BYDAY'].split(',');
-    pattern.daysOfWeek = days
-      .map((day) => dayNames.indexOf(day.trim()))
-      .filter((index) => index !== -1);
+    const daysOfWeek: number[] = [];
+    const ordinals = new Set<number>();
+    for (const token of rruleMap['BYDAY'].split(',')) {
+      const match = /^([+-]?\d{1,2})?(MO|TU|WE|TH|FR|SA|SU)$/i.exec(token.trim());
+      if (!match) {
+        return { unsupported: true, reason: `Unsupported BYDAY token "${token.trim()}"` };
+      }
+      if (match[1]) {
+        ordinals.add(parseInt(match[1], 10));
+      }
+      const index = DAY_NAMES.indexOf(match[2].toUpperCase() as (typeof DAY_NAMES)[number]);
+      if (index !== -1 && !daysOfWeek.includes(index)) {
+        daysOfWeek.push(index);
+      }
+    }
+
+    if (ordinals.size > 1) {
+      return { unsupported: true, reason: 'Mixed BYDAY ordinals are not supported' };
+    }
+    if (ordinals.size === 1) {
+      const ordinal = [...ordinals][0];
+      if (!SUPPORTED_ORDINALS.includes(ordinal)) {
+        return { unsupported: true, reason: `BYDAY ordinal ${ordinal} is not supported` };
+      }
+      bydayOrdinal = ordinal;
+    }
+
+    if (daysOfWeek.length > 0) {
+      pattern.daysOfWeek = daysOfWeek;
+    }
+  }
+
+  if (rruleMap['BYSETPOS']) {
+    const values = rruleMap['BYSETPOS'].split(',').map((value) => parseInt(value.trim(), 10));
+    if (values.length > 1) {
+      return { unsupported: true, reason: 'Multiple BYSETPOS values are not supported' };
+    }
+    const [setPos] = values;
+    if (!SUPPORTED_ORDINALS.includes(setPos)) {
+      return { unsupported: true, reason: `BYSETPOS ${rruleMap['BYSETPOS']} is not supported` };
+    }
+    if (bydayOrdinal !== undefined && bydayOrdinal !== setPos) {
+      return { unsupported: true, reason: 'Conflicting BYDAY ordinal and BYSETPOS' };
+    }
+    if (!pattern.daysOfWeek || pattern.daysOfWeek.length === 0) {
+      return { unsupported: true, reason: 'BYSETPOS without BYDAY is not supported' };
+    }
+    bydayOrdinal = setPos;
+  }
+
+  if (bydayOrdinal !== undefined) {
+    pattern.weekOfMonth = bydayOrdinal as IRecurrencePattern['weekOfMonth'];
   }
 
   if (rruleMap['BYMONTHDAY']) {
-    pattern.dayOfMonth = parseInt(rruleMap['BYMONTHDAY'], 10);
+    const values = rruleMap['BYMONTHDAY'].split(',');
+    if (values.length > 1) {
+      return { unsupported: true, reason: 'Multiple BYMONTHDAY values are not supported' };
+    }
+    const dayOfMonth = parseInt(values[0], 10);
+    if (!Number.isInteger(dayOfMonth) || dayOfMonth < 1 || dayOfMonth > 31) {
+      return { unsupported: true, reason: `BYMONTHDAY ${values[0]} is not supported` };
+    }
+    pattern.dayOfMonth = dayOfMonth;
   }
 
   if (rruleMap['BYMONTH']) {
-    pattern.monthOfYear = parseInt(rruleMap['BYMONTH'], 10);
+    const values = rruleMap['BYMONTH'].split(',');
+    if (values.length > 1) {
+      return { unsupported: true, reason: 'Multiple BYMONTH values are not supported' };
+    }
+    const monthOfYear = parseInt(values[0], 10);
+    if (!Number.isInteger(monthOfYear) || monthOfYear < 1 || monthOfYear > 12) {
+      return { unsupported: true, reason: `BYMONTH ${values[0]} is not supported` };
+    }
+    pattern.monthOfYear = monthOfYear;
   }
 
   if (rruleMap['COUNT']) {
-    pattern.count = parseInt(rruleMap['COUNT'], 10);
+    const count = parseInt(rruleMap['COUNT'], 10);
+    if (Number.isInteger(count) && count > 0) {
+      pattern.count = count;
+    }
   }
 
   if (rruleMap['UNTIL']) {
@@ -135,22 +304,49 @@ export function convertRRULEToRecurrencePattern(
     }
   }
 
-  if (pattern.daysOfWeek && pattern.daysOfWeek.length > 0) {
-    const weekdays = [1, 2, 3, 4, 5];
-    const isWorkdaysOnly = pattern.daysOfWeek.every((day) => weekdays.includes(day));
-    if (isWorkdaysOnly && pattern.frequency === 'weekly') {
-      pattern.workdaysOnly = true;
-    }
+  if (
+    pattern.frequency === 'weekly' &&
+    pattern.daysOfWeek &&
+    pattern.daysOfWeek.length === WEEKDAY_INDEXES.length &&
+    WEEKDAY_INDEXES.every((day) => pattern.daysOfWeek!.includes(day))
+  ) {
+    pattern.workdaysOnly = true;
   }
 
-  if (rruleMap['EXDATE']) {
-    const exdates = rruleMap['EXDATE'].split(',');
-    pattern.exceptions = exdates
-      .map((dateStr) => parseRRULEDate(dateStr.trim()))
-      .filter((date): date is Date => date !== null);
+  const inlineExceptions = rruleMap['EXDATE']
+    ? rruleMap['EXDATE']
+        .split(',')
+        .map((value) => parseRRULEDate(value.trim()))
+        .filter((date): date is Date => date !== null)
+    : [];
+
+  const allExceptions = [...extraExceptions, ...inlineExceptions];
+  if (allExceptions.length > 0) {
+    pattern.exceptions = allExceptions;
   }
 
-  return pattern as IRecurrencePattern;
+  if (timeZone) {
+    pattern.timeZone = timeZone;
+  }
+
+  return { pattern };
+}
+
+/**
+ * Back-compatible single-RRULE entry point. Unsupported rules resolve to null;
+ * callers that need to distinguish "cannot express" from "not recurring" should
+ * use convertRecurrenceLinesToPattern.
+ */
+export function convertRRULEToRecurrencePattern(
+  rrule: string,
+  startDate: Date,
+  timeZone?: string
+): IRecurrencePattern | null {
+  const conversion = convertRecurrenceLinesToPattern(rrule, startDate, timeZone);
+  if (!conversion || isUnsupportedRecurrence(conversion)) {
+    return null;
+  }
+  return conversion.pattern;
 }
 
 function formatRRULEDate(date: Date): string {
@@ -165,24 +361,23 @@ function formatRRULEDate(date: Date): string {
 
 function parseRRULEDate(dateStr: string): Date | null {
   try {
-    if (dateStr.length === 16 && dateStr.includes('T')) {
-      const year = parseInt(dateStr.substring(0, 4), 10);
-      const month = parseInt(dateStr.substring(4, 6), 10) - 1;
-      const day = parseInt(dateStr.substring(6, 8), 10);
-      const hours = parseInt(dateStr.substring(9, 11), 10);
-      const minutes = parseInt(dateStr.substring(11, 13), 10);
-      const seconds = parseInt(dateStr.substring(13, 15), 10);
-      return new Date(Date.UTC(year, month, day, hours, minutes, seconds));
+    // 20270101T045959Z and the floating 20270101T045959 (TZID-qualified) form.
+    const basic = /^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})Z?)?$/.exec(dateStr);
+    if (basic) {
+      return new Date(
+        Date.UTC(
+          parseInt(basic[1], 10),
+          parseInt(basic[2], 10) - 1,
+          parseInt(basic[3], 10),
+          basic[4] ? parseInt(basic[4], 10) : 0,
+          basic[5] ? parseInt(basic[5], 10) : 0,
+          basic[6] ? parseInt(basic[6], 10) : 0
+        )
+      );
     }
 
-    if (dateStr.length === 8) {
-      const year = parseInt(dateStr.substring(0, 4), 10);
-      const month = parseInt(dateStr.substring(4, 6), 10) - 1;
-      const day = parseInt(dateStr.substring(6, 8), 10);
-      return new Date(Date.UTC(year, month, day, 0, 0, 0));
-    }
-
-    return new Date(dateStr);
+    const parsed = new Date(dateStr);
+    return isNaN(parsed.getTime()) ? null : parsed;
   } catch (error) {
     console.error('Failed to parse RRULE date:', dateStr, error);
     return null;

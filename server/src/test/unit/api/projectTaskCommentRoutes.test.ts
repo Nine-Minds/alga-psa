@@ -44,7 +44,7 @@ class TestController extends ApiProjectTaskCommentController {
 
   constructor(service: Record<string, unknown>) {
     super();
-    (this as any).commentService = { assertTaskExists: vi.fn().mockResolvedValue(undefined), ...service };
+    (this as any).commentService = { ...service };
   }
 
   protected async authenticate(req: NextRequest) {
@@ -67,7 +67,7 @@ function request(method: string, path: string, body?: unknown) {
 const base = `/api/v1/projects/tasks/${taskId}/comments`;
 
 describe('project task comment routes', () => {
-  it('lists comments in the documented resource shape behind project_task:read', async () => {
+  it('lists comments in the documented resource shape through the service authorization boundary', async () => {
     const list = vi.fn().mockResolvedValue([resource]);
     const controller = new TestController({ listComments: list });
 
@@ -76,17 +76,17 @@ describe('project task comment routes', () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ data: [resource] });
     expect(list).toHaveBeenCalledWith(taskId, expect.objectContaining({ tenant: 'test-tenant' }));
-    expect(controller.permissionChecks).toEqual(['read']);
+    // Authorization is decided inside the service (withTaskCommentAccess), not by a shared controller gate.
+    expect(controller.permissionChecks).toEqual([]);
   });
 
   it('answers 404 when the task does not exist', async () => {
-    const list = vi.fn();
-    const controller = new TestController({ listComments: list, assertTaskExists: vi.fn().mockRejectedValue(new NotFoundError('Task not found')) });
+    const list = vi.fn().mockRejectedValue(new NotFoundError('Task not found'));
+    const controller = new TestController({ listComments: list });
 
     const response = await controller.list()(request('GET', base));
 
     expect(response.status).toBe(404);
-    expect(list).not.toHaveBeenCalled();
   });
 
   it('creates a comment and validates the note and parent id', async () => {

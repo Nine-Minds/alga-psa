@@ -22,6 +22,8 @@ vi.mock('@alga-psa/assets/lib/assetReadAuthorization', async (orig) => {
     ...actual,
     isAssetReadAllowed: async (...args: Parameters<typeof actual.isAssetReadAllowed>) =>
       denied.assetIds.has(args[3].asset_id) ? false : actual.isAssetReadAllowed(...args),
+    isAssetActionAllowed: async (...args: Parameters<typeof actual.isAssetActionAllowed>) =>
+      denied.assetIds.has(args[3].asset_id) ? false : actual.isAssetActionAllowed(...args),
     filterReadableAssets: async (...args: Parameters<typeof actual.filterReadableAssets>) =>
       (await actual.filterReadableAssets(...args)).filter((a) => !denied.assetIds.has(a.asset_id)),
   };

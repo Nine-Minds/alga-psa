@@ -118,6 +118,9 @@ export async function authorizeApiResourceAction(input: {
   return decision.allowed;
 }
 
+// Keep the existing generic name for callers that already pass an explicit action.
+export const authorizeApiResource = authorizeApiResourceAction;
+
 export async function authorizeApiResourceRead(input: {
   knex: Knex;
   tenant: string;

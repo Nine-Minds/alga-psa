@@ -3,7 +3,7 @@
  */
 
 import { randomBytes } from 'crypto';
-import { getMicrosoftAuthorizeUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
+import { getMicrosoftAuthorizeUrl, MICROSOFT_CALENDAR_OAUTH_SCOPES } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 import type { CalendarOAuthState } from '@alga-psa/types';
 
 export async function generateGoogleCalendarAuthUrl(params: {
@@ -31,12 +31,8 @@ export async function generateMicrosoftCalendarAuthUrl(params: {
   state: string;
   tenantId?: string;
 }): Promise<string> {
-  const scopes = [
-    'https://graph.microsoft.com/Calendars.ReadWrite',
-    'https://graph.microsoft.com/MailboxSettings.ReadWrite',
-    'https://graph.microsoft.com/Mail.Read',
-    'offline_access',
-  ].join(' ');
+  // LEVERAGE: pattern calendar-oauth-helpers-copies — this file exists in three copies (ee/packages/calendar, packages/integrations, server); the scope list is shared, the URL builder is not.
+  const scopes = MICROSOFT_CALENDAR_OAUTH_SCOPES.join(' ');
 
   const queryParams = new URLSearchParams({
     client_id: params.clientId,

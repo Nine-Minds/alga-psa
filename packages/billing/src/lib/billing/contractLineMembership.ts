@@ -2,6 +2,7 @@
 // tenant id, so they must never be reachable as action endpoints. The actions in
 // ../../actions/contractLineServiceActions.ts own auth and wrap these.
 import { tenantDb } from '@alga-psa/db';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import type {
@@ -11,6 +12,7 @@ import type {
   IContractLineServiceUsageConfig,
   IContractLineServiceBucketConfig,
   IService,
+  IUser,
 } from '@alga-psa/types';
 import { deleteTemplateServicePrices } from '@alga-psa/shared/billingClients/templateAmounts';
 import { ContractLineServiceConfigurationService } from '../../services/contractLineServiceConfigurationService';
@@ -377,9 +379,84 @@ async function removeServiceFromLiveContractLine(
     .delete();
 }
 
+export interface MembershipWriteState {
+  membershipExists: boolean;
+  configurationExists: boolean;
+}
+
+/**
+ * The one authorization rule for writes to a line's service membership.
+ *
+ * Permission is decided from the rows the transaction is about to write, read
+ * under a lock on the line, never from a list the caller declared:
+ *   - the membership row or the service's configuration row is missing, so the
+ *     write creates one of them: `billing:create`;
+ *   - both exist, so the write only modifies them: `billing:update`.
+ *
+ * The configuration row is `contract_line_service_configuration` for a live
+ * line (what addServiceToLiveContractLine creates/updates) and
+ * `contract_template_line_service_configuration` for a template line.
+ *
+ * Call this before the first row is written. The `FOR UPDATE` on the line
+ * serializes membership writes per line, so the existence read is a fact held
+ * until commit rather than a check-then-act observation.
+ */
+export async function authorizeMembershipWrite(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUser,
+  contractLineId: string,
+  serviceId: string,
+): Promise<MembershipWriteState> {
+  const liveLine = await tenantScopedTable(trx, tenant, 'contract_lines')
+    .where({ contract_line_id: contractLineId })
+    .forUpdate()
+    .first('contract_line_id');
+
+  let membershipTable = 'contract_line_services';
+  let configurationTable = 'contract_line_service_configuration';
+  let lineKey = 'contract_line_id';
+  if (!liveLine) {
+    const templateLine = await tenantScopedTable(trx, tenant, 'contract_template_lines')
+      .where({ template_line_id: contractLineId })
+      .forUpdate()
+      .first('template_line_id');
+    if (!templateLine) {
+      throw new Error(`Contract line ${contractLineId} not found`);
+    }
+    membershipTable = 'contract_template_line_services';
+    configurationTable = 'contract_template_line_service_configuration';
+    lineKey = 'template_line_id';
+  }
+
+  const membership = await tenantScopedTable(trx, tenant, membershipTable)
+    .where({ [lineKey]: contractLineId, service_id: serviceId })
+    .first();
+  const configuration = await tenantScopedTable(trx, tenant, configurationTable)
+    .where({ [lineKey]: contractLineId, service_id: serviceId })
+    .first();
+  const state: MembershipWriteState = {
+    membershipExists: Boolean(membership),
+    configurationExists: Boolean(configuration),
+  };
+
+  const action = state.membershipExists && state.configurationExists ? 'update' : 'create';
+  if (!await hasPermission(user, 'billing', action, trx)) {
+    const service = await tenantScopedTable(trx, tenant, 'service_catalog')
+      .where({ service_id: serviceId })
+      .first('service_name') as { service_name?: string } | undefined;
+    const label = service?.service_name ? `"${service.service_name}" (${serviceId})` : serviceId;
+    throw new Error(
+      `Permission denied: billing:${action} required to ${action === 'create' ? 'attach' : 'modify'} service ${label} on contract line ${contractLineId}`,
+    );
+  }
+  return state;
+}
+
 export async function addServiceToContractLineInTransaction(
   trx: Knex.Transaction,
   tenant: string,
+  user: IUser,
   contractLineId: string,
   serviceId: string,
   quantity?: number,
@@ -393,6 +470,7 @@ export async function addServiceToContractLineInTransaction(
   >,
   rateTiers?: IContractLineServiceRateTier[],
 ): Promise<string> {
+  await authorizeMembershipWrite(trx, tenant, user, contractLineId, serviceId);
   const templateLine = await findTemplateLine(trx, tenant, contractLineId);
   if (templateLine) {
     return addServiceToTemplateLine(
@@ -436,12 +514,14 @@ export async function removeServiceFromContractLineInTransaction(
 
 
 /**
- * Removals then additions on a caller-owned transaction. Writes only; callers own
- * validation, permission checks and rematerialization.
+ * Removals then additions on a caller-owned transaction. Callers own validation and
+ * rematerialization; membership-write permission is enforced per row by
+ * addServiceToContractLineInTransaction (authorizeMembershipWrite).
  */
 export async function applyContractLineServiceMembershipChangesInTransaction(
   trx: Knex.Transaction,
   tenant: string,
+  user: IUser,
   contractLineId: string,
   changes: ContractLineServiceMembershipChanges,
 ): Promise<void> {
@@ -452,6 +532,7 @@ export async function applyContractLineServiceMembershipChangesInTransaction(
     await addServiceToContractLineInTransaction(
       trx,
       tenant,
+      user,
       contractLineId,
       addition.serviceId,
       addition.quantity,

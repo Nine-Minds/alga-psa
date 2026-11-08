@@ -71,8 +71,8 @@ describe('ticket comment tenant facade contract', () => {
     expect(sources.commentModel).toContain("tenantScopedTable(trx, 'comments as parent', tenant)");
     expect(sources.commentModel).toContain("'comment_threads as thread'");
 
-    expect(sources.commentActions).toContain("tenantScopedTable(trx, 'users as u', tenant)");
-    expect(sources.commentActions).toContain("'contacts as c'");
+    expect(sources.commentActions).toContain("tenantScopedTable(trx, 'comments as parent', tenant)");
+    expect(sources.commentActions).toContain("'comment_threads as thread'");
 
     expect(sources.clipboardImageDraftActions).toContain("tenantScopedTable(trx, 'documents as d', tenant)");
     expect(sources.clipboardImageDraftActions).toContain("'document_associations as da'");

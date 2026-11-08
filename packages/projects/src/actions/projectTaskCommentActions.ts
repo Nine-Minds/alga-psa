@@ -4,8 +4,9 @@ import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { serves } from '@alga-psa/core/capability';
+import { isCoManagedSharedWorkError } from '@alga-psa/co-managed/sharedWorkIdentity';
 import { getApiKeyUserOverride, getSession } from '@alga-psa/auth';
-import type { IProjectTaskComment, IProjectTaskCommentWithUser } from '@alga-psa/types';
+import type { IProjectTaskComment, IProjectTaskCommentWithUser, IUserWithRoles } from '@alga-psa/types';
 import {
   countTaskCommentsBatchWithDb,
   countTaskCommentsWithDb,
@@ -14,6 +15,7 @@ import {
   listTaskCommentsWithDb,
   updateTaskCommentWithDb,
 } from '../lib/taskComments/taskCommentService';
+import { withTaskCommentAccess, withTaskCommentBatchReadAccess } from '../lib/taskComments/taskCommentAuthorization';
 import {
   actionError,
   permissionError,
@@ -51,9 +53,16 @@ function projectTaskCommentActionErrorFrom(error: unknown): ProjectTaskCommentAc
     if (message === 'Comment not found') {
       return actionError('Comment not found. It may have been deleted. Please refresh and try again.', 'projects:errors.comment.notFound');
     }
+    if (message.startsWith('Task comment was changed')) {
+      return actionError(message, 'projects:errors.comment.revisionConflict');
+    }
     if (message.startsWith('You can only edit') || message.startsWith('You can only delete')) {
       return actionError(message);
     }
+  }
+
+  if (isCoManagedSharedWorkError(error)) {
+    return actionError('Comment not found. It may have been deleted. Please refresh and try again.', 'projects:errors.comment.notFound');
   }
 
   const dbError = error as { code?: string; column?: string };
@@ -85,11 +94,12 @@ export const createTaskComment = withAuth(async (
 ): Promise<string | ProjectTaskCommentActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
-    return await createTaskCommentWithDb(db, tenant, user, {
-      taskId: comment.taskId,
-      note: comment.note,
-      parentCommentId: comment.parentCommentId || comment.parent_comment_id || null,
-    });
+    return await withTaskCommentAccess(db, tenant, user as IUserWithRoles, { taskId: comment.taskId }, 'create', ({ trx, collaboration }) =>
+      createTaskCommentWithDb(trx, tenant, user, {
+        taskId: comment.taskId,
+        note: comment.note,
+        parentCommentId: comment.parentCommentId || comment.parent_comment_id || null,
+      }, { collaboration }));
   } catch (error) {
     const expected = projectTaskCommentActionErrorFrom(error);
     if (expected) return expected;
@@ -106,12 +116,9 @@ export const getTaskComments = withAuth(async (
   taskId: string
 ): Promise<IProjectTaskCommentWithUser[] | ProjectTaskCommentActionError> => {
   try {
-    if (!await hasPermission(user, 'project_task', 'read')) {
-      throw new Error('Permission denied: cannot read task comments');
-    }
-
     const { knex: db } = await createTenantKnex();
-    return await listTaskCommentsWithDb(db, tenant, taskId);
+    return await withTaskCommentAccess(db, tenant, user as IUserWithRoles, { taskId }, 'read', ({ trx, collaboration }) =>
+      listTaskCommentsWithDb(trx, tenant, taskId, { collaboration, viewerUserId: user.user_id }));
   } catch (error) {
     const expected = projectTaskCommentActionErrorFrom(error);
     if (expected) return expected;
@@ -126,11 +133,14 @@ export const updateTaskComment = withAuth(async (
   user,
   { tenant },
   taskCommentId: string,
-  updates: Partial<Pick<IProjectTaskComment, 'note'>>
+  updates: Partial<Pick<IProjectTaskComment, 'note'>>,
+  /** Co-managed workspaces only: the revision the editor last saw (a stale edit is refused, not merged). */
+  expectedRevision?: number
 ): Promise<void | ProjectTaskCommentActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
-    return await updateTaskCommentWithDb(db, tenant, user, taskCommentId, updates);
+    return await withTaskCommentAccess(db, tenant, user as IUserWithRoles, { taskCommentId }, 'update', ({ trx, collaboration }) =>
+      updateTaskCommentWithDb(trx, tenant, user, taskCommentId, updates, { collaboration, expectedRevision }));
   } catch (error) {
     const expected = projectTaskCommentActionErrorFrom(error);
     if (expected) return expected;
@@ -144,11 +154,14 @@ export const updateTaskComment = withAuth(async (
 export const deleteTaskComment = withAuth(async (
   user,
   { tenant },
-  taskCommentId: string
+  taskCommentId: string,
+  /** Co-managed workspaces only: the revision the viewer last saw. */
+  expectedRevision?: number
 ): Promise<void | ProjectTaskCommentActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
-    return await deleteTaskCommentWithDb(db, tenant, user, taskCommentId);
+    return await withTaskCommentAccess(db, tenant, user as IUserWithRoles, { taskCommentId }, 'delete', ({ trx, collaboration }) =>
+      deleteTaskCommentWithDb(trx, tenant, user, taskCommentId, { collaboration, expectedRevision }));
   } catch (error) {
     const expected = projectTaskCommentActionErrorFrom(error);
     if (expected) return expected;
@@ -165,12 +178,9 @@ export const getTaskCommentCount = withAuth(async (
   taskId: string
 ): Promise<number | ProjectTaskCommentActionError> => {
   try {
-    if (!await hasPermission(user, 'project_task', 'read')) {
-      throw new Error('Permission denied: cannot read task comments');
-    }
-
     const { knex: db } = await createTenantKnex();
-    return await countTaskCommentsWithDb(db, tenant, taskId);
+    return await withTaskCommentAccess(db, tenant, user as IUserWithRoles, { taskId }, 'read', ({ trx }) =>
+      countTaskCommentsWithDb(trx, tenant, taskId));
   } catch (error) {
     const expected = projectTaskCommentActionErrorFrom(error);
     if (expected) return expected;
@@ -210,12 +220,16 @@ export const getTaskCommentCountsBatch = withAuth(async (
   try {
     if (taskIds.length === 0) return {};
 
+    // Coarse permission first, before the co-managed admission path can see the request.
     if (!await hasPermission(user, 'project_task', 'read')) {
       throw new Error('Permission denied: cannot read task comments');
     }
 
     const { knex: db } = await createTenantKnex();
-    return await coManagedBoardCommentCounts(db, tenant, user, taskIds) ?? await countTaskCommentsBatchWithDb(db, tenant, taskIds);
+    const coManaged = await coManagedBoardCommentCounts(db, tenant, user, taskIds);
+    if (coManaged) return coManaged;
+    return await withTaskCommentBatchReadAccess(db, tenant, user as IUserWithRoles, { taskIds }, 'read', ({ trx, ids }) =>
+      countTaskCommentsBatchWithDb(trx, tenant, ids));
   } catch (error) {
     const expected = projectTaskCommentActionErrorFrom(error);
     if (expected) return expected;

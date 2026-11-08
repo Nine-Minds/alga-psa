@@ -12,7 +12,21 @@ export {
 } from './invoiceBillingRecipientService';
 export { ensureInvoiceEmailLinks } from './ensureInvoiceEmailLinks';
 export { BillingEngine } from '../lib/billing/billingEngine';
-export { recalculateQuoteFinancials } from './quoteCalculationService';
+export { recalculateQuoteFinancials, resolveQuoteItemTaxesIfIncluded } from './quoteCalculationService';
+export {
+  decideQuote,
+  authorizePortalUserForQuote,
+  type DecideQuoteInput,
+  type QuoteDecisionAction,
+  type QuoteDecisionActor,
+  type QuoteDecisionContext,
+  type QuoteDecisionForbiddenReason,
+  type QuoteDecisionMethod,
+  type QuoteDecisionResult,
+  type QuoteDecisionSelections,
+  type QuoteDecisionSigner,
+  type PortalQuoteAccessResult,
+} from './quoteDecisionService';
 export {
   PDFGenerationService,
   createPDFGenerationService,
@@ -138,6 +152,14 @@ export {
   type AccountingSyncOperation
 } from './accountingSync/accountingSync.types';
 export { verifyAndCompletePublicSetup, type SetupInspection } from './publicSetupConfirmation';
+export {
+  QuoteAccessLinks,
+  computeQuoteAccessExpiry,
+  hashQuoteAccessToken,
+  type IQuoteAccessLink,
+  type QuoteAccessLinkRevokeReason,
+  type QuoteAccessResolveResult,
+} from './quoteAccessLinks';
 
 // Label batch rendering (work tags, asset / stock-unit labels): one PDF from N authorized view models.
 export {

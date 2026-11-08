@@ -148,22 +148,47 @@ export async function createAssetReadContext(
   };
 }
 
+export type AssetAuthorizationAction = 'read' | 'update' | 'delete';
+
+/**
+ * True when the caller's per-record kernel decision allows `action` on the asset. The action selects which
+ * bundle rules narrow the decision (a bundle's `asset:update` rule is not its `asset:read` rule), so mutations
+ * must ask for the action they perform. Mutations also require read visibility. Coarse RBAC is not
+ * evaluated here; callers pre-filter with it.
+ */
+export async function isAssetActionAllowed(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  context: AssetReadAuthorizationContext,
+  asset: AssetAuthorizationInput,
+  action: AssetAuthorizationAction
+): Promise<boolean> {
+  const records = await resolveAssetAuthorizationRecords(trx, tenant, [asset]);
+  const request = {
+    subject: context.subject,
+    resource: { type: 'asset' as const, action: 'read' as const, id: asset.asset_id },
+    record: records.get(asset.asset_id),
+    requestCache: context.requestCache,
+    knex: trx as Knex,
+  };
+  const readDecision = await context.authorizationKernel.authorizeResource(request);
+  if (!readDecision.allowed || action === 'read') return readDecision.allowed;
+
+  const actionDecision = await context.authorizationKernel.authorizeResource({
+    ...request,
+    resource: { ...request.resource, action },
+  });
+  return actionDecision.allowed;
+}
+
 /** True when the caller's per-record kernel decision allows reading the asset. */
-export async function isAssetReadAllowed(
+export function isAssetReadAllowed(
   trx: Knex | Knex.Transaction,
   tenant: string,
   context: AssetReadAuthorizationContext,
   asset: AssetAuthorizationInput
 ): Promise<boolean> {
-  const records = await resolveAssetAuthorizationRecords(trx, tenant, [asset]);
-  const decision = await context.authorizationKernel.authorizeResource({
-    subject: context.subject,
-    resource: { type: 'asset', action: 'read', id: asset.asset_id },
-    record: records.get(asset.asset_id),
-    requestCache: context.requestCache,
-    knex: trx as Knex,
-  });
-  return decision.allowed;
+  return isAssetActionAllowed(trx, tenant, context, asset, 'read');
 }
 
 /**
@@ -175,16 +200,22 @@ export async function filterReadableAssets<T extends AssetAuthorizationInput>(
   trx: Knex | Knex.Transaction,
   tenant: string,
   context: AssetReadAuthorizationContext,
-  assets: readonly T[]
+  assets: readonly T[],
+  options?: { resolveMultiUserOwnersIndividually?: boolean }
 ): Promise<T[]> {
   if (assets.length === 0) return [];
   const records = await resolveAssetAuthorizationRecords(trx, tenant, [...assets]);
   const allowed = await Promise.all(
     assets.map(async (asset) => {
+      const record = records.get(asset.asset_id);
+      // The association query has no ordering, so batching can change which user is treated as the owner.
+      if (options?.resolveMultiUserOwnersIndividually && (record?.assignedUserIds?.length ?? 0) > 1) {
+        return isAssetReadAllowed(trx, tenant, context, asset);
+      }
       const decision = await context.authorizationKernel.authorizeResource({
         subject: context.subject,
         resource: { type: 'asset', action: 'read', id: asset.asset_id },
-        record: records.get(asset.asset_id),
+        record,
         requestCache: context.requestCache,
         knex: trx as Knex,
       });

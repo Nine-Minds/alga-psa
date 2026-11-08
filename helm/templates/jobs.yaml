@@ -25,8 +25,12 @@ spec:
       imagePullSecrets:
         - name: "{{ .Values.setup.image.credentials }}"
       {{- end }}
+      securityContext:
+        {{- toYaml (.Values.setup.podSecurityContext | default .Values.podSecurityContext) | nindent 8 }}
       containers:
         - name: bootstrap
+          securityContext:
+            {{- toYaml (.Values.setup.securityContext | default .Values.securityContext) | nindent 12 }}
           image: "{{ .Values.setup.image.name }}:{{ .Values.setup.image.tag }}"
           imagePullPolicy: {{ .Values.setup.pullPolicy }}
           {{- if .Values.setup.applianceBootstrap.enabled }}

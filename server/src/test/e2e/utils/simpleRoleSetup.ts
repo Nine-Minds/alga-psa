@@ -90,6 +90,7 @@ export async function setupTestUserWithPermissions(
     'time_period',
     'service',
     'storage',
+    'ticket_template',
   ];
   const actions = ['create', 'read', 'update', 'delete'];
   

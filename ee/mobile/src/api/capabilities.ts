@@ -13,6 +13,12 @@ export type FeatureCapabilities = {
   contactsUpdate: boolean;
   /** Project read access; gates the actionable parts of the task screen. */
   projects: boolean;
+  /** Asset read access; gates the Assets tab. */
+  assets: boolean;
+  /** Asset read + update; gates starting a site audit. */
+  assetAudit: boolean;
+  /** Tenant setting: every "Don't notify the customer" checkbox starts ticked. */
+  dontNotifyCustomerDefault: boolean;
 };
 
 export type DateFieldPart = "day" | "month" | "year";
@@ -46,6 +52,9 @@ export const EMPTY_FEATURE_CAPABILITIES: FeatureCapabilities = {
   contactsCreate: false,
   contactsUpdate: false,
   projects: false,
+  assets: false,
+  assetAudit: false,
+  dontNotifyCustomerDefault: false,
 };
 
 /** Every flag the server did not send is off, so an older server hides the matching UI. */

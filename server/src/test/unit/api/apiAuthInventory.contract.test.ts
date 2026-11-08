@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 /**
  * Inventory contract over the copied-auth controllers and direct routes that
  * load a user from an API key. Any new `findUserByIdForApi` context assignment
- * must be guarded by `assertInternalApiUser` before `req.context` is assigned,
+ * must be guarded by `assertApiPrincipal` before `req.context` is assigned,
  * so a permissively mocked or regressed validator can never admit a client user.
  *
  * This is an inventory test only; the behavioral validator/context suites are
@@ -31,18 +31,24 @@ const ROUTE_FILES = [
   resolve(__dirname, '../../../app/api/documents/view/[fileId]/route.ts'),
 ];
 
-describe('copied-auth inventory: every API-user load is guarded by assertInternalApiUser', () => {
+describe('copied-auth inventory: every API-user load is guarded by assertApiPrincipal', () => {
   it.each(CONTROLLERS)('%s guards every findUserByIdForApi call', (file) => {
     const source = readFileSync(resolve(CONTROLLER_DIR, file), 'utf8');
 
     const loadSites = source.split('const user = await findUserByIdForApi(').length - 1;
-    expect(loadSites, `${file} should contain findUserByIdForApi calls`).toBeGreaterThan(0);
+    // Loads moved behind the shared context builder (which asserts the principal and applies
+    // the edition boundary) are covered by the builder check below.
+    const viaBuilder = source.includes('buildAuthenticatedApiContext(');
+    expect(
+      loadSites > 0 || viaBuilder,
+      `${file} should load users via findUserByIdForApi or buildAuthenticatedApiContext`
+    ).toBe(true);
 
     // Count of the guarded pattern immediately following each load.
     const guarded = source
       .split('const user = await findUserByIdForApi(')
       .slice(1)
-      .filter((rest) => rest.includes('assertInternalApiUser(user);')).length;
+      .filter((rest) => rest.includes('assertApiPrincipal(user);')).length;
 
     expect(guarded).toBe(loadSites);
 
@@ -55,20 +61,21 @@ describe('copied-auth inventory: every API-user load is guarded by assertInterna
     for (const file of ROUTE_FILES) {
       const source = readFileSync(file, 'utf8');
       if (source.includes('findUserByIdForApi(')) {
-        expect(source).toContain('assertInternalApiUser');
+        expect(source).toContain('assertApiPrincipal');
       }
     }
   });
 
-  it('base controller and shared context builder both call assertInternalApiUser', () => {
+  it('base controller and shared context builder both call assertApiPrincipal', () => {
     const base = readFileSync(resolve(CONTROLLER_DIR, 'ApiBaseController.ts'), 'utf8');
-    expect(base).toContain('assertInternalApiUser(user);');
+    // The base controller delegates to the shared builder, which owns the guard.
+    expect(base).toContain('buildAuthenticatedApiContext(');
 
     const middleware = readFileSync(
       resolve(__dirname, '../../../lib/api/middleware/apiMiddleware.ts'),
       'utf8'
     );
-    expect(middleware).toContain('assertInternalApiUser(user);');
-    expect(middleware).toContain('export function assertInternalApiUser');
+    expect(middleware).toContain('assertApiPrincipal(user);');
+    expect(middleware).toContain('export function assertApiPrincipal');
   });
 });

@@ -33,6 +33,7 @@ const SUBTYPES = [
   { category: 'Tickets', name: 'Ticket Created Client', description: 'When a new ticket is created (client-facing)' },
   { category: 'Tickets', name: 'Ticket Updated Client', description: 'When a ticket is modified (client-facing)' },
   { category: 'Tickets', name: 'Ticket Auto-Close Warning', description: 'When a ticket is about to be closed automatically due to inactivity' },
+  { category: 'Tickets', name: 'co-managed-routing', description: 'Escalation received, returned, or assignment of a shared (co-managed) ticket' },
   // Surveys
   { category: 'Surveys', name: 'survey-project-closed', description: 'When a customer satisfaction survey invitation is sent after a project is completed' },
   { category: 'Surveys', name: 'survey-ticket-closed', description: 'When a customer satisfaction survey invitation is sent after a ticket is closed' },
