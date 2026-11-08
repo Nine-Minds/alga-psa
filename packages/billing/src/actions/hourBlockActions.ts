@@ -603,7 +603,13 @@ export const manuallyExpireHourBlock = withAuth(async (
         type: 'manual_expiration',
         createdBy: user.user_id,
         reason: reason.trim(),
-        metadata: { remaining_minutes_at_expiration: Number(block.remaining_minutes) },
+        metadata: {
+          remaining_minutes_at_expiration: Number(block.remaining_minutes),
+          // Keeps the scheduled expiry recoverable when the stamp above
+          // overwrote a future date.
+          previous_expiration_date: currentExpiry,
+          expiration_date: expirationDate,
+        },
       });
 
       const updated = await tenantScopedTable(trx, tenant, 'hour_blocks')
