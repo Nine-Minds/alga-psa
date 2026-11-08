@@ -40,5 +40,5 @@ export default function CoManagedCustomerShell({ children }: { children: ReactNo
       <button type="button" onClick={() => void signOut({ callbackUrl: '/auth/msp/signin' })}>{t('nav.signOut', { defaultValue: 'Sign out' })}</button>
     </nav>
     <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
-  </div><DrawerOutlet fallbackOnly /></StopwatchProvider></DrawerProvider></MspClientTagsProvider>;
+  </div><DrawerOutlet /></StopwatchProvider></DrawerProvider></MspClientTagsProvider>;
 }

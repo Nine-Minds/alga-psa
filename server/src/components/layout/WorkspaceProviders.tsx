@@ -4,7 +4,7 @@ import React from "react";
 import { useProduct } from "@/context/ProductContext";
 import ClientCoManagedIntegration from '@/components/co-managed/CoManagedClientIntegration';
 import type { ClientCoManagedIntegrationProps } from '@alga-psa/clients/context/ClientCrossFeatureContext';
-import { DrawerOutlet } from "@alga-psa/ui";
+import { DrawerOutlet, DrawerProvider } from "@alga-psa/ui";
 import { ActivityDrawerProvider } from "@alga-psa/msp-composition/user-activities/ActivityDrawerProvider";
 import { SchedulingProviderWithCallbacks } from '@alga-psa/scheduling/providers/SchedulingProviderWithCallbacks';
 // Keep granular msp-composition imports: package index barrels pull broad feature trees
@@ -44,32 +44,37 @@ export default function WorkspaceProviders({ children }: WorkspaceProvidersProps
     return <>{children}</>;
   }
 
+  // Route-owned drawer state must leave with this provider tree. The shell keeps
+  // its own outlet for shell-only routes, so a route drawer cannot be replayed
+  // there after its feature providers unmount during navigation.
   return (
-    <SchedulingProviderWithCallbacks>
-      <MspTicketIntegrationProvider>
-       <MspProjectBillingIntegrationProvider>
-        <MspClientIntegrationProvider>
-          <ActivityDrawerProvider>
-            <MspClientDrawerProvider>
-              <MspClientCrossFeatureProvider clientCoManagedIntegration={renderClientCoManagedIntegration}>
-                <MspAssetCrossFeatureProvider>
-                  <MspDocumentsCrossFeatureProvider>
-                    <MspSchedulingCrossFeatureProvider>
-                      <MspActivityCrossFeatureProvider>
-                        <QuickAddClientProviderWithCallbacks>
-                          {children}
-                          <DrawerOutlet />
-                        </QuickAddClientProviderWithCallbacks>
-                      </MspActivityCrossFeatureProvider>
-                    </MspSchedulingCrossFeatureProvider>
-                  </MspDocumentsCrossFeatureProvider>
-                </MspAssetCrossFeatureProvider>
-              </MspClientCrossFeatureProvider>
-            </MspClientDrawerProvider>
-          </ActivityDrawerProvider>
-        </MspClientIntegrationProvider>
-       </MspProjectBillingIntegrationProvider>
-      </MspTicketIntegrationProvider>
-    </SchedulingProviderWithCallbacks>
+    <DrawerProvider>
+      <SchedulingProviderWithCallbacks>
+        <MspTicketIntegrationProvider>
+          <MspProjectBillingIntegrationProvider>
+            <MspClientIntegrationProvider>
+              <ActivityDrawerProvider>
+                <MspClientDrawerProvider>
+                  <MspClientCrossFeatureProvider clientCoManagedIntegration={renderClientCoManagedIntegration}>
+                    <MspAssetCrossFeatureProvider>
+                      <MspDocumentsCrossFeatureProvider>
+                        <MspSchedulingCrossFeatureProvider>
+                          <MspActivityCrossFeatureProvider>
+                            <QuickAddClientProviderWithCallbacks>
+                              {children}
+                              <DrawerOutlet />
+                            </QuickAddClientProviderWithCallbacks>
+                          </MspActivityCrossFeatureProvider>
+                        </MspSchedulingCrossFeatureProvider>
+                      </MspDocumentsCrossFeatureProvider>
+                    </MspAssetCrossFeatureProvider>
+                  </MspClientCrossFeatureProvider>
+                </MspClientDrawerProvider>
+              </ActivityDrawerProvider>
+            </MspClientIntegrationProvider>
+          </MspProjectBillingIntegrationProvider>
+        </MspTicketIntegrationProvider>
+      </SchedulingProviderWithCallbacks>
+    </DrawerProvider>
   );
 }
