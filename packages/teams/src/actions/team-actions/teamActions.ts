@@ -1,6 +1,7 @@
 'use server'
 
 import Team from '../../models/team';
+import { USER_RESPONSE_FIELD_NAMES, sanitizeUserForResponse } from '@alga-psa/types';
 import type { DeletionValidationResult, IRole, ITeam, ITeamMember, IUser, IUserWithRoles } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -26,7 +27,7 @@ async function getUsersWithRoles(
   const userIds = members.map((member) => member.user_id);
   const db = tenantDb(trx, tenant);
   const users = await db.table<IUser>('users')
-    .select('*')
+    .select(USER_RESPONSE_FIELD_NAMES)
     .whereIn('user_id', userIds);
 
   const rolesQuery = db.table<IRole>('roles');
@@ -48,8 +49,10 @@ async function getUsersWithRoles(
 
   const roleByUser = new Map(members.map((member) => [member.user_id, member.role]));
 
+  // Credential columns are never fetched (allow-list projection above) and the sanitizer is the
+  // belt-and-braces strip on the way out, so team members can never carry hashed_password etc.
   return users.map((user) => ({
-    ...(user as any),
+    ...sanitizeUserForResponse(user as Record<string, unknown>),
     roles: rolesByUser.get(user.user_id) ?? [],
     role: roleByUser.get(user.user_id) ?? 'member',
   }));

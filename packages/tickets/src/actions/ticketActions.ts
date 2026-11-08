@@ -1,9 +1,14 @@
 'use server';
 
 import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
-import { isMspPrincipalUserType } from '@alga-psa/types';
+import {
+  isClientUserType,
+  isMspPrincipalUserType,
+  type AllowlistedUserField,
+} from '@alga-psa/types';
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { ticketUpdateStamp } from '@shared/lib/tickets/ticketUpdateStamp';
+import { projectResponseUsers, sanitizeResponseUsers } from '../lib/responseUsers';
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { type NativeCommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
@@ -37,6 +42,7 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { deleteTicketChildRecords } from '../lib/deleteTicketChildRecords';
+import { authorizeTicketRecordAccessConcealed } from '../lib/ticketRecordAuthorization';
 import { createTagsForEntityWithTransaction, findTagsByEntityIds } from '@alga-psa/tags/actions/tagActions';
 import TagMapping from '@alga-psa/tags/models/tagMapping';
 import { isTagActionError } from '@alga-psa/tags/actions/tagActionErrors';
@@ -2393,11 +2399,9 @@ async function performTicketDelete(
   trx: Knex.Transaction,
   ticketId: string,
   tenant: string,
-  user: IUser
+  user: IUserWithRoles
 ): Promise<void> {
-  if (!await hasPermission(user, 'ticket', 'delete', trx)) {
-    throw new Error('Permission denied: Cannot delete ticket');
-  }
+  await authorizeTicketRecordAccessConcealed({ trx, tenant, user, ticketId, action: 'delete' });
 
   const ticket = await tenantScopedTable(trx, 'tickets', tenant)
     .where({
@@ -2441,6 +2445,7 @@ export const deleteTicket = withAuth(async (
 ): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
   try {
     const { knex } = await createTenantKnex();
+    await authorizeTicketRecordAccessConcealed({ trx: knex, tenant, user, ticketId, action: 'delete' });
     const result = await deleteEntityWithValidation('ticket', ticketId, knex, tenant, async (trx, tenantId) => {
       await performTicketDelete(trx, ticketId, tenantId, user);
     });
@@ -2491,6 +2496,13 @@ export const deleteTickets = withAuth(async (user, { tenant }, ticketIds: string
 
   for (const ticketId of uniqueIds) {
     try {
+      await authorizeTicketRecordAccessConcealed({
+        trx: ticketKnex,
+        tenant,
+        user,
+        ticketId,
+        action: 'delete',
+      });
       const result = await deleteEntityWithValidation('ticket', ticketId, ticketKnex, tenant, async (trx, tenantId) => {
         await performTicketDelete(trx, ticketId, tenantId, user);
       });
@@ -3062,8 +3074,14 @@ export type DetailedTicket = ITicket & {
   client_name?: string;
 
   additionalAgents?: ITicketResource[];
-  availableAgents?: IUser[];
+  /**
+   * Assignable-agent directory, allow-listed user columns only (never credential material).
+   * Omitted for client-portal principals, who have no use for the MSP agent directory.
+   */
+  availableAgents?: TicketAgentOption[];
 };
+
+export type TicketAgentOption = Pick<IUserWithRoles, AllowlistedUserField>;
 
 export const getTicketById = withAuth(async (user, { tenant }, id: string): Promise<DetailedTicket> => {
   try {
@@ -3121,15 +3139,24 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
         throw new Error('Permission denied: Cannot view ticket');
       }
 
+      // Client-portal principals are admitted to their own ticket but do not receive the MSP
+      // agent directory, so the users table is not queried for them at all.
+      const includeAgentDirectory = !isClientUserType(user.user_type);
+
       // Fetch additional resources and available agents in parallel
-      const [additionalAgents, availableAgents] = await Promise.all([
+      const [additionalAgents, agentRows] = await Promise.all([
         tenantScopedTable(trx, 'ticket_resources', tenant)
           .where({
             ticket_id: id
           }),
-        tenantScopedTable(trx, 'users', tenant)
-          .orderBy('first_name', 'asc')
+        includeAgentDirectory
+          ? projectResponseUsers(tenantScopedTable(trx, 'users', tenant))
+              .where({ is_inactive: false })
+              .orderBy('first_name', 'asc')
+              .then(sanitizeResponseUsers)
+          : Promise.resolve(undefined)
       ]);
+      const availableAgents: TicketAgentOption[] | undefined = agentRows;
 
 
     const assigned_to_name = (ticket.assigned_to_first_name || ticket.assigned_to_last_name)
@@ -3147,7 +3174,7 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
       contact_name: ticket.contact_name || undefined,
       client_name: ticket.client_name || undefined,
       additionalAgents: additionalAgents,
-      availableAgents: availableAgents,
+      ...(availableAgents ? { availableAgents } : {}),
     };
 
     delete (detailedTicket as any).assigned_to_first_name;
