@@ -1699,9 +1699,9 @@
       "letter-full": "Letter-ark, en per sida"
     },
     "paper": {
-      "a4": "A4",
-      "letter": "Letter",
-      "legal": "Legal"
+      "a4": "A4-ark",
+      "letter": "Letter-ark",
+      "legal": "Legal-ark"
     },
     "standardTemplates": {
       "standard-ticket-customer-worksheet-a4": "Standard kundarbetsblad (A4)",

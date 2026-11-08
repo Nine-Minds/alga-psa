@@ -96,12 +96,14 @@ describe('renderLabelBatchHtml failures', () => {
         [{ templateCode: STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_CODE, viewModel }],
         letter,
       );
-      expect(html).toContain('ASSET-123');
-      expect(html).not.toContain('Asset ASSET-123');
-      expect(html).toContain('1234567');
-      expect(html).toContain('First paragraph\nSecond &lt;paragraph&gt;');
-      expect(html).toContain('white-space:pre-wrap');
-      expect(html).not.toContain('S/N');
+      const body = /<body>([\s\S]*)<\/body>/.exec(html)?.[1] ?? '';
+      expect(body).toContain('ASSET-123');
+      expect(body).not.toContain('Asset ASSET-123');
+      expect(body).toContain('1234567');
+      expect(body).toContain('First paragraph\nSecond &lt;paragraph&gt;');
+      expect(body).toContain('white-space:pre-wrap');
+      // Scoped to the body because the head carries base64 font data that can contain "S/N".
+      expect(body).not.toContain('S/N');
     });
 
     it('marks worksheet cells as full-page flow sections so long descriptions paginate', async () => {

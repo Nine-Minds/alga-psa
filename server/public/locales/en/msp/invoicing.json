@@ -2329,11 +2329,11 @@
       },
       "label_assetSerialNumber": {
         "label": "Full asset serial number",
-        "description": "Full serial of the selected asset, available on Letter customer worksheets."
+        "description": "Full serial of the selected asset, available on full-page customer worksheets."
       },
       "label_ticketDescription": {
         "label": "Ticket description",
-        "description": "Ticket description as plain text, available on Letter customer worksheets."
+        "description": "Ticket description as plain text, available on full-page customer worksheets."
       },
       "label_custodyLocation": {
         "label": "Custody location",

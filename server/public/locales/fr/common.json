@@ -1699,9 +1699,9 @@
       "letter-full": "Feuille Letter, une par page"
     },
     "paper": {
-      "a4": "A4",
-      "letter": "Letter",
-      "legal": "Legal"
+      "a4": "Feuille A4",
+      "letter": "Feuille Letter",
+      "legal": "Feuille Legal"
     },
     "standardTemplates": {
       "standard-ticket-customer-worksheet-a4": "Feuille de travail client standard (A4)",
