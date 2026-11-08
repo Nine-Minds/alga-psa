@@ -22,6 +22,7 @@ import { getTenantThemeByTenantId } from "@alga-psa/tenancy/actions/tenant-actio
 import { resolveMspBranding } from "@/components/layout/mspBranding";
 import type { Metadata } from 'next';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
+import { getDontNotifyCustomerDefaultAction } from '@alga-psa/notifications/actions/notification-actions/notificationActions';
 
 /**
  * Client-portal branding must never leak into the staff app by itself. The
@@ -142,6 +143,9 @@ export default async function MspLayout({
   const currencyCode = await getTenantDefaultCurrencyCode().catch(() => 'USD');
   // Digit order / separator / clock follow the tenant's country, never the language.
   const dateFormat = await getDateFormatPreference().catch(() => SYSTEM_DATE_FORMAT);
+  // Seeds every "Don't notify the customer" checkbox in the MSP portal. A
+  // failed read falls back to the unticked default rather than blocking the shell.
+  const dontNotifyCustomerDefault = await getDontNotifyCustomerDefaultAction().catch(() => false);
 
   const tenantId = session.user.tenant;
   const { mspWhiteLabel, tenantBranding } = tenantId
@@ -155,6 +159,7 @@ export default async function MspLayout({
       session={session}
       currencyCode={currencyCode}
       dateFormat={dateFormat}
+      dontNotifyCustomerDefault={dontNotifyCustomerDefault}
       productCode={productCode}
       workspaceNotice={workspaceNotice}
       needsOnboarding={needsOnboarding}

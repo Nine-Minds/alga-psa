@@ -33,7 +33,14 @@ function setCacheEntry(key: string, value: BucketConfig): void {
 export async function apiRateLimitConfigGetter(
   tenantId: string,
   apiKeyId?: string,
+  contextOverride?: BucketConfig | null,
 ): Promise<BucketConfig> {
+  // A context-supplied override (set only by an edition boundary) wins over the
+  // stored settings. Callers validate it (see enforce.ts) before passing it in.
+  if (contextOverride) {
+    return contextOverride;
+  }
+
   const cacheKey = getCacheKey(tenantId, apiKeyId);
   const cached = cache.get(cacheKey);
 

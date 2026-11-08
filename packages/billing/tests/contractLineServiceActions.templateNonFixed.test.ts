@@ -18,6 +18,7 @@ function makeBuilder(table: string) {
   builder.orderByRaw = () => builder;
   builder.forUpdate = () => builder;
   builder.select = () => builder;
+  builder.forUpdate = () => builder;
   builder.first = async () => matching()[0];
   builder.insert = async (row: Row) => {
     rows().push({ ...row });

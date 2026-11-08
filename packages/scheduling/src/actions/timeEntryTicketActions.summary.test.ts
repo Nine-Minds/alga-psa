@@ -109,7 +109,7 @@ describe('fetchTimeEntriesForTicketCore ticket totals', () => {
     state.decisions.set('other-hidden', { allowed: false, redactedFields: [] });
 
     const { fetchTimeEntriesForTicketCore } = await import('./timeEntryTicketActions');
-    const db = { raw: (sql: string) => sql } as never;
+    const db = { raw: (sql: string) => sql, schema: { hasColumn: async () => false } } as never;
 
     const summary = await fetchTimeEntriesForTicketCore(USER, 'tenant-1', db, 'ticket-1');
 

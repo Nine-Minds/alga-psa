@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { BundleNarrowingRule } from '@alga-psa/authorization/kernel/providers/bundleProvider';
 
 type Row = Record<string, any>;
 const h = vi.hoisted(() => ({
   permission: true,
-  rules: [] as Array<{ id: string; resource: string; action: string; templateKey?: 'selected_clients'; selectedClientIds?: string[] }>,
+  rules: [] as BundleNarrowingRule[],
   resolverFails: false,
   tables: {} as Record<string, Row[]>,
   permissionCalls: [] as unknown[][],
@@ -26,6 +27,8 @@ vi.mock('@alga-psa/db', () => ({
         rows = rows.filter((row) => values.includes(row[column]));
         return query;
       },
+      // These fixtures have at most one association per asset, so ordering cannot change ownership.
+      orderBy(_column: string, _direction?: 'asc' | 'desc') { return query; },
       select(...selected: string[]) { columns = selected; return query; },
       first() { return Promise.resolve(project(rows[0])); },
       then(resolve: (rows: Row[]) => unknown, reject: (error: unknown) => unknown) {
@@ -89,6 +92,22 @@ describe('assertAssetAccess with the authorization kernel', () => {
     expect(h.resolverCalls).toBe(1);
   });
 
+  it('allows team-scoped note access only when the requested asset belongs to the user\'s team', async () => {
+    h.rules = [{ id: 'team-read', resource: 'asset', action: 'read', templateKey: 'same_team' }];
+    h.tables.team_members = [{ user_id: user.user_id, team_id: 'team-1' }];
+    h.tables.asset_associations = [
+      { asset_id: 'asset-1', entity_type: 'team', entity_id: 'team-1' },
+    ];
+
+    await expect(assertAssetAccess({} as any, 'tenant-1', user, 'asset-1', 'read'))
+      .resolves.toEqual({ asset_id: 'asset-1', client_id: 'client-1' });
+
+    // A team association on a different asset must not grant access to this asset's notes.
+    h.tables.asset_associations[0].asset_id = 'other-asset';
+    await expect(assertAssetAccess({} as any, 'tenant-1', user, 'asset-1', 'read'))
+      .rejects.toThrow('Asset not found');
+  });
+
   it.each(['read', 'update', 'delete'] as const)('allows an RBAC-authorized %s without bundle narrowing', async (action) => {
     h.rules = [];
     await expect(assertAssetAccess({} as any, 'tenant-1', user, 'asset-1', action))
@@ -97,10 +116,10 @@ describe('assertAssetAccess with the authorization kernel', () => {
     expect(h.resolverCalls).toBe(1);
   });
 
-  it('does not apply a read narrowing rule to an authorized delete', async () => {
+  it.each(['update', 'delete'] as const)('denies %s when the asset is outside the read policy', async (action) => {
     h.rules = selectedClients('read', ['client-outside-policy']);
-    await expect(assertAssetAccess({} as any, 'tenant-1', user, 'asset-1', 'delete'))
-      .resolves.toEqual({ asset_id: 'asset-1', client_id: 'client-1' });
+    await expect(assertAssetAccess({} as any, 'tenant-1', user, 'asset-1', action))
+      .rejects.toThrow('Asset not found');
     expect(h.resolverCalls).toBe(1);
   });
 

@@ -14,6 +14,7 @@ import {
   ReportExecutionOptions
 } from './types';
 import { QueryBuilder } from '../builders/QueryBuilder';
+import { formatCurrencyWithSymbol } from '@alga-psa/core/formatters';
 
 export class ReportEngine {
   
@@ -225,15 +226,13 @@ export class ReportEngine {
    */
   private static formatCurrency(value: number, formatting: FormattingOptions, locale: string, defaultCurrency: string = 'USD'): string {
     const amount = formatting.divisor ? value / formatting.divisor : value;
-    return new Intl.NumberFormat(locale, {
-      style: 'currency',
-      // A metric definition may pin a specific currency (formatting.currency); otherwise
-      // use the tenant's configured default currency (default_billing_settings, resolved in
-      // execute()), falling back to 'USD' only when neither is available.
-      currency: formatting.currency || defaultCurrency || 'USD',
+    // A metric definition may pin a specific currency (formatting.currency); otherwise
+    // use the tenant's configured default currency (default_billing_settings, resolved in
+    // execute()), falling back to 'USD' only when neither is available.
+    return formatCurrencyWithSymbol(amount, locale, formatting.currency || defaultCurrency || 'USD', {
       minimumFractionDigits: formatting.decimals ?? 2,
       maximumFractionDigits: formatting.decimals ?? 2
-    }).format(amount);
+    });
   }
   
   /**

@@ -64,6 +64,9 @@ const SYMBOL_TO_COMPARISON_OPERATOR: Record<string, WorkflowConditionOperator> =
 
 const POSITIVE_TEXT_FUNCTION_BY_OPERATOR: Partial<Record<WorkflowConditionOperator, string>> = {
   contains: 'contains',
+  not_contains: 'notContains',
+  contains_ci: 'containsCI',
+  not_contains_ci: 'notContainsCI',
   starts_with: 'startsWith',
   ends_with: 'endsWith',
 };

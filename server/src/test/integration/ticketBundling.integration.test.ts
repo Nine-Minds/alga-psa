@@ -273,6 +273,45 @@ describe('Ticket bundling integration', () => {
     await db?.destroy().catch(() => undefined);
   });
 
+  it('getConsolidatedTicketData returns only the ticket client, never the tenant client list', async () => {
+    const tag = uuidv4().slice(0, 6);
+    const ticketClientName = `Only Client ${tag}`;
+    const ticketClientId = await createClient(db, tenantId, ticketClientName);
+    const otherClients: Array<{ id: string; name: string }> = [];
+    for (let i = 0; i < 4; i += 1) {
+      const name = `Unrelated Client ${tag} ${i}`;
+      otherClients.push({ id: await createClient(db, tenantId, name), name });
+    }
+
+    const ticketId = uuidv4();
+    await insertTicket(db, {
+      tenant: tenantId,
+      ticketId,
+      ticketNumber: `CLN-${tag}`,
+      title: 'Client list probe',
+      clientId: ticketClientId,
+      contactId: null as any,
+      statusId: statusOpenId,
+      priorityId,
+      boardId,
+    });
+
+    const data = await runWithTenant(tenantId, async () =>
+      getConsolidatedTicketData(ticketId, internalUser as any)
+    );
+
+    expect(data).not.toHaveProperty('clients');
+    expect(data.client?.client_id).toBe(ticketClientId);
+    expect(data.client?.client_name).toBe(ticketClientName);
+
+    // None of the other seeded clients may appear anywhere in the payload.
+    const payload = JSON.stringify(data);
+    for (const other of otherClients) {
+      expect(payload).not.toContain(other.id);
+      expect(payload).not.toContain(other.name);
+    }
+  });
+
   it('enforces permissions for bundle operations', async () => {
     const clientA = await createClient(db, tenantId, `Perm Client ${uuidv4().slice(0, 6)}`);
     const contactA = await createContact(db, tenantId, clientA, `perm-${uuidv4().slice(0, 6)}@example.com`);
@@ -484,7 +523,7 @@ describe('Ticket bundling integration', () => {
     expect(childAfter?.priority_id).toBe(nextPriorityId);
 
     const childWorkflowUpdateResult = await runWithTenant(tenantId, async () => {
-      return updateTicketWithCache(childId, { status_id: statusOpenId }, internalUser as any);
+      return updateTicketWithCache(childId, { status_id: statusOpenId });
     });
     expect(childWorkflowUpdateResult).toMatchObject({
       actionError: 'This ticket is bundled; workflow fields are locked (status_id). Update the master ticket instead.',
@@ -1245,7 +1284,6 @@ describe('Ticket bundling integration', () => {
         updateTicketWithCache(
           childId,
           { status_id: statusClosedId, assigned_to: internalUser.user_id, priority_id: other.priority_id },
-          internalUser as any,
         )
       );
       expect(result).not.toMatchObject({ actionError: expect.anything() });
@@ -1258,7 +1296,7 @@ describe('Ticket bundling integration', () => {
     it('sync_updates child is rejected with the lock message (server action)', async () => {
       const { childId } = await setup('sync_updates');
       const result = await runWithTenant(tenantId, () =>
-        updateTicketWithCache(childId, { assigned_to: internalUser.user_id }, internalUser as any)
+        updateTicketWithCache(childId, { assigned_to: internalUser.user_id })
       );
       expect(result).toMatchObject({
         actionError: 'This ticket is bundled; workflow fields are locked (assigned_to). Update the master ticket instead.',

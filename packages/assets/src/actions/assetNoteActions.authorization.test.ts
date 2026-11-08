@@ -22,6 +22,8 @@ vi.mock('@alga-psa/db', () => ({
     const query: any = {
       where(criteria: Record<string, unknown>) { where = criteria; rows = rows.filter((row) => Object.entries(criteria).every(([k, v]) => row[k] === v)); return query; },
       whereIn(column: string, values: unknown[]) { rows = rows.filter((row) => values.includes(row[column])); return query; },
+      // These fixtures have no asset associations, so their ordering is immaterial.
+      orderBy(_column: string, _direction?: 'asc' | 'desc') { return query; },
       select(...selected: string[]) { columns = selected; return query; },
       first() { return Promise.resolve(project(rows[0])); },
       insert(row: Row) { h.tables[table] ??= []; h.tables[table].push(row); return Promise.resolve(); },
