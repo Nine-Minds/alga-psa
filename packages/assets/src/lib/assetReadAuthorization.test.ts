@@ -104,14 +104,14 @@ describe('isAssetActionAllowed', () => {
     { id: 'r1', resource: 'asset', action: 'read', templateKey: 'selected_clients' as const, selectedClientIds: ['client-a'] },
     { id: 'r2', resource: 'asset', action: 'update', templateKey: 'same_team' as const },
   ];
-  const context = () => ({
+  const context = (bundleRules = rules) => ({
     subject: {
       tenant: 'tenant-a', userId: 'user-1', userType: 'internal' as const, roleIds: [], teamIds: ['team-ops'],
       managedUserIds: [], clientId: null, portfolioClientIds: [],
     },
     authorizationKernel: createAuthorizationKernel({
       builtinProvider: new BuiltinAuthorizationKernelProvider(),
-      bundleProvider: new BundleAuthorizationKernelProvider({ resolveRules: async () => rules }),
+      bundleProvider: new BundleAuthorizationKernelProvider({ resolveRules: async () => bundleRules }),
       rbacEvaluator: async () => true,
     }),
     requestCache: new RequestLocalAuthorizationCache(),
@@ -134,9 +134,30 @@ describe('isAssetActionAllowed', () => {
     expect(await isAssetActionAllowed({} as any, 'tenant-a', context(), asset, 'update')).toBe(true);
   });
 
-  it('does not narrow an action the bundle has no rule for', async () => {
+  it('requires the update team restriction for delete when no exact delete rule exists', async () => {
     h.dbState.asset_associations = [];
-    // The missing delete rule leaves that action unrestricted, but the asset must still be readable.
-    expect(await isAssetActionAllowed({} as any, 'tenant-a', context(), { asset_id: 'asset-3', client_id: 'client-a' }, 'delete')).toBe(true);
+    const asset = { asset_id: 'asset-3', client_id: 'client-a' };
+
+    expect(await isAssetReadAllowed({} as any, 'tenant-a', context(), asset)).toBe(true);
+    expect(await isAssetActionAllowed({} as any, 'tenant-a', context(), asset, 'delete')).toBe(false);
+
+    h.dbState.asset_associations = [{ asset_id: 'asset-3', entity_type: 'team', entity_id: 'team-ops' }];
+    expect(await isAssetActionAllowed({} as any, 'tenant-a', context(), asset, 'delete')).toBe(true);
+  });
+
+  it('still requires read visibility when delete satisfies the update team restriction', async () => {
+    h.dbState.asset_associations = [{ asset_id: 'asset-3', entity_type: 'team', entity_id: 'team-ops' }];
+    expect(await isAssetActionAllowed({} as any, 'tenant-a', context(), { asset_id: 'asset-3', client_id: 'client-b' }, 'delete')).toBe(false);
+  });
+
+  it('does not narrow delete when the bundle has neither a delete nor an update rule', async () => {
+    h.dbState.asset_associations = [];
+    expect(await isAssetActionAllowed({} as any, 'tenant-a', context(rules.filter((rule) => rule.action === 'read')), { asset_id: 'asset-3', client_id: 'client-a' }, 'delete')).toBe(true);
+  });
+
+  it('uses an exact delete rule instead of the update alias', async () => {
+    h.dbState.asset_associations = [];
+    const ctx = context([...rules, { id: 'r3', resource: 'asset', action: 'delete', templateKey: 'selected_clients', selectedClientIds: ['client-a'] }]);
+    expect(await isAssetActionAllowed({} as any, 'tenant-a', ctx, { asset_id: 'asset-3', client_id: 'client-a' }, 'delete')).toBe(true);
   });
 });
