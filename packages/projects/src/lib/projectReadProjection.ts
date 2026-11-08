@@ -10,13 +10,18 @@ type ProjectRecord = Partial<IProject> & Record<string, unknown>;
 export const PROJECT_SEARCH_INDEX_TYPES = ['project', 'project_phase', 'project_task', 'project_task_comment'] as const;
 export type ProjectSearchIndexType = typeof PROJECT_SEARCH_INDEX_TYPES[number];
 
-/** Search index fields that can carry project names copied from their source records. */
-const PROJECT_NAME_INDEX_FIELD_SOURCES = { title: ['project_name'], subtitle: ['project_name'], body: ['project_name'] } as const;
+/** Canonical sources for indexed project text, used to rebuild fields before matching. */
+const PROJECT_INDEX_FIELD_SOURCES = {
+  project: { title: ['projects.project_name'], subtitle: [], body: ['projects.description'] },
+  project_phase: { title: ['project_phases.phase_name'], subtitle: ['projects.project_name'], body: ['project_phases.description'] },
+  project_task: { title: ['project_tasks.task_name'], subtitle: ['projects.project_name'], body: ['project_tasks.description'] },
+  project_task_comment: { title: ['project_tasks.task_name'], subtitle: ['projects.project_name'], body: ['project_task_comments.body'] },
+} as const;
 export const PROJECT_SEARCH_INDEX_FIELD_SOURCES: Record<ProjectSearchIndexType, Record<string, readonly string[]>> = {
-  project: PROJECT_NAME_INDEX_FIELD_SOURCES,
-  project_phase: PROJECT_NAME_INDEX_FIELD_SOURCES,
-  project_task: PROJECT_NAME_INDEX_FIELD_SOURCES,
-  project_task_comment: PROJECT_NAME_INDEX_FIELD_SOURCES,
+  project: PROJECT_INDEX_FIELD_SOURCES.project,
+  project_phase: PROJECT_INDEX_FIELD_SOURCES.project_phase,
+  project_task: PROJECT_INDEX_FIELD_SOURCES.project_task,
+  project_task_comment: PROJECT_INDEX_FIELD_SOURCES.project_task_comment,
 };
 
 const PROJECT_FIELD_SOURCES: Record<string, string[]> = {
@@ -38,17 +43,6 @@ export function isProjectFieldRedacted(redactedFields: readonly string[], field:
 
 export function isWholeProjectRedacted(redactedFields: readonly string[]): boolean {
   return redactedFields.some((field) => field === '*' || field === 'projects.*' || field === 'project.*');
-}
-
-/** Removes every copy of a redacted source value from indexed text before matching. */
-export function projectSearchIndexText(
-  value: string | null | undefined,
-  sourceValue: string | null | undefined,
-  sourceIsRedacted: boolean,
-): string | null {
-  if (value == null) return null;
-  if (!sourceIsRedacted || !sourceValue) return value;
-  return value.toLowerCase().split(sourceValue.toLowerCase()).join(' ');
 }
 
 export function assertProjectFieldsWritable(redactedFields: readonly string[], fields: readonly string[]): void {

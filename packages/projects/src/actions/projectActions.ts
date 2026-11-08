@@ -580,11 +580,17 @@ export const searchProjectListIds = withAuth(async (
       isProjectFieldRedacted(decision.redactedFields, 'project_name') && project.project_id ? [project.project_id] : []);
     const hiddenProjectNumberIds = allowedProjects.flatMap(({ project, decision }) =>
       isProjectFieldRedacted(decision.redactedFields, 'project_number') && project.project_id ? [project.project_id] : []);
+    const projectsWithAnyRedactionIds = allowedProjects.flatMap(({ project, decision }) =>
+      decision.redactedFields.length > 0 && project.project_id ? [project.project_id] : []);
+    const hiddenProjectDescriptionIds = allowedProjects.flatMap(({ project, decision }) =>
+      isProjectFieldRedacted(decision.redactedFields, 'description') && project.project_id ? [project.project_id] : []);
 
     const searchIndex = tenantScopedDerivedTableSql(scopedDb, 'app_search_index', 'si');
     const projects = tenantScopedDerivedTableSql(scopedDb, 'projects', 'p');
     const projectTasks = tenantScopedDerivedTableSql(scopedDb, 'project_tasks', 'pt');
     const projectPhases = tenantScopedDerivedTableSql(scopedDb, 'project_phases', 'ph');
+    const indexedTasks = tenantScopedDerivedTableSql(scopedDb, 'project_tasks', 'indexed_task');
+    const indexedPhases = tenantScopedDerivedTableSql(scopedDb, 'project_phases', 'indexed_phase');
     const projectTaskCommentJoin = tenantJoinSubquerySql(
       scopedDb,
       trx,
@@ -617,21 +623,41 @@ export const searchProjectListIds = withAuth(async (
       WHEN si.object_type = 'project_task_comment' THEN ph.project_id::text
       ELSE si.parent_id
     END`;
-    const indexTextFields = [...new Set(PROJECT_LIST_SEARCH_TYPES.flatMap((type) =>
-      Object.keys(PROJECT_SEARCH_INDEX_FIELD_SOURCES[type]).filter((field) =>
-        PROJECT_SEARCH_INDEX_FIELD_SOURCES[type][field].includes('project_name'))))];
-    const effectiveTextColumns = indexTextFields.map((field) => ({
-      field,
-      sql: `CASE WHEN p.project_id = ANY(?::uuid[]) AND COALESCE(p.project_name, '') <> ''
-        THEN replace(lower(COALESCE(si.${field}, '')), lower(p.project_name), ' ')
-        ELSE si.${field} END`,
-      bindings: [hiddenProjectNameIds],
-    }));
-    const effectiveVector = `setweight(public.process_large_lexemes(COALESCE(effective_title, '')), 'A')
-      || setweight(public.process_large_lexemes(COALESCE(effective_subtitle, '')), 'B')
-      || setweight(public.process_large_lexemes(COALESCE(effective_body, '')), 'C')`;
-    const result = await trx.raw<{ rows: Array<{ project_id: string }> }>(
-      `
+    const sourceExpressions: Record<string, string> = {
+      'projects.project_name': 'p.project_name',
+      'projects.description': 'p.description',
+      'project_phases.phase_name': 'indexed_phase.phase_name',
+      'project_phases.description': 'indexed_phase.description',
+      'project_tasks.task_name': "CASE WHEN si.object_type = 'project_task_comment' THEN pt.task_name ELSE indexed_task.task_name END",
+      'project_tasks.description': 'indexed_task.description',
+      'project_task_comments.task_name': 'pt.task_name',
+      'project_task_comments.body': 'si.body',
+    };
+    const redactedSourceIds: Record<string, string[]> = {
+      'projects.project_name': hiddenProjectNameIds,
+      'projects.description': hiddenProjectDescriptionIds,
+    };
+    const projectSourceProjection = (field: 'title' | 'subtitle' | 'body') => {
+      const branches = PROJECT_LIST_SEARCH_TYPES.map((type) => {
+        const source = PROJECT_SEARCH_INDEX_FIELD_SOURCES[type][field]?.[0];
+        if (!source) return `WHEN '${type}' THEN si.${field}`;
+        const expression = sourceExpressions[source];
+        const redactedIds = redactedSourceIds[source];
+        const projected = redactedIds
+          ? `CASE WHEN p.project_id = ANY(?::uuid[]) THEN NULL ELSE ${expression} END`
+          : expression;
+        return `WHEN '${type}' THEN ${projected}`;
+      });
+      const bindings = PROJECT_LIST_SEARCH_TYPES.flatMap((type) => {
+        const source = PROJECT_SEARCH_INDEX_FIELD_SOURCES[type][field]?.[0];
+        return source && redactedSourceIds[source] ? [redactedSourceIds[source]] : [];
+      });
+      return { sql: `CASE si.object_type ${branches.join(' ')} ELSE si.${field} END`, bindings };
+    };
+    const effectiveTitle = projectSourceProjection('title');
+    const effectiveSubtitle = projectSourceProjection('subtitle');
+    const effectiveBody = projectSourceProjection('body');
+    const searchQuerySql = `
         WITH q AS (
           SELECT
             websearch_to_tsquery('english', ?) AS tsq,
@@ -644,17 +670,30 @@ export const searchProjectListIds = withAuth(async (
             si.*,
             p.project_id AS owning_project_id,
             p.project_number AS project_number,
-            ${effectiveTextColumns.map(({ field, sql }) => `${sql} AS effective_${field}`).join(',\n            ')},
-            ${effectiveVector} AS effective_search_vector
+            ${effectiveTitle.sql} AS effective_title,
+            ${effectiveSubtitle.sql} AS effective_subtitle,
+            ${effectiveBody.sql} AS effective_body
           FROM ${searchIndex.sql}
+          LEFT JOIN ${indexedTasks.sql} ON indexed_task.tenant = si.tenant
+            AND si.object_type = 'project_task' AND indexed_task.task_id::text = si.object_id
+          LEFT JOIN ${indexedPhases.sql} ON indexed_phase.tenant = si.tenant
+            AND si.object_type = 'project_phase' AND indexed_phase.phase_id::text = si.object_id
           ${projectTaskCommentJoin.sql}
           ${projectPhaseJoin.sql}
           JOIN ${projects.sql} ON p.tenant = si.tenant AND p.project_id::text = ${projectIdExpression}
         ),
+        searchable_with_vector AS (
+          SELECT
+            searchable.*,
+            setweight(public.process_large_lexemes(COALESCE(effective_title, '')), 'A')
+              || setweight(public.process_large_lexemes(COALESCE(effective_subtitle, '')), 'B')
+              || setweight(public.process_large_lexemes(COALESCE(effective_body, '')), 'C') AS effective_search_vector
+          FROM searchable
+        ),
         matched AS (
           SELECT DISTINCT
             si.owning_project_id::text AS project_id
-          FROM searchable si
+          FROM searchable_with_vector si
           CROSS JOIN q
           WHERE si.owning_project_id = ANY(?::uuid[])
             AND si.object_type = ANY(?::text[])
@@ -662,6 +701,7 @@ export const searchProjectListIds = withAuth(async (
             AND (cardinality(si.visible_to_user_ids) = 0 OR si.visible_to_user_ids && ARRAY[?]::uuid[])
             AND (si.is_internal_only = false OR ?::boolean = true)
             AND (si.is_private = false OR si.visible_to_user_ids && ARRAY[?]::uuid[])
+            AND NOT (si.object_type = 'project_task_comment' AND si.owning_project_id = ANY(?::uuid[]))
             AND ${clientScopePredicate}
             AND (
               si.effective_search_vector @@ q.tsq
@@ -685,29 +725,34 @@ export const searchProjectListIds = withAuth(async (
         SELECT project_id
         FROM matched
         WHERE project_id IS NOT NULL
-      `,
-      [
-        rawSearch,
-        prefixTsquery,
-        prefixTsquery,
-        rawSearch,
-        identifier,
-        ...effectiveTextColumns.flatMap(({ bindings }) => bindings),
-        ...searchIndex.bindings,
-        ...projectTaskCommentJoin.bindings,
-        ...projectPhaseJoin.bindings,
-        ...projects.bindings,
-        allowedProjectIds,
-        [...PROJECT_LIST_SEARCH_TYPES],
-        ['project:read'],
-        user.user_id,
-        isInternalUser,
-        user.user_id,
-        ...clientScopeBindings,
-        hiddenProjectNumberIds,
-        hiddenProjectNumberIds,
-      ]
-    );
+      `;
+    const searchQueryBindings = [
+      rawSearch,
+      prefixTsquery,
+      prefixTsquery,
+      rawSearch,
+      identifier,
+      ...effectiveTitle.bindings,
+      ...effectiveSubtitle.bindings,
+      ...effectiveBody.bindings,
+      ...searchIndex.bindings,
+      ...indexedTasks.bindings,
+      ...indexedPhases.bindings,
+      ...projectTaskCommentJoin.bindings,
+      ...projectPhaseJoin.bindings,
+      ...projects.bindings,
+      allowedProjectIds,
+      [...PROJECT_LIST_SEARCH_TYPES],
+      ['project:read'],
+      user.user_id,
+      isInternalUser,
+      user.user_id,
+      projectsWithAnyRedactionIds,
+      ...clientScopeBindings,
+      hiddenProjectNumberIds,
+      hiddenProjectNumberIds,
+    ];
+    const result = await trx.raw<{ rows: Array<{ project_id: string }> }>(searchQuerySql, searchQueryBindings);
     return result.rows.map((row) => row.project_id);
   });
 });

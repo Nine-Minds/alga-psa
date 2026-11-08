@@ -90,10 +90,10 @@ describe('project list search respects effective redacted fields', () => {
     const phaseId = randomUUID();
     const taskId = randomUUID();
     await testState.trx('project_phases').insert({
-      tenant, phase_id: phaseId, project_id: projectId, phase_name: `Planning for ${name}`, status: 'open',
+      tenant, phase_id: phaseId, project_id: projectId, phase_name: 'Planning milestone', status: 'open',
       order_number: 1, wbs_code: 'phase-1',
     });
-    await testState.trx('project_tasks').insert({ tenant, task_id: taskId, phase_id: phaseId, task_name: `Review ${name}`, wbs_code: 'task-1' });
+    await testState.trx('project_tasks').insert({ tenant, task_id: taskId, phase_id: phaseId, task_name: 'Review shipment', description: 'Needlewood visible task notes', wbs_code: 'task-1' });
     await addIndexEntry({ type: 'project', id: projectId, parentId: null, title: name, body: `Notes for ${name}`, metadata: { identifier: 'Nacre-9162' } });
     await addIndexEntry({ type: 'project_phase', id: phaseId, parentId: projectId, title: `Planning for ${name}`, subtitle: name });
     await addIndexEntry({ type: 'project_task', id: taskId, parentId: projectId, title: `Review ${name}`, subtitle: name });
@@ -102,14 +102,44 @@ describe('project list search respects effective redacted fields', () => {
 
     expect(await searchProjectListIds(name)).not.toContain(projectId);
     expect(await searchProjectListIds('Nacre-9162')).not.toContain(projectId);
+    expect(await searchProjectListIds('PRJ-9162')).toContain(projectId);
+    expect(await searchProjectListIds('Needlewood')).toContain(projectId);
+  });
+
+  it('does not match stale indexed names after a rename, redacted descriptions, or comments denied by any parent redaction', async () => {
+    const renamedId = await makeProject('Current Alder Portfolio', 'PRJ-9170');
+    const descriptionHiddenId = await makeProject('Visible description project', 'PRJ-9171');
+    await testState.trx('projects').where({ tenant, project_id: descriptionHiddenId }).update({ description: 'HarborVault description source' });
+    const taskId = randomUUID();
+    const phaseId = randomUUID();
+    await testState.trx('project_phases').insert({ tenant, phase_id: phaseId, project_id: renamedId, phase_name: 'Current phase', status: 'open', order_number: 1, wbs_code: 'phase-2' });
+    await testState.trx('project_tasks').insert({ tenant, task_id: taskId, phase_id: phaseId, task_name: 'Current task', wbs_code: 'task-2' });
+    await addIndexEntry({ type: 'project', id: renamedId, parentId: null, title: 'Project Nacre-9162 Lantern', body: 'Old Nacre-9162 notes' });
+    await addIndexEntry({ type: 'project_phase', id: phaseId, parentId: renamedId, title: 'Old phase Project Nacre-9162 Lantern', subtitle: 'Project Nacre-9162 Lantern' });
+    await addIndexEntry({ type: 'project_task', id: taskId, parentId: renamedId, title: 'Old task Project Nacre-9162 Lantern', subtitle: 'Project Nacre-9162 Lantern' });
+    await addIndexEntry({ type: 'project', id: descriptionHiddenId, parentId: null, title: 'Visible description project', body: 'HarborVault description source' });
+    await addIndexEntry({ type: 'project_task_comment', id: randomUUID(), parentId: taskId, title: 'Current task', body: 'CommentVault inaccessible comment text' });
+    testState.decisions.set(renamedId, { allowed: true, redactedFields: ['project_name'] });
+    testState.decisions.set(descriptionHiddenId, { allowed: true, redactedFields: ['projects.description'] });
+
+    expect(await searchProjectListIds('Project Nacre-9162 Lantern')).not.toContain(renamedId);
+    expect(await searchProjectListIds('Nacre-9162')).not.toContain(renamedId);
+    expect(await searchProjectListIds('HarborVault')).not.toContain(descriptionHiddenId);
+    expect(await searchProjectListIds('CommentVault')).not.toContain(renamedId);
+    expect(await searchProjectListIds('Alder')).not.toContain(renamedId);
   });
 
   it('keeps visible project numbers and child text searchable, while excluding denied and wholly redacted projects', async () => {
     const visibleId = await makeProject('Visible rollout', 'PRJ-9163');
     const deniedId = await makeProject('Denied rollout', 'PRJ-9164');
     const wholeRedactedId = await makeProject('Whole hidden rollout', 'PRJ-9165');
+    const visiblePhaseId = randomUUID();
+    await testState.trx('project_phases').insert({
+      tenant, phase_id: visiblePhaseId, project_id: visibleId, phase_name: 'Operations milestone',
+      description: 'Needlewood commissioning notes', status: 'open', order_number: 1, wbs_code: 'phase-visible',
+    });
     await addIndexEntry({ type: 'project', id: visibleId, parentId: null, title: 'Visible rollout' });
-    await addIndexEntry({ type: 'project_phase', id: randomUUID(), parentId: visibleId, title: 'Operations milestone', body: 'Needlewood commissioning notes' });
+    await addIndexEntry({ type: 'project_phase', id: visiblePhaseId, parentId: visibleId, title: 'Operations milestone', body: 'Needlewood commissioning notes' });
     await addIndexEntry({ type: 'project', id: deniedId, parentId: null, title: 'Denied rollout' });
     await addIndexEntry({ type: 'project', id: wholeRedactedId, parentId: null, title: 'Whole hidden rollout' });
     testState.decisions.set(deniedId, { allowed: false, redactedFields: [] });
