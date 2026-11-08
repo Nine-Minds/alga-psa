@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IUserWithRoles } from '@alga-psa/types';
-import { createAssetReadContext, isAssetActionAllowed, isAssetReadAllowed } from '../../lib/assetReadAuthorization';
+import {
+  createAssetReadContext,
+  isAssetActionAllowed,
+  isAssetReadAllowed,
+  resolveAssetAuthorizationRecords,
+} from '../../lib/assetReadAuthorization';
 
 type Row = Record<string, any>;
 
@@ -60,6 +65,8 @@ const h = vi.hoisted(() => {
         rows = rows.filter((row) => !Object.entries(criteria).every(([key, value]) => row[key] === value));
         return qb;
       },
+      // These fixtures exercise association membership, independent of row order.
+      orderBy() { return qb; },
       select() { return qb; },
       first() { return Promise.resolve(rows[0]); },
       then(resolve: (rows: Row[]) => unknown, reject?: (error: unknown) => unknown) {
@@ -161,6 +168,22 @@ vi.mock('@alga-psa/shared/rmm/signedInUserMappings', () => h.shared);
 
 const { mapRmmUserToContact, suggestAssigneeFromRmmUser } = await import('../rmmUserAssignmentActions');
 
+async function assetUpdateRuleAllows(
+  context: Awaited<ReturnType<typeof createAssetReadContext>>,
+  asset: { asset_id: string; client_id: string },
+) {
+  // Evaluate the update rule alone: the mutation helper also requires read visibility.
+  const records = await resolveAssetAuthorizationRecords(h.knex, 'tenant-1', [asset]);
+  const decision = await context.authorizationKernel.authorizeResource({
+    subject: context.subject,
+    resource: { type: 'asset', action: 'update', id: asset.asset_id },
+    record: records.get(asset.asset_id),
+    requestCache: context.requestCache,
+    knex: h.knex,
+  });
+  return decision.allowed;
+}
+
 beforeEach(() => {
   h.reset();
   h.shared.suggestContactForAsset.mockClear();
@@ -190,6 +213,17 @@ describe('RMM user mapping record authorization', () => {
     expect(h.shared.suggestContactForAsset).toHaveBeenCalledWith(
       h.knex, 'tenant-1', 'asset-out-of-scope', expect.any(Function),
     );
+  });
+
+  it('returns the signed-in identity for a readable asset without requiring update scope', async () => {
+    const result = await suggestAssigneeFromRmmUser('asset-readable-not-updatable');
+
+    expect(result).toEqual({
+      rawUser: 'CORP\\jdoe', key: 'jdoe', contactId: null, contactName: null,
+      method: null, integrationId: 'integration-1', provider: 'ninjaone',
+    });
+    expect(h.state.mappingWrites).toBe(0);
+    expect(h.state.assignments).toEqual([]);
   });
 
   it('rejects an unavailable integration before mapping writes', async () => {
@@ -268,7 +302,7 @@ describe('RMM user mapping record authorization', () => {
     const unreadableAsset = { asset_id: 'asset-updatable-not-readable', client_id: 'client-out-of-scope' };
 
     expect(await isAssetReadAllowed(h.knex, 'tenant-1', context, unreadableAsset)).toBe(false);
-    expect(await isAssetActionAllowed(h.knex, 'tenant-1', context, unreadableAsset, 'update')).toBe(true);
+    expect(await assetUpdateRuleAllows(context, unreadableAsset)).toBe(true);
 
     const result = await mapRmmUserToContact({
       integrationId: 'integration-1', provider: 'ninjaone', rawUser: 'CORP\\jdoe',
@@ -300,6 +334,6 @@ describe('RMM user mapping record authorization', () => {
 
     const unreadableAsset = { asset_id: 'asset-updatable-not-readable', client_id: 'client-out-of-scope' };
     expect(await isAssetReadAllowed(h.knex, 'tenant-1', context, unreadableAsset)).toBe(false);
-    expect(await isAssetActionAllowed(h.knex, 'tenant-1', context, unreadableAsset, 'update')).toBe(true);
+    expect(await assetUpdateRuleAllows(context, unreadableAsset)).toBe(true);
   });
 });
