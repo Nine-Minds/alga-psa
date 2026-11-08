@@ -2424,7 +2424,11 @@
       "Code 128",
       "Ticket: {{number}}",
       "RMA {{number}} · {{status}}",
-      "Markdown"
+      "Markdown",
+      "Tickets",
+      "ticket",
+      "tickets",
+      "Firmware"
     ],
     "caseInsensitive": [
       "api",
