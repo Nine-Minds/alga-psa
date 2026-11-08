@@ -797,7 +797,7 @@
           "tickets": "Ärenden",
           "tasks": "Projektuppgifter"
         },
-        "openCount": "Att hantera: {{count}} {{label}}",
+        "openCount": "Antal öppna {{label}}: {{count}}",
         "actions": {
           "reassign": "Tilldela på nytt",
           "unassign": "Ta bort tilldelning",
@@ -811,7 +811,7 @@
         },
         "summary": {
           "archived": "{{count}} {{label}} kommer att arkiveras",
-          "unassigned": "Tilldelningen tas bort för {{count}} {{label}}",
+          "unassigned": "{{count}} {{label}} kommer att få tilldelningen borttagen",
           "reassigned": "{{count}} {{label}} kommer att tilldelas {{name}}"
         }
       }
@@ -1092,7 +1092,7 @@
     "sharedWorkspaceLabel": "Delad arbetsplats",
     "details": {
       "notProvided": "Inte angivet",
-      "notAvailable": "Inte tillgängligt",
+      "notAvailable": "Saknas",
       "cpuWithModel": "{{model}} (antal kärnor: {{count}})",
       "cpuCores": "Antal kärnor: {{count}}",
       "workstationTitle": "Information om arbetsstationen",
