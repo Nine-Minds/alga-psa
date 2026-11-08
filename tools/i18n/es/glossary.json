@@ -2423,7 +2423,8 @@
       "{{size}} GB",
       "Code 128",
       "Ticket: {{number}}",
-      "RMA {{number}} · {{status}}"
+      "RMA {{number}} · {{status}}",
+      "Markdown"
     ],
     "caseInsensitive": [
       "api",
