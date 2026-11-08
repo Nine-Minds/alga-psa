@@ -1489,7 +1489,7 @@
         "noFieldSelected": "Inget fält valt",
         "customHint": "Ange en egen bindningssökväg om fältet du behöver inte finns i listan.",
         "useFieldPicker": "Använd fältväljaren",
-        "current": "Aktuell",
+        "current": "Aktuellt fält",
         "unbound": "Utan bindning",
         "searchFields": "Sök fält…",
         "noMatches": "Inga matchande fält.",
@@ -1655,7 +1655,7 @@
         },
         "fill": {
           "label": "Fyll",
-          "description": "Utöka till ledigt utrymme med elementets önskade storlek som utgångspunkt."
+          "description": "Ta upp ledigt utrymme med elementets önskade storlek som utgångspunkt."
         },
         "share": {
           "label": "Dela",
@@ -1669,7 +1669,7 @@
       "groups": {
         "layout": "Layout",
         "direction": "Riktning",
-        "alignItems": "Justera objekt",
+        "alignItems": "Justera element",
         "justifyContent": "Fördela innehåll",
         "objectFit": "Bildanpassning",
         "horizontalAlign": "Horisontell justering",
@@ -1683,14 +1683,14 @@
         "widthLower": "bredd",
         "heightLower": "höjd"
       },
-      "flexItemHint": "I den här stapeln ({{direction}}) styr inställningarna hur elementet delar utrymme i {{axis}} med element på samma nivå.",
+      "flexItemHint": "I den här stapeln ({{direction}}) styr inställningarna hur elementet delar utrymme i {{axis}}led med element på samma nivå.",
       "flexBehavior": "{{axis}} – beteende",
       "flexBehaviorAria": "{{axis}} – beteende: {{preset}}",
       "flexCustomNotice": "Det här elementet har anpassade flexvärden. Välj en förinställning för att förenkla dem eller justera de avancerade värdena nedan.",
       "advancedFlexValues": "Avancerade flexvärden",
-      "flexGrow": "Ta extra utrymme",
+      "flexGrow": "Ta upp extra utrymme",
       "flexShrink": "Tillåt krympning",
-      "flexBasis": "Önskad storlek i {{axis}}",
+      "flexBasis": "Önskad {{axis}}",
       "displayFormat": {
         "singleLine": {
           "label": "En rad",
