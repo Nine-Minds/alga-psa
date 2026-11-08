@@ -1,8 +1,17 @@
 import { Knex } from 'knex';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
-import type { IContractLineServiceConfiguration } from '@alga-psa/types';
+import type {
+  ContractLineServiceConfigurationMutableValues,
+  IContractLineServiceConfiguration,
+} from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
+import { registerUpdatableColumns } from './allowlistedUpdate';
+
+const configurationUpdateValues = registerUpdatableColumns<IContractLineServiceConfiguration>()([
+  'custom_rate',
+  'quantity',
+]);
 
 export default class ContractLineServiceConfiguration {
   private knex: Knex;
@@ -108,23 +117,13 @@ export default class ContractLineServiceConfiguration {
   /**
    * Update an existing contract line service configuration
    */
-  async update(configId: string, data: Partial<IContractLineServiceConfiguration>): Promise<boolean> {
+  async update(configId: string, data: ContractLineServiceConfigurationMutableValues): Promise<boolean> {
     await this.initKnex();
     
     const updateData = {
-      ...data,
+      ...configurationUpdateValues(data),
       updated_at: new Date()
     };
-    
-    // Remove config_id from update data if present
-    if ('config_id' in updateData) {
-      delete updateData.config_id;
-    }
-    
-    // Remove tenant from update data if present
-    if ('tenant' in updateData) {
-      delete updateData.tenant;
-    }
     
     const result = await this.table('contract_line_service_configuration')
       .where({
@@ -132,6 +131,15 @@ export default class ContractLineServiceConfiguration {
       })
       .update(updateData);
     
+    return result > 0;
+  }
+
+  /** Dedicated identity mutation for the authorized rebind service operation. */
+  async rebindIdentity(configId: string, contractLineId: string, serviceId: string): Promise<boolean> {
+    await this.initKnex();
+    const result = await this.table('contract_line_service_configuration')
+      .where({ config_id: configId })
+      .update({ contract_line_id: contractLineId, service_id: serviceId, updated_at: new Date() });
     return result > 0;
   }
 

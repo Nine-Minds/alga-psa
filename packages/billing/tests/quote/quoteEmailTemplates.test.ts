@@ -191,3 +191,40 @@ describe('formatQuoteDate calendar-day stability (alga-2026-0002724)', () => {
     expect(text).not.toContain('Review online');
   });
 });
+
+describe('quote review link in fallback builders', () => {
+  const input = { quote: baseQuote, companyName: 'Acme MSP', portalLink: 'https://portal.example.com/q', };
+  const review = 'https://app.example.com/quote/tok';
+
+  it.each([
+    ['sent', buildQuoteSentEmailTemplate],
+    ['reminder', buildQuoteReminderEmailTemplate],
+  ])('%s: review link is the primary CTA and the portal link is secondary after it', (_n, build) => {
+    const out = build({ ...input, quoteReviewLink: review, hasPortalAccess: true });
+    expect(out.html).toContain(`<a href="${review}"`);
+    expect(out.html).toContain('Review and approve quote');
+    expect(out.html.indexOf(review)).toBeLessThan(out.html.indexOf(input.portalLink));
+    expect(out.text.indexOf(review)).toBeLessThan(out.text.indexOf(input.portalLink));
+  });
+
+  it.each([
+    ['sent', buildQuoteSentEmailTemplate],
+    ['reminder', buildQuoteReminderEmailTemplate],
+  ])('%s: portal link omitted without portal access', (_n, build) => {
+    const out = build({ ...input, quoteReviewLink: review, hasPortalAccess: false });
+    expect(out.html).toContain(review);
+    expect(out.html).not.toContain(input.portalLink);
+    expect(out.text).not.toContain(input.portalLink);
+  });
+
+  it.each([
+    ['sent', buildQuoteSentEmailTemplate],
+    ['reminder', buildQuoteReminderEmailTemplate],
+  ])('%s: without a review link the output is unchanged (portal link only, hasPortalAccess ignored)', (_n, build) => {
+    const plain = build(input);
+    expect(build({ ...input, hasPortalAccess: false })).toEqual(plain);
+    expect(plain.html).toContain(input.portalLink);
+    expect(plain.html).not.toMatch(/Review and approve|quote\//);
+    expect(plain.text).toContain(`Review online: ${input.portalLink}`);
+  });
+});

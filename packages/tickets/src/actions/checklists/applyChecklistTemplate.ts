@@ -15,7 +15,7 @@ import {
 import { checklistActionErrorFrom, TEMPLATE_CLIENT_MISMATCH, type ChecklistActionError } from './checklistActionErrors';
 import { authorizeTicketRecordAccessConcealed } from '../../lib/ticketRecordAuthorization';
 
-/** UI entry point: an MSP administrator applies a checklist template to an authorized ticket. */
+/** UI entry point: an authorized user applies a checklist template to a ticket by hand. */
 export const applyChecklistTemplate = withAuth(
   async (user, { tenant }, ticketId: string, templateId: string): Promise<ApplyChecklistTemplateResult | ChecklistActionError> => {
     try {
