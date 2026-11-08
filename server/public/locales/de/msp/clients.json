@@ -329,7 +329,8 @@
       "empty": "Keine clientspezifischen Checklistenvorlagen.",
       "loadFailed": "Checklistenvorlagen konnten nicht geladen werden",
       "retry": "Erneut versuchen"
-    }
+    },
+    "audits": "Audits"
   },
   "clientCommandCenter": {
     "cards": {
@@ -383,7 +384,12 @@
       "warrantyExpired_other": "{{count}} ohne Garantie",
       "warrantyExpiring_one": "1 läuft in ≤90 T ab",
       "warrantyExpiring_other": "{{count}} laufen in ≤90 T ab",
-      "warrantyTracked": " (von {{count}} erfasst)"
+      "warrantyTracked": " (von {{count}} erfasst)",
+      "auditsLink": "Standortaudits",
+      "lastAudit": "Letztes Audit {{date}}",
+      "lastAuditMissing_one": "1 fehlt",
+      "lastAuditMissing_other": "{{count}} fehlen",
+      "neverAudited": "Noch nie auditiert"
     },
     "locations": {
       "billing": "Rechnung",
@@ -392,7 +398,9 @@
       "manage": "Verwalten",
       "more": "+{{count}} weitere",
       "none": "Noch keine Standorte.",
-      "shipping": "Versand"
+      "shipping": "Versand",
+      "lastAudit": "Auditiert {{date}}",
+      "neverAudited": "Noch nie auditiert"
     },
     "money": {
       "activeContracts": "Aktive Verträge",
@@ -1671,7 +1679,8 @@
           "members": "Mitglieder",
           "people": "Personen"
         }
-      }
+      },
+      "startAudit": "Audit starten"
     },
     "tickets": {
       "addTicket": "Ticket hinzufügen",
