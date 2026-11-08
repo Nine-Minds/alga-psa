@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 /// <reference types="@testing-library/jest-dom/vitest" />
+import '@testing-library/jest-dom/vitest';
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
