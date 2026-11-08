@@ -25,10 +25,6 @@ import { HealthServer } from './healthServer.js';
 import { getWorkflowWorkerMetrics } from './metrics.js';
 import { registerEnterpriseStorageProviders } from './registerEnterpriseStorageProviders.js';
 
-// Compose the co-managed ticket authority before workflow actions are registered. This
-// module also installs the capability classification used by the shared mutation guard.
-import '@alga-psa/co-managed/deliveryRegistration';
-
 async function startServices() {
   const healthServer = new HealthServer(undefined, getWorkflowWorkerMetrics().registry);
   try {
@@ -66,6 +62,8 @@ async function startServices() {
 
     // Workflow ticket mutations must go through the co-managed record-scope / field-redaction authority.
     // Reuse the shared registration (delivery seam + workflow-ticket seam); do not register by hand.
+    // Keep this import inside startup so an unavailable provider leaves health reporting not-ready.
+    // It also installs capability classification before the workflow runtime initializes.
     try {
       await import('@alga-psa/co-managed/deliveryRegistration');
     } catch (error) {

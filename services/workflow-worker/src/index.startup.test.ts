@@ -113,7 +113,7 @@ const { healthState, registrationMode, callOrder } = vi.hoisted(() => ({
 
 vi.mock('./healthServer.js', () => ({
   HealthServer: class {
-    async start() {}
+    async start() { callOrder.push('health-start'); }
     async stop() {}
     setWorker(name: string, ready: boolean) { healthState.workers[name] = ready; }
     markReady() { healthState.ready = true; }
@@ -174,6 +174,18 @@ vi.mock('@alga-psa/licensing/lifecycle', () => ({
 }));
 vi.mock('@alga-psa/licensing/lifecycle-error', () => ({ CoManagedLifecycleError: class extends Error {} }));
 
+// Exercise the real registration module and capability setup, without loading
+// the database-backed operations that its providers will invoke later.
+vi.mock('../../../packages/co-managed/src/workflowTicketAuthority', () => ({
+  retainCoManagedWorkflowTicketAuthority: vi.fn()
+}));
+vi.mock('../../../packages/co-managed/src/deliveryProvider', () => ({
+  createCoManagedDeliveryProvider: vi.fn()
+}));
+vi.mock('../../../packages/co-managed/src/inboundCommentWriter', () => ({
+  registerCoManagedInboundCommentWriter: vi.fn()
+}));
+
 describe('workflow worker startup', () => {
   beforeEach(() => {
     vi.resetModules();
@@ -181,14 +193,12 @@ describe('workflow worker startup', () => {
     healthState.ready = false;
     registrationMode.fail = false;
     callOrder.length = 0;
-    // Stand-in for the shared registration module (re-run per boot: a vi.mock factory is cached across resetModules).
-    // Registers on the REAL seam, or throws like an image that cannot resolve @alga-psa/co-managed.
-    vi.doMock('@alga-psa/co-managed/deliveryRegistration', async () => {
+    // Re-run per boot: a vi.mock factory is cached across resetModules.
+    // Load the real registration, or simulate an image that cannot resolve it.
+    vi.doMock('@alga-psa/co-managed/deliveryRegistration', async (importOriginal) => {
       callOrder.push('import');
       if (registrationMode.fail) throw new Error('cannot resolve co-managed');
-      const { coManagedWorkflowTicketSeam } = await import('@alga-psa/shared/lib/coManagedDelivery');
-      if (!coManagedWorkflowTicketSeam.hasProvider()) coManagedWorkflowTicketSeam.register(() => ({ retain: async () => undefined }));
-      return {};
+      return importOriginal();
     });
     delete process.env.WORKFLOW_RUNTIME_V2_ENABLE_DB_POLLING;
     delete process.env.WORKFLOW_RUNTIME_V2_ENABLE_TEMPORAL_POLLING;
@@ -237,6 +247,8 @@ describe('workflow worker startup', () => {
       const { coManagedWorkflowTicketSeam } = await import('@alga-psa/shared/lib/coManagedDelivery');
       expect(coManagedWorkflowTicketSeam.hasProvider()).toBe(true);
       expect(registerCapabilityParticipationMock).toHaveBeenCalledTimes(1);
+      expect(registerCapabilityParticipationMock).toHaveBeenCalledWith('co-managed', expect.any(Function));
+      expect(registerCapabilityEligibilityMock).toHaveBeenCalledWith('co-managed', expect.any(Function));
       expect(registerCapabilityParticipationMock.mock.invocationCallOrder[0]).toBeLessThan(initializeWorkflowRuntimeV2Mock.mock.invocationCallOrder[0]);
 
       const checker = registerFeatureFlagCheckerMock.mock.calls[0]?.[0];
@@ -299,7 +311,7 @@ describe('workflow worker startup', () => {
       const { coManagedWorkflowTicketSeam } = await import('@alga-psa/shared/lib/coManagedDelivery');
       expect(coManagedWorkflowTicketSeam.hasProvider()).toBe(true);
       expect(healthState.workers['co-managed-workflow-authority']).toBe(true);
-      expect(callOrder).toEqual(['import', 'init']);
+      expect(callOrder).toEqual(['health-start', 'import', 'init']);
     } finally {
       processOnSpy.mockRestore();
     }
@@ -310,7 +322,14 @@ describe('workflow worker startup', () => {
     const processOnSpy = vi.spyOn(process, 'on').mockReturnValue(process);
     try {
       await import('./index.ts');
-      await vi.waitFor(() => expect(eventWorkerStartMock).toHaveBeenCalledTimes(1));
+      await vi.waitFor(() => expect(sweepWorkerStartMock).toHaveBeenCalledTimes(1));
+      const { coManagedWorkflowTicketSeam } = await import('@alga-psa/shared/lib/coManagedDelivery');
+      expect(coManagedWorkflowTicketSeam.hasProvider()).toBe(false);
+      expect(registerCapabilityParticipationMock).not.toHaveBeenCalled();
+      expect(callOrder).toEqual(['health-start', 'import', 'init']);
+      expect(healthState.workers.temporal).toBe(true);
+      expect(healthState.workers.eventStream).toBe(true);
+      expect(healthState.workers.dataStoreSweep).toBe(true);
       expect(healthState.workers['co-managed-workflow-authority']).toBe(false);
       expect(healthState.ready).toBe(false);
       expect(loggerInfoMock).not.toHaveBeenCalledWith('[WorkflowWorker] All services started successfully');
