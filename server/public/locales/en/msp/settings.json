@@ -1882,7 +1882,8 @@
         "loading": "Loading email templates...",
         "templateCount": "({{templateCount}} templates)",
         "usingCustom": "Using custom template",
-        "usingStandard": "Using standard template"
+        "usingStandard": "Using standard template",
+        "notCurrentlySent": "Not currently sent"
       },
       "columns": {
         "name": "Name",
@@ -1906,7 +1907,8 @@
         "close": "Close",
         "cancel": "Cancel",
         "saving": "Saving...",
-        "save": "Save"
+        "save": "Save",
+        "variableReference": "Variable reference"
       },
       "description": "Each event type has a standard template that can be customized. You can either use the standard template or create a custom version.",
       "filter": {
@@ -1929,7 +1931,8 @@
         "notAvailable": "N/A"
       },
       "edit": {
-        "title": "Edit Custom Template: {{name}}"
+        "title": "Edit Custom Template: {{name}}",
+        "variableSuggestions": "Template variable suggestions"
       },
       "languages": {
         "en": "English",
@@ -1939,7 +1942,8 @@
         "nl": "Dutch",
         "it": "Italian",
         "pl": "Polish",
-        "pt": "Portuguese"
+        "pt": "Portuguese",
+        "sv": "Swedish"
       }
     },
     "emailBranding": {
@@ -3018,7 +3022,8 @@
     "rmmEnterpriseNote": "RMM integrations are available in Pro.",
     "categoryHeading": "{{label}} Integrations",
     "loading": {
-      "payments": "Loading payment settings..."
+      "payments": "Loading payment settings...",
+      "hudu": "Loading Hudu integration settings..."
     },
     "categories": {
       "accounting": {
@@ -3110,6 +3115,11 @@
         "name": "Telephony",
         "description": "Journal calls as interactions, recognise callers, and turn a call into a ticket"
       }
+    },
+    "addOnRequired": {
+      "heading": "{{featureName}} requires the {{addOnName}} add-on",
+      "manageAddOns": "Manage add-ons",
+      "entraDescription": "Purchase the Enterprise add-on to activate Microsoft Entra Sync, including tenant discovery, client mapping, contact sync, and reconciliation workflows."
     }
   },
   "orgChart": {

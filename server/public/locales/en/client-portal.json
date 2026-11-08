@@ -921,7 +921,12 @@
       "noMessage": "No message"
     },
     "unreadCount_few": "{{count}} unread notifications",
-    "unreadCount_many": "{{count}} unread notifications"
+    "unreadCount_many": "{{count}} unread notifications",
+    "reconnectingToServer": "Reconnecting to server...",
+    "refresh": "Refresh",
+    "markAllRead": "Mark all read",
+    "emptyTitle": "No notifications",
+    "emptyDescription": "You're all caught up!"
   },
   "billing": {
     "columns": {
