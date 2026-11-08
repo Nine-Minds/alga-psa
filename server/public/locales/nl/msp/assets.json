@@ -54,6 +54,22 @@
       "closed": "Gesloten",
       "warranty_review": "Garantiebeoordeling",
       "repaired": "Gerepareerd"
+    },
+    "assetAuditStatus": {
+      "in_progress": "In uitvoering",
+      "completed": "Voltooid",
+      "cancelled": "Geannuleerd"
+    },
+    "assetAuditResult": {
+      "expected": "Verwacht",
+      "present": "Aanwezig",
+      "missing": "Ontbrekend",
+      "unexpected": "Onverwacht"
+    },
+    "assetAuditMethod": {
+      "scan": "Scan",
+      "manual": "Handmatig",
+      "register": "Ter plaatse geregistreerd"
     }
   },
   "assetAlertsSection": {
@@ -204,6 +220,13 @@
         "any": "Elke bewaring",
         "inCustody": "In bewaring bij MSP",
         "notInCustody": "Niet in bewaring bij MSP"
+      },
+      "audit": {
+        "any": "Alle controleresultaten",
+        "present": "Laatste controle: aanwezig",
+        "missing": "Laatste controle: ontbrekend",
+        "never": "Nooit gecontroleerd",
+        "stale": "Niet gecontroleerd in de afgelopen 90 dagen"
       }
     },
     "activeFilters": {
@@ -377,7 +400,9 @@
       "location": "Locatie",
       "purchaseDate": "Aankoopdatum",
       "warrantyEnd": "Einde garantie",
-      "notProvided": "Niet voorzien"
+      "notProvided": "Niet voorzien",
+      "lastAudited": "Laatst gecontroleerd",
+      "neverAudited": "Nooit gecontroleerd"
     },
     "info": {
       "client": "Klant",
@@ -842,24 +867,6 @@
     "links": {
       "title": "Koppelingen voor toegang op afstand",
       "description": "Configureer URL-sjablonen voor ScreenConnect en andere tools voor toegang op afstand.",
-      "errors": {
-        "load": "Laden van koppelingen voor toegang op afstand is mislukt.",
-        "save": "Opslaan van de koppeling voor toegang op afstand is mislukt.",
-        "delete": "Verwijderen van de koppeling voor toegang op afstand is mislukt.",
-        "templateHttp": "Het sjabloon moet beginnen met http:// of https:// en een letterlijke hostnaam.",
-        "templatePlaceholder": "Het sjabloon bevat een niet-ondersteunde placeholder.",
-        "templateUrl": "Het sjabloon moet een geldige http- of https-URL opleveren.",
-        "required": "Een knoptekst en URL-sjabloon zijn vereist.",
-        "partialDelete": "Kon {{count}} geselecteerde koppeling(en) niet verwijderen."
-      },
-      "noneAvailable": "Er zijn geen opties voor toegang op afstand beschikbaar.",
-      "confirmDeleteTitle": "Koppeling voor toegang op afstand verwijderen?",
-      "confirmDeleteMessage": "Weet u zeker dat u “{{label}}” wilt verwijderen? Dit kan niet ongedaan worden gemaakt.",
-      "openMenu": "Menu openen",
-      "selectLabel": "{{label}} selecteren",
-      "confirmBulkDeleteTitle": "Geselecteerde koppelingen verwijderen?",
-      "confirmBulkDeleteMessage": "{{count}} geselecteerde koppeling(en) voor toegang op afstand verwijderen?",
-      "selectedCount": "{{count}} geselecteerd",
       "add": "Koppeling toevoegen",
       "empty": "Er zijn geen koppelingen voor toegang op afstand ingesteld.",
       "edit": "Bewerken",
@@ -872,10 +879,28 @@
       "template": "URL-sjabloon",
       "ninjaExample": "Voorbeeld van het NinjaOne-apparaatdashboard: https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Vervang de host door uw NinjaOne-regio: app, eu, ca, oc of us2 .ninjarmm.com.",
       "tokens": "Gebruik {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {asset.rmm_provider}, {asset.rmm_organization_id}, {client.name} en {field.<key>} met aangepaste veldsleutels uit Instellingen → Assets → Assettypen.",
+      "errors": {
+        "load": "Laden van koppelingen voor toegang op afstand is mislukt.",
+        "save": "Opslaan van de koppeling voor toegang op afstand is mislukt.",
+        "delete": "Verwijderen van de koppeling voor toegang op afstand is mislukt.",
+        "templateHttp": "Het sjabloon moet beginnen met http:// of https:// en een letterlijke hostnaam.",
+        "templatePlaceholder": "Het sjabloon bevat een niet-ondersteunde placeholder.",
+        "templateUrl": "Het sjabloon moet een geldige http- of https-URL opleveren.",
+        "required": "Een knoptekst en URL-sjabloon zijn vereist.",
+        "partialDelete": "Kon {{count}} geselecteerde koppeling(en) niet verwijderen."
+      },
       "loading": "Opties voor toegang op afstand laden…",
+      "noneAvailable": "Er zijn geen opties voor toegang op afstand beschikbaar.",
       "unavailable": "Niet beschikbaar voor dit asset",
+      "confirmDeleteTitle": "Koppeling voor toegang op afstand verwijderen?",
+      "confirmDeleteMessage": "Weet u zeker dat u “{{label}}” wilt verwijderen? Dit kan niet ongedaan worden gemaakt.",
       "actions": "Acties",
-      "selectAll": "Alle koppelingen selecteren"
+      "openMenu": "Menu openen",
+      "selectLabel": "{{label}} selecteren",
+      "selectAll": "Alle koppelingen selecteren",
+      "confirmBulkDeleteTitle": "Geselecteerde koppelingen verwijderen?",
+      "confirmBulkDeleteMessage": "{{count}} geselecteerde koppeling(en) voor toegang op afstand verwijderen?",
+      "selectedCount": "{{count}} geselecteerd"
     }
   },
   "assetListErrors": {
@@ -1653,7 +1678,8 @@
     "assignDialogTitle": "Dit asset toewijzen",
     "sharedWorkspace": "Gedeelde werkplek",
     "sharedWorkspaceValue": "{{name}} · {{count}} personen",
-    "billingProfile": "Factureringsprofiel"
+    "billingProfile": "Factureringsprofiel",
+    "lastAudited": "Laatst gecontroleerd"
   },
   "assetTimeline": {
     "title": "Tijdlijn",
@@ -1683,7 +1709,11 @@
       "aGroup": "een groep",
       "autoAssignedFrom": "Automatisch toegewezen aan {{contact}} via {{provider}}",
       "groupLocationMoved": "Met {{group}} verplaatst naar {{location}}",
-      "groupLocationCleared": "Locatie gewist met {{group}}"
+      "groupLocationCleared": "Locatie gewist met {{group}}",
+      "audit": "Controle",
+      "auditPresent": "Controle: aanwezig",
+      "auditMissing": "Controle: ontbrekend",
+      "auditMethod": "Gemarkeerd via {{method}}"
     },
     "changeTypes": {
       "created": "Aangemaakt",
@@ -2145,6 +2175,105 @@
     },
     "badge": {
       "label": "RMA {{number}} · {{status}}"
+    }
+  },
+  "assetAudits": {
+    "title": "Controles op locatie",
+    "startAudit": "Controle starten",
+    "noLocation": "Geen locatie",
+    "loading": "Controles laden…",
+    "empty": "Er zijn nog geen controles op locatie die overeenkomen met deze weergave.",
+    "columns": {
+      "client": "Klant",
+      "location": "Locatie",
+      "status": "Status",
+      "startedBy": "Gestart door",
+      "started": "Gestart",
+      "completed": "Voltooid",
+      "expected": "Verwacht",
+      "present": "Aanwezig",
+      "missing": "Ontbrekend",
+      "unexpected": "Onverwacht"
+    },
+    "filters": {
+      "client": "Klant",
+      "allLocations": "Alle locaties",
+      "allStatuses": "Alle statussen",
+      "started": "Gestart"
+    },
+    "stats": {
+      "expected": "verwacht",
+      "present": "aanwezig",
+      "missing": "ontbrekend",
+      "remaining": "resterend",
+      "unexpected": "onverwacht"
+    },
+    "segments": {
+      "remaining": "Resterend",
+      "present": "Aanwezig",
+      "missing": "Ontbrekend",
+      "unexpected": "Onverwacht",
+      "all": "Alle"
+    },
+    "start": {
+      "title": "Controle op locatie starten",
+      "client": "Klant",
+      "clientPlaceholder": "Selecteer een klant",
+      "location": "Locatie",
+      "locationHint": "Met \"Geen locatie\" controleert u de apparaten van de klant waarvoor geen locatie is vastgelegd.",
+      "statuses": "Te controleren assetstatussen",
+      "statusesHint": "Als u geen status selecteert, worden alle statussen gecontroleerd.",
+      "statusesLoading": "Statussen laden…",
+      "notes": "Notities",
+      "notesPlaceholder": "Doel van deze controleronde (optioneel)",
+      "pickClient": "Selecteer een klant om te zien welke apparaten worden gecontroleerd.",
+      "counting": "Te controleren apparaten tellen…",
+      "countUnavailable": "Het aantal apparaten is momenteel niet beschikbaar.",
+      "expected_one": "1 apparaat verwacht binnen deze selectie",
+      "expected_other": "{{count}} apparaten verwacht binnen deze selectie",
+      "submit": "Controle starten",
+      "starting": "Starten…"
+    },
+    "detail": {
+      "backToClient": "Terug naar controles voor deze klant",
+      "untitledClient": "Klant",
+      "location": "Locatie",
+      "startedBy": "Gestart door",
+      "started": "Gestart",
+      "completed": "Voltooid",
+      "scopeStatuses": "Te controleren statussen",
+      "allStatuses": "Alle statussen",
+      "notes": "Notities",
+      "exportCsv": "CSV exporteren",
+      "addUnexpected": "Onverwachte asset toevoegen",
+      "addUnexpectedHint": "Een apparaat dat op locatie wordt gevonden maar buiten deze controleselectie valt, wordt als onverwacht geregistreerd, nooit als verwacht.",
+      "addUnexpectedPlaceholder": "Zoek een asset…",
+      "addUnexpectedEmpty": "Geen andere assets voor deze klant.",
+      "complete": "Controle voltooien",
+      "completeConfirm_one": "1 ongemarkeerd apparaat wordt als ontbrekend geregistreerd.",
+      "completeConfirm_other": "{{count}} ongemarkeerde apparaten worden als ontbrekend geregistreerd.",
+      "cancelAudit": "Controle annuleren",
+      "cancelConfirm": "De controle wordt afgebroken en er wordt niets bij de assets vastgelegd. Dit kan niet ongedaan worden gemaakt.",
+      "keepAudit": "Doorgaan met controleren"
+    },
+    "items": {
+      "columns": {
+        "asset": "Asset",
+        "type": "Type",
+        "serial": "Serienummer / label",
+        "result": "Resultaat",
+        "method": "Methode",
+        "markedBy": "Gemarkeerd door",
+        "markedAt": "Gemarkeerd op",
+        "actions": "Acties"
+      },
+      "searchPlaceholder": "Zoeken op naam, label of serienummer",
+      "empty": "Geen assets in deze weergave.",
+      "markPresent": "Als aanwezig markeren",
+      "undoMark": "Ongedaan maken",
+      "createTicket": "Ticket aanmaken",
+      "ticketTitle": "Ontbrekend bij controle op locatie: {{asset}}",
+      "ticketDescription": "Niet gevonden tijdens de controle op locatie die op {{date}} is gestart."
     }
   }
 }
