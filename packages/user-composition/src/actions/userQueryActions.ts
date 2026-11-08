@@ -9,9 +9,15 @@ import UserPreferences from '@alga-psa/db/models/userPreferences';
 import { getUserAvatarUrl } from '../lib/avatarUtils';
 import { hasPermission } from '../lib/permissions';
 import logger from '@alga-psa/core/logger';
-import { getCurrentUser, withAuth, withOptionalAuth } from '@alga-psa/auth';
+import { getCurrentUser as resolveCurrentUser, withAuth, withOptionalAuth } from '@alga-psa/auth';
+import { projectCurrentUserForClient } from '../lib/currentUserProjection';
 
-export { getCurrentUser };
+/** Return the session user without credential material through this server action. */
+export async function getCurrentUser(): Promise<Omit<IUserWithRoles, 'hashed_password' | 'password' | 'two_factor_secret'> | null> {
+  const user = await resolveCurrentUser();
+  if (!user) return null;
+  return projectCurrentUserForClient(user);
+}
 
 function isPermissionDeniedError(error: unknown): boolean {
   return error instanceof Error && error.message.includes('Permission denied:');

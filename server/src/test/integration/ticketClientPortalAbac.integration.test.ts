@@ -461,6 +461,78 @@ describeDb('ticket client-portal ABAC (TicketService)', () => {
     }
   });
 
+  it('loads authorized portal ticket details with and without associated client-visible documents on the migrated schema', async () => {
+    const ticket = await db.transaction((trx) => TicketModel.createTicket({
+      title: 'Document association detail regression',
+      description: 'Portal safe description',
+      client_id: fixture.clientAId,
+      contact_id: fixture.contactAId,
+      board_id: fixture.boardVisibleId,
+      status_id: fixture.statusId,
+      priority_id: fixture.priorityId,
+      entered_by: fixture.internalUserId,
+    }, fixture.tenantId, trx, {}, silentTicketCreation('test fixture')));
+    const testTicketId = ticket.ticket_id!;
+    const publicDocumentId = uuidv4();
+    const privateDocumentId = uuidv4();
+    const otherTicketDocumentId = uuidv4();
+    const privateIdentity = uuidv4();
+    optimizedPathMocks.hasPermission.mockResolvedValue(true);
+    optimizedPathMocks.tenant = fixture.tenantId;
+    optimizedPathMocks.user = { ...clientA(), tenant: fixture.tenantId };
+
+    try {
+      await tenantRows('tickets', fixture.tenantId).where({ ticket_id: testTicketId }).update({
+        attributes: { description: 'Portal safe description', watchers: [{ contact_id: privateIdentity, email: 'watcher-secret@example.com' }], raw_private_value: 'must-not-leak' },
+        email_metadata: { email: 'internal-email-secret@example.com' },
+      });
+
+      const portal = await import('@alga-psa/client-portal/actions/client-portal-actions/client-tickets');
+      await runWithTenant(fixture.tenantId, async () => {
+        // This request is deliberately executed before attaching documents. It
+        // exercises the document select against the real schema even when the
+        // left-side ticket has no matching association.
+        const withoutDocuments = await portal.getClientTicketDetails(testTicketId) as any;
+        expect(withoutDocuments.ticket_id).toBe(testTicketId);
+        expect(withoutDocuments.documents).toEqual([]);
+        expect(withoutDocuments.attributes).toEqual({ description: 'Portal safe description' });
+        expect(JSON.stringify(withoutDocuments)).not.toContain('internal-email-secret@example.com');
+        expect(JSON.stringify(withoutDocuments)).not.toContain(privateIdentity);
+        expect(JSON.stringify(withoutDocuments)).not.toContain('watcher-secret@example.com');
+        expect(JSON.stringify(withoutDocuments)).not.toContain('must-not-leak');
+
+        await db('documents').insert([
+          { tenant: fixture.tenantId, document_id: publicDocumentId, document_name: 'Visible attachment', type_id: null, user_id: fixture.internalUserId, order_number: 1, created_by: fixture.internalUserId, is_client_visible: true },
+          { tenant: fixture.tenantId, document_id: privateDocumentId, document_name: 'Internal attachment', type_id: null, user_id: fixture.internalUserId, order_number: 2, created_by: fixture.internalUserId, is_client_visible: false },
+          { tenant: fixture.tenantId, document_id: otherTicketDocumentId, document_name: 'Other ticket attachment', type_id: null, user_id: fixture.internalUserId, order_number: 3, created_by: fixture.internalUserId, is_client_visible: true },
+        ]);
+        await db('document_associations').insert([
+          { tenant: fixture.tenantId, document_id: publicDocumentId, entity_id: testTicketId, entity_type: 'ticket' },
+          { tenant: fixture.tenantId, document_id: privateDocumentId, entity_id: testTicketId, entity_type: 'ticket' },
+          { tenant: fixture.tenantId, document_id: otherTicketDocumentId, entity_id: fixture.ticketHiddenBoardId, entity_type: 'ticket' },
+        ]);
+
+        const withDocuments = await portal.getClientTicketDetails(testTicketId) as any;
+        expect(withDocuments.ticket_id).toBe(testTicketId);
+        expect(withDocuments.documents).toHaveLength(1);
+        expect(withDocuments.documents[0]).toMatchObject({
+          document_id: publicDocumentId,
+          document_name: 'Visible attachment',
+          ticket_id: testTicketId,
+          client_id: fixture.clientAId,
+        });
+        expect(JSON.stringify(withDocuments)).not.toContain('Internal attachment');
+        expect(JSON.stringify(withDocuments)).not.toContain('Other ticket attachment');
+        expect(JSON.stringify(withDocuments)).not.toContain('internal-email-secret@example.com');
+        expect(JSON.stringify(withDocuments)).not.toContain(privateIdentity);
+      });
+    } finally {
+      await tenantRows('document_associations', fixture.tenantId).whereIn('document_id', [publicDocumentId, privateDocumentId, otherTicketDocumentId]).del();
+      await tenantRows('documents', fixture.tenantId).whereIn('document_id', [publicDocumentId, privateDocumentId, otherTicketDocumentId]).del();
+      await tenantRows('tickets', fixture.tenantId).where({ ticket_id: testTicketId }).del();
+    }
+  });
+
   it('executes contact/board predicates with both ticket aliases and matches kernel JS/SQL, including NULLs', async () => {
     const { applyTicketVisibilityFilter } = await import('@alga-psa/tickets/lib');
     const { compileRelationshipTemplateSql, evaluateRelationshipTemplate } = await import('@alga-psa/authorization/kernel');
