@@ -66,7 +66,8 @@ export default function CoManagedProjectTaskQueue() {
     { title: t('coManaged.sharedTasks.project', { defaultValue: 'Project' }), dataIndex: 'projectName', sortable: false, render: (_v, row) => dash(row.projectName) },
     { title: t('coManaged.sharedTasks.organization', { defaultValue: 'Organization' }), dataIndex: 'organizationName', sortable: false, render: (_v, row) => dash(row.organizationName) },
     { title: t('coManaged.sharedTasks.assignee', { defaultValue: 'Assigned to' }), dataIndex: 'assigneeName', sortable: false,
-      render: (_v, row) => row.assignedToMe && row.assigneeName ? t('coManaged.sharedTasks.you', { defaultValue: '{{name}} (you)', name: row.assigneeName }) : dash(row.assigneeName) },
+      render: (_v, row) => row.assignedToMe && row.assigneeName ? t('coManaged.sharedTasks.you', { defaultValue: '{{name}} (you)', name: row.assigneeName })
+        : row.assigneeName || (row.isAssigned ? t('coManaged.sharedTasks.assignedHidden', { defaultValue: 'Assigned (name hidden)' }) : dash(null)) },
   ];
   const projectColumns: ColumnDefinition<ProjectRow>[] = [
     { title: t('coManaged.sharedTasks.project', { defaultValue: 'Project' }), dataIndex: 'projectName', sortable: false,

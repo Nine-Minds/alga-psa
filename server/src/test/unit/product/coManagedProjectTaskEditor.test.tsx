@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import CoManagedProjectTaskEditor from '../../../components/co-managed/CoManagedProjectTaskEditor';
 import CoManagedProjectTaskHistory from '../../../components/co-managed/CoManagedProjectTaskHistory';
 import CoManagedProjectTaskAssignment from '../../../components/co-managed/CoManagedProjectTaskAssignment';
+import { projectCoManagedTaskSnapshot } from '@alga-psa/co-managed/projectTaskEditing';
 
 const mocks = vi.hoisted(() => ({ snapshot: vi.fn(), statuses: vi.fn(), edit: vi.fn(), assign: vi.fn(), history: vi.fn() }));
 vi.mock('../../../lib/actions/coManagedProjectTaskActions', () => ({
@@ -76,7 +77,11 @@ describe('co-managed project task editor', () => {
   });
 
   it('shows an assigned task with a hidden assignee name as assigned, not as unassigned', async () => {
-    mocks.snapshot.mockResolvedValue({ ...snapshot(), assignee: { kind: 'user', name: null } });
+    const redactedSnapshot = projectCoManagedTaskSnapshot({ referenceId: 'reference-1', revision: 3, hasAssignment: true, assigneeKind: 'user', assigneeName: null,
+      taskName: 'Patch servers', projectName: 'Network refresh', organizationName: 'Customer Co', assignedToMe: null }, {
+      updated_at: '2026-10-01T10:00:00.000Z', task_name: 'Patch servers', project_status_mapping_id: 'm1', due_date: '2026-10-20T00:00:00.000Z',
+    }, ['assignee_name']);
+    mocks.snapshot.mockResolvedValue(redactedSnapshot);
     render(<CoManagedProjectTaskEditor {...props} />);
     await screen.findByText('Assigned (name hidden)');
     expect(screen.queryByText('Not assigned')).toBeNull();

@@ -12,7 +12,8 @@ export interface CoManagedProjectTaskReference {
   projectName: string | null;
   organizationName: string | null;
   assigneeName: string | null;
-  hasAssigneeName: boolean | null;
+  /** Assignment existence is safe metadata required to distinguish hidden names from no assignment. */
+  hasAssignment: boolean;
   assigneeKind: 'user' | 'team' | null;
   assignedToMe: boolean | null;
 }
@@ -50,8 +51,8 @@ export function projectCoManagedProjectTaskReferenceSnapshot(
     referenceId: reference.reference_id,
     revision: reference.revision,
     ...projected,
-    hasAssigneeName: isCoManagedReadFieldHidden(redactedFields, coManagedTaskFieldAliases('assignee_name')) ? null : Boolean(reference.assignee_name),
-    assigneeKind: isCoManagedReadFieldHidden(redactedFields, coManagedTaskFieldAliases('assignee_name')) ? null : reference.assigned_team_id ? 'team' : reference.assigned_to ? 'user' : null,
+    hasAssignment: Boolean(reference.assigned_team_id || reference.assigned_to),
+    assigneeKind: reference.assigned_team_id ? 'team' : reference.assigned_to ? 'user' : null,
     assignedToMe: isCoManagedReadFieldHidden(redactedFields, coManagedTaskFieldAliases('assignee_name')) ? null : reference.assigned_to === actorUserId,
   };
 }

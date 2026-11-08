@@ -37,7 +37,9 @@ describe('editCoManagedProjectTask conflict snapshots', () => {
       try { await editCoManagedProjectTask({} as any, actor, resource, editRequest, async () => { state.writes += 1; }); }
       catch (error) { failure = error; }
       expect(failure).toBeInstanceOf(CoManagedTaskEditError);
-      expect((failure as CoManagedTaskEditError).snapshot).toMatchObject({ revision: 4, assignee: null, values: { task_name: 'Replace core switch' } });
+      const fresh = (failure as CoManagedTaskEditError).snapshot!;
+      expect(fresh.assignee).not.toBeNull();
+      expect(fresh).toMatchObject({ revision: 4, assignee: { kind: 'user', name: null }, values: { task_name: 'Replace core switch' } });
       expect(JSON.stringify((failure as CoManagedTaskEditError).snapshot)).not.toContain('QA Tester');
       expect(state.writes).toBe(0);
     });

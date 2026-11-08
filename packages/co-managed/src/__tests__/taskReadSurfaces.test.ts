@@ -36,14 +36,16 @@ describe.each(['project_tasks', 'co_managed_project_task_references'])('qualifie
   it('masks detail, project task list and assignment metadata after policy tightening', async () => {
     expect((await getCoManagedProjectTaskSnapshot({} as any, actor, resource)).assignee?.name).toBe('QA Tester');
     state.redactedFields = [`${namespace}.assignee_name`];
-    expect((await getCoManagedProjectTaskSnapshot({} as any, actor, resource)).assignee).toBeNull();
+    const hidden = await getCoManagedProjectTaskSnapshot({} as any, actor, resource);
+    expect(hidden.assignee).not.toBeNull();
+    expect(hidden.assignee).toMatchObject({ kind: 'user', name: null });
     const list = await listCoManagedSharedProjectTasks({} as any, actor, {
       customerTenant: resource.tenant, relationshipId: resource.relationshipId, projectId: U(8),
     });
-    expect(list.rows[0].reference).toMatchObject({ assigneeName: null, assignedToMe: null });
+    expect(list.rows[0].reference).toMatchObject({ isAssigned: true, assigneeName: null, assignedToMe: null });
     const context: any = { trx: {}, actor, resource, redactedFields: state.redactedFields };
     expect((await readCoManagedProjectTaskReferences(context, [task.task_id])).get(task.task_id)).toMatchObject({
-      assigneeName: null, hasAssigneeName: null, assigneeKind: null, assignedToMe: null,
+      assigneeName: null, hasAssignment: true, assigneeKind: 'user', assignedToMe: null,
     });
     expect(reference.assignee_name).toBe('QA Tester');
   });
@@ -57,7 +59,7 @@ describe.each(['project_tasks', 'co_managed_project_task_references'])('qualifie
   it('masks qualified assignee and organization fields in the assigned queue and live organization fallback', async () => {
     state.redactedFields = [`${namespace}.assignee_name`, `${namespace}.organization_name`];
     const page = await listCoManagedAssignedTasks({} as any, actor);
-    expect(page.rows[0]).toMatchObject({ assigneeName: null, organizationName: null, assignedToMe: null, taskName: task.task_name });
+    expect(page.rows[0]).toMatchObject({ isAssigned: true, assigneeName: null, organizationName: null, assignedToMe: null, taskName: task.task_name });
     expect(await readCoManagedCustomerOrganizationName({} as any, resource.tenant, state.redactedFields)).toBe('');
     expect(reference.organization_name).toBe('Customer Co');
   });

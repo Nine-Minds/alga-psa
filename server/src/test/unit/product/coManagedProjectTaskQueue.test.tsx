@@ -4,9 +4,11 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import CoManagedProjectTaskQueue from '../../../components/co-managed/CoManagedProjectTaskQueue';
 import CoManagedProjectTaskQueueLink from '../../../components/co-managed/CoManagedProjectTaskQueueLink';
+import CoManagedProjectTasks from '../../../components/co-managed/CoManagedProjectTasks';
 
-const mocks = vi.hoisted(() => ({ tasks: vi.fn(), projects: vi.fn(), capability: vi.fn() }));
-vi.mock('../../../lib/actions/coManagedProjectTaskActions', () => ({ listCoManagedAssignedTasksAction: mocks.tasks, listCoManagedSharedProjectsAction: mocks.projects }));
+const mocks = vi.hoisted(() => ({ tasks: vi.fn(), projects: vi.fn(), projectTasks: vi.fn(), search: vi.fn(), capability: vi.fn() }));
+vi.mock('../../../lib/actions/coManagedProjectTaskActions', () => ({ listCoManagedAssignedTasksAction: mocks.tasks, listCoManagedSharedProjectsAction: mocks.projects,
+  listCoManagedSharedProjectTasksAction: mocks.projectTasks, searchCoManagedSharedProjectsAction: mocks.search }));
 vi.mock('@alga-psa/ui/hooks', () => ({ useCapability: mocks.capability }));
 vi.mock('next/link', () => ({ default: ({ href, children, ...rest }: any) => <a href={href} {...rest}>{children}</a> }));
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({ default: ({ id, label, value, options, onValueChange }: any) =>
@@ -15,16 +17,31 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({ default: ({ id, label, 
 vi.mock('@alga-psa/ui/components/DataTable', () => ({ DataTable: ({ data, columns }: any) => <table><tbody>{data.map((row: any, i: number) =>
   <tr key={i}>{columns.map((c: any, j: number) => <td key={j}>{c.render ? c.render(row[c.dataIndex], row, i) : row[c.dataIndex]}</td>)}</tr>)}</tbody></table> }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
-  useTranslation: () => ({ t: (key: string, o?: any) => (o?.defaultValue ?? key).replace(/{{(\w+)}}/g, (_m: string, k: string) => String(o?.[k] ?? '')) }) }));
+  useTranslation: () => ({ t: (key: string, o?: any) => (o?.defaultValue ?? key).replace(/{{(\w+)}}/g, (_m: string, k: string) => String(o?.[k] ?? '')) }),
+  useFormatters: () => ({ formatDate: (d: Date) => d.toISOString().slice(0, 10) }) }));
 
 const task = { customerTenant: 'cust-tenant-1', relationshipId: 'rel-1', taskId: 'task-1', taskName: 'Patch servers', projectName: 'Server Refresh',
-  organizationName: 'Kansas Dental', assigneeName: 'Quinn Tech', assignedToMe: true, revision: 2 };
+  organizationName: 'Kansas Dental', assigneeName: 'Quinn Tech', assignedToMe: true, isAssigned: true, revision: 2 };
 const project = { customerTenant: 'cust-tenant-1', relationshipId: 'rel-1', projectId: 'proj-1', projectName: 'Server Refresh', organizationName: 'Kansas Dental', canCollaborate: true };
 
 beforeEach(() => {
   vi.resetAllMocks();
   mocks.tasks.mockResolvedValue({ rows: [task], next: null });
   mocks.projects.mockResolvedValue({ rows: [project], next: null });
+  mocks.projectTasks.mockResolvedValue({ rows: [], nextAfterTaskId: null });
+  mocks.search.mockResolvedValue({ results: [], typeahead: [], totalCount: 0 });
+});
+
+describe('co-managed shared project task list', () => {
+  it('distinguishes hidden assigned names from genuinely unassigned tasks', async () => {
+    mocks.projectTasks.mockResolvedValue({ rows: [
+      { taskId: 'task-hidden', taskName: 'Hidden assignee', dueDate: null, reference: { revision: 1, isAssigned: true, assigneeName: null, assignedToMe: null } },
+      { taskId: 'task-unassigned', taskName: 'Unassigned', dueDate: null, reference: { revision: 1, isAssigned: false, assigneeName: null, assignedToMe: null } },
+    ], nextAfterTaskId: null });
+    render(<CoManagedProjectTasks customerTenant="cust" relationshipId="rel" projectId="project" />);
+    await screen.findByText('Assigned (name hidden)');
+    expect(screen.getByText('Not assigned')).toBeTruthy();
+  });
 });
 afterEach(cleanup);
 
@@ -56,6 +73,13 @@ describe('co-managed shared tasks queue', () => {
     await screen.findByText('Second task');
     expect(mocks.tasks).toHaveBeenLastCalledWith({ assigned: 'me', limit: 25, after: { referenceId: 'ref-9' } });
     expect(screen.getByText('Patch servers')).toBeTruthy();
+  });
+
+  it('shows hidden assigned rows as assigned without disclosing a name', async () => {
+    mocks.tasks.mockResolvedValue({ rows: [{ ...task, assigneeName: null, assignedToMe: null }], next: null });
+    render(<CoManagedProjectTaskQueue />);
+    await screen.findByText('Assigned (name hidden)');
+    expect(document.body.textContent).not.toContain('Quinn Tech');
   });
 });
 

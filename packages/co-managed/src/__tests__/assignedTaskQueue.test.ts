@@ -36,7 +36,7 @@ beforeEach(() => { state.references = [reference(1), reference(2, U(9))]; state.
 describe('listCoManagedAssignedTasks redaction', () => {
   it('with nothing redacted returns the old shape', async () => {
     const page = await listCoManagedAssignedTasks({} as any, actor);
-    expect(page.rows[0]).toEqual({ customerTenant: U(3), relationshipId: U(4), taskId: U(201), taskName: 'Task 1', projectName: 'Rollout', organizationName: 'Acme', assigneeName: 'Alex', assignedToMe: true, revision: 1 });
+    expect(page.rows[0]).toEqual({ customerTenant: U(3), relationshipId: U(4), taskId: U(201), taskName: 'Task 1', projectName: 'Rollout', organizationName: 'Acme', assigneeName: 'Alex', assignedToMe: true, isAssigned: true, revision: 1 });
     expect(page.rows[1].assignedToMe).toBe(false);
   });
   it('a redacted task_name nulls only taskName', async () => {

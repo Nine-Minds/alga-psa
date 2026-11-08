@@ -24,7 +24,7 @@ export interface CoManagedTaskEditReceipt { revision: number; taskUpdatedAt: str
 export interface CoManagedTaskSnapshot { revision: number; taskUpdatedAt: string; values: CoManagedTaskEditPatch; assignee: { kind: 'user' | 'team'; name: string | null } | null }
 export function projectCoManagedTaskSnapshot(reference: CoManagedProjectTaskReference, row: { updated_at: unknown } & Record<string, unknown>, redactedFields: readonly string[]): CoManagedTaskSnapshot {
   return { revision: reference.revision, taskUpdatedAt: iso(row.updated_at), values: values(row, redactedFields),
-    assignee: reference.hasAssigneeName && reference.assigneeKind ? { kind: reference.assigneeKind, name: reference.assigneeName } : null };
+    assignee: reference.hasAssignment && reference.assigneeKind ? { kind: reference.assigneeKind, name: reference.assigneeName } : null };
 }
 
 export type CoManagedTaskEditErrorCode = 'INVALID_TASK_EDIT' | 'TASK_EDIT_CONFLICT';

@@ -54,7 +54,9 @@ export default function CoManagedProjectTasks({ customerTenant, relationshipId, 
     { title: t('coManaged.sharedTasks.due', { defaultValue: 'Due' }), dataIndex: 'dueDate', sortable: false,
       render: (_v, row) => row.dueDate ? formatDate(new Date(row.dueDate), { dateStyle: 'medium' }) : '—' },
     { title: t('coManaged.sharedTasks.assignee', { defaultValue: 'Assigned to' }), dataIndex: 'reference', sortable: false,
-      render: (_v, row) => row.reference ? row.reference.assigneeName || '—' : t('coManaged.sharedTasks.unassigned', { defaultValue: 'Not assigned' }) },
+      render: (_v, row) => row.reference?.assigneeName || (row.reference?.isAssigned
+        ? t('coManaged.sharedTasks.assignedHidden', { defaultValue: 'Assigned (name hidden)' })
+        : t('coManaged.sharedTasks.unassigned', { defaultValue: 'Not assigned' })) },
   ];
 
   return <div id="co-managed-project-tasks" className="min-w-0 space-y-4">

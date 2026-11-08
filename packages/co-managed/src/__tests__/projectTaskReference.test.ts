@@ -35,7 +35,7 @@ describe('readCoManagedProjectTaskReferences', () => {
     const result = (await readCoManagedProjectTaskReferences(context, [taskId])).get(taskId);
     expect(result).toMatchObject({
       revision: 4, taskName: 'Replace core switch', projectName: 'Network refresh', organizationName: 'Customer Co',
-      assigneeName: 'QA Tester', hasAssigneeName: true, assigneeKind: 'user', assignedToMe: true,
+      assigneeName: 'QA Tester', hasAssignment: true, assigneeKind: 'user', assignedToMe: true,
     });
     expect(JSON.stringify(result)).not.toContain(reference.assigned_to);
   });
@@ -49,10 +49,20 @@ describe('readCoManagedProjectTaskReferences', () => {
     const tightened = (await readCoManagedProjectTaskReferences(context, [taskId])).get(taskId);
     expect(tightened).toMatchObject({
       taskName: 'Replace core switch', projectName: null, organizationName: null, assigneeName: null,
-      hasAssigneeName: null, assigneeKind: null, assignedToMe: null, revision: 4,
+      hasAssignment: true, assigneeKind: 'user', assignedToMe: null, revision: 4,
     });
     expect(JSON.stringify(tightened)).not.toMatch(/QA Tester|Network refresh|Customer Co/);
     expect(state.rows[0]).toEqual(stored);
+  });
+
+  it('distinguishes an unassigned reference from a hidden assigned reference', async () => {
+    state.rows = [{ ...reference, assigned_to: null, assigned_team_id: null, assignee_name: null }];
+    const unassigned = (await readCoManagedProjectTaskReferences(context, [taskId])).get(taskId);
+    expect(unassigned).toMatchObject({ hasAssignment: false, assigneeKind: null, assigneeName: null });
+    context.redactedFields = ['assignee_name'];
+    state.rows = [reference];
+    const hidden = (await readCoManagedProjectTaskReferences(context, [taskId])).get(taskId);
+    expect(hidden).toMatchObject({ hasAssignment: true, assigneeKind: 'user', assigneeName: null });
   });
 
   it.each(['assignee_name', 'users', 'teams'])('masks an assignee under alias %s', async redaction => {

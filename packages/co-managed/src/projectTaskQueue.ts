@@ -90,7 +90,7 @@ async function readProject(db: Knex, actor: CoManagedSessionActor, customerTenan
 
 export interface CoManagedSharedTaskRow {
   taskId: string; taskName: string; dueDate: string | null; taskUpdatedAt: string;
-  reference: { revision: number; assigneeName: string | null; assignedToMe: boolean | null } | null;
+  reference: { revision: number; isAssigned: boolean; assigneeName: string | null; assignedToMe: boolean | null } | null;
 }
 export interface CoManagedSharedTaskPage { rows: CoManagedSharedTaskRow[]; nextAfterTaskId: string | null }
 
@@ -116,7 +116,7 @@ export async function listCoManagedSharedProjectTasks(db: Knex, inputActor: CoMa
       rows: page.map(task => {
         const reference = byTask.get(task.task_id);
         return { taskId: task.task_id, taskName: task.task_name, dueDate: dueHidden || !task.due_date ? null : new Date(task.due_date).toISOString(), taskUpdatedAt: new Date(task.updated_at).toISOString(),
-          reference: reference ? { revision: reference.revision, assigneeName: reference.assigneeName, assignedToMe: reference.assignedToMe } : null };
+          reference: reference ? { revision: reference.revision, isAssigned: reference.hasAssignment, assigneeName: reference.assigneeName, assignedToMe: reference.assignedToMe } : null };
       }),
       nextAfterTaskId: tasks.length > limit ? page[page.length - 1].task_id : null,
     };
@@ -125,7 +125,7 @@ export async function listCoManagedSharedProjectTasks(db: Knex, inputActor: CoMa
 
 export interface CoManagedAssignedTaskRow {
   customerTenant: string; relationshipId: string; taskId: string; taskName: string | null; projectName: string | null; organizationName: string | null; assigneeName: string | null;
-  assignedToMe: boolean | null; revision: number;
+  assignedToMe: boolean | null; isAssigned: boolean; revision: number;
 }
 export interface CoManagedAssignedTaskPage { rows: CoManagedAssignedTaskRow[]; next: { referenceId: string } | null }
 
@@ -164,7 +164,7 @@ export async function listCoManagedAssignedTasks(db: Knex, inputActor: CoManaged
           if (!projected) throw new CoManagedSharedWorkError();
           return { customerTenant: reference.customer_tenant, relationshipId: reference.relationship_id, taskId: reference.task_id,
             taskName: projected.taskName, projectName: projected.projectName, organizationName: projected.organizationName, assigneeName: projected.assigneeName,
-            assignedToMe: projected.assignedToMe, revision: projected.revision };
+            assignedToMe: projected.assignedToMe, isAssigned: projected.hasAssignment, revision: projected.revision };
         });
       } catch (error) {
         if (isCoManagedSharedWorkError(error)) continue;

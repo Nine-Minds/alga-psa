@@ -229,9 +229,16 @@ describe('CM L3c task editing and assignment', () => {
     await setRedactions(['assignee_name']);
     try {
       const hidden = await getCoManagedProjectTaskSnapshot(db, actor(), resource(id));
-      expect(hidden.assignee?.name ?? null).toBeNull();
+      expect(hidden.assignee).not.toBeNull();
+      expect(hidden.assignee!.name).toBeNull();
+      const conflict = await conflictOf(editCoManagedProjectTask(db, actor(), resource(id),
+        { expectedRevision: original.revision + 1, expectedTaskUpdatedAt: original.taskUpdatedAt, patch: { task_name: 'Must not be written' } }, writeCoManagedSharedTask));
+      expect(conflict.reason).toBe('revision');
+      expect(conflict.snapshot?.assignee).not.toBeNull();
+      expect(conflict.snapshot!.assignee!.name).toBeNull();
+      expect((await taskRow(id)).task_name).toBe(original.values.task_name);
       const list = await listCoManagedSharedProjectTasks(db, actor(), target);
-      expect(list.rows.find(row => row.taskId === id)?.reference).toMatchObject({ assigneeName: null, assignedToMe: null });
+      expect(list.rows.find(row => row.taskId === id)?.reference).toMatchObject({ isAssigned: true, assigneeName: null, assignedToMe: null });
       expect((await referenceRow(id)).assignee_name).toBe(storedName);
     } finally { await setRedactions([]); }
   });
@@ -253,11 +260,18 @@ describe('CM L3c task editing and assignment', () => {
       await db('authorization_bundles').where({ tenant: world.sponsor, bundle_id: bundleId }).update({ published_revision_id: revisionId });
       await db('authorization_bundle_rules').insert({ tenant: world.sponsor, bundle_id: bundleId, revision_id: revisionId, resource_type: 'project', action: 'read',
         template_key: 'selected_clients', constraint_key: 'hide_sensitive_fields', effect: 'narrow',
-        config: JSON.stringify({ selectedClientIds: [world.sponsorClientId], redactedFields: ['values.actor_display_name', 'values.organization_name', 'values.organizationName'] }), position: 0 });
+        config: JSON.stringify({ selectedClientIds: [world.sponsorClientId], redactedFields: ['values.actor_display_name', 'values.organization_name', 'values.organizationName', 'assignee_name'] }), position: 0 });
       await db('authorization_bundle_assignments').insert({ tenant: world.sponsor, bundle_id: bundleId, target_type: 'user', target_id: world.technician.userId, status: 'active' });
 
       const bundleHistory = await listCoManagedProjectTaskHistory(db, actor(), resource(id));
       expect(bundleHistory[0]).toMatchObject({ authorName: '', organizationName: '' });
+      const bundleSnapshot = await getCoManagedProjectTaskSnapshot(db, actor(), resource(id));
+      expect(bundleSnapshot.assignee).not.toBeNull();
+      expect(bundleSnapshot.assignee!.name).toBeNull();
+      const bundleConflict = await conflictOf(editCoManagedProjectTask(db, actor(), resource(id),
+        { expectedRevision: bundleSnapshot.revision + 1, expectedTaskUpdatedAt: bundleSnapshot.taskUpdatedAt, patch: { task_name: 'Must not be written' } }, writeCoManagedSharedTask));
+      expect(bundleConflict.snapshot?.assignee).not.toBeNull();
+      expect(bundleConflict.snapshot!.assignee!.name).toBeNull();
       expect((await listCoManagedAssignedTasks(db, actor(), { assigned: 'any', limit: 100 })).rows.find(row => row.taskId === id)?.organizationName).toBeNull();
       expect((await listCoManagedSharedProjects(db, actor(), { relationshipId: world.relationshipId })).rows.find(row => row.projectId === collab.projectId)?.organizationName).toBe('');
       expect(await referenceRow(id)).toEqual(storedReference);
