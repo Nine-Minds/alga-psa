@@ -417,10 +417,12 @@ jobs:
     name: Production ${{ matrix.lane }} (${{ matrix.edition }})
     needs: [changes, browser-collection, build-images]
     if: always()
+
     # Pinned: `ubuntu-latest` rolled to ubuntu-26.04 on 2026-10-21, whose
     # Docker reports a different image Id for a loaded archive, so candidate
     # identity verification failed, and whose Playwright cannot install
     # Chromium. Unpin once both tolerate 26.04.
+
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     permissions:

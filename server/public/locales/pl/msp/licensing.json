@@ -266,7 +266,11 @@
         "title": "{{tier}} jest aktywny",
         "description": "Płatna licencja jest aktywna na tym urządzeniu.",
         "descriptionWithExpiry": "Licencja jest aktywna do {{date}}.",
-        "badge": "Licencja aktywna"
+        "badge": "Licencja aktywna",
+        "descriptionEnding": "Twoja subskrypcja została anulowana. Pro pozostaje aktywne do {{date}}.",
+        "descriptionTermEnds": "Pro jest aktywne do {{date}}, kiedy kończy się okres stały.",
+        "descriptionPaymentFailed": "Pro jest aktywne, ale ostatnia płatność za odnowienie nie powiodła się. Zaktualizuj metodę płatności, aby zachować Pro.",
+        "descriptionPaymentFailedEnded": "Twoja subskrypcja Pro zakończyła się — płatność nie powiodła się. Pro pozostaje aktywne do {{date}}."
       },
       "licenseExpired": {
         "eyebrow": "Licencja wymaga uwagi",
@@ -291,6 +295,12 @@
         "title": "Korzystasz z Essentials",
         "description": "Essentials jest aktywny na tym urządzeniu. Nadal korzystaj z podstawowego zestawu funkcji albo uruchom jednorazowy 15-dniowy okres próbny Pro.",
         "badge": "Essentials aktywny"
+      },
+      "subscriptionLapsed": {
+        "eyebrow": "Subskrypcja zakończona",
+        "title": "Korzystasz teraz z wersji bezpłatnej",
+        "description": "Twoja subskrypcja Pro się zakończyła. Dane są zachowane, a funkcje Pro włączą się ponownie po wznowieniu subskrypcji.",
+        "badge": "Wersja bezpłatna"
       }
     },
     "trialCta": {
@@ -356,7 +366,31 @@
       "activateLicenseKey": "Nie udało się aktywować klucza licencyjnego.",
       "activateClaimCode": "Nie udało się aktywować kodu aktywacyjnego.",
       "startTrial": "Nie udało się uruchomić okresu próbnego.",
-      "refreshLicense": "Nie udało się odświeżyć licencji."
+      "refreshLicense": "Nie udało się odświeżyć licencji.",
+      "credentialRevoked": "Dane uwierzytelniające licencji tego urządzenia zostały unieważnione. Połącz je ponownie, używając nowego kodu aktywacyjnego z portalu licencji.",
+      "subscriptionEnding": "Twoja subskrypcja Pro została anulowana. Pro kończy się {{date}}.",
+      "subscriptionEndingNoDate": "Twoja subskrypcja Pro została anulowana.",
+      "subscriptionEnded": "Twoja subskrypcja Pro się zakończyła. To urządzenie korzysta z wersji bezpłatnej.",
+      "subscriptionEndingPaymentFailed": "Twoja subskrypcja Pro zakończyła się — płatność nie powiodła się. Pro kończy się {{date}}.",
+      "subscriptionEndingPaymentFailedNoDate": "Twoja subskrypcja Pro zakończyła się — płatność nie powiodła się.",
+      "subscriptionEndedPaymentFailed": "Pro zakończyło się — płatność nie powiodła się. Twoje urządzenie korzysta z Essentials.",
+      "resubscribeAt": "Wznów subskrypcję na {{url}}.",
+      "resubscribeToRestore": "Wznów subskrypcję, aby przywrócić Pro."
+    },
+    "lapse": {
+      "lapsedTitle": "Korzystasz teraz z wersji bezpłatnej. Wznów subskrypcję, aby przywrócić Pro.",
+      "endingTitle": "Twoja subskrypcja Pro została anulowana.",
+      "endedOn": "Pro zakończyło się {{date}}.",
+      "endsOn": "Pro kończy się {{date}}.",
+      "dataKept": "Nic nie jest usuwane. Dane pozostają na miejscu, a funkcje Pro włączą się ponownie po wznowieniu subskrypcji i odświeżeniu licencji.",
+      "resubscribe": "Wznów subskrypcję",
+      "termEndsTitle": "Twój okres Pro dobiega końca.",
+      "paymentFailedTitle": "Płatność nie powiodła się — ponowimy próbę {{date}}. Zaktualizuj metodę płatności, aby zachować Pro.",
+      "paymentFailedTitleNoRetry": "Płatność nie powiodła się. Zaktualizuj metodę płatności, aby zachować Pro.",
+      "paymentFailedEndedTitle": "Pro zakończono — płatność nie powiodła się. Twoje urządzenie działa w wersji Essentials.",
+      "paymentFailedEndingTitle": "Twoja subskrypcja Pro zakończyła się — płatność nie powiodła się.",
+      "paymentFailedEndsOn": "Pro kończy się {{date}}, jeśli płatność nadal będzie nieudana.",
+      "updatePaymentMethod": "Zaktualizuj metodę płatności"
     }
   },
   "errors": {

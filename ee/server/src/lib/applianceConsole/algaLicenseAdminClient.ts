@@ -332,6 +332,25 @@ export async function revokeApplianceEntitlement(stripeSubId: string): Promise<{
 }
 
 /**
+ * Payment-failure context for the check-in (informational — never changes
+ * `active`; that is revokeApplianceEntitlement). Idempotent in C4; an unknown
+ * subscription is a no-op (`updated:false`).
+ *  - `failed`: `next_retry_at` is unix seconds; omit to keep the stored value,
+ *    null to clear it (retries exhausted). Same for `update_payment_url`.
+ *  - `ok`: payments recovered; clears everything.
+ */
+export type ApplianceSubscriptionPaymentState =
+  | { state: 'failed'; next_retry_at?: number | null; update_payment_url?: string | null }
+  | { state: 'ok' };
+
+export async function setApplianceEntitlementPaymentState(
+  stripeSubId: string,
+  payment: ApplianceSubscriptionPaymentState,
+): Promise<{ updated: boolean }> {
+  return send<{ updated: boolean }>('PATCH', `/entitlements/${encodeURIComponent(stripeSubId)}/payment-state`, payment);
+}
+
+/**
  * Re-enable the entitlement behind a Stripe subscription that came back to
  * active/trialing after a revoke (idempotent in C4; 404 `not_found` if C4 has no such sub — a 404 without that
  * body code means the route is missing from the deployed alga-license).
