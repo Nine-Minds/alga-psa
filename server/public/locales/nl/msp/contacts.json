@@ -813,7 +813,7 @@
       "addFirst": "Document toevoegen",
       "empty": "Nog geen documenten",
       "fallbackTitle": "Document",
-      "dialogTitle": "Documenten van contact"
+      "dialogTitle": "Contactdocumenten"
     },
     "relatedWork": {
       "title": "Gerelateerd werk",
@@ -966,7 +966,7 @@
       "deleteConfirm": "Deze zichtbaarheidsgroep verwijderen?",
       "deleteFailed": "Zichtbaarheidsgroep verwijderen mislukt",
       "saveFailed": "Zichtbaarheidsgroep opslaan mislukt",
-      "loadFailed": "Zichtbaarheidsgroep laden voor bewerking mislukt",
+      "loadFailed": "Zichtbaarheidsgroep kon niet worden geladen om te bewerken",
       "empty": "Nog geen zichtbaarheidsgroepen",
       "fullAccess": "Volledige toegang"
     }
