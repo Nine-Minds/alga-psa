@@ -2374,7 +2374,10 @@
       "RMA {{number}} · {{status}}",
       "Markdown",
       "ticket",
-      "Firmware"
+      "Firmware",
+      "No",
+      "team",
+      "{{actor}} • {{eventType}}"
     ],
     "caseInsensitive": [
       "account",
