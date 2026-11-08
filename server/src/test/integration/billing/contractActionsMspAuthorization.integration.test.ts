@@ -249,6 +249,7 @@ describe('MSP contract actions authorization boundary', () => {
 
     const denied = await updateContractLineRate(contractId, lineId, 9900, 'arrears', 'tampered description');
     expect(denied).toHaveProperty('permissionError');
+    expect(denied).toHaveProperty('messageKey', 'msp/contracts:errors.permissions.modifyLines');
     expect(await lineState(lineId)).toEqual(beforeLine);
     expect(await tenantTable(db, tenantId, 'recurring_service_periods')
       .where({ tenant: tenantId, obligation_id: lineId }).select('*')).toEqual(beforePeriods);

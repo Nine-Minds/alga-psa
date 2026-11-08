@@ -63,20 +63,20 @@ class ContractActionDomainError extends Error {
   }
 }
 
-function contractActionErrorFrom(error: unknown): ContractActionError | null {
+function contractActionErrorFrom(error: unknown, permissionMessageKey?: string): ContractActionError | null {
   if (isContractLineTimingNotAllowedError(error)) {
     return actionError(error.message, 'msp/contract-lines:errors.line.advanceTimingNotAllowed');
   }
 
   if (error instanceof ContractActionDomainError || error instanceof ContractScopeError) {
     if (error.message.startsWith('Permission denied:')) {
-      return permissionError(error.message);
+      return permissionError(error.message, permissionMessageKey);
     }
     return actionError(error.message);
   }
 
   if (error instanceof Error && error.message.startsWith('Permission denied:')) {
-    return permissionError(error.message);
+    return permissionError(error.message, permissionMessageKey);
   }
 
   if (error instanceof Error) {
@@ -430,7 +430,7 @@ export const addContractLine = withAuth(async (
     );
   } catch (error) {
     console.error(`Error adding contract line ${contractLineId} to contract ${contractId}:`, error);
-    const expected = contractActionErrorFrom(error);
+    const expected = contractActionErrorFrom(error, 'msp/contracts:errors.permissions.modifyLines');
     if (expected) {
       return expected;
     }
@@ -447,7 +447,7 @@ export const removeContractLine = withAuth(async (user, { tenant }, contractId: 
     await repoRemoveContractLine(knex, tenant, contractId, contractLineId);
   } catch (error) {
     console.error(`Error removing contract line ${contractLineId} from contract ${contractId}:`, error);
-    const expected = contractActionErrorFrom(error);
+    const expected = contractActionErrorFrom(error, 'msp/contracts:errors.permissions.modifyLines');
     if (expected) {
       return expected;
     }
@@ -479,7 +479,7 @@ export const updateContractLineAssociation = withAuth(async (
     });
   } catch (error) {
     console.error(`Error updating contract line ${contractLineId} for contract ${contractId}:`, error);
-    const expected = contractActionErrorFrom(error);
+    const expected = contractActionErrorFrom(error, 'msp/contracts:errors.permissions.modifyLines');
     if (expected) {
       return expected;
     }
@@ -516,7 +516,7 @@ export const updateContractLineRate = withAuth(async (
     });
   } catch (error) {
     console.error(`Error updating contract line ${contractLineId} rate for contract ${contractId}:`, error);
-    const expected = contractActionErrorFrom(error);
+    const expected = contractActionErrorFrom(error, 'msp/contracts:errors.permissions.modifyLines');
     if (expected) {
       return expected;
     }
@@ -796,7 +796,7 @@ export const deleteContract = withAuth(async (user, { tenant }, contractId: stri
       idempotencyKey: `contract_deleted:${contractId}:${occurredAt}`,
     });
   } catch (error) {
-    const expected = contractActionErrorFrom(error);
+    const expected = contractActionErrorFrom(error, 'msp/contracts:errors.permissions.deleteContracts');
     if (expected) {
       console.error('Error deleting contract:', error);
       return expected;
