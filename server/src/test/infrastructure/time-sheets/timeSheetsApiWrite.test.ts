@@ -124,11 +124,12 @@ describe('TimeSheetService write paths (REST API, alga-2026-0002763)', () => {
       const row = await sheetRow(sheet.id);
       expect(row).toMatchObject({ period_id: periodId, user_id: context.userId, approval_status: 'DRAFT' });
       expect(row).not.toHaveProperty('created_at');
-      expect(row).not.toHaveProperty('notes');
+      expect(row.notes).toBeNull();
 
       const parsed = timeSheetResponseSchema.parse(wire(sheet));
       expect(parsed.id).toBe(sheet.id);
       expect(parsed).not.toHaveProperty('created_at');
+      expect(parsed).not.toHaveProperty('notes');
     });
 
     it('rejects body fields the table cannot store at the schema boundary', () => {
@@ -445,8 +446,10 @@ describe('TimeSheetService write paths (REST API, alga-2026-0002763)', () => {
 
   describe('legacy notes migration', () => {
     it('preserves notes across tenants, rollback, edits and reapplication without inventing provenance', async () => {
-      const migration = await import('../../../../migrations/20261101130000_move_time_sheet_notes_to_history.cjs');
-      await context.db.schema.alterTable('time_sheets', (table) => table.text('notes').nullable());
+      const migration = await import('../../../../migrations/20261107100000_move_time_sheet_notes_to_history.cjs');
+      if (!(await context.db.schema.hasColumn('time_sheets', 'notes'))) {
+        await context.db.schema.alterTable('time_sheets', (table) => table.text('notes').nullable());
+      }
 
       const legacySheet = await create({ period_id: periodId });
       const nullPeriod = await addPeriod('2026-11-08', '2026-11-15');
@@ -483,7 +486,8 @@ describe('TimeSheetService write paths (REST API, alga-2026-0002763)', () => {
       expect(await tenantDb(context.db, otherTenant).table('time_sheet_notes').where({ time_sheet_id: otherSheet }).first())
         .toMatchObject({ tenant: otherTenant, kind: 'legacy', note: 'Second tenant note', created_by: null });
       expect(await table('time_sheet_notes').where({ time_sheet_id: otherSheet })).toHaveLength(0);
-      expect(await context.db.schema.hasColumn('time_sheets', 'notes')).toBe(false);
+      expect(await context.db.schema.hasColumn('time_sheets', 'notes')).toBe(true);
+      expect((await sheetRow(legacySheet.id)).notes).toBe('Imported legacy note — preserve exactly');
 
       await table('time_sheet_notes').insert({
         tenant: context.tenantId, time_sheet_id: nullSheet.id, kind: 'approval',
@@ -511,7 +515,7 @@ describe('TimeSheetService write paths (REST API, alga-2026-0002763)', () => {
       ]);
       await migration.up(context.db);
       expect(await notesFor(legacySheet.id)).toHaveLength(2);
-      expect(await context.db.schema.hasColumn('time_sheets', 'notes')).toBe(false);
+      expect(await context.db.schema.hasColumn('time_sheets', 'notes')).toBe(true);
     });
   });
 });

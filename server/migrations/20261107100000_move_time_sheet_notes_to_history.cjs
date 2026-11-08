@@ -1,10 +1,10 @@
 'use strict';
 const { createHash } = require('node:crypto');
 
-// Keep the approved time_sheets schema limited to its lifecycle columns. Mainline's
-// 20261028135300 migration briefly added a free-form notes column; preserve any values
-// as submission history before removing it. Read/write in bounded batches so this also
-// works when the two tables have different Citus distribution states.
+// Mainline's 20261028135300 migration added a free-form notes column. Preserve any values
+// as submission history, while retaining the column for N-1 application compatibility.
+// Read/write in bounded batches so this also works when the two tables have different
+// Citus distribution states.
 exports.config = { transaction: false };
 
 exports.up = async function up(knex) {
@@ -56,11 +56,6 @@ exports.up = async function up(knex) {
     }
     last = rows[rows.length - 1];
   }
-
-  await knex.schema.alterTable('time_sheets', (table) => {
-    // migration-lint: allow 3 — legacy notes are copied to time_sheet_notes above before retiring this temporary column.
-    table.dropColumn('notes');
-  });
 };
 
 exports.down = async function down(knex) {

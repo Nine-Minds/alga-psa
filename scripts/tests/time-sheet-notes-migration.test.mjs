@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import migration from '../../server/migrations/20261107100000_move_time_sheet_notes_to_history.cjs';
 
-test('time sheet notes are retained in history before the legacy column is dropped', async () => {
+test('time sheet notes are retained in history while the legacy column remains for N-1 compatibility', async () => {
   const rows = [
     { tenant: 'tenant-a', id: 'sheet-1', user_id: 'user-1', notes: 'Keep this note' },
   ];
@@ -56,10 +56,7 @@ test('time sheet notes are retained in history before the legacy column is dropp
   assert.equal(inserted[0].kind, 'legacy');
   assert.equal(inserted[0].note, 'Keep this note');
   assert.equal(inserted[0].created_by, null);
-  const dropIndex = operations.findIndex((operation) => operation[0] === 'drop-column');
-  assert.ok(dropIndex > -1);
-  assert.equal(operations[dropIndex][2], 'notes');
-  assert.ok(operations.findIndex((operation) => operation[0] === 'insert-note') < dropIndex,
-    'the legacy note is inserted before the column drop');
+  assert.equal(operations.some((operation) => operation[0] === 'drop-column'), false,
+    'the legacy column remains available to the previous application version');
   assert.match(operations.find((operation) => operation[0] === 'raw' && operation[1].includes('ADD CONSTRAINT'))[1], /NOT VALID$/);
 });
