@@ -100,7 +100,7 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
       })
       .catch((error) => {
         if (!cancelled) {
-          setLoadError(migrationErrorMessage(error, 'Failed to load configuration options.'));
+          setLoadError(migrationErrorMessage(error, t('importExport.migration.configure.errors.loadOptions', { defaultValue: 'Failed to load configuration options.' })));
         }
       })
       .finally(() => {
@@ -112,7 +112,7 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
     return () => {
       cancelled = true;
     };
-  }, [details.migrationJobId, details.configuration]);
+  }, [details.migrationJobId, details.configuration, t]);
 
   const hasTickets = options?.stagedEntityTypes.includes('tickets') ?? false;
   const hasAssets = options?.stagedEntityTypes.includes('assets') ?? false;
@@ -177,7 +177,7 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
       setSaveSucceeded(true);
       await onSaved();
     } catch (error) {
-      setSaveError(migrationErrorMessage(error, 'Failed to save the configuration.'));
+      setSaveError(migrationErrorMessage(error, t('importExport.migration.configure.errors.save', { defaultValue: 'Failed to save the configuration.' })));
     } finally {
       setIsSaving(false);
     }
@@ -197,6 +197,7 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
     options,
     priorityMapping,
     statusMapping,
+    t,
   ]);
 
   if (isLoading) {
@@ -210,7 +211,7 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
   if (loadError || !options) {
     return (
       <Alert variant="destructive">
-        <AlertDescription>{loadError ?? 'Configuration options are unavailable.'}</AlertDescription>
+        <AlertDescription>{loadError ?? t('importExport.migration.configure.errors.optionsUnavailable', { defaultValue: 'Configuration options are unavailable.' })}</AlertDescription>
       </Alert>
     );
   }
@@ -218,88 +219,87 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-sm font-semibold text-foreground">Configure the migration</h3>
+        <h3 className="text-sm font-semibold text-foreground">{t('importExport.migration.configure.title', { defaultValue: 'Configure the migration' })}</h3>
         <p className="text-sm text-muted-foreground">
-          Map the package&apos;s reference data to this tenant. Preflight verifies every mapping
-          before anything can run.
+          {t('importExport.migration.configure.description', { defaultValue: "Map the package's reference data to this tenant. Preflight verifies every mapping before anything can run." })}
         </p>
       </div>
 
       {hasTickets && (
         <section className="space-y-4 rounded-md border border-border p-4">
-          <h4 className="text-sm font-semibold text-foreground">Tickets</h4>
+          <h4 className="text-sm font-semibold text-foreground">{t('importExport.migration.configure.tickets.title', { defaultValue: 'Tickets' })}</h4>
 
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
               <Label htmlFor="amp-config-board-select">
-                Board <span className="text-destructive">*</span>
+                {t('importExport.migration.configure.tickets.board', { defaultValue: 'Board' })} <span className="text-destructive">*</span>
               </Label>
               <CustomSelect
                 id="amp-config-board-select"
                 options={boardOptions}
                 value={boardId}
                 onValueChange={setBoardId}
-                placeholder="Select a board"
+                placeholder={t('importExport.migration.configure.tickets.boardPlaceholder', { defaultValue: 'Select a board' })}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="amp-config-default-requester-select">
-                Default requester client <span className="text-destructive">*</span>
+                {t('importExport.migration.configure.tickets.defaultRequester', { defaultValue: 'Default requester client' })} <span className="text-destructive">*</span>
               </Label>
               <CustomSelect
                 id="amp-config-default-requester-select"
                 options={clientOptions}
                 value={defaultRequesterClientId}
                 onValueChange={setDefaultRequesterClientId}
-                placeholder="Select a client"
+                placeholder={t('importExport.migration.configure.clientPlaceholder', { defaultValue: 'Select a client' })}
               />
               <p className="text-xs text-muted-foreground">
-                Used when a ticket&apos;s organization cannot be resolved.
+                {t('importExport.migration.configure.tickets.defaultRequesterHelp', { defaultValue: "Used when a ticket's organization cannot be resolved." })}
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="amp-config-default-assignee-select">Default assignee</Label>
+              <Label htmlFor="amp-config-default-assignee-select">{t('importExport.migration.configure.tickets.defaultAssignee', { defaultValue: 'Default assignee' })}</Label>
               <CustomSelect
                 id="amp-config-default-assignee-select"
                 options={userOptions}
                 value={defaultAssigneeId}
                 onValueChange={setDefaultAssigneeId}
-                placeholder="Leave tickets unassigned"
+                placeholder={t('importExport.migration.configure.tickets.defaultAssigneePlaceholder', { defaultValue: 'Leave tickets unassigned' })}
                 allowClear
               />
             </div>
           </div>
 
           <MappingGrid
-            title="Status mapping"
-            description="Every status name in the package must map to a ticket status in this tenant."
+            title={t('importExport.migration.configure.statusMapping.title', { defaultValue: 'Status mapping' })}
+            description={t('importExport.migration.configure.statusMapping.description', { defaultValue: 'Every status name in the package must map to a ticket status in this tenant.' })}
             idPrefix="amp-config-status-mapping"
             sourceNames={options.packageStatusNames}
             targetOptions={statusOptions}
             mapping={statusMapping}
             onChange={setStatusMapping}
-            emptyMessage="The package's tickets carry no status names."
+            emptyMessage={t('importExport.migration.configure.statusMapping.empty', { defaultValue: "The package's tickets carry no status names." })}
           />
 
           <MappingGrid
-            title="Priority mapping"
-            description="Every priority name in the package must map to a priority in this tenant."
+            title={t('importExport.migration.configure.priorityMapping.title', { defaultValue: 'Priority mapping' })}
+            description={t('importExport.migration.configure.priorityMapping.description', { defaultValue: 'Every priority name in the package must map to a priority in this tenant.' })}
             idPrefix="amp-config-priority-mapping"
             sourceNames={options.packagePriorityNames}
             targetOptions={priorityOptions}
             mapping={priorityMapping}
             onChange={setPriorityMapping}
-            emptyMessage="The package's tickets carry no priority names."
+            emptyMessage={t('importExport.migration.configure.priorityMapping.empty', { defaultValue: "The package's tickets carry no priority names." })}
           />
         </section>
       )}
 
       {hasAssets && (
         <section className="space-y-4 rounded-md border border-border p-4">
-          <h4 className="text-sm font-semibold text-foreground">Assets</h4>
+          <h4 className="text-sm font-semibold text-foreground">{t('importExport.migration.configure.assets.title', { defaultValue: 'Assets' })}</h4>
           <MappingGrid
-            title="Asset type mapping"
-            description="Every asset type name in the package must map to an asset type in this tenant."
+            title={t('importExport.migration.configure.assetTypeMapping.title', { defaultValue: 'Asset type mapping' })}
+            description={t('importExport.migration.configure.assetTypeMapping.description', { defaultValue: 'Every asset type name in the package must map to an asset type in this tenant.' })}
             idPrefix="amp-config-asset-type-mapping"
             sourceNames={options.packageAssetTypeNames}
             targetOptions={assetTypeOptions}
@@ -309,7 +309,7 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
               setCustomFieldMapping((current) => seedCustomAssetFieldMappings(next, current, options.assetTypes, options.packageAssetCustomFields));
             }}
             allowClear
-            emptyMessage="The package's assets carry no asset type names."
+            emptyMessage={t('importExport.migration.configure.assetTypeMapping.empty', { defaultValue: "The package's assets carry no asset type names." })}
           />
           {[...new Set(Object.values(assetTypeMapping))].map((slug) => {
             const type = options.assetTypes.find((candidate) => candidate.slug === slug);
@@ -371,19 +371,19 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
 
       {hasOrphanCandidates && (
         <section className="space-y-4 rounded-md border border-border p-4">
-          <h4 className="text-sm font-semibold text-foreground">General</h4>
+          <h4 className="text-sm font-semibold text-foreground">{t('importExport.migration.configure.general.title', { defaultValue: 'General' })}</h4>
           <div className="max-w-md space-y-2">
-            <Label htmlFor="amp-config-default-client-select">Default client for orphaned records</Label>
+            <Label htmlFor="amp-config-default-client-select">{t('importExport.migration.configure.general.defaultClient', { defaultValue: 'Default client for orphaned records' })}</Label>
             <CustomSelect
               id="amp-config-default-client-select"
               options={clientOptions}
               value={defaultClientId}
               onValueChange={setDefaultClientId}
-              placeholder="Select a client"
+              placeholder={t('importExport.migration.configure.clientPlaceholder', { defaultValue: 'Select a client' })}
               allowClear
             />
             <p className="text-xs text-muted-foreground">
-              Contacts and assets whose organization cannot be resolved are attached to this client.
+              {t('importExport.migration.configure.general.defaultClientHelp', { defaultValue: 'Contacts and assets whose organization cannot be resolved are attached to this client.' })}
             </p>
           </div>
         </section>
@@ -397,7 +397,7 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
       {saveSucceeded && !saveError && (
         <Alert>
           <AlertDescription>
-            Configuration saved. Run preflight to validate it against the staged records.
+            {t('importExport.migration.configure.saved', { defaultValue: 'Configuration saved. Run preflight to validate it against the staged records.' })}
           </AlertDescription>
         </Alert>
       )}
@@ -407,10 +407,10 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
           {isSaving ? (
             <span className="flex items-center gap-2">
               <Spinner size="sm" />
-              Saving…
+              {t('importExport.migration.configure.saving', { defaultValue: 'Saving…' })}
             </span>
           ) : (
-            'Save configuration'
+            t('importExport.migration.configure.save', { defaultValue: 'Save configuration' })
           )}
         </Button>
       </div>
@@ -442,7 +442,9 @@ const MappingGrid = ({
   allowClear?: boolean;
   preserveClears?: boolean;
   detail?: (sourceName: string) => string;
-}): React.JSX.Element => (
+}): React.JSX.Element => {
+  const { t } = useTranslation('msp/settings');
+  return (
   <div className="space-y-2">
     <div>
       <h5 className="text-sm font-medium text-foreground">{title}</h5>
@@ -465,7 +467,7 @@ const MappingGrid = ({
               id={`${idPrefix}-${index}-select`}
               options={targetOptions}
               value={Object.prototype.hasOwnProperty.call(mapping, sourceName) ? mapping[sourceName] : ''}
-              placeholder="Select a mapping"
+              placeholder={t('importExport.migration.configure.mappingPlaceholder', { defaultValue: 'Select a mapping' })}
               allowClear={allowClear}
               onValueChange={(value) => {
                 const next = value
@@ -481,7 +483,8 @@ const MappingGrid = ({
       </div>
     )}
   </div>
-);
+  );
+};
 
 export default MigrationConfigurePanel;
 
