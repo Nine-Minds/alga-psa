@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
+import { PDFDocument } from 'pdf-lib';
 import jsQR from 'jsqr';
 import { afterAll, describe, expect, it } from 'vitest';
 import { recordUrl, type LabelViewModel } from '@alga-psa/types';
@@ -44,12 +45,14 @@ const item = (description = viewModel.ticketDescription): LabelPrintItem => ({
   viewModel: { ...viewModel, ticketDescription: description },
 });
 
-function pdfPageSizes(pdf: Buffer): Array<{ width: number; height: number }> {
-  const info = execFileSync('pdfinfo', ['-f', '1', '-l', '100000', '-'], { input: pdf, encoding: 'utf8' });
-  return [...info.matchAll(/^Page\s+\d+\s+size:\s+([\d.]+)\s+x\s+([\d.]+)\s+pts/gm)].map((match) => ({
-    width: Number(match[1]),
-    height: Number(match[2]),
-  }));
+// Page geometry straight from the PDF: pdf-lib reads the MediaBox of every page, so the checks do
+// not need poppler (pdfinfo / pdftotext) on the machine running the suite.
+async function pdfPageSizes(pdf: Buffer): Promise<Array<{ width: number; height: number }>> {
+  const doc = await PDFDocument.load(pdf);
+  return doc.getPages().map((p) => {
+    const { width, height } = p.getSize();
+    return { width, height };
+  });
 }
 
 afterAll(async () => {
@@ -60,7 +63,7 @@ describe('Letter customer worksheet PDF', () => {
   it('prints the full serial and multiline description on one Letter page with a canonical QR', async () => {
     const { html, printOptions } = await renderLabelBatchHtml([item()], pageLayout);
     const pdf = await renderHtmlToPdf(html, printOptions);
-    const pages = pdfPageSizes(pdf);
+    const pages = await pdfPageSizes(pdf);
     expect(pages).toHaveLength(1);
     expect(pages[0].width).toBeCloseTo(612, 0);
     expect(pages[0].height).toBeCloseTo(792, 0);
@@ -106,12 +109,21 @@ describe('Letter customer worksheet PDF', () => {
     }
   }, 120_000);
 
-  it('refuses a worksheet whose long description would be clipped, identifying its batch position', async () => {
+  it('flows a long description onto continuation pages instead of clipping it', async () => {
     const longDescription = Array.from({ length: 100 }, (_, index) => `Description line ${index + 1}`).join('\n');
     const { html, printOptions } = await renderLabelBatchHtml([item(), item(longDescription)], pageLayout);
-    await expect(renderHtmlToPdf(html, printOptions)).rejects.toThrow(
-      /Worksheet 2 contains text that does not fit/,
-    );
+    const pdf = await renderHtmlToPdf(html, printOptions);
+    // The short worksheet stays on its own page and the 100-line description spills onto more.
+    const pages = await pdfPageSizes(pdf);
+    expect(pages.length).toBeGreaterThanOrEqual(3);
+    for (const page of pages) {
+      expect(page.width).toBeCloseTo(612, 0);
+      expect(page.height).toBeCloseTo(792, 0);
+    }
+    const printedText = execFileSync('pdftotext', ['-layout', '-', '-'], { input: pdf, encoding: 'utf8' });
+    expect(printedText).toContain('Description line 1');
+    expect(printedText).toContain('Description line 100');
+    expect(printedText).toContain('First paragraph of the customer report.');
   }, 120_000);
 
   it('also detects text clipped inside an explicitly sized custom worksheet field', async () => {
@@ -133,7 +145,7 @@ describe('Letter customer worksheet PDF', () => {
       { ...item(), viewModel: { ...viewModel, identifier } },
     ], pageLayout);
     const pdf = await renderHtmlToPdf(html, printOptions);
-    expect(pdfPageSizes(pdf)).toHaveLength(1);
+    expect(await pdfPageSizes(pdf)).toHaveLength(1);
 
     const browser = await browserPoolService.getBrowser();
     const page = await browser.newPage();

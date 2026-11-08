@@ -1,4 +1,5 @@
 import type { Page } from 'puppeteer';
+import { PDFDocument } from 'pdf-lib';
 import { createTenantKnex } from '@alga-psa/db';
 import type { InvoicePdfPrintOptions } from '@alga-psa/types';
 
@@ -37,6 +38,10 @@ export async function renderHtmlToPdf(html: string, printOptions: InvoicePdfPrin
       const clipped: number[] = [];
       const tolerance = 0.75;
       for (const cell of document.querySelectorAll<HTMLElement>('.label-cell[data-validate-text-fits="true"]')) {
+        // A flow cell (a worksheet page) is bounded horizontally only: content taller than one page
+        // continues on the next page, so vertical overflow past the cell is legitimate. Boxes inside
+        // the content that clip on their own (an author's fixed-size field) are still checked fully.
+        const isFlowCell = cell.dataset.flow === 'true';
         const walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);
         let isClipped = false;
         for (let node = walker.nextNode(); node && !isClipped; node = walker.nextNode()) {
@@ -46,8 +51,9 @@ export async function renderHtmlToPdf(html: string, printOptions: InvoicePdfPrin
           const rects = Array.from(range.getClientRects()).filter((rect) => rect.width > 0 && rect.height > 0);
           for (let element = node.parentElement; element && cell.contains(element); element = element.parentElement) {
             const style = getComputedStyle(element);
-            const clipX = element === cell || ['hidden', 'clip', 'auto', 'scroll'].includes(style.overflowX);
-            const clipY = element === cell || ['hidden', 'clip', 'auto', 'scroll'].includes(style.overflowY);
+            const clipsOwnBox = ['hidden', 'clip', 'auto', 'scroll'];
+            const clipX = element === cell || clipsOwnBox.includes(style.overflowX);
+            const clipY = clipsOwnBox.includes(style.overflowY) || (element === cell && !isFlowCell);
             if (!clipX && !clipY) continue;
             const box = element.getBoundingClientRect();
             const left = box.left + element.clientLeft;
@@ -107,7 +113,15 @@ export async function renderLabelBatchPdf(
     locale: options.locale,
   });
   const pdf = await renderHtmlToPdf(html, printOptions);
-  return { pdf, sheets: geometry.sheets, labels: items.length };
+  // A worksheet flows across pages, so the planned sheet count is a floor: report the real page
+  // count of the produced PDF, falling back to the plan when the buffer cannot be re-read.
+  let sheets = geometry.sheets;
+  try {
+    sheets = (await PDFDocument.load(pdf)).getPageCount();
+  } catch {
+    // The plan stays the answer for a buffer pdf-lib cannot parse.
+  }
+  return { pdf, sheets, labels: items.length };
 }
 
 /** Resolve the template for a print (explicit id -> class default -> standard). Read-only. */

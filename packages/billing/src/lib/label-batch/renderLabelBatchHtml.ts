@@ -192,6 +192,9 @@ export async function renderLabelBatchHtml(
         designedSizeMm: worksheetSize ?? (printSettings?.customPageSize ? customPageSizeToMm(printSettings.customPageSize) : null),
         description: `Label ${index + 1} (${code})`,
         validateTextFits: Boolean(worksheetSize && item.viewModel.labelClass === 'ticket-work-tag'),
+        // A worksheet prints as a flow section: a description taller than one page continues onto the
+        // next page (like a regular document) instead of being clipped or refused.
+        flow: Boolean(worksheetSize),
       });
     } catch (error) {
       const fallback = LABEL_FALLBACK_TEMPLATE_BY_CODE[templateCode];

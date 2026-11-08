@@ -132,6 +132,8 @@ export async function POST(request: Request) {
         'X-Label-Count': String(result.labels),
         // Only a count: never which records were skipped or why.
         'X-Label-Skipped': String(result.skipped),
+        // Sheets the batch consumed: a worksheet flows across pages, so this can exceed the label count.
+        'X-Label-Sheets': String(result.sheets),
       },
     });
   } catch (error) {

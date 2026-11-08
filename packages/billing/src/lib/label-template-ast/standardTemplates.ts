@@ -209,9 +209,16 @@ const buildTicketCustomerWorksheet = (paper: 'letter' | 'a4'): TemplateAst => ({
   layout: {
     id: 'root',
     type: 'document',
-    // A4 is 210 x 297 mm (794 x 1123 px at 96 dpi); the layout below is sized for Letter and the
-    // content flows from the top, so the taller A4 page simply leaves more room at the bottom.
-    style: { inline: { width: paper === 'a4' ? '794px' : '816px', height: paper === 'a4' ? '1123px' : '1056px' } },
+    // The page is declared in the paper's own units so the root measures exactly like the printed page
+    // (A4's px conversion at 96 dpi is not integral). Height stays auto with a one-page minimum so a
+    // description longer than one page grows the root and flows onto continuation pages.
+    style: {
+      inline: {
+        width: paper === 'a4' ? '210mm' : '8.5in',
+        height: 'auto',
+        minHeight: paper === 'a4' ? '297mm' : '11in',
+      },
+    },
     children: [
       {
         id: 'header',

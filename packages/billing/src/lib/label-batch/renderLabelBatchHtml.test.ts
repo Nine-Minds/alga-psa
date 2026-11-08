@@ -104,6 +104,18 @@ describe('renderLabelBatchHtml failures', () => {
       expect(html).not.toContain('S/N');
     });
 
+    it('marks worksheet cells as full-page flow sections so long descriptions paginate', async () => {
+      const { html } = await renderLabelBatchHtml(
+        [{ templateCode: STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_CODE, viewModel }],
+        letter,
+      );
+      expect(html).toContain('label-sheet label-sheet-flow');
+      expect(html).toContain('label-cell label-cell-flow');
+      expect(html).toContain('data-flow="true"');
+      // A short worksheet still frames one full page: the flow root carries a page-tall minHeight.
+      expect(html).toContain('min-height:11in');
+    });
+
     it('renders the standard worksheet headings in the selected locale', async () => {
       const { html } = await renderLabelBatchHtml(
         [{ templateCode: STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_CODE, viewModel }],
