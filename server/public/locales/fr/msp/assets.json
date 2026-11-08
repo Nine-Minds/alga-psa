@@ -1468,8 +1468,8 @@
       "customSchedule": "Planning personnalisé",
       "everyUnit": "Chaque {{unit}}",
       "everyCountUnit": "À intervalles de {{count}} {{unit}}",
-      "onDays": "{{base}}, le {{days}}",
-      "onDatesOfMonth": "{{base}}, le {{dates}}",
+      "onDays": "{{base}} : {{days}}",
+      "onDatesOfMonth": "{{base}} : {{dates}} du mois",
       "frequency": {
         "daily": "Quotidien",
         "weekly": "Hebdomadaire",
@@ -1567,7 +1567,7 @@
       "today": "Aujourd'hui",
       "moreCount": "+{{count}} de plus",
       "legend": "Légende",
-      "scheduled": "Planifié"
+      "scheduled": "Planifiées"
     },
     "fields": {
       "asset": "Actif",
