@@ -35,6 +35,7 @@ export default defineConfig({
       // Scheduler and immediate invoice email authorization behavior.
       'src/actions/invoiceJobActions.sender.test.ts',
       'src/lib/prepaidBalanceAlerts.test.ts',
+      'src/lib/hourBlockExpiration.test.ts',
       'src/lib/contractRecurringShape.test.ts',
       'src/lib/taxRateApplicability.test.ts',
       'src/lib/currency/rateInput.test.ts',
