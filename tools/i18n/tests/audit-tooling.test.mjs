@@ -128,6 +128,21 @@ for (const locale of ['pt', 'it']) {
   });
 }
 
+for (const locale of ['pt', 'de', 'es', 'fr', 'it', 'nl', 'pl', 'sv']) {
+  test(`${locale} RMM alert predicate editor copy passes the locale quality audit`, () => {
+    const { report } = runAudit({
+      locale,
+      namespaceFilter: new Set(['msp/integrations']),
+      writeReport: false,
+    });
+    const result = report.namespaces[0];
+    assert.ok(result.keyCount > 0);
+    assert.deepEqual(result.structuralErrors, []);
+    assert.deepEqual(result.untranslated, []);
+    assert.deepEqual(result.forbiddenViolations, []);
+  });
+}
+
 for (const locale of ['pt', 'es', 'fr', 'it']) {
   test(`${locale} duration audit accepts unit symbols but rejects English duration prose`, (t) => {
     const root = mkdtempSync(join(tmpdir(), 'schedule-duration-audit-'));
