@@ -200,40 +200,6 @@ export class ApiTicketController extends ApiBaseController {
     };
   }
 
-  private async assertTicketMutationAllowed(
-    apiRequest: AuthenticatedApiRequest,
-    ticketId: string,
-    action: 'update' | 'delete',
-    knex?: Awaited<ReturnType<typeof getConnection>>
-  ): Promise<Record<string, any>> {
-    const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
-    const ticket = await this.ticketService.getById(ticketId, apiRequest.context);
-    if (!ticket) {
-      throw new NotFoundError('ticket not found');
-    }
-
-    // Must still be readable, then authorized against the mutation action's scope.
-    const ticketRow = ticket as Record<string, any>;
-    const recordContext = this.buildTicketRecordContext(ticketRow);
-    const authInput = {
-      knex: resolvedKnex,
-      tenant: apiRequest.context.tenant,
-      user: apiRequest.context.user,
-      apiKeyId: apiRequest.context.apiKeyId,
-      resource: 'ticket',
-      recordContext,
-    };
-    const allowed =
-      (await authorizeApiResourceRead(authInput)) &&
-      (await authorizeApiResource({ ...authInput, action }));
-
-    if (!allowed) {
-      throw new ForbiddenError(`Permission denied: Cannot ${action} ticket`);
-    }
-
-    return ticket as Record<string, any>;
-  }
-
   private async filterAuthorizedTickets(
     apiRequest: AuthenticatedApiRequest,
     tickets: Record<string, any>[],

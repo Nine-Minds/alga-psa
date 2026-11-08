@@ -13,6 +13,7 @@ const OUT_OF_SCOPE = '33333333-3333-3333-3333-333333333333';
 
 const state = vi.hoisted(() => ({
   tickets: {} as Record<string, Record<string, unknown>>,
+  lockedTickets: {} as Record<string, Record<string, unknown>>,
   // Bundle simulation: `update` is narrowed to this board (relation X); read is unrestricted unless listed.
   updateBoards: new Set<string>(),
   readDenied: new Set<string>(),
@@ -33,7 +34,7 @@ const authorizeResourceMock = vi.hoisted(() =>
 
 const serviceUpdateMock = vi.hoisted(() =>
   vi.fn(async (id: string, data: Record<string, unknown>, _ctx: unknown, options?: { authorize?: (t: any, trx: any) => Promise<void> }) => {
-    const row = state.tickets[id];
+    const row = state.lockedTickets[id] ?? state.tickets[id];
     if (options?.authorize) await options.authorize(row, {});
     state.writes.push(id);
     return { ...row, ...data };
@@ -110,6 +111,7 @@ describe('PUT /api/v1/tickets/{id}/assignment authorization', () => {
       [OUT_OF_SCOPE]: { ticket_id: OUT_OF_SCOPE, board_id: 'board-y', client_id: 'c1', assigned_to: null, status_id: 's1' },
     };
     state.updateBoards = new Set(['board-x']);
+    state.lockedTickets = {};
     state.readDenied = new Set();
     state.writes = [];
     authorizeResourceMock.mockClear();
@@ -147,17 +149,16 @@ describe('PUT /api/v1/tickets/{id}/assignment authorization', () => {
     expect(actionsRequested()).toContain('ticket:update');
   });
 
-  it('passes an in-transaction authorize hook that re-checks the locked row', async () => {
-    await put(IN_SCOPE);
-    const options = serviceUpdateMock.mock.calls[0][3] as { authorize?: unknown } | undefined;
-    expect(typeof options?.authorize).toBe('function');
-
-    // The row changed between the pre-check and the lock: the hook decides on the locked row.
-    state.tickets[IN_SCOPE] = { ...state.tickets[IN_SCOPE], board_id: 'board-y' };
-    state.writes = [];
+  it('denies a ticket that moves outside update scope between the pre-check and the row lock', async () => {
+    // The pre-check still sees board-x; only the transaction sees the changed row.
+    state.lockedTickets[IN_SCOPE] = { ...state.tickets[IN_SCOPE], board_id: 'board-y' };
     const res = await put(IN_SCOPE);
     expect(res.status).toBe(403);
+    expect(serviceUpdateMock).toHaveBeenCalledTimes(1);
     expect(state.writes).toEqual([]);
+    expect(authorizeResourceMock.mock.calls
+      .filter(([input]) => input.resource.action === 'update')
+      .map(([input]) => input.record.boardId)).toEqual(['board-x', 'board-y']);
   });
 
   describe('Disclosure arm: read is required only where the response discloses the ticket', () => {
