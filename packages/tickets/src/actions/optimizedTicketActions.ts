@@ -12,6 +12,7 @@ import { resolveTicketMutationCollaborator, type TicketMutationCollaborationCont
 import { formatCollaborationActorName } from '@alga-psa/event-schemas/collaboration';
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { hasCommentCollaborationAttribution } from '../lib/commentAuthorResolution';
+import { projectResponseUsers } from '../lib/responseUsers';
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { resolveCommentMergeTokens } from '../lib/cannedResponses/commentMerge';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
@@ -740,8 +741,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     const extraCommentAuthors: Array<{ user_id: string; user_type?: string | null; contact_id?: string | null }> =
       extraAuthorIds.length > 0
         // LEVERAGE: pattern users-star-projection — see availableAgents query above
-        ? await tenantScopedTable(trx, 'users', tenant).whereIn('user_id', extraAuthorIds)
-          .select(...USER_RESPONSE_FIELD_NAMES)
+        ? await projectResponseUsers(tenantScopedTable(trx, 'users', tenant)).whereIn('user_id', extraAuthorIds)
         : [];
 
     // Client-portal authors carry their avatar on the linked contact, not the user
