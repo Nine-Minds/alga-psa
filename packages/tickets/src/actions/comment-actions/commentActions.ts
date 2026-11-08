@@ -373,7 +373,8 @@ export const createComment = withAuth(async (
         };
       }
 
-      const commentId = await Comment.insert(trx, commentTenant!, commentToInsert);
+      const insertedComment = await Comment.insertRecord(trx, commentTenant!, commentToInsert);
+      const commentId = insertedComment.comment_id!;
       console.log(`[createComment] Comment inserted with ID:`, commentId);
 
       // A named audience on a root comment is only stored for co-managed workspaces. Read back what
@@ -387,8 +388,7 @@ export const createComment = withAuth(async (
         labelledAudience = applied?.audience ?? null;
       }
 
-      // Verify the comment was inserted correctly
-      const insertedComment = await Comment.get(trx, commentTenant!, commentId);
+      // Log the stored values returned by the insert.
       if (insertedComment) {
         console.log(`[createComment] Verification - inserted comment:`, {
           comment_id: insertedComment.comment_id,
@@ -422,7 +422,7 @@ export const createComment = withAuth(async (
         // Publish TICKET_COMMENT_ADDED event for mention notifications
         // Persist notification intent with the comment; failed intent writes must roll back.
         try {
-          const eventComment = await Comment.get(trx, commentTenant, commentId);
+          const eventComment = insertedComment;
           await publishCommentEvent(trx, 'ticket', {
             tenantId: commentTenant,
             ticketId: comment.ticket_id!,
@@ -464,7 +464,6 @@ export const createComment = withAuth(async (
 
         // Publish workflow v2 domain ticket message events (additive; no impact on legacy comment events).
         try {
-          const insertedComment = await Comment.get(trx, commentTenant, commentId);
           const createdAt = insertedComment?.created_at ?? undefined;
           const visibility = comment.is_internal ? 'internal' : 'public';
 
@@ -511,7 +510,7 @@ export const createComment = withAuth(async (
       // reconciler repairs a post-commit scheduling failure.
       if (isScheduled && labelledAudience && commentTenant && comment.ticket_id) {
         // Keep the audience with the durable intent so the scheduled dispatch cannot widen it.
-        const scheduledComment = await Comment.get(trx, commentTenant, commentId);
+        const scheduledComment = insertedComment;
         await tenantDb(trx, commentTenant).table('comments').where({ comment_id: commentId }).update({
           comment_publication_payload: JSON.stringify({
             ...buildTicketCommentAddedPayload({
@@ -756,11 +755,10 @@ export const updateComment = withAuth(async (user, { tenant }, id: string, reque
     });
 
       // Use the Comment model to update the comment
-      await Comment.update(trx, commentTenant, id, commentToUpdate, user.user_id);
+      const updatedComment = await Comment.update(trx, commentTenant, id, commentToUpdate, user.user_id);
       console.log(`[updateComment] Successfully updated comment with ID: ${id}`);
 
-      // Verify the comment was updated correctly
-      const updatedComment = await Comment.get(trx, commentTenant, id);
+      // Log the stored values returned by the update.
       if (updatedComment) {
         console.log(`[updateComment] Verification - updated comment:`, {
           comment_id: updatedComment.comment_id,
@@ -884,7 +882,7 @@ export const deleteComment = withAuth(async (user, _ctx, id: string) => {
         .where({ comment_id: id })
         .update({ comment_id: null });
 
-      await Comment.delete(trx, tenant, id);
+      if (existingComment) await Comment.deleteRecord(trx, tenant, existingComment);
 
       if (existingComment?.ticket_id) {
         await publishTicketUpdate({

@@ -78,3 +78,54 @@ Fix (alga-2026-0002993):
   Its only callers are the comment mutations.
 - Tests: `commentMutationsAuthz.test.ts` (MSP deny/allow cases) and
   `server/src/test/integration/commentActions.mspBundleRestriction.integration.test.ts` (real kernel + bundle).
+
+
+## SQL budget repair (2026-11-08)
+
+Ticket authorization now selects the parent record and an authorization snapshot in one statement.
+The snapshot contains current roles, teams, managed users, and published bundle rules. Scalar aggregates
+keep these collections separate; shared membership CTEs feed both subject construction and bundle targeting.
+The existing resolver and the snapshot use the same assignment predicate and rule decoder. Policy-load
+errors propagate rather than becoming an empty, unrestricted rule set. Portal visibility still comes from
+the canonical contact resolver and is evaluated by the existing kernel for the requested action.
+
+`Comment.insertRecord` returns the normalized stored row through SQL `RETURNING`. The ID-only `insert`
+API delegates to it. Comment creation reuses that row for diagnostic, notification, workflow, and scheduled
+payload data. `Comment.update` also returns its stored row. `Comment.deleteRecord` accepts the row already
+loaded and authorized in the command transaction, checks its tenant identity, and retains attachment,
+reply-count, and tombstone behavior. The ID-only delete API still loads the row for other callers.
+
+Measured counts from the hot-path contract, with a discarded warm-up and three agreeing runs:
+
+| Path | Before repair | Authorization saving | Mutation-result reuse saving | After repair | Original budget | Lock statements |
+|---|---:|---:|---:|---:|---:|---:|
+| comment.add | 29 | 5 | 3 | 21 | 23 | 3 |
+| comment.edit | 18 | 5 | 1 | 12 | 12 | 2 |
+| comment.delete | 17 | 5 | 1 | 11 | 11 | 0 |
+| comment.scheduledEnqueue | 20 | 5 | 1 | 14 | 14 | 2 |
+
+The six authorization statements became one on each measured MSP mutation. Every other scenario step
+and every lock count stayed at its original baseline. The inflated snapshot from `419ac22bbd` was restored
+first, then the add budget was recorded downward to 21 as required by the contract. The total is 464,
+compared with 466 before inflation and 490 after inflation.
+
+Reproduce the visible counts and parameterized SQL trace from the repository root:
+
+```sh
+TEST_DB_NAME=comment_budget_2993_optimization HOT_PATH_BUDGET_TRACE=1 npm run budget:hot-path -- --silent=false
+```
+
+The verified trace is saved locally at `/tmp/comment-budget-2993-verified.log`. Baseline and initial
+post-change traces are `/tmp/comment-budget-2993-before.log` and `/tmp/comment-budget-2993-after.log`.
+An `EXPLAIN (ANALYZE, BUFFERS)` of the consolidated statement on the test fixture used indexed scans
+for memberships, managed users, rules, and the ticket. Its plan is `/tmp/comment-2993-auth-explain.json`;
+this small-fixture check does not establish production latency.
+
+Verification includes the contact-visibility and MSP bundle restriction integration suites, action/model
+threading suites, and targeted unit tests. Added behavioral coverage exercises role/team-targeted bundles,
+membership removal within a transaction, agreement with the existing rule resolver, returned normalized
+rows and thread identity, cross-tenant delete rejection, and policy-load failure propagation.
+
+All checks passed: hot-path contract (2 tests), card and threading integration suites (29 tests), bundle
+assignment/publishing/lifecycle and relationship parity integration suites (14 tests), targeted unit suites
+(77 tests), and `NODE_OPTIONS=--max-old-space-size=14336 npx tsc --noEmit -p server`.

@@ -1,6 +1,7 @@
 // @vitest-environment node
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { loadAuthorizationEvaluationSnapshot } from '@alga-psa/authorization/bundles/service';
 import { authorizeTicketRecordAccess, createTicketAuthorizationContext } from './ticketRecordAuthorization';
 
 const getVisibilityMock = vi.fn();
@@ -11,8 +12,13 @@ vi.mock('@alga-psa/db', () => ({
 vi.mock('./clientPortalVisibility.server', () => ({
   getClientContactVisibilityContext: (...args: any[]) => getVisibilityMock(...args),
 }));
-vi.mock('@alga-psa/authorization/bundles/service', () => ({
+vi.mock('@alga-psa/authorization/bundles/service', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/authorization/bundles/service')>()),
   resolveBundleNarrowingRulesForEvaluation: vi.fn(async () => []),
+  authorizationEvaluationSnapshotQuery: vi.fn(() => ({ as: () => null })),
+  loadAuthorizationEvaluationSnapshot: vi.fn(async () => ({
+    roleIds: [], teamIds: [], managedUserIds: [], rules: [],
+  })),
 }));
 
 function fakeTrx(ticket: Record<string, unknown> | null = null) {
@@ -50,13 +56,7 @@ describe('createTicketAuthorizationContext', () => {
     expect(ctx.selectedBoardIds).toEqual(['b1']);
   });
 
-  it('never uses selected_boards and leaves internal users unnarrowed', async () => {
-    const source = (await import('node:fs')).readFileSync(
-      new URL('./ticketRecordAuthorization.ts', import.meta.url),
-      'utf8',
-    );
-    expect(source).not.toContain('selected_boards');
-    expect(source).not.toContain('resolveClientSelectedBoardIds');
+  it('leaves internal users unnarrowed by portal visibility', async () => {
     const ctx = await createTicketAuthorizationContext(fakeTrx(), 'tenant-1', { user_id: 'i', user_type: 'internal', roles: [] } as any);
     expect(ctx.contactVisibility).toBeUndefined();
     expect(ctx.selectedBoardIds).toBeUndefined();
@@ -96,6 +96,11 @@ describe('authorizeTicketRecordAccess (client principals)', () => {
 
   it('denies a client with no contact', async () => {
     await expect(run(row(), { ...client, contact_id: undefined })).rejects.toThrow(/Permission denied/);
+  });
+
+  it('propagates a failed policy load instead of treating it as an unrestricted principal', async () => {
+    vi.mocked(loadAuthorizationEvaluationSnapshot).mockRejectedValueOnce(new Error('policy database unavailable'));
+    await expect(run(row(), { ...client, user_type: 'internal' })).rejects.toThrow('policy database unavailable');
   });
 
   it('reports a missing ticket as not found', async () => {

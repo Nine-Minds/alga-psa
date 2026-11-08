@@ -71,9 +71,9 @@ vi.mock('@alga-psa/db', () => ({
 vi.mock('../../models/comment', () => ({
   default: {
     get: vi.fn(async () => commentRow),
-    insert: (...args: any[]) => commentInsert(...args),
+    insertRecord: async (...args: any[]) => ({ ...args[2], comment_id: await commentInsert(...args), thread_id: 'thread-1' }),
     update: (...args: any[]) => commentUpdate(...args),
-    delete: (...args: any[]) => commentDelete(...args),
+    deleteRecord: (trx: any, tenant: string, row: any) => commentDelete(trx, tenant, row.comment_id),
   },
 }));
 vi.mock('@alga-psa/event-bus/publishers', () => ({
@@ -98,8 +98,13 @@ vi.mock('../../lib/cannedResponses/commentMerge', () => ({ resolveCommentMergeTo
 vi.mock('../../lib/workflowTicketCommunicationEvents', () => ({ buildTicketCommunicationWorkflowEvents: vi.fn(() => []), publishTicketCommunicationWorkflowEvent: vi.fn() }));
 vi.mock('@alga-psa/db/commentEventRegistry', () => ({ publishCommentEvent: vi.fn(async () => undefined) }));
 vi.mock('@alga-psa/tickets/actions/ticketBundleUtils', () => ({ maybeReopenBundleMasterFromChildReply: vi.fn(async () => undefined) }));
-vi.mock('@alga-psa/authorization/bundles/service', () => ({
+vi.mock('@alga-psa/authorization/bundles/service', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/authorization/bundles/service')>()),
   resolveBundleNarrowingRulesForEvaluation: vi.fn(async () => bundleRules),
+  authorizationEvaluationSnapshotQuery: vi.fn(() => ({ as: () => null })),
+  loadAuthorizationEvaluationSnapshot: vi.fn(async () => ({
+    roleIds: [], teamIds: [], managedUserIds: [], rules: bundleRules.map((r) => ({ rule_id: r.id, resource_type: r.resource, action: r.action, template_key: r.templateKey, constraint_key: r.constraintKey ?? null, config: {} })),
+  })),
 }));
 
 const client = { user_id: 'client-user-1', user_type: 'client', tenant: 'tenant-1', contact_id: 'contact-1', clientId: 'client-1', roles: [{ role_id: 'rc' }] };

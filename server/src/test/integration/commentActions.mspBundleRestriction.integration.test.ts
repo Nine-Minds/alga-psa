@@ -9,6 +9,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createTenant, createUser } from '../../../test-utils/testDataFactory';
 import {
+  loadAuthorizationEvaluationSnapshot,
+  resolveBundleNarrowingRulesForEvaluation,
+  bundleNarrowingRuleFromRow,
   createAuthorizationBundle,
   createBundleAssignment,
   publishBundleRevision,
@@ -51,6 +54,7 @@ import {
 } from '../../../../packages/tickets/src/actions/comment-actions/commentActions';
 import { toggleCommentReaction } from '../../../../packages/tickets/src/actions/comment-actions/commentReactionActions';
 import Comment from '../../../../packages/tickets/src/models/comment';
+import { authorizeTicketRecordAccess } from '../../../../packages/tickets/src/lib/ticketRecordAuthorization';
 
 const note = (text: string) => JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text, styles: {} }] }]);
 
@@ -176,4 +180,73 @@ describe('commentActions: own_or_assigned bundle-restricted MSP user (real autho
     expect(String(row.note)).toContain(`pre-existing-${mark}`);
     expect(await db('comment_reactions').where({ tenant, comment_id: ids.foreignComment })).toHaveLength(0);
   });
+
+  it.each(['role', 'team'] as const)('loads %s-targeted bundle rules with current memberships in the record decision', async (targetType) => {
+    const trx = await db.transaction();
+    try {
+      const targetId = uuidv4();
+      if (targetType === 'role') {
+        await trx('roles').insert({ tenant, role_id: targetId, role_name: `snapshot-${mark}`, msp: true, client: false });
+        await trx('user_roles').insert({ tenant, role_id: targetId, user_id: ids.restrictedId });
+      } else {
+        await trx('teams').insert({ tenant, team_id: targetId, team_name: `snapshot-${mark}`, manager_id: ids.techId });
+        await trx('team_members').insert({ tenant, team_id: targetId, user_id: ids.restrictedId });
+      }
+      await trx('users').where({ tenant, user_id: ids.otherId }).update({ reports_to: ids.restrictedId });
+      const bundle = await createAuthorizationBundle(trx, { tenant, name: `snapshot-${targetType}-${mark}` });
+      await upsertBundleRule(trx, {
+        tenant, bundleId: bundle.bundleId, revisionId: bundle.revisionId,
+        resourceType: 'ticket', action: 'update', templateKey: 'own', config: {},
+      });
+      await publishBundleRevision(trx, { tenant, bundleId: bundle.bundleId, revisionId: bundle.revisionId });
+      await createBundleAssignment(trx, { tenant, bundleId: bundle.bundleId, targetType, targetId });
+      const subject = { tenant, userId: ids.restrictedId, userType: 'internal' as const };
+      const snapshot = await loadAuthorizationEvaluationSnapshot(trx, subject);
+      expect(snapshot[targetType === 'role' ? 'roleIds' : 'teamIds']).toContain(targetId);
+      expect(snapshot.managedUserIds).toContain(ids.otherId);
+      const legacyRules = await resolveBundleNarrowingRulesForEvaluation(trx, {
+        subject, resource: { type: 'ticket', action: 'update' },
+      });
+      expect(snapshot.rules.map(bundleNarrowingRuleFromRow).sort((a, b) => a.id.localeCompare(b.id)))
+        .toEqual(legacyRules.sort((a, b) => a.id.localeCompare(b.id)));
+      const authorize = () => authorizeTicketRecordAccess({
+        trx, tenant, user: ref.user, ticketId: ids.assignedTicket, action: 'update',
+      });
+      // The existing direct bundle allows an assigned ticket; the newly targeted
+      // 'own' rule must narrow it further, even with no roles supplied in the session.
+      await expect(authorize()).rejects.toThrow('Permission denied');
+      await trx(targetType === 'role' ? 'user_roles' : 'team_members')
+        .where({ tenant, user_id: ids.restrictedId, [targetType === 'role' ? 'role_id' : 'team_id']: targetId }).del();
+      await expect(authorize()).resolves.toMatchObject({ ticket_id: ids.assignedTicket });
+    } finally {
+      await trx.rollback();
+    }
+  });
+
+  it('returns the normalized stored comment from insert and update, including thread identity and timestamps', async () => {
+    const trx = await db.transaction();
+    try {
+      const inserted = await Comment.insertRecord(trx, tenant, {
+        ticket_id: ids.assignedTicket, user_id: ids.restrictedId,
+        author_type: 'client', is_internal: true, note: note('returned row'),
+        markdown_content: 'returned row', is_resolution: false,
+      } as any);
+      expect(inserted.author_type).toBe('internal');
+      expect(inserted.thread_id).toBeTruthy();
+      expect(inserted.created_at).toBeTruthy();
+      expect(inserted).toEqual(await Comment.get(trx, tenant, inserted.comment_id!));
+      const updated = await Comment.update(trx, tenant, inserted.comment_id!, { note: note('updated row') }, ids.restrictedId);
+      expect(updated.note).toBe(note('updated row'));
+      expect(updated.thread_id).toBe(inserted.thread_id);
+      expect(updated).toEqual(await Comment.get(trx, tenant, inserted.comment_id!));
+      await expect(Comment.deleteRecord(trx, uuidv4(), updated)).rejects.toThrow('Invalid comment identity');
+      expect(await Comment.get(trx, tenant, inserted.comment_id!)).toBeTruthy();
+      await Comment.deleteRecord(trx, tenant, updated);
+      expect(await Comment.get(trx, tenant, inserted.comment_id!)).toBeUndefined();
+      expect(await trx('comment_threads').where({ tenant, thread_id: inserted.thread_id }).first()).toBeUndefined();
+    } finally {
+      await trx.rollback();
+    }
+  });
+
 });

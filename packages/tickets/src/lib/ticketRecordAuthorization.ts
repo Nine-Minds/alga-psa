@@ -11,7 +11,12 @@ import {
   type AuthorizationSubject,
   type RelationshipRule,
 } from '@alga-psa/authorization/kernel';
-import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
+import {
+  authorizationEvaluationSnapshotQuery,
+  loadAuthorizationEvaluationSnapshot,
+  bundleNarrowingRuleFromRow,
+  type AuthorizationEvaluationSnapshot,
+} from '@alga-psa/authorization/bundles/service';
 import { extractActiveWatcherContactIds } from '@alga-psa/authorization/portal/visibility';
 import type { ContactVisibilityContext } from './clientPortalVisibility';
 import { getClientContactVisibilityContext } from './clientPortalVisibility.server';
@@ -33,72 +38,6 @@ type Conn = Knex | Knex.Transaction;
 
 function tenantScopedTable(conn: Conn, tenant: string, table: string): Knex.QueryBuilder {
   return tenantDb(conn, tenant).table(table) as Knex.QueryBuilder;
-}
-
-function extractRoleIdsFromUser(user: unknown): string[] {
-  const roles = (user as { roles?: unknown }).roles;
-  if (!Array.isArray(roles)) {
-    return [];
-  }
-
-  return roles
-    .map((role) => {
-      if (typeof role === 'string') {
-        return role;
-      }
-      if (role && typeof role === 'object' && 'role_id' in role) {
-        const roleId = (role as { role_id?: unknown }).role_id;
-        return typeof roleId === 'string' ? roleId : null;
-      }
-      return null;
-    })
-    .filter((value): value is string => Boolean(value));
-}
-
-async function resolveAuthorizationSubjectForUser(
-  trx: Conn,
-  tenant: string,
-  user: IUserWithRoles,
-): Promise<AuthorizationSubject> {
-  let roleIds = extractRoleIdsFromUser(user);
-  if (roleIds.length === 0) {
-    try {
-      const roleRows = await tenantScopedTable(trx, tenant, 'user_roles')
-        .where({ user_id: user.user_id })
-        .select<{ role_id: string }[]>('role_id');
-      roleIds = roleRows.map((row) => row.role_id);
-    } catch {
-      roleIds = [];
-    }
-  }
-
-  let teamRows: Array<{ team_id: string }> = [];
-  let managedRows: Array<{ user_id: string }> = [];
-  try {
-    teamRows = await tenantScopedTable(trx, tenant, 'team_members')
-      .where({ user_id: user.user_id })
-      .select<{ team_id: string }[]>('team_id');
-  } catch {
-    teamRows = [];
-  }
-  try {
-    managedRows = await tenantScopedTable(trx, tenant, 'users')
-      .where({ reports_to: user.user_id })
-      .select<{ user_id: string }[]>('user_id');
-  } catch {
-    managedRows = [];
-  }
-
-  return {
-    tenant,
-    userId: user.user_id,
-    userType: user.user_type,
-    roleIds,
-    teamIds: teamRows.map((row) => row.team_id),
-    managedUserIds: managedRows.map((row) => row.user_id),
-    clientId: user.clientId ?? null,
-    portfolioClientIds: [],
-  };
 }
 
 function toTicketAuthorizationRecord(ticket: Partial<ITicket>): AuthorizationRecord {
@@ -150,8 +89,14 @@ export async function createTicketAuthorizationContext(
   trx: Conn,
   tenant: string,
   user: IUserWithRoles,
+  snapshot?: AuthorizationEvaluationSnapshot,
 ): Promise<TicketAuthorizationContext> {
-  const authorizationSubject = await resolveAuthorizationSubjectForUser(trx, tenant, user);
+  const facts = snapshot ?? await loadAuthorizationEvaluationSnapshot(trx, { tenant, userId: user.user_id });
+  const authorizationSubject: AuthorizationSubject = {
+    tenant, userId: user.user_id, userType: user.user_type,
+    roleIds: facts.roleIds, teamIds: facts.teamIds, managedUserIds: facts.managedUserIds,
+    clientId: user.clientId ?? null, portfolioClientIds: [],
+  };
   const contactVisibility = await resolveClientVisibility(trx, tenant, user);
   const selectedBoardIds =
     contactVisibility === null ? [] : contactVisibility?.visibleBoardIds ?? undefined;
@@ -166,13 +111,7 @@ export async function createTicketAuthorizationContext(
       relationshipRules,
     }),
     bundleProvider: new BundleAuthorizationKernelProvider({
-      resolveRules: async (input) => {
-        try {
-          return await resolveBundleNarrowingRulesForEvaluation(trx as Knex.Transaction, input);
-        } catch {
-          return [];
-        }
-      },
+      resolveRules: async () => facts.rules.map(bundleNarrowingRuleFromRow),
     }),
     rbacEvaluator: async () => true,
   });
@@ -203,9 +142,11 @@ async function resolveTicketRecord(
   trx: Conn,
   tenant: string,
   ticketId: string,
-): Promise<TicketRecordRow | null> {
+  user: IUserWithRoles,
+): Promise<(TicketRecordRow & { authorization_snapshot: AuthorizationEvaluationSnapshot }) | null> {
   const row = (await tenantScopedTable(trx, tenant, 'tickets')
     .where({ ticket_id: ticketId })
+    .select(authorizationEvaluationSnapshotQuery(trx, { tenant, userId: user.user_id }).as('authorization_snapshot'))
     .first(
       'ticket_id',
       'assigned_to',
@@ -216,7 +157,7 @@ async function resolveTicketRecord(
       'contact_name_id',
       'billing_profile_id',
       'attributes',
-    )) as TicketRecordRow | undefined;
+    )) as (TicketRecordRow & { authorization_snapshot: AuthorizationEvaluationSnapshot }) | undefined;
   return row ?? null;
 }
 
@@ -237,12 +178,15 @@ export async function authorizeTicketRecordAccess(input: {
   ticketRow?: TicketRecordRow;
 }): Promise<TicketRecordRow> {
   const ticket =
-    input.ticketRow ?? (await resolveTicketRecord(input.trx, input.tenant, input.ticketId));
+    input.ticketRow ?? (await resolveTicketRecord(input.trx, input.tenant, input.ticketId, input.user));
   if (!ticket) {
     throw new Error('Ticket not found');
   }
 
-  const context = await createTicketAuthorizationContext(input.trx, input.tenant, input.user);
+  const { authorization_snapshot: snapshot, ...record } = ticket as TicketRecordRow & {
+    authorization_snapshot?: AuthorizationEvaluationSnapshot;
+  };
+  const context = await createTicketAuthorizationContext(input.trx, input.tenant, input.user, snapshot);
   const decision = await context.authorizationKernel.authorizeResource({
     subject: context.authorizationSubject,
     resource: {
@@ -261,7 +205,7 @@ export async function authorizeTicketRecordAccess(input: {
     throw new Error('Permission denied: Cannot access ticket');
   }
 
-  return ticket;
+  return record;
 }
 
 /**
