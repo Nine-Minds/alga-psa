@@ -1,3 +1,4 @@
+import { generateInvoiceForCycle } from '../../../test-utils/billingTestHelpers';
 import { beforeAll, afterAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -19,7 +20,6 @@ import {
 let db: Knex;
 let tenantId: string;
 let createClientContractFromWizard: typeof import('@alga-psa/billing/actions/contractWizardActions').createClientContractFromWizard;
-let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoice;
 let syncRecurringServicePeriodsForContractLine: typeof import('@alga-psa/billing/actions/recurringServicePeriodSync').syncRecurringServicePeriodsForContractLine;
 let scheduleUnitPricingRevision: typeof import('@alga-psa/billing/actions/contractLineUnitPricingActions').scheduleUnitPricingRevision;
 let resetContractLineRateToStandard: typeof import('@alga-psa/billing/actions/rateReviewActions').resetContractLineRateToStandard;
@@ -105,7 +105,6 @@ describe('rate-review reset on a mixed bundle + per-seat line', () => {
     tenantId = await ensureFixtureTenant(db);
     setupCommonMocks({ tenantId, userId: 'per-seat-test-user', permissionCheck: () => true });
     ({ createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions'));
-    ({ generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
     ({ syncRecurringServicePeriodsForContractLine } = await import('@alga-psa/billing/actions/recurringServicePeriodSync'));
     ({ scheduleUnitPricingRevision } = await import('@alga-psa/billing/actions/contractLineUnitPricingActions'));
     ({ resetContractLineRateToStandard } = await import('@alga-psa/billing/actions/rateReviewActions'));
@@ -193,7 +192,7 @@ describe('rate-review reset on a mixed bundle + per-seat line', () => {
     await db.transaction((trx) =>
       syncRecurringServicePeriodsForContractLine(trx, { tenant: tenantId, contractLineId: lineId, sourceRunPrefix: 'per-seat-reset-test' }),
     );
-    const invoice: any = await generateInvoice(januaryCycle);
+    const invoice: any = await generateInvoiceForCycle(januaryCycle);
     expect(invoice, JSON.stringify(invoice)).not.toHaveProperty('error');
     expect(Number(invoice.subtotal)).toBe(65000 + 50000);
   }, HOOK_TIMEOUT);

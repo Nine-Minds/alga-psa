@@ -117,7 +117,9 @@
     "tagModeAny": "Dowolny z",
     "tagModeNone": "Żaden z",
     "droppedFromLink": "Niektóre filtry w tym łączu są nieprawidłowe i zostały zignorowane.",
-    "clearFilters": "Wyczyść filtry"
+    "clearFilters": "Wyczyść filtry",
+    "location": "Lokalizacja",
+    "requesterLocation": "Lokalizacja zgłaszającego"
   },
   "create": {
     "title": "Utwórz zgłoszenie wsparcia",
@@ -461,7 +463,9 @@
         "operationConflict": "Ten komentarz koliduje z wcześniejszą próbą. Wczytaj ponownie i spróbuj jeszcze raz.",
         "audienceUnresolved": "Wybierz, kto może zobaczyć ten komentarz, zanim go opublikujesz.",
         "unknownOutcome": "Nie udało się potwierdzić opublikowania komentarza. Sprawdź rozmowę, zanim wyślesz go ponownie."
-      }
+      },
+      "unavailable": "To zgłoszenie jest niedostępne.",
+      "back": "Wróć do zgłoszeń klientów"
     }
   },
   "responseState": {
@@ -1026,7 +1030,9 @@
       "heading": "Obserwatorzy",
       "placeholder": "Dodaj obserwatorów..."
     },
-    "attachmentsPartialFailure": "Zgłoszenie utworzone, ale nie udało się dołączyć tych plików: {{files}}. Dodaj je w zgłoszeniu."
+    "attachmentsPartialFailure": "Zgłoszenie utworzone, ale nie udało się dołączyć tych plików: {{files}}. Dodaj je w zgłoszeniu.",
+    "contactLocationSuffix": "(lokalizacja kontaktu)",
+    "contactPrimaryLocationSuffix": "(główna lokalizacja kontaktu)"
   },
   "itil": {
     "calculatedPriority": "Priorytet (obliczony)",
@@ -1648,7 +1654,9 @@
       "agentAlreadyAssigned": "Ten użytkownik jest już przypisany jako dodatkowy agent.",
       "teamNotFound": "Nie znaleziono zespołu. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
       "teamLeadNotFound": "Wybrany zespół nie ma lidera. Wybierz inny zespół lub najpierw wyznacz lidera.",
-      "commentNotFound": "Nie znaleziono komentarza. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie."
+      "commentNotFound": "Nie znaleziono komentarza. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "boardNotFound": "Nie znaleziono tablicy. Mogła zostać usunięta. Odśwież stronę i spróbuj ponownie.",
+      "boardInactive": "Tablica docelowa jest nieaktywna. Wybierz aktywną tablicę."
     },
     "bundle": {
       "masterAlreadyBundleMaster": "Zgłoszenie {{tickets}} jest już zgłoszeniem nadrzędnym pakietu i nie może zostać dodane jako zgłoszenie podrzędne. Najpierw rozwiąż pakiet albo użyj go jako zgłoszenia nadrzędnego.",
@@ -1684,7 +1692,14 @@
       "referenceInvalid": "Wybrana tablica, status, priorytet, osoba przypisana, zespół lub zasada SLA nie jest już prawidłowa. Odśwież stronę i spróbuj ponownie.",
       "duplicateName": "Tablica o tej nazwie już istnieje.",
       "duplicate": "Tablica lub status o tych samych ustawieniach już istnieje.",
-      "invalidValue": "Jedna z wartości tablicy lub statusu jest nieprawidłowa. Odśwież stronę i spróbuj ponownie."
+      "invalidValue": "Jedna z wartości tablicy lub statusu jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "notificationEmailInvalid": "Reguła powiadomień {{rule}} zawiera nieprawidłowy adres e-mail (maksymalnie {{max}} znaków)",
+      "notificationEmailLimit": "Reguła powiadomień {{rule}} może zawierać co najwyżej {{max}} adresów e-mail",
+      "notificationRecipientRequired": "Reguła powiadomień {{rule}} musi powiadamiać co najmniej jednego użytkownika, zespół lub adres e-mail",
+      "notificationEmailIsUser": "Reguła powiadomień {{rule}}: {{address}} to adres e-mail użytkownika Alga. Wybierz zamiast tego użytkownika.",
+      "notificationEmailIsContact": "Reguła powiadomień {{rule}}: {{address}} należy do kontaktu lub lokalizacji klienta i nie może być odbiorcą.",
+      "notificationEmailClientDomain": "Reguła powiadomień {{rule}}: {{address}} należy do domeny e-mail klienta i nie może być odbiorcą.",
+      "notificationEmailInboundMailbox": "Reguła powiadomień {{rule}}: {{address}} to połączona skrzynka odbiorcza i nie może być odbiorcą."
     },
     "material": {
       "invalidValue": "Jedna z wybranych wartości materiału jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
@@ -2060,7 +2075,9 @@
       "openScheduleEntry": "Otwórz wpis harmonogramu",
       "addDescriptionPrompt": "Dodaj opis — na czym polega problem i czego potrzebuje klient?",
       "projectTasks": "Zadania projektu",
-      "timeAndBilling": "Czas i rozliczenia"
+      "timeAndBilling": "Czas i rozliczenia",
+      "useContactLocation": "Użyj lokalizacji kontaktu",
+      "remote": "Zdalny"
     },
     "timeline": {
       "subtitle": "Odpowiedzi, czas i zmiany systemowe w jednym miejscu",
@@ -2922,5 +2939,35 @@
     "discardMessage": "Skonfigurowane kopie nie zostały jeszcze utworzone. Odrzucić je i zamknąć?",
     "discardConfirm": "Odrzuć",
     "discardKeep": "Kontynuuj edycję"
+  },
+  "sharedSla": {
+    "title": "Poziom usług",
+    "msp": "Poziom usług MSP",
+    "customer": "Poziom usług klienta",
+    "state": {
+      "running": "W toku",
+      "paused": "Wstrzymane",
+      "met": "Dotrzymane",
+      "breached": "Naruszone"
+    },
+    "target": {
+      "response": "Pierwsza odpowiedź",
+      "resolution": "Rozwiązanie"
+    },
+    "elapsed": "Upłynęło: {{time}}",
+    "dueAt": "Termin: {{date}}",
+    "completedAt": "Dotrzymano {{date}}",
+    "breached": "Naruszone",
+    "targetPaused": "Wstrzymane",
+    "noTarget": "Brak celu",
+    "duration": {
+      "hoursMinutes": "{{hours}} godz. {{minutes}} min",
+      "minutes": "{{minutes}} min"
+    },
+    "notStarted": "Zegar rusza po eskalacji zgłoszenia.",
+    "unavailable": "Ten poziom usług nie jest już dostępny.",
+    "notConfigured": "Nie obowiązuje żaden poziom usług.",
+    "empty": "Dla tego zgłoszenia nie jest jeszcze śledzony żaden poziom usług.",
+    "loadError": "Nie udało się wczytać poziomu usług."
   }
 }

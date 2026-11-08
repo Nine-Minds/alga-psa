@@ -2,7 +2,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { CO_MANAGED_PORTABLE_WORK_COLUMNS } from '../../../../../packages/co-managed/src/portableWorkCatalog';
-import { PORTABLE_CATALOGS, PORTABLE_MIGRATION_TABLE_NAMES, PORTABLE_PHYSICAL_TABLES, catalogColumnsToCheck } from '../../helpers/coManagedPortableCatalogColumns';
+import { PORTABLE_CATALOGS, PORTABLE_MIGRATION_TABLE_NAMES, PORTABLE_PHYSICAL_TABLES, PORTABLE_QUERIED_TABLES, catalogColumnsToCheck } from '../../helpers/coManagedPortableCatalogColumns';
 
 /**
  * Every column a portable catalog projects must exist in the migrated main schema. A catalog column the schema lacks
@@ -27,6 +27,7 @@ describe('portable catalogs against the main schema', () => {
   it('only maps handoff_history to a physical table, external_files to its migration name, and computes the workflow *_name fields', () => {
     expect(PORTABLE_PHYSICAL_TABLES).toEqual({ handoff_history: 'co_management_ticket_handoffs' });
     expect(PORTABLE_MIGRATION_TABLE_NAMES).toEqual({ external_files: 'file_stores' });
+    expect(PORTABLE_QUERIED_TABLES).toEqual({ handoff_history: 'co_management_ticket_handoffs' });
     const checked = catalogColumnsToCheck().length;
     const all = Object.values(PORTABLE_CATALOGS).flatMap(t => Object.values(t)).reduce((n, c) => n + c.length, 0);
     expect(all - checked).toBe(3); // created_by_name, completed_by_name, user_name

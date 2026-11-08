@@ -364,6 +364,21 @@
     "accountManagementRead": "Berechtigung verweigert: Leseberechtigung für die Kontoverwaltung erforderlich"
   },
   "coManaged": {
+    "portableExport": {
+      "title": "Arbeitsbereich exportieren",
+      "description": "Laden Sie ein verschlüsseltes, portables Archiv der Datensätze und Dateien Ihres Arbeitsbereichs herunter.",
+      "recovery": "Bewahren Sie die Wiederherstellungspassphrase sicher auf. Ohne sie lässt sich das Archiv nicht öffnen.",
+      "connections": "Das Archiv enthält die Datensätze Ihres Arbeitsbereichs und die darin gespeicherten Dateien. Dokumentdatensätze und -verknüpfungen sowie Zeit-, Termin-, Besprechungs- und Unterhaltungsverläufe sind noch nicht enthalten und folgen in einer späteren Version. Abrechnungsdaten, MSP-interne Daten und Integrationsgeheimnisse sind nicht enthalten.",
+      "passphrase": "Wiederherstellungspassphrase",
+      "confirmPassphrase": "Wiederherstellungspassphrase bestätigen",
+      "download": "Archiv vorbereiten und herunterladen",
+      "requested": "Ihre Anfrage wird in einem neuen Tab geöffnet. Die Vorbereitung kann einige Minuten dauern; Ihr Browser lädt die Datei herunter, sobald sie bereit ist.",
+      "loadError": "Mit Ihrem aktuellen Zugriff können Sie diesen Arbeitsbereich nicht exportieren.",
+      "lengthError": "Verwenden Sie eine Passphrase mit 16 bis 1024 UTF-8-Bytes.",
+      "matchError": "Die Wiederherstellungspassphrasen müssen übereinstimmen.",
+      "unavailable": "Der Export von Arbeitsbereichen ist in dieser Edition nicht verfügbar.",
+      "loading": "Wird geladen…"
+    },
     "acceptance": {
       "accept": "Annehmen und Workspace aktivieren",
       "administratorRequired": "Ein lokaler Workspace-Administrator muss diese Beziehung annehmen, bevor Ihr Team beginnen kann.",
@@ -436,7 +451,8 @@
       "workspace": "Arbeitsbereich",
       "capacity": "{{allocated}} von {{count}} Co-Managed-Plätzen zugewiesen.",
       "openClient": "Co-Managed IT für diesen Kunden einrichten",
-      "readOnly": "Co-Managed IT ist für diesen Arbeitsbereich schreibgeschützt. Bestehende Beziehungen werden angezeigt; eine neue Einrichtung ist nicht verfügbar."
+      "readOnly": "Co-Managed IT ist für diesen Arbeitsbereich schreibgeschützt. Bestehende Beziehungen werden angezeigt; eine neue Einrichtung ist nicht verfügbar.",
+      "slaPriorities": "SLA-Prioritätszuordnungen"
     },
     "provisioning": {
       "administrator": "Administrator",
@@ -579,7 +595,22 @@
       "previous": "Zurück",
       "priority": "Priorität",
       "status": "Status",
-      "titleColumn": "Titel"
+      "titleColumn": "Titel",
+      "title": "Kundentickets",
+      "view": "Ansicht",
+      "columns": "Spalten",
+      "density": "Dichte",
+      "filters": "Filter",
+      "client": "Kunde",
+      "allClients": "Alle Kunden",
+      "share": "Teilen",
+      "clearSignal": "Zurücksetzen",
+      "unavailable": "Diese Ansicht ist für Ihr Konto noch nicht verfügbar.",
+      "allTickets": "Alle Tickets",
+      "signals": {
+        "escalatedUnassigned": "Eskaliert, nicht zugewiesen",
+        "awaitingReply": "Wartet auf Ihre Antwort"
+      }
     },
     "delegation": {
       "actions": "Aktionen",
@@ -659,7 +690,8 @@
       "viewer": "Betrachter",
       "viewOnly": "Nur Ansicht",
       "visibility": "Ticket-Sichtbarkeit",
-      "whyTitle": "Warum kann jemand dies nicht sehen?"
+      "whyTitle": "Warum kann jemand dies nicht sehen?",
+      "readOnly": "Sie können diese Konfiguration ansehen, aber nicht ändern."
     },
     "sharedTasks": {
       "link": "Geteilte Aufgaben",
@@ -715,7 +747,16 @@
       "reloadLatest": "Neueste Version laden",
       "rejected": "Diese Aufgabe konnte nicht gespeichert werden.",
       "saved": "Gespeichert.",
-      "save": "Speichern"
+      "save": "Speichern",
+      "projectNotFound": "Dieses Projekt ist nicht verfügbar. Es wird möglicherweise nicht mehr mit Ihnen geteilt."
+    },
+    "sla": {
+      "title": "SLA-Prioritäten bei gemeinsamer Verwaltung",
+      "description": "Legen Sie fest, welche Ihrer Prioritäten – und damit welches Ihrer SLA-Ziele – gilt, wenn ein Kunde ein Ticket der jeweiligen Priorität eskaliert.",
+      "missingPolicy": "Keine SLA-Richtlinie konfiguriert",
+      "settings": "SLA-Richtlinien verwalten",
+      "mappingFor": "Kundenpriorität {{name}} entspricht",
+      "unmapped": "Nicht zugeordnet"
     },
     "portableExport": {
       "title": "Arbeitsbereich exportieren",
@@ -731,6 +772,290 @@
       "matchError": "Die Wiederherstellungspassphrasen müssen übereinstimmen.",
       "unavailable": "Der Export von Arbeitsbereichen ist in dieser Edition nicht verfügbar.",
       "loading": "Wird geladen…"
+    },
+    "section": {
+      "title": "Co-Managed",
+      "viewHistory": "Übergabeverlauf anzeigen",
+      "responsible": "Verantwortlich",
+      "change": "Ändern",
+      "privateTo": "Privat für {{organization}}"
+    },
+    "ticket": {
+      "title": "Co-Managed-Ticket",
+      "escalate": "An MSP eskalieren",
+      "handback": "An Kunden zurückgeben",
+      "takeBack": "Zurücknehmen",
+      "revoke": "Ticketzugriff entziehen",
+      "escalateHelp": "Der MSP übernimmt sofort die Verantwortung. Ergänzen Sie den nötigen Kontext.",
+      "handbackHelp": "Die Verantwortung geht an den Kunden zurück. Der MSP behält den genehmigten Ticketzugriff.",
+      "revokeHelp": "Der individuelle Ticketzugriff wird entzogen und die Verantwortung geht an den Kunden zurück. Separat genehmigter Board-Zugriff bleibt bestehen.",
+      "note": "Übergabenotiz",
+      "noteAudience": "Für berechtigte IT-Mitarbeitende beider Organisationen sichtbar. Diese Notiz wird nicht an Anfragende gesendet.",
+      "uncertain": "Das Ergebnis konnte nicht bestätigt werden. Wiederholen Sie dieselbe Anfrage oder laden Sie den aktuellen Stand, bevor Sie weitere Änderungen vornehmen.",
+      "saving": "Wird gespeichert…",
+      "retry": "Erneut versuchen",
+      "reload": "Aktuellen Stand laden",
+      "cancel": "Abbrechen",
+      "loadError": "Das Ticket oder die Zugriffsliste konnte nicht geladen werden. Ihre Berechtigungen haben sich möglicherweise geändert.",
+      "loading": "Wird geladen…",
+      "restricted": "Eingeschränktes Ticket",
+      "responsibility": "Verantwortlich: {{organization}}",
+      "formerSponsor": "Ehemaliger MSP",
+      "readOnly": "Dieser Arbeitsbereich ist schreibgeschützt. Kundenadministratoren können weiterhin Zugriff entziehen.",
+      "history": "Gemeinsamer IT-Übergabeverlauf",
+      "noHistory": "Keine sichtbaren Übergaben.",
+      "historyError": "Der Übergabeverlauf konnte nicht geladen werden.",
+      "older": "Ältere laden",
+      "transitions": {
+        "escalated": "An MSP eskaliert",
+        "handed_back": "An Kunden zurückgegeben",
+        "access_revoked": "Individueller Ticketzugriff entzogen"
+      },
+      "assignment": {
+        "needsHandoff": "Eskalieren Sie dieses Ticket, bevor Sie MSP-Mitarbeiter zuweisen.",
+        "unavailable": "Der zugewiesene MSP-Mitarbeiter oder das Team ist nicht mehr verfügbar."
+      },
+      "refusal": {
+        "invalidHandoff": "Geben Sie eine gültige Übergabe mit einer geteilten IT-Notiz an.",
+        "handoffChanged": "Diese Übergabe hat sich geändert, seit Sie sie geöffnet haben. Laden Sie das Ticket neu und versuchen Sie es erneut.",
+        "alreadyResponsible": "Die Verantwortung für dieses Ticket liegt bereits wie gewünscht. Laden Sie neu, um zu sehen, wer jetzt verantwortlich ist.",
+        "alreadyRevoked": "Dieser Ticketzugriff wurde bereits widerrufen.",
+        "destinationUnavailable": "Das genehmigte MSP-Ziel ist nicht verfügbar.",
+        "capabilityUnavailable": "Dies ist für Ihren Arbeitsbereich derzeit nicht verfügbar.",
+        "notAvailable": "Dieses Ticket wird nicht mehr geteilt oder ist für Sie nicht mehr verfügbar.",
+        "readOnly": "Dieses Ticket ist derzeit schreibgeschützt, daher kann diese Änderung nicht vorgenommen werden."
+      }
+    },
+    "callout": {
+      "title": "Kundentickets brauchen Sie",
+      "escalatedUnassigned_one": "{{count}} eskaliertes Ticket, nicht zugewiesen",
+      "escalatedUnassigned_other": "{{count}} eskalierte Tickets, nicht zugewiesen",
+      "awaitingReply_one": "{{count}} Ticket wartet auf Ihre Antwort",
+      "awaitingReply_other": "{{count}} Tickets warten auf Ihre Antwort",
+      "dismiss": "Schließen"
+    },
+    "queue": {
+      "title": "Co-Managed-Ticketwarteschlangen",
+      "workingDescription": "Gemeinsame Tickets, für die Ihr Team verantwortlich oder zuständig ist.",
+      "oversightDescription": "Kundentickets in Ihrem genehmigten Zugriff, einschließlich der Arbeit der Kunden-IT.",
+      "view": "Ansicht",
+      "working": "Arbeitswarteschlange",
+      "oversight": "Kundenübersicht",
+      "workspace": "Arbeitsbereich",
+      "allWorkspaces": "Alle Arbeitsbereiche",
+      "state": "Status",
+      "open": "Offen",
+      "closed": "Geschlossen",
+      "all": "Alle Status",
+      "sort": "Sortieren nach",
+      "direction": "Reihenfolge",
+      "asc": "Aufsteigend",
+      "desc": "Absteigend",
+      "search": "Tickets suchen",
+      "loadError": "Tickets konnten nicht geladen werden. Aktualisieren Sie die Ansicht, um Ihren Zugriff zu prüfen.",
+      "counts_one": "{{count}} Ticket · {{open}} offen · {{closed}} geschlossen",
+      "counts_other": "{{count}} Tickets · {{open}} offen · {{closed}} geschlossen",
+      "empty": "Keine zugänglichen Tickets entsprechen diesen Filtern.",
+      "emptyUnfiltered": "Es gibt noch keine Kundentickets.",
+      "retry": "Erneut versuchen",
+      "page": "Seite {{page}}",
+      "sortFields": {
+        "updated": "Zuletzt aktualisiert",
+        "created": "Erstellt",
+        "title": "Titel",
+        "number": "Ticketnummer"
+      },
+      "columns": {
+        "ticket": "Ticket",
+        "workspace": "Arbeitsbereich",
+        "state": "Status",
+        "status": "Status",
+        "priority": "Priorität",
+        "responsibility": "Zuständige Organisation",
+        "updated": "Aktualisiert",
+        "title": "Titel"
+      },
+      "organizations": {
+        "msp": "MSP",
+        "customer": "Kunden-IT"
+      },
+      "export": "CSV exportieren",
+      "exporting": "Wird exportiert…",
+      "exportError": "Tickets konnten nicht exportiert werden. Aktualisieren Sie die Warteschlange und versuchen Sie es erneut.",
+      "bulkHandback": {
+        "title": "Tickets an die Kunden-IT zurückgeben",
+        "select": "Wählen Sie Tickets auf dieser Seite aus. Jedem ausgewählten Ticket wird dieselbe gemeinsame IT-Notiz hinzugefügt.",
+        "returned": "An die Kunden-IT zurückgegeben",
+        "forbidden": "Zugriff verweigert",
+        "changed": "Ticket geändert. Aktualisieren Sie vor einem erneuten Versuch.",
+        "invalid": "Ungültige Auswahl",
+        "selected": "{{count}} ausgewählte(s) Ticket(s) werden zurückgegeben.",
+        "resume": "Eine Rückgabe an die Kunden-IT wurde unterbrochen. Fortsetzen, um das Ergebnis zu bestätigen.",
+        "noReloadRecovery": "Die Wiederherstellung nach dem Neuladen ist in diesem Browser nicht verfügbar; ein erneuter Versuch in dieser Sitzung ist weiterhin möglich.",
+        "done": "Erledigt",
+        "selectAll": "Alle rückgabefähigen Tickets auswählen",
+        "selectRow": "Ticket auswählen",
+        "readOnly": "Schreibgeschützter Zugriff"
+      },
+      "scopeUnavailable": "Ticketliste wird geöffnet…",
+      "searchPlaceholder": "Nach Nummer oder Titel suchen",
+      "mspAlsoAssigned": "MSP ebenfalls zugewiesen",
+      "unavailableWorkspace": "Nicht verfügbarer Arbeitsbereich",
+      "reset": "Zurücksetzen"
+    },
+    "projects": {
+      "assignment": {
+        "title": "MSP-Zuweisung",
+        "unassigned": "Nicht dem MSP zugewiesen",
+        "kind": "Zuweisen an",
+        "user": "Techniker",
+        "team": "Team",
+        "assignee": "Zuständiger",
+        "more": "Weitere Zuständige",
+        "assign": "Zuweisen",
+        "clear": "MSP-Zuweisung entfernen"
+      }
+    },
+    "editor": {
+      "errors": {
+        "invalid": "Einige Werte sind ungültig. Prüfen Sie Ihre Änderungen und versuchen Sie es erneut.",
+        "conflict": "Dieses Ticket wurde geändert. Laden Sie es vor dem Speichern neu.",
+        "operationConflict": "Diese Speicheranfrage wurde bereits für eine andere Änderung verwendet. Laden Sie das Ticket neu.",
+        "forbidden": "Ihr Zugriff auf dieses Ticket hat sich geändert. Laden Sie es neu.",
+        "readOnly": "Dieser Arbeitsbereich ist schreibgeschützt. Laden Sie den aktuellen Stand neu.",
+        "closeRules": "Das Ticket muss die Abschlussbedingungen seines Boards erfüllen, bevor es geschlossen werden kann.",
+        "unknownOutcome": "Es konnte nicht bestätigt werden, ob die Änderung gespeichert wurde. Wiederholen Sie dieselbe Speicherung oder verwerfen Sie Ihre Änderungen und laden Sie neu.",
+        "slaSetupRequired": "Ihr MSP muss seine SLA-Richtlinie und Prioritätszuordnung konfigurieren, bevor dieses Ticket unter MSP-Verantwortung wieder geöffnet werden kann."
+      }
+    },
+    "attachments": {
+      "title": "Anhänge",
+      "add": "Datei anhängen",
+      "choose": "Datei auswählen",
+      "help": "Dateien übernehmen den Empfängerkreis dieser Nachricht. Maximal {{size}} MiB.",
+      "uploading": "Wird hochgeladen…",
+      "upload": "Hochladen",
+      "invalid": "Wählen Sie eine zulässige Datei innerhalb der Größenbegrenzung.",
+      "loadError": "Anhänge sind nicht verfügbar. Aktualisieren Sie, um Ihren Zugriff zu prüfen.",
+      "unknownOutcome": "Der Upload konnte nicht bestätigt werden. Versuchen Sie es mit derselben Datei erneut.",
+      "remove": "Entfernen",
+      "removeTitle": "Anhang entfernen",
+      "removeHelp": "{{name}} aus dieser Nachricht entfernen? Personen, die die Nachricht sehen, können diese Datei dann nicht mehr herunterladen.",
+      "removeUnknownOutcome": "Das Entfernen konnte nicht bestätigt werden. Versuchen Sie es erneut, um dieselbe Datei zu prüfen.",
+      "removing": "Wird entfernt…",
+      "removeNamed": "{{name}} entfernen"
+    },
+    "disclosure": {
+      "title": "Sichtbarkeit des Verlaufs ändern",
+      "review": "Erneut prüfen",
+      "confirm": "Änderung bestätigen",
+      "scope": "Dies ändert die Sichtbarkeit des gesamten Verlaufs: {{comments}} Nachrichten und {{attachments}} Anhänge.",
+      "current": "Aktuelle Sichtbarkeit: {{audience}}",
+      "help": "Antworten und Anhänge übernehmen diese Sichtbarkeit. Bereits gelesene oder heruntergeladene Informationen können nicht zurückgerufen werden.",
+      "pending": "Ein Anhang wird noch hochgeladen. Schließen Sie den Upload ab, bevor Sie die Sichtbarkeit ändern.",
+      "unknownOutcome": "Das Ergebnis ist unbekannt. Wiederholen Sie die Anfrage, um dieselbe Änderung zu prüfen.",
+      "transferHelp": "Beim Teilen werden dieser Verlauf und seine Anhänge in den Kundenarbeitsbereich übertragen. Der ursprüngliche MSP-private Verlauf bleibt als schreibgeschützter Verlauf erhalten.",
+      "open": "Sichtbarkeit dieses Threads ändern"
+    },
+    "conversation": {
+      "audience": "Sichtbar für",
+      "audiences": {
+        "requester": "Anfragende und IT-Teams",
+        "shared_it": "Gemeinsame IT-Teams",
+        "organization_private": "Nur meine Organisation"
+      },
+      "audienceHelp": {
+        "requester": "Sichtbar für berechtigte Anfragende und IT-Mitarbeitende beider Organisationen.",
+        "shared_it": "Sichtbar für berechtigte IT-Mitarbeitende beider Organisationen, ohne Zugriff für Anfragende.",
+        "organization_private": "Nur für berechtigte Mitarbeitende Ihrer Organisation sichtbar."
+      },
+      "drafts": {
+        "title": "Nicht gesendete Nachrichten",
+        "help": "Diese Nachrichten wurden begonnen, aber nicht gesendet. Prüfen Sie eine Nachricht, wählen Sie fehlende Dateien erneut aus und senden oder verwerfen Sie sie.",
+        "fileReady": "Hochgeladen",
+        "fileMissing": "Muss erneut ausgewählt werden",
+        "choose": "Fehlende Dateien auswählen",
+        "resume": "Senden",
+        "discard": "Verwerfen",
+        "missing": "Wählen Sie vor dem Senden jede fehlende Datei mit demselben Namen aus.",
+        "unsent": "Wir konnten nicht bestätigen, dass Ihre Nachricht und die Dateien gesendet wurden. Sie sind gespeichert und erscheinen unter „Nicht gesendete Nachrichten“ – setzen Sie sie dort fort oder verwerfen Sie sie."
+      },
+      "files": {
+        "choose": "Dateien anhängen",
+        "help": "Bis zu {{count}} Dateien mit jeweils {{size}} MiB. Dateien sind für den Empfängerkreis dieser Nachricht sichtbar.",
+        "remove": "Entfernen",
+        "removeNamed": "{{name}} entfernen",
+        "invalid": "Entfernen Sie vor dem Senden Dateien, die die Größen- oder Anzahlbegrenzung überschreiten.",
+        "preparing": "Dateien werden vorbereitet…",
+        "uploading": "{{completed}} von {{total}} Dateien hochgeladen…",
+        "publishing": "Nachricht und Dateien werden veröffentlicht…",
+        "notReady": "Einige Dateien sind noch nicht bereit. Versuchen Sie es erneut, um den Upload abzuschließen und dieselbe Nachricht zu senden.",
+        "preparationFailed": "Die ausgewählten Dateien konnten nicht gelesen werden. Wählen Sie sie erneut aus oder entfernen Sie sie vor dem nächsten Versuch.",
+        "abandoned": "Dieser Entwurf wurde verworfen. Speichern Sie erneut, um eine neue Nachricht mit den ausgewählten Dateien zu erstellen.",
+        "audienceUnavailable": "An Nachrichten für diese Zielgruppe können keine Dateien angehängt werden. Entfernen Sie die Dateien oder wählen Sie eine andere Zielgruppe.",
+        "cancelUnknownOutcome": "Die Stornierung konnte nicht bestätigt werden. Versuchen Sie es erneut, um dieselbe Anfrage zu prüfen.",
+        "canceling": "Wird abgebrochen…"
+      },
+      "title": "Unterhaltung",
+      "reload": "Neu laden",
+      "loadError": "Die Unterhaltung konnte nicht geladen werden.",
+      "readOnly": "Sie können diese Unterhaltung lesen, aber nichts hinzufügen.",
+      "new": "Neuer Kommentar",
+      "empty": "Noch keine Kommentare.",
+      "restrictedAuthor": "Autor verborgen",
+      "replyMarker": "Antwort",
+      "deleted": "Dieser Kommentar wurde gelöscht.",
+      "reply": "Antworten",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "newer": "Neuere",
+      "older": "Ältere",
+      "message": "Nachricht",
+      "deleteHelp": "Der Kommentar wird durch einen Löschvermerk ersetzt. Antworten bleiben im Verlauf.",
+      "conflict": "Dieser Kommentar wurde geändert, seit Sie ihn geöffnet haben. Brechen Sie ab und laden Sie neu, um fortzufahren.",
+      "unknownOutcome": "Das Speichern konnte nicht bestätigt werden. Versuchen Sie es erneut; es wird nicht doppelt angewendet.",
+      "invalid": "Dieser Kommentar konnte nicht gespeichert werden.",
+      "send": "Senden",
+      "cancel": "Abbrechen"
+    },
+    "upgrade": {
+      "title": "Zu AlgaPSA wechseln",
+      "description": "Nutzen Sie diesen Arbeitsbereich unabhängig mit Ihrer eigenen kostenpflichtigen AlgaPSA-Lizenz.",
+      "preserved": "Ihre Tickets, Projekte, Dokumente und der Verlauf bleiben in diesem Arbeitsbereich erhalten.",
+      "trustEnds": "Mit dem Wechsel endet der aktive Zugriff Ihres MSP und die zugewiesenen Co-Managed-Sitze werden freigegeben. Ihr MSP behält das zulässige Beteiligungsarchiv.",
+      "alreadyDeparted": "Ihre MSP-Beziehung wurde bereits beendet. Das vorhandene Archiv bleibt unverändert.",
+      "seats": "Erforderliche kostenpflichtige Technikersitze: {{count}}",
+      "hosting": "Bei diesem Wechsel bleibt Ihr Hosting unverändert. Wenn Sie diese Installation verlassen möchten, sind ein separater Export und eine Wiederherstellung erforderlich.",
+      "licenseRequired": "Aktivieren Sie vor dem Wechsel eine mandantengebundene Pro-Lizenz mit ausreichend Sitzen.",
+      "subscriptionRequired": "Vor dem Wechsel ist ein aktives, bezahltes AlgaPSA-Abonnement erforderlich, das diesem Arbeitsbereich gehört.",
+      "manageLicense": "Arbeitsbereichslizenz verwalten",
+      "running": "Der Wechsel wird durchgeführt. Diese Seite wird aktualisiert, sobald er abgeschlossen ist.",
+      "failed": "Der Wechsel wurde nicht abgeschlossen. Prüfen Sie Ihre Berechtigung und versuchen Sie es erneut.",
+      "unavailable": "Der Fortschritt des Wechsels ist vorübergehend nicht verfügbar. Aktualisieren Sie die Seite, um es erneut zu prüfen.",
+      "start": "Arbeitsbereich wechseln",
+      "refresh": "Status aktualisieren",
+      "completed": "Dieser Arbeitsbereich ist jetzt ein unabhängiger AlgaPSA-Arbeitsbereich.",
+      "openPsa": "AlgaPSA öffnen",
+      "loadError": "Der Wechselstatus konnte nicht geladen werden. Aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "startError": "Der Wechsel konnte nicht gestartet werden. Sie können die Anfrage erneut senden.",
+      "confirmTitle": "Diesen Arbeitsbereich wechseln?",
+      "confirmMessage": "Dadurch wird Ihr Arbeitsbereich zu AlgaPSA umgestellt und jede aktive MSP-Beziehung beendet. Ihre eigene kostenpflichtige Berechtigung deckt diesen Arbeitsbereich ab. Das Hosting Ihrer Daten bleibt unverändert.",
+      "cancel": "Abbrechen",
+      "billingInterval": "Abrechnungszeitraum",
+      "month": "Monatlich",
+      "year": "Jährlich",
+      "paymentProcessing": "Ihre Zahlung wird verarbeitet. Aktualisieren Sie den Status oder setzen Sie den Kauf fort, um erneut nachzusehen.",
+      "purchaseScope": "Dieser Kauf gilt für diesen Arbeitsbereich. Der MSP-Zugriff endet erst, wenn Sie den Wechsel nach der Zahlung bestätigen.",
+      "paymentFailed": "Die erste Zahlung ist fehlgeschlagen. Sie können einen neuen Checkout starten, nachdem Sie diesen unbezahlten Versuch geschlossen haben.",
+      "retryPayment": "Zahlung erneut versuchen",
+      "retryTitle": "Diese Zahlung erneut versuchen?",
+      "retryMessage": "Schließen Sie diesen fehlgeschlagenen Zahlungsversuch und öffnen Sie einen neuen Checkout. MSP-Zugriff und Co-Managed-Sitze bleiben bestehen.",
+      "billingTitle": "Ihre AlgaPSA-Abrechnung",
+      "paymentMethod": "Zahlungsmethode aktualisieren",
+      "paidSeats": "Bezahlte Technikersitze",
+      "reviewSeatChange": "Sitzänderung prüfen",
+      "billingError": "Die Abrechnung konnte nicht geöffnet werden. Aktualisieren Sie den Status und versuchen Sie es erneut.",
+      "purchaseUnconfigured": "Käufe sind für diese Bereitstellung nicht konfiguriert."
     }
   },
   "common": {
