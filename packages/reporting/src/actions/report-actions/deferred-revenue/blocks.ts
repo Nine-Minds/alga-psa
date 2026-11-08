@@ -26,10 +26,14 @@
  * Burn recorded before a pending block's invoice is finalized carries no
  * earlier liability: its recognition date is clamped up to the issuance date,
  * so pre-finalization draws land in the issuance month's `applied` and the
- * movement identity stays balanced. A block whose expiry was settled by a
- * manual or contract-end expiration (audit-dated, since those paths may not
- * set `expiration_date`) is written off on that settled date when it is
- * earlier than `expiration_date`.
+ * movement identity stays balanced. Expiry is projected from the block's own
+ * dates rather than gated on the nightly job's status flip: a report viewed
+ * at a future month shows what the liability would be if nothing changed
+ * between now and then. A block whose expiry was settled by a manual or
+ * contract-end expiration (audit-dated, since those paths may not set
+ * `expiration_date`) is written off on that settled date when it is earlier
+ * than `expiration_date`, and a block the expiry job has since processed
+ * composes to the same figure — settled months never restate.
  */
 
 import { monthRange } from './month';
@@ -66,9 +70,10 @@ export interface HourBlockInput {
   voidedAt: string | null;
   /**
    * Earliest settled-expiry audit date (manual or contract-end expiration)
-   * for a block whose status is `expired`; null for other blocks. Writes off
-   * at min(expirationDate, expiredAt) so early manual expiry lands in the
-   * month the block actually stopped being usable.
+   * for a block whose status is `expired`; null for other blocks. When set it
+   * is the authoritative write-off date — min(expirationDate, expiredAt) —
+   * so early manual expiry lands in the month the block actually stopped
+   * being usable. When null, `expirationDate` itself is projected.
    */
   expiredAt: string | null;
   /** Remaining-minute adjustments from `hour_block_audit` (type 'adjustment'). */
@@ -124,14 +129,18 @@ function burnThrough(allocations: HourBlockAllocationInput[], day: string): numb
 
 /**
  * The date the block's remaining liability is extinguished (expiration or
- * void), or null when it stays outstanding until burned. Only a settled
- * status counts, so a not-yet-processed expiry keeps the balance outstanding
- * until the nightly job (or the manual/contract-end action) marks the block.
+ * void), or null when it stays outstanding until burned. Expiration is
+ * projected from the block's own dates rather than waiting for the nightly
+ * expiry job to flip the status: once `expiration_date` passes, the block is
+ * unusable, so a report viewed at or after that date writes the residual
+ * off. An expiry that was actually processed (manual, contract-end, or the
+ * job's auto_expiration audit) is authoritative when earlier, and a block
+ * the job flips later composes to the same projected figure, so settled
+ * months never restate.
  */
 function extinguishDate(input: HourBlockInput): string | null {
-  if (input.status === 'voided' && input.voidedAt) {
-    return datePart(input.voidedAt);
-  }
+  if (input.status === 'voided') return input.voidedAt ? datePart(input.voidedAt) : null;
+  if (input.status === 'pending') return null;
   if (input.status === 'expired') {
     const dates = [input.expirationDate, input.expiredAt]
       .filter((value): value is string => typeof value === 'string' && value.length > 0)
@@ -139,7 +148,8 @@ function extinguishDate(input: HourBlockInput): string | null {
     if (dates.length === 0) return null;
     return dates.reduce((min, date) => (date < min ? date : min));
   }
-  return null;
+  // `active` (and any other status): project the scheduled expiry date.
+  return input.expirationDate ? datePart(input.expirationDate) : null;
 }
 
 type EventKind = 'burn' | 'adjustment';
