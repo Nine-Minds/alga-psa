@@ -1713,7 +1713,7 @@
       "audit": "Auditoria",
       "auditPresent": "Auditoria: presente",
       "auditMissing": "Auditoria: ausente",
-      "auditMethod": "Marcado por {{method}}"
+      "auditMethod": "Marcado via {{method}}"
     },
     "changeTypes": {
       "created": "Criado",
@@ -2253,7 +2253,7 @@
       "completeConfirm_one": "1 dispositivo não marcado será registrado como ausente.",
       "completeConfirm_other": "{{count}} dispositivos não marcados serão registrados como ausentes.",
       "cancelAudit": "Cancelar auditoria",
-      "cancelConfirm": "A execução será abandonada e nada será gravado nos ativos. Esta ação não pode ser desfeita.",
+      "cancelConfirm": "A auditoria será abandonada e nada será gravado nos ativos. Esta ação não pode ser desfeita.",
       "keepAudit": "Continuar auditoria"
     },
     "items": {
