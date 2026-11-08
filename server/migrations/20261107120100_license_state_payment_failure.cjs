@@ -16,17 +16,19 @@
  * migrations — no Citus distribution handling.
  */
 exports.up = async function (knex) {
-  await knex.schema.alterTable('license_state', (table) => {
-    table.timestamp('subscription_next_retry_at', { useTz: true }).nullable();
-    table.text('subscription_update_payment_url').nullable();
-    table.text('subscription_end_reason').nullable();
-  });
+  await knex.raw(`
+    ALTER TABLE license_state
+      ADD COLUMN IF NOT EXISTS subscription_next_retry_at timestamptz,
+      ADD COLUMN IF NOT EXISTS subscription_update_payment_url text,
+      ADD COLUMN IF NOT EXISTS subscription_end_reason text
+  `);
 };
 
 exports.down = async function (knex) {
-  await knex.schema.alterTable('license_state', (table) => {
-    table.dropColumn('subscription_next_retry_at');
-    table.dropColumn('subscription_update_payment_url');
-    table.dropColumn('subscription_end_reason');
-  });
+  await knex.raw(`
+    ALTER TABLE license_state
+      DROP COLUMN IF EXISTS subscription_next_retry_at,
+      DROP COLUMN IF EXISTS subscription_update_payment_url,
+      DROP COLUMN IF EXISTS subscription_end_reason
+  `);
 };

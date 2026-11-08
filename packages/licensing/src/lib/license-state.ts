@@ -31,7 +31,7 @@ export interface LicenseStateRow {
   last_checkin_at: Date | null;
   /**
    * Subscription context from the last alga-license check-in (migration
-   * 20261016000000). All null/absent = no known subscription event (legacy
+   * 20261107120000). All null/absent = no known subscription event (legacy
    * appliance, never connected, or the subscription is healthy). Optional so
    * an un-migrated row still type-checks and resolves.
    */
@@ -40,7 +40,7 @@ export interface LicenseStateRow {
   subscription_resubscribe_url?: string | null;
   subscription_context_updated_at?: Date | null;
   /**
-   * Failing-renewal-payment context (migration 20261031230000). Optional end to
+   * Failing-renewal-payment context (migration 20261107120100). Optional end to
    * end: absent/null on legacy rows, older alga-license servers and any state
    * other than payment_failed (next_retry_at, update_payment_url) / cancelled
    * (end_reason).
@@ -57,7 +57,12 @@ export type SubscriptionStateValue = 'active' | 'cancel_scheduled' | 'term_ends'
 export type SubscriptionEndReasonValue = 'payment_failed';
 /** The slice of a licence record that tier resolution reads. A tenant's own signed claim and the
  * installation singleton both fit it. */
-export type SelfHostLicenseInput = Pick<LicenseStateRow, 'edition_choice' | 'trial_started_at' | 'license_token'> & {
+export type SelfHostLicenseInput = Pick<LicenseStateRow,
+  | 'edition_choice' | 'trial_started_at' | 'license_token'
+  | 'subscription_state' | 'subscription_cancels_at' | 'subscription_resubscribe_url'
+  | 'subscription_context_updated_at' | 'subscription_next_retry_at'
+  | 'subscription_update_payment_url' | 'subscription_end_reason'
+> & {
   /** `tenant`: an independently staged claim. It must name this tenant (`aud`), and it never
    * inherits the installation's trial or CE choice. */
   license_scope?: 'tenant';
@@ -158,7 +163,7 @@ export async function upsertLicenseState(
  * the subscription is cancelled or scheduled to end. Null otherwise — including
  * `active` and legacy rows with no subscription data.
  */
-function resolveEndingSubscription(row: LicenseStateRow, tokenExp: Date): ResolvedSubscription | null {
+function resolveEndingSubscription(row: SelfHostLicenseInput, tokenExp: Date): ResolvedSubscription | null {
   const sub = row.subscription_state;
   if (sub === 'payment_failed') {
     // Still entitled: Pro runs until the token's exp (and beyond, if a payment
@@ -188,7 +193,7 @@ function resolveEndingSubscription(row: LicenseStateRow, tokenExp: Date): Resolv
  * subscription context so callers can say *why* Pro ended and where to
  * resubscribe; otherwise it is a plain `license_expired`.
  */
-function licenseExpired(row: LicenseStateRow, tokenExp: Date | null, now: number): ResolvedLicenseState {
+function licenseExpired(row: SelfHostLicenseInput, tokenExp: Date | null, now: number): ResolvedLicenseState {
   const sub = row.subscription_state;
   const cancelsAt = row.subscription_cancels_at ? new Date(row.subscription_cancels_at) : null;
   const subscriptionEnded =
@@ -276,7 +281,7 @@ export function resolveSelfHostTier(
 
   // A tenant-scoped claim never falls back to the installation's CE choice or trial.
   if (row.license_scope === 'tenant') {
-    return { state: 'license_required', tier: 'essentials', expiresAt: null, daysRemaining: null };
+    return { state: 'license_required', tier: 'essentials', expiresAt: null, daysRemaining: null, subscription: null };
   }
 
   // 2. Check CE choice (no trial available).

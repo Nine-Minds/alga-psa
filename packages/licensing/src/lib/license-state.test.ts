@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { resolveSelfHostTier, type LicenseStateRow } from './license-state';
+import { resolveSelfHostTier, type LicenseStateRow, type SelfHostLicenseInput } from './license-state';
 import { clearLicenseVerifyCache } from './verify-license';
 import { checkInStateUpdate, interpretCheckInResponse } from './license-check-in';
 
@@ -32,6 +32,32 @@ describe('resolveSelfHostTier', () => {
   // T008: no row → null
   it('returns null when no row exists (SaaS mode)', () => {
     expect(resolveSelfHostTier(null)).toBeNull();
+  });
+
+  it('returns a complete license-required result for a tenant claim without a usable token', () => {
+    const input: SelfHostLicenseInput = {
+      edition_choice: 'ee',
+      trial_started_at: new Date(),
+      license_token: null,
+      license_scope: 'tenant',
+    };
+    expect(resolveSelfHostTier(input, 'tenant-a')).toEqual({
+      state: 'license_required', tier: 'essentials', expiresAt: null,
+      daysRemaining: null, subscription: null,
+    });
+  });
+
+  it('resolves subscription context from the licensing input without singleton DB metadata', () => {
+    const input: SelfHostLicenseInput = {
+      edition_choice: 'ee', trial_started_at: null, license_token: VALID_PRO_TOKEN,
+      subscription_state: 'cancel_scheduled',
+      subscription_cancels_at: new Date('2026-12-01T00:00:00Z'),
+      subscription_resubscribe_url: 'https://portal.example/resubscribe',
+    };
+    expect(resolveSelfHostTier(input)?.subscription).toEqual({
+      phase: 'ending', cause: 'cancelled', endsAt: input.subscription_cancels_at,
+      resubscribeUrl: input.subscription_resubscribe_url,
+    });
   });
 
   // T009: valid license → license.tier

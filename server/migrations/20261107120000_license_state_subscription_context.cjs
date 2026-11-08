@@ -15,19 +15,21 @@
  * stores nothing (the next 'ok' check-in clears it on reactivation).
  */
 exports.up = async function (knex) {
-  await knex.schema.alterTable('license_state', (table) => {
-    table.text('subscription_state').nullable();
-    table.timestamp('subscription_cancels_at', { useTz: true }).nullable();
-    table.text('subscription_resubscribe_url').nullable();
-    table.timestamp('subscription_context_updated_at', { useTz: true }).nullable();
-  });
+  await knex.raw(`
+    ALTER TABLE license_state
+      ADD COLUMN IF NOT EXISTS subscription_state text,
+      ADD COLUMN IF NOT EXISTS subscription_cancels_at timestamptz,
+      ADD COLUMN IF NOT EXISTS subscription_resubscribe_url text,
+      ADD COLUMN IF NOT EXISTS subscription_context_updated_at timestamptz
+  `);
 };
 
 exports.down = async function (knex) {
-  await knex.schema.alterTable('license_state', (table) => {
-    table.dropColumn('subscription_state');
-    table.dropColumn('subscription_cancels_at');
-    table.dropColumn('subscription_resubscribe_url');
-    table.dropColumn('subscription_context_updated_at');
-  });
+  await knex.raw(`
+    ALTER TABLE license_state
+      DROP COLUMN IF EXISTS subscription_state,
+      DROP COLUMN IF EXISTS subscription_cancels_at,
+      DROP COLUMN IF EXISTS subscription_resubscribe_url,
+      DROP COLUMN IF EXISTS subscription_context_updated_at
+  `);
 };

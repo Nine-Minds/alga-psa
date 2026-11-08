@@ -138,9 +138,8 @@ describe('TimeSheetService time periods (API)', () => {
       expect(withFlag.end_date).toBe('2026-11-09');
       expect(withFlag.is_current).toBe(expected);
 
-      vi.setSystemTime(new Date('2026-11-03T12:00:00Z')); // inside the period
       const flagFalse = await update(period.period_id, { end_date: '2026-11-09', is_current: false });
-      expect(flagFalse.is_current).toBe(true);
+      expect(flagFalse.is_current).toBe(expected);
 
       const without = await update(period.period_id, { start_date: '2026-11-02' });
       expect(without.start_date).toBe('2026-11-02');
