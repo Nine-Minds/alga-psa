@@ -44,6 +44,7 @@ vi.mock('@alga-psa/authorization/bundles/service', () => ({
 
 import {
   filterReadableAssets,
+  isAssetActionAllowed,
   isAssetReadAllowed,
 } from '@alga-psa/authorization/assetReadAuthorization';
 import {
@@ -65,7 +66,9 @@ function context() {
     authorizationKernel: createAuthorizationKernel({
       builtinProvider: new BuiltinAuthorizationKernelProvider(),
       bundleProvider: new BundleAuthorizationKernelProvider({
-        resolveRules: async () => [{ id: 'own', resource: 'asset', action: 'read', templateKey: 'own' }],
+        resolveRules: async () => (['read', 'update', 'delete'] as const).map((action) => ({
+          id: `own-${action}`, resource: 'asset', action, templateKey: 'own' as const,
+        })),
       }),
       rbacEvaluator: async () => true,
     }),
@@ -103,6 +106,15 @@ describe('batched asset read authorization', () => {
     state.associations[0].created_at = '2026-11-01';
     expect(await isAssetReadAllowed(db, 'tenant-a', context(), assets[0])).toBe(false);
     expect(await filterReadableAssets(db, 'tenant-a', context(), assets)).toEqual([]);
+  });
+
+  it.each(['update', 'delete'] as const)('allows %s only for the oldest associated owner', async (action) => {
+    state.associations.reverse();
+    expect(await isAssetActionAllowed(db, 'tenant-a', context(), assets[0], action)).toBe(true);
+
+    const newerAssignee = context();
+    newerAssignee.subject.userId = 'other';
+    expect(await isAssetActionAllowed(db, 'tenant-a', newerAssignee, assets[0], action)).toBe(false);
   });
 
   it('breaks timestamp ties by user id and places null timestamps last', async () => {
