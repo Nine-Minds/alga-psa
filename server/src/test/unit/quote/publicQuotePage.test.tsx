@@ -6,6 +6,7 @@ const m = vi.hoisted(() => ({
   record: vi.fn(async () => true),
   load: vi.fn(),
   generatePDF: vi.fn(async () => Buffer.from('%PDF-1.4')),
+  recipientLocale: vi.fn(async () => 'en'),
 }));
 
 vi.mock('next/headers.js', () => ({ headers: async () => new Headers({ 'x-forwarded-for': '1.2.3.4' }) }));
@@ -16,7 +17,7 @@ vi.mock('@alga-psa/billing/services', () => ({
   QuoteAccessLinks: { resolve: (...a: unknown[]) => m.resolve(...a) },
   loadPublicQuoteView: (...a: unknown[]) => m.load(...a),
   recordQuoteViewedViaEmailLink: (...a: unknown[]) => m.record(...a),
-  resolveQuoteRecipientLocale: async () => 'en',
+  resolveQuoteRecipientLocale: (...a: unknown[]) => m.recipientLocale(...a),
   createPDFGenerationService: () => ({ generatePDF: m.generatePDF }),
 }));
 vi.mock('@alga-psa/client-portal/components', () => ({ PublicQuoteReview: () => null }));
@@ -49,6 +50,34 @@ const view = { quote: { quote_id: 'q1', status: 'sent' }, items: [], locations: 
 beforeEach(() => {
   vi.clearAllMocks();
   m.load.mockResolvedValue(view);
+  m.recipientLocale.mockResolvedValue('en');
+});
+
+describe('public quote page reader', () => {
+  const render = async () =>
+    (await PublicQuotePage({ params: Promise.resolve({ token: TOKEN }) })) as React.ReactElement<any>;
+
+  it("renders in the recipient's language, resolving the token once", async () => {
+    m.resolve.mockResolvedValue(okResult);
+    m.recipientLocale.mockResolvedValue('de');
+    const el = await render();
+    expect(el.props.locale).toBe('de');
+    expect(m.recipientLocale).toHaveBeenCalledWith({}, 't1', okResult.recipient);
+    expect(m.resolve).toHaveBeenCalledTimes(1);
+  });
+
+  it('falls back to English for an unsupported recipient locale', async () => {
+    m.resolve.mockResolvedValue(okResult);
+    m.recipientLocale.mockResolvedValue('kl');
+    const el = await render();
+    expect(el.props.locale).toBe('en');
+  });
+
+  it('never resolves a reader for a failed token', async () => {
+    m.resolve.mockResolvedValue({ status: 'expired' });
+    await render();
+    expect(m.recipientLocale).not.toHaveBeenCalled();
+  });
 });
 
 describe('public quote page telemetry', () => {
@@ -96,7 +125,7 @@ describe('public quote PDF route', () => {
 
   it.each([
     ['not_found', 404],
-    ['revoked', 410],
+    ['revoked', 404],
     ['expired', 410],
     ['rate_limited', 429],
   ])('%s -> %i with an empty body', async (status, code) => {

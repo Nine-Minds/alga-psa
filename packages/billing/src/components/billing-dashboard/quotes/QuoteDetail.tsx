@@ -9,9 +9,9 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
-import type { IClient, IContact, IQuote, QuoteConversionPreview } from '@alga-psa/types';
+import type { IContact, IQuote, QuoteConversionPreview } from '@alga-psa/types';
 import { isActionMessageError, isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
-import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
+import { useBillingClient } from '../../../hooks/useBillingClient';
 import { getActiveClientLocationsForBilling, type BillingLocationSummary } from '../../../actions/billingClientLocationActions';
 import LocationAddress from '../locations/LocationAddress';
 import { buildLocationGroups, shouldShowLocationGroups } from '../locations/locationGrouping';
@@ -146,14 +146,29 @@ function renderQuoteDetailRow(
   );
 }
 
+
+/** Recipient email from activity metadata; tolerates missing, null, array or JSON-string metadata. */
+function viewedViaEmailLinkRecipient(metadata: unknown): string | null {
+  let value = metadata;
+  if (typeof value === 'string') {
+    try {
+      value = JSON.parse(value);
+    } catch {
+      return null;
+    }
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const email = (value as Record<string, unknown>).recipient_email;
+  return typeof email === 'string' && email.trim() ? email.trim() : null;
+}
+
 const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSelectVersion }) => {
   const { t } = useTranslation('msp/quotes');
-  const { formatCurrency, formatDate } = useFormatters();
+  const { formatCurrency, formatDate, formatCalendarDate } = useFormatters();
   const router = useRouter();
   const [quote, setQuote] = useState<IQuote | null>(null);
   const [clientLocations, setClientLocations] = useState<BillingLocationSummary[]>([]);
   const [versions, setVersions] = useState<IQuote[]>([]);
-  const [clients, setClients] = useState<IClient[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isWorking, setIsWorking] = useState(false);
@@ -190,9 +205,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
   const loadQuote = async () => {
     try {
       setIsLoading(true);
-      const [loadedQuote, loadedClients, loadedContacts, approvalSettings, loadedTemplates] = await Promise.all([
+      const [loadedQuote, loadedContacts, approvalSettings, loadedTemplates] = await Promise.all([
         getQuote(quoteId),
-        getAllClientsForBilling(false),
         getContactsForPicker('active'),
         getQuoteApprovalSettings(),
         getQuoteDocumentTemplates(),
@@ -208,12 +222,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       if (isActionPermissionError(loadedContacts) || isActionMessageError(loadedContacts)) {
         throw new Error(getErrorMessage(loadedContacts));
       }
-      if (isActionPermissionError(loadedClients) || isActionMessageError(loadedClients)) {
-        throw new Error(getErrorMessage(loadedClients));
-      }
 
       setQuote(loadedQuote);
-      setClients(loadedClients);
       setContacts(loadedContacts);
       setApprovalRequired(!isActionPermissionError(approvalSettings) && approvalSettings.approvalRequired === true);
       setIsSoleApprover(!isActionPermissionError(approvalSettings) && approvalSettings.currentUserIsSoleApprover === true);
@@ -234,7 +244,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
     }
   };
 
-  const client = useMemo(() => clients.find((entry) => entry.client_id === quote?.client_id) ?? null, [clients, quote?.client_id]);
+  const { client } = useBillingClient(quote?.client_id);
   const contact = useMemo(() => contacts.find((entry) => entry.contact_name_id === quote?.contact_id) ?? null, [contacts, quote?.contact_id]);
   const acceptedOptionalItems = useMemo(
     () => (quote?.quote_items || []).filter((item) => item.is_optional),
@@ -1107,11 +1117,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
           </div>
           <div>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.quoteDate', { defaultValue: 'Quote Date' })}</div>
-            <div className="mt-1 font-medium">{quote.quote_date ? formatDate(quote.quote_date) : '—'}</div>
+            <div className="mt-1 font-medium">{quote.quote_date ? formatCalendarDate(quote.quote_date) : '—'}</div>
           </div>
           <div>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.validUntil', { defaultValue: 'Valid Until' })}</div>
-            <div className="mt-1 font-medium">{quote.valid_until ? formatDate(quote.valid_until) : '—'}</div>
+            <div className="mt-1 font-medium">{quote.valid_until ? formatCalendarDate(quote.valid_until) : '—'}</div>
           </div>
           <div>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.poNumber', { defaultValue: 'PO Number' })}</div>
@@ -1334,17 +1344,20 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
                 <div key={activity.activity_id} className="rounded-md border border-border p-3">
                   <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
                     <div className="font-medium text-foreground">
-                      {activity.activity_type === 'viewed_via_email_link'
-                        ? (typeof activity.metadata?.recipient_email === 'string'
-                          ? t('quoteDetail.activity.viewedViaEmailLink.descriptionWithRecipient', {
-                            defaultValue: 'Quote viewed via email link by {{email}}',
-                            email: activity.metadata.recipient_email,
-                          })
-                          : t('quoteDetail.activity.viewedViaEmailLink.description', { defaultValue: 'Quote viewed via email link' }))
-                        : (() => {
-                          const linked = emailLinkDecisionForActivity(quote.decisions, activity);
-                          return linked ? <QuoteDecisionLine decision={linked} /> : activity.description;
-                        })()}
+                      {(() => {
+                        const linked = emailLinkDecisionForActivity(quote.decisions, activity);
+                        if (linked) return <QuoteDecisionLine decision={linked} />;
+                        if (activity.activity_type === 'viewed_via_email_link') {
+                          const recipient = viewedViaEmailLinkRecipient(activity.metadata);
+                          return recipient
+                            ? t('quoteDetail.activity.viewedViaEmailLink.descriptionWithRecipient', {
+                              defaultValue: 'Quote viewed via email link by {{email}}',
+                              email: recipient,
+                            })
+                            : t('quoteDetail.activity.viewedViaEmailLink.description', { defaultValue: 'Quote viewed via email link' });
+                        }
+                        return activity.description;
+                      })()}
                     </div>
                     <div className="text-xs text-muted-foreground">{activity.created_at ? formatDate(activity.created_at) : '—'}</div>
                   </div>

@@ -6,6 +6,11 @@ import { i18nMiddleware, shouldSkipI18n } from './middleware/i18n';
 import { resolveDeploymentCapabilities, type DeploymentCapabilities } from './lib/deployment/deploymentProfile';
 import { resolveRequestHost, resolveRequestOrigin, detectForwardedHostRewrite } from './lib/deployment/requestHost';
 import { MIGRATED_SETTINGS_TAB_IDS } from './components/settings/settingsTabsRegistry';
+import {
+  PUBLIC_QUOTE_DECISION_PATTERN,
+  PUBLIC_QUOTE_PAGE_PATTERN,
+  PUBLIC_QUOTE_PDF_PATTERN,
+} from './lib/quote/publicQuotePaths';
 import { resolveHostSurface } from './lib/portal-domains/hostSurface';
 import { portalDomainServes, surfaceForPath, type PortalDomainSurface } from '@alga-psa/shared/core/portalDomainSurface';
 
@@ -63,15 +68,10 @@ export function isPublicPagePath(pathname: string): boolean {
 }
 
 /**
- * Public, session-less quote review (alga-2026-0002820). Public by exact shape,
- * not by prefix: a 43-char base64url token (mirrors QUOTE_ACCESS_TOKEN_LENGTH in
- * @alga-psa/billing; middleware is Edge so it cannot import the Node service)
- * and nothing after it except, for the API, the fixed `/pdf` and `/decision` leaves.
- * Authorization is the token itself, checked in the page / route handler.
+ * Public, session-less quote review (alga-2026-0002820); shapes live in
+ * lib/quote/publicQuotePaths. Authorization is the token itself, checked in the
+ * page / route handler.
  */
-const PUBLIC_QUOTE_PAGE_PATTERN = /^\/quote\/[A-Za-z0-9_-]{43}$/;
-const PUBLIC_QUOTE_PDF_PATTERN = /^\/api\/quote\/[A-Za-z0-9_-]{43}\/pdf$/;
-const PUBLIC_QUOTE_DECISION_PATTERN = /^\/api\/quote\/[A-Za-z0-9_-]{43}\/decision$/;
 
 export function isPublicQuotePagePath(pathname: string): boolean {
   return PUBLIC_QUOTE_PAGE_PATTERN.test(pathname);
@@ -271,6 +271,10 @@ const exactApiKeySkipPaths = [
   // x-api-key). The route re-checks the session itself, and
   // `/api/notifications` has no other route to exempt.
   '/api/notifications/live-token',
+  // Customer-admin workspace export: a browser form POST from the session-authenticated export page (no
+  // x-api-key). The route re-checks the session, the co-managed capability and the export permission itself.
+  // Exact match only, so nothing else under /api/co-management is exempted by this entry.
+  '/api/co-management/export',
 ];
 
 export function shouldSkipApiKeyAuth(pathname: string): boolean {
@@ -282,6 +286,14 @@ export function shouldSkipApiKeyAuth(pathname: string): boolean {
     // Client portal document handlers authenticate the portal session and run
     // the shared tenant/client visibility resolver before serving content.
     /^\/api\/client-portal\/documents\/[^/]+\/(?:file|export)$/.test(pathname) ||
+    // Co-managed conversation attachment downloads: the handlers authenticate the
+    // session, run capabilityRouteGuard and resolveAttachmentAccess (denied, closed or
+    // kill-switched readers get 404). Single-segment ids only; no nested paths.
+    /^\/api\/co-management\/attachments\/[^/]+$/.test(pathname) ||
+    // Archived conversation bytes: the route independently checks the session,
+    // capability, sealed-manifest membership and archive ownership.
+    /^\/api\/co-management\/archive-files\/[^/]+$/.test(pathname) ||
+    /^\/api\/client-portal\/conversation-attachments\/[^/]+$/.test(pathname) ||
     exactApiKeySkipPaths.includes(pathname) ||
     apiKeySkipPaths.some((path) => pathname.startsWith(path)) ||
     (pathname.startsWith('/api/tickets/') &&
@@ -459,6 +471,10 @@ const _middleware = auth(async (request) => {
 
   // Handle CORS preflight requests early
   if (request.method === 'OPTIONS') {
+    // Token routes are same-origin only: no permissive CORS, not even on preflight.
+    if (isPublicQuoteReviewPath(pathname)) {
+      return applyPublicQuoteReviewHeaders(new NextResponse(null, { status: 204 }));
+    }
     return corsPreflightResponse(origin);
   }
 
@@ -583,7 +599,7 @@ const _middleware = auth(async (request) => {
     }
 
     if (shouldSkipApiKeyAuth(pathname)) {
-      return applyCorsHeaders(response, origin);
+      return isPublicQuotePdfPath(pathname) ? response : applyCorsHeaders(response, origin);
     }
 
     // For API routes that need authentication, check for API key presence only;
@@ -602,8 +618,14 @@ const _middleware = auth(async (request) => {
   // Skip auth pages to prevent redirect loops
   const isAuthPage = pathname.startsWith('/auth/');
 
-  // Public Stripe Checkout and opaque emailed links verify their token/context themselves.
-  if (isPublicPagePath(pathname) || isPublicQuotePagePath(pathname)) {
+  // Public Stripe Checkout return page verifies its opaque session context itself.
+  if (isPublicQuotePagePath(pathname)) {
+    // Same-origin only: never the permissive CORS headers on a bearer-token page.
+    return response;
+  }
+  // Public Stripe Checkout return page and the emailed /pay/<token> link verify
+  // their opaque signed context themselves.
+  if (isPublicPagePath(pathname)) {
     return applyCorsHeaders(response, origin);
   }
 

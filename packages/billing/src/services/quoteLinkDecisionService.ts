@@ -18,7 +18,7 @@ import {
   QUOTE_ACCEPTANCE_AGREEMENT_VERSION,
 } from '../lib/quoteAgreement';
 import { decideQuote } from './quoteDecisionService';
-import { computePublicQuoteFingerprint } from './publicQuoteView';
+import { computePublicQuoteFingerprint, loadPublicQuoteItemReferenceMap } from './publicQuoteView';
 import { QuoteAccessLinks, isWellFormedQuoteAccessToken } from './quoteAccessLinks';
 
 export const QUOTE_LINK_DECISION_LIMITS = {
@@ -55,7 +55,7 @@ export interface QuoteLinkDecisionInput {
   agreementTextHash?: string | null;
   /** Fingerprint of the public quote content the signer was shown (computePublicQuoteFingerprint). */
   quoteFingerprint?: string | null;
-  selectedOptionalQuoteItemIds?: string[];
+  selectedOptionalQuoteItemRefs?: string[];
   comment?: string | null;
 }
 
@@ -72,7 +72,6 @@ export type QuoteLinkInputProblem =
   | 'invalid_selection'
   | 'too_long'
   | 'invalid_action'
-  | 'invalid_field_type'
   | 'fingerprint_required';
 
 /** The quote as persisted by the decision transaction (minor units, as on the quotes row). */
@@ -82,7 +81,7 @@ export interface QuoteLinkCommittedSnapshot {
   tax: number;
   total_amount: number;
   /** Optional items that are selected after the decision. */
-  selectedOptionalQuoteItemIds: string[];
+  selectedOptionalQuoteItemRefs: string[];
 }
 
 export type QuoteLinkDecisionOutcome =
@@ -145,7 +144,6 @@ function validateShape(input: QuoteLinkDecisionInput): QuoteLinkInputProblem | n
 
   const name = typeof input.signer?.name === 'string' ? input.signer.name.trim() : '';
   if (!name) return 'name_required';
-  if (input.signer?.title != null && typeof input.signer.title !== 'string') return 'invalid_field_type';
   const title = typeof input.signer?.title === 'string' ? input.signer.title.trim() : '';
   if (name.length > L.name || title.length > L.title) return 'too_long';
   if (input.agreed !== true) return 'agreement_required';
@@ -155,17 +153,24 @@ function validateShape(input: QuoteLinkDecisionInput): QuoteLinkInputProblem | n
     return 'agreement_outdated';
   }
 
-  const selected = input.selectedOptionalQuoteItemIds ?? [];
+  const selected = input.selectedOptionalQuoteItemRefs ?? [];
   if (!Array.isArray(selected) || selected.length > L.selections) return 'invalid_selection';
   return typeof input.quoteFingerprint === 'string' ? null : 'fingerprint_required';
 }
 
-function validateSelectionMembership(input: QuoteLinkDecisionInput, optionalItemIds: Set<string>): QuoteLinkInputProblem | null {
-  if (input.action !== 'accept') return null;
-  for (const id of input.selectedOptionalQuoteItemIds ?? []) {
-    if (typeof id !== 'string' || !optionalItemIds.has(id)) return 'invalid_selection';
+function resolveSelectedItemIds(
+  input: QuoteLinkDecisionInput,
+  itemIdByPublicRef: Map<string, string>,
+  optionalItemIds: Set<string>,
+): { problem: QuoteLinkInputProblem | null; ids: string[] } {
+  if (input.action !== 'accept') return { problem: null, ids: [] };
+  const ids: string[] = [];
+  for (const ref of input.selectedOptionalQuoteItemRefs ?? []) {
+    const id = typeof ref === 'string' ? itemIdByPublicRef.get(ref) : undefined;
+    if (!id || !optionalItemIds.has(id)) return { problem: 'invalid_selection', ids: [] };
+    ids.push(id);
   }
-  return null;
+  return { problem: null, ids };
 }
 
 /** Re-read the quote as persisted (same transaction) so the caller renders what was committed, not what it sent. */
@@ -173,6 +178,7 @@ async function readCommittedSnapshot(
   trx: Knex.Transaction,
   tenant: string,
   quoteId: string,
+  publicRefByItemId: Map<string, string>,
 ): Promise<QuoteLinkCommittedSnapshot> {
   const row = await tenantDb(trx, tenant)
     .table('quotes')
@@ -190,7 +196,10 @@ async function readCommittedSnapshot(
     discount_total: Number(row?.discount_total ?? 0),
     tax: Number(row?.tax ?? 0),
     total_amount: Number(row?.total_amount ?? 0),
-    selectedOptionalQuoteItemIds: selected.map((r) => r.quote_item_id),
+    selectedOptionalQuoteItemRefs: selected.flatMap((r) => {
+      const ref = publicRefByItemId.get(r.quote_item_id);
+      return ref ? [ref] : [];
+    }),
   };
 }
 
@@ -244,8 +253,14 @@ async function submitInTransaction(
     .table('quote_items')
     .where({ quote_id: quote.quote_id, is_optional: true })
     .select<Array<{ quote_item_id: string }>>('quote_item_id');
-  const problem = validateSelectionMembership(input, new Set(optionalRows.map((r) => r.quote_item_id)));
-  if (problem) return { status: 'invalid_input', problem };
+  const itemIdByPublicRef = await loadPublicQuoteItemReferenceMap(trx, tenant, quote.quote_id);
+  const resolvedSelection = resolveSelectedItemIds(
+    input,
+    itemIdByPublicRef,
+    new Set(optionalRows.map((r) => r.quote_item_id)),
+  );
+  if (resolvedSelection.problem) return { status: 'invalid_input', problem: resolvedSelection.problem };
+  const publicRefByItemId = new Map([...itemIdByPublicRef].map(([ref, id]) => [id, ref]));
 
   const accepting = input.action === 'accept';
   const agreement = getCurrentQuoteAgreement();
@@ -271,7 +286,7 @@ async function submitInTransaction(
         agreementVersion: accepting ? agreement.version : null,
         contentFingerprint: fingerprint,
       },
-      selections: accepting ? { selectedOptionalQuoteItemIds: input.selectedOptionalQuoteItemIds ?? [] } : undefined,
+      selections: accepting ? { selectedOptionalQuoteItemIds: resolvedSelection.ids } : undefined,
       comment: accepting ? null : input.comment!.trim(),
     },
     trx,
@@ -284,7 +299,7 @@ async function submitInTransaction(
         status: 'decided',
         decision: accepting ? 'accepted' : 'rejected',
         decidedAt: row ? iso(row.decided_at) : new Date().toISOString(),
-        committed: await readCommittedSnapshot(trx, tenant, quote.quote_id),
+        committed: await readCommittedSnapshot(trx, tenant, quote.quote_id, publicRefByItemId),
       };
     }
     case 'already_decided':

@@ -6,6 +6,7 @@ import { SharedNumberingService } from '@shared/services/numberingService';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import QuoteItem from './quoteItem';
 import QuoteActivity from './quoteActivity';
+import { canTransitionQuoteStatus } from '../schemas/quoteSchemas';
 import { recalculateQuoteFinancials } from '../services/quoteCalculationService';
 import { prepareQuoteTermsForDb } from '../lib/quoteTermsContent';
 import { revoke as revokeQuoteAccessLinks } from '../services/quoteAccessLinks';
@@ -75,7 +76,7 @@ async function expireQuoteIfNeeded(
       return (await quoteTable<IQuote>(trx, tenant, 'quotes').where({ quote_id: candidate.quote_id }).first()) ?? null;
     }
 
-    // Same transaction as the status change: an expired quote must not stay reachable.
+    // Same transaction as the status change: an expired quote must not stay reachable by link.
     await revokeQuoteAccessLinks(trx, tenant, { quoteId: candidate.quote_id }, 'cancelled');
 
     const activity = await QuoteActivity.create(trx, tenant, {
@@ -87,6 +88,7 @@ async function expireQuoteIfNeeded(
     });
 
     await recordQuoteLifecycleTransition(trx, tenant, candidate, expiredQuote as IQuote, activity, { actor: { actorType: 'SYSTEM' } });
+    await revokeQuoteAccessLinks(trx, tenant, { quoteId: candidate.quote_id }, 'cancelled');
     return expiredQuote;
   });
 }
@@ -308,7 +310,7 @@ const Quote = {
         .update({ ...prepareQuoteTermsForDb(updateData as Record<string, unknown>), updated_at: trx.fn.now() }).returning('*');
       const changed = updateData.status && updateData.status !== existingQuote.status;
       // Cancelling/expiring a quote kills its access links in the same transaction.
-      // accepted/rejected deliberately do NOT revoke (read-only view stays available).
+      // accepted/rejected deliberately do NOT revoke (the read-only view stays available).
       if (changed && (updateData.status === 'cancelled' || updateData.status === 'expired')) {
         await revokeQuoteAccessLinks(trx, tenant, { quoteId }, 'cancelled');
       }
@@ -321,33 +323,41 @@ const Quote = {
       if (!updatedQuote.is_template) await recalculateQuoteFinancials(trx, tenant, quoteId);
       const finalQuote = (await quoteTable<IQuote>(trx, tenant, 'quotes').where({ quote_id: quoteId }).first() ?? updatedQuote) as IQuote;
       await recordQuoteLifecycleTransition(trx, tenant, existingQuote as IQuote, finalQuote, activity, options);
+      if (changed && (finalQuote.status === 'cancelled' || finalQuote.status === 'expired')) {
+        await revokeQuoteAccessLinks(trx, tenant, { quoteId }, 'cancelled');
+      }
       return finalQuote;
     });
   },
 
-  /** Atomically transition a sent quote once; concurrent decisions return null. */
+  /**
+   * Status transition guarded by the expected current status. Locks the row, and
+   * returns null (writing nothing) when the quote is no longer in `expectedStatus`,
+   * so of several concurrent callers exactly one transitions it. On success it writes
+   * the same `status_changed` activity, financial recalculation and lifecycle event
+   * (`recordQuoteLifecycleTransition`) as `update`.
+   */
   async updateIfStatus(
     knexOrTrx: Knex | Knex.Transaction,
     tenant: string,
     quoteId: string,
     expectedStatus: QuoteStatus,
     updateData: Partial<IQuote> & { status: QuoteStatus },
+    options: QuoteLifecycleOptions = {}
   ): Promise<IQuote | null> {
     if (!tenant) throw new Error('Tenant context is required for updating quote');
-
     return withTransaction(knexOrTrx, async (trx) => {
       const existingQuote = await quoteTable<IQuote>(trx, tenant, 'quotes')
-        .where({ quote_id: quoteId, is_template: false })
-        .forUpdate()
-        .first();
-      if (!existingQuote || existingQuote.status !== expectedStatus) return null;
-
+        .where({ quote_id: quoteId }).forUpdate().first();
+      if (!existingQuote || existingQuote.is_template || existingQuote.status !== expectedStatus) {
+        return null;
+      }
+      assertQuoteLifecycleTransition(existingQuote as IQuote, updateData.status, options);
       const [updatedQuote] = await quoteTable<IQuote>(trx, tenant, 'quotes')
-        .where({ quote_id: quoteId, status: expectedStatus, is_template: false })
+        .where({ quote_id: quoteId, status: expectedStatus })
         .update({ ...prepareQuoteTermsForDb(updateData as Record<string, unknown>), updated_at: trx.fn.now() })
         .returning('*');
       if (!updatedQuote) return null;
-
       const activity = await QuoteActivity.create(trx, tenant, {
         quote_id: quoteId,
         activity_type: 'status_changed',
@@ -355,9 +365,12 @@ const Quote = {
         performed_by: updateData.updated_by ?? null,
         metadata: { previous_status: expectedStatus, next_status: updateData.status },
       });
+      if (updateData.status === 'cancelled' || updateData.status === 'expired') {
+        await revokeQuoteAccessLinks(trx, tenant, { quoteId }, 'cancelled');
+      }
       await recalculateQuoteFinancials(trx, tenant, quoteId);
       const finalQuote = (await quoteTable<IQuote>(trx, tenant, 'quotes').where({ quote_id: quoteId }).first() ?? updatedQuote) as IQuote;
-      await recordQuoteLifecycleTransition(trx, tenant, existingQuote as IQuote, finalQuote, activity);
+      await recordQuoteLifecycleTransition(trx, tenant, existingQuote as IQuote, finalQuote, activity, options);
       return finalQuote;
     });
   },
@@ -496,6 +509,7 @@ const Quote = {
         details: { supersededByQuoteId: revisedQuote.quote_id, nextVersion },
         patch: { updated_by: performedBy ?? null },
     });
+      await revokeQuoteAccessLinks(trx, tenant, { quoteId: sourceQuote.quote_id }, 'superseded');
 
     await QuoteActivity.create(trx, tenant, {
       quote_id: revisedQuote.quote_id,

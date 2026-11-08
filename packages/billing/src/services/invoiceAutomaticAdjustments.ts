@@ -447,7 +447,10 @@ export async function previewAutomaticInvoiceDiscounts(
   const configLineIds = new Map<string, string>(configs.map((row) => [row.config_id, row.contract_line_id]));
   const fixedParents = new Map<string, InvoiceAdjustmentCharge>();
   const inputs: InvoiceAdjustmentCharge[] = [];
+  // Line id each charge's discount allocation resolves to (fixed parents merge).
+  const chargeItemIds: string[] = [];
   charges.forEach((charge, index) => {
+    chargeItemIds[index] = `preview-charge-${index}`;
     const lineId = (charge.config_id && configLineIds.get(charge.config_id)) || charge.client_contract_line_id;
     const servicePeriods = charge.contractChangeAdjustment
       ? (() => {
@@ -484,6 +487,7 @@ export async function previewAutomaticInvoiceDiscounts(
       const parent = fixedParents.get(key);
       if (parent) {
         parent.period_allocations!.push({ net_amount: amount, service_periods: servicePeriods });
+        chargeItemIds[index] = parent.item_id;
         parent.net_amount += amount;
         parent.unit_price = parent.net_amount;
         parent.is_taxable ||= input.is_taxable;
@@ -534,7 +538,10 @@ export async function previewAutomaticInvoiceDiscounts(
       if (!part.service_periods.length) part.service_periods = fallbackPeriods;
     }
   }
-  return evaluateContractInvoiceAdjustments({ charges: inputs, automaticDiscounts: buildAutomaticDiscountPolicies(rows) });
+  return {
+    ...evaluateContractInvoiceAdjustments({ charges: inputs, automaticDiscounts: buildAutomaticDiscountPolicies(rows) }),
+    chargeItemIds,
+  };
 }
 
 interface DesiredSettlementRow {
@@ -778,6 +785,14 @@ export async function reconcileAutomaticInvoiceDiscounts(
     discountValue: discount.value,
     scope: discount.scope,
     baseAmount: discount.base_amount,
+    // Exact per-charge split resolved by the evaluator. Tax uses it to lower
+    // only the taxable base of the lines this discount actually applied to.
+    metadata: {
+      allocations: discount.allocations.map((allocation) => ({
+        itemId: allocation.item_id,
+        amount: allocation.amount,
+      })),
+    },
     clientContractId: policies.find((policy) => policy.discount_id === discount.discount_id)?.client_contract_id ?? null,
   }));
 

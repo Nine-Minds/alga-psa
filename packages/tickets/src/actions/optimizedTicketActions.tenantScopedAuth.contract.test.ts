@@ -21,20 +21,15 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     expect(source).not.toContain('compileResourceReadAuthorizationSql,');
   });
 
-  it('uses structural tenant scoping for authorization subject and response-state roots', () => {
+  it('uses structural tenant scoping for the authorization subject and the shared response-state engine', () => {
     const source = fs.readFileSync(path.resolve(__dirname, './optimizedTicketActions.ts'), 'utf8');
     const authStart = source.indexOf('async function resolveAuthorizationSubjectForUser');
     const authEnd = source.indexOf('function toTicketAuthorizationRecord', authStart);
-    const responseStart = source.indexOf('async function updateTicketResponseStateFromComment');
-    const responseEnd = source.indexOf('// Helper function to safely convert dates', responseStart);
 
     expect(authStart).toBeGreaterThanOrEqual(0);
     expect(authEnd).toBeGreaterThan(authStart);
-    expect(responseStart).toBeGreaterThanOrEqual(0);
-    expect(responseEnd).toBeGreaterThan(responseStart);
 
     const authSection = source.slice(authStart, authEnd);
-    const responseSection = source.slice(responseStart, responseEnd);
 
     expect(authSection).toContain("tenantScopedTable(trx, 'user_roles', tenant)");
     expect(authSection).toContain("tenantScopedTable(trx, 'team_members', tenant)");
@@ -42,8 +37,12 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     expect(authSection).not.toContain(".where({ tenant, user_id: user.user_id })");
     expect(authSection).not.toContain(".where({ tenant, reports_to: user.user_id })");
 
-    expect(responseSection).toContain("tenantScopedTable(trx, 'tickets', tenant)");
-    expect(responseSection).not.toContain(".where({ ticket_id: ticketId, tenant })");
+    // Comment-driven response state goes through the shared engine (structurally
+    // tenant scoped via tenantDb); no local copy and no direct state write.
+    expect(source).not.toContain('updateTicketResponseStateFromComment');
+    expect(source).toContain("from '@alga-psa/shared/lib/tickets/responseState'");
+    expect(source).toContain('await applyCommentResponseState(trx, {');
+    expect(source).not.toContain('LEVERAGE: pattern ' + 'response-state-from-comment');
   });
 
   it('uses structural tenant scoping for consolidated ticket top-level hydration roots', () => {
@@ -59,19 +58,34 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     expect(section).toContain("tenantScopedTable(trx, 'tickets as t', tenant)");
     expect(section).toContain('Comment.getAllbyTicketId(trx, tenant, ticketId)');
     expect(section).toContain("tenantScopedTable(trx, 'documents as d', tenant)");
-    expect(section).toContain("tenantScopedTable(trx, 'clients as c', tenant)");
     expect(section).toContain("tenantScopedTable(trx, 'ticket_resources', tenant)");
     expect(section).toContain("tenantScopedTable(trx, 'users', tenant)");
     expect(section).toContain("tenantScopedTable(trx, 'statuses', tenant)");
     expect(section).toContain("tenantScopedTable(trx, 'boards', tenant)");
     expect(section).toContain("tenantScopedTable(trx, 'priorities', tenant)");
     expect(section).toContain("tenantScopedTable(trx, 'categories', tenant)");
-    expect(section).toContain("tenantScopedTable(trx, 'documents', tenant)");
     expect(section).not.toContain("'t.tenant': tenant");
     expect(section).not.toContain('tenant: tenant');
     expect(section).not.toContain(".where({ 'c.tenant': tenant })");
     expect(section).not.toContain(".where({ tenant })");
     expect(section).not.toContain(".andWhere({ tenant })");
+  });
+
+  it('does not load the tenant client list in getConsolidatedTicketData (client pickers are server-searched)', () => {
+    const source = fs.readFileSync(path.resolve(__dirname, './optimizedTicketActions.ts'), 'utf8');
+    const start = source.indexOf('export const getConsolidatedTicketData');
+    const end = source.indexOf('export const getTicketFormOptions', start);
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+    const section = source.slice(start, end);
+
+    // The only clients query left is the single client attached to the ticket, keyed by id.
+    const clientQueries = section.match(/'clients as c'/g) ?? [];
+    expect(clientQueries).toHaveLength(1);
+    expect(section).toContain("'c.client_id': ticket.client_id");
+    expect(section).not.toContain('getAllClients');
+    expect(section).not.toMatch(/\n\s+clients(,|:)/);
+    expect(section).not.toContain('clientsWithLogos');
   });
 
   it('uses structural tenant scoping for consolidated ticket client and bundle roots', () => {
@@ -195,7 +209,9 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     expect(optionsSection).toContain("tenantScopedTable(trx, 'priorities', tenant)");
     expect(optionsSection).toContain("tenantScopedTable(trx, 'boards', tenant)");
     expect(optionsSection).toContain("tenantScopedTable(trx, 'categories', tenant)");
-    expect(optionsSection).toContain("tenantScopedTable(trx, 'clients as c', tenant)");
+    // The client filter is a server-searched picker; form options never load the client list.
+    expect(optionsSection).not.toContain("'clients as c'");
+    expect(optionsSection).not.toContain('getClientLogoUrlsBatch');
     expect(optionsSection).toContain("tenantScopedTable(trx, 'users', tenant)");
     expect(optionsSection).not.toContain(".where({ tenant, item_type: 'ticket' })");
     expect(optionsSection).not.toContain(".where({ tenant })");

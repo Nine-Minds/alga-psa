@@ -47,25 +47,45 @@ const STATUS_VARIANTS: Record<QuoteStatus, BadgeVariant> = {
 export type LocationGroup = {
   key: string;
   locationId: string | null;
-  location: ClientPortalLocationSummary | null;
-  items: IQuoteItem[];
+  location: QuoteDocumentLocation | null;
+  items: QuoteDocumentItem[];
+};
+
+export type QuoteDocumentItem = Pick<
+  IQuoteItem,
+  'description' | 'quantity' | 'unit_price' | 'total_price' | 'display_order' | 'is_optional' | 'is_selected' | 'is_discount' | 'tax_amount_if_included'
+> & {
+  /** Database ID for authenticated portal interactions, when available. */
+  quote_item_id?: string;
+  /** Page-local key for public documents. */
+  publicRef?: string;
+  location_id?: string | null;
+  /** Page-local location join for public documents. */
+  locationRef?: string | null;
+};
+
+export type QuoteDocumentLocation = Omit<ClientPortalLocationSummary, 'location_id'> & {
+  location_id?: string;
+  /** Page-local key for public documents. */
+  publicRef?: string;
 };
 
 export { UNASSIGNED_KEY };
 
 export function groupQuoteItemsByLocation(
-  items: IQuoteItem[],
-  locations: ClientPortalLocationSummary[],
+  items: QuoteDocumentItem[],
+  locations: QuoteDocumentLocation[],
 ): LocationGroup[] {
-  const locationById = new Map<string, ClientPortalLocationSummary>();
+  const locationById = new Map<string, QuoteDocumentLocation>();
   for (const location of locations) {
-    if (location.location_id) locationById.set(location.location_id, location);
+    const ref = location.publicRef ?? location.location_id;
+    if (ref) locationById.set(ref, location);
   }
   const order: string[] = [];
   const grouped = new Map<string, LocationGroup>();
 
   for (const item of items) {
-    const id = item.location_id ?? null;
+    const id = item.locationRef ?? item.location_id ?? null;
     const key = id && id.trim().length > 0 ? id : UNASSIGNED_KEY;
     let entry = grouped.get(key);
     if (!entry) {
@@ -83,15 +103,16 @@ export function groupQuoteItemsByLocation(
   return order.map((key) => grouped.get(key)!);
 }
 
-export function distinctLocationCount(items: IQuoteItem[]): number {
+export function distinctLocationCount(items: QuoteDocumentItem[]): number {
   const seen = new Set<string>();
   for (const item of items) {
-    if (item.location_id) seen.add(item.location_id);
+    const ref = item.locationRef ?? item.location_id;
+    if (ref) seen.add(ref);
   }
   return seen.size;
 }
 
-export function formatClientPortalLocationLines(location: ClientPortalLocationSummary | null | undefined): string[] {
+export function formatClientPortalLocationLines(location: QuoteDocumentLocation | null | undefined): string[] {
   if (!location) return [];
   const lines: string[] = [];
   for (const field of [location.address_line1, location.address_line2, location.address_line3]) {
@@ -109,7 +130,7 @@ export function formatClientPortalLocationLines(location: ClientPortalLocationSu
 
 /** The subset of a quote this view reads. Both IQuote and the public view model satisfy it. */
 export interface QuoteDocumentQuote {
-  quote_id: string;
+  quote_id?: string;
   quote_number?: string | null;
   title: string;
   description?: string | null;
@@ -133,8 +154,8 @@ export interface QuoteDocumentTotals {
 export interface QuoteDocumentViewProps {
   quote: QuoteDocumentQuote;
   /** Items as they should be displayed (optional-item preview already applied). */
-  items: IQuoteItem[];
-  locations: ClientPortalLocationSummary[];
+  items: QuoteDocumentItem[];
+  locations: QuoteDocumentLocation[];
   /** Totals to display, in minor units of `quote.currency_code`. */
   totals: QuoteDocumentTotals;
   /** Live optional-item preview, when the caller computed one. */
@@ -147,7 +168,7 @@ export interface QuoteDocumentViewProps {
     canEdit: boolean;
     disabled?: boolean;
     previewUnavailable?: boolean;
-    onToggle?: (quoteItemId: string, checked: boolean) => void;
+    onToggle?: (quoteItemRef: string, checked: boolean) => void;
   };
   /** Same-origin href of the quote PDF; renders a download link in the header. */
   pdfHref?: string;
@@ -157,6 +178,8 @@ export interface QuoteDocumentViewProps {
   footerSlot?: React.ReactNode;
   termsId?: string;
 }
+
+const DOCUMENT_DATE_OPTIONS: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'long', day: 'numeric' };
 
 export const QuoteDocumentView: React.FC<QuoteDocumentViewProps> = ({
   quote,
@@ -181,9 +204,11 @@ export const QuoteDocumentView: React.FC<QuoteDocumentViewProps> = ({
     [money],
   );
 
-  // Central formatter: the client's own country sets the digit order, their
-  // language names the month.
-  const { formatDate: formatLocalizedDate } = useFormatters();
+  // quote_date / valid_until name a day (stored as midnight UTC), so they never
+  // shift by the viewer's timezone. They are written with a named month, the
+  // shape the reader's language owns: it reads right to any recipient whether
+  // or not their country is on file, and matches the quote email.
+  const { formatCalendarDate } = useFormatters();
   const formatDate = useCallback(
     (date: string | { toString(): string } | undefined | null) => {
       if (!date) return 'N/A';
@@ -192,12 +217,12 @@ export const QuoteDocumentView: React.FC<QuoteDocumentViewProps> = ({
         if (Number.isNaN(new Date(dateStr).getTime())) {
           return 'Invalid date';
         }
-        return formatLocalizedDate(dateStr);
+        return formatCalendarDate(dateStr, DOCUMENT_DATE_OPTIONS);
       } catch {
         return 'Invalid date';
       }
     },
-    [formatLocalizedDate],
+    [formatCalendarDate],
   );
 
   // quote_date / valid_until are calendar dates stored as UTC midnight. Reduce to the
@@ -217,7 +242,7 @@ export const QuoteDocumentView: React.FC<QuoteDocumentViewProps> = ({
   const canEditSelections = selection?.canEdit ?? false;
   const onToggle = selection?.onToggle;
 
-  const renderItemsTable = (rowItems: IQuoteItem[]) => (
+  const renderItemsTable = (rowItems: QuoteDocumentItem[]) => (
     <div className="overflow-x-auto rounded-md border">
       <table className="min-w-full divide-y text-sm">
         <thead className="bg-muted/50">
@@ -232,7 +257,7 @@ export const QuoteDocumentView: React.FC<QuoteDocumentViewProps> = ({
           {rowItems.map((item) => {
             const isIncluded = isQuoteItemIncluded(item);
             return (
-              <tr key={item.quote_item_id} className={!isIncluded ? 'opacity-60' : undefined}>
+              <tr key={item.publicRef ?? item.quote_item_id} className={!isIncluded ? 'opacity-60' : undefined}>
                 <td className="px-3 py-2">
                   <div className="flex flex-col gap-1">
                     <span>{item.description}</span>
@@ -249,10 +274,10 @@ export const QuoteDocumentView: React.FC<QuoteDocumentViewProps> = ({
                     {item.is_optional && onToggle && (
                       <div className="pt-1">
                         <Switch
-                          id={`quote-item-${item.quote_item_id}-selection`}
+                          id={`quote-item-${item.publicRef ?? item.quote_item_id}-selection`}
                           checked={isIncluded}
                           disabled={!canEditSelections || selection?.disabled}
-                          onCheckedChange={(checked) => onToggle(item.quote_item_id, checked)}
+                          onCheckedChange={(checked) => onToggle(item.quote_item_id ?? item.publicRef!, checked)}
                           className="data-[state=checked]:bg-primary-500"
                           label={isIncluded
                             ? t('quotes.detail.include', { defaultValue: 'Include' })
@@ -270,7 +295,7 @@ export const QuoteDocumentView: React.FC<QuoteDocumentViewProps> = ({
                 <td className="px-3 py-2">
                   {formatCurrency(
                     preview && item.is_discount
-                      ? preview.discountAmountById.get(item.quote_item_id) ?? 0
+                      ? preview.discountAmountById.get(item.quote_item_id ?? '') ?? 0
                       : item.total_price || 0,
                     quote.currency_code,
                   )}
@@ -344,7 +369,9 @@ export const QuoteDocumentView: React.FC<QuoteDocumentViewProps> = ({
           <div>
             <h1 className="text-xl font-semibold">
               {quote.quote_number ||
-                t('quotes.detail.fallbackTitle', { defaultValue: 'Quote {{id}}', id: quote.quote_id.slice(0, 8) })}
+                (quote.quote_id
+                  ? t('quotes.detail.fallbackTitle', { defaultValue: 'Quote {{id}}', id: quote.quote_id.slice(0, 8) })
+                  : t('quotes.detail.unnumberedTitle', { defaultValue: 'Quote' }))}
             </h1>
             <p className="text-sm text-muted-foreground">{quote.title}</p>
           </div>

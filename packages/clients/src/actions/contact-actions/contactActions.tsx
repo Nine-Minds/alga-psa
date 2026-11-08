@@ -5,8 +5,8 @@ import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
 import type {
   ContactEmailAddressInput,
+  ContactLocationInput,
   DeletionValidationResult,
-  IClient,
   IContact,
   ImportContactResult,
   ITag,
@@ -54,6 +54,13 @@ import {
   parseSubmittedFields
 } from '@alga-psa/validation';
 import { collectReportContactIds } from '../../lib/managerSubtree';
+import { attachContactLocations } from '../../lib/contactLocations';
+import {
+  getContactLocationCount as readContactLocationCount,
+  getContactLocations,
+  isContactLocationClientMismatch,
+  replaceContactLocations,
+} from '../../models/contactLocation';
 import { isStructuralFailure, type StructuralResult } from '../../lib/structuralResult';
 
 // Keep the error key alongside localized text so classification never depends on
@@ -171,7 +178,9 @@ function buildDefaultPhoneNumbers(phoneNumber?: string | null) {
   }];
 }
 
-type ContactActionInput = Omit<Partial<IContact>, 'phone_numbers' | 'additional_email_addresses'> & {
+type ContactActionInput = Omit<Partial<IContact>, 'phone_numbers' | 'additional_email_addresses' | 'locations'> & {
+  /** Omitted leaves the location links unchanged; [] removes them all. */
+  locations?: ContactLocationInput[];
   phone_numbers?: CreateContactInput['phone_numbers'];
   primary_email_canonical_type?: CreateContactInput['primary_email_canonical_type'];
   primary_email_custom_type?: CreateContactInput['primary_email_custom_type'];
@@ -224,6 +233,9 @@ async function contactEmailConflictMessageFrom(error: unknown): Promise<string |
 async function contactUpdateActionErrorFrom(error: unknown): Promise<ContactUpdateActionError | null> {
   const localized = localizedContactActionError(error);
   if (localized) return localized;
+  if (isContactLocationClientMismatch(error)) {
+    return actionError(error.message, 'msp/contacts:errors.contact.locationClientMismatch');
+  }
   if (error instanceof Error) {
     const message = error.message;
     if (message.includes('Permission denied:') || message.includes('You do not have permission')) {
@@ -304,6 +316,12 @@ async function contactActionResultErrorFrom(error: unknown, fallback: string): P
 }
 
 async function prefixedContactActionErrorFrom(error: unknown, fallback: string): Promise<string> {
+  // Create and CSV import go through here, so the cross-client location refusal has to be named
+  // on this path too — otherwise it reaches the caller as the generic "failed to create" fallback.
+  if (isContactLocationClientMismatch(error)) {
+    return `VALIDATION_ERROR: ${await contactText('errors.contact.locationClientMismatch')}`;
+  }
+
   const emailConflict = await contactEmailConflictMessageFrom(error);
   if (emailConflict) {
     return `EMAIL_EXISTS: ${emailConflict}`;
@@ -358,10 +376,13 @@ function contactImportFailureResults(
   }));
 }
 
-type ContactImportData = Omit<Partial<IContact>, 'additional_email_addresses'> & {
+type ContactImportData = Omit<Partial<IContact>, 'additional_email_addresses' | 'locations'> & {
   additional_email_addresses?: CreateContactInput['additional_email_addresses'];
   tags?: string;
   primary_email_custom_type?: string | null;
+  /** Location names as written in the CSV; resolved against the contact's client during import. */
+  location_names?: string[];
+  primary_location_name?: string | null;
 };
 
 export type AddContactResult =
@@ -428,7 +449,8 @@ export const getContactByContactNameId = withAuth(async (
     // The model doesn't resolve avatars (they live in document associations),
     // but single-contact reads feed avatar-bearing surfaces (bento hero, quick view).
     const avatarUrlsMap = await getContactAvatarUrlsBatchAsync([contact.contact_name_id], tenant);
-    return { ...contact, avatarUrl: avatarUrlsMap.get(contact.contact_name_id) ?? null };
+    const [withLocations] = await attachContactLocations(db, tenant, [contact], (row) => row.contact_name_id);
+    return { ...withLocations, avatarUrl: avatarUrlsMap.get(contact.contact_name_id) ?? null };
   } catch (err) {
     console.error('Error getting contact by contact_name_id:', err);
 
@@ -709,14 +731,22 @@ export const addContact = withAuth(async (
       manager_contact_id: contactData.manager_contact_id || undefined,
       role: contactData.role ?? undefined,
       notes: contactData.notes || undefined,
-      is_inactive: contactData.is_inactive ?? undefined
+      is_inactive: contactData.is_inactive ?? undefined,
+      work_arrangement: contactData.work_arrangement ?? undefined,
     };
 
     // LEVERAGE: pattern contact-create-with-event
     // Use the shared ContactModel to create the contact.
     // The model handles validation and business rules.
     const created = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return ContactModel.createContact(createInput, tenant, trx);
+      const contact = await ContactModel.createContact(createInput, tenant, trx);
+      // Same transaction as the contact: a cross-client location rolls the contact back too.
+      const locations = contactData.locations === undefined
+        ? []
+        : await replaceContactLocations(trx, tenant, contact.contact_name_id, contactData.locations, {
+          createdBy: user?.user_id ?? null,
+        });
+      return { ...contact, locations };
     });
 
     const clientId = (created as any)?.client_id;
@@ -936,7 +966,22 @@ export const updateContact = withAuth(async (
         role: contactData.role ?? undefined,
         notes: contactData.notes ?? undefined,
         is_inactive: contactData.is_inactive ?? undefined,
+        // undefined = leave unchanged; null (the editor's "Not set") clears it. Collapsing null to
+        // undefined here would make "Not set" a silent no-op.
+        work_arrangement:
+          contactData.work_arrangement === undefined ? undefined : (contactData.work_arrangement || null),
       }, tenant, trx);
+
+      // ContactModel already dropped every link when the client changed (a link never crosses
+      // clients) and reported how many went; an explicit `locations` then writes the new set, so a
+      // move plus a new selection in one call lands only the new links.
+      const removedLocationCount = Number((updated as { removedLocationCount?: number }).removedLocationCount ?? 0);
+      if (contactData.locations !== undefined) {
+        await replaceContactLocations(trx, tenant, contactData.contact_name_id!, contactData.locations, {
+          createdBy: user?.user_id ?? null,
+        });
+      }
+      const locations = await getContactLocations(trx, tenant, contactData.contact_name_id!);
 
       if (contactData.is_inactive === true) {
         await tenantScopedTable(trx, 'users', tenant)
@@ -946,7 +991,7 @@ export const updateContact = withAuth(async (
 
       return {
         before: existingContact,
-        after: updated,
+        after: { ...updated, locations, removedLocationCount },
         updatedFieldKeys: Object.keys(contactData).filter((key) => key !== 'contact_name_id'),
         occurredAt: updated.updated_at,
       };
@@ -1143,7 +1188,6 @@ export const updateContactsForClient = withAuth(async (
 
 export async function exportContactsToCSV(
   contacts: IContact[],
-  clients: IClient[],
   contactTags: Record<string, ITag[]>
 ): Promise<string> {
   const fields = [
@@ -1156,10 +1200,12 @@ export async function exportContactsToCSV(
     'role',
     'notes',
     'tags',
+    'work_arrangement',
+    'locations',
+    'primary_location',
   ];
 
   const data = contacts.map((contact): Record<string, string> => {
-    const client = clients.find(c => c.client_id === contact.client_id);
     const tags = contactTags[contact.contact_name_id] || [];
     const tagText = tags.map((tag: ITag) => tag.tag_text).join(', ');
 
@@ -1169,10 +1215,15 @@ export async function exportContactsToCSV(
       primary_email_type: formatContactCsvPrimaryEmailType(contact),
       additional_email_addresses: formatContactCsvAdditionalEmailAddresses(contact.additional_email_addresses),
       phone_number: getDerivedDefaultPhone(contact),
-      client: client?.client_name || '',
+      // The list actions return client_name on every row, so no client list is needed here.
+      client: typeof contact.client_name === 'string' ? contact.client_name : '',
       role: contact.role || '',
       notes: contact.notes || '',
-      tags: tagText
+      tags: tagText,
+      work_arrangement: contact.work_arrangement || '',
+      // Semicolon-separated so a location name may contain a comma; import reads the same form.
+      locations: (contact.locations ?? []).map((location) => location.location_name ?? '').filter(Boolean).join('; '),
+      primary_location: (contact.locations ?? []).find((location) => location.is_primary)?.location_name || '',
     };
   });
 
@@ -1190,7 +1241,10 @@ export async function generateContactCSVTemplate(): Promise<string> {
       client: 'Mad Hatter Tea Client',
       role: await contactText('csvTemplate.explorerRole'),
       notes: await contactText('csvTemplate.explorerNotes'),
-      tags: await contactText('csvTemplate.explorerTags')
+      tags: await contactText('csvTemplate.explorerTags'),
+      work_arrangement: 'hybrid',
+      locations: 'Tea Room; Rabbit Hole Depot',
+      primary_location: 'Tea Room'
     },
     {
       full_name: 'Mad Hatter',
@@ -1201,7 +1255,10 @@ export async function generateContactCSVTemplate(): Promise<string> {
       client: 'Mad Hatter Tea Client',
       role: await contactText('csvTemplate.teaRole'),
       notes: await contactText('csvTemplate.teaNotes'),
-      tags: await contactText('csvTemplate.teaTags')
+      tags: await contactText('csvTemplate.teaTags'),
+      work_arrangement: 'remote',
+      locations: '',
+      primary_location: ''
     }
   ];
 
@@ -1215,6 +1272,9 @@ export async function generateContactCSVTemplate(): Promise<string> {
     'role',
     'notes',
     'tags',
+    'work_arrangement',
+    'locations',
+    'primary_location',
   ];
 
   return unparseCSV(templateData, fields);
@@ -1271,6 +1331,48 @@ function toContactEmailAddressInput(
     custom_type: row.custom_type ?? null,
     display_order: row.display_order,
   };
+}
+
+/**
+ * CSV carries location *names*, so the import resolves them against the contact's own client. An
+ * unknown name fails that row naming the location rather than skipping it silently — a quietly
+ * dropped site is exactly the data loss this feature exists to prevent. A row with locations but
+ * no client fails too: there is nothing to resolve against.
+ */
+async function resolveImportedContactLocations(
+  trx: Knex.Transaction,
+  tenant: string,
+  contactName: string,
+  clientId: string | null | undefined,
+  locationNames: string[],
+  primaryLocationName: string | null | undefined,
+): Promise<ContactLocationInput[]> {
+  if (locationNames.length === 0) return [];
+  if (!clientId) {
+    throw await contactError('errors.contact.importLocationNoClient', 'VALIDATION_ERROR: ', { name: contactName });
+  }
+
+  const rows = await tenantScopedTable(trx, 'client_locations', tenant)
+    .where({ client_id: clientId })
+    .select('location_id', 'location_name') as Array<{ location_id: string; location_name: string | null }>;
+  const byName = new Map(rows.map((row) => [(row.location_name ?? '').trim().toLowerCase(), row.location_id]));
+
+  const links: ContactLocationInput[] = [];
+  for (const name of locationNames) {
+    const locationId = byName.get(name.trim().toLowerCase());
+    if (!locationId) {
+      throw await contactError('errors.contact.importLocationUnknown', 'VALIDATION_ERROR: ', {
+        name: contactName,
+        location: name,
+      });
+    }
+    links.push({
+      location_id: locationId,
+      is_primary: Boolean(primaryLocationName)
+        && name.trim().toLowerCase() === primaryLocationName!.trim().toLowerCase(),
+    });
+  }
+  return links;
 }
 
 export const importContactsFromCSV = withAuth(async (
@@ -1421,6 +1523,10 @@ export const importContactsFromCSV = withAuth(async (
               is_inactive: contactData.is_inactive ?? undefined,
               role: normalizeOptionalText(contactData.role) ?? existingContact.role ?? undefined,
               notes: normalizeOptionalText(contactData.notes) ?? existingContact.notes ?? undefined,
+              // A mapped but blank cell is an explicit "clear it" (null); an unmapped column leaves
+              // the arrangement alone (undefined).
+              work_arrangement:
+                contactData.work_arrangement === undefined ? undefined : (contactData.work_arrangement || null),
             };
 
             if (contactData.primary_email_canonical_type !== undefined || contactData.primary_email_custom_type !== undefined) {
@@ -1432,7 +1538,31 @@ export const importContactsFromCSV = withAuth(async (
               updateData.additional_email_addresses = contactData.additional_email_addresses;
             }
 
+            // Mapped and non-blank states the whole set (including "clear them all"); absent leaves
+            // whatever the contact already has. Resolved before the write: the rows of one file
+            // share a transaction, so a row refused *after* its update would leave the edit behind.
+            const resolvedLocations = contactData.location_names === undefined
+              ? undefined
+              : await resolveImportedContactLocations(
+                trx,
+                tenant,
+                contactData.full_name!.trim(),
+                updateData.client_id ?? existingContact.client_id,
+                contactData.location_names,
+                contactData.primary_location_name,
+              );
+
             savedContact = await ContactModel.updateContact(existingContact.contact_name_id, updateData, tenant, trx);
+
+            if (resolvedLocations !== undefined) {
+              await replaceContactLocations(
+                trx,
+                tenant,
+                savedContact.contact_name_id,
+                resolvedLocations,
+                { createdBy: user?.user_id ?? null },
+              );
+            }
             queueContactUpdated(trx, tenant, existingContact as any, savedContact as any, Object.keys(updateData), { actorUserId: user?.user_id });
 
             // A blank Tags value is "no opinion": it neither clears nor writes tags.
@@ -1458,9 +1588,33 @@ export const importContactsFromCSV = withAuth(async (
               is_inactive: contactData.is_inactive || false,
               role: normalizeOptionalText(contactData.role),
               notes: normalizeOptionalText(contactData.notes),
+              work_arrangement: contactData.work_arrangement ?? null,
             };
 
+            // Resolved first, for the same reason as the update branch above: the file's rows share
+            // one transaction, so a name that cannot be placed must fail before the person is
+            // written rather than leave a linkless contact behind.
+            const resolvedLocations = contactData.location_names === undefined
+              ? undefined
+              : await resolveImportedContactLocations(
+                trx,
+                tenant,
+                contactData.full_name!.trim(),
+                contactData.client_id,
+                contactData.location_names,
+                contactData.primary_location_name,
+              );
+
             savedContact = await ContactModel.createContact(contactToCreate, tenant, trx);
+            if (resolvedLocations !== undefined) {
+              await replaceContactLocations(
+                trx,
+                tenant,
+                savedContact.contact_name_id,
+                resolvedLocations,
+                { createdBy: user?.user_id ?? null },
+              );
+            }
             queueContactCreated(trx, tenant, savedContact as any, { actorUserId: user?.user_id });
 
             if (hasImportedTags(contactData.tags)) {
@@ -2077,6 +2231,21 @@ export const getClientPortalVisibilityGroupsForContact = withAuth(async (
     console.error('[contactActions.getClientPortalVisibilityGroupsForContact]', error);
     throw error;
   }
+});
+
+/**
+ * How many locations this contact is linked to. Backs the "this removes N location links"
+ * confirmation the edit form shows before a client change actually drops them.
+ */
+export const getContactLocationCount = withAuth(async (
+  user,
+  { tenant },
+  contactId: string
+): Promise<number> => {
+  const { knex: db } = await createTenantKnex();
+  await assertMspPermission(user, 'contact', 'read', `Permission denied: ${await contactText('errors.contact.permissions.readContacts')}`, db);
+  if (!contactId) return 0;
+  return await readContactLocationCount(db, tenant, contactId);
 });
 
 /** Number of people (transitively) reporting to this contact; drives the portal tab's "also sees" note. */

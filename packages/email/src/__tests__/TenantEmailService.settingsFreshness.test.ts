@@ -220,6 +220,34 @@ describe('TenantEmailService settings freshness', () => {
     ]);
   });
 
+  it('rebuilds the provider when a secret reference rotates, even if updated_at is unchanged', async () => {
+    const withRef = (ref: string) => {
+      const row = buildSettingsRow({ password: '', from: 'refs@example.test', fromName: 'Refs' });
+      const config = row.provider_configs[0].config as Record<string, any>;
+      delete config.password;
+      config.secretRefs = { password: ref };
+      return row;
+    };
+    runtime.settingsRow = withRef('email_outbound_smtp_password_00000000-0000-4000-8000-000000000001');
+    const service = TenantEmailService.getInstance('tenant-settings-freshness');
+    const params = {
+      mailClass: 'general' as const,
+      tenantId: 'tenant-settings-freshness',
+      to: 'client@example.test',
+      subject: 'Status update',
+      html: '<p>Status update</p>',
+    };
+
+    await service.sendEmail(params);
+    await service.sendEmail(params);
+    expect(runtime.initializedSettings).toHaveLength(1);
+
+    runtime.settingsRow = withRef('email_outbound_smtp_password_00000000-0000-4000-8000-000000000002');
+    await service.sendEmail(params);
+    expect(runtime.initializedSettings).toHaveLength(2);
+    expect(runtime.initializedSettings[1].providerConfigs[0].config.secretRefs.password).toMatch(/000000000002$/);
+  });
+
   it('uses the ticket board name for From when route and sender names are absent', async () => {
     runtime.settingsRow = buildSettingsRow({ password: 'password', from: 'shared@example.test', fromName: '' });
     const service = TenantEmailService.getInstance('tenant-settings-freshness');

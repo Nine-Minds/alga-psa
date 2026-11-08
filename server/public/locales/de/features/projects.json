@@ -2274,5 +2274,6 @@
         "inventoryStock": "Sie benötigen Inventarzugriff, um Lagerbestände einzusehen."
       }
     }
-  }
+  },
+  "backToSharedTasks": "← Zurück zu gemeinsamen Aufgaben"
 }
