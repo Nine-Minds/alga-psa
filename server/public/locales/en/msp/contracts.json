@@ -284,6 +284,20 @@
     },
     "documents": {
       "loading": "Loading documents..."
+    },
+    "simulatorLoading": "Loading simulator...",
+    "unnamedBoard": "Unnamed board",
+    "notFound": "Contract not found",
+    "loadFailed": "Failed to load contract",
+    "invoicesLoadFailed": "Failed to load invoices for this contract assignment.",
+    "deleteFailed": "Failed to delete contract",
+    "backToContracts": "Back to Contracts",
+    "viewSourceQuote": "View Source Quote",
+    "clientDrawer": {
+      "loading": "Loading…",
+      "notFound": "Client not found.",
+      "openClient": "Open Client",
+      "loadFailed": "Failed to load client details."
     }
   },
   "contractHeader": {

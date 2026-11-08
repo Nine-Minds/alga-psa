@@ -255,7 +255,8 @@
     "tagModeNone": "None of",
     "droppedFromLink": "Some filters in this link are not valid and were ignored.",
     "location": "Location",
-    "requesterLocation": "Requester location"
+    "requesterLocation": "Requester location",
+    "selectStatus": "Select Status"
   },
   "create": {
     "title": "Create Support Ticket",
@@ -3185,5 +3186,9 @@
     "bundledTo": "Bundled → {{ticketNumber}}",
     "master": "Master",
     "openChildrenShort": "open"
+  },
+  "statusChange": {
+    "title": "Update Ticket Status",
+    "message": "Are you sure you want to change the status from \"{{from}}\" to \"{{to}}\"?"
   }
 }
