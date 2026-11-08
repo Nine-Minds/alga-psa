@@ -385,7 +385,7 @@
       "warrantyExpiring_one": "1 a expirar em ≤90 d",
       "warrantyExpiring_other": "{{count}} a expirar em ≤90 d",
       "warrantyTracked": " (de {{count}} monitorizados)",
-      "auditsLink": "Auditorias dos locais",
+      "auditsLink": "Auditorias no local",
       "lastAudit": "Última auditoria em {{date}}",
       "lastAuditMissing_one": "1 ausente",
       "lastAuditMissing_other": "{{count}} ausentes",
