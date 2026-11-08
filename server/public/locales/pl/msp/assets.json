@@ -2249,6 +2249,8 @@
       "allStatuses": "Wszystkie statusy",
       "notes": "Notatki",
       "exportCsv": "Eksportuj CSV",
+      "exportStarted": "Rozpoczęto eksport CSV.",
+      "exportEmpty": "W tym widoku nie ma nic do wyeksportowania.",
       "addUnexpected": "Dodaj nieoczekiwany zasób",
       "addUnexpectedHint": "Urządzenie znalezione na miejscu, ale poza zakresem tego audytu, jest zapisywane jako nieoczekiwane, nigdy jako oczekiwane.",
       "addUnexpectedPlaceholder": "Znajdź zasób…",
