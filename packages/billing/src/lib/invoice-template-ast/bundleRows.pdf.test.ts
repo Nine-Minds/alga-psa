@@ -47,7 +47,11 @@ describe.skipIf(!enabled)('bundle child rows across PDF page breaks (T013)', () 
       const text = execFileSync('pdftotext', ['-layout', pdfPath, '-'], { encoding: 'utf8' });
       const pages = text.split('\f').filter((page) => page.trim().length > 0);
       expect(pages.length).toBeGreaterThan(1);
-      for (const page of pages) expect(page).toMatch(/Description/);
+      // A totals-only final page is outside the item table and has no table
+      // header. Every page containing bundle rows must repeat the header.
+      for (const page of pages.filter((page) => /Managed bundle \d+|B\d+ service \d/.test(page))) {
+        expect(page).toMatch(/Description/);
+      }
       pages.forEach((page, index) => {
         const lines = page.split('\n').map((line) => line.trim()).filter(Boolean);
         const last = lines.filter((line) => /Managed bundle \d+|service \d/.test(line)).pop() ?? '';
