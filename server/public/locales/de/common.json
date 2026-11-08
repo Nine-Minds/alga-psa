@@ -1749,7 +1749,7 @@
     "reconnectingToServer": "Verbindung zum Server wird wiederhergestellt...",
     "refresh": "Aktualisieren",
     "markAllAsRead": "Alle als gelesen markieren",
-    "markAllRead": "Alle als gelesen markieren",
+    "markAllRead": "Alle gelesen",
     "emptyTitle": "Keine Benachrichtigungen",
     "emptyDescription": "Sie sind auf dem neuesten Stand!"
   },
