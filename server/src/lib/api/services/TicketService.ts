@@ -349,6 +349,15 @@ function tenantScopedTable(
   return tenantDb(conn, tenant).table(table);
 }
 
+/**
+ * `authorize` runs inside the write transaction, on the locked ticket row, before any write.
+ * Throwing from it aborts the update and rolls the transaction back.
+ */
+export interface UpdateTicketOptions {
+  authorize?: (ticket: Record<string, any>, trx: Knex.Transaction) => Promise<void>;
+  honorSuppliedClosure?: boolean;
+}
+
 /** Historical timestamps require the same MSP permission as the owning API write. */
 async function validateHistoricalTimestampWrite(
   field: 'entered_at' | 'created_at',
@@ -2064,7 +2073,7 @@ export class TicketService extends BaseService<ITicket> {
    * then does a caller-supplied closed_at / closed_by replace now / context.userId
    * on an open -> closed crossing. Generic update always derives closure.
    */
-  async update(id: string, data: UpdateTicketData, context: ServiceContext, options: { honorSuppliedClosure?: boolean } = {}): Promise<ITicket> {
+  async update(id: string, data: UpdateTicketData, context: ServiceContext, options: UpdateTicketOptions = {}): Promise<ITicket> {
     const { knex } = await this.getKnex();
     const enteredAt = data.entered_at === undefined ? undefined
       : await validateHistoricalTimestampWrite('entered_at', data.entered_at, 'update', context, knex);
@@ -2074,13 +2083,21 @@ export class TicketService extends BaseService<ITicket> {
       // An update that carries `attributes` re-writes the stored watch_list mirror, so it
       // takes the same row lock as watcher writes (TicketWatcherService).
       const currentTicketQuery = tenantScopedTable(trx, 'tickets', context.tenant).where({ ticket_id: id });
-      if ((data as any).attributes !== undefined) {
+      // A caller-supplied authorization hook also needs the lock, so the decision is made
+      // against the exact row the write will modify.
+      if ((data as any).attributes !== undefined || options.authorize) {
         currentTicketQuery.forUpdate();
       }
       const currentTicket = await currentTicketQuery.first();
 
       if (!currentTicket) {
         throw new NotFoundError('Ticket not found');
+      }
+
+      // Authorize against the locked row, before any write (including assigned_to /
+      // ticket_resources). A throw here rolls the transaction back untouched.
+      if (options.authorize) {
+        await options.authorize(currentTicket as Record<string, any>, trx);
       }
 
       if (enteredAt !== undefined) {
