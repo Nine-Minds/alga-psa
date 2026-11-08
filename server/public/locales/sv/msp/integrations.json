@@ -2458,6 +2458,42 @@
           "title": "Underhållsfönster",
           "description": "Larm som kommer under ett aktivt tidsfönster undertrycks och skapar inga ärenden.",
           "empty": "Inga underhållsfönster har konfigurerats."
+        },
+        "predicate": {
+          "matchAll": "Matchning",
+          "all": "Alla villkor",
+          "any": "Valfritt villkor",
+          "add": "Lägg till villkor",
+          "remove": "Ta bort",
+          "value": "Värde",
+          "nestedGroup": "Nästlad grupp",
+          "legacyRegex": "Äldre reguljärt uttryck för meddelande",
+          "and": "och",
+          "or": "eller",
+          "fields": {
+            "severity": "Allvarlighetsgrad",
+            "alertClass": "Larmklass",
+            "activityType": "Aktivitetstyp",
+            "sourceType": "Källtyp",
+            "organizationId": "Organisations-ID",
+            "text": "Meddelande och detaljer",
+            "deviceName": "Enhetsnamn",
+            "externalDeviceId": "Externt enhets-ID",
+            "message": "Meddelande",
+            "details": "Detaljer"
+          },
+          "operators": {
+            "equals": "är",
+            "not_equals": "är inte",
+            "in": "är ett av",
+            "not_in": "är inget av",
+            "contains": "innehåller",
+            "not_contains": "innehåller inte",
+            "contains_ci": "innehåller, utan hänsyn till skiftläge",
+            "not_contains_ci": "innehåller inte, utan hänsyn till skiftläge"
+          },
+          "addGroup": "Lägg till grupp",
+          "removeGroup": "Ta bort grupp"
         }
       },
       "ninjaOne": {
@@ -3107,6 +3143,93 @@
           "showSecret": "Visa hemlighet",
           "title": "Larmwebhook",
           "url": "Webhook-URL"
+        }
+      },
+      "unifi": {
+        "proFeature": {
+          "description": "UniFi-integrationen är tillgänglig i AlgaPSA Pro."
+        },
+        "actions": {
+          "saveConfiguration": "Spara konfiguration",
+          "testConnection": "Testa anslutning",
+          "disconnect": "Koppla från",
+          "discoverSites": "Identifiera platser",
+          "runDeviceSync": "Kör enhetssynkronisering",
+          "checkOfflineNow": "Kontrollera offlineenheter nu",
+          "saveAlerting": "Spara aviseringsinställningar"
+        },
+        "alerting": {
+          "title": "Offlineaviseringar",
+          "description": "En enhet som är offline längre än respitperioden utlöser en avisering, och ett ärende om dina aviseringsregler anger det. Aviseringen löses när enheten är online igen.",
+          "graceMinutes": "Respitperiod för offline (minuter)",
+          "graceHelp": "Hur länge en enhet måste vara offline utan avbrott innan en avisering skapas. Använd 0 för att avisera direkt.",
+          "rulesNote": "Ärendeskapande, prioriteringar och automatisk lösning konfigureras i aviseringsreglerna nedan."
+        },
+        "connection": {
+          "title": "UniFi-anslutning",
+          "description": "Anslut med en UniFi API-nyckel. Använd Site Manager för att nå alla konsoler på ditt konto, eller Lokal styrenhet för en styrenhet du når direkt. Adopterade gateways, switchar och åtkomstpunkter synkroniseras.",
+          "syncLabel": "Synkronisering: {{status}}",
+          "syncLabelWithError": "Synkronisering: {{status}} ({{error}})",
+          "connectedAt": "Ansluten: {{time}}",
+          "never": "aldrig"
+        },
+        "errors": {
+          "loadSettings": "Det gick inte att läsa in UniFi-inställningar",
+          "loadMappings": "Det gick inte att läsa in UniFi-platskopplingar",
+          "loadSummary": "Det gick inte att läsa in UniFi-anslutningssammanfattningen",
+          "loadState": "Det gick inte att läsa in UniFi-integrationens status",
+          "saveConfiguration": "Det gick inte att spara UniFi-konfigurationen",
+          "testConnectionFailed": "Anslutningstestet misslyckades",
+          "disconnectFailed": "Det gick inte att koppla från UniFi-integrationen",
+          "siteSyncFailed": "Platsidentifieringen misslyckades",
+          "deviceSyncFailed": "Enhetssynkroniseringen misslyckades",
+          "updateMappingFailed": "Det gick inte att uppdatera kopplingen",
+          "reconnectRequired": "UniFi avvisade den sparade API-nyckeln. Klistra in en ny nyckel och spara för att återuppta synkroniseringen.",
+          "alertCheckFailed": "Offlinekontrollen misslyckades",
+          "saveAlertingFailed": "Det gick inte att spara aviseringsinställningarna",
+          "invalidGraceMinutes": "Ange ett heltal för minuter mellan 0 och 1440."
+        },
+        "fields": {
+          "apiKey": "API-nyckel ({{state}})",
+          "apiKeyStateSaved": "sparad",
+          "apiKeyStateRequired": "obligatorisk",
+          "apiKeyPlaceholderExisting": "Nyckel sparad. Ange en ny nyckel för att ersätta den",
+          "apiKeyPlaceholderNew": "Klistra in din UniFi API-nyckel",
+          "connectionMode": "Anslutningsläge",
+          "modeSiteManager": "Site Manager (moln)",
+          "modeLocal": "Lokal styrenhet",
+          "localBaseUrl": "Styrenhetens URL",
+          "localBaseUrlPlaceholder": "https://unifi.example.com"
+        },
+        "mappings": {
+          "site": "UniFi-plats",
+          "siteIdLabel": "ID: {{id}}",
+          "mappedClient": "Kopplad kund",
+          "defaultContact": "Standardkontakt",
+          "selectContact": "Välj kontakt",
+          "autoSync": "Automatisk synkronisering",
+          "autoSyncEnabled": "Aktiverad",
+          "autoSyncDisabled": "Inaktiverad"
+        },
+        "status": {
+          "label": "Status: ",
+          "connected": "Ansluten",
+          "disconnected": "Inte ansluten",
+          "reconnectRequired": "Återanslutning krävs"
+        },
+        "success": {
+          "configurationSaved": "UniFi-konfigurationen sparad",
+          "connectionTestSucceeded": "Anslutningen till UniFi lyckades",
+          "disconnected": "UniFi-integrationen frånkopplad",
+          "siteSyncCompleted": "Platsidentifiering klar: {{processed}} behandlade, {{created}} skapade, {{updated}} uppdaterade",
+          "deviceSyncCompleted": "Enhetssynkronisering klar: {{processed}} behandlade, {{created}} skapade, {{updated}} uppdaterade",
+          "alertCheckCompleted": "Offlinekontrollen klar",
+          "alertingSaved": "Aviseringsinställningarna sparade"
+        },
+        "sync": {
+          "title": "Synkronisering och platskopplingar",
+          "description": "Identifiera UniFi-platser och koppla varje plats till en kund. Enheter på okopplade platser hoppas över.",
+          "summary": "{{mappedSites}} kopplade platser · {{devices}} enheter · {{activeAlerts}} aktiva aviseringar"
         }
       },
       "huntress": {

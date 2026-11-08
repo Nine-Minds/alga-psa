@@ -31,6 +31,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { getClientByIdForBilling } from '../../../actions/billingClientsActions';
 import { useBillingClient } from '../../../hooks/useBillingClient';
 import { getActiveClientLocationsForBilling, type BillingLocationSummary } from '../../../actions/billingClientLocationActions';
+import { QuoteDecisionLine } from './QuoteDecisionLine';
 import { addQuoteItem, approveQuote, convertQuoteToContract, convertQuoteToInvoice, convertQuoteToSalesOrder, createQuote, createQuoteFromTemplate, createQuoteRevision, downloadQuotePdf, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuotes, markQuoteAccepted, removeQuoteItem, reorderQuoteItems, requestQuoteApprovalChanges, resendQuote, sendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote, updateQuoteItem } from '../../../actions/quoteActions';
 import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplates';
 import { getContactsForPicker } from '@alga-psa/user-composition/actions/contactQueryActions';
@@ -718,7 +719,9 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
             discount_percentage: item.discount_percentage ?? null,
             applies_to_item_id: item.applies_to_item_id ? (quoteItemIdMap.get(item.applies_to_item_id) ?? item.applies_to_item_id) : null,
             applies_to_service_id: item.applies_to_service_id ?? null,
-            is_taxable: item.is_taxable ?? true,
+            // Sent as-is: an omitted value lets the server derive the treatment
+            // from the service's tax configuration instead of forcing `true`.
+            is_taxable: item.is_taxable,
             tax_region: item.tax_region ?? null,
             tax_rate: item.tax_rate ?? null,
             location_id: item.location_id ?? null,
@@ -1533,7 +1536,8 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
           <Alert>
             <AlertTitle>{t('quoteForm.banners.acceptedTitle', { defaultValue: 'Quote Accepted' })}</AlertTitle>
             <AlertDescription>
-              {quote.accepted_by_name && <>{t('quoteForm.banners.acceptedBy', { defaultValue: 'Accepted by: {{name}}', name: quote.accepted_by_name })}<br /></>}
+              {quote.decisions?.[0]?.decision === 'accepted' && <><QuoteDecisionLine decision={quote.decisions[0]} /><br /></>}
+              {quote.decisions?.[0]?.decision !== 'accepted' && quote.accepted_by_name && <>{t('quoteForm.banners.acceptedBy', { defaultValue: 'Accepted by: {{name}}', name: quote.accepted_by_name })}<br /></>}
               {quote.accepted_at && <>{t('quoteForm.banners.acceptedOn', { defaultValue: 'Accepted on: {{date}}', date: formatDate(quote.accepted_at) })}</>}
             </AlertDescription>
           </Alert>

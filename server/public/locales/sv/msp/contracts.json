@@ -786,6 +786,9 @@
       "cost": "Kostnad: {{cost}}",
       "costInCurrency": "Kostnad i {{currency}}: {{cost}}",
       "margin": "Marginal: {{margin}} per enhet"
+    },
+    "invoiceText": {
+      "subtitleLabel": "Fakturarubrik (undertitel)"
     }
   },
   "contractLineEdit": {
@@ -802,7 +805,9 @@
       "rate": "Taxa",
       "invoiceText": "Fakturaradstext",
       "invoiceTextPlaceholder": "Visas på fakturan; radens namn används som standard",
-      "invoiceTextHelp": "Den här texten visas ordagrant på den återkommande fakturaraden."
+      "invoiceTextHelp": "Den här texten visas ordagrant på den återkommande fakturaraden.",
+      "invoiceSubtitle": "Fakturarubrik (undertitel)",
+      "invoiceSubtitleHelp": "En nedtonad andra rad under fakturaradens text."
     },
     "sections": {
       "billingTiming": "Faktureringstidpunkt",
@@ -1633,7 +1638,11 @@
       "nameLabel": "Radnamn (valfritt)",
       "namePlaceholder": "Fast rad {{number}}",
       "removeLine": "Ta bort fast rad",
-      "noServiceWarning": "Den här raden har ett återkommande belopp men ingen tjänst att fakturera det på. Lägg till en tjänst innan du slutför; du kan fortfarande spara den som utkast."
+      "noServiceWarning": "Den här raden har ett återkommande belopp men ingen tjänst att fakturera det på. Lägg till en tjänst innan du slutför; du kan fortfarande spara den som utkast.",
+      "invoiceTitleLabel": "Fakturatitel (valfri)",
+      "invoiceTitlePlaceholder": "Standard är radens namn",
+      "invoiceSubtitleLabel": "Fakturaundertitel (valfri)",
+      "invoiceSubtitlePlaceholder": "t.ex. Hanterade slutpunkter och säkerhetskopiering"
     },
     "recurringChange": {
       "title": "Bekräfta ändring av återkommande summa",
@@ -2272,7 +2281,11 @@
     },
     "actions": {
       "addService": "Lägg till tjänst"
-    }
+    },
+    "invoiceTitleLabel": "Fakturatitel (valfri)",
+    "invoiceTitlePlaceholder": "Standard är radens namn",
+    "invoiceSubtitleLabel": "Fakturaundertitel (valfri)",
+    "invoiceSubtitlePlaceholder": "t.ex. Hanterade slutpunkter och säkerhetskopiering"
   },
   "templateProducts": {
     "heading": "Produkter",

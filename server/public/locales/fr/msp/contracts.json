@@ -786,6 +786,9 @@
       "cost": "Coût : {{cost}}",
       "costInCurrency": "Coût en {{currency}} : {{cost}}",
       "margin": "Marge : {{margin}} par unité"
+    },
+    "invoiceText": {
+      "subtitleLabel": "Sous-titre de la facture"
     }
   },
   "contractLineEdit": {
@@ -802,7 +805,9 @@
       "rate": "Tarif",
       "invoiceText": "Texte de la ligne de facture",
       "invoiceTextPlaceholder": "Imprimé sur la facture ; par défaut, le nom de la ligne",
-      "invoiceTextHelp": "Ce texte est imprimé tel quel sur la ligne de facture récurrente."
+      "invoiceTextHelp": "Ce texte est imprimé tel quel sur la ligne de facture récurrente.",
+      "invoiceSubtitle": "Sous-titre de la facture",
+      "invoiceSubtitleHelp": "Une deuxième ligne atténuée sous le texte de la ligne de facture."
     },
     "sections": {
       "billingTiming": "Moment de facturation",
@@ -1633,7 +1638,11 @@
       "nameLabel": "Nom de la ligne (facultatif)",
       "namePlaceholder": "Ligne fixe {{number}}",
       "removeLine": "Supprimer la ligne fixe",
-      "noServiceWarning": "Cette ligne a un montant récurrent mais aucun service sur lequel le facturer. Ajoutez un service avant de terminer ; vous pouvez toujours l'enregistrer comme brouillon."
+      "noServiceWarning": "Cette ligne a un montant récurrent mais aucun service sur lequel le facturer. Ajoutez un service avant de terminer ; vous pouvez toujours l'enregistrer comme brouillon.",
+      "invoiceTitleLabel": "Titre de la facture (facultatif)",
+      "invoiceTitlePlaceholder": "Par défaut, le nom de la ligne",
+      "invoiceSubtitleLabel": "Sous-titre de la facture (facultatif)",
+      "invoiceSubtitlePlaceholder": "p. ex. Postes gérés et sauvegarde"
     },
     "recurringChange": {
       "title": "Confirmer la modification du total récurrent",
@@ -2272,7 +2281,11 @@
     },
     "actions": {
       "addService": "Ajouter un service"
-    }
+    },
+    "invoiceTitleLabel": "Titre de la facture (facultatif)",
+    "invoiceTitlePlaceholder": "Par défaut, le nom de la ligne",
+    "invoiceSubtitleLabel": "Sous-titre de la facture (facultatif)",
+    "invoiceSubtitlePlaceholder": "p. ex. Postes gérés et sauvegarde"
   },
   "templateProducts": {
     "heading": "Produits",

@@ -21,7 +21,8 @@ export interface AssetRelationship {
 }
 
 // RMM Provider types
-export type RmmProvider = 'ninjaone' | 'tacticalrmm' | 'tanium' | 'levelio' | 'datto' | 'connectwise_automate' | 'huntress';
+// LEVERAGE: pattern rmm-provider-union — RmmProvider is duplicated in three files; every new provider edits all of them
+export type RmmProvider = 'ninjaone' | 'tacticalrmm' | 'tanium' | 'levelio' | 'unifi' | 'datto' | 'connectwise_automate' | 'huntress';
 export type RmmAgentStatus = 'online' | 'offline' | 'overdue' | 'unknown';
 export interface AssetRemoteAccessLink {
   link_id: string;
@@ -578,6 +579,8 @@ export interface AssetQueryParams {
   contact_name_id?: string;
   /** Built-in slug or tenant asset_type_registry slug (custom type). */
   asset_type?: string;
+  /** Match any of these slugs (multi-select type filter). Mutually exclusive with `asset_type`. */
+  asset_types?: string[];
   status?: string;
   /** Filter by who owns the device. */
   ownership?: 'client' | 'msp';

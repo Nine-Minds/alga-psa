@@ -2,6 +2,7 @@
 
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { checkCurrentUserPermissions } from '@alga-psa/auth/actions/permissionActions';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, MoreVertical, HelpCircle, ChevronDown, ArrowLeft, AlertTriangle, CheckCircle2, Settings2, Users, ListChecks, Mail, Zap, Clock, Search, Inbox, Star, LayoutGrid, EyeOff, Bell, Trash2 } from "lucide-react";
 import { IBoard, ITeam, CategoryType, PriorityType, IPriority, IUser, DeletionValidationResult, DeletionDependency, isSenderActionFailure, type SenderActionFailure } from '@alga-psa/types';
@@ -41,6 +42,7 @@ import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
+import { EmailRecipientsInput } from '@alga-psa/ui/components/EmailRecipientsInput';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { getTeams } from '@alga-psa/teams/actions/team-actions/teamActions';
@@ -133,6 +135,7 @@ interface EditableNotificationRule {
   status_ids: string[];
   user_ids: string[];
   team_ids: string[];
+  email_addresses: string[];
   is_enabled: boolean;
 }
 
@@ -143,6 +146,7 @@ function createEmptyNotificationRule(index: number): EditableNotificationRule {
     status_ids: [],
     user_ids: [],
     team_ids: [],
+    email_addresses: [],
     is_enabled: true,
   };
 }
@@ -535,6 +539,22 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     ticket_statuses: [] as ManagedTicketStatus[],
   });
   const [boards, setBoards] = useState<IBoard[]>([]);
+  // UI gating only: the board server actions enforce ticket_settings:<action> themselves.
+  // All false until the batch resolves (and on failure) so a control never flashes in
+  // for a user who cannot use it.
+  const [boardPermissions, setBoardPermissions] = useState({ create: false, update: false, delete: false });
+  useEffect(() => {
+    let cancelled = false;
+    const actions = ['create', 'update', 'delete'] as const;
+    checkCurrentUserPermissions(actions.map((action) => ({ resource: 'ticket_settings', action })))
+      .then((results) => {
+        if (cancelled) return;
+        const granted = (action: string) => results.some((r) => r.action === action && r.granted);
+        setBoardPermissions({ create: granted('create'), update: granted('update'), delete: granted('delete') });
+      })
+      .catch(() => { /* stay hidden; the server remains the boundary */ });
+    return () => { cancelled = true; };
+  }, []);
   const [users, setUsers] = useState<IUser[]>([]);
   const [teams, setTeams] = useState<ITeam[]>([]);
   // Avatar URLs for the default agents/teams shown in the boards list, keyed by
@@ -640,6 +660,8 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
   const [autoCloseRulesForm, setAutoCloseRulesForm] = useState<EditableAutoCloseRule[]>([]);
   const [removedAutoCloseRuleIds, setRemovedAutoCloseRuleIds] = useState<string[]>([]);
   const [notificationRules, setNotificationRules] = useState<EditableNotificationRule[]>([]);
+  // Free-text entries the chip input rejected, keyed by rule temp_id. Not persisted; any entry blocks save.
+  const [invalidNotificationEmails, setInvalidNotificationEmails] = useState<Record<string, string[]>>({});
   const [defaultWatcherUserIds, setDefaultWatcherUserIds] = useState<string[]>([]);
   // Accordion editor: per-section collapse state + dirty tracking against an on-open baseline
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(collapsedExceptFirstSection);
@@ -899,6 +921,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
             status_ids: rule.status_ids,
             user_ids: rule.user_ids,
             team_ids: rule.team_ids,
+            email_addresses: rule.email_addresses ?? [],
             is_enabled: rule.is_enabled,
           }))
         );
@@ -945,6 +968,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     setCloseRulesForm(createEmptyCloseRulesForm());
     setAutoCloseRulesForm([]);
     setNotificationRules([]);
+    setInvalidNotificationEmails({});
     setDefaultWatcherUserIds([]);
 
     await reloadBoardEditorData(board);
@@ -1136,6 +1160,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
         status_ids: rule.status_ids,
         user_ids: rule.user_ids,
         team_ids: rule.team_ids,
+        email_addresses: rule.email_addresses,
         is_enabled: rule.is_enabled,
       })),
       default_watcher_user_ids: defaultWatcherUserIds,
@@ -1183,8 +1208,12 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
           failInSection('notifications', t('ticketing.boards.editor.sections.notificationsTriggerRequired', 'Each notification rule needs at least one trigger: ticket creation or a status.'));
           return;
         }
-        if (rule.user_ids.length === 0 && rule.team_ids.length === 0) {
-          failInSection('notifications', t('ticketing.boards.editor.sections.notificationsRecipientRequired', 'Each notification rule needs at least one user or team to notify.'));
+        if ((invalidNotificationEmails[rule.temp_id] ?? []).length > 0) {
+          failInSection('notifications', t('ticketing.boards.editor.sections.notificationsEmailInvalid', 'Fix or remove the invalid email addresses in the notification rules.'));
+          return;
+        }
+        if (rule.user_ids.length === 0 && rule.team_ids.length === 0 && rule.email_addresses.length === 0) {
+          failInSection('notifications', t('ticketing.boards.editor.sections.notificationsRecipientRequired', 'Each notification rule needs at least one user, team or email address to notify.'));
           return;
         }
       }
@@ -1449,6 +1478,10 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
           regularResult = await importReferenceData('boards', regularBoardIds);
         }
 
+        if (isReturnedActionError(regularResult)) {
+          throw new Error(getErrorMessage(regularResult));
+        }
+
         if (regularResult?.imported) allResults.imported.push(...regularResult.imported);
         if (regularResult?.skipped) allResults.skipped.push(...regularResult.skipped);
       }
@@ -1511,6 +1544,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     setIsLoadingBoardStatuses(false);
     setIsLoadingCloseRules(false);
     setNotificationRules([]);
+    setInvalidNotificationEmails({});
     setDefaultWatcherUserIds([]);
     setCollapsedSections(collapsedExceptFirstSection());
     setFormSnapshot(null);
@@ -1709,7 +1743,10 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
       dataIndex: 'actions',
       width: '5%',
       sortable: false,
-      render: (_value: unknown, board: IBoard) => (
+      render: (_value: unknown, board: IBoard) => {
+        const canDelete = boardPermissions.delete && !board.is_default;
+        if (!boardPermissions.update && !canDelete) return null;
+        return (
         <div className="text-right">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -1718,10 +1755,12 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => startEditing(board)}>
-                {t('ticketing.boards.actions.edit')}
-              </DropdownMenuItem>
-              {!board.is_default && (
+              {boardPermissions.update && (
+                <DropdownMenuItem onClick={() => startEditing(board)}>
+                  {t('ticketing.boards.actions.edit')}
+                </DropdownMenuItem>
+              )}
+              {canDelete && (
                 <DropdownMenuItem
                   onClick={() => setDeleteDialog({ isOpen: true, boardId: board.board_id || '', boardName: board.board_name || '' })}
                   className="text-destructive"
@@ -1732,7 +1771,8 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      ),
+        );
+      }
     },
   ];
 
@@ -1747,6 +1787,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
             <p className="text-sm text-gray-500">{t('ticketing.boards.alert')}</p>
           </div>
           <div className="flex shrink-0 gap-2">
+            {boardPermissions.create && (
             <Button
               id="add-board-button"
               onClick={() => {
@@ -1773,6 +1814,8 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
             >
               <Plus className="h-4 w-4 mr-2" /> {t('ticketing.boards.actions.addBoard')}
             </Button>
+            )}
+            {boardPermissions.create && (
             <Button
               id="import-boards-button"
               variant="outline"
@@ -1789,6 +1832,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
             >
               {t('ticketing.boards.actions.importStandard')}
             </Button>
+            )}
           </div>
         </div>
 
@@ -1824,7 +1868,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
           onPageChange={setBoardsPage}
           pageSize={boardsPageSize}
           onItemsPerPageChange={(size) => { setBoardsPageSize(size); setBoardsPage(1); }}
-          onRowClick={(board) => startEditing(board)}
+          onRowClick={boardPermissions.update ? (board) => startEditing(board) : undefined}
           rowClassName={(board) => (board.is_inactive ? 'opacity-60' : '')}
         />
         {visibleBoards.length === 0 && (
@@ -2346,6 +2390,29 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                     <p className="text-xs text-muted-foreground mt-1">
                       {t('ticketing.boards.editor.sections.notificationsRecipientsHelp', 'Team members are looked up each time a notification is sent.')}
                     </p>
+
+                    <div className="mt-3">
+                      <Label htmlFor={`board-notification-rule-${index}-emails`}>
+                        {t('ticketing.boards.editor.sections.notificationsEmails', 'Email addresses')}
+                      </Label>
+                      <EmailRecipientsInput
+                        id={`board-notification-rule-${index}-emails`}
+                        value={rule.email_addresses.map((email) => ({ email }))}
+                        onChange={(chips) => updateRule({ email_addresses: chips.map((chip) => chip.email) })}
+                        invalidEntries={invalidNotificationEmails[rule.temp_id] ?? []}
+                        onInvalidEntriesChange={(entries) =>
+                          setInvalidNotificationEmails((prev) => ({ ...prev, [rule.temp_id]: entries }))
+                        }
+                        placeholder={t('ticketing.boards.editor.sections.notificationsEmailsPlaceholder', 'Add a distribution list or shared mailbox...')}
+                      />
+                      <p
+                        id={`board-notification-rule-${index}-emails-warning`}
+                        className="mt-1 flex items-start gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-700"
+                      >
+                        <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                        <span>{t('ticketing.boards.editor.sections.notificationsEmailsHelp', 'These addresses receive the full ticket details for every matching ticket on this board, even though they are not Alga users and no permission check applies. Use for distribution lists you control. To notify a person who has an Alga account, choose them above instead.')}</span>
+                      </p>
+                    </div>
                   </div>
                 </div>
               );

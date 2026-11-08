@@ -7,6 +7,27 @@ import { createServiceUser } from '../../../test-utils/serviceUserFixtures';
 import { HumanWorkOwnerRequiredError } from '../../../../shared/lib/humanWork/HumanWorkOwnerRequiredError';
 import { TimeSheetService } from '@/lib/api/services/TimeSheetService';
 
+// Authorization is fixture setup here; approval ownership and persistence are
+// the behavior under test. Give the service the same authenticated context the
+// API controller supplies and grant the approval permission explicitly.
+const grants = vi.hoisted(() => {
+  const byUser = new Map<string, Set<string>>();
+  return {
+    byUser,
+    check: async (user: { user_id: string }, resource: string, action: string) =>
+      byUser.get(user.user_id)?.has(`${resource}:${action}`) ?? false,
+  };
+});
+
+vi.mock('@alga-psa/auth', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  hasPermission: vi.fn(grants.check),
+}));
+vi.mock('@/lib/auth/rbac', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  hasPermission: vi.fn(grants.check),
+}));
+
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn(async () => undefined),
   publishWorkflowEvent: vi.fn(async () => undefined),
@@ -27,10 +48,15 @@ describe('T043 TimeSheetService.approveTimeSheet (F056)', () => {
   function approverService(userId: string) {
     const svc = new TimeSheetService();
     vi.spyOn(svc as any, 'getKnex').mockResolvedValue({ knex: db, tenant });
-    // canApproveTimeSheets is a stub that always returns false in CE ("Simplified for now");
-    // stub it so the update path under test is reachable.
-    vi.spyOn(svc as any, 'canApproveTimeSheets').mockResolvedValue(true);
-    return { svc, context: { tenant, userId } as any };
+    grants.byUser.set(userId, new Set(['time_sheet:approve']));
+    return {
+      svc,
+      context: {
+        tenant,
+        userId,
+        user: { user_id: userId, tenant, user_type: 'internal' },
+      } as any,
+    };
   }
 
   async function submittedSheet(): Promise<{ sheetId: string; entryId: string }> {
@@ -91,6 +117,7 @@ describe('T043 TimeSheetService.approveTimeSheet (F056)', () => {
     }
     if (created.periods.length) await t.table('time_periods').whereIn('period_id', created.periods).delete();
     await t.table('users').where({ user_id: serviceUserId }).delete();
+    grants.byUser.clear();
     await db.destroy();
   });
 

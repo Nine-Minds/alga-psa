@@ -603,7 +603,10 @@
       "defaultTitle": "Dashboard | AlgaPSA"
     },
     "coManaged": {
-      "title": "Co-Managed IT"
+      "title": "Co-Managed IT",
+      "archive": {
+        "title": "Co-Managed Archive"
+      }
     },
     "coManagement": {
       "title": "Co-Managed Access",
@@ -624,8 +627,17 @@
         "taskTitle": "Shared Task",
         "projectTitle": "Shared Project"
       },
+      "departure": {
+        "title": "End Co-Managed IT"
+      },
+      "sla": {
+        "title": "Co-Managed SLA Priorities"
+      },
       "export": {
         "title": "Export Workspace"
+      },
+      "upgrade": {
+        "title": "Upgrade to AlgaPSA"
       }
     }
   },

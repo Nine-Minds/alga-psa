@@ -451,7 +451,7 @@ describe('getAssetDocuments (integration)', () => {
         user_type: 'internal',
       } as any);
       expect(await isAssetReadAllowed(trx, fx.tenantId, context, targetAsset)).toBe(false);
-      expect(await isAssetActionAllowed(trx, fx.tenantId, context, targetAsset, 'update')).toBe(true);
+      expect(await isAssetActionAllowed(trx, fx.tenantId, context, targetAsset, 'update')).toBe(false);
     });
 
     const documentId = await fx.seedDocument('Internal users owned, unassociated.md', fx.userId);
@@ -534,7 +534,7 @@ describe('getAssetDocuments (integration)', () => {
           user_type: 'internal',
         } as any);
         expect(await isAssetReadAllowed(trx, fx.tenantId, context, targetAsset)).toBe(readAllowed);
-        expect(await isAssetActionAllowed(trx, fx.tenantId, context, targetAsset, 'delete')).toBe(true);
+        expect(await isAssetActionAllowed(trx, fx.tenantId, context, targetAsset, 'delete')).toBe(readAllowed);
       });
     };
     await expectAssetScope(false);

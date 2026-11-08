@@ -786,6 +786,9 @@
       "cost": "⟦Ƈȯşŧ: {{cost}}⟧",
       "costInCurrency": "⟦Ƈȯşŧ īƞ {{currency}}: {{cost}}⟧",
       "margin": "⟦Ḿȧřɠīƞ: {{margin}} ƥḗř ŭƞīŧ⟧"
+    },
+    "invoiceText": {
+      "subtitleLabel": "⟦Īƞṽȯīƈḗ şŭƀŧīŧŀḗ⟧"
     }
   },
   "contractLineEdit": {
@@ -802,7 +805,9 @@
       "rate": "⟦Řȧŧḗ⟧",
       "invoiceText": "⟦Īƞṽȯīƈḗ ŀīƞḗ ŧḗẋŧ⟧",
       "invoiceTextPlaceholder": "⟦Ƥřīƞŧḗḓ ȯƞ ŧħḗ īƞṽȯīƈḗ; ḓḗƒȧŭŀŧş ŧȯ ŧħḗ ŀīƞḗ ƞȧḿḗ⟧",
-      "invoiceTextHelp": "⟦Ŧħīş ŧḗẋŧ ƥřīƞŧş ṽḗřƀȧŧīḿ ȯƞ ŧħḗ řḗƈŭřřīƞɠ īƞṽȯīƈḗ ŀīƞḗ.⟧"
+      "invoiceTextHelp": "⟦Ŧħīş ŧḗẋŧ ƥřīƞŧş ṽḗřƀȧŧīḿ ȯƞ ŧħḗ řḗƈŭřřīƞɠ īƞṽȯīƈḗ ŀīƞḗ.⟧",
+      "invoiceSubtitle": "⟦Īƞṽȯīƈḗ şŭƀŧīŧŀḗ⟧",
+      "invoiceSubtitleHelp": "⟦Ȧ ḿŭŧḗḓ şḗƈȯƞḓ ŀīƞḗ ŭƞḓḗř ŧħḗ īƞṽȯīƈḗ ŀīƞḗ ŧḗẋŧ.⟧"
     },
     "sections": {
       "billingTiming": "⟦Ɓīŀŀīƞɠ Ŧīḿīƞɠ⟧",
@@ -1633,7 +1638,11 @@
       "nameLabel": "⟦Ŀīƞḗ ƞȧḿḗ (ȯƥŧīȯƞȧŀ)⟧",
       "namePlaceholder": "⟦Ƒīẋḗḓ ŀīƞḗ {{number}}⟧",
       "removeLine": "⟦Řḗḿȯṽḗ ƒīẋḗḓ ŀīƞḗ⟧",
-      "noServiceWarning": "⟦Ŧħīş ŀīƞḗ ħȧş ȧ řḗƈŭřřīƞɠ ȧḿȯŭƞŧ ƀŭŧ ƞȯ şḗřṽīƈḗ ŧȯ ƀīŀŀ īŧ ȯƞ. Ȧḓḓ ȧ şḗřṽīƈḗ ƀḗƒȯřḗ ƒīƞīşħīƞɠ; ẏȯŭ ƈȧƞ şŧīŀŀ şȧṽḗ īŧ ȧş ȧ ḓřȧƒŧ.⟧"
+      "noServiceWarning": "⟦Ŧħīş ŀīƞḗ ħȧş ȧ řḗƈŭřřīƞɠ ȧḿȯŭƞŧ ƀŭŧ ƞȯ şḗřṽīƈḗ ŧȯ ƀīŀŀ īŧ ȯƞ. Ȧḓḓ ȧ şḗřṽīƈḗ ƀḗƒȯřḗ ƒīƞīşħīƞɠ; ẏȯŭ ƈȧƞ şŧīŀŀ şȧṽḗ īŧ ȧş ȧ ḓřȧƒŧ.⟧",
+      "invoiceTitleLabel": "⟦Īƞṽȯīƈḗ ŧīŧŀḗ (ȯƥŧīȯƞȧŀ)⟧",
+      "invoiceTitlePlaceholder": "⟦Ḓḗƒȧŭŀŧş ŧȯ ŧħḗ ŀīƞḗ ƞȧḿḗ⟧",
+      "invoiceSubtitleLabel": "⟦Īƞṽȯīƈḗ şŭƀŧīŧŀḗ (ȯƥŧīȯƞȧŀ)⟧",
+      "invoiceSubtitlePlaceholder": "⟦ḗ.ɠ. Ḿȧƞȧɠḗḓ ḗƞḓƥȯīƞŧ ȧƞḓ ƀȧƈķŭƥ şḗřṽīƈḗş⟧"
     },
     "recurringChange": {
       "title": "⟦Ƈȯƞƒīřḿ řḗƈŭřřīƞɠ ŧȯŧȧŀ ƈħȧƞɠḗ⟧",
@@ -2272,7 +2281,11 @@
     },
     "actions": {
       "addService": "⟦Ȧḓḓ Şḗřṽīƈḗ⟧"
-    }
+    },
+    "invoiceTitleLabel": "⟦Īƞṽȯīƈḗ ŧīŧŀḗ (ȯƥŧīȯƞȧŀ)⟧",
+    "invoiceTitlePlaceholder": "⟦Ḓḗƒȧŭŀŧş ŧȯ ŧħḗ ŀīƞḗ ƞȧḿḗ⟧",
+    "invoiceSubtitleLabel": "⟦Īƞṽȯīƈḗ şŭƀŧīŧŀḗ (ȯƥŧīȯƞȧŀ)⟧",
+    "invoiceSubtitlePlaceholder": "⟦ḗ.ɠ. Ḿȧƞȧɠḗḓ ḗƞḓƥȯīƞŧ ȧƞḓ ƀȧƈķŭƥ şḗřṽīƈḗş⟧"
   },
   "templateProducts": {
     "heading": "⟦Ƥřȯḓŭƈŧş⟧",
