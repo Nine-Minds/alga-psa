@@ -10,6 +10,7 @@ const h = vi.hoisted(() => ({
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: any[]) => fn({ user_id: 'user-1', user_type: 'internal' }, { tenant: 'tenant-1' }, ...args),
+  hasPermission: vi.fn(async () => true),
 }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: vi.fn(async () => true) }));
 vi.mock('@alga-psa/db', () => ({
@@ -46,6 +47,9 @@ vi.mock('@alga-psa/authorization/bundles/service', () => ({
     }];
   }),
 }));
+vi.mock('@shared/lib/documentAuthorization', () => ({
+  authorizeAndRedactDocuments: vi.fn(async (_trx: unknown, _tenant: string, _user: unknown, documents: Row[]) => documents),
+}));
 vi.mock('../assetActionErrors', () => ({
   assetActionErrorFrom: (error: Error) => ({ actionError: error.message }),
 }));
@@ -75,7 +79,7 @@ describe('asset note actions authorization', () => {
   it('checks read access before loading the note document or block data', async () => {
     h.allowed = false;
     const result = await getAssetNoteContent('asset-1');
-    expect(result).toMatchObject({ actionError: expect.stringContaining('Asset not found') });
+    expect(result).toMatchObject({ permissionError: expect.stringContaining('Cannot read asset notes') });
     expect(h.authorizationCalls).toEqual(['read']);
   });
 
@@ -83,18 +87,18 @@ describe('asset note actions authorization', () => {
     h.allowed = false;
     const before = structuredClone(h.tables);
     const result = await saveAssetNote('asset-1', [{ type: 'paragraph', content: [{ type: 'text', text: 'changed' }] }]);
-    expect(result).toMatchObject({ actionError: expect.stringContaining('Asset not found') });
+    expect(result).toMatchObject({ permissionError: expect.stringContaining('Cannot update asset notes') });
     expect(h.tables).toEqual(before);
-    expect(h.authorizationCalls).toEqual(['update']);
+    expect(h.authorizationCalls).toEqual(['read']);
   });
 
   it('does not unlink or delete note data when delete authorization is denied', async () => {
     h.allowed = false;
     const before = structuredClone(h.tables);
     const result = await deleteAssetNote('asset-1', true);
-    expect(result).toMatchObject({ actionError: expect.stringContaining('Asset not found') });
+    expect(result).toMatchObject({ permissionError: expect.stringContaining('Cannot delete asset notes') });
     expect(h.tables).toEqual(before);
-    expect(h.authorizationCalls).toEqual(['delete']);
+    expect(h.authorizationCalls).toEqual(['read']);
   });
 
   it('reads and updates BlockNote content for an authorized asset', async () => {
@@ -104,7 +108,7 @@ describe('asset note actions authorization', () => {
     const next = [{ type: 'paragraph', content: [{ type: 'text', text: 'updated' }] }];
     await expect(saveAssetNote('asset-1', next)).resolves.toEqual({ document_id: 'doc-1' });
     expect(h.tables.document_block_content[0].block_data).toBe(JSON.stringify(next));
-    expect(h.authorizationCalls).toEqual(['read', 'update']);
+    expect(h.authorizationCalls).toEqual(['read', 'read', 'update']);
   });
 
   it('reads, saves and deletes notes with asset permissions and no bundle narrowing', async () => {
@@ -121,6 +125,6 @@ describe('asset note actions authorization', () => {
     expect(h.tables.documents).toEqual([]);
     expect(h.tables.document_block_content).toEqual([]);
     expect(h.tables.document_associations).toEqual([]);
-    expect(h.authorizationCalls).toEqual(['read', 'update', 'delete']);
+    expect(h.authorizationCalls).toEqual(['read', 'read', 'update', 'read', 'delete']);
   });
 });

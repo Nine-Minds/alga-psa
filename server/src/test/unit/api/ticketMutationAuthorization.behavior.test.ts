@@ -169,7 +169,12 @@ describe('ticket mutations are authorized against update/delete scope, not read'
     const entered_at = '2024-01-01T08:00:00-05:00';
     const created_at = '2024-01-02T08:00:00-05:00';
     expect((await PUT(req('PUT', '', { entered_at }), ctx as any)).status).toBe(200);
-    expect(svc.update).toHaveBeenCalledWith(TICKET, { entered_at }, expect.anything());
+    expect(svc.update).toHaveBeenCalledWith(
+      TICKET,
+      { entered_at },
+      expect.anything(),
+      { authorize: expect.any(Function) }
+    );
     expect((await commentPOST(req('POST', '/comments', { comment_text: 'history', created_at }), ctx as any)).status).toBe(201);
     expect(svc.addComment).toHaveBeenCalledWith(TICKET, expect.objectContaining({ created_at }), expect.anything());
   });
