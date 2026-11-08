@@ -370,7 +370,9 @@ async function boardMutationGuard(
   trx?: Knex | Knex.Transaction
 ): Promise<BoardGuardResult<any>> {
   const decision = await evaluateBoardMutationPolicy(user, action, hasPermission, trx);
-  if (!decision.allowed) {
+  // Keep explicit discriminant checks: the EE app's tsconfig disables
+  // strictNullChecks, where negated booleans do not narrow this union.
+  if (decision.allowed === false) {
     const denial = BOARD_PERMISSION_DENIED[action];
     return {
       ok: false,
@@ -406,7 +408,7 @@ export const createBoard = withAuth(async (user, { tenant }, rawBoardData: Creat
   const { knex: db } = await createTenantKnex();
 
   const guard = await boardMutationGuard(user, 'create', rawBoardData, db);
-  if (!guard.ok) {
+  if (guard.ok === false) {
     return guard.error;
   }
   const boardData = guard.data;
@@ -711,7 +713,7 @@ export const deleteBoard = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   const guard = await boardMutationGuard(user, 'delete', undefined, db);
-  if (!guard.ok) {
+  if (guard.ok === false) {
     return {
       success: false,
       code: 'PERMISSION_DENIED',
