@@ -2220,7 +2220,7 @@
       "client": "Cliente",
       "clientPlaceholder": "Seleziona un cliente",
       "location": "Sede",
-      "locationHint": "\"Nessuna sede\" include nell’audit i dispositivi del cliente senza una sede registrata.",
+      "locationHint": "«Nessuna sede» include nell’audit i dispositivi del cliente senza una sede registrata.",
       "statuses": "Stati degli asset inclusi nell’audit",
       "statusesHint": "Se non selezioni alcuno stato, l’audit include tutti gli stati.",
       "statusesLoading": "Caricamento degli stati…",
@@ -2270,7 +2270,7 @@
       "searchPlaceholder": "Cerca per nome, tag o numero di serie",
       "empty": "Nessun asset in questa vista.",
       "markPresent": "Contrassegna come presente",
-      "undoMark": "Annulla",
+      "undoMark": "Annulla contrassegno",
       "createTicket": "Crea ticket",
       "ticketTitle": "Mancante durante l’audit della sede: {{asset}}",
       "ticketDescription": "Non trovato durante l’audit della sede avviato il {{date}}."
