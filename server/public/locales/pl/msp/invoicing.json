@@ -1541,9 +1541,9 @@
         "noFieldSelected": "Nie wybrano pola",
         "customHint": "Wpisz dowolną ścieżkę powiązania, jeśli potrzebnego pola nie ma na liście.",
         "useFieldPicker": "Użyj selektora pól",
-        "current": "Bieżące",
+        "current": "Bieżące powiązanie",
         "unbound": "Bez powiązania",
-        "searchFields": "Szukaj pól...",
+        "searchFields": "Szukaj pól…",
         "noMatches": "Brak pasujących pól.",
         "useCustomPath": "Użyj niestandardowej ścieżki"
       },
@@ -1674,8 +1674,8 @@
       },
       "widthMode": {
         "auto": {
-          "label": "Automatycznie",
-          "tooltip": "Pozwól kontenerowi ustalić szerokość (element rozciąga się w stosie pionowym)"
+          "label": "Auto",
+          "tooltip": "Decyduje kontener (rozciąga się w stosie pionowym)"
         },
         "fill": {
           "label": "Wypełnij",
@@ -1686,24 +1686,24 @@
           "tooltip": "Zmniejsz do rozmiaru zawartości"
         },
         "fixed": {
-          "label": "Stała",
+          "label": "Stały",
           "tooltip": "Użyj dokładnej szerokości wpisanej poniżej"
         }
       },
       "heightMode": {
         "auto": {
-          "label": "Automatycznie",
-          "tooltip": "Zwiększaj wysokość wraz z zawartością"
+          "label": "Auto",
+          "tooltip": "Rośnie wraz z zawartością"
         },
         "fixed": {
-          "label": "Stała",
+          "label": "Stały",
           "tooltip": "Użyj dokładnej wysokości wpisanej poniżej"
         }
       },
       "flexPreset": {
         "natural": {
           "label": "Naturalny",
-          "description": "Użyj rozmiaru zawartości elementu, ale pozwól go zmniejszyć, gdy zabraknie miejsca."
+          "description": "Użyj rozmiaru zawartości elementu, ale pozwól mu się zmniejszyć, gdy zabraknie miejsca."
         },
         "fill": {
           "label": "Wypełnij",
@@ -1738,10 +1738,10 @@
       "flexItemHint": "Te ustawienia określają, jak element dzieli miejsce z pozostałymi elementami stosu (kierunek: {{direction}}, wymiar: {{axis}}).",
       "flexBehavior": "{{axis}} — zachowanie",
       "flexBehaviorAria": "{{axis}} — zachowanie: {{preset}}",
-      "flexCustomNotice": "Ten element ma niestandardowe wartości flex. Wybierz gotowe ustawienia, aby uprościć konfigurację, lub zmień wartości zaawansowane poniżej.",
+      "flexCustomNotice": "Ten element ma niestandardowe wartości flex. Wybierz preset, aby uprościć konfigurację, lub zmień wartości zaawansowane poniżej.",
       "advancedFlexValues": "Zaawansowane wartości flex",
-      "flexGrow": "Zajmuj dodatkowe miejsce",
-      "flexShrink": "Zezwalaj na zmniejszanie",
+      "flexGrow": "Zajmowanie dodatkowego miejsca",
+      "flexShrink": "Zezwalanie na zmniejszanie",
       "flexBasis": "Preferowany rozmiar ({{axis}})",
       "displayFormat": {
         "singleLine": {
@@ -2391,18 +2391,18 @@
       "fieldRebound": "{{name}} wyświetla teraz {{path}}.",
       "dropIncompatibleComponent": "Miejsce docelowe nie obsługuje tego komponentu.",
       "dropIncompatible": "Miejsce docelowe nie obsługuje tego elementu.",
-      "dropIncompatiblePreset": "Miejsce docelowe nie obsługuje tego gotowego układu.",
+      "dropIncompatiblePreset": "Miejsce docelowe nie obsługuje tego presetu.",
       "dropOnCanvas": "Upuść na kanwie, aby dodać ten komponent.",
       "addComponentFailed": "Nie można dodać tego komponentu w bieżącym kontekście.",
-      "presetUnavailable": "Definicja gotowego układu jest niedostępna.",
-      "presetPlacementUnresolved": "Nie można ustalić, gdzie umieścić ten gotowy układ.",
-      "addPresetFailed": "Nie można dodać tego gotowego układu w bieżącym kontekście.",
+      "presetUnavailable": "Definicja presetu jest niedostępna.",
+      "presetPlacementUnresolved": "Nie można ustalić, gdzie umieścić ten preset.",
+      "addPresetFailed": "Nie można dodać tego presetu w bieżącym kontekście.",
       "inserted": "Wstawiono: {{value}}.",
       "insertedWithDiagnostic": "Wstawiono: {{value}}. {{diagnostic}}",
       "selectTextBlock": "Wybierz blok tekstu, a następnie kliknij pole tekstowe, aby wstawić zmienne.",
       "focusTextField": "Kliknij pole tekstowe w inspektorze, aby wstawić tę zmienną.",
       "selectSectionToFit": "Wybierz sekcję do dopasowania.",
-      "sectionNoChildren": "Sekcja nie zawiera elementów podrzędnych, do których można dopasować jej rozmiar.",
+      "sectionNoChildren": "Sekcja nie ma zawartości do dopasowania.",
       "sectionFitted": "Dopasowano sekcję do zawartości.",
       "sectionFittedFixed": "Ustawiono stały rozmiar sekcji i dopasowano ją do zawartości."
     },
