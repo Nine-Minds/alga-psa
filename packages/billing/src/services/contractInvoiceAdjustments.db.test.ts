@@ -427,7 +427,8 @@ describe('contract invoice adjustments (DB-backed)', () => {
         billing_period_start: '2026-01-01', billing_period_end: '2026-03-01',
       });
       // True-ups inherit this service's explicit non-taxable classification.
-      // The consolidated parent below independently carries the taxable region.
+      // The consolidated components below carry their own taxable region
+      // (per-detail taxability, not the parent's, decides what is taxed).
       await trx('service_catalog').where({ tenant, service_id: serviceId }).update({ tax_rate_id: null });
       await trx('discounts').where({ tenant, discount_id: configuredDiscountId }).update({
         scope: 'invoice', start_date: '2026-01-01', end_date: '2026-02-01',
@@ -448,7 +449,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
           service_id: serviceId, config_id: configId, quantity: 1, rate: amount, service_period_start: start, service_period_end: end });
         await trx('invoice_charge_fixed_details').insert({ tenant, item_detail_id: detailId,
           base_rate: amount, enable_proration: false, fmv: amount, proportion: 1, allocated_amount: amount,
-          tax_amount: 0 });
+          tax_amount: 0, is_taxable: true, tax_region: 'CONSOLIDATED-TEST' });
         charges.push({ tenant, type: 'fixed', config_id: configId, serviceId, serviceName: 'Consolidated period',
           client_contract_id: clientContractId, client_contract_line_id: contractLineId, quantity: 1, rate: amount,
           total: amount, tax_amount: 0, tax_rate: 0, servicePeriodStart: start, servicePeriodEnd: end });
@@ -509,7 +510,13 @@ describe('contract invoice adjustments (DB-backed)', () => {
         .toHaveLength(2);
       await updateInvoiceTotalsAndRecordTransaction(trx, fixture.invoiceId, client, tenant, 'CONSOLIDATED-PERIOD-DB');
       const expectedSubtotal = 30000 + 2000 - 3000 - 400 - expected;
-      const expectedTax = 300;
+      // Discounts reduce the tax base. The discount is scoped to the January
+      // period (10000 taxable detail + 2000 non-taxable true-up), so only its
+      // taxable share (1000 of 1200, or all 10000 of the capped 12000) lowers
+      // the 1% tax. The parent's reduced tax is then spread over its period
+      // details in proportion to their allocated amounts (they sum to the parent).
+      const janTaxableShare = discountType === 'percentage' ? 1000 : 10000;
+      const expectedTax = (30000 - janTaxableShare) / 100;
       const totals = await trx('invoices').where({ tenant, invoice_id: fixture.invoiceId }).first('subtotal', 'tax', 'total_amount');
       expect([Number(totals.subtotal), Number(totals.tax), Number(totals.total_amount)])
         .toEqual([expectedSubtotal, expectedTax, expectedSubtotal + expectedTax]);
@@ -518,7 +525,8 @@ describe('contract invoice adjustments (DB-backed)', () => {
         .where('d.tenant', tenant).where('d.item_id', fixture.generatedChargeId)
         .orderBy('d.service_period_start').select('f.allocated_amount', 'f.tax_amount');
       expect(canonicalAllocations.map((row) => [Number(row.allocated_amount), Number(row.tax_amount)]))
-        .toEqual([[10000, 100], [20000, 200]]);
+        .toEqual(discountType === 'percentage' ? [[10000, 97], [20000, 193]] : [[10000, 67], [20000, 133]]);
+      expect(canonicalAllocations.reduce((sum, row) => sum + Number(row.tax_amount), 0)).toBe(expectedTax);
       const manualBeforeRecalculation = await trx('invoice_charges').where({ tenant, item_id: manualCreditId }).first();
       expect(manualBeforeRecalculation).toMatchObject({ description: 'Preserved manual credit', is_manual: true });
       expect(Number(manualBeforeRecalculation.net_amount)).toBe(-400);
@@ -2025,6 +2033,68 @@ describe('contract invoice adjustments (DB-backed)', () => {
       .count<{ count: string }>('item_id as count')
       .first();
     expect(Number(countAfter?.count)).toBe(Number(countBefore?.count));
+  });
+
+  it('a service-scoped contract discount lowers only the targeted line\'s tax on a mixed taxable/exempt invoice', async () => {
+    await db('contract_discount_assignments').where({ tenant, client_contract_id: clientContractId }).delete();
+    await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ is_active: false });
+    const scopedDiscountId = uuidv4();
+    await db('discounts').insert({
+      tenant, discount_id: scopedDiscountId, discount_name: 'Service 50% (tax)', discount_type: 'percentage',
+      value: 0.5, start_date: '2026-01-01T00:00:00.000Z', end_date: null, is_active: true,
+      scope: 'service', scope_service_id: serviceId,
+    });
+    await db('contract_line_discounts').insert({
+      tenant, discount_id: scopedDiscountId, contract_line_id: contractLineId, client_id: clientId,
+      client_contract_id: clientContractId,
+    });
+    const trx = await db.transaction();
+    const taxCalculation = vi.spyOn(TaxService.prototype, 'calculateTax').mockImplementation(async (_client: string, amount: number) => ({
+      taxAmount: Math.round(amount / 100), taxRate: 1,
+    }) as any);
+    try {
+      const invoiceId = uuidv4();
+      await trx('invoices').insert({
+        tenant, invoice_id: invoiceId, invoice_number: `ADJ-TAX-${invoiceId.slice(0, 8)}`,
+        invoice_date: '2026-09-01T00:00:00.000Z', due_date: '2026-09-30T00:00:00.000Z',
+        total_amount: 0, status: 'draft', client_id: clientId, currency_code: 'USD', is_manual: false,
+        client_contract_id: clientContractId,
+        billing_period_start: '2026-08-01', billing_period_end: '2026-09-01',
+      });
+      await trx('service_catalog').where({ tenant, service_id: serviceId }).update({ tax_rate_id: null });
+      const mk = async (service: string | null, desc: string, amount: number, taxable: boolean, region: string | null) => {
+        const id = uuidv4();
+        await trx('invoice_charges').insert({
+          tenant, item_id: id, invoice_id: invoiceId, service_id: service, description: desc, quantity: 1,
+          unit_price: amount, net_amount: amount, total_price: amount, tax_amount: 0, tax_rate: taxable ? 1 : 0,
+          is_manual: false, is_discount: false, is_taxable: taxable, tax_region: region, client_contract_id: clientContractId,
+        });
+        return id;
+      };
+      const scopedId = await mk(serviceId, 'Targeted taxable', 390_000, true, 'ADJ-TAX-A');
+      const otherTaxableId = await mk(null, 'Other taxable', 100_000, true, 'ADJ-TAX-B');
+      const exemptId = await mk(null, 'Exempt', 50_000, false, null);
+
+      await new BillingEngine().recalculateInvoice(invoiceId, trx, tenant);
+
+      const discount = await trx('invoice_charges').where({ tenant, invoice_id: invoiceId, adjustment_source_kind: 'discount' }).first();
+      expect(Number(discount.net_amount)).toBe(-195_000);
+      expect(Number(discount.tax_amount)).toBe(0);
+      const taxOf = async (id: string) => Number((await trx('invoice_charges').where({ tenant, item_id: id }).first()).tax_amount);
+      // 1% of the discounted 195000 for the targeted line; the others are untouched.
+      expect(await taxOf(scopedId)).toBe(1950);
+      expect(await taxOf(otherTaxableId)).toBe(1000);
+      expect(await taxOf(exemptId)).toBe(0);
+      const inv = await trx('invoices').where({ tenant, invoice_id: invoiceId }).first('subtotal', 'tax', 'total_amount');
+      expect([Number(inv.subtotal), Number(inv.tax), Number(inv.total_amount)])
+        .toEqual([390_000 + 100_000 + 50_000 - 195_000, 2950, 390_000 + 100_000 + 50_000 - 195_000 + 2950]);
+    } finally {
+      taxCalculation.mockRestore();
+      await trx.rollback();
+      await db('contract_line_discounts').where({ tenant, discount_id: scopedDiscountId }).delete();
+      await db('discounts').where({ tenant, discount_id: scopedDiscountId }).delete();
+      await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ is_active: true });
+    }
   });
 
   it('applies a configured service-scoped discount only to matching service rows', async () => {

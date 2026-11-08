@@ -4,5 +4,10 @@ export {
   authorizeTicketRecordAccess,
   authorizeTicketRecordAccessConcealed,
   createTicketAuthorizationContext,
+  runAuthorizedTicketWatcherWrite,
+  TicketWatcherPermissionError,
 } from '@alga-psa/authorization/ticketRecordAuthorization';
-export type { TicketRecordRow } from '@alga-psa/authorization/ticketRecordAuthorization';
+export type {
+  TicketRecordRow,
+  TicketWatcherWritePrincipal,
+} from '@alga-psa/authorization/ticketRecordAuthorization';

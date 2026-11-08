@@ -367,6 +367,85 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
     expect(upsertTicketWatchListRecipientsMock).not.toHaveBeenCalled();
   });
 
+  // alga-2026-0003119: an MSP tech mailing their own M365 helpdesk mailbox about an
+  // existing ticket carries no Authentication-Results (intra-tenant Exchange delivery),
+  // so the internal-user gate used to drop the identity and the thread-header gate then
+  // quarantined the message with no ticket, comment, or UI trace.
+  it('applies a Microsoft intra-org internal reply to the threaded ticket without a security event', async () => {
+    parseEmailReplyBodyMock.mockResolvedValue({
+      sanitizedText: 'Forwarding the customer chain', sanitizedHtml: undefined, confidence: 0.95,
+      strategy: 'plain', appliedHeuristics: [], warnings: [], tokens: {},
+    });
+    findContactByEmailMock.mockResolvedValue({
+      contact_id: null,
+      client_id: null,
+      user_id: 'internal-user-1',
+      email: 'tech@msp.example',
+      matched_email: 'tech@msp.example',
+      user_type: 'internal',
+      is_inactive: false,
+    });
+    withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
+      const trx = vi.fn((table: string) => {
+        if (table === 'tickets as t' || table === 'comments as c') return makeQueryBuilder(undefined);
+        if (table === 'email_sending_logs') return makeQueryBuilder({ threadId: 'thread-intraorg' });
+        if (table === 'comment_threads') return makeQueryBuilder({ ticketId: 'ticket-intraorg', threadId: 'thread-intraorg' });
+        if (table === 'comments') {
+          const builder: any = {
+            select: vi.fn().mockReturnThis(),
+            where: vi.fn().mockReturnThis(),
+            whereRaw: vi.fn().mockReturnThis(),
+            orderBy: vi.fn().mockReturnThis(),
+            first: vi.fn().mockResolvedValue({ parentCommentId: 'parent-comment-intraorg' }),
+            // The one-off Cc/Bcc lookup awaits the builder for a row list.
+            then: (resolve: any, reject: any) => Promise.resolve([]).then(resolve, reject),
+          };
+          return builder;
+        }
+        if (table === 'tickets') return makeQueryBuilder({ ticket_id: 'ticket-intraorg', board_id: 'board-1', client_id: 'client-1', attributes: {} });
+        if (table === 'statuses') return makeQueryBuilder({ is_closed: false });
+        if (table === 'boards') return makeQueryBuilder({});
+        throw new Error(`Unexpected table in unit test: ${table}`);
+      });
+      return callback(trx);
+    });
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const { processInboundEmailInApp } = await import('@alga-psa/shared/services/email/processInboundEmailInApp');
+      const result = await processInboundEmailInApp({
+        tenantId: 'tenant-1', providerId: 'provider-1',
+        emailData: buildEmailData({
+          id: 'email-intraorg-internal-1',
+          provider: 'microsoft',
+          from: { email: 'tech@msp.example', name: 'MSP Tech' },
+          inReplyTo: '<outbound-intraorg@example.test>',
+          // Intra-tenant Exchange delivery: the org stamp stands alone.
+          headers: { 'X-MS-Exchange-Organization-AuthAs': 'Internal' },
+        }),
+      }, { collectDiagnostics: true });
+
+      expect(result).toMatchObject({
+        outcome: 'replied', matchedBy: 'thread_headers', ticketId: 'ticket-intraorg', commentId: 'comment-1',
+      });
+      expect(result.diagnostics?.threading.matchedBy).toBe('thread_headers');
+      expect(result.diagnostics?.threading.failureReason ?? null).toBeNull();
+      expect(createCommentFromEmailMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ticket_id: 'ticket-intraorg',
+          author_type: 'internal',
+          author_id: 'internal-user-1',
+        }),
+        'tenant-1'
+      );
+      const warnings = warnSpy.mock.calls.map((call) => String(call[0]));
+      expect(warnings).not.toContain('SECURITY_EVENT inbound_email_internal_sender_auth_failed');
+      expect(warnings).not.toContain('security_event: inbound_thread_header_sender_quarantined');
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
   it('T035: References are walked from newest to oldest and first match wins', async () => {
     parseEmailReplyBodyMock.mockResolvedValue({
       sanitizedText: 'References reply body',

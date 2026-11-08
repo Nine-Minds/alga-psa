@@ -189,6 +189,8 @@ export type RmmAlertProcessingOutcome =
   | 'recorded_only'
   | 'resolved'
   | 'acknowledged'
+  /** Delivery is temporarily blocked; leave its durable transition pending. */
+  | 'deferred'
   | 'skipped';
 
 export interface RmmAlertProcessingResult {

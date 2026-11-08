@@ -1,3 +1,4 @@
+import { generateInvoiceForCycle } from '../../../../test-utils/billingTestHelpers';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import knex, { type Knex } from 'knex';
 import { randomUUID } from 'node:crypto';
@@ -308,10 +309,10 @@ describe('T018: recurring draft preview and persisted tax cap', () => {
       }, { materializeServicePeriods: false });
       const { syncRecurringServicePeriodsForContractLine } = await import('@alga-psa/billing/actions/recurringServicePeriodSync');
       await syncRecurringServicePeriodsForContractLine(context.db!, { tenant: context.tenant, contractLineId: ids.lineId, sourceRunPrefix: 'tax-cap-invoice-test' });
-      const { previewInvoice, generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration');
+      const { previewInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration');
       const preview = await previewInvoice(ids.cycleId);
       expect(preview.success, JSON.stringify(preview)).toBe(true);
-      const generated: any = await generateInvoice(ids.cycleId);
+      const generated: any = await generateInvoiceForCycle(ids.cycleId);
       expect(generated?.invoice_id, JSON.stringify(generated)).toBeTruthy();
       const persisted = await context.db!('invoices').where({ tenant: context.tenant, invoice_id: generated.invoice_id }).first();
       expect(persisted).toMatchObject({ status: 'draft', currency_code: 'GBP' });

@@ -461,6 +461,122 @@ describe('User Activities v1 API — ad-hoc CRUD, list, and the API-key bridge',
     }
   });
 
+  // ── Imported calendar series (the 730-row Activities regression) ─────────────
+
+  /**
+   * The user-visible symptom behind the calendar-sync recurring-import fix: a
+   * monthly "@alga" Google series with no end date was imported as one ad-hoc
+   * `schedule_entries` row per occurrence — 730 of them, out to 2087 — and the
+   * ad-hoc feed lists ad-hoc work regardless of the date window, so Activities
+   * showed the same meeting 730 times.
+   *
+   * The fixed importer stores the series as ONE recurring master, and
+   * fetchAdHocEntriesForUser excludes recurring masters so only the windowed
+   * expansion reaches the feed. Nothing else pins that: this is the guard.
+   *
+   * The companion emulator suite (googleCalendarEmulator.integration.test.ts)
+   * proves the import produces exactly one row; it mocks @alga-psa/db, so the
+   * feed assertion has to live here, against the real schema.
+   */
+  async function seedImportedSeriesMaster(title: string) {
+    const entryId = randomUUID();
+    await ctx.db('schedule_entries').insert({
+      entry_id: entryId,
+      tenant: tenantId,
+      title,
+      // First Thursday of each month, 10:15 America/New_York, no end date —
+      // the production series, down to the zone.
+      scheduled_start: new Date('2026-10-01T14:15:00.000Z'),
+      scheduled_end: new Date('2026-10-01T14:45:00.000Z'),
+      status: 'scheduled',
+      work_item_type: 'ad_hoc',
+      work_item_id: null,
+      is_recurring: true,
+      original_entry_id: null,
+      recurrence_pattern: JSON.stringify({
+        frequency: 'monthly',
+        interval: 1,
+        daysOfWeek: [3],
+        weekOfMonth: 1,
+        startDate: '2026-10-01T14:15:00.000Z',
+        timeZone: 'America/New_York',
+      }),
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+    await ctx.db('schedule_entry_assignees').insert({
+      tenant: tenantId,
+      entry_id: entryId,
+      user_id: userId,
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+    return entryId;
+  }
+
+  it('lists an imported recurring series only for its in-window occurrences, not once per occurrence', async () => {
+    const title = 'Go over advisories in Git @alga';
+    await seedImportedSeriesMaster(title);
+
+    // One stored row for the whole series.
+    const rows = await ctx.db('schedule_entries').where({ tenant: tenantId, title }).pluck('entry_id');
+    expect(rows).toHaveLength(1);
+
+    // The default window is now → +30 days. Two consecutive first-Thursdays are
+    // 28–35 days apart, so such a window holds at most two of them — and never
+    // the 730 the bug produced.
+    const windowed = await fetchUserActivitiesForApi(
+      ctx.user,
+      tenantId,
+      { types: [ActivityType.SCHEDULE] },
+      1,
+      1000,
+    );
+    const matches = windowed.activities.filter((activity) => activity.title === title);
+    expect(matches.length).toBeLessThanOrEqual(2);
+
+    const windowStart = Date.now();
+    const windowEnd = windowStart + 30 * 24 * 60 * 60 * 1000;
+    for (const activity of matches) {
+      const occurrence = new Date((activity as any).startDate).getTime();
+      // A day of slack on each edge: the feed's window is built from "now".
+      expect(occurrence).toBeGreaterThanOrEqual(windowStart - 24 * 60 * 60 * 1000);
+      expect(occurrence).toBeLessThanOrEqual(windowEnd + 24 * 60 * 60 * 1000);
+    }
+
+    // Over an explicit year the expansion is exact, and the instants hold 10:15
+    // New York across both DST boundaries (15:15Z in EST, 14:15Z in EDT).
+    const yearly = await fetchUserActivitiesForApi(
+      ctx.user,
+      tenantId,
+      {
+        types: [ActivityType.SCHEDULE],
+        dateRangeStart: '2027-01-01T00:00:00.000Z',
+        dateRangeEnd: '2027-12-31T23:59:59.999Z',
+      },
+      1,
+      1000,
+    );
+    const yearlyStarts = yearly.activities
+      .filter((activity) => activity.title === title)
+      .map((activity) => new Date((activity as any).startDate).toISOString())
+      .sort();
+    expect(yearlyStarts).toEqual([
+      '2027-01-07T15:15:00.000Z',
+      '2027-02-04T15:15:00.000Z',
+      '2027-03-04T15:15:00.000Z',
+      '2027-04-01T14:15:00.000Z',
+      '2027-05-06T14:15:00.000Z',
+      '2027-06-03T14:15:00.000Z',
+      '2027-07-01T14:15:00.000Z',
+      '2027-08-05T14:15:00.000Z',
+      '2027-09-02T14:15:00.000Z',
+      '2027-10-07T14:15:00.000Z',
+      '2027-11-04T14:15:00.000Z',
+      '2027-12-02T15:15:00.000Z',
+    ]);
+  });
+
   // ── The API-key bridge (route-level) ─────────────────────────────────────────
 
   it('rejects an activities request with neither session nor API key (401)', async () => {

@@ -11,6 +11,8 @@ import {
   type AuthorizationSubject,
   type RelationshipRule,
 } from './kernel';
+import type { AuthorizationKernel } from './kernel';
+import { TicketWatcherError } from '@alga-psa/shared/services/tickets/ticketWatcherService';
 import { resolveBundleNarrowingRulesForEvaluation } from './bundles/service';
 import { extractActiveWatcherContactIds } from './portal/visibility';
 import type { ContactVisibilityContext } from './portal/visibility';
@@ -265,6 +267,69 @@ export async function authorizeTicketRecordAccess(input: {
   }
 
   return ticket;
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** The actor passed the coarse permission but not the per-record update decision. */
+export class TicketWatcherPermissionError extends Error {
+  constructor() {
+    super('Permission denied: Cannot update ticket watchers');
+    this.name = 'TicketWatcherPermissionError';
+  }
+}
+
+export type TicketWatcherWritePrincipal =
+  | { user: IUserWithRoles }
+  | { subject: AuthorizationSubject; kernel: AuthorizationKernel };
+
+/** Authorize ticket:update before a shared watcher write touches watcher rows. */
+export async function runAuthorizedTicketWatcherWrite<T>(input: {
+  trx: Knex.Transaction;
+  tenant: string;
+  ticketId: string;
+  principal: TicketWatcherWritePrincipal;
+  write: (trx: Knex.Transaction) => Promise<T>;
+}): Promise<T> {
+  const { trx, tenant, ticketId, principal } = input;
+  const ticket = UUID_PATTERN.test(ticketId)
+    ? ((await tenantScopedTable(trx, tenant, 'tickets')
+        .where({ ticket_id: ticketId })
+        .forUpdate()
+        .first()) as (Partial<ITicket> & { ticket_id: string }) | undefined)
+    : undefined;
+  if (!ticket) {
+    throw new TicketWatcherError('ticket_not_found');
+  }
+
+  let subject: AuthorizationSubject;
+  let kernel: AuthorizationKernel;
+  let selectedBoardIds: string[] | undefined;
+  if ('user' in principal) {
+    const context = await createTicketAuthorizationContext(trx, tenant, principal.user);
+    subject = context.authorizationSubject;
+    kernel = context.authorizationKernel;
+    selectedBoardIds = context.selectedBoardIds;
+  } else {
+    subject = { ...principal.subject, tenant };
+    kernel = principal.kernel;
+  }
+
+  const record = toTicketAuthorizationRecord(ticket);
+  const decision = await kernel.authorizeMutation({
+    subject,
+    resource: { type: 'ticket', action: 'update', id: ticketId },
+    record,
+    mutation: { kind: 'update_watchers', record },
+    selectedBoardIds,
+    requestCache: new RequestLocalAuthorizationCache(),
+    knex: trx,
+  });
+  if (!decision.allowed) {
+    throw new TicketWatcherPermissionError();
+  }
+
+  return input.write(trx);
 }
 
 /**
