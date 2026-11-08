@@ -107,6 +107,20 @@
     }
   },
   "contractDetail": {
+    "simulatorLoading": "Cargando simulador...",
+    "unnamedBoard": "Tablero sin nombre",
+    "notFound": "Contrato no encontrado",
+    "loadFailed": "No se pudo cargar el contrato",
+    "invoicesLoadFailed": "No se pudieron cargar las facturas de esta asignación de contrato.",
+    "deleteFailed": "No se pudo eliminar el contrato",
+    "backToContracts": "Volver a contratos",
+    "viewSourceQuote": "Ver cotización de origen",
+    "clientDrawer": {
+      "loading": "Cargando…",
+      "notFound": "Cliente no encontrado.",
+      "openClient": "Abrir cliente",
+      "loadFailed": "No se pudieron cargar los detalles del cliente."
+    },
     "alerts": {
       "saveSuccess": "¡Contrato guardado correctamente!",
       "unsavedChanges": "Tiene cambios sin guardar. Haga clic en \"Guardar cambios\" para aplicarlos."

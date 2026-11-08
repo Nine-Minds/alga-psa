@@ -193,6 +193,8 @@
       "failedHeading": "Import nie powiódł się",
       "noneCreated": "Nie utworzono żadnych zgłoszeń.",
       "allSkipped_one": "Pominięto {{count}} zgłoszenie z powodu błędów.",
+      "allSkipped_few": "Pominięto {{count}} zgłoszenia z powodu błędów.",
+      "allSkipped_many": "Pominięto {{count}} zgłoszeń z powodu błędów.",
       "allSkipped_other": "Z powodu błędów pominięto wszystkie zgłoszenia ({{count}})."
     }
   },
