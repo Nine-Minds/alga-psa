@@ -4,6 +4,11 @@ import { StorageService } from '@alga-psa/storage/StorageService';
 import { documentPreviewErrorMessage } from './previewErrors';
 import path from 'path';
 import fs from 'fs/promises';
+import type { RenderContent } from '../lib/renderHtmlToPng';
+
+function escapeHtml(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
 
 /**
  * Handler for Microsoft Office documents (Word, Excel, PowerPoint)
@@ -75,10 +80,10 @@ export class OfficeDocumentHandler extends BaseDocumentHandler {
       const docType = this.getOfficeDocumentType(document);
       
       // Generate placeholder HTML based on document type
-      const htmlContent = this.generatePlaceholderHTML(document, docType);
+      const previewContent = this.generatePlaceholderHTML(document, docType);
       
       // Generate preview image
-      const imageBuffer = await this.renderHtmlToPng(htmlContent, 400, 300);
+      const imageBuffer = await this.renderHtmlToPng(previewContent, 400, 300);
       
       // Save to cache
       await this.saveToCache(document.file_id, imageBuffer, tenant);
@@ -117,8 +122,8 @@ export class OfficeDocumentHandler extends BaseDocumentHandler {
       
       return `
         <div class="office-document-info">
-          <h3>${docType} Document</h3>
-          <p>Filename: ${document.document_name || 'Unknown'}</p>
+          <h3>${escapeHtml(docType)} Document</h3>
+          <p>Filename: ${escapeHtml(document.document_name || 'Unknown')}</p>
           <p>Type: ${document.mime_type || 'Unknown'}</p>
           <p>Size: ${document.file_size ? Math.round(document.file_size / 1024) + ' KB' : 'Unknown'}</p>
           <p><a href="/api/documents/download/${document.file_id}" target="_blank">Download Document</a></p>
@@ -157,44 +162,24 @@ export class OfficeDocumentHandler extends BaseDocumentHandler {
    * @param docType The document type (Word, Excel, PowerPoint)
    * @returns HTML content for the placeholder
    */
-  private generatePlaceholderHTML(document: IDocument, docType: 'Word' | 'Excel' | 'PowerPoint' | 'Office'): string {
+  private generatePlaceholderHTML(document: IDocument, docType: 'Word' | 'Excel' | 'PowerPoint' | 'Office'): RenderContent {
     const fileName = document.document_name || 'Unknown';
     const fileSize = document.file_size ? Math.round(document.file_size / 1024) + ' KB' : 'Unknown size';
     
-    let iconColor = '#2b579a'; // Default blue
     let icon = '📄'; // Default document icon
     
     switch (docType) {
       case 'Word':
-        iconColor = '#2b579a'; // Word blue
         icon = '📝';
         break;
       case 'Excel':
-        iconColor = '#217346'; // Excel green
         icon = '📊';
         break;
       case 'PowerPoint':
-        iconColor = '#d24726'; // PowerPoint orange
         icon = '📑';
         break;
     }
     
-    return `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 20px; text-align: center; background-color: #f9f9f9; border-radius: 8px; border: 1px solid #e0e0e0; width: 100%; height: 100%;">
-        <div style="font-size: 64px; margin-bottom: 15px;">${icon}</div>
-        <div style="background-color: ${iconColor}; color: white; padding: 10px; border-radius: 4px; margin-bottom: 15px;">
-          <strong>${docType} Document</strong>
-        </div>
-        <div style="font-size: 14px; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 10px;">
-          ${fileName}
-        </div>
-        <div style="font-size: 12px; color: #666;">
-          ${fileSize}
-        </div>
-        <div style="margin-top: 15px; font-size: 12px; color: #999;">
-          Preview not available. Download to view.
-        </div>
-      </div>
-    `;
+    return { kind: 'file-placeholder', fileName, fileType: `${docType} Document`, fileSize, icon };
   }
 }

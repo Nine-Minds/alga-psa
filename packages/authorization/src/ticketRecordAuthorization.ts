@@ -2,6 +2,7 @@ import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import type { ITicket, IUserWithRoles } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
+import { hasPermission } from './rbac';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
@@ -12,7 +13,7 @@ import {
   type RelationshipRule,
 } from './kernel';
 import type { AuthorizationKernel } from './kernel';
-import { bundleNarrowingRuleFromRow, loadAuthorizationEvaluationSnapshot } from './bundles/service';
+import { resolveBundleNarrowingRulesForEvaluation } from './bundles/service';
 import { extractActiveWatcherContactIds } from './portal/visibility';
 import type { ContactVisibilityContext } from './portal/visibility';
 import { getClientContactVisibilityContext } from './portal/visibility.server';
@@ -39,28 +40,69 @@ function tenantScopedTable(conn: Conn, tenant: string, table: string): Knex.Quer
   return tenantDb(conn, tenant).table(table) as Knex.QueryBuilder;
 }
 
-async function resolveAuthorizationEvaluationForUser(
+function extractRoleIdsFromUser(user: unknown): string[] {
+  const roles = (user as { roles?: unknown }).roles;
+  if (!Array.isArray(roles)) {
+    return [];
+  }
+
+  return roles
+    .map((role) => {
+      if (typeof role === 'string') {
+        return role;
+      }
+      if (role && typeof role === 'object' && 'role_id' in role) {
+        const roleId = (role as { role_id?: unknown }).role_id;
+        return typeof roleId === 'string' ? roleId : null;
+      }
+      return null;
+    })
+    .filter((value): value is string => Boolean(value));
+}
+
+async function resolveAuthorizationSubjectForUser(
   trx: Conn,
   tenant: string,
   user: IUserWithRoles,
-): Promise<{ subject: AuthorizationSubject; rules: ReturnType<typeof bundleNarrowingRuleFromRow>[] }> {
-  const snapshot = await loadAuthorizationEvaluationSnapshot(trx, {
-    tenant,
-    userId: user.user_id,
-  });
+): Promise<AuthorizationSubject> {
+  let roleIds = extractRoleIdsFromUser(user);
+  if (roleIds.length === 0) {
+    try {
+      const roleRows = await tenantScopedTable(trx, tenant, 'user_roles')
+        .where({ user_id: user.user_id })
+        .select<{ role_id: string }[]>('role_id');
+      roleIds = roleRows.map((row) => row.role_id);
+    } catch {
+      roleIds = [];
+    }
+  }
+
+  let teamRows: Array<{ team_id: string }> = [];
+  let managedRows: Array<{ user_id: string }> = [];
+  try {
+    teamRows = await tenantScopedTable(trx, tenant, 'team_members')
+      .where({ user_id: user.user_id })
+      .select<{ team_id: string }[]>('team_id');
+  } catch {
+    teamRows = [];
+  }
+  try {
+    managedRows = await tenantScopedTable(trx, tenant, 'users')
+      .where({ reports_to: user.user_id })
+      .select<{ user_id: string }[]>('user_id');
+  } catch {
+    managedRows = [];
+  }
 
   return {
-    subject: {
-      tenant,
-      userId: user.user_id,
-      userType: user.user_type,
-      roleIds: snapshot.roleIds,
-      teamIds: snapshot.teamIds,
-      managedUserIds: snapshot.managedUserIds,
-      clientId: user.clientId ?? null,
-      portfolioClientIds: [],
-    },
-    rules: snapshot.rules.map(bundleNarrowingRuleFromRow),
+    tenant,
+    userId: user.user_id,
+    userType: user.user_type,
+    roleIds,
+    teamIds: teamRows.map((row) => row.team_id),
+    managedUserIds: managedRows.map((row) => row.user_id),
+    clientId: user.clientId ?? null,
+    portfolioClientIds: [],
   };
 }
 
@@ -114,8 +156,7 @@ export async function createTicketAuthorizationContext(
   tenant: string,
   user: IUserWithRoles,
 ): Promise<TicketAuthorizationContext> {
-  const evaluation = await resolveAuthorizationEvaluationForUser(trx, tenant, user);
-  const authorizationSubject = evaluation.subject;
+  const authorizationSubject = await resolveAuthorizationSubjectForUser(trx, tenant, user);
   const contactVisibility = await resolveClientVisibility(trx, tenant, user);
   const selectedBoardIds =
     contactVisibility === null ? [] : contactVisibility?.visibleBoardIds ?? undefined;
@@ -130,7 +171,8 @@ export async function createTicketAuthorizationContext(
       relationshipRules,
     }),
     bundleProvider: new BundleAuthorizationKernelProvider({
-      resolveRules: async () => evaluation.rules,
+      // A policy lookup failure must not become an empty rule set that grants access.
+      resolveRules: (input) => resolveBundleNarrowingRulesForEvaluation(trx as Knex.Transaction, input),
     }),
     rbacEvaluator: async () => true,
   });
@@ -190,7 +232,7 @@ export async function authorizeTicketRecordAccess(input: {
   tenant: string;
   user: IUserWithRoles;
   ticketId: string;
-  action: 'read' | 'update';
+  action: 'read' | 'update' | 'delete';
   /** Already-loaded ticket row (must include the authorization columns); skips the reload. */
   ticketRow?: TicketRecordRow;
 }): Promise<TicketRecordRow> {
@@ -217,6 +259,15 @@ export async function authorizeTicketRecordAccess(input: {
 
   if (!decision.allowed) {
     throw new Error('Permission denied: Cannot access ticket');
+  }
+
+  if (input.action === 'delete' && !(await hasPermission(
+    { ...input.user, tenant: input.tenant },
+    'ticket',
+    'delete',
+    input.trx,
+  ))) {
+    throw new Error('Permission denied: Cannot delete ticket');
   }
 
   return ticket;

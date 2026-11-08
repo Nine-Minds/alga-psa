@@ -109,6 +109,51 @@ describe('board mutation guard', () => {
     publishEventMock.mockResolvedValue(undefined);
   });
 
+  it.each(['create', 'update'] as const)(
+    '%s returns permission denial before validating malformed input',
+    async (action) => {
+      const { createBoard, updateBoard } = await import('./boardActions');
+      const malformedInput = { board_name: 42 };
+      const result = action === 'create'
+        ? await createBoard(malformedInput as any)
+        : await updateBoard('board-a', malformedInput as any);
+
+      expect(result).toMatchObject(denied);
+      expect(result).not.toHaveProperty('actionError');
+      expect(refusedBy()).toEqual([PERMISSION]);
+      expect(withTransactionMock).not.toHaveBeenCalled();
+      expect(reads).toHaveLength(0);
+      expect(writes).toHaveLength(0);
+      expect(publishEventMock).not.toHaveBeenCalled();
+    }
+  );
+  it.each([
+    ['create', 'internal', PERMISSION],
+    ['create', 'client', PRINCIPAL],
+    ['update', 'internal', PERMISSION],
+    ['update', 'client', PRINCIPAL],
+  ] as const)('%s returns a permission error before validating input for a denied %s user', async (action, userType, code) => {
+    currentUser.user_type = userType;
+    if (userType === 'client') granted.add(`ticket_settings:${action}`);
+    const { createBoard, updateBoard } = await import('./boardActions');
+    const invalidInputs = [
+      null as any,
+      { board_name: 42, tenant: 'other-tenant' } as any,
+    ];
+
+    for (const invalidInput of invalidInputs) {
+      const result = action === 'create'
+        ? await createBoard(invalidInput)
+        : await updateBoard('board-a', invalidInput);
+      expect(result).toMatchObject(denied);
+      expect(result).not.toHaveProperty('actionError');
+    }
+    expect(refusedBy()).toEqual([code, code]);
+    expect(withTransactionMock).not.toHaveBeenCalled();
+    expect(reads).toEqual([]);
+    expect(writes).toEqual([]);
+  });
+
   describe('createBoard', () => {
     it('denies without ticket_settings:create and touches nothing (existing default stays default)', async () => {
       granted.add('ticket_settings:update');
