@@ -157,6 +157,24 @@ test('ticket conversation audience strings use the formal register in es and nl'
   }
 });
 
+test('Spanish quote acceptance title uses the glossary term for a sales quote', () => {
+  const locale = 'es';
+  const config = registry[locale];
+  const glossary = JSON.parse(readFileSync(join(repoRoot, config.dir, config.glossary), 'utf8'));
+  const matchers = forbiddenMatchers(glossary, config.dialect);
+  const en = JSON.parse(readFileSync(join(repoRoot, 'server/public/locales/en/documents.json'), 'utf8'));
+  const strings = JSON.parse(readFileSync(join(repoRoot, 'server/public/locales/es/documents.json'), 'utf8'));
+  const source = en.labels.quoteAcceptance.title;
+  const translation = strings.labels.quoteAcceptance.title;
+
+  nonEmptyString(translation, 'es: documents:labels.quoteAcceptance.title must exist');
+  assert.deepEqual(
+    findForbiddenTerms(translation, matchers, config.dialect, source, 'documents:labels.quoteAcceptance.title'),
+    [],
+    `es: documents:labels.quoteAcceptance.title = ${translation}`,
+  );
+});
+
 test('Microsoft calendar provider strings respect every locale glossary', () => {
   // The bring-your-own Microsoft app copy talks about single-/multitenant apps and
   // the directory (tenant) ID; locales must render "tenant" with the glossary term
