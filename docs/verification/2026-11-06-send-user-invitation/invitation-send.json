@@ -1,0 +1,11 @@
+{
+  "revision": "ef5f216168bd8bfedeec1834e7e1464829995c71",
+  "email": "authz-takeover-20261106@example.test",
+  "selectedRole": "Project Manager",
+  "transport": "real Next server action",
+  "result": {
+    "success": true,
+    "invitationId": "de8ddb2f-671e-4418-acd2-b2c4cec85c37",
+    "message": "Invitation sent successfully to authz-takeover-20261106@example.test"
+  }
+}

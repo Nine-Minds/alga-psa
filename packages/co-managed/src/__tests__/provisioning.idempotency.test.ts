@@ -126,7 +126,7 @@ describe('co-managed provisioning idempotency', () => {
     await runCoManagedProvisioningStep(db, SPONSOR, OP, 'settings', async () => undefined);
     await runCoManagedProvisioningStep(db, SPONSOR, OP, 'administrator_invitation', async trx => {
       await fakeTenantDb(trx, CUSTOMER).table('user_invitations').insert({ tenant: CUSTOMER, invitation_id: op.administrator_invitation_id,
-        email: 'ada@acme.test', used_at: null, expires_at: '2099-01-01T00:00:00.000Z' });
+        email: 'ada@acme.test', email_normalized: 'ada@acme.test', used_at: null, expires_at: '2099-01-01T00:00:00.000Z' });
     });
     await finalizeCoManagedProvisioning(db, SPONSOR, OP);
     await finalizeCoManagedProvisioning(db, SPONSOR, OP);

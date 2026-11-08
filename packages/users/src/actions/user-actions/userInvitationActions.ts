@@ -11,6 +11,7 @@ import type { IUserWithRoles } from '@alga-psa/types';
 import { checkInternalUserLicenseLimit, countPendingInvitationSeats, isInternalUserLicenseLimitRejected, lockInternalUserSeats } from '../../lib/internalUserLicenseGuard';
 import { assertCoManagedSeatAdmission, CoManagedAdmissionError } from '@alga-psa/licensing';
 import { isCoManagedInvitationServed } from '../../lib/coManagedInvitationCapability';
+import { assertMspRoleGrantsWithinActorPermissions } from '@alga-psa/authorization/roleGrantAuthorization';
 
 export type UserInvitationErrorCode =
   | 'PERMISSION_DENIED_INVITE'
@@ -71,6 +72,9 @@ function normalizeSendUserInvitationError(
 
   if (error instanceof Error) {
     const message = error.message.trim();
+    if (message.startsWith('Permission denied:')) {
+      return { message, errorCode: 'PERMISSION_DENIED_INVITE' };
+    }
     if (message === 'Unauthorized') {
       return { message: 'Permission denied: Cannot invite users', errorCode: 'PERMISSION_DENIED_INVITE' };
     }
@@ -104,6 +108,12 @@ export const sendUserInvitation = withAuth(async (
     if (!await hasPermission(user, 'user', 'invite', knex)) {
       return { success: false, error: 'Permission denied: Cannot invite users', errorCode: 'PERMISSION_DENIED_INVITE' };
     }
+    if (!await hasPermission(user, 'user', 'create', knex)) {
+      return { success: false, error: 'Permission denied: Cannot create user accounts', errorCode: 'PERMISSION_DENIED_INVITE' };
+    }
+    if (!await hasPermission(user, 'user', 'update', knex)) {
+      return { success: false, error: 'Permission denied: Cannot assign user roles', errorCode: 'PERMISSION_DENIED_INVITE' };
+    }
 
     if (!tenant) {
       throw new Error('Tenant is required');
@@ -124,6 +134,7 @@ export const sendUserInvitation = withAuth(async (
     if (!role) {
       return { success: false, error: 'Invalid role selected', errorCode: 'INVALID_ROLE' };
     }
+    await assertMspRoleGrantsWithinActorPermissions(user.user_id, tenant, knex, [params.roleId]);
 
     const existingUser = await tenantDb(knex, tenant).table('users')
       .where({ email: normalizedEmail, user_type: 'internal' })

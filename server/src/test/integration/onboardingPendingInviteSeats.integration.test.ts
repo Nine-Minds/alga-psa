@@ -54,7 +54,7 @@ const seedUser = (tenant: string, email: string) => db('users').insert({
   user_type: 'internal', hashed_password: 'unused', is_inactive: false,
 });
 const seedInvitation = (tenant: string, email: string, expires: string, used: boolean) => db('user_invitations').insert({
-  tenant, email, first_name: 'I', last_name: 'V', token: randomUUID(),
+  tenant, email, email_normalized: email.toLowerCase(), first_name: 'I', last_name: 'V', token: randomUUID(),
   expires_at: db.raw(`now() + interval '${expires}'`), used_at: used ? db.fn.now() : null,
 });
 

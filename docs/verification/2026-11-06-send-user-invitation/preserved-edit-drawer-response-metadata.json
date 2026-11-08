@@ -1,0 +1,32 @@
+{
+  "revision": "ef5f216168bd8bfedeec1834e7e1464829995c71",
+  "surface": "Users edit drawer; actual getCurrentUser server action response",
+  "url": "http://feature-security-authz-in-senduserinvitation.localhost:3358/msp/settings/users",
+  "httpStatus": 200,
+  "responseCount": 4,
+  "identityFieldNames": [
+    "user_id",
+    "username",
+    "first_name",
+    "last_name",
+    "email",
+    "tenant",
+    "user_type",
+    "roles"
+  ],
+  "identityEmailPresent": true,
+  "roleCount": 1,
+  "roleNames": [
+    "Admin"
+  ],
+  "passwordCredentialFieldNamesPresent": [],
+  "mfaSecretFieldNamesPresent": [],
+  "mfaStatusFieldPresent": true,
+  "underlyingDatabase": {
+    "passwordPopulated": true,
+    "mfaSecretPopulated": true,
+    "mfaSentinelPopulated": true,
+    "twoFactorEnabled": false
+  },
+  "valuesRetained": false
+}

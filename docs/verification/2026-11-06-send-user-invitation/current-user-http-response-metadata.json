@@ -1,0 +1,40 @@
+{
+  "revision": "ef5f216168bd8bfedeec1834e7e1464829995c71",
+  "route": "/msp/settings/users",
+  "method": "real browser-facing Next server action over HTTP",
+  "fields": [
+    "roles",
+    "user_id",
+    "username",
+    "first_name",
+    "last_name",
+    "email",
+    "phone",
+    "timezone",
+    "user_type",
+    "contact_id",
+    "icon",
+    "created_at",
+    "updated_at",
+    "two_factor_enabled",
+    "two_factor_required_new_device",
+    "is_google_user",
+    "is_inactive",
+    "tenant",
+    "reports_to",
+    "last_login_at",
+    "last_login_method",
+    "clientId"
+  ],
+  "roles": [
+    "Admin"
+  ],
+  "database": {
+    "password_populated": true,
+    "mfa_populated": true
+  },
+  "sensitiveFieldNamesPresent": [],
+  "sentinelLeaked": false,
+  "identityPreserved": true,
+  "valuesRetained": false
+}
