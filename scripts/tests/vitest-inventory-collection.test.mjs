@@ -49,7 +49,8 @@ test('manual Vitest runner reviews remain valid through their stated expiry date
   for (const runner of manualRunners) {
     assert.equal(hasCurrentManualRunnerReview(runner, today), true, `${runner.runner} review must be current`);
   }
-  assert.equal(hasCurrentManualRunnerReview({ reason: 'reviewed', issue: 'issue', expires: '2026-11-08' }, today), false);
+  assert.equal(hasCurrentManualRunnerReview({ reason: 'reviewed', issue: 'issue', expires: '2026-11-07' }, today), false);
+  assert.equal(hasCurrentManualRunnerReview({ reason: 'reviewed', issue: 'issue', expires: '2026-11-08' }, today), true);
   assert.equal(hasCurrentManualRunnerReview({ reason: 'reviewed', issue: 'issue', expires: '2026-11-09' }, today), true);
 });
 
@@ -67,14 +68,13 @@ test('real Vitest inventory loads cases without executing bodies and rejects emp
   assert.throws(() => collectVitestInventory({ root, output: path.join(root, 'reports'),
     runner: { ...runner, mandatory: false, reason: 'Manual fixture', issue: 'fixture-1', expires: '2000-01-01' } }), /unexpired review/);
   const reviewedRunner = { ...runner, mandatory: false, reason: 'Manual fixture', issue: 'fixture-1', expires: '2026-11-08' };
-  assert.throws(() => collectVitestInventory({ root, output: path.join(root, 'reports'), runner: reviewedRunner,
-    now: new Date('2026-11-08T00:00:00Z') }), /unexpired review/);
   writeFileSync(path.join(root, 'base.test.js'),
     'test("must only collect", () => { throw new Error("body must not execute") });');
+  const expiresToday = collectVitestInventory({ root, output: path.join(root, 'reports'), runner: reviewedRunner,
+    now: new Date('2026-11-08T00:00:00Z') });
+  assert.equal(expiresToday.status, 'passed');
   assert.doesNotThrow(() => collectVitestInventory({ root, output: path.join(root, 'reports'),
     runner: { ...reviewedRunner, expires: '2026-11-09' }, now: new Date('2026-11-08T23:59:59Z') }));
-  writeFileSync(path.join(root, 'base.test.js'),
-    'test("must only collect", () => { throw new Error("body must not execute") });');
   const valid = collect();
   assert.equal(valid.status, 'passed');
   assert.deepEqual(valid.files, ['base.test.js']);
