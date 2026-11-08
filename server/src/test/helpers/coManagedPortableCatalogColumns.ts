@@ -18,17 +18,23 @@ export const PORTABLE_PHYSICAL_TABLES: Record<string, string> = { handoff_histor
  */
 export const PORTABLE_MIGRATION_TABLE_NAMES: Record<string, string> = { external_files: 'file_stores' };
 
+/** Catalog names the export reads from another live relation. */
+export const PORTABLE_QUERIED_TABLES: Record<string, string> = { handoff_history: 'co_management_ticket_handoffs' };
+
 /** Computed in the export query by joining users, not selected from the table. */
 const isComputed = (table: string, column: string) =>
   (table === 'workflow_tasks' || table === 'workflow_task_history') && column.endsWith('_name');
 
-/** The (physical table, column) pairs a migrated main schema must provide for the portable export to run. */
-export function catalogColumnsToCheck() {
-  const out: { catalog: string; table: string; physical: string; migrationName: string; column: string }[] = [];
+export type CatalogColumn = { catalog: string; table: string; physical: string; migrationName: string; queried: string; column: string };
+
+/** Physical, migration, and query names differ for a small number of portable catalog tables. */
+export function catalogColumnsToCheck(): CatalogColumn[] {
+  const out: CatalogColumn[] = [];
   for (const [catalog, tables] of Object.entries(PORTABLE_CATALOGS)) for (const [table, columns] of Object.entries(tables)) {
     const physical = PORTABLE_PHYSICAL_TABLES[table] ?? table;
     const migrationName = PORTABLE_MIGRATION_TABLE_NAMES[physical] ?? physical;
-    for (const column of columns) if (!isComputed(table, column)) out.push({ catalog, table, physical, migrationName, column });
+    const queried = PORTABLE_QUERIED_TABLES[table] ?? table;
+    for (const column of columns) if (!isComputed(table, column)) out.push({ catalog, table, physical, migrationName, queried, column });
   }
   return out;
 }

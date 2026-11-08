@@ -64,6 +64,10 @@ import { findPriorityBoardTypeProblem, findTicketUpdatePriorityBoardTypeProblem,
 import { TicketModel, CreateTicketInput } from '@alga-psa/shared/models/ticketModel';
 import { resolveAssetBillingProfileIdForClient } from '@alga-psa/shared/models/assetBillingProfileModel';
 import {
+  assetIdForBillingProfileInheritance,
+  dedupeTicketAssetIds,
+} from '@alga-psa/shared/models/ticketAssetLinkModel';
+import {
   TICKET_ACTIVITY_ACTOR,
   TICKET_ACTIVITY_ENTITY,
   TICKET_ACTIVITY_EVENT,
@@ -133,6 +137,7 @@ import {
   shouldApplyOpenOnlyStatusFilter,
 } from '../lib/ticketStatusFilter';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
+import { assertBoardAcceptsTickets } from './ticketBoardGuards';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 // SLA cancellation is injected by the composition layer to avoid tickets→sla cross-package violation
 let _cancelSlaFn: ((tenantId: string, ticketId: string) => Promise<void>) | null = null;
@@ -628,9 +633,12 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
           throw new Error('Permission denied: Cannot link assets to tickets');
         }
       }
-      const linkedAssetIds = Array.from(
-        new Set([...(asset_id ? [asset_id as string] : []), ...extras.assetIds])
-      );
+      // The asset the dialog was opened from leads the picked ones, so it is
+      // also the one whose billing profile the ticket inherits below.
+      const linkedAssetIds = dedupeTicketAssetIds([
+        typeof asset_id === 'string' ? asset_id : '',
+        ...extras.assetIds,
+      ]);
 
       // Duplicate-ticket fields. The client only names the source; the hidden
       // carry-over (custom fields, checklist) is copied below from the source
@@ -684,7 +692,14 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         title: data.get('title') as string,
         board_id: data.get('board_id') as string,
         client_id: data.get('client_id') as string,
-        location_id: location_id === '' ? undefined : (location_id as string),
+        // Three states, deliberately: the field absent (or '') means nobody said, so the model
+        // fills it from the contact; the literal 'none' is the operator choosing None and stays
+        // null; anything else is the id they picked.
+        location_id: location_id === null || location_id === ''
+          ? undefined
+          : location_id === 'none'
+            ? null
+            : (location_id as string),
         billing_profile_id: billing_profile_id === '' || billing_profile_id === null
           ? undefined
           : (billing_profile_id as string),
@@ -707,14 +722,15 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       // FR-F3: a ticket raised against an asset inherits the asset's billing
       // profile (or its location's default) when the caller picked none. This
       // is the QuickAddTicket path used by the asset header, the asset list,
-      // service history and maintenance — `createTicketFromAsset` does the
-      // same for its own dialog.
-      if (linkedAssetIds.length > 0 && createTicketInput.client_id && !createTicketInput.billing_profile_id) {
+      // service history and maintenance — `createTicketFromAsset` and the REST
+      // create read the same rule from ticketAssetLinkModel.
+      const billingProfileSourceAssetId = assetIdForBillingProfileInheritance(linkedAssetIds);
+      if (billingProfileSourceAssetId && createTicketInput.client_id && !createTicketInput.billing_profile_id) {
         createTicketInput.billing_profile_id =
           (await resolveAssetBillingProfileIdForClient(
             trx,
             tenant,
-            linkedAssetIds[0],
+            billingProfileSourceAssetId,
             createTicketInput.client_id
           )) ?? undefined;
       }
@@ -2338,6 +2354,8 @@ export const moveTicketsToBoard = withAuth(async (
 
   try {
     resolvedStatusId = await withTransaction(ticketKnex, async (trx: Knex.Transaction) => {
+      await assertBoardAcceptsTickets(trx, tenantAlias, destinationBoardId);
+
       if (!destinationStatusId) {
         const defaultStatusId = await TicketModel.getDefaultStatusId(tenantAlias, trx, destinationBoardId);
         if (!defaultStatusId) {

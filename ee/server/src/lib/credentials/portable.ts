@@ -1,4 +1,4 @@
-import { createCipheriv, randomBytes, scrypt } from 'node:crypto';
+import { createCipheriv, createDecipheriv, randomBytes, scrypt } from 'node:crypto';
 import { assertPortableTransferActive, awaitPortableTransfer } from '@alga-psa/co-managed/portableTransfer';
 import {
   decryptCredentialValue, encryptCredentialValues, isCredentialEncryptionScheme,
@@ -71,6 +71,14 @@ async function deriveKey(password: Buffer, salt: Buffer): Promise<Buffer> {
   }
 }
 
+function decode(value: unknown, length?: number): Buffer {
+  if (typeof value !== 'string' || value.length > Math.ceil(MAX_BYTES / 3) * 4) invalid();
+  const bytes = Buffer.from(value, 'base64');
+  if (bytes.toString('base64') !== value || bytes.length > MAX_BYTES ||
+      (length !== undefined && bytes.length !== length)) invalid();
+  return bytes;
+}
+
 function validateIds(ids: readonly string[]): void {
   if (!Array.isArray(ids) || ids.length > MAX_RECORDS || ids.some(id => typeof id !== 'string' || !UUID.test(id)) ||
       new Set(ids).size !== ids.length) invalid();
@@ -126,6 +134,64 @@ export async function sealPortableCredentialVault(
     return invalid();
   } finally {
     key.fill(0);
+    plaintext?.fill(0);
+  }
+}
+
+/**
+ * Verify the whole envelope and its exact manifest credential membership before
+ * encrypting any values with the destination installation's configured vault.
+ * Returns ciphertext only. The restore coordinator owns destination admission,
+ * ID remapping, ACL reconstruction, auditing, and atomic database insertion.
+ * No source installation credential/key is needed here.
+ */
+export async function restorePortableCredentialVault(
+  input: PortableCredentialVault,
+  expectedContext: PortableCredentialContext,
+  expectedCredentialIds: readonly string[],
+  passphrase: string,
+): Promise<StoredPortableCredential[]> {
+  const bound = contextCopy(expectedContext);
+  if (!Array.isArray(expectedCredentialIds)) invalid();
+  const expectedIds = [...expectedCredentialIds];
+  validateIds(expectedIds);
+  if (!input || input.format !== FORMAT || input.packageId !== bound.packageId ||
+      input.sourceTenant !== bound.sourceTenant) invalid();
+  // Copy/decode all input before asynchronous KDF/provider work.
+  const salt = decode(input.salt, 16);
+  const iv = decode(input.iv, 12);
+  const tag = decode(input.tag, 16);
+  const ciphertext = decode(input.ciphertext);
+  const key = await deriveKey(passphraseBytes(passphrase), salt);
+  let plaintext: Buffer | undefined;
+  let provisional: Buffer | undefined;
+  try {
+    const decipher = createDecipheriv('aes-256-gcm', key, iv);
+    decipher.setAAD(associatedData(bound));
+    decipher.setAuthTag(tag);
+    provisional = decipher.update(ciphertext);
+    // Do not parse or send unauthenticated plaintext to the destination vault.
+    plaintext = Buffer.concat([provisional, decipher.final()]);
+    const values: unknown = JSON.parse(plaintext.toString('utf8'));
+    if (!Array.isArray(values) || values.length !== expectedIds.length) invalid();
+    const expected = new Set(expectedIds);
+    for (const value of values) {
+      if (!value || typeof value !== 'object' || !expected.delete(value.credentialId) ||
+          !(value.password === null || typeof value.password === 'string') ||
+          !(value.otpSecret === null || typeof value.otpSecret === 'string') ||
+          Object.keys(value).sort().join(',') !== 'credentialId,otpSecret,password') invalid();
+    }
+    if (expected.size !== 0) invalid();
+    const restored: StoredPortableCredential[] = [];
+    for (const value of values as PlainCredential[]) {
+      restored.push({ credentialId: value.credentialId, ...await awaitPortableTransfer(() => encryptCredentialValues(value)) });
+    }
+    return restored;
+  } catch {
+    return invalid();
+  } finally {
+    key.fill(0);
+    provisional?.fill(0);
     plaintext?.fill(0);
   }
 }

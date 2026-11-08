@@ -18,9 +18,14 @@ export interface ParsedTableExpression {
 export const tenantTableMetadata: Record<string, TenantTableScope> = {
   co_management_board_scopes: { scope: 'tenant' },
   co_managed_allocations: { scope: 'tenant' },
+  co_managed_relationship_closures: { scope: 'tenant' },
+  co_managed_archive_manifests: { scope: 'tenant' },
   co_managed_entitlements: { scope: 'tenant' },
   co_managed_provisioning_operations: { scope: 'tenant' },
   co_managed_purchase_operations: { scope: 'tenant' },
+  co_managed_independent_upgrades: { scope: 'tenant' },
+  co_managed_upgrade_purchases: { scope: 'tenant' },
+  portable_workspace_activations: { scope: 'tenant' },
   tenant_license_state: { scope: 'tenant' },
   co_managed_meeting_creation_operations: { scope: 'tenant' },
   co_management_relationship_events: { scope: 'tenant' },
@@ -30,14 +35,25 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   co_management_private_threads: { scope: 'tenant' },
   co_management_private_comments: { scope: 'tenant' },
   co_management_private_command_receipts: { scope: 'tenant' },
+  co_management_conversation_drafts: { scope: 'tenant' },
+  co_management_conversation_attachments: { scope: 'tenant' },
+  co_management_thread_transfers: { scope: 'tenant' },
+  co_managed_archive_files: { scope: 'tenant' },
   co_managed_project_task_references: { scope: 'tenant' },
   collaboration_actor_references: { scope: 'tenant' },
   co_managed_participation_evidence: { scope: 'tenant' },
+  portable_restore_suspensions: { scope: 'tenant' },
+  portable_workspace_restores: { scope: 'tenant' },
+  portable_workspace_restore_uploads: { scope: 'tenant' },
   co_management_ticket_work: { scope: 'tenant' },
   co_management_ticket_handoffs: { scope: 'tenant' },
   co_managed_ticket_references: { scope: 'tenant' },
   co_managed_time_work_references: { scope: 'tenant' },
   co_management_command_receipts: { scope: 'tenant' },
+  sla_organization_obligations: { scope: 'tenant' },
+  sla_organization_events: { scope: 'tenant' },
+  sla_organization_notification_events: { scope: 'tenant' },
+  co_managed_sla_priority_mappings: { scope: 'tenant' },
   co_management_deliveries: { scope: 'tenant' },
   co_management_delegated_grants: { scope: 'tenant' },
   co_management_delegated_receipts: { scope: 'tenant' },
@@ -54,6 +70,8 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   asset_group_members: { scope: 'tenant' },
   asset_group_contacts: { scope: 'tenant' },
   asset_assignments: { scope: 'tenant' },
+  asset_audits: { scope: 'tenant' },
+  asset_audit_items: { scope: 'tenant' },
   asset_custody: { scope: 'tenant' },
   asset_custody_events: { scope: 'tenant' },
   asset_statuses: { scope: 'tenant' },
@@ -119,6 +137,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   client_contracts: { scope: 'tenant' },
   client_contract_lines: { scope: 'tenant' },
   client_locations: { scope: 'tenant' },
+  contact_locations: { scope: 'tenant' },
   client_inbound_email_domains: { scope: 'tenant' },
   client_name_aliases: { scope: 'tenant' },
   client_payment_customers: { scope: 'tenant' },
@@ -715,6 +734,22 @@ export function parseTableExpression(tableExpression: string): ParsedTableExpres
     tableName: baseTableName(trimmed),
     rootAlias: baseTableName(trimmed),
   };
+}
+
+/**
+ * Registers tables owned by an optional module (for example an Enterprise-only
+ * table) so that module can use tenantDb without its table names living in the
+ * shared registry. Idempotent; a table that is already registered must keep its
+ * scope, so a conflicting registration throws.
+ */
+export function registerTenantTables(tables: Record<string, TenantTableScope>): void {
+  for (const [name, scope] of Object.entries(tables)) {
+    const existing = tenantTableMetadata[name];
+    if (existing && JSON.stringify(existing) !== JSON.stringify(scope)) {
+      throw new Error(`Table ${name} is already registered with a different scope`);
+    }
+    tenantTableMetadata[name] = scope;
+  }
 }
 
 export function getTenantTableScope(tableName: string): TenantTableScope | undefined {

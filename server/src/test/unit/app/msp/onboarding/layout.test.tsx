@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   redirect: vi.fn((url: string) => { throw new Error(`NEXT_REDIRECT ${url}`); }),
   productCode: 'psa' as string,
   getCoManagedWorkspaceState: vi.fn(async (): Promise<any> => ({ kind: 'none' })),
+  getDontNotifyCustomerDefault: vi.fn(async (): Promise<boolean> => false),
 }));
 
 vi.mock('react', async (importOriginal) => ({ ...await importOriginal<typeof import('react')>(), cache: (fn: unknown) => fn }));
@@ -43,6 +44,9 @@ vi.mock('@alga-psa/core/features', () => ({ isEnterprise: false }));
 vi.mock('@alga-psa/tenancy/actions/tenant-actions/getTenantBrandingByDomain', () => ({ getTenantBrandingByTenantId: vi.fn() }));
 vi.mock('@alga-psa/tenancy/actions/tenant-actions/tenantThemeActions', () => ({ getTenantThemeByTenantId: vi.fn() }));
 vi.mock('@/components/layout/mspBranding', () => ({ resolveMspBranding: vi.fn(() => ({})) }));
+vi.mock('@alga-psa/notifications/actions/notification-actions/notificationActions', () => ({
+  getDontNotifyCustomerDefaultAction: mocks.getDontNotifyCustomerDefault,
+}));
 vi.mock('@alga-psa/ui/lib/i18n/serverOnly', () => ({ getServerTranslation: vi.fn(async () => ({ t: (_k: string, o?: any) => o?.defaultValue })) }));
 
 const { default: MspLayout } = await import('../../../../../app/msp/layout');
@@ -60,6 +64,8 @@ beforeEach(() => {
   mocks.productCode = 'psa';
   mocks.getCoManagedWorkspaceState.mockReset();
   mocks.getCoManagedWorkspaceState.mockResolvedValue({ kind: 'none' });
+  mocks.getDontNotifyCustomerDefault.mockReset();
+  mocks.getDontNotifyCustomerDefault.mockResolvedValue(false);
 });
 
 describe('MSP layout sign-in redirects', () => {
@@ -120,6 +126,19 @@ describe('MSP layout co-managed workspace notice', () => {
     mocks.productCode = 'co_managed';
     mocks.getCoManagedWorkspaceState.mockRejectedValue(new Error('gated'));
     expect(await layoutProps()).toMatchObject({ workspaceNotice: null });
+    expect(mocks.redirect).not.toHaveBeenCalled();
+  });
+});
+
+describe('MSP layout notification defaults', () => {
+  it('hands the tenant dont-notify-customer policy to the shell', async () => {
+    mocks.getDontNotifyCustomerDefault.mockResolvedValue(true);
+    expect(await layoutProps()).toMatchObject({ dontNotifyCustomerDefault: true });
+  });
+
+  it('falls back to unticked when the policy read fails', async () => {
+    mocks.getDontNotifyCustomerDefault.mockRejectedValue(new Error('denied'));
+    expect(await layoutProps()).toMatchObject({ dontNotifyCustomerDefault: false });
     expect(mocks.redirect).not.toHaveBeenCalled();
   });
 });

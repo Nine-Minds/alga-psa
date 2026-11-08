@@ -73,6 +73,8 @@
       "@alga-psa/billing/*": ["../../packages/billing/src/*"],
       "@product/service-principals/entry": ["../../packages/product-service-principals/ee/entry"],
       "@product/service-principals/types": ["../../packages/product-service-principals/types"],
+      "@alga-psa/users/*": ["../../packages/users/src/*"],
+      "@alga-psa/user-composition/*": ["../../packages/user-composition/src/*"],
       "@alga-psa/auth/sso/*": ["../../packages/auth/src/lib/sso/*"],
       "@alga-psa/auth/*": ["../../packages/auth/src/*"],
       "@alga-psa/tenancy": ["../../packages/tenancy/src/index.ts"],

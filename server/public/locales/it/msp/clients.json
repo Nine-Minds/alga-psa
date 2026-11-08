@@ -387,6 +387,8 @@
     },
     "locations": {
       "billing": "Fatturazione",
+      "contactCount_one": "1 contatto",
+      "contactCount_other": "{{count}} contatti",
       "manage": "Gestisci",
       "more": "+{{count}} altre",
       "none": "Ancora nessuna sede.",
@@ -462,7 +464,7 @@
       "paused": "SLA in pausa"
     },
     "software": {
-      "assetsMeta_one": "{{count}} asset",
+      "assetsMeta_one": "1 asset",
       "assetsMeta_other": "{{count}} asset",
       "loadError": "Impossibile caricare l'inventario software.",
       "titles": "titoli",
@@ -1354,7 +1356,10 @@
         "phoneLabel": "Telefono",
         "setDefault": "Imposta come predefinito",
         "shippingTag": "Spedizione",
-        "unnamed": "Posizione senza nome"
+        "unnamed": "Posizione senza nome",
+        "contactCount_one": "1 contatto",
+        "contactCount_other": "{{count}} contatti",
+        "contactPrimary": "Principale"
       },
       "dialog": {
         "addTitle": "Aggiungi nuova posizione",
@@ -1951,7 +1956,8 @@
       "sourceIsTenantDefault": "La scheda della tua organizzazione non può essere unita a un cliente.",
       "sourceHasCoManagement": "Questo cliente ha uno spazio di lavoro IT in co-gestione. Annulla la configurazione o termina la co-gestione prima di unirlo.",
       "parentLinkCycle": "Quel cliente risulta figlio di quello che stai unendo, quindi l'unione invertirebbe la gerarchia.",
-      "invalidContractCutover": "Una delle date di subentro è al di fuori della durata del relativo contratto."
+      "invalidContractCutover": "Una delle date di subentro è al di fuori della durata del relativo contratto.",
+      "invalidContactLocation": "Una sede scelta non appartiene a nessuno dei clienti uniti."
     },
     "profileContacts": {
       "duplicateManager": "Un profilo di fatturazione può avere un solo responsabile.",
@@ -2033,7 +2039,16 @@
     "billingStrategyHeading": "Profilo di fatturazione per il lavoro e i dispositivi trasferiti",
     "billingStrategySource": "Profilo di fatturazione di {{source}}, mantenuto come profilo separato su {{target}}",
     "billingStrategyTarget": "Profilo di fatturazione predefinito di {{target}}",
-    "billingStrategyHelp": "Si applica a {{tickets}} ticket, {{projects}} progetto/i, {{assets}} asset e {{mappings}} gruppo/i di dispositivi RMM senza un profilo di fatturazione proprio. Le righe con un profilo esplicito lo mantengono, mentre fatture, cicli di fatturazione, pagamenti e crediti restano sempre sul profilo unito."
+    "billingStrategyHelp": "Si applica a {{tickets}} ticket, {{projects}} progetto/i, {{assets}} asset e {{mappings}} gruppo/i di dispositivi RMM senza un profilo di fatturazione proprio. Le righe con un profilo esplicito lo mantengono, mentre fatture, cicli di fatturazione, pagamenti e crediti restano sempre sul profilo unito.",
+    "locationsColumn": "Sedi",
+    "remoteBadge": "Remota",
+    "noLocationsAfterMerge": "Nessuna sede",
+    "unnamedLocation": "Sede",
+    "movingFrom": "in arrivo da {{client}}",
+    "primaryLocation": "Principale",
+    "targetAlsoHas": "{{client}} ha anche «{{location}}»",
+    "useIt": "Usa questa",
+    "contactLocationSummary": "{{count}} collegamenti contatto-sede, {{repointed}} reindirizzati"
   },
   "billingProfileContacts": {
     "title": "Contatti del profilo",
