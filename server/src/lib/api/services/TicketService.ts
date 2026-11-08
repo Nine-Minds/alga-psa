@@ -48,6 +48,10 @@ import {
   type BundleAfterCommitPublication,
   type BundleAttachFailure,
 } from '@alga-psa/tickets/actions/ticketBundleUtils';
+import {
+  findPriorityBoardTypeProblem,
+  findTicketUpdatePriorityBoardTypeProblem,
+} from '@alga-psa/tickets/lib/ticketFieldReferences';
 import { BundlePropagationConfirmationRequiredError } from '@alga-psa/tickets/lib/ticketBundlePropagation';
 import {
   BundleConcurrentModificationError,
@@ -1787,6 +1791,11 @@ export class TicketService extends BaseService<ITicket> {
           ]);
         }
 
+        const priorityProblem = await findPriorityBoardTypeProblem(trx, context.tenant, data.board_id, data.priority_id);
+        if (priorityProblem) {
+          throw new ValidationError('Validation failed', [{ path: ['priority_id'], message: priorityProblem.message }]);
+        }
+
         // Devices named on the create request. Validated before the insert so a
         // bad asset id rolls back with no ticket written at all.
         const assetIds = dedupeTicketAssetIds(data.asset_ids);
@@ -2040,6 +2049,17 @@ export class TicketService extends BaseService<ITicket> {
         throw new ValidationError('Validation failed', [
           { path: ['status_id'], message: 'Changing the board requires selecting a status for the destination board' }
         ]);
+      }
+
+      // Priority family must match the board's priority_type; checked only when this patch changes either.
+      const priorityProblem = await findTicketUpdatePriorityBoardTypeProblem(
+        trx,
+        context.tenant,
+        currentTicket,
+        cleanedData as { board_id?: string | null; priority_id?: string | null }
+      );
+      if (priorityProblem) {
+        throw new ValidationError('Validation failed', [{ path: ['priority_id'], message: priorityProblem.message }]);
       }
 
       if (cleanedData.status_id && cleanedData.status_id !== currentTicket.status_id) {
@@ -2421,6 +2441,11 @@ export class TicketService extends BaseService<ITicket> {
         throw new ValidationError('Validation failed', [
           { path: ['status_id'], message: `status_id ${data.status_id} does not belong to board_id ${data.board_id}` }
         ]);
+      }
+
+      const assetPriorityProblem = await findPriorityBoardTypeProblem(trx, context.tenant, data.board_id, data.priority_id);
+      if (assetPriorityProblem) {
+        throw new ValidationError('Validation failed', [{ path: ['priority_id'], message: assetPriorityProblem.message }]);
       }
 
       // Publish after the transaction commits so notification subscribers can

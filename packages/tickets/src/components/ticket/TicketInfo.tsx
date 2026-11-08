@@ -276,6 +276,9 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   // Get the effective board ID (pending or saved)
   const effectiveBoardId = pendingChanges.board_id ?? originalTicketValues.board_id;
   const hasPendingStatusOverride = Object.prototype.hasOwnProperty.call(pendingChanges, 'status_id');
+  const pendingPriorityValue = pendingChanges.priority_id !== undefined
+    ? pendingChanges.priority_id
+    : (originalTicketValues.priority_id ?? null);
   const pendingStatusValue = hasPendingStatusOverride
     ? (pendingChanges.status_id ?? '')
     : (originalTicketValues.status_id ?? '');
@@ -295,13 +298,13 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   // ticket's own priority stays listed so a legacy value still renders.
   const scopedPriorityOptions = useMemo(() => {
     const wantsItil = effectiveBoardConfig.priority_type === 'itil';
-    const currentPriorityId = pendingChanges.priority_id ?? originalTicketValues.priority_id ?? null;
+    const currentPriorityId = pendingPriorityValue;
 
     return priorityOptions.filter((option) =>
       (wantsItil ? Boolean(option.is_from_itil_standard) : !option.is_from_itil_standard)
       || option.value === currentPriorityId
     );
-  }, [priorityOptions, effectiveBoardConfig.priority_type, pendingChanges.priority_id, originalTicketValues.priority_id]);
+  }, [priorityOptions, effectiveBoardConfig.priority_type, pendingPriorityValue]);
 
   // Calculate ITIL priority when impact and urgency are available
   // Use pending ITIL values if available, otherwise use prop values
@@ -1835,7 +1838,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   <h5 className="font-bold mb-2">{t('fields.priority', 'Priority')}</h5>
                   <div className={`transition-opacity ${isFieldRemotelyEdited('priority_id') ? 'opacity-60' : ''}`}>
                     <PrioritySelect
-                      value={pendingChanges.priority_id ?? originalTicketValues.priority_id ?? null}
+                      value={pendingPriorityValue}
                       options={scopedPriorityOptions}
                       onValueChange={(value) => handlePendingChange('priority_id', value)}
                       customStyles={customStyles}

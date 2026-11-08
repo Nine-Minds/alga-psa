@@ -70,11 +70,13 @@ test('real Vitest inventory loads cases without executing bodies and rejects emp
   const reviewedRunner = { ...runner, mandatory: false, reason: 'Manual fixture', issue: 'fixture-1', expires: '2026-11-08' };
   writeFileSync(path.join(root, 'base.test.js'),
     'test("must only collect", () => { throw new Error("body must not execute") });');
-  const expiresToday = collectVitestInventory({ root, output: path.join(root, 'reports'), runner: reviewedRunner,
-    now: new Date('2026-11-08T00:00:00Z') });
+  const expiresToday = collectVitestInventory({ root, output: path.join(root, 'reports'),
+    runner: reviewedRunner, now: new Date('2026-11-08T00:00:00Z') });
   assert.equal(expiresToday.status, 'passed');
   assert.doesNotThrow(() => collectVitestInventory({ root, output: path.join(root, 'reports'),
-    runner: { ...reviewedRunner, expires: '2026-11-09' }, now: new Date('2026-11-08T23:59:59Z') }));
+    runner: reviewedRunner, now: new Date('2026-11-08T23:59:59Z') }));
+  assert.throws(() => collectVitestInventory({ root, output: path.join(root, 'reports'),
+    runner: reviewedRunner, now: new Date('2026-11-09T00:00:00Z') }), /unexpired review/);
   // Exercise the production default clock as well as the injected clock above.
   const OriginalDate = globalThis.Date;
   globalThis.Date = class extends OriginalDate {
