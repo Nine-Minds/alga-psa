@@ -1,12 +1,37 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync, rmSync, realpathSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync, rmSync, realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { collectVitestInventory } from '../lib/vitest-inventory-collection.mjs';
 import { readRunnerCollection } from '../lib/read-runner-collection.mjs';
 import { isAdditionalWorkspaceTest, reconcileDiscovery } from '../lib/test-discovery.mjs';
+
+test('renewed email and invoice reviews collect real cases after the previous deadline', t => {
+  // The workspace DB job passed all test bodies, then failed manual collection
+  // when these reviews reached their deadline at midnight UTC on November 8.
+  t.mock.timers.enable({ apis: ['Date'], now: Date.parse('2026-11-08T01:54:56Z') });
+  const root = fileURLToPath(new URL('../../', import.meta.url));
+  const output = mkdtempSync(path.join(tmpdir(), 'renewed-manual-inventory-'));
+  t.after(() => rmSync(output, { recursive: true, force: true }));
+  const runners = JSON.parse(readFileSync(path.join(root, 'scripts/manual-vitest-runners.json'), 'utf8'));
+
+  for (const name of ['legacy-email-review', 'invoice-visual-review']) {
+    const runner = runners.find(entry => entry.runner === name);
+    assert.ok(runner, `Missing manual runner: ${name}`);
+    assert.throws(() => collectVitestInventory({ root, output,
+      runner: { ...runner, expires: '2026-11-08' } }), /unexpired review/);
+
+    const collection = collectVitestInventory({ root, runner, output });
+    assert.equal(collection.status, 'passed', collection.failures.join('\n'));
+    assert.equal(collection.mandatory, false);
+    assert.deepEqual([...collection.files].sort(), runner.filters.map(file => `${runner.cwd}/${file}`).sort());
+    assert.ok(collection.collectedTests >= collection.files.length);
+    const discovery = reconcileDiscovery({ root, candidates: collection.files, collections: [collection] });
+    assert.equal(discovery.status, 'passed', discovery.failures.join('\n'));
+  }
+});
 
 for (const name of ['maintenance-fanout-activities', 'tenant-deletion-prepaid-block-order']) {
   test(`Temporal readiness collects the ${name} behavioral regression`, t => {
