@@ -130,6 +130,7 @@ import {
   type UpdateTicketInTransactionOptions,
 } from './optimizedTicketActions';
 import { createTicketRichTextParagraph } from '../lib/ticketRichText';
+import { assertAllowedTicketUpdateOptions } from '../lib/ticketUpdateAuthorization';
 import { revertBundlePropagationForChild } from './ticketBundleUtils';
 import {
   buildTicketResolutionSlaStageCompletionEvent,
@@ -204,6 +205,13 @@ export type TicketBulkStatusOptions = TicketNotificationSuppressionOptions & {
     isInternal?: boolean;
   };
 };
+
+const TICKET_NOTIFICATION_OPTION_KEYS = ['suppressContactNotifications', 'suppressInternalNotifications'] as const;
+const TICKET_BULK_STATUS_OPTION_KEYS = [
+  ...TICKET_NOTIFICATION_OPTION_KEYS,
+  'propagateToChildren',
+  'resolutionComment',
+] as const;
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
@@ -2529,6 +2537,7 @@ export const moveTicketsToBoard = withAuth(async (
   movedIds: string[];
   failed: Array<{ ticketId: string; message: string }>;
 }> => {
+  assertAllowedTicketUpdateOptions(options, TICKET_NOTIFICATION_OPTION_KEYS);
   const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
 
   if (uniqueIds.length === 0) {
@@ -2630,6 +2639,7 @@ export const bulkAssignTickets = withAuth(async (
   updatedIds: string[];
   failed: Array<{ ticketId: string; message: string }>;
 }> => {
+  assertAllowedTicketUpdateOptions(options, TICKET_NOTIFICATION_OPTION_KEYS);
   const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
 
   if (uniqueIds.length === 0) {
@@ -2775,6 +2785,7 @@ export const bulkUpdateTicketDueDate = withAuth(async (
   updatedIds: string[];
   failed: Array<{ ticketId: string; message: string }>;
 }> => {
+  assertAllowedTicketUpdateOptions(options, TICKET_NOTIFICATION_OPTION_KEYS);
   const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
 
   if (uniqueIds.length === 0) {
@@ -2825,6 +2836,7 @@ export const bulkUpdateTicketStatus = withAuth(async (
   updatedIds: string[];
   failed: Array<{ ticketId: string; message: string; closeRuleFailures?: CloseRuleFailure[] }>;
 }> => {
+  assertAllowedTicketUpdateOptions(options, TICKET_BULK_STATUS_OPTION_KEYS);
   const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
 
   if (uniqueIds.length === 0) {
@@ -2927,6 +2939,7 @@ export const bulkUpdateTicketPriority = withAuth(async (
   updatedIds: string[];
   failed: Array<{ ticketId: string; message: string }>;
 }> => {
+  assertAllowedTicketUpdateOptions(options, TICKET_NOTIFICATION_OPTION_KEYS);
   const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
 
   if (uniqueIds.length === 0) {
