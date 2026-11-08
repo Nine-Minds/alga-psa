@@ -2577,7 +2577,12 @@
       "tickets",
       "RAM",
       "Firmware",
-      "{{count}} open {{label}}"
+      "{{count}} open {{label}}",
+      "{{count}} ticket(s)",
+      "status",
+      "contact",
+      "{{actor}} • {{eventType}}",
+      "open"
     ],
     "caseInsensitive": [
       "account",
