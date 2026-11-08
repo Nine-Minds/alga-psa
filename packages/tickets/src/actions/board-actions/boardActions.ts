@@ -1141,7 +1141,7 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, ra
 
   // Unconditional, and before the board load / default-unset / any write.
   const guard = await boardMutationGuard(user, 'update', rawBoardData, db);
-  if (!guard.ok) {
+  if (guard.ok === false) {
     return guard.error;
   }
   const boardData = guard.data;

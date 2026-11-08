@@ -179,6 +179,7 @@ describe('board mutation guard', () => {
       const { updateBoard } = await import('./boardActions');
       const result = await updateBoard('board-a', { is_default: true, board_name: 'Hijack' } as any);
       expect(result).toMatchObject(denied);
+      expect(result).not.toHaveProperty('actionError');
       expect(refusedBy()).toEqual([PERMISSION]);
       expect(withTransactionMock).not.toHaveBeenCalled();
       expect(reads).toHaveLength(0);
