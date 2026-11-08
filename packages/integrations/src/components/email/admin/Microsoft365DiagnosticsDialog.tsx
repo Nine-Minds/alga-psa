@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { CheckCircle, AlertCircle, XCircle, Clock, Copy } from 'lucide-react';
-import type { EmailProvider } from '../types';
+import type { PublicEmailProvider } from '../types';
 import { runMicrosoft365Diagnostics } from '@alga-psa/integrations/actions';
 import type { Microsoft365DiagnosticsReport, Microsoft365DiagnosticsStep } from '@alga-psa/shared/interfaces/microsoft365-diagnostics.interfaces';
 
@@ -38,7 +38,7 @@ export function Microsoft365DiagnosticsDialog({
 }: {
   isOpen: boolean;
   onClose: () => void;
-  provider: EmailProvider | null;
+  provider: PublicEmailProvider | null;
 }) {
   const { t } = useTranslation('msp/admin');
   const [loading, setLoading] = React.useState(false);

@@ -12,6 +12,7 @@ import {
   type AutomaticDiscountPolicy,
   type InvoiceAdjustmentCharge,
 } from "./contractInvoiceAdjustments";
+import { formatCurrencyWithSymbol } from "@alga-psa/core/formatters";
 
 export interface DiscountComputeCandidate extends IDiscount {
   contract_line_id?: string | null;
@@ -125,11 +126,8 @@ export function filterApplicableDiscounts(
 }
 
 function formatCents(cents: number, currencyCode: string): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: currencyCode || "USD",
   // LEVERAGE: pattern currency-minor-units — hard-coded /100 assumes a 2-digit currency; display/compute formatting should go through formatCurrencyFromMinorUnits (alga0002091 follow-up)
-  }).format(cents / 100);
+  return formatCurrencyWithSymbol(cents / 100, "en-US", currencyCode || "USD");
 }
 
 export function computeDiscountsAndAdjustments(

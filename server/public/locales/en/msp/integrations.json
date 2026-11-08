@@ -36,6 +36,15 @@
         "suggested": "Suggested",
         "toSave": "{{total}} to save"
       },
+      "customerMapping": {
+        "unlink": "Unlink",
+        "unlinkConfirm": {
+          "title": "Unlink {{client}} from QuickBooks?",
+          "body": "{{client}} stops exporting to QuickBooks customer {{customer}}. Nothing changes in QuickBooks, and you can link it again from this list at any time.",
+          "confirm": "Unlink",
+          "cancel": "Keep link"
+        }
+      },
       "dialog": {
         "cancel": "Cancel",
         "enterPlaceholder": "Enter {{field}}...",
@@ -844,7 +853,13 @@
             "expired": "The connection attempt expired before it finished. Nothing was saved — start the connection again.",
             "generic": "Microsoft Entra was not connected, and nothing was saved. Please try again.",
             "validationFailed": "Microsoft signed you in, but the managed tenant list could not be read, so nothing was saved. Your permissions were accepted — this usually means the partner tenant is not onboarded to Microsoft 365 Lighthouse or has no active GDAP relationships.",
-            "tokenRejected": "Microsoft rejected the connection's access token, so nothing was saved. Start the connection again."
+            "tokenRejected": "Microsoft rejected the connection's access token, so nothing was saved. Start the connection again.",
+            "singleTenantApp": "Microsoft rejected the sign-in because this app registration is single-tenant. Entra needs a multi-tenant app: open the app registration, go to Authentication, set Supported account types to \"Accounts in any organizational directory\", then reconnect. Nothing was saved.",
+            "appNotInDirectory": "Microsoft could not find this app in the directory named by the Tenant ID on its Microsoft profile. Check that the Tenant ID is the directory (tenant) ID where the app is registered. Nothing was saved.",
+            "wrongDirectory": "The account you signed in with is from a different directory than this single-tenant app. Make the app multi-tenant (Accounts in any organizational directory), then reconnect. Nothing was saved.",
+            "redirectUriMismatch": "Microsoft rejected the redirect URI because it is not registered on the app. Add this exact URI under Authentication > Web redirect URIs, then reconnect: {{redirectUri}}",
+            "invalidClientSecret": "Microsoft rejected the client secret on the Microsoft profile. Make sure you saved the secret Value, not its Secret ID.",
+            "expiredClientSecret": "The client secret on the Microsoft profile has expired. Create a new secret in Azure and update the profile."
           },
           "connectingSuffix": " (Connecting...)",
           "details": "Connection details",
@@ -1924,8 +1939,12 @@
           "calendarRedirect": "Calendar sync redirect URI",
           "calendarTitle": "Calendar",
           "clientId": "Client ID",
+          "copied": "Copied",
+          "copy": "Copy",
+          "copyFailed": "Could not copy",
           "currentProfileTitle": "Saved app values",
           "emailRedirect": "Inbound email redirect URI",
+          "emailSetupRedirect": "Email setup redirect URI",
           "emailTitle": "Email",
           "entraConsent": "Requirement",
           "entraConsentValue": "Register this app as multitenant and grant admin consent in your partner Microsoft tenant.",
@@ -2097,11 +2116,18 @@
         "environment": "Intuit Environment",
         "environmentProduction": "Production",
         "environmentSandbox": "Sandbox",
+        "environmentHint": "Production connects to real QuickBooks companies. Sandbox connects to an Intuit test company, so you can try exports without touching real books.",
+        "environmentLockedHint": "Disconnect QuickBooks before switching environments. The connected company and its tokens exist only in the environment they were authorized in.",
+        "environmentSandboxKeysTitle": "Sandbox needs your own Intuit app",
+        "environmentSandboxKeysDescription": "Intuit sandbox companies only accept the Development keys of an Intuit app you control. The shared app this deployment provides uses Production keys, so register your own app and save its Development keys below before connecting.",
+        "environmentSavedSandbox": "QuickBooks will now connect to an Intuit sandbox company. Connect with your own Intuit app's Development keys.",
+        "environmentSavedProduction": "QuickBooks will now connect to real QuickBooks companies.",
         "errors": {
           "automatedSalesTax": "Failed to update Automated Sales Tax mode.",
           "disconnect": "Failed to disconnect QuickBooks.",
           "load": "Failed to load QuickBooks settings.",
-          "saveCredentials": "Failed to save QuickBooks credentials."
+          "saveCredentials": "Failed to save QuickBooks credentials.",
+          "environment": "Failed to change the Intuit environment."
         },
         "howItWorksDescription": "Connect your QuickBooks company by signing in to Intuit, and AlgaPSA will use it as the default live context for exports and mappings. The Intuit App card below tells you whether your deployment already provides the app that sign-in goes through, or whether you need to register one first.",
         "howItWorksTitle": "How live QuickBooks works in this release",
@@ -2133,6 +2159,7 @@
         "credentialSource": {
           "app": "This deployment provides a shared Intuit app, so you can connect QuickBooks without registering one. Skip this card and click Connect QuickBooks below.",
           "none": "No Intuit app is available yet. Register one with Intuit before you can connect.",
+          "noneSandbox": "Sandbox needs an Intuit app of your own. Register one and save its Development keys before you can connect.",
           "tenant": "This tenant connects through its own Intuit app, using the credentials stored below. To rotate a key, paste the new value and save.",
           "appTitle": "No credentials needed"
         },
@@ -2431,6 +2458,42 @@
           "title": "Maintenance Windows",
           "description": "Alerts arriving during an active window are suppressed and will not create tickets.",
           "empty": "No maintenance windows configured."
+        },
+        "predicate": {
+          "matchAll": "Match",
+          "all": "All conditions",
+          "any": "Any condition",
+          "add": "Add condition",
+          "remove": "Remove",
+          "value": "Value",
+          "nestedGroup": "Nested group",
+          "legacyRegex": "Legacy message regex",
+          "and": "and",
+          "or": "or",
+          "fields": {
+            "severity": "Severity",
+            "alertClass": "Alert class",
+            "activityType": "Activity type",
+            "sourceType": "Source type",
+            "organizationId": "Organization ID",
+            "text": "Message and details",
+            "deviceName": "Device name",
+            "externalDeviceId": "External device ID",
+            "message": "Message",
+            "details": "Details"
+          },
+          "operators": {
+            "equals": "is",
+            "not_equals": "is not",
+            "in": "is one of",
+            "not_in": "is none of",
+            "contains": "contains",
+            "not_contains": "does not contain",
+            "contains_ci": "contains, ignoring case",
+            "not_contains_ci": "does not contain, ignoring case"
+          },
+          "addGroup": "Add group",
+          "removeGroup": "Remove group"
         }
       },
       "ninjaOne": {
@@ -3080,6 +3143,93 @@
           "showSecret": "Show secret",
           "title": "Alert Webhook",
           "url": "Webhook URL"
+        }
+      },
+      "unifi": {
+        "proFeature": {
+          "description": "UniFi integration is available in AlgaPSA Pro."
+        },
+        "actions": {
+          "saveConfiguration": "Save Configuration",
+          "testConnection": "Test Connection",
+          "disconnect": "Disconnect",
+          "discoverSites": "Discover Sites",
+          "runDeviceSync": "Run Device Sync",
+          "checkOfflineNow": "Check Offline Devices Now",
+          "saveAlerting": "Save Alerting Settings"
+        },
+        "alerting": {
+          "title": "Offline Alerting",
+          "description": "A device that stays offline longer than the grace period opens an alert, and a ticket when your alert rules say so. The alert resolves when the device comes back online.",
+          "graceMinutes": "Offline grace period (minutes)",
+          "graceHelp": "How long a device must be continuously offline before an alert is raised. Use 0 to alert immediately.",
+          "rulesNote": "Ticket creation, priorities and auto-resolve are configured in the alert rules below."
+        },
+        "connection": {
+          "title": "UniFi Connection",
+          "description": "Connect with a UniFi API key. Use Site Manager to reach every console on your account, or Local controller for a controller you can reach directly. Adopted gateways, switches and access points are synced.",
+          "syncLabel": "Sync: {{status}}",
+          "syncLabelWithError": "Sync: {{status}} ({{error}})",
+          "connectedAt": "Connected: {{time}}",
+          "never": "never"
+        },
+        "errors": {
+          "loadSettings": "Failed to load UniFi settings",
+          "loadMappings": "Failed to load UniFi site mappings",
+          "loadSummary": "Failed to load UniFi connection summary",
+          "loadState": "Failed to load UniFi integration state",
+          "saveConfiguration": "Failed to save UniFi configuration",
+          "testConnectionFailed": "Connection test failed",
+          "disconnectFailed": "Failed to disconnect UniFi integration",
+          "siteSyncFailed": "Site discovery failed",
+          "deviceSyncFailed": "Device sync failed",
+          "updateMappingFailed": "Failed to update mapping",
+          "reconnectRequired": "UniFi rejected the saved API key. Paste a new key and save to resume syncing.",
+          "alertCheckFailed": "Offline check failed",
+          "saveAlertingFailed": "Failed to save alerting settings",
+          "invalidGraceMinutes": "Enter a whole number of minutes between 0 and 1440."
+        },
+        "fields": {
+          "apiKey": "API key ({{state}})",
+          "apiKeyStateSaved": "saved",
+          "apiKeyStateRequired": "required",
+          "apiKeyPlaceholderExisting": "Key saved. Enter a new key to replace it",
+          "apiKeyPlaceholderNew": "Paste your UniFi API key",
+          "connectionMode": "Connection mode",
+          "modeSiteManager": "Site Manager (cloud)",
+          "modeLocal": "Local controller",
+          "localBaseUrl": "Controller URL",
+          "localBaseUrlPlaceholder": "https://unifi.example.com"
+        },
+        "mappings": {
+          "site": "UniFi Site",
+          "siteIdLabel": "ID: {{id}}",
+          "mappedClient": "Mapped Client",
+          "defaultContact": "Default Contact",
+          "selectContact": "Select contact",
+          "autoSync": "Auto Sync",
+          "autoSyncEnabled": "Enabled",
+          "autoSyncDisabled": "Disabled"
+        },
+        "status": {
+          "label": "Status: ",
+          "connected": "Connected",
+          "disconnected": "Not connected",
+          "reconnectRequired": "Reconnect required"
+        },
+        "success": {
+          "configurationSaved": "UniFi configuration saved",
+          "connectionTestSucceeded": "Connection to UniFi succeeded",
+          "disconnected": "UniFi integration disconnected",
+          "siteSyncCompleted": "Site discovery completed: {{processed}} processed, {{created}} created, {{updated}} updated",
+          "deviceSyncCompleted": "Device sync completed: {{processed}} processed, {{created}} created, {{updated}} updated",
+          "alertCheckCompleted": "Offline check completed",
+          "alertingSaved": "Alerting settings saved"
+        },
+        "sync": {
+          "title": "Sync & Site Mappings",
+          "description": "Discover UniFi sites and map each to a client. Devices in unmapped sites are skipped.",
+          "summary": "{{mappedSites}} mapped sites · {{devices}} devices · {{activeAlerts}} active alerts"
         }
       },
       "huntress": {

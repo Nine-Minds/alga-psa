@@ -48,7 +48,8 @@ export const RMM_ALERT_RECONCILIATION_JOB = 'rmm-alert-reconciliation';
 export const HUNTRESS_INCIDENT_POLL_JOB = 'huntress-incident-poll';
 export const RMM_DEVICE_SYNC_JOB = 'rmm-device-sync';
 
-const RMM_ALERT_POLLING_PROVIDERS = ['ninjaone', 'tacticalrmm', 'datto'];
+// LEVERAGE: pattern rmm-provider-registration — provider lists are hand-maintained per capability
+const RMM_ALERT_POLLING_PROVIDERS = ['ninjaone', 'tacticalrmm', 'unifi', 'datto'];
 
 /**
  * Which providers get a recurring device sync. Deliberately NOT the alert
@@ -61,7 +62,8 @@ const RMM_ALERT_POLLING_PROVIDERS = ['ninjaone', 'tacticalrmm', 'datto'];
  * entitlement, so its engine asserts the tier itself rather than relying on the
  * action wrapper a scheduled run never passes through.
  */
-const RMM_DEVICE_SYNC_PROVIDERS = ['ninjaone', 'levelio', 'tacticalrmm', 'datto', 'tanium'];
+// LEVERAGE: pattern rmm-provider-registration — provider lists are hand-maintained per capability
+const RMM_DEVICE_SYNC_PROVIDERS = ['ninjaone', 'levelio', 'tacticalrmm', 'datto', 'tanium', 'unifi'];
 
 const RMM_POLLING_RECONCILE_TENANT = '__rmm_polling_reconcile__';
 const RMM_POLLING_RECONCILE_REASON = 'RMM polling reconciler scans integration schedules across tenants';
@@ -99,6 +101,15 @@ async function ensureFetchersRegistered(): Promise<void> {
     }
   } catch {
     // CE build without the alias target — NinjaOne polling simply unavailable.
+  }
+  // LEVERAGE: pattern rmm-provider-registration — hand-written dynamic-import registration block per provider
+  try {
+    const mod = await import('@enterprise/lib/integrations/unifi/alerts/reconciliationFetcher');
+    if (mod.unifiAlertFetcher) {
+      registerRmmAlertFetcher('unifi', mod.unifiAlertFetcher);
+    }
+  } catch {
+    // CE build without the alias target — UniFi offline alerts unavailable.
   }
   try {
     const mod = await import('@enterprise/lib/integrations/datto/alertFetcher');
@@ -350,6 +361,15 @@ async function ensureDeviceSyncStrategiesRegistered(): Promise<void> {
     }
   } catch {
     // CE build without the alias target — Tanium device sync unavailable.
+  }
+  // LEVERAGE: pattern rmm-provider-registration — hand-written dynamic-import registration block per provider
+  try {
+    const mod = await import('@enterprise/lib/integrations/unifi/sync/deviceSyncStrategy');
+    if (mod.uniFiDeviceSyncStrategy) {
+      registerRmmDeviceSyncStrategy('unifi', mod.uniFiDeviceSyncStrategy);
+    }
+  } catch {
+    // CE build without the alias target — UniFi device sync unavailable.
   }
   deviceSyncStrategiesEnsured = true;
 }

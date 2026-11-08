@@ -1,0 +1,168 @@
+import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
+import type { InvoiceBundlePresentation } from '@alga-psa/types';
+import type { BundlePreviousPeriod } from './snapshot';
+
+export interface PreviousPeriodRequest {
+  /** `contract_lines.contract_line_id` of the Fixed line. */
+  contractLineId: string;
+  /** Earliest service period start covered by this invoice's bundle. */
+  earliestPeriodStart: string | Date;
+}
+
+/**
+ * Invoices that never billed the customer, so their quantities are not a
+ * "previous billed period". Draft invoices DO count (PRD R3: only cancelled
+ * and the current invoice are excluded), because a finalize-later workflow
+ * generates the next period before the prior draft is issued. `void` and the
+ * `canceled` spelling are treated like `cancelled`, case-insensitively.
+ */
+export const EXCLUDED_PREVIOUS_PERIOD_STATUSES = ['cancelled', 'canceled', 'void', 'voided'] as const;
+
+export const isExcludedPreviousPeriodStatus = (status: string | null | undefined): boolean =>
+  typeof status === 'string' && (EXCLUDED_PREVIOUS_PERIOD_STATUSES as readonly string[]).includes(status.trim().toLowerCase());
+
+export interface PreviousPeriodRow {
+  /** `invoices.status` of the row's invoice; excluded statuses are dropped. */
+  invoiceStatus?: string | null;
+  contractLineId: string;
+  /** `invoice_charges.item_id` of the consolidated parent carrying the snapshot. */
+  chargeItemId: string;
+  serviceId: string;
+  serviceName: string;
+  itemDetailId: string;
+  detailQuantity: number | null;
+  servicePeriodStart: string | Date | null;
+  servicePeriodEnd: string | Date | null;
+  bundlePresentation: InvoiceBundlePresentation | null;
+}
+
+const toMs = (value: string | Date | null | undefined): number => {
+  if (!value) return Number.NaN;
+  return value instanceof Date ? value.getTime() : new Date(value).getTime();
+};
+
+/**
+ * Pure selection of "the previous billed period" per line from candidate rows
+ * (rows of other, non-cancelled invoices). The latest service period ending on
+ * or before the bundle's earliest covered start wins; quantities are summed per
+ * service, preferring the prior invoice's snapshot quantity (raw, unclamped)
+ * over the clamped detail quantity.
+ */
+export function selectPreviousPeriods(
+  requests: PreviousPeriodRequest[],
+  rows: PreviousPeriodRow[],
+): Map<string, BundlePreviousPeriod | null> {
+  const result = new Map<string, BundlePreviousPeriod | null>();
+  for (const request of requests) {
+    const startMs = toMs(request.earliestPeriodStart);
+    const candidates = rows.filter((row) => {
+      if (row.contractLineId !== request.contractLineId) return false;
+      if (isExcludedPreviousPeriodStatus(row.invoiceStatus)) return false;
+      const endMs = toMs(row.servicePeriodEnd);
+      return !Number.isNaN(endMs) && !Number.isNaN(startMs) && endMs <= startMs;
+    });
+    if (candidates.length === 0) {
+      result.set(request.contractLineId, null);
+      continue;
+    }
+    const latest = candidates.reduce((best, row) => {
+      const endDelta = toMs(row.servicePeriodEnd) - toMs(best.servicePeriodEnd);
+      if (endDelta !== 0) return endDelta > 0 ? row : best;
+      return toMs(row.servicePeriodStart) > toMs(best.servicePeriodStart) ? row : best;
+    });
+    const sameperiod = candidates.filter(
+      (row) =>
+        toMs(row.servicePeriodEnd) === toMs(latest.servicePeriodEnd)
+        && toMs(row.servicePeriodStart) === toMs(latest.servicePeriodStart),
+    );
+
+    const quantities = new Map<string, number | null>();
+    const names = new Map<string, string>();
+    // Every detail row carries its own parsed copy of the charge's jsonb, so
+    // components are deduped by value, using the same identity snapshot.ts
+    // groups by (period + service), scoped to the charge that owns the snapshot.
+    const countedSnapshotComponents = new Set<string>();
+    const add = (serviceId: string, quantity: number | null) => {
+      if (!quantities.has(serviceId)) {
+        quantities.set(serviceId, quantity);
+      } else {
+        const existing = quantities.get(serviceId);
+        quantities.set(serviceId, existing === null || quantity === null ? null : (existing ?? 0) + quantity);
+      }
+    };
+    for (const row of sameperiod) {
+      names.set(row.serviceId, row.serviceName);
+      const component = row.bundlePresentation?.components?.find((entry) => entry.detailItemIds.includes(row.itemDetailId));
+      if (component) {
+        const componentKey = [
+          row.chargeItemId,
+          component.servicePeriodStart ?? '',
+          component.servicePeriodEnd ?? '',
+          component.serviceId,
+        ].join('|');
+        if (countedSnapshotComponents.has(componentKey)) continue;
+        countedSnapshotComponents.add(componentKey);
+        // Snapshot null means the quantity was unset; fall back to the detail row.
+        add(row.serviceId, component.quantity ?? row.detailQuantity);
+      } else {
+        add(row.serviceId, row.detailQuantity);
+      }
+    }
+    result.set(request.contractLineId, { quantitiesByServiceId: quantities, serviceNames: names });
+  }
+  return result;
+}
+
+/**
+ * One batched, tenant-scoped query for every bundle on an invoice. Cancelled
+ * invoices and the invoice being generated are ignored: invoice detail rows
+ * are the only quantity history, because allocated services are edited in place.
+ */
+export async function loadPreviousBundlePeriods(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  /** The invoice being generated (excluded from history); null for a draft preview with no invoice yet. */
+  currentInvoiceId: string | null,
+  requests: PreviousPeriodRequest[],
+): Promise<Map<string, BundlePreviousPeriod | null>> {
+  if (requests.length === 0) return new Map();
+  const latestStart = requests.reduce((max, request) => {
+    const ms = toMs(request.earliestPeriodStart);
+    return ms > max ? ms : max;
+  }, Number.NEGATIVE_INFINITY);
+
+  const db = tenantDb(trx, tenant);
+  const query = db.table('invoice_charge_details as d');
+  db.tenantJoin(query, 'invoice_charges as c', 'd.item_id', 'c.item_id');
+  db.tenantJoin(query, 'invoices as i', 'c.invoice_id', 'i.invoice_id');
+  db.tenantJoin(query, 'contract_line_service_configuration as cfg', 'd.config_id', 'cfg.config_id');
+  db.tenantJoin(query, 'service_catalog as sc', 'd.service_id', 'sc.service_id');
+  const rows = await query
+    .whereIn('cfg.contract_line_id', requests.map((request) => request.contractLineId))
+    .modify((q) => { if (currentInvoiceId) q.whereNot('i.invoice_id', currentInvoiceId); })
+    .whereRaw('lower(trim(coalesce(??, \'\'))) not in (' + EXCLUDED_PREVIOUS_PERIOD_STATUSES.map(() => '?').join(',') + ')', ['i.status', ...EXCLUDED_PREVIOUS_PERIOD_STATUSES])
+    .whereNotNull('d.service_period_end')
+    .where('d.service_period_end', '<=', new Date(latestStart))
+    .select(
+      'cfg.contract_line_id as contractLineId',
+      'c.item_id as chargeItemId',
+      'd.service_id as serviceId',
+      'sc.service_name as serviceName',
+      'd.item_detail_id as itemDetailId',
+      'd.quantity as detailQuantity',
+      'd.service_period_start as servicePeriodStart',
+      'd.service_period_end as servicePeriodEnd',
+      'c.bundle_presentation as bundlePresentation',
+      'i.status as invoiceStatus',
+    );
+
+  return selectPreviousPeriods(
+    requests,
+    rows.map((row: any) => ({
+      ...row,
+      detailQuantity: row.detailQuantity === null || row.detailQuantity === undefined ? null : Number(row.detailQuantity),
+      bundlePresentation: typeof row.bundlePresentation === 'string' ? JSON.parse(row.bundlePresentation) : row.bundlePresentation ?? null,
+    })),
+  );
+}

@@ -11,6 +11,14 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Download, X, Mail } from 'lucide-react';
 import { getClientInvoiceById, downloadClientInvoicePdf, sendClientInvoiceEmail } from '@alga-psa/client-portal/actions';
 import { getActiveClientLocationsForBilling, type BillingLocationSummary } from '@alga-psa/billing/actions/billingClientLocationActions';
+import { buildBundleComponents } from '@alga-psa/billing/lib/invoiceBundleComponents/components';
+import {
+  isBundleParentRoleBlank,
+  resolveBundleRowCells,
+  type BundleCellFormatters,
+  type BundleRowRole,
+  type ResolvedBundleCell,
+} from '@alga-psa/billing/lib/invoiceBundleComponents/layoutCells';
 import { triggerInvoicePdfDownload } from './invoicePdfDownload';
 import {
   LocationAddress,
@@ -264,9 +272,71 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
       ? buildLocationGroups(charges, clientLocations)
       : [];
 
+    // Bundle component rows, drawn the way the client's resolved template draws
+    // them: its childRows cells decide what each column shows, and its
+    // parentBlankColumns decide which bundle-row cells go blank. The server
+    // sends bundle data (and the layout) only when that template renders
+    // component rows, and amounts only when it binds a component price.
+    const layout = invoice.bundle_rows_layout ?? null;
+    const bundleOf = (item: IInvoiceCharge) => {
+      if (!layout) return null;
+      const bundle = buildBundleComponents(item.bundle_presentation ?? null, {
+        includePricing: Boolean(item.bundle_component_amounts),
+        amounts: item.bundle_component_amounts ?? null,
+      });
+      return bundle?.hasComponents ? bundle : null;
+    };
+    const parentBlank = (item: IInvoiceCharge, role: BundleRowRole) =>
+      isBundleParentRoleBlank(layout, role) && Boolean(bundleOf(item));
+    const cellFormatters: BundleCellFormatters = {
+      currency: (amount) => formatCurrency(amount, invoice.currencyCode),
+      number: (value) => String(value),
+      date: (value) => formatDate(value),
+      dateRange: (start, end) => (end ? formatServicePeriodRange(start, end) ?? formatDate(start) : formatDate(start)),
+    };
+    const renderBundleCell = (cell: ResolvedBundleCell | null, lead: boolean) => {
+      if (!cell) return lead ? '\u2022' : null;
+      return (
+        <>
+          {cell.change ? (
+            <span className={cell.change > 0 ? 'mr-1 font-semibold text-green-700' : 'mr-1 font-semibold text-red-700'}>
+              {cell.change > 0 ? '+' : '\u2212'}{Math.abs(cell.change)}
+            </span>
+          ) : null}
+          {cell.lines.length === 0 && lead ? '\u2022' : null}
+          {cell.lines.map((line, lineIdx) => {
+            const text = `${lead && lineIdx === 0 ? '\u2022 ' : ''}${line.text}`;
+            if (cell.change) return <span key={lineIdx} className={lineIdx > 0 ? 'ml-2 text-xs' : undefined}>{text}</span>;
+            return <div key={lineIdx} className={lineIdx > 0 || line.supplemental ? 'text-xs' : undefined}>{text}</div>;
+          })}
+        </>
+      );
+    };
+    const renderBundleRows = (item: IInvoiceCharge, idx: number, keyPrefix: string) => {
+      const bundle = bundleOf(item);
+      if (!bundle || !layout) return null;
+      return bundle.components.map((component, componentIdx) => {
+        const cells = resolveBundleRowCells(layout, component, item as unknown as Record<string, unknown>, cellFormatters);
+        return (
+          <tr
+            key={`${keyPrefix}-${idx}-component-${componentIdx}`}
+            data-automation-id={`invoice-line-item-${keyPrefix}-${idx}-component-${componentIdx}`}
+            className="text-sm text-muted-foreground"
+          >
+            <td className="px-3 py-1 pl-8">{renderBundleCell(cells.description, true)}</td>
+            <td className="px-3 py-1">{renderBundleCell(cells.quantity, false)}</td>
+            <td className="px-3 py-1">{renderBundleCell(cells.unitPrice, false)}</td>
+            <td className="px-3 py-1">{renderBundleCell(cells.total, false)}</td>
+          </tr>
+        );
+      });
+    };
+
     // One consistent row renderer so both the flat layout and the per-location
     // tables agree on column formatting / service-period badging.
-    const renderChargeRow = (item: IInvoiceCharge, idx: number, keyPrefix: string) => (
+    const renderChargeRow = (item: IInvoiceCharge, idx: number, keyPrefix: string) => {
+      const bundle = bundleOf(item);
+      return (
       <tr key={`${keyPrefix}-${idx}`} data-automation-id={`invoice-line-item-${keyPrefix}-${idx}`}>
         <td className="px-3 py-2">
           <div className="space-y-1">
@@ -286,6 +356,9 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
                 <span className="text-xs text-muted-foreground">{item.service_sku}</span>
               ) : null}
             </div>
+            {bundle?.subtitle ? (
+              <div className="text-xs text-muted-foreground">{bundle.subtitle}</div>
+            ) : null}
             {item.recurring_detail_periods && item.recurring_detail_periods.length > 0
               ? renderRecurringDetailPeriods(item.recurring_detail_periods)
               : formatServicePeriodRange(item.service_period_start, item.service_period_end) ? (
@@ -295,11 +368,12 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
                 ) : renderFinancialArtifactNote(item)}
           </div>
         </td>
-        <td className="px-3 py-2">{item.quantity}</td>
-        <td className="px-3 py-2">{formatCurrency(item.unit_price, invoice.currencyCode)}</td>
-        <td className="px-3 py-2">{formatCurrency(item.net_amount ?? item.total_price, invoice.currencyCode)}</td>
+        <td className="px-3 py-2">{parentBlank(item, 'quantity') ? null : item.quantity}</td>
+        <td className="px-3 py-2">{parentBlank(item, 'unitPrice') ? null : formatCurrency(item.unit_price, invoice.currencyCode)}</td>
+        <td className="px-3 py-2">{parentBlank(item, 'total') ? null : formatCurrency(item.net_amount ?? item.total_price, invoice.currencyCode)}</td>
       </tr>
-    );
+      );
+    };
 
     const renderChargesTable = (rows: IInvoiceCharge[], keyPrefix: string) => (
       <table className="min-w-full divide-y divide-gray-200 mt-2">
@@ -313,7 +387,12 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
         </thead>
         <tbody className="divide-y divide-gray-200">
           {rows.length > 0
-            ? rows.map((item, idx) => renderChargeRow(item, idx, keyPrefix))
+            ? rows.map((item, idx) => (
+                <React.Fragment key={`${keyPrefix}-${idx}`}>
+                  {renderChargeRow(item, idx, keyPrefix)}
+                  {renderBundleRows(item, idx, keyPrefix)}
+                </React.Fragment>
+              ))
             : (
                 <tr>
                   <td colSpan={4} className="px-3 py-2 text-center text-gray-500">

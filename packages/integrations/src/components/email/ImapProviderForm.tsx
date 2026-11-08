@@ -18,7 +18,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga
 import { DrawerFooter } from '@alga-psa/ui/components/Drawer';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Eye, EyeOff } from 'lucide-react';
-import type { EmailProvider } from './types';
+import toast from 'react-hot-toast';
+import type { PublicEmailProvider } from './types';
 import { createEmailProvider, updateEmailProvider } from '@alga-psa/integrations/actions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { getInboundTicketDefaults } from '@alga-psa/integrations/actions';
@@ -50,8 +51,8 @@ type ImapProviderFormData = {
 
 interface ImapProviderFormProps {
   tenant: string;
-  provider?: EmailProvider;
-  onSuccess: (provider: EmailProvider) => void;
+  provider?: PublicEmailProvider;
+  onSuccess: (provider: PublicEmailProvider) => void;
   onCancel: () => void;
 }
 
@@ -126,7 +127,8 @@ export function ImapProviderForm({
       oauthAuthorizeUrl: provider.imapConfig.oauth_authorize_url || '',
       oauthTokenUrl: provider.imapConfig.oauth_token_url || '',
       oauthClientId: provider.imapConfig.oauth_client_id || '',
-      oauthClientSecret: provider.imapConfig.oauth_client_secret || '',
+      // The stored client secret never reaches the browser; blank keeps it.
+      oauthClientSecret: '',
       oauthScopes: provider.imapConfig.oauth_scopes || '',
       isActive: provider.isActive,
       folderFilters: provider.imapConfig.folder_filters?.join(', ') || '',
@@ -221,6 +223,13 @@ export function ImapProviderForm({
         return;
       }
 
+      if (result.reconnectRequired) {
+        // The OAuth issuer changed, so the stored authorization was discarded.
+        toast(t('forms.imap.messages.reconnectRequired', {
+          defaultValue: 'OAuth settings changed. Reconnect the mailbox to authorize it with the new settings.',
+        }), { icon: '⚠️', duration: 8000 });
+      }
+
       onSuccess(result.provider);
     } catch (err: any) {
       setError(getErrorMessage(err));
@@ -230,7 +239,7 @@ export function ImapProviderForm({
   };
 
   const authType = form.watch('authType');
-  const oauthConnected = !!provider?.imapConfig?.refresh_token || !!provider?.imapConfig?.access_token;
+  const oauthConnected = !!provider?.imapConfig?.has_refresh_token || !!provider?.imapConfig?.has_access_token;
 
   const handleOauthConnect = async () => {
     if (!provider?.id) return;
@@ -396,6 +405,9 @@ export function ImapProviderForm({
               </div>
               <div>
                 <Label htmlFor="oauthClientSecret">{t('forms.imap.auth.clientSecret', { defaultValue: 'OAuth Client Secret' })}</Label>
+                <p className="text-sm text-muted-foreground mb-1">
+                  {t('forms.imap.auth.clientSecretHelp', { defaultValue: 'The client secret is stored securely and will not be displayed. Leave blank to keep the existing secret.' })}
+                </p>
                 <div className="relative">
                   <Input
                     id="oauthClientSecret"
