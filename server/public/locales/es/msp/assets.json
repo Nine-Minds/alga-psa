@@ -69,7 +69,7 @@
     "assetAuditMethod": {
       "scan": "Escaneo",
       "manual": "Manual",
-      "register": "Registrado en sitio"
+      "register": "Registro en sitio"
     }
   },
   "assetAlertsSection": {
@@ -2209,7 +2209,7 @@
       "unexpected": "no esperados"
     },
     "segments": {
-      "remaining": "Restante",
+      "remaining": "Restantes",
       "present": "Presentes",
       "missing": "Faltantes",
       "unexpected": "No esperados",
@@ -2250,8 +2250,8 @@
       "addUnexpectedPlaceholder": "Buscar un activo…",
       "addUnexpectedEmpty": "No hay otros activos para este cliente.",
       "complete": "Completar auditoría",
-      "completeConfirm_one": "Se registrará 1 dispositivo sin marcar como faltante.",
-      "completeConfirm_other": "Se registrarán {{count}} dispositivos sin marcar como faltantes.",
+      "completeConfirm_one": "1 dispositivo sin marcar se registrará como faltante.",
+      "completeConfirm_other": "{{count}} dispositivos sin marcar se registrarán como faltantes.",
       "cancelAudit": "Cancelar auditoría",
       "cancelConfirm": "Se abandona la auditoría y no se guarda ningún cambio en los activos. Esta acción no se puede deshacer.",
       "keepAudit": "Continuar auditando"
