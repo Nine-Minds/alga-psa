@@ -43,20 +43,34 @@ export async function retainCoManagedBeforeAccessReduction(context: CoManagedAcc
 // Participation evidence writer
 // ---------------------------------------------------------------------------
 
-type Source = 'work_audit';
+type Source = 'ticket_handoff' | 'work_audit';
 const object = (value: any): Record<string, any> => typeof value === 'string' ? JSON.parse(value) : value ?? {};
 
 /** Internal writer hook. Reads the committed-in-this-transaction source event,
  * never caller-provided history. Captures only already-shared audit fields.
- * Handoff-sourced evidence is registered by L3b1 against the same store. */
+ * Handoff-sourced evidence (L3b1) reads the immutable handoff row written in this transaction. */
 export async function retainCoManagedParticipationEvidence(context: CoManagedSharedWorkContext, source: Source, sourceId: string): Promise<void> {
   const { trx, resource, actor } = context;
   if (!trx.isTransaction || context.action !== 'update' || !['ticket', 'project_task'].includes(resource.kind) ||
-      source !== 'work_audit' || !isCoManagedUuid(sourceId)) throw new CoManagedSharedWorkError();
+      !['ticket_handoff', 'work_audit'].includes(source) || !isCoManagedUuid(sourceId)) throw new CoManagedSharedWorkError();
   const customer = tenantDb(trx, resource.tenant);
   const relationship = await customer.table('co_management_relationships').where({ relationship_id: resource.relationshipId, state: 'active' })
     .whereNull('ended_at').forShare().first('sponsor_tenant', 'sponsor_client_id');
   if (!relationship || ![resource.tenant, relationship.sponsor_tenant].includes(actor.tenant)) throw new CoManagedSharedWorkError();
+  if (source === 'ticket_handoff') {
+    if (resource.kind !== 'ticket') throw new CoManagedSharedWorkError();
+    const handoff = await customer.table('co_management_ticket_handoffs').where({ operation_id: sourceId, relationship_id: resource.relationshipId,
+      ticket_id: resource.id, actor_tenant: actor.tenant, actor_user_id: actor.userId, audience: 'shared_it' }).forShare().first();
+    if (!handoff) throw new CoManagedSharedWorkError();
+    const subject = await customer.table('tickets').where('ticket_id', resource.id).first('title', 'ticket_number');
+    const identity: ParticipationEvidenceIdentity = { tenant: relationship.sponsor_tenant, customer_tenant: resource.tenant, relationship_id: resource.relationshipId,
+      resource_type: 'ticket', resource_id: resource.id, source_type: 'ticket_handoff', source_id: sourceId };
+    await appendParticipationEvidence(trx, identity, { client_id: relationship.sponsor_client_id, operation_id: handoff.operation_id, event_type: handoff.transition,
+      actor_tenant: actor.tenant, actor_user_id: actor.userId, actor_name: handoff.actor_name, actor_organization: handoff.actor_organization,
+      occurred_at: new Date(handoff.occurred_at).toISOString(),
+      payload: { revision: handoff.revision, note: handoff.note, audience: 'shared_it', resourceTitle: subject?.title ?? null, ticketNumber: subject?.ticket_number ?? null } });
+    return;
+  }
   const event = await customer.table('audit_logs').where({ audit_id: sourceId, table_name: resource.kind === 'ticket' ? 'tickets' : 'project_tasks', record_id: resource.id })
     .whereIn('operation', resource.kind === 'ticket' ? ['co_managed_ticket_assignment'] : ['co_managed_project_task_update', 'co_managed_project_task_assignment'])
     .forShare().first();

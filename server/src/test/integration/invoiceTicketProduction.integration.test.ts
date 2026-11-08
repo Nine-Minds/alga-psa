@@ -1,3 +1,4 @@
+import { generateInvoiceForCycle } from '../../../test-utils/billingTestHelpers';
 import { it, expect, vi } from 'vitest';
 import fs from 'node:fs';
 import { randomUUID } from 'node:crypto';
@@ -38,8 +39,7 @@ it('renders saved transformed detail and primary tables through preview and PDF'
     state.tenant = state.user.tenant;
     const tenant = state.tenant;
     const ids = await createSourceFixture(db);
-    const { generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration');
-    const invoice = await generateInvoice(ids.cycleId) as any;
+    const invoice = await generateInvoiceForCycle(ids.cycleId) as any;
     expect(invoice.invoice_id, JSON.stringify(invoice)).toBeTruthy();
     const { getStandardTemplateAstByCode } = await import('@alga-psa/billing/lib/invoice-template-ast/standardTemplates');
     const { saveInvoiceTemplate } = await import('@alga-psa/billing/actions/invoiceTemplates');
@@ -192,7 +192,7 @@ async function generateProductionVariant(db: ReturnType<typeof knex>, variant: s
     }
     if (variant === 'multi-tax-long') await addLongInvoiceSources(db, ids);
   });
-  const { generateInvoice, generateProjectInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration');
+  const { generateProjectInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration');
   let result: any;
   let hourBlockPreviewSubtotal: number | undefined;
   if (variant === 'hour-block') {
@@ -215,7 +215,7 @@ async function generateProductionVariant(db: ReturnType<typeof knex>, variant: s
     if (!preview.success) throw new Error(preview.error);
     hourBlockPreviewSubtotal = preview.previews[0].data.subtotal;
     result = await generateInvoiceForSelectionInputs(selectors);
-  } else result = await (variant === 'cap' ? generateProjectInvoice(cappedProjectId!) : generateInvoice(ids.cycleId));
+  } else result = await (variant === 'cap' ? generateProjectInvoice(cappedProjectId!) : generateInvoiceForCycle(ids.cycleId));
   expect(result.invoice_id, JSON.stringify(result)).toBeTruthy();
   const { default: Invoice } = await import('@alga-psa/billing/models/invoice');
   const { mapDbInvoiceToWasmViewModel } = await import('@alga-psa/billing/lib/adapters/invoiceAdapters');
@@ -257,7 +257,14 @@ async function generateProductionVariant(db: ReturnType<typeof knex>, variant: s
       { description: 'Cap acceptance information', quantity: 1, rate: 0, is_taxable: false, service_id: charges.find((c) => Number(c.net_amount) > 0)!.service_id },
     ] as any) as any;
     const adjustedVm = mapDbInvoiceToWasmViewModel(adjusted)!;
-    expect(adjustedVm.subtotal).toBe(vm.subtotal - 1500); expect(adjustedVm.tax).toBe(vm.tax); expect(adjustedVm.total).toBe(vm.total - 1500);
+    expect(adjustedVm.subtotal).toBe(vm.subtotal - 1500);
+    // Discounts lower the taxable base before tax. The generated invoice has no
+    // discount (tax stays 2000 / 5500 above); the -1000 line discount and -500
+    // negative credit then take 1500 off the base, i.e. 10% = 150 off the tax:
+    // 2000 -> 1850 (cap) and 5500 -> 5350 (recurring-cap).
+    expect(adjustedVm.tax).toBe(vm.tax - 150);
+    expect(adjustedVm.tax).toBe(variant === 'cap' ? 1850 : 5350);
+    expect(adjustedVm.total).toBe(vm.total - 1500 - 150);
     for (const description of ['Cap acceptance line discount', 'Cap acceptance negative credit', 'Cap acceptance information']) {
       expect(adjustedVm.ticketPresentationRows!.filter((row) => row.description === description)).toHaveLength(1);
     }
@@ -280,7 +287,7 @@ async function generateProductionVariant(db: ReturnType<typeof knex>, variant: s
     expect(periods.every((period) => period.lifecycle_state === 'billed' && period.invoice_charge_detail_id)).toBe(true);
     fs.writeFileSync(`${dir}/recurring-periods.json`, JSON.stringify(periods, null, 2));
     const before = await db('invoice_charges').where({ tenant: ids.tenant, invoice_id: result.invoice_id }).orderBy('item_id');
-    expect((await generateInvoice(ids.cycleId) as any)?.invoice_id).toBeUndefined();
+    expect((await generateInvoiceForCycle(ids.cycleId) as any)?.invoice_id).toBeUndefined();
     expect(await db('invoice_charges').where({ tenant: ids.tenant, invoice_id: result.invoice_id }).orderBy('item_id')).toEqual(before);
   }
   if (variant === 'task-identities') {
@@ -374,8 +381,7 @@ it('saves and verifies a named nested alias on the generated long invoice throug
     if (!state.user) throw new Error('Migrated test database must seed an internal fixture user');
     state.tenant = state.user.tenant;
     const ids = await createSourceFixture(db, (ids) => addLongInvoiceSources(db, ids));
-    const { generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration');
-    const invoice = await generateInvoice(ids.cycleId) as any;
+    const invoice = await generateInvoiceForCycle(ids.cycleId) as any;
     expect(invoice.invoice_id, JSON.stringify(invoice)).toBeTruthy();
     const generated = { ids, invoiceId: invoice.invoice_id, invoiceNumber: invoice.invoice_number };
     const { getStandardTemplateAstByCode } = await import('@alga-psa/billing/lib/invoice-template-ast/standardTemplates');
@@ -475,8 +481,7 @@ it('surfaces declared scalar and missing collection diagnostics through producti
     if (!state.user) throw new Error('Migrated test database must seed an internal fixture user');
     state.tenant = state.user.tenant;
     const ids = await createSourceFixture(db);
-    const { generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration');
-    const invoice = await generateInvoice(ids.cycleId) as any;
+    const invoice = await generateInvoiceForCycle(ids.cycleId) as any;
     expect(invoice.invoice_id, JSON.stringify(invoice)).toBeTruthy();
     const generated = { invoiceId: invoice.invoice_id, invoiceNumber: invoice.invoice_number };
     const { saveInvoiceTemplate } = await import('@alga-psa/billing/actions/invoiceTemplates');
@@ -548,7 +553,6 @@ it('verifies saved detail and historical locale matrix through persisted reads, 
     expect(flat.columns).toHaveLength(6); expect(nested.columns).toHaveLength(6);
     expect(ast.transforms.operations).toContainEqual(expect.objectContaining({ type: 'sort', keys: [{ path: 'date', direction: 'desc' }] }));
     fs.writeFileSync(`${dir}/saved-template.json`, JSON.stringify(template, null, 2));
-    const { generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration');
     const { default: Invoice } = await import('@alga-psa/billing/models/invoice');
     const { mapDbInvoiceToWasmViewModel } = await import('@alga-psa/billing/lib/adapters/invoiceAdapters');
     const { PDFGenerationService } = await import('@alga-psa/billing/services/pdfGenerationService');
@@ -566,7 +570,7 @@ it('verifies saved detail and historical locale matrix through persisted reads, 
     }
     for (const variant of ['historical-fallbacks', 'historical-partial', 'historical-none']) {
       const ids = await createSourceFixture(db);
-      const generated = await generateInvoice(ids.cycleId) as any;
+      const generated = await generateInvoiceForCycle(ids.cycleId) as any;
       expect(generated.invoice_id).toBeTruthy();
       const before = await db('invoice_time_entries').where({ tenant: ids.tenant, invoice_id: generated.invoice_id }).orderBy('entry_id');
       // EXPLICIT HISTORICAL FIXTURES: generate supported owned time first, then

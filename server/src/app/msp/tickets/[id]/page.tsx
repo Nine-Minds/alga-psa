@@ -5,7 +5,7 @@ import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/user-compos
 import { Suspense } from 'react';
 import { TicketDetailsSkeleton } from '@alga-psa/tickets/components/ticket/TicketDetailsSkeleton';
 import { getSurveyTicketSummary } from '@alga-psa/surveys/actions/survey-actions/surveyDashboardActions';
-import AssociatedAssets from '@alga-psa/assets/components/AssociatedAssets';
+import AssociatedAssets from '@/components/tickets/TicketAssociatedAssets';
 import MspTicketDetailsContainerClient from '@alga-psa/msp-composition/tickets/MspTicketDetailsContainerClient';
 
 import { getTicketById } from '@alga-psa/tickets/actions/ticketActions';
@@ -36,6 +36,9 @@ import { fetchTimeEntriesForTicket } from '@alga-psa/scheduling/actions/timeEntr
 import { AIChatContextBoundary } from '@product/chat/context';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
+import { createTenantKnex, isCoManagedWorkspace } from '@alga-psa/db';
+import { getWorkspaceReadOnly } from '@/lib/co-managed/workspaceReadOnly';
+import { CoManagedLocalTicketDataSourceProvider } from '@/components/co-managed/CoManagedLocalTicketDataSourceProvider';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 
@@ -231,17 +234,31 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
         </Suspense>
       ) : null;
     
+    // A co_managed workspace's own tickets get the audience-aware conversation; the check is
+    // one cheap lookup that is false for every other tenant, which renders exactly as before.
+    // An ended or lapsed workspace is read-only: the provider sets `screen.readOnly`, which freezes
+    // every field and removes the pure-write actions (delete, duplicate, workflow, create-task).
+    // Other entry points to the ticket detail (client/contact drawers) do not pass through here;
+    // the write choke point still refuses writes there.
+    const { knex: workspaceKnex } = await createTenantKnex(user.tenant);
+    const coManaged = await isCoManagedWorkspace(workspaceKnex, user.tenant);
+    const workspaceReadOnly = coManaged ? await getWorkspaceReadOnly() : false;
+    const detailsClient = (
+      <MspTicketDetailsContainerClient
+        ticketData={ticketData as any}
+        surveySummary={surveySummary ?? null}
+        associatedAssets={associatedAssets}
+        isAlgaDeskMode={isAlgaDesk}
+        bootstrap={bootstrap}
+        linkedTasksStream={linkedTasksStream}
+      />
+    );
     const detailsContent = (
       <div id="ticket-details-container" className="bg-[rgb(var(--color-app-ground))]">
         <Suspense fallback={<TicketDetailsSkeleton />}>
-          <MspTicketDetailsContainerClient
-            ticketData={ticketData as any}
-            surveySummary={surveySummary ?? null}
-            associatedAssets={associatedAssets}
-            isAlgaDeskMode={isAlgaDesk}
-            bootstrap={bootstrap}
-            linkedTasksStream={linkedTasksStream}
-          />
+          {coManaged
+            ? <CoManagedLocalTicketDataSourceProvider ticketId={id} readOnly={workspaceReadOnly}>{detailsClient}</CoManagedLocalTicketDataSourceProvider>
+            : detailsClient}
         </Suspense>
       </div>
     );

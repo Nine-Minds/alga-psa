@@ -279,9 +279,11 @@ const addQuoteItemInputSchema = z.object({
   discount_percentage: z.number().int().min(0).max(100).optional().nullable(),
   applies_to_item_id: uuidSchema.optional().nullable(),
   applies_to_service_id: uuidSchema.optional().nullable(),
-  is_taxable: z.boolean().default(true),
+  // Omitted rather than defaulted to true, so an unset value reaches the DAL
+  // undefined and is derived from the service's tax configuration.
+  is_taxable: z.boolean().optional(),
   tax_region: z.string().trim().optional().nullable(),
-  tax_rate: z.number().int().min(0).optional().nullable(),
+  tax_rate: z.number().min(0).optional().nullable(),
   location_id: uuidSchema.optional().nullable(),
   cost: z.number().int().min(0).optional().nullable(),
   cost_currency: z.string().trim().length(3).optional().nullable(),

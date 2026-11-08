@@ -6,6 +6,9 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import TicketResolutionDialog from "./TicketResolutionDialog";
+import { TicketDataSourceProvider } from "./TicketDataSourceContext";
+import { nativeTicketDataSource } from "../../lib/nativeTicketDataSource";
+import { composeTicketDataSource } from "../../lib/ticketDataSource";
 
 const DEFAULT_BLOCK = [
   {
@@ -671,5 +674,52 @@ describe("TicketResolutionDialog", () => {
       "aria-checked",
       "false",
     );
+  });
+
+  describe("with audiences in the conversation config", () => {
+    const renderWithAudiences = (onConfirm: ReturnType<typeof vi.fn>, audiences: ("requester" | "shared_it" | "organization_private")[]) =>
+      render(
+        <TicketDataSourceProvider dataSource={composeTicketDataSource(nativeTicketDataSource, { conversation: { audiences } })}>
+          <TicketResolutionDialog
+            id="ticket-resolution-close"
+            isOpen
+            ticketId="ticket-1"
+            statusOptions={[{ value: "closed", label: "Closed" }]}
+            onClose={vi.fn()}
+            onConfirm={onConfirm as never}
+          />
+        </TicketDataSourceProvider>,
+      );
+    const audienceSelect = () => document.getElementById("ticket-resolution-close-audience-select") as HTMLSelectElement;
+
+    it("replaces the Internal switch, blocks submit until an audience is chosen, and passes it through", () => {
+      const onConfirm = vi.fn().mockResolvedValue(true);
+      renderWithAudiences(onConfirm, ["requester", "shared_it", "organization_private"]);
+      const confirm = screen.getByRole("button", { name: "Resolve and close" });
+
+      expect(screen.queryByRole("switch", { name: /internal/i })).toBeNull();
+      // Shared IT cannot carry a resolution: only the native audiences are offered here.
+      expect(Array.from(audienceSelect().options).map((o) => o.value)).toEqual(["", "requester", "organization_private"]);
+      expect(confirm).toBeDisabled();
+      fireEvent.click(confirm);
+      expect(onConfirm).not.toHaveBeenCalled();
+
+      fireEvent.change(audienceSelect(), { target: { value: "organization_private" } });
+      expect(confirm).toBeEnabled();
+      fireEvent.click(confirm);
+      expect(onConfirm).toHaveBeenCalledTimes(1);
+      const args = onConfirm.mock.calls[0];
+      expect(args[0]).toBe("closed");
+      expect(args[3]).toBe(true);
+      expect(args[5]).toBe("organization_private");
+    });
+
+    it("keeps the legacy Internal switch and passes no audience without config", () => {
+      const onConfirm = vi.fn().mockResolvedValue(true);
+      renderWithAudiences(onConfirm, []);
+      expect(audienceSelect()).toBeNull();
+      fireEvent.click(screen.getByRole("button", { name: "Resolve and close" }));
+      expect(onConfirm.mock.calls[0]).toHaveLength(5);
+    });
   });
 });

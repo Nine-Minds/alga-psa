@@ -69,6 +69,7 @@
     "sku": "Artikelnummer",
     "source": "Källa",
     "subtotal": "Delsumma",
+    "subtotalBeforeDiscounts": "Delsumma före rabatter",
     "tax": "Moms",
     "termsAndConditions": "Allmänna villkor",
     "ticket": "Ärende",

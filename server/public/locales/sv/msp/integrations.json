@@ -36,6 +36,15 @@
         "suggested": "Föreslagen",
         "toSave": "{{total}} att spara"
       },
+      "customerMapping": {
+        "unlink": "Ta bort koppling",
+        "unlinkConfirm": {
+          "title": "Ta bort kopplingen mellan {{client}} och QuickBooks?",
+          "body": "{{client}} exporteras inte längre till QuickBooks-kunden {{customer}}. Inget ändras i QuickBooks, och du kan koppla kunden igen från den här listan när du vill.",
+          "confirm": "Ta bort koppling",
+          "cancel": "Behåll kopplingen"
+        }
+      },
       "dialog": {
         "cancel": "Avbryt",
         "enterPlaceholder": "Ange {{field}}…",
@@ -844,7 +853,13 @@
             "expired": "Anslutningsförsöket upphörde innan det slutfördes. Inget sparades – starta anslutningen igen.",
             "generic": "Microsoft Entra anslöts inte och inget sparades. Försök igen.",
             "validationFailed": "Microsoft loggade in dig, men listan över hanterade klientorganisationer kunde inte läsas, så inget sparades. Dina behörigheter godkändes – detta innebär oftast att partnerns klientorganisation inte har anslutits till Microsoft 365 Lighthouse eller saknar aktiva GDAP-relationer.",
-            "tokenRejected": "Microsoft avvisade anslutningens åtkomsttoken, så inget sparades. Starta anslutningen igen."
+            "tokenRejected": "Microsoft avvisade anslutningens åtkomsttoken, så inget sparades. Starta anslutningen igen.",
+            "singleTenantApp": "Microsoft avvisade inloggningen eftersom den här appregistreringen är för en enda klientorganisation. Entra kräver en app för flera klientorganisationer: öppna appregistreringen, gå till Autentisering, ställ in Kontotyper som stöds på \"Konton i valfri organisationskatalog\" och anslut igen. Inget sparades.",
+            "appNotInDirectory": "Microsoft hittade inte appen i katalogen som anges av klientorganisations-ID:t i Microsoft-profilen. Kontrollera att klientorganisations-ID:t är ID:t för katalogen (klientorganisationen) där appen är registrerad. Inget sparades.",
+            "wrongDirectory": "Kontot du loggade in med tillhör en annan katalog än den här appen för en enda klientorganisation. Gör appen flerklientorganisationsbar (Konton i valfri organisationskatalog) och anslut igen. Inget sparades.",
+            "redirectUriMismatch": "Microsoft avvisade omdirigerings-URI:n eftersom den inte är registrerad i appen. Lägg till exakt den här URI:n under Autentisering > Omdirigerings-URI:er för webben och anslut igen: {{redirectUri}}",
+            "invalidClientSecret": "Microsoft avvisade klienthemligheten i Microsoft-profilen. Kontrollera att du sparade hemlighetens värde, inte dess hemlighets-ID.",
+            "expiredClientSecret": "Klienthemligheten i Microsoft-profilen har gått ut. Skapa en ny hemlighet i Azure och uppdatera profilen."
           },
           "connectingSuffix": " (Ansluter…)",
           "details": "Anslutningsuppgifter",
@@ -1924,8 +1939,12 @@
           "calendarRedirect": "Omdirigerings-URI för kalendersynkronisering",
           "calendarTitle": "Kalender",
           "clientId": "Klient-ID",
+          "copied": "Kopierat",
+          "copy": "Kopiera",
+          "copyFailed": "Det gick inte att kopiera",
           "currentProfileTitle": "Sparade appvärden",
           "emailRedirect": "Omdirigerings-URI för inkommande e-post",
+          "emailSetupRedirect": "Omdirigerings-URI för e-postinställning",
           "emailTitle": "E-post",
           "entraConsent": "Krav",
           "entraConsentValue": "Registrera appen för flera klientorganisationer och ge administratörssamtycke i partnerns Microsoft-klientorganisation.",
@@ -2097,11 +2116,18 @@
         "environment": "Intuit-miljö",
         "environmentProduction": "Produktion",
         "environmentSandbox": "Sandlåda",
+        "environmentHint": "Produktion ansluter till riktiga QuickBooks-företag. Sandlådan ansluter till ett testföretag hos Intuit, så att du kan prova exporter utan att påverka riktig bokföring.",
+        "environmentLockedHint": "Koppla från QuickBooks innan du byter miljö. Det anslutna företaget och dess tokens finns bara i den miljö där de auktoriserades.",
+        "environmentSandboxKeysTitle": "Sandlådan kräver din egen Intuit-app",
+        "environmentSandboxKeysDescription": "Företag i Intuits sandlåda accepterar bara Development-nycklarna från en Intuit-app som du själv styr. Den delade appen i den här installationen använder Production-nycklar, så registrera din egen app och spara dess Development-nycklar nedan innan du ansluter.",
+        "environmentSavedSandbox": "QuickBooks ansluter nu till ett företag i Intuits sandlåda. Anslut med Development-nycklarna från din egen Intuit-app.",
+        "environmentSavedProduction": "QuickBooks ansluter nu till riktiga QuickBooks-företag.",
         "errors": {
           "automatedSalesTax": "Det gick inte att uppdatera läget för ”Automated Sales Tax”.",
           "disconnect": "Det gick inte att koppla från QuickBooks.",
           "load": "Det gick inte att läsa in QuickBooks-inställningarna.",
-          "saveCredentials": "Det gick inte att spara QuickBooks-autentiseringsuppgifterna."
+          "saveCredentials": "Det gick inte att spara QuickBooks-autentiseringsuppgifterna.",
+          "environment": "Det gick inte att byta Intuit-miljö."
         },
         "howItWorksDescription": "Anslut ditt QuickBooks-företag genom att logga in på Intuit, så använder AlgaPSA det som standardkontext för direktexporter och mappningar. Kortet Intuit-app nedan visar om din installation redan tillhandahåller appen som används för inloggning eller om du behöver registrera en först.",
         "howItWorksTitle": "Så fungerar direktanslutning till QuickBooks i den här versionen",
@@ -2133,6 +2159,7 @@
         "credentialSource": {
           "app": "Den här installationen tillhandahåller en delad Intuit-app så att du kan ansluta QuickBooks utan att registrera en. Hoppa över det här kortet och klicka på Anslut QuickBooks nedan.",
           "none": "Ingen Intuit-app är tillgänglig ännu. Registrera en hos Intuit innan du kan ansluta.",
+          "noneSandbox": "Sandlådan kräver en egen Intuit-app. Registrera en och spara dess Development-nycklar innan du kan ansluta.",
           "tenant": "Din organisation ansluter via sin egen Intuit-app med autentiseringsuppgifterna nedan. Rotera en nyckel genom att klistra in det nya värdet och spara.",
           "appTitle": "Inga autentiseringsuppgifter behövs"
         },
@@ -3116,6 +3143,93 @@
           "showSecret": "Visa hemlighet",
           "title": "Larmwebhook",
           "url": "Webhook-URL"
+        }
+      },
+      "unifi": {
+        "proFeature": {
+          "description": "UniFi-integrationen är tillgänglig i AlgaPSA Pro."
+        },
+        "actions": {
+          "saveConfiguration": "Spara konfiguration",
+          "testConnection": "Testa anslutning",
+          "disconnect": "Koppla från",
+          "discoverSites": "Identifiera platser",
+          "runDeviceSync": "Kör enhetssynkronisering",
+          "checkOfflineNow": "Kontrollera offlineenheter nu",
+          "saveAlerting": "Spara aviseringsinställningar"
+        },
+        "alerting": {
+          "title": "Offlineaviseringar",
+          "description": "En enhet som är offline längre än respitperioden utlöser en avisering, och ett ärende om dina aviseringsregler anger det. Aviseringen löses när enheten är online igen.",
+          "graceMinutes": "Respitperiod för offline (minuter)",
+          "graceHelp": "Hur länge en enhet måste vara offline utan avbrott innan en avisering skapas. Använd 0 för att avisera direkt.",
+          "rulesNote": "Ärendeskapande, prioriteringar och automatisk lösning konfigureras i aviseringsreglerna nedan."
+        },
+        "connection": {
+          "title": "UniFi-anslutning",
+          "description": "Anslut med en UniFi API-nyckel. Använd Site Manager för att nå alla konsoler på ditt konto, eller Lokal styrenhet för en styrenhet du når direkt. Adopterade gateways, switchar och åtkomstpunkter synkroniseras.",
+          "syncLabel": "Synkronisering: {{status}}",
+          "syncLabelWithError": "Synkronisering: {{status}} ({{error}})",
+          "connectedAt": "Ansluten: {{time}}",
+          "never": "aldrig"
+        },
+        "errors": {
+          "loadSettings": "Det gick inte att läsa in UniFi-inställningar",
+          "loadMappings": "Det gick inte att läsa in UniFi-platskopplingar",
+          "loadSummary": "Det gick inte att läsa in UniFi-anslutningssammanfattningen",
+          "loadState": "Det gick inte att läsa in UniFi-integrationens status",
+          "saveConfiguration": "Det gick inte att spara UniFi-konfigurationen",
+          "testConnectionFailed": "Anslutningstestet misslyckades",
+          "disconnectFailed": "Det gick inte att koppla från UniFi-integrationen",
+          "siteSyncFailed": "Platsidentifieringen misslyckades",
+          "deviceSyncFailed": "Enhetssynkroniseringen misslyckades",
+          "updateMappingFailed": "Det gick inte att uppdatera kopplingen",
+          "reconnectRequired": "UniFi avvisade den sparade API-nyckeln. Klistra in en ny nyckel och spara för att återuppta synkroniseringen.",
+          "alertCheckFailed": "Offlinekontrollen misslyckades",
+          "saveAlertingFailed": "Det gick inte att spara aviseringsinställningarna",
+          "invalidGraceMinutes": "Ange ett heltal för minuter mellan 0 och 1440."
+        },
+        "fields": {
+          "apiKey": "API-nyckel ({{state}})",
+          "apiKeyStateSaved": "sparad",
+          "apiKeyStateRequired": "obligatorisk",
+          "apiKeyPlaceholderExisting": "Nyckel sparad. Ange en ny nyckel för att ersätta den",
+          "apiKeyPlaceholderNew": "Klistra in din UniFi API-nyckel",
+          "connectionMode": "Anslutningsläge",
+          "modeSiteManager": "Site Manager (moln)",
+          "modeLocal": "Lokal styrenhet",
+          "localBaseUrl": "Styrenhetens URL",
+          "localBaseUrlPlaceholder": "https://unifi.example.com"
+        },
+        "mappings": {
+          "site": "UniFi-plats",
+          "siteIdLabel": "ID: {{id}}",
+          "mappedClient": "Kopplad kund",
+          "defaultContact": "Standardkontakt",
+          "selectContact": "Välj kontakt",
+          "autoSync": "Automatisk synkronisering",
+          "autoSyncEnabled": "Aktiverad",
+          "autoSyncDisabled": "Inaktiverad"
+        },
+        "status": {
+          "label": "Status: ",
+          "connected": "Ansluten",
+          "disconnected": "Inte ansluten",
+          "reconnectRequired": "Återanslutning krävs"
+        },
+        "success": {
+          "configurationSaved": "UniFi-konfigurationen sparad",
+          "connectionTestSucceeded": "Anslutningen till UniFi lyckades",
+          "disconnected": "UniFi-integrationen frånkopplad",
+          "siteSyncCompleted": "Platsidentifiering klar: {{processed}} behandlade, {{created}} skapade, {{updated}} uppdaterade",
+          "deviceSyncCompleted": "Enhetssynkronisering klar: {{processed}} behandlade, {{created}} skapade, {{updated}} uppdaterade",
+          "alertCheckCompleted": "Offlinekontrollen klar",
+          "alertingSaved": "Aviseringsinställningarna sparade"
+        },
+        "sync": {
+          "title": "Synkronisering och platskopplingar",
+          "description": "Identifiera UniFi-platser och koppla varje plats till en kund. Enheter på okopplade platser hoppas över.",
+          "summary": "{{mappedSites}} kopplade platser · {{devices}} enheter · {{activeAlerts}} aktiva aviseringar"
         }
       },
       "huntress": {

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { NormalizedRmmAlertEvent } from '../contracts';
 
 /**
  * Automation alert ids are deterministic (`automation:<device>:<name>`), so a
@@ -73,7 +74,7 @@ vi.mock('../ticketCreatedEvent', () => ({ publishRmmTicketCreated: async () => u
 
 import { processRmmAlertEvent } from '../processRmmAlertEvent';
 
-const event = {
+const event: NormalizedRmmAlertEvent = {
   kind: 'triggered',
   tenantId: 'tenant-1',
   integrationId: 'int-1',
@@ -82,7 +83,8 @@ const event = {
   externalDeviceId: 'device-1',
   severity: 'critical',
   occurredAt: '2026-10-16T00:00:00.000Z',
-} as any;
+  raw: {},
+};
 
 function existingRow(overrides: Record<string, unknown> = {}) {
   return { alert_id: 'alert-1', status: 'active', ticket_id: 'ticket-old', device_name: 'SRV-01', ...overrides };
@@ -112,6 +114,19 @@ describe('processTriggered with an existing live-status row', () => {
     ).toBe(true);
     expect(h.state.updates.some((u) => u.table === 'rmm_alerts' && u.patch.ticket_id === 'ticket-new')).toBe(true);
   });
+
+  it.each([{}, { automation: { name: 'disk full' }, device_id: 'device-1' }])(
+    'persists ordinary provider metadata when re-ticketing a closed alert: %j',
+    async (raw) => {
+      h.state.linkedTicket = { is_closed: true };
+      const result = await processRmmAlertEvent({ knex: {} as any }, { ...event, raw });
+      expect(result).toMatchObject({ outcome: 'ticket_created', ticketId: 'ticket-new' });
+      expect(h.state.updates).toContainEqual({
+        table: 'rmm_alerts',
+        patch: expect.objectContaining({ metadata: JSON.stringify(raw), status: 'active' }),
+      });
+    }
+  );
 
   it('treats a deleted linked ticket (no FK) like a closed one', async () => {
     h.state.linkedTicket = undefined;

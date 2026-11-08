@@ -40,7 +40,7 @@ function TimelineToggleProbe() {
 describe('Timeline toggle follows the server bootstrap', () => {
   it('ProjectDetail uses the same flag call and option gating as the probe', () => {
     const src = readFileSync(join(__dirname, 'ProjectDetail.tsx'), 'utf8');
-    expect(src).toContain("const { enabled: timelineEnabled } = useFeatureFlag('release-v2-0-feature', { defaultValue: false });");
+    expect(src).toContain("const { enabled: timelineFlagEnabled } = useFeatureFlag('release-v2-0-feature', { defaultValue: false });");
     expect(src).toMatch(/if \(timelineEnabled\) \{\s*options\.push\(\{ value: 'gantt'/);
   });
 

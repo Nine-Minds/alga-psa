@@ -185,6 +185,39 @@ export function noteTenantProductCode(tenant: string | undefined | null, product
   s.negative.add(tenant);
 }
 
+/**
+ * Is this tenant a co-managed workspace? Reads the same cache the write gate uses, so a
+ * tenant already known to be a plain PSA tenant answers `false` with zero SQL. An unknown
+ * tenant costs one `tenants.product_code` read, after which a non-co-managed answer is
+ * remembered for the life of the process (a tenant only ever leaves the product), exactly
+ * like `admitTenantWrite`. A co-managed answer is not cached here: those workspaces
+ * already pay for a decision per write. A failed lookup answers `false` without
+ * remembering, matching the write gate's fail-open for lookup faults.
+ */
+export async function isCoManagedWorkspace(db: Knex | Knex.Transaction, tenant: string): Promise<boolean> {
+  // No resolver registered (or tenant already negative): nothing can be co-managed here.
+  if (!isTenantWriteGuarded(tenant)) return false;
+  const s = state();
+  let productCode: string | null | undefined;
+  try {
+    const row = await tenantDb(db, LOOKUP_TENANT)
+      .unscoped<{ product_code: string | null }>('tenants', 'comment audience product lookup')
+      .where('tenant', tenant)
+      .first('product_code');
+    productCode = row?.product_code;
+  } catch (error) {
+    console.warn('[WriteAdmission] workspace lookup failed; treating as native', {
+      tenant,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return false;
+  }
+  if (productCode === CO_MANAGED_PRODUCT_CODE) return true;
+  s.mustLookup.delete(tenant);
+  s.negative.add(tenant);
+  return false;
+}
+
 async function decide(db: Knex | Knex.Transaction, tenant: string, resolver: WriteAdmissionResolver, valid: () => boolean): Promise<WriteAdmissionDecision | null> {
   const s = state();
   let productCode: string | null | undefined;

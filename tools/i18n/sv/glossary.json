@@ -534,6 +534,7 @@
   "identicalAllowlist": {
     "exact": [
       "{{from}} → {{to}}",
+      "{{field}}: {{from}} → {{to}}",
       "RMA {{id}}",
       "RMA {{number}} · {{status}}",
       "Datto RMM",

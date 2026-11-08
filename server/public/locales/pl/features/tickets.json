@@ -116,7 +116,10 @@
     "clientTags": "Tagi klienta",
     "tagModeAny": "Dowolny z",
     "tagModeNone": "Żaden z",
-    "droppedFromLink": "Niektóre filtry w tym łączu są nieprawidłowe i zostały zignorowane."
+    "droppedFromLink": "Niektóre filtry w tym łączu są nieprawidłowe i zostały zignorowane.",
+    "clearFilters": "Wyczyść filtry",
+    "location": "Lokalizacja",
+    "requesterLocation": "Lokalizacja zgłaszającego"
   },
   "create": {
     "title": "Utwórz zgłoszenie wsparcia",
@@ -256,7 +259,9 @@
     "createTemplate": "Utwórz szablon ze zgłoszenia",
     "createWorkflowFromTicket": "Utwórz workflow ze zgłoszenia",
     "printWorkTag": "Drukuj etykietę roboczą",
-    "retry": "Ponów"
+    "retry": "Ponów",
+    "duplicateMultiple": "Duplikuj wielokrotnie…",
+    "duplicateOptions": "Więcej opcji duplikowania"
   },
   "messages": {
     "noTickets": "Brak zgłoszeń",
@@ -439,7 +444,29 @@
     "bcc": "Udw",
     "ccBccInvalid": "Popraw wyróżnione adresy przed wysłaniem.",
     "ccBccTooMany": "W jednym komentarzu można skopiować maksymalnie {{max}} odbiorców Dw i Udw.",
-    "ccBccNotSentOnInternal": "Dw i Udw nie są wysyłane z notatką wewnętrzną. Wyłącz opcję Wewnętrzna, aby ich użyć."
+    "ccBccNotSentOnInternal": "Dw i Udw nie są wysyłane z notatką wewnętrzną. Wyłącz opcję Wewnętrzna, aby ich użyć.",
+    "audience": {
+      "requester": "Zgłaszający",
+      "sharedIt": "Wspólny dział IT",
+      "organizationPrivate": "Prywatne dla organizacji",
+      "placeholder": "Kto może to zobaczyć?",
+      "required": "Wybierz, kto może zobaczyć ten komentarz, zanim go opublikujesz."
+    },
+    "shared": {
+      "loading": "Wczytywanie wspólnej rozmowy...",
+      "loadError": "Nie udało się wczytać wspólnej rozmowy.",
+      "reload": "Wczytaj ponownie",
+      "errors": {
+        "forbidden": "Nie masz uprawnień do publikowania dla tych odbiorców.",
+        "invalid": "Tego komentarza nie można opublikować.",
+        "readOnly": "Ta przestrzeń robocza jest obecnie tylko do odczytu.",
+        "operationConflict": "Ten komentarz koliduje z wcześniejszą próbą. Wczytaj ponownie i spróbuj jeszcze raz.",
+        "audienceUnresolved": "Wybierz, kto może zobaczyć ten komentarz, zanim go opublikujesz.",
+        "unknownOutcome": "Nie udało się potwierdzić opublikowania komentarza. Sprawdź rozmowę, zanim wyślesz go ponownie."
+      },
+      "unavailable": "To zgłoszenie jest niedostępne.",
+      "back": "Wróć do zgłoszeń klientów"
+    }
   },
   "responseState": {
     "awaitingYourResponse": "Oczekuje na Twoją odpowiedź",
@@ -1003,7 +1030,9 @@
       "heading": "Obserwatorzy",
       "placeholder": "Dodaj obserwatorów..."
     },
-    "attachmentsPartialFailure": "Zgłoszenie utworzone, ale nie udało się dołączyć tych plików: {{files}}. Dodaj je w zgłoszeniu."
+    "attachmentsPartialFailure": "Zgłoszenie utworzone, ale nie udało się dołączyć tych plików: {{files}}. Dodaj je w zgłoszeniu.",
+    "contactLocationSuffix": "(lokalizacja kontaktu)",
+    "contactPrimaryLocationSuffix": "(główna lokalizacja kontaktu)"
   },
   "itil": {
     "calculatedPriority": "Priorytet (obliczony)",
@@ -1625,7 +1654,9 @@
       "agentAlreadyAssigned": "Ten użytkownik jest już przypisany jako dodatkowy agent.",
       "teamNotFound": "Nie znaleziono zespołu. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
       "teamLeadNotFound": "Wybrany zespół nie ma lidera. Wybierz inny zespół lub najpierw wyznacz lidera.",
-      "commentNotFound": "Nie znaleziono komentarza. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie."
+      "commentNotFound": "Nie znaleziono komentarza. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "boardNotFound": "Nie znaleziono tablicy. Mogła zostać usunięta. Odśwież stronę i spróbuj ponownie.",
+      "boardInactive": "Tablica docelowa jest nieaktywna. Wybierz aktywną tablicę."
     },
     "bundle": {
       "masterAlreadyBundleMaster": "Zgłoszenie {{tickets}} jest już zgłoszeniem nadrzędnym pakietu i nie może zostać dodane jako zgłoszenie podrzędne. Najpierw rozwiąż pakiet albo użyj go jako zgłoszenia nadrzędnego.",
@@ -1652,7 +1683,9 @@
       "missingFieldNamed": "Brakuje wymaganego pola zgłoszenia: {{field}}.",
       "referenceMissing": "Jeden z wybranych rekordów zgłoszenia już nie istnieje. Odśwież stronę i spróbuj ponownie.",
       "conflict": "Ta zmiana zgłoszenia koliduje z istniejącym rekordem. Odśwież stronę i spróbuj ponownie.",
-      "valueNotAllowed": "Jedna z wartości zgłoszenia jest niedozwolona. Sprawdź formularz i spróbuj ponownie."
+      "valueNotAllowed": "Jedna z wartości zgłoszenia jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
+      "priorityItilBoardCustom": "Priorytet „{{priority}}” jest priorytetem ITIL, ale tablica „{{board}}” używa priorytetów niestandardowych.",
+      "priorityCustomBoardItil": "Priorytet „{{priority}}” jest priorytetem niestandardowym, ale tablica „{{board}}” używa priorytetów ITIL."
     },
     "board": {
       "invalidReference": "Wybrana tablica, status lub reguła jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
@@ -1661,7 +1694,14 @@
       "referenceInvalid": "Wybrana tablica, status, priorytet, osoba przypisana, zespół lub zasada SLA nie jest już prawidłowa. Odśwież stronę i spróbuj ponownie.",
       "duplicateName": "Tablica o tej nazwie już istnieje.",
       "duplicate": "Tablica lub status o tych samych ustawieniach już istnieje.",
-      "invalidValue": "Jedna z wartości tablicy lub statusu jest nieprawidłowa. Odśwież stronę i spróbuj ponownie."
+      "invalidValue": "Jedna z wartości tablicy lub statusu jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "notificationEmailInvalid": "Reguła powiadomień {{rule}} zawiera nieprawidłowy adres e-mail (maksymalnie {{max}} znaków)",
+      "notificationEmailLimit": "Reguła powiadomień {{rule}} może zawierać co najwyżej {{max}} adresów e-mail",
+      "notificationRecipientRequired": "Reguła powiadomień {{rule}} musi powiadamiać co najmniej jednego użytkownika, zespół lub adres e-mail",
+      "notificationEmailIsUser": "Reguła powiadomień {{rule}}: {{address}} to adres e-mail użytkownika Alga. Wybierz zamiast tego użytkownika.",
+      "notificationEmailIsContact": "Reguła powiadomień {{rule}}: {{address}} należy do kontaktu lub lokalizacji klienta i nie może być odbiorcą.",
+      "notificationEmailClientDomain": "Reguła powiadomień {{rule}}: {{address}} należy do domeny e-mail klienta i nie może być odbiorcą.",
+      "notificationEmailInboundMailbox": "Reguła powiadomień {{rule}}: {{address}} to połączona skrzynka odbiorcza i nie może być odbiorcą."
     },
     "material": {
       "invalidValue": "Jedna z wybranych wartości materiału jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
@@ -1723,6 +1763,9 @@
       "templateRulesTargetOtherClients": "Niektóre reguły automatycznego stosowania tego szablonu dotyczą innych klientów. Usuń tych klientów z reguł, zanim przypiszesz szablon do jednego klienta.",
       "predicateClientOutsideScope": "Klient {{client}} jest poza zakresem tego szablonu.",
       "predicateInvalid": "Nieprawidłowa reguła listy kontrolnej: {{detail}}"
+    },
+    "comment": {
+      "audienceRequired": "Wybierz, kto może zobaczyć ten komentarz, zanim go opublikujesz."
     }
   },
   "ticketSection": {
@@ -2034,7 +2077,9 @@
       "openScheduleEntry": "Otwórz wpis harmonogramu",
       "addDescriptionPrompt": "Dodaj opis — na czym polega problem i czego potrzebuje klient?",
       "projectTasks": "Zadania projektu",
-      "timeAndBilling": "Czas i rozliczenia"
+      "timeAndBilling": "Czas i rozliczenia",
+      "useContactLocation": "Użyj lokalizacji kontaktu",
+      "remote": "Zdalny"
     },
     "timeline": {
       "subtitle": "Odpowiedzi, czas i zmiany systemowe w jednym miejscu",
@@ -2589,12 +2634,15 @@
       "columns": {
         "name": "Nazwa",
         "title": "Tytuł zgłoszenia",
+        "client": "Klient",
         "board": "Tablica",
         "checklist": "Pozycje listy kontrolnej",
         "status": "Status",
         "schedules": "Harmonogramy"
       },
-      "deleteBlocked": "Używany przez {{count}} cykliczny(ch) harmonogram(ów). Najpierw wskaż im inny szablon lub zarchiwizuj je."
+      "deleteBlocked": "Używany przez {{count}} cykliczny(ch) harmonogram(ów). Najpierw wskaż im inny szablon lub zarchiwizuj je.",
+      "allClients": "Wszyscy klienci",
+      "clientFilter": "Wszyscy klienci"
     },
     "status": {
       "active": "Aktywny",
@@ -2622,6 +2670,9 @@
       "title": "Tytuł zgłoszenia",
       "description": "Opis",
       "descriptionPlaceholder": "Opis",
+      "client": "Klient",
+      "clientPlaceholder": "Wszyscy klienci",
+      "clientHelp": "Pozostaw puste, aby oferować szablon wszystkim klientom. Wybierz jednego, aby oferować go tylko w zgłoszeniach tego klienta.",
       "offerForManualUse": "Oferuj w selektorze nowego zgłoszenia",
       "offerForManualUseHelp": "Wyłącz dla szablonów używanych tylko przez harmonogramy cykliczne.",
       "titleTokens": "W tytule możesz użyć {{tokens}}; są wypełniane dla każdego zgłoszenia."
@@ -2652,15 +2703,17 @@
       "fromTicket": "Wstępnie wypełniono ze zgłoszenia #{{number}}. Nic nie zostanie zapisane, dopóki nie klikniesz Zapisz.",
       "inlineImages": "Opis zawiera obrazy należące do zgłoszenia źródłowego. Mogą przestać się wyświetlać po usunięciu tego zgłoszenia. Usuń je lub wgraj ponownie, jeśli szablon ma przetrwać zgłoszenie.",
       "viewOnly": "Możesz wyświetlić ten szablon, ale nie możesz go zmieniać.",
-      "referenceProblems": "Niektóre pola tego szablonu wskazują elementy, które już nie istnieją. Przy użyciu szablonu pozostaną puste. Popraw je i zapisz:",
+      "referenceProblems": "Niektóre pola tego szablonu są nieprawidłowe: odwołują się do elementów, które już nie istnieją, lub nie pasują do siebie (na przykład priorytet niezgodny z tablicą). Popraw je i zapisz:",
       "inactiveWarning": "Nieaktywny: ukryty w selektorze szablonów; nadal używany przez {{count}} harmonogramów.",
       "sharedWarning": "Zmiany dotyczą każdego cyklicznego harmonogramu używającego tego szablonu, od następnego utworzonego zgłoszenia.",
-      "boardChangeWarning": "Zmiana tablicy czyści priorytet i kategorię i może unieważnić status harmonogramów używających tego szablonu. Te harmonogramy kończą się błędem, dopóki ich nie edytujesz. Dotknięte harmonogramy: {{schedules}}."
+      "boardChangeWarning": "Zmiana tablicy czyści priorytet i kategorię i może unieważnić status harmonogramów używających tego szablonu. Te harmonogramy kończą się błędem, dopóki ich nie edytujesz. Dotknięte harmonogramy: {{schedules}}.",
+      "priorityTypeMismatchItil": "Priorytet ‘{{priority}}’ jest priorytetem ITIL, ale tablica ‘{{board}}’ używa priorytetów niestandardowych. Zapis zostanie odrzucony, dopóki nie zmienisz priorytetu lub tablicy.",
+      "priorityTypeMismatchCustom": "Priorytet ‘{{priority}}’ jest priorytetem niestandardowym, ale tablica ‘{{board}}’ używa priorytetów ITIL. Zapis zostanie odrzucony, dopóki nie zmienisz priorytetu lub tablicy."
     },
     "errors": {
       "notFound": "Nie znaleziono szablonu zgłoszenia",
       "duplicateName": "Szablon o nazwie {{name}} już istnieje",
-      "invalidReferences": "Szablon odwołuje się do tablicy, kategorii lub priorytetu, który jest niedostępny",
+      "invalidReferences": "{{problems}}",
       "notAvailable": "Szablony zgłoszeń są niedostępne",
       "subcategoryNeedsCategory": "Podkategoria wymaga kategorii",
       "inUseBySchedules": "Używany przez {{count}} cykliczny(ch) harmonogram(ów): {{schedules}}. Najpierw wskaż im inny szablon lub zarchiwizuj je."
@@ -2809,5 +2862,116 @@
       "notAvailable": "Ta gotowa odpowiedź nie jest dostępna dla tego zgłoszenia.",
       "notATeamMember": "Możesz zarządzać odpowiedziami zespołu tylko dla zespołów, do których należysz."
     }
+  },
+  "batchDuplicate": {
+    "title": "Duplikuj #{{number}} dla kontaktów",
+    "titleLoading": "Duplikuj dla kontaktów",
+    "loading": "Ładowanie…",
+    "loadFailed": "Nie udało się wczytać zgłoszenia do zduplikowania. Spróbuj ponownie.",
+    "createFailed": "Nie udało się utworzyć kopii. Spróbuj ponownie.",
+    "templateLabel": "Szablon tytułu",
+    "insertToken": "Wstaw:",
+    "nameHint": "Zastąp „{{name}}” tokenem {{token}}, aby spersonalizować każdą kopię.",
+    "replace": "Zastąp",
+    "contactsLabel": "Kontakty",
+    "contactsPlaceholder": "Wybierz kontakty…",
+    "addBlankRow": "Dodaj kopię bez kontaktu",
+    "count": "{{count}} z {{max}}",
+    "capReached": "Maksymalnie {{max}} kopii w jednej partii.",
+    "columns": {
+      "contact": "Kontakt",
+      "title": "Tytuł"
+    },
+    "resetRow": "Przywróć szablon",
+    "removeRow": "Usuń kopię",
+    "copyChecklist": "Kopiuj pozycje listy kontrolnej (niezaznaczone)",
+    "cancel": "Anuluj",
+    "review": "Przejrzyj",
+    "back": "Wstecz",
+    "create_one": "Utwórz {{count}} zgłoszenie",
+    "create_few": "Utwórz {{count}} zgłoszenia",
+    "create_many": "Utwórz {{count}} zgłoszeń",
+    "create_other": "Utwórz {{count}} zgłoszenia",
+    "creating_one": "Tworzenie {{count}} zgłoszenia…",
+    "creating_few": "Tworzenie {{count}} zgłoszeń…",
+    "creating_many": "Tworzenie {{count}} zgłoszeń…",
+    "creating_other": "Tworzenie {{count}} zgłoszenia…",
+    "done": "Gotowe",
+    "retryFailed_one": "Ponów nieudane ({{count}})",
+    "retryFailed_few": "Ponów nieudane ({{count}})",
+    "retryFailed_many": "Ponów nieudane ({{count}})",
+    "retryFailed_other": "Ponów nieudane ({{count}})",
+    "errors": {
+      "contactRequired": "Ten tytuł używa {{token}}, ale kopia nie ma kontaktu.",
+      "unknownToken": "Nieznany token: {{tokens}}",
+      "empty": "Tytuł nie może być pusty.",
+      "unresolvedToken": "Tytuł nadal zawiera token {{placeholder}}."
+    },
+    "summary": {
+      "client": "Klient",
+      "board": "Tablica",
+      "category": "Kategoria",
+      "priority": "Priorytet",
+      "assignee": "Przypisany",
+      "team": "Zespół",
+      "additionalAgents": "Dodatkowi agenci",
+      "tags": "Tagi",
+      "checklist": "Lista kontrolna",
+      "checklistCopy_one": "Kopiuj {{count}} pozycję (niezaznaczoną)",
+      "checklistCopy_few": "Kopiuj {{count}} pozycje (niezaznaczone)",
+      "checklistCopy_many": "Kopiuj {{count}} pozycji (niezaznaczonych)",
+      "checklistCopy_other": "Kopiuj {{count}} pozycji (niezaznaczonych)",
+      "checklistSkip": "Nie kopiowana",
+      "customFields": "Pola niestandardowe",
+      "status": "Status",
+      "statusBoardDefault": "Domyślny dla tablicy",
+      "none": "Brak",
+      "notCopied": "Komentarze, wpisy czasu, załączniki i termin wykonania nie są kopiowane.",
+      "unresolved": "Nazwa niedostępna"
+    },
+    "results": {
+      "created_one": "Utworzono {{count}} zgłoszenie",
+      "created_few": "Utworzono {{count}} zgłoszenia",
+      "created_many": "Utworzono {{count}} zgłoszeń",
+      "created_other": "Utworzono {{count}} zgłoszenia",
+      "failed_one": "Nie udało się utworzyć {{count}} kopii",
+      "failed_few": "Nie udało się utworzyć {{count}} kopii",
+      "failed_many": "Nie udało się utworzyć {{count}} kopii",
+      "failed_other": "Nie udało się utworzyć {{count}} kopii"
+    },
+    "discardTitle": "Odrzucić te kopie?",
+    "discardMessage": "Skonfigurowane kopie nie zostały jeszcze utworzone. Odrzucić je i zamknąć?",
+    "discardConfirm": "Odrzuć",
+    "discardKeep": "Kontynuuj edycję"
+  },
+  "sharedSla": {
+    "title": "Poziom usług",
+    "msp": "Poziom usług MSP",
+    "customer": "Poziom usług klienta",
+    "state": {
+      "running": "W toku",
+      "paused": "Wstrzymane",
+      "met": "Dotrzymane",
+      "breached": "Naruszone"
+    },
+    "target": {
+      "response": "Pierwsza odpowiedź",
+      "resolution": "Rozwiązanie"
+    },
+    "elapsed": "Upłynęło: {{time}}",
+    "dueAt": "Termin: {{date}}",
+    "completedAt": "Dotrzymano {{date}}",
+    "breached": "Naruszone",
+    "targetPaused": "Wstrzymane",
+    "noTarget": "Brak celu",
+    "duration": {
+      "hoursMinutes": "{{hours}} godz. {{minutes}} min",
+      "minutes": "{{minutes}} min"
+    },
+    "notStarted": "Zegar rusza po eskalacji zgłoszenia.",
+    "unavailable": "Ten poziom usług nie jest już dostępny.",
+    "notConfigured": "Nie obowiązuje żaden poziom usług.",
+    "empty": "Dla tego zgłoszenia nie jest jeszcze śledzony żaden poziom usług.",
+    "loadError": "Nie udało się wczytać poziomu usług."
   }
 }

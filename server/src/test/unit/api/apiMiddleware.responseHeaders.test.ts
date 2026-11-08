@@ -69,6 +69,26 @@ describe('apiMiddleware response headers', () => {
     expect(body.error.details.unaffectedChildren[0]).toMatchObject({ ticket_id: 'child-2', reason: 'already_closed' });
   });
 
+  it('maps a JSON parse failure to 400, not the 500 fallback', async () => {
+    // `await req.json()` on an empty or garbled body throws this; a bodyless
+    // DELETE used to surface as 500 INTERNAL_ERROR (alga-2026-0002902).
+    let parseError: unknown;
+    try {
+      JSON.parse('');
+    } catch (error) {
+      parseError = error;
+    }
+
+    const response = handleApiError(parseError);
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toMatchObject({
+      code: 'VALIDATION_ERROR',
+      message: 'Request body must be valid JSON',
+    });
+  });
+
   it('adds extra headers to success responses', () => {
     const response = createSuccessResponse(
       { ok: true },

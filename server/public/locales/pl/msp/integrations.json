@@ -36,6 +36,15 @@
         "suggested": "Sugerowane",
         "toSave": "Do zapisania: {{total}}"
       },
+      "customerMapping": {
+        "unlink": "Odłącz",
+        "unlinkConfirm": {
+          "title": "Odłączyć klienta {{client}} od QuickBooks?",
+          "body": "Klient {{client}} przestanie być eksportowany do klienta QuickBooks {{customer}}. W QuickBooks nic się nie zmieni, a połączenie można w każdej chwili utworzyć ponownie z tej listy.",
+          "confirm": "Odłącz",
+          "cancel": "Zachowaj połączenie"
+        }
+      },
       "dialog": {
         "cancel": "Anuluj",
         "enterPlaceholder": "Wprowadź {{field}}...",
@@ -844,7 +853,13 @@
             "expired": "Próba połączenia wygasła przed zakończeniem. Nic nie zostało zapisane — rozpocznij połączenie ponownie.",
             "generic": "Nie połączono z Microsoft Entra i nic nie zostało zapisane. Spróbuj ponownie.",
             "validationFailed": "Microsoft zalogował Cię, ale nie udało się odczytać listy zarządzanych organizacji; nic nie zostało zapisane. Uprawnienia zostały zaakceptowane — zwykle oznacza to, że organizacja partnerska nie jest wdrożona w Microsoft 365 Lighthouse lub nie ma aktywnych relacji GDAP.",
-            "tokenRejected": "Microsoft odrzucił token dostępu połączenia; nic nie zostało zapisane. Rozpocznij połączenie ponownie."
+            "tokenRejected": "Microsoft odrzucił token dostępu połączenia; nic nie zostało zapisane. Rozpocznij połączenie ponownie.",
+            "singleTenantApp": "Microsoft odrzucił logowanie, ponieważ ta rejestracja aplikacji jest przeznaczona dla jednej organizacji. Entra wymaga aplikacji obsługującej wiele organizacji: otwórz rejestrację aplikacji, przejdź do Uwierzytelnianie, ustaw Obsługiwane typy kont na „Konta w dowolnym katalogu organizacji”, a następnie połącz ponownie. Nic nie zostało zapisane.",
+            "appNotInDirectory": "Microsoft nie znalazł tej aplikacji w katalogu wskazanym przez identyfikator organizacji w profilu Microsoft. Sprawdź, czy identyfikator organizacji to identyfikator katalogu (organizacji), w którym zarejestrowano aplikację. Nic nie zostało zapisane.",
+            "wrongDirectory": "Konto, którego użyto do zalogowania, pochodzi z innego katalogu niż ta aplikacja przeznaczona dla jednej organizacji. Zmień aplikację na obsługującą wiele organizacji (Konta w dowolnym katalogu organizacji) i połącz ponownie. Nic nie zostało zapisane.",
+            "redirectUriMismatch": "Microsoft odrzucił identyfikator URI przekierowania, ponieważ nie jest on zarejestrowany w aplikacji. Dodaj dokładnie ten identyfikator URI w obszarze Uwierzytelnianie > Identyfikatory URI przekierowania w sieci Web, a następnie połącz ponownie: {{redirectUri}}",
+            "invalidClientSecret": "Microsoft odrzucił klucz tajny klienta w profilu Microsoft. Upewnij się, że zapisano wartość klucza tajnego, a nie jego identyfikator.",
+            "expiredClientSecret": "Klucz tajny klienta w profilu Microsoft wygasł. Utwórz nowy klucz tajny w Azure i zaktualizuj profil."
           },
           "connectingSuffix": " (Łączenie...)",
           "details": "Szczegóły połączenia",
@@ -1919,8 +1934,12 @@
           "calendarRedirect": "Redirect URI synchronizacji kalendarza",
           "calendarTitle": "Wskazówki dotyczące kalendarza",
           "clientId": "Identyfikator klienta",
+          "copied": "Skopiowano",
+          "copy": "Kopiuj",
+          "copyFailed": "Nie udało się skopiować",
           "currentProfileTitle": "Bieżące wartości profilu",
           "emailRedirect": "Redirect URI poczty przychodzącej",
+          "emailSetupRedirect": "URI przekierowania konfiguracji poczty e-mail",
           "emailTitle": "Wskazówki dotyczące poczty",
           "entraConsent": "Wymaganie",
           "entraConsentValue": "Zarejestruj tę aplikację jako wielodostępną i udziel zgody administratora w organizacji partnerskiej.",
@@ -2074,11 +2093,18 @@
         "environment": "Środowisko Intuit",
         "environmentProduction": "Produkcja",
         "environmentSandbox": "Środowisko testowe",
+        "environmentHint": "Produkcja łączy się z prawdziwymi firmami QuickBooks. Środowisko testowe łączy się z firmą testową Intuit, więc możesz wypróbować eksporty bez zmieniania prawdziwych księgi.",
+        "environmentLockedHint": "Rozłącz QuickBooks przed zmianą środowiska. Połączona firma i jej tokeny istnieją tylko w środowisku, w którym zostały autoryzowane.",
+        "environmentSandboxKeysTitle": "Środowisko testowe wymaga własnej aplikacji Intuit",
+        "environmentSandboxKeysDescription": "Firmy w środowisku testowym Intuit akceptują tylko klucze Development aplikacji Intuit, którą kontrolujesz. Wspólna aplikacja tej instalacji używa kluczy Production, więc zarejestruj własną aplikację i zapisz poniżej jej klucze Development przed połączeniem.",
+        "environmentSavedSandbox": "QuickBooks będzie teraz łączyć się z firmą w środowisku testowym Intuit. Połącz się przy użyciu kluczy Development własnej aplikacji Intuit.",
+        "environmentSavedProduction": "QuickBooks będzie teraz łączyć się z prawdziwymi firmami QuickBooks.",
         "errors": {
           "automatedSalesTax": "Nie udało się zaktualizować trybu Automated Sales Tax.",
           "disconnect": "Nie udało się rozłączyć QuickBooks.",
           "load": "Nie udało się załadować ustawień QuickBooks.",
-          "saveCredentials": "Nie udało się zapisać poświadczeń QuickBooks."
+          "saveCredentials": "Nie udało się zapisać poświadczeń QuickBooks.",
+          "environment": "Nie udało się zmienić środowiska Intuit."
         },
         "howItWorksDescription": "Połącz swoją firmę QuickBooks, logując się do Intuit, a AlgaPSA użyje jej jako domyślnego kontekstu na żywo dla eksportów i mapowań. Karta „Aplikacja Intuit” poniżej informuje, czy Twoje wdrożenie już udostępnia aplikację używaną do tego logowania, czy najpierw trzeba ją zarejestrować.",
         "howItWorksTitle": "Jak działa QuickBooks na żywo w tej wersji",
@@ -2110,6 +2136,7 @@
         "credentialSource": {
           "app": "To wdrożenie udostępnia współdzieloną aplikację Intuit, więc możesz połączyć QuickBooks bez rejestrowania własnej. Pomiń tę kartę i kliknij poniżej „Połącz QuickBooks”.",
           "none": "Żadna aplikacja Intuit nie jest jeszcze dostępna. Zarejestruj ją w Intuit, zanim będzie można się połączyć.",
+          "noneSandbox": "Środowisko testowe wymaga własnej aplikacji Intuit. Zarejestruj ją i zapisz jej klucze Development, zanim będzie można się połączyć.",
           "tenant": "Ta organizacja łączy się przez własną aplikację Intuit, używając zapisanych poniżej danych. Aby zmienić klucz, wklej nową wartość i zapisz.",
           "appTitle": "Dane uwierzytelniające nie są potrzebne"
         },
@@ -3093,6 +3120,93 @@
           "showSecret": "Pokaż sekret",
           "title": "Webhook alertów",
           "url": "Adres URL webhooka"
+        }
+      },
+      "unifi": {
+        "proFeature": {
+          "description": "Integracja z UniFi jest dostępna w AlgaPSA Pro."
+        },
+        "actions": {
+          "saveConfiguration": "Zapisz konfigurację",
+          "testConnection": "Testuj połączenie",
+          "disconnect": "Rozłącz",
+          "discoverSites": "Wykryj witryny",
+          "runDeviceSync": "Uruchom synchronizację urządzeń",
+          "checkOfflineNow": "Sprawdź teraz urządzenia offline",
+          "saveAlerting": "Zapisz ustawienia alertów"
+        },
+        "alerting": {
+          "title": "Alerty o urządzeniach offline",
+          "description": "Urządzenie, które pozostaje offline dłużej niż okres karencji, generuje alert, a także zgłoszenie, jeśli tak wskazują reguły alertów. Alert zostaje rozwiązany, gdy urządzenie wróci do trybu online.",
+          "graceMinutes": "Okres karencji offline (minuty)",
+          "graceHelp": "Jak długo urządzenie musi być stale offline, zanim zostanie wygenerowany alert. Wartość 0 oznacza natychmiastowy alert.",
+          "rulesNote": "Tworzenie zgłoszeń, priorytety i automatyczne rozwiązywanie konfiguruje się w regułach alertów poniżej."
+        },
+        "connection": {
+          "title": "Połączenie UniFi",
+          "description": "Połącz się za pomocą klucza API UniFi. Użyj Site Manager, aby uzyskać dostęp do wszystkich konsol na koncie, lub Kontrolera lokalnego, do którego masz bezpośredni dostęp. Synchronizowane są przyjęte bramy, przełączniki i punkty dostępowe.",
+          "syncLabel": "Synchronizacja: {{status}}",
+          "syncLabelWithError": "Synchronizacja: {{status}} ({{error}})",
+          "connectedAt": "Połączono: {{time}}",
+          "never": "nigdy"
+        },
+        "errors": {
+          "loadSettings": "Nie udało się wczytać ustawień UniFi",
+          "loadMappings": "Nie udało się wczytać mapowań witryn UniFi",
+          "loadSummary": "Nie udało się wczytać podsumowania połączenia UniFi",
+          "loadState": "Nie udało się wczytać stanu integracji UniFi",
+          "saveConfiguration": "Nie udało się zapisać konfiguracji UniFi",
+          "testConnectionFailed": "Test połączenia nie powiódł się",
+          "disconnectFailed": "Nie udało się rozłączyć integracji UniFi",
+          "siteSyncFailed": "Wykrywanie witryn nie powiodło się",
+          "deviceSyncFailed": "Synchronizacja urządzeń nie powiodła się",
+          "updateMappingFailed": "Nie udało się zaktualizować mapowania",
+          "reconnectRequired": "UniFi odrzucił zapisany klucz API. Wklej nowy klucz i zapisz, aby wznowić synchronizację.",
+          "alertCheckFailed": "Sprawdzanie urządzeń offline nie powiodło się",
+          "saveAlertingFailed": "Nie udało się zapisać ustawień alertów",
+          "invalidGraceMinutes": "Wprowadź liczbę całkowitą minut od 0 do 1440."
+        },
+        "fields": {
+          "apiKey": "Klucz API ({{state}})",
+          "apiKeyStateSaved": "zapisany",
+          "apiKeyStateRequired": "wymagany",
+          "apiKeyPlaceholderExisting": "Klucz zapisany. Wprowadź nowy klucz, aby go zastąpić",
+          "apiKeyPlaceholderNew": "Wklej klucz API UniFi",
+          "connectionMode": "Tryb połączenia",
+          "modeSiteManager": "Site Manager (chmura)",
+          "modeLocal": "Kontroler lokalny",
+          "localBaseUrl": "Adres URL kontrolera",
+          "localBaseUrlPlaceholder": "https://unifi.example.com"
+        },
+        "mappings": {
+          "site": "Witryna UniFi",
+          "siteIdLabel": "ID: {{id}}",
+          "mappedClient": "Przypisany klient",
+          "defaultContact": "Domyślny kontakt",
+          "selectContact": "Wybierz kontakt",
+          "autoSync": "Automatyczna synchronizacja",
+          "autoSyncEnabled": "Włączona",
+          "autoSyncDisabled": "Wyłączona"
+        },
+        "status": {
+          "label": "Stan: ",
+          "connected": "Połączono",
+          "disconnected": "Niepołączono",
+          "reconnectRequired": "Wymagane ponowne połączenie"
+        },
+        "success": {
+          "configurationSaved": "Konfiguracja UniFi zapisana",
+          "connectionTestSucceeded": "Połączenie z UniFi powiodło się",
+          "disconnected": "Integracja UniFi rozłączona",
+          "siteSyncCompleted": "Wykrywanie witryn zakończone: przetworzono {{processed}}, utworzono {{created}}, zaktualizowano {{updated}}",
+          "deviceSyncCompleted": "Synchronizacja urządzeń zakończona: przetworzono {{processed}}, utworzono {{created}}, zaktualizowano {{updated}}",
+          "alertCheckCompleted": "Sprawdzanie urządzeń offline zakończone",
+          "alertingSaved": "Ustawienia alertów zapisane"
+        },
+        "sync": {
+          "title": "Synchronizacja i mapowania witryn",
+          "description": "Wykryj witryny UniFi i przypisz każdą do klienta. Urządzenia w nieprzypisanych witrynach są pomijane.",
+          "summary": "Przypisane witryny: {{mappedSites}} · urządzenia: {{devices}} · aktywne alerty: {{activeAlerts}}"
         }
       },
       "huntress": {

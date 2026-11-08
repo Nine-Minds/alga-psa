@@ -421,6 +421,12 @@ interface RuleEditorDialogProps {
   onSave: () => Promise<void>;
   saving: boolean;
   formOptions: RmmAlertRuleFormOptions | null;
+  /**
+   * Providers with no outbound alert-reset surface (UniFi: offline alerts are
+   * derived, there is nothing to reset on the provider side) hide the
+   * "reset alert when ticket closes" switch rather than offer a dead control.
+   */
+  hideResetOnClose?: boolean;
 }
 
 function RuleEditorDialog({
@@ -432,6 +438,7 @@ function RuleEditorDialog({
   onSave,
   saving,
   formOptions,
+  hideResetOnClose = false,
 }: RuleEditorDialogProps) {
   const { t } = useTranslation("msp/integrations");
   const toggleNotifyUser = (id: string) => {
@@ -763,19 +770,21 @@ function RuleEditorDialog({
             </div>
           )}
 
-          <div className="flex items-center gap-2">
-            <Switch
-              id="rule-reset-on-close"
-              checked={f.resetAlertOnTicketClose}
-              onCheckedChange={(v) =>
-                setF((p) => ({ ...p, resetAlertOnTicketClose: v }))
-              }
-              disabled={saving}
-            />
-            <Label htmlFor="rule-reset-on-close">
-              {t("integrations.rmm.alertAutomation.rules.resetOnClose")}
-            </Label>
-          </div>
+          {!hideResetOnClose && (
+            <div className="flex items-center gap-2">
+              <Switch
+                id="rule-reset-on-close"
+                checked={f.resetAlertOnTicketClose}
+                onCheckedChange={(v) =>
+                  setF((p) => ({ ...p, resetAlertOnTicketClose: v }))
+                }
+                disabled={saving}
+              />
+              <Label htmlFor="rule-reset-on-close">
+                {t("integrations.rmm.alertAutomation.rules.resetOnClose")}
+              </Label>
+            </div>
+          )}
         </div>
       </div>
     </Dialog>
@@ -1101,7 +1110,8 @@ function WindowEditorDialog({
 // Main component
 // ---------------------------------------------------------------------------
 
-const POLLING_PROVIDERS = new Set(["ninjaone", "tacticalrmm", "datto"]);
+// LEVERAGE: pattern rmm-provider-registration — provider lists are hand-maintained per capability
+const POLLING_PROVIDERS = new Set(["ninjaone", "tacticalrmm", "unifi", "datto"]);
 
 export function RmmAlertAutomationSettings({
   integrationId,
@@ -1254,6 +1264,8 @@ export function RmmAlertAutomationSettings({
     setSavingRule(true);
     try {
       const { conditions, actions } = formToRuleInput(ruleForm);
+      // The reset-on-close switch is hidden for UniFi (alerts are derived, nothing to reset provider-side).
+      if (provider === "unifi") actions.resetAlertOnTicketClose = false;
       let res;
       if (editingRule) {
         res = await updateRmmAlertRule({
@@ -1921,6 +1933,7 @@ export function RmmAlertAutomationSettings({
         onSave={handleSaveRule}
         saving={savingRule}
         formOptions={formOptions}
+        hideResetOnClose={provider === "unifi"}
       />
 
       {/* ── Window editor dialog ──────────────────────────────────────────── */}
