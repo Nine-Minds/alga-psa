@@ -22,3 +22,5 @@ export * from './WriteOffsReport';
 export * from './MarginReport';
 export * from './ImportOpeningBalances';
 export * from './GhostUsageReport';
+export * from './rma/RmaWarrantyPanel';
+export * from './rma/NewWarrantyClaimDialog';

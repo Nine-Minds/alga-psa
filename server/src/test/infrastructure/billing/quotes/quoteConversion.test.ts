@@ -39,6 +39,7 @@ import {
   convertQuoteToDraftSalesOrder,
 } from '../../../../../../packages/billing/src/services/quoteConversionService';
 import { recalculatePercentageDiscountInvoiceCharges } from '../../../../../../packages/billing/src/services/invoiceService';
+import { ensureDefaultBillingProfile } from '../../../../../test-utils/billingProfileTestHelpers';
 import {
   convertQuoteToDraftContract as runtimeConvertQuoteToDraftContract,
   convertQuoteToDraftContractAndInvoice as runtimeConvertQuoteToDraftContractAndInvoice,
@@ -199,6 +200,111 @@ describe('Quote conversion infrastructure', () => {
       items: createdItems,
     };
   }
+
+  describe('invoice header terms from the effective billing identity', () => {
+    const oneTimeItem = [{
+      description: 'Project onboarding',
+      quantity: 1,
+      unit_price: 12000,
+      is_recurring: false,
+      billing_method: 'fixed' as const,
+    }];
+
+    async function setTerms(
+      table: 'clients' | 'client_billing_profiles',
+      where: Record<string, unknown>,
+      terms: { payment_terms?: string | null; preferred_payment_method?: string | null },
+    ) {
+      await context.db(table).where({ tenant: context.tenantId, ...where }).update(terms);
+    }
+
+    async function loadHeader(invoiceId: string) {
+      return context.db('invoices')
+        .where({ tenant: context.tenantId, invoice_id: invoiceId })
+        .first();
+    }
+
+    function dateOnly(value: Date | string): string {
+      return (value instanceof Date ? value.toISOString() : value).slice(0, 10);
+    }
+
+    it('(a) client Net 15 + credit_card with no profile overrides sets due_date, method and default profile', async () => {
+      await setTerms('clients', { client_id: context.clientId }, {
+        payment_terms: 'net_15',
+        preferred_payment_method: 'credit_card',
+      });
+      const defaultProfileId = await ensureDefaultBillingProfile(context, context.clientId);
+      const { quote } = await createAcceptedQuote(oneTimeItem);
+
+      const result = await context.db.transaction((trx) =>
+        convertQuoteToDraftInvoice(trx, context.tenantId, quote.quote_id, context.userId)
+      );
+
+      const header = await loadHeader(result.invoice.invoice_id);
+      // accepted_at 2026-03-14T12:00Z + 15 days
+      expect(dateOnly(header.invoice_date)).toBe('2026-03-14');
+      expect(dateOnly(header.due_date)).toBe('2026-03-29');
+      expect(header.payment_method).toBe('credit_card');
+      expect(header.billing_profile_id).toBe(defaultProfileId);
+
+      const charges = await context.db('invoice_charges')
+        .where({ tenant: context.tenantId, invoice_id: result.invoice.invoice_id });
+      expect(charges.length).toBeGreaterThan(0);
+      for (const charge of charges) {
+        expect(charge.billing_profile_id).toBe(header.billing_profile_id);
+      }
+    });
+
+    it('(b) default profile terms and method override the client', async () => {
+      await setTerms('clients', { client_id: context.clientId }, {
+        payment_terms: 'net_15',
+        preferred_payment_method: 'credit_card',
+      });
+      const defaultProfileId = await ensureDefaultBillingProfile(context, context.clientId);
+      await setTerms('client_billing_profiles', { billing_profile_id: defaultProfileId }, {
+        payment_terms: 'net_30',
+        preferred_payment_method: 'bank_transfer',
+      });
+      const { quote } = await createAcceptedQuote(oneTimeItem);
+
+      const result = await context.db.transaction((trx) =>
+        convertQuoteToDraftInvoice(trx, context.tenantId, quote.quote_id, context.userId)
+      );
+
+      const header = await loadHeader(result.invoice.invoice_id);
+      expect(dateOnly(header.due_date)).toBe('2026-04-13');
+      expect(header.payment_method).toBe('bank_transfer');
+      expect(header.billing_profile_id).toBe(defaultProfileId);
+    });
+
+    it('(c) convert-to-both produces the same header terms', async () => {
+      await setTerms('clients', { client_id: context.clientId }, {
+        payment_terms: 'net_15',
+        preferred_payment_method: 'credit_card',
+      });
+      const defaultProfileId = await ensureDefaultBillingProfile(context, context.clientId);
+      const { quote } = await createAcceptedQuote([
+        {
+          description: 'Recurring maintenance',
+          quantity: 1,
+          unit_price: 4000,
+          is_recurring: true,
+          billing_frequency: 'monthly',
+          billing_method: 'fixed',
+        },
+        ...oneTimeItem,
+      ]);
+
+      const result = await context.db.transaction((trx) =>
+        convertQuoteToDraftContractAndInvoice(trx, context.tenantId, quote.quote_id, context.userId)
+      );
+
+      const header = await loadHeader(result.invoice.invoice_id);
+      expect(dateOnly(header.due_date)).toBe('2026-03-29');
+      expect(header.payment_method).toBe('credit_card');
+      expect(header.billing_profile_id).toBe(defaultProfileId);
+    });
+  });
 
   it('T104: Quote→Contract creates a draft contract with the quote title and accepted date', async () => {
     const { quote } = await createAcceptedQuote([
@@ -472,6 +578,52 @@ describe('Quote conversion infrastructure', () => {
     expect(discountCharge.discount_percentage).toBeNull();
     expect(discountCharge.applies_to_item_id).toBe(baseCharge.item_id);
     expect(Number(discountCharge.net_amount)).toBe(-1000);
+  });
+
+  it('a discounted quote converts to an invoice with the same per-line and total tax', async () => {
+    await context.db('clients')
+      .where({ tenant: context.tenantId, client_id: context.clientId })
+      .update({ region_code: 'US-NY', is_tax_exempt: false });
+    await setupClientTaxConfiguration(context, { regionCode: 'US-NY', taxPercentage: 10 });
+
+    const { quote, items } = await createAcceptedQuote([
+      { description: 'Project A', quantity: 1, unit_price: 10000, is_recurring: false, billing_method: 'fixed' },
+      { description: 'Project B', quantity: 1, unit_price: 5000, is_recurring: false, billing_method: 'fixed' },
+    ]);
+    // Whole-quote fixed discount, added through the model so quote totals recalc.
+    await context.db('quotes').where({ tenant: context.tenantId, quote_id: quote.quote_id }).update({ status: 'draft' });
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Quote-wide discount',
+      quantity: 1,
+      unit_price: 3000,
+      is_discount: true,
+      discount_type: 'fixed',
+      created_by: context.userId,
+    } as any);
+    await context.db('quotes').where({ tenant: context.tenantId, quote_id: quote.quote_id })
+      .update({ status: 'accepted', accepted_at: ACCEPTED_AT, accepted_by: context.userId });
+
+    const quoteRow = await context.db('quotes').where({ tenant: context.tenantId, quote_id: quote.quote_id }).first();
+    const quoteLines = await context.db('quote_items')
+      .where({ tenant: context.tenantId, quote_id: quote.quote_id, is_discount: false });
+    // 3000 spread 2:1 -> 2000 / 1000, so the taxed base is 8000 + 4000 = 12000.
+    expect(Number(quoteRow.tax)).toBe(1200);
+    expect(quoteLines.reduce((sum: number, line: any) => sum + Number(line.tax_amount), 0)).toBe(1200);
+
+    const result = await context.db.transaction((trx) =>
+      convertQuoteToDraftInvoice(trx, context.tenantId, quote.quote_id, context.userId)
+    );
+    const charges = await context.db('invoice_charges')
+      .where({ tenant: context.tenantId, invoice_id: result.invoice.invoice_id });
+    const invoiceLineTax = charges.reduce((sum: number, c: any) => sum + Number(c.tax_amount), 0);
+    expect(invoiceLineTax).toBe(Number(quoteRow.tax));
+    for (const line of quoteLines) {
+      const converted = charges.find((c: any) => c.description === line.description);
+      expect(Number(converted.tax_amount)).toBe(Number(line.tax_amount));
+    }
+    expect(charges.find((c: any) => c.is_discount === true).tax_amount.toString()).toBe('0');
+    expect(items).toHaveLength(2);
   });
 
   it('T112: invoice conversion stores converted_invoice_id on the source quote', async () => {

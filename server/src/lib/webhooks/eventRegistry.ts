@@ -24,7 +24,7 @@
  * `classifyEventTypes` / `assertEventTypesAllowed`.
  */
 
-export type WebhookEntity = 'ticket' | 'project' | 'client' | 'contact' | 'client_location';
+export type WebhookEntity = 'ticket' | 'project' | 'client' | 'contact' | 'client_location' | 'quote';
 
 export interface WebhookEventDefinition {
   readonly name: string;
@@ -116,6 +116,16 @@ export const WEBHOOK_EVENT_REGISTRY = [
     sourceEvents: ['CLIENT_LOCATION_DELETED'],
     entityIdKeys: ['location_id', 'client_id'],
   }),
+  def({ name: 'quote.sent', entity: 'quote', sourceEvents: ['QUOTE_SENT'], entityIdKeys: ['quote_id', 'client_id'] }),
+  def({ name: 'quote.viewed', entity: 'quote', sourceEvents: ['QUOTE_VIEWED'], entityIdKeys: ['quote_id', 'client_id'] }),
+  def({ name: 'quote.approved', entity: 'quote', sourceEvents: ['QUOTE_APPROVED'], entityIdKeys: ['quote_id', 'client_id'] }),
+  def({ name: 'quote.accepted', entity: 'quote', sourceEvents: ['QUOTE_ACCEPTED'], entityIdKeys: ['quote_id', 'client_id'] }),
+  def({ name: 'quote.rejected', entity: 'quote', sourceEvents: ['QUOTE_REJECTED'], entityIdKeys: ['quote_id', 'client_id'] }),
+  def({ name: 'quote.expired', entity: 'quote', sourceEvents: ['QUOTE_EXPIRED'], entityIdKeys: ['quote_id', 'client_id'] }),
+  def({ name: 'quote.converted', entity: 'quote', sourceEvents: ['QUOTE_CONVERTED'], entityIdKeys: ['quote_id', 'client_id'] }),
+  def({ name: 'quote.conversion_reverted', entity: 'quote', sourceEvents: ['QUOTE_CONVERSION_REVERTED'], entityIdKeys: ['quote_id', 'client_id'] }),
+  def({ name: 'quote.superseded', entity: 'quote', sourceEvents: ['QUOTE_SUPERSEDED'], entityIdKeys: ['quote_id', 'client_id'] }),
+  def({ name: 'quote.cancelled', entity: 'quote', sourceEvents: ['QUOTE_CANCELLED'], entityIdKeys: ['quote_id', 'client_id'] }),
 ] as const;
 
 export type WebhookEventName = (typeof WEBHOOK_EVENT_REGISTRY)[number]['name'];

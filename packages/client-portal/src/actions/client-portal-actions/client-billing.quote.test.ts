@@ -20,6 +20,9 @@ const updateQuoteMock = vi.fn();
 const createQuoteActivityMock = vi.fn();
 const recalculateQuoteFinancialsMock = vi.fn();
 
+const recordQuoteLifecycleMock = vi.hoisted(() => vi.fn(async () => {}));
+vi.mock('@alga-psa/shared/lib/quotes/quoteLifecycleEvents', () => ({ recordQuoteLifecycleTransition: (...args: any[]) => recordQuoteLifecycleMock(...args) }));
+
 vi.mock('@alga-psa/auth', () => ({
   withAuth:
     (action: any) =>
@@ -60,6 +63,11 @@ vi.mock('@alga-psa/billing/models/quoteActivity', () => ({
 
 vi.mock('@alga-psa/billing/services', () => ({
   recalculateQuoteFinancials: (...args: any[]) => recalculateQuoteFinancialsMock(...args),
+  resolveQuoteItemTaxesIfIncluded: async () =>
+    new Map([
+      ['item-required', { taxAmount: 0, taxPercentage: 0 }],
+      ['item-optional', { taxAmount: 0, taxPercentage: 0 }],
+    ]),
 }));
 
 vi.mock('@alga-psa/billing/actions/invoiceQueries', () => ({
@@ -210,6 +218,8 @@ function buildTrx() {
         const chain: any = {};
         let criteria: Record<string, unknown> = {};
         let requiredNullField: string | null = null;
+        chain.forUpdate = vi.fn(() => chain);
+        chain.first = vi.fn(async () => quoteStore[String(criteria.quote_id)]);
         chain.where = vi.fn((nextCriteria: Record<string, unknown>) => {
           criteria = { ...criteria, ...nextCriteria };
           return chain;
@@ -245,6 +255,7 @@ function buildTrx() {
 
 describe('client quote billing actions', () => {
   beforeEach(() => {
+    recordQuoteLifecycleMock.mockClear();
     vi.clearAllMocks();
     vi.resetModules();
 
@@ -353,46 +364,76 @@ describe('client quote billing actions', () => {
     });
   });
 
-  it('T097: updateClientQuoteSelections persists optional selections and recalculates totals', async () => {
-    const { updateClientQuoteSelections } = await import('./client-billing');
+  it('T097: toggling optional items is a local preview — no per-toggle action exists and loading the quote writes nothing', async () => {
+    const actions = await import('./client-billing');
 
-    const updatedQuote = await updateClientQuoteSelections('quote-1', []);
+    expect((actions as Record<string, unknown>).updateClientQuoteSelections).toBeUndefined();
 
-    // Tenant scoping now lives in the tenantDb facade, so the criteria no longer
-    // carries tenant; assert the facade scoped the quote_items table to this tenant.
-    expect(quoteItemUpdateLog).toContainEqual({
-      criteria: { quote_item_id: 'item-optional' },
-      payload: { is_selected: false, updated_at: 'db-now' },
-    });
-    expect(tenantScopeLog).toContainEqual({ tenant: 'tenant-1', table: 'quote_items' });
-    expect(recalculateQuoteFinancialsMock).toHaveBeenCalledWith(expect.anything(), 'tenant-1', 'quote-1');
-    expect(updatedQuote.quote_items?.find((item) => item.quote_item_id === 'item-optional')?.is_selected).toBe(false);
-    expect(updatedQuote.total_amount).toBe(15000);
+    const before = clone(quoteStore['quote-1']);
+    const quote = await actions.getClientQuoteById('quote-1');
+
+    expect(quoteItemUpdateLog).toEqual([]);
+    expect(recalculateQuoteFinancialsMock).not.toHaveBeenCalled();
+    expect(quoteStore['quote-1'].quote_items).toEqual(before.quote_items);
+    expect(quoteStore['quote-1'].total_amount).toBe(before.total_amount);
+    // The payload carries the server-resolved inputs the local preview needs.
+    expect(quote.quote_items?.every((item) => typeof item.tax_amount_if_included === 'number')).toBe(true);
   });
 
-  it('T097a: optional quote selections persist across a follow-up reload', async () => {
-    const { getClientQuoteById, updateClientQuoteSelections } = await import('./client-billing');
+  it('T097a: the vendor selection is what a reload returns until Accept', async () => {
+    const { getClientQuoteById } = await import('./client-billing');
 
-    await updateClientQuoteSelections('quote-1', []);
+    await getClientQuoteById('quote-1');
     const reloadedQuote = await getClientQuoteById('quote-1');
 
-    expect(reloadedQuote.quote_items?.find((item) => item.quote_item_id === 'item-optional')?.is_selected).toBe(false);
-    expect(reloadedQuote.total_amount).toBe(15000);
+    expect(reloadedQuote.quote_items?.find((item) => item.quote_item_id === 'item-optional')?.is_selected).toBe(true);
+    expect(reloadedQuote.total_amount).toBe(20000);
+    expect(quoteItemUpdateLog).toEqual([]);
   });
 
-  it('T098: acceptClientQuote persists selections and marks the quote as accepted', async () => {
+  it('T098: acceptClientQuote persists exactly the given selection, updates totals and records the activity', async () => {
     const { acceptClientQuote } = await import('./client-billing');
 
-    const acceptedQuote = await acceptClientQuote('quote-1', ['item-optional']);
+    const acceptedQuote = await acceptClientQuote('quote-1', []);
 
     expect(acceptedQuote.status).toBe('accepted');
     expect(acceptedQuote.accepted_by).toBe('portal-user-1');
     expect(acceptedQuote.accepted_at).toEqual(expect.any(String));
+    // Selection persisted for every optional row, then totals recalculated.
+    expect(quoteItemUpdateLog).toEqual([
+      {
+        criteria: { quote_item_id: 'item-optional' },
+        payload: { is_selected: false, updated_at: 'db-now' },
+      },
+    ]);
+    expect(tenantScopeLog).toContainEqual({ tenant: 'tenant-1', table: 'quote_items' });
+    expect(recalculateQuoteFinancialsMock).toHaveBeenCalledWith(expect.anything(), 'tenant-1', 'quote-1');
+    expect(acceptedQuote.total_amount).toBe(15000);
     expect(createQuoteActivityMock).toHaveBeenCalledWith(
       expect.anything(),
       'tenant-1',
       expect.objectContaining({
         quote_id: 'quote-1',
+        activity_type: 'accepted',
+        metadata: {
+          selected_optional_quote_item_ids: [],
+          deselected_optional_quote_item_ids: ['item-optional'],
+        },
+      })
+    );
+  });
+
+  it('T098a: accepting with the optional item selected keeps it and records it as selected', async () => {
+    const { acceptClientQuote } = await import('./client-billing');
+
+    const acceptedQuote = await acceptClientQuote('quote-1', ['item-optional']);
+
+    expect(acceptedQuote.status).toBe('accepted');
+    expect(acceptedQuote.total_amount).toBe(20000);
+    expect(createQuoteActivityMock).toHaveBeenCalledWith(
+      expect.anything(),
+      'tenant-1',
+      expect.objectContaining({
         activity_type: 'accepted',
         metadata: {
           selected_optional_quote_item_ids: ['item-optional'],
@@ -432,6 +473,7 @@ describe('client quote billing actions', () => {
     const viewedQuote = await getClientQuoteById('quote-1');
 
     expect(viewedQuote.viewed_at).toEqual(expect.any(String));
+    expect(recordQuoteLifecycleMock).toHaveBeenCalledOnce();
     // Tenant scoping now lives in the tenantDb facade, so the criteria no longer
     // carries tenant; assert the facade scoped the quotes table to this tenant.
     expect(rawQuoteUpdateLog).toContainEqual({
@@ -456,6 +498,7 @@ describe('client quote billing actions', () => {
     const viewedQuote = await getClientQuoteById('quote-1');
 
     expect(viewedQuote.viewed_at).toBe('2026-03-13T10:00:00.000Z');
+    expect(recordQuoteLifecycleMock).not.toHaveBeenCalled();
     expect(rawQuoteUpdateLog).toHaveLength(0);
     expect(createQuoteActivityMock).not.toHaveBeenCalled();
   });
@@ -522,6 +565,11 @@ describe('client quote billing actions', () => {
     const generateAndStore = vi.fn(async () => ({ file_id: 'new-pdf-file' }));
     vi.doMock('@alga-psa/billing/services', () => ({
       recalculateQuoteFinancials: (...args: any[]) => recalculateQuoteFinancialsMock(...args),
+      resolveQuoteItemTaxesIfIncluded: async () =>
+        new Map([
+          ['item-required', { taxAmount: 0, taxPercentage: 0 }],
+          ['item-optional', { taxAmount: 0, taxPercentage: 0 }],
+        ]),
       createPDFGenerationService: vi.fn(() => ({ generateAndStore })),
     }));
 
@@ -557,6 +605,11 @@ describe('client quote billing actions', () => {
     // to avoid breaking other tests that depend on the same mock
     vi.doMock('@alga-psa/billing/services', () => ({
       recalculateQuoteFinancials: (...args: any[]) => recalculateQuoteFinancialsMock(...args),
+      resolveQuoteItemTaxesIfIncluded: async () =>
+        new Map([
+          ['item-required', { taxAmount: 0, taxPercentage: 0 }],
+          ['item-optional', { taxAmount: 0, taxPercentage: 0 }],
+        ]),
       createPDFGenerationService: vi.fn(() => ({
         generateAndStore: vi.fn(async () => ({ file_id: 'generated-pdf-file-1' })),
       })),

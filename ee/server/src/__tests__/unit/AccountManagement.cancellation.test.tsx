@@ -106,6 +106,11 @@ vi.mock('../../components/settings/account/AiUsageSection', () => ({ default: ()
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
+  useFormatters: () => ({
+    formatCurrency: (value: number, currency: string) =>
+      new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(value),
+    formatDate: (value: Date | string) => new Date(value).toISOString().slice(0, 10),
+  }),
 }));
 
 vi.mock('react-hot-toast', () => ({

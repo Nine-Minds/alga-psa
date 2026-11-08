@@ -8,6 +8,8 @@ export { createTicketForAlertId } from './createTicketForAlertId';
 export { resolveRmmTicketContactId } from './resolveContact';
 export { publishRmmTicketCreated } from './ticketCreatedEvent';
 export { isTicketUntouched } from './untouched';
+export { reconcileConditionObservations, acknowledgeConditionTransition } from './conditionLifecycle';
+export type { ConditionObservation, ConditionTransitionResult } from './conditionLifecycle';
 export { registerRmmAlertOutboundAdapter, getRmmAlertOutboundAdapter } from './outboundRegistry';
 export {
   registerRmmAlertFetcher,

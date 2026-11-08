@@ -10,6 +10,7 @@
 import {
   getTenantTableScope,
   tenantDb,
+  tenantExportOrder,
   type TenantDb,
   type TenantTableScope,
 } from '@alga-psa/db';
@@ -53,88 +54,6 @@ interface ColumnMetadataRow {
 
 const TENANT_EXPORT_DISCOVERY_TENANT = '__tenant_export_discovery__';
 type TenantColumnName = 'tenant' | 'tenant_id';
-
-/**
- * Tables to export for tenant data export.
- * Focuses on business data, excludes system/config tables.
- */
-const TENANT_TABLES_EXPORT_ORDER: string[] = [
-  // Core business data
-  'users', // includes reports_to
-  'contacts',
-  'companies',
-  'clients',
-
-  // Tickets and support
-  'tickets', // includes assigned_team_id
-  'ticket_resources',
-  'ticket_materials',
-  'comments',
-
-  // Time tracking
-  'time_entries',
-  'time_sheets',
-  'time_sheet_comments',
-
-  // Projects
-  'projects',
-  'project_phases',
-  'project_tasks', // includes assigned_team_id
-  'project_task_comments',
-  'project_materials',
-
-  // Invoices and billing
-  'invoices',
-  'invoice_items',
-  'invoice_annotations',
-  'invoice_time_entries',
-  'transactions',
-  'credit_tracking',
-
-  // Contracts
-  'contracts',
-  'contract_lines',
-  'contract_line_services',
-
-  // Documents
-  'documents',
-  'document_versions',
-  'document_content',
-  'document_block_content',
-
-  // Assets
-  'assets',
-  'asset_remote_access_links',
-  'asset_history',
-  'asset_associations',
-  'asset_software',
-  'asset_maintenance_schedules',
-  'asset_maintenance_occurrences',
-
-  // Schedules
-  'schedules',
-  'schedule_entries',
-
-  // Teams and roles
-  'teams',
-  'team_members', // includes role
-  'roles',
-  'user_roles',
-
-  // Interactions
-  'interactions',
-
-  // Service catalog
-  'service_catalog',
-  'service_categories',
-
-  // Tags
-  'tags',
-  'tag_mappings',
-
-  // Workflow tasks
-  'workflow_tasks',
-];
 
 /**
  * Check if a table exists and has a tenant column
@@ -251,7 +170,8 @@ export async function exportTenantData(
     let tableCount = 0;
 
     // Export each table
-    for (const tableName of TENANT_TABLES_EXPORT_ORDER) {
+    // Tables to export come from the tenant table manifest (`export.rank`).
+    for (const tableName of tenantExportOrder()) {
       try {
         const tenantColumn = await getTableTenantColumn(exportDb, tableName);
 

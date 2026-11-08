@@ -74,6 +74,17 @@ async function ensureCompositeFk(knex, spec) {
   return true;
 }
 
+// Citus rejects CREATE/DROP TRIGGER on a distributed table unless
+// citus.enable_unsafe_triggers is set, which this codebase does not set. A
+// trigger on a tenant-distributed table is therefore defense-in-depth for plain
+// Postgres and for tables Citus leaves local; where the table is distributed the
+// invariant rests on the application path that writes it. Probe the extension
+// first: pg_dist_partition does not exist on plain Postgres.
+async function supportsTriggers(knex, tableName) {
+  if (!(await canCreateDistributedTable(knex))) return true;
+  return !(await isDistributed(knex, tableName));
+}
+
 module.exports = {
   canCreateDistributedTable,
   isDistributed,
@@ -82,4 +93,5 @@ module.exports = {
   hasConstraint,
   isFkCompatible,
   ensureCompositeFk,
+  supportsTriggers,
 };

@@ -24,22 +24,20 @@ import {
   timeSheetExportQuerySchema,
   createScheduleEntrySchema,
   updateScheduleEntrySchema,
+  scheduleEntryListQuerySchema,
+  scheduleEntrySearchQuerySchema,
   calendarListQuerySchema
 } from '../schemas/timeSheet';
 import { 
   ApiKeyServiceForApi 
 } from '../../services/apiKeyServiceForApi';
 import { hasApiContextPermission } from '../middleware/apiContextPermission';
-import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { 
   runWithTenant 
 } from '../../db';
 import { 
   getConnection 
 } from '../../db/db';
-import { 
-  hasPermission 
-} from '../../auth/rbac';
 import { AuthenticatedApiRequest, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError, buildAuthenticatedApiContext, createPaginatedResponse, createSuccessResponse, handleApiError } from '../middleware/apiMiddleware';
 import {
   canAssignUser,
@@ -48,6 +46,33 @@ import {
 } from '@alga-psa/scheduling/lib/calendarAccess';
 import { ZodError } from 'zod';
 import { uuidSchema } from '../schemas/common';
+
+/**
+ * Query keys the search/export schemas type as `z.array(...)`. Both repeated keys
+ * (`?user_ids=a&user_ids=b`) and comma-separated values (`?user_ids=a,b`) are accepted,
+ * matching the documented array encoding for `/api/v1/time-sheets/{search,export}`.
+ */
+const TIME_SHEET_ARRAY_QUERY_KEYS: ReadonlySet<string> = new Set(['approval_statuses', 'user_ids', 'period_ids', 'fields']);
+
+/**
+ * Shape a query string for timeSheetSearchSchema / timeSheetExportQuerySchema.
+ * `Object.fromEntries(searchParams)` yields one string per key and keeps only the last
+ * repeated value, so no `z.array` filter could ever validate. Array keys collect every
+ * occurrence (split on commas, trimmed, blanks dropped); scalars keep their last value;
+ * absent keys stay absent so the schema defaults apply.
+ */
+// LEVERAGE: pattern multi-value-query-params — ApiAssetController.export() hand-rolls the same
+// getAll + split(',') normalization; a shared query normalizer belongs below the controllers.
+function timeSheetQueryParams(searchParams: URLSearchParams): Record<string, string | string[]> {
+  const params: Record<string, string | string[]> = {};
+  for (const key of new Set(searchParams.keys())) {
+    const values = searchParams.getAll(key);
+    params[key] = TIME_SHEET_ARRAY_QUERY_KEYS.has(key)
+      ? values.flatMap((value) => value.split(',')).map((value) => value.trim()).filter(Boolean)
+      : values[values.length - 1];
+  }
+  return params;
+}
 
 export class ApiTimeSheetController extends ApiBaseController {
   private timeSheetService: TimeSheetService;
@@ -174,6 +199,95 @@ export class ApiTimeSheetController extends ApiBaseController {
   }
 
   /**
+   * Get the time entries of one time sheet (GET /time-sheets/{id}/entries)
+   */
+  // LEVERAGE: pattern api-controller-auth-preamble — same auth/tenant/permission sequence as getWithDetails()
+  getEntries() {
+    return this.perSheetRead((id, ctx) => this.timeSheetService.getTimeSheetEntries(id, ctx));
+  }
+
+  /**
+   * Get the summary of one time sheet (GET /time-sheets/{id}/summary)
+   */
+  // LEVERAGE: pattern api-controller-auth-preamble — same auth/tenant/permission sequence as getWithDetails()
+  getSummary() {
+    return this.perSheetRead((id, ctx) => this.timeSheetService.getTimeSheetSummary(id, ctx));
+  }
+
+  /**
+   * Shared read for /time-sheets/{id}/<sub-resource>: authenticates, checks
+   * time_sheet:read, takes the id from route params (never the last URL
+   * segment, which is the sub-resource name), 404s unknown or other-tenant
+   * sheets via getById(), then runs the reader.
+   */
+  private perSheetRead(
+    reader: (id: string, ctx: { userId: string; user: any; tenant: string }) => Promise<unknown>
+  ) {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiKey = req.headers.get('x-api-key');
+
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        let tenantId = req.headers.get('x-tenant-id');
+        let keyRecord;
+
+        if (tenantId) {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+        } else {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) {
+            tenantId = keyRecord.tenant;
+          }
+        }
+
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+        const user = apiAuthContext.user;
+
+
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
+
+        const db = await getConnection(tenantId!);
+        const hasReadPermission = await hasApiContextPermission(apiAuthContext, 'time_sheet', 'read', db);
+
+        if (!hasReadPermission) {
+          throw new ForbiddenError('Permission denied: Cannot read time sheets');
+        }
+
+        const params = await (req as any).params;
+        const parsedId = uuidSchema.safeParse(params?.id);
+        if (!parsedId.success) {
+          throw new ValidationError('Invalid time sheet id', parsedId.error.issues);
+        }
+        const id = parsedId.data;
+
+        const ctx = { userId: apiAuthContext.userId, viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null, user, tenant: tenantId! };
+        const result = await runWithTenant(tenantId!, async () => {
+          const timeSheet = await this.timeSheetService.getById(id, ctx);
+          if (!timeSheet) {
+            return null;
+          }
+          return { data: await reader(id, ctx) };
+        });
+
+        if (!result) {
+          throw new NotFoundError('Time sheet not found');
+        }
+
+        return createSuccessResponse(result.data);
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
    * Submit time sheet for approval
    */
   submit() {
@@ -234,7 +348,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           submitData = submitTimeSheetSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid submit data', error.errors);
+            throw new ValidationError('Invalid submit data', error.issues);
           }
           throw error;
         }
@@ -316,7 +430,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           approveData = approveTimeSheetSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid approve data', error.errors);
+            throw new ValidationError('Invalid approve data', error.issues);
           }
           throw error;
         }
@@ -398,7 +512,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           requestChangesData = requestChangesTimeSheetSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid request changes data', error.errors);
+            throw new ValidationError('Invalid request changes data', error.issues);
           }
           throw error;
         }
@@ -480,7 +594,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           reverseData = reverseApprovalSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid reverse approval data', error.errors);
+            throw new ValidationError('Invalid reverse approval data', error.issues);
           }
           throw error;
         }
@@ -557,7 +671,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           bulkApproveData = bulkApproveTimeSheetSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid bulk approve data', error.errors);
+            throw new ValidationError('Invalid bulk approve data', error.issues);
           }
           throw error;
         }
@@ -712,7 +826,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           commentData = createTimeSheetCommentSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid comment data', error.errors);
+            throw new ValidationError('Invalid comment data', error.issues);
           }
           throw error;
         }
@@ -782,16 +896,16 @@ export class ApiTimeSheetController extends ApiBaseController {
           throw new ForbiddenError('Permission denied: Cannot read time sheets');
         }
 
-        // Validate query parameters
+        // Validate query parameters (array filters arrive repeated or comma-separated)
         const url = new URL(req.url);
-        const queryParams = Object.fromEntries(url.searchParams);
-        
+        const queryParams = timeSheetQueryParams(url.searchParams);
+
         let searchParams;
         try {
           searchParams = timeSheetSearchSchema.parse(queryParams);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid search parameters', error.errors);
+            throw new ValidationError('Invalid search parameters', error.issues);
           }
           throw error;
         }
@@ -861,29 +975,33 @@ export class ApiTimeSheetController extends ApiBaseController {
           throw new ForbiddenError('Permission denied: Cannot export time sheets');
         }
 
-        // Validate query parameters
+        // Validate query parameters (array filters arrive repeated or comma-separated)
         const url = new URL(req.url);
-        const queryParams = Object.fromEntries(url.searchParams);
-        
+        const queryParams = timeSheetQueryParams(url.searchParams);
+
         let exportParams;
         try {
           exportParams = timeSheetExportQuerySchema.parse(queryParams);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid export parameters', error.errors);
+            throw new ValidationError('Invalid export parameters', error.issues);
           }
           throw error;
         }
 
-        // Export within tenant context
-        const result = await runWithTenant(tenantId!, async () => {
-          const timeSheets = await this.timeSheetService.list({}, {
+        // Export within tenant context: every row matching the filters, not page 1 of list()
+        const rows = await runWithTenant(tenantId!, async () => {
+          return this.timeSheetService.exportTimeSheets(exportParams, {
             userId: user.user_id,
             user,
             tenant: tenantId!,
           });
-          return timeSheets.data;
         });
+
+        const fields = exportParams.fields?.filter((field) => field.length > 0);
+        const result = fields && fields.length > 0
+          ? rows.map((row) => Object.fromEntries(fields.map((field) => [field, row[field]])))
+          : rows;
 
         // Return appropriate response based on format
         if (exportParams.format === 'csv') {
@@ -1241,7 +1359,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           periodData = createTimePeriodSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid time period data', error.errors);
+            throw new ValidationError('Invalid time period data', error.issues);
           }
           throw error;
         }
@@ -1322,7 +1440,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           periodData = updateTimePeriodSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid time period data', error.errors);
+            throw new ValidationError('Invalid time period data', error.issues);
           }
           throw error;
         }
@@ -1398,7 +1516,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         const { id: rawId } = await (req as any).params;
         const idResult = uuidSchema.safeParse(rawId);
         if (!idResult.success) {
-          throw new ValidationError('Invalid time period id', idResult.error.errors);
+          throw new ValidationError('Invalid time period id', idResult.error.issues);
         }
         const id = idResult.data;
 
@@ -1471,7 +1589,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         const { id: rawId } = await (req as any).params;
         const idResult = uuidSchema.safeParse(rawId);
         if (!idResult.success) {
-          throw new ValidationError('Invalid time period id', idResult.error.errors);
+          throw new ValidationError('Invalid time period id', idResult.error.issues);
         }
         const id = idResult.data;
 
@@ -1499,7 +1617,7 @@ export class ApiTimeSheetController extends ApiBaseController {
       try {
         // Authenticate
         const apiKey = req.headers.get('x-api-key');
-        
+
         if (!apiKey) {
           throw new UnauthorizedError('API key required');
         }
@@ -1516,7 +1634,7 @@ export class ApiTimeSheetController extends ApiBaseController {
             tenantId = keyRecord.tenant;
           }
         }
-        
+
         if (!keyRecord) {
           throw new UnauthorizedError('Invalid API key');
         }
@@ -1609,7 +1727,6 @@ export class ApiTimeSheetController extends ApiBaseController {
           throw new ForbiddenError('Permission denied: Cannot read time period settings');
         }
 
-        // Get settings within tenant context
         const settings = await runWithTenant(tenantId!, async () => {
           return await this.timeSheetService.getTimePeriodSettings({
             userId: user.user_id,
@@ -1626,7 +1743,74 @@ export class ApiTimeSheetController extends ApiBaseController {
   }
 
   /**
-   * Create time period settings
+   * Get time period settings by ID
+   */
+  getTimePeriodSettingsById() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiKey = req.headers.get('x-api-key');
+
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        // Extract tenant ID
+        let tenantId = req.headers.get('x-tenant-id');
+        let keyRecord;
+
+        if (tenantId) {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+        } else {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) {
+            tenantId = keyRecord.tenant;
+          }
+        }
+
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+
+        // Build the same API context used by the other controller handlers.
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+        const user = apiAuthContext.user;
+
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
+
+        // Check permissions
+        const db = await getConnection(tenantId!);
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
+          'time_period',
+          'read',
+          db
+        );
+
+        if (!hasReadPermission) {
+          throw new ForbiddenError('Permission denied: Cannot read time period settings');
+        }
+
+        // Extract ID from path
+        const id = new URL(req.url).pathname.split('/').pop()!;
+
+        const settings = await runWithTenant(tenantId!, async () => {
+          return await this.timeSheetService.getTimePeriodSettingsById(id, {
+            userId: user.user_id,
+            user,
+            tenant: tenantId!,
+          });
+        });
+
+        return createSuccessResponse(settings);
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Create time period settings (409 when it overlaps an active setting)
    */
   createTimePeriodSettings() {
     return async (req: NextRequest): Promise<NextResponse> => {
@@ -1681,7 +1865,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           settingsData = createTimePeriodSettingsSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid settings data', error.errors);
+            throw new ValidationError('Invalid settings data', error.issues);
           }
           throw error;
         }
@@ -1703,7 +1887,7 @@ export class ApiTimeSheetController extends ApiBaseController {
   }
 
   /**
-   * Update time period settings
+   * Update time period settings (409 when the result overlaps an active setting)
    */
   updateTimePeriodSettings() {
     return async (req: NextRequest): Promise<NextResponse> => {
@@ -1752,8 +1936,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Extract ID from path
-        const pathParts = req.url.split('/');
-        const id = pathParts[pathParts.length - 1];
+        const id = new URL(req.url).pathname.split('/').pop()!;
 
         // Parse and validate request body
         const body = await req.json();
@@ -1762,7 +1945,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           settingsData = updateTimePeriodSettingsSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid settings data', error.errors);
+            throw new ValidationError('Invalid settings data', error.issues);
           }
           throw error;
         }
@@ -1783,12 +1966,86 @@ export class ApiTimeSheetController extends ApiBaseController {
     };
   }
 
-  // Schedule Management
+  /**
+   * Delete time period settings
+   */
+  deleteTimePeriodSettings() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiKey = req.headers.get('x-api-key');
+
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        // Extract tenant ID
+        let tenantId = req.headers.get('x-tenant-id');
+        let keyRecord;
+
+        if (tenantId) {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+        } else {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) {
+            tenantId = keyRecord.tenant;
+          }
+        }
+
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+
+        // Build the same API context used by the other controller handlers.
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+        const user = apiAuthContext.user;
+
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
+
+        // Check permissions
+        const db = await getConnection(tenantId!);
+        const hasManagePermission = await hasApiContextPermission(
+          apiAuthContext,
+          'time_period',
+          'manage',
+          db
+        );
+
+        if (!hasManagePermission) {
+          throw new ForbiddenError('Permission denied: Cannot manage time period settings');
+        }
+
+        // Extract ID from path
+        const id = new URL(req.url).pathname.split('/').pop()!;
+
+        await runWithTenant(tenantId!, async () => {
+          return await this.timeSheetService.deleteTimePeriodSettings(id, {
+            userId: user.user_id,
+            user,
+            tenant: tenantId!,
+          });
+        });
+
+        return new NextResponse(null, { status: 204 });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
 
   /**
-   * List schedule entries
+   * Search schedule entries (GET /api/v1/schedules/search): same auth,
+   * permission and visibility path as listScheduleEntries(), but paginated.
    */
-  listScheduleEntries() {
+  searchScheduleEntries() {
+    return this.listScheduleEntries({ paginate: true });
+  }
+
+  /**
+   * List schedule entries (GET /api/v1/schedules). Unpaginated unless
+   * `paginate` is set: shipped mobile clients read the whole result set.
+   */
+  listScheduleEntries(options: { paginate?: boolean } = {}) {
     return async (req: NextRequest): Promise<NextResponse> => {
       try {
         // Authenticate
@@ -1839,22 +2096,37 @@ export class ApiTimeSheetController extends ApiBaseController {
         // enforced by the service through the shared-calendar resolver, so
         // any user_id may be requested; unshared calendars simply return none.
         const url = new URL(req.url);
-        const filters = {
-          start_date: url.searchParams.get('start_date') || undefined,
-          end_date: url.searchParams.get('end_date') || undefined,
-          user_id: url.searchParams.get('user_id') || undefined
+        const rawQuery = Object.fromEntries(url.searchParams.entries());
+        const parseQuery = <T>(schema: { parse(v: unknown): T }): T => {
+          try {
+            return schema.parse(rawQuery);
+          } catch (error) {
+            if (error instanceof ZodError) {
+              throw new ValidationError('Invalid schedule query parameters', error.issues);
+            }
+            throw error;
+          }
         };
+        const serviceContext = { userId: user.user_id, user, tenant: tenantId! };
 
-        // Get schedule entries within tenant context
-        const entries = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.getScheduleEntries({
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          }, filters);
+        if (!options.paginate) {
+          const { filters } = parseQuery(scheduleEntryListQuerySchema);
+          const entries = await runWithTenant(tenantId!, async () => {
+            return await this.timeSheetService.getScheduleEntries(serviceContext, filters);
+          });
+          return createSuccessResponse(entries);
+        }
+
+        const { page, limit, filters } = parseQuery(scheduleEntrySearchQuerySchema);
+
+        // Paginated after visibility is resolved, so total excludes hidden entries.
+        // LEVERAGE: pattern paginated-list-outside-base — ApiBaseController.list() paginates via service.list(); schedule entries need a bespoke paged service method.
+        const result = await runWithTenant(tenantId!, async () => {
+          return await this.timeSheetService.getScheduleEntriesPage(
+            serviceContext, filters, { page, limit });
         });
 
-        return createSuccessResponse(entries);
+        return createPaginatedResponse(result.data, result.total, page, limit, undefined, req);
       } catch (error) {
         return handleApiError(error);
       }
@@ -1907,7 +2179,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           });
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid query parameters', error.errors);
+            throw new ValidationError('Invalid query parameters', error.issues);
           }
           throw error;
         }
@@ -2057,7 +2329,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           scheduleData = createScheduleEntrySchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid schedule data', error.errors);
+            throw new ValidationError('Invalid schedule data', error.issues);
           }
           throw error;
         }
@@ -2143,7 +2415,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           scheduleData = updateScheduleEntrySchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid schedule data', error.errors);
+            throw new ValidationError('Invalid schedule data', error.issues);
           }
           throw error;
         }

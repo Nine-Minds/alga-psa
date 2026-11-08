@@ -15,8 +15,8 @@ export function registerPublicResourcesV1Routes(
   const Success = registry.registerSchema(
     'PublicV1Success',
     zOpenApi.object({
-      data: zOpenApi.union([zOpenApi.record(zOpenApi.unknown()), zOpenApi.array(zOpenApi.record(zOpenApi.unknown()))]),
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      data: zOpenApi.union([zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()), zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()))]),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 
@@ -57,8 +57,8 @@ export function registerPublicResourcesV1Routes(
     request: { body: { schema: registry.registerSchema('AiDocumentAssistBody', zOpenApi.object({
       instruction: zOpenApi.string().describe('What the assistant should do.'),
       documentContext: zOpenApi.string().describe('Current document text/context.'),
-      documentId: zOpenApi.string().uuid().optional(),
-      tenantId: zOpenApi.string().uuid(),
+      documentId: zOpenApi.string().guid().optional(),
+      tenantId: zOpenApi.string().guid(),
       connectedUserNames: zOpenApi.array(zOpenApi.string()).optional(),
     })) } },
     responses: {
@@ -84,7 +84,7 @@ export function registerPublicResourcesV1Routes(
       software_type: zOpenApi.string().optional(),
       is_managed: zOpenApi.enum(['true', 'false']).optional(),
       is_security_relevant: zOpenApi.enum(['true', 'false']).optional(),
-      client_id: zOpenApi.string().uuid().optional(),
+      client_id: zOpenApi.string().guid().optional(),
       page: zOpenApi.number().int().min(1).optional(),
       limit: zOpenApi.number().int().min(1).max(200).optional(),
     })) },
@@ -138,14 +138,14 @@ export function registerPublicResourcesV1Routes(
     summary: 'Get a priority',
     description: 'Returns a single priority by id.',
     tags: ['Priorities'], security: [{ ApiKeyAuth: [] }],
-    request: { params: registry.registerSchema('PriorityIdParam', zOpenApi.object({ id: zOpenApi.string().uuid() })) },
+    request: { params: registry.registerSchema('PriorityIdParam', zOpenApi.object({ id: zOpenApi.string().guid() })) },
     responses: { 200: { description: 'The priority.', schema: Success }, ...stdErrs({ 404: 'Priority not found.' }) },
     extensions: { 'x-tenant-scoped': true, 'x-rbac-resource': 'ticket', 'x-rbac-action': 'read' },
     edition: 'both',
   });
 
   // Extensions (EE-only; 501 on CE).
-  const ExtensionActionBody = registry.registerSchema('ExtensionActionBody', zOpenApi.record(zOpenApi.unknown()).describe('Extension install/uninstall payload (handled by the EE extension service).'));
+  const ExtensionActionBody = registry.registerSchema('ExtensionActionBody', zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).describe('Extension install/uninstall payload (handled by the EE extension service).'));
   for (const action of ['install', 'uninstall'] as const) {
     registry.registerRoute({
       method: 'post', path: `/api/v1/extensions/${action}`,
@@ -175,8 +175,8 @@ export function registerPublicResourcesV1Routes(
     request: { query: registry.registerSchema('CompanyContractLineListQuery', zOpenApi.object({
       page: zOpenApi.number().int().min(1).optional(),
       limit: zOpenApi.number().int().min(1).max(100).optional(),
-      client_id: zOpenApi.string().uuid().optional(),
-      contract_line_id: zOpenApi.string().uuid().optional(),
+      client_id: zOpenApi.string().guid().optional(),
+      contract_line_id: zOpenApi.string().guid().optional(),
     })) },
     responses: { 200: { description: 'Client contract lines.', schema: Success }, ...stdErrs() },
     extensions: { 'x-tenant-scoped': true, 'x-deprecated': true, 'x-replaced-by': '/api/v1/client-contract-lines' },
@@ -188,9 +188,9 @@ export function registerPublicResourcesV1Routes(
     description: `Assigns a contract line to a client by cloning a template line into the client contract. ${ccLineDeprecation}`,
     tags: ['Contract Lines'], security: [{ ApiKeyAuth: [] }],
     request: { body: { schema: registry.registerSchema('CompanyContractLineBody', zOpenApi.object({
-      client_id: zOpenApi.string().uuid(),
-      contract_line_id: zOpenApi.string().uuid(),
-      client_contract_id: zOpenApi.string().uuid().optional(),
+      client_id: zOpenApi.string().guid(),
+      contract_line_id: zOpenApi.string().guid(),
+      client_contract_id: zOpenApi.string().guid().optional(),
       custom_rate: zOpenApi.number().optional(),
     })) } },
     responses: { 201: { description: 'Assignment created.', schema: Success }, ...stdErrs() },
@@ -202,7 +202,7 @@ export function registerPublicResourcesV1Routes(
     summary: 'Unassign contract line (deprecated)',
     description: `Deactivates a client-owned contract line by id. ${ccLineDeprecation}`,
     tags: ['Contract Lines'], security: [{ ApiKeyAuth: [] }],
-    request: { params: registry.registerSchema('CompanyContractLineIdParam', zOpenApi.object({ id: zOpenApi.string().uuid() })) },
+    request: { params: registry.registerSchema('CompanyContractLineIdParam', zOpenApi.object({ id: zOpenApi.string().guid() })) },
     responses: { 204: { description: 'Unassigned.', emptyBody: true }, ...stdErrs({ 404: 'Not found.' }) },
     extensions: { 'x-tenant-scoped': true, 'x-deprecated': true, 'x-replaced-by': '/api/v1/client-contract-lines' },
     edition: 'both',

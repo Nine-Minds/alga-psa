@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@alga-psa/db', () => ({ getConnection: vi.fn(), tenantDb: () => ({ table: () => ({ where: () => ({ first: async () => ({ user_id: 'u', archived_at: null, allow_act_as: false }) }) }) }), registerTenantTables: vi.fn() }));
-vi.mock('@alga-psa/users/actions', () => ({ findUserByIdForApi: vi.fn() }));
+vi.mock('@alga-psa/users/actions/user-actions/findUserByIdForApi', () => ({ findUserByIdForApi: vi.fn() }));
 vi.mock('@alga-psa/licensing', () => ({ getLicenseStateRow: vi.fn(), verifyLicense: vi.fn() }));
 vi.mock('server/src/lib/api/rateLimit/apiRateLimitSettingsModel', () => ({ getForKey: vi.fn() }));
 vi.mock('@alga-psa/core/rateLimit', () => ({

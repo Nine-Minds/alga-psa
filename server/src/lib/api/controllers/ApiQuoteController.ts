@@ -435,7 +435,7 @@ export class ApiQuoteController extends ApiBaseController {
         });
       } catch (error) {
         if (error instanceof ZodError) {
-          return handleApiError(new ValidationError('Validation failed', error.errors));
+          return handleApiError(new ValidationError('Validation failed', error.issues));
         }
         return handleApiError(error);
       }
@@ -469,7 +469,7 @@ export class ApiQuoteController extends ApiBaseController {
         });
       } catch (error) {
         if (error instanceof ZodError) {
-          return handleApiError(new ValidationError('Validation failed', error.errors));
+          return handleApiError(new ValidationError('Validation failed', error.issues));
         }
         return handleApiError(error);
       }
@@ -524,7 +524,7 @@ export class ApiQuoteController extends ApiBaseController {
         });
       } catch (error) {
         if (error instanceof ZodError) {
-          return handleApiError(new ValidationError('Validation failed', error.errors));
+          return handleApiError(new ValidationError('Validation failed', error.issues));
         }
         return handleApiError(error);
       }
@@ -555,7 +555,7 @@ export class ApiQuoteController extends ApiBaseController {
         });
       } catch (error) {
         if (error instanceof ZodError) {
-          return handleApiError(new ValidationError('Validation failed', error.errors));
+          return handleApiError(new ValidationError('Validation failed', error.issues));
         }
         return handleApiError(error);
       }
@@ -582,7 +582,7 @@ export class ApiQuoteController extends ApiBaseController {
         });
       } catch (error) {
         if (error instanceof ZodError) {
-          return handleApiError(new ValidationError('Validation failed', error.errors));
+          return handleApiError(new ValidationError('Validation failed', error.issues));
         }
         return handleApiError(error);
       }
@@ -684,7 +684,7 @@ export class ApiQuoteController extends ApiBaseController {
         });
       } catch (error) {
         if (error instanceof ZodError) {
-          return handleApiError(new ValidationError('Validation failed', error.errors));
+          return handleApiError(new ValidationError('Validation failed', error.issues));
         }
         return handleApiError(error);
       }
@@ -738,7 +738,7 @@ export class ApiQuoteController extends ApiBaseController {
         });
       } catch (error) {
         if (error instanceof ZodError) {
-          return handleApiError(new ValidationError('Validation failed', error.errors));
+          return handleApiError(new ValidationError('Validation failed', error.issues));
         }
         return handleApiError(error);
       }

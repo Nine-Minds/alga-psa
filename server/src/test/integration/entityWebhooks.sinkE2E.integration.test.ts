@@ -44,6 +44,7 @@ const bus = vi.hoisted(() => {
     },
   };
 });
+vi.mock('@/lib/webhooks/deliveryReceipt', () => ({ withWebhookDeliveryReceipt: async (_db: unknown, _job: unknown, deliver: () => Promise<unknown>) => deliver() }));
 vi.mock('@alga-psa/event-bus', async (orig) => ({ ...(await orig<any>()), getEventBus: () => bus.instance }));
 vi.mock('@/lib/eventBus', () => ({ getEventBus: () => bus.instance }));
 

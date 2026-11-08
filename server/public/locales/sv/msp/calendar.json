@@ -243,6 +243,23 @@
         "defaults": {
           "providerName": "Outlook-kalender",
           "calendarId": "calendar"
+        },
+        "setup": {
+          "title": "Innan du ansluter",
+          "intro": "Lägg till den här omdirigerings-URI:n i din Microsoft Entra-appregistrering och bevilja dessa delegerade behörigheter.",
+          "redirectUri": "Omdirigerings-URI",
+          "copy": "Kopiera",
+          "copied": "Kopierad",
+          "copyFailed": "Det gick inte att kopiera",
+          "unavailable": "Inte tillgänglig",
+          "permissions": "Delegerade behörigheter (Microsoft Graph)",
+          "tenancy": "Appen kan vara enkelklientorganisation eller flerklientorganisation. Inloggningen följer katalog-ID:t (klient-ID:t) för den Microsoft-profil som är kopplad till Calendar.",
+          "openProviders": "Öppna Microsofts leverantörsinställningar"
+        },
+        "adminConsentPending": {
+          "title": "Administratörsgodkännande väntar.",
+          "body": "En Microsoft 365-administratör måste fortfarande godkänna den appregistrering som är kopplad till Calendar. Be dem bevilja administratörsmedgivande för behörigheterna nedan och kom sedan tillbaka hit för att ansluta Outlook Calendar.",
+          "openSettings": "Öppna Microsofts leverantörsinställningar"
         }
       }
     }

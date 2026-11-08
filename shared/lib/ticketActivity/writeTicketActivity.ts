@@ -19,6 +19,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import {
   TICKET_ACTIVITY_ACTOR,
+  TICKET_ACTIVITY_SOURCE,
   type TicketActivityChanges,
   type WriteTicketActivityInput,
 } from './types';
@@ -123,45 +124,66 @@ export async function writeTicketActivity(
     throw new Error('writeTicketActivity requires a source');
   }
 
+  const actor = { ...input.actor };
+  // Foreign identity must never populate a customer-local user/contact FK.
+  // Resolve snapshots exclusively from the owner-local reference; the verified
+  // shared command creates/refreshes that reference before calling this writer.
+  let organizationName: string | null = null;
+  if (actor.actorReferenceId != null) {
+    if (!knex.isTransaction || actor.actorType !== TICKET_ACTIVITY_ACTOR.USER || actor.userId != null || actor.contactId != null ||
+        typeof actor.actorReferenceId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(actor.actorReferenceId)) {
+      throw new Error('Foreign ticket attribution requires a transaction and an exclusive actor reference');
+    }
+    const reference = await tenantScopedTable(knex, 'collaboration_actor_references', input.tenant)
+      .where('actor_reference_id', actor.actorReferenceId).forShare().first('display_name', 'organization_name');
+    if (!reference) throw new Error('Ticket actor reference is not available in the owning tenant');
+    actor.displayName = reference.display_name;
+    organizationName = reference.organization_name;
+  }
   const auditId = uuidv4();
   const occurredAt = toIso(input.occurredAt);
 
   // Best-effort display name resolution if the caller didn't supply one.
-  let displayName = input.actor.displayName ?? null;
+  let displayName = actor.displayName ?? null;
   if (!displayName) {
     if (
-      input.actor.actorType === TICKET_ACTIVITY_ACTOR.USER &&
-      input.actor.userId
+      actor.actorType === TICKET_ACTIVITY_ACTOR.USER &&
+      actor.userId
     ) {
       displayName = await resolveUserDisplayName(
         knex,
         input.tenant,
-        input.actor.userId,
+        actor.userId,
       );
     } else if (
-      (input.actor.actorType === TICKET_ACTIVITY_ACTOR.CONTACT ||
-        input.actor.actorType === TICKET_ACTIVITY_ACTOR.EMAIL_SENDER) &&
-      input.actor.contactId
+      (actor.actorType === TICKET_ACTIVITY_ACTOR.CONTACT ||
+        actor.actorType === TICKET_ACTIVITY_ACTOR.EMAIL_SENDER) &&
+      actor.contactId
     ) {
       displayName = await resolveContactDisplayName(
         knex,
         input.tenant,
-        input.actor.contactId,
+        actor.contactId,
       );
     }
   }
 
   // A service-principal user acting as itself is a distinct actor kind. Under
   // act-as the actor stays the human (`user`) and the principal is recorded via.
-  let actorType: string = input.actor.actorType;
-  const viaPrincipalUserId = input.actor.viaPrincipalUserId ?? null;
+  let actorType: string = actor.actorType;
+  const viaPrincipalUserId = actor.viaPrincipalUserId ?? null;
+  // The human is the actor under act-as, whichever channel the request arrived on.
+  if (viaPrincipalUserId && actorType === TICKET_ACTIVITY_ACTOR.API) actorType = TICKET_ACTIVITY_ACTOR.USER;
+  // Service identities enter through the API boundary; interactive UI and
+  // inbound-email writes already know their actor kind and need no user lookup.
   if (
+    input.source === TICKET_ACTIVITY_SOURCE.API &&
     (actorType === TICKET_ACTIVITY_ACTOR.USER || actorType === TICKET_ACTIVITY_ACTOR.API) &&
-    input.actor.userId &&
+    actor.userId &&
     !viaPrincipalUserId
   ) {
     const owner = await tenantScopedTable(knex, 'users', input.tenant)
-      .where({ user_id: input.actor.userId })
+      .where({ user_id: actor.userId })
       .first('user_type');
     if (owner?.user_type === 'service') actorType = TICKET_ACTIVITY_ACTOR.SERVICE_PRINCIPAL;
   }
@@ -177,15 +199,16 @@ export async function writeTicketActivity(
     entity_type: input.entityType,
     entity_id: input.entityId ?? null,
     actor_type: actorType,
-    actor_user_id: input.actor.userId ?? null,
-    actor_contact_id: input.actor.contactId ?? null,
-    ...(viaPrincipalUserId ? { via_principal_user_id: viaPrincipalUserId } : {}),
+    actor_user_id: actor.userId ?? null,
+    actor_contact_id: actor.contactId ?? null,
     actor_display_name: displayName,
+    ...(actor.actorReferenceId ? { actor_reference_id: actor.actorReferenceId, actor_organization_name: organizationName } : {}),
     source: input.source,
     occurred_at: occurredAt,
     changes: JSON.stringify(changes),
     details: JSON.stringify(details),
     created_at: new Date().toISOString(),
+    ...(viaPrincipalUserId ? { via_principal_user_id: viaPrincipalUserId } : {}),
   });
 
   return auditId;

@@ -1,3 +1,8 @@
+import { InboundRetryLaterError, isInboundRetryLaterError } from './inboundRetryLaterError';
+import { classifyReplyToken, coManagedDeliverySeam, coManagedInboundCommentSeam, coManagedInboundOperationId, parseCm2Metadata } from '../../lib/coManagedDelivery';
+import { resolveCommentAudienceForRead } from '../../lib/commentAudience';
+import type { TenantDb } from '@alga-psa/db';
+import { htmlToVisibleText } from '../../lib/email/replyParser';
 import type { EmailMessageDetails } from '../../interfaces/inbound-email.interfaces';
 import type { IEventPublisher } from '@alga-psa/types';
 import type { InboundEmailExecutionOptions } from '../../workflow/actions/emailWorkflowActions';
@@ -37,6 +42,7 @@ import { withTenantAdminTransaction } from './tenantAdminTransaction';
 import { associateAssetWithTicket } from '../assets/assetTicketAssociation';
 import {
   detectOutboundNotificationLoop,
+  detectThreadHeaderSelfAutomatedLoop,
   type NotificationLoopDetectionResult,
 } from './notificationLoopDetection';
 import {
@@ -154,6 +160,7 @@ export interface ProcessInboundEmailInAppDiagnostics extends Record<string, unkn
       | 'new_ticket_created'
       | 'deduped'
       | 'quarantined'
+      | 'co_managed_token_unserved'
       | null;
   };
   /**
@@ -201,9 +208,9 @@ type ProcessInboundEmailInAppBaseResult =
     }
   | {
       outcome: 'quarantined';
-      reason: 'unauthorized_thread_header_sender';
+      reason: 'unauthorized_thread_header_sender' | 'co_managed_token_refused' | 'co_managed_token_unserved' | 'co_managed_sender_unauthenticated';
       ticketId: string;
-      matchedBy: 'thread_headers';
+      matchedBy: 'thread_headers' | 'reply_token';
     };
 
 export type ProcessInboundEmailInAppResult = ProcessInboundEmailInAppBaseResult & {
@@ -400,7 +407,11 @@ function hasSubstantiveReplyContent(parsedEmail: any, emailData: EmailMessageDet
     emailData.body?.text ??
     '';
 
-  return stripAutomatedReplyMarkers(String(candidateText)).length > 0;
+  if (String(candidateText).trim()) return stripAutomatedReplyMarkers(String(candidateText)).length > 0;
+  // HTML-only mail has no sanitizedText in the reply parser. Use its existing
+  // HTML text projection, without reviving quoted HTML when a text part exists.
+  if (emailData.body?.text?.trim()) return false;
+  return stripAutomatedReplyMarkers(htmlToVisibleText(parsedEmail?.sanitizedHtml ?? emailData.body?.html ?? '')).length > 0;
 }
 
 function normalizePositiveInteger(value: unknown, fallback: number): number {
@@ -578,7 +589,7 @@ async function applyInboundReplyReopenTransition(params: {
 
   await withTenantAdminTransaction(
     params.tenantId,
-    async (trx: any, db: any) => {
+    async (trx: any, db: TenantDb) => {
     const previous = await db.table('tickets')
       .select('status_id')
       .where({ ticket_id: params.ticketId })
@@ -700,6 +711,19 @@ async function findExistingEmailTicket(params: {
       .first();
     return row?.ticketId ? { ticketId: row.ticketId, ticketNumber: row.ticketNumber } : null;
   });
+}
+
+/**
+ * Audience of the thread a cm token points at, for the unserved branch only (a psa token never gets
+ * here). cm2 metadata without a thread, or no parseable metadata (cm1), is the requester thread. A
+ * thread that cannot be read is NOT requester: unknown must not reach the native writer.
+ */
+async function cmTokenIsRequesterThread(tenantId: string, metadata: unknown): Promise<boolean> {
+  const threadId = parseCm2Metadata(metadata)?.threadId ?? null;
+  if (!threadId) return true;
+  const thread = await withTenantAdminTransaction(tenantId, async (_trx: any, db: any) =>
+    db.table('comment_threads').select('collaboration_audience', 'is_internal').where({ thread_id: threadId }).first());
+  return thread ? resolveCommentAudienceForRead(thread) === 'requester' : false;
 }
 
 async function resolveReplyTargetFromComment(params: {
@@ -943,7 +967,7 @@ export async function processInboundEmailInApp(
   const senderAuthResults = verifySenderAuthentication(authenticationResultsHeader, senderEmail);
   const isVerifiedListRewrite = Boolean(emailData.headers?.['x-resolved-original-sender']);
   // Same-M365-tenant mail has no Authentication-Results; Exchange's internal-auth stamp
-  // stands in for aligned SPF/DKIM for contact (never internal-user) attribution.
+  // stands in for aligned SPF/DKIM for both contact and internal-user attribution.
   const isTrustedIntraOrgSender = isMicrosoftIntraOrgSender(emailData.provider, emailData.headers);
   const contactSenderTrusted = allowsContactSenderAttribution(senderAuthResults) || isVerifiedListRewrite || isTrustedIntraOrgSender;
   const durableExecution = options.durableExecution ?? null;
@@ -1037,9 +1061,10 @@ export async function processInboundEmailInApp(
     if (!matched) return null;
 
     if (matched.user_type === 'internal') {
-      if (allowsInternalSenderAttribution(senderAuthResults)) return matched;
-      // A list rewrite may be trusted for contact matching, but never grants an
-      // internal identity: only authentication aligned to the original From can.
+      if (allowsInternalSenderAttribution(senderAuthResults) || isTrustedIntraOrgSender) return matched;
+      // A list rewrite may be trusted for contact matching, but never grants an internal
+      // identity: only authentication aligned to the original From, or Exchange's
+      // intra-org stamp on a Microsoft provider, can.
       console.warn('SECURITY_EVENT inbound_email_internal_sender_auth_failed', {
         tenantId, providerId, emailId: emailData.id, senderEmail,
         authResults: senderAuthResults,
@@ -1289,7 +1314,32 @@ export async function processInboundEmailInApp(
     matchedBy: 'reply_token' | 'thread_headers';
     parentCommentId?: string | null;
     threadId?: string | null;
+    authorizedRequesterContactId?: string;
+    authorizedRequesterClientId?: string;
   }): Promise<ProcessInboundEmailInAppResult | null> => {
+    let matchedSenderContact: Awaited<ReturnType<typeof resolveSenderContact>> | undefined;
+    if (params.authorizedRequesterContactId) {
+      try {
+        matchedSenderContact = await resolveSenderContact({ ticketId: params.ticketId });
+      } catch {
+        throw new InboundRetryLaterError('could not revalidate the admitted requester contact; retrying before any fallback processing');
+      }
+    }
+    if (params.authorizedRequesterContactId && (
+      !matchedSenderContact
+      || matchedSenderContact.contact_id !== params.authorizedRequesterContactId
+      || matchedSenderContact.client_id !== params.authorizedRequesterClientId
+      || matchedSenderContact.user_type === 'internal'
+      || matchedSenderContact.is_inactive !== false
+    )) {
+      if (diagnostics) diagnostics.threading.failureReason = 'quarantined';
+      return withDiagnostics({
+        outcome: 'quarantined',
+        reason: 'co_managed_token_refused',
+        ticketId: params.ticketId,
+        matchedBy: params.matchedBy,
+      }, diagnostics);
+    }
     const existingCommentId = await findExistingEmailComment({
       tenantId,
       ticketId: params.ticketId,
@@ -1318,9 +1368,10 @@ export async function processInboundEmailInApp(
       text: parsedText,
     });
     const serializedBlocks = JSON.stringify(blocks);
-    const matchedSenderContact = await resolveSenderContact({ ticketId: params.ticketId });
-    const matchedSenderIsInternalUser = matchedSenderContact?.user_type === 'internal';
-    const matchedSenderContactId = matchedSenderContact?.contact_id || undefined;
+    if (!matchedSenderContact) matchedSenderContact = await resolveSenderContact({ ticketId: params.ticketId });
+    const senderContact = matchedSenderContact;
+    const matchedSenderIsInternalUser = senderContact?.user_type === 'internal';
+    const matchedSenderContactId = senderContact?.contact_id || undefined;
     const senderKind = matchedSenderIsInternalUser ? 'internal' : 'client';
 
     let policyContext: InboundReplyReopenPolicyContext | null = null;
@@ -1340,11 +1391,36 @@ export async function processInboundEmailInApp(
     }
 
     if (params.matchedBy === 'thread_headers') {
+      // LEVERAGE: pattern principal-address-classification — sender classification (contact / internal user / watcher / ours) is re-derived here, in the board audience resolver and in the save-time guards.
+      // Redelivery of our own automated notification through a DL that expands
+      // into a connected mailbox: skip before the sender check so it is neither
+      // quarantined as an unknown sender nor turned into a comment/watcher.
+      const selfLoop = await detectThreadHeaderSelfAutomatedLoop({
+        tenantId,
+        ticketId: params.ticketId,
+        emailData,
+        senderEmail,
+      });
+      if (selfLoop.isLoop) {
+        console.info('processInboundEmailInApp: skipping thread-header redelivery of our own notification', {
+          tenantId,
+          providerId,
+          emailId: emailData.id,
+          ticketId: params.ticketId,
+          matchedLogId: selfLoop.matchedLogId,
+        });
+        if (diagnostics) {
+          diagnostics.notificationLoop = selfLoop;
+          diagnostics.threading.failureReason = 'notification_loop';
+        }
+        return withDiagnostics({ outcome: 'skipped', reason: 'notification_loop' }, diagnostics);
+      }
+
       const senderIsTicketClientContact = Boolean(
-        matchedSenderContact
+        senderContact
         && !matchedSenderIsInternalUser
         && policyContext?.clientId
-        && matchedSenderContact.client_id === policyContext.clientId
+        && senderContact?.client_id === policyContext.clientId
       );
       const senderIsActiveWatcher = Boolean(
         senderEmail && policyContext && getActiveWatchListEmails(policyContext.attributes).includes(senderEmail)
@@ -1530,7 +1606,7 @@ export async function processInboundEmailInApp(
           tenantId,
           ticketId: params.ticketId,
           statusId: reopenTarget.statusId,
-          updatedByUserId: matchedSenderIsInternalUser ? matchedSenderContact?.user_id : undefined,
+          updatedByUserId: matchedSenderIsInternalUser ? senderContact?.user_id : undefined,
           existingConnection: durableExecution?.trx,
           eventPublisher: durableExecution?.eventPublishers?.comment ?? durableExecution?.eventPublishers?.ticket,
         });
@@ -1588,12 +1664,12 @@ export async function processInboundEmailInApp(
         parent_comment_id: replyParentCommentId ?? undefined,
         source: 'email',
         author_type: matchedSenderIsInternalUser ? 'internal' : 'contact',
-        author_id: matchedSenderContact?.user_id,
+        author_id: senderContact?.user_id,
         contact_id: matchedSenderIsInternalUser ? undefined : matchedSenderContactId,
         metadata: {
           email: buildCommentEmailMetadata({
-            matchedSenderEmail: matchedSenderContact?.matched_email ?? senderEmail ?? null,
-            primaryContactEmail: matchedSenderContact?.email ?? null,
+            matchedSenderEmail: senderContact?.matched_email ?? senderEmail ?? null,
+            primaryContactEmail: senderContact?.email ?? null,
           }),
           parser: {
             confidence: parsedEmail?.confidence,
@@ -1636,9 +1712,9 @@ export async function processInboundEmailInApp(
         scopeLabel: 'reply',
         clientVisibleAttachments: Boolean(
           !matchedSenderIsInternalUser
-          && matchedSenderContact?.client_id
+          && senderContact?.client_id
           && policyContext?.clientId
-          && matchedSenderContact.client_id === policyContext.clientId
+          && senderContact?.client_id === policyContext.clientId
         ),
       });
       await applyEmbeddedImageUrlMappingsToStoredBodies({
@@ -1678,7 +1754,131 @@ export async function processInboundEmailInApp(
   if (token) {
     try {
       const match = await findTicketByReplyToken(String(token), tenantId);
-      if (match?.ticketId) {
+      const tokenClass = classifyReplyToken(String(token));
+      if (match?.ticketId && match.expiryValid === false && tokenClass === 'cm2') {
+        // A known expired cm2 bearer credential is terminal. Do this
+        // before admission fallbacks, thread-header matching, or ticket creation.
+        if (diagnostics) diagnostics.threading.failureReason = 'quarantined';
+        return withDiagnostics({
+          outcome: 'quarantined',
+          reason: 'co_managed_token_refused',
+          ticketId: match.ticketId,
+          matchedBy: 'reply_token',
+        }, diagnostics);
+      }
+      // CM L5 admission hook: the prefix check is a string compare, so a native (psa) token costs
+      // 0 extra statements. Only cm1:/cm2: tokens consult the delivery seam, and a refusal happens
+      // before any comment write.
+      let tokenInert = false;
+      let authorizedRequesterContactId: string | undefined;
+      let authorizedRequesterClientId: string | undefined;
+      if (match?.ticketId && tokenClass !== 'native') {
+        // No provider registered in THIS process (as opposed to a provider that says "not served"):
+        // admission cannot be evaluated, so the token must neither be treated as inert (native
+        // write by thread headers) nor reach a writer that throws and is then deduped.
+        // Retry rather than quarantine: a cm token can only exist on a tenant that co-managed
+        // served when it was minted, so a no-provider process is a deploy-order/boot gap, not
+        // evidence the reply is unauthorised. Quarantine here is only a log line plus a terminal
+        // processed record, which would lose a legitimate customer reply permanently; a retry
+        // lets a co-managed-capable consumer handle it, and the queue's dead-letter state bounds it.
+        if (!coManagedDeliverySeam.hasProvider()) {
+          throw new InboundRetryLaterError('co-managed delivery provider is not registered in this process; cannot evaluate a cm reply token, leaving the message to retry');
+        }
+        const provider = await coManagedDeliverySeam.resolve(tenantId);
+        if (!provider) {
+          // The seam answers null for every non-served verdict, but the verdicts differ. Ask the gate
+          // (30s cached, no extra SQL in steady state) WHY, so an unserved cm token never reaches a
+          // native writer that throws CommentAudienceError and is then deduped as already processed.
+          const { serves } = await import('@alga-psa/core/capability');
+          const verdict = await serves('co-managed', tenantId);
+          if (!verdict.served && (verdict.reasons.served === 'resolver-unregistered' || verdict.reasons.served === 'participation-error')) {
+            // Boot or transient gap, not a decision: retry like the no-provider branch.
+            throw new InboundRetryLaterError(`co-managed capability gate could not decide (${verdict.reasons.served}); cannot evaluate a cm reply token, leaving the message to retry`);
+          }
+          if (!verdict.served && !(await cmTokenIsRequesterThread(tenantId, match.metadata))) {
+            // Genuinely not served and the token points at a shared_it / organization_private thread:
+            // the native writer cannot take it. Terminal, visible, no write.
+            if (diagnostics) diagnostics.threading.failureReason = 'co_managed_token_unserved';
+            return withDiagnostics({
+              outcome: 'quarantined',
+              reason: 'co_managed_token_unserved',
+              ticketId: match.ticketId,
+              matchedBy: 'reply_token',
+            }, diagnostics);
+          }
+        }
+        // Not served, requester-thread token: the token is inert and thread headers decide (native writer).
+        const admission = provider
+          ? await provider.admitReplyToken(tenantId, String(token), match.metadata, {
+              email: senderEmail ?? null,
+              internalAttributionTrusted: allowsInternalSenderAttribution(senderAuthResults),
+              contactAttributionTrusted: contactSenderTrusted,
+            })
+          : null;
+        // Only "not served" (or no provider) leaves the token inert: thread headers decide. Every other
+        // refusal is terminal and quarantined; `acknowledge` only decides whether the sender is mailed.
+        tokenInert = !admission || (admission.admitted === false && admission.reason === 'not_served');
+        if (admission && admission.admitted === false && !tokenInert) {
+          const responder = await coManagedInboundCommentSeam.resolve(tenantId);
+          if (admission.acknowledge && responder && senderEmail && !detectAutomatedInboundMessage(emailData).isAutomated) {
+            try {
+              await responder.acknowledgeRefusal({ tenant: tenantId, token: String(token), to: senderEmail, ticketId: match.ticketId, reason: admission.reason });
+            } catch (ackError) {
+              console.warn('processInboundEmailInApp: co-managed refusal acknowledgement failed (continuing)', {
+                tenantId, emailId: emailData.id, error: ackError instanceof Error ? ackError.message : String(ackError),
+              });
+            }
+          }
+          if (diagnostics) diagnostics.threading.failureReason = 'quarantined';
+          return withDiagnostics({
+            outcome: 'quarantined',
+            reason: admission.reason === 'sender_unauthenticated' ? 'co_managed_sender_unauthenticated' : 'co_managed_token_refused',
+            ticketId: match.ticketId,
+            matchedBy: 'reply_token',
+          }, diagnostics);
+        }
+        if (admission && admission.admitted === true && admission.actor) {
+          // shared_it / organization_private reply: written through L4a's writer as the verified
+          // participant, never through the native writer, so the audience is stamped on the thread.
+          const writer = await coManagedInboundCommentSeam.resolve(tenantId);
+          if (!writer) throw new InboundRetryLaterError('co-managed inbound writer is not available in this process; leaving the message to retry');
+          const text = (parsedEmail?.sanitizedText ?? emailData.body?.text ?? htmlToVisibleText(parsedEmail?.sanitizedHtml ?? emailData.body?.html ?? '')).trim();
+          const written = await writer.write({
+            tenant: tenantId,
+            ticketId: admission.ticketId,
+            relationshipId: admission.relationshipId,
+            threadId: admission.threadId,
+            parentCommentId: admission.parentCommentId,
+            audience: admission.audience,
+            actor: admission.actor,
+            operationId: coManagedInboundOperationId(tenantId, admission.ticketId, emailData.id),
+            text,
+          });
+          if (diagnostics) {
+            diagnostics.threading.tokenLookupMatched = true;
+            diagnostics.threading.matchedBy = 'reply_token';
+            diagnostics.threading.matchedTicketId = admission.ticketId;
+            diagnostics.threading.matchedCommentId = written.commentId;
+          }
+          return withDiagnostics({
+            outcome: 'replied',
+            matchedBy: 'reply_token',
+            ticketId: admission.ticketId,
+            commentId: written.commentId,
+          }, diagnostics);
+        }
+        authorizedRequesterContactId = admission?.admitted === true && admission.audience === 'requester'
+          ? admission.requesterContactId
+          : undefined;
+        authorizedRequesterClientId = admission?.admitted === true && admission.audience === 'requester'
+          ? admission.requesterClientId
+          : undefined;
+        if (admission?.admitted === true && admission.audience === 'requester' && (!authorizedRequesterContactId || !authorizedRequesterClientId)) {
+          if (diagnostics) diagnostics.threading.failureReason = 'quarantined';
+          return withDiagnostics({ outcome: 'quarantined', reason: 'co_managed_token_refused', ticketId: admission.ticketId, matchedBy: 'reply_token' }, diagnostics);
+        }
+      }
+      if (match?.ticketId && !tokenInert) {
         const replyTarget = match.commentId
           ? await resolveReplyTargetFromComment({
               tenantId,
@@ -1700,6 +1900,8 @@ export async function processInboundEmailInApp(
           matchedBy: 'reply_token',
           parentCommentId: replyTarget?.parentCommentId ?? null,
           threadId: replyTarget?.threadId ?? null,
+          authorizedRequesterContactId,
+          authorizedRequesterClientId,
         });
         if (handled) {
           return handled;
@@ -1708,6 +1910,7 @@ export async function processInboundEmailInApp(
         diagnostics.threading.tokenLookupMissReason = 'token_not_found';
       }
     } catch (error) {
+      if (isInboundRetryLaterError(error)) throw error;
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.warn('processInboundEmailInApp: reply-token threading failed (continuing)', {
         tenantId,
@@ -2065,6 +2268,32 @@ export async function processInboundEmailInApp(
   }
   if (diagnostics) diagnostics.senderResolution = { autoCreatedContactId: autoCreatedContactId ?? null, autoCreateSkipReason };
 
+  // The matched contact's own explicit location, read before the ticket is built so the precedence
+  // in the createTicketFromEmail call below is a single readable expression. `remote` resolves to
+  // null here and therefore yields to the mailbox defaults. Only an *explicit* link counts: the
+  // client-default fallback is the model's job, and letting it happen there keeps the "different
+  // client than the defaults" case from borrowing the wrong client's default.
+  let contactExplicitLocationId: string | undefined;
+  if (targetContactId) {
+    try {
+      const { withAdminTransaction, tenantDb } = await import('@alga-psa/db');
+      const { getContactLocations } = await import('../../models/contactLocation');
+      contactExplicitLocationId = await withAdminTransaction(async (trx: any) => {
+        const contact = await tenantDb(trx, tenantId).table('contacts')
+          .where({ contact_name_id: targetContactId })
+          .first(['work_arrangement']);
+        if (contact?.work_arrangement === 'remote') return undefined;
+        const links = await getContactLocations(trx, tenantId, targetContactId!);
+        const active = links.filter((link) => link.is_active);
+        const primary = active.find((link) => link.is_primary) ?? (active.length === 1 ? active[0] : undefined);
+        return primary?.location_id;
+      });
+    } catch (error) {
+      // An unreadable link list must not drop the email; the defaults still apply.
+      console.error('Failed to resolve the inbound contact location', { tenantId, emailId: emailData.id, error });
+    }
+  }
+
   const parsedHtml = parsedEmail?.sanitizedHtml ?? emailData.body?.html;
   const parsedText = parsedEmail?.sanitizedText ?? emailData.body?.text;
   const blocks = await blocksFromEmailBody({
@@ -2090,8 +2319,14 @@ export async function processInboundEmailInApp(
       priority_id: defaults.priority_id,
       category_id: defaults.category_id,
       subcategory_id: defaults.subcategory_id,
-      // Avoid cross-client location_id mismatch when we infer a different client than the defaults.
-      location_id: targetClientId === defaults.client_id ? defaults.location_id : null,
+      // Location precedence (OQ1, confirmed): the matched contact's own explicit link wins, because
+      // the person who emailed knows where they are better than the mailbox does; then the
+      // mailbox defaults, but only when the client we inferred is the defaults' client (otherwise
+      // the location would belong to someone else); then `undefined`, which lets
+      // TicketModel.createTicket fall back to the client's default location. A remote contact
+      // resolves to null and so skips straight on to the defaults.
+      location_id: contactExplicitLocationId
+        ?? (targetClientId === defaults.client_id ? (defaults.location_id ?? undefined) : undefined),
       entered_by: defaults.entered_by,
       email_metadata: {
         messageId: normalizeStoredMessageId(emailData.id),

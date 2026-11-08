@@ -17,6 +17,9 @@ import {
   type ClientCadenceScheduleContext,
 } from './clientCadenceScheduleContext';
 import { ensureClientBillingSettingsRow } from './billingSettings';
+import { loadBilledClientCadenceRecurringPeriods } from './billedClientCadenceRecurringPeriods';
+import type { HistoricalBillingCycleBoundary } from './clientCadenceServicePeriods';
+import { dbDateObjectToDateOnly, isDbLocalMidnightDate } from './dbDateOnly';
 
 function isDateObject(val: unknown): val is Date {
   return Object.prototype.toString.call(val) === '[object Date]';
@@ -27,6 +30,12 @@ function normalizeDbIsoUtcMidnight(value: unknown): ISO8601String {
     return ensureUtcMidnightIsoDate(value);
   }
   if (isDateObject(value)) {
+    // A `date` column hydrates as local midnight on a non-UTC server: that is the
+    // stored calendar day, not a mid-day instant. Any other non-UTC-midnight Date
+    // is still rejected below.
+    if (isDbLocalMidnightDate(value)) {
+      return ensureUtcMidnightIsoDate(`${dbDateObjectToDateOnly(value)}T00:00:00Z`);
+    }
     return ensureUtcMidnightIsoDate(value.toISOString());
   }
   return ensureUtcMidnightIsoDate(String(value));
@@ -74,6 +83,70 @@ export async function getClientBillingCycleAnchor(
     anchor: normalized,
     cadenceContext: CLIENT_CADENCE_SCHEDULE_CONTEXT,
   };
+}
+
+/**
+ * The client's billed cycle windows, in the shape they were actually billed.
+ * After a cycle change older windows keep their old shape and only windows from
+ * the cut-over on follow the new cycle, so the scalar `clients.billing_cycle`
+ * alone cannot say where a past window began or ended.
+ *
+ * Primary source: the billed / invoice-linked client-cadence
+ * `recurring_service_periods` ledger (Due Work invoicing writes no
+ * `client_billing_cycles` rows). Each distinct `invoice_window_start/end` is one
+ * cycle; service periods are not used because they can be partial when a
+ * contract starts mid-cycle. Active `client_billing_cycles` rows are merged in
+ * only where they do not overlap any ledger window: the consumer
+ * (`normalizeHistoricalCycles`) keeps the earliest-starting window of an
+ * overlapping pair, so ledger precedence is enforced here by dropping
+ * overlapping table rows rather than by relying on sort order.
+ * Shaped for `generateClientCadenceServicePeriods({ historicalCycles })`.
+ */
+export async function loadClientBillingCycleHistory(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  clientId: string
+): Promise<HistoricalBillingCycleBoundary[]> {
+  const [ledgerRows, tableRows] = await Promise.all([
+    loadBilledClientCadenceRecurringPeriods(knexOrTrx, { tenant, clientId }),
+    tenantDb(knexOrTrx, tenant)
+      .table('client_billing_cycles')
+      .where({ client_id: clientId, is_active: true })
+      .whereNotNull('period_start_date')
+      .whereNotNull('period_end_date')
+      .select('billing_cycle_id', 'period_start_date', 'period_end_date'),
+  ]);
+
+  const ledger = new Map<string, HistoricalBillingCycleBoundary>();
+  for (const row of ledgerRows) {
+    if (row.invoice_window_start == null || row.invoice_window_end == null) {
+      continue;
+    }
+    const start = normalizeDbIsoUtcMidnight(row.invoice_window_start);
+    const end = normalizeDbIsoUtcMidnight(row.invoice_window_end);
+    if (start.slice(0, 10) >= end.slice(0, 10)) {
+      continue;
+    }
+    ledger.set(`${start.slice(0, 10)}|${end.slice(0, 10)}`, { start, end });
+  }
+  const ledgerWindows = [...ledger.values()];
+
+  const overlapsLedger = (start: string, end: string) =>
+    ledgerWindows.some(
+      (window) => start.slice(0, 10) < window.end.slice(0, 10) && window.start.slice(0, 10) < end.slice(0, 10)
+    );
+
+  const tableWindows: HistoricalBillingCycleBoundary[] = tableRows
+    .map((row: any) => ({
+      start: normalizeDbIsoUtcMidnight(row.period_start_date),
+      end: normalizeDbIsoUtcMidnight(row.period_end_date),
+      billingCycleId: row.billing_cycle_id as string,
+    }))
+    .filter((window) => !overlapsLedger(window.start, window.end));
+
+  return [...ledgerWindows, ...tableWindows].sort((left, right) =>
+    left.start.slice(0, 10).localeCompare(right.start.slice(0, 10))
+  );
 }
 
 export type UpdateClientBillingScheduleInput = {

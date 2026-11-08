@@ -1,6 +1,7 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { productionSourceFiles } from '../../../../scripts/lib/production-source-files.mjs';
 
 /**
  * Coverage ledger for every production writer that sets `clients.is_inactive` (direct `clients` table
@@ -14,74 +15,56 @@ const read = (rel: string) => readFileSync(path.join(root, rel), 'utf8');
 
 /** writer file -> [file that must contain the marker, marker] */
 const PUBLISHED_WRITERS: Record<string, [string, string]> = {
-  // Datto RMM site provisioning inserts new active clients; publishes CLIENT_CREATED after commit.
-  'ee/server/src/lib/integrations/datto/siteClientProvisioning.ts': ['ee/server/src/lib/integrations/datto/siteClientProvisioning.ts', "eventType: 'CLIENT_CREATED'"],
   // UI: updateClient, createClient, CSV import, markClientInactive/ActiveWithContacts.
   'packages/clients/src/actions/clientActions.ts': ['packages/clients/src/actions/clientActions.ts', "eventType: 'CLIENT_UPDATED'"],
   'packages/clients/src/actions/inboundActions.ts': ['packages/clients/src/actions/inboundActions.ts', 'CLIENT_STATUS_CHANGED'],
   // Merge tombstones the source client; clientMergeActions publishes CLIENT_MERGED (public client.deleted).
   'packages/clients/src/lib/clientMergeEngine.ts': ['packages/clients/src/actions/clientMergeActions.ts', 'CLIENT_MERGED'],
-  'packages/integrations/src/services/xeroCsvClientSyncService.ts': ['packages/integrations/src/services/xeroCsvClientSyncService.ts', 'CLIENT_CREATED'],
   'server/src/lib/migrations/appliers/entityAppliers.ts': ['server/src/lib/migrations/appliers/entityAppliers.ts', 'CLIENT_CREATED'],
   'shared/workflow/runtime/actions/businessOperations/clients.ts': ['shared/workflow/runtime/actions/businessOperations/clients.ts', 'CLIENT_ARCHIVED'],
   // REST ClientService.update/create (scanner-invisible: writes through the generic service layer).
 };
+
+// Datto site provisioning and the Xero CSV sync used to insert `clients` rows
+// directly (is_inactive literal in the same file), which is how the scanner
+// used to find them. Both now create through the shared
+// `createClientWithDefaults` seam (shared/models/clientCreation.ts), so the
+// is_inactive default lives there instead and the scanner no longer sees
+// these two call sites as writers. Their CLIENT_CREATED publish is unchanged
+// and still covered by their own integration tests.
 
 const SILENT_WRITERS: Record<string, string> = {
   'ee/temporal-workflows/src/activities/customer-tracking-activities.ts':
     'Temporal tenant-provisioning activity: creates/reactivates the Nine Minds management-tenant customer client for a new tenant; no user actor and the worker has no event-bus publisher',
   'ee/temporal-workflows/src/activities/tenant-deletion-activities.ts':
     'Temporal tenant deactivate/reactivate flips the management-tenant customer client as part of the tenant lifecycle; operator-driven, not a tenant user action, and the worker has no event-bus publisher',
-  'ee/temporal-workflows/src/db/tenant-operations.ts':
-    'tenant provisioning inserts the first (system) client of a brand-new tenant; no webhook subscription can exist yet',
-  'packages/tickets/src/actions/ticketImportActions.ts':
-    'KNOWN GAP: ticket CSV import inserts new clients (is_inactive=false) without client.created; user-reachable, creation only (no is_inactive transition). Follow-up, out of scope for the reactivation fix',
   'server/src/lib/service-requests/mapping/destinations/accountDestinationProvider.ts':
     'KNOWN GAP: service-request answer mapping updates clients through ClientModel.updateClient (is_inactive is a mappable field) and publishes no client.updated for any field; user-reachable via admin-configured mappings. Follow-up, out of scope for the reactivation fix',
 };
+// ee/temporal-workflows/src/db/tenant-operations.ts and
+// packages/tickets/src/actions/ticketImportActions.ts moved for the same
+// reason as the two PUBLISHED_WRITERS above: both now create through
+// createClientWithDefaults, so the scanner no longer finds them here either.
 
 // REST ClientService is not found by the scanner (generic service layer); pin its markers directly.
 const SERVICE_MARKERS = ['CLIENT_ARCHIVED', 'CLIENT_UPDATED', 'CLIENT_CREATED'];
 
 const WRITE_VERB = /\.(insert|update|del|delete|upsert)\(/;
 const MODEL_WRITE = /ClientModel\.(createClient|updateClient)\(/;
-const SKIP = /^(node_modules|dist|generated|__tests__|test|tests|test-utils|seeds)$|^\.next/;
-
-function walk(dir: string, out: string[]): void {
-  for (const name of readdirSync(dir)) {
-    if (SKIP.test(name)) continue;
-    const full = path.join(dir, name);
-    let st;
-    try {
-      st = statSync(full);
-    } catch {
-      continue; // dangling symlink (e.g. generated build scratch): not a source file
-    }
-    if (st.isDirectory()) walk(full, out);
-    else if (/\.(ts|tsx)$/.test(name) && !/\.(test|d)\.tsx?$/.test(name)) out.push(full);
-  }
-}
 
 function writersOfClientIsInactive(): string[] {
-  const files: string[] = [];
-  for (const base of ['packages', 'server/src', 'shared', 'ee/server/src', 'ee/packages', 'ee/temporal-workflows/src']) {
-    const abs = path.join(root, base);
-    try {
-      if (statSync(abs).isDirectory()) walk(abs, files);
-    } catch {
-      /* optional tree */
-    }
-  }
+  const files = productionSourceFiles(root, ['packages', 'server/src', 'shared', 'ee/server/src', 'ee/packages', 'ee/temporal-workflows/src'])
+    .filter((file: string) => !/(^|\/)seeds\//.test(file));
   const writers: string[] = [];
   for (const file of files) {
-    const lines = readFileSync(file, 'utf8').split('\n');
+    const lines = read(file).split('\n');
     const writes = lines.some((line, i) => {
       if (MODEL_WRITE.test(line)) return true;
       if (!/['"]clients['"]/.test(line)) return false;
       const window = lines.slice(i, i + 9).join(' ');
       return WRITE_VERB.test(window) && /\bis_inactive\b/.test(window);
     });
-    if (writes) writers.push(path.relative(root, file));
+    if (writes) writers.push(file);
   }
   return writers.sort();
 }

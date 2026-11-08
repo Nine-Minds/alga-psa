@@ -11,7 +11,7 @@ export function registerStatusRoutes(
   const StatusIdParams = registry.registerSchema(
     'StatusIdParams',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('Status UUID.'),
+      id: zOpenApi.string().guid().describe('Status UUID.'),
     }),
   );
 

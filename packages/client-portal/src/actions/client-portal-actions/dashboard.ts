@@ -17,6 +17,7 @@ import { listDeployableStatusSlugs } from '@alga-psa/assets/lib/assetStatusRegis
 import { clientPortalActionErrorFrom, type ClientPortalActionError } from './clientPortalActionErrors';
 import { hasClientProjectReadPermission } from './clientProjectPermissions';
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
+import { formatCurrencyWithSymbol } from '@alga-psa/core/formatters';
 
 export interface DashboardMetrics {
   openTickets: number;
@@ -156,10 +157,7 @@ function formatCurrencyFromCents(
   locale: string,
   currencyCode?: string | null,
 ): string {
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency: currencyCode || 'USD',
-  }).format((Number(value ?? 0) || 0) / 100);
+  return formatCurrencyWithSymbol((Number(value ?? 0) || 0) / 100, locale, currencyCode || 'USD');
 }
 
 function formatRecentInvoiceDescription(invoice: RecentInvoiceActivityRow, locale: string): string {

@@ -15,6 +15,9 @@ vi.mock('@alga-psa/db', () => ({
 vi.mock('@alga-psa/users/actions', () => ({
   findUserByIdForApi: vi.fn(async (id: string) => mocks.users.get(id) ?? null),
 }));
+vi.mock('@alga-psa/users/actions/user-actions/findUserByIdForApi', () => ({
+  findUserByIdForApi: vi.fn(async (id: string) => mocks.users.get(id) ?? null),
+}));
 vi.mock('server/src/lib/api/rateLimit/apiRateLimitSettingsModel', () => ({ getForKey: vi.fn(async () => null) }));
 vi.mock('../../../../../server/src/lib/auth/rbac', () => ({
   hasPermission: vi.fn(async (user: { user_id: string }, resource: string, action: string) =>

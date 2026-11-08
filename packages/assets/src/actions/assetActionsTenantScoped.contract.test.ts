@@ -6,7 +6,9 @@ const source = readFileSync(resolve(__dirname, 'assetActions.ts'), 'utf8');
 // Subject / record resolution for asset read authorization was extracted from assetActions.ts
 // (alga-2026-0002683 C2) so the label code paths share it. It is tenant-scoped structurally through
 // tenantDb(trx, tenant).table(...), which is the same guarantee tenantScopedTable gives the actions.
-const readAuthSource = readFileSync(resolve(__dirname, '../lib/assetReadAuthorization.ts'), 'utf8');
+// The implementation now lives in @alga-psa/authorization so document authorization can share it;
+// packages/assets/src/lib/assetReadAuthorization.ts re-exports it.
+const readAuthSource = readFileSync(resolve(__dirname, '../../../authorization/src/assetReadAuthorization.ts'), 'utf8');
 
 function sourceBetween(start: string, end: string): string {
     const startIndex = source.indexOf(start);

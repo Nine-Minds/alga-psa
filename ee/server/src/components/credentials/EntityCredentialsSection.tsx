@@ -65,6 +65,8 @@ interface EntityCredentialsSectionProps {
   defaultClientId?: string | null;
   /** Override the section title locale key (asset keeps its own key). */
   titleKey?: string;
+  /** List, reveal and copy only: no attach, create or detach. */
+  readOnly?: boolean;
 }
 
 type CredentialsListState = ReturnType<typeof useCredentialsList>;
@@ -200,11 +202,13 @@ function CredentialsTile({
   entityId,
   defaultClientId,
   title,
+  readOnly,
 }: {
   entityType: CredentialAssociationEntityType;
   entityId: string;
   defaultClientId?: string | null;
   title: string;
+  readOnly: boolean;
 }) {
   const { t } = useTranslation('msp/credentials');
   const [managerOpen, setManagerOpen] = useState(false);
@@ -242,9 +246,11 @@ function CredentialsTile({
     body = (
       <div>
         <BentoTileEmpty id={`${tileId}-empty`}>{t('credentials.section.empty')}</BentoTileEmpty>
-        <BentoTileEmptyAction id={`${tileId}-attach-link`} onClick={() => setManagerOpen(true)}>
-          {t('credentials.section.attach')}
-        </BentoTileEmptyAction>
+        {!readOnly && (
+          <BentoTileEmptyAction id={`${tileId}-attach-link`} onClick={() => setManagerOpen(true)}>
+            {t('credentials.section.attach')}
+          </BentoTileEmptyAction>
+        )}
       </div>
     );
   } else {
@@ -276,6 +282,7 @@ function CredentialsTile({
         title={title}
         icon={<KeyRound className="h-4 w-4" />}
         action={
+          readOnly ? undefined : (
           <Button
             id={`${tileId}-manage-btn`}
             variant="ghost"
@@ -287,6 +294,7 @@ function CredentialsTile({
           >
             <Plus className="h-4 w-4" />
           </Button>
+          )
         }
       >
         {body}
@@ -309,6 +317,7 @@ function CredentialsTile({
             entityType={entityType}
             entityId={entityId}
             defaultClientId={defaultClientId ?? null}
+            readOnly={readOnly}
           />
         </ContentCardVariantProvider>
       </Dialog>
@@ -321,6 +330,7 @@ export function EntityCredentialsSection({
   entityId,
   defaultClientId,
   titleKey = 'credentials.section.title',
+  readOnly = false,
 }: EntityCredentialsSectionProps) {
   const { t } = useTranslation('msp/credentials');
   const { hasFeature } = useTier();
@@ -373,6 +383,7 @@ export function EntityCredentialsSection({
         entityId={entityId}
         defaultClientId={defaultClientId}
         title={t(titleKey)}
+        readOnly={readOnly}
       />
     );
   }
@@ -386,7 +397,12 @@ export function EntityCredentialsSection({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <CredentialsScreen entityType={entityType} entityId={entityId} defaultClientId={defaultClientId ?? null} />
+        <CredentialsScreen
+          entityType={entityType}
+          entityId={entityId}
+          defaultClientId={defaultClientId ?? null}
+          readOnly={readOnly}
+        />
       </CardContent>
     </Card>
   );

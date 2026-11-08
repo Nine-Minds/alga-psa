@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ApiBaseController, AuthenticatedApiRequest } from './ApiBaseController';
 import { TicketService, type TicketDocumentVariant } from '../services/TicketService';
 import { 
-  createTicketSchema, updateTicketSchema, ticketListQuerySchema, ticketSearchSchema, ticketStatsResponseSchema, createTicketMaterialSchema, createTicketCommentSchema, updateTicketCommentSchema, updateTicketStatusSchema, updateTicketAssignmentSchema, createTicketFromAssetSchema, linkTicketAssetSchema, addTicketAgentSchema, assignTicketTeamSchema, removeTicketTeamSchema, createTicketChecklistItemSchema, updateTicketChecklistCompletionSchema,
+  createTicketRequestSchema, updateTicketSchema, ticketListQuerySchema, ticketSearchSchema, ticketStatsResponseSchema, createTicketMaterialSchema, createTicketCommentSchema, updateTicketCommentSchema, updateTicketStatusSchema, updateTicketAssignmentSchema, createTicketFromAssetSchema, linkTicketAssetSchema, addTicketAgentSchema, addTicketWatcherSchema, updateTicketWatcherSchema, removeTicketWatcherQuerySchema, assignTicketTeamSchema, removeTicketTeamSchema, createTicketChecklistItemSchema, updateTicketChecklistCompletionSchema,
   createExternalLinkSchema, updateExternalLinkSchema, externalLinkLookupQuerySchema,
 } from '../schemas/ticket';
 import { uuidSchema } from '../schemas/common';
@@ -22,7 +22,8 @@ import {
 import {
   getConnection
 } from '../../db/db';
-import { authorizeApiResourceRead, buildAuthorizationPrincipalSubject } from './authorizationKernel';
+import { authorizeApiResource, authorizeApiResourceRead, buildAuthorizationPrincipalSubject } from './authorizationKernel';
+import { buildTicketRecordContext } from './recordContexts';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 import { compileTenantScopedResourceReadAuthorizationSql, resolveDefaultBuiltinRelationshipRules } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
@@ -38,6 +39,7 @@ import {
   updateBundleSettingsSchema
 } from '../schemas/ticketBundle';
 import { ZodError } from 'zod';
+import { buildDocumentPreviewHeaders } from '@alga-psa/core';
 import {
   addChecklistItem,
   getTicketChecklistItems,
@@ -105,7 +107,7 @@ export class ApiTicketController extends ApiBaseController {
     
     super(ticketService, {
       resource: 'ticket',
-      createSchema: createTicketSchema,
+      createSchema: createTicketRequestSchema,
       updateSchema: updateTicketSchema,
       querySchema: ticketListQuerySchema,
       permissions: {
@@ -120,21 +122,9 @@ export class ApiTicketController extends ApiBaseController {
     this.ticketService = ticketService;
   }
 
-  // A ticket is "assigned" only to its primary `assigned_to` for read authorization.
-  // Do not trust `ticket_resources.additional_user_id` as a read grant because
-  // time-entry workflows can create those rows without ticket row-level authorization.
+  // LEVERAGE: pattern ticket-record-context — thin wrapper over the shared builder; callers should import ./recordContexts directly
   private buildTicketRecordContext(ticket: Record<string, any>) {
-    const assignedUserIds = new Set<string>();
-    if (typeof ticket.assigned_to === 'string') assignedUserIds.add(ticket.assigned_to);
-    return {
-      id: ticket.ticket_id,
-      ownerUserId: typeof ticket.entered_by === 'string' ? ticket.entered_by : undefined,
-      assignedUserIds: Array.from(assignedUserIds),
-      clientId: typeof ticket.client_id === 'string' ? ticket.client_id : undefined,
-      boardId: typeof ticket.board_id === 'string' ? ticket.board_id : undefined,
-      teamIds: typeof ticket.assigned_team_id === 'string' ? [ticket.assigned_team_id] : [],
-      statusId: ticket.status_id,
-    };
+    return buildTicketRecordContext(ticket);
   }
 
   private async assertTicketReadAllowed(
@@ -160,6 +150,40 @@ export class ApiTicketController extends ApiBaseController {
 
     if (!allowed) {
       throw new ForbiddenError('Permission denied: Cannot read ticket');
+    }
+
+    return ticket as Record<string, any>;
+  }
+
+  private async assertTicketMutationAllowed(
+    apiRequest: AuthenticatedApiRequest,
+    ticketId: string,
+    action: 'update' | 'delete',
+    knex?: Awaited<ReturnType<typeof getConnection>>
+  ): Promise<Record<string, any>> {
+    const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
+    const ticket = await this.ticketService.getById(ticketId, apiRequest.context);
+    if (!ticket) {
+      throw new NotFoundError('ticket not found');
+    }
+
+    // Must still be readable, then authorized against the mutation action's scope.
+    const ticketRow = ticket as Record<string, any>;
+    const recordContext = this.buildTicketRecordContext(ticketRow);
+    const authInput = {
+      knex: resolvedKnex,
+      tenant: apiRequest.context.tenant,
+      user: apiRequest.context.user,
+      apiKeyId: apiRequest.context.apiKeyId,
+      resource: 'ticket',
+      recordContext,
+    };
+    const allowed =
+      (await authorizeApiResourceRead(authInput)) &&
+      (await authorizeApiResource({ ...authInput, action }));
+
+    if (!allowed) {
+      throw new ForbiddenError(`Permission denied: Cannot ${action} ticket`);
     }
 
     return ticket as Record<string, any>;
@@ -481,7 +505,7 @@ export class ApiTicketController extends ApiBaseController {
             validatedQuery = ticketSearchSchema.parse(query);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Query validation failed', error.errors);
+              throw new ValidationError('Query validation failed', error.issues);
             }
             throw error;
           }
@@ -731,7 +755,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           const data = await this.validateData(apiRequest, createTicketChecklistItemSchema);
 
           const result = await addChecklistItem(ticketId, data);
@@ -768,7 +792,7 @@ export class ApiTicketController extends ApiBaseController {
           const ticketId = await this.extractIdFromPath(apiRequest);
           const itemId = this.extractChecklistItemId(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           const data = await this.validateData(apiRequest, updateTicketChecklistCompletionSchema);
 
           // Bind the item to the authorized ticket before calling the existing
@@ -837,7 +861,7 @@ export class ApiTicketController extends ApiBaseController {
           await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           const data = await this.validateData(apiRequest, createExternalLinkSchema);
 
           const result = await addExternalLink({ ticket_id: ticketId, ...data });
@@ -865,7 +889,7 @@ export class ApiTicketController extends ApiBaseController {
           const ticketId = await this.extractIdFromPath(apiRequest);
           const linkId = this.extractExternalLinkId(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           const data = await this.validateData(apiRequest, updateExternalLinkSchema);
 
           const before = await getTicketExternalLinks(ticketId);
@@ -898,7 +922,7 @@ export class ApiTicketController extends ApiBaseController {
           const ticketId = await this.extractIdFromPath(apiRequest);
           const linkId = this.extractExternalLinkId(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
 
           const before = await getTicketExternalLinks(ticketId);
           if (isServerActionErrorResult(before) || !before.some((link) => link.link_id === linkId)) {
@@ -1022,7 +1046,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           if (!(await hasApiContextPermission(apiRequest.context!, 'asset', 'read', knex))) {
             throw new ForbiddenError('Permission denied: Cannot read asset');
           }
@@ -1030,7 +1054,7 @@ export class ApiTicketController extends ApiBaseController {
           const body = await req.json();
           const validation = linkTicketAssetSchema.safeParse(body);
           if (!validation.success) {
-            throw new ValidationError('Validation failed', validation.error.errors);
+            throw new ValidationError('Validation failed', validation.error.issues);
           }
 
           const { asset_id, relationship_type, notes } = validation.data;
@@ -1059,7 +1083,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           if (!(await hasApiContextPermission(apiRequest.context!, 'asset', 'read', knex))) {
             throw new ForbiddenError('Permission denied: Cannot read asset');
           }
@@ -1124,12 +1148,12 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
 
           const body = await req.json();
           const validation = addTicketAgentSchema.safeParse(body);
           if (!validation.success) {
-            throw new ValidationError('Validation failed', validation.error.errors);
+            throw new ValidationError('Validation failed', validation.error.issues);
           }
 
           const agents = await this.ticketService.addTicketAgent(ticketId, validation.data, apiRequest.context!);
@@ -1155,7 +1179,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
 
           // userId is the path segment after "agents".
           const url = new URL(apiRequest.url || req.url);
@@ -1180,6 +1204,132 @@ export class ApiTicketController extends ApiBaseController {
   }
 
   /**
+   * List a ticket's watchers
+   */
+  getWatchers() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
+
+          const ticketId = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context!.tenant);
+          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+
+          const watchers = await this.ticketService.listWatchers(ticketId, apiRequest.context!);
+
+          return createSuccessResponse(watchers, 200, undefined, apiRequest);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Add a watcher (idempotent set-add) by contact_id, user_id or bare email
+   */
+  addWatcher() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
+
+          const ticketId = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context!.tenant);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
+
+          const body = await req.json();
+          const validation = addTicketWatcherSchema.safeParse(body);
+          if (!validation.success) {
+            throw new ValidationError('Validation failed', validation.error.issues);
+          }
+
+          const watchers = await this.ticketService.addWatcher(ticketId, validation.data, apiRequest.context!);
+
+          // Set-add: always 200 with the full list, never 201.
+          return createSuccessResponse(watchers, 200, undefined, apiRequest);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Toggle a watcher active/inactive
+   */
+  updateWatcher() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
+
+          const ticketId = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context!.tenant);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
+
+          const body = await req.json();
+          const validation = updateTicketWatcherSchema.safeParse(body);
+          if (!validation.success) {
+            throw new ValidationError('Validation failed', validation.error.issues);
+          }
+
+          const watchers = await this.ticketService.setWatcherActive(ticketId, validation.data, apiRequest.context!);
+
+          return createSuccessResponse(watchers, 200, undefined, apiRequest);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Remove a watcher by email (?email=, optional &silent=true)
+   */
+  removeWatcher() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
+
+          const ticketId = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context!.tenant);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
+
+          const url = new URL(apiRequest.url || req.url);
+          const validation = removeTicketWatcherQuerySchema.safeParse(
+            Object.fromEntries(url.searchParams.entries())
+          );
+          if (!validation.success) {
+            throw new ValidationError('Validation failed', validation.error.issues);
+          }
+
+          const watchers = await this.ticketService.removeWatcher(
+            ticketId,
+            validation.data.email,
+            validation.data.silent,
+            apiRequest.context!
+          );
+
+          return createSuccessResponse(watchers, 200, undefined, apiRequest);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
    * Assign a team to a ticket
    */
   assignTeam() {
@@ -1192,12 +1342,12 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
 
           const body = await req.json();
           const validation = assignTicketTeamSchema.safeParse(body);
           if (!validation.success) {
-            throw new ValidationError('Validation failed', validation.error.errors);
+            throw new ValidationError('Validation failed', validation.error.issues);
           }
 
           const ticket = await this.ticketService.assignTeam(ticketId, validation.data, apiRequest.context!);
@@ -1223,7 +1373,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
 
           // DELETE bodies are optional; no body means remove_all.
           let body: unknown = {};
@@ -1240,7 +1390,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const validation = removeTicketTeamSchema.safeParse(body);
           if (!validation.success) {
-            throw new ValidationError('Validation failed', validation.error.errors);
+            throw new ValidationError('Validation failed', validation.error.issues);
           }
 
           const ticket = await this.ticketService.removeTeam(ticketId, validation.data, apiRequest.context!);
@@ -1266,7 +1416,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           const formData = await req.formData();
           const file = formData.get('file');
 
@@ -1358,7 +1508,10 @@ export class ApiTicketController extends ApiBaseController {
 
           const etag = `"${result.fileId}"`;
           const headers = new Headers();
-          headers.set('Content-Type', result.mimeType);
+          // LEVERAGE: pattern byte-serving-headers — policy headers set by hand in each byte-serving route
+          for (const [name, value] of Object.entries(buildDocumentPreviewHeaders(result.mimeType))) {
+            headers.set(name, value);
+          }
           headers.set('ETag', etag);
           // Variants are immutable per file id: a regenerated preview gets a new id.
           headers.set('Cache-Control', 'private, max-age=31536000, immutable');
@@ -1389,7 +1542,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
 
           const url = new URL(apiRequest.url || req.url);
           const segments = url.pathname.split('/');
@@ -1483,7 +1636,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           const material = await this.ticketService.addTicketMaterial(ticketId, validatedData, apiRequest.context!);
 
           return createSuccessResponse(material, 201, undefined, apiRequest);
@@ -1556,14 +1709,14 @@ export class ApiTicketController extends ApiBaseController {
             validatedData = createTicketCommentSchema.parse(body);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Validation failed', error.errors);
+              throw new ValidationError('Validation failed', error.issues);
             }
             throw error;
           }
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           const comment = await this.ticketService.addComment(
             ticketId,
             validatedData,
@@ -1591,7 +1744,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
 
           const url = new URL(apiRequest.url || req.url);
           const segments = url.pathname.split('/');
@@ -1662,14 +1815,14 @@ export class ApiTicketController extends ApiBaseController {
             validatedData = updateTicketCommentSchema.parse(body);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Validation failed', error.errors);
+              throw new ValidationError('Validation failed', error.issues);
             }
             throw error;
           }
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           // Extract commentId from URL: /api/v1/tickets/{id}/comments/{commentId}
           const url = new URL(req.url);
           const segments = url.pathname.split('/').filter(Boolean);
@@ -1752,18 +1905,19 @@ export class ApiTicketController extends ApiBaseController {
             validatedData = updateTicketStatusSchema.parse(body);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Validation failed', error.errors);
+              throw new ValidationError('Validation failed', error.issues);
             }
             throw error;
           }
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           const updated = await this.ticketService.update(
             ticketId,
             validatedData,
-            apiRequest.context!
+            apiRequest.context!,
+            { honorSuppliedClosure: true }
           );
 
           if (!updated) {
@@ -1840,14 +1994,14 @@ export class ApiTicketController extends ApiBaseController {
             validatedData = updateTicketAssignmentSchema.parse(body);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Validation failed', error.errors);
+              throw new ValidationError('Validation failed', error.issues);
             }
             throw error;
           }
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           const updated = await this.ticketService.update(
             ticketId,
             validatedData,
@@ -1876,7 +2030,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, id, knex);
+          await this.assertTicketMutationAllowed(apiRequest, id, 'update', knex);
 
           const data = this.options.updateSchema
             ? await this.validateData(apiRequest, this.options.updateSchema)
@@ -1905,7 +2059,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, id, knex);
+          await this.assertTicketMutationAllowed(apiRequest, id, 'delete', knex);
 
           const resource = await this.service.getById(id, apiRequest.context);
           if (!resource) {
@@ -1983,7 +2137,7 @@ export class ApiTicketController extends ApiBaseController {
             validatedData = createTicketFromAssetSchema.parse(body);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Validation failed', error.errors);
+              throw new ValidationError('Validation failed', error.issues);
             }
             throw error;
           }

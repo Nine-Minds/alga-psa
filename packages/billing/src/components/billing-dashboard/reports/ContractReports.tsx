@@ -21,6 +21,7 @@ import {
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -45,6 +46,7 @@ import { PrintableDetailHeader } from '@alga-psa/ui/components/PrintableDetailHe
 import { PrintableSummary } from '@alga-psa/ui/components/PrintableSummary';
 import { PrintableTable, type PrintableTableColumn } from '@alga-psa/ui/components/PrintableTable';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import ProfitabilityReport from './ProfitabilityReport';
 import {
@@ -96,9 +98,11 @@ type BucketUsageRow = Omit<BucketUsage, 'contract_name' | 'overage_hours'> & Par
 // Utilization table. Only columns listed here override the content defaults.
 const BUCKET_USAGE_COLUMNS_PREF_KEY = 'billing.reports.bucketUsage.columnVisibility';
 
+type BucketUsageStatusFilter = 'all' | 'active' | 'expired' | 'voided';
+
 const ContractReports: React.FC = () => {
   const { t } = useTranslation('msp/reports');
-  const { formatCurrency, formatDate } = useFormatters();
+  const { formatCurrency, formatDate, locale } = useFormatters();
   const { currencyCode: tenantCurrency } = useCurrencyFormat();
   const [activeReport, setActiveReport] = useState('revenue');
   const [revenueData, setRevenueData] = useState<ContractRevenue[]>([]);
@@ -161,6 +165,10 @@ const ContractReports: React.FC = () => {
 
   // Format minor units in a specific contract currency; the tenant currency is
   // only a fallback for rows that carry no currency of their own.
+  // Block values are minor units of the block's own currency, so the currency's exponent applies.
+  const formatBlockMinor = (minor: number, currencyCode?: string | null): string =>
+    formatCurrencyFromMinorUnits(minor, locale, currencyCode || tenantCurrency);
+
   const formatCents = (cents: number, currencyCode?: string | null): string => {
     return formatCurrency(cents / 100, currencyCode || tenantCurrency);
   };
@@ -306,6 +314,27 @@ const ContractReports: React.FC = () => {
   const hasPoolRows = bucketUsageData.length > 0;
   const hasBlockRows = hourBlockUsageData.length > 0;
 
+  // Block-status filter for the table. Bucket pools are live by definition, so
+  // they show under 'all' and 'active' and drop out of the expired/voided views.
+  const [bucketUsageStatusFilter, setBucketUsageStatusFilter] = useState<BucketUsageStatusFilter>('all');
+
+  const bucketUsageStatusOptions = useMemo(() => [
+    { value: 'all', label: t('contractReports.statusValues.all', { defaultValue: 'All statuses' }) },
+    { value: 'active', label: t('contractReports.statusValues.active', { defaultValue: 'Active' }) },
+    { value: 'expired', label: t('contractReports.statusValues.expired', { defaultValue: 'Expired' }) },
+    { value: 'voided', label: t('contractReports.statusValues.voided', { defaultValue: 'Voided' }) },
+  ], [t]);
+
+  const visibleBucketUsageRows = useMemo(() => (
+    bucketUsageStatusFilter === 'all'
+      ? bucketUsageRows
+      : bucketUsageRows.filter((row) => (
+        row.row_kind === 'block'
+          ? row.status === bucketUsageStatusFilter
+          : bucketUsageStatusFilter === 'active'
+      ))
+  ), [bucketUsageRows, bucketUsageStatusFilter]);
+
   // Per-column visibility the user chose, persisted server-side per user (like
   // the client list view preferences). A column the user never touched follows
   // its content default below; one the user set keeps the user's choice.
@@ -332,6 +361,8 @@ const ContractReports: React.FC = () => {
     { id: 'utilization_percentage', titleKey: 'contractReports.table.utilization', fallback: 'Utilization', defaultVisible: true },
     { id: 'overage_hours', titleKey: 'contractReports.table.overage', fallback: 'Overage', defaultVisible: hasPoolRows },
     { id: 'hourly_rate', titleKey: 'contractReports.table.hourlyRate', fallback: 'Rate / hr', defaultVisible: hasBlockRows },
+    { id: 'remaining_value', titleKey: 'contractReports.table.remainingValue', fallback: 'Remaining value', defaultVisible: hasBlockRows },
+    { id: 'valid_from', titleKey: 'contractReports.table.validFrom', fallback: 'Valid from', defaultVisible: hasBlockRows },
     { id: 'expiration_date', titleKey: 'contractReports.table.expirationDate', fallback: 'Expires', defaultVisible: hasBlockRows },
     { id: 'status', titleKey: 'contractReports.table.status', fallback: 'Status', defaultVisible: hasBlockRows },
   ], [hasPoolRows, hasBlockRows]);
@@ -442,8 +473,20 @@ const ContractReports: React.FC = () => {
       title: t('contractReports.table.hourlyRate', { defaultValue: 'Rate / hr' }),
       dataIndex: 'hourly_rate',
       render: (value: number | undefined, record) => record.row_kind === 'block' && value != null
-        ? formatCents(value, record.currency_code ?? tenantCurrency)
+        ? formatBlockMinor(value, record.currency_code)
         : dash
+    },
+    {
+      title: t('contractReports.table.remainingValue', { defaultValue: 'Remaining value' }),
+      dataIndex: 'remaining_value',
+      render: (value: number | undefined, record) => record.row_kind === 'block' && value != null
+        ? formatBlockMinor(value, record.currency_code)
+        : dash
+    },
+    {
+      title: t('contractReports.table.validFrom', { defaultValue: 'Valid from' }),
+      dataIndex: 'valid_from',
+      render: (value: string | null | undefined, record) => record.row_kind !== 'block' || !value ? dash : formatDate(value)
     },
     {
       title: t('contractReports.table.expirationDate', { defaultValue: 'Expires' }),
@@ -516,7 +559,9 @@ const ContractReports: React.FC = () => {
         ? `+${row.overage_hours} ${t('units.hoursShort', { defaultValue: 'hrs' })}`
         : t('units.dash', { defaultValue: '—' })),
     },
-    { key: 'hourly_rate', header: t('contractReports.table.hourlyRate', { defaultValue: 'Rate / hr' }), render: (row) => row.row_kind === 'block' && row.hourly_rate != null ? formatCents(row.hourly_rate, row.currency_code ?? tenantCurrency) : t('units.dash', { defaultValue: '—' }) },
+    { key: 'hourly_rate', header: t('contractReports.table.hourlyRate', { defaultValue: 'Rate / hr' }), render: (row) => row.row_kind === 'block' && row.hourly_rate != null ? formatBlockMinor(row.hourly_rate, row.currency_code) : t('units.dash', { defaultValue: '—' }) },
+    { key: 'remaining_value', header: t('contractReports.table.remainingValue', { defaultValue: 'Remaining value' }), render: (row) => row.row_kind === 'block' && row.remaining_value != null ? formatBlockMinor(row.remaining_value, row.currency_code) : t('units.dash', { defaultValue: '—' }) },
+    { key: 'valid_from', header: t('contractReports.table.validFrom', { defaultValue: 'Valid from' }), render: (row) => row.row_kind === 'block' && row.valid_from ? formatDate(row.valid_from) : t('units.dash', { defaultValue: '—' }) },
     { key: 'expiration_date', header: t('contractReports.table.expirationDate', { defaultValue: 'Expires' }), render: (row) => row.row_kind !== 'block' ? t('units.dash', { defaultValue: '—' }) : row.expiration_date ? formatDate(row.expiration_date) : t('contractReports.table.neverExpires', { defaultValue: 'Never' }) },
     { key: 'status', header: t('contractReports.table.status', { defaultValue: 'Status' }), render: (row) => row.row_kind === 'block' && row.status ? hourBlockStatusLabel(row.status, t) : t('units.dash', { defaultValue: '—' }) },
   ];
@@ -833,7 +878,18 @@ const ContractReports: React.FC = () => {
               <h3 className="text-lg font-semibold">
                 {t('contractReports.sections.bucketUsage.title', { defaultValue: 'Bucket Hours Utilization' })}
               </h3>
-              <div className="ml-auto">
+              <div className="ml-auto flex items-center gap-2">
+                <CustomSelect
+                  id="bucket-usage-status-filter"
+                  value={bucketUsageStatusFilter}
+                  options={bucketUsageStatusOptions}
+                  placeholder={t('contractReports.statusValues.all', { defaultValue: 'All statuses' })}
+                  onValueChange={(value) => {
+                    setBucketUsageStatusFilter(value as BucketUsageStatusFilter);
+                    setCurrentPage(1);
+                  }}
+                  className="min-w-[150px]"
+                />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -894,14 +950,14 @@ const ContractReports: React.FC = () => {
                 defaultValue: 'Monitor bucket hours usage and identify overage situations. Prepaid hour blocks (contract-issued and ad-hoc) are listed with their burn-down.',
               })}
             </p>
-            {bucketUsageRows.length === 0 ? (
+            {visibleBucketUsageRows.length === 0 ? (
               <p className="text-sm text-muted-foreground py-8 text-center">
                 {t('contractReports.sections.bucketUsage.empty', { defaultValue: 'No bucket-based contracts found' })}
               </p>
             ) : (
               <DataTable
                 id="bucket-usage-table"
-                data={bucketUsageRows}
+                data={visibleBucketUsageRows}
                 columns={bucketUsageColumns}
                 columnVisibility={bucketUsageVisibility}
                 pagination={true}
@@ -916,10 +972,10 @@ const ContractReports: React.FC = () => {
             'bucket-usage-print',
             t('contractReports.sections.bucketUsage.title', { defaultValue: 'Bucket Hours Utilization' }),
             t('contractReports.sections.bucketUsage.description', {
-              defaultValue: 'Monitor bucket hours usage and identify overage situations',
+              defaultValue: 'Monitor bucket hours usage and identify overage situations. Prepaid hour blocks (contract-issued and ad-hoc) are listed with their burn-down.',
             }),
             <PrintableTable
-              rows={bucketUsageRows}
+              rows={visibleBucketUsageRows}
               columns={visibleBucketUsagePrintColumns}
               getRowKey={(row) => row.id}
               emptyMessage={t('contractReports.sections.bucketUsage.empty', { defaultValue: 'No bucket-based contracts found' })}

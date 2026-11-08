@@ -280,7 +280,7 @@ describe('Ticket templates (integration)', () => {
 
   async function addBoardApplyRule() {
     await tt('checklist_template_apply_rules').insert({
-      tenant: tenantId, apply_rule_id: uuidv4(), template_id: checklistTemplateX, board_id: boardId, is_enabled: true,
+      tenant: tenantId, apply_rule_id: uuidv4(), template_id: checklistTemplateX, where: JSON.stringify({ join: 'and', clauses: [{ path: 'board_id', operator: 'equals', value: boardId }] }), is_enabled: true,
     });
   }
 
@@ -704,7 +704,7 @@ describe('Ticket templates (integration)', () => {
       await expect(migration.up(context.db)).resolves.not.toThrow();
     });
 
-    it('the permission catalog matches D11 for PSA and AlgaDesk', async () => {
+    it('the permission catalog matches D11 for PSA, AlgaDesk and co-managed', async () => {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const { ACTIVE_PERMISSIONS: PERMISSIONS } = require('../../../migrations/utils/permissions/catalog.cjs');
       const rows = PERMISSIONS.filter((p: any) => p.resource === 'ticket_template');
@@ -712,15 +712,19 @@ describe('Ticket templates (integration)', () => {
       for (const row of rows) {
         expect(row.msp).toBe(true);
         expect(row.client).toBe(false);
-        expect([...row.products].sort()).toEqual(['algadesk', 'psa']);
+        expect([...row.products].sort()).toEqual(['algadesk', 'co_managed', 'psa']);
         if (row.action === 'read') {
           expect(row.defaultGrants.psa).toEqual(
             expect.arrayContaining(['msp:Admin', 'msp:Technician', 'msp:Dispatcher', 'msp:Manager', 'msp:Project Manager'])
           );
           expect(row.defaultGrants.algadesk).toEqual(expect.arrayContaining(['msp:Admin', 'msp:Agent']));
+          expect(row.defaultGrants.co_managed).toEqual(
+            expect.arrayContaining(['msp:Admin', 'msp:Technician', 'msp:Dispatcher', 'msp:Project Manager'])
+          );
         } else {
           expect(row.defaultGrants.psa).toEqual(['msp:Admin']);
           expect(row.defaultGrants.algadesk).toEqual(['msp:Admin']);
+          expect(row.defaultGrants.co_managed).toEqual(['msp:Admin']);
         }
       }
     });

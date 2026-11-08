@@ -20,6 +20,8 @@ vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({ t: translate }),
+  useFormatters: () => ({ locale: 'en' }),
+  useOptionalI18n: () => null,
 }));
 
 vi.mock('@alga-psa/ui/lib', () => ({

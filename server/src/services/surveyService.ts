@@ -605,6 +605,7 @@ function addHours(date: Date, hours: number): Date {
   return new Date(date.getTime() + hours * 60 * 60 * 1000);
 }
 
+// LEVERAGE: pattern tenant-link-context — hand-built tenant-facing base URL for client-recipient links (/surveys/respond is not surface-routable by path, left canonical).
 function getBaseUrl(): string {
   const envUrl = process.env.DOMAIN || process.env.NEXTAUTH_URL || 'http://localhost:3000';
   const trimmed = envUrl.trim();

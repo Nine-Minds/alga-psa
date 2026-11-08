@@ -2,10 +2,11 @@
  * API Project Task Comment Controller
  * Comments and reactions on a project task, for API-key clients (mobile).
  *
- * Reads are gated on `project_task:read`, the same permission the web uses for
- * task comment counts. Writes are additionally gated by the shared service:
- * only internal users may comment, and a non-internal caller may only edit or
- * delete their own comment — exactly what the web server actions enforce.
+ * Every operation goes through withTaskCommentAccess (the boundary the web
+ * server actions use): read/react need `project_task:read`, create/update/delete
+ * need the matching write permission, and all require record-level access to the
+ * parent project. Editing or deleting someone else's comment also needs
+ * `project_task:update`.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -62,7 +63,7 @@ export class ApiProjectTaskCommentController extends ApiBaseController {
       return parse(body);
     } catch (error) {
       if (error instanceof ZodError) {
-        throw new ValidationError('Validation failed', error.errors);
+        throw new ValidationError('Validation failed', error.issues);
       }
       throw error;
     }
@@ -77,8 +78,8 @@ export class ApiProjectTaskCommentController extends ApiBaseController {
         const apiRequest = await this.authenticate(req) as AuthenticatedApiRequest;
         const ids = this.pathIds(req, needComment);
         return await runWithTenant(apiRequest.context.tenant, async () => {
-          await this.checkPermission(apiRequest, 'read');
-          await this.commentService.assertTaskExists(ids.taskId, apiRequest.context);
+          // Authorization (permission per operation, parent-project record access, ownership) is decided
+          // inside ProjectTaskCommentService via withTaskCommentAccess, before any comment data is touched.
           return run(ids, apiRequest, req);
         });
       } catch (error) {

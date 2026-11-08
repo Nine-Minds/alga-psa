@@ -9,7 +9,8 @@ const mocks = vi.hoisted(() => ({
   fetch: vi.fn(),
 }));
 
-vi.mock('@alga-psa/agent-tooling', () => ({
+vi.mock('@alga-psa/agent-tooling', async (importOriginal) => ({
+  ...await importOriginal() as typeof import('@alga-psa/agent-tooling'),
   runRegistrySearch: vi.fn(),
   buildRequest: vi.fn(),
   buildMetaToolDefinitions: vi.fn(() => []),
@@ -62,6 +63,16 @@ describe('MCP act_as_user_id (T024)', () => {
     vi.stubGlobal('fetch', mocks.fetch);
   });
 
+  it('answers 403 (not 500) when minting is refused for an inactive agent', async () => {
+    mocks.mintAgentSessionKey.mockRejectedValue(
+      Object.assign(new Error('This agent is inactive'), { name: 'AgentInactiveError', code: 'AGENT_INACTIVE', statusCode: 403 }),
+    );
+    const res = await handleMcpJsonRpc(rpc({}));
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: 'This agent is inactive' });
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+
   it('forwards the act-as header and audits the acted-as user', async () => {
     await handleMcpJsonRpc(rpc({ act_as_user_id: HUMAN }));
     const [, init] = mocks.fetch.mock.calls[0];
@@ -70,6 +81,14 @@ describe('MCP act_as_user_id (T024)', () => {
     expect(mocks.writeAgentAudit).toHaveBeenCalledWith(
       expect.objectContaining({ tenant: 't1', agentId: 'agent-1', actAsUserId: HUMAN, ok: true }),
     );
+  });
+
+  it('redacts audit arguments while preserving act-as attribution', async () => {
+    await handleMcpJsonRpc(rpc({ act_as_user_id: HUMAN, authorization: 'Bearer private-token' }));
+    expect(mocks.writeAgentAudit).toHaveBeenCalledWith(expect.objectContaining({
+      actAsUserId: HUMAN,
+      arguments: expect.objectContaining({ authorization: '[redacted]', act_as_user_id: HUMAN }),
+    }));
   });
 
   it('sends no header and audits null without act_as_user_id', async () => {

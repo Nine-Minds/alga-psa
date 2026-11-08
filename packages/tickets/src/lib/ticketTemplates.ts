@@ -1,3 +1,4 @@
+// LEVERAGE: pattern rule-matching — ticket-template defaults remain separate; checklist auto-apply now uses the shared ticket predicate schema (alga-2026-0002836).
 // Pure rules for ticket templates. Deliberately NOT a 'use server' module: nothing here may become a
 // client-callable action. `actions/ticketTemplateActions.ts` and `addTicket` are the entry points.
 //
@@ -46,12 +47,13 @@ function readAttributes(attributes: unknown): Record<string, unknown> {
 
 /**
  * Ticket → template copy set (plan "Copy sets"). Completion state, assignee, client, contact,
- * location, status, assignment, watch list and SLA bookkeeping are never copied.
+ * location, status, assignment, watch list and SLA bookkeeping are never copied. `client_id` is
+ * absent on purpose: a template from a ticket starts tenant-wide and the editor scopes it.
  */
 export function ticketToTemplateDraft(
   source: TicketRowForTemplate,
   { tags, checklist }: { tags: readonly string[]; checklist: readonly SourceChecklistRow[] }
-): TicketTemplateDraft {
+): Omit<TicketTemplateDraft, 'client_id'> {
   const attributes = readAttributes(source.attributes);
   const customFields = pickDuplicableAttributes(attributes).custom_fields as Record<string, unknown> | undefined;
   return {

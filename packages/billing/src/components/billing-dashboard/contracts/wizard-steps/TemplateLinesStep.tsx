@@ -11,6 +11,7 @@ import {
   useFormatBillingFrequency,
   useFormatContractLineType,
 } from '@alga-psa/billing/hooks/useBillingEnumOptions';
+import { resolveEffectiveBillingTiming } from '@shared/billingClients/contractLineTimingRule';
 import { useTemplateMoney } from '../useTemplateMoney';
 import { TemplateAmountInput } from '../TemplateAmountInput';
 import {
@@ -41,6 +42,15 @@ interface TemplateLinesStepProps {
  * template line id) that are applied on top of the faithful clone. Anything
  * left untouched is copied from the template as-is.
  */
+/** A template line keeps its own timing (cloned as-is); the wizard only displays it. */
+function useFormatTemplateLineTiming() {
+  const { t } = useTranslation('msp/contracts');
+  return (line: { line_type: string; billing_timing: string }) =>
+    resolveEffectiveBillingTiming(line.line_type, line.billing_timing) === 'advance'
+      ? t('wizardReview.billingTiming.advance', { defaultValue: 'In advance' })
+      : t('wizardReview.billingTiming.arrears', { defaultValue: 'In arrears' });
+}
+
 export function TemplateLinesStep({ view, isLoading, loadError, edits, onChange }: TemplateLinesStepProps) {
   const { t } = useTranslation('msp/contracts');
 
@@ -82,6 +92,7 @@ function TemplateLinesBody({
   const frequencyOptions = useBillingFrequencyOptions();
   const formatFrequency = useFormatBillingFrequency();
   const formatLineType = useFormatContractLineType();
+  const formatTiming = useFormatTemplateLineTiming();
   const templateMoney = useTemplateMoney(view.template_currency);
 
   // Pre-fill required, unset member rates from the contract-currency catalog once
@@ -280,6 +291,14 @@ function TemplateLinesBody({
                   placeholder={formatFrequency(line.billing_frequency)}
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor={`tpl-line-timing-${lineId}`}>
+                  {t('wizardBasics.billingTiming.label', { defaultValue: 'Billing Timing' })}
+                </Label>
+                <p id={`tpl-line-timing-${lineId}`} className="text-sm">
+                  {formatTiming(line)}
+                </p>
+              </div>
             </div>
 
             {lineLevel.filter(hasSlot).map((ref) =>
@@ -452,6 +471,7 @@ export function TemplateLinesReview({
   const { t } = useTranslation('msp/contracts');
   const formatFrequency = useFormatBillingFrequency();
   const formatLineType = useFormatContractLineType();
+  const formatTiming = useFormatTemplateLineTiming();
   const money = useTemplateMoney(view.currency_code);
   const refsByLine = new Map<string, TemplateAmountFieldRef[]>();
   for (const ref of listTemplateAmountFields(view)) {
@@ -471,7 +491,7 @@ export function TemplateLinesReview({
             <li key={line.template_line_id} className="rounded-md border p-3">
               <div className="font-medium">{edit?.line_name ?? line.line_name}</div>
               <div className="text-muted-foreground">
-                {formatLineType(line.line_type)} · {formatFrequency(edit?.billing_frequency ?? line.billing_frequency)}
+                {formatLineType(line.line_type)} · {formatFrequency(edit?.billing_frequency ?? line.billing_frequency)} · {formatTiming(line)}
               </div>
               <div className="text-muted-foreground">
                 {line.services

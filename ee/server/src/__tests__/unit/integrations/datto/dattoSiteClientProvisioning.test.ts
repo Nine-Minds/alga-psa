@@ -28,6 +28,12 @@ vi.mock('@alga-psa/db', () => ({
   withTransaction: (knex: any, fn: any) => fakeTransaction(knex, fn),
 }));
 
+// The shared client-creation seam imports tenantDb from this subpath (not the
+// barrel above) to dodge a turbopack shim, so it needs its own mock too.
+vi.mock('@alga-psa/db/tenantDb', () => ({
+  tenantDb: (conn: any, _tenant: string) => ({ table: (t: string) => conn.__table(t) }),
+}));
+
 vi.mock('@alga-psa/core/logger', () => ({
   default: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
@@ -47,8 +53,9 @@ vi.mock('@alga-psa/shared/billingClients/billingProfiles', () => ({
 vi.mock('@alga-psa/shared/billingClients/defaultContract', () => ({
   ensureDefaultContractForClientIfBillingConfigured: (...args: any[]) => defaultContract(...args),
 }));
-vi.mock('@alga-psa/shared/billingClients/taxSettings', () => ({
-  createDefaultTaxSettings: (...args: any[]) => taxSettings(...args),
+// Reached through the shared client-creation seam, which owns tax init.
+vi.mock('@alga-psa/shared/billingClients/defaultTaxRate', () => ({
+  initializeClientDefaultTax: (...args: any[]) => taxSettings(...args),
 }));
 vi.mock('@alga-psa/shared/rmm/moveRmmOrganizationAssets', () => ({
   moveRmmOrganizationAssets: (...args: any[]) => moveAssets(...args),

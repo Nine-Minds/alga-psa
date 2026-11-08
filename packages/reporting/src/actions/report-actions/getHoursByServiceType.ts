@@ -13,7 +13,7 @@ import { reportingActionErrorFrom, type ReportingActionError } from './reporting
 
 // Define the schema for the input parameters
 const InputSchema = z.object({
-  clientId: z.string().uuid(),
+  clientId: z.string().guid(),
   startDate: z.string().refine((date) => !isNaN(Date.parse(date)), {
     message: "Invalid start date format",
   }),

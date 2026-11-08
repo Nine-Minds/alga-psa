@@ -38,7 +38,7 @@ import {
   type RenewalQueueRow,
 } from '@alga-psa/billing/actions/renewalsQueueActions';
 import { activateClientContractForBilling, updateClientContractForBilling } from '@alga-psa/billing/actions/billingClientsActions';
-import { toPlainDate } from '@alga-psa/core';
+import { toCalendarDisplayDate } from '@alga-psa/core';
 import { ContractWizard } from './ContractWizard';
 import { ContractDialog } from './ContractDialog';
 import {
@@ -300,21 +300,13 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
+  // start_date/end_date are calendar days stored in timestamp columns; pin the day with
+  // toCalendarDisplayDate before handing it to formatDate.
   const formatDateValue = (value: unknown): string => {
-    if (value === null || value === undefined || value === '') {
-      return t('contractsList.empty.dash', { defaultValue: '—' });
-    }
-
-    // start_date/end_date are stored as timestamps but represent calendar dates.
-    // toPlainDate reads both YYYY-MM-DD strings and ISO timestamps in UTC; pinning
-    // to noon UTC keeps the intended day regardless of the viewer's timezone.
-    try {
-      const plainDate = toPlainDate(value as string | Date);
-      const dateOnly = new Date(Date.UTC(plainDate.year, plainDate.month - 1, plainDate.day, 12));
-      return formatDate(dateOnly);
-    } catch {
-      return t('contractsList.empty.dash', { defaultValue: '—' });
-    }
+    const displayDate = toCalendarDisplayDate(value as string | Date | null | undefined);
+    return displayDate
+      ? formatDate(displayDate)
+      : t('contractsList.empty.dash', { defaultValue: '—' });
   };
 
   const clientContractColumns: ColumnDefinition<IContractWithClient>[] = [

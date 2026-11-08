@@ -8,6 +8,7 @@ import {
   getErrorMessage,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { assetStatusLabel } from '../../lib/assetStatus';
 import {
   BUILTIN_ASSET_STATUSES,
   assetStatusLabelForSlug,
@@ -73,32 +74,6 @@ export function useAssetStatusRegistry(
   return { statuses, reload: () => setNonce((value) => value + 1) };
 }
 
-export function assetStatusLabel(t: TranslateFn, status: { slug: string; label: string }): string {
-  const builtin = BUILTIN_ASSET_STATUSES.find((candidate) => candidate.slug === status.slug);
-  // The registry label is the source of truth. A builtin is translated only
-  // while it still carries its shipped label: renaming "Active" is allowed
-  // (FR-B4), and translating the slug regardless made the rename invisible
-  // everywhere it was read.
-  if (builtin && (!status.label || status.label === builtin.label)) {
-    return t(`assetStatuses.${status.slug}`, { defaultValue: builtin.label });
-  }
-  return status.label || humanizeAssetStatusSlug(status.slug);
-}
-
-/**
- * The reading of a bare slug held on an asset row (F021). Never shows the raw
- * slug: the registry row's label wins, then the builtin label, then the
- * humanized slug — so "in_repair" reads as "In repair" even mid-load.
- */
-export function resolveAssetStatusLabel(
-  t: TranslateFn,
-  slug: string | null | undefined,
-  statuses: AssetStatus[] | null
-): string {
-  if (!slug) return '';
-  return assetStatusLabel(t, { slug, label: assetStatusLabelForSlug(slug, statuses) });
-}
-
 /**
  * Status-select options grouped by lifecycle kind.
  *
@@ -131,7 +106,7 @@ export function buildAssetStatusOptions(
   if (currentSlug && !options.some((option) => option.value === currentSlug)) {
     options.push({
       value: currentSlug,
-      label: assetStatusLabel(t, { slug: currentSlug, label: assetStatusLabelForSlug(currentSlug, all) }),
+      label: assetStatusLabel(t, currentSlug, all),
     });
   }
 

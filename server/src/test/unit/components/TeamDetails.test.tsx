@@ -7,7 +7,7 @@ import '@testing-library/jest-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import TeamDetails from '../../../components/settings/general/TeamDetails';
-import { getTeamById, saveTeamChanges } from '@alga-psa/teams/actions/team-actions/teamActions';
+import { getTeamById, saveTeamChanges, updateTeam } from '@alga-psa/teams/actions/team-actions/teamActions';
 import { getAllUsers } from '@alga-psa/user-composition/actions/userQueryActions';
 
 vi.mock('@alga-psa/teams/actions/team-actions/teamActions', () => ({
@@ -54,10 +54,14 @@ async function renderLoaded() {
   await screen.findByText('Service Desk');
 }
 
+function mockTeam(team: Record<string, unknown> = TEAM) {
+  vi.mocked(getTeamById).mockResolvedValue(team as any);
+}
+
 describe('TeamDetails "Not assigned" lead', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getTeamById).mockResolvedValue(TEAM as any);
+    mockTeam();
     vi.mocked(getAllUsers).mockResolvedValue([
       { user_id: 'user-lead', first_name: 'Lee', last_name: 'Lead', email: 'lee@example.com', is_inactive: false, roles: [] },
       { user_id: 'user-b', first_name: 'Bea', last_name: 'Member', email: 'bea@example.com', is_inactive: false, roles: [] },
@@ -74,5 +78,57 @@ describe('TeamDetails "Not assigned" lead', () => {
 
     await waitFor(() => expect(saveTeamChanges).toHaveBeenCalledTimes(1));
     expect(saveTeamChanges).toHaveBeenCalledWith('team-1', { managerId: null, removeUserIds: [], addUserIds: [] });
+  });
+});
+
+describe('TeamDetails description', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getAllUsers).mockResolvedValue([
+      { user_id: 'user-lead', first_name: 'Lee', last_name: 'Lead', email: 'lee@example.com', is_inactive: false, roles: [] },
+    ] as any);
+  });
+  afterEach(() => cleanup());
+
+  it('shows the stored description', async () => {
+    mockTeam({ ...TEAM, description: 'Handles escalations for the east region' });
+    await renderLoaded();
+
+    expect(screen.getByText('Handles escalations for the east region')).toBeInTheDocument();
+  });
+
+  it('shows placeholder copy when the team has no description', async () => {
+    mockTeam({ ...TEAM, description: null });
+    await renderLoaded();
+
+    expect(screen.getByText('teams.details.noDescription')).toBeInTheDocument();
+  });
+
+  it('saves an edited description through updateTeam', async () => {
+    mockTeam({ ...TEAM, description: null });
+    vi.mocked(updateTeam).mockResolvedValue({ ...TEAM, description: 'Second-line support' } as any);
+    await renderLoaded();
+
+    fireEvent.click(screen.getByTitle('teams.details.actions.editDescription'));
+    fireEvent.change(await screen.findByLabelText('teams.details.fields.description'), {
+      target: { value: 'Second-line support' },
+    });
+    fireEvent.click(screen.getByTitle('teams.details.actions.saveDescription'));
+
+    await waitFor(() => expect(updateTeam).toHaveBeenCalledWith('team-1', { description: 'Second-line support' }));
+    expect(await screen.findByText('Second-line support')).toBeInTheDocument();
+  });
+
+  it('abandons the edit on Escape without calling updateTeam', async () => {
+    mockTeam({ ...TEAM, description: 'Handles escalations for the east region' });
+    await renderLoaded();
+
+    fireEvent.click(screen.getByTitle('teams.details.actions.editDescription'));
+    const input = await screen.findByLabelText('teams.details.fields.description');
+    fireEvent.change(input, { target: { value: 'Typed but abandoned' } });
+    fireEvent.keyDown(input, { key: 'Escape' });
+
+    expect(updateTeam).not.toHaveBeenCalled();
+    expect(await screen.findByText('Handles escalations for the east region')).toBeInTheDocument();
   });
 });

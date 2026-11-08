@@ -12,7 +12,7 @@ export {
 } from './invoiceBillingRecipientService';
 export { ensureInvoiceEmailLinks } from './ensureInvoiceEmailLinks';
 export { BillingEngine } from '../lib/billing/billingEngine';
-export { recalculateQuoteFinancials } from './quoteCalculationService';
+export { recalculateQuoteFinancials, resolveQuoteItemTaxesIfIncluded } from './quoteCalculationService';
 export {
   PDFGenerationService,
   createPDFGenerationService,
@@ -147,6 +147,8 @@ export {
   listLabelTemplatesForTenant,
 } from './labelPdfService';
 export type { ResolvedLabelTemplate } from '../lib/label-batch/resolveLabelTemplate';
+// Registered document types rendered on demand from a caller-built view model (C6 packing manifest).
+export { renderRegisteredDocumentPdf } from './registeredDocumentPdfService';
 export { LabelRenderError } from '../lib/label-batch/renderLabelBatchHtml';
 export type { LabelPrintItem } from '../lib/label-batch/renderLabelBatchHtml';
 export { LabelLayoutError } from '../lib/label-batch/layout';

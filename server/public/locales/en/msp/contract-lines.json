@@ -62,7 +62,10 @@
         "invoiceLineDescriptionLabel": "Invoice Line Description",
         "invoiceLineDescriptionPlaceholder": "e.g. Monthly phone system maintenance per 2019 agreement",
         "nameLabel": "Contract Line Name *",
-        "namePlaceholder": "e.g. Managed Support - Gold"
+        "namePlaceholder": "e.g. Managed Support - Gold",
+        "invoiceLineSubtitleLabel": "Invoice Line Subtitle",
+        "invoiceLineSubtitlePlaceholder": "e.g. Managed endpoint and backup services",
+        "invoiceLineSubtitleHelp": "Shown as a muted second line under the title when this fixed line appears on an invoice."
       },
       "cardTitle": "Edit Contract Line: {{name}} (Fixed)",
       "errors": {
@@ -819,7 +822,8 @@
       "notAllowed": "One of the contract line values is not allowed. Please review the form and try again.",
       "missingField": "Missing required contract line field.",
       "missingFieldNamed": "Missing required contract line field: {{field}}.",
-      "advanceTimingNotAllowed": "Advance billing is only available for fixed contract lines. Hourly and usage lines always bill in arrears, after the work happens."
+      "advanceTimingNotAllowed": "Advance billing is only available for fixed contract lines. Hourly and usage lines always bill in arrears, after the work happens.",
+      "versionConflict": "This contract line was changed by someone else since you started editing. Reload it and re-apply your edit."
     },
     "templateLine": {
       "unavailable": "The selected template line is no longer available. Please refresh and try again."

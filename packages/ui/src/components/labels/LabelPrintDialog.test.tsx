@@ -27,7 +27,16 @@ vi.mock('../Dialog', () => ({
   DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
-vi.mock('../CustomSelect', () => ({ default: () => <div data-testid="select" /> }));
+vi.mock('../CustomSelect', () => ({
+  default: ({ id, disabled, options }: { id: string; disabled?: boolean; options: Array<{ value: string; label: string }> }) => (
+    <div data-testid="select" id={id} data-disabled={String(Boolean(disabled))} data-options={JSON.stringify(options.map((o) => o.label))} />
+  ),
+}));
+vi.mock('../Checkbox', () => ({
+  Checkbox: ({ id, label, checked, onChange }: { id: string; label: string; checked: boolean; onChange: (e: unknown) => void }) => (
+    <label>{label}<input type="checkbox" id={id} checked={checked} onChange={onChange as never} /></label>
+  ),
+}));
 vi.mock('../Input', () => ({
   Input: ({ label, value, onChange, id }: { label: string; value: string; onChange: (e: unknown) => void; id: string }) => (
     <label>{label}<input id={id} value={value} onChange={onChange as never} /></label>
@@ -39,7 +48,7 @@ vi.mock('../Button', () => ({
   ),
 }));
 
-import { LabelPrintDialog } from './LabelPrintDialog';
+import { LabelPrintDialog, buildLabelSubjects } from './LabelPrintDialog';
 
 const A = '11111111-1111-4111-8111-111111111111';
 const B = '22222222-2222-4222-8222-222222222222';
@@ -78,7 +87,7 @@ describe('LabelPrintDialog', () => {
     await waitFor(() => expect(screen.getByText('Use standard-asset-label')).toBeTruthy());
     fireEvent.click(screen.getByText('Skip these and print the rest'));
     await waitFor(() => expect(hook.print).toHaveBeenCalledTimes(2));
-    expect(hook.print.mock.calls[1][0].ids).toEqual([B]);
+    expect(hook.print.mock.calls[1][0].labels).toEqual([{ recordId: B }]);
   });
 
   it('disables printing above the 200-label limit and says why', async () => {
@@ -95,6 +104,76 @@ describe('LabelPrintDialog', () => {
     fireEvent.click(screen.getByText('Print'));
     await waitFor(() => expect(hook.print).toHaveBeenCalled());
     expect(hook.print.mock.calls[0][0].overrides).toEqual({ detail: 'Warranty' });
+    expect(hook.print.mock.calls[0][0].labels).toEqual([{ recordId: A }]);
     expect(hook.print.mock.calls[0][0].linkedAssetId).toBeUndefined();
+  });
+});
+
+describe('LabelPrintDialog - picked custody (ticket work tag)', () => {
+  const held = (loc: string) => ({ custodyLocation: loc, nextAction: 'Follow up Oct 29' });
+  const choices3 = [
+    { assetId: 'a1', assetTag: 'T-1', name: 'Dock', custody: held('Main Office / Shelf A1') },
+    { assetId: 'a2', assetTag: 'T-2', name: 'Laptop', custody: held('Main Office / Shelf B3') },
+    { assetId: 'a3', assetTag: 'T-3', name: 'Phone', custody: held('Main Office / Shelf C2') },
+  ];
+  const open = () => render(<LabelPrintDialog isOpen onClose={vi.fn()} labelClass="ticket-work-tag" ids={[A]} />);
+  const printedOk = { status: 'printed', printed: 3, skipped: 0, blobUrl: 'blob:x', popupBlocked: false };
+
+  it('buildLabelSubjects: batch is one subject per held item; otherwise one subject with the pick', () => {
+    const mixed = [...choices3, { assetId: 'a4', assetTag: 'T-4', name: 'Not held', custody: null }];
+    expect(buildLabelSubjects(A, mixed, '__none__', true)).toEqual([
+      { recordId: A, linkedAssetId: 'a1' }, { recordId: A, linkedAssetId: 'a2' }, { recordId: A, linkedAssetId: 'a3' },
+    ]);
+    expect(buildLabelSubjects(A, mixed, 'a2', false)).toEqual([{ recordId: A, linkedAssetId: 'a2' }]);
+    expect(buildLabelSubjects(A, mixed, '__none__', false)).toEqual([{ recordId: A }]);
+  });
+
+  it('three held items: batch option shows with the count, and the preview says "3 items held."', async () => {
+    hook.loadLinkedAssets.mockResolvedValue(choices3);
+    open();
+    await waitFor(() => expect(screen.getByLabelText('One tag per held item (3)')).toBeTruthy());
+    expect(screen.getByText('3 items held.')).toBeTruthy();
+    expect(document.getElementById('label-print-linked-asset-select')!.getAttribute('data-disabled')).toBe('false');
+  });
+
+  it('turning batch on disables the picker, previews the count and sends three subjects with distinct assets', async () => {
+    hook.loadLinkedAssets.mockResolvedValue(choices3);
+    hook.print.mockResolvedValue(printedOk);
+    open();
+    fireEvent.click(await screen.findByLabelText('One tag per held item (3)'));
+    expect(screen.getByText('Print 3 tags, one per held item.')).toBeTruthy();
+    expect(document.getElementById('label-print-linked-asset-select')!.getAttribute('data-disabled')).toBe('true');
+    fireEvent.click(screen.getByText('Print'));
+    await waitFor(() => expect(hook.print).toHaveBeenCalled());
+    const labels = hook.print.mock.calls[0][0].labels;
+    expect(labels).toEqual(['a1', 'a2', 'a3'].map((linkedAssetId) => ({ recordId: A, linkedAssetId })));
+  });
+
+  it('picker options carry the shelf, never a raw id', async () => {
+    hook.loadLinkedAssets.mockResolvedValue([...choices3, { assetId: 'raw-id-9', assetTag: null, name: null, custody: null }]);
+    open();
+    await waitFor(() => expect(document.getElementById('label-print-linked-asset-select')).toBeTruthy());
+    const options = JSON.parse(document.getElementById('label-print-linked-asset-select')!.getAttribute('data-options')!);
+    expect(options).toContain('T-2 - Laptop \u2014 Main Office / Shelf B3');
+    expect(JSON.stringify(options)).not.toContain('raw-id-9');
+  });
+
+  it('one held item: no batch option, preview names the location, one subject is sent', async () => {
+    hook.loadLinkedAssets.mockResolvedValue([choices3[0]]);
+    hook.print.mockResolvedValue({ ...printedOk, printed: 1 });
+    open();
+    await waitFor(() => expect(screen.getByText('The tag will show Main Office / Shelf A1.')).toBeTruthy());
+    expect(screen.queryByLabelText(/One tag per held item/)).toBeNull();
+    fireEvent.click(screen.getByText('Print'));
+    await waitFor(() => expect(hook.print).toHaveBeenCalled());
+    expect(hook.print.mock.calls[0][0].labels).toEqual([{ recordId: A }]);
+  });
+
+  it('nothing held: no batch option and no custody preview', async () => {
+    hook.loadLinkedAssets.mockResolvedValue([{ assetId: 'a1', assetTag: 'T-1', name: 'Dock', custody: null }]);
+    open();
+    await waitFor(() => expect(hook.loadLinkedAssets).toHaveBeenCalled());
+    expect(screen.queryByLabelText(/One tag per held item/)).toBeNull();
+    expect(document.getElementById('label-print-preview')).toBeNull();
   });
 });

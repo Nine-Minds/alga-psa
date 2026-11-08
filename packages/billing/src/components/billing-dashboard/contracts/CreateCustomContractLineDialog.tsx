@@ -30,6 +30,8 @@ import {
 import { UsageServiceConfigPanel } from '../service-configurations/UsageServiceConfigPanel';
 import { FixedServiceConfigPanel } from '../service-configurations/FixedServiceConfigPanel';
 import type { IContractLineServiceRateTier } from '@alga-psa/types';
+import { useClientBillingSchedule } from '../../../hooks/useClientBillingSchedule';
+import { ArrearsFirstInvoiceHint } from './ArrearsFirstInvoiceHint';
 import { PrepaidBlockConfigFields } from './PrepaidBlockConfigFields';
 import {
   draftToInput,
@@ -49,6 +51,9 @@ interface CreateCustomContractLineDialogProps {
   onClose: () => void;
   contractId: string;
   currencyCode?: string;
+  /** Client and start date of the contract, to say when a Fixed arrears line's first partial period invoices. */
+  clientId?: string | null;
+  contractStartDate?: string | null;
   onCreated: () => Promise<void>;
 }
 
@@ -57,6 +62,8 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
   onClose,
   contractId,
   currencyCode,
+  clientId = null,
+  contractStartDate = null,
   onCreated,
 }) => {
   const { t } = useTranslation('msp/contracts');
@@ -68,6 +75,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
   const [planType, setPlanType] = useState<PlanType | null>(null);
   const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
   const [billingTiming, setBillingTiming] = useState<'arrears' | 'advance'>('arrears');
+  const { schedule: clientSchedule } = useClientBillingSchedule(clientId, isOpen && !!contractStartDate);
   const [invoiceLineDescription, setInvoiceLineDescription] = useState('');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
@@ -1149,6 +1157,19 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                     defaultValue: 'This text prints verbatim on the recurring invoice line.',
                   })}
                 </p>
+                {planType === 'Fixed' && (
+                  <div className="mt-2">
+                    <ArrearsFirstInvoiceHint
+                      id="create-custom-line-first-invoice-hint"
+                      lineType="Fixed"
+                      cadenceOwner="client"
+                      billingTiming={billingTiming}
+                      startDate={startDate || contractStartDate}
+                      clientSchedule={clientSchedule}
+                      today={new Date()}
+                    />
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

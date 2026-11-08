@@ -23,7 +23,7 @@ import {
   updateServiceRequestExecutionConfigAction,
   setLinkedServiceForDefinitionAction,
   updateServiceRequestExecutionProviderAction,
-  updateServiceRequestVisibilityConfigAction,
+  updateServiceRequestAudienceAction,
   updateServiceRequestVisibilityProviderAction,
   validateServiceRequestDefinitionForPublishAction,
 } from './actions';
@@ -49,6 +49,11 @@ import { ServiceRequestCard } from '../../client-portal/request-services/Service
 import { ServiceRequestIconPicker } from './ServiceRequestIconPicker';
 import { FieldVisibilityEditor } from './FieldVisibilityEditor';
 import { AnswerMappingSection } from './AnswerMappingSection';
+import {
+  ServiceRequestAudienceEditor,
+  type ServiceRequestAudienceValue,
+  type ServiceRequestAudienceInitialValue,
+} from './ServiceRequestAudienceEditor';
 import { SubmissionMappingPanel } from './SubmissionMappingPanel';
 import { SERVICE_REQUEST_ICON_OPTIONS } from '../../../lib/service-requests/iconCatalog';
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
@@ -95,6 +100,8 @@ interface EditorData {
     formBehaviorConfig: Record<string, unknown>;
     visibilityProvider: string;
     visibilityConfig: Record<string, unknown>;
+    audience: ServiceRequestAudienceInitialValue;
+    removedAudienceReferences: string[];
     availableExecutionProviders: Array<{
       key: string;
       displayName: string;
@@ -721,7 +728,7 @@ export default function ServiceRequestDefinitionEditorPage() {
   const [visibilityProviderInput, setVisibilityProviderInput] = useState(
     'all-authenticated-client-users'
   );
-  const [visibilityConfigText, setVisibilityConfigText] = useState('{}');
+  const [audienceDraft, setAudienceDraft] = useState<ServiceRequestAudienceValue>({ join: 'and', clauses: [] });
   const [ticketRoutingConfigInput, setTicketRoutingConfigInput] = useState({
     boardId: '',
     statusId: '',
@@ -1003,9 +1010,7 @@ export default function ServiceRequestDefinitionEditorPage() {
 
     setFormBehaviorProviderInput(data.execution.formBehaviorProvider);
     setVisibilityProviderInput(data.execution.visibilityProvider);
-    setVisibilityConfigText(
-      JSON.stringify(data.execution.visibilityConfig ?? {}, null, 2)
-    );
+    setAudienceDraft(data.execution.audience);
   }, [data]);
 
   const handleTicketRoutingBoardChange = async (nextBoardId: string) => {
@@ -1154,17 +1159,13 @@ export default function ServiceRequestDefinitionEditorPage() {
     }
 
     try {
-      const parsed = visibilityConfigText.trim() ? JSON.parse(visibilityConfigText) : {};
-      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-        throw new Error('Visibility config must be a JSON object');
+      const result = await updateServiceRequestAudienceAction(data.definitionId, audienceDraft);
+      if (result && 'success' in result && result.success === false) {
+        throw new Error(result.message);
       }
-      await updateServiceRequestVisibilityConfigAction(
-        data.definitionId,
-        parsed as Record<string, unknown>
-      );
     } catch (error) {
-      console.error('Save all: visibility config failed', error);
-      failures.push(t('editor.execution.visibility.title'));
+      console.error('Save all: audience failed', error);
+      failures.push(t('editor.execution.visibility.audience.title'));
     }
 
     await reloadDefinitionEditorState(data.definitionId);
@@ -1878,41 +1879,14 @@ export default function ServiceRequestDefinitionEditorPage() {
         )}
         <div className="space-y-3 rounded border p-3 bg-[rgb(var(--color-border-100))]">
           <div className="text-sm font-semibold">{t('editor.execution.visibility.title')}</div>
-          <TextArea
-            id="service-request-visibility-config"
-            label={t('editor.execution.visibility.config')}
-            wrapperClassName="mb-0"
-            className="min-h-[140px] font-mono"
-            value={visibilityConfigText}
-            onChange={(event) => setVisibilityConfigText(event.target.value)}
+          <ServiceRequestAudienceEditor
+            definitionId={data.definitionId}
+            initialAudience={data.execution.audience}
+            removedReferences={data.execution.removedAudienceReferences}
+            onChange={setAudienceDraft}
+            onSaved={() => reloadDefinitionEditorState(data.definitionId)}
           />
-          <div>
-            <Button
-              id="service-request-visibility-config-save"
-              onClick={async () => {
-                try {
-                  const parsed = visibilityConfigText.trim()
-                    ? JSON.parse(visibilityConfigText)
-                    : {};
-                  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-                    toast.error(t('messages.error.visibilityNotObject'));
-                    return;
-                  }
-                  await updateServiceRequestVisibilityConfigAction(
-                    data.definitionId,
-                    parsed as Record<string, unknown>
-                  );
-                  await reloadDefinitionEditorState(data.definitionId);
-                  toast.success(t('messages.success.visibilityConfigUpdated'));
-                } catch (error) {
-                  console.error('Failed to update visibility config', error);
-                  toast.error(t('messages.error.visibilityInvalid'));
-                }
-              }}
-            >
-              {t('editor.execution.visibility.save')}
-            </Button>
-          </div>
+
         </div>
         <FieldRow label={t('editor.execution.fields.executionProvider')} value={data.execution.executionProvider} />
         <FieldRow label={t('editor.execution.fields.executionConfig')} value={JSON.stringify(data.execution.executionConfig)} />

@@ -149,6 +149,8 @@ export type TicketActivityChanges = Partial<
 >;
 
 export interface TicketActivityActorInfo {
+  /** Owner-local attribution reference for a foreign human; never a login user. */
+  actorReferenceId?: string | null;
   actorType: TicketActivityActor;
   userId?: string | null;
   contactId?: string | null;
@@ -184,6 +186,9 @@ export interface TicketActivityRow {
   /** Set when a principal acted on a human's behalf (EE only); `via_principal_name` is its display name. */
   via_principal_user_id?: string | null;
   via_principal_name?: string | null;
+  /** Legacy rows omit these fields; reference identity is qualified by row.tenant. */
+  actor_reference_id?: string | null;
+  actor_organization_name?: string | null;
   source: string;
   occurred_at: string;
   changes: TicketActivityChanges;

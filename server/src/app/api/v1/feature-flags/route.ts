@@ -10,7 +10,7 @@ const featureFlagRequestSchema = z.object({
     userRole: z.string().optional(),
     companySize: z.enum(['small', 'medium', 'large', 'enterprise']).optional(),
     subscriptionPlan: z.string().optional(),
-    customProperties: z.record(z.any()).optional(),
+    customProperties: z.record(z.string(), z.any()).optional(),
   }).optional(),
 });
 
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Invalid request data', details: error.errors },
+        { error: 'Invalid request data', details: error.issues },
         { status: 400 }
       );
     }

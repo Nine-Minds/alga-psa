@@ -15,7 +15,7 @@ import {
   resumeEmailProvider,
   updateEmailProvider,
 } from '@alga-psa/integrations/actions';
-import type { EmailProvider } from './types';
+import type { PublicEmailProvider } from './types';
 import { EmailProviderCard, EmptyProviderPlaceholder } from './EmailProviderCard';
 import { RefreshCw } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -26,20 +26,20 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 
 interface EmailProviderListProps {
-  providers: EmailProvider[];
+  providers: PublicEmailProvider[];
   reconnectingProviderIds?: ReadonlySet<string>;
-  onEdit: (provider: EmailProvider) => void;
+  onEdit: (provider: PublicEmailProvider) => void;
   onDelete: (providerId: string) => void;
-  onTestConnection: (provider: EmailProvider) => Promise<void>;
+  onTestConnection: (provider: PublicEmailProvider) => Promise<void>;
   onRefresh: () => void;
-  onRefreshWatchSubscription: (provider: EmailProvider) => void;
-  onRetryRenewal: (provider: EmailProvider) => void;
-  onReconnectOAuth?: (provider: EmailProvider) => void;
-  onResyncProvider?: (provider: EmailProvider) => Promise<void>;
-  onRunDiagnostics: (provider: EmailProvider) => void;
+  onRefreshWatchSubscription: (provider: PublicEmailProvider) => void;
+  onRetryRenewal: (provider: PublicEmailProvider) => void;
+  onReconnectOAuth?: (provider: PublicEmailProvider) => void;
+  onResyncProvider?: (provider: PublicEmailProvider) => Promise<void>;
+  onRunDiagnostics: (provider: PublicEmailProvider) => void;
   onAddClick?: () => void;
   /** Provider-specific reconnect dispatch for auth_failure auto-pauses. */
-  onReconnect: (provider: EmailProvider) => void;
+  onReconnect: (provider: PublicEmailProvider) => void;
 }
 
 export function EmailProviderList({
@@ -79,7 +79,7 @@ export function EmailProviderList({
     loadDefaults();
   }, []);
 
-  const handleChangeDefaults = async (provider: EmailProvider, newDefaultsId?: string) => {
+  const handleChangeDefaults = async (provider: PublicEmailProvider, newDefaultsId?: string) => {
     try {
       setUpdatingProviderId(provider.id);
       const result = await updateEmailProvider(provider.id, {
@@ -103,7 +103,7 @@ export function EmailProviderList({
     }
   };
 
-  const handleTestConnectionInternal = async (provider: EmailProvider) => {
+  const handleTestConnectionInternal = async (provider: PublicEmailProvider) => {
     try {
       setBusyProviderId(provider.id);
       setBusyAction('test');
@@ -114,7 +114,7 @@ export function EmailProviderList({
     }
   };
 
-  const handleResyncProviderInternal = async (provider: EmailProvider) => {
+  const handleResyncProviderInternal = async (provider: PublicEmailProvider) => {
     if (!onResyncProvider) return;
     try {
       setBusyProviderId(provider.id);
@@ -126,7 +126,7 @@ export function EmailProviderList({
     }
   };
 
-  const handleTogglePause = async (provider: EmailProvider) => {
+  const handleTogglePause = async (provider: PublicEmailProvider) => {
     const isPaused = Boolean(provider.inboundPausedAt);
     try {
       setBusyProviderId(provider.id);

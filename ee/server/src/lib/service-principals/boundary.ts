@@ -2,7 +2,10 @@ import { getConnection, tenantDb } from '@alga-psa/db';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { TIER_FEATURES } from '@alga-psa/types';
 import { assertTenantTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
+import { servicePrincipalDb } from './tables';
 import { getForKey } from 'server/src/lib/api/rateLimit/apiRateLimitSettingsModel';
+import { BoundaryError } from './errors';
+export { mapServicePrincipalError } from './errors';
 import type {
   BoundaryApiContext,
   BoundaryApiKeyRecord,
@@ -18,17 +21,6 @@ import { rateLimitCeiling } from './entitlements';
 
 export const ACT_AS_HEADER = 'x-alga-act-as';
 
-class BoundaryError extends Error {
-  readonly statusCode: number;
-  readonly code: string;
-  constructor(code: string, message: string, statusCode: number) {
-    super(message);
-    this.name = 'ServicePrincipalBoundaryError';
-    this.code = code;
-    this.statusCode = statusCode;
-  }
-}
-
 interface PrincipalRow {
   user_id: string;
   allow_act_as: boolean;
@@ -39,7 +31,7 @@ interface PrincipalRow {
 
 async function loadActivePrincipal(tenant: string, userId: string): Promise<PrincipalRow | null> {
   const knex = await getConnection(tenant);
-  const row = (await tenantDb(knex, tenant)
+  const row = (await servicePrincipalDb(knex, tenant)
     .table('service_principals')
     .where({ user_id: userId })
     .first('user_id', 'allow_act_as', 'archived_at', 'rate_limit_max_tokens', 'rate_limit_refill_per_min')) as
@@ -153,22 +145,4 @@ export async function servicePrincipalKeyGate(owner: BoundaryKeyGateOwner): Prom
   } catch {
     return false;
   }
-}
-
-/**
- * Rewrites errors that only EE can describe (R5.4, R5.9). The seam erases class
- * identity, so match on the error name.
- */
-export function mapServicePrincipalError<T>(error: T): T {
-  const err = error as unknown as { name?: string; field?: string; message?: string };
-  if (err && err.name === 'HumanWorkOwnerRequiredError') {
-    const mapped = new BoundaryError(
-      'ACT_AS_REQUIRED',
-      `This action must be performed by a person. Send the X-Alga-Act-As header with an active internal user id (the principal must have act-as enabled) so the work is attributed to that user.` +
-        (err.field ? ` Field: ${err.field}.` : ''),
-      422,
-    );
-    return mapped as unknown as T;
-  }
-  return error;
 }

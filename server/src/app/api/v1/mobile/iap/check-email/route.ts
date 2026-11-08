@@ -33,7 +33,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ exists });
   } catch (error) {
     if (error instanceof ZodError) {
-      return handleApiError(new ValidationError('Validation failed', error.errors));
+      return handleApiError(new ValidationError('Validation failed', error.issues));
     }
     return handleApiError(error);
   }

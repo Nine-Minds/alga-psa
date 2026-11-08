@@ -125,6 +125,8 @@ function normalizeActivityRow(row: Record<string, unknown>): TicketActivityRow {
     actor_contact_id: (row.actor_contact_id as string | null) ?? null,
     actor_display_name: (row.actor_display_name as string | null) ?? null,
     via_principal_user_id: (row.via_principal_user_id as string | null | undefined) ?? null,
+    actor_reference_id: (row.actor_reference_id as string | null) ?? null,
+    actor_organization_name: (row.actor_organization_name as string | null) ?? null,
     source: row.source as string,
     occurred_at:
       row.occurred_at instanceof Date

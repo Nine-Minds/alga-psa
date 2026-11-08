@@ -56,12 +56,27 @@
     "manageLicense": "Gerenciar licença",
     "ariaLabel": "Status da licença",
     "dismiss": "Dispensar",
-    "licenseExpiresIn_few": "A licença expira em {{count}} dias. Renove para evitar interrupção do serviço.",
+
+    "subscriptionEnding": "A sua subscrição Pro foi cancelada. O Pro termina em {{date}}. Subscreva novamente para manter o Pro.",
+    "subscriptionEndingNoDate": "A sua subscrição Pro foi cancelada. Subscreva novamente para manter o Pro.",
+    "subscriptionLapsed": "Está agora na edição gratuita. Subscreva novamente para restaurar o Pro.",
+    "resubscribe": "Subscrever novamente",
+    "termEnds": "O seu acesso ao Pro termina em {{date}}. Renove para manter o Pro.",
+    "termEndsNoDate": "O seu período Pro está a terminar. Renove para manter o Pro.",
+    "paymentFailed": "Falha no pagamento — tentaremos novamente em {{date}}. Atualize o método de pagamento para manter o Pro.",
+    "paymentFailedNoRetry": "Falha no pagamento. Atualize o método de pagamento para manter o Pro.",
+    "paymentFailedEndsOn": "O Pro termina em {{date}} se o pagamento continuar a falhar.",
+    "paymentFailedEnded": "O Pro terminou — falha no pagamento. A sua appliance executa o Essentials.",
+    "paymentFailedEndedEnding": "A sua subscrição Pro terminou — falha no pagamento. O Pro continua ativo até {{date}}. Subscreva novamente para manter o Pro.",
+    "paymentFailedEndedEndingNoDate": "A sua subscrição Pro terminou — falha no pagamento. Subscreva novamente para manter o Pro.",
+    "updatePaymentMethod": "Atualizar método de pagamento",
+"licenseExpiresIn_few": "A licença expira em {{count}} dias. Renove para evitar interrupção do serviço.",
     "licenseExpiresIn_many": "A licença expira em {{count}} dias. Renove para evitar interrupção do serviço.",
     "trialDaysRemaining_few": "Avaliação Pro ativa — {{count}} dias restantes.",
     "trialDaysRemaining_many": "Avaliação Pro ativa — {{count}} dias restantes.",
     "trialExpiresIn_few": "A avaliação Pro expira em {{count}} dias. Insira uma chave de licença para manter os recursos Pro.",
     "trialExpiresIn_many": "A avaliação Pro expira em {{count}} dias. Insira uma chave de licença para manter os recursos Pro."
+
   },
   "nav": {
     "dashboard": "Painel",
@@ -156,7 +171,8 @@
     "unnamedUser": "Usuário sem nome",
     "unnamedTeam": "Equipe sem nome",
     "userPicker": "Seletor de usuários",
-    "noUsersFound": "Nenhum usuário encontrado"
+    "noUsersFound": "Nenhum usuário encontrado",
+    "contactRemoteLocation": "Remoto"
   },
   "serviceTypeSelect": {
     "placeholder": "Selecione um tipo de serviço...",
@@ -204,6 +220,10 @@
     "passwordMismatch": "As senhas não coincidem"
   },
   "errors": {
+    "coManaged": {
+      "readOnly": "Este espaço de trabalho cogerido é somente leitura. Login, leitura, exportação e recuperação da licença continuam disponíveis.",
+      "acceptancePending": "O administrador do cliente deve aceitar a cogestão antes de usar este espaço de trabalho."
+    },
     "validation": {
       "required": "{{field}} é obrigatório.",
       "invalidType": "{{field}} tem o tipo incorreto.",
@@ -1583,6 +1603,8 @@
     "printColumns": "Imprimir colunas",
     "dialog": {
       "assetTitle": "Imprimir etiquetas de recursos",
+      "batch_one": "Uma etiqueta para o item retido ({{count}})",
+      "batch_other": "Uma etiqueta por item retido ({{count}})",
       "count_one": "{{count}} selecionado",
       "count_other": "{{count}} selecionados",
       "failed": "Não foi possível imprimir as etiquetas.",
@@ -1592,6 +1614,14 @@
       "noAsset": "Nenhum recurso",
       "notFound": "Não foi possível abrir estes registros.",
       "openPdf": "Abrir PDF",
+      "previewBatch_one": "Imprimir {{count}} etiqueta para o item retido.",
+      "previewBatch_other": "Imprimir {{count}} etiquetas, uma por item retido.",
+      "previewPicked": "A etiqueta mostrará o local e a próxima ação deste item.",
+      "previewPickedNotHeld": "Este item não está retido, então a etiqueta não mostra local.",
+      "previewSingle": "A etiqueta mostrará {{location}}.",
+      "previewSingleNoLocation": "A etiqueta mostrará a próxima ação deste item.",
+      "previewSummary_one": "{{count}} item retido.",
+      "previewSummary_other": "{{count}} itens retidos.",
       "printed_one": "{{count}} etiqueta impressa.",
       "printed_other": "{{count}} etiquetas impressas.",
       "printing": "Preparando…",
@@ -1603,6 +1633,7 @@
       "template": "Modelo",
       "ticketTitle": "Imprimir etiquetas de trabalho",
       "tooMany": "Você pode imprimir no máximo {{max}} etiquetas por vez.",
+      "unnamedAsset": "Recurso sem nome",
       "useTemplate": "Usar {{template}}"
     }
   },
@@ -2196,5 +2227,8 @@
   },
   "viewSwitcher": {
     "ariaLabel": "Alternar visualização"
+  },
+  "entityChip": {
+    "moreTags": "mais {{count}} tags: {{names}}"
   }
 }

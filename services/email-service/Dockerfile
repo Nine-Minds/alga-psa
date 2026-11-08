@@ -23,6 +23,7 @@ COPY packages/ee/package.json ./packages/ee/
 COPY packages/event-bus/package.json ./packages/event-bus/
 COPY packages/event-schemas/package.json ./packages/event-schemas/
 COPY packages/formatting/package.json ./packages/formatting/
+COPY packages/predicates/package.json ./packages/predicates/
 COPY packages/storage/package.json ./packages/storage/
 COPY packages/types/package.json ./packages/types/
 
@@ -36,12 +37,17 @@ RUN npm config set legacy-peer-deps true && npm install --include-workspace-root
   --workspace=@alga-psa/event-bus \
   --workspace=@alga-psa/event-schemas \
   --workspace=@alga-psa/formatting \
+  --workspace=@alga-psa/predicates \
   --workspace=@alga-psa/storage \
   --workspace=@alga-psa/types
 
 COPY shared/ ./shared/
 COPY server/ ./server/
 COPY packages/ ./packages/
+
+# Predicates must build first: types and shared import it via dist/.
+WORKDIR /app/packages/predicates
+RUN npm run build
 
 WORKDIR /app/packages/core
 RUN npm run build && tsc-alias -p tsconfig.json -f --resolve-full-paths
@@ -92,4 +98,14 @@ WORKDIR /app
 COPY --from=builder /app /app
 
 ENV NODE_ENV=production
+
+# Run as the unprivileged node user (uid 1000). The /app tree stays root-owned
+# and read-only to the process. /run/secrets must be owned by the running uid so
+# the filesystem secret provider can write tenant secrets below it, and
+# /data/files is the local file-storage root (mount the files volume here).
+RUN install -d -o 1000 -g 1000 -m 0700 /run/secrets && \
+    install -d -o 1000 -g 1000 -m 0755 /data/files
+
+USER 1000:1000
+
 ENTRYPOINT ["/app/entrypoint.sh"]

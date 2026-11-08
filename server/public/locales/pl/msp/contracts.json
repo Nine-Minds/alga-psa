@@ -150,7 +150,11 @@
       "title": "Przypisanie klienta",
       "useTenantRenewalDefaults": "Użyj domyślnych ustawień odnowień tenanta",
       "usingCustomSettings": "Używanie niestandardowych ustawień przypisania",
-      "usingTenantDefaults": "Używanie domyślnych ustawień tenanta"
+      "usingTenantDefaults": "Używanie domyślnych ustawień tenanta",
+      "billingProfileUseDefault": "Użyj {{name}} (domyślny klienta)",
+      "billingProfileAssigned": "Przypisany profil rozliczeniowy",
+      "billingProfileUnavailable": "Brak profilu — przypisanie oczekuje",
+      "billingProfileLoading": "Ładowanie profilu rozliczeniowego…"
     },
     "clientOwnership": {
       "assignmentStatus": "Status przypisania",
@@ -375,6 +379,82 @@
         "failed": "Nie udało się zmienić sposobu pomiaru tej usługi."
       },
       "effectiveFrom": "Zmiana sposobu pomiaru obowiązuje od"
+    },
+    "billing": {
+      "title": "Profil rozliczeniowy i warunki płatności",
+      "asOf": "stan na {{date}}",
+      "profileLabel": "Profil rozliczeniowy",
+      "inactive": "Nieaktywny",
+      "lineCountOne": "{{count}} pozycja",
+      "lineCountOther": "{{count}} pozycji",
+      "termsLabel": "Warunki płatności",
+      "terms": {
+        "net_30": "Netto 30",
+        "net_15": "Netto 15",
+        "net_14": "Netto 14",
+        "net_7": "Netto 7",
+        "due_on_receipt": "Płatne po otrzymaniu"
+      },
+      "termsSource": {
+        "profile": "z profilu rozliczeniowego",
+        "client": "od klienta",
+        "tenant": "z ustawień domyślnych organizacji",
+        "default": "domyślne — nie ustawiono warunków"
+      },
+      "profileSource": {
+        "client_default": "domyślny klienta",
+        "contract": "przypisany do umowy",
+        "contract_line": "ustawiony w pozycji",
+        "work_item": "ustawiony w zgłoszeniu lub projekcie"
+      },
+      "valueSource": {
+        "profile": "Profil",
+        "client": "Klient",
+        "contract": "Umowa",
+        "default": "Domyślne"
+      },
+      "dueSentence": "Faktura z dnia {{invoiceDate}} jest płatna do {{dueDate}} — {{terms}} {{source}}",
+      "detailsToggle": "Pozostałe szczegóły rozliczeń",
+      "fieldNone": "Brak",
+      "taxRegionChain": "Region usługi, następnie lokalizacja pozycji umowy, następnie domyślny region klienta",
+      "taxExempt": "Zwolniony z podatku",
+      "taxable": "Podlega opodatkowaniu",
+      "templateCustom": "Szablon niestandardowy",
+      "templateDefault": "Szablon domyślny",
+      "paymentMethod": {
+        "credit_card": "Karta kredytowa",
+        "bank_transfer": "Przelew bankowy",
+        "check": "Czek"
+      },
+      "fieldLabel": {
+        "bill_to": "Nabywca",
+        "payment_method": "Metoda płatności",
+        "tax_exemption": "Zwolnienie z podatku",
+        "tax_region": "Region podatkowy",
+        "delivery": "Dostarczanie faktur",
+        "template": "Szablon faktury",
+        "po_number": "Numer zamówienia",
+        "currency": "Waluta",
+        "cadence": "Cykl rozliczeń",
+        "profile_billing_cycle": "Cykl rozliczeniowy profilu",
+        "profile_billing_cycle_unapplied": "Cykl rozliczeniowy profilu (jeszcze niezastosowany)"
+      },
+      "warnings": {
+        "inactiveProfile": "Profil {{name}} jest nieaktywny. Opłaty pozostają do niego przypisane, ale są fakturowane na profilu domyślnym z jego warunkami płatności.",
+        "mixedProfiles": "Ta umowa jest rozliczana przez {{count}} różne profile, więc żaden pojedynczy profil jej nie obejmuje. Każda faktura stosuje warunki płatności profilu, na którym jest wystawiona.",
+        "lineOverride": "Pozycja „{{line}}\" jest rozliczana przez {{name}} zamiast profilu umowy.",
+        "workItemOverride": "Czas zapisany w zgłoszeniu lub projekcie jest rozliczany przez profil tego elementu pracy, jeśli go ma. W przeciwnym razie obowiązuje domyślny profil klienta.",
+        "workItemOverrideWithProfiles": "Czas zapisany w zgłoszeniu lub projekcie jest rozliczany przez profil tego elementu pracy, jeśli go ma ({{names}}). W przeciwnym razie obowiązuje domyślny profil klienta.",
+        "mixedProfilesSameInvoice": "Opłaty z tej umowy są przypisane do {{count}} różnych profili, ale wszystkie trafiają na fakturę profilu {{invoice}}, więc obowiązuje jeden zestaw warunków płatności.",
+        "bucketCoverageNote": "Na pozycjach z przedpłaconą pulą lub blokiem godzin czas pokryty przez pulę lub blok nie podąża za elementem pracy; podąża za nim tylko pozostały czas godzinowy."
+      },
+      "simulationNote": "Symulowana wycena używa zwolnienia z podatku na poziomie klienta. Własne zwolnienie profilu nie jest stosowane w tej symulacji.",
+      "dueSentenceWorkItem": "Faktura z dnia {{invoiceDate}} jest płatna do {{dueDate}} — {{terms}} {{source}}, chyba że zgłoszenie lub projekt jest rozliczane przez inny profil",
+      "workItemProfileLine": "Jeśli zgłoszenie lub projekt jest rozliczane przez {{name}}:",
+      "invoiceLanding": {
+        "notBilledSeparately": "Przypisano do {{attributed}}; zafakturowano na {{invoice}} ({{attributed}} nie rozlicza osobno) — {{terms}}, termin {{dueDate}}",
+        "inactiveProfile": "Przypisano do {{attributed}}; zafakturowano na {{invoice}} ({{attributed}} jest nieaktywny, więc nie ma własnej faktury) — {{terms}}, termin {{dueDate}}"
+      }
     }
   },
   "contractDialog": {
@@ -588,7 +668,8 @@
       "failedToResetRate": "Nie udało się przywrócić stawki pozycji",
       "protectedStartDate": "Data rozpoczęcia musi przypadać {{boundary}} lub wcześniej, aby uwzględnić chronioną historię usług.",
       "protectedEndDate": "Data zakończenia musi przypadać {{boundary}} lub później, aby uwzględnić chronioną historię usług.",
-      "cannotEditWithInvoices": "Nie można edytować linii kontraktowej: ta umowa ma powiązane faktury. Linii kontraktowych nie można edytować po wygenerowaniu faktur."
+      "cannotEditWithInvoices": "Nie można edytować linii kontraktowej: ta umowa ma powiązane faktury. Linii kontraktowych nie można edytować po wygenerowaniu faktur.",
+      "reloadLatest": "Wczytaj najnowszą wersję"
     },
     "loading": {
       "contractLines": "Ładowanie linii kontraktowych",
@@ -698,6 +779,16 @@
       "statusSuperseded": "Zastąpiono",
       "supersededHistory": "Zastąpione oczekujące edycje ({{count}})",
       "supersededBy": "Zastąpiono przez"
+    },
+    "pricing": {
+      "catalog": "katalog",
+      "override": "nadpisana",
+      "cost": "Koszt: {{cost}}",
+      "costInCurrency": "Koszt w {{currency}}: {{cost}}",
+      "margin": "Marża: {{margin}} za jednostkę"
+    },
+    "invoiceText": {
+      "subtitleLabel": "Podtytuł faktury"
     }
   },
   "contractLineEdit": {
@@ -714,7 +805,9 @@
       "rate": "Stawka",
       "invoiceText": "Tekst wiersza faktury",
       "invoiceTextPlaceholder": "Drukowany na fakturze; domyślnie nazwa wiersza",
-      "invoiceTextHelp": "Ten tekst jest drukowany dosłownie w wierszu faktury cyklicznej."
+      "invoiceTextHelp": "Ten tekst jest drukowany dosłownie w wierszu faktury cyklicznej.",
+      "invoiceSubtitle": "Podtytuł faktury",
+      "invoiceSubtitleHelp": "Wyciszony drugi wiersz pod tekstem pozycji faktury."
     },
     "sections": {
       "billingTiming": "Termin rozliczeń",
@@ -1545,7 +1638,11 @@
       "nameLabel": "Nazwa linii (opcjonalnie)",
       "namePlaceholder": "Linia stała {{number}}",
       "removeLine": "Usuń linię stałą",
-      "noServiceWarning": "Ta linia ma kwotę cykliczną, ale nie ma usługi, na której można ją rozliczyć. Dodaj usługę przed zakończeniem; nadal możesz zapisać ją jako wersję roboczą."
+      "noServiceWarning": "Ta linia ma kwotę cykliczną, ale nie ma usługi, na której można ją rozliczyć. Dodaj usługę przed zakończeniem; nadal możesz zapisać ją jako wersję roboczą.",
+      "invoiceTitleLabel": "Tytuł faktury (opcjonalnie)",
+      "invoiceTitlePlaceholder": "Domyślnie nazwa pozycji",
+      "invoiceSubtitleLabel": "Podtytuł faktury (opcjonalnie)",
+      "invoiceSubtitlePlaceholder": "np. Zarządzane stacje końcowe i kopie zapasowe"
     },
     "recurringChange": {
       "title": "Potwierdź zmianę sumy cyklicznej",
@@ -1699,6 +1796,9 @@
       "label": "Profil rozliczeniowy",
       "none": "Użyj domyślnego profilu klienta",
       "hint": "Opłaty z tej umowy są rozliczane w tym profilu, chyba że pozycja go zastąpi."
+    },
+    "billingTiming": {
+      "label": "Moment rozliczenia"
     }
   },
   "wizardFixed": {
@@ -1749,10 +1849,7 @@
       "allocationQuantityLabel": "Ilość alokacji",
       "noCurrencyPrice": "Brak ceny w walucie {{currency}} w katalogu. Podaj stawkę jednostkową."
     },
-    "advanceSuggestion": {
-      "message": "Przy rozliczaniu z dołu tę pozycję można zafakturować dopiero po zakończeniu pierwszego okresu usługi. Przy rozliczaniu z góry według cyklu umowy zostanie zafakturowana w dniu rozpoczęcia.",
-      "action": "Rozliczaj z góry według cyklu umowy"
-    }
+    "billingTimingLabel": "Moment rozliczenia"
   },
   "wizardProducts": {
     "actions": {
@@ -1775,7 +1872,8 @@
       "productMissingPrice": "Ten produkt nie ma ceny domyślnej ani nadpisania. Nie można go rozliczać, dopóki nie wprowadzisz ceny jednostkowej.",
       "noCurrencyPriceEnterUnitPrice": "Brak ceny w {{currency}} w katalogu. Wprowadź cenę jednostkową.",
       "noCurrencyPriceWithLegacyHint": "Brak ceny w {{currency}} w katalogu. Starsza domyślna stawka: {{rate}}. Wprowadź cenę jednostkową w {{currency}}."
-    }
+    },
+    "billingTimingLabel": "Moment rozliczenia"
   },
   "wizardHourly": {
     "actions": {
@@ -1833,7 +1931,8 @@
         "rolloverDisabled": "Wyłączone",
         "rolloverEnabled": "Włączone"
       }
-    }
+    },
+    "billingTimingLabel": "Moment rozliczenia"
   },
   "wizardUsage": {
     "actions": {
@@ -1871,7 +1970,8 @@
     },
     "values": {
       "defaultUnit": "jednostka"
-    }
+    },
+    "billingTimingLabel": "Moment rozliczenia"
   },
   "wizardReview": {
     "heading": "Przejrzyj umowę",
@@ -1980,7 +2080,10 @@
         "one": "Liczba produktów: {{count}}",
         "other": "Liczba produktów: {{count}}"
       },
-      "overrideRate": "- nadpisanie {{rate}}/{{currencyCode}}"
+      "overrideRate": "- nadpisanie {{rate}}/{{currencyCode}}",
+      "cost": "Koszt: {{cost}}",
+      "costInCurrency": "Koszt w {{currency}}: {{cost}}",
+      "margin": "Marża: {{margin}} za jednostkę"
     },
     "hourly": {
       "badgeCount": {
@@ -2002,9 +2105,13 @@
     },
     "total": {
       "title": "Szacowana suma miesięczna",
-      "description": "Tylko opłaty stałe. Usługi godzinowe i rozliczane według zużycia są rozliczane osobno na podstawie rzeczywistego użycia.",
-      "perMonth": "miesięcznie",
-      "savedDraftValue": "Zapisana wartość wersji roboczej: {{amount}}"
+      "description": "Produkty i opłaty stałe są wliczone w tę sumę. Usługi godzinowe i rozliczane według zużycia są rozliczane według rzeczywistych wartości.",
+      "savedDraftValue": "Zapisana wartość wersji roboczej: {{amount}}",
+      "titleCadence": "Szacowana suma",
+      "mixedFrequencyTitle": "Szacowana suma według częstotliwości rozliczeń",
+      "perFrequency": "{{amount}} {{period}}",
+      "perMonthEquivalent": "ok. {{amount}} miesięcznie",
+      "savedDraftValueMonthly": "Zapisana wartość wersji roboczej: {{amount}} miesięcznie"
     },
     "finalChecklist": {
       "title": "Zanim zakończysz:",
@@ -2023,7 +2130,16 @@
       "badgeCount_few": "{{count}} pozycje",
       "badgeCount_many": "{{count}} pozycji",
       "expiresAfter_few": "wygasa po {{count}} miesiącach",
-      "expiresAfter_many": "wygasa po {{count}} miesiącach"
+      "expiresAfter_many": "wygasa po {{count}} miesiącach",
+      "cadenceSummary": "{{hours}} godz. w każdym okresie rozliczeniowym za {{price}}",
+      "overageRate": "nadwyżka {{rate}}/godz."
+    },
+    "billingTiming": {
+      "label": "Moment rozliczenia:",
+      "advance": "Z góry",
+      "arrears": "Z dołu",
+      "advanceInherited": "Z góry (domyślnie z umowy)",
+      "arrearsInherited": "Z dołu (domyślnie z umowy)"
     }
   },
   "wizardTemplateLines": {
@@ -2175,7 +2291,11 @@
     },
     "actions": {
       "addService": "Dodaj usługę"
-    }
+    },
+    "invoiceTitleLabel": "Tytuł faktury (opcjonalnie)",
+    "invoiceTitlePlaceholder": "Domyślnie nazwa pozycji",
+    "invoiceSubtitleLabel": "Podtytuł faktury (opcjonalnie)",
+    "invoiceSubtitlePlaceholder": "np. Zarządzane stacje końcowe i kopie zapasowe"
   },
   "templateProducts": {
     "heading": "Produkty",
@@ -2327,7 +2447,8 @@
       "period": "Okres: {{period}}"
     },
     "prepaid": {
-      "blockSummaryNeutral": "{{hours}} godz. za {{price}} (w walucie klienta)"
+      "blockSummaryNeutral": "{{hours}} godz. za {{price}} (w walucie klienta)",
+      "cadenceSummaryNeutral": "{{hours}} godz. w każdym okresie rozliczeniowym za {{price}} (w walucie klienta)"
     }
   },
   "templatePreview": {
@@ -2437,6 +2558,22 @@
       "description": "Ta umowa nie ma pozycji umowy. Najpierw dodaj pozycje umowy, a następnie wróć, aby przeprowadzić symulację.",
       "title": "Na razie nie ma czego symulować"
     },
+    "errors": {
+      "title": "Nie można uruchomić symulacji",
+      "baselineTitle": "Obecnej umowy nie można zasymulować, więc nie ma z czym porównywać",
+      "unsupportedLineType": "Pozycja umowy „{{lineName}}\" ma typ pozycji „{{lineType}}\", którego symulator nie potrafi wycenić. Zmień pozycję na Ryczałt, Godzinową lub Zużycie i zasymuluj ponownie.",
+      "unsupportedServiceConfiguration": "Usługa „{{serviceName}}\" w pozycji umowy „{{lineName}}\" ma typ konfiguracji „{{configurationType}}\", którego symulator nie potrafi wycenić. Ustaw usługę jako Ryczałt, Godzinową, Zużycie lub Pakiet i zasymuluj ponownie.",
+      "serviceNotInCatalog": "Pozycja umowy „{{lineName}}\" używa usługi, której nie ma już w katalogu usług ({{serviceId}}). Usuń ją z pozycji lub przywróć usługę i zasymuluj ponownie.",
+      "poolMissing": "Usługa „{{serviceName}}\" w pozycji umowy „{{lineName}}\" jest skonfigurowana jako pakiet, ale nie ma puli godzin w cenie. Dodaj godziny w cenie puli w pozycji umowy i zasymuluj ponownie.",
+      "contractNotFound": "Ta umowa jest niedostępna. Mogła zostać usunięta; odśwież stronę.",
+      "clientNotAvailable": "Klient tej symulacji jest niedostępny. Mógł zostać usunięty; wybierz innego klienta.",
+      "clientRequired": "Przed symulacją wybierz klienta.",
+      "historyRequiresClient": "Założenia historyczne wymagają scenariusza powiązanego z prawdziwym klientem. Wybierz klienta dla tej symulacji i spróbuj ponownie.",
+      "invalidReplayRange": "Zakres odtwarzania jest nieprawidłowy. Wybierz zakres, który kończy się po swoim początku i obejmuje nie więcej niż 120 okresów rozliczeniowych.",
+      "scenarioInvalid": "Tego scenariusza nie można zasymulować, ponieważ jego konfiguracja jest niekompletna. Odśwież stronę i spróbuj ponownie.",
+      "scenarioReferenceInvalid": "Ten scenariusz odwołuje się do czegoś, co jest już niedostępne, na przykład pozycji umowy, usługi, stawki podatku lub lokalizacji klienta. Odśwież stronę, aby zacząć od bieżącej umowy.",
+      "unexpected": "Symulator nie mógł się uruchomić z powodu nieoczekiwanego błędu. Spróbuj ponownie; jeśli problem się powtarza, skontaktuj się z pomocą techniczną."
+    },
     "explanation": {
       "amount": "Kwota",
       "close": "Zamknij",
@@ -2483,6 +2620,7 @@
       "simulatedDelta": "symulowana różnica"
     },
     "runBar": {
+      "blocked": "Symulacja niemożliwa",
       "compareToggle": "Pokaż zmiany względem bieżącego kontraktu",
       "horizonOption": "{{count}} okresów rozliczeniowych klienta",
       "lastRun": "Symulacja aktualna · {{count}} okresów rozliczeniowych klienta",
@@ -2491,6 +2629,7 @@
       "simulating": "Symulowanie…",
       "stale": "Zmiany nie zostały zasymulowane",
       "staleBanner": "Te kwoty pochodzą z poprzedniej symulacji. Zaktualizuj symulację, aby uwzględnić najnowsze zmiany.",
+      "staleBlockedBanner": "Ten komunikat pochodzi z poprzedniej symulacji. Zaktualizuj symulację, aby uwzględnić najnowsze zmiany.",
       "updateSimulation": "Zaktualizuj symulację"
     },
     "scenario": {
@@ -2752,6 +2891,7 @@
   "wizardFirstInvoice": {
     "loading": "Sprawdzanie harmonogramu rozliczeń klienta…",
     "arrearsPreviewNote": "Do tego czasu podgląd faktur tego klienta nie zawiera nic do rozliczenia dla tej pozycji.",
+    "arrearsPreviewNoteMany": "Do tego czasu podgląd faktur tego klienta nie zawiera nic do rozliczenia dla tych pozycji.",
     "unavailable": {
       "missingStartDate": "Wybierz datę rozpoczęcia, aby zobaczyć, kiedy ta umowa zostanie po raz pierwszy zafakturowana.",
       "unsupportedFrequency": "Data pierwszej faktury nie jest wyświetlana, ponieważ rozliczanie według cyklu umowy nie obsługuje tej częstotliwości. Wybierz obsługiwaną częstotliwość lub rozliczaj według harmonogramu klienta.",
@@ -2762,7 +2902,8 @@
       "advance": "Rozliczana z góry według cyklu umowy: pierwsza faktura jest dostępna od {{date}}, czyli daty rozpoczęcia umowy."
     },
     "client": {
-      "arrears": "Rozliczana z dołu według harmonogramu rozliczeń klienta: pierwsza faktura będzie dostępna {{date}}, gdy zakończy się bieżący okres rozliczeniowy klienta.",
+      "arrears": "Rozliczana z dołu według harmonogramu rozliczeń klienta: pierwsza faktura będzie dostępna {{date}}, gdy zakończy się okres rozliczeniowy klienta zawierający datę rozpoczęcia.",
+      "arrearsPartial": "Rozliczana z dołu według harmonogramu rozliczeń klienta: pierwsza faktura będzie dostępna {{date}}, gdy zakończy się okres rozliczeniowy klienta zawierający datę rozpoczęcia. Ponieważ data rozpoczęcia przypada w trakcie tego okresu, obejmuje ona {{periodStart}} – {{periodEnd}}.",
       "advance": "Rozliczana z góry według harmonogramu rozliczeń klienta: pierwsza faktura jest dostępna od {{date}}, czyli początku okresu rozliczeniowego klienta, w którym przypada data rozpoczęcia umowy."
     }
   },
@@ -2773,7 +2914,7 @@
     "done": "Gotowe"
   },
   "sellHourBlockNote": {
-    "text": "Pakiet godzin w umowie rozlicza tylko przekroczenie. Aby z góry naliczyć opłatę za pakiet godzin, dodaj do tej umowy linię Przedpłacony pakiet."
+    "text": "Pula godzin w umowie rozlicza tylko nadwyżkę. Aby pobierać opłatę z góry za blok godzin, dodaj do umowy pozycję Blok przedpłacony i wystawiaj ją w każdym okresie rozliczeniowym."
   },
   "review": {
     "saveTemplateRates": "Zapisz te stawki w {{currency}} w szablonie",
@@ -2787,7 +2928,11 @@
     "options": {
       "advance": "Z góry (rozlicz na początku okresu)",
       "arrears": "Z dołu (rozlicz na końcu okresu)"
-    }
+    },
+    "inheritWithValue": "Użyj domyślnej wartości umowy — {{timing}}",
+    "inheritedAdvance": "z góry",
+    "inheritedArrears": "z dołu",
+    "contractDefaultHelp": "Domyślna wartość dla pozycji stałych, które mogą być rozliczane z góry. Pozycje godzinowe i według zużycia zawsze są rozliczane z dołu, niezależnie od tego wyboru."
   },
   "contractDiscounts": {
     "title": "Rabaty",
@@ -2955,7 +3100,19 @@
       "tier": "Faktura następna",
       "tierDraft": "Utwórz wersję roboczą do przeglądu",
       "tierAutoIssue": "Finalizuj i wyślij automatycznie",
-      "blockPriceNeutral": "Cena bloku (w walucie klienta)"
+      "blockPriceNeutral": "Cena bloku (w walucie klienta)",
+      "ratePerHour": "Daje to {{rate}} za godzinę bloku.",
+      "issueMode": "Wystawiaj bloki",
+      "issueModeCadence": "W każdym okresie rozliczeniowym",
+      "blockFeeInAdvance": "Pozycja jest rozliczana z dołu; opłata za blok jest rozliczana z góry.",
+      "issueModeConsumption": "Gdy bieżący blok się wyczerpie lub wygaśnie",
+      "rolloverPeriods": "Niewykorzystane godziny",
+      "rolloverNone": "Wygasają na koniec okresu",
+      "cadenceNote": "Rozliczane z góry w każdym okresie. Godziny ponad blok są rozliczane według stawki godzinowej pozycji na następnej fakturze.",
+      "rolloverCarry_one": "Przenieś na {{count}} okres",
+      "rolloverCarry_few": "Przenieś na {{count}} okresy",
+      "rolloverCarry_many": "Przenieś na {{count}} okresów",
+      "rolloverCarry_other": "Przenieś na {{count}} okresy"
     },
     "status": {
       "pending": "Oczekujący",
@@ -2980,5 +3137,9 @@
       "invalidBlock": "Uzupełnij rozmiar, cenę i wyzwalacze każdej pozycji bloku przedpłaconego przed zakończeniem.",
       "rateRequired": "Usługa bloku przedpłaconego \"{{serviceName}}\" wymaga stawki godzinowej powyżej zera (godziny ponad blok są fakturowane według tej stawki)."
     }
+  },
+  "arrearsFirstInvoiceHint": {
+    "message": "Pierwsza faktura: faktura z dnia {{invoiceDate}} obejmuje {{periodStart}} – {{periodEnd}} (rozliczane z dołu). Wybierz „Z góry”, aby rozliczyć to na fakturze za okres rozpoczynający się {{advanceInvoiceDate}}.",
+    "billInAdvance": "Rozlicz z góry"
   }
 }

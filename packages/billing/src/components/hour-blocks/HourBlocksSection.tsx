@@ -14,7 +14,7 @@ import { MoreVertical, Eye, SlidersHorizontal, CalendarClock, TimerOff, Ban } fr
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatCalendarDate, formatCurrencyFromMinorUnits, getCurrentDateInUserTimeZone, toPlainDate } from '@alga-psa/core';
 import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ColumnDefinition, IHourBlock } from '@alga-psa/types';
@@ -67,6 +67,7 @@ function getStatusBadge(t: TranslateFn, block: IHourBlock) {
 
 export default function HourBlocksSection({ clientId, currencyCode = 'USD' }: HourBlocksSectionProps) {
   const { t } = useTranslation('msp/hour-blocks');
+  const { locale } = useFormatters();
 
   const [blocks, setBlocks] = useState<IHourBlock[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -149,7 +150,7 @@ export default function HourBlocksSection({ clientId, currencyCode = 'USD' }: Ho
       cellClassName: 'text-right tabular-nums',
       render: (value: number, record) => (
         <span className="text-sm text-[rgb(var(--color-text-900))]">
-          {formatCurrencyFromMinorUnits(Number(value ?? 0), undefined, record.currency_code || currencyCode)}
+          {formatCurrencyFromMinorUnits(Number(value ?? 0), locale, record.currency_code || currencyCode)}
         </span>
       ),
     },
@@ -173,12 +174,20 @@ export default function HourBlocksSection({ clientId, currencyCode = 'USD' }: Ho
     {
       title: t('columns.expiration', { defaultValue: 'Expiration' }),
       dataIndex: 'expiration_date',
-      render: (value: string | null | undefined) => {
-        if (!value) {
-          return <span className="text-sm text-[rgb(var(--color-text-500))]">{t('status.never', { defaultValue: 'Never' })}</span>;
-        }
-        return <span className="text-sm text-[rgb(var(--color-text-900))]">{formatCalendarDate(value)}</span>;
-      },
+      render: (value: string | null | undefined, record) => (
+        <div className="min-w-0">
+          {value ? (
+            <span className="text-sm text-[rgb(var(--color-text-900))]">{formatCalendarDate(value)}</span>
+          ) : (
+            <span className="text-sm text-[rgb(var(--color-text-500))]">{t('status.never', { defaultValue: 'Never' })}</span>
+          )}
+          {record.valid_from ? (
+            <p id={`hb-valid-from-${record.block_id}`} className="text-xs text-[rgb(var(--color-text-500))]">
+              {t('columns.validFrom', { date: formatCalendarDate(record.valid_from) ?? '', defaultValue: 'Valid from {{date}}' })}
+            </p>
+          ) : null}
+        </div>
+      ),
     },
     {
       title: t('columns.source', { defaultValue: 'Source' }),

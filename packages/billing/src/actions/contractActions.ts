@@ -16,6 +16,8 @@ import {
   IContractWithClient,
   IContractLineMapping,
 } from '@alga-psa/types';
+import type { ContractBillingTrace } from '@alga-psa/types';
+import { loadContractBillingTrace } from '@alga-psa/shared/billingClients/contractBillingTrace';
 import {
   IContractTemplate,
   IContractTemplateWithLines,
@@ -26,8 +28,8 @@ import { isContractLineTimingNotAllowedError } from '@alga-psa/shared/billingCli
 import { validateDiscountInput, type DiscountAuthoringInput } from '../lib/billing/discountAuthoring';
 import { getContractMonthlyFixedValuesByContract } from '@alga-psa/shared/billingClients/contractMonthlyValue';
 import { resolveMemberRate, type ServicePriceRateRow } from '@alga-psa/shared/billingClients/resolveFixedLineRate';
-import { publishWorkflowEvent, publishNonCatalogWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { buildContractRecordCreatedPayload, buildContractRecordUpdatedPayload } from '@alga-psa/workflow-streams';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildContractRecordCreatedPayload } from '@alga-psa/workflow-streams';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 
 import { Knex } from 'knex';
@@ -46,6 +48,8 @@ import {
   DetailedContractLine,
 } from '../repositories/contractLineRepository';
 import { newSupportReference } from '../lib/supportReference';
+import { ContractUpdateError, updateContractHeaderWithEvents } from '../lib/contractUpdate';
+import { ContractDeletionError, deleteContractWithEvents } from '../lib/contractDeletion';
 import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
 import { syncPrepaidBlockIssuancesForContractLine } from '../services/prepaidBlockIssuanceSync';
 
@@ -264,13 +268,6 @@ async function attachContractClientLogos(
     ...row,
     logoUrl: row.client_id ? logoUrlsMap.get(row.client_id) ?? null : null,
   }));
-}
-
-async function isTemplateContract(knex: TenantScopedKnex, tenant: string, contractId: string): Promise<boolean> {
-  const template = await tenantScopedTable(knex, tenant, 'contract_templates')
-    .where({ template_id: contractId })
-    .first();
-  return Boolean(template);
 }
 
 export const getContracts = withAuth(async (user, { tenant }): Promise<IContract[] | ContractActionError> => {
@@ -669,77 +666,15 @@ export const updateContract = withAuth(async (
       return mapTemplateToContract(updatedTemplate);
     }
 
-    if (currentContract.is_system_managed_default === true) {
-      throw new ContractActionDomainError(
-        'System-managed default contracts are attribution-only; contract authoring and lifecycle edits are disabled.',
-      );
-    }
-
-    // Special handling for expired contracts
-    if (currentContract.status === 'expired') {
-      // If trying to manually change status of an expired contract (not through end date logic)
-      if (updateData.status && updateData.status !== 'expired') {
-        throw new ContractActionDomainError('Cannot manually change the status of an expired contract. To reactivate, extend the contract end date.');
+    try {
+      return await updateContractHeaderWithEvents(knex, tenant, currentContract, updateData, user.user_id);
+    } catch (error) {
+      // Rule refusals are expected domain errors, surfaced to the UI as messages.
+      if (error instanceof ContractUpdateError) {
+        throw new ContractActionDomainError(error.message);
       }
-
-      // Check if end dates are being updated on client contracts
-      // We'll check this after the client contract updates below
-      // For now, remove the status from updateData if it's expired (we'll handle it automatically)
-      if (updateData.status === 'expired') {
-        delete updateData.status; // Don't update status, we'll determine it based on end dates
-      }
-    } else {
-      // Prevent manual setting of expired status on non-expired contracts
-      if (updateData.status === 'expired') {
-        throw new ContractActionDomainError('Cannot manually set contract to expired. Contracts are automatically expired when their end date passes.');
-      }
+      throw error;
     }
-
-    // If trying to set contract to draft, check if it has invoices
-    if (updateData.status === 'draft') {
-      const hasInvoices = await Contract.hasInvoices(knex, tenant, contractId);
-      if (hasInvoices) {
-        throw new ContractActionDomainError('Cannot set contract to draft because it has associated invoices. Contracts with invoices cannot be set to draft.');
-      }
-    }
-
-    const {
-      tenant: _ignoredTenant,
-      is_system_managed_default: _ignoredSystemManagedMarker,
-      owner_client_id: _ignoredOwnerClientId,
-      ...safeUpdateData
-    } = updateData as any;
-    const updated = await Contract.update(knex, tenant, contractId, safeUpdateData);
-    const occurredAt = updated.updated_at ?? new Date().toISOString();
-    await publishWorkflowEvent({
-      eventType: 'CONTRACT_UPDATED',
-      payload: buildContractRecordUpdatedPayload({
-        contractId,
-        ownerClientId: updated.owner_client_id,
-        userId: user.user_id,
-        occurredAt: new Date(occurredAt).toISOString(),
-        status: updated.status,
-        patch: safeUpdateData,
-        before: currentContract as unknown as Record<string, unknown>,
-        after: updated as unknown as Record<string, unknown>,
-      }),
-      ctx: {
-        tenantId: tenant,
-        occurredAt,
-        actor: maybeUserActor(user),
-      },
-      idempotencyKey: `contract_updated:${contractId}:${occurredAt}`,
-    });
-
-    // After updating, check if an expired contract should be reactivated based on end dates
-    if (currentContract.status === 'expired') {
-      await Contract.checkAndReactivateExpiredContract(knex, tenant, contractId);
-      // Re-fetch the contract to get the potentially updated status
-      const reactivatedContract = await Contract.getById(knex, tenant, contractId);
-      return reactivatedContract!;
-    }
-
-    return updated;
   } catch (error) {
     console.error('Error updating contract:', error);
     const expected = contractActionErrorFrom(error);
@@ -768,64 +703,18 @@ export const deleteContract = withAuth(async (user, { tenant }, contractId: stri
       }
     }
 
-    const templateExists = await isTemplateContract(knex, tenant, contractId);
-    if (templateExists) {
-      await ContractTemplateModel.delete(contractId, tenant);
-      return;
-    }
-
-    // LEVERAGE: friction contract-delete-owns-transaction — Contract.delete issues ~15
-    // statements but leaves the transaction to its caller, so every caller must remember
-    // to wrap it or a mid-way failure orphans the contract header.
-    // Everything commits together or rolls back; events are published only after commit.
-    const clientContracts = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const currentContract = await Contract.getById(trx, tenant, contractId);
-      if (currentContract?.is_system_managed_default === true) {
-        throw new ContractActionDomainError('System-managed default contracts cannot be deleted manually');
+    // Template branch, system-managed refusal, invoice guard, transactional delete and the
+    // post-commit events are shared with the REST API (DELETE /api/v1/contracts/{id}).
+    try {
+      await deleteContractWithEvents(knex, tenant, contractId, user.user_id);
+    } catch (error) {
+      // NOT_FOUND / SYSTEM_MANAGED are domain refusals; HAS_INVOICES keeps its message so
+      // contractActionErrorFrom maps it to the localized "has invoices" error.
+      if (error instanceof ContractDeletionError && error.code !== 'HAS_INVOICES') {
+        throw new ContractActionDomainError(error.message);
       }
-
-      const rows = await tenantScopedTable(trx, tenant, 'client_contracts')
-        .where({ contract_id: contractId })
-        .select('client_contract_id', 'client_id');
-
-      await Contract.delete(trx, tenant, contractId);
-      return rows;
-    });
-    const occurredAt = new Date().toISOString();
-
-    for (const clientContract of clientContracts) {
-      await publishNonCatalogWorkflowEvent({
-        eventType: 'CLIENT_CONTRACT_DELETED',
-        payload: {
-          clientContractId: clientContract.client_contract_id,
-          contractId,
-          clientId: clientContract.client_id,
-          userId: user.user_id,
-          timestamp: occurredAt,
-        },
-        ctx: {
-          tenantId: tenant,
-          occurredAt,
-          actor: maybeUserActor(user),
-        },
-        idempotencyKey: `client_contract_deleted:${clientContract.client_contract_id}:${occurredAt}`,
-      });
+      throw error;
     }
-
-    await publishNonCatalogWorkflowEvent({
-      eventType: 'CONTRACT_DELETED',
-      payload: {
-        contractId,
-        userId: user.user_id,
-        timestamp: occurredAt,
-      },
-      ctx: {
-        tenantId: tenant,
-        occurredAt,
-        actor: maybeUserActor(user),
-      },
-      idempotencyKey: `contract_deleted:${contractId}:${occurredAt}`,
-    });
   } catch (error) {
     const expected = contractActionErrorFrom(error);
     if (expected) {
@@ -1116,11 +1005,22 @@ export interface IContractLineOverview {
   /** Effective timing (Hourly/Usage always resolve to arrears); never the raw column. */
   billing_timing: 'advance' | 'arrears';
   base_rate: number | null;  // For fixed lines - in cents
+  /**
+   * Effective recurring amount of one billing period (cents) for a Fixed line
+   * that holds product members, computed by the shared contract valuation so
+   * the header can never disagree with the contract total. A zero line rate is
+   * a historical placeholder, not a price, so `base_rate` must not be printed
+   * for such a line. Null when the line has no product members (the line's own
+   * `base_rate` is then the amount) and for templates.
+   */
+  recurring_amount: number | null;
   display_order: number;
   services: {
     service_id: string;
     service_name: string;
     billing_method: string;
+    /** Catalog item kind ('product' members are billed quantity x rate, never as a bundle share). */
+    item_kind: string | null;
     custom_rate: number | null;  // In cents
     /**
      * Fixed-allocation quantity. Always null for Usage lines: usage billing is
@@ -1165,6 +1065,11 @@ export interface IContractOverview {
   currencyCode: string;  // ISO currency code (e.g., 'USD', 'AUD')
   /** Owning client for contract-backed overviews (null for templates); lets usage deep links prefill the client filter. */
   clientId: string | null;
+  /**
+   * Which billing profile(s) bill this contract, its payment terms, and where
+   * each value comes from. Resolved live (never stored); null for templates.
+   */
+  billingTrace: ContractBillingTrace | null;
 }
 
 /**
@@ -1228,6 +1133,7 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
             'ctls.service_id',
             's.service_name',
             's.billing_method',
+            's.item_kind',
             'ctls.custom_rate',
             'ctls.quantity'
           ]);
@@ -1258,6 +1164,7 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           billing_frequency: line.billing_frequency || 'monthly',
           billing_timing: resolveEffectiveBillingTiming(line.contract_line_type || 'Fixed', line.billing_timing),
           base_rate: line.base_rate ? Number(line.base_rate) : null,
+          recurring_amount: null,
           display_order: line.display_order ?? 0,
           services: (services as any[]).map((svc: any) => {
             const config = configMap.get(svc.service_id);
@@ -1267,6 +1174,7 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
               service_id: svc.service_id,
               service_name: svc.service_name || 'Unknown Service',
               billing_method: svc.billing_method || 'fixed',
+              item_kind: svc.item_kind ?? null,
               custom_rate: config?.custom_rate ? Number(config.custom_rate) : (svc.custom_rate ? Number(svc.custom_rate) : null),
               // Usage lines bill recorded usage only; legacy configured
               // quantities are audit metadata and must not read as billable.
@@ -1415,10 +1323,13 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
         const catalogRateByConfig = new Map<string, number | null>();
         const inheritingUnitConfigs = (configs as any[]).filter((config: any) => {
           const fixed = fixedSemanticsMap.get(config.config_id);
-          const unitValued = fixed?.pricing_basis === 'unit' || effectiveUnitConfigIds.has(config.config_id);
+          const isProduct = itemKindByService.get(config.service_id) === 'product';
+          // A product is always quantity x rate (the engine never reads its
+          // pricing_basis), and its fixed base_rate is never a unit rate.
+          const unitValued = isProduct || fixed?.pricing_basis === 'unit' || effectiveUnitConfigIds.has(config.config_id);
           if (!unitValued) return false;
           return catalogPolicyConfigIds.has(config.config_id)
-            || (fixed?.base_rate == null && config.custom_rate == null);
+            || ((isProduct || fixed?.base_rate == null) && config.custom_rate == null);
         });
         if (inheritingUnitConfigs.length > 0) {
           const inheritingServiceIds = inheritingUnitConfigs.map((config: any) => config.service_id);
@@ -1462,17 +1373,20 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           billing_frequency: line.billing_frequency || 'monthly',
           billing_timing: resolveEffectiveBillingTiming(line.contract_line_type || 'Fixed', line.billing_timing),
           base_rate: line.base_rate ? Number(line.base_rate) : null,
+          recurring_amount: null,
           display_order: line.display_order ?? 0,
           services: (services as any[]).map((svc: any) => {
             const config = configMap.get(svc.service_id);
             const semantics = fixedSemanticsMap.get(config?.config_id);
             const isScheduledUnit = effectiveUnitConfigIds.has(config?.config_id);
             const isCatalogPolicy = catalogPolicyConfigIds.has(config?.config_id);
-            const isUnitValued = semantics?.pricing_basis === 'unit' || isScheduledUnit;
+            const isProduct = svc.item_kind === 'product';
+            const isUnitValued = semantics?.pricing_basis === 'unit' || isScheduledUnit || isProduct;
             return {
               service_id: svc.service_id,
               service_name: svc.service_name || 'Unknown Service',
               billing_method: svc.billing_method || 'fixed',
+              item_kind: svc.item_kind ?? null,
               custom_rate: config?.custom_rate ? Number(config.custom_rate) : null,
               // Usage lines bill recorded usage only; legacy configured
               // quantities are audit metadata and must not read as billable.
@@ -1491,7 +1405,7 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
                 ? null
                 : catalogRateByConfig.has(config?.config_id)
                   ? catalogRateByConfig.get(config?.config_id) ?? null
-                  : (semantics?.base_rate != null
+                  : (semantics?.base_rate != null && !isProduct
                       ? Number(semantics.base_rate)
                       : (config?.custom_rate != null ? Number(config.custom_rate) : null))
             };
@@ -1520,13 +1434,26 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
     // show the fixed portion; hourly/usage revenue is variable).
     let totalEstimatedMonthlyValue: number | null = null;
 
-    if (hasFixedServices && !isTemplate) {
+    // A cadence Prepaid Block lives on an Hourly line but bills a fixed fee every period, so a
+    // contract with only such lines still has a fixed monthly value.
+    const contractValues = !isTemplate && (hasFixedServices || hasHourlyServices)
+      ? await getContractMonthlyFixedValuesByContract(knex, tenant, [contractId])
+      : null;
+    if (contractValues && (hasFixedServices || contractValues.get(contractId)?.hasCadencePrepaidBlock)) {
       // Real contracts use the canonical shared valuation so the overview,
       // contract reports, and the summary MRR cannot disagree: unit-priced
       // lines are quantity × unit rate (revision-aware), bundles keep their
       // line rate, and every line is cadence-normalized.
-      const contractValues = await getContractMonthlyFixedValuesByContract(knex, tenant, [contractId]);
       totalEstimatedMonthlyValue = contractValues.get(contractId)?.monthlyValueCents ?? 0;
+      // A Fixed line holding product members is billed quantity x rate, so
+      // its header amount comes from the same valuation as the total (a line
+      // `custom_rate` of 0 is a legacy placeholder and must not be printed).
+      const linePeriodCents = contractValues.get(contractId)?.linePeriodCentsByLine;
+      for (const line of contractLines) {
+        if (line.contract_line_type !== 'Fixed') continue;
+        if (!line.services.some((service) => service.item_kind === 'product')) continue;
+        line.recurring_amount = linePeriodCents?.get(line.contract_line_id) ?? null;
+      }
     } else if (hasFixedServices) {
       // Templates have no contract rows for the shared valuation; keep the
       // template-line normalization. Per-seat members add quantity × default
@@ -1559,7 +1486,13 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
       hasHourlyServices,
       hasUsageServices,
       currencyCode,
-      clientId
+      clientId,
+      // Same engine functions the invoice uses; a template has no client to bill.
+      billingTrace: isTemplate
+        ? null
+        : await loadContractBillingTrace(knex, tenant, {
+            contractId,
+          }),
     };
   } catch (error) {
     console.error(`Error fetching contract overview for ${contractId}:`, error);

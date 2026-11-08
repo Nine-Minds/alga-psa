@@ -728,7 +728,7 @@
   {
     "id": "F089",
     "description": "OpenAPI documents X-Alga-Act-As and the new error codes on affected routes; MCP and chat API registries regenerated",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ]

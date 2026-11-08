@@ -4,11 +4,11 @@
  * With the CE stub bound to '@product/service-principals/entry':
  *  - buildAuthenticatedApiContext rejects a key owned by a user that is neither
  *    internal nor client (the boundary returns null),
- *  - the internal path is unchanged and gains only the default generic fields,
- *  - the @enterprise service-principal component stubs render null.
+ *  - the internal path is unchanged and gains only the default generic fields.
+ *
+ * The @enterprise component-stub half lives in servicePrincipalStubs.ce.render.test.tsx
+ * so it runs under the jsdom React lane.
  */
-import React from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -29,7 +29,6 @@ import {
   buildAuthenticatedApiContext,
 } from '../../../lib/api/middleware/apiMiddleware';
 import * as ossEntry from '../../../../../packages/product-service-principals/oss/entry';
-import * as servicePrincipalStubs from '../../../../../packages/ee/src/components/service-principals';
 
 const keyRecord = { api_key_id: 'key-1', user_id: 'owner-1', tenant: 'tenant-1' };
 
@@ -45,6 +44,9 @@ describe('T037: CE service-principal boundary (oss entry) — API context', () =
     await expect(
       ossEntry.servicePrincipalKeyGate({ user_id: 'owner-1', tenant: 'tenant-1', user_type: 'service' })
     ).resolves.toBe(false);
+    await expect(ossEntry.stampTimeEntryAttribution({
+      table: () => { throw new Error('CE attribution hook must not query EE-only columns'); },
+    }, 'tenant-1', 'entry-1', 'update', undefined)).resolves.toEqual({});
     const error = new Error('x');
     expect(ossEntry.mapServicePrincipalError(error)).toBe(error);
   });
@@ -95,22 +97,5 @@ describe('T037: CE service-principal boundary (oss entry) — API context', () =
     };
     expect(() => assertApiPrincipal(forged)).toThrow(UnauthorizedError);
     expect(() => assertApiPrincipal({ user_type: 'internal' } as any)).not.toThrow();
-  });
-});
-
-describe('T037: @enterprise service-principal component stubs render null', () => {
-  const stubs = [
-    'ServicePrincipalsSettingsTab',
-    'ServicePrincipalUsageRow',
-    'ViaPrincipalLabel',
-    'ServiceAuthorBadge',
-    'ApiKeyPrincipalCell',
-  ] as const;
-
-  it.each(stubs)('%s renders nothing', (name) => {
-    const Component = (servicePrincipalStubs as Record<string, React.ComponentType<any>>)[name];
-    expect(Component).toBeTypeOf('function');
-    expect(renderToStaticMarkup(React.createElement(Component, { principalId: 'p', name: 'n' }))).toBe('');
-    expect((Component as (props: object) => unknown)({})).toBeNull();
   });
 });

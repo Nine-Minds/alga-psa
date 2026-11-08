@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
+import { randomUUID } from 'node:crypto';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { tenantDb } from '@alga-psa/db';
 
@@ -46,7 +47,13 @@ vi.mock('../../../../packages/tickets/src/lib/liveUpdates', () => ({
   publishTicketUpdate: vi.fn(),
 }));
 
-import { createComment } from '../../../../packages/tickets/src/actions/comment-actions/commentActions';
+import { hasPermission } from '@alga-psa/auth';
+import { createComment, deleteComment, updateComment } from '../../../../packages/tickets/src/actions/comment-actions/commentActions';
+import {
+  registerCommentEventContributor,
+  resetCommentEventContributors,
+  type CommentEventEnvelope,
+} from '@alga-psa/db/commentEventRegistry';
 
 const blockNote = (text: string) => JSON.stringify([
   {
@@ -310,12 +317,15 @@ describe('ticket comment threading actions', () => {
         'u.user_id as internal_user_id'
       )
       .whereNotNull('t.client_id')
+      // The seeded client user must be able to see this ticket's board in the portal.
+      .whereRaw(`COALESCE((SELECT b.client_portal_visible FROM boards b WHERE b.tenant = t.tenant AND b.board_id = t.board_id), true) <> false`)
       .first();
     expect(context).toBeTruthy();
 
     const generated = await knex.raw(`
       SELECT
         gen_random_uuid() AS client_user_id,
+        gen_random_uuid() AS client_contact_id,
         gen_random_uuid() AS other_client_id,
         gen_random_uuid() AS other_ticket_id
     `);
@@ -346,9 +356,21 @@ describe('ticket comment threading actions', () => {
       updated_at: new Date(),
     });
 
+    // Client principals are authorized by contact_visibility, which needs a contact. This contact
+    // belongs to the ticket's client and has no visibility group (client scope), so it sees every
+    // portal-visible-board ticket of that client but nothing of other_client_id.
+    await scopedDb(context.tenant).table('contacts').insert({
+      tenant: context.tenant,
+      contact_name_id: ids.client_contact_id,
+      full_name: 'T078 Client',
+      email: `t078-contact-${Date.now()}@example.test`,
+      client_id: context.client_id,
+    });
+
     await scopedDb(context.tenant).table('users').insert({
       tenant: context.tenant,
       user_id: ids.client_user_id,
+      contact_id: ids.client_contact_id,
       username: `t078-client-${Date.now()}`,
       hashed_password: 'not-used',
       first_name: 'T078',
@@ -388,6 +410,7 @@ describe('ticket comment threading actions', () => {
         first_name: 'T078',
         last_name: 'Client',
         clientId: context.client_id,
+        contact_id: ids.client_contact_id,
       };
 
       allowedReplyId = await createComment({
@@ -436,9 +459,8 @@ describe('ticket comment threading actions', () => {
         is_resolution: false,
         parent_comment_id: inaccessibleRootId,
       });
-      expect(deniedInaccessibleReply).toMatchObject({
-        actionError: 'Client user cannot access this ticket',
-      });
+      // Record-level denial: a returned permissionError, identical for an invisible and a missing ticket.
+      expect(deniedInaccessibleReply).toEqual({ permissionError: 'Permission denied: Cannot access ticket' });
     } finally {
       userRef.user = originalUser;
       // Remove anything the client user authored, including comments a
@@ -466,8 +488,152 @@ describe('ticket comment threading actions', () => {
       await scopedDb(context.tenant).table('ticket_audit_logs').where({ actor_user_id: ids.client_user_id }).delete();
       await scopedDb(context.tenant).table('ticket_audit_logs').where({ ticket_id: ids.other_ticket_id }).delete();
       await scopedDb(context.tenant).table('users').where({ user_id: ids.client_user_id }).delete();
+      await scopedDb(context.tenant).table('contacts').where({ contact_name_id: ids.client_contact_id }).delete();
       await scopedDb(context.tenant).table('tickets').where({ ticket_id: ids.other_ticket_id }).delete();
       await scopedDb(context.tenant).table('clients').where({ client_id: ids.other_client_id }).delete();
+    }
+  });
+
+  it('refuses to let a user without ticket:update change a comment nobody authored', async () => {
+    // The author-less repair path is gated on ticket:update; without it an
+    // internal user is treated like any other non-author.
+    const ticket = await scopedDb().table('tickets').select('ticket_id').first();
+    const author = userRef.user;
+    const commentId = await createComment({ ticket_id: ticket.ticket_id, user_id: author.user_id,
+      note: blockNote('Inbound text'), is_internal: false, is_resolution: false });
+    await scopedDb().table('comments').where({ comment_id: commentId }).update({ user_id: null });
+    const other = { ...author, user_id: randomUUID() };
+    await scopedDb().table('users').insert({ tenant: dbRef.tenant, user_id: other.user_id, username: `noupd-${other.user_id}`,
+      email: `noupd-${other.user_id}@example.test`, first_name: 'No', last_name: 'Update', hashed_password: 'not-a-login',
+      user_type: 'internal', is_inactive: false });
+    const permission = vi.mocked(hasPermission);
+    try {
+      permission.mockImplementation(async (_user: any, resource: string, action: string) =>
+        !(resource === 'ticket' && action === 'update'));
+      userRef.user = other;
+      await expect(updateComment(commentId, { note: blockNote('Rewritten without ticket:update') }))
+        .resolves.toMatchObject({ actionError: 'You can only edit your own comments' });
+      await expect(deleteComment(commentId)).resolves.toMatchObject({ actionError: 'You can only edit your own comments' });
+      expect(permission).toHaveBeenCalledWith(expect.objectContaining({ user_id: other.user_id }), 'ticket', 'update', expect.anything());
+      const stored = await scopedDb().table('comments').where({ comment_id: commentId }).first();
+      expect(stored).toBeTruthy();
+      expect(stored.note).toContain('Inbound text');
+    } finally {
+      permission.mockImplementation(async () => true);
+      userRef.user = author;
+      await scopedDb().table('comments').where({ comment_id: commentId }).delete();
+      await scopedDb().table('users').where({ user_id: other.user_id }).delete();
+    }
+  });
+
+  it('refuses a customer-side caller who submits is_internal on their own comment', async () => {
+    // The client principal must be able to see the ticket (record-level authz runs first), so pick a
+    // client ticket on a portal-visible board and give the user a client-scope contact of that client.
+    const ticket = await scopedDb().table('tickets as t').select('t.ticket_id', 't.client_id')
+      .whereNotNull('t.client_id')
+      .whereRaw(`COALESCE((SELECT b.client_portal_visible FROM boards b WHERE b.tenant = t.tenant AND b.board_id = t.board_id), true) <> false`)
+      .first();
+    expect(ticket).toBeTruthy();
+    const author = userRef.user;
+    const clientUserId = randomUUID();
+    const clientContactId = randomUUID();
+    await scopedDb().table('contacts').insert({ tenant: dbRef.tenant, contact_name_id: clientContactId, full_name: 'Portal Client',
+      email: `cli-int-${clientContactId}@example.test`, client_id: ticket.client_id });
+    await scopedDb().table('users').insert({ tenant: dbRef.tenant, user_id: clientUserId, username: `cli-int-${clientUserId}`,
+      email: `cli-int-${clientUserId}@example.test`, first_name: 'Portal', last_name: 'Client', hashed_password: 'not-a-login',
+      user_type: 'client', is_inactive: false, contact_id: clientContactId });
+    const commentId = await createComment({ ticket_id: ticket.ticket_id, user_id: author.user_id,
+      note: blockNote('Client visible text'), is_internal: false, is_resolution: false });
+    await scopedDb().table('comments').where({ comment_id: commentId }).update({ user_id: clientUserId, author_type: 'client' });
+    try {
+      userRef.user = { user_id: clientUserId, user_type: 'client', first_name: 'Portal', last_name: 'Client',
+        contact_id: clientContactId, clientId: ticket.client_id };
+      await expect(updateComment(commentId, { note: blockNote('Now hidden from my own portal'), is_internal: true }))
+        .resolves.toMatchObject({ actionError: 'Only MSP users can set comments as internal' });
+      const stored = await scopedDb().table('comments').where({ comment_id: commentId }).first();
+      expect(stored.is_internal).toBe(false);
+      expect(stored.note).toContain('Client visible text');
+
+      // Control: resubmitting the unchanged flag alongside a text edit is not a change and is accepted.
+      const edited = await updateComment(commentId, { note: blockNote('Edited by the client'), is_internal: false });
+      expect((edited as { actionError?: string } | undefined)?.actionError).toBeUndefined();
+      const after = await scopedDb().table('comments').where({ comment_id: commentId }).first();
+      expect(after.note).toContain('Edited by the client');
+      expect(after.is_internal).toBe(false);
+    } finally {
+      userRef.user = author;
+      await scopedDb().table('comments').where({ comment_id: commentId }).delete();
+      await scopedDb().table('ticket_audit_logs').where({ actor_user_id: clientUserId }).delete();
+      await scopedDb().table('users').where({ user_id: clientUserId }).delete();
+      await scopedDb().table('contacts').where({ contact_name_id: clientContactId }).delete();
+    }
+  });
+
+  it('lets only the author change a comment, and only its text and flags', async () => {
+    // updateComment checked the user_id in the request body, not the caller,
+    // and passed every other field through: anyone could rewrite, backdate or
+    // undelete another user's comment by leaving user_id out.
+    const ticket = await scopedDb().table('tickets').select('ticket_id').first();
+    const author = userRef.user;
+    const commentId = await createComment({ ticket_id: ticket.ticket_id, user_id: author.user_id,
+      note: blockNote('Original text'), is_internal: false, is_resolution: false });
+    const other = { ...author, user_id: randomUUID() };
+    await scopedDb().table('users').insert({ tenant: dbRef.tenant, user_id: other.user_id, username: `other-${other.user_id}`,
+      email: `other-${other.user_id}@example.test`, first_name: 'Other', last_name: 'Tech', hashed_password: 'not-a-login',
+      user_type: 'internal', is_inactive: false });
+    try {
+      userRef.user = other;
+      await expect(updateComment(commentId, { note: blockNote('Rewritten by someone else') }))
+        .resolves.toMatchObject({ actionError: 'You can only edit your own comments' });
+      await expect(deleteComment(commentId)).resolves.toMatchObject({ actionError: 'You can only edit your own comments' });
+      expect((await scopedDb().table('comments').where({ comment_id: commentId }).first()).note).toContain('Original text');
+
+      userRef.user = author;
+      publishEventMock.mockClear();
+      await updateComment(commentId, { note: blockNote('Corrected by the author'), created_at: '2020-01-01T00:00:00Z',
+        user_id: other.user_id, deleted_at: null, publish_state: 'scheduled' } as any);
+      const stored = await scopedDb().table('comments').where({ comment_id: commentId }).first();
+      expect(stored.note).toContain('Corrected by the author');
+      expect(stored.user_id).toBe(author.user_id);
+      expect(new Date(stored.created_at).getFullYear()).not.toBe(2020);
+      expect(stored.publish_state).not.toBe('scheduled');
+
+      // The edit must still notify: the event is no longer keyed on a body-supplied user_id.
+      const updatedEvent = publishEventMock.mock.calls
+        .map(([event]) => event)
+        .find((event) => event?.eventType === 'TICKET_COMMENT_UPDATED');
+      expect(updatedEvent).toBeTruthy();
+      expect(updatedEvent.payload).toMatchObject({ userId: author.user_id, ticketId: ticket.ticket_id });
+      expect(updatedEvent.payload.newComment.id).toBe(commentId);
+
+      // A comment nobody authored (inbound email) may be corrected by someone who updates tickets.
+      await scopedDb().table('comments').where({ comment_id: commentId }).update({ user_id: null });
+      userRef.user = other;
+      publishEventMock.mockClear();
+      const retained: CommentEventEnvelope[] = [];
+      registerCommentEventContributor({ name: 'test-capture', retain: async (_trx, envelope) => {
+        retained.push(envelope);
+        return false;
+      } });
+      const fixed = await updateComment(commentId, { note: blockNote('Fixed inbound text') });
+      expect((fixed as { actionError?: string } | undefined)?.actionError).toBeUndefined();
+      expect((await scopedDb().table('comments').where({ comment_id: commentId }).first()).note).toContain('Fixed inbound text');
+
+      // Editing does not change authorship: the corrector is the actor, not the new author.
+      const repairEvent = publishEventMock.mock.calls
+        .map(([event]) => event)
+        .find((event) => event?.eventType === 'TICKET_COMMENT_UPDATED');
+      expect(repairEvent.payload.userId).toBe(other.user_id);
+      expect(repairEvent.payload.oldComment.author).toBe('Unknown User');
+      expect(repairEvent.payload.newComment.author).toBe('Unknown User');
+      expect(retained).toEqual([{ source: 'ticket', event: expect.objectContaining({
+        eventType: 'TICKET_COMMENT_UPDATED', commentId, ticketId: ticket.ticket_id, userId: other.user_id,
+      }) }]);
+    } finally {
+      resetCommentEventContributors();
+      userRef.user = author;
+      await scopedDb().table('comments').where({ comment_id: commentId }).delete();
+      await scopedDb().table('users').where({ user_id: other.user_id }).update({ is_inactive: true });
     }
   });
 });

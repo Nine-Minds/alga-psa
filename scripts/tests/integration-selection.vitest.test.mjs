@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { execFileSync, spawnSync } from 'node:child_process';
 
 const repository = fileURLToPath(new URL('../../', import.meta.url));
-const vitest = path.join(repository, 'server/node_modules/vitest/vitest.mjs');
+const vitest = path.join(repository, 'node_modules/vitest/vitest.mjs');
 
 test('workflow selector and real integration runner agree on git changes and widen on graph failure', (t) => {
   const root = mkdtempSync(path.join(tmpdir(), 'alga-selection-'));
@@ -19,11 +19,12 @@ test('workflow selector and real integration runner agree on git changes and wid
   // Exercise the production entry points in a disposable repository. The
   // runner shim delegates every invocation to the installed Vitest binary;
   // its optional failure models an unavailable affected-test graph only.
-  for (const file of ['scripts/select-integration-tests.mjs', 'scripts/run-tier1-integration.mjs', 'scripts/lib/integration-selection.mjs', 'scripts/lib/test-execution-evidence.mjs', 'scripts/lib/test-discovery.mjs', 'scripts/lib/test-revision.mjs', 'scripts/lib/test-sharding.mjs', 'scripts/lib/flaky-policy.mjs', 'scripts/lib/vitest-flaky-reporter.mjs']) {
+  for (const file of ['scripts/select-integration-tests.mjs', 'scripts/run-tier1-integration.mjs', 'scripts/lib/integration-selection.mjs', 'scripts/lib/test-execution-evidence.mjs', 'scripts/lib/test-discovery.mjs', 'scripts/lib/test-revision.mjs', 'scripts/lib/test-sharding.mjs', 'scripts/lib/flaky-policy.mjs', 'scripts/lib/vitest-flaky-reporter.mjs', 'scripts/lib/vitest-progress-reporter.mjs', 'scripts/lib/flaky-error.mjs',
+    'scripts/lib/server-unit-durations.mjs']) {
     write(file, '');
     copyFileSync(path.join(repository, file), path.join(root, file));
   }
-  write('server/node_modules/vitest/vitest.mjs', `
+  write('node_modules/vitest/vitest.mjs', `
 import { existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 const args = process.argv.slice(2);

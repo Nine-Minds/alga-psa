@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
 import { registerAfterCommit, tenantDb } from '@alga-psa/db';
 import { publishWorkflowEvent, type WorkflowActor } from '@alga-psa/event-bus/publishers';
-import { TicketModel, type CreateTicketInput } from '../../models/ticketModel';
+import { TicketModel, type CreateTicketInput, type IAnalyticsTracker } from '../../models/ticketModel';
 import { TagModel } from '../../models/tagModel';
 import { associateAssetWithTicket } from '../assets/assetTicketAssociation';
 import {
@@ -176,6 +176,8 @@ export interface CreateTicketWithSideEffectsInput {
     suppressContactNotifications?: boolean;
     suppressInternalNotifications?: boolean;
   };
+  /** Records `ticket_created` analytics. Omit for callers that do not track it (e.g. the scheduler). */
+  analyticsTracker?: IAnalyticsTracker;
 }
 
 export interface CreateTicketWithSideEffectsResult {
@@ -223,7 +225,7 @@ export async function createTicketWithSideEffects(
     trx,
     {},
     eventPublisher,
-    undefined,
+    input.analyticsTracker,
     actorUserId ?? undefined,
     3,
   );
@@ -286,7 +288,16 @@ export async function createTicketWithSideEffects(
   }
 
   if (input.checklistTemplateId) {
-    await applyChecklistTemplateToTicket(trx, tenant, ticketId, input.checklistTemplateId, 'template');
+    // A client-scoped template that doesn't match the new ticket's client is skipped, not fatal:
+    // ticket creation must never fail because of an optional checklist.
+    const checklistResult = await applyChecklistTemplateToTicket(trx, tenant, ticketId, input.checklistTemplateId, 'template');
+    if (checklistResult.reason) {
+      console.warn('[createTicketWithSideEffects] checklist template not applied', {
+        ticketId,
+        templateId: input.checklistTemplateId,
+        reason: checklistResult.reason,
+      });
+    }
   }
 
   const fullTicket = await db.table('tickets').where({ ticket_id: ticketId }).first();

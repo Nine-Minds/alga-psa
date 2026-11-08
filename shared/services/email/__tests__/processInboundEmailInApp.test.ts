@@ -676,6 +676,57 @@ describe('processInboundEmailInApp', () => {
     expect(processInboundEmailArtifactsBestEffortMock).not.toHaveBeenCalled();
   });
 
+  it('threads an HTML-only reply (no text part) onto the ticket instead of skipping it as self_notification', async () => {
+    const html = '<div>Thanks, that fixed it.</div>';
+    parseEmailReplyBodyMock.mockResolvedValue({
+      sanitizedText: undefined,
+      sanitizedHtml: html,
+      confidence: 0.9,
+      strategy: 'html',
+      appliedHeuristics: [],
+      warnings: [],
+      tokens: { conversationToken: 'html-only-token-1' },
+    });
+    findTicketByReplyTokenMock.mockResolvedValue({ ticketId: 'ticket-html-only' });
+
+    const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+
+    const result = await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({ id: 'email-html-only-1', body: { text: '', html } }),
+    });
+
+    expect(result).toMatchObject({ outcome: 'replied', ticketId: 'ticket-html-only' });
+    expect(createCommentFromEmailMock).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['&nbsp;-only', '<div>&nbsp;&nbsp;</div><p>&nbsp;</p>'],
+    ['whitespace-only', '<div> \n </div><br>'],
+  ])('does not count a %s HTML reply as substantive content', async (_label, html) => {
+    parseEmailReplyBodyMock.mockResolvedValue({
+      sanitizedText: undefined,
+      sanitizedHtml: html,
+      confidence: 0.9,
+      strategy: 'html',
+      appliedHeuristics: [],
+      warnings: [],
+      tokens: { conversationToken: 'blank-html-token-1' },
+    });
+
+    const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+
+    const result = await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({ id: 'email-blank-html-1', body: { text: '', html } }),
+    });
+
+    expect(result).toEqual({ outcome: 'skipped', reason: 'self_notification' });
+    expect(createCommentFromEmailMock).not.toHaveBeenCalled();
+  });
+
   it('rewrites data:image embeds to served attachment URLs in the stored comment and description after artifacts persist', async () => {
     const updatedNotes: any[] = [];
     const updatedTicketAttributes: any[] = [];

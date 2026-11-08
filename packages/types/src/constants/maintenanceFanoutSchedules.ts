@@ -1,3 +1,4 @@
+import { listExtensionMaintenanceSchedules } from './jobScheduleExtensions';
 import { CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME } from './billingJobNames';
 
 /**
@@ -49,6 +50,11 @@ export const MAINTENANCE_FANOUT_SCHEDULES: ReadonlyArray<{ jobName: string; cron
   // cannot load the billing domain graph.
   { jobName: CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME, cron: '0 4 * * *' },
 
+  { jobName: 'recover-file-uploads', cron: '*/5 * * * *' },
+  // Co-managed upload/transfer cleanup. Capability-gated in the fan-out (inert for tenants
+  // `co-managed` does not serve); registered server-side by registerServerMaintenanceJobs.
+  { jobName: 'co-managed-upload-cleanup', cron: '17 * * * *' },
+
   // Server-registered jobs (registerServerMaintenanceJobs.ts).
   { jobName: 'create-client-contract-line-cycles', cron: '0 0 * * *' },
   { jobName: 'project-date-readiness', cron: '15 0 * * *' },
@@ -63,6 +69,15 @@ export const MAINTENANCE_FANOUT_SCHEDULES: ReadonlyArray<{ jobName: string; cron
   { jobName: 'recover-comment-publications', cron: '* * * * *' },
   { jobName: 'generate-recurring-tickets', cron: '*/15 * * * *' },
 ];
+
+/**
+ * The EE schedule set: the native catalog followed by rows registered through
+ * `registerMaintenanceSchedule` (normally via `defineJob({ schedule })`). With
+ * nothing registered this is a copy of MAINTENANCE_FANOUT_SCHEDULES.
+ */
+export function listMaintenanceFanoutSchedules(): Array<{ jobName: string; cron: string }> {
+  return [...MAINTENANCE_FANOUT_SCHEDULES, ...listExtensionMaintenanceSchedules('ee')];
+}
 
 /**
  * Prefixes of the per-tenant Temporal schedules the server used to upsert at

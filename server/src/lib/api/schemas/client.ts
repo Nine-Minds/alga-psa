@@ -21,6 +21,7 @@ import {
   clientLocationCoreFieldsSchema,
   emailFieldSchema
 } from '@alga-psa/validation';
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
 // Structural rules for name/email/url/phone come from @alga-psa/validation so the
 // REST API and the server actions accept and reject exactly the same inputs.
@@ -209,7 +210,7 @@ export const createClientLocationSchema = z.object({
 });
 
 // Typed partial (createUpdateSchema takes ZodObject<any>, which would erase the email type).
-export const updateClientLocationSchema = createClientLocationSchema.partial().extend({
+export const updateClientLocationSchema = partialWithoutDefaults(createClientLocationSchema).extend({
   // null clears the email; a blank string is "not sent", matching the shared optional() helper.
   email: z
     .union([z.null(), z.literal('').transform(() => undefined), emailFieldSchema])
@@ -239,6 +240,8 @@ export const clientLocationResponseSchema = z.object({
   email: z.string().nullable(),
   notes: z.string().nullable(),
   is_active: z.boolean(),
+  /** How many contacts work at this location; a non-zero count is why a delete is refused. */
+  contact_count: z.number().int().min(0).optional(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   tenant: uuidSchema
@@ -266,8 +269,8 @@ export const clientStatsResponseSchema = z.object({
   total_clients: z.number(),
   active_clients: z.number(),
   inactive_clients: z.number(),
-  clients_by_billing_cycle: z.record(z.number()),
-  clients_by_client_type: z.record(z.number()),
+  clients_by_billing_cycle: z.record(z.string(), z.number()),
+  clients_by_client_type: z.record(z.string(), z.number()),
   total_credit_balance: z.number(),
   average_credit_balance: z.number()
 });
@@ -333,7 +336,7 @@ export const clientMergeResponseSchema = z.object({
   target_client_id: uuidSchema,
   moved_profile_ids: z.array(uuidSchema),
   moved_default_profile_id: uuidSchema.nullable(),
-  counts: z.record(z.number()),
+  counts: z.record(z.string(), z.number()),
   remapped_external_mapping_ids: z.array(z.string()),
   skipped_external_mapping_ids: z.array(z.string()),
   billing_strategy: z.enum(['source_profile', 'target_default']).optional()

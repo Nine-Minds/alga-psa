@@ -2808,7 +2808,7 @@ function OutboundWebhooksSetup() {
  * from delivery. The parent component decides on save whether the resulting
  * selection collapses to "full payload" (sentinel `null`) or an explicit map.
  */
-function PayloadFieldSelector(props: {
+export function PayloadFieldSelector(props: {
   selectedEventTypes: string[];
   selection: Record<string, string[]>;
   onChange: (next: Record<string, string[]>) => void;
@@ -2865,10 +2865,11 @@ function PayloadFieldSelector(props: {
           <div key={entity} className="mb-4 last:mb-0">
             <div className="mb-2 flex items-center justify-between">
               <div className="text-xs font-semibold uppercase tracking-wide text-gray-600">
-                {entity}
+                {entity === 'quote' ? t('security.webhooks.quotePayload.entity', { defaultValue: 'Quote' }) : entity}
               </div>
               <div className="flex gap-3 text-xs">
                 <button
+                  id={`webhook-fields-${entity}-select-all`}
                   type="button"
                   className="text-primary-600 hover:underline"
                   onClick={() => setEntitySelection(entity, [...all])}
@@ -2877,6 +2878,7 @@ function PayloadFieldSelector(props: {
                   {t('security.webhooks.form.payloadFieldsSelectAll', { defaultValue: 'Select all' })}
                 </button>
                 <button
+                  id={`webhook-fields-${entity}-clear`}
                   type="button"
                   className="text-gray-600 hover:underline"
                   onClick={() => setEntitySelection(entity, [])}
@@ -2891,7 +2893,7 @@ function PayloadFieldSelector(props: {
                 <Checkbox
                   key={`${entity}-${field}`}
                   id={`webhook-field-${entity}-${field}`}
-                  label={field}
+                  label={entity === 'quote' ? t(`security.webhooks.quotePayload.fields.${field}`, { defaultValue: field }) : field}
                   checked={selected.has(field)}
                   onChange={(event) => toggleField(entity, field, event.target.checked)}
                 />

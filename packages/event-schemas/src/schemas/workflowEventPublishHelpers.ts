@@ -1,7 +1,10 @@
+import { collaborationActorPayloadIssue, type CollaborationActorReference } from './collaborationActorSchemas';
+
 export type WorkflowActor =
   | { actorType: 'USER'; actorUserId: string }
   | { actorType: 'CONTACT'; actorContactId: string }
-  | { actorType: 'SYSTEM' };
+  | { actorType: 'SYSTEM' }
+  | { actorType: 'COLLABORATOR'; actorReference: CollaborationActorReference };
 
 export type WorkflowEventPublishContext = {
   tenantId: string;
@@ -17,14 +20,18 @@ function toIsoString(value: string | Date | undefined): string {
   return value.toISOString();
 }
 
-/** actorType/actorUserId/actorContactId for a WorkflowActor. The one actor-to-payload mapping. */
-function workflowActorFields(actor: WorkflowActor | undefined): {
-  actorType?: 'USER' | 'CONTACT' | 'SYSTEM';
+type WorkflowActorFields = {
+  actorType?: WorkflowActor['actorType'];
   actorUserId?: string;
   actorContactId?: string;
-} {
+  actorReference?: CollaborationActorReference;
+};
+
+/** actorType plus the actor's identity fields for a WorkflowActor. The one actor-to-payload mapping. */
+function workflowActorFields(actor: WorkflowActor | undefined): WorkflowActorFields {
   if (actor?.actorType === 'USER') return { actorType: 'USER', actorUserId: actor.actorUserId };
   if (actor?.actorType === 'CONTACT') return { actorType: 'CONTACT', actorContactId: actor.actorContactId };
+  if (actor?.actorType === 'COLLABORATOR') return { actorType: 'COLLABORATOR', actorReference: { ...actor.actorReference } };
   if (actor?.actorType === 'SYSTEM') return { actorType: 'SYSTEM' };
   return {};
 }
@@ -46,17 +53,11 @@ export function resolveTicketEventActor(input: {
  * actorType/actorUserId/actorContactId plus the legacy `userId` alias. `userId` is set
  * for USER actors only and is omitted (never null, never a substitute id) otherwise.
  */
-export function ticketEventActorFields(actor: WorkflowActor): {
-  actorType: 'USER' | 'CONTACT' | 'SYSTEM';
-  actorUserId?: string;
-  actorContactId?: string;
+export function ticketEventActorFields(actor: WorkflowActor): WorkflowActorFields & {
+  actorType: WorkflowActor['actorType'];
   userId?: string;
 } {
-  const fields = workflowActorFields(actor) as {
-    actorType: 'USER' | 'CONTACT' | 'SYSTEM';
-    actorUserId?: string;
-    actorContactId?: string;
-  };
+  const fields = workflowActorFields(actor) as WorkflowActorFields & { actorType: WorkflowActor['actorType'] };
   return actor.actorType === 'USER' ? { ...fields, userId: actor.actorUserId } : fields;
 }
 
@@ -90,18 +91,22 @@ export function buildWorkflowPayload<TPayload extends Record<string, unknown>>(
 ): TPayload & {
   tenantId: string;
   occurredAt: string;
-  actorType?: 'USER' | 'CONTACT' | 'SYSTEM';
+  actorType?: 'USER' | 'CONTACT' | 'SYSTEM' | 'COLLABORATOR';
+  actorReference?: CollaborationActorReference;
   actorUserId?: string;
   actorContactId?: string;
   idempotencyKey?: string;
 } {
   const occurredAt = toIsoString(ctx.occurredAt);
 
-  return {
+  const result = {
     ...payload,
     ...workflowActorFields(ctx.actor),
     tenantId: ctx.tenantId,
     occurredAt,
     ...(ctx.idempotencyKey ? { idempotencyKey: ctx.idempotencyKey } : {}),
   };
+  const issue = collaborationActorPayloadIssue(result);
+  if (issue) throw new Error(issue);
+  return result;
 }

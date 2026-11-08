@@ -107,16 +107,19 @@ export function ClientProfile() {
       });
 
       if (!result.success) {
-        const errorKeys: Record<typeof result.code, string> = {
+        const errorKeys: Partial<Record<typeof result.code, string>> = {
           EMAIL_ALREADY_EXISTS: 'profile.messages.emailAlreadyExists',
           REPORTS_TO_SELF: 'profile.messages.reportsToSelf',
           REPORTS_TO_CYCLE: 'profile.messages.reportsToCycle',
           SCIM_MANAGED_INACTIVE: 'profile.messages.scimManagedInactive',
           INVALID_TIMEZONE: 'profile.messages.invalidTimezone',
           PERMISSION_DENIED: 'profile.messages.permissionDenied',
+          INVALID_ACTIVE_STATE: 'profile.messages.updateError',
+          LICENSE_LIMIT_REACHED: 'profile.messages.updateError',
+          SOLO_PLAN_LIMIT: 'profile.messages.updateError',
           USER_UPDATE_FAILED: 'profile.messages.updateFailed',
         };
-        toast.error(tProfile(errorKeys[result.code], { defaultValue: result.error }));
+        toast.error((errorKeys[result.code] ? tProfile(errorKeys[result.code] as string, { defaultValue: result.error }) : result.error));
         return;
       }
 

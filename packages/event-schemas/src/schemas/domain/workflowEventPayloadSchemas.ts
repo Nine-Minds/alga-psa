@@ -1,4 +1,16 @@
-import { ZodTypeAny } from 'zod';
+import {
+  quoteSentEventPayloadSchema,
+  quoteViewedEventPayloadSchema,
+  quoteApprovedEventPayloadSchema,
+  quoteAcceptedEventPayloadSchema,
+  quoteRejectedEventPayloadSchema,
+  quoteExpiredEventPayloadSchema,
+  quoteConvertedEventPayloadSchema,
+  quoteConversionRevertedEventPayloadSchema,
+  quoteSupersededEventPayloadSchema,
+  quoteCancelledEventPayloadSchema,
+} from './quoteEventSchemas';
+import type { ZodType } from 'zod';
 import {
   emailProviderConnectedEventPayloadSchema,
   emailProviderDisconnectedEventPayloadSchema,
@@ -153,6 +165,7 @@ import {
 import {
   assetAssignedEventPayloadSchema,
   assetCreatedEventPayloadSchema,
+  assetCustodyChangedEventPayloadSchema,
   assetUnassignedEventPayloadSchema,
   assetUpdatedEventPayloadSchema,
   assetWarrantyExpiringEventPayloadSchema,
@@ -192,6 +205,7 @@ import {
   inventoryCountApprovedEventPayloadSchema,
   inventoryPoReceivedEventPayloadSchema,
   inventoryRmaCreatedEventPayloadSchema,
+  inventoryRmaUpdatedEventPayloadSchema,
   inventorySoFulfilledEventPayloadSchema,
   inventoryStockLowEventPayloadSchema,
   inventoryCountSubmittedEventPayloadSchema,
@@ -205,7 +219,7 @@ import {
   inventoryTransferReceivedEventPayloadSchema,
 } from './inventoryEventSchemas';
 
-export const workflowEventPayloadSchemas: Record<string, ZodTypeAny> = {
+export const workflowEventPayloadSchemas: Record<string, ZodType<any, any>> = {
   // Existing/already-present
   'payload.TicketCreated.v1': ticketCreatedEventPayloadSchema,
   'payload.TicketUpdated.v1': ticketUpdatedEventPayloadSchema,
@@ -328,6 +342,16 @@ export const workflowEventPayloadSchemas: Record<string, ZodTypeAny> = {
   'payload.ClientOwnerAssigned.v1': clientOwnerAssignedEventPayloadSchema,
   'payload.ClientMerged.v1': clientMergedEventPayloadSchema,
   'payload.ClientArchived.v1': clientArchivedEventPayloadSchema,
+  'payload.QuoteSent.v1': quoteSentEventPayloadSchema,
+  'payload.QuoteViewed.v1': quoteViewedEventPayloadSchema,
+  'payload.QuoteApproved.v1': quoteApprovedEventPayloadSchema,
+  'payload.QuoteAccepted.v1': quoteAcceptedEventPayloadSchema,
+  'payload.QuoteRejected.v1': quoteRejectedEventPayloadSchema,
+  'payload.QuoteExpired.v1': quoteExpiredEventPayloadSchema,
+  'payload.QuoteConverted.v1': quoteConvertedEventPayloadSchema,
+  'payload.QuoteConversionReverted.v1': quoteConversionRevertedEventPayloadSchema,
+  'payload.QuoteSuperseded.v1': quoteSupersededEventPayloadSchema,
+  'payload.QuoteCancelled.v1': quoteCancelledEventPayloadSchema,
   'payload.ClientLocationCreated.v1': clientLocationCreatedEventPayloadSchema,
   'payload.ClientLocationUpdated.v1': clientLocationUpdatedEventPayloadSchema,
   'payload.ClientLocationDeactivated.v1': clientLocationDeactivatedEventPayloadSchema,
@@ -390,6 +414,7 @@ export const workflowEventPayloadSchemas: Record<string, ZodTypeAny> = {
   'payload.AssetAssigned.v1': assetAssignedEventPayloadSchema,
   'payload.AssetUnassigned.v1': assetUnassignedEventPayloadSchema,
   'payload.AssetWarrantyExpiring.v1': assetWarrantyExpiringEventPayloadSchema,
+  'payload.AssetCustodyChanged.v1': assetCustodyChangedEventPayloadSchema,
   'payload.FileUploaded.v1': fileUploadedEventPayloadSchema,
   'payload.MediaProcessingSucceeded.v1': mediaProcessingSucceededEventPayloadSchema,
   'payload.MediaProcessingFailed.v1': mediaProcessingFailedEventPayloadSchema,
@@ -408,6 +433,7 @@ export const workflowEventPayloadSchemas: Record<string, ZodTypeAny> = {
   'payload.InventoryPoReceived.v1': inventoryPoReceivedEventPayloadSchema,
   'payload.InventorySoFulfilled.v1': inventorySoFulfilledEventPayloadSchema,
   'payload.InventoryRmaCreated.v1': inventoryRmaCreatedEventPayloadSchema,
+  'payload.InventoryRmaUpdated.v1': inventoryRmaUpdatedEventPayloadSchema,
   'payload.InventorySalesOrderCreated.v1': inventorySalesOrderCreatedEventPayloadSchema,
   'payload.InventorySalesOrderUpdated.v1': inventorySalesOrderUpdatedEventPayloadSchema,
   'payload.InventorySalesOrderDeleted.v1': inventorySalesOrderDeletedEventPayloadSchema,

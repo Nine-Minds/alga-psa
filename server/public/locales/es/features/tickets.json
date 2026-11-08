@@ -84,6 +84,7 @@
     "button": "Filtros",
     "unassigned": "Sin asignar",
     "category": "Filtrar por categoría",
+    "removeFilterChip": "Quitar filtro: {{label}}",
     "assignee": "Asignado",
     "allAssignees": "Todos los asignados",
     "responseState": "Estado de respuesta",
@@ -110,7 +111,15 @@
     "allResponseStatuses": "Todos los estados de respuesta",
     "responseStatus": "Estado de respuesta",
     "board": "Filtrar por tablero",
-    "searchSmart": "Buscar tickets y comentarios… Intro para búsqueda inteligente"
+    "searchSmart": "Buscar tickets y comentarios… Intro para búsqueda inteligente",
+    "requesterTags": "Etiquetas del solicitante",
+    "clientTags": "Etiquetas del cliente",
+    "tagModeAny": "Cualquiera de",
+    "tagModeNone": "Ninguna de",
+    "droppedFromLink": "Algunos filtros de este enlace no son válidos y se ignoraron.",
+    "clearFilters": "Limpiar filtros",
+    "location": "Ubicación",
+    "requesterLocation": "Ubicación del solicitante"
   },
   "create": {
     "title": "Crear ticket de soporte",
@@ -249,7 +258,10 @@
     "moreActions": "Más acciones",
     "createTemplate": "Crear plantilla desde el ticket",
     "createWorkflowFromTicket": "Crear flujo de trabajo desde el ticket",
-    "printWorkTag": "Imprimir etiqueta de trabajo"
+    "printWorkTag": "Imprimir etiqueta de trabajo",
+    "retry": "Reintentar",
+    "duplicateMultiple": "Duplicar varias veces…",
+    "duplicateOptions": "Más opciones de duplicado"
   },
   "messages": {
     "noTickets": "No se encontraron tickets",
@@ -359,7 +371,8 @@
     "pastedImagesDeleteFailed_many": "No se pudieron eliminar {{count}} imágenes pegadas.",
     "pastedImagesDeleted_few": "Se eliminaron {{count}} imágenes pegadas.",
     "pastedImagesDeleted_many": "Se eliminaron {{count}} imágenes pegadas.",
-    "sharedWorkspaceReadOnly": "Puede ver este ticket porque trata sobre un dispositivo de un espacio compartido. Solo quien lo creó puede añadir contenido."
+    "sharedWorkspaceReadOnly": "Puede ver este ticket porque trata sobre un dispositivo de un espacio compartido. Solo quien lo creó puede añadir contenido.",
+    "loadPartyTagsFailed": "No se pudieron cargar las etiquetas del solicitante y del cliente"
   },
   "conversation": {
     "comments": "Comentarios",
@@ -431,7 +444,29 @@
     "bcc": "Cco",
     "ccBccInvalid": "Corrige las direcciones resaltadas antes de enviar.",
     "ccBccTooMany": "Como máximo se pueden copiar {{max}} destinatarios Cc y Cco en un comentario.",
-    "ccBccNotSentOnInternal": "Cc y Cco no se envían con una nota interna. Desactiva Interna para usarlos."
+    "ccBccNotSentOnInternal": "Cc y Cco no se envían con una nota interna. Desactiva Interna para usarlos.",
+    "audience": {
+      "requester": "Solicitante",
+      "sharedIt": "TI compartida",
+      "organizationPrivate": "Privado de la organización",
+      "placeholder": "¿Quién puede ver esto?",
+      "required": "Elige quién puede ver este comentario antes de publicarlo."
+    },
+    "shared": {
+      "loading": "Cargando la conversación compartida...",
+      "loadError": "No se pudo cargar la conversación compartida.",
+      "reload": "Recargar",
+      "errors": {
+        "forbidden": "No tiene permiso para publicar para esta audiencia.",
+        "invalid": "Este comentario no se puede publicar.",
+        "readOnly": "Este espacio de trabajo es de solo lectura por ahora.",
+        "operationConflict": "Este comentario entra en conflicto con un intento anterior. Recarga e inténtalo de nuevo.",
+        "audienceUnresolved": "Elige quién puede ver este comentario antes de publicarlo.",
+        "unknownOutcome": "No pudimos confirmar que el comentario se publicó. Revisa la conversación antes de enviarlo de nuevo."
+      },
+      "unavailable": "Este ticket no está disponible.",
+      "back": "Volver a Tickets de clientes"
+    }
   },
   "responseState": {
     "awaitingYourResponse": "Esperando su respuesta",
@@ -511,6 +546,7 @@
     },
     "filters": {
       "allAssignees": "Todos los asignados",
+      "allContacts": "Todos los contactos",
       "selectStatus": "Seleccionar estado",
       "responseState": "Estado de respuesta",
       "allResponseStates": "Todos los estados de respuesta",
@@ -979,7 +1015,24 @@
     "tagCreatePartialFailure_few": "No se pudieron crear {{count}} etiquetas",
     "tagCreatePartialFailure_many": "No se pudieron crear {{count}} etiquetas",
     "tagCreationFailed_few": "No se pudieron crear {{count}} etiquetas",
-    "tagCreationFailed_many": "No se pudieron crear {{count}} etiquetas"
+    "tagCreationFailed_many": "No se pudieron crear {{count}} etiquetas",
+    "assets": {
+      "heading": "Activos",
+      "selectClientFirst": "Seleccione un cliente para vincular activos.",
+      "unavailable": "Los activos se pueden vincular desde el ticket una vez creado."
+    },
+    "attachments": {
+      "heading": "Archivos adjuntos",
+      "add": "Añadir archivos",
+      "remove": "Quitar {{name}}"
+    },
+    "watchers": {
+      "heading": "Observadores",
+      "placeholder": "Añadir observadores..."
+    },
+    "attachmentsPartialFailure": "Ticket creado, pero no se pudieron adjuntar estos archivos: {{files}}. Añádalos desde el ticket.",
+    "contactLocationSuffix": "(ubicación del contacto)",
+    "contactPrimaryLocationSuffix": "(ubicación principal del contacto)"
   },
   "itil": {
     "calculatedPriority": "Prioridad (calculada)",
@@ -1274,6 +1327,9 @@
     },
     "display": {
       "responseStateTrackingTitle": "Seguimiento del estado de respuesta",
+      "defaultReplyInternalTitle": "Visibilidad predeterminada de las respuestas",
+      "defaultReplyInternalDescription": "Iniciar las nuevas respuestas a tickets como internas para todos los miembros del equipo. Los usuarios pueden cambiar una respuesta a Cliente. Las respuestas del portal del cliente y de los hilos existentes no cambian.",
+      "defaultReplyInternalLabel": "Usar respuestas internas de forma predeterminada",
       "responseStateTrackingDescription": "Cuando está habilitado, los tickets rastrean automáticamente quién necesita responder a continuación (en espera del cliente o en espera de respuesta interna). Al deshabilitar esto, se ocultan las insignias de estado de respuesta, los filtros y las opciones de pausa de SLA relacionadas.",
       "responseStateTrackingEnabled": "Seguimiento del estado de respuesta habilitado",
       "responseStateTrackingDisabled": "Seguimiento del estado de respuesta deshabilitado",
@@ -1408,7 +1464,15 @@
     "selectUnit": "Seleccione una unidad para entregar...",
     "onHandByLocation": "Disponible por ubicación",
     "catalogUnitCost": "Costo unitario de catálogo",
-    "costNotConfigured": "No configurado"
+    "costNotConfigured": "No configurado",
+    "availableBadge": "Disponible: {{available}}",
+    "availableByLocation": "Existencias libres por ubicación",
+    "freeOfOnHand": "{{free}} libres de {{onHand}}",
+    "stockHeld": "Solo hay {{free}} disponibles. {{held}} en existencia están bloqueadas para pedidos de venta o proyectos y no se pueden usar aquí.",
+    "stockInsufficient": "Solo hay {{onHand}} en existencia y se solicitaron {{requested}}.",
+    "reservedStockTitle": "Las existencias están reservadas para un pedido de venta o un proyecto",
+    "reservedStockMessage": "Solo {{free}} de este producto están libres. {{reserved}} en existencia están reservadas para pedidos de venta o proyectos y solicitó {{requested}}. Si lo agrega de todos modos, toma existencias con las que cuenta un pedido de venta o un proyecto y es posible que quede incompleto.",
+    "reservedStockConfirm": "Agregar de todos modos"
   },
   "watchList": {
     "title": "Lista de seguimiento",
@@ -1590,7 +1654,9 @@
       "agentAlreadyAssigned": "Este usuario ya está asignado como agente adicional.",
       "teamNotFound": "Equipo no encontrado. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
       "teamLeadNotFound": "El equipo seleccionado no tiene responsable. Elija otro equipo o asigne un responsable primero.",
-      "commentNotFound": "Comentario no encontrado. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo."
+      "commentNotFound": "Comentario no encontrado. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "boardNotFound": "Tablero no encontrado. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "boardInactive": "El tablero de destino está inactivo. Elija un tablero activo."
     },
     "bundle": {
       "masterAlreadyBundleMaster": "El ticket {{tickets}} ya es un ticket principal de agrupación y no puede añadirse como ticket secundario. Deshaga la agrupación primero o utilícelo como principal.",
@@ -1617,7 +1683,9 @@
       "missingFieldNamed": "Falta un campo obligatorio del ticket: {{field}}.",
       "referenceMissing": "Uno de los registros de ticket seleccionados ya no existe. Actualice la página e inténtelo de nuevo.",
       "conflict": "Este cambio del ticket entra en conflicto con un registro existente. Actualice la página e inténtelo de nuevo.",
-      "valueNotAllowed": "Uno de los valores del ticket no está permitido. Revise el formulario e inténtelo de nuevo."
+      "valueNotAllowed": "Uno de los valores del ticket no está permitido. Revise el formulario e inténtelo de nuevo.",
+      "priorityItilBoardCustom": "La prioridad ‘{{priority}}’ es una prioridad ITIL, pero el tablero ‘{{board}}’ usa prioridades personalizadas.",
+      "priorityCustomBoardItil": "La prioridad ‘{{priority}}’ es una prioridad personalizada, pero el tablero ‘{{board}}’ usa prioridades ITIL."
     },
     "board": {
       "invalidReference": "El tablero, el estado o la regla seleccionados no son válidos. Actualice la página e inténtelo de nuevo.",
@@ -1626,7 +1694,14 @@
       "referenceInvalid": "El tablero, el estado, la prioridad, el responsable, el equipo o la política de SLA seleccionados ya no son válidos. Actualice la página e inténtelo de nuevo.",
       "duplicateName": "Ya existe un tablero con este nombre.",
       "duplicate": "Ya existe un tablero o estado con la misma configuración.",
-      "invalidValue": "Uno de los valores del tablero o del estado no es válido. Actualice la página e inténtelo de nuevo."
+      "invalidValue": "Uno de los valores del tablero o del estado no es válido. Actualice la página e inténtelo de nuevo.",
+      "notificationEmailInvalid": "La regla de notificación {{rule}} tiene una dirección de correo electrónico no válida (hasta {{max}} caracteres)",
+      "notificationEmailLimit": "La regla de notificación {{rule}} puede tener como máximo {{max}} direcciones de correo electrónico",
+      "notificationRecipientRequired": "La regla de notificación {{rule}} debe notificar al menos a un usuario, equipo o dirección de correo electrónico",
+      "notificationEmailIsUser": "Regla de notificación {{rule}}: {{address}} es la dirección de correo de un usuario de Alga. Elige al usuario en su lugar.",
+      "notificationEmailIsContact": "Regla de notificación {{rule}}: {{address}} pertenece a un contacto o ubicación de un cliente y no puede ser destinatario.",
+      "notificationEmailClientDomain": "Regla de notificación {{rule}}: {{address}} pertenece al dominio de correo de un cliente y no puede ser destinatario.",
+      "notificationEmailInboundMailbox": "Regla de notificación {{rule}}: {{address}} es un buzón de entrada conectado y no puede ser destinatario."
     },
     "material": {
       "invalidValue": "Uno de los valores de material seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
@@ -1681,7 +1756,16 @@
       "ruleSubcategoryRequiresCategory": "Seleccione una categoría antes de elegir una subcategoría.",
       "ruleTooManyKeywords": "Use como máximo {{max}} palabras clave por regla.",
       "ruleKeywordTooLong": "Cada palabra clave debe tener {{max}} caracteres o menos.",
-      "ruleOriginInvalid": "Uno de los orígenes de ticket seleccionados no es válido."
+      "ruleOriginInvalid": "Uno de los orígenes de ticket seleccionados no es válido.",
+      "templateClientMismatch": "Esta plantilla de lista de verificación está limitada a un cliente distinto del cliente del ticket.",
+      "templateClientInvalid": "No se encontró el cliente seleccionado.",
+      "ruleClientOutsideTemplateScope": "Esta plantilla pertenece a un cliente, por lo que sus reglas no pueden dirigirse a otros clientes.",
+      "templateRulesTargetOtherClients": "Algunas reglas de aplicación automática de esta plantilla se dirigen a otros clientes. Quite esos clientes de las reglas antes de asignar la plantilla a un cliente.",
+      "predicateClientOutsideScope": "El cliente {{client}} está fuera del alcance de esta plantilla.",
+      "predicateInvalid": "Regla de lista de verificación no válida: {{detail}}"
+    },
+    "comment": {
+      "audienceRequired": "Elige quién puede ver este comentario antes de publicarlo."
     }
   },
   "ticketSection": {
@@ -1807,7 +1891,8 @@
     "remoteFieldUpdated": "{{name}} actualizó {{field}}",
     "connection": {
       "reconnecting": "Actualizaciones en vivo sin conexión - reconectando...",
-      "unavailable": "Actualizaciones en vivo no disponibles"
+      "unavailable": "Actualizaciones en vivo no disponibles",
+      "offlineShort": "Sin conexión"
     }
   },
   "delete": {
@@ -1989,7 +2074,12 @@
       "openScheduleEntry": "Abrir entrada de agenda",
       "acrossEntries_few": "en {{count}} entradas",
       "acrossEntries_many": "en {{count}} entradas",
-      "changeLocation": "Cambiar ubicación"
+      "changeLocation": "Cambiar ubicación",
+      "addDescriptionPrompt": "Añade una descripción: ¿cuál es el problema y qué necesita el cliente?",
+      "projectTasks": "Tareas del proyecto",
+      "timeAndBilling": "Tiempo y facturación",
+      "useContactLocation": "Usar la ubicación del contacto",
+      "remote": "Remota"
     },
     "timeline": {
       "subtitle": "Respuestas, tiempo y cambios del sistema en un solo lugar",
@@ -2085,6 +2175,17 @@
       "collapseActivity": "Contraer actividad anterior",
       "replyingToComment": "Respondiendo a {{name}}",
       "createdFromTemplate": "{{actor}} creó este ticket desde la plantilla \"{{name}}\""
+    },
+    "board": {
+      "conversation": "Conversación",
+      "details": "Detalles"
+    },
+    "groups": {
+      "customer": "Cliente",
+      "work": "Trabajo",
+      "who": "Personas",
+      "linked": "Elementos vinculados",
+      "empty": "Aún no hay nada"
     }
   },
   "notifications": {
@@ -2516,7 +2617,9 @@
     "discard": "Descartar cronómetro",
     "pausedHint": "En pausa. Reanude para seguir registrando o detenga para guardar el tiempo.",
     "workDescription": "Descripción del trabajo",
-    "whatAreYouWorkingOn": "¿En qué está trabajando?"
+    "whatAreYouWorkingOn": "¿En qué está trabajando?",
+    "chipElsewhere": "Cronómetro en {{label}}",
+    "title": "Cronómetro"
   },
   "templates": {
     "loading": "Cargando…",
@@ -2531,12 +2634,15 @@
       "columns": {
         "name": "Nombre",
         "title": "Título del ticket",
+        "client": "Cliente",
         "board": "Tablero",
         "checklist": "Elementos de la lista",
         "status": "Estado",
         "schedules": "Programaciones"
       },
-      "deleteBlocked": "Usada por {{count}} programación(es) recurrente(s). Asígneles otra plantilla o archívelas primero."
+      "deleteBlocked": "Usada por {{count}} programación(es) recurrente(s). Asígneles otra plantilla o archívelas primero.",
+      "allClients": "Todos los clientes",
+      "clientFilter": "Todos los clientes"
     },
     "status": {
       "active": "Activa",
@@ -2564,6 +2670,9 @@
       "title": "Título del ticket",
       "description": "Descripción",
       "descriptionPlaceholder": "Descripción",
+      "client": "Cliente",
+      "clientPlaceholder": "Todos los clientes",
+      "clientHelp": "Déjelo vacío para ofrecer la plantilla a todos los clientes. Elija uno para ofrecerla solo en los tickets de ese cliente.",
       "offerForManualUse": "Ofrecer en el selector de nuevo ticket",
       "offerForManualUseHelp": "Desactívelo para plantillas que solo usan las programaciones recurrentes.",
       "titleTokens": "Puede usar {{tokens}} en el título; se rellenan en cada ticket."
@@ -2594,15 +2703,17 @@
       "fromTicket": "Rellenado desde el ticket #{{number}}. No se guarda nada hasta que haga clic en Guardar.",
       "inlineImages": "La descripción contiene imágenes que pertenecen al ticket de origen. Pueden dejar de mostrarse si ese ticket se elimina. Quítelas o vuelva a subirlas si la plantilla debe sobrevivir al ticket.",
       "viewOnly": "Puede ver esta plantilla pero no modificarla.",
-      "referenceProblems": "Algunos campos de esta plantilla apuntan a elementos que ya no existen. Se dejan en blanco al usar la plantilla. Corríjalos y guarde:",
+      "referenceProblems": "Algunos campos de esta plantilla no son válidos: hacen referencia a elementos que ya no existen o no son compatibles entre sí (por ejemplo, una prioridad que no coincide con el tablero). Corríjalos y guarde:",
       "inactiveWarning": "Inactiva: oculta en el selector de plantillas; todavía la usan {{count}} programaciones.",
       "sharedWarning": "Los cambios se aplican a cada programación recurrente que use esta plantilla, a partir del siguiente ticket que cree.",
-      "boardChangeWarning": "Cambiar el tablero borra la prioridad y la categoría, y puede invalidar el estado de las programaciones que usan esta plantilla. Esas programaciones fallan hasta que las edite. Programaciones afectadas: {{schedules}}."
+      "boardChangeWarning": "Cambiar el tablero borra la prioridad y la categoría, y puede invalidar el estado de las programaciones que usan esta plantilla. Esas programaciones fallan hasta que las edite. Programaciones afectadas: {{schedules}}.",
+      "priorityTypeMismatchItil": "La prioridad ‘{{priority}}’ es una prioridad ITIL, pero el tablero ‘{{board}}’ usa prioridades personalizadas. No se podrá guardar hasta que cambie la prioridad o el tablero.",
+      "priorityTypeMismatchCustom": "La prioridad ‘{{priority}}’ es una prioridad personalizada, pero el tablero ‘{{board}}’ usa prioridades ITIL. No se podrá guardar hasta que cambie la prioridad o el tablero."
     },
     "errors": {
       "notFound": "Plantilla de ticket no encontrada",
       "duplicateName": "Ya existe una plantilla llamada {{name}}",
-      "invalidReferences": "La plantilla hace referencia a un tablero, una categoría o una prioridad que no está disponible",
+      "invalidReferences": "{{problems}}",
       "notAvailable": "Las plantillas de tickets no están disponibles",
       "subcategoryNeedsCategory": "Una subcategoría requiere una categoría",
       "inUseBySchedules": "Usada por {{count}} programación(es) recurrente(s): {{schedules}}. Asígneles otra plantilla o archívelas primero."
@@ -2641,5 +2752,214 @@
       "daysHours": "{{days}} d {{hours}} h",
       "days": "{{days}} d"
     }
+  },
+  "cannedResponses": {
+    "picker": {
+      "button": "Respuestas predefinidas",
+      "buttonTooltip": "Insertar una respuesta predefinida (Ctrl/Cmd+J, o escriba /)",
+      "title": "Insertar una respuesta predefinida",
+      "searchPlaceholder": "Buscar respuestas predefinidas…",
+      "searchLabel": "Buscar respuestas predefinidas",
+      "loading": "Cargando respuestas predefinidas…",
+      "empty": "Todavía no hay respuestas predefinidas.",
+      "noResults": "Ninguna respuesta predefinida coincide con su búsqueda.",
+      "loadFailed": "No se pudieron cargar las respuestas predefinidas.",
+      "insertFailed": "No se pudo insertar la respuesta predefinida.",
+      "favorites": "Favoritas",
+      "recent": "Usadas recientemente",
+      "uncategorized": "Sin categoría",
+      "slashGroup": "Respuestas predefinidas",
+      "slashBrowse": "Respuestas predefinidas…",
+      "slashBrowseHint": "Explorar e insertar una respuesta guardada"
+    },
+    "scope": {
+      "personal": "Personal",
+      "team": "Equipo",
+      "board": "Tablero",
+      "clientPortal": "Portal del cliente",
+      "personalHelp": "Solo usted puede usar esta respuesta.",
+      "teamHelp": "Los miembros del equipo elegido pueden usar esta respuesta.",
+      "boardHelp": "Cualquiera que responda tickets del tablero elegido puede usar esta respuesta.",
+      "clientPortalHelp": "Reservada para respuestas del portal del cliente. No se ofrece al responder desde el portal MSP."
+    },
+    "list": {
+      "title": "Respuestas predefinidas",
+      "new": "Nueva respuesta predefinida",
+      "showInactive": "Mostrar inactivas",
+      "searchPlaceholder": "Buscar por nombre, categoría o texto…",
+      "searchLabel": "Buscar respuestas predefinidas",
+      "allCategories": "Todas las categorías",
+      "noResults": "Ninguna respuesta predefinida coincide con sus filtros.",
+      "empty": "Aún no hay respuestas predefinidas. Cree una para reutilizarla en las respuestas de tickets.",
+      "deleteTitle": "Eliminar respuesta predefinida",
+      "deleteMessage": "¿Eliminar «{{name}}»? Las respuestas que ya la usaron no se modifican.",
+      "deleted": "Respuesta predefinida eliminada",
+      "favorite": "Favorita",
+      "columns": {
+        "name": "Nombre",
+        "category": "Categoría",
+        "scope": "Disponible para",
+        "preview": "Vista previa",
+        "status": "Estado"
+      }
+    },
+    "status": {
+      "active": "Activa",
+      "inactive": "Inactiva"
+    },
+    "actions": {
+      "favorite": "Añadir a favoritas",
+      "unfavorite": "Quitar de favoritas",
+      "edit": "Editar",
+      "activate": "Activar",
+      "deactivate": "Desactivar",
+      "delete": "Eliminar",
+      "cancel": "Cancelar"
+    },
+    "loading": "Cargando…",
+    "editor": {
+      "back": "Respuestas predefinidas",
+      "newTitle": "Nueva respuesta predefinida",
+      "save": "Guardar",
+      "saving": "Guardando…",
+      "saved": "Respuesta predefinida guardada",
+      "created": "Respuesta predefinida creada",
+      "viewOnly": "Puede ver esta respuesta predefinida, pero no modificarla."
+    },
+    "sections": {
+      "details": "Detalles",
+      "body": "Respuesta"
+    },
+    "fields": {
+      "name": "Nombre",
+      "category": "Categoría",
+      "categoryHelp": "Agrupa las respuestas en el selector. Opcional.",
+      "scope": "Disponible para",
+      "team": "Equipo",
+      "teamPlaceholder": "Seleccione un equipo",
+      "board": "Tablero",
+      "boardPlaceholder": "Seleccione un tablero",
+      "body": "Texto de la respuesta",
+      "bodyPlaceholder": "Escriba la respuesta…"
+    },
+    "mergeFields": {
+      "title": "Campos de combinación",
+      "help": "Se rellenan al insertar la respuesta en una réplica. Un campo sin valor queda vacío; un campo no reconocido se deja tal como está.",
+      "descriptions": {
+        "contact_first_name": "Nombre del contacto",
+        "contact_last_name": "Apellido del contacto",
+        "contact_name": "Nombre completo del contacto",
+        "ticket_number": "El número del ticket",
+        "ticket_title": "El título del ticket",
+        "agent_name": "Su nombre (el agente que responde)",
+        "client_name": "El nombre del cliente"
+      }
+    },
+    "errors": {
+      "notFound": "No se encontró la respuesta predefinida.",
+      "duplicateName": "Ya existe aquí una respuesta predefinida llamada «{{name}}».",
+      "invalidReferences": "El equipo o tablero seleccionado ya no existe.",
+      "notAvailable": "Esta respuesta predefinida no está disponible para este ticket.",
+      "notATeamMember": "Solo puede administrar respuestas de equipo de los equipos a los que pertenece."
+    }
+  },
+  "batchDuplicate": {
+    "title": "Duplicar #{{number}} para contactos",
+    "titleLoading": "Duplicar para contactos",
+    "loading": "Cargando…",
+    "loadFailed": "No se pudo cargar el ticket que se va a duplicar. Inténtalo de nuevo.",
+    "createFailed": "No se pudieron crear las copias. Inténtalo de nuevo.",
+    "templateLabel": "Plantilla de título",
+    "insertToken": "Insertar:",
+    "nameHint": "Sustituye «{{name}}» por {{token}} para personalizar cada copia.",
+    "replace": "Sustituir",
+    "contactsLabel": "Contactos",
+    "contactsPlaceholder": "Seleccionar contactos…",
+    "addBlankRow": "Añadir copia sin contacto",
+    "count": "{{count}} de {{max}}",
+    "capReached": "Máximo de {{max}} copias por lote.",
+    "columns": {
+      "contact": "Contacto",
+      "title": "Título"
+    },
+    "resetRow": "Restablecer a la plantilla",
+    "removeRow": "Quitar copia",
+    "copyChecklist": "Copiar elementos de la lista de verificación (sin marcar)",
+    "cancel": "Cancelar",
+    "review": "Revisar",
+    "back": "Atrás",
+    "create_one": "Crear {{count}} ticket",
+    "create_other": "Crear {{count}} tickets",
+    "creating_one": "Creando {{count}} ticket…",
+    "creating_other": "Creando {{count}} tickets…",
+    "done": "Hecho",
+    "retryFailed_one": "Reintentar fallidas ({{count}})",
+    "retryFailed_other": "Reintentar fallidas ({{count}})",
+    "errors": {
+      "contactRequired": "Este título usa {{token}}, pero la copia no tiene contacto.",
+      "unknownToken": "Marcador desconocido: {{tokens}}",
+      "empty": "El título no puede estar vacío.",
+      "unresolvedToken": "El título aún contiene un marcador {{placeholder}}."
+    },
+    "summary": {
+      "client": "Cliente",
+      "board": "Tablero",
+      "category": "Categoría",
+      "priority": "Prioridad",
+      "assignee": "Asignado a",
+      "team": "Equipo",
+      "additionalAgents": "Agentes adicionales",
+      "tags": "Etiquetas",
+      "checklist": "Lista de verificación",
+      "checklistCopy_one": "Copiar {{count}} elemento (sin marcar)",
+      "checklistCopy_other": "Copiar {{count}} elementos (sin marcar)",
+      "checklistSkip": "No se copia",
+      "customFields": "Campos personalizados",
+      "status": "Estado",
+      "statusBoardDefault": "Predeterminado del tablero",
+      "none": "Ninguno",
+      "notCopied": "Los comentarios, las entradas de tiempo, los archivos adjuntos y la fecha de vencimiento no se copian.",
+      "unresolved": "Nombre no disponible"
+    },
+    "results": {
+      "created_one": "{{count}} ticket creado",
+      "created_other": "{{count}} tickets creados",
+      "failed_one": "Falló {{count}} copia",
+      "failed_other": "Fallaron {{count}} copias"
+    },
+    "discardTitle": "¿Descartar estas copias?",
+    "discardMessage": "Las copias configuradas aún no se han creado. ¿Descartarlas y cerrar?",
+    "discardConfirm": "Descartar",
+    "discardKeep": "Seguir editando"
+  },
+  "sharedSla": {
+    "title": "Nivel de servicio",
+    "msp": "Nivel de servicio del MSP",
+    "customer": "Nivel de servicio del cliente",
+    "state": {
+      "running": "En curso",
+      "paused": "En pausa",
+      "met": "Cumplido",
+      "breached": "Incumplido"
+    },
+    "target": {
+      "response": "Primera respuesta",
+      "resolution": "Resolución"
+    },
+    "elapsed": "Transcurrido: {{time}}",
+    "dueAt": "Vence: {{date}}",
+    "completedAt": "Cumplido el {{date}}",
+    "breached": "Incumplido",
+    "targetPaused": "En pausa",
+    "noTarget": "Sin objetivo",
+    "duration": {
+      "hoursMinutes": "{{hours}} h {{minutes}} min",
+      "minutes": "{{minutes}} min"
+    },
+    "notStarted": "El reloj empieza cuando se escala el ticket.",
+    "unavailable": "Este nivel de servicio ya no está disponible.",
+    "notConfigured": "No se aplica ningún nivel de servicio.",
+    "empty": "Todavía no se hace seguimiento de ningún nivel de servicio para este ticket.",
+    "loadError": "No se pudo cargar el nivel de servicio."
   }
 }

@@ -118,6 +118,11 @@ vi.mock('@alga-psa/core/secrets', async (importOriginal) => {
 let actionsDb: Knex | undefined;
 let actionsTenant: string | undefined;
 
+// Opt in to the allow-by-default '@alga-psa/auth/rbac' mock (not global on purpose;
+// see ../helpers/allowAllRbac.ts). Fixture tenants here don't seed role_permissions.
+vi.mock('@alga-psa/auth/rbac', async (importOriginal) =>
+  (await import('../helpers/allowAllRbac')).allowAllRbac(importOriginal as any));
+
 vi.mock('../../lib/db', () => ({
   getCurrentTenantId: () => actionsTenant,
   createTenantKnex: vi.fn(async () => ({ knex: actionsDb, tenant: actionsTenant })),

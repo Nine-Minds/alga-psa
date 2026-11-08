@@ -5,7 +5,7 @@
  * means a comment added from the mobile app publishes the same events, and so
  * fires the same mention and assignee notifications, as one added on the web.
  *
- * Callers own authentication and tenant context; every function takes the
+ * Callers own authentication, tenant context and authorization (withTaskCommentAccess); every function takes the
  * connection, tenant and acting user explicitly. Failures are thrown as plain
  * Errors with the messages the action-layer mapper already understands.
  */
@@ -13,18 +13,20 @@
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { getEntityImageUrlsBatch } from '@alga-psa/formatting/avatarUtils';
+import { publishCommentEvent } from '@alga-psa/db/commentEventRegistry';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildTaskCommentAddedPayload, buildTaskCommentUpdatedPayload } from '@alga-psa/workflow-streams';
 import { aggregateReactions, isMspPrincipalUserType, validateEmoji } from '@alga-psa/types';
+import { redactTaskComment } from '@alga-psa/types';
 import type { IAggregatedReaction, IProjectTaskComment, IProjectTaskCommentWithUser, IReactionsBatchResult } from '@alga-psa/types';
 import type { Knex } from 'knex';
-import {
-  BuiltinAuthorizationKernelProvider,
-  RequestLocalAuthorizationCache,
-  createAuthorizationKernel,
-} from '@alga-psa/authorization/kernel';
+import { assertNativeTaskNote, collaborationFieldPolicy, type TaskCommentCollaboration } from './taskCommentCollaboration';
+import { projectTaskAudience } from '@alga-psa/co-managed/projectTaskAudience';
 
 export type TaskCommentActor = { user_id: string; user_type: 'internal' | 'client' | 'service' };
+
+/** Present only for an active co-managed workspace (resolved by withTaskCommentAccess); absent = native path. */
+export type TaskCommentCollaborationOptions = { collaboration?: TaskCommentCollaboration };
 
 export type CreateTaskCommentInput = {
   taskId: string;
@@ -38,8 +40,12 @@ export type TaskCommentRow = {
   task_id: string;
   thread_id: string | null;
   parent_comment_id: string | null;
-  user_id: string;
-  author_type: 'internal';
+  /** Null for collaborator- and contact-authored rows. */
+  user_id: string | null;
+  author_type: 'internal' | 'client';
+  actor_reference_id?: string | null;
+  author_kind?: 'user' | 'contact' | null;
+  collaboration_revision?: number | null;
   note: string;
   markdown_content: string;
   created_at: string;
@@ -57,59 +63,6 @@ function tenantScopedTable(
   tenant: string,
 ): Knex.QueryBuilder {
   return tenantDb(conn, tenant).table(table);
-}
-
-function buildCommentAuthorizationSubject(user: TaskCommentActor, tenant: string) {
-  return {
-    tenant,
-    userId: user.user_id,
-    userType: user.user_type,
-    roleIds: [],
-    teamIds: [],
-    managedUserIds: [],
-    portfolioClientIds: [],
-    clientId: null,
-  };
-}
-
-async function assertOwnCommentOrInternalUser(
-  trx: Knex.Transaction,
-  user: TaskCommentActor,
-  tenant: string,
-  taskCommentId: string,
-  ownerUserId: string,
-  action: 'update' | 'delete'
-): Promise<void> {
-  if (isMspPrincipalUserType(user.user_type)) {
-    return;
-  }
-
-  const kernel = createAuthorizationKernel({
-    builtinProvider: new BuiltinAuthorizationKernelProvider({
-      relationshipRules: [{ template: 'own' }],
-    }),
-    rbacEvaluator: async () => true,
-  });
-
-  const decision = await kernel.authorizeResource({
-    subject: buildCommentAuthorizationSubject(user, tenant),
-    resource: {
-      type: 'project_task_comment',
-      action,
-      id: taskCommentId,
-    },
-    record: {
-      id: taskCommentId,
-      ownerUserId,
-    },
-    requestCache: new RequestLocalAuthorizationCache(),
-    knex: trx,
-  });
-
-  if (!decision.allowed) {
-    const verb = action === 'update' ? 'edit' : 'delete';
-    throw new Error(`You can only ${verb} your own comments`);
-  }
 }
 
 async function loadTaskContext(
@@ -160,7 +113,9 @@ export async function createTaskCommentWithDb(
   tenant: string,
   user: TaskCommentActor,
   comment: CreateTaskCommentInput,
+  options: TaskCommentCollaborationOptions = {},
 ): Promise<string> {
+  const { collaboration } = options;
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const userId = user.user_id;
 
@@ -187,7 +142,7 @@ export async function createTaskCommentWithDb(
 
     if (isReply) {
       const parent = await tenantScopedTable(trx, 'project_task_comments', tenant)
-        .select('task_comment_id', 'task_id', 'thread_id', 'deleted_at')
+        .select(...(collaboration ? ['*'] : ['task_comment_id', 'task_id', 'thread_id', 'deleted_at']))
         .where({ task_comment_id: parentCommentId })
         .first();
 
@@ -202,6 +157,9 @@ export async function createTaskCommentWithDb(
       if (parent.deleted_at) {
         throw new Error('Cannot reply to a deleted task comment');
       }
+
+      // Co-managed: a native reply may only continue an organization-private thread.
+      await assertNativeTaskNote(trx, tenant, parent, collaboration, { reply: true });
 
       const idsResult = await trx.raw('SELECT gen_random_uuid() AS task_comment_id');
       taskCommentId = idsResult.rows?.[0]?.task_comment_id;
@@ -218,7 +176,8 @@ export async function createTaskCommentWithDb(
         ticket_id: null,
         project_task_id: comment.taskId,
         root_comment_id: taskCommentId,
-        is_internal: false,
+        // Native task comments are organization-private in a co-managed workspace; legacy rows stay NULL.
+        ...(collaboration ? { is_internal: true, collaboration_audience: 'organization_private' } : { is_internal: false }),
         reply_count: 0,
         last_activity_at: now,
         created_at: now,
@@ -242,6 +201,7 @@ export async function createTaskCommentWithDb(
         author_type: 'internal',
         note: comment.note,
         markdown_content: markdownContent,
+        ...(collaboration ? { collaboration_revision: 1 } : {}),
         created_at: now
       })
       .returning('*');
@@ -256,37 +216,45 @@ export async function createTaskCommentWithDb(
     }
 
     // Publish event (mention extraction happens in event handler)
-    await publishWorkflowEvent({
+    await publishCommentEvent(trx, 'project-task', {
+      tenantId: tenant,
+      taskId: comment.taskId,
+      commentId: newComment.task_comment_id,
+      userId,
       eventType: 'TASK_COMMENT_ADDED',
-      payload: buildTaskCommentAddedPayload({
-        taskId: comment.taskId,
-        projectId: task.project_id,
-        createdByUserId: userId,
-        taskCommentId: newComment.task_comment_id,
-        threadId,
-        parentCommentId,
-        isReply,
-        taskName: task.task_name,
-        commentContent: comment.note,  // BlockNote JSON with embedded mentions
-      }),
-      ctx: {
-        tenantId: tenant,
-        actor: { actorType: 'USER', actorUserId: userId },
-      },
-    });
+    }, async () => {
+      await publishWorkflowEvent({
+        eventType: 'TASK_COMMENT_ADDED',
+        payload: buildTaskCommentAddedPayload({
+          taskId: comment.taskId,
+          projectId: task.project_id,
+          createdByUserId: userId,
+          taskCommentId: newComment.task_comment_id,
+          threadId,
+          parentCommentId,
+          isReply,
+          taskName: task.task_name,
+          commentContent: comment.note,  // BlockNote JSON with embedded mentions
+        }),
+        ctx: {
+          tenantId: tenant,
+          actor: { actorType: 'USER', actorUserId: userId },
+        },
+      });
 
-    await publishEvent({
-      eventType: 'PROJECT_TASK_COMMENT_CREATED',
-      payload: {
-        tenantId: tenant,
-        taskId: comment.taskId,
-        projectId: task.project_id,
-        userId,
-        taskCommentId: newComment.task_comment_id,
-        taskName: task.task_name,
-        commentContent: comment.note,
-        isUpdate: false
-      }
+      await publishEvent({
+        eventType: 'PROJECT_TASK_COMMENT_CREATED',
+        payload: {
+          tenantId: tenant,
+          taskId: comment.taskId,
+          projectId: task.project_id,
+          userId,
+          taskCommentId: newComment.task_comment_id,
+          taskName: task.task_name,
+          commentContent: comment.note,
+          isUpdate: false
+        }
+      });
     });
 
     return newComment.task_comment_id;
@@ -298,7 +266,9 @@ export async function listTaskCommentsWithDb(
   db: Knex,
   tenant: string,
   taskId: string,
+  options: TaskCommentCollaborationOptions & { viewerUserId?: string } = {},
 ): Promise<IProjectTaskCommentWithUser[]> {
+  const { collaboration } = options;
   const commentsQuery = tenantScopedTable(db, 'project_task_comments', tenant);
   tenantDb(db, tenant).tenantJoin(commentsQuery, 'users', 'project_task_comments.user_id', 'users.user_id', { type: 'left' });
   const comments = await commentsQuery
@@ -311,6 +281,16 @@ export async function listTaskCommentsWithDb(
     )
     .orderBy('project_task_comments.created_at', 'asc') as any[];
 
+  // Co-managed: audience comes from the thread; the thread rows are fetched once for the task.
+  const threadAudience = new Map<string, ReturnType<typeof projectTaskAudience>>();
+  if (collaboration) {
+    const threads = await tenantScopedTable(db, 'comment_threads', tenant)
+      .where({ project_task_id: taskId }).whereNull('ticket_id')
+      .select('thread_id', 'collaboration_audience', 'is_internal') as any[];
+    for (const thread of threads) threadAudience.set(thread.thread_id, projectTaskAudience(thread));
+  }
+  const rootDeleted = new Set<string>(comments.filter((c: any) => !c.parent_comment_id && c.deleted_at).map((c: any) => c.thread_id));
+
   // Get avatar URLs for all users
   const userIds: string[] = [
     ...new Set(
@@ -322,25 +302,53 @@ export async function listTaskCommentsWithDb(
   const avatarUrls = tenant ? await getEntityImageUrlsBatch('user', userIds, tenant) : new Map<string, string | null>();
 
   // Map snake_case to camelCase
-  return comments.map((comment: any) => ({
-    taskCommentId: comment.task_comment_id,
-    taskId: comment.task_id,
-    threadId: comment.thread_id,
-    parentCommentId: comment.parent_comment_id,
-    userId: comment.user_id,
-    authorType: comment.author_type,
-    note: comment.note,
-    markdownContent: comment.markdown_content,
-    createdAt: comment.created_at,
-    updatedAt: comment.updated_at,
-    editedAt: comment.edited_at,
-    deletedAt: comment.deleted_at,
-    tenant: comment.tenant,
-    firstName: comment.first_name,
-    lastName: comment.last_name,
-    email: comment.email,
-    avatarUrl: avatarUrls.get(comment.user_id) || null,
-  }));
+  const mapped = comments.map((comment: any): IProjectTaskCommentWithUser => {
+    const base: IProjectTaskCommentWithUser = {
+      taskCommentId: comment.task_comment_id,
+      taskId: comment.task_id,
+      threadId: comment.thread_id,
+      parentCommentId: comment.parent_comment_id,
+      userId: comment.user_id,
+      authorType: comment.author_type,
+      note: comment.note,
+      markdownContent: comment.markdown_content,
+      createdAt: comment.created_at,
+      updatedAt: comment.updated_at,
+      editedAt: comment.edited_at,
+      deletedAt: comment.deleted_at,
+      tenant: comment.tenant,
+      firstName: comment.first_name,
+      lastName: comment.last_name,
+      email: comment.email,
+      avatarUrl: avatarUrls.get(comment.user_id) || null,
+    };
+    if (!collaboration) return base;
+
+    // A missing author kind is a row written before contact authorship existed: a user.
+    const authorKind: 'user' | 'contact' = comment.author_kind === 'contact' ? 'contact' : 'user';
+    const audience = threadAudience.get(comment.thread_id) ?? 'organization_private';
+    const deleted = Boolean(comment.deleted_at);
+    const qualified = Boolean(comment.actor_reference_id) || authorKind === 'contact';
+    const ownNote = !qualified && audience === 'organization_private' && !deleted && comment.user_id === options.viewerUserId;
+    const labelled: IProjectTaskCommentWithUser = {
+      ...base,
+      // Qualified authors have no local login: their saved label stands in for the joined user.
+      ...(qualified ? { firstName: comment.actor_display_name ?? '', lastName: '', email: '' } : {}),
+      organizationName: comment.actor_organization_name ?? undefined,
+      authorKind,
+      actorReferenceId: comment.actor_reference_id ?? null,
+      contactId: comment.contact_id ?? null,
+      audience,
+      collaborationRevision: comment.collaboration_revision ?? 1,
+      // A tombstone keeps its place but never its text.
+      ...(deleted ? { note: '[deleted]', markdownContent: '[deleted]' } : {}),
+      canEdit: ownNote,
+      canReply: !deleted && audience === 'organization_private' && !rootDeleted.has(comment.thread_id) && !qualified,
+      canReact: !deleted && audience === 'organization_private' && !qualified,
+    };
+    return redactTaskComment(labelled, collaborationFieldPolicy(collaboration, taskId));
+  });
+  return mapped;
 }
 
 /** Replace the note, stamp edited_at, and publish the update events (new mentions are notified downstream). */
@@ -350,8 +358,10 @@ export async function updateTaskCommentWithDb(
   user: TaskCommentActor,
   taskCommentId: string,
   updates: Partial<Pick<IProjectTaskComment, 'note'>>,
+  options: TaskCommentCollaborationOptions & { expectedRevision?: number } = {},
 ): Promise<void> {
   const userId = user.user_id;
+  const { collaboration } = options;
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const existingComment = await tenantScopedTable(trx, 'project_task_comments', tenant)
@@ -362,7 +372,8 @@ export async function updateTaskCommentWithDb(
       throw new Error('Comment not found');
     }
 
-    await assertOwnCommentOrInternalUser(trx, user, tenant, taskCommentId, existingComment.user_id, 'update');
+    // Authorization (ownership, project access) is enforced by withTaskCommentAccess before this runs.
+    await assertNativeTaskNote(trx, tenant, existingComment, collaboration, { ownUserId: userId, expectedRevision: options.expectedRevision });
 
     // Convert updated note to markdown
     const markdownContent = convertBlockNoteToMarkdown(updates.note);
@@ -372,6 +383,7 @@ export async function updateTaskCommentWithDb(
       .update({
         note: updates.note,
         markdown_content: markdownContent,
+        ...(collaboration ? { collaboration_revision: (existingComment.collaboration_revision ?? 1) + 1 } : {}),
         edited_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       });
@@ -381,36 +393,44 @@ export async function updateTaskCommentWithDb(
 
     // Publish event for smart mention notifications
     // Event handler will compare old vs new mentions and only notify NEW ones
-    await publishWorkflowEvent({
+    await publishCommentEvent(trx, 'project-task', {
+      tenantId: tenant,
+      taskId: existingComment.task_id,
+      commentId: taskCommentId,
+      userId,
       eventType: 'TASK_COMMENT_UPDATED',
-      payload: buildTaskCommentUpdatedPayload({
-        taskId: existingComment.task_id,
-        projectId: task.project_id,
-        updatedByUserId: userId,
-        taskCommentId,
-        taskName: task.task_name,
-        oldCommentContent: existingComment.note,  // Old BlockNote JSON
-        newCommentContent: updates.note ?? existingComment.note,          // New BlockNote JSON
-      }),
-      ctx: {
-        tenantId: tenant,
-        actor: { actorType: 'USER', actorUserId: userId },
-      },
-    });
+    }, async () => {
+      await publishWorkflowEvent({
+        eventType: 'TASK_COMMENT_UPDATED',
+        payload: buildTaskCommentUpdatedPayload({
+          taskId: existingComment.task_id,
+          projectId: task.project_id,
+          updatedByUserId: userId,
+          taskCommentId,
+          taskName: task.task_name,
+          oldCommentContent: existingComment.note,  // Old BlockNote JSON
+          newCommentContent: updates.note ?? existingComment.note,          // New BlockNote JSON
+        }),
+        ctx: {
+          tenantId: tenant,
+          actor: { actorType: 'USER', actorUserId: userId },
+        },
+      });
 
-    await publishEvent({
-      eventType: 'PROJECT_TASK_COMMENT_UPDATED',
-      payload: {
-        tenantId: tenant,
-        taskId: existingComment.task_id,
-        projectId: task.project_id,
-        userId,
-        taskCommentId: taskCommentId,
-        taskName: task.task_name,
-        oldCommentContent: existingComment.note,
-        newCommentContent: updates.note,
-        isUpdate: true
-      }
+      await publishEvent({
+        eventType: 'PROJECT_TASK_COMMENT_UPDATED',
+        payload: {
+          tenantId: tenant,
+          taskId: existingComment.task_id,
+          projectId: task.project_id,
+          userId,
+          taskCommentId: taskCommentId,
+          taskName: task.task_name,
+          oldCommentContent: existingComment.note,
+          newCommentContent: updates.note,
+          isUpdate: true
+        }
+      });
     });
   });
 }
@@ -425,8 +445,10 @@ export async function deleteTaskCommentWithDb(
   tenant: string,
   user: TaskCommentActor,
   taskCommentId: string,
+  options: TaskCommentCollaborationOptions & { expectedRevision?: number } = {},
 ): Promise<void> {
   const userId = user.user_id;
+  const { collaboration } = options;
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const existingComment = await tenantScopedTable(trx, 'project_task_comments', tenant)
@@ -437,7 +459,8 @@ export async function deleteTaskCommentWithDb(
       throw new Error('Comment not found');
     }
 
-    await assertOwnCommentOrInternalUser(trx, user, tenant, taskCommentId, existingComment.user_id, 'delete');
+    // Authorization (ownership, project access) is enforced by withTaskCommentAccess before this runs.
+    await assertNativeTaskNote(trx, tenant, existingComment, collaboration, { ownUserId: userId, expectedRevision: options.expectedRevision });
 
     const task = await loadTaskContext(trx, tenant, existingComment.task_id);
 
@@ -447,7 +470,8 @@ export async function deleteTaskCommentWithDb(
       .where({ parent_comment_id: taskCommentId })
       .first();
 
-    if (child) {
+    // Co-managed: every delete is a tombstone, so the revision history and the audience's replies stay intact.
+    if (child || collaboration) {
       const now = new Date().toISOString();
       await tenantScopedTable(trx, 'project_task_comments', tenant)
         .where({ task_comment_id: taskCommentId })
@@ -456,6 +480,7 @@ export async function deleteTaskCommentWithDb(
           markdown_content: '[deleted]',
           deleted_at: now,
           updated_at: now,
+          ...(collaboration ? { collaboration_revision: (existingComment.collaboration_revision ?? 1) + 1 } : {}),
         });
 
       await publishEvent({
@@ -544,10 +569,17 @@ export async function toggleTaskCommentReactionWithDb(
   userId: string,
   taskCommentId: string,
   emoji: string,
+  options: TaskCommentCollaborationOptions = {},
 ): Promise<{ added: boolean }> {
   validateEmoji(emoji);
 
   return withTransaction(db, async (trx) => {
+    if (options.collaboration) {
+      // Reactions live inside the audience: only a live organization-private note can be reacted to natively.
+      const target = await getTaskCommentById(trx, tenant, taskCommentId);
+      if (!target) throw new Error('Comment not found');
+      await assertNativeTaskNote(trx, tenant, target, options.collaboration, { reply: true });
+    }
     const existing = await tenantScopedTable(trx, 'project_task_comment_reactions', tenant)
       .where({ task_comment_id: taskCommentId, user_id: userId, emoji })
       .first();

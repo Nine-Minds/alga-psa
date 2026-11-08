@@ -3,6 +3,7 @@ import { tenantDb } from '@alga-psa/db';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
 import { getConnection } from '@/lib/db/db';
 import { resolveIdpFromPreset, type IdpKind } from './idpPresets';
+import { isUsableAudience, MISSING_AUDIENCE_MESSAGE } from './audience';
 import { listBuiltinIssuers } from './idpBuiltins';
 import {
   archiveOrDeleteServicePrincipal,
@@ -10,6 +11,7 @@ import {
   createServicePrincipalInTrx,
   setServicePrincipalActive,
 } from '../service-principals/service';
+import { servicePrincipalDb } from '../service-principals/tables';
 
 /**
  * MCP agent identity service. An agent is an IdP-bound service principal:
@@ -69,6 +71,20 @@ export class AgentBindingConflictError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'AgentBindingConflictError';
+  }
+}
+
+/**
+ * Thrown when a session key is requested for a deactivated or missing agent /
+ * service user. Shaped (name, code, numeric statusCode) so the route's structural
+ * error mapping handles it without `instanceof`.
+ */
+export class AgentInactiveError extends Error {
+  public readonly code = 'AGENT_INACTIVE';
+  public readonly statusCode = 403;
+  constructor(message = 'This agent is inactive') {
+    super(message);
+    this.name = 'AgentInactiveError';
   }
 }
 
@@ -138,7 +154,15 @@ export async function createAgent(input: CreateAgentInput): Promise<AgentRecord>
 export async function listAgents(tenant: string): Promise<AgentRecord[]> {
   return runWithTenant(tenant, async () => {
     const { knex } = await createTenantKnex(tenant);
-    return tenantDb(knex, tenant).table('agents').orderBy('created_at', 'desc');
+    const db = servicePrincipalDb(knex, tenant);
+    return db.table('agents')
+      .leftJoin('service_principals as sp', function joinPrincipal() {
+        this.on(knex.raw('??::text = ??::text', ['sp.user_id', 'agents.service_user_id']))
+          .andOn(knex.raw('??::text = ??::text', ['sp.tenant', 'agents.tenant']));
+      })
+      .whereNull('sp.archived_at')
+      .select('agents.*')
+      .orderBy('agents.created_at', 'desc');
   });
 }
 
@@ -193,6 +217,9 @@ export interface TrustedIdpInput {
 /** Add/update a trusted IdP, resolving presets (issuer + JWKS via OIDC discovery). Returns the stored row. */
 export async function addTrustedIdp(input: TrustedIdpInput): Promise<TrustedIdp> {
   const kind = input.kind ?? 'custom';
+  // Refuse before any discovery call; applies to every kind.
+  if (!isUsableAudience(input.audience)) throw new Error(MISSING_AUDIENCE_MESSAGE);
+  const audience = input.audience.trim();
   const resolved = await resolveIdpFromPreset(kind, {
     entraTenantId: input.entraTenantId,
     issuer: input.issuer,
@@ -205,7 +232,7 @@ export async function addTrustedIdp(input: TrustedIdpInput): Promise<TrustedIdp>
     const db = tenantDb(knex, input.tenant);
     const fields = {
       jwks_uri: resolved.jwksUri,
-      audience: input.audience ?? null,
+      audience,
       subject_claim: resolved.subjectClaim,
       kind,
       entra_tenant_id: input.entraTenantId ?? null,
@@ -335,6 +362,10 @@ export async function mintAgentSessionKey(params: {
   await runWithTenant(tenant, async () => {
     const { knex } = await createTenantKnex(tenant);
     const db = tenantDb(knex, tenant);
+    // R8.2: a deactivated principal (or its agent) must not get a fresh key.
+    const user = await db.table('users').where({ user_id: userId }).first('is_inactive');
+    const agent = await db.table('agents').where({ agent_id: agentId }).first('active');
+    if (!user || user.is_inactive || !agent || !agent.active) throw new AgentInactiveError();
     // Opportunistically sweep this tenant's expired agent session keys so they
     // don't accumulate (each agent request mints a fresh short-lived key).
     await db.table('api_keys')

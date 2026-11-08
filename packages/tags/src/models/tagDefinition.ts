@@ -20,6 +20,9 @@ const tagDefinitionsQuery = (knexOrTrx: Knex | Knex.Transaction, tenant: string)
 const tagMappingsQuery = (knexOrTrx: Knex | Knex.Transaction, tenant: string) =>
   tenantDb(knexOrTrx, tenant).table('tag_mappings');
 
+const tagReferencesQuery = (knexOrTrx: Knex | Knex.Transaction, tenant: string) =>
+  tenantDb(knexOrTrx, tenant).table('tag_references');
+
 const TagDefinition = {
   getAll: async (knexOrTrx: Knex | Knex.Transaction, tenant: string): Promise<ITagDefinition[]> => {
     const definitions = await tagDefinitionsQuery(knexOrTrx, tenant)
@@ -92,6 +95,13 @@ const TagDefinition = {
   },
 
   delete: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, tag_id: string): Promise<void> => {
+    // On Citus the tag_references -> tag_definitions FK (and its ON DELETE CASCADE) may be skipped,
+    // so delete the references explicitly. Callers pass a transaction so both deletes commit together.
+    // Referrers' own rows (e.g. a display rule) are not touched here: this package does not know who
+    // refers to a tag. A referrer row whose tag is gone is dangling, and every reader skips it.
+    await tagReferencesQuery(knexOrTrx, tenant)
+      .where('tag_id', tag_id)
+      .del();
     await tagDefinitionsQuery(knexOrTrx, tenant)
       .where('tag_id', tag_id)
       .del();
@@ -106,6 +116,13 @@ const TagDefinition = {
         tagMappingsQuery(knexOrTrx, tenant)
           .select(knexOrTrx.raw('1'))
           .whereRaw('tag_mappings.tag_id = tag_definitions.tag_id')
+      )
+      // A definition something refers to (tag_references, written by any referrer) is configuration,
+      // not litter: it stays while unmapped.
+      .whereNotExists(
+        tagReferencesQuery(knexOrTrx, tenant)
+          .select(knexOrTrx.raw('1'))
+          .whereRaw('tag_references.tag_id = tag_definitions.tag_id')
       )
       .del();
   },

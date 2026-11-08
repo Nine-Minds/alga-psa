@@ -87,7 +87,7 @@ describe('service request enterprise authoring panel gating', () => {
 
     expect(executionProviderKeys).toContain('workflow-only');
     expect(formBehaviorProviderKeys).toContain('advanced');
-    expect(visibilityProviderKeys).toContain('advanced-visibility');
+    expect(visibilityProviderKeys).toEqual(['all-authenticated-client-users']);
     expect(editorData?.execution.showWorkflowExecutionConfigPanel).toBe(true);
     expect(editorData?.execution.showAdvancedFormBehaviorConfigPanel).toBe(true);
   });
