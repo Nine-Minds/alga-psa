@@ -152,17 +152,16 @@ export async function loadPublicQuoteView(
 
   // Server-resolved per-row tax for the live optional-item preview (not a DB column), same as
   // getClientQuoteById. Runs on the caller's knex/trx, so the submit path computes it inside its
-  // locked transaction. Values are plain numbers (Map<string, number>), safe for canonicalJson.
+  // locked transaction. Project the resolver's taxAmount as a plain number, safe for canonicalJson.
   // The item tax is part of the hashed view (see fingerprintPublicQuoteView): the signature binds
   // to the tax inputs the signer saw, and a tax-rate change between render and submit yields `changed`.
   let sourceItems: IQuoteItem[] = quote.quote_items ?? [];
   if (quote.status === 'sent' && sourceItems.length > 0) {
     const taxByItemId = await resolveQuoteItemTaxesIfIncluded(knex, tenant, quoteId);
-    sourceItems = sourceItems.map((item) =>
-      taxByItemId.has(item.quote_item_id)
-        ? { ...item, tax_amount_if_included: Number(taxByItemId.get(item.quote_item_id)) }
-        : item,
-    );
+    sourceItems = sourceItems.map((item) => {
+      const rowTax = taxByItemId.get(item.quote_item_id);
+      return rowTax ? { ...item, tax_amount_if_included: rowTax.taxAmount } : item;
+    });
   }
   const locationIds = Array.from(new Set(sourceItems
     .map((item) => item.location_id)

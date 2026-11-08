@@ -212,7 +212,7 @@ describe('submitQuoteLinkDecision (alga-2026-0002820 4/6)', () => {
     const base = view!.items.filter((i) => !i.is_discount);
     expect(base.length).toBe(2);
     for (const item of base) {
-      expect(typeof item.tax_amount_if_included).toBe('number');
+      expect(Number.isFinite(item.tax_amount_if_included)).toBe(true);
     }
     expect(view!.items.find((i) => i.publicRef === 'item-0')!.tax_amount_if_included).toBe(Math.ceil((15000 * 8.875) / 100));
 
@@ -427,6 +427,30 @@ describe('submitQuoteLinkDecision (alga-2026-0002820 4/6)', () => {
     });
     const out: any = await submit(s.token, await acceptInput({ quoteFingerprint: rendered }));
     expect(out).toEqual({ status: 'changed' });
+    expect((await quoteRow(s.tenantId, s.quoteId)).status).toBe('sent');
+    expect(await decisionRows(s.tenantId, s.quoteId)).toHaveLength(0);
+    expect(onQuoteAcceptedSpy).not.toHaveBeenCalled();
+  });
+
+  it('tax changes after rendering invalidate the fingerprint and prevent acceptance', async () => {
+    const s = await setup();
+    await tt(s.tenantId, 'tax_regions').insert({
+      tenant: s.tenantId, region_code: 'TST-LINK', region_name: 'Test', is_active: true,
+    });
+    const taxRateId = uuidv4();
+    await tt(s.tenantId, 'tax_rates').insert({
+      tax_rate_id: taxRateId, tenant: s.tenantId, region_code: 'TST-LINK', tax_percentage: 8.875,
+      description: 'Test tax', start_date: '2025-01-01T00:00:00.000Z', is_active: true,
+    });
+    await tt(s.tenantId, 'clients').where({ client_id: s.clientId })
+      .update({ region_code: 'TST-LINK', is_tax_exempt: false });
+    const rendered = await fingerprintOf(s);
+
+    // Only the live tax changes: persisted quote and item totals remain untouched.
+    await tt(s.tenantId, 'tax_rates').where({ tax_rate_id: taxRateId }).update({ tax_percentage: 10 });
+    expect(await submit(s.token, await acceptInput({ quoteFingerprint: rendered })))
+      .toEqual({ status: 'changed' });
+    expect(await fingerprintOf(s)).not.toBe(rendered);
     expect((await quoteRow(s.tenantId, s.quoteId)).status).toBe('sent');
     expect(await decisionRows(s.tenantId, s.quoteId)).toHaveLength(0);
     expect(onQuoteAcceptedSpy).not.toHaveBeenCalled();
