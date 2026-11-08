@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -33,6 +33,10 @@ interface MigrationJobsHomeProps {
 
 const MigrationJobsHome = ({ onSelectJob }: MigrationJobsHomeProps): React.JSX.Element => {
   const { t } = useTranslation('msp/settings');
+  // Loaders read the latest translator through a ref so a new `t` (namespace load,
+  // language switch) never re-triggers the fetch.
+  const tRef = useRef(t);
+  tRef.current = t;
   const [jobs, setJobs] = useState<MigrationJobSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -46,11 +50,11 @@ const MigrationJobsHome = ({ onSelectJob }: MigrationJobsHomeProps): React.JSX.E
     try {
       setJobs(await listMigrationJobs());
     } catch (error) {
-      setLoadError(migrationErrorMessage(error, t('importExport.migration.errors.loadJobs', { defaultValue: 'Failed to load migration jobs.' })));
+      setLoadError(migrationErrorMessage(error, tRef.current('importExport.migration.errors.loadJobs', { defaultValue: 'Failed to load migration jobs.' })));
     } finally {
       setIsLoading(false);
     }
-  }, [t]);
+  }, []);
 
   useEffect(() => {
     void loadJobs(true);

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { parseCustomRecurrence } from '../lib/maintenanceRecurrence';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import useSWR from 'swr';
 import { CalendarDays, CheckCircle2, List, Pause, Plus, Search, SkipForward } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -124,6 +124,10 @@ function rowAccentClass(occurrence: AssetMaintenanceOccurrence): string {
 
 function NewMaintenancePlanAssetDialog({ isOpen, onClose, onSelect }: { isOpen: boolean; onClose: () => void; onSelect: (assetId: string) => void }) {
   const { t } = useTranslation('msp/assets');
+  // The loader reads the latest translator through a ref so a new `t` (namespace load,
+  // language switch) never re-triggers the fetch.
+  const tRef = useRef(t);
+  tRef.current = t;
   const [assets, setAssets] = useState<Asset[]>([]);
   const [assetTotal, setAssetTotal] = useState(0);
   const [search, setSearch] = useState('');
@@ -140,14 +144,14 @@ function NewMaintenancePlanAssetDialog({ isOpen, onClose, onSelect }: { isOpen: 
         const response: AssetListResponse = unwrapAssetActionResult(await listAssets({ page: 1, limit: 20, search: search || undefined }));
         if (!cancelled) { setAssets(response.assets); setAssetTotal(response.total); }
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : t('maintenanceCommandCenter.assetPicker.loadFailed', { defaultValue: 'Unable to load assets.' }));
+        if (!cancelled) setError(err instanceof Error ? err.message : tRef.current('maintenanceCommandCenter.assetPicker.loadFailed', { defaultValue: 'Unable to load assets.' }));
       } finally {
         if (!cancelled) setIsLoading(false);
       }
     };
     const timer = window.setTimeout(() => { void loadAssets(); }, 250);
     return () => { cancelled = true; window.clearTimeout(timer); };
-  }, [isOpen, search, t]);
+  }, [isOpen, search]);
 
   return <Dialog
     id="maintenance-plan-asset-select-dialog"

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   BriefcaseBusiness,
@@ -245,6 +245,10 @@ export function ContactBentoLayout({
   onDocumentCreated,
 }: ContactBentoLayoutProps) {
   const { t } = useTranslation('msp/contacts');
+  // The loader reads the latest translator through a ref so a new `t` (namespace load,
+  // language switch) never re-triggers the fetch.
+  const tRef = useRef(t);
+  tRef.current = t;
   const { toast } = useToast();
   const { renderDocuments } = useDocumentsCrossFeature();
   const { openDrawer, closeDrawer } = useDrawer();
@@ -277,10 +281,10 @@ export function ContactBentoLayout({
       setInteractions(rows);
     } catch (error) {
       console.error('Failed to refresh contact interactions:', error);
-      setInteractionsErrorMessage(t('contactBento.interactions.loadError', { defaultValue: 'Interactions could not be loaded. Please try again.' }));
+      setInteractionsErrorMessage(tRef.current('contactBento.interactions.loadError', { defaultValue: 'Interactions could not be loaded. Please try again.' }));
       // Keep the current rows; the drawer/dialog that changed data already surfaced its own errors.
     }
-  }, [contact.contact_name_id, t]);
+  }, [contact.contact_name_id]);
   useEffect(() => {
     if (initialInteractions === undefined) {
       void refreshInteractions();

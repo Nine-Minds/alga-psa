@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -55,6 +55,10 @@ interface MigrationConfigurePanelProps {
  */
 const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelProps): React.JSX.Element => {
   const { t } = useTranslation('msp/settings');
+  // Error copy reads the latest translator through a ref: depending on `t` would reseed
+  // the form from the saved configuration whenever the namespace loads, dropping edits.
+  const tRef = useRef(t);
+  tRef.current = t;
   const [options, setOptions] = useState<MigrationConfigurationOptions | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -100,7 +104,7 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
       })
       .catch((error) => {
         if (!cancelled) {
-          setLoadError(migrationErrorMessage(error, t('importExport.migration.configure.errors.loadOptions', { defaultValue: 'Failed to load configuration options.' })));
+          setLoadError(migrationErrorMessage(error, tRef.current('importExport.migration.configure.errors.loadOptions', { defaultValue: 'Failed to load configuration options.' })));
         }
       })
       .finally(() => {
@@ -112,7 +116,7 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
     return () => {
       cancelled = true;
     };
-  }, [details.migrationJobId, details.configuration, t]);
+  }, [details.migrationJobId, details.configuration]);
 
   const hasTickets = options?.stagedEntityTypes.includes('tickets') ?? false;
   const hasAssets = options?.stagedEntityTypes.includes('assets') ?? false;

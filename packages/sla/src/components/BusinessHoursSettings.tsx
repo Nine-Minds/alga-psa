@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Plus, MoreVertical, Clock, Calendar, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
@@ -91,6 +91,10 @@ interface HolidayFormData {
 
 export function BusinessHoursSettings() {
   const { t } = useTranslation('msp/settings');
+  // The loader reads the latest translator through a ref so a new `t` (namespace load,
+  // language switch) never re-triggers the fetch.
+  const tRef = useRef(t);
+  tRef.current = t;
   const dayName = useCallback(
     (dayOfWeek: number) => t(`sla.businessHours.days.${dayOfWeek}`, { defaultValue: DAY_NAME_DEFAULTS[dayOfWeek] }),
     [t]
@@ -159,12 +163,12 @@ export function BusinessHoursSettings() {
       setSchedules(data);
       setError(null);
     } catch (err) {
-      handleError(err, t('sla.businessHours.errors.loadSchedules', { defaultValue: 'Failed to load business hours schedules' }));
-      setError(t('sla.businessHours.errors.loadSchedules', { defaultValue: 'Failed to load business hours schedules' }));
+      handleError(err, tRef.current('sla.businessHours.errors.loadSchedules', { defaultValue: 'Failed to load business hours schedules' }));
+      setError(tRef.current('sla.businessHours.errors.loadSchedules', { defaultValue: 'Failed to load business hours schedules' }));
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, []);
 
   // Fetch schedule details
   const fetchScheduleDetails = useCallback(async (scheduleId: string) => {

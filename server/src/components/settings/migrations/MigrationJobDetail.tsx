@@ -34,6 +34,10 @@ interface MigrationJobDetailProps {
 
 const MigrationJobDetail = ({ migrationJobId, onBack }: MigrationJobDetailProps): React.JSX.Element => {
   const { t } = useTranslation('msp/settings');
+  // Loaders read the latest translator through a ref so a new `t` (namespace load,
+  // language switch) never re-triggers the fetch.
+  const tRef = useRef(t);
+  tRef.current = t;
   const [details, setDetails] = useState<MigrationJobDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -58,7 +62,7 @@ const MigrationJobDetail = ({ migrationJobId, onBack }: MigrationJobDetailProps)
       return next;
     } catch (error) {
       if (isMountedRef.current) {
-        setLoadError(migrationErrorMessage(error, t('importExport.migration.errors.loadJob', { defaultValue: 'Failed to load the migration job.' })));
+        setLoadError(migrationErrorMessage(error, tRef.current('importExport.migration.errors.loadJob', { defaultValue: 'Failed to load the migration job.' })));
       }
       return null;
     } finally {
@@ -66,7 +70,7 @@ const MigrationJobDetail = ({ migrationJobId, onBack }: MigrationJobDetailProps)
         setIsLoading(false);
       }
     }
-  }, [migrationJobId, t]);
+  }, [migrationJobId]);
 
   useEffect(() => {
     setDetails(null);

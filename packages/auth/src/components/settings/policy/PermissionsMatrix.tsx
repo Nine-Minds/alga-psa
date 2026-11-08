@@ -2,7 +2,7 @@
 
 // Auth-owned permissions matrix UI.
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@alga-psa/ui/components/Card';
 import { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { ChevronDown, ChevronRight } from 'lucide-react';
@@ -65,6 +65,10 @@ interface RolePermissionRow {
 
 export default function PermissionsMatrix() {
   const { t } = useTranslation('msp/settings');
+  // Fetchers read the latest translator through a ref so a new `t` (namespace load,
+  // language switch) never re-triggers them and reset the saved-permission baseline.
+  const tRef = useRef(t);
+  tRef.current = t;
   const [permissions, setPermissions] = useState<IPermission[]>([]);
   const [roles, setRoles] = useState<IRole[]>([]);
   const [selectedRole, setSelectedRole] = useState<string>('all');
@@ -90,9 +94,9 @@ export default function PermissionsMatrix() {
       setPermissions(data);
     } catch (err) {
       console.error('Error fetching permissions:', err);
-      setError(t('permissions.errors.fetchPermissions', { defaultValue: 'Failed to fetch permissions' }));
+      setError(tRef.current('permissions.errors.fetchPermissions', { defaultValue: 'Failed to fetch permissions' }));
     }
-  }, [t]);
+  }, []);
 
   const fetchRoles = useCallback(async () => {
     try {
@@ -100,9 +104,9 @@ export default function PermissionsMatrix() {
       setRoles(data);
     } catch (err) {
       console.error('Error fetching roles:', err);
-      setError(t('permissions.errors.fetchRoles', { defaultValue: 'Failed to fetch roles' }));
+      setError(tRef.current('permissions.errors.fetchRoles', { defaultValue: 'Failed to fetch roles' }));
     }
-  }, [t]);
+  }, []);
 
   const fetchRolePermissions = useCallback(async (roleId: string) => {
     try {
@@ -110,9 +114,9 @@ export default function PermissionsMatrix() {
       setRolePermissions(data.map((p: IPermission) => p.permission_id));
     } catch (err) {
       console.error('Error fetching role permissions:', err);
-      setError(t('permissions.errors.fetchRolePermissions', { defaultValue: 'Failed to fetch role permissions' }));
+      setError(tRef.current('permissions.errors.fetchRolePermissions', { defaultValue: 'Failed to fetch role permissions' }));
     }
-  }, [t]);
+  }, []);
 
   useEffect(() => {
     fetchPermissions();
@@ -167,9 +171,9 @@ export default function PermissionsMatrix() {
       setOriginalRolePermissions(new Map(rolePermissionsMap));
     } catch (err) {
       console.error('Error fetching all role permissions:', err);
-      setError(t('permissions.errors.fetchRolePermissions', { defaultValue: 'Failed to fetch role permissions' }));
+      setError(tRef.current('permissions.errors.fetchRolePermissions', { defaultValue: 'Failed to fetch role permissions' }));
     }
-  }, [filteredRoles, t]);
+  }, [filteredRoles]);
 
   useEffect(() => {
     if (filteredRoles.length > 0) {

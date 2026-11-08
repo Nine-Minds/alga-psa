@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -50,6 +50,10 @@ interface MigrationResultsPanelProps {
  */
 const MigrationResultsPanel = ({ details }: MigrationResultsPanelProps): React.JSX.Element => {
   const { t } = useTranslation('msp/settings');
+  // Loaders read the latest translator through a ref so a new `t` (namespace load,
+  // language switch) never re-triggers the fetch.
+  const tRef = useRef(t);
+  tRef.current = t;
   const [summary, setSummary] = useState<MigrationOutcomeSummary[]>([]);
   const [isLoadingSummary, setIsLoadingSummary] = useState(true);
   const [summaryError, setSummaryError] = useState<string | null>(null);
@@ -76,7 +80,7 @@ const MigrationResultsPanel = ({ details }: MigrationResultsPanelProps): React.J
       })
       .catch((error) => {
         if (!cancelled) {
-          setSummaryError(migrationErrorMessage(error, t('importExport.migration.results.errors.loadSummary', { defaultValue: 'Failed to load the outcome summary.' })));
+          setSummaryError(migrationErrorMessage(error, tRef.current('importExport.migration.results.errors.loadSummary', { defaultValue: 'Failed to load the outcome summary.' })));
         }
       })
       .finally(() => {
@@ -126,7 +130,7 @@ const MigrationResultsPanel = ({ details }: MigrationResultsPanelProps): React.J
       })
       .catch((error) => {
         if (!cancelled) {
-          setRecordsError(migrationErrorMessage(error, t('importExport.migration.results.errors.loadRecords', { defaultValue: 'Failed to load outcome records.' })));
+          setRecordsError(migrationErrorMessage(error, tRef.current('importExport.migration.results.errors.loadRecords', { defaultValue: 'Failed to load outcome records.' })));
         }
       })
       .finally(() => {
@@ -138,7 +142,7 @@ const MigrationResultsPanel = ({ details }: MigrationResultsPanelProps): React.J
     return () => {
       cancelled = true;
     };
-  }, [actionFilter, details.migrationJobId, entityFilter, t]);
+  }, [actionFilter, details.migrationJobId, entityFilter]);
 
   const handleDownloadCsv = useCallback(async () => {
     setIsDownloading(true);

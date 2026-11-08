@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -34,6 +34,10 @@ interface MigrationPreflightPanelProps {
  */
 const MigrationPreflightPanel = ({ details, onStateChanged }: MigrationPreflightPanelProps): React.JSX.Element => {
   const { t } = useTranslation('msp/settings');
+  // Loaders read the latest translator through a ref so a new `t` (namespace load,
+  // language switch) never re-triggers the fetch.
+  const tRef = useRef(t);
+  tRef.current = t;
   const [report, setReport] = useState<PreflightResult | null>(null);
   const [isLoadingReport, setIsLoadingReport] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -55,7 +59,7 @@ const MigrationPreflightPanel = ({ details, onStateChanged }: MigrationPreflight
       })
       .catch((error) => {
         if (!cancelled) {
-          setLoadError(migrationErrorMessage(error, t('importExport.migration.preflight.errors.loadReport', { defaultValue: 'Failed to load the preflight report.' })));
+          setLoadError(migrationErrorMessage(error, tRef.current('importExport.migration.preflight.errors.loadReport', { defaultValue: 'Failed to load the preflight report.' })));
         }
       })
       .finally(() => {
@@ -67,7 +71,7 @@ const MigrationPreflightPanel = ({ details, onStateChanged }: MigrationPreflight
     return () => {
       cancelled = true;
     };
-  }, [details.migrationJobId, details.preflightedAt, t]);
+  }, [details.migrationJobId, details.preflightedAt]);
 
   const handleRunPreflight = useCallback(async () => {
     setIsPreflighting(true);
