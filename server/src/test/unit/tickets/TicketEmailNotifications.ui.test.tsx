@@ -130,7 +130,7 @@ describe('TicketEmailNotifications', () => {
       {
         id: 1,
         sent_at: '2026-01-01T12:00:00Z',
-        to_addresses: ['to@example.com'],
+        recipient: 'to@example.com',
         subject: 'Hello',
         status: 'sent',
         error_message: null,
@@ -158,7 +158,7 @@ describe('TicketEmailNotifications', () => {
       {
         id: 1,
         sent_at: '2026-01-01T12:00:00Z',
-        to_addresses: ['to@example.com'],
+        recipient: 'to@example.com',
         subject: 'Hello',
         status: 'failed',
         error_message: 'Boom',
@@ -181,7 +181,7 @@ describe('TicketEmailNotifications', () => {
     const logs = Array.from({ length: 25 }, (_, idx) => ({
       id: idx + 1,
       sent_at: '2026-01-01T12:00:00Z',
-      to_addresses: [`user${idx}@example.com`],
+      recipient: `user${idx}@example.com`,
       subject: `S${idx}`,
       status: 'sent',
       error_message: null,
@@ -208,7 +208,7 @@ describe('TicketEmailNotifications', () => {
     const logs = Array.from({ length: 25 }, (_, idx) => ({
       id: idx + 1,
       sent_at: '2026-01-01T12:00:00Z',
-      to_addresses: [`user${idx}@example.com`],
+      recipient: `user${idx}@example.com`,
       subject: `S${idx}`,
       status: 'sent',
       error_message: null,

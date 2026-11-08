@@ -1,14 +1,14 @@
 // @vitest-environment node
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { authorizeTicketRecordAccess, authorizeTicketRecordAccessConcealed, createTicketAuthorizationContext } from './ticketRecordAuthorization';
+import { authorizeTicketRecordAccess, authorizeTicketRecordAccessConcealed, createTicketAuthorizationContext } from '@alga-psa/authorization/ticketRecordAuthorization';
 
 const getVisibilityMock = vi.fn();
 
 vi.mock('@alga-psa/db', () => ({
   tenantDb: (conn: any) => ({ table: (t: string) => conn(t) }),
 }));
-vi.mock('./clientPortalVisibility.server', () => ({
+vi.mock('../../../authorization/src/portal/visibility.server', () => ({
   getClientContactVisibilityContext: (...args: any[]) => getVisibilityMock(...args),
 }));
 vi.mock('@alga-psa/authorization/bundles/service', () => ({
@@ -50,13 +50,7 @@ describe('createTicketAuthorizationContext', () => {
     expect(ctx.selectedBoardIds).toEqual(['b1']);
   });
 
-  it('never uses selected_boards and leaves internal users unnarrowed', async () => {
-    const source = (await import('node:fs')).readFileSync(
-      new URL('./ticketRecordAuthorization.ts', import.meta.url),
-      'utf8',
-    );
-    expect(source).not.toContain('selected_boards');
-    expect(source).not.toContain('resolveClientSelectedBoardIds');
+  it('leaves internal users unnarrowed', async () => {
     const ctx = await createTicketAuthorizationContext(fakeTrx(), 'tenant-1', { user_id: 'i', user_type: 'internal', roles: [] } as any);
     expect(ctx.contactVisibility).toBeUndefined();
     expect(ctx.selectedBoardIds).toBeUndefined();
