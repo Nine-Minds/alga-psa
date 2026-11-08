@@ -65980,6 +65980,74 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "post-_api_v1_quotes_id_cancel",
+    "method": "post",
+    "path": "/api/v1/quotes/{id}/cancel",
+    "displayName": "Cancel quote",
+    "summary": "Cancel quote",
+    "description": "Cancels quote via cancel(); requires billing:update. Quote status is not editable through PUT /api/v1/quotes/{id}.",
+    "tags": [
+      "Quotes & Contracts v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Quote UUID from quotes.quote_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Quote UUID from quotes.quote_id."
+        }
+      },
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "additionalProperties": {},
+      "description": "Controller/service-specific payload; see quote/contract controller schemas for exact required fields."
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
     "id": "post-_api_v1_quotes_id_remind",
     "method": "post",
     "path": "/api/v1/quotes/{id}/remind",
