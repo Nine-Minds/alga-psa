@@ -115,8 +115,17 @@ export async function flushBuildHooks(trx) {
 export async function withTenantTransaction() { throw new Error('unexpected activity transaction in build guard'); }
 export async function withTenantTransactionRetryReadOnly() { throw new Error('unexpected activity transaction in build guard'); }
 export async function withTransaction() { throw new Error('unexpected in-app notification transaction in build guard'); }
+export async function withSavepoint(parent, callback) { return callback(parent); }
 export async function createTenantKnex() { return { knex: fakeKnex }; }
 export async function getConnection() { return fakeKnex; }
+
+export class TenantEmailOutboundAdapter {
+  async send() { throw new Error('unexpected outbound adapter call in build guard'); }
+}
+
+export class TenantEmailService {
+  static async getTenantEmailSettings() { throw new Error('unexpected tenant email settings lookup in build guard'); }
+}
 
 export const buildFixture = {
   tenantId,

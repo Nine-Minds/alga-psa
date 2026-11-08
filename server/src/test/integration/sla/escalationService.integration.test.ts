@@ -315,20 +315,28 @@ describe('SLA Escalation Service Integration Tests', () => {
     const unknownId = uuidv4();
     const failedId = uuidv4();
     const existingStringId = uuidv4();
+    const additionalLegacyIds = Array.from({ length: 501 }, () => uuidv4());
     await tenantTable(db, tenantId, 'sla_audit_log').insert([
       { log_id: provenId, tenant: tenantId, ticket_id: ticketId, event_type: 'ticket_escalated', event_data: JSON.stringify({ notifications: { email: true, emailMessageId: 'smtp-proven-77' }, custom: { keep: 'yes' } }) },
       { log_id: unknownId, tenant: tenantId, ticket_id: ticketId, event_type: 'ticket_escalated', event_data: JSON.stringify({ notifications: { email: true }, custom: { keep: 'also' } }) },
       { log_id: failedId, tenant: tenantId, ticket_id: ticketId, event_type: 'ticket_escalated', event_data: JSON.stringify({ notifications: { email: false, emailMessageId: 'smtp-failed-88' }, custom: { keep: 'failed' } }) },
       { log_id: existingStringId, tenant: tenantId, ticket_id: ticketId, event_type: 'ticket_escalated', event_data: JSON.stringify({ notifications: { email: 'failed', emailReason: 'existing outcome' }, custom: { keep: 'string' } }) },
+      ...additionalLegacyIds.map((log_id) => ({
+        log_id, tenant: tenantId, ticket_id: ticketId, event_type: 'ticket_escalated',
+        event_data: JSON.stringify({ notifications: { email: true }, custom: { keep: 'batched' } }),
+      })),
     ]);
 
     await legacyEmailAuditBackfill.up(db);
-    const rows = await tenantTable(db, tenantId, 'sla_audit_log').whereIn('log_id', [provenId, unknownId, failedId, existingStringId]);
+    const rows = await tenantTable(db, tenantId, 'sla_audit_log').whereIn('log_id', [provenId, unknownId, failedId, existingStringId, ...additionalLegacyIds]);
     const byId = new Map(rows.map((row: any) => [row.log_id, typeof row.event_data === 'string' ? JSON.parse(row.event_data) : row.event_data]));
     expect(byId.get(provenId)).toMatchObject({ notifications: { email: 'sent', emailLegacyValue: true, emailMessageId: 'smtp-proven-77' }, custom: { keep: 'yes' } });
     expect(byId.get(unknownId)).toMatchObject({ notifications: { email: 'queued', emailLegacyValue: true, emailReason: expect.stringContaining('no provider message id') }, custom: { keep: 'also' } });
     expect(byId.get(failedId)).toMatchObject({ notifications: { email: 'failed', emailLegacyValue: false, emailMessageId: 'smtp-failed-88' }, custom: { keep: 'failed' } });
     expect(byId.get(existingStringId)).toMatchObject({ notifications: { email: 'failed', emailReason: 'existing outcome' }, custom: { keep: 'string' } });
+    expect(additionalLegacyIds.every((id) => byId.get(id)?.notifications.email === 'queued')).toBe(true);
+    expect(additionalLegacyIds.every((id) => byId.get(id)?.notifications.emailLegacyValue === true)).toBe(true);
+    expect(additionalLegacyIds.every((id) => byId.get(id)?.custom.keep === 'batched')).toBe(true);
   });
 
   it('escalates when the L1 manager is the assignee, notifies once, and retries idempotently', async () => {

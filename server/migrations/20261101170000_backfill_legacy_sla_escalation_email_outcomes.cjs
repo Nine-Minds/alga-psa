@@ -8,12 +8,24 @@
  * unchanged.
  */
 exports.up = async function up(knex) {
+  const batchSize = 500;
   const tenants = await knex('tenants').select('tenant');
   let updated = 0;
 
   for (const { tenant } of tenants) {
-    const result = await knex.raw(
-      `UPDATE sla_audit_log
+    let batchUpdated;
+    do {
+      const result = await knex.raw(
+        `WITH batch AS (
+          SELECT log_id
+            FROM sla_audit_log
+           WHERE tenant = ?
+             AND event_type = 'ticket_escalated'
+             AND jsonb_typeof(event_data #> '{notifications,email}') = 'boolean'
+           ORDER BY log_id
+           LIMIT ?
+        )
+        UPDATE sla_audit_log
           SET event_data = jsonb_set(
             jsonb_set(
               CASE
@@ -37,13 +49,14 @@ exports.up = async function up(knex) {
             END),
             true
           )
-        WHERE tenant = ?
-          AND event_type = 'ticket_escalated'
-          AND jsonb_typeof(event_data #> '{notifications,email}') = 'boolean'
-        RETURNING log_id`,
-      ['Legacy audit had no provider message id; delivery outcome is unknown.', tenant]
-    );
-    updated += result.rows?.length || 0;
+        WHERE sla_audit_log.tenant = ?
+          AND sla_audit_log.log_id IN (SELECT log_id FROM batch)
+        RETURNING sla_audit_log.log_id`,
+        [tenant, batchSize, 'Legacy audit had no provider message id; delivery outcome is unknown.', tenant]
+      );
+      batchUpdated = result.rows?.length || 0;
+      updated += batchUpdated;
+    } while (batchUpdated === batchSize);
   }
 
   console.log(`SLA email audit backfill: normalized ${updated} legacy boolean outcome(s) with provider evidence where available.`);

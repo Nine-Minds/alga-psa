@@ -5,6 +5,10 @@ const runtimeFixture = fileURLToPath(new URL('./worker-email-test-runtime.mjs', 
 
 registerHooks({
   resolve(specifier, context, nextResolve) {
+    if (specifier === '@alga-psa/email'
+      && context.parentURL?.endsWith('/dist/packages/notifications/src/notifications/email.js')) {
+      return { url: pathToFileURL(runtimeFixture).href, shortCircuit: true };
+    }
     const resolved = nextResolve(specifier, context);
     if (resolved.url.endsWith('/dist/packages/db/src/index.js')) {
       return { url: pathToFileURL(runtimeFixture).href, shortCircuit: true };
