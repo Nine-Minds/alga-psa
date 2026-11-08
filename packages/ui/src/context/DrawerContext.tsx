@@ -2,7 +2,7 @@
 
 import Drawer from '../components/Drawer';
 import { guardActiveDismiss } from '../components/DismissGuard';
-import React, { createContext, useContext, useEffect, useRef, useState, ReactNode, useCallback, useReducer } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState, ReactNode, useCallback, useMemo, useReducer } from 'react';
 import type { Activity, ActivityType } from '@alga-psa/types';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Button } from '../components/Button';
@@ -73,11 +73,25 @@ interface DrawerContextType {
   hasOutlet?: () => boolean;
   /** Called by DrawerOutlet on mount; returns the unregister function. */
   registerOutlet?: () => () => void;
+  /** Routes drawer commands from an ancestor provider into the active child scope. */
+  registerDrawerDelegate?: (delegate: DrawerDispatchTarget) => () => void;
   canGoBack: boolean;
   canGoForward: boolean;
   currentEntry: DrawerHistoryEntry | null;
   history: DrawerHistoryEntry[];
 }
+
+type DrawerDispatchTarget = Pick<DrawerContextType,
+  | 'openDrawer'
+  | 'replaceDrawer'
+  | 'closeDrawer'
+  | 'goBack'
+  | 'openListDrawer'
+  | 'openDetailDrawer'
+  | 'openFormDrawer'
+  | 'goForward'
+  | 'hasOutlet'
+>;
 
 // Define the drawer actions
 type DrawerAction =
@@ -256,15 +270,29 @@ function drawerReducer(state: DrawerState, action: DrawerAction): DrawerState {
 const DrawerContext = createContext<DrawerContextType | undefined>(undefined);
 
 export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const parentDrawer = useContext(DrawerContext);
   const [state, dispatch] = useReducer(drawerReducer, initialState);
   const outletCountRef = useRef(0);
+  const drawerDelegateRef = useRef<DrawerDispatchTarget | null>(null);
+  const registerDrawerDelegate = useCallback((delegate: DrawerDispatchTarget) => {
+    const previous = drawerDelegateRef.current;
+    drawerDelegateRef.current = delegate;
+    return () => {
+      if (drawerDelegateRef.current === delegate) {
+        drawerDelegateRef.current = previous;
+      }
+    };
+  }, []);
   const registerOutlet = useCallback(() => {
     outletCountRef.current += 1;
     return () => {
       outletCountRef.current = Math.max(0, outletCountRef.current - 1);
     };
   }, []);
-  const hasOutlet = useCallback(() => outletCountRef.current > 0, []);
+  const hasOutlet = useCallback(
+    () => drawerDelegateRef.current?.hasOutlet?.() ?? outletCountRef.current > 0,
+    [],
+  );
   
   // Compute derived state
   const canGoBack = state.currentIndex > 0;
@@ -273,14 +301,26 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   
   // Original methods (for backward compatibility)
   const openDrawer = useCallback((content: ReactNode, onMount?: () => Promise<void>, onClose?: () => void, width?: string) => {
+    if (drawerDelegateRef.current) {
+      drawerDelegateRef.current.openDrawer(content, onMount, onClose, width);
+      return;
+    }
     dispatch({ type: 'OPEN_DRAWER', payload: { content, onMount, onClose, width } });
   }, []);
 
   const replaceDrawer = useCallback((content: ReactNode, onMount?: () => Promise<void>, width?: string) => {
+    if (drawerDelegateRef.current) {
+      drawerDelegateRef.current.replaceDrawer(content, onMount, width);
+      return;
+    }
     dispatch({ type: 'REPLACE_DRAWER', payload: { content, onMount, width } });
   }, []);
 
   const closeDrawer = useCallback(() => {
+    if (drawerDelegateRef.current) {
+      drawerDelegateRef.current.closeDrawer();
+      return;
+    }
     // Call onClose callback for the current entry before closing
     if (currentEntry?.onClose) {
       currentEntry.onClose();
@@ -289,6 +329,10 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   }, [currentEntry]);
 
   const goBack = useCallback(() => {
+    if (drawerDelegateRef.current) {
+      drawerDelegateRef.current.goBack();
+      return;
+    }
     dispatch({ type: 'GO_BACK' });
   }, []);
   
@@ -300,6 +344,10 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     onMount?: () => Promise<void>,
     metadata?: Record<string, any>
   ) => {
+    if (drawerDelegateRef.current) {
+      drawerDelegateRef.current.openListDrawer(activityType, title, content, onMount, metadata);
+      return;
+    }
     dispatch({
       type: 'OPEN_LIST_DRAWER',
       payload: { activityType, title, content, onMount, metadata }
@@ -312,6 +360,10 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     title?: string,
     onMount?: () => Promise<void>
   ) => {
+    if (drawerDelegateRef.current) {
+      drawerDelegateRef.current.openDetailDrawer(activity, content, title, onMount);
+      return;
+    }
     dispatch({
       type: 'OPEN_DETAIL_DRAWER',
       payload: { activity, content, title, onMount }
@@ -325,6 +377,10 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     title?: string,
     onMount?: () => Promise<void>
   ) => {
+    if (drawerDelegateRef.current) {
+      drawerDelegateRef.current.openFormDrawer(activity, formId, content, title, onMount);
+      return;
+    }
     dispatch({
       type: 'OPEN_FORM_DRAWER',
       payload: { activity, formId, content, title, onMount }
@@ -332,8 +388,41 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   }, []);
   
   const goForward = useCallback(() => {
+    if (drawerDelegateRef.current) {
+      drawerDelegateRef.current.goForward();
+      return;
+    }
     dispatch({ type: 'GO_FORWARD' });
   }, []);
+
+  const drawerDispatchTargetRef = useRef<DrawerDispatchTarget | null>(null);
+  drawerDispatchTargetRef.current = {
+    openDrawer,
+    replaceDrawer,
+    closeDrawer,
+    goBack,
+    openListDrawer,
+    openDetailDrawer,
+    openFormDrawer,
+    goForward,
+    hasOutlet,
+  };
+  const drawerDispatch = useMemo<DrawerDispatchTarget>(() => ({
+    openDrawer: (...args) => drawerDispatchTargetRef.current?.openDrawer(...args),
+    replaceDrawer: (...args) => drawerDispatchTargetRef.current?.replaceDrawer(...args),
+    closeDrawer: () => drawerDispatchTargetRef.current?.closeDrawer(),
+    goBack: () => drawerDispatchTargetRef.current?.goBack(),
+    openListDrawer: (...args) => drawerDispatchTargetRef.current?.openListDrawer(...args),
+    openDetailDrawer: (...args) => drawerDispatchTargetRef.current?.openDetailDrawer(...args),
+    openFormDrawer: (...args) => drawerDispatchTargetRef.current?.openFormDrawer(...args),
+    goForward: () => drawerDispatchTargetRef.current?.goForward(),
+    hasOutlet: () => drawerDispatchTargetRef.current?.hasOutlet?.() ?? false,
+  }), []);
+
+  useEffect(
+    () => parentDrawer?.registerDrawerDelegate?.(drawerDispatch),
+    [drawerDispatch, parentDrawer?.registerDrawerDelegate],
+  );
 
   useShortcutScope('panel', state.isOpen);
   // Keyboard and header-button dismissals go through the drawer's unsaved-changes
@@ -357,6 +446,7 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       goForward,
       hasOutlet,
       registerOutlet,
+      registerDrawerDelegate,
       canGoBack,
       canGoForward,
       currentEntry,

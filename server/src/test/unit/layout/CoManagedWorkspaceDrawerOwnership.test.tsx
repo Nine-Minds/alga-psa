@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import React from 'react';
+import React, { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { DrawerProvider, useDrawer } from '@alga-psa/ui';
@@ -23,15 +23,16 @@ vi.mock('@alga-psa/clients/actions', () => ({
 vi.mock('@alga-psa/user-composition/actions', () => ({
   getUserAvatarUrlsBatchAction: mocks.getUserAvatarUrlsBatchAction,
 }));
-vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
-  useTranslation: () => ({ t: (_key: string, options?: { defaultValue?: string; [key: string]: unknown }) => {
+vi.mock('@alga-psa/ui/lib/i18n/client', () => {
+  const t = (_key: string, options?: { defaultValue?: string; [key: string]: unknown }) => {
     let value = options?.defaultValue ?? _key;
     for (const [name, replacement] of Object.entries(options ?? {})) {
       value = value.replace(`{{${name}}}`, String(replacement));
     }
     return value;
-  } }),
-}));
+  };
+  return { useTranslation: () => ({ t }) };
+});
 vi.mock('@alga-psa/ui/components/Button', () => ({
   Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
 }));
@@ -141,6 +142,28 @@ function InteractionDetailsProbe() {
   return <section><h1>Shell route details</h1><span>{features ? 'Shell ticket action' : 'No shell ticket action'}</span></section>;
 }
 
+function WorkspaceActionProbe() {
+  const { renderQuickAddTicket } = useClientCrossFeature();
+  return <section><h1>Ancestor launched details</h1><span>{renderQuickAddTicket ? 'Workspace ticket action' : 'No workspace ticket action'}</span></section>;
+}
+
+function AncestorDrawerLauncher() {
+  const { openDrawer, hasOutlet } = useDrawer();
+  const [usedFallback, setUsedFallback] = useState(false);
+  return (
+    <div>
+      {usedFallback && <p>Stopwatch fallback used</p>}
+      <button onClick={() => {
+        if (!hasOutlet?.()) {
+          setUsedFallback(true);
+          return;
+        }
+        openDrawer(<WorkspaceActionProbe />);
+      }}>Launch from shell ancestor</button>
+    </div>
+  );
+}
+
 function Feed() {
   return <OverallInteractionsFeed users={[]} contacts={[]} clients={[]} />;
 }
@@ -177,8 +200,28 @@ describe('co-managed workspace drawer ownership', () => {
     await waitFor(() => expect(mocks.getInteractionsPage).toHaveBeenCalledWith(expect.objectContaining({ page: 2, cursor: cursor1 })));
     fireEvent.click(screen.getByRole('button', { name: 'Next' }));
     await waitFor(() => expect(mocks.getInteractionsPage).toHaveBeenCalledWith(expect.objectContaining({ page: 3, cursor: cursor2 })));
+    const pageTwoRequestsBeforePrevious = mocks.getInteractionsPage.mock.calls.filter(([request]) => request.page === 2).length;
+    const requestsBeforePrevious = mocks.getInteractionsPage.mock.calls.length;
     fireEvent.click(screen.getByRole('button', { name: 'Previous' }));
-    await waitFor(() => expect(mocks.getInteractionsPage).toHaveBeenCalledWith(expect.objectContaining({ page: 2, cursor: cursor1 })));
+    await waitFor(() => expect(mocks.getInteractionsPage.mock.calls.length).toBe(requestsBeforePrevious + 1));
+    expect(mocks.getInteractionsPage.mock.calls.slice(-1)[0][0]).toMatchObject({ page: 2, cursor: cursor1 });
+    expect(mocks.getInteractionsPage.mock.calls.filter(([request]) => request.page === 2)).toHaveLength(pageTwoRequestsBeforePrevious + 1);
+  });
+
+  it('routes an ancestor drawer launch to the active workspace outlet', async () => {
+    render(
+      <DrawerProvider>
+        <AncestorDrawerLauncher />
+        <WorkspaceProviders><div>Workspace route</div></WorkspaceProviders>
+      </DrawerProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Launch from shell ancestor' }));
+
+    expect(await screen.findByRole('heading', { name: 'Ancestor launched details' })).toBeInTheDocument();
+    expect(screen.queryByText('Stopwatch fallback used')).not.toBeInTheDocument();
+    expect(screen.getByText('Workspace ticket action')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Close drawer' })).toHaveLength(1);
   });
 
   it('discards workspace drawer content when navigating to a shell route', async () => {
