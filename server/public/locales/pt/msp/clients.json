@@ -1535,7 +1535,7 @@
       "endBeforeStart": "O horário de término deve ser igual ou posterior ao horário de início.",
       "endBeforeStartShort": "O horário de término deve ser igual ou posterior ao horário de início",
       "rangeTooLong": "As interações não podem durar mais de 24 horas.",
-      "reflectionLabel": "Adicionar interação rapidamente",
+      "reflectionLabel": "Adição rápida de interação",
       "validationIntro": "Corrija os seguintes erros:",
       "loadingEditor": "Carregando editor...",
       "dialog": {
@@ -1549,8 +1549,8 @@
         "saveHelper": "Criar esta nova interação",
         "update": "Atualizar interação",
         "updateHelper": "Salvar as alterações desta interação",
-        "close": "Fechar janela",
-        "closeHelper": "Fechar a janela da interação"
+        "close": "Fechar caixa de diálogo",
+        "closeHelper": "Fechar a caixa de diálogo da interação"
       },
       "fields": {
         "type": {
