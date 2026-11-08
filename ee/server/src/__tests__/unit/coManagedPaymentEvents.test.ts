@@ -11,6 +11,7 @@ vi.mock('@alga-psa/licensing', async (importOriginal: () => Promise<Record<strin
   recordCoManagedPaymentFailure: vi.fn(async () => undefined),
 }));
 
+import { invalidateCapability, registerCapabilityParticipation } from '@alga-psa/core/capability';
 import { dispatchPaymentEvent } from '../../lib/stripe/paymentEventRegistry';
 import { createCoManagedPaymentHandlers, isCoManagedPaymentEvent } from '../../lib/stripe/coManagedPaymentEvents';
 
@@ -32,7 +33,13 @@ function setup(priceId: string | null = PRICE) {
   return { sync, finalizeCheckout, handlers: createCoManagedPaymentHandlers({ priceId: () => priceId ?? undefined, sync, finalizeCheckout }) };
 }
 
-beforeEach(() => { delete process.env.FORCE_CAPABILITIES; gate.admits.mockReset(); gate.admits.mockResolvedValue({ admitted: false }); });
+/** The REAL `serves` decides, fed by a participation resolver: no hand-built decision objects. */
+const participating = new Set<string>();
+let participationReads = 0;
+registerCapabilityParticipation('co-managed', async ({ tenantIds }) => (participationReads += 1, new Set(tenantIds.filter((id) => participating.has(id)))));
+
+beforeEach(() => { delete process.env.FORCE_CAPABILITIES; gate.admits.mockReset(); gate.admits.mockResolvedValue({ admitted: false });
+  participating.clear(); participationReads = 0; invalidateCapability('co-managed'); });
 afterEach(() => { delete process.env.FORCE_CAPABILITIES; });
 
 describe('payment-event registry: ordinary PSA tenants', () => {
@@ -43,6 +50,16 @@ describe('payment-event registry: ordinary PSA tenants', () => {
     expect(sync).not.toHaveBeenCalled();
     // the sponsor-base handler asked the capability (an in-memory 30s-cached gate) and stopped there
     expect(gate.admits).toHaveBeenCalledWith('co-managed', 't');
+  });
+
+  it('an ADMITTED sponsor still runs the base-subscription sync (real admits decision shape: served is always false)', async () => {
+    gate.admits.mockResolvedValue({ capability: 'co-managed', admitted: true, served: false } as never);
+    const { handlers } = setup();
+    // The sync itself is best effort (errors are logged); what matters is that the gate opened.
+    const outcome = await dispatchPaymentEvent(handlers, { event: ordinary, tenantId: 't', knex: {} as never });
+    expect(outcome.consumed).toBe(false);
+    expect(outcome.handledBy).toContain('co-managed-sponsor-base');
+    expect(outcome.closed).not.toContain('co-managed-sponsor-base');
   });
 
   it('is payload-only: an ordinary event is never claimed as co-managed', () => {
@@ -79,5 +96,82 @@ describe('payment-event registry: co-managed events', () => {
     await dispatchPaymentEvent(handlers, { event: coManagedInvoice, tenantId: 't', knex: {} as never });
     expect(gate.admits).not.toHaveBeenCalled();
     expect(sync).not.toHaveBeenCalled(); // no subscription id on this payload: nothing to reconcile
+  });
+});
+
+describe('payment-event registry: independent upgrade (L8b)', () => {
+  const upgrade = event('checkout.session.completed', { id: 'cs_1', metadata: { source: 'co_managed_independent_upgrade', tenant_id: 't' } });
+  const otherTenant = event('checkout.session.completed', { id: 'cs_2', metadata: { source: 'co_managed_independent_upgrade', tenant_id: 'other' } });
+  const plain = event('checkout.session.completed', { id: 'cs_3', metadata: { tenant_id: 't' } });
+  const withUpgrade = (applied = true) => {
+    const upgradePayment = vi.fn(async () => applied);
+    const handlers = createCoManagedPaymentHandlers({ priceId: () => undefined, sync: async () => undefined, finalizeCheckout: async () => undefined, upgradePayment });
+    return { upgradePayment, handlers };
+  };
+  /** Stands in for StripeService's MSP licence handlers: anything left unconsumed would reach it. */
+  const fallThrough = async (handlers: ReturnType<typeof withUpgrade>['handlers'], e: Stripe.Event, tenantId = 't') => {
+    const msp = vi.fn();
+    const outcome = await dispatchPaymentEvent(handlers, { event: e, tenantId, knex: {} as never });
+    if (!outcome.consumed) msp();
+    return { outcome, msp };
+  };
+
+  it('a serving customer with NO entitlement (admits closed) has the upgrade consumed by the L8b handler', async () => {
+    participating.add('t');
+    gate.admits.mockResolvedValue({ admitted: false });
+    const { handlers, upgradePayment } = withUpgrade();
+    const { outcome, msp } = await fallThrough(handlers, upgrade);
+    expect(outcome.consumed).toBe(true);
+    expect(outcome.handledBy).toContain('co-managed-independent-upgrade');
+    expect(upgradePayment).toHaveBeenCalledWith(upgrade, 't', expect.anything());
+    expect(msp).not.toHaveBeenCalled();
+  });
+
+  it('kill switch off: consumed, not applied, no fall-through', async () => {
+    process.env.FORCE_CAPABILITIES = 'co-managed:off';
+    participating.add('t');
+    const { handlers, upgradePayment } = withUpgrade();
+    const { outcome, msp } = await fallThrough(handlers, upgrade);
+    expect(outcome).toMatchObject({ consumed: true, handledBy: [] });
+    expect(outcome.closed).toContain('co-managed-independent-upgrade');
+    expect(upgradePayment).not.toHaveBeenCalled();
+    expect(msp).not.toHaveBeenCalled();
+  });
+
+  it('a non-participating tenant: consumed, not applied, no fall-through', async () => {
+    const { handlers, upgradePayment } = withUpgrade();
+    const { outcome, msp } = await fallThrough(handlers, upgrade);
+    expect(outcome.consumed).toBe(true);
+    expect(upgradePayment).not.toHaveBeenCalled();
+    expect(msp).not.toHaveBeenCalled();
+  });
+
+  it('an unauthorised marked event (reconcile says no) is consumed, never handed to the MSP licence handlers', async () => {
+    participating.add('t');
+    const { handlers, upgradePayment } = withUpgrade(false);
+    const { outcome, msp } = await fallThrough(handlers, upgrade);
+    expect(upgradePayment).toHaveBeenCalled();
+    expect(outcome.consumed).toBe(true);
+    expect(msp).not.toHaveBeenCalled();
+  });
+
+  it('a marker naming another tenant is consumed with no reconciliation', async () => {
+    participating.add('t');
+    const { handlers, upgradePayment } = withUpgrade();
+    const { outcome, msp } = await fallThrough(handlers, otherTenant);
+    expect(outcome.consumed).toBe(true);
+    expect(upgradePayment).not.toHaveBeenCalled();
+    expect(msp).not.toHaveBeenCalled();
+  });
+
+  it('an event without the marker is not claimed and the serves gate is not consulted', async () => {
+    participating.add('t');
+    const { handlers, upgradePayment } = withUpgrade();
+    const { outcome, msp } = await fallThrough(handlers, plain);
+    expect(outcome.handledBy).not.toContain('co-managed-independent-upgrade');
+    expect(outcome.closed).not.toContain('co-managed-independent-upgrade');
+    expect(participationReads).toBe(0);   // the marker check keeps ordinary events away from the gate
+    expect(upgradePayment).not.toHaveBeenCalled();
+    expect(msp).toHaveBeenCalled();
   });
 });

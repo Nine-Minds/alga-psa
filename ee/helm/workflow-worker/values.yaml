@@ -129,11 +129,22 @@ podDisruptionBudget:
 podAnnotations: {}
 podLabels: {}
 
-# Pod security context
-podSecurityContext: {}
+# Pod security context. The worker image runs as uid 1000 (`node`).
+podSecurityContext:
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  fsGroupChangePolicy: OnRootMismatch
+  seccompProfile:
+    type: RuntimeDefault
 
 # Security context
-securityContext: {}
+securityContext:
+  runAsNonRoot: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
 
 # Scheduling
 nodeSelector: {}

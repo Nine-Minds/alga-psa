@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Input } from '@alga-psa/ui/components/Input';
 import { ColumnDefinition } from '@alga-psa/types';
+import { contactLocationCell } from '../../lib/contactLocationDisplay';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { useContactQuickViewDrawer } from './bento/useContactQuickViewDrawer';
 import { useContactEditDrawer } from './bento/useContactEditDrawer';
@@ -37,7 +38,6 @@ const addIdToContacts = (contacts: IContact[]): ContactWithId[] => {
   }));
 };
 
-// LEVERAGE: friction client-picker-option-threading — ClientPicker's options are threaded from every caller (about 51 files call getAllClients). A caller that passes a list scoped to its page quietly shrinks the picker, as alga0002338 showed. A ClientPicker that loads its own tenant list would remove this class of bug.
 const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, client }) => {
   const { t } = useTranslation('msp/contacts');
   const [contacts, setContacts] = useState<ContactWithId[]>([]);
@@ -45,6 +45,9 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
   const [error, setError] = useState<string | null>(null);
   const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | 'all'>('active');
+  // 'all' | 'remote' | 'none' | a location id. Options come from the contacts on screen, so the
+  // filter never offers a site nobody here works at.
+  const [locationFilter, setLocationFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [indexedSearchContactIds, setIndexedSearchContactIds] = useState<Set<string> | null>(null);
   const openContactQuickView = useContactQuickViewDrawer();
@@ -152,6 +155,35 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
     );
   }, [contacts, searchTerm, indexedSearchContactIds]);
 
+  const locationFilterOptions = useMemo(() => {
+    const byId = new Map<string, string>();
+    for (const contact of contacts) {
+      for (const location of contact.locations ?? []) {
+        byId.set(location.location_id, location.location_name?.trim() || location.address_line1?.trim() || '—');
+      }
+    }
+    return [
+      { value: 'all', label: t('clientContactsList.filter.allLocations', { defaultValue: 'All locations' }) },
+      ...[...byId.entries()]
+        .sort((left, right) => left[1].localeCompare(right[1]))
+        .map(([value, label]) => ({ value, label })),
+      { value: 'remote', label: t('contactLocations.arrangement.remote', { defaultValue: 'Remote' }) },
+      { value: 'none', label: t('clientContactsList.filter.noLocation', { defaultValue: 'No location' }) },
+    ];
+  }, [contacts, t]);
+
+  const locationFilteredContacts = useMemo(() => {
+    if (locationFilter === 'all') return filteredContacts;
+    if (locationFilter === 'remote') {
+      return filteredContacts.filter((contact) => contact.work_arrangement === 'remote');
+    }
+    if (locationFilter === 'none') {
+      return filteredContacts.filter((contact) => (contact.locations ?? []).length === 0);
+    }
+    return filteredContacts.filter((contact) =>
+      (contact.locations ?? []).some((location) => location.location_id === locationFilter));
+  }, [filteredContacts, locationFilter]);
+
   const columns: ColumnDefinition<IContact>[] = [
     {
       title: t('clientContactsList.table.name', { defaultValue: 'Name' }),
@@ -199,6 +231,31 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
       width: '22%',
       render: (value, record): React.ReactNode =>
         record.email || t('common.states.na', { defaultValue: 'N/A' }),
+    },
+    {
+      title: t('clientContactsList.table.location', { defaultValue: 'Location' }),
+      // The nested name, so the table sorts the column by it rather than by the object.
+      dataIndex: ['primaryLocation', 'location_name'],
+      width: '15%',
+      render: (value, record): React.ReactNode => {
+        const cell = contactLocationCell(record);
+        if (!cell.label) {
+          return cell.isRemote
+            ? t('contactLocations.arrangement.remote', { defaultValue: 'Remote' })
+            : '';
+        }
+        return (
+          <span className="truncate">
+            {cell.label}
+            {cell.extraCount > 0 ? (
+              <span className="text-gray-500">
+                {' '}
+                {t('contactLocations.extraCount', { defaultValue: '+{{count}}', count: cell.extraCount })}
+              </span>
+            ) : null}
+          </span>
+        );
+      },
     },
     {
       title: t('clientContactsList.table.phoneNumber', {
@@ -334,6 +391,12 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
               }
             ]}
           />
+          <CustomSelect
+            id="contact-location-filter"
+            value={locationFilter}
+            onValueChange={setLocationFilter}
+            options={locationFilterOptions}
+          />
           {/* W7 (roast gap): a client with dozens of contacts had no search. */}
           <Input
             id="client-contacts-search"
@@ -355,7 +418,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
       </div>
       <DataTable
         id="client-contacts-list"
-        data={filteredContacts}
+        data={locationFilteredContacts}
         columns={columns}
         pagination={true}
         currentPage={currentPage}
@@ -371,7 +434,6 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
             .then(data => setContacts(addIdToContacts(data)))
             .catch(err => console.error('Error refreshing contacts after quick add:', err));
         }}
-        clients={[client]}
         selectedClientId={clientId}
       />
     </div>

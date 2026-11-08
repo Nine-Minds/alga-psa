@@ -10,7 +10,7 @@
  */
 
 import { Knex } from 'knex';
-import { registerAfterCommit, tenantDb } from '@alga-psa/db';
+import { registerAfterCommit, tenantDb, withSavepoint } from '@alga-psa/db';
 import { IEscalationManagerWithUser } from '../types';
 import { getEmailNotificationService } from '@alga-psa/notifications/notifications/email';
 import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions';
@@ -30,6 +30,11 @@ export interface EscalationResult {
   };
   error?: string;
 }
+
+export type EscalationManagerTicketResourceResult =
+  | 'already_assignee'
+  | 'existing_resource'
+  | 'added';
 
 /**
  * Escalate a ticket to a new level.
@@ -118,15 +123,27 @@ export async function escalateTicket(
     result.managerName = `${manager.manager_first_name || ''} ${manager.manager_last_name || ''}`.trim() || null;
 
     // 4. Add manager as additional resource
-    const resourceAdded = await addEscalationManagerAsResource(
-      trx,
-      tenant,
-      ticketId,
-      ticket.assigned_to,
-      manager.manager_user_id,
-      newLevel
-    );
-    result.resourceAdded = resourceAdded;
+    try {
+      const resourceResult = await ensureEscalationManagerOnTicket(
+        trx,
+        tenant,
+        ticketId,
+        manager.manager_user_id,
+        newLevel
+      );
+      result.resourceAdded = resourceResult === 'added';
+    } catch (error) {
+      // Resource assignment is an optional side effect of escalation. A
+      // savepoint inside ensureEscalationManagerOnTicket leaves the outer
+      // transaction usable when PostgreSQL rejects the attachment statement.
+      console.error('Unable to attach SLA escalation manager to ticket:', {
+        tenant,
+        ticketId,
+        managerId: manager.manager_user_id,
+        level: newLevel,
+        error,
+      });
+    }
 
     // 5. Send notifications
     const notifyVia = manager.notify_via || ['in_app', 'email'];
@@ -164,7 +181,7 @@ export async function escalateTicket(
       escalated_by: escalatedBy,
       manager_found: true,
       manager_id: manager.manager_user_id,
-      resource_added: resourceAdded,
+      resource_added: result.resourceAdded,
       notifications: result.notificationsSent
     });
 
@@ -210,7 +227,8 @@ export async function checkEscalationNeeded(
   trx: Knex.Transaction,
   tenant: string,
   ticketId: string,
-  elapsedPercent: number
+  elapsedPercent: number,
+  requestedLevel?: 1 | 2 | 3
 ): Promise<1 | 2 | 3 | null> {
   const scopedDb = tenantDb(trx, tenant);
 
@@ -246,6 +264,15 @@ export async function checkEscalationNeeded(
   }
 
   const currentLevel = ticket.escalation_level || 0;
+
+  // Configured wake points can coincide. Evaluate each level independently so
+  // one shared timer does not collapse several due escalation actions into L3.
+  if (requestedLevel !== undefined) {
+    const threshold = target[`escalation_${requestedLevel}_percent`];
+    return threshold && elapsedPercent >= threshold && currentLevel < requestedLevel
+      ? requestedLevel
+      : null;
+  }
 
   // Check which escalation level should be triggered
   // Only trigger if we haven't already escalated to this level
@@ -294,49 +321,52 @@ async function getEscalationManagerInternal(
 /**
  * Add escalation manager as an additional resource on the ticket.
  */
-async function addEscalationManagerAsResource(
+export async function ensureEscalationManagerOnTicket(
   trx: Knex.Transaction,
   tenant: string,
   ticketId: string,
-  assignedTo: string | null,
   managerId: string,
   level: number
-): Promise<boolean> {
-  const scopedDb = tenantDb(trx, tenant);
+): Promise<EscalationManagerTicketResourceResult> {
+  return withSavepoint(trx, async (resourceTrx) => {
+    const scopedDb = tenantDb(resourceTrx, tenant);
+    const ticket = await scopedDb.table('tickets')
+      .where({ ticket_id: ticketId })
+      .select('assigned_to')
+      .first();
 
-  // Check if this manager is already a resource on this ticket
-  const existingResource = await scopedDb.table('ticket_resources')
-    .where({
-      ticket_id: ticketId,
-      additional_user_id: managerId
-    })
-    .first();
+    if (!ticket) {
+      throw new Error(`Cannot attach escalation manager: ticket ${ticketId} was not found`);
+    }
+    if (ticket.assigned_to === managerId) {
+      return 'already_assignee';
+    }
 
-  if (existingResource) {
-    // Update the role to reflect new escalation level
-    await scopedDb.table('ticket_resources')
-      .where({
-        assignment_id: existingResource.assignment_id
-      })
-      .update({
-        role: `escalation_manager_L${level}`
-      });
-    return true;
-  }
+    const existingResource = await scopedDb.table('ticket_resources')
+      .where({ ticket_id: ticketId, additional_user_id: managerId })
+      .first();
 
-  // Add as new resource
-  await scopedDb.table('ticket_resources')
-    .insert({
+    if (existingResource) {
+      // Keep the existing resource's escalation role current when the same
+      // person handles a later level; do not create another assignment row.
+      await scopedDb.table('ticket_resources')
+        .where({ assignment_id: existingResource.assignment_id })
+        .update({ role: `escalation_manager_L${level}` });
+      return 'existing_resource';
+    }
+
+    await scopedDb.table('ticket_resources').insert({
       assignment_id: crypto.randomUUID(),
       tenant,
       ticket_id: ticketId,
-      assigned_to: assignedTo,
+      assigned_to: ticket.assigned_to,
       additional_user_id: managerId,
       role: `escalation_manager_L${level}`,
-      assigned_at: trx.fn.now()
+      assigned_at: resourceTrx.fn.now(),
     });
 
-  return true;
+    return 'added';
+  });
 }
 
 /**

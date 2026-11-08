@@ -8,7 +8,7 @@ import type { InvoiceViewModel } from '@alga-psa/types';
 const actions = vi.hoisted(() => ({ clients: vi.fn(), services: vi.fn(), capability: vi.fn() }));
 // The card prefetches through the session-recoverable wrappers, so the mocks
 // must expose those names and not the raw loaders.
-vi.mock('@alga-psa/billing/actions/billingClientsActions', () => ({ getAllClientsForBillingRecoverable: actions.clients }));
+vi.mock('@alga-psa/billing/actions/billingClientsActions', () => ({ getClientByIdForBillingRecoverable: actions.clients }));
 vi.mock('@alga-psa/billing/actions/serviceActions', () => ({ getServicesRecoverable: actions.services }));
 vi.mock('@alga-psa/billing/actions/invoiceModification', () => ({ getInvoiceAdjustmentCapability: actions.capability }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
@@ -20,13 +20,13 @@ vi.mock('../src/components/billing-dashboard/ManualInvoices', () => ({
 
 import DraftInvoiceAdjustmentsCard from '../src/components/billing-dashboard/invoicing/DraftInvoiceAdjustmentsCard';
 
-const invoice = (id: string) => ({ invoice_id: id, status: 'draft' }) as InvoiceViewModel;
+const invoice = (id: string) => ({ invoice_id: id, client_id: 'client-1', status: 'draft' }) as InvoiceViewModel;
 const editable = { editable: true, code: null, reason: null, isManualOrigin: false, currencyCode: 'USD' };
 
 describe('draft invoice adjustment access', () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    actions.clients.mockResolvedValue([]);
+    actions.clients.mockResolvedValue(null);
     actions.services.mockResolvedValue({ services: [] });
     actions.capability.mockResolvedValue(editable);
   });
@@ -36,6 +36,8 @@ describe('draft invoice adjustment access', () => {
     render(<DraftInvoiceAdjustmentsCard invoice={invoice('draft-1')} />);
     expect(await screen.findByTestId('manual-editor')).toHaveTextContent('draft-1');
     expect(actions.capability).toHaveBeenCalledWith('draft-1');
+    // Only the invoice's own client is read, never the client list.
+    expect(actions.clients).toHaveBeenCalledWith('client-1');
   });
 
   it('shows a returned permission denial instead of opening the editor', async () => {

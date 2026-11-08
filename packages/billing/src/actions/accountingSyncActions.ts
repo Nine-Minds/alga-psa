@@ -6,7 +6,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb, writeAccountingAudit } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
 import logger from '@alga-psa/core/logger';
-import { getStoredQboCredentialsMap, QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
+import { getStoredQboCredentialsMap, QboClientService, resolveTenantQboEnvironment } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import { getStoredXeroConnections } from '@alga-psa/integrations/lib/xero/xeroClientService';
 import { isAccountingReconnectRequired } from '@alga-psa/integrations/lib/accountingReconnectHeuristic';
 import { isProviderDisconnectActive, PROVIDER_QBO, PROVIDER_XERO } from '@alga-psa/integrations/lib/providerDisconnect';
@@ -370,10 +370,11 @@ export const getInvoiceSyncStatuses = withAuth(async (
   }
 
   // The Intuit environment only applies to the QBO deep link; Xero has none.
+  // Resolved per realm: the environment stamped on the stored connection, else
+  // the tenant setting, else the deployment default.
   let environment: 'sandbox' | 'production' | undefined;
   if (integrationType === 'quickbooks_online') {
-    const { getQboEnvironment } = await import('@alga-psa/integrations/lib/qbo/qboClientService');
-    environment = getQboEnvironment();
+    environment = target.qboEnvironment ?? (await resolveTenantQboEnvironment(tenant));
   }
 
   const result: Record<string, InvoiceSyncStatus> = {};
