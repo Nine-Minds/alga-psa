@@ -1,5 +1,6 @@
 import { Knex } from 'knex';
 import { getAuthorizationKernel } from 'server/src/lib/authorization/kernel';
+import { resolveAuthorizationSubjectForUser } from '@alga-psa/authorization/assetReadAuthorization';
 import type {
   AuthorizationRecord,
   AuthorizationSubject,
@@ -111,7 +112,21 @@ export async function authorizeApiResource(input: {
   recordContext: AuthorizationRecord;
 }): Promise<boolean> {
   const kernel = await getAuthorizationKernel();
-  const subject = buildAuthorizationPrincipalSubject(input.user, input.apiKeyId);
+  const subject = await resolveAuthorizationSubjectForUser(
+    input.knex,
+    input.tenant,
+    {
+      ...input.user,
+      user_id: input.user?.user_id,
+      user_type: input.user?.user_type === 'client' ? 'client' : input.user?.user_type === 'service' ? 'service' : 'internal',
+      clientId: input.user?.client_id ?? input.user?.clientId,
+      role_ids: [
+        ...normalizeStringArray(input.user?.role_ids),
+        ...normalizeIdArrayFromObjects(input.user?.roles, 'role_id'),
+      ],
+    },
+    input.apiKeyId,
+  );
   subject.tenant = input.tenant;
 
   const decision = await kernel.authorizeResource({
@@ -124,8 +139,6 @@ export async function authorizeApiResource(input: {
   return decision.allowed;
 }
 
-// LEVERAGE: pattern read-authz-for-writes — ApiProjectController, ApiQuoteController, ApiInventoryController and assetReadGuard
-// likely authorize writes via this read wrapper too; migrate them to authorizeApiResource({ action }).
 export async function authorizeApiResourceRead(input: {
   knex: Knex;
   tenant: string;

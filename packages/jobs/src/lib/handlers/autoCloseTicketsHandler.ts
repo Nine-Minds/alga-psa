@@ -3,6 +3,7 @@ import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { updateTicketInTransaction } from '@alga-psa/tickets/actions/optimizedTicketActions';
+import { AUTO_CLOSE_TICKET_AUTHORIZATION } from '@alga-psa/tickets/lib/ticketUpdateAuthorization';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
 import type { IUserWithRoles } from '@alga-psa/types';
 import {
@@ -48,7 +49,7 @@ const NON_ACTIVITY_AUDIT_EVENTS = [
 
 /**
  * Placeholder for updateTicketInTransaction's required user parameter. With
- * systemActor: true the function never reads attribution off this object —
+ * the auto-close authorization capability the function never reads attribution off this object —
  * closed_by stays null and events/audit carry a SYSTEM actor.
  */
 const SYSTEM_ACTOR_USER = {
@@ -381,7 +382,6 @@ async function closeDueTickets(knex: Knex, tenant: string): Promise<{ closed: nu
           row.ticket_id,
           { status_id: row.close_to_status_id },
           {
-            systemActor: true,
             // Auto-close is an automated close of the master; preserve the
             // pre-gate behaviour by propagating to open children. This routes
             // through propagateBundleMasterStatus so the ledger/audit rows are
@@ -390,7 +390,9 @@ async function closeDueTickets(knex: Knex, tenant: string): Promise<{ closed: nu
             bypassCloseRules: { source: 'auto_close' },
             suppressContactNotifications: Boolean(row.suppress_contact_notifications),
             suppressInternalNotifications: Boolean(row.suppress_internal_notifications),
-          }
+          },
+          undefined,
+          AUTO_CLOSE_TICKET_AUTHORIZATION,
         );
 
         await tenantScopedTable(trx, 'ticket_auto_close_state', tenant)

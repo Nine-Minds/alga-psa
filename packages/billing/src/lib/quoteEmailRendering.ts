@@ -12,7 +12,7 @@ import {
 
 export type QuoteTemplateName = 'quote-email' | 'quote-reminder-email' | 'quote-accepted-confirmation-email';
 
-interface QuoteEmailTemplate {
+export interface QuoteEmailTemplate {
   subject: string;
   html_content: string;
   text_content: string;
@@ -53,6 +53,97 @@ export const getQuoteEmailTemplate = async (
   }
 
   return null;
+};
+
+export const REVIEW_LINK_VARIABLE = 'quoteReviewLink';
+
+const templateReferencesReviewLink = (source: string): boolean => {
+  let ast: unknown;
+  try {
+    ast = Handlebars.parse(source);
+  } catch {
+    return false;
+  }
+  const visit = (node: unknown): boolean => {
+    if (Array.isArray(node)) return node.some(visit);
+    if (!node || typeof node !== 'object') return false;
+    const record = node as Record<string, unknown>;
+    if (record.type === 'PathExpression' && !record.data && Array.isArray(record.parts) && record.parts[0] === REVIEW_LINK_VARIABLE) return true;
+    return Object.values(record).some((value) => typeof value === 'object' && value !== null && visit(value));
+  };
+  return visit(ast);
+};
+
+export interface ResolvedQuoteEmail {
+  templateName: QuoteTemplateName;
+  locale: string;
+  template: QuoteEmailTemplate | null;
+  htmlRendersReviewLink: boolean;
+  textRendersReviewLink: boolean;
+  rendersReviewLink: boolean;
+}
+
+export const resolveQuoteEmail = async (
+  knex: Knex | Knex.Transaction,
+  tenant: string,
+  templateName: QuoteTemplateName,
+  locale: string
+): Promise<ResolvedQuoteEmail> => {
+  const template = await getQuoteEmailTemplate(knex, tenant, templateName, locale);
+  if (!template) {
+    return { templateName, locale, template: null, htmlRendersReviewLink: true, textRendersReviewLink: true, rendersReviewLink: true };
+  }
+  const htmlRendersReviewLink = templateReferencesReviewLink(template.html_content);
+  const textRendersReviewLink = templateReferencesReviewLink(template.text_content);
+  return {
+    templateName, locale, template, htmlRendersReviewLink, textRendersReviewLink,
+    rendersReviewLink: htmlRendersReviewLink || textRendersReviewLink,
+  };
+};
+
+export const renderResolvedQuoteEmail = ({
+  resolved,
+  quote,
+  companyName,
+  portalLink,
+  quoteReviewLink,
+  hasPortalAccess,
+  customMessage,
+}: {
+  resolved: ResolvedQuoteEmail;
+  quote: IQuote;
+  companyName: string;
+  portalLink?: string;
+  quoteReviewLink?: string;
+  hasPortalAccess?: boolean;
+  customMessage?: string;
+}): { subject: string; html: string; text: string } => {
+  const { template, templateName, locale } = resolved;
+  if (!template) {
+    return CODE_TEMPLATES[templateName]({ quote, companyName, portalLink, quoteReviewLink, hasPortalAccess, customMessage, locale });
+  }
+
+  const baseContext = {
+    quote: {
+      number: quote.quote_number ?? quote.quote_id,
+      // LEVERAGE: pattern currency-minor-units — hard-coded /100 assumes a 2-digit currency; display/compute formatting should go through formatCurrencyFromMinorUnits (alga0002091 follow-up)
+      amount: formatCurrency((quote.total_amount ?? 0) / 100, locale, quote.currency_code || 'USD'),
+      validUntil: formatQuoteDate(quote.valid_until ?? null, locale),
+      acceptedAt: formatQuoteDate(quote.accepted_at ?? null, locale),
+    },
+    company: { name: companyName },
+    quoteReviewLink: quoteReviewLink?.trim() || '',
+    customMessage: customMessage?.trim() || '',
+  };
+  const contextFor = (partRendersReviewLink: boolean) => ({
+    ...baseContext,
+    portalLink: (quoteReviewLink && hasPortalAccess === false && partRendersReviewLink ? '' : portalLink?.trim()) || '',
+  });
+  return {
+    subject: Handlebars.compile(template.subject, { noEscape: true })(contextFor(false)),
+    html: Handlebars.compile(template.html_content)(contextFor(resolved.htmlRendersReviewLink)),
+    text: Handlebars.compile(template.text_content, { noEscape: true })(contextFor(resolved.textRendersReviewLink)),
+  };
 };
 
 /**

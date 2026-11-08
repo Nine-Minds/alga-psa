@@ -711,7 +711,7 @@ export const deleteBoard = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   const guard = await boardMutationGuard(user, 'delete', undefined, db);
-  if (!guard.ok) {
+  if (guard.ok === false) {
     return {
       success: false,
       code: 'PERMISSION_DENIED',

@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildAuthorizationPrincipalSubject, authorizeApiResourceRead, authorizeApiResource } from 'server/src/lib/api/controllers/authorizationKernel';
 
 const authorizeResourceMock = vi.fn();
+const resolveSubjectMock = vi.hoisted(() => vi.fn());
 
 vi.mock('server/src/lib/authorization/kernel', () => ({
   getAuthorizationKernel: vi.fn(async () => ({
@@ -9,7 +10,25 @@ vi.mock('server/src/lib/authorization/kernel', () => ({
   })),
 }));
 
+vi.mock('@alga-psa/authorization/assetReadAuthorization', async (original) => ({
+  ...await original<typeof import('@alga-psa/authorization/assetReadAuthorization')>(),
+  resolveAuthorizationSubjectForUser: (...args: unknown[]) => resolveSubjectMock(...args),
+}));
+
 describe('api authorization kernel helper', () => {
+  beforeEach(() => {
+    resolveSubjectMock.mockImplementation(async (_knex, tenant, user, apiKeyId) => ({
+      tenant,
+      userId: user.user_id,
+      userType: 'internal',
+      roleIds: [],
+      teamIds: [],
+      managedUserIds: [],
+      portfolioClientIds: [],
+      ...(apiKeyId ? { apiKeyId } : {}),
+    }));
+  });
+
   it('normalizes user roles, teams, and api key into authorization subject', () => {
     const subject = buildAuthorizationPrincipalSubject(
       {
@@ -112,15 +131,20 @@ describe('api authorization kernel helper', () => {
     expect(allowed).toBe(true);
   });
 
-  it('authorizeApiResource passes the given action through; the read wrapper sends read', async () => {
+  it('evaluates independent action decisions without turning writes into reads', async () => {
     authorizeResourceMock.mockReset();
-    authorizeResourceMock.mockResolvedValue({ allowed: true });
+    authorizeResourceMock.mockImplementation(async ({ resource }: { resource: { action: string } }) => ({
+      allowed: resource.action === 'update',
+    }));
     const base = { knex: {} as any, tenant: 't1', user: { user_id: 'u1' }, resource: 'ticket', recordContext: { id: 'r1' } };
 
-    await authorizeApiResource({ ...base, action: 'update' });
-    await authorizeApiResource({ ...base, action: 'delete' });
-    await authorizeApiResourceRead(base);
+    const updateAllowed = await authorizeApiResource({ ...base, action: 'update' });
+    const deleteAllowed = await authorizeApiResource({ ...base, action: 'delete' });
+    const readAllowed = await authorizeApiResourceRead(base);
 
+    expect(updateAllowed).toBe(true);
+    expect(deleteAllowed).toBe(false);
+    expect(readAllowed).toBe(false);
     const actions = authorizeResourceMock.mock.calls.map((c) => c[0].resource.action);
     expect(actions).toEqual(['update', 'delete', 'read']);
   });
