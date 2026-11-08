@@ -1491,12 +1491,12 @@
       "useFieldPicker": "Usar selector de campos",
       "current": "Actual",
       "unbound": "Sin enlace",
-      "searchFields": "Buscar campos...",
+      "searchFields": "Buscar campos…",
       "noMatches": "No hay campos que coincidan.",
       "useCustomPath": "Usar ruta personalizada"
     },
     "customCssPreserved": "Valor CSS personalizado conservado hasta que se edite:",
-    "pickField": "Seleccione {{field}}"
+    "pickField": "Seleccionar {{field}}"
     },
     "shell": {
       "selectedLabel": "Seleccionado:",
@@ -1651,19 +1651,19 @@
     "flexPreset": {
       "natural": {
         "label": "Natural",
-        "description": "Use el tamaño del contenido del elemento, pero permita que se reduzca si falta espacio."
+        "description": "Usa el tamaño del contenido del elemento, pero permite que se reduzca si falta espacio."
       },
       "fill": {
         "label": "Llenar",
-        "description": "Ocupe el espacio sobrante manteniendo el tamaño preferido del elemento."
+        "description": "Ocupa el espacio sobrante manteniendo el tamaño preferido del elemento."
       },
       "share": {
         "label": "Compartir",
-        "description": "Reparta el espacio disponible por igual entre los elementos que lo comparten."
+        "description": "Reparte el espacio disponible por igual entre los elementos que lo comparten."
       },
       "fixed": {
         "label": "Fijo",
-        "description": "Mantenga el tamaño del elemento y no permita que flexbox lo reduzca."
+        "description": "Mantiene el tamaño del elemento y no permite que flexbox lo reduzca."
       }
     },
     "groups": {
@@ -1684,25 +1684,25 @@
       "heightLower": "alto"
     },
     "flexItemHint": "En esta pila {{direction}}, estas opciones controlan cómo el elemento comparte el {{axis}} con los demás elementos del mismo nivel.",
-    "flexBehavior": "Comportamiento de {{axis}}",
-    "flexBehaviorAria": "Comportamiento de {{axis}}: {{preset}}",
-    "flexCustomNotice": "Este elemento tiene valores flex personalizados. Seleccione un ajuste preestablecido para simplificarlo o modifique los valores avanzados a continuación.",
+    "flexBehavior": "Comportamiento del {{axis}}",
+    "flexBehaviorAria": "Comportamiento del {{axis}}: {{preset}}",
+    "flexCustomNotice": "Este elemento tiene valores flex personalizados. Seleccione un preset para simplificarlo o modifique los valores avanzados a continuación.",
     "advancedFlexValues": "Valores flex avanzados",
     "flexGrow": "Ocupar espacio adicional",
     "flexShrink": "Permitir reducción",
-    "flexBasis": "Tamaño preferido de {{axis}}",
+    "flexBasis": "Tamaño preferido del {{axis}}",
     "displayFormat": {
       "singleLine": {
         "label": "Una línea",
-        "description": "Muestre la dirección en una sola línea."
+        "description": "Muestra la dirección en una sola línea."
       },
       "multiline": {
         "label": "Varias líneas",
-        "description": "Divida la dirección en varias líneas."
+        "description": "Divide la dirección en varias líneas."
       },
       "raw": {
         "label": "Sin procesar",
-        "description": "Use el valor almacenado tal como está."
+        "description": "Usa el valor almacenado tal como está."
       },
       "onlyDataField": "Esto solo se aplica a los nodos de campo de datos.",
       "aria": "Formato de visualización: {{format}}"
@@ -1717,7 +1717,7 @@
     "media": {
       "altText": "Texto alternativo",
       "aspectRatio": "Relación de aspecto",
-      "fitParentSection": "Ajustar la sección contenedora al medio",
+      "fitParentSection": "Ajustar la sección contenedora al bloque de medios",
       "reflowsPrefix": "Redistribuye",
       "reflowsSuffix": "para eliminar el espacio en blanco sobrante.",
       "notInSection": "Este bloque de medios no está dentro de una sección."
@@ -2337,20 +2337,20 @@
       "insertedOnPage": "Se añadió {{block}} a la página.",
       "insertedInto": "Se añadió {{block}} a {{parent}}.",
     "fieldRebound": "{{name}} ahora muestra {{path}}.",
-    "dropIncompatibleComponent": "El destino donde se intenta soltar no es compatible con este componente.",
-    "dropIncompatible": "El destino donde se intenta soltar no es compatible.",
-    "dropIncompatiblePreset": "El destino donde se intenta soltar no es compatible con este ajuste preestablecido.",
+    "dropIncompatibleComponent": "La zona de destino no es compatible con este componente.",
+    "dropIncompatible": "La zona de destino no es compatible.",
+    "dropIncompatiblePreset": "La zona de destino no es compatible con este preset.",
     "dropOnCanvas": "Suelte en el lienzo para agregar este componente.",
     "addComponentFailed": "No se puede agregar este componente en el contexto actual.",
-    "presetUnavailable": "La definición del ajuste preestablecido no está disponible.",
-    "presetPlacementUnresolved": "No se pudo determinar dónde colocar este ajuste preestablecido.",
-    "addPresetFailed": "No se puede agregar este ajuste preestablecido en el contexto actual.",
+    "presetUnavailable": "La definición del preset no está disponible.",
+    "presetPlacementUnresolved": "No se pudo determinar dónde colocar este preset.",
+    "addPresetFailed": "No se puede agregar este preset en el contexto actual.",
     "inserted": "Se insertó {{value}}.",
     "insertedWithDiagnostic": "Se insertó {{value}}. {{diagnostic}}",
     "selectTextBlock": "Seleccione un bloque de texto y luego active un campo de texto para insertar variables.",
     "focusTextField": "Active un campo de texto en el inspector para insertar esta variable.",
     "selectSectionToFit": "Seleccione una sección para ajustar.",
-    "sectionNoChildren": "La sección no tiene contenido secundario al que ajustarse.",
+    "sectionNoChildren": "La sección no tiene contenido para ajustar.",
     "sectionFitted": "Se ajustó la sección al contenido.",
     "sectionFittedFixed": "Se cambió la sección al modo de tamaño fijo y se ajustó al contenido."
     },
