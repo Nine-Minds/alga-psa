@@ -295,7 +295,12 @@ vi.mock('@alga-psa/ui/components/UserAndTeamPicker', () => ({
 
 vi.mock('@alga-psa/ui/components/MultiUserAndTeamPicker', () => ({
   __esModule: true,
-  default: ({ values }: any) => <div data-testid="additional-agents-value">{(values || []).join(',')}</div>,
+  default: ({ values, onValuesChange }: any) => (
+    <div data-testid="additional-agents-value">
+      {(values || []).join(',')}
+      <button type="button" onClick={() => onValuesChange(['user-9'])}>Select staffing agent</button>
+    </div>
+  ),
 }));
 
 vi.mock('@alga-psa/ui/components/settings/general/BoardPicker', () => ({
@@ -769,6 +774,23 @@ describe('QuickAddTicket template mode', () => {
     expect(formData.get('title')).toBe('Employee department change');
     expect(formData.has('duplicate_of_ticket_id')).toBe(false);
     expect(formData.has('attributes')).toBe(false);
+  });
+
+  it('submits selected additional agents through addTicket and shows a staffing failure', async () => {
+    renderQuickAdd();
+    await pickTemplate();
+    await waitFor(() => expect((screen.getByTestId('select-ticket-quick-add') as HTMLSelectElement).value).toBe('status-1'));
+    fireEvent.click(screen.getByRole('button', { name: 'Change client' }));
+    await waitFor(() => expect(screen.getByTestId('client-picker-value')).toHaveTextContent('client-2'));
+    fireEvent.click(screen.getByRole('button', { name: 'Select staffing agent' }));
+    addTicketMock.mockResolvedValueOnce({ permissionError: 'Unable to assign the selected agent: user is not eligible' });
+
+    fireEvent.click(document.getElementById('ticket-quick-add-submit-btn') as HTMLElement);
+    await waitFor(() => expect(addTicketMock).toHaveBeenCalled());
+
+    expect(JSON.parse(submittedFormData().get('additional_agent_ids') as string)).toEqual(['user-9']);
+    expect(await screen.findByText('Unable to assign the selected agent: user is not eligible')).toBeInTheDocument();
+    expect(screen.getByTestId('quick-add-dialog-root')).toBeInTheDocument();
   });
 
   it('sends template_copy_checklist=false when the checklist is unchecked', async () => {

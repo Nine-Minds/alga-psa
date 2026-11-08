@@ -1931,7 +1931,9 @@ components:
         associationId:
           type: string
           format: uuid
-          description: Document association UUID from document_associations.association_id.
+          description: Asset document association UUID returned by the API; new API
+            associations use document_associations.association_id and may also
+            resolve asset_document_associations IDs.
       required:
         - associationId
     AssetDocumentAssociationRequest:
@@ -1943,7 +1945,7 @@ components:
           description: Document UUID from documents.document_id to associate with the asset.
         notes:
           type: string
-          description: Optional notes stored on document_associations.notes.
+          description: Optional notes stored on asset_document_associations.notes.
       required:
         - document_id
     AssetExtensionData:
@@ -2237,55 +2239,86 @@ components:
         association_id:
           type: string
           format: uuid
-          description: Primary key from document_associations.association_id.
+          description: Association UUID from document_associations.association_id.
         entity_type:
           type: string
           enum:
             - asset
-          description: Entity type stored on document_associations; always asset for these
-            routes.
+          description: Legacy entity type for this asset document association.
         entity_id:
           type: string
           format: uuid
-          description: Asset UUID from document_associations.entity_id.
+          description: Legacy asset UUID field from document_associations.entity_id.
+        asset_id:
+          type: string
+          format: uuid
+          description: Asset UUID linked by the association.
         document_id:
           type: string
           format: uuid
-          description: Document UUID from document_associations.document_id.
+          description: Document UUID linked by the association.
         notes:
           type:
             - string
             - "null"
-          description: Optional association notes.
+          description: Optional association notes stored on
+            asset_document_associations.notes.
         tenant:
           type: string
           format: uuid
-          description: Tenant UUID from document_associations.tenant.
+          description: Tenant UUID for the association.
         created_at:
           type: string
           format: date-time
           description: Association creation timestamp.
         original_filename:
           type: string
-          description: Original filename from the joined documents table, present on list
-            responses.
+          description: Legacy document filename field, included on list responses.
         file_size:
-          type: number
-          description: File size in bytes from the joined documents table, present on list
-            responses.
+          type:
+            - number
+            - "null"
+          description: Legacy document size field in bytes, included on list responses.
         mime_type:
-          type: string
-          description: MIME type from the joined documents table, present on list responses.
+          type:
+            - string
+            - "null"
+          description: Legacy document MIME type field, included on list responses.
         uploaded_at:
           type: string
           format: date-time
-          description: Document upload timestamp from the joined documents table, present
-            on list responses.
+          description: Legacy document upload timestamp field, included on list responses.
+        document:
+          type: object
+          properties:
+            document_id:
+              type: string
+              format: uuid
+            original_filename:
+              type: string
+            file_size:
+              type:
+                - number
+                - "null"
+            mime_type:
+              type:
+                - string
+                - "null"
+            uploaded_at:
+              type: string
+              format: date-time
+          required:
+            - document_id
+            - original_filename
+            - uploaded_at
+          description: Document details joined for list responses.
       required:
         - association_id
         - entity_type
         - entity_id
+        - asset_id
         - document_id
+        - notes
         - tenant
     AssetDocumentListPayload:
       type: object
@@ -2294,8 +2327,7 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AssetDocumentAssociationRow"
-          description: Document association rows for the asset. Empty when no associations
-            exist or the asset is not found.
+          description: Document association rows for the authorized asset.
         _links:
           type: object
           properties:
@@ -2340,8 +2372,8 @@ components:
         data:
           allOf:
             - $ref: "#/components/schemas/AssetDocumentAssociationRow"
-            - description: Inserted document association row returned from
-                document_associations.returning(*).
+            - description: Asset document association returned by the API with notes from the
+                asset-specific association record.
       required:
         - data
     AssetDocumentAssociationResponse:
@@ -2754,8 +2786,8 @@ components:
       properties:
         relationshipId:
           type: string
-          format: uuid
-          description: Asset relationship UUID from asset_relationships.relationship_id.
+          description: "Composite asset relationship identity:
+            parent_asset_id:child_asset_id."
       required:
         - relationshipId
     AssetMaintenanceScheduleUpdateRequest:
@@ -3332,16 +3364,23 @@ components:
       properties:
         relationship_id:
           type: string
-          format: uuid
-          description: Primary key from asset_relationships.relationship_id.
+          description: "Composite route identity: parent_asset_id:child_asset_id."
         asset_id:
           type: string
           format: uuid
-          description: Source asset UUID from asset_relationships.asset_id.
+          description: Compatibility alias for parent_asset_id.
+        parent_asset_id:
+          type: string
+          format: uuid
+          description: Parent asset UUID from asset_relationships.parent_asset_id.
+        child_asset_id:
+          type: string
+          format: uuid
+          description: Child asset UUID from asset_relationships.child_asset_id.
         related_asset_id:
           type: string
           format: uuid
-          description: Related asset UUID from asset_relationships.related_asset_id.
+          description: Other endpoint asset UUID, present in relationship list responses.
         relationship_type:
           type: string
           description: Free-form relationship type.
@@ -3372,6 +3411,8 @@ components:
       required:
         - relationship_id
         - asset_id
+        - parent_asset_id
+        - child_asset_id
         - related_asset_id
         - relationship_type
         - tenant
@@ -32639,13 +32680,12 @@ paths:
   /api/v1/assets/documents/{associationId}:
     delete:
       summary: Remove asset document association
-      description: Removes a document association row by
-        document_associations.association_id for the authenticated tenant. The
-        service deletes rows where association_id and tenant match and does not
-        verify entity_type in this method. The controller intends to return an
-        empty success response after deletion, but currently calls
-        createApiResponse(null, 204) inside NextResponse.json, which can throw
-        because JSON responses cannot use status 204 with a body.
+      description: Removes a document association by its API association ID within the
+        authenticated tenant and verifies it belongs to an asset before
+        authorization. The asset is resolved within the tenant before the
+        caller’s update permission and record-level scope are checked;
+        foreign-tenant IDs return 404. The generic document link and any
+        asset-specific notes record are deleted together.
       tags:
         - Assets
       security:
@@ -32663,10 +32703,13 @@ paths:
         - schema:
             type: string
             format: uuid
-            description: Document association UUID from
-              document_associations.association_id.
+            description: Asset document association UUID returned by the API; new API
+              associations use document_associations.association_id and may also
+              resolve asset_document_associations IDs.
           required: true
-          description: Document association UUID from document_associations.association_id.
+          description: Asset document association UUID returned by the API; new API
+            associations use document_associations.association_id and may also
+            resolve asset_document_associations IDs.
           name: associationId
           in: path
         - schema:
@@ -33209,10 +33252,11 @@ paths:
       parameters:
         - schema:
             type: string
-            format: uuid
-            description: Asset relationship UUID from asset_relationships.relationship_id.
+            description: "Composite asset relationship identity:
+              parent_asset_id:child_asset_id."
           required: true
-          description: Asset relationship UUID from asset_relationships.relationship_id.
+          description: "Composite asset relationship identity:
+            parent_asset_id:child_asset_id."
           name: relationshipId
           in: path
         - schema:
@@ -34006,13 +34050,14 @@ paths:
   /api/v1/assets/{id}/documents:
     get:
       summary: List asset document associations
-      description: Returns document_associations rows for an asset in the
-        authenticated tenant where entity_type is asset and entity_id is the
-        path asset ID. The service joins documents to add original_filename,
-        file_size, mime_type, and uploaded_at. It does not check whether the
-        asset exists first, so nonexistent or cross-tenant asset IDs return 200
-        with an empty array. Response links currently point at /api/v2/assets
-        paths.
+      description: Returns document associations for the asset in the authenticated
+        tenant. Controller authorization resolves and authorizes the asset
+        first; nonexistent or cross-tenant asset IDs return 404, while in-tenant
+        permission denials return 403. Document details are joined from
+        documents/external_files, legacy filename, size, MIME type, and
+        upload-time fields remain at the response top level, and optional
+        association notes come from asset_document_associations. Response links
+        currently point at /api/v2/assets paths.
       tags:
         - Assets
       security:
@@ -34023,7 +34068,7 @@ paths:
         x-current-auth-wiring-missing: true
         x-rbac-resource: asset
         x-rbac-action: read
-        x-no-asset-existence-check: true
+        x-no-asset-existence-check: false
         x-response-links-path-version: v2
       x-alga-products:
         - psa
@@ -34060,8 +34105,8 @@ paths:
           in: header
       responses:
         "200":
-          description: Document associations returned successfully. Empty when no
-            associations exist or the asset is not found.
+          description: Document associations returned successfully for an authorized
+            asset; an asset with no associations returns an empty array.
           content:
             application/json:
               schema:
@@ -34130,15 +34175,14 @@ paths:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
     post:
       summary: Associate document with asset
-      description: Creates a document_associations row that links the path asset ID to
-        the supplied document_id. The body is validated with
+      description: Creates the tenant-scoped document link for the path asset and
+        supplied document_id, while storing optional notes and authenticated
+        created_by in asset_document_associations. The body is validated with
         createAssetDocumentSchema; document_id is required and notes is
-        optional. The service inserts entity_type=asset, entity_id from the
-        path, document_id, notes, tenant from context, and created_at, then
-        returns the inserted row. It does not verify that the asset or document
-        belongs to the same tenant before insert, does not set created_by, and
-        publishes no event. Foreign-key or unique constraint errors surface
-        through handleApiError.
+        optional. Both association records are written transactionally so
+        document workflows and the asset API stay consistent. Tenant-scoped
+        asset and document checks run before insert; database persistence errors
+        are surfaced through handleApiError.
       tags:
         - Assets
       security:
@@ -112405,6 +112449,129 @@ paths:
     post:
       summary: Reorder quote items
       description: Reorders quote item sequence via reorderItems().
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: quote
+        x-read-authorization-resource: billing
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Quote UUID from quotes.quote_id.
+          required: true
+          description: Quote UUID from quotes.quote_id.
+          name: id
+          in: path
+        - schema:
+            type: string
+            format: uuid
+            description: Service-principal keys only. The user id of an active internal user
+              to act as. The request then runs as that user (the effective user,
+              recorded as author/actor) with the principal recorded as the
+              delegating principal; permissions are the intersection of the
+              principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the
+              principal is not allowed to act as, ACT_AS_INVALID_TARGET for a
+              missing, inactive, client or service target, and
+              ACT_AS_NOT_SUPPORTED when sent with a human-owned key.
+          required: false
+          description: Service-principal keys only. The user id of an active internal user
+            to act as. The request then runs as that user (the effective user,
+            recorded as author/actor) with the principal recorded as the
+            delegating principal; permissions are the intersection of the
+            principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the
+            principal is not allowed to act as, ACT_AS_INVALID_TARGET for a
+            missing, inactive, client or service target, and
+            ACT_AS_NOT_SUPPORTED when sent with a human-owned key.
+          name: X-Alga-Act-As
+          in: header
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuotesContractsGenericBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "201":
+          description: Create-like operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "400":
+          description: "Validation or request parsing failure. ACT_AS_NOT_SUPPORTED: the
+            act-as header was sent with a key that cannot act as another user."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: "RBAC denied for quote resource action. ACT_AS_NOT_ALLOWED: the
+            service principal is not allowed to act as users."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "422":
+          description: "ACT_AS_REQUIRED: a service principal performed human work without
+            the act-as header; ACT_AS_INVALID_TARGET: the act-as user is
+            missing, inactive, client or service; HUMAN_WORK_ASSIGNEE_INVALID: a
+            service user was given as assignee/resource."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details: {}
+                    required:
+                      - code
+                      - message
+                required:
+                  - error
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+  /api/v1/quotes/{id}/cancel:
+    post:
+      summary: Cancel quote
+      description: Cancels quote via cancel(); requires billing:update. Quote status
+        is not editable through PUT /api/v1/quotes/{id}.
       tags:
         - Quotes & Contracts v1
       security:

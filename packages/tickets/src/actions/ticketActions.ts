@@ -1,9 +1,14 @@
 'use server';
 
 import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
-import { isMspPrincipalUserType } from '@alga-psa/types';
+import {
+  isClientUserType,
+  isMspPrincipalUserType,
+  type AllowlistedUserField,
+} from '@alga-psa/types';
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { ticketUpdateStamp } from '@shared/lib/tickets/ticketUpdateStamp';
+import { projectResponseUsers, sanitizeResponseUsers } from '../lib/responseUsers';
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { type NativeCommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
@@ -37,6 +42,7 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { deleteTicketChildRecords } from '../lib/deleteTicketChildRecords';
+import { authorizeTicketRecordAccessConcealed } from '../lib/ticketRecordAuthorization';
 import { createTagsForEntityWithTransaction, findTagsByEntityIds } from '@alga-psa/tags/actions/tagActions';
 import TagMapping from '@alga-psa/tags/models/tagMapping';
 import { isTagActionError } from '@alga-psa/tags/actions/tagActionErrors';
@@ -130,6 +136,7 @@ import {
   type UpdateTicketInTransactionOptions,
 } from './optimizedTicketActions';
 import { createTicketRichTextParagraph } from '../lib/ticketRichText';
+import { assertAllowedTicketUpdateOptions } from '../lib/ticketUpdateAuthorization';
 import { revertBundlePropagationForChild } from './ticketBundleUtils';
 import {
   buildTicketResolutionSlaStageCompletionEvent,
@@ -141,6 +148,7 @@ import {
   shouldApplyOpenOnlyStatusFilter,
 } from '../lib/ticketStatusFilter';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
+import { addTicketResourceCore, publishTicketResourceEvent } from '@alga-psa/shared/services/tickets/ticketResourceCore';
 import { assertBoardAcceptsTickets } from './ticketBoardGuards';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 // SLA cancellation is injected by the composition layer to avoid tickets→sla cross-package violation
@@ -203,6 +211,13 @@ export type TicketBulkStatusOptions = TicketNotificationSuppressionOptions & {
     isInternal?: boolean;
   };
 };
+
+const TICKET_NOTIFICATION_OPTION_KEYS = ['suppressContactNotifications', 'suppressInternalNotifications'] as const;
+const TICKET_BULK_STATUS_OPTION_KEYS = [
+  ...TICKET_NOTIFICATION_OPTION_KEYS,
+  'propagateToChildren',
+  'resolutionComment',
+] as const;
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
@@ -628,7 +643,7 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       // Optional create extras (linked assets, watchers). Parsed and validated before anything is
       // written; both are optional so callers that send none behave as before.
       const extras = parseTicketCreateExtras(data);
-      const hasCreateExtras = extras.assetIds.length > 0 || extras.watcherIds.length > 0;
+      const hasCreateExtras = extras.assetIds.length > 0 || extras.watcherIds.length > 0 || extras.additionalAgentIds.length > 0;
       if (hasCreateExtras) {
         if (user.user_type !== 'internal') {
           throw new Error('Permission denied: operation not available in client portal');
@@ -842,6 +857,16 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
           // single `asset_id` on its own keeps its old behaviour (existence only).
           clientId: extras.assetIds.length > 0 ? createTicketInput.client_id : undefined,
         });
+      }
+
+      // Additional agents are part of the authorized create operation. Validate and persist
+      // them before commit so a caller lacking later ticket-update access cannot lose staffing.
+      const creationAuthorization = { kind: 'creation' as const, ticketId: ticketResult.ticket_id };
+      for (const additionalAgentId of extras.additionalAgentIds) {
+        const { event } = await addTicketResourceCore(
+          trx, tenant, user.user_id, ticketResult.ticket_id, additionalAgentId, 'support', creationAuthorization,
+        );
+        registerAfterCommit(trx, () => publishTicketResourceEvent(event), `${event.eventType} ticket=${ticketResult.ticket_id}`);
       }
 
       // Server-specific: Handle assigned ticket event
@@ -2374,11 +2399,9 @@ async function performTicketDelete(
   trx: Knex.Transaction,
   ticketId: string,
   tenant: string,
-  user: IUser
+  user: IUserWithRoles
 ): Promise<void> {
-  if (!await hasPermission(user, 'ticket', 'delete', trx)) {
-    throw new Error('Permission denied: Cannot delete ticket');
-  }
+  await authorizeTicketRecordAccessConcealed({ trx, tenant, user, ticketId, action: 'delete' });
 
   const ticket = await tenantScopedTable(trx, 'tickets', tenant)
     .where({
@@ -2422,6 +2445,7 @@ export const deleteTicket = withAuth(async (
 ): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
   try {
     const { knex } = await createTenantKnex();
+    await authorizeTicketRecordAccessConcealed({ trx: knex, tenant, user, ticketId, action: 'delete' });
     const result = await deleteEntityWithValidation('ticket', ticketId, knex, tenant, async (trx, tenantId) => {
       await performTicketDelete(trx, ticketId, tenantId, user);
     });
@@ -2472,6 +2496,13 @@ export const deleteTickets = withAuth(async (user, { tenant }, ticketIds: string
 
   for (const ticketId of uniqueIds) {
     try {
+      await authorizeTicketRecordAccessConcealed({
+        trx: ticketKnex,
+        tenant,
+        user,
+        ticketId,
+        action: 'delete',
+      });
       const result = await deleteEntityWithValidation('ticket', ticketId, ticketKnex, tenant, async (trx, tenantId) => {
         await performTicketDelete(trx, ticketId, tenantId, user);
       });
@@ -2518,6 +2549,7 @@ export const moveTicketsToBoard = withAuth(async (
   movedIds: string[];
   failed: Array<{ ticketId: string; message: string }>;
 }> => {
+  assertAllowedTicketUpdateOptions(options, TICKET_NOTIFICATION_OPTION_KEYS);
   const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
 
   if (uniqueIds.length === 0) {
@@ -2619,6 +2651,7 @@ export const bulkAssignTickets = withAuth(async (
   updatedIds: string[];
   failed: Array<{ ticketId: string; message: string }>;
 }> => {
+  assertAllowedTicketUpdateOptions(options, TICKET_NOTIFICATION_OPTION_KEYS);
   const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
 
   if (uniqueIds.length === 0) {
@@ -2764,6 +2797,7 @@ export const bulkUpdateTicketDueDate = withAuth(async (
   updatedIds: string[];
   failed: Array<{ ticketId: string; message: string }>;
 }> => {
+  assertAllowedTicketUpdateOptions(options, TICKET_NOTIFICATION_OPTION_KEYS);
   const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
 
   if (uniqueIds.length === 0) {
@@ -2814,6 +2848,7 @@ export const bulkUpdateTicketStatus = withAuth(async (
   updatedIds: string[];
   failed: Array<{ ticketId: string; message: string; closeRuleFailures?: CloseRuleFailure[] }>;
 }> => {
+  assertAllowedTicketUpdateOptions(options, TICKET_BULK_STATUS_OPTION_KEYS);
   const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
 
   if (uniqueIds.length === 0) {
@@ -2916,6 +2951,7 @@ export const bulkUpdateTicketPriority = withAuth(async (
   updatedIds: string[];
   failed: Array<{ ticketId: string; message: string }>;
 }> => {
+  assertAllowedTicketUpdateOptions(options, TICKET_NOTIFICATION_OPTION_KEYS);
   const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
 
   if (uniqueIds.length === 0) {
@@ -3038,8 +3074,14 @@ export type DetailedTicket = ITicket & {
   client_name?: string;
 
   additionalAgents?: ITicketResource[];
-  availableAgents?: IUser[];
+  /**
+   * Assignable-agent directory, allow-listed user columns only (never credential material).
+   * Omitted for client-portal principals, who have no use for the MSP agent directory.
+   */
+  availableAgents?: TicketAgentOption[];
 };
+
+export type TicketAgentOption = Pick<IUserWithRoles, AllowlistedUserField>;
 
 export const getTicketById = withAuth(async (user, { tenant }, id: string): Promise<DetailedTicket> => {
   try {
@@ -3097,15 +3139,24 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
         throw new Error('Permission denied: Cannot view ticket');
       }
 
+      // Client-portal principals are admitted to their own ticket but do not receive the MSP
+      // agent directory, so the users table is not queried for them at all.
+      const includeAgentDirectory = !isClientUserType(user.user_type);
+
       // Fetch additional resources and available agents in parallel
-      const [additionalAgents, availableAgents] = await Promise.all([
+      const [additionalAgents, agentRows] = await Promise.all([
         tenantScopedTable(trx, 'ticket_resources', tenant)
           .where({
             ticket_id: id
           }),
-        tenantScopedTable(trx, 'users', tenant)
-          .orderBy('first_name', 'asc')
+        includeAgentDirectory
+          ? projectResponseUsers(tenantScopedTable(trx, 'users', tenant))
+              .where({ is_inactive: false })
+              .orderBy('first_name', 'asc')
+              .then(sanitizeResponseUsers)
+          : Promise.resolve(undefined)
       ]);
+      const availableAgents: TicketAgentOption[] | undefined = agentRows;
 
 
     const assigned_to_name = (ticket.assigned_to_first_name || ticket.assigned_to_last_name)
@@ -3123,7 +3174,7 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
       contact_name: ticket.contact_name || undefined,
       client_name: ticket.client_name || undefined,
       additionalAgents: additionalAgents,
-      availableAgents: availableAgents,
+      ...(availableAgents ? { availableAgents } : {}),
     };
 
     delete (detailedTicket as any).assigned_to_first_name;

@@ -24,6 +24,10 @@ export type AssetAuthUser = {
   user_id: string;
   user_type: AuthorizationSubject['userType'];
   clientId?: string | null;
+  client_id?: string | null;
+  role_ids?: string[];
+  portfolio_client_ids?: string[];
+  portfolioClientIds?: string[];
   roles?: Array<{ role_id?: string } | string>;
 };
 
@@ -52,22 +56,20 @@ function extractRoleIdsFromUser(user: AssetAuthUser): string[] {
 export async function resolveAuthorizationSubjectForUser(
   trx: Knex | Knex.Transaction,
   tenant: string,
-  user: AssetAuthUser
+  user: AssetAuthUser,
+  apiKeyId?: string
 ): Promise<AuthorizationSubject> {
   const db = tenantDb(trx, tenant);
   let roleIds = extractRoleIdsFromUser(user);
+  roleIds = Array.from(new Set([...roleIds, ...(user.role_ids ?? [])]));
   if (roleIds.length === 0) {
-    try {
-      const roleRows = await db.table('user_roles').where({ user_id: user.user_id }).select<{ role_id: string }[]>('role_id');
-      roleIds = roleRows.map((row) => row.role_id);
-    } catch {
-      roleIds = [];
-    }
+    const roleRows = await db.table('user_roles').where({ user_id: user.user_id }).select<{ role_id: string }[]>('role_id');
+    roleIds = roleRows.map((row) => row.role_id);
   }
 
   const [teamRows, managedRows] = await Promise.all([
-    db.table('team_members').where({ user_id: user.user_id }).select<{ team_id: string }[]>('team_id').catch(() => []),
-    db.table('users').where({ reports_to: user.user_id }).select<{ user_id: string }[]>('user_id').catch(() => []),
+    db.table('team_members').where({ user_id: user.user_id }).select<{ team_id: string }[]>('team_id'),
+    db.table('users').where({ reports_to: user.user_id }).select<{ user_id: string }[]>('user_id'),
   ]);
 
   return {
@@ -77,8 +79,13 @@ export async function resolveAuthorizationSubjectForUser(
     roleIds,
     teamIds: teamRows.map((row) => row.team_id),
     managedUserIds: managedRows.map((row) => row.user_id),
-    clientId: user.clientId ?? null,
-    portfolioClientIds: user.clientId ? [user.clientId] : [],
+    clientId: user.clientId ?? user.client_id ?? null,
+    portfolioClientIds: Array.from(new Set([
+      ...(user.portfolio_client_ids ?? []),
+      ...(user.portfolioClientIds ?? []),
+      ...((user.clientId ?? user.client_id) ? [user.clientId ?? user.client_id!] : []),
+    ])),
+    ...(apiKeyId ? { apiKeyId } : {}),
   };
 }
 
@@ -95,6 +102,8 @@ export async function resolveAssetAuthorizationRecords(
   const associationRows = await tenantDb(trx, tenant)
     .table('asset_associations')
     .whereIn('asset_id', assetIds)
+    .orderBy('created_at', 'asc')
+    .orderBy('entity_id', 'asc')
     .select<Array<{ asset_id: string; entity_type: string; entity_id: string }>>('asset_id', 'entity_type', 'entity_id');
 
   const associationsByAsset = new Map<string, Array<{ entity_type: string; entity_id: string }>>();
@@ -189,6 +198,29 @@ export function isAssetReadAllowed(
   asset: AssetAuthorizationInput
 ): Promise<boolean> {
   return isAssetActionAllowed(trx, tenant, context, asset, 'read');
+}
+
+/**
+ * Load an asset and enforce its record-level read decision using the same
+ * transaction the caller will use for the protected operation. A null result
+ * deliberately combines missing and unreadable assets to avoid an existence
+ * oracle at ID-based action boundaries.
+ */
+export async function loadReadableAssetById(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  user: AssetAuthUser,
+  assetId: string
+): Promise<AssetAuthorizationInput | null> {
+  const asset = await tenantDb(trx, tenant)
+    .table('assets')
+    .where({ asset_id: assetId })
+    .select('asset_id', 'client_id')
+    .first() as AssetAuthorizationInput | undefined;
+
+  if (!asset) return null;
+  const context = await createAssetReadContext(trx, tenant, user);
+  return await isAssetReadAllowed(trx, tenant, context, asset) ? asset : null;
 }
 
 /**

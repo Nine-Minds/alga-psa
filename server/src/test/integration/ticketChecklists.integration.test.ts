@@ -288,6 +288,20 @@ describe('ticket checklists', () => {
     });
   });
 
+  it('requires ticket read permission when the caller can otherwise access the ticket record', async () => {
+    const ticketId = await insertTicket(db, fixture);
+    await addChecklistItem(ticketId, { item_name: 'Visible checklist step' });
+
+    expect(await getTicketChecklistItems(ticketId)).toHaveLength(1);
+
+    hasPermissionMock.mockResolvedValue(false);
+    await expect(getTicketChecklistItems(ticketId)).resolves.toEqual([]);
+    expect(hasPermissionMock).toHaveBeenLastCalledWith(userRef.user, 'ticket', 'read');
+
+    hasPermissionMock.mockResolvedValue(true);
+    expect(await getTicketChecklistItems(ticketId)).toHaveLength(1);
+  });
+
   it('T023: completion stamps accountability and audit rows preserve prior signoff', async () => {
     const ticketId = await insertTicket(db, fixture);
     const item = expectActionSuccess(await addChecklistItem(ticketId, { item_name: 'Verify backups' }));
@@ -314,6 +328,58 @@ describe('ticket checklists', () => {
     expect(uncheckAudit.details.previous_completed_by).toBe(fixture.userId);
     expect(uncheckAudit.details.previous_completed_at).toBeTruthy();
     expect(uncheckAudit.actor_user_id).toBe(fixture.userId);
+  });
+
+  it('denies a client principal checklist access across ticket visibility boundaries', async () => {
+    const other = await createCloseRulesFixture(db, fixture.tenantId, fixture.userId);
+    const ticketId = await insertTicket(db, fixture);
+    const itemId = expectActionSuccess(await addChecklistItem(ticketId, { item_name: 'Private checklist step' }))
+      .checklist_item_id;
+    const templateId = await createTemplateWithItems([{ name: 'Unauthorized template step' }]);
+    const originalUser = userRef.user;
+    userRef.user = {
+      user_id: uuidv4(),
+      user_type: 'client',
+      tenant: fixture.tenantId,
+      clientId: other.clientId,
+      contact_id: other.contactId,
+      roles: [],
+    };
+
+    try {
+      // Reads conceal inaccessible tickets; mutations return permission errors.
+      await expect(getTicketChecklistItems(ticketId)).resolves.toEqual([]);
+      expect(await addChecklistItem(ticketId, { item_name: 'Unauthorized add' })).toMatchObject({ permissionError: expect.stringMatching(/permission denied/i) });
+      expect(await updateChecklistItem(itemId, { item_name: 'Unauthorized update' })).toMatchObject({ permissionError: expect.stringMatching(/permission denied/i) });
+      expect(await setChecklistItemCompleted(itemId, true)).toMatchObject({ permissionError: expect.stringMatching(/permission denied/i) });
+      expect(await deleteChecklistItem(itemId)).toMatchObject({ permissionError: expect.stringMatching(/permission denied/i) });
+      expect(await reorderChecklistItems(ticketId, [itemId])).toMatchObject({ permissionError: expect.stringMatching(/permission denied/i) });
+      expect(await applyChecklistTemplate(ticketId, templateId)).toMatchObject({ permissionError: expect.stringMatching(/permission denied/i) });
+
+      const stored = await scopedDbFor(fixture.tenantId).table('ticket_checklist_items')
+        .where({ checklist_item_id: itemId }).first();
+      expect(stored).toMatchObject({ item_name: 'Private checklist step', completed: false });
+      expect(await scopedDbFor(fixture.tenantId).table('ticket_checklist_items').where({ ticket_id: ticketId })).toHaveLength(1);
+    } finally {
+      userRef.user = originalUser;
+    }
+  });
+
+  it('rejects reorder lists containing items owned by another ticket', async () => {
+    const ticketId = await insertTicket(db, fixture);
+    const otherTicketId = await insertTicket(db, fixture);
+    const ownedItem = expectActionSuccess(await addChecklistItem(ticketId, { item_name: 'Owned item' }))
+      .checklist_item_id;
+    const foreignItem = expectActionSuccess(await addChecklistItem(otherTicketId, { item_name: 'Other ticket item' }))
+      .checklist_item_id;
+
+    expect(await reorderChecklistItems(ticketId, [ownedItem, foreignItem])).toMatchObject({
+      actionError: expect.stringMatching(/not found/i),
+    });
+    expect(await scopedDbFor(fixture.tenantId).table('ticket_checklist_items')
+      .where({ checklist_item_id: ownedItem }).first()).toMatchObject({ order_number: 0 });
+    expect(await scopedDbFor(fixture.tenantId).table('ticket_checklist_items')
+      .where({ checklist_item_id: foreignItem }).first()).toMatchObject({ order_number: 0 });
   });
 
   it('T024: applying a template copies items idempotently and templates stack', async () => {

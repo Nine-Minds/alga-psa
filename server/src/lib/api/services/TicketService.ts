@@ -38,6 +38,8 @@ import { displayTagKey, loadDisplayTagsForEntities } from '@alga-psa/tags/lib/lo
 import { displayAudienceForUser } from '@alga-psa/tags/lib/tagDisplayRules';
 import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
 import { ITicket, ITicketWithDetails } from 'server/src/interfaces/ticket.interfaces';
+import type { IUserWithRoles } from '@alga-psa/types';
+import { authorizeTicketRecordAccess } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { ITicketMaterial } from 'server/src/interfaces/material.interfaces';
 import { TICKET_ORIGINS, type IExternalEntityLink } from '@alga-psa/types';
@@ -63,6 +65,8 @@ import {
 } from '@alga-psa/tickets/lib/ticketBundlePolicy';
 import { BUNDLE_CHILD_LOCKED_FIELDS, isChildWorkflowLocked } from '@alga-psa/tickets/lib/bundleWorkflowLock';
 import { deleteTicketChildRecords } from '@alga-psa/tickets/lib/deleteTicketChildRecords';
+import { authorizeTicketRecordAccessConcealed } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
+import type { IUserWithRoles } from '@alga-psa/types';
 import {
   ticketLatestActivitySql,
 } from '@alga-psa/tickets/actions/ticketListSortSql';
@@ -349,6 +353,15 @@ function tenantScopedTable(
   return tenantDb(conn, tenant).table(table);
 }
 
+/**
+ * `authorize` runs inside the write transaction, on the locked ticket row, before any write.
+ * Throwing from it aborts the update and rolls the transaction back.
+ */
+export interface UpdateTicketOptions {
+  authorize?: (ticket: Record<string, any>, trx: Knex.Transaction) => Promise<void>;
+  honorSuppliedClosure?: boolean;
+}
+
 /** Historical timestamps require the same MSP permission as the owning API write. */
 async function validateHistoricalTimestampWrite(
   field: 'entered_at' | 'created_at',
@@ -456,6 +469,29 @@ export class TicketService extends BaseService<ITicket> {
     });
   }
 
+  private ticketResourceAuthorization(context: ServiceContext, trx: Knex.Transaction) {
+    const user = context.user as IUserWithRoles | undefined;
+    if (!user || user.user_id !== context.userId || !user.user_type) {
+      throw new ForbiddenError('Ticket resource operations require a verified user authorization context');
+    }
+    return {
+      kind: 'user' as const,
+      authorizeTicket: async (ticketId: string, action: 'read' | 'update') => {
+        try {
+          return await authorizeTicketRecordAccess({ trx, tenant: context.tenant, user, ticketId, action });
+        } catch (error) {
+          if (error instanceof Error && error.message === 'Ticket not found') {
+            throw new NotFoundError('Ticket not found');
+          }
+          if (error instanceof Error && error.message.startsWith('Permission denied')) {
+            throw new ForbiddenError(error.message);
+          }
+          throw error;
+        }
+      },
+    };
+  }
+
   /**
    * Resolve the portal visibility context for a client-portal API subject, or
    * return null for internal contexts (which keep the current tenant-scoped
@@ -523,6 +559,33 @@ export class TicketService extends BaseService<ITicket> {
    */
   async delete(id: string, context: ServiceContext): Promise<void> {
     const { knex } = await this.getKnex();
+    const user = context.user as IUserWithRoles | undefined;
+    if (!user) {
+      throw new ForbiddenError('Authenticated user context is required to delete tickets');
+    }
+
+    const authorizeDelete = async (trx: Knex | Knex.Transaction, tenant: string) => {
+      try {
+        await authorizeTicketRecordAccessConcealed({
+          trx,
+          tenant,
+          user,
+          ticketId: id,
+          action: 'delete',
+        });
+      } catch (error) {
+        if (error instanceof Error && error.message === 'Ticket not found') {
+          throw new NotFoundError('Ticket not found');
+        }
+        if (error instanceof Error && error.message.startsWith('Permission denied')) {
+          if (isClientUserType(user.user_type)) throw new NotFoundError('Ticket not found');
+          throw new ForbiddenError('Permission denied: Cannot delete ticket');
+        }
+        throw error;
+      }
+    };
+
+    await authorizeDelete(knex, context.tenant);
 
     const result = await deleteEntityWithValidation(
       'ticket',
@@ -530,6 +593,8 @@ export class TicketService extends BaseService<ITicket> {
       knex,
       context.tenant,
       async (trx, tenant) => {
+        await authorizeDelete(trx, tenant);
+
         const ticket = await tenantScopedTable(trx, 'tickets', tenant)
           .where({ ticket_id: id })
           .first();
@@ -1108,6 +1173,11 @@ export class TicketService extends BaseService<ITicket> {
     this.assertValidTicketId(ticketId);
 
     return withTransaction(knex, async (trx) => {
+      if (!context.user || !(await hasPermission(context.user, 'ticket', 'read', trx))) {
+        throw new ForbiddenError('Permission denied: Cannot view ticket resources');
+      }
+      const authorization = this.ticketResourceAuthorization(context, trx);
+      const resources = await getTicketResourcesCore(trx, context.tenant, ticketId, authorization);
       const ticket = await tenantScopedTable(trx, 'tickets', context.tenant)
         .where({ ticket_id: ticketId })
         .first();
@@ -1115,7 +1185,6 @@ export class TicketService extends BaseService<ITicket> {
         throw new NotFoundError('Ticket not found');
       }
 
-      const resources = await getTicketResourcesCore(trx, context.tenant, ticketId);
       return this.buildTicketAgentsResponse(trx, context, ticket, resources);
     });
   }
@@ -1134,6 +1203,11 @@ export class TicketService extends BaseService<ITicket> {
     const notificationSuppression = resolveTicketNotificationSuppression(data);
 
     const { response, event } = await withTransaction(knex, async (trx) => {
+      if (!context.user || !(await hasPermission(context.user, 'ticket', 'update', trx))) {
+        throw new ForbiddenError('Permission denied: Cannot update ticket resources');
+      }
+      const authorization = this.ticketResourceAuthorization(context, trx);
+      await authorization.authorizeTicket(ticketId, 'update');
       const agentUser = await tenantScopedTable(trx, 'users', context.tenant)
         .where({ user_id: data.user_id })
         .first();
@@ -1150,6 +1224,7 @@ export class TicketService extends BaseService<ITicket> {
           ticketId,
           data.user_id,
           data.role ?? 'support',
+          authorization,
           notificationSuppression,
           'api',
         );
@@ -1165,7 +1240,7 @@ export class TicketService extends BaseService<ITicket> {
       const ticket = await tenantScopedTable(trx, 'tickets', context.tenant)
         .where({ ticket_id: ticketId })
         .first();
-      const resources = await getTicketResourcesCore(trx, context.tenant, ticketId);
+      const resources = await getTicketResourcesCore(trx, context.tenant, ticketId, authorization);
       return {
         response: await this.buildTicketAgentsResponse(trx, context, ticket, resources),
         event: added.event,
@@ -1302,6 +1377,11 @@ export class TicketService extends BaseService<ITicket> {
     this.assertValidTicketId(ticketId);
 
     await withTransaction(knex, async (trx) => {
+      if (!context.user || !(await hasPermission(context.user, 'ticket', 'update', trx))) {
+        throw new ForbiddenError('Permission denied: Cannot update ticket resources');
+      }
+      const authorization = this.ticketResourceAuthorization(context, trx);
+      await authorization.authorizeTicket(ticketId, 'update');
       const resource = await tenantScopedTable(trx, 'ticket_resources', context.tenant)
         .where({ ticket_id: ticketId, additional_user_id: userId })
         .first();
@@ -1309,7 +1389,7 @@ export class TicketService extends BaseService<ITicket> {
         throw new NotFoundError('Additional agent not found on this ticket');
       }
 
-      await removeTicketResourceCore(trx, context.tenant, context.userId, resource.assignment_id, 'api');
+      await removeTicketResourceCore(trx, context.tenant, context.userId, resource.assignment_id, authorization, 'api');
     });
   }
 
@@ -2064,7 +2144,7 @@ export class TicketService extends BaseService<ITicket> {
    * then does a caller-supplied closed_at / closed_by replace now / context.userId
    * on an open -> closed crossing. Generic update always derives closure.
    */
-  async update(id: string, data: UpdateTicketData, context: ServiceContext, options: { honorSuppliedClosure?: boolean } = {}): Promise<ITicket> {
+  async update(id: string, data: UpdateTicketData, context: ServiceContext, options: UpdateTicketOptions = {}): Promise<ITicket> {
     const { knex } = await this.getKnex();
     const enteredAt = data.entered_at === undefined ? undefined
       : await validateHistoricalTimestampWrite('entered_at', data.entered_at, 'update', context, knex);
@@ -2074,13 +2154,21 @@ export class TicketService extends BaseService<ITicket> {
       // An update that carries `attributes` re-writes the stored watch_list mirror, so it
       // takes the same row lock as watcher writes (TicketWatcherService).
       const currentTicketQuery = tenantScopedTable(trx, 'tickets', context.tenant).where({ ticket_id: id });
-      if ((data as any).attributes !== undefined) {
+      // A caller-supplied authorization hook also needs the lock, so the decision is made
+      // against the exact row the write will modify.
+      if ((data as any).attributes !== undefined || options.authorize) {
         currentTicketQuery.forUpdate();
       }
       const currentTicket = await currentTicketQuery.first();
 
       if (!currentTicket) {
         throw new NotFoundError('Ticket not found');
+      }
+
+      // Authorize against the locked row, before any write (including assigned_to /
+      // ticket_resources). A throw here rolls the transaction back untouched.
+      if (options.authorize) {
+        await options.authorize(currentTicket as Record<string, any>, trx);
       }
 
       if (enteredAt !== undefined) {
