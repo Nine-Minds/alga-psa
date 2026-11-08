@@ -23,6 +23,7 @@ const SCHEMA = `t0002926_${process.pid}`;
 const TENANT_A = randomUUID();
 const TENANT_B = randomUUID();
 const MASTER = randomUUID();
+const STRIPE_ACCOUNT = 'acct_test_operator';
 const SHARED_EMAIL = 'billing@shared.example';
 
 let db: Knex;
@@ -35,6 +36,7 @@ function makeService(customers: FakeCustomer[], subscriptions: Record<string, an
   service.ensureInitialized = async () => undefined;
   service.importSubscription = vi.fn(async () => undefined);
   service.stripe = {
+    accounts: { retrieve: vi.fn(async () => ({ id: STRIPE_ACCOUNT })) },
     customers: {
       list: vi.fn(async ({ email }: { email: string }) => ({
         data: customers.filter((c) => c.email === email && !c.deleted),
@@ -119,11 +121,13 @@ describe('migration: global uniqueness of stripe_customer_external_id', () => {
   });
 
   it('the binding blocks one external id being bound to a second tenant, and writes nothing for it', async () => {
-    const customers: FakeCustomer[] = [{ id: 'cus_shared', email: SHARED_EMAIL, metadata: { tenant_id: TENANT_A } }];
+    const customers: FakeCustomer[] = [{ id: 'cus_shared', email: SHARED_EMAIL, metadata: {
+      tenant_id: TENANT_A, stripe_account_id: STRIPE_ACCOUNT, purpose: 'saas_billing',
+    } }];
     await makeService(customers).getOrImportCustomer(TENANT_A);
 
     // Tenant B's customer metadata (wrongly) also names B: the DB must still refuse the second binding.
-    customers[0].metadata = { tenant_id: TENANT_B };
+    customers[0].metadata = { tenant_id: TENANT_B, stripe_account_id: STRIPE_ACCOUNT, purpose: 'saas_billing' };
     await expect(makeService(customers).getOrImportCustomer(TENANT_B)).rejects.toMatchObject({ code: 'already_bound' });
     expect(await count('stripe_customers', { tenant: TENANT_B })).toBe(0);
     expect(await db('stripe_customer_bindings').select('tenant')).toEqual([{ tenant: TENANT_A }]);
@@ -140,8 +144,12 @@ describe('migration: global uniqueness of stripe_customer_external_id', () => {
 describe('getOrImportCustomer ownership proof', () => {
   it('two tenants share an email: tenant A imports only the customer whose metadata names A', async () => {
     const customers: FakeCustomer[] = [
-      { id: 'cus_other', email: SHARED_EMAIL, metadata: { tenant_id: TENANT_B } },
-      { id: 'cus_mine', email: SHARED_EMAIL, metadata: { alga_tenant_id: TENANT_A } },
+      { id: 'cus_other', email: SHARED_EMAIL, metadata: {
+        tenant_id: TENANT_B, stripe_account_id: STRIPE_ACCOUNT, purpose: 'saas_billing',
+      } },
+      { id: 'cus_mine', email: SHARED_EMAIL, metadata: {
+        alga_tenant_id: TENANT_A, stripe_account_id: STRIPE_ACCOUNT, purpose: 'saas_billing',
+      } },
     ];
     const row = await makeService(customers).getOrImportCustomer(TENANT_A);
     expect(row.stripe_customer_external_id).toBe('cus_mine');
@@ -165,8 +173,12 @@ describe('getOrImportCustomer ownership proof', () => {
 
   it('refuses ambiguous owned candidates and lists the ids for the operator', async () => {
     const service = makeService([
-      { id: 'cus_one', email: SHARED_EMAIL, metadata: { tenant_id: TENANT_A } },
-      { id: 'cus_two', email: SHARED_EMAIL, metadata: { alga_tenant_id: TENANT_A } },
+      { id: 'cus_one', email: SHARED_EMAIL, metadata: {
+        tenant_id: TENANT_A, stripe_account_id: STRIPE_ACCOUNT, purpose: 'saas_billing',
+      } },
+      { id: 'cus_two', email: SHARED_EMAIL, metadata: {
+        alga_tenant_id: TENANT_A, stripe_account_id: STRIPE_ACCOUNT, purpose: 'saas_billing',
+      } },
     ]);
     const err = await service.getOrImportCustomer(TENANT_A).catch((e: unknown) => e);
     expect(err).toMatchObject({ code: 'ambiguous_owned_candidates', candidateIds: ['cus_one', 'cus_two'] });
@@ -199,7 +211,9 @@ describe('getOrImportCustomer ownership proof', () => {
 
   it('skips a subscription stamped with another tenant while its siblings import; unstamped ones import', async () => {
     const service = makeService(
-      [{ id: 'cus_mine', email: SHARED_EMAIL, metadata: { tenant_id: TENANT_A } }],
+      [{ id: 'cus_mine', email: SHARED_EMAIL, metadata: {
+        tenant_id: TENANT_A, stripe_account_id: STRIPE_ACCOUNT, purpose: 'saas_billing',
+      } }],
       {
         cus_mine: [
           { id: 'sub_ok', metadata: { tenant_id: TENANT_A } },

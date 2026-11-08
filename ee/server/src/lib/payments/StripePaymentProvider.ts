@@ -12,6 +12,9 @@
  */
 
 import Stripe from 'stripe';
+import { createHash } from 'crypto';
+import { createStripeClient } from './stripeClient';
+import { stripeTenantSecretName } from './stripeTenantConfig';
 import { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { getConnection } from '@alga-psa/db';
@@ -45,10 +48,24 @@ interface StripePaymentConfig {
   secretKey: string;
   webhookSecret: string;
   publishableKey: string;
+  accountId: string;
+  configId: string;
+  credentialsVaultPath: string;
+  credentialFingerprint?: string;
+}
+
+export class StripeTenantAccountUnboundError extends Error {
+  readonly code = 'stripe-import/account-unbound';
+  constructor() { super('stripe-import/account-unbound'); this.name = 'StripeTenantAccountUnboundError'; }
+}
+
+export class StripeTenantAccountMismatchError extends Error {
+  readonly code = 'stripe-import/account-mismatch';
+  constructor() { super('stripe-import/account-mismatch'); this.name = 'StripeTenantAccountMismatchError'; }
 }
 
 /**
- * Gets Stripe configuration from tenant-specific settings or environment.
+ * Gets Stripe configuration exclusively from this tenant's saved credentials.
  */
 async function getStripePaymentConfig(tenantId: string): Promise<StripePaymentConfig | null> {
   const knex = await getConnection();
@@ -65,38 +82,21 @@ async function getStripePaymentConfig(tenantId: string): Promise<StripePaymentCo
 
   if (config?.credentials_vault_path) {
     // Use tenant-specific credentials from vault
-    const secretKey = await secretProvider.getTenantSecret(tenantId, 'stripe_payment_secret_key');
+    const secretKey = await secretProvider.getTenantSecret(tenantId, stripeTenantSecretName(config.configuration));
     const publishableKey = config.configuration?.publishable_key as string;
 
+    const accountId = config.configuration?.stripe_account_id as string | undefined;
     if (secretKey && publishableKey) {
       // Webhook secret is optional - only needed for verifying incoming webhooks
       const webhookSecret = await secretProvider.getTenantSecret(tenantId, 'stripe_payment_webhook_secret') || '';
-      return { secretKey, webhookSecret, publishableKey };
+      return {
+        secretKey, webhookSecret, publishableKey, accountId: accountId ?? '', configId: config.config_id,
+        credentialsVaultPath: config.credentials_vault_path,
+        credentialFingerprint: config.configuration?.stripe_credential_fingerprint as string | undefined,
+      };
     }
   }
-
-  // Fall back to global/environment configuration
-  let secretKey = await secretProvider.getAppSecret('stripe_secret_key');
-  if (!secretKey && process.env.STRIPE_SECRET_KEY) {
-    secretKey = process.env.STRIPE_SECRET_KEY;
-  }
-
-  let webhookSecret = await secretProvider.getAppSecret('stripe_payment_webhook_secret');
-  // Fall back to the main webhook secret if payment-specific not set
-  if (!webhookSecret) {
-    webhookSecret = await secretProvider.getAppSecret('stripe_webhook_secret');
-  }
-
-  let publishableKey = await secretProvider.getAppSecret('stripe_publishable_key');
-  if (!publishableKey && process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
-    publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-  }
-
-  if (!secretKey || !webhookSecret || !publishableKey) {
-    return null;
-  }
-
-  return { secretKey, webhookSecret, publishableKey };
+  return null;
 }
 
 export class StripePaymentProvider implements PaymentProvider {
@@ -117,45 +117,58 @@ export class StripePaymentProvider implements PaymentProvider {
   private async initialize(): Promise<void> {
     if (this.stripe) return;
 
-    this.config = await getStripePaymentConfig(this.tenantId);
-    if (!this.config) {
-      throw new Error('Stripe payment configuration not found for tenant');
+    const config = await getStripePaymentConfig(this.tenantId);
+    this.config = config;
+    if (!config) {
+      throw new Error('stripe-import/no-tenant-stripe-account');
     }
-
-    const clientOptions: Stripe.StripeConfig = {
-      apiVersion: '2024-12-18.acacia' as any,
-      typescript: true,
-    };
-
-    // Test-only endpoint override: an explicit STRIPE_API_BASE_URL points the
-    // Stripe SDK at a local emulator. With the variable absent, construction is
-    // byte-for-byte equivalent to the production path and uses Stripe's normal
-    // API endpoint.
-    const apiBaseUrl = process.env.STRIPE_API_BASE_URL;
-    if (apiBaseUrl) {
-      let parsed: URL;
-      try {
-        parsed = new URL(apiBaseUrl);
-      } catch {
-        throw new Error(`Invalid STRIPE_API_BASE_URL: ${apiBaseUrl}`);
-      }
-      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-        throw new Error(`Invalid STRIPE_API_BASE_URL protocol: ${parsed.protocol}`);
-      }
-      clientOptions.host = parsed.hostname;
-      if (parsed.port) {
-        clientOptions.port = Number(parsed.port);
-      }
-      clientOptions.protocol = parsed.protocol === 'https:' ? 'https' : 'http';
-      logger.info('[StripePaymentProvider] Using STRIPE_API_BASE_URL override', {
-        tenantId: this.tenantId,
-        host: parsed.hostname,
-        port: parsed.port,
-        protocol: clientOptions.protocol,
+    const fingerprint = createHash('sha256').update(config.secretKey).digest('hex');
+    if (config.credentialFingerprint && config.credentialFingerprint !== fingerprint) {
+      throw new Error('Stripe credentials changed during account verification');
+    }
+    this.stripe = createStripeClient(config.secretKey);
+    const account = await this.stripe.accounts.retrieve();
+    if (config.accountId && account.id !== config.accountId) {
+      this.stripe = null;
+      throw new StripeTenantAccountMismatchError();
+    }
+    if (!config.accountId) {
+      // The account lookup is the only Stripe request allowed before binding. Lock
+      // and re-read the row so concurrent reconnects cannot overwrite its binding.
+      const knex = await getConnection();
+      await knex.transaction(async (trx: Knex.Transaction) => {
+        const db = tenantDb(trx, this.tenantId);
+        const row = await db.table<IPaymentProviderConfig>('payment_provider_configs')
+          .where({ tenant: this.tenantId, config_id: config.configId, provider_type: 'stripe', is_enabled: true })
+          .forUpdate().first();
+        if (!row || row.credentials_vault_path !== config.credentialsVaultPath) {
+          throw new Error('Stripe configuration changed during account verification');
+        }
+        const currentId = row.configuration?.stripe_account_id as string | undefined;
+        const currentFingerprint = row.configuration?.stripe_credential_fingerprint as string | undefined;
+        if (currentFingerprint && currentFingerprint !== fingerprint) {
+          throw new Error('Stripe credentials changed during account verification');
+        }
+        // Older rows have no fingerprint. Re-read the selected Vault value while
+        // holding the config lock so an in-place legacy credential replacement
+        // cannot bind the account discovered with a stale key.
+        const secretProvider = await getSecretProviderInstance();
+        const currentSecret = await secretProvider.getTenantSecret(
+          this.tenantId,
+          stripeTenantSecretName(row.configuration),
+        );
+        if (!currentSecret || createHash('sha256').update(currentSecret).digest('hex') !== fingerprint) {
+          throw new Error('Stripe credentials changed during account verification');
+        }
+        if (currentId && currentId !== account.id) throw new StripeTenantAccountMismatchError();
+        if (!currentId) {
+          const updated = await db.table('payment_provider_configs').where({ config_id: row.config_id })
+            .update({ configuration: { ...(row.configuration ?? {}), stripe_account_id: account.id, stripe_credential_fingerprint: fingerprint }, updated_at: trx.fn.now() });
+          if (!updated) throw new Error('Could not persist verified Stripe account binding');
+        }
       });
+      config.accountId = account.id;
     }
-
-    this.stripe = new Stripe(this.config.secretKey, clientOptions);
   }
 
   /**
@@ -177,6 +190,12 @@ export class StripePaymentProvider implements PaymentProvider {
       throw new Error('Stripe client not initialized');
     }
     return this.stripe;
+  }
+
+  async getVerifiedAccountId(): Promise<string> {
+    await this.ensureInitialized();
+    if (!this.config?.accountId) throw new StripeTenantAccountUnboundError();
+    return this.config.accountId;
   }
 
   /**
@@ -337,13 +356,15 @@ export class StripePaymentProvider implements PaymentProvider {
       // Verify the customer still exists in Stripe
       try {
         const customer = await stripe.customers.retrieve(existingMapping.external_customer_id);
-        if (!('deleted' in customer) && customer.metadata?.tenant_id === this.tenantId && customer.metadata?.client_id === clientId &&
+        if (!('deleted' in customer) && customer.metadata?.tenant_id === this.tenantId &&
+            (customer.metadata?.stripe_account_id === undefined || customer.metadata.stripe_account_id === this.config?.accountId) &&
+            customer.metadata?.client_id === clientId &&
             (customer.metadata?.billing_profile_id === billingProfileId || (!customer.metadata?.billing_profile_id && existingMapping.billing_profile_id === billingProfileId))) {
-          // Legacy default-profile customer mappings predate the profile metadata key.
-          // The migrated local mapping is the authority for that one backfilled profile.
-          if (!customer.metadata?.billing_profile_id) {
+          // Legacy mappings may omit account/profile stamps; this provider is already confined to its verified account.
+          if (!customer.metadata?.billing_profile_id || customer.metadata?.stripe_account_id === undefined) {
             await stripe.customers.update(existingMapping.external_customer_id, { metadata: {
               ...customer.metadata, tenant_id: this.tenantId, client_id: clientId, billing_profile_id: billingProfileId,
+              stripe_account_id: this.config?.accountId ?? '',
             } });
           }
           return existingMapping.external_customer_id;
@@ -364,7 +385,8 @@ export class StripePaymentProvider implements PaymentProvider {
     });
     const matchedCustomer = existingCustomers.data.find((customer) =>
       (customer as any).deleted !== true && customer.metadata?.tenant_id === this.tenantId &&
-      customer.metadata?.client_id === clientId && customer.metadata?.billing_profile_id === billingProfileId
+      customer.metadata?.stripe_account_id === this.config?.accountId && customer.metadata?.client_id === clientId &&
+      customer.metadata?.billing_profile_id === billingProfileId
     );
 
     let customerId: string;
@@ -386,6 +408,7 @@ export class StripePaymentProvider implements PaymentProvider {
           tenant_id: this.tenantId,
           client_id: clientId,
           billing_profile_id: billingProfileId,
+          stripe_account_id: this.config?.accountId ?? '',
           source: 'alga_psa_invoice_payment',
         },
       });
@@ -407,7 +430,7 @@ export class StripePaymentProvider implements PaymentProvider {
         provider_type: 'stripe',
         external_customer_id: customerId,
         email,
-        metadata: { name },
+        metadata: { name, stripe_account_id: this.config?.accountId ?? '' },
         updated_at: knex.fn.now(),
       } as any)
       .onConflict(['tenant', 'client_id', 'billing_profile_id', 'provider_type'])

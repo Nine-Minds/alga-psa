@@ -40,12 +40,13 @@ export function register(reg: ControlRegistry, core: StripeEmulatorCore): void {
     description: 'Configure test credentials, webhook targets, and the public hosted checkout base URL',
     params: z.object({
       secretKey: z.string().optional(),
+      accountId: z.string().regex(/^acct_[A-Za-z0-9_]+$/).optional(),
       webhookSecret: z.string().optional(),
       publishableKey: z.string().optional(),
       webhookTarget: z.string().optional(),
       hostedBaseUrl: z.string().optional(),
     }),
-    run: ({ secretKey, webhookSecret, publishableKey, webhookTarget, hostedBaseUrl }) => {
+    run: ({ secretKey, accountId, webhookSecret, publishableKey, webhookTarget, hostedBaseUrl }) => {
       if (webhookTarget !== undefined) {
         const targets = core.webhookTargets;
         if (!targets.includes(webhookTarget)) targets.push(webhookTarget);
@@ -53,6 +54,7 @@ export function register(reg: ControlRegistry, core: StripeEmulatorCore): void {
       return redactedConfig(
         core.configure({
           secretKey,
+          accountId,
           webhookSecret,
           publishableKey,
           hostedBaseUrl: hostedBaseUrl ?? null,
@@ -68,8 +70,22 @@ export function register(reg: ControlRegistry, core: StripeEmulatorCore): void {
       email: z.string().email(),
       name: z.string().optional(),
       id: z.string().optional(),
+      metadata: z.record(z.string(), z.string()).optional(),
+      defaultPaymentMethod: z.string().optional(),
     }),
-    run: ({ email, name, id }) => core.createCustomer({ id, email, name }),
+    run: ({ email, name, id, metadata, defaultPaymentMethod }) => core.createCustomer({ id, email, name, metadata, defaultPaymentMethod }),
+  });
+
+  reg.seeder({
+    name: 'payment-method',
+    description: 'Seed an attached test card and successful off-session SetupIntent for Stripe import review',
+    params: z.object({
+      id: z.string().regex(/^pm_[A-Za-z0-9_]+$/), customer: z.string().regex(/^cus_[A-Za-z0-9_]+$/),
+      brand: z.string().optional(), last4: z.string().regex(/^\d{4}$/).optional(), expMonth: z.number().int().min(1).max(12).optional(),
+      expYear: z.number().int().optional(), fingerprint: z.string().optional(), metadata: z.record(z.string(), z.string()).optional(),
+      allowRedisplay: z.enum(['always', 'limited', 'unspecified']).optional(), offSession: z.boolean().optional(), isDefault: z.boolean().optional(),
+    }),
+    run: (input) => core.createPaymentMethod(input),
   });
 
   reg.seeder({
@@ -186,6 +202,9 @@ export function register(reg: ControlRegistry, core: StripeEmulatorCore): void {
     description: 'Stripe customers',
     get: () => [...core.customers.values()],
   });
+
+  reg.stateView({ name: 'payment-methods', description: 'Attached Stripe test cards', get: () => [...core.paymentMethods.values()] });
+  reg.stateView({ name: 'setup-intents', description: 'Stripe setup intents', get: () => [...core.setupIntents.values()] });
 
   reg.stateView({
     name: 'checkout-sessions',

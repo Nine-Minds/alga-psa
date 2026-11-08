@@ -1,12 +1,13 @@
 import { SET_OPERATORS, isPredicateGroup, operatorTakesList, operatorTakesValue } from './types';
 import type { PredicateClause, PredicateLiteral, PredicateNode, PredicateOperator } from './types';
+import type { Knex } from 'knex';
 
 export type AttributeType = 'string' | 'number' | 'boolean' | 'uuid' | 'timestamp';
 
 /** A fragment of SQL with positional `?` bindings and `??` identifier bindings (knex syntax). */
 export interface SqlFragment {
   sql: string;
-  bindings: unknown[];
+  bindings: Knex.RawBinding[];
 }
 
 export interface ColumnAttribute {

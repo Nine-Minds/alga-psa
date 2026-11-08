@@ -27,6 +27,9 @@ vi.mock('stripe', () => {
   // vitest 4 calls mock implementations with `new`; arrow functions cannot be constructed.
   const mockStripe = vi.fn().mockImplementation(function () {
     return {
+    accounts: {
+      retrieve: vi.fn().mockResolvedValue({ id: 'acct_test_mock' }),
+    },
     customers: {
       create: vi.fn().mockResolvedValue({ id: 'cus_mock123' }),
       retrieve: vi.fn().mockResolvedValue({ id: 'cus_mock123', deleted: false }),

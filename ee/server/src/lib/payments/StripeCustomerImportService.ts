@@ -19,6 +19,7 @@ import {
 
 /** The slice of the Stripe provider the import needs; injectable for tests. */
 export interface StripeImportGateway {
+  getVerifiedAccountId?(): Promise<string>;
   getCustomerImportSnapshot(customerId: string): Promise<StripeCustomerSnapshot | null>;
   listCustomersForImport(): Promise<{ customers: StripeCustomerSnapshot[]; truncated: boolean }>;
   updateCustomerMetadata(customerId: string, metadata: Record<string, string>, idempotencyKey: string): Promise<Record<string, string>>;
@@ -81,15 +82,23 @@ export function customerStampIdempotencyKey(tenantId: string, row: Pick<RowPlan,
 }
 
 export class StripeCustomerImportService {
+  readonly accountId: string;
   constructor(
     private readonly tenantId: string,
     private readonly knex: Knex,
     private readonly gateway: StripeImportGateway,
+    accountId: string,
     private readonly now: () => Date = () => new Date(),
-  ) {}
+  ) {
+    if (!accountId) throw new Error('stripe-import/account-unbound');
+    this.accountId = accountId;
+  }
 
   static async create(tenantId: string): Promise<StripeCustomerImportService> {
-    return new StripeCustomerImportService(tenantId, await getConnection(), createStripePaymentProvider(tenantId) as unknown as StripeImportGateway);
+    const gateway = createStripePaymentProvider(tenantId) as unknown as StripeImportGateway;
+    const accountId = await gateway.getVerifiedAccountId?.();
+    if (!accountId) throw new Error('stripe-import/no-tenant-stripe-account');
+    return new StripeCustomerImportService(tenantId, await getConnection(), gateway, accountId);
   }
 
   private table(name: string, knex: Knex | Knex.Transaction = this.knex) {
@@ -101,7 +110,7 @@ export class StripeCustomerImportService {
       this.table('client_billing_profiles as p')
         .join('clients as c', function () { this.on('c.tenant', '=', 'p.tenant').andOn('c.client_id', '=', 'p.client_id'); })
         .select('p.client_id', 'p.billing_profile_id', 'p.name as profile_name', 'p.is_active', 'c.client_name', 'c.default_currency_code'),
-      this.table('client_payment_customers').where({ provider_type: 'stripe' }).select('client_id', 'billing_profile_id', 'external_customer_id'),
+      this.table('client_payment_customers').where({ provider_type: 'stripe' }).select('client_id', 'billing_profile_id', 'external_customer_id', 'metadata'),
       this.table('payment_methods').where({ provider_type: 'stripe' })
         .select('payment_method_id', 'external_payment_method_id', 'client_id', 'billing_profile_id', 'is_default', 'is_deleted', 'status'),
       this.table('billing_profile_autopay').where({ is_enabled: true }).select('billing_profile_id'),
@@ -114,7 +123,7 @@ export class StripeCustomerImportService {
         isActive: p.is_active !== false,
         currency: String(p.default_currency_code ?? process.env.DEFAULT_CURRENCY ?? '').toLowerCase() || null,
       })),
-      mappings: mappings.map((m: any) => ({ clientId: m.client_id, billingProfileId: m.billing_profile_id, customerId: m.external_customer_id })),
+      mappings: mappings.map((m: any) => ({ clientId: m.client_id, billingProfileId: m.billing_profile_id, customerId: m.external_customer_id, accountId: m.metadata?.stripe_account_id })),
       paymentMethods: methods.filter((m: any) => m.external_payment_method_id).map((m: any) => ({
         paymentMethodId: m.payment_method_id, externalPaymentMethodId: m.external_payment_method_id, clientId: m.client_id,
         billingProfileId: m.billing_profile_id, isDefault: !!m.is_default, isDeleted: !!m.is_deleted, status: m.status,
@@ -130,7 +139,7 @@ export class StripeCustomerImportService {
     const alga = await this.loadAlgaState();
     const ids = [...new Set(rows.map((row) => row.customerId).filter((id) => /^cus_[A-Za-z0-9]+$/.test(id)))];
     const snapshots = await mapWithConcurrency(ids, SNAPSHOT_CONCURRENCY, (id) => this.gateway.getCustomerImportSnapshot(id));
-    return classifyImport({ rows, customers: snapshots.filter((s): s is StripeCustomerSnapshot => !!s), alga });
+    return classifyImport({ rows, customers: snapshots.filter((s): s is StripeCustomerSnapshot => !!s), alga: { ...alga, accountId: this.accountId } });
   }
 
   /** Assisted matching: proposals only. Nothing is written; the operator reviews, then it goes through preview(). */
@@ -193,7 +202,7 @@ export class StripeCustomerImportService {
   }
 
   private async applyRow(row: RowPlan, attemptId: string): Promise<number> {
-    const stamp = importMetadata(this.tenantId, row.clientId, row.billingProfileId);
+    const stamp = importMetadata(this.tenantId, row.clientId, row.billingProfileId, this.accountId);
 
     // Adoption order is mandatory (1): stamp the Stripe customer BEFORE any local mapping exists.
     // getOrCreateCustomer only reuses a cus_ whose metadata matches exactly; otherwise it overwrites
@@ -217,7 +226,7 @@ export class StripeCustomerImportService {
       if (row.needsMapping) {
         await this.table('client_payment_customers', trx).insert({
           tenant: this.tenantId, client_id: row.clientId, billing_profile_id: row.billingProfileId, provider_type: 'stripe',
-          external_customer_id: row.customerId, email: row.customerEmail, metadata: { name: row.customerName, source: 'alga_import' },
+          external_customer_id: row.customerId, email: row.customerEmail, metadata: { name: row.customerName, source: 'alga_import', stripe_account_id: this.accountId },
           updated_at: trx.fn.now(),
         } as any).onConflict(['tenant', 'client_id', 'billing_profile_id', 'provider_type'])
           .merge(['external_customer_id', 'email', 'metadata', 'updated_at']);

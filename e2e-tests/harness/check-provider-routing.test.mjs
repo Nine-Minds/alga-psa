@@ -14,7 +14,7 @@ const env = {
   STRIPE_SECRET_KEY: 'synthetic-test-key-never-in-evidence',
 };
 
-async function fixture(t, { badStatus = false, incompleteJournal = false, externalReachable = false, redirectProvider = false, staleJournal = false } = {}) {
+async function fixture(t, { badStatus = false, incompleteJournal = false, externalReachable = false, redirectProvider = false, staleJournal = false, missingStripeJournal = false } = {}) {
   const journal = redirectProvider || staleJournal ? [{ sequence: 1, path: "/v1.0/me", method: "GET", status: 401 }] : [];
   const server = http.createServer((req, res) => {
     if (req.url.startsWith('/control/')) {
@@ -29,7 +29,7 @@ async function fixture(t, { badStatus = false, incompleteJournal = false, extern
       return;
     }
     const status = badStatus ? 502 : req.url === '/v1/customers' ? 200 : 401;
-    if (!(staleJournal && req.url === '/v1.0/me')) journal.push({ sequence: journal.length + 1, path: req.url, method: req.method, status });
+    if (!(staleJournal && req.url === '/v1.0/me') && !(missingStripeJournal && req.url === '/v1/customers')) journal.push({ sequence: journal.length + 1, path: req.url, method: req.method, status });
     res.statusCode = status;
     res.end('{}');
   });
@@ -46,7 +46,7 @@ async function fixture(t, { badStatus = false, incompleteJournal = false, extern
         if (externalReachable) return new Response('reachable');
         throw new Error('Fixture transport blocks external destinations');
       }
-      assert.ok(['algasim', 'algasim.test'].includes(url.hostname));
+      assert.ok(['algasim', 'algasim.test'].includes(url.hostname) || url.origin === 'http://127.0.0.1:4050');
       // Map only the fixed emulator DNS names to this real native HTTP fixture.
       // Production CLI uses the unmodified built-in fetch and container routing.
       url.hostname = '127.0.0.1';
@@ -70,6 +70,38 @@ test('records process, revision and safe origins only after real HTTP and journa
   assert.ok(!JSON.stringify(evidence).includes(env.STRIPE_SECRET_KEY));
   assert.ok(f.calls.includes('http://1.1.1.1/'));
 });
+
+const loopbackStripeEnv = {
+  ...env, PROVIDER_PROBE_SERVICE: 'server', ALGA_STRIPE_LOCAL_REVIEW: 'true',
+  STRIPE_API_BASE_URL: 'http://127.0.0.1:4050', STRIPE_SECRET_KEY: 'sk_test_algasim',
+};
+
+test('probes the guarded server Stripe loopback endpoint and requires emulator journal evidence', async t => {
+  const f = await fixture(t);
+  const result = await verifyProviderRouting({ env: loopbackStripeEnv, request: f.request });
+  assert.equal(result.endpoints.STRIPE_API_BASE_URL, 'http://127.0.0.1:4050');
+  assert.ok(f.calls.includes('http://127.0.0.1:4050/v1/customers'));
+  assert.ok(f.journal.some(entry => entry.path === '/v1/customers' && entry.status === 200));
+});
+
+test('refuses loopback success without a matching Stripe emulator journal entry', async t => {
+  const f = await fixture(t, { missingStripeJournal: true });
+  await assert.rejects(verifyProviderRouting({ env: loopbackStripeEnv, request: f.request }), /stripe must actually observe this request/);
+});
+
+for (const override of [
+  { PROVIDER_PROBE_SERVICE: 'workflow-worker' },
+  { ALGA_STRIPE_LOCAL_REVIEW: 'false' },
+  { STRIPE_SECRET_KEY: 'sk_live_forbidden' },
+  { STRIPE_API_BASE_URL: 'http://127.0.0.1:4051' },
+  { QBO_API_BASE_URL: 'http://127.0.0.1:4050' },
+]) {
+  test(`refuses unguarded loopback routing ${JSON.stringify(override)}`, async () => {
+    let calls = 0;
+    await assert.rejects(verifyProviderRouting({ env: { ...loopbackStripeEnv, ...override }, request: async () => { calls++; } }));
+    assert.equal(calls, 0);
+  });
+}
 
 for (const [name, option] of [['bad provider response', 'badStatus'], ['incomplete request journal', 'incompleteJournal'], ['reachable external fallback', 'externalReachable'], ['redirect masked by an earlier successful journal entry', 'redirectProvider'], ['stale journal with no record of this request', 'staleJournal']]) {
   test(`refuses readiness evidence for ${name}`, async t => {

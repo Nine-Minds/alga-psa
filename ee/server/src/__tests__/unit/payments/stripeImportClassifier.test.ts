@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  classifyImport, proposeCustomerMatches,
+  classifyImport, importMetadata, ownershipOf, proposeCustomerMatches,
   type AlgaState, type StripeCustomerSnapshot, type StripePaymentMethodSnapshot,
 } from '../../../lib/payments/stripeImportClassifier';
 import { parseImportCsv, resolveImportRows } from '../../../lib/payments/stripeImportRows';
@@ -29,6 +29,30 @@ const alga = (extra: Partial<AlgaState> = {}): AlgaState => ({
 const row = (rowId: string, clientId: string, billingProfileId: string, customerId: string) => ({ rowId, clientId, billingProfileId, customerId });
 
 describe('classifyImport', () => {
+  it('adopts unclaimed legacy customers only in the verified bound account and stamps that account', () => {
+    const state = alga({ accountId: 'acct_tenant' });
+    const plan = classifyImport({ rows: [row('r', 'c1', 'p1', 'cus_1')], customers: [customer('cus_1')], alga: state });
+    expect(plan.rows[0]).toMatchObject({ action: 'adopt', needsCustomerStamp: true });
+    expect(ownershipOf({}, T, 'acct_tenant', 'c1', 'p1')).toBe('unclaimed');
+    expect(ownershipOf({ tenant_id: T, stripe_account_id: 'acct_other' }, T, 'acct_tenant', 'c1', 'p1')).toBe('claimed-by-other');
+    expect(ownershipOf({ tenant_id: T, stripe_account_id: '' }, T, 'acct_tenant', 'c1', 'p1')).toBe('claimed-by-other');
+    expect(importMetadata(T, 'c1', 'p1', 'acct_tenant')).toMatchObject({ stripe_account_id: 'acct_tenant' });
+  });
+
+  it('rejects customer ownership stamped for a different Stripe account', () => {
+    const cust = customer('cus_1', { metadata: { tenant_id: T, client_id: 'c1', billing_profile_id: 'p1', stripe_account_id: 'acct_other' } });
+    const plan = classifyImport({ rows: [row('r', 'c1', 'p1', 'cus_1')], customers: [cust], alga: alga({ accountId: 'acct_tenant' }) });
+    expect(plan.rows[0]).toMatchObject({ action: 'conflict', reason: 'customer-metadata-owned-by-other' });
+  });
+
+  it('completes a partial same-account customer stamp before mapping it', () => {
+    const cust = customer('cus_1', { metadata: { tenant_id: T, stripe_account_id: 'acct_tenant' } });
+    const plan = classifyImport({ rows: [row('r', 'c1', 'p1', 'cus_1')], customers: [cust], alga: alga({ accountId: 'acct_tenant' }) });
+    expect(plan.rows[0]).toMatchObject({ action: 'adopt', needsCustomerStamp: true, needsMapping: true });
+    expect(importMetadata(T, 'c1', 'p1', 'acct_tenant')).toMatchObject({
+      tenant_id: T, client_id: 'c1', billing_profile_id: 'p1', stripe_account_id: 'acct_tenant',
+    });
+  });
   it('adopts a customer with cards and no subscriptions, stamping and defaulting', () => {
     const { rows } = classifyImport({ rows: [row('r', 'c1', 'p1', 'cus_1')], customers: [customer('cus_1')], alga: alga() });
     expect(rows[0]).toMatchObject({ action: 'adopt', needsCustomerStamp: true, needsMapping: true, enrollable: true, enrollmentExternalPaymentMethodId: 'pm_1' });
@@ -47,25 +71,25 @@ describe('classifyImport', () => {
   });
 
   it('classifies a fully imported row as already-imported on re-run', () => {
-    const stamped = { tenant_id: T, client_id: 'c1', billing_profile_id: 'p1', source: 'alga_import' };
+    const stamped = { tenant_id: T, client_id: 'c1', billing_profile_id: 'p1', stripe_account_id: 'acct_1', source: 'alga_import' };
     const cust = customer('cus_1', { metadata: stamped, paymentMethods: [pm('pm_1', { metadata: stamped })] });
     const state = alga({
       mappings: [{ clientId: 'c1', billingProfileId: 'p1', customerId: 'cus_1' }],
       paymentMethods: [{ paymentMethodId: 'x', externalPaymentMethodId: 'pm_1', clientId: 'c1', billingProfileId: 'p1', isDefault: true, isDeleted: false, status: 'active' }],
     });
-    const plan = classifyImport({ rows: [row('r', 'c1', 'p1', 'cus_1')], customers: [cust], alga: state }).rows[0];
+    const plan = classifyImport({ rows: [row('r', 'c1', 'p1', 'cus_1')], customers: [cust], alga: alga({ ...state, accountId: 'acct_1' }) }).rows[0];
     expect(plan.action).toBe('already-imported');
     expect(plan.cards[0].action).toBe('already-imported');
     expect(plan.needsCustomerStamp || plan.needsMapping).toBe(false);
   });
 
   it('does not re-activate a card parked in requires_update', () => {
-    const stamped = { tenant_id: T, client_id: 'c1', billing_profile_id: 'p1' };
+    const stamped = { tenant_id: T, client_id: 'c1', billing_profile_id: 'p1', stripe_account_id: 'acct_1' };
     const state = alga({
       mappings: [{ clientId: 'c1', billingProfileId: 'p1', customerId: 'cus_1' }],
       paymentMethods: [{ paymentMethodId: 'x', externalPaymentMethodId: 'pm_1', clientId: 'c1', billingProfileId: 'p1', isDefault: true, isDeleted: false, status: 'requires_update' }],
     });
-    const plan = classifyImport({ rows: [row('r', 'c1', 'p1', 'cus_1')], customers: [customer('cus_1', { metadata: stamped, paymentMethods: [pm('pm_1', { metadata: stamped })] })], alga: state }).rows[0];
+    const plan = classifyImport({ rows: [row('r', 'c1', 'p1', 'cus_1')], customers: [customer('cus_1', { metadata: stamped, paymentMethods: [pm('pm_1', { metadata: stamped })] })], alga: alga({ ...state, accountId: 'acct_1' }) }).rows[0];
     expect(plan.cards[0].action).toBe('already-imported');
     expect(plan.action).toBe('already-imported');
     expect(plan.enrollable).toBe(false); // a parked card is not a chargeable enrollment target

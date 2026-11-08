@@ -18,11 +18,11 @@ import { getConnection } from '@/lib/db/db';
 import { tenantDb } from '@alga-psa/db';
 import { auditLog } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
-import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { getOperatorStripeConfig } from '../payments/operatorStripeConfig';
+import { createStripeClient } from '../payments/stripeClient';
 import { startTenantDeletionWorkflow } from '@ee/lib/tenant-management/workflowClient';
 import { ADD_ONS, type AddOnKey, type TenantTier } from '@alga-psa/types';
 import { tierFromStripeProduct } from './stripeTierMapping';
-import { stripeApiOverride } from './stripeApiOverride';
 import { reconcileHostedCoManagedEntitlement, runCoManagedPurchase, type CoManagedPurchaseResult } from '@alga-psa/licensing';
 import { coManagedSnapshotFromStripe, isCoManagedSubscription, assertCoManagedPrice, currentProSubscriptionExpiry } from './coManagedSubscription';
 import {
@@ -105,24 +105,10 @@ function getStripeReturnBaseUrl(): string {
 
 // Stripe configuration with secret provider support
 async function getStripeConfig() {
-  const secretProvider = await getSecretProviderInstance();
-
-  // Get secrets using the secret provider system (supports env, filesystem, vault)
-  // Try secret provider first, fall back to environment variables
-  let secretKey = await secretProvider.getAppSecret('stripe_secret_key');
-  if (!secretKey && process.env.STRIPE_SECRET_KEY) {
-    secretKey = process.env.STRIPE_SECRET_KEY;
-  }
-
-  let webhookSecret = await secretProvider.getAppSecret('stripe_webhook_secret');
-  if (!webhookSecret && process.env.STRIPE_WEBHOOK_SECRET) {
-    webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  }
-
-  let publishableKey = await secretProvider.getAppSecret('stripe_publishable_key');
-  if (!publishableKey && process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
-    publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-  }
+  const operatorConfig = await getOperatorStripeConfig();
+  const secretKey = operatorConfig?.secretKey;
+  const webhookSecret = operatorConfig?.webhookSecret;
+  const publishableKey = operatorConfig?.publishableKey;
 
   // These are non-sensitive config, can come from env vars
   const masterTenantId = process.env.MASTER_BILLING_TENANT_ID;
@@ -340,13 +326,7 @@ export class StripeService {
 
   private async initialize() {
     this.config = await getStripeConfig();
-    const clientOptions: Stripe.StripeConfig = {
-      apiVersion: '2024-12-18.acacia' as any,
-      typescript: true,
-    };
-    // Defaults to real Stripe; honoured only for a loopback endpoint with an sk_test_ key.
-    Object.assign(clientOptions, stripeApiOverride(this.config.secretKey));
-    this.stripe = new Stripe(this.config.secretKey, clientOptions);
+    this.stripe = createStripeClient(this.config.secretKey);
     await this.cleanupRetiredPremiumSchedules();
   }
 
@@ -515,7 +495,8 @@ export class StripeService {
       logger.warn(`[StripeService] More than ${stripeCustomers.data.length} Stripe customers share the email for tenant ${tenantId}; only the first page is considered`);
     }
 
-    const selection = selectOwnedCustomer(tenantId, stripeCustomers.data);
+    const accountId = (await this.stripe.accounts.retrieve()).id;
+    const selection = selectOwnedCustomer({ tenantId, accountId, purpose: 'saas_billing' }, stripeCustomers.data);
     if (selection.error) {
       logger.warn(`[StripeService] Refusing Stripe customer import: ${selection.error.detail}`);
       throw selection.error;
@@ -663,6 +644,7 @@ export class StripeService {
       throw new StripeOwnershipError('customer_deleted', tenantId, [stripeCustomerId], 'Stripe customer is deleted.');
     }
     const stripeCustomer = response as Stripe.Customer;
+    const accountId = (await this.stripe.accounts.retrieve()).id;
 
     const boundTo = await tenantDb(knex, tenantId)
       .unscoped('stripe_customer_bindings', 'Operator link: refuse customers already bound to another tenant')
@@ -672,12 +654,16 @@ export class StripeService {
       throw new StripeOwnershipError('already_bound', tenantId, [stripeCustomerId], `Stripe customer is already bound to tenant ${boundTo.tenant}.`);
     }
 
+    if (stripeCustomer.metadata.stripe_account_id !== undefined && stripeCustomer.metadata.stripe_account_id !== accountId) {
+      throw new StripeOwnershipError('not_owned', tenantId, [stripeCustomerId], 'Stripe customer metadata names a different Stripe account.');
+    }
+
     if (stripeMetadataClaimsOtherTenant(stripeCustomer, tenantId)) {
       throw new StripeOwnershipError('not_owned', tenantId, [stripeCustomerId], 'Stripe customer metadata names a different tenant; the operator path never overwrites it.');
     }
-    if (stripeMetadataTenant(stripeCustomer) !== tenantId) {
+    if (stripeMetadataTenant(stripeCustomer) !== tenantId || stripeCustomer.metadata.stripe_account_id !== accountId || stripeCustomer.metadata.purpose !== 'saas_billing') {
       await this.stripe.customers.update(stripeCustomerId, {
-        metadata: { tenant_id: tenantId, linked_by_operator: actor },
+        metadata: { tenant_id: tenantId, stripe_account_id: accountId, purpose: 'saas_billing', linked_by_operator: actor },
       });
     }
 

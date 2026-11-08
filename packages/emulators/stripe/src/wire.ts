@@ -117,6 +117,11 @@ export function wire(router: Router, core: StripeEmulatorCore, env: HostEnv): vo
   const v1 = express.Router();
   router.use('/v1', bearerAuth(core), v1);
 
+  v1.get('/account', route((_req, res) => {
+    checkFault(core, 'account.retrieve');
+    res.json(core.retrieveAccount());
+  }));
+
   v1.get('/customers', route((req, res) => {
     checkFault(core, 'customers.list');
     const email = typeof req.query.email === 'string' ? req.query.email : undefined;
@@ -141,6 +146,35 @@ export function wire(router: Router, core: StripeEmulatorCore, env: HostEnv): vo
   v1.get('/customers/:id', route((req, res) => {
     checkFault(core, 'customers.retrieve');
     res.json(core.getCustomer(String(req.params.id)));
+  }));
+
+  v1.post('/customers/:id', route((req, res) => {
+    const body = (req.body ?? {}) as Record<string, any>;
+    res.json(core.updateCustomer(String(req.params.id), {
+      metadata: body.metadata && typeof body.metadata === 'object' ? body.metadata : undefined,
+      invoice_settings: body.invoice_settings && typeof body.invoice_settings === 'object' ? body.invoice_settings : undefined,
+    }));
+  }));
+
+  v1.get('/customers/:id/payment_methods', route((req, res) => {
+    const result = core.listCustomerPaymentMethods(String(req.params.id));
+    res.json(result);
+  }));
+
+  v1.get('/payment_methods/:id', route((req, res) => { res.json(core.getPaymentMethod(String(req.params.id))); }));
+  v1.post('/payment_methods/:id', route((req, res) => {
+    const body = (req.body ?? {}) as Record<string, any>;
+    res.json(core.updatePaymentMethod(String(req.params.id), body.metadata ?? {}));
+  }));
+
+  v1.get('/setup_intents', route((req, res) => {
+    const customer = typeof req.query.customer === 'string' ? req.query.customer : undefined;
+    res.json(core.listSetupIntents(customer));
+  }));
+
+  v1.get('/payment_intents', route((req, res) => {
+    const customer = typeof req.query.customer === 'string' ? req.query.customer : undefined;
+    res.json(core.listPaymentIntents(customer));
   }));
 
   v1.post('/checkout/sessions', route((req, res) => {

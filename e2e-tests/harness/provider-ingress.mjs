@@ -30,6 +30,7 @@ export function createProviderIngressServer(port, { connect = options => net.con
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const stripeLoopback = process.argv.includes('--stripe-loopback');
   if (process.env.E2E_CALENDAR_CALLBACK_TLS === 'true') {
     createCalendarCallbackServer({
       key: readFileSync('/calendar-tls/private-key.pem'),
@@ -39,10 +40,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       process.exit(1);
     }).listen(3443, '0.0.0.0');
   }
-  for (const [port] of destinations) {
+  for (const [port] of stripeLoopback ? destinations.filter(([port]) => port === 4050) : destinations) {
     createProviderIngressServer(port).on('error', error => {
       console.error(`Cannot bind test ingress ${port}: ${error.code}`);
       process.exit(1);
-    }).listen(port, '0.0.0.0');
+    }).listen(port, stripeLoopback ? '127.0.0.1' : '0.0.0.0');
   }
 }

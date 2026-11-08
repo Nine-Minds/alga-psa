@@ -26,9 +26,9 @@ describe('stripeMetadataTenant (single decision point for the tenant metadata ke
 
 describe('selectOwnedCustomer', () => {
   it('selects exactly one owned candidate, never the first hit', () => {
-    const r = selectOwnedCustomer('t1', [
-      { id: 'cus_foreign', metadata: { tenant_id: 't2' } },
-      { id: 'cus_mine', metadata: { alga_tenant_id: 't1' } },
+    const r = selectOwnedCustomer({ tenantId: 't1', accountId: 'acct_1', purpose: 'saas_billing' }, [
+      { id: 'cus_foreign', metadata: { tenant_id: 't2', stripe_account_id: 'acct_1', purpose: 'saas_billing' } },
+      { id: 'cus_mine', metadata: { alga_tenant_id: 't1', stripe_account_id: 'acct_1', purpose: 'saas_billing' } },
     ]);
     expect(r).toEqual({ customerId: 'cus_mine', error: null });
   });
@@ -37,13 +37,28 @@ describe('selectOwnedCustomer', () => {
     for (const [cands, code] of [
       [[], 'no_candidates'],
       [[{ id: 'a' }], 'no_owned_candidate'],
-      [[{ id: 'a', metadata: { tenant_id: 't2' } }], 'no_owned_candidate'],
-      [[{ id: 'a', metadata: { tenant_id: 't1' } }, { id: 'b', metadata: { tenant_id: 't1' } }], 'ambiguous_owned_candidates'],
+      [[{ id: 'a', metadata: { tenant_id: 't2', stripe_account_id: 'acct_1', purpose: 'saas_billing' } }], 'no_owned_candidate'],
+      [[{ id: 'a', metadata: { tenant_id: 't1', stripe_account_id: 'acct_1', purpose: 'saas_billing' } }, { id: 'b', metadata: { tenant_id: 't1', stripe_account_id: 'acct_1', purpose: 'saas_billing' } }], 'ambiguous_owned_candidates'],
     ] as const) {
-      const r = selectOwnedCustomer('t1', cands as any);
+      const r = selectOwnedCustomer({ tenantId: 't1', accountId: 'acct_1', purpose: 'saas_billing' }, cands as any);
       expect(r.customerId).toBeNull();
       expect(r.error!.code).toBe(code);
       expect(r.error!.message).not.toMatch(/cus_|\ba\b.*\bb\b|t2/);
     }
+  });
+
+  it('does not treat client-payment import metadata as SaaS billing ownership', () => {
+    const r = selectOwnedCustomer({ tenantId: 't1', accountId: 'acct_1', purpose: 'saas_billing' }, [
+      { id: 'cus_client_payment', metadata: { tenant_id: 't1', stripe_account_id: 'acct_1', client_id: 'c1' } },
+    ]);
+    expect(r.customerId).toBeNull();
+    expect(r.error?.code).toBe('no_owned_candidate');
+  });
+
+  it('rejects a conflicting Stripe account stamp even when tenant and purpose match', () => {
+    const r = selectOwnedCustomer({ tenantId: 't1', accountId: 'acct_1', purpose: 'saas_billing' }, [
+      { id: 'cus_wrong_account', metadata: { tenant_id: 't1', stripe_account_id: 'acct_2', purpose: 'saas_billing' } },
+    ]);
+    expect(r.customerId).toBeNull();
   });
 });

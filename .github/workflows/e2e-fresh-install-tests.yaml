@@ -1048,6 +1048,9 @@ jobs:
           docker-compose -p alga-e2e-test up -d \
             --no-build --no-recreate --no-deps \
             server email-service imap-test-server hocuspocus
+          # The Stripe SDK accepts only loopback test endpoints in production.
+          # Start its fixed-destination proxy in the server network namespace.
+          docker-compose -p alga-e2e-test up --no-build --no-deps --wait --wait-timeout 90 -d stripe-loopback
         shell: bash
 
       - name: Start and verify background workers
@@ -1516,6 +1519,7 @@ jobs:
           # for the later Teams phase and retain stopped-container diagnostics.
           docker-compose -p alga-e2e-test stop server email-service pgbouncer
           docker-compose -p alga-e2e-test up --no-build --no-deps --force-recreate -d server
+          docker-compose -p alga-e2e-test up --no-build --no-deps --force-recreate --wait --wait-timeout 90 -d stripe-loopback
           container=$(docker-compose -p alga-e2e-test ps -q server)
           test "$(docker inspect --format '{{.Image}}' "$container")" = "$expected_image"
           echo "UPGRADE_APPLICATION_REVISION=$GITHUB_SHA" >> "$GITHUB_ENV"
@@ -1632,6 +1636,7 @@ jobs:
           expected_image=$(docker image inspect --format '{{.Id}}' "$image")
           export COMPOSE_FILE="$COMPOSE_FILE:$RUNNER_TEMP/citus-upgrade-compose.json"
           docker-compose -p alga-e2e-test up --no-build --no-deps --force-recreate -d server
+          docker-compose -p alga-e2e-test up --no-build --no-deps --force-recreate --wait --wait-timeout 90 -d stripe-loopback
           container=$(docker-compose -p alga-e2e-test ps -q server)
           test "$(docker inspect --format '{{.Image}}' "$container")" = "$expected_image"
           echo "UPGRADE_APPLICATION_REVISION=$GITHUB_SHA" >> "$GITHUB_ENV"
@@ -1737,6 +1742,7 @@ jobs:
           # Keep its frontend available while releasing the consumer processes.
           docker-compose -p alga-e2e-test stop email-service hocuspocus workflow-worker temporal-worker
           docker-compose -p alga-e2e-test up --no-build --no-deps --force-recreate -d server
+          docker-compose -p alga-e2e-test up --no-build --no-deps --force-recreate --wait --wait-timeout 90 -d stripe-loopback
           docker-compose -p alga-e2e-test exec -T server node -e 'const fs = require("node:fs"); const probe = "/app/server/node_modules/.cache/webpack/.write-probe"; fs.writeFileSync(probe, "cache-writable", { flag: "wx" }); fs.unlinkSync(probe);'
           ready=false
           mkdir -p "$RUNNER_TEMP/teams-development-probe"
