@@ -457,7 +457,13 @@ export class TimeSheetService extends BaseService<any> {
 
   async update(id: string, data: UpdateTimeSheetData, context: ServiceContext): Promise<any> {
     // approval_status is derived state: a supplied status is a *request* for a transition, never a column write.
-    const { approval_status: requestedStatus, ...fields } = data;
+    const { approval_status: requestedStatus, change_reason, detailed_feedback, submission_notes, approval_notes, ...fields } = data;
+
+    // Allow an external time source to own the record before looking it up in the native store. In particular,
+    // a delegated DRAFT update may legitimately refer to an id that does not exist in the native time_sheets table.
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'update', [id, data, context]);
+    if (delegated.handled) return delegated.value;
+
     if (requestedStatus !== undefined) {
       // Validated before the time-source seam: the status means the same thing to every source.
       const current = await this.getById(id, context);
@@ -467,9 +473,6 @@ export class TimeSheetService extends BaseService<any> {
       if (requestedStatus !== current.approval_status) findTransition(requestedStatus);
     }
 
-    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
-    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'update', [id, data, context]);
-    if (delegated.handled) return delegated.value;
       const { knex } = await this.getKnex();
       
       await withTransaction(knex, async (trx) => {
@@ -497,7 +500,12 @@ export class TimeSheetService extends BaseService<any> {
 
         // Same transaction, after the field write: a refused transition rolls the other fields back too.
         if (requestedStatus !== undefined && requestedStatus !== existing.approval_status) {
-          await transitionTimeSheet(trx, existing, requestedStatus, context);
+          await transitionTimeSheet(trx, existing, requestedStatus, context, {
+            change_reason,
+            detailed_feedback,
+            submission_notes,
+            approval_notes,
+          });
         }
       });
 

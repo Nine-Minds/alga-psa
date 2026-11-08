@@ -372,7 +372,11 @@ describe('TimeSheetService write paths (REST API, alga-2026-0002763)', () => {
         ['request_changes', 'fix it'],
         ['submission', 'first'],
       ]));
-      expect(parsed.comments).toHaveLength(1);
+      expect(parsed.comments).toHaveLength(2);
+      expect(parsed.comments?.map((comment) => comment.comment)).toEqual(expect.arrayContaining([
+        'first',
+        'Changes requested: fix it',
+      ]));
       expect(parsed.time_period?.period_id).toBe(periodId);
       expect(parsed).not.toHaveProperty('created_at');
     });
