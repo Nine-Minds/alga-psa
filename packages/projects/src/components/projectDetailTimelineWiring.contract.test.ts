@@ -35,24 +35,24 @@ describe('ProjectDetail dependency guard wiring', () => {
 
   it('asks before a kanban drop changes a task status', () => {
     const body = handlerBody('const handleDrop = async (');
-    expectGuardBeforeSave(body, ['updateTaskStatus(', 'moveTaskToPhase(']);
+    expectGuardBeforeSave(body, ['tasks.updateStatus(', 'tasks.moveToPhase(']);
     // Reordering inside the same column is not a status change and must not ask.
     expect(body).toMatch(/task\.project_status_mapping_id !== targetStatusId &&\s*!\(await confirmTaskChanges\(/);
   });
 
   it('asks before a bulk kanban drop', () => {
-    expectGuardBeforeSave(handlerBody('const handleBulkKanbanDrop = async ('), ['updateTaskStatus(', 'moveTaskToPhase(']);
+    expectGuardBeforeSave(handlerBody('const handleBulkKanbanDrop = async ('), ['tasks.updateStatus(', 'tasks.moveToPhase(']);
   });
 
   it('asks before a list-view drag moves tasks to another status, for one task or a selection', () => {
     const body = handlerBody('const handleListViewTaskMove = useCallback(async (');
-    expectGuardBeforeSave(body, ['updateTaskStatus(', 'moveTaskToPhase(']);
+    expectGuardBeforeSave(body, ['tasks.updateStatus(', 'tasks.moveToPhase(']);
     expect(body).toContain('selectedTaskIds.has(taskId) && selectedTaskIds.size > 1 ? [...selectedTaskIds] : [taskId]');
   });
 
   it('asks before an inline list edit or a timeline drag changes status or dates, and only then', () => {
     const body = handlerBody('const handleListTaskUpdate = async (');
-    expectGuardBeforeSave(body, ['updateTaskWithChecklist(']);
+    expectGuardBeforeSave(body, ['tasks.update(']);
     expect(body).toContain("if ('project_status_mapping_id' in updates || 'start_date' in updates || 'due_date' in updates) {");
     expect(body).toContain('if (!(await confirmTaskChanges([{ taskId, change }]))) return;');
   });
@@ -114,7 +114,7 @@ describe('ProjectDetail timeline release flag', () => {
   });
 
   it('falls back to kanban when the saved view or a deep link names the gated timeline', () => {
-    expect(source).toContain("const viewMode: ProjectViewMode = storedViewMode === 'gantt' && !timelineEnabled ? 'kanban' : storedViewMode;");
+    expect(source).toContain("const viewMode: ProjectViewMode = (storedViewMode === 'gantt' && !timelineEnabled) || (sharedMode && storedViewMode === 'billing') ? 'kanban' : storedViewMode;");
     // The fallback is derived, not written back, so the preference returns once the flag is on.
     expect(source).not.toMatch(/timelineEnabled[^\n]*setViewMode|setViewMode\([^)]*timelineEnabled/);
   });

@@ -1,6 +1,6 @@
 'use server'
 
-import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import {
@@ -12,14 +12,7 @@ import {
   type ApplyChecklistTemplateResult,
 } from '@alga-psa/shared/lib/ticketChecklists';
 import { checklistActionErrorFrom, TEMPLATE_CLIENT_MISMATCH, type ChecklistActionError } from './checklistActionErrors';
-
-function tenantScopedTable(
-  conn: Knex | Knex.Transaction,
-  table: string,
-  tenant: string
-): Knex.QueryBuilder {
-  return tenantDb(conn, tenant).table(table);
-}
+import { authorizeTicketRecordAccessConcealed } from '../../lib/ticketRecordAuthorization';
 
 /** UI entry point: a tech applies a checklist template to a ticket by hand. */
 export const applyChecklistTemplate = withAuth(
@@ -31,9 +24,7 @@ export const applyChecklistTemplate = withAuth(
 
       const { knex: db } = await createTenantKnex();
       return await withTransaction(db, async (trx: Knex.Transaction) => {
-        // LEVERAGE: friction checklist-record-authz -- only the coarse ticket:update check guards this; same per-ticket gap as ticketChecklistActions (fixed there via authorizeTicketRecordAccessConcealed), out of scope for alga-2026-0002974.
-        const ticket = await tenantScopedTable(trx, 'tickets', tenant).where({ ticket_id: ticketId }).first();
-        if (!ticket) throw new Error('Ticket not found');
+        await authorizeTicketRecordAccessConcealed({ trx, tenant, user, ticketId, action: 'update' });
 
         const result = await applyChecklistTemplateToTicket(trx, tenant, ticketId, templateId, 'template', {
           actor: {

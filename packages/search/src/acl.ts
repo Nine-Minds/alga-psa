@@ -95,14 +95,21 @@ export function composeAclHints(opts: AclMetadata = {}): ComposedAclHints {
   };
 }
 
+/**
+ * Object types whose client scope is strict: for a scoped principal a NULL `client_scope_id` is
+ * NOT tenant-wide, it is "unknown owner" and must be hidden. Shared by the SQL predicate (so
+ * counts and result pages agree) and the per-row verifier (`hasTicketClientAccess`).
+ */
+export const STRICT_CLIENT_SCOPE_OBJECT_TYPES: readonly string[] = ['ticket', 'ticket_comment'];
+
 export function aclPredicateSql(user: SearchAclPrincipal): SqlFragment {
   const clientAccess = user.clientAccess ?? { mode: 'all' };
   const clientScopeClause = clientAccess.mode === 'all'
     ? 'TRUE'
-    : '(client_scope_id IS NULL OR client_scope_id = ANY(?::uuid[]))';
+    : '((client_scope_id IS NULL AND NOT (object_type = ANY(?::text[]))) OR client_scope_id = ANY(?::uuid[]))';
   const clientScopeBindings = clientAccess.mode === 'all'
     ? []
-    : [clientAccess.clientIds];
+    : [[...STRICT_CLIENT_SCOPE_OBJECT_TYPES], clientAccess.clientIds];
 
   return {
     sql: `
@@ -246,12 +253,39 @@ async function commentIsRequesterAudience(knex: Knex, user: SearchAclPrincipal, 
   return found?.audience === 'requester';
 }
 
-async function ticketExists(knex: Knex, user: SearchAclPrincipal, ticketId: string): Promise<boolean> {
-  const row = await tenantScopedRoot<{ ticket_id: string }>(knex, user, 'tickets')
-    .select('ticket_id')
+/**
+ * Strict client-scope check for tickets. Unlike `hasClientAccess` (null client = tenant-wide for
+ * most entity types), a ticket with no client is never visible to a scoped principal: the
+ * principal can only prove access to a client it is scoped to. Fails closed for legacy index rows
+ * whose `client_scope_id` is NULL.
+ */
+function hasTicketClientAccess(
+  user: SearchAclPrincipal,
+  objectType: 'ticket' | 'ticket_comment',
+  clientId: string | null | undefined,
+): boolean {
+  const clientAccess = user.clientAccess ?? { mode: 'all' };
+  if (clientAccess.mode === 'all') return true;
+  if (!clientId) return !STRICT_CLIENT_SCOPE_OBJECT_TYPES.includes(objectType);
+  return clientAccess.clientIds.includes(clientId);
+}
+
+// LEVERAGE: friction portal-ticket-policy-in-search — the canonical portal policy (board visibility
+// groups, contact-scoped tickets: ticketMatchesVisibility / getClientContactVisibilityContext in
+// @alga-psa/authorization) is not enforced here: SearchAclPrincipal carries no contact context and
+// the resolver needs a transaction. Only client scope is enforced for ticket search.
+async function ticketVisibleToPrincipal(
+  knex: Knex,
+  user: SearchAclPrincipal,
+  objectType: 'ticket' | 'ticket_comment',
+  ticketId: string,
+): Promise<boolean> {
+  const row = await tenantScopedRoot<{ ticket_id: string; client_id: string | null }>(knex, user, 'tickets')
+    .select('ticket_id', 'client_id')
     .where('ticket_id', ticketId)
     .first();
-  return Boolean(row);
+  if (!row) return false;
+  return hasTicketClientAccess(user, objectType, row.client_id);
 }
 
 async function projectClientIdForProject(
@@ -267,7 +301,7 @@ async function projectClientIdForProject(
 }
 
 registerSearchVisibilityVerifier('ticket', async (knex, user, row) => {
-  return ticketExists(knex, user, row.id);
+  return ticketVisibleToPrincipal(knex, user, 'ticket', row.id);
 });
 
 registerSearchVisibilityVerifier('ticket_comment', async (knex, user, row) => {
@@ -287,7 +321,7 @@ registerSearchVisibilityVerifier('ticket_comment', async (knex, user, row) => {
   // every audience stored there). It uses the same predicate as the indexer and portal reads, so
   // a public-flagged comment on a private thread cannot be reached through search.
   if (!user.isInternal && !(await commentIsRequesterAudience(knex, user, row.id))) return false;
-  return ticketExists(knex, user, comment.ticket_id);
+  return ticketVisibleToPrincipal(knex, user, 'ticket_comment', comment.ticket_id);
 });
 
 registerSearchVisibilityVerifier('project', async (knex, user, row) => {

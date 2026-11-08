@@ -6,6 +6,7 @@ import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/ticket
 import { loadPortalTicketExternalLinks } from '../../lib/portalTicketExternalLinks';
 import { commentAudienceSql } from '@alga-psa/shared/lib/commentAudience';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
+import { applyCommentResponseState } from '@alga-psa/shared/lib/tickets/responseState';
 import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal ticket actions intentionally compose ticketing feature APIs for client-facing workflows. */
@@ -742,14 +743,18 @@ export const addClientTicketComment = withAuth(async (
       });
       const newComment = await tenantDb(trx, tenant).table('comments').where({ comment_id: commentId }).first();
 
+      let responseStateChanged = false;
       if (!isInternal) {
-        // LEVERAGE: pattern response-state-from-comment — client portal writes awaiting_internal directly (no tracking check, no TICKET_RESPONSE_STATE_CHANGED); route through applyCommentResponseState in shared/lib/tickets/responseState.ts once portal behaviour change is accepted.
-        await tenantDb(trx, tenant).table('tickets')
-          .where({
-            ticket_id: ticketId,
-          })
-          .update({ response_state: 'awaiting_internal' });
+        const { previousState, newState } = await applyCommentResponseState(trx, {
+          tenant,
+          ticketId,
+          authorType: 'client',
+          isInternal: false,
+          userId,
+        });
+        responseStateChanged = newState !== previousState;
 
+        // Independent of the response-state tracking setting.
         await maybeReopenBundleMasterFromChildReply(trx, tenant, ticketId, userId);
       }
 
@@ -781,7 +786,7 @@ export const addClientTicketComment = withAuth(async (
       await publishTicketUpdate({
         tenantId: tenant,
         ticketId,
-        updatedFields: isInternal ? ['comments'] : ['comments', 'response_state'],
+        updatedFields: responseStateChanged ? ['comments', 'response_state'] : ['comments'],
         updatedBy: {
           userId,
           displayName: `${userRecord.first_name || ''} ${userRecord.last_name || ''}`.trim() || user.email || 'Client User',
@@ -1505,6 +1510,9 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
         priority_id: validatedData.priority_id,
         client_id: visibility.clientId,
         contact_id: visibility.contactId, // Maps to contact_name_id in database
+        // The portal never asks where the ticket is, so leave it unsaid: the model fills it from
+        // the portal user's own contact (or the client default), and a remote worker gets none.
+        location_id: undefined,
         billing_profile_id: assetBillingProfileId ?? contactBillingProfileId,
         entered_by: userId,
         source: 'client_portal',

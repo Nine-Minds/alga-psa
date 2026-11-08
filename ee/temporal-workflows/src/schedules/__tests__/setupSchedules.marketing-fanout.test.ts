@@ -55,7 +55,7 @@ vi.mock('@ee/lib/integrations/ninjaone/proactiveRefresh', () => ({
 }));
 
 vi.mock('@alga-psa/db/admin.js', () => ({
-  getAdminConnection: vi.fn(async () => ({})),
+  getAdminConnection: vi.fn(async () => ({ schema: { hasTable: vi.fn(async () => false) } })),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -215,7 +215,9 @@ describe('setupSchedules marketing fan-out cutover', () => {
       'accounting-sync-cycle:tenant-2',
       'recover-comment-publications:tenant-1',
     ]));
-    expect(deleted.filter((scheduleId) => scheduleId.startsWith('maintenance-fanout:'))).toEqual([]);
+    expect(deleted.filter((scheduleId) => scheduleId.startsWith('maintenance-fanout:'))).toEqual([
+      'maintenance-fanout:portable-restore-upload-cleanup',
+    ]);
     expect(deleted).not.toContain('unrelated:schedule');
 
     const firstLegacyDelete = events.indexOf('delete:opportunity-discipline:tenant-1');

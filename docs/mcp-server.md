@@ -168,6 +168,12 @@ provider.
 | Registry endpoint (`/api/v1/meta/mcp-registry`) | ✓ | ✓ |
 | Remote MCP server (`/api/mcp`) + agent identity + IdP auth + audit | — | ✓ |
 
+## Migration note — existing IdP registrations without an audience
+
+Migration `20261030090000_deactivate_agent_idp_providers_without_audience.cjs` (shipped 2026-10-30) automatically deactivates any `agent_idp_providers` row whose `audience` column is NULL or blank.
+
+If you registered a trusted IdP before the audience field was required, that registration is now deactivated and token validation will reject new agent connections against it. To restore access, open **Settings → MCP Server**, delete the deactivated provider entry, and re-add it with an explicit audience value. See [The easy path — provider presets](#the-easy-path--provider-presets-reuse-and-hosted-built-ins) for the correct audience per provider type.
+
 ## Known MVP limitations
 
 - **PRM is instance-wide.** `/.well-known/oauth-protected-resource` lists all trusted issuers
@@ -179,3 +185,21 @@ provider.
   in-process dispatch is a later optimization.
 - **Not yet in MVP** (Phase 3): agent-specific ABAC policy, approval gates (human-in-the-loop),
   and quotas/rate-limits.
+
+## Security note: audit redaction of returned secrets (alga-2026-0003021, f2)
+
+`mcp_agent_audit` (and so `GET /api/v1/mcp/audit`) no longer stores secrets that tools return,
+e.g. the `signing_secret` from `POST /api/v1/webhooks/{id}/secret/rotate`. Redaction happens in
+`writeAgentAudit` (`redactToolResult` / `redactToolArguments` in `@alga-psa/agent-tooling`); the tool
+response to the agent is unchanged. Keys named `signing_secret`, `client_secret`, `secret`, `password`,
+`private_key`, `api_key`, `webhook_secret`, or ending in `_secret` / `_password` / `_token` are replaced
+with `[redacted]` (deliberately broad).
+
+**Release note:** secrets returned before this fix may still be in existing audit rows. Run the
+remediation (idempotent, per tenant) and **rotate any webhook signing secrets that were rotated via
+MCP before the fix** — removing the stored copy does not un-leak it:
+
+```
+npx tsx ee/server/scripts/redact-mcp-audit-secrets.ts --tenant=<tenant-id> --dry-run
+npx tsx ee/server/scripts/redact-mcp-audit-secrets.ts --tenant=<tenant-id>     # or --all-tenants
+```

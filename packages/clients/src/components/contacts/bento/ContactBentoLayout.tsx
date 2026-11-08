@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   BriefcaseBusiness,
   ExternalLink,
   FileText,
   Mail,
+  MapPin,
   MessageSquarePlus,
   NotebookPen,
   Pencil,
@@ -28,7 +29,7 @@ import { TagManager } from '@alga-psa/tags/components';
 import { useToast, useDrawer } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
-import { updateContact, getInteractionsForEntity } from '@alga-psa/clients/actions';
+import { updateContact, getInteractionsForEntity, getClientById } from '@alga-psa/clients/actions';
 import { useOptionalClientCrossFeature } from '../../../context/ClientCrossFeatureContext';
 import { QuickAddInteraction } from '../../interactions/QuickAddInteraction';
 import InteractionDetails from '../../interactions/InteractionDetails';
@@ -47,6 +48,7 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import { formatCurrencyWithSymbol } from '@alga-psa/core/formatters';
 
 type PortalPermissions = {
   canInvite: boolean;
@@ -59,7 +61,14 @@ const isReturnedActionError = (value: unknown) =>
 interface ContactBentoLayoutProps {
   id?: string;
   contact: IContact;
-  clients: IClient[];
+  /**
+   * @deprecated Ignored. The layout no longer needs a tenant client list: the hero name comes
+   * from `clientName` (or a by-id lookup) and the change-client picker searches on the server.
+   * Kept optional so ticket and interaction surfaces that still pass a list keep compiling.
+   */
+  clients?: IClient[];
+  /** Name of the contact's current client, when the caller already has it (saves a lookup). */
+  clientName?: string | null;
   documents?: IDocument[];
   /** AlgaDesk composes contact details without the PSA documents surface. */
   showDocuments?: boolean;
@@ -117,10 +126,7 @@ function centsToMoney(value: string | number | null, currencyCode?: string | nul
   if (value == null) return '—';
   const amount = typeof value === 'number' ? value : Number(value);
   if (Number.isNaN(amount)) return '—';
-  return new Intl.NumberFormat(undefined, {
-    style: 'currency',
-    currency: currencyCode || 'USD',
-  }).format(amount / 100);
+  return formatCurrencyWithSymbol(amount / 100, undefined, currencyCode || 'USD');
 }
 
 function statusChipClass(isPositive: boolean) {
@@ -216,7 +222,7 @@ function Eyebrow({ children, first = false }: { children: React.ReactNode; first
 export function ContactBentoLayout({
   id = 'contact-bento',
   contact: initialContact,
-  clients,
+  clientName: initialClientName,
   documents = [],
   showDocuments = true,
   showRelatedWork = true,
@@ -291,10 +297,37 @@ export function ContactBentoLayout({
     );
   };
 
-  const clientName = useMemo(
-    () => clients.find((client) => client.client_id === contact.client_id)?.client_name ?? null,
-    [clients, contact.client_id],
+  // Hero client name. Seeded by the caller; re-resolved by id only when the contact's client
+  // changes (after an edit). Stale responses for a previously selected client are ignored.
+  const [resolvedClient, setResolvedClient] = useState<{ clientId: string | null; name: string | null }>(
+    () => ({ clientId: initialContact.client_id ?? null, name: initialClientName ?? null }),
   );
+  useEffect(() => {
+    const clientId = contact.client_id ?? null;
+    if (!clientId) {
+      setResolvedClient({ clientId: null, name: null });
+      return;
+    }
+    if (resolvedClient.clientId === clientId && resolvedClient.name) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const client = await getClientById(clientId);
+        if (cancelled) return;
+        setResolvedClient({
+          clientId,
+          name: client && !isReturnedActionError(client) ? client.client_name : null,
+        });
+      } catch (error) {
+        if (!cancelled) console.error('Error loading contact client name:', error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-resolve only when the client id changes
+  }, [contact.client_id]);
+  const clientName = resolvedClient.clientId === (contact.client_id ?? null) ? resolvedClient.name : null;
 
   const primaryPhone = contact.default_phone_number
     || contact.phone_numbers?.find((phone) => phone.is_default)?.phone_number
@@ -361,7 +394,6 @@ export function ContactBentoLayout({
       <ContactDetailsEdit
         id={`${id}-edit`}
         initialContact={contact}
-        clients={clients}
         isInDrawer
         onSave={(updated) => {
           setContact(updated);
@@ -772,6 +804,69 @@ export function ContactBentoLayout({
       </BentoTile>
   );
 
+  const workArrangementLabel = contact.work_arrangement
+    ? t(`contactLocations.arrangement.${contact.work_arrangement}`, {
+        defaultValue: contact.work_arrangement === 'on_site'
+          ? 'On site'
+          : contact.work_arrangement === 'hybrid' ? 'Hybrid' : 'Remote',
+      })
+    : null;
+
+  // Locations are a reference to the client's sites, so the tile reads them through and the edit
+  // drawer is the only way to change the set. Remote with no links still says Remote: that is the
+  // answer to "where do I send someone", not an empty state.
+  const locationsTile = (
+      <BentoTile
+        id={`${id}-locations`}
+        title={t('contactLocations.locations', { defaultValue: 'Locations' })}
+        icon={<MapPin className="h-4 w-4" />}
+        action={
+          <BentoTileAddButton
+            id={`${id}-locations-add`}
+            label={t('contactLocations.addLocation', { defaultValue: 'Add location' })}
+            onClick={openEditDrawer}
+          />
+        }
+      >
+        {workArrangementLabel ? (
+          <div className="mb-2">
+            <Badge id={`${id}-locations-arrangement`} variant="secondary">{workArrangementLabel}</Badge>
+          </div>
+        ) : null}
+        {(contact.locations ?? []).length > 0 ? (
+          <TileRows>
+            {(contact.locations ?? []).map((location) => (
+              <TileRow
+                key={location.location_id}
+                primary={location.location_name || location.address_line1 || '—'}
+                meta={[
+                  [location.address_line1, location.city, location.postal_code].filter(Boolean).join(', ') || null,
+                  location.is_primary ? t('contactLocations.primary', { defaultValue: 'Primary' }) : null,
+                  location.is_active === false
+                    ? t('contactLocations.inactiveMarker', { defaultValue: '(inactive)' })
+                    : null,
+                ].filter(Boolean).join(' · ')}
+                emphasize={location.is_primary}
+              />
+            ))}
+          </TileRows>
+        ) : contact.work_arrangement === 'remote' ? (
+          <BentoTileEmpty id={`${id}-locations-remote`}>
+            {t('contactLocations.arrangement.remote', { defaultValue: 'Remote' })}
+          </BentoTileEmpty>
+        ) : (
+          <>
+            <BentoTileEmpty id={`${id}-locations-empty`}>
+              {t('contactLocations.none', { defaultValue: 'No locations' })}
+            </BentoTileEmpty>
+            <BentoTileEmptyAction id={`${id}-locations-add-first`} onClick={openEditDrawer}>
+              {t('contactLocations.addLocation', { defaultValue: 'Add location' })}
+            </BentoTileEmptyAction>
+          </>
+        )}
+      </BentoTile>
+  );
+
   const notesTile = (
       <BentoTile
         id={`${id}-notes-tile`}
@@ -874,6 +969,7 @@ export function ContactBentoLayout({
           <ContentCardVariantProvider variant="bento">{assetsSlot}</ContentCardVariantProvider>
         ) : null}
         {showRelatedWork ? relatedWorkTile : null}
+        {locationsTile}
         {notesTile}
       </div>
 

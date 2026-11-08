@@ -6,11 +6,13 @@ import type { RmmProvider } from '@alga-psa/types';
 import { registerAction, type InboundActionDefinition } from '@alga-psa/shared/inboundWebhooks/actions/registry';
 import { lookupAlgaEntityByExternalId, writeEntityMapping } from '@alga-psa/shared/inboundWebhooks/externalEntityMappings';
 
+// LEVERAGE: pattern rmm-provider-registration — hand-maintained provider list (see rmmProviderDisplay.ts, ticketCreator.ts PROVIDER_LABELS, providerRegistry.ts)
 const KNOWN_RMM_PROVIDERS = new Set<RmmProvider>([
   'ninjaone',
   'tacticalrmm',
   'tanium',
   'levelio',
+  'unifi',
   'datto',
   'connectwise_automate',
   'huntress',

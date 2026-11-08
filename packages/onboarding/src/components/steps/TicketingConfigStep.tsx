@@ -24,7 +24,8 @@ import { IStandardPriority, ITicketCategory } from '@alga-psa/types';
 import { IStandardStatus } from '@alga-psa/types';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
-import { createBoard, updateBoard } from '@alga-psa/tickets/actions/board-actions/boardActions';
+import { createBoard, updateBoard, deleteBoard } from '@alga-psa/tickets/actions/board-actions/boardActions';
+import { deleteWizardBoard } from '../../lib/deleteWizardBoard';
 import { createBoardTicketStatus, updateBoardTicketStatus } from '@alga-psa/tickets/actions/board-actions/boardTicketStatusActions';
 import { createCategory } from '@alga-psa/tickets/actions/ticketCategoryActions';
 import { createPriority } from '@alga-psa/reference-data/actions';
@@ -453,6 +454,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       if (regularBoards.length > 0) {
         const regularBoardIds = regularBoards.map(c => c.id);
         const regularResult = await importReferenceData('boards', regularBoardIds);
+        if (isReturnedActionError(regularResult)) {
+          throw new Error(getErrorMessage(regularResult));
+        }
 
         if (regularResult?.imported) allResults.imported.push(...regularResult.imported);
         if (regularResult?.skipped) allResults.skipped.push(...regularResult.skipped);
@@ -931,7 +935,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
     if (!boardToDelete) return;
     try {
       setIsBoardDeleteProcessing(true);
-      const result = await deleteReferenceDataItem('boards', boardToDelete.id);
+      const result = await deleteWizardBoard(boardToDelete.id, deleteBoard);
       if (!result.success) {
         setBoardDeleteValidation(result);
         return;

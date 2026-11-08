@@ -275,7 +275,7 @@ export const bundleTicketsAction = withAuth(async (
     return result;
   });
 
-  if (!txResult.ok) {
+  if (txResult.ok === false) {
     return bundleAttachFailureToActionError(txResult, {
       masterIsChildMessage: 'Cannot select a child ticket as the master.',
       masterIsChildKey: 'features/tickets:errors.bundle.childAsMaster',
@@ -345,7 +345,7 @@ export const addChildrenToBundleAction = withAuth(async (
     return result;
   });
 
-  if (!txResult.ok) {
+  if (txResult.ok === false) {
     return bundleAttachFailureToActionError(txResult, {
       masterIsChildMessage: 'Cannot add children to a bundled child ticket.',
       masterIsChildKey: 'features/tickets:errors.bundle.childrenOnBundledChild',
@@ -567,7 +567,7 @@ export const updateBundleSettingsAction = withAuth(async (
       source: TICKET_ACTIVITY_SOURCE.UI,
       occurredAt,
     });
-    if (!result.ok) {
+    if (result.ok === false) {
       if (result.code === 'settings_not_found') throw new Error('Bundle settings not found');
       return bundleAttachFailureToActionError(result);
     }

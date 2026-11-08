@@ -24,8 +24,5 @@ describe('system-managed contract action guardrails wiring', () => {
     expect(contractActionsSource).toContain('const created = await Contract.create(knex, tenant, safeContractData);');
   });
 
-  it('system-managed default contracts cannot be deleted manually through backend actions', () => {
-    expect(contractActionsSource).toContain('System-managed default contracts cannot be deleted manually');
-    expect(contractActionsSource).toContain('currentContract?.is_system_managed_default === true');
-  });
+  // Shared deletion guardrails are exercised in contractLifecycle.behavior.test.ts.
 });

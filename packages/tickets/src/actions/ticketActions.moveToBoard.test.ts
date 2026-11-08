@@ -146,9 +146,23 @@ vi.mock('@alga-psa/sla/services', () => ({
   SlaBackendFactory: {},
 }));
 
-function createMockTrx(tickets: Map<string, Record<string, any>>) {
+function createMockTrx(
+  tickets: Map<string, Record<string, any>>,
+  boards: Map<string, Record<string, any>> = new Map([['board-dest', { board_id: 'board-dest', is_inactive: false }]]),
+) {
   return ((table: string) => {
     let whereClause: Record<string, any> | undefined;
+    if (table === 'boards') {
+      const boardsApi: any = {
+        select: () => boardsApi,
+        where: (criteria: Record<string, any>) => {
+          whereClause = criteria;
+          return boardsApi;
+        },
+        first: async () => (whereClause?.board_id ? boards.get(whereClause.board_id) : undefined),
+      };
+      return boardsApi;
+    }
     const tableApi: any = {
       where: (criteria: Record<string, any>) => {
         whereClause = criteria;
@@ -323,6 +337,49 @@ describe('ticketActions moveTicketsToBoard', () => {
       { ticketId: 'ticket-8', message: 'Permission denied: Cannot update ticket' },
     ]);
     expect(result.movedIds).toEqual(['ticket-7']);
+  });
+
+  it('rejects an inactive destination board for every selected ticket without moving any', async () => {
+    const tickets = new Map<string, Record<string, any>>([
+      ['ticket-11', { ticket_id: 'ticket-11', tenant: 'tenant-1', board_id: 'board-source' }],
+      ['ticket-12', { ticket_id: 'ticket-12', tenant: 'tenant-1', board_id: 'board-source' }],
+    ]);
+    const boards = new Map([['board-dest', { board_id: 'board-dest', is_inactive: true }]]);
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) =>
+      callback(createMockTrx(tickets, boards)));
+
+    const { moveTicketsToBoard } = await import('./ticketActions');
+    const result = await moveTicketsToBoard(['ticket-11', 'ticket-12'], 'board-dest', '');
+
+    expect(result).toEqual({
+      movedIds: [],
+      failed: [
+        { ticketId: 'ticket-11', message: 'The destination board is inactive. Choose an active board.' },
+        { ticketId: 'ticket-12', message: 'The destination board is inactive. Choose an active board.' },
+      ],
+    });
+    expect(getDefaultStatusIdMock).not.toHaveBeenCalled();
+    expect(updateTicketWithCacheMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects a destination board that does not exist', async () => {
+    const tickets = new Map<string, Record<string, any>>([
+      ['ticket-13', { ticket_id: 'ticket-13', tenant: 'tenant-1', board_id: 'board-source' }],
+    ]);
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) =>
+      callback(createMockTrx(tickets, new Map())));
+
+    const { moveTicketsToBoard } = await import('./ticketActions');
+    const result = await moveTicketsToBoard(['ticket-13'], 'board-missing', 'status-1');
+
+    expect(result).toEqual({
+      movedIds: [],
+      failed: [
+        { ticketId: 'ticket-13', message: 'Board not found. It may have been deleted. Please refresh and try again.' },
+      ],
+    });
+    expect(validateStatusBelongsToBoardMock).not.toHaveBeenCalled();
+    expect(updateTicketWithCacheMock).not.toHaveBeenCalled();
   });
 
   it('T042: forwards suppression flags to every moved ticket', async () => {

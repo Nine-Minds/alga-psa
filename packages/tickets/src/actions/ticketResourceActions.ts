@@ -14,6 +14,16 @@ import {
   removeTicketResourceCore,
 } from '@alga-psa/shared/services/tickets/ticketResourceCore';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
+import { authorizeTicketRecordAccess } from '../lib/ticketRecordAuthorization';
+import type { IUserWithRoles } from '@alga-psa/types';
+
+function userAuthorization(user: IUserWithRoles, trx: Knex.Transaction, tenant: string) {
+  return {
+    kind: 'user' as const,
+    authorizeTicket: (ticketId: string, action: 'read' | 'update') =>
+      authorizeTicketRecordAccess({ trx, tenant, user, ticketId, action }),
+  };
+}
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
@@ -37,7 +47,10 @@ export const addTicketResource = withAuth(async (
       throw new Error('Permission denied: Cannot add ticket resource');
     }
 
-    return await addTicketResourceCore(trx, tenant, user.user_id, ticketId, additionalUserId, role);
+    return await addTicketResourceCore(
+      trx, tenant, user.user_id, ticketId, additionalUserId, role,
+      userAuthorization(user, trx, tenant),
+    );
     });
 
     // Emit after the transaction commits so subscribers can see the data.
@@ -66,7 +79,10 @@ export const removeTicketResource = withAuth(async (
       throw new Error('Permission denied: Cannot remove ticket resource');
     }
 
-    await removeTicketResourceCore(trx, tenant, user.user_id, assignmentId);
+    await removeTicketResourceCore(
+      trx, tenant, user.user_id, assignmentId,
+      userAuthorization(user, trx, tenant),
+    );
     });
   } catch (error) {
     const expected = ticketActionErrorFrom(error);
@@ -90,7 +106,7 @@ export const getTicketResources = withAuth(async (
       throw new Error('Permission denied: Cannot view ticket resources');
     }
 
-    return await getTicketResourcesCore(trx, tenant, ticketId);
+    return await getTicketResourcesCore(trx, tenant, ticketId, userAuthorization(user, trx, tenant));
     });
   } catch (error) {
     const expected = ticketActionErrorFrom(error);
@@ -104,7 +120,7 @@ export const getTicketResources = withAuth(async (
 
 // Helper function to check if a user can be added as additional agent
 export const canAddAsAdditionalAgent = withAuth(async (
-  _user,
+  user,
   { tenant },
   ticketId: string,
   userId: string
@@ -112,6 +128,10 @@ export const canAddAsAdditionalAgent = withAuth(async (
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+    if (!await hasPermission(user, 'ticket', 'read', trx)) {
+      throw new Error('Permission denied: Cannot view ticket resources');
+    }
+    await authorizeTicketRecordAccess({ trx, tenant, user, ticketId, action: 'read' });
     // First verify the ticket exists
     const ticket = await tenantScopedTable(trx, 'tickets', tenant)
       .where({
