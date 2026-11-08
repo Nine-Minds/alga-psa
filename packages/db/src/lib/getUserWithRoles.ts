@@ -1,6 +1,7 @@
 'use server';
 
 import type { Knex } from 'knex';
+import { USER_RESPONSE_FIELD_NAMES } from '@alga-psa/types';
 import type { IUser, IRole, IUserWithRoles } from '@alga-psa/types';
 import { createTenantKnex } from './tenant';
 import { withTransaction } from './tenant';
@@ -32,7 +33,7 @@ export async function getUserWithRoles(
     const scopedDb = tenantDb(trx, tenantId);
 
     const user = await scopedDb.table<IUser>('users')
-      .select('*')
+      .select(...USER_RESPONSE_FIELD_NAMES)
       .where('user_id', userId)
       .first();
 
@@ -94,7 +95,7 @@ export async function getUserWithRolesByEmail(
     const scopedDb = tenantDb(trx, tenantId);
 
     let query = scopedDb.table<IUser>('users')
-      .select('*')
+      .select(...USER_RESPONSE_FIELD_NAMES)
       .where('email', email.toLowerCase());
 
     if (userType) {

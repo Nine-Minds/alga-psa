@@ -100,6 +100,7 @@ async function insertUser(tenant: string, userType: 'internal' | 'client', label
     first_name: label,
     last_name: 'User',
     hashed_password: 'original-hash',
+    two_factor_secret: 'JBSWY3DPEHPK3PXP',
     user_type: userType,
     is_inactive: false,
   });
@@ -157,6 +158,56 @@ describe('Service principals A/4 user management (T026, T013, F085, F086)', () =
   });
 
   describe('T026: list defaults exclude non-interactive users', () => {
+    it('User.getAll and the basic directory action return only response-allowlisted fields', async () => {
+      const f = await createFixture();
+      const staff = await tt(f.tenant, 'users').where({ user_id: f.internalId }).first();
+      mockCurrentUser = { user_id: f.internalId, tenant: f.tenant, user_type: 'internal', roles: [] };
+      const statements: string[] = [];
+      const capture = (query: { sql?: string }) => { if (query.sql?.includes('from "users"')) statements.push(query.sql); };
+      db.on('query', capture);
+      try {
+        const User = (await import('@alga-psa/db/models/user')).default;
+        const { runWithTenant } = await import('@alga-psa/db');
+        const rows = await runWithTenant(f.tenant, () => User.getAll(db, true));
+        expect(statements.length).toBeGreaterThan(0);
+        expect(statements.some((sql) => /hashed_password|two_factor_secret/.test(sql))).toBe(false);
+        expect(rows.find((row) => row.user_id === f.internalId)).toMatchObject({ email: staff.email, first_name: staff.first_name });
+        expect(rows.find((row) => row.user_id === f.internalId)).not.toHaveProperty('hashed_password');
+        expect(rows.find((row) => row.user_id === f.internalId)).not.toHaveProperty('two_factor_secret');
+
+        const detail = await runWithTenant(f.tenant, () => User.getUserWithRoles(db, f.internalId));
+        expect(statements.some((sql) => /hashed_password|two_factor_secret/.test(sql))).toBe(false);
+        expect(detail).toMatchObject({ user_id: f.internalId, email: staff.email });
+        expect(detail).not.toHaveProperty('hashed_password');
+        expect(detail).not.toHaveProperty('two_factor_secret');
+
+        const { getAllUsersBasic } = await import('@alga-psa/user-composition/actions/userQueryActions');
+        const result = await getAllUsersBasic(true);
+        const listed = result.find((row) => row.user_id === f.internalId);
+        expect(listed).toBeDefined();
+        if (!listed) throw new Error('Expected the authorized staff user in the basic directory');
+        expect(listed).toMatchObject({ user_id: f.internalId, email: staff.email, first_name: staff.first_name, user_type: 'internal' });
+        expect(listed).not.toHaveProperty('hashed_password');
+        expect(listed).not.toHaveProperty('two_factor_secret');
+        const { USER_RESPONSE_FIELD_NAMES } = await import('@alga-psa/types');
+        const allowedFields = new Set<string>(USER_RESPONSE_FIELD_NAMES);
+        expect(Object.keys(listed).every((key) => allowedFields.has(key))).toBe(true);
+
+        const { findUserById, getUserWithRoles, getMultipleUsersWithRoles } = await import('@alga-psa/user-composition/actions/userQueryActions');
+        for (const detailResult of [
+          await findUserById(f.internalId),
+          await getUserWithRoles(f.internalId),
+          ...(await getMultipleUsersWithRoles([f.internalId])),
+        ]) {
+          expect(detailResult).toMatchObject({ user_id: f.internalId, email: staff.email });
+          expect(detailResult).not.toHaveProperty('hashed_password');
+          expect(detailResult).not.toHaveProperty('two_factor_secret');
+        }
+      } finally {
+        db.removeListener('query', capture);
+      }
+    });
+
     it('User.getAll excludes service by default and includes with includeNonInteractive', async () => {
       const f = await createFixture();
       const User = (await import('@alga-psa/db/models/user')).default;
