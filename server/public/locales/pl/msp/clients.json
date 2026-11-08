@@ -439,7 +439,7 @@
       "lastAuditMissing_few": "{{count}} brakujące zasoby",
       "lastAuditMissing_many": "{{count}} brakujących zasobów",
       "lastAuditMissing_other": "{{count}} brakującego zasobu",
-      "neverAudited": "Nie przeprowadzono audytu"
+      "neverAudited": "Nigdy nie audytowano"
     },
     "locations": {
       "billing": "Rozliczenia",
@@ -451,8 +451,8 @@
       "more": "+{{count}} więcej",
       "none": "Brak lokalizacji.",
       "shipping": "Wysyłka",
-      "lastAudit": "Audyt przeprowadzono {{date}}",
-      "neverAudited": "Nie przeprowadzono audytu"
+      "lastAudit": "Audyt: {{date}}",
+      "neverAudited": "Nigdy nie audytowano"
     },
     "money": {
       "activeContracts": "Aktywne umowy",
