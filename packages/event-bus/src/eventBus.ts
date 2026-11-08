@@ -286,7 +286,7 @@ export class EventBus {
         const result = await client.get(key);
         if (result && result !== 'pending') {
           const completion = JSON.parse(result) as EventRequestResult;
-          if (completion.success) return;
+          if (completion.success === true) return;
           throw new Error(completion.error || 'Server execution failed');
         }
         await new Promise((resolve) => setTimeout(resolve, Math.min(100, Math.max(1, deadline - Date.now()))));
