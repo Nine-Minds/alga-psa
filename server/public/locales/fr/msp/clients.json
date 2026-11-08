@@ -329,7 +329,8 @@
       "empty": "Aucun modèle de liste de contrôle propre au client.",
       "loadFailed": "Échec du chargement des modèles de listes de contrôle",
       "retry": "Réessayer"
-    }
+    },
+    "audits": "Audits"
   },
   "clientCommandCenter": {
     "cards": {
@@ -383,7 +384,12 @@
       "warrantyExpired_other": "{{count}} hors garantie",
       "warrantyExpiring_one": "1 expire sous ≤90 j",
       "warrantyExpiring_other": "{{count}} expirent sous ≤90 j",
-      "warrantyTracked": " (sur {{count}} suivis)"
+      "warrantyTracked": " (sur {{count}} suivis)",
+      "auditsLink": "Audits des sites",
+      "lastAudit": "Dernier audit : {{date}}",
+      "lastAuditMissing_one": "1 manquant",
+      "lastAuditMissing_other": "{{count}} manquants",
+      "neverAudited": "Jamais audité"
     },
     "locations": {
       "billing": "Facturation",
@@ -392,7 +398,9 @@
       "manage": "Gérer",
       "more": "+{{count}} de plus",
       "none": "Aucun site pour l’instant.",
-      "shipping": "Livraison"
+      "shipping": "Livraison",
+      "lastAudit": "Audité : {{date}}",
+      "neverAudited": "Jamais audité"
     },
     "money": {
       "activeContracts": "Contrats actifs",
@@ -1671,7 +1679,8 @@
           "members": "Membres",
           "people": "Personnes"
         }
-      }
+      },
+      "startAudit": "Démarrer un audit"
     },
     "tickets": {
       "addTicket": "Ajouter un ticket",

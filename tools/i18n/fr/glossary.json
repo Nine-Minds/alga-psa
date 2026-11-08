@@ -2264,7 +2264,8 @@
       "Code 128",
       "RMA {{number}} · {{status}}",
       "Page {{page}}",
-      "Audit"
+      "Audit",
+      "Audits"
     ],
     "caseInsensitive": [
       "api",
