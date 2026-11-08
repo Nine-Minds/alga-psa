@@ -2245,6 +2245,8 @@
       "allStatuses": "Alla statusar",
       "notes": "Anteckningar",
       "exportCsv": "Exportera CSV",
+      "exportStarted": "CSV-exporten har startat.",
+      "exportEmpty": "Det finns inget att exportera i den här vyn.",
       "addUnexpected": "Lägg till oväntad tillgång",
       "addUnexpectedHint": "En enhet som hittas på plats men ligger utanför inventeringens omfattning registreras som oväntad, aldrig som förväntad.",
       "addUnexpectedPlaceholder": "Sök efter en tillgång…",
