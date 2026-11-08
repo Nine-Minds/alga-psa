@@ -2245,6 +2245,8 @@
       "allStatuses": "Tous les statuts",
       "notes": "Notes",
       "exportCsv": "Exporter en CSV",
+      "exportStarted": "Export CSV démarré.",
+      "exportEmpty": "Il n’y a rien à exporter dans cette vue.",
       "addUnexpected": "Ajouter un actif non attendu",
       "addUnexpectedHint": "Un appareil trouvé sur site mais hors du périmètre de cet audit est enregistré comme non attendu, jamais comme attendu.",
       "addUnexpectedPlaceholder": "Rechercher un actif…",
