@@ -191,6 +191,40 @@ describe('expression admission', () => {
     });
   });
 
+  describe('CPU clock', () => {
+    type ThreadCpu = { threadCpuUsage?: () => { user: number; system: number } };
+    const proc = process as unknown as ThreadCpu;
+    const originalThreadCpuUsage = proc.threadCpuUsage;
+    afterEach(() => {
+      vi.restoreAllMocks();
+      if (originalThreadCpuUsage) proc.threadCpuUsage = originalThreadCpuUsage;
+      else delete proc.threadCpuUsage;
+    });
+
+    it('does not charge CPU burned by other threads in the process to the evaluation', async () => {
+      // Other threads (GC helpers, libuv pool, worker threads) show up only in process-wide CPU:
+      // here every process.cpuUsage() sample jumps by a full second.
+      let processCpuMicros = 0;
+      const cpuUsage = vi.spyOn(process, 'cpuUsage').mockImplementation(() => ({ user: (processCpuMicros += 1_000_000), system: 0 }));
+      await expect(
+        runWithEvaluationRequestBudget({ cpuBudgetMs: 5_000, wallBudgetMs: 60_000 }, async () => {
+          for (let i = 0; i < 20; i++) await evaluateWorkflowExpression(LONG_LEGAL, { payload: { items: manyItems(200) } });
+          return 'done';
+        })
+      ).resolves.toBe('done');
+      expect(cpuUsage).not.toHaveBeenCalled();
+    });
+
+    it("uses the evaluating thread's CPU counter when the runtime provides one", async () => {
+      let threadCpuMicros = 0;
+      proc.threadCpuUsage = () => ({ user: (threadCpuMicros += 100_000), system: 0 });
+      const error: any = await evaluateWorkflowExpression(LONG_LEGAL, { payload: { items: manyItems(500) } }).catch((e: any) => e);
+      expect(error).toBeInstanceOf(EvaluationBudgetExceededError);
+      expect(error.kind).toBe('cpu');
+      expect(error.message).toMatch(/250ms CPU budget/);
+    });
+  });
+
   describe('request-scope ceiling', () => {
     const cheap = '1 + 1'; // far under every per-evaluation budget
 

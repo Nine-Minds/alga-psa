@@ -8,7 +8,7 @@ import {
   endRequestEvaluation,
   getEvaluationRequestDeadline,
   getExpressionAdmissionStats,
-  processCpuClock,
+  evaluationCpuClock,
   requestCpuMessage,
   requestWallMessage,
   type EvaluationRequestDeadline,
@@ -47,7 +47,7 @@ const MAX_INTERMEDIATE_BYTES = 4 * 1024 * 1024;
 const MAX_OUTPUT_BYTES = 256 * 1024;
 export const DEFAULT_CPU_BUDGET_MS = 250;
 export const DEFAULT_WALL_BUDGET_MS = 2_000;
-// Sampling process CPU costs a syscall; wall/abort checks (cheap) run on every hook.
+// Sampling thread CPU costs a syscall; wall/abort checks (cheap) run on every hook.
 const CPU_SAMPLE_INTERVAL = 16;
 // String-named so JSONata source cannot address it ($-variables cannot contain spaces).
 const LIMITS_BINDING = 'workflow evaluation limits';
@@ -65,7 +65,7 @@ const budgetsByEnvironment = new WeakMap<object, EvaluationBudget>();
  * running code: a single native operation cannot be cut short.
  */
 export type EvaluationLimits = {
-  /** Approximate CPU budget (process CPU time fair-shared across in-flight evaluations). */
+  /** Approximate CPU budget (CPU of the evaluating thread, fair-shared across in-flight evaluations). */
   cpuBudgetMs?: number;
   /** Wall-clock budget, measured from when the evaluation holds its slot. */
   wallBudgetMs?: number;
@@ -653,7 +653,7 @@ function createDeadline(environment: JsonataEnvironment): DeadlineState | undefi
   };
 }
 
-const defaultCpuClock = processCpuClock;
+const defaultCpuClock = evaluationCpuClock;
 
 function throwBudget(message: string, kind: EvaluationBudgetKind): never {
   throw new EvaluationBudgetExceededError(message, kind);
@@ -673,7 +673,7 @@ function checkDeadline(budget: EvaluationBudget): void {
   deadline.checks += 1;
   if (deadline.cpuNow && deadline.checks % CPU_SAMPLE_INTERVAL === 0) {
     const sample = deadline.cpuNow();
-    // Process CPU is shared by every in-flight evaluation; charge a fair share.
+    // The thread is shared by every in-flight evaluation; charge a fair share.
     const inFlight = Math.max(1, getExpressionAdmissionStats().active);
     deadline.cpuSpentMs += (sample - (deadline.lastCpuSample ?? sample)) / inFlight;
     deadline.lastCpuSample = sample;

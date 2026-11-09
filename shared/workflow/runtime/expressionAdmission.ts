@@ -406,13 +406,35 @@ export function requestCpuMessage(cpuBudgetMs: number): string {
   return `Request expression budget exceeded (${cpuBudgetMs}ms CPU for all evaluations in this request)`;
 }
 
-export function processCpuClock(): (() => number) | null {
-  const proc = (globalThis as { process?: { cpuUsage?: () => { user: number; system: number } } }).process;
-  if (!isExpressionAdmissionActive() || typeof proc?.cpuUsage !== 'function') return null;
-  return () => {
-    const usage = proc.cpuUsage!();
-    return (usage.user + usage.system) / 1000;
-  };
+type CpuUsage = { user: number; system: number };
+
+/**
+ * Clock (ms) for the CPU budgets: CPU of the thread running the evaluation, never the whole process.
+ *
+ * process.cpuUsage() sums every thread in the process (V8 GC helpers, the libuv pool, Temporal worker
+ * threads, Turbopack in dev). Charging that to whichever evaluation is in flight failed ordinary
+ * millisecond expressions with "250ms CPU budget" whenever other threads were busy, so it is not used.
+ *
+ * Node >= 23.9 / 22.19 exposes process.threadCpuUsage(). Older Node has no per-thread CPU counter;
+ * there the monotonic clock is used instead: JSONata yields only to microtasks, so time elapsed on this
+ * thread between hook checks bounds this thread's CPU and cannot count other threads.
+ */
+export function evaluationCpuClock(): (() => number) | null {
+  if (!isExpressionAdmissionActive()) return null;
+  const proc = (globalThis as { process?: { threadCpuUsage?: () => CpuUsage } }).process;
+  if (typeof proc?.threadCpuUsage === 'function') {
+    const threadCpuUsage = proc.threadCpuUsage.bind(proc);
+    return () => {
+      const usage = threadCpuUsage();
+      return (usage.user + usage.system) / 1000;
+    };
+  }
+  const perf = (globalThis as { performance?: { now?: () => number } }).performance;
+  if (typeof perf?.now === 'function') {
+    const now = perf.now.bind(perf);
+    return () => now();
+  }
+  return null;
 }
 
 /** The deadline of the enclosing request scope, if any and still open. */
@@ -421,7 +443,7 @@ export function getEvaluationRequestDeadline(): EvaluationRequestDeadline | unde
   return active && !active.finished ? active : undefined;
 }
 
-/** Charge process CPU since the last sample to the request (fair-shared across active slots). */
+/** Charge this thread's CPU since the last sample to the request (fair-shared across active slots). */
 export function chargeRequestCpu(request: EvaluationRequestDeadline): void {
   if (!request.cpuNow) return;
   const sample = request.cpuNow();
@@ -456,7 +478,7 @@ export async function runWithEvaluationRequestBudget<T>(
   if (getEvaluationRequestDeadline()) return fn();
 
   const now = options.now ?? Date.now;
-  const cpuNow = options.cpuNow ?? processCpuClock();
+  const cpuNow = options.cpuNow ?? evaluationCpuClock();
   const controller = new AbortController();
   const request: EvaluationRequestDeadline = {
     startedAt: now(),
