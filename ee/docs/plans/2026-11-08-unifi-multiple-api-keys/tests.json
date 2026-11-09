@@ -1,0 +1,80 @@
+[
+  {
+    "id": "T001",
+    "description": "DB migration: unifi_credentials and unifi_console_routes created with Citus-safe DDL; uniques and indexes present",
+    "implemented": true,
+    "featureIds": ["F001", "F002"]
+  },
+  {
+    "id": "T002",
+    "description": "DB migration: existing single-key tenant in both modes backfills to one 'Default' credential and keeps every scope key and asset mapping",
+    "implemented": true,
+    "featureIds": ["F003", "F004", "F010"]
+  },
+  {
+    "id": "T003",
+    "description": "Unit: fleet client with one credential delegates exactly like the single client; existing consumer tests pass unchanged",
+    "implemented": true,
+    "featureIds": ["F005", "F006"]
+  },
+  {
+    "id": "T004",
+    "description": "Unit: routing with keys A and B — every console resolves to a reaching key, fabric consoles to B, nothing unreachable",
+    "implemented": true,
+    "featureIds": ["F007", "F008", "F019"]
+  },
+  {
+    "id": "T005",
+    "description": "Unit: only key A — fabric consoles yield the 'add a fabric key' warning and independent consoles sync normally",
+    "implemented": true,
+    "featureIds": ["F011", "F019"]
+  },
+  {
+    "id": "T006",
+    "description": "Unit: routes are reused on routine sync and re-probed on console_forbidden, credential removal and full sync",
+    "implemented": true,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T007",
+    "description": "Unit: a 401 on key B marks only B; A's sites keep syncing and B's sites are neither tombstoned nor auto-resolved",
+    "implemented": true,
+    "featureIds": ["F012", "F013"]
+  },
+  {
+    "id": "T008",
+    "description": "Unit: two local controllers get distinct colon-free host ids and distinct scope keys",
+    "implemented": true,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T009",
+    "description": "Unit/DB: saving a new local base URL without a new key is rejected, and no request is issued that carries the old key to the new destination",
+    "implemented": true,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T010",
+    "description": "Unit: credential removal re-routes reachable consoles, marks the rest unreachable, and asks before unmapping sites",
+    "implemented": true,
+    "featureIds": ["F017", "F011"]
+  },
+  {
+    "id": "T011",
+    "description": "UI: credential list renders labels/modes/statuses/consoles-reached with no ids; add, replace, relabel, remove flows",
+    "implemented": true,
+    "featureIds": ["F015", "F016"]
+  },
+  {
+    "id": "T012",
+    "description": "Smoke (dev stack + simulator): two keys, one independent and one fabric site mapped, device sync and alert cycle produce assets and an offline-alert ticket for both",
+    "implemented": true,
+    "featureIds": ["F019", "F011", "F018"]
+  },
+  {
+    "id": "T013",
+    "description": "Docs/release: setup guide covers Independent + per-fabric keys and the release note credits Ryan at Tom's Help Desk",
+    "implemented": true,
+    "featureIds": ["F020"]
+  }
+]

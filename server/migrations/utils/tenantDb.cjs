@@ -412,6 +412,8 @@ const TENANT_TABLE_METADATA = {
   rmm_alerts: { scope: 'tenant' },
   rmm_condition_states: { scope: 'tenant' },
   rmm_condition_transitions: { scope: 'tenant' },
+  unifi_console_routes: { scope: 'tenant' },
+  unifi_credentials: { scope: 'tenant' },
   rmm_integrations: { scope: 'tenant' },
   rmm_maintenance_windows: { scope: 'tenant' },
   rmm_organization_mappings: { scope: 'tenant' },
