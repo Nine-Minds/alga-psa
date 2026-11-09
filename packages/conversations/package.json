@@ -15,8 +15,8 @@
       "import": "./src/files/index.ts"
     },
     "./files/storage": {
-      "types": "./src/files/storageAdapter.ts",
-      "import": "./src/files/storageAdapter.ts"
+      "types": "./src/files/storage.ts",
+      "import": "./src/files/storage.ts"
     },
     "./files/download": {
       "types": "./src/files/download.ts",

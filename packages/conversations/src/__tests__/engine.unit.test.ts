@@ -98,6 +98,17 @@ describe('contracts', () => {
       + readFileSync(join(root, 'packages/conversations/src/files/errors.ts'), 'utf8');
     expect(src).not.toMatch(/from '(node:crypto|knex|next\/[^']*|@alga-psa\/(db|storage)[^']*)'/);
   });
+  it('every exports-map subpath resolves where consumer aliases look (src/<subpath>.ts or src/<subpath>/index.ts)', () => {
+    // server/tsconfig.json, next.config.mjs, server/vitest.config.ts and the worker tsconfigs all map
+    // `@alga-psa/conversations/<subpath>` to `src/<subpath>`; the exports map must agree with them.
+    const pkgDir = join(root, 'packages/conversations');
+    const exportsMap = JSON.parse(readFileSync(join(pkgDir, 'package.json'), 'utf8')).exports as Record<string, { import: string }>;
+    for (const [subpath, target] of Object.entries(exportsMap)) {
+      const sub = subpath === '.' ? '' : subpath.slice(2);
+      const conventional = [join(pkgDir, 'src', `${sub}.ts`), join(pkgDir, 'src', sub, 'index.ts')].map(p => resolve(p));
+      expect(conventional, `${subpath} -> ${target.import}`).toContain(resolve(pkgDir, target.import));
+    }
+  });
   it('no mounted route and no import from server/src/app', () => {
     const files = walk(join(root, 'server/src/app')).filter(f => /route\.tsx?$/.test(f));
     for (const f of files) expect(readFileSync(f, 'utf8'), f).not.toContain('@alga-psa/conversations');
