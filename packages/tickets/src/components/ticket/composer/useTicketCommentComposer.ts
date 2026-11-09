@@ -1,6 +1,8 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import type { MutableRefObject } from 'react';
+import type { PartialBlock } from '@blocknote/core';
 import { dateToWallTimeString, getUserTimeZone, zonedWallTimeToUtc } from '@alga-psa/core';
 import { audienceIsInternal, nativeComposerAudiences, type ComposerAudience } from '../CommentAudienceControl';
 import { useCommentEmailRecipientsDraft, type CommentEmailRecipientsPayload } from '../CommentEmailRecipientsControl';
@@ -61,6 +63,8 @@ export function useTicketCommentComposer(params: TicketCommentComposerParams) {
     defaultNotificationSuppression
   );
   const emailRecipients = useCommentEmailRecipientsDraft();
+  // Content a prefill staged before the editor mounted; the host seeds `initialContent` from it.
+  const [pendingContent, setPendingContent] = useState<PartialBlock[] | null>(null);
 
   // A resolution closes the ticket through the native path, so it never offers `shared_it`.
   const offeredAudiences = configuredAudiences == null
@@ -123,20 +127,100 @@ export function useTicketCommentComposer(params: TicketCommentComposerParams) {
     setNotificationSuppression(defaultNotificationSuppression());
     setIsSchedule(false);
     setScheduledPublishAt(undefined);
+    setPendingContent(null);
   }, [emailRecipients.reset, defaultNotificationSuppression]);
 
   return {
     isOpen, setIsOpen, placement, open,
     isInternal, setIsInternal,
-    configuredAudiences, audienceSelectable, offeredAudiences, chosenAudience, audienceMissing,
+    configuredAudiences, audienceSelectable, portalSubmit, offeredAudiences, chosenAudience, audienceMissing,
     composerAudience, setComposerAudience, handleAudienceChange,
     isResolution, setIsResolution,
     resolutionCloseStatusId, setResolutionCloseStatusId,
     notificationSuppression, setNotificationSuppression, defaultNotificationSuppression,
     isSchedule, setIsSchedule, scheduledPublishAt, setScheduledPublishAt, scheduledInstant, scheduleInstantValid,
     emailRecipients,
+    pendingContent, setPendingContent,
     buildSubmitArgs, resetAfterSubmit,
   };
 }
 
 export type TicketCommentComposer = ReturnType<typeof useTicketCommentComposer>;
+
+// ---------------------------------------------------------------------------------------------
+// Prefill (`base-composer-prefill`): a handle a host's caller uses to put text, and optionally
+// visibility / audience / resolution, into the composer. No caller exists in this card.
+// ---------------------------------------------------------------------------------------------
+
+export interface TicketComposerPrefill {
+  content: PartialBlock[];
+  visibility?: 'client' | 'internal';
+  audience?: ComposerAudience;
+  resolution?: boolean;
+}
+
+export type TicketComposerPrefillResult = { ok: true } | { ok: false; reason: 'dirty' | 'read-only' };
+
+export interface TicketComposerHandle {
+  prefill(prefill: TicketComposerPrefill, opts?: { replace?: boolean }): TicketComposerPrefillResult;
+  isOpen(): boolean;
+  hasContent(): boolean;
+}
+
+/** The slice of BlockNote's editor a prefill needs; keeps this file free of editor internals. */
+export interface PrefillEditor {
+  document: ReadonlyArray<{ id: string }>;
+  replaceBlocks(blocksToRemove: string[], blocksToInsert: PartialBlock[]): void;
+}
+
+export interface ComposerPrefillParams {
+  composer: TicketCommentComposer;
+  /** A read-only screen refuses. */
+  readOnly: boolean;
+  /** The guard's tracked state: whether the editor holds typed text. */
+  hasContent: boolean;
+  editorRef: MutableRefObject<PrefillEditor | null>;
+  /**
+   * What the host does with changed draft content (classic: track + forward; Bento: also arm Send).
+   * Called with the prefilled content so the submit path sends what is shown.
+   */
+  onContentChange: (content: PartialBlock[]) => void;
+}
+
+/**
+ * Rules: refuse when read-only; refuse a dirty composer unless `replace`; open a closed composer keeping the
+ * current placement; apply resolution, then audience through the controller's own rules (an audience that is
+ * not offered is dropped, so resolution + `shared_it` keeps the resolution and drops the audience); a bare
+ * visibility is ignored when an audience is required or on the portal, which cannot post internally. Never
+ * confirms: whether to ask first is the caller's UI.
+ */
+export function useComposerPrefill({ composer, readOnly, hasContent, editorRef, onContentChange }: ComposerPrefillParams): TicketComposerHandle {
+  const latest = useRef({ composer, readOnly, hasContent, onContentChange });
+  latest.current = { composer, readOnly, hasContent, onContentChange };
+
+  return useMemo<TicketComposerHandle>(() => ({
+    prefill(prefill, opts) {
+      const { composer: c, readOnly: ro, hasContent: dirty, onContentChange: changed } = latest.current;
+      if (ro) return { ok: false, reason: 'read-only' };
+      if (dirty && !opts?.replace) return { ok: false, reason: 'dirty' };
+
+      if (!c.isOpen) c.open(c.placement);
+      if (prefill.resolution != null) c.setIsResolution(prefill.resolution);
+      if (prefill.audience != null && c.audienceSelectable) {
+        const nativeOnly = (prefill.resolution ?? c.isResolution) && prefill.audience === 'shared_it';
+        const offered = c.configuredAudiences != null && c.configuredAudiences.includes(prefill.audience) && !nativeOnly;
+        if (offered) c.handleAudienceChange(prefill.audience);
+      } else if (prefill.visibility != null && !c.audienceSelectable && !c.portalSubmit) {
+        c.setIsInternal(prefill.visibility === 'internal');
+      }
+
+      const editor = editorRef.current;
+      if (editor) editor.replaceBlocks(editor.document.map((block) => block.id), prefill.content);
+      else c.setPendingContent(prefill.content);
+      changed(prefill.content);
+      return { ok: true };
+    },
+    isOpen: () => latest.current.composer.isOpen,
+    hasContent: () => latest.current.hasContent,
+  }), [editorRef]);
+}

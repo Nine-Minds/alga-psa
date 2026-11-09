@@ -2,9 +2,9 @@
 
 import { toast } from 'react-hot-toast';
 import { useComposerAudiences, type ComposerAudience } from '../CommentAudienceControl';
-import React, { use, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { use, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type Ref } from 'react';
 import dynamic from 'next/dynamic';
-import type { PartialBlock } from '@blocknote/core';
+import type { BlockNoteEditor, PartialBlock } from '@blocknote/core';
 import { Activity, AlertTriangle, ArrowDownUp, CheckCircle, Clock, Lock, MessageSquare, MessageSquarePlus } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -21,7 +21,7 @@ import RichTextEditorSkeleton from '@alga-psa/ui/components/skeletons/RichTextEd
 import { buildCommentThreadGroups, HybridThreadNode, type CommentThreadGroup } from '@alga-psa/ui/components';
 import InlineReplyComposer from '@alga-psa/ui/components/InlineReplyComposer';
 import { COMPOSER_MAX_HEIGHT } from '@alga-psa/ui/components/composerSizing';
-import { useTicketCommentComposer, NO_STATUS_CHANGE } from './../composer/useTicketCommentComposer';
+import { useTicketCommentComposer, useComposerPrefill, NO_STATUS_CHANGE, type TicketComposerHandle } from './../composer/useTicketCommentComposer';
 import { ComposerAudienceOrVisibility } from '../composer/ComposerAudienceOrVisibility';
 import { useComposerDirtyGuard } from '@alga-psa/ui/editor/useComposerDirtyGuard';
 import { ClampedContent } from '@alga-psa/ui/components/ClampedContent';
@@ -144,6 +144,8 @@ interface BentoTimelineTileProps {
   resolveTicketAttachmentViewUrl?: (document: { document_id?: string; file_id?: string }) => string;
   /** Opt-in per-comment Cc/Bcc on public replies (MSP only). */
   allowEmailRecipients?: boolean;
+  /** Optional handle for callers that prefill the composer (AI draft, share, synthesis). */
+  composerHandleRef?: Ref<TicketComposerHandle>;
   /** The ticket's client, used to rank its contacts first in suggestions. */
   clientId?: string | null;
   className?: string;
@@ -430,6 +432,7 @@ export function BentoTimelineTile({
   deleteDraftTicketAttachmentImagesAction,
   resolveTicketAttachmentViewUrl,
   allowEmailRecipients = false,
+  composerHandleRef,
   clientId,
   className,
 }: BentoTimelineTileProps) {
@@ -514,7 +517,17 @@ export function BentoTimelineTile({
   // hasDraft (which only gates Send and never resets on clearing), this tracks the
   // editor's current content. It lives here, not in a slot, so it covers both the
   // top slot and the bottom dock, which render the same composer.
-  const { trackContent: trackComposeContent, clear: clearComposeContent } = useComposerDirtyGuard(showComposer, `${id}-compose`);
+  const { trackContent: trackComposeContent, clear: clearComposeContent, hasContent: composeHasContent } = useComposerDirtyGuard(showComposer, `${id}-compose`);
+  const handleComposeContentChange = useCallback((content: PartialBlock[]) => {
+    onNewCommentContentChange(content);
+    setHasDraft(true);
+    trackComposeContent(content);
+  }, [onNewCommentContentChange, trackComposeContent]);
+  const composeEditorRef = useRef<BlockNoteEditor<any, any, any> | null>(null);
+  const composerPrefill = useComposerPrefill({
+    composer: composerState, readOnly, hasContent: composeHasContent, editorRef: composeEditorRef, onContentChange: handleComposeContentChange,
+  });
+  useImperativeHandle(composerHandleRef, () => composerPrefill, [composerPrefill]);
   // Proxy for "the tile header is still on screen" — the header itself lives
   // inside BentoTile, so the filter row directly beneath it is the sentinel.
   const headerAnchorRef = useRef<HTMLDivElement>(null);
@@ -541,6 +554,7 @@ export function BentoTimelineTile({
     onDocumentsChanged: onClipboardImageUploaded,
     onDiscard: () => {
       onNewCommentContentChange(DEFAULT_BLOCK);
+      composerState.setPendingContent(null);
       setHasDraft(false); clearComposeContent(); setShowComposer(false); setIsScheduleToggle(false); setScheduledPublishAt(undefined);
       setIsResolutionToggle(false);
       // onDiscard runs only on a real discard (not on submit, not on "Continue editing"), so the host
@@ -896,12 +910,9 @@ export function BentoTimelineTile({
         {...withDataAutomationId({ id: `${id}-composer-editor` })}
         key={editorKey}
         roomName={`ticket-${ticketId}`}
-        initialContent={DEFAULT_BLOCK}
-        onContentChange={(content: PartialBlock[]) => {
-          onNewCommentContentChange(content);
-          setHasDraft(true);
-          trackComposeContent(content);
-        }}
+        initialContent={composerState.pendingContent ?? DEFAULT_BLOCK}
+        editorRef={composeEditorRef}
+        onContentChange={handleComposeContentChange}
         searchMentions={searchUsersForMentions}
         uploadFile={composeUploadSession.uploadFile}
         snippets={cannedResponseSnippets}

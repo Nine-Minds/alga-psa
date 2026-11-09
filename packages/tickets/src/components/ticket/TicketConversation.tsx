@@ -2,19 +2,19 @@
 
 import { toast } from 'react-hot-toast';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import React, { useState, useMemo, useEffect, useCallback, useRef, Suspense } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef, useImperativeHandle, Suspense, type Ref } from 'react';
 import dynamic from 'next/dynamic';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import { useComposerAudiences, type ComposerAudience } from './CommentAudienceControl';
-import { useTicketCommentComposer, NO_STATUS_CHANGE } from './composer/useTicketCommentComposer';
+import { useTicketCommentComposer, useComposerPrefill, NO_STATUS_CHANGE, type TicketComposerHandle } from './composer/useTicketCommentComposer';
 import { ComposerAudienceOrVisibility } from './composer/ComposerAudienceOrVisibility';
 import { ArrowUpDown } from 'lucide-react';
 import { IComment, ITicket } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
 import { filterHiddenNoiseComments } from '../../lib/commentNoise';
-import { PartialBlock } from '@blocknote/core';
+import { PartialBlock, type BlockNoteEditor } from '@blocknote/core';
 import RichTextEditorSkeleton from '@alga-psa/ui/components/skeletons/RichTextEditorSkeleton';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import CommentThreadDrawer from '@alga-psa/ui/components/CommentThreadDrawer';
@@ -144,6 +144,8 @@ interface TicketConversationProps {
    * component and deliberately leaves it off.
    */
   allowEmailRecipients?: boolean;
+  /** Optional handle for callers that prefill the composer (AI draft, share, synthesis). */
+  composerHandleRef?: Ref<TicketComposerHandle>;
 }
 
 const ALL_COMMENTS_TAB_ID = 'all-comments';
@@ -188,6 +190,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   reactionRefreshVersion = 0,
   externalLinksByCommentId = {},
   allowEmailRecipients = false,
+  composerHandleRef,
 }) => {
   const { t } = useTranslation('features/tickets');
   const dataSource = useTicketDataSource();
@@ -276,12 +279,19 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   // Drawer/Dialog so Escape or an overlay click asks before dropping it.
   // Full-page ticket view: no Dialog/Drawer to guard, so the page-level registry
   // makes prev/next ticket navigation confirm and reload/history chords blocked.
-  const { trackContent: trackComposeContent, clear: clearComposeContent } = useComposerDirtyGuard(showEditor, `${compId}-compose`);
+  const { trackContent: trackComposeContent, clear: clearComposeContent, hasContent: composeHasContent } = useComposerDirtyGuard(showEditor, `${compId}-compose`);
 
   const handleComposeContentChange = React.useCallback((content: PartialBlock[]) => {
     trackComposeContent(content);
     onNewCommentContentChange(content);
   }, [onNewCommentContentChange, trackComposeContent]);
+
+  // Lets a caller put text into the composer (see `useComposerPrefill`); unset hosts are unaffected.
+  const composeEditorRef = useRef<BlockNoteEditor<any, any, any> | null>(null);
+  const composerPrefill = useComposerPrefill({
+    composer, readOnly, hasContent: composeHasContent, editorRef: composeEditorRef, onContentChange: handleComposeContentChange,
+  });
+  useImperativeHandle(composerHandleRef, () => composerPrefill, [composerPrefill]);
 
   // The composer remounts empty after a successful submit (editorKey bump).
   useEffect(() => {
@@ -291,6 +301,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const discardComposeEditor = React.useCallback(() => {
     onNewCommentContentChange(DEFAULT_BLOCK);
     clearComposeContent();
+    composer.setPendingContent(null);
     setShowEditor(false);
     // Runs only when the discard really happens (not on 'keep editing'), so a host can drop what it staged beside the composer.
     dataSource.screen.onComposerCancel?.();
@@ -367,6 +378,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       if (success) {
         console.log('Comment added successfully, closing editor');
         composeUploadSession.resetDraftTracking();
+        composer.setPendingContent(null);
         setShowEditor(false);
       } else {
         console.log('Comment addition failed, keeping editor open');
@@ -917,7 +929,8 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             {...withDataAutomationId({ id: `${compId}-editor` })}
             key={editorKey}
             roomName={`ticket-${ticket.ticket_id}`}
-            initialContent={DEFAULT_BLOCK}
+            initialContent={composer.pendingContent ?? DEFAULT_BLOCK}
+            editorRef={composeEditorRef}
             onContentChange={handleComposeContentChange}
             searchMentions={searchUsersForMentions}
             uploadFile={composeUploadSession.uploadFile}
