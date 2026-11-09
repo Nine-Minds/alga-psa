@@ -9,4 +9,3 @@ export function coManagedPortableNativeFilePath(tenant: string, input: unknown):
   if (!((parts[0] === tenant && parts.length >= 2) || (parts[0] === 'pdfs' && parts[1] === tenant && parts.length >= 3))) throw new CoManagedSharedWorkError();
   return input;
 }
-

@@ -9,19 +9,27 @@
 
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import AssetDashboardClient from './AssetDashboardClient';
-import type { AssetListResponse } from '@alga-psa/types';
+import type { AssetListResponse, AssetQueryParams } from '@alga-psa/types';
 
 const mockListAssets = vi.fn();
 const mockGetClientMaintenanceSummaries = vi.fn();
 const mockGetAssetTypes = vi.fn();
 const mockGetAssetCountsByType = vi.fn();
 
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
+
 vi.mock('./custody/CustodyBadge', () => ({ useCustodyBadges: () => new Map(), CustodyBadge: () => null }));
 vi.mock('./warranty/RmaBadge', () => ({ useRmaBadges: () => new Map(), RmaBadge: () => null }));
+vi.mock('../actions/assetNumberingActions', () => ({
+  createMinimalAssetForLabelIntake: vi.fn(),
+  completeScannedAssetReservation: vi.fn(),
+  findAssetByScannedTag: vi.fn(),
+}));
+
 vi.mock('../actions/assetActions', () => ({
   listAssets: (...args: unknown[]) => mockListAssets(...args),
   bulkUpdateAssets: vi.fn(),
@@ -280,17 +288,38 @@ const workstationEntry = {
 };
 
 function initialAssets(): AssetListResponse {
-  return { assets: allAssets, total: allAssets.length, page: 1, limit: 10 } as AssetListResponse;
+  return {
+    assets: allAssets,
+    total: allAssets.length,
+    page: 1,
+    limit: 10,
+    asset_type_counts: { workstation: 1, door_access: 1, mystery_thing: 1 },
+  };
 }
 
 describe('AssetDashboardClient custom types (T314)', () => {
   beforeEach(() => {
     mockListAssets.mockReset();
-    mockListAssets.mockImplementation(async (params: any) => {
-      const filtered = params?.asset_type
-        ? allAssets.filter((item) => item.asset_type === params.asset_type)
+    mockListAssets.mockImplementation(async (params: AssetQueryParams) => {
+      const search = params.search?.toLowerCase();
+      const matching = search
+        ? allAssets.filter((item) => item.name.toLowerCase().includes(search))
         : allAssets;
-      return { assets: filtered, total: filtered.length, page: params?.page ?? 1, limit: params?.limit ?? 10 };
+      const typeFilter = params?.asset_types ?? (params?.asset_type ? [params.asset_type] : []);
+      const filtered = typeFilter.length > 0
+        ? matching.filter((item) => typeFilter.includes(item.asset_type))
+        : matching;
+      const asset_type_counts: Record<string, number> = {};
+      for (const item of matching) {
+        asset_type_counts[item.asset_type] = (asset_type_counts[item.asset_type] ?? 0) + 1;
+      }
+      return {
+        assets: filtered,
+        total: filtered.length,
+        page: params?.page ?? 1,
+        limit: params?.limit ?? 10,
+        asset_type_counts,
+      };
     });
     mockGetClientMaintenanceSummaries.mockReset();
     mockGetClientMaintenanceSummaries.mockResolvedValue({});
@@ -341,7 +370,7 @@ describe('AssetDashboardClient custom types (T314)', () => {
 
     await waitFor(() => {
       expect(mockListAssets).toHaveBeenLastCalledWith(
-        expect.objectContaining({ asset_type: 'door_access' })
+        expect.objectContaining({ asset_types: ['door_access'] })
       );
     });
 
@@ -353,6 +382,38 @@ describe('AssetDashboardClient custom types (T314)', () => {
     });
   });
 
+  it('joins the results of every selected type bubble in one request per click', async () => {
+    render(<AssetDashboardClient initialAssets={initialAssets()} />);
+
+    const doorChip = await waitFor(() => {
+      const el = document.getElementById('asset-type-breakdown-door_access');
+      expect(el).toBeTruthy();
+      return el as HTMLButtonElement;
+    });
+    await waitFor(() => expect(mockListAssets).toHaveBeenCalled());
+    mockListAssets.mockClear();
+
+    await userEvent.click(doorChip);
+    await waitFor(() => {
+      expect(mockListAssets).toHaveBeenLastCalledWith(expect.objectContaining({ asset_types: ['door_access'] }));
+    });
+    await userEvent.click(document.getElementById('asset-type-breakdown-workstation')!);
+
+    await waitFor(() => {
+      expect(mockListAssets).toHaveBeenLastCalledWith(
+        expect.objectContaining({ asset_types: ['door_access', 'workstation'] })
+      );
+    });
+    const table = document.getElementById('asset-table')!;
+    await waitFor(() => {
+      expect(table.textContent).toContain('Door 42');
+      expect(table.textContent).toContain('WS-1');
+      expect(table.textContent).not.toContain('Mystery Box');
+    });
+    expect(mockListAssets).toHaveBeenCalledTimes(2);
+    expect(mockListAssets.mock.calls.every(([params]) => params.asset_type === undefined)).toBe(true);
+  });
+
   it('shows the by-type breakdown with registry labels (F313 wiring)', async () => {
     render(<AssetDashboardClient initialAssets={initialAssets()} />);
 
@@ -361,5 +422,63 @@ describe('AssetDashboardClient custom types (T314)', () => {
       expect(chip).toBeTruthy();
       expect(chip!.textContent).toContain('Door Access System');
     });
+  });
+
+  it('updates the list and facet together from one action when search changes', async () => {
+    render(<AssetDashboardClient initialAssets={initialAssets()} />);
+    await waitFor(() => expect(mockListAssets).toHaveBeenCalled());
+    mockListAssets.mockClear();
+
+    fireEvent.change(screen.getByLabelText('asset-search-input'), { target: { value: 'Door' } });
+
+    await waitFor(() => {
+      expect(mockListAssets).toHaveBeenCalledWith(expect.objectContaining({ search: 'Door' }));
+      expect(document.getElementById('asset-table')?.textContent).toContain('Door 42');
+      expect(document.getElementById('asset-table')?.textContent).not.toContain('WS-1');
+      expect(document.getElementById('asset-type-breakdown-door_access')?.textContent).toContain('1');
+      expect(document.getElementById('asset-type-breakdown-workstation')).toBeNull();
+    });
+    expect(mockListAssets).toHaveBeenCalledTimes(1);
+    expect(mockGetAssetCountsByType).not.toHaveBeenCalled();
+  });
+
+  it('ignores a stale list response for both rows and type counts', async () => {
+    render(<AssetDashboardClient initialAssets={initialAssets()} />);
+    await waitFor(() => expect(mockListAssets).toHaveBeenCalled());
+
+    let resolveSlow: (response: AssetListResponse) => void = () => {
+      throw new Error('Slow request was not started');
+    };
+    let resolveFast: (response: AssetListResponse) => void = () => {
+      throw new Error('Fast request was not started');
+    };
+    mockListAssets.mockImplementation((params: AssetQueryParams) => {
+      if (params.search === 'slow') {
+        return new Promise<AssetListResponse>((resolve) => { resolveSlow = resolve; });
+      }
+      if (params.search === 'fast') {
+        return new Promise<AssetListResponse>((resolve) => { resolveFast = resolve; });
+      }
+      throw new Error(`Unexpected asset search: ${params.search}`);
+    });
+
+    const search = screen.getByLabelText('asset-search-input');
+    fireEvent.change(search, { target: { value: 'slow' } });
+    await waitFor(() => expect(mockListAssets).toHaveBeenCalledWith(expect.objectContaining({ search: 'slow' })));
+    fireEvent.change(search, { target: { value: 'fast' } });
+    await waitFor(() => expect(mockListAssets).toHaveBeenCalledWith(expect.objectContaining({ search: 'fast' })));
+
+    await act(async () => resolveFast({
+      assets: [allAssets[0]], total: 1, page: 1, limit: 10, asset_type_counts: { workstation: 1 },
+    }));
+    await act(async () => resolveSlow({
+      assets: [allAssets[1]], total: 1, page: 1, limit: 10, asset_type_counts: { door_access: 99 },
+    }));
+
+    expect(document.getElementById('asset-table')?.textContent).toContain('WS-1');
+    expect(document.getElementById('asset-table')?.textContent).not.toContain('Door 42');
+    expect(document.getElementById('asset-type-breakdown-workstation')?.textContent).toContain('1');
+    expect(document.getElementById('asset-type-breakdown-door_access')).toBeNull();
+    expect(mockGetAssetCountsByType).not.toHaveBeenCalled();
   });
 });

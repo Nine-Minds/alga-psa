@@ -19,6 +19,7 @@ import {
 import { normalizeLiveRecurringStorage, normalizeRecurringStorageForLineType } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
 import { isContractLineTimingNotAllowedError } from '@alga-psa/shared/billingClients/contractLineTimingRule';
 import { toDateOnly } from '../lib/billing/dateOnly';
+import { assertContractLineMutationAuthorized, ContractScopeError } from '../lib/billing/contractAuthorization';
 
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -40,7 +41,7 @@ function contractLineMappingActionErrorFrom(error: unknown): ContractLineMapping
     return actionError(error.message, 'msp/contract-lines:errors.line.advanceTimingNotAllowed');
   }
 
-  if (error instanceof ContractLineMappingDomainError) {
+  if (error instanceof ContractLineMappingDomainError || error instanceof ContractScopeError) {
     if (error.message.startsWith('Permission denied:')) {
       return permissionError(error.message);
     }
@@ -142,6 +143,7 @@ type DetailedContractLineResultRow =
   Record<string, unknown> & {
     cadence_owner?: IContractLineMapping['cadence_owner'] | null;
     billing_timing?: IContractLineMapping['billing_timing'] | null;
+    billing_profile_id?: string | null;
   };
 
 export async function ensureTemplateLineSnapshot(
@@ -176,6 +178,8 @@ export async function ensureTemplateLineSnapshot(
       template_id: templateId,
       template_line_name: contractLine.contract_line_name,
       description: contractLine.description ?? null,
+      invoice_line_description: contractLine.invoice_line_description ?? null,
+      invoice_line_subtitle: contractLine.invoice_line_subtitle ?? null,
       billing_frequency: contractLine.billing_frequency,
       line_type: contractLine.contract_line_type ?? null,
       service_category: contractLine.service_category ?? null,
@@ -197,6 +201,8 @@ export async function ensureTemplateLineSnapshot(
       template_id: templateId,
       template_line_name: contractLine.contract_line_name,
       description: contractLine.description ?? null,
+      invoice_line_description: contractLine.invoice_line_description ?? null,
+      invoice_line_subtitle: contractLine.invoice_line_subtitle ?? null,
       billing_frequency: contractLine.billing_frequency,
       line_type: contractLine.contract_line_type ?? null,
       service_category: contractLine.service_category ?? null,
@@ -560,6 +566,8 @@ export const getDetailedContractLines = withAuth(async (user, { tenant }, contra
             'lines.invoice_line_description',
             'lines.created_at',
             'lines.template_line_name as contract_line_name',
+            'lines.invoice_line_description',
+            'lines.invoice_line_subtitle',
             'lines.billing_frequency',
             trx.raw('false as is_custom'),
             'lines.line_type as contract_line_type',
@@ -567,6 +575,8 @@ export const getDetailedContractLines = withAuth(async (user, { tenant }, contra
             'lines.round_up_to_nearest',
             'tfc.base_rate as default_rate',
             trx.raw('NULL::uuid as location_id'),
+            // LEVERAGE: pattern detailed-template-line-select — same template-line projection as ContractLineMapping.getDetailedContractLines; the two selects must be kept in step by hand
+            trx.raw('NULL::uuid as billing_profile_id'),
           ])
           .orderBy('lines.display_order', 'asc') as unknown as DetailedContractLineResultRow[];
 
@@ -752,9 +762,7 @@ export const updateContractLineAssociation = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx) => {
-      if (!await hasPermission(user, 'billing', 'update', trx)) {
-        throw new ContractLineMappingDomainError('Permission denied: Cannot update contract line associations');
-      }
+      await assertContractLineMutationAuthorized(trx, user, tenant, contractId, contractLineId);
 
       // Prepare data specifically for the database update
       // Use a more generic type to allow assigning null
@@ -825,7 +833,7 @@ export const updateContractLineAssociation = withAuth(async (
       await assertContractIsAuthorable(trx, tenant, contractId);
 
       return normalizeContractLineMapping(
-        await ContractLineMapping.updateContractLineAssociation(contractId, contractLineId, dbUpdateData),
+        await ContractLineMapping.updateContractLineAssociation(trx, tenant, contractId, contractLineId, dbUpdateData),
       );
     });
   } catch (error) {

@@ -12,6 +12,7 @@ const NOW_ISO = '2026-06-12T12:00:00.000Z';
 
 type Row = Record<string, any>;
 
+// LEVERAGE: pattern asset-actions-inmemory-harness — identity operations also require shared query semantics in these action doubles.
 const h = vi.hoisted(() => {
   const TENANT = 'a0000000-0000-4000-8000-00000000000a';
 
@@ -51,6 +52,7 @@ const h = vi.hoisted(() => {
       { tenant: TENANT, status_id: 'st-retired', slug: 'retired', label: 'Retired', kind: 'archived', is_builtin: true, is_active: true, display_order: 4 },
     ];
     updateCalls.length = 0;
+    dbState.tenants = [{ tenant: TENANT, asset_tag_claims_required: false }];
     uuidCounter = 0;
   };
 
@@ -59,6 +61,7 @@ const h = vi.hoisted(() => {
   const isRaw = (value: unknown): value is { __raw: true; sql: string; bindings: string } =>
     Boolean(value && typeof value === 'object' && (value as any).__raw === true);
 
+  // LEVERAGE: pattern asset-action-query-fake — These action suites duplicate an in-memory SQL adapter.
   class QB {
     private readonly table: string;
     private objWheres: Array<Record<string, any>> = [];
@@ -75,7 +78,8 @@ const h = vi.hoisted(() => {
 
     private notWheres: Array<Record<string, any>> = [];
 
-    whereNot(arg1: Record<string, any>) {
+    whereNot(arg1: Record<string, any> | string, arg2?: unknown) {
+      if (typeof arg1 === 'string') { this.notWheres.push({ [stripPrefix(arg1)]: arg2 }); return this; }
       const normalized: Record<string, any> = {};
       for (const [key, value] of Object.entries(arg1)) normalized[stripPrefix(key)] = value;
       this.notWheres.push(normalized);
@@ -93,6 +97,10 @@ const h = vi.hoisted(() => {
       this.objWheres.push(normalized);
       return this;
     }
+
+    forKeyShare() { return this; }
+
+    whereRaw(_sql: string, values: unknown[]) { return this.where({ asset_tag_normalized: values[0] }); }
 
     andWhere(arg1: any, arg2?: any) {
       return this.where(arg1, arg2);
@@ -130,6 +138,8 @@ const h = vi.hoisted(() => {
     leftJoin(_table: any, _fn: any) {
       return this;
     }
+
+    forUpdate() { return this; }
 
     orderBy() {
       return this;
@@ -172,6 +182,13 @@ const h = vi.hoisted(() => {
       this.rows.push(...incoming);
       const result: any = Promise.resolve(incoming);
       result.returning = () => Promise.resolve(incoming);
+      result.onConflict = (cols: string[]) => ({ ignore: async () => {
+        for (const row of incoming) {
+          if (this.rows.some(existing => existing !== row && cols.every(col => existing[col] === row[col]))) {
+            this.rows.splice(this.rows.indexOf(row), 1);
+          }
+        }
+      } });
       return result;
     }
 

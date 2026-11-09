@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../../shared/test-utils/assetFixtures';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -37,7 +38,7 @@ describe('date trigger source database integration', () => {
         created_at: '2020-06-15T00:00:00.000Z',
         updated_at: '2020-06-15T00:00:00.000Z',
       });
-      await trx('assets').insert([
+      await insertTestAssets(trx, [
         { tenant: tenantId, asset_id: activeAssetId, asset_tag: `date-${activeAssetId}`, name: 'Active warranty fixture', status: 'active', asset_type: 'hardware', client_id: clientId, warranty_end_date: '2099-06-15T18:30:00.000Z' },
         { tenant: tenantId, asset_id: retiredAssetId, asset_tag: `date-${retiredAssetId}`, name: 'Retired warranty fixture', status: 'retired', asset_type: 'hardware', client_id: clientId, warranty_end_date: '2099-06-15T18:30:00.000Z' },
       ]);

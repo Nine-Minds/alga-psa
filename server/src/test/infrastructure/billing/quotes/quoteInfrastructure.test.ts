@@ -1,3 +1,4 @@
+import { JSDOM } from 'jsdom';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -531,8 +532,10 @@ describe('Quote infrastructure', () => {
 
     const reloadedItem = await context.db('quote_items').where({ tenant: context.tenantId, quote_item_id: item.quote_item_id }).first();
     expect(reloadedItem.tax_region).toBe('US-NY');
-    expect(Number(reloadedItem.tax_rate)).toBe(9);
-    expect(Number(reloadedItem.tax_amount)).toBeGreaterThan(0);
+    // alga-2026-0002902: the stored rate is the rate charged — 8.875, not a
+    // rounded 9 beside a tax amount computed at 8.875.
+    expect(Number(reloadedItem.tax_rate)).toBe(8.875);
+    expect(Number(reloadedItem.tax_amount)).toBe(Math.ceil((10000 * 8.875) / 100));
   });
 
   it('T056: Discount: percentage discount calculates correct amount from target item total', async () => {
@@ -829,8 +832,9 @@ describe('Quote infrastructure', () => {
     const reloadedQuote = await loadQuoteRow(quote.quote_id);
     expect(Number(reloadedQuote.subtotal)).toBe(1000);
     expect(Number(reloadedQuote.discount_total)).toBe(100);
-    expect(Number(reloadedQuote.tax)).toBe(100);
-    expect(Number(reloadedQuote.total_amount)).toBe(1000);
+    // 10% of the discounted base: 1000 - 100 = 900.
+    expect(Number(reloadedQuote.tax)).toBe(90);
+    expect(Number(reloadedQuote.total_amount)).toBe(990);
   });
 
   it('T064: Totals: adding an item triggers recalculation of all totals', async () => {
@@ -2719,13 +2723,20 @@ describe('Quote infrastructure', () => {
     // with only the browser print mocked.
     const capturedHtml: { value: string } = { value: '' };
     const pageMock = {
+      setJavaScriptEnabled: vi.fn().mockResolvedValue(undefined),
+      setRequestInterception: vi.fn().mockResolvedValue(undefined),
+      on: vi.fn(),
       setContent: vi.fn(async (_html: string) => {
         capturedHtml.value = _html;
       }),
       pdf: vi.fn().mockResolvedValue(Buffer.from('%PDF-quote-lines')),
       close: vi.fn().mockResolvedValue(undefined),
     };
-    const browserMock = { newPage: vi.fn().mockResolvedValue(pageMock) };
+    const contextMock = {
+      newPage: vi.fn().mockResolvedValue(pageMock),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+    const browserMock = { createBrowserContext: vi.fn().mockResolvedValue(contextMock) };
     const getBrowserSpy = vi.spyOn(browserPoolService, 'getBrowser').mockResolvedValue(browserMock as never);
     const releaseSpy = vi.spyOn(browserPoolService, 'releaseBrowser').mockResolvedValue(undefined);
 
@@ -2733,9 +2744,16 @@ describe('Quote infrastructure', () => {
       const pdf = await service.generatePDF({ quoteId: quote.quote_id, userId: context.userId });
       expect(Buffer.isBuffer(pdf)).toBe(true);
       expect(pdf.toString('utf8')).toContain('%PDF-quote-lines');
-      expect(capturedHtml.value).toContain('<!doctype html>');
+      expect(pageMock.setJavaScriptEnabled).toHaveBeenCalledWith(false);
+      expect(pageMock.setRequestInterception).toHaveBeenCalledWith(true);
+      expect(contextMock.close).toHaveBeenCalledOnce();
+      const document = new JSDOM(capturedHtml.value).window.document;
+      expect(document.doctype?.name).toBe('html');
       expect(capturedHtml.value).toContain('Monthly');
-      expect(capturedHtml.value).toContain('<div class="ast-table-cell-line" style="font-weight:600;line-height:1.3">Managed Support A</div>');
+      const descriptionLine = Array.from(document.querySelectorAll<HTMLElement>('.ast-table-cell-line'))
+        .find((line) => line.textContent === 'Managed Support A');
+      expect(descriptionLine?.style.fontWeight).toBe('600');
+      expect(descriptionLine?.style.lineHeight).toBe('1.3');
       expect(capturedHtml.value).toContain('-$5.00');
       expect(capturedHtml.value).toContain('$50.00');
     } finally {

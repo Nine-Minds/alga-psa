@@ -39,6 +39,11 @@ import {
   ExpiringHourBlocksNotificationJobData,
 } from '@alga-psa/jobs/handlers/expiringHourBlocksNotificationHandler';
 import { expireQuotesHandler, ExpireQuotesJobData } from './handlers/expireQuotesHandler';
+import {
+  FINALIZE_LINK_ACCEPTED_QUOTE_JOB,
+  finalizeLinkAcceptedQuoteHandler,
+  FinalizeLinkAcceptedQuoteJobData,
+} from './handlers/finalizeLinkAcceptedQuoteHandler';
 import { opportunityDisciplineHandler, OpportunityDisciplineJobData } from './handlers/opportunityDisciplineHandler';
 import { opportunityWeeklyDigestHandler, OpportunityWeeklyDigestJobData } from './handlers/opportunityWeeklyDigestHandler';
 import { opportunityGeneratorsHandler, OpportunityGeneratorsJobData } from './handlers/opportunityGeneratorsHandler';
@@ -392,6 +397,18 @@ export async function registerAllJobHandlers(
         await expireQuotesHandler(data);
       },
       retry: { maxAttempts: 3 },
+    },
+    registerOpts
+  );
+
+  JobHandlerRegistry.register<FinalizeLinkAcceptedQuoteJobData & BaseJobData>(
+    {
+      name: FINALIZE_LINK_ACCEPTED_QUOTE_JOB,
+      handler: async (_jobId, data) => {
+        await finalizeLinkAcceptedQuoteHandler(data);
+      },
+      retry: { maxAttempts: 3 },
+      timeoutMs: 300000, // PDF render + SMTP
     },
     registerOpts
   );
@@ -979,6 +996,16 @@ export async function registerAllJobHandlers(
     registerOpts
   );
 
+  // CM L6b: declare the co-managed SLA observation job as data. It is capability-gated in the fan-out,
+  // so a plain PSA tenant is filtered out before any tenant SQL. Best-effort: absent, nothing is scheduled.
+  // Runs after every worker registration: its import graph is large and must not delay them.
+  try {
+    (await import('./capabilityJobFilter')).wireJobCapabilityFilter();
+    (await import('./handlers/coManagedSlaObservationJob')).defineCoManagedSlaObservationJob();
+  } catch (error) {
+    logger.error('Failed to define the co-managed SLA observation job', { error });
+  }
+
   // Mark registry as initialized
   JobHandlerRegistry.markInitialized();
 
@@ -997,6 +1024,7 @@ export function getAvailableJobHandlers(): string[] {
     'generate-invoice',
     'invoice_zip',
     'invoice_email',
+    FINALIZE_LINK_ACCEPTED_QUOTE_JOB,
     PROJECT_DATE_READINESS_JOB,
     // Credits
     'expired-credits',

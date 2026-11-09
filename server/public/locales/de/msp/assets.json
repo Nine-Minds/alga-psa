@@ -739,6 +739,14 @@
     "ownership": {
       "client": "Im Kundeneigentum",
       "msp": "Im MSP-Eigentum"
+    },
+    "create": {
+      "success": "Asset {{tag}} erstellt",
+      "autoTag": "Nächsten automatischen Tag zuweisen",
+      "preview": "Vorschau des nächsten Tags: {{tag}} (die Vorschau reserviert keine Nummer)",
+      "selectClient": "Kunden für die Vorschau auswählen",
+      "addAnother": "Speichern und weiteres Asset hinzufügen",
+      "submit": "Asset erstellen"
     }
   },
   "assetFormClient": {
@@ -1058,7 +1066,10 @@
       "vendor": "Lieferant",
       "purchaseCost": "Kaufpreis",
       "orderNumber": "Bestellnr.",
-      "ownership": "Eigentum"
+      "ownership": "Eigentum",
+      "autoAssetTag": "Automatisch zuweisen",
+      "assetTagPreviewLoading": "Wählen Sie einen Kunden, um den nächsten Tag als Vorschau anzuzeigen",
+      "previewNotReserved": "Nur Vorschau; Zuweisung beim Speichern"
     },
     "placeholders": {
       "workstationOsType": "z. B. Windows, macOS, Linux",
@@ -1447,7 +1458,182 @@
   "maintenanceCommandCenter": {
     "title": "Wartungsleitstelle",
     "description": "Der nächste Fälligkeitstermin richtet sich nach dem tatsächlichen Abschlussdatum.",
-    "assetsLink": "Assets"
+    "assetsLink": "Assets",
+    "notRecorded": "Nicht erfasst",
+    "system": "System",
+    "checklist": {
+      "complete": "Erledigt",
+      "incomplete": "Nicht erledigt"
+    },
+    "weekdays": {
+      "0": "So",
+      "1": "Mo",
+      "2": "Di",
+      "3": "Mi",
+      "4": "Do",
+      "5": "Fr",
+      "6": "Sa"
+    },
+    "cadence": {
+      "custom": "Benutzerdefiniert",
+      "customSchedule": "Benutzerdefinierter Zeitplan",
+      "everyUnit": "Einmal pro {{unit}}",
+      "everyCountUnit": "Alle {{count}} {{unit}}",
+      "onDays": "{{base}} am {{days}}",
+      "onDatesOfMonth": "{{base}} am {{dates}}",
+      "frequency": {
+        "daily": "Täglich",
+        "weekly": "Wöchentlich",
+        "monthly": "Monatlich",
+        "quarterly": "Vierteljährlich",
+        "yearly": "Jährlich"
+      }
+    },
+    "urgency": {
+      "overdue": "{{count}} T. überfällig",
+      "dueToday": "heute fällig",
+      "inDays": "in {{count}} T."
+    },
+    "actions": {
+      "cancel": "Abbrechen",
+      "refresh": "Aktualisieren",
+      "newPlan": "Neuer Wartungsplan",
+      "skip": "Überspringen",
+      "skipTooltip": "Mit Pflichtangabe eines Grundes überspringen — der Plan rückt zum nächsten Wartungstermin vor",
+      "complete": "Wartung abschließen",
+      "createTicket": "Ticket erstellen",
+      "openTicket": "Ticket öffnen ↗",
+      "pausePlan": "Plan pausieren"
+    },
+    "assetPicker": {
+      "title": "Asset auswählen",
+      "searchPlaceholder": "Nach Name, Tag oder Seriennummer suchen",
+      "loading": "Assets werden geladen…",
+      "loadFailed": "Assets konnten nicht geladen werden.",
+      "empty": "Keine Assets gefunden.",
+      "showingFirst": "Die ersten {{shown}} von {{total}} werden angezeigt — grenzen Sie Ihre Suche ein."
+    },
+    "kpi": {
+      "overdue": "Überfällig",
+      "dueToday": "Heute fällig",
+      "upcoming7d": "Nächste 7 Tage",
+      "openTickets": "Offene Tickets",
+      "compliance90d": "Termintreue (90 Tage)",
+      "clickToFilter": "Zum Filtern klicken",
+      "allClear": "Alles im grünen Bereich",
+      "quietWeek": "Ruhige Woche steht bevor",
+      "linkedToOccurrences": "Mit Wartungsterminen verknüpft",
+      "onTimeCompletion": "Fristgerechter Abschluss"
+    },
+    "tabs": {
+      "queue": "Arbeitsliste",
+      "plans": "Planliste",
+      "history": "Verlauf"
+    },
+    "filters": {
+      "searchPlaceholder": "Pläne, Assets oder Kunden suchen",
+      "actionable": "Zu erledigen",
+      "allStatuses": "Alle Status",
+      "completed": "Abgeschlossen",
+      "skipped": "Übersprungen",
+      "button": "Filter",
+      "allClients": "Alle Kunden",
+      "allAssetTypes": "Alle Asset-Typen",
+      "allPlanTypes": "Alle Plantypen",
+      "due": "Fällig",
+      "clearAll": "Alle zurücksetzen",
+      "done": "Fertig",
+      "clientChip": "Kunde"
+    },
+    "viewMode": {
+      "list": "Liste",
+      "calendar": "Kalender"
+    },
+    "queue": {
+      "actionableTitle": "Zu erledigende Wartungstermine",
+      "plansTitle": "Aktive Planliste (mit Wartungsterminen)",
+      "loading": "Wartungen werden geladen…",
+      "empty": "Keine Wartungstermine entsprechen diesen Filtern.",
+      "emptyFiltered": "Keine Wartungstermine entsprechen diesen Filtern. Entfernen Sie einen Filter oder erweitern Sie den Fälligkeitszeitraum.",
+      "emptyHistory": "Abgeschlossene und übersprungene Wartungstermine erscheinen hier, sobald die Wartung abgeschlossen ist.",
+      "emptyPlans": "Offene Wartungstermine erscheinen hier, sobald die Zeitpläne neue Arbeit erzeugen.",
+      "clearBeyond": "Außer diesen {{count}} Einträgen ist die Arbeitsliste leer — erweitern Sie den Fälligkeitszeitraum oder prüfen Sie die Planliste.",
+      "allCaughtUp": "Alles erledigt",
+      "nextDueIn": "— nächste Fälligkeit in {{count}} T.",
+      "shownCount": "{{shown}} angezeigt · {{open}} offen ·",
+      "inHistory": "{{count}} im Verlauf",
+      "itemCount_one": "· {{count}} Eintrag",
+      "itemCount_other": "· {{count}} Einträge",
+      "overdueCount": "{{count}} überfällig",
+      "ticketChip": "Ticket"
+    },
+    "miniMonth": {
+      "atAGlance": "{{month}} auf einen Blick",
+      "overdue": "überfällig",
+      "today": "heute",
+      "upcoming": "anstehend"
+    },
+    "calendar": {
+      "dueCount": "{{count}} fällig",
+      "today": "Heute",
+      "moreCount": "+{{count}} weitere",
+      "legend": "Legende",
+      "scheduled": "Geplant"
+    },
+    "fields": {
+      "asset": "Asset",
+      "type": "Typ",
+      "cadence": "Intervall",
+      "nextDue": "Nächste Fälligkeit",
+      "lastDone": "Zuletzt durchgeführt",
+      "assignee": "Zugewiesen an",
+      "createdBy": "Erstellt von",
+      "linkedTicket": "Verknüpftes Ticket"
+    },
+    "detail": {
+      "noSelection": "Kein Wartungstermin ausgewählt",
+      "noSelectionHint": "Wählen Sie einen Wartungstermin aus der Arbeitsliste aus, um das zugehörige Asset, den Plan, das verknüpfte Ticket und die Aktionen zur Durchführung zu sehen — oder setzen Sie die Filter zurück, um weitere Arbeit anzuzeigen.",
+      "unassignedClient": "Kein Kunde zugewiesen",
+      "dueSuffix": "· fällig am {{date}}",
+      "nextDueTooltip": "Die nächste Fälligkeit wird ab dem tatsächlichen Abschlussdatum berechnet.",
+      "never": "Nie",
+      "unassigned": "Nicht zugewiesen",
+      "assignViaTicket": "Über Ticket zuweisen",
+      "ticketClosed": "Geschlossen",
+      "ticketOpen": "Offen",
+      "noTicketYet": "Noch keines",
+      "execution": "Durchführung",
+      "noChecklistPrefix": "Dieser Plan hat keine Checkliste —",
+      "addStepsLink": "fügen Sie beim Asset Schritte hinzu,",
+      "noChecklistSuffix": "um Technikern eine Anleitung zu geben.",
+      "timeline": "Zeitverlauf"
+    },
+    "timeline": {
+      "created": "Wartungstermin erstellt",
+      "ticketLinked": "Ticket verknüpft — {{ticket}}",
+      "dueRepeats": "Fällig — Wiederholung: {{cadence}}",
+      "completedBy": "Abgeschlossen von {{name}}{{notes}}",
+      "skippedBy": "Übersprungen von {{name}}"
+    },
+    "evidence": {
+      "completionTitle": "Abschlussnachweis",
+      "performed": "Durchgeführt am:",
+      "performedBy": "Durchgeführt von:",
+      "notes": "Notizen:",
+      "checklist": "Checkliste:",
+      "skipTitle": "Nachweis des Überspringens",
+      "reason": "Grund:",
+      "closedBy": "Geschlossen von:",
+      "closed": "Geschlossen am:"
+    },
+    "skip": {
+      "title": "Wartung überspringen",
+      "reason": "Grund"
+    },
+    "ticket": {
+      "title": "Wartung: {{plan}}",
+      "description": "Wartung ({{type}}) fällig am {{date}}. Wartungstermin: {{occurrenceId}}"
+    }
   },
   "maintenanceCompletionDialog": {
     "errors": {
@@ -1776,6 +1962,7 @@
       "updateAssets": "Zugriff verweigert: Assets können nicht aktualisiert werden"
     },
     "asset": {
+      "tagAlreadyExists": "Dieses Asset-Tag wird bereits verwendet oder ist reserviert. Scannen Sie es, um das vorhandene Asset zu finden, oder geben Sie ein anderes Tag ein.",
       "notFoundRefresh": "Asset nicht gefunden. Es wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "clientNotFound": "Kunde nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "maintenanceNotFound": "Wartungsplan nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
@@ -2146,5 +2333,30 @@
     "badge": {
       "label": "RMA {{number}} · {{status}}"
     }
+  },
+  "scanLookup": {
+    "title": "Asset-Tag scannen",
+    "input": "Tag scannen oder eingeben",
+    "loading": "Suche läuft…",
+    "find": "Asset suchen",
+    "ambiguous": "Mehrere sichtbare Assets haben diesen Tag. Bitten Sie einen Administrator, die doppelten Tags zu bereinigen.",
+    "notFound": "Kein sichtbares Asset stimmt genau mit diesem Tag überein.",
+    "failed": "Dieser Tag konnte nicht gesucht werden. Prüfen Sie Ihre Zugriffsrechte und versuchen Sie es erneut."
+  },
+  "fullIntake": {
+    "title": "Asset hinzufügen",
+    "description": "Wählen Sie eine Mandantennummer oder behalten Sie einen bereits gedruckten Tag bei.",
+    "back": "Zurück zu Assets"
+  },
+  "labelFirstIntake": {
+    "start": "Erfassung per Etikett",
+    "title": "Erfassung per Etikett starten",
+    "help": "Erstellen Sie einen dauerhaften Asset-Datensatz mit Mindestangaben und drucken Sie zwei Exemplare seines Etiketts. Scannen Sie später eines davon, um denselben Datensatz zu vervollständigen.",
+    "client": "Kunde",
+    "clientRequired": "Wählen Sie einen Kunden, um fortzufahren.",
+    "createFailed": "Der Erfassungsdatensatz konnte nicht erstellt werden.",
+    "name": "Kurzbeschreibung (optional)",
+    "creating": "Wird erstellt…",
+    "createPrint": "Erstellen und Etikettenpaar drucken"
   }
 }

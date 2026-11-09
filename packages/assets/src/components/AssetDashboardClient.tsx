@@ -47,6 +47,9 @@ import { useRangeSelection } from '@alga-psa/ui/hooks';
 import { toast } from 'react-hot-toast';
 import { formatClientLocation } from '../lib/formatClientLocation';
 import { QuickAddAsset } from './QuickAddAsset';
+import Link from 'next/link';
+import LabelFirstAssetIntake from './LabelFirstAssetIntake';
+import { AssetTagScanLookup } from './AssetTagScanLookup';
 import { AssetCommandPalette } from './AssetCommandPalette';
 import { AssetTypeBreakdownCard } from './AssetTypeBreakdownCard';
 import { useAssetTypeRegistry } from './shared/useAssetTypeOptions';
@@ -202,6 +205,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
 
   const [assets, setAssets] = useState<Asset[]>(initialAssets.assets);
   const [totalAssets, setTotalAssets] = useState(initialAssets.total);
+  const [assetTypeCounts, setAssetTypeCounts] = useState(initialAssets.asset_type_counts);
   const [pageSize, setPageSize] = useState(initialAssets.limit || 10);
   const [currentPage, setCurrentPage] = useState(initialAssets.page || 1);
   const [maintenanceSummaries, setMaintenanceSummaries] = useState<Record<string, ClientMaintenanceSummary>>({});
@@ -507,7 +511,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     return {
       search: debouncedSearchTerm || undefined,
       status: statusFilters.length > 0 ? statusFilters[0] : undefined,
-      asset_type: typeFilters.length > 0 ? typeFilters[0] : undefined,
+      asset_types: typeFilters.length > 0 ? typeFilters : undefined,
       client_id: clientFilters.length > 0 ? clientFilters[0] : undefined,
       agent_status: agentStatusFilters.length > 0 ? (agentStatusFilters[0] as AssetQueryParams['agent_status']) : undefined,
       rmm_managed: rmmManaged,
@@ -599,6 +603,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
 
         setAssets(response.assets);
         setTotalAssets(response.total);
+        setAssetTypeCounts(response.asset_type_counts);
       } catch (error) {
         if (lastAssetsRequestIdRef.current !== requestId) {
           return;
@@ -1530,8 +1535,12 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                 {t('assetDashboardClient.actions.refreshData', { defaultValue: 'Refresh data' })}
               </Button>
               <QuickAddAsset onAssetAdded={() => { void handleAssetAdded(); }} />
+              <Link href="/msp/assets/new" className="inline-flex h-9 items-center rounded-md border px-3 text-sm font-medium">Full add</Link>
+              <LabelFirstAssetIntake />
             </div>
           </div>
+
+          <AssetTagScanLookup />
 
           <Card className="p-4 space-y-4" {...withDataAutomationId({ id: 'asset-toolbar-card' })}>
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -1878,7 +1887,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
 
             <AssetTypeBreakdownCard
               getTypeLabel={getAssetTypeLabel}
-              refreshToken={refreshCounter}
+              counts={assetTypeCounts}
               activeTypes={typeFilters}
               onSelectType={(slug) => toggleFilterValue(typeFilters, slug, setTypeFilters)}
             />

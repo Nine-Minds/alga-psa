@@ -46,6 +46,10 @@
       "import": "./src/lib/geolocation.ts",
       "types": "./src/lib/geolocation.ts"
     },
+    "./boardPolicy": {
+      "import": "./src/boardPolicy.ts",
+      "types": "./src/boardPolicy.ts"
+    },
     "./twoFactorHelpers": {
       "import": "./src/lib/twoFactorHelpers.ts",
       "types": "./src/lib/twoFactorHelpers.ts"
@@ -154,6 +158,7 @@
     "@auth/core": "^0.41.3",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/authorization": "*",
     "@alga-psa/licensing": "*",
     "@alga-psa/ui": "*",
     "jose": "^6.1.3",

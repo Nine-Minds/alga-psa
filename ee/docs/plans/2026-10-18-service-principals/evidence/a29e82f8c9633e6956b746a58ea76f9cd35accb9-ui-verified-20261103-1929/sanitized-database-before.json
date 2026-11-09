@@ -1,0 +1,15 @@
+{
+  "source": "HTTP 201 create response from the authenticated act-as API, captured before QA UI edit; response reflects persisted insert but is not a separate SQL snapshot",
+  "row": {
+    "entry_id": "aaeec38b-8f21-4f2b-91b5-6984b48280ab",
+    "user_id": "bb3d9c78-6da3-4d77-859e-d014d9709f1e",
+    "created_by": "bb3d9c78-6da3-4d77-859e-d014d9709f1e",
+    "updated_by": "bb3d9c78-6da3-4d77-859e-d014d9709f1e",
+    "notes": "Card C direct QA UI verification 2026-11-03",
+    "start_time": "2026-11-05T19:00:00.000Z",
+    "end_time": "2026-11-05T19:15:00.000Z",
+    "time_sheet_id": "00b6fbb9-6e2d-4e01-8ed2-b4f277a1f880",
+    "created_via_principal_id": "4c725ada-2d39-4c46-b7b5-8ebad758b845",
+    "updated_via_principal_id": "4c725ada-2d39-4c46-b7b5-8ebad758b845"
+  }
+}

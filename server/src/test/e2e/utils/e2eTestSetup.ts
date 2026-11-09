@@ -154,7 +154,13 @@ export async function setupE2ETestEnvironment(options: {
         await tenantTable('client_locations').delete();
 
         // API-created clients also own billing profiles; locations can reference them.
+        // Billing cycles reference their billing profile, so remove cycles first.
+        await tenantTable('client_billing_cycles').delete();
         await tenantTable('client_billing_profiles').delete();
+
+        // Ticket templates can be client-scoped (ticket_templates_client_foreign);
+        // detach before deleting clients. Checklist items cascade with their template.
+        await tenantTable('ticket_templates').delete();
 
         // Clean up clients
         await tenantTable('clients').delete();

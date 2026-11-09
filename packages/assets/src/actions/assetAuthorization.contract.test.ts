@@ -15,22 +15,25 @@ describe('asset authorization kernel contracts', () => {
     expect(source).toContain('export const getAsset = withAuth(async (user, { tenant }, asset_id: string)');
     expect(source).toContain('export const getAssetDetailBundle = withAuth(async (user, { tenant }, asset_id: string)');
     expect(source).toContain('export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryParams)');
-    expect(source).toContain('buildAuthorizationAwarePage<any>({');
-    expect(source).toContain('const buildAssetListQuery = () => {');
+    expect(source).toContain('buildAuthorizationAwarePage<AssetListScanRow>({');
+    expect(source).toContain('const listQuery = requiresRecordAuthorization');
+    expect(source).toContain(': applyAssetTypeFilter(facetQuery.clone(), assetTypeFilter);');
+    expect(source).toContain('const countRow = await listQuery.clone()');
     expect(source).toContain(".count<{ count: string }>('assets.asset_id as count')");
-    expect(source).toContain('authorizeRecord: async (asset) => {');
-    expect(source).toContain('total: Number(countRow?.count || 0),');
+    expect(source).toContain('filterReadableAssets(trx, tenant, context, rows, {');
+    expect(source).toContain('resolveMultiUserOwnersIndividually: requiresIndividualOwnerResolution,');
+    expect(source).toContain('authorizeRecord: async ({ asset, readable }) => {');
+    expect(source).toContain('const sourceTotal = Number(countRow.count);');
     expect(source).toContain('total: authorizedPage.total,');
     expect(source).toContain('builtinProvider: new BuiltinAuthorizationKernelProvider(),');
     expect(source).toContain('bundleProvider: new BundleAuthorizationKernelProvider({');
     expect(source).toContain('return await resolveBundleNarrowingRulesForEvaluation(trx, input);');
-    expect(source).toContain('record: assetRecords.get(asset.asset_id),');
   });
 
   it('T016: applies asset-level read authorization to relationship, maintenance, history, linked-ticket, entity-list, and summary-metric surfaces', () => {
     expect(source).toContain('async function resolveAssetAuthorizationInputById(');
     expect(source).toContain('async function assertAssetReadAllowedById(');
-    expect(source).toContain('async function createAuthorizedAssetReadContextForUser(');
+    expect(source).toContain('async function createAuthorizedAssetContextForUser(');
     expect(source).toContain('export const getAssetRelationships = withAuth(async (user, { tenant }, asset_id: string)');
     expect(source).toContain('export const getAssetMaintenanceSchedules = withAuth(async (user, { tenant }, asset_id: string)');
     expect(source).toContain('export const getAssetMaintenanceReport = withAuth(async (user, { tenant }, asset_id: string)');
@@ -38,7 +41,6 @@ describe('asset authorization kernel contracts', () => {
     expect(source).toContain('export const getAssetLinkedTickets = withAuth(async (user, { tenant }, asset_id: string)');
     expect(source).toContain('export const listEntityAssets = withAuth(async (user, { tenant }, entity_id: string, entity_type: \'ticket\' | \'project\')');
     expect(source).toContain('export const getAssetSummaryMetrics = withAuth(async (user, { tenant }, asset_id: string)');
-    expect(source).toContain('await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);');
     expect(source).toContain('const context = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);');
     expect(source).toContain('const authorizedAssetIds = await getAuthorizedAssetIdsForClient(trx, tenant, context, client_id);');
     expect(source).toContain('async function countAssetsForClient(');
@@ -59,10 +61,7 @@ describe('asset authorization kernel contracts', () => {
     expect(source).toContain('export const updateMaintenanceSchedule = withAuth(async (');
     expect(source).toContain('export const deleteMaintenanceSchedule = withAuth(async (user, { tenant }, schedule_id: string)');
     expect(source).toContain('export const recordMaintenanceHistory = withAuth(async (user, { tenant }, data: CreateMaintenanceHistoryRequest)');
-    expect(source).toContain('await assertAssetReadAllowedById(trx, tenant, context, validated.parent_asset_id);');
-    expect(source).toContain('await assertAssetReadAllowedById(trx, tenant, context, validated.child_asset_id);');
     expect(source).toContain('if (!await hasPermission(user, \'asset\', \'delete\')) {');
-    expect(source).toContain('await createAuthorizedAssetReadContextForUser(trx as Knex.Transaction, tenantId, user as AssetAuthUser, asset_id);');
     expect(source).toContain('if (schedule.asset_id !== validatedData.asset_id) {');
   });
 

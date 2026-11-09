@@ -58,8 +58,28 @@ const authorizationKernelMock = vi.hoisted(() => ({
   useRealKernel: false,
 }));
 const bundleRulesMock = vi.hoisted(() => vi.fn<() => Promise<import('@alga-psa/authorization/kernel').BundleNarrowingRule[]>>(async () => []));
-vi.mock('@alga-psa/authorization/bundles/service', () => ({
-  resolveBundleNarrowingRulesForEvaluation: bundleRulesMock,
+vi.mock('@alga-psa/authorization/bundles/service', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/authorization/bundles/service')>()),
+  // Keep the real authorization kernel in the T319 checks while supplying the
+  // snapshot rows that its current evaluation path consumes.
+  loadAuthorizationEvaluationSnapshot: vi.fn(async () => ({
+    roleIds: [],
+    teamIds: [],
+    managedUserIds: [],
+    rules: (await bundleRulesMock()).map((rule) => ({
+      rule_id: rule.id,
+      resource_type: rule.resource,
+      action: rule.action,
+      template_key: rule.templateKey,
+      constraint_key: null,
+      config: {
+        selectedBoardIds: rule.selectedBoardIds,
+        selectedClientIds: rule.selectedClientIds,
+        constraints: rule.constraints,
+        redactedFields: rule.redactedFields,
+      },
+    })),
+  })),
 }));
 vi.mock('@alga-psa/authorization/kernel', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@alga-psa/authorization/kernel')>();

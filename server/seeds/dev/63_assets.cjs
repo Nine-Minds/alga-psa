@@ -108,7 +108,23 @@ exports.seed = async function(knex) {
             }
         ];
 
-        await knex('assets').insert(assets);
+        // These fixtures have fixed physical tags and IDs. Claim them before
+        // insertion, just like manual intake; reseeding must not allocate or
+        // replace the printed tags. All fixture tags are canonical ASCII.
+        await knex.transaction(async (trx) => {
+            await trx('asset_tag_claims').insert(assets.map((asset) => ({
+                tenant: asset.tenant,
+                normalized_tag: asset.asset_tag,
+                asset_tag: asset.asset_tag,
+                owner_kind: 'asset',
+                owner_id: asset.asset_id,
+            }))).onConflict(['tenant', 'normalized_tag']).ignore();
+            await trx('assets').insert(assets.map((asset) => ({
+                ...asset,
+                asset_tag_normalized: asset.asset_tag,
+                asset_tag_legacy_exempt: false,
+            })));
+        });
 
         // Insert server assets
         const serverAssets = [
