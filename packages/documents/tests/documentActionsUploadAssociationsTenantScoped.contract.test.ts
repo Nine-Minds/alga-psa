@@ -11,7 +11,8 @@ const uploadAssociationSection = source.slice(
 describe('document upload and association mutation tenant-scoped query contract', () => {
   it('uses structural tenant scoping for association removal and upload helper roots', () => {
     expect(uploadAssociationSection).toContain("tenantScopedTable(trx, 'document_associations', tenant)");
-    expect(uploadAssociationSection).toContain("tenantScopedTable(knex, 'document_folders', tenant)");
+    expect(uploadAssociationSection).toContain("tenantScopedTable(trx, 'document_folders', tenant)");
+    expect(uploadAssociationSection).toContain("tenantScopedTable(trx, 'documents', tenant)");
     expect(uploadAssociationSection).toContain("tenantScopedTable(knex, 'documents', tenant)");
     expect(uploadAssociationSection).not.toContain("trx('document_associations')");
     expect(uploadAssociationSection).not.toContain("knex('document_folders')");
@@ -25,7 +26,7 @@ describe('document upload and association mutation tenant-scoped query contract'
     // Without the folder they land in the library root; without the
     // association nothing ties the image to the article it belongs to.
     expect(uploadAssociationSection).toContain('resolvedFolderPath === INLINE_IMAGE_FOLDER_PATH');
-    expect(uploadAssociationSection).toContain('ensureInlineImageFolder(knex, tenant, authenticatedUserId)');
+    expect(uploadAssociationSection).toContain('ensureInlineImageFolder(trx, tenant, authenticatedUserId)');
     expect(uploadAssociationSection).toContain('if (options.parentDocumentId) {');
     expect(uploadAssociationSection).toContain("entity_type: 'document'");
   });

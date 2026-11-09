@@ -6,6 +6,8 @@ import { createAssetReadContext, filterReadableAssets } from '@alga-psa/authoriz
 import { createProjectReadAuthorizer } from '../../packages/projects/src/lib/projectReadAuthorization';
 import { canAccessAttachmentTicket } from './ticketCommentAttachments';
 import { authorizeAndRedactDocuments } from './documentAuthorization';
+import { getClientContactVisibilityContext } from '@alga-psa/authorization/portal/visibility.server';
+import { applyTicketVisibilityFilter } from '@alga-psa/authorization/portal/visibility';
 
 type AssociationSearchEntity = 'client' | 'contact' | 'ticket' | 'asset' | 'project_task' | 'contract' | 'opportunity' | 'quote';
 type AssociationTargetEntity = AssociationSearchEntity | 'invoice' | 'sales_order' | 'user' | 'team' | 'tenant' | 'document';
@@ -96,13 +98,24 @@ function directClientScope(column: string): SearchScope {
 async function ticketScope(query: Knex.QueryBuilder, conn: Knex.Transaction, tenant: string, user: IUser, alias: string): Promise<void> {
   if (user.user_type !== 'client') return;
   query.where(`${alias}.client_id`, user.clientId ?? '__no_client_scope__');
-  const candidates = await query.clone().clearSelect().clearOrder().select<{ ticket_id: string }[]>(`${alias}.ticket_id`);
-  const allowed: string[] = [];
-  for (const row of candidates) {
-    if (await canAccessAttachmentTicket(conn, tenant, user.user_id, row.ticket_id)) allowed.push(row.ticket_id);
+  if (!user.contact_id) {
+    query.whereRaw('1 = 0');
+    return;
   }
-  if (allowed.length === 0) query.whereRaw('1 = 0');
-  else query.whereIn(`${alias}.ticket_id`, allowed);
+  try {
+    const visibility = await getClientContactVisibilityContext(conn, tenant, user.contact_id);
+    if (!user.clientId || visibility.clientId !== user.clientId) {
+      query.whereRaw('1 = 0');
+      return;
+    }
+    applyTicketVisibilityFilter(query, visibility, {
+      boardColumn: `${alias}.board_id`,
+      contactColumn: `${alias}.contact_name_id`,
+    });
+  } catch {
+    // Visibility metadata failures must narrow search to no tickets.
+    query.whereRaw('1 = 0');
+  }
 }
 
 async function taskScope(query: Knex.QueryBuilder, _conn: Knex.Transaction, _tenant: string, user: IUser): Promise<void> {
@@ -209,29 +222,29 @@ const adapters: Record<AssociationTargetEntity, AssociationTargetAdapter> = {
     },
   },
   contract: {
-    permissionResource: 'contract',
+    permissionResource: 'billing',
     scopeSearch: async (query, _conn, _tenant, user) => {
       if (user.user_type === 'client') query.where('cc.client_id', user.clientId ?? '__no_client_scope__');
     },
     assertTarget: async (conn, tenant, user, id, action) => {
-      if (!await hasTargetPermission(user, 'contract', action, conn)) return false;
+      if (!await hasTargetPermission(user, 'billing', action, conn)) return false;
       const rows = await dbTable(conn, tenant, 'client_contracts').select('client_id').where({ contract_id: id });
       if (user.user_type !== 'client') return rows.length > 0;
       return Boolean(user.clientId && rows.length === 1 && rows[0]?.client_id === user.clientId);
     },
   },
   opportunity: {
-    permissionResource: 'opportunity',
+    permissionResource: 'opportunities',
     scopeSearch: directClientScope('o.client_id'),
-    assertTarget: (conn, tenant, user, id, action) => assertOwnedRecord(conn, tenant, user, action, 'opportunity', async () => {
+    assertTarget: (conn, tenant, user, id, action) => assertOwnedRecord(conn, tenant, user, action, 'opportunities', async () => {
       const row = await dbTable(conn, tenant, 'opportunities').select('client_id').where({ opportunity_id: id }).first();
       return row?.client_id;
     }),
   },
   quote: {
-    permissionResource: 'quote',
+    permissionResource: 'billing',
     scopeSearch: directClientScope('q.client_id'),
-    assertTarget: (conn, tenant, user, id, action) => assertOwnedRecord(conn, tenant, user, action, 'quote', async () => {
+    assertTarget: (conn, tenant, user, id, action) => assertOwnedRecord(conn, tenant, user, action, 'billing', async () => {
       const row = await dbTable(conn, tenant, 'quotes').select('client_id').where({ quote_id: id }).first();
       return row?.client_id;
     }),
@@ -275,7 +288,7 @@ const adapters: Record<AssociationTargetEntity, AssociationTargetAdapter> = {
     assertTarget: async (conn, tenant, user, id, action) => {
       if (!await hasTargetPermission(user, 'document', action, conn)) return false;
       const rows = await dbTable(conn, tenant, 'documents').where({ document_id: id }).select('document_id', 'created_by', 'is_client_visible');
-      return (await authorizeAndRedactDocuments(conn, tenant, user, rows as any)).length === 1;
+      return (await authorizeAndRedactDocuments(conn, tenant, user, rows as any, undefined, action === 'read' ? 'read' : 'update')).length === 1;
     },
   },
 };

@@ -236,7 +236,7 @@ function normalizeDocumentSortBy(sortBy: unknown): SafeDocumentSortField | undef
 }
 
 async function ensureEntityFoldersInitializedInternal(
-  knex: Knex,
+  knex: Knex | Knex.Transaction,
   tenant: string,
   entityId: string,
   entityType: string,
@@ -306,10 +306,11 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
   tenant: string,
   user: IUser,
   documents: T[],
-  verifiedRecipientLifecycleAccess?: (documentId: string) => Promise<boolean>
+  verifiedRecipientLifecycleAccess?: (documentId: string) => Promise<boolean>,
+  action: 'read' | 'update' = 'read'
 ): Promise<T[]> {
   const admitted = await admitMeetingDocumentsForBrowser(trx, tenant, user, documents);
-  const authorized = await authorizeDocumentRows(trx, tenant, user, admitted.documents, verifiedRecipientLifecycleAccess);
+  const authorized = await authorizeDocumentRows(trx, tenant, user, admitted.documents, verifiedRecipientLifecycleAccess, action);
   await admitted.assertCurrent?.();
   return authorized;
 }
@@ -371,6 +372,9 @@ async function assertAuthorizedDocumentSetForMutation(
   documentIds: string[],
   deniedMessage: string = 'Permission denied: Cannot update documents'
 ): Promise<IDocument[] | ActionPermissionError> {
+  if (!await hasPermission(user, 'document', 'update', trx)) {
+    return permissionError(deniedMessage);
+  }
   const uniqueDocumentIds = Array.from(new Set(documentIds.filter((documentId) => typeof documentId === 'string' && documentId.length > 0)));
   if (uniqueDocumentIds.length === 0) {
     return [];
@@ -388,7 +392,9 @@ async function assertAuthorizedDocumentSetForMutation(
     trx,
     tenant,
     user,
-    documents as IDocument[]
+    documents as IDocument[],
+    undefined,
+    'update'
   );
 
   if (authorizedDocuments.length !== uniqueDocumentIds.length) {
@@ -2459,123 +2465,9 @@ export const uploadDocument = withAuth(async (
       if (isActionPermissionErrorResult(typeResult)) return typeResult;
       const { typeId, isShared } = typeResult;
 
-      // Auto-file into entity folder if folder_path not set and entity context exists
-      // Best-effort: never fails the upload, wraps in try/catch
-      let resolvedFolderPath: string | undefined = options.folder_path || undefined;
 
-      // Inline editor images name a tenant-level folder that no wizard creates.
-      // Provision it on first use so a customer never has to make it by hand,
-      // and so a missing folder cannot quietly dump the image into the root.
-      if (resolvedFolderPath === INLINE_IMAGE_FOLDER_PATH) {
-        try {
-          await ensureInlineImageFolder(knex, tenant, authenticatedUserId);
-        } catch (folderError) {
-          console.error('[uploadDocument] Failed to provision the inline image folder:', folderError);
-        }
-      }
-
-      if (!resolvedFolderPath) {
-        try {
-          const primaryEntity = options.ticketId ? { id: options.ticketId, type: 'ticket' }
-            : options.projectTaskId ? { id: options.projectTaskId, type: 'project_task' }
-            : options.contractId ? { id: options.contractId, type: 'contract' }
-            : options.opportunityId ? { id: options.opportunityId, type: 'opportunity' }
-            : options.clientId ? { id: options.clientId, type: 'client' }
-            : options.assetId ? { id: options.assetId, type: 'asset' }
-            : null;
-
-          if (primaryEntity) {
-            await ensureEntityFoldersInitializedInternal(
-              knex,
-              tenant,
-              primaryEntity.id,
-              primaryEntity.type,
-              authenticatedUserId
-            );
-
-            const entityFolderQuery = () =>
-              tenantScopedTable(knex, 'document_folders', tenant)
-                .andWhere('entity_id', primaryEntity.id)
-                .andWhere('entity_type', primaryEntity.type);
-
-            if (primaryEntity.type === 'ticket') {
-              const attachmentsFolder = await entityFolderQuery()
-                .andWhere('folder_path', '/Tickets/Attachments')
-                .select('folder_path')
-                .first();
-
-              if (attachmentsFolder) {
-                resolvedFolderPath = attachmentsFolder.folder_path;
-              }
-            }
-
-            if (!resolvedFolderPath) {
-              // Fall back to the first entity-scoped folder for older setups.
-              const entityFolder = await entityFolderQuery()
-                .orderBy('folder_path', 'asc')
-                .select('folder_path')
-                .first();
-
-              if (entityFolder) {
-                resolvedFolderPath = entityFolder.folder_path;
-              }
-            }
-          }
-        } catch {
-          // Silent failure — best-effort, never fails the upload
-        }
-      }
-
-      // Create document record
-      // Documents uploaded by client users are automatically client-visible.
-      // For internal users, inherit visibility from the target folder.
-      let isClientVisible = options.isClientVisible === true || user.user_type === 'client';
-      if (!isClientVisible && options.isClientVisible !== false && resolvedFolderPath) {
-        try {
-          const folderVisibilityQuery = tenantScopedTable(knex, 'document_folders', tenant)
-            .select('is_client_visible')
-            .andWhere('folder_path', resolvedFolderPath);
-
-          const entityId = options.ticketId || options.projectTaskId || options.contractId
-            || options.opportunityId || options.clientId || options.assetId;
-          const entityType = options.ticketId ? 'ticket'
-            : options.projectTaskId ? 'project_task'
-            : options.contractId ? 'contract'
-            : options.opportunityId ? 'opportunity'
-            : options.clientId ? 'client'
-            : options.assetId ? 'asset'
-            : null;
-
-          if (entityId && entityType) {
-            folderVisibilityQuery.andWhere('entity_id', entityId).andWhere('entity_type', entityType);
-          }
-
-          const targetFolder = await folderVisibilityQuery.first();
-          if (targetFolder?.is_client_visible) {
-            isClientVisible = true;
-          }
-        } catch {
-          // Silent failure — best-effort, never fails the upload
-        }
-      }
-      const document: IDocument = {
-        document_id: uuidv4(),
-        document_name: fileData.name,
-        type_id: isShared ? null : typeId,
-        shared_type_id: isShared ? typeId : undefined,
-        user_id: authenticatedUserId,
-        order_number: 0,
-        created_by: authenticatedUserId,
-        tenant,
-        file_id: uploadResult.file_id,
-        storage_path: uploadResult.storage_path,
-        mime_type: fileData.type,
-        file_size: fileData.size,
-        folder_path: resolvedFolderPath,
-        is_client_visible: options.commentAttachmentDraft ? true : isClientVisible,
-      };
-
-      // Use transaction for document creation and associations
+      // Folder, document, and association writes share the authorization transaction.
+      let document: IDocument | undefined;
       const result: { success: true; document: IDocument } | ActionPermissionError = await withTransaction(knex, async (trx: Knex.Transaction): Promise<{ success: true; document: IDocument } | ActionPermissionError> => {
         for (const target of requestedTargets) {
           if (!await assertAuthorizedAssociationTarget(trx, tenant, user, target.entityType, target.entityId, 'update')) {
@@ -2586,6 +2478,123 @@ export const uploadDocument = withAuth(async (
           const parent = await assertAuthorizedDocumentSetForMutation(trx, tenant, user, [options.parentDocumentId], 'Permission denied: Cannot access parent document');
           if (isActionPermissionErrorResult(parent)) return parent;
         }
+        // Auto-file into entity folder if folder_path not set and entity context exists
+        // Best-effort: never fails the upload, wraps in try/catch
+        let resolvedFolderPath: string | undefined = options.folder_path || undefined;
+
+        // Inline editor images name a tenant-level folder that no wizard creates.
+        // Provision it on first use so a customer never has to make it by hand,
+        // and so a missing folder cannot quietly dump the image into the root.
+        if (resolvedFolderPath === INLINE_IMAGE_FOLDER_PATH) {
+          try {
+            await ensureInlineImageFolder(trx, tenant, authenticatedUserId);
+          } catch (folderError) {
+            console.error('[uploadDocument] Failed to provision the inline image folder:', folderError);
+          }
+        }
+
+        if (!resolvedFolderPath) {
+          try {
+            const primaryEntity = options.ticketId ? { id: options.ticketId, type: 'ticket' }
+              : options.projectTaskId ? { id: options.projectTaskId, type: 'project_task' }
+              : options.contractId ? { id: options.contractId, type: 'contract' }
+              : options.opportunityId ? { id: options.opportunityId, type: 'opportunity' }
+              : options.clientId ? { id: options.clientId, type: 'client' }
+              : options.assetId ? { id: options.assetId, type: 'asset' }
+              : null;
+
+            if (primaryEntity) {
+              await ensureEntityFoldersInitializedInternal(
+                trx,
+                tenant,
+                primaryEntity.id,
+                primaryEntity.type,
+                authenticatedUserId
+              );
+
+              const entityFolderQuery = () =>
+                tenantScopedTable(trx, 'document_folders', tenant)
+                  .andWhere('entity_id', primaryEntity.id)
+                  .andWhere('entity_type', primaryEntity.type);
+
+              if (primaryEntity.type === 'ticket') {
+                const attachmentsFolder = await entityFolderQuery()
+                  .andWhere('folder_path', '/Tickets/Attachments')
+                  .select('folder_path')
+                  .first();
+
+                if (attachmentsFolder) {
+                  resolvedFolderPath = attachmentsFolder.folder_path;
+                }
+              }
+
+              if (!resolvedFolderPath) {
+                // Fall back to the first entity-scoped folder for older setups.
+                const entityFolder = await entityFolderQuery()
+                  .orderBy('folder_path', 'asc')
+                  .select('folder_path')
+                  .first();
+
+                if (entityFolder) {
+                  resolvedFolderPath = entityFolder.folder_path;
+                }
+              }
+            }
+          } catch {
+            // Silent failure — best-effort, never fails the upload
+          }
+        }
+
+        // Create document record
+        // Documents uploaded by client users are automatically client-visible.
+        // For internal users, inherit visibility from the target folder.
+        let isClientVisible = options.isClientVisible === true || user.user_type === 'client';
+        if (!isClientVisible && options.isClientVisible !== false && resolvedFolderPath) {
+          try {
+            const folderVisibilityQuery = tenantScopedTable(trx, 'document_folders', tenant)
+              .select('is_client_visible')
+              .andWhere('folder_path', resolvedFolderPath);
+
+            const entityId = options.ticketId || options.projectTaskId || options.contractId
+              || options.opportunityId || options.clientId || options.assetId;
+            const entityType = options.ticketId ? 'ticket'
+              : options.projectTaskId ? 'project_task'
+              : options.contractId ? 'contract'
+              : options.opportunityId ? 'opportunity'
+              : options.clientId ? 'client'
+              : options.assetId ? 'asset'
+              : null;
+
+            if (entityId && entityType) {
+              folderVisibilityQuery.andWhere('entity_id', entityId).andWhere('entity_type', entityType);
+            }
+
+            const targetFolder = await folderVisibilityQuery.first();
+            if (targetFolder?.is_client_visible) {
+              isClientVisible = true;
+            }
+          } catch {
+            // Silent failure — best-effort, never fails the upload
+          }
+        }
+        document = {
+          document_id: uuidv4(),
+          document_name: fileData.name,
+          type_id: isShared ? null : typeId,
+          shared_type_id: isShared ? typeId : undefined,
+          user_id: authenticatedUserId,
+          order_number: 0,
+          created_by: authenticatedUserId,
+          tenant,
+          file_id: uploadResult.file_id,
+          storage_path: uploadResult.storage_path,
+          mime_type: fileData.type,
+          file_size: fileData.size,
+          folder_path: resolvedFolderPath,
+          is_client_visible: options.commentAttachmentDraft ? true : isClientVisible,
+        };
+
+        if (!document) throw new Error('Document upload was not initialized');
         await tenantScopedTable(trx, 'documents', tenant).insert(document);
         if (options.commentAttachmentDraft) {
           await tenantDb(trx, tenant).table('ticket_comment_attachments').insert({
@@ -2693,6 +2702,7 @@ export const uploadDocument = withAuth(async (
       });
 
       if (isActionPermissionErrorResult(result)) return result;
+      if (!document) throw new Error('Document upload did not produce a document');
       unclaimedStorageFileId = undefined; // The document transaction committed; never remove shared storage.
 
       if (createdAssociations.length > 0) {

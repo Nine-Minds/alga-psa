@@ -192,7 +192,8 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
   tenant: string,
   user: IUser,
   documents: T[],
-  verifiedRecipientLifecycleAccess?: (documentId: string) => Promise<boolean>
+  verifiedRecipientLifecycleAccess?: (documentId: string) => Promise<boolean>,
+  action: 'read' | 'update' = 'read'
 ): Promise<T[]> {
   if (documents.length === 0) {
     return [];
@@ -256,7 +257,7 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
         subject: authorizationSubject,
         resource: {
           type: 'document',
-          action: 'read',
+          action,
           id: document.document_id,
         },
         record,

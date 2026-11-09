@@ -16,6 +16,16 @@ let clientBUserId: string;
 let taskAId: string;
 let taskBId: string;
 let ticketBId: string;
+let ticketAVisibleId: string;
+let ticketAVisibleSecondId: string;
+let ticketAHiddenBoardId: string;
+let clientAContactId: string;
+let visibleBoardId: string;
+let hiddenBoardId: string;
+let visibilityGroupId: string;
+let contractBId: string;
+let quoteBId: string;
+let opportunityBId: string;
 let documentAId: string;
 let documentBId: string;
 let statusOrder = 0;
@@ -129,12 +139,12 @@ describe('document association cross-client authorization', () => {
     mspUserId = await createUser(db, tenantId, { username: `msp-${uuidv4().slice(0, 8)}` });
     clientAId = await createClient(db, tenantId, 'Association Client A');
     clientBId = await createClient(db, tenantId, 'Association Client B');
-    const contactAId = uuidv4();
-    await table('contacts').insert({ tenant: tenantId, contact_name_id: contactAId, client_id: clientAId, full_name: 'Client A User' });
+    clientAContactId = uuidv4();
+    await table('contacts').insert({ tenant: tenantId, contact_name_id: clientAContactId, client_id: clientAId, full_name: 'Client A User' });
     clientAUserId = uuidv4();
     await table('users').insert({
       tenant: tenantId, user_id: clientAUserId, username: `client-${clientAUserId.slice(0, 8)}`,
-      email: `${clientAUserId}@test.com`, hashed_password: 'test', user_type: 'client', contact_id: contactAId,
+      email: `${clientAUserId}@test.com`, hashed_password: 'test', user_type: 'client', contact_id: clientAContactId,
       first_name: 'Client', last_name: 'A', is_inactive: false,
     });
     const contactBId = uuidv4();
@@ -147,11 +157,55 @@ describe('document association cross-client authorization', () => {
     });
     taskAId = await seedProjectTask(clientAId, 'Client A task');
     taskBId = await seedProjectTask(clientBId, 'Client B secret task');
+    visibleBoardId = uuidv4();
+    hiddenBoardId = uuidv4();
+    visibilityGroupId = uuidv4();
+    await table('boards').insert([
+      { tenant: tenantId, board_id: visibleBoardId, board_name: 'Client A Visible Board', is_default: false, is_inactive: false },
+      { tenant: tenantId, board_id: hiddenBoardId, board_name: 'Client A Hidden Board', is_default: false, is_inactive: false },
+    ]);
+    await table('client_portal_visibility_groups').insert({ tenant: tenantId, group_id: visibilityGroupId, client_id: clientAId, name: 'Association ticket board scope' });
+    await table('client_portal_visibility_group_boards').insert({ tenant: tenantId, group_id: visibilityGroupId, board_id: visibleBoardId });
+    await table('contacts').where({ contact_name_id: clientAContactId }).update({ portal_visibility_group_id: visibilityGroupId });
+    const makeTicket = async (title: string, boardId: string) => {
+      const ticketId = uuidv4();
+      await table('tickets').insert({
+        tenant: tenantId, ticket_id: ticketId, ticket_number: `A-${ticketId.slice(0, 6)}`,
+        title, client_id: clientAId, board_id: boardId, contact_name_id: clientAContactId,
+        entered_by: mspUserId, entered_at: new Date(), updated_at: new Date(), attributes: {},
+      });
+      return ticketId;
+    };
+    ticketAVisibleId = await makeTicket('Client A board ticket visible one', visibleBoardId);
+    ticketAVisibleSecondId = await makeTicket('Client A board ticket visible two', visibleBoardId);
+    ticketAHiddenBoardId = await makeTicket('Client A hidden board secret', hiddenBoardId);
     ticketBId = uuidv4();
     await table('tickets').insert({
       tenant: tenantId, ticket_id: ticketBId, ticket_number: `B-${ticketBId.slice(0, 6)}`,
       title: 'Client B secret ticket', client_id: clientBId, entered_by: mspUserId, entered_at: new Date(),
       updated_at: new Date(), attributes: {},
+    });
+    contractBId = uuidv4();
+    await table('contracts').insert({
+      tenant: tenantId, contract_id: contractBId, contract_name: 'Client B secret contract',
+      owner_client_id: clientBId, billing_frequency: 'monthly', currency_code: 'USD', status: 'active',
+      is_active: true, is_template: false,
+    });
+    await table('client_contracts').insert({
+      tenant: tenantId, client_contract_id: uuidv4(), client_id: clientBId, contract_id: contractBId,
+      start_date: new Date('2026-01-01'), is_active: true,
+    });
+    quoteBId = uuidv4();
+    await table('quotes').insert({
+      tenant: tenantId, quote_id: quoteBId, client_id: clientBId, quote_number: `QB-${quoteBId.slice(0, 6)}`,
+      title: 'Client B secret quote', status: 'draft', version: 1, is_template: false, currency_code: 'USD',
+      subtotal: 0, tax: 0, total_amount: 0, discount_total: 0,
+    });
+    opportunityBId = uuidv4();
+    await table('opportunities').insert({
+      tenant: tenantId, opportunity_id: opportunityBId, opportunity_number: `OB-${opportunityBId.slice(0, 6)}`,
+      client_id: clientBId, title: 'Client B secret opportunity', opportunity_type: 'new_logo', owner_id: mspUserId,
+      currency_code: 'USD', last_activity_at: new Date(), created_by: mspUserId,
     });
     documentAId = await seedDocument();
     documentBId = await seedDocument(clientBId, mspUserId, 'Client B document');
@@ -164,52 +218,73 @@ describe('document association cross-client authorization', () => {
     ({ getClientDocuments } = await import('@alga-psa/client-portal/actions'));
   }, 120_000);
 
-  afterAll(async () => { await db?.destroy(); });
+  afterAll(async () => {
+    if (db && tenantId) {
+      await table('document_associations').whereIn('document_id', [documentAId, documentBId]).del();
+      await table('documents').whereIn('document_id', [documentAId, documentBId]).del();
+      const uploadedDocuments = await table('documents').where({ created_by: mspUserId, document_name: 'msp-cross-client.txt' }).select('document_id');
+      const uploadedIds = uploadedDocuments.map((document: { document_id: string }) => document.document_id);
+      if (uploadedIds.length) {
+        await table('document_associations').whereIn('document_id', uploadedIds).del();
+        await table('documents').whereIn('document_id', uploadedIds).del();
+      }
+      if (mspUploadedFileId) await table('external_files').where({ file_id: mspUploadedFileId }).del();
+      await table('document_folders').whereIn('entity_id', [taskAId, taskBId]).del();
+      if (mspStorageConfigurationId) await table('storage_configurations').where({ configuration_id: mspStorageConfigurationId }).del();
+      if (mspStorageProviderId) await table('storage_providers').where({ provider_id: mspStorageProviderId }).del();
+      await table('tickets').whereIn('ticket_id', [ticketBId, ticketAVisibleId, ticketAVisibleSecondId, ticketAHiddenBoardId]).del();
+      await table('client_portal_visibility_group_boards').where({ group_id: visibilityGroupId }).del();
+      await table('client_portal_visibility_groups').where({ group_id: visibilityGroupId }).del();
+      await table('quotes').where({ quote_id: quoteBId }).del();
+      await table('opportunities').where({ opportunity_id: opportunityBId }).del();
+      await table('client_contracts').where({ contract_id: contractBId }).del();
+      await table('contracts').where({ contract_id: contractBId }).del();
+      await table('boards').whereIn('board_id', [visibleBoardId, hiddenBoardId]).del();
+      const projects = await table('projects').whereIn('client_id', [clientAId, clientBId]).pluck('project_id');
+      const phases = projects.length ? await table('project_phases').whereIn('project_id', projects).select('phase_id') : [];
+      const phaseIds = phases.map((phase: { phase_id: string }) => phase.phase_id);
+      if (phaseIds.length) await table('project_tasks').whereIn('phase_id', phaseIds).del();
+      if (phaseIds.length) await table('project_phases').whereIn('phase_id', phaseIds).del();
+      if (projects.length) await table('project_status_mappings').whereIn('project_id', projects).del();
+      if (projects.length) await table('projects').whereIn('project_id', projects).del();
+      await table('statuses').where('created_by', mspUserId).andWhere('status_type', 'project').del();
+      await table('users').whereIn('user_id', [clientAUserId, clientBUserId]).del();
+      await table('contacts').whereIn('client_id', [clientAId, clientBId]).del();
+      await table('clients').whereIn('client_id', [clientAId, clientBId]).del();
+    }
+    await db?.destroy();
+  });
 
   afterEach(async () => {
     if (!db || !tenantId) return;
     await table('document_associations').where({ document_id: documentAId }).del();
-    await table('documents').where({ document_id: documentAId }).del();
-    await table('document_associations').where({ document_id: documentBId }).del();
-    await table('documents').where({ document_id: documentBId }).del();
+    await table('document_associations').insert({
+      tenant: tenantId, association_id: uuidv4(), document_id: documentAId,
+      entity_type: 'client', entity_id: clientAId, created_at: new Date(),
+    });
     const uploadedDocuments = await table('documents').where({ created_by: mspUserId, document_name: 'msp-cross-client.txt' }).select('document_id');
     const uploadedIds = uploadedDocuments.map((document: { document_id: string }) => document.document_id);
     if (uploadedIds.length) {
       await table('document_associations').whereIn('document_id', uploadedIds).del();
       await table('documents').whereIn('document_id', uploadedIds).del();
     }
-    await table('external_files').where({ file_id: mspUploadedFileId }).del();
+    if (mspUploadedFileId) await table('external_files').where({ file_id: mspUploadedFileId }).del();
     await table('document_folders').whereIn('entity_id', [taskAId, taskBId]).del();
-    await table('storage_configurations').where({ configuration_id: mspStorageConfigurationId }).del();
-    await table('storage_providers').where({ provider_id: mspStorageProviderId }).del();
-    await table('document_associations').whereIn('entity_id', [taskAId, taskBId, ticketBId]).del();
-    await table('tickets').where({ ticket_id: ticketBId }).del();
-    const projects = await table('projects').whereIn('client_id', [clientAId, clientBId]).pluck('project_id');
-    const phases = projects.length
-      ? await table('project_phases').whereIn('project_id', projects).select('phase_id')
-      : [];
-    const taskIds = phases.length ? await table('project_tasks').whereIn('phase_id', phases.map((phase: { phase_id: string }) => phase.phase_id)).pluck('task_id') : [];
-    if (taskIds.length) await table('project_tasks').whereIn('task_id', taskIds).del();
-    await table('project_phases').whereIn('phase_id', phases.map((phase: { phase_id: string }) => phase.phase_id)).del();
-    if (projects.length) await table('project_status_mappings').whereIn('project_id', projects).del();
-    await table('projects').whereIn('project_id', projects).del();
-    await table('statuses').where('created_by', mspUserId).andWhere('status_type', 'project').del();
-    await table('users').where({ user_id: clientAUserId }).del();
-    await table('users').where({ user_id: clientBUserId }).del();
-    await table('contacts').whereIn('client_id', [clientAId, clientBId]).del();
-    await table('clients').whereIn('client_id', [clientAId, clientBId]).del();
+    if (mspStorageConfigurationId) await table('storage_configurations').where({ configuration_id: mspStorageConfigurationId }).del();
+    if (mspStorageProviderId) await table('storage_providers').where({ provider_id: mspStorageProviderId }).del();
   });
 
   it('scopes search counts and rejects cross-client attach, upload, and removal without persisted changes', async () => {
     const clientUser = createMockUser('client', {
       user_id: clientAUserId, tenant: tenantId, clientId: clientAId,
-      contact_id: undefined,
+      contact_id: clientAContactId,
     });
-    setMockUser(clientUser, [
+    const clientPermissions = new Set([
       'document:read', 'document:create', 'document:update', 'client:read', 'contact:read', 'ticket:read',
-      'asset:read', 'project:read', 'project:update', 'contract:read', 'opportunity:read', 'quote:read',
+      'asset:read', 'project:read', 'project:update', 'billing:read', 'billing:update', 'opportunities:read', 'opportunities:update',
     ]);
-    setupCommonMocks({ tenantId, userId: clientAUserId, user: clientUser, permissionCheck: () => true });
+    setMockUser(clientUser, [...clientPermissions]);
+    setupCommonMocks({ tenantId, userId: clientAUserId, user: clientUser, permissionCheck: (_user, resource, action) => clientPermissions.has(`${resource}:${action}`) });
 
 
     const hiddenTask = await searchDocumentAssociationEntities('project_task', 'Client B secret task', 1, 50);
@@ -220,6 +295,23 @@ describe('document association cross-client authorization', () => {
     expect(hiddenClient).toEqual({ options: [], total: 0 });
     const hiddenTicket = await searchDocumentAssociationEntities('ticket', 'Client B secret ticket', 1, 50);
     expect(hiddenTicket).toEqual({ options: [], total: 0 });
+    const hiddenContract = await searchDocumentAssociationEntities('contract', 'Client B secret contract', 1, 50);
+    expect(hiddenContract).toEqual({ options: [], total: 0 });
+    const hiddenQuote = await searchDocumentAssociationEntities('quote', 'Client B secret quote', 1, 50);
+    expect(hiddenQuote).toEqual({ options: [], total: 0 });
+    const hiddenOpportunity = await searchDocumentAssociationEntities('opportunity', 'Client B secret opportunity', 1, 50);
+    expect(hiddenOpportunity).toEqual({ options: [], total: 0 });
+    const visibleTicketPage1 = await searchDocumentAssociationEntities('ticket', 'Client A board ticket visible', 1, 1);
+    expect(visibleTicketPage1.total).toBe(2);
+    expect(visibleTicketPage1.options).toHaveLength(1);
+    const visibleTicketPage2 = await searchDocumentAssociationEntities('ticket', 'Client A board ticket visible', 2, 1);
+    expect(visibleTicketPage2.total).toBe(2);
+    expect(visibleTicketPage2.options).toHaveLength(1);
+    expect([
+      ...visibleTicketPage1.options.map((item: { value: string }) => item.value),
+      ...visibleTicketPage2.options.map((item: { value: string }) => item.value),
+    ].sort()).toEqual([ticketAVisibleId, ticketAVisibleSecondId].sort());
+    expect(await searchDocumentAssociationEntities('ticket', 'Client A hidden board secret', 1, 50)).toEqual({ options: [], total: 0 });
 
     expect(await createDocumentAssociations(taskAId, 'project_task', [documentAId])).toEqual({ success: true });
     expect(await table('document_associations').where({ document_id: documentAId, entity_id: taskAId })).toHaveLength(1);
@@ -251,18 +343,34 @@ describe('document association cross-client authorization', () => {
 
     const clientBUser = createMockUser('client', { user_id: clientBUserId, tenant: tenantId, clientId: clientBId, contact_id: undefined });
     setMockUser(clientBUser, ['document:read']);
-    setupCommonMocks({ tenantId, userId: clientBUser.user_id, user: clientBUser, permissionCheck: () => true });
+    setupCommonMocks({ tenantId, userId: clientBUser.user_id, user: clientBUser, permissionCheck: (_user, resource, action) => resource === 'document' && action === 'read' });
     const clientDocuments = await getClientDocuments(1, 20, {});
     expect(clientDocuments.documents.map((document: { document_id: string }) => document.document_id)).not.toContain(documentAId);
 
     const mspUser = createMockUser('internal', { user_id: mspUserId, tenant: tenantId });
-    setMockUser(mspUser, ['document:read', 'document:create', 'document:update', 'project:read', 'project:update']);
-    setupCommonMocks({ tenantId, userId: mspUserId, user: mspUser, permissionCheck: () => true });
+    const mspPermissions = new Set([
+      'document:read', 'document:create', 'document:update', 'project:read', 'project:update', 'billing:read',
+      'billing:update', 'opportunities:read', 'opportunities:update',
+    ]);
+    setMockUser(mspUser, [...mspPermissions]);
+    setupCommonMocks({ tenantId, userId: mspUserId, user: mspUser, permissionCheck: (_user, resource, action) => mspPermissions.has(`${resource}:${action}`) });
     const mspTasks = await searchDocumentAssociationEntities('project_task', '', 1, 50);
     expect(mspTasks.total).toBeGreaterThanOrEqual(2);
     expect(mspTasks.options.map((item: { value: string }) => item.value)).toEqual(expect.arrayContaining([taskAId, taskBId]));
+    for (const [type, search, expectedId] of [
+      ['contract', 'Client B secret contract', contractBId],
+      ['quote', 'Client B secret quote', quoteBId],
+      ['opportunity', 'Client B secret opportunity', opportunityBId],
+    ] as const) {
+      const result = await searchDocumentAssociationEntities(type, search, 1, 10);
+      expect(result.options.map((item: { value: string }) => item.value)).toContain(expectedId);
+    }
     expect(await createDocumentAssociations(taskBId, 'project_task', [documentAId])).toEqual({ success: true });
     expect(await table('document_associations').where({ document_id: documentAId, entity_id: taskBId })).toHaveLength(1);
+    for (const [type, id] of [['contract', contractBId], ['quote', quoteBId], ['opportunity', opportunityBId]] as const) {
+      expect(await createDocumentAssociations(id, type, [documentAId])).toEqual({ success: true });
+      expect(await removeDocumentAssociations(id, type, [documentAId])).toEqual({ success: true });
+    }
 
     mspStorageProviderId = uuidv4();
     mspStorageConfigurationId = uuidv4();
@@ -288,5 +396,85 @@ describe('document association cross-client authorization', () => {
     expect(uploaded).toBeDefined();
     if (!uploaded) throw new Error('Expected authorized MSP upload to persist its document');
     expect(await table('document_associations').where({ document_id: uploaded.document_id, entity_id: taskBId })).toHaveLength(1);
+  });
+
+  it('requires document:update for association mutations and parent-document uploads even when read/create are granted', async () => {
+    const clientUser = createMockUser('client', {
+      user_id: clientAUserId, tenant: tenantId, clientId: clientAId, contact_id: clientAContactId,
+    });
+    const grants = new Set(['document:read', 'document:create', 'project:update']);
+    setMockUser(clientUser, [...grants]);
+    setupCommonMocks({
+      tenantId, userId: clientAUserId, user: clientUser,
+      permissionCheck: (_user, resource, action) => grants.has(`${resource}:${action}`),
+    });
+
+    const readable = await getClientDocuments(1, 20, {});
+    expect(readable.documents.map((document: { document_id: string }) => document.document_id)).toContain(documentAId);
+
+    await table('document_associations').insert({
+      tenant: tenantId, association_id: uuidv4(), document_id: documentAId,
+      entity_type: 'project_task', entity_id: taskAId, created_at: new Date(),
+    });
+    const existingAssociation = await table('document_associations')
+      .where({ document_id: documentAId, entity_type: 'project_task', entity_id: taskAId }).select('association_id');
+    expect(await createDocumentAssociations(taskAId, 'project_task', [documentAId])).toHaveProperty('permissionError');
+    expect(await removeDocumentAssociations(taskAId, 'project_task', [documentAId])).toHaveProperty('permissionError');
+    expect(await table('document_associations')
+      .where({ document_id: documentAId, entity_type: 'project_task', entity_id: taskAId }).select('association_id'))
+      .toEqual(existingAssociation);
+
+    storageMocks.uploadFile.mockClear();
+    const parentUpload = new FormData();
+    parentUpload.set('file', new File(['parent image'], 'parent-image.txt', { type: 'text/plain' }));
+    const parentUploadResult = await uploadDocument(parentUpload, { userId: clientAUserId, parentDocumentId: documentAId });
+    expect(parentUploadResult).toHaveProperty('permissionError');
+    expect(storageMocks.uploadFile).not.toHaveBeenCalled();
+    expect(await table('documents').where({ created_by: clientAUserId, document_name: 'parent-image.txt' })).toHaveLength(0);
+  });
+
+  it('rolls back folder and document writes and cleans uploaded storage after a late target denial', async () => {
+    const clientUser = createMockUser('client', {
+      user_id: clientAUserId, tenant: tenantId, clientId: clientAId, contact_id: clientAContactId,
+    });
+    const grants = new Set([
+      'document:read', 'document:create', 'document:update', 'project:read', 'project:update',
+    ]);
+    setMockUser(clientUser, [...grants]);
+    setupCommonMocks({
+      tenantId, userId: clientAUserId, user: clientUser,
+      permissionCheck: (_user, resource, action) => grants.has(`${resource}:${action}`),
+    });
+
+    const project = await table('project_tasks as pt')
+      .join('project_phases as pp', 'pt.phase_id', 'pp.phase_id')
+      .join('projects as p', 'pp.project_id', 'p.project_id')
+      .where('pt.task_id', taskAId).first('p.project_id');
+    if (!project?.project_id) throw new Error('Expected Client A task project');
+    const projectId = project.project_id as string;
+    const foldersBefore = await table('document_folders').where({ entity_id: taskAId }).select('folder_id', 'folder_path');
+    const associationsBefore = await table('document_associations').where({ entity_id: taskAId }).select('association_id', 'document_id', 'entity_type');
+    const storageFileId = uuidv4();
+    storageMocks.uploadFile.mockClear();
+    storageMocks.deleteFile.mockClear();
+    storageMocks.uploadFile.mockImplementationOnce(async () => {
+      // Move the target out of the client's scope after the early check and file upload,
+      // so only the transaction's final authorization check catches the change.
+      await table('projects').where({ project_id: projectId }).update({ client_id: clientBId });
+      return { file_id: storageFileId, storage_path: `test/${storageFileId}` };
+    });
+
+    const lateDeniedForm = new FormData();
+    lateDeniedForm.set('file', new File(['late denial'], 'late-denial.txt', { type: 'text/plain' }));
+    try {
+      const result = await uploadDocument(lateDeniedForm, { userId: clientAUserId, projectTaskId: taskAId });
+      expect(result).toHaveProperty('permissionError');
+      expect(await table('documents').where({ created_by: clientAUserId, document_name: 'late-denial.txt' })).toHaveLength(0);
+      expect(await table('document_associations').where({ entity_id: taskAId }).select('association_id', 'document_id', 'entity_type')).toEqual(associationsBefore);
+      expect(await table('document_folders').where({ entity_id: taskAId }).select('folder_id', 'folder_path')).toEqual(foldersBefore);
+      expect(storageMocks.deleteFile).toHaveBeenCalledWith(storageFileId, clientAUserId);
+    } finally {
+      await table('projects').where({ project_id: projectId }).update({ client_id: clientAId });
+    }
   });
 });
