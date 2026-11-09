@@ -329,6 +329,9 @@ export function createPersistentFleetStore(
       const knex = await getKnex();
       // A route may only point at a persisted credential row.
       if (route.credentialId === LEGACY_CREDENTIAL_ID) return;
+      // Bound in Node: Citus rejects non-IMMUTABLE functions (now()) in the
+      // DO UPDATE SET clause of upserts on distributed tables.
+      const now = new Date().toISOString();
       await tenantDb(knex, tenant)
         .table('unifi_console_routes')
         .insert({
@@ -339,8 +342,8 @@ export function createPersistentFleetStore(
           console_name: route.consoleName,
           state: route.state satisfies UniFiRouteState,
           last_error: route.lastError,
-          first_seen_at: knex.fn.now(),
-          last_verified_at: knex.fn.now(),
+          first_seen_at: now,
+          last_verified_at: now,
         })
         .onConflict(['tenant', 'integration_id', 'host_id'])
         .merge({
@@ -348,7 +351,7 @@ export function createPersistentFleetStore(
           console_name: route.consoleName,
           state: route.state,
           last_error: route.lastError,
-          last_verified_at: knex.fn.now(),
+          last_verified_at: now,
         });
     },
 
