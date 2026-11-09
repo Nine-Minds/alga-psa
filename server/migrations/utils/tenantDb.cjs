@@ -82,6 +82,7 @@ const TENANT_TABLE_METADATA = {
   recurring_ticket_occurrences: { scope: 'tenant' },
   ticket_templates: { scope: 'tenant' },
   ticket_template_checklist_items: { scope: 'tenant' },
+  ticket_template_links: { scope: 'tenant' },
   client_merges: { scope: 'tenant' },
   client_billing_settings: { scope: 'tenant' },
   client_contracts: { scope: 'tenant' },

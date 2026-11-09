@@ -96,6 +96,13 @@ export const BUILT_IN_EXTERNAL_SYSTEMS: readonly ExternalSystemDefinition[] = [
     originCategory: 'api',
   },
   {
+    // No urlTemplate: each tenant runs its own Hudu host, so an explicit absolute URL is required.
+    key: 'hudu',
+    label: 'Hudu',
+    icon: 'BookOpen',
+    originCategory: 'other',
+  },
+  {
     key: 'generic',
     label: 'External Reference',
     icon: 'Link',
@@ -137,6 +144,8 @@ export interface IExternalEntityLink {
   realm?: string | null;
   /** Explicit link-out; overrides the system's urlTemplate when present. */
   url?: string | null;
+  /** Human title for a citation (e.g. a knowledge-base article name). */
+  title?: string | null;
   relationship: ExternalLinkRelationship;
   actor?: ExternalSystemActor | null;
   external_status?: string | null;

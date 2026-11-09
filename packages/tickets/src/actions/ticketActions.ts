@@ -950,6 +950,8 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
                 checklist_template_id: item.checklist_template_id,
               }))
             : [],
+          // Links are always copied (no form toggle): a technician who does not want a citation removes it.
+          links: sourceTemplate.links,
           fromTemplate: {
             template_id: sourceTemplate.template_id,
             template_name: sourceTemplate.name,

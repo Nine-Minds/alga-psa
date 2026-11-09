@@ -30,8 +30,8 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import type { ExternalLinkRelationship, ExternalSystemActor, ExternalSystemDefinition } from '@alga-psa/types';
-import { renderExternalLinkUrl } from '../../lib/externalSystems';
+import type { ExternalLinkRelationship, ExternalSystemActor } from '@alga-psa/types';
+import { ExternalLinkFields, resolveExternalLinkPreview } from './ExternalLinkFields';
 import type {
   ExternalSystemOption,
   ITicketExternalLinkView,
@@ -84,6 +84,7 @@ interface LinkFormState {
   externalId: string;
   realm: string;
   url: string;
+  title: string;
   relationship: ExternalLinkRelationship;
   actorHandle: string;
   actorDisplay: string;
@@ -95,6 +96,7 @@ const EMPTY_FORM: LinkFormState = {
   externalId: '',
   realm: '',
   url: '',
+  title: '',
   relationship: 'reference',
   actorHandle: '',
   actorDisplay: '',
@@ -241,62 +243,15 @@ const TicketExternalLinksSection: React.FC<TicketExternalLinksSectionProps> = ({
     }
   }, []);
 
-  const systemOptions = useMemo(() => {
-    const optionFor = (system: ExternalSystemOption) => ({
-      value: system.key,
-      label: system.label,
-    });
-    const builtIns = systems.filter((system) => !system.isCustom).map(optionFor);
-    const customs = systems.filter((system) => system.isCustom).map(optionFor);
-    const options: { value: string; label: string; disabled?: boolean }[] = [];
-    if (builtIns.length > 0) {
-      options.push({
-        value: '__group-builtin',
-        label: t('externalLinks.fields.builtInGroup', 'Built-in systems'),
-        disabled: true,
-      });
-      options.push(...builtIns);
-    }
-    if (customs.length > 0) {
-      options.push({
-        value: '__group-custom',
-        label: t('externalLinks.fields.customGroup', 'Custom systems'),
-        disabled: true,
-      });
-      options.push(...customs);
-    }
-    return options;
-  }, [systems, t]);
-
   const selectedSystem = useMemo(
     () => systems.find((system) => system.key === form.system) ?? null,
     [systems, form.system],
   );
 
-  // A realm input is shown when the definition names one, or when its template
-  // consumes `{realm}` even though no human label was declared (custom systems).
-  // Without this, a `custom:<slug>` template with `{realm}` could never be
-  // completed in the dialog and would demand an explicit URL override.
-  const realmField = useMemo(() => {
-    if (!selectedSystem) return null;
-    const needsRealm = selectedSystem.urlTemplate?.includes('{realm}') ?? false;
-    if (!selectedSystem.realmLabel && !needsRealm) return null;
-    return {
-      label: selectedSystem.realmLabel ?? t('externalLinks.fields.realm', 'Realm'),
-    };
-  }, [selectedSystem, t]);
-
-  const previewHref = useMemo(() => {
-    if (!selectedSystem) return null;
-    return renderExternalLinkUrl(
-      selectedSystem as unknown as ExternalSystemDefinition,
-      {
-        external_id: form.externalId.trim(),
-        realm: form.realm.trim() || null,
-        url: form.url.trim() || null,
-      },
-    );
-  }, [selectedSystem, form.externalId, form.realm, form.url]);
+  const previewHref = useMemo(
+    () => resolveExternalLinkPreview(selectedSystem, form),
+    [selectedSystem, form],
+  );
 
   const hasOtherOrigin = useMemo(
     () => ticketLevelLinks.some((link) => link.relationship === 'origin' && link.link_id !== editingLink?.link_id),
@@ -320,6 +275,7 @@ const TicketExternalLinksSection: React.FC<TicketExternalLinksSectionProps> = ({
         externalId: link.external_id,
         realm: link.realm ?? '',
         url: link.url ?? '',
+        title: link.title ?? '',
         relationship: link.relationship,
         actorHandle: link.actor?.handle ?? '',
         actorDisplay: link.actor?.display_name ?? '',
@@ -369,6 +325,7 @@ const TicketExternalLinksSection: React.FC<TicketExternalLinksSectionProps> = ({
           relationship: form.relationship,
           portal_visible: form.portalVisible,
           url: form.url.trim() || null,
+          title: form.title.trim() || null,
           actor,
         });
       } else {
@@ -379,6 +336,7 @@ const TicketExternalLinksSection: React.FC<TicketExternalLinksSectionProps> = ({
           external_id: form.externalId.trim(),
           realm: form.realm.trim() || null,
           url: form.url.trim() || null,
+          title: form.title.trim() || null,
           relationship: form.relationship,
           portal_visible: form.portalVisible,
           actor,
@@ -520,11 +478,13 @@ const TicketExternalLinksSection: React.FC<TicketExternalLinksSectionProps> = ({
                         href={link.display.href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        title={`${link.display.label} · ${labelText}`}
+                        title={`${link.title ?? link.display.label} · ${labelText}`}
                         className="flex max-w-full flex-col text-sm text-primary-600 hover:underline dark:text-primary-400"
                       >
-                        <span className="truncate font-medium">{link.display.label}</span>
-                        <span className="truncate text-[rgb(var(--color-text-600))]">{labelText}</span>
+                        <span className="truncate font-medium">{link.title ?? link.display.label}</span>
+                        <span className="truncate text-[rgb(var(--color-text-600))]">
+                          {link.title ? `${link.display.label} · ${labelText}` : labelText}
+                        </span>
                       </a>
                     ) : (
                       <span
@@ -534,8 +494,10 @@ const TicketExternalLinksSection: React.FC<TicketExternalLinksSectionProps> = ({
                           'No URL available for this reference',
                         )}
                       >
-                        <span className="truncate font-medium">{link.display.label}</span>
-                        <span className="truncate text-[rgb(var(--color-text-600))]">{labelText}</span>
+                        <span className="truncate font-medium">{link.title ?? link.display.label}</span>
+                        <span className="truncate text-[rgb(var(--color-text-600))]">
+                          {link.title ? `${link.display.label} · ${labelText}` : labelText}
+                        </span>
                       </span>
                     )}
                     <div className="flex flex-wrap items-center gap-1">
@@ -638,79 +600,14 @@ const TicketExternalLinksSection: React.FC<TicketExternalLinksSectionProps> = ({
               {t('externalLinks.dialog.intro', 'Adding a link does not sync data between systems.')}
             </p>
 
-            <div className="space-y-2">
-              <Label htmlFor={`${id}-system`}>
-                {t('externalLinks.fields.system', 'System')}
-              </Label>
-              <CustomSelect
-                id={`${id}-system`}
-                options={systemOptions}
-                value={form.system}
-                onValueChange={(value) => setForm((prev) => ({ ...prev, system: value }))}
-                placeholder={
-                  systemsLoading
-                    ? t('externalLinks.fields.loadingSystems', 'Loading systems...')
-                    : t('externalLinks.fields.selectSystem', 'Select a system')
-                }
-                disabled={editingLink !== null || systemsLoading}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor={`${id}-external-id`}>
-                {t('externalLinks.fields.externalId', 'External ID')}
-              </Label>
-              <Input
-                id={`${id}-external-id`}
-                value={form.externalId}
-                onChange={(event) => setForm((prev) => ({ ...prev, externalId: event.target.value }))}
-                disabled={editingLink !== null}
-                placeholder={t('externalLinks.fields.externalIdPlaceholder', 'e.g. 42 or 1234567890')}
-              />
-            </div>
-
-            {realmField ? (
-              <div className="space-y-2">
-                <Label htmlFor={`${id}-realm`}>{realmField.label}</Label>
-                <Input
-                  id={`${id}-realm`}
-                  value={form.realm}
-                  onChange={(event) => setForm((prev) => ({ ...prev, realm: event.target.value }))}
-                  disabled={editingLink !== null}
-                />
-              </div>
-            ) : null}
-
-            <div className="space-y-2">
-              <Label htmlFor={`${id}-url`}>
-                {t('externalLinks.fields.url', 'URL')}
-              </Label>
-              <Input
-                id={`${id}-url`}
-                type="url"
-                value={form.url}
-                onChange={(event) => setForm((prev) => ({ ...prev, url: event.target.value }))}
-                placeholder={
-                  selectedSystem?.urlTemplate
-                    ? t('externalLinks.fields.urlOptional', 'Optional override')
-                    : t('externalLinks.fields.urlRequired', 'https://...')
-                }
-              />
-              {previewHref ? (
-                <p className="break-all text-xs text-[rgb(var(--color-text-500))]">
-                  {t('externalLinks.fields.urlPreview', 'Opens:')}{' '}
-                  <span className="text-[rgb(var(--color-text-600))]">{previewHref}</span>
-                </p>
-              ) : selectedSystem?.urlTemplate ? (
-                <p className="text-xs text-[rgb(var(--color-text-500))]">
-                  {t(
-                    'externalLinks.fields.urlPreviewIncomplete',
-                    'Fill in the fields above to preview the link.',
-                  )}
-                </p>
-              ) : null}
-            </div>
+            <ExternalLinkFields
+              id={id}
+              systems={systems}
+              systemsLoading={systemsLoading}
+              value={form}
+              onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
+              lockIdentity={editingLink !== null}
+            />
 
             <div className="space-y-2">
               <Label htmlFor={`${id}-visibility`}>

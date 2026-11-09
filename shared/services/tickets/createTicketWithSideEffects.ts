@@ -16,6 +16,10 @@ import {
   TICKET_ACTIVITY_SOURCE,
   writeTicketActivity,
 } from '../../lib/ticketActivity';
+import {
+  persistExternalLinksForCreate,
+  publishExternalLinkEvent,
+} from './externalLinkPersistence';
 import { TicketModelEventPublisher } from './ticketModelEventPublisher';
 import { addTicketResourceCore, type TicketAdditionalAgentEvent } from './ticketResourceCore';
 import { assignTeamToTicketCore } from './teamAssignmentCore';
@@ -96,6 +100,19 @@ export interface CreatedFromTemplateInput {
   custom_fields_copied: number;
 }
 
+/**
+ * A documentation link a ticket template carries. Always created on the ticket as a `reference`:
+ * stored values are copied verbatim, nothing is resolved or fetched at creation time.
+ */
+export interface TemplateLinkInput {
+  system: string;
+  external_id: string;
+  realm?: string | null;
+  url?: string | null;
+  title?: string | null;
+  metadata?: Record<string, unknown> | null;
+}
+
 export function ownedChecklistItemsToInsert(items: readonly OwnedChecklistItemInput[]): ChecklistItemToInsert[] {
   return items.map((item) => ({
     item_name: item.item_name,
@@ -110,7 +127,10 @@ export function ownedChecklistItemsToInsert(items: readonly OwnedChecklistItemIn
 /**
  * The effects of "created from a ticket template" once the ticket row exists: the owned checklist items
  * (replacement rule, plus a CHECKLIST_TEMPLATE_APPLIED activity per carried checklist template that auto-apply
- * had not applied) and the TICKET_CREATED_FROM_TEMPLATE activity. Used by `createTicketWithSideEffects` and by
+ * had not applied), the template's documentation links (as `reference` external links, with a
+ * TICKET_EXTERNAL_LINK_ADDED event after commit) and the TICKET_CREATED_FROM_TEMPLATE activity. This is the one
+ * choke point all three template paths share (recurring generator, REST/MCP instantiate, in-app New ticket from
+ * template), so the links are copied here and nowhere else. Used by `createTicketWithSideEffects` and by
  * `addTicket`, which composes its own create but must record the same provenance.
  */
 export async function applyCreatedFromTemplateEffects(
@@ -120,9 +140,11 @@ export async function applyCreatedFromTemplateEffects(
     ticketId: string;
     actor: CreateTicketActor;
     checklistItems: readonly OwnedChecklistItemInput[];
+    /** The template's links, in template order. */
+    links?: readonly TemplateLinkInput[];
     fromTemplate: CreatedFromTemplateInput;
   }
-): Promise<{ checklistItemsCopied: number }> {
+): Promise<{ checklistItemsCopied: number; linksCopied: number }> {
   const { actorUserId, activityActor, activitySource } = resolveActorEffects(args.actor);
   const checklistItemsCopied = await insertChecklistItemsReplacingTemplates(trx, tenant, {
     targetTicketId: args.ticketId,
@@ -130,6 +152,30 @@ export async function applyCreatedFromTemplateEffects(
     userId: actorUserId,
     audit: { actor: activityActor, source: activitySource },
   });
+  const links = args.links ?? [];
+  // Throws ExternalLinkValidationError when a stored link is no longer valid; that rolls the ticket back.
+  const insertedLinks = await persistExternalLinksForCreate(
+    trx,
+    tenant,
+    args.ticketId,
+    links.map((link) => ({
+      system: link.system,
+      external_id: link.external_id,
+      realm: link.realm ?? null,
+      url: link.url ?? null,
+      title: link.title ?? null,
+      metadata: link.metadata ?? null,
+      relationship: 'reference' as const,
+    })),
+    args.actor,
+  );
+  for (const row of insertedLinks) {
+    registerAfterCommit(
+      trx,
+      () => publishExternalLinkEvent('TICKET_EXTERNAL_LINK_ADDED', tenant, row, actorUserId),
+      `TICKET_EXTERNAL_LINK_ADDED ticket=${args.ticketId} link=${row.link_id}`,
+    );
+  }
   await writeTicketActivity(trx, {
     tenant,
     ticketId: args.ticketId,
@@ -142,10 +188,11 @@ export async function applyCreatedFromTemplateEffects(
       template_id: args.fromTemplate.template_id,
       template_name: args.fromTemplate.template_name,
       checklist_items_copied: checklistItemsCopied,
+      links_copied: insertedLinks.length,
       custom_fields_copied: args.fromTemplate.custom_fields_copied,
     },
   });
-  return { checklistItemsCopied };
+  return { checklistItemsCopied, linksCopied: insertedLinks.length };
 }
 
 export interface CreateTicketWithSideEffectsInput {
@@ -166,6 +213,8 @@ export interface CreateTicketWithSideEffectsInput {
   checklistItems?: OwnedChecklistItemInput[];
   /** When set, the ticket records that it was created from a ticket template (activity row inside this layer). */
   fromTemplate?: CreatedFromTemplateInput;
+  /** The template's documentation links, copied as `reference` external links. Only used with `fromTemplate`. */
+  templateLinks?: TemplateLinkInput[];
   /**
    * Notification suppression carried on every published ticket event
    * (TICKET_CREATED, TICKET_ASSIGNED and the additional-agent events). The
@@ -331,6 +380,7 @@ export async function createTicketWithSideEffects(
       ticketId,
       actor: input.actor,
       checklistItems: input.checklistItems ?? [],
+      links: input.templateLinks ?? [],
       fromTemplate: input.fromTemplate,
     });
   } else if (input.checklistItems?.length) {

@@ -2387,7 +2387,9 @@
       "builtInGroup": "Built-in systems",
       "customGroup": "Custom systems",
       "urlPreview": "Opens:",
-      "urlPreviewIncomplete": "Fill in the fields above to preview the link."
+      "urlPreviewIncomplete": "Fill in the fields above to preview the link.",
+      "title": "Title",
+      "titlePlaceholder": "Optional, e.g. the article name"
     },
     "errors": {
       "ticketNotFound": "Ticket not found",
@@ -2799,7 +2801,8 @@
       "details": "Template",
       "ticket": "Ticket",
       "checklist": "Checklist",
-      "customFields": "Custom fields"
+      "customFields": "Custom fields",
+      "links": "Documentation links"
     },
     "fields": {
       "name": "Template name",
@@ -2854,13 +2857,33 @@
       "invalidReferences": "{{problems}}",
       "notAvailable": "Ticket templates are not available",
       "subcategoryNeedsCategory": "A subcategory requires a category",
-      "inUseBySchedules": "Used by {{count}} recurring schedule(s): {{schedules}}. Point them at another template or archive them first."
+      "inUseBySchedules": "Used by {{count}} recurring schedule(s): {{schedules}}. Point them at another template or archive them first.",
+      "duplicateLink": "This template already has that documentation link."
     },
     "usage": {
       "schedules": "Used by {{count}} schedules",
       "paused": "paused",
       "tickets": "{{count}} tickets created from this template",
       "scheduleThis": "Schedule this template…"
+    },
+    "links": {
+      "help": "Copied onto every ticket created from this template, as references. Later changes to the template do not change existing tickets.",
+      "empty": "No documentation links.",
+      "add": "Add link",
+      "remove": "Remove link",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "dialogTitle": "Add documentation link",
+      "pickFromHudu": "Pick from Hudu",
+      "huduPickerTitle": "Pick a Hudu article",
+      "huduSearch": "Search Hudu articles...",
+      "huduLoading": "Loading Hudu articles...",
+      "huduDisconnected": "Hudu is not connected. You can still add a link by entering its details.",
+      "huduError": "Hudu could not be reached. Try again later.",
+      "huduEmpty": "No Hudu articles found.",
+      "huduSelect": "Select",
+      "huduPrev": "Previous",
+      "huduNext": "Next"
     }
   },
   "enums": {

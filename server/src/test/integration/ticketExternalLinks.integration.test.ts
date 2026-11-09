@@ -258,7 +258,7 @@ describe('ticket external system links', () => {
     expect(await addExternalLink({ ticket_id: ticketId, entity_type: 'comment', system: 'generic',
       external_id: uuidv4(), url: 'https://example.com', portal_visible: true })).toMatchObject({ code: 'invalid_visibility' });
     const [imported] = await db.transaction((trx) => persistExternalLinksForCreate(trx, fixture.tenantId, ticketId,
-      [{ system: 'generic', external_id: uuidv4(), url: 'https://example.com', portal_visible: true }], fixture.userId));
+      [{ system: 'generic', external_id: uuidv4(), url: 'https://example.com', portal_visible: true }], { type: 'user', userId: fixture.userId }));
     expect(imported.portal_visible).toBe(false);
     const commentId = await insertResolutionComment(db, fixture, ticketId);
     const commentLink = expectActionSuccess(await addExternalLink({ ticket_id: ticketId, entity_type: 'comment',
@@ -552,7 +552,7 @@ describe('ticket external system links', () => {
   ): Promise<void> {
     await expect(
       db.transaction((trx) =>
-        persistExternalLinksForCreate(trx, fixture.tenantId, ticketId, links, fixture.userId),
+        persistExternalLinksForCreate(trx, fixture.tenantId, ticketId, links, { type: 'user', userId: fixture.userId }),
       ),
     ).rejects.toThrow();
     const rows = await scopedDbFor(fixture.tenantId)
@@ -584,7 +584,7 @@ describe('ticket external system links', () => {
 
     // A single valid link persists and writes its planned audit entry inline.
     const first = await db.transaction((trx) =>
-      persistExternalLinksForCreate(trx, fixture.tenantId, ticketId, [{ system: 'github', realm: 'acme/repo', external_id: 'atomic-ok' }], fixture.userId),
+      persistExternalLinksForCreate(trx, fixture.tenantId, ticketId, [{ system: 'github', realm: 'acme/repo', external_id: 'atomic-ok' }], { type: 'user', userId: fixture.userId }),
     );
     expect(first).toHaveLength(1);
 

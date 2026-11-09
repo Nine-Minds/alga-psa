@@ -1028,6 +1028,8 @@ export const TENANT_TABLE_FOREIGN_KEYS: readonly TenantTableForeignKey[] = [
   { child: 'ticket_resources', parent: 'users', column: 'assigned_to', deleteRule: 'NO ACTION', name: 'ticket_resources_tenant_assigned_to_foreign' },
   { child: 'ticket_template_checklist_items', parent: 'tenants', column: '', deleteRule: 'NO ACTION', name: 'ticket_template_checklist_items_tenant_foreign' },
   { child: 'ticket_template_checklist_items', parent: 'ticket_templates', column: 'template_id', deleteRule: 'CASCADE', name: 'ticket_template_checklist_items_template_foreign' },
+  { child: 'ticket_template_links', parent: 'tenants', column: '', deleteRule: 'NO ACTION', name: 'ticket_template_links_tenant_foreign' },
+  { child: 'ticket_template_links', parent: 'ticket_templates', column: 'template_id', deleteRule: 'CASCADE', name: 'ticket_template_links_template_foreign' },
   { child: 'ticket_templates', parent: 'tenants', column: '', deleteRule: 'NO ACTION', name: 'ticket_templates_tenant_foreign' },
   { child: 'ticket_watchers', parent: 'tickets', column: 'ticket_id', deleteRule: 'CASCADE', name: 'ticket_watchers_ticket_foreign' },
   { child: 'tickets', parent: 'categories', column: 'category_id', deleteRule: 'NO ACTION', name: 'tickets_tenant_category_id_foreign' },

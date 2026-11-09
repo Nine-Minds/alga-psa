@@ -298,6 +298,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'recurring_ticket_definition_clients',
   'recurring_ticket_definitions',
   'ticket_template_checklist_items',
+  'ticket_template_links',
   'ticket_templates',
   'canned_response_favorites',
   'canned_responses',

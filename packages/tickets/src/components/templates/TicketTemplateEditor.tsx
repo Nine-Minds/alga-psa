@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { PartialBlock } from '@blocknote/core';
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { toast } from 'react-hot-toast';
 import type { IClient, ITicketTemplate, PendingTag, TicketTemplateReferenceProblem, TicketTemplateUsage } from '@alga-psa/types';
 import { QuickAddTagPicker } from '@alga-psa/tags/components/QuickAddTagPicker';
@@ -14,6 +15,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -32,6 +34,7 @@ import {
   listSchedulesForTemplate,
   updateTicketTemplate,
 } from '../../actions/ticketTemplateActions';
+import { listExternalSystems, type ExternalSystemOption } from '../../actions/externalLinks/externalLinkActions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions/priorityActions';
 import { getTicketTemplateDraftFromTicket } from '../../actions/ticketActions';
 import { getAllClients } from '../../actions/clientLookupActions';
@@ -43,6 +46,19 @@ import { useTicketFieldReferenceData } from '../useTicketFieldReferenceData';
 import { isBlankDocument, recurringErrorMessage, unwrapRecurring } from '../recurring/recurringUi';
 import { useRecurringTicketPermissions } from '../recurring/useRecurringTicketPermissions';
 import { useTicketTemplatePermissions } from './useTicketTemplatePermissions';
+import {
+  EMPTY_EXTERNAL_LINK_FIELDS,
+  ExternalLinkFields,
+  resolveExternalLinkPreview,
+  type ExternalLinkFieldsValue,
+} from '../ticket/ExternalLinkFields';
+
+// EE-only "Pick from Hudu". Reached through the edition-swapped `@enterprise` alias, never a direct EE import:
+// CE resolves it to a stub that renders nothing, and the Hudu server action stays out of the client bundle.
+const HuduArticlePicker = dynamic(
+  () => import('@enterprise/components/integrations/hudu/HuduArticlePicker').then((mod) => mod.HuduArticlePicker),
+  { ssr: false, loading: () => null },
+);
 
 const ID = 'ticket-template';
 const MESSAGE_KEY_PREFIX = 'features/tickets:';
@@ -54,6 +70,17 @@ interface ChecklistRow {
   is_required: boolean;
   description: string | null;
   checklist_template_id: string | null;
+}
+
+interface LinkRow {
+  /** Stable React key; not persisted. */
+  key: string;
+  system: string;
+  external_id: string;
+  realm: string | null;
+  url: string | null;
+  title: string | null;
+  metadata: Record<string, unknown> | null;
 }
 
 interface CustomFieldRow {
@@ -80,6 +107,7 @@ interface FormState {
   itil_urgency: number | null;
   tags: PendingTag[];
   checklist: ChecklistRow[];
+  links: LinkRow[];
   customFields: CustomFieldRow[];
 }
 
@@ -89,7 +117,7 @@ const nextKey = () => `row-${(rowCounter += 1)}`;
 function emptyForm(): FormState {
   return {
     name: '', notes: '', title: '', offer_for_manual_use: true, description: null, client_id: null, board_id: '', category_id: null, subcategory_id: null,
-    priority_id: '', itil_impact: null, itil_urgency: null, tags: [], checklist: [], customFields: [],
+    priority_id: '', itil_impact: null, itil_urgency: null, tags: [], checklist: [], links: [], customFields: [],
   };
 }
 
@@ -110,6 +138,7 @@ interface TemplateLike {
   tags: string[];
   custom_fields: Record<string, unknown>;
   checklist: Array<{ item_name: string; description: string | null; is_required: boolean; checklist_template_id: string | null }>;
+  links?: Array<{ system: string; external_id: string; realm: string | null; url: string | null; title: string | null; metadata: Record<string, unknown> | null }>;
 }
 
 function formFromTemplate(template: TemplateLike): FormState {
@@ -133,6 +162,15 @@ function formFromTemplate(template: TemplateLike): FormState {
       is_required: item.is_required,
       description: item.description,
       checklist_template_id: item.checklist_template_id,
+    })),
+    links: (template.links ?? []).map((link) => ({
+      key: nextKey(),
+      system: link.system,
+      external_id: link.external_id,
+      realm: link.realm,
+      url: link.url,
+      title: link.title,
+      metadata: link.metadata,
     })),
     customFields: Object.entries(template.custom_fields).map(([name, value]) => ({
       key: nextKey(),
@@ -176,6 +214,14 @@ function toInput(form: FormState) {
         is_required: row.is_required,
         checklist_template_id: row.checklist_template_id,
       })),
+    links: form.links.map((link) => ({
+      system: link.system,
+      external_id: link.external_id,
+      realm: link.realm,
+      url: link.url,
+      title: link.title,
+      metadata: link.metadata,
+    })),
   };
 }
 
@@ -323,6 +369,60 @@ function TicketTemplateEditorBody({ templateId, fromTicketId }: TicketTemplateEd
     const next = [...form.checklist];
     [next[index], next[target]] = [next[target], next[index]];
     patch({ checklist: next });
+  };
+  const [linkSystems, setLinkSystems] = useState<ExternalSystemOption[]>([]);
+  const [linkSystemsLoading, setLinkSystemsLoading] = useState(false);
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [linkDraft, setLinkDraft] = useState<ExternalLinkFieldsValue>(EMPTY_EXTERNAL_LINK_FIELDS);
+  const [linkDraftMetadata, setLinkDraftMetadata] = useState<Record<string, unknown> | null>(null);
+  const [linkDialogError, setLinkDialogError] = useState<string | null>(null);
+
+  // Systems are needed to label rows and to fill the dialog; a failure only costs the nicer labels.
+  useEffect(() => {
+    let cancelled = false;
+    setLinkSystemsLoading(true);
+    listExternalSystems()
+      .then((result) => { if (!cancelled && Array.isArray(result)) setLinkSystems(result); })
+      .catch(() => { /* the dialog still works with typed values */ })
+      .finally(() => { if (!cancelled) setLinkSystemsLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const systemLabel = (key: string) => linkSystems.find((system) => system.key === key)?.label ?? key;
+  const moveLink = (index: number, delta: number) => {
+    const target = index + delta;
+    if (target < 0 || target >= form.links.length) return;
+    const next = [...form.links];
+    [next[index], next[target]] = [next[target], next[index]];
+    patch({ links: next });
+  };
+  const openLinkDialog = (prefill?: ExternalLinkFieldsValue, metadata: Record<string, unknown> | null = null) => {
+    setLinkDraft(prefill ?? EMPTY_EXTERNAL_LINK_FIELDS);
+    setLinkDraftMetadata(metadata);
+    setLinkDialogError(null);
+    setLinkDialogOpen(true);
+  };
+  const addLinkFromDraft = () => {
+    const system = linkSystems.find((candidate) => candidate.key === linkDraft.system) ?? null;
+    if (!linkDraft.system) return setLinkDialogError(t('externalLinks.errors.systemRequired', 'Choose an external system.'));
+    if (!linkDraft.externalId.trim()) return setLinkDialogError(t('externalLinks.errors.externalIdRequired', 'External ID is required.'));
+    // Stored absolute: the template snapshot never re-resolves at ticket creation.
+    const href = resolveExternalLinkPreview(system, linkDraft);
+    if (!href) return setLinkDialogError(t('externalLinks.errors.urlRequired', 'A URL is required for systems without a URL template.'));
+    const duplicate = form.links.some((link) => link.system === linkDraft.system && link.external_id === linkDraft.externalId.trim());
+    if (duplicate) return setLinkDialogError(t('templates.errors.duplicateLink', 'This template already has that documentation link.'));
+    patch({
+      links: [...form.links, {
+        key: nextKey(),
+        system: linkDraft.system,
+        external_id: linkDraft.externalId.trim(),
+        realm: linkDraft.realm.trim() || null,
+        url: href,
+        title: linkDraft.title.trim() || null,
+        metadata: linkDraftMetadata,
+      }],
+    });
+    setLinkDialogOpen(false);
   };
   const patchCustomField = (key: string, changes: Partial<CustomFieldRow>) =>
     patch({ customFields: form.customFields.map((row) => (row.key === key ? { ...row, ...changes } : row)) });
@@ -666,6 +766,89 @@ function TicketTemplateEditorBody({ templateId, fromTicketId }: TicketTemplateEd
           </Button>
         )}
       </SectionCard>
+
+      <SectionCard id={`${ID}-links`} title={t('templates.sections.links', 'Documentation links')} bodyClassName="space-y-3 md:max-w-3xl">
+        <p className="text-xs text-[rgb(var(--color-text-500))]">
+          {t('templates.links.help', 'Copied onto every ticket created from this template, as references. Later changes to the template do not change existing tickets.')}
+        </p>
+        {form.links.length === 0 && (
+          <p id={`${ID}-links-empty`} className="text-sm text-[rgb(var(--color-text-500))]">
+            {t('templates.links.empty', 'No documentation links.')}
+          </p>
+        )}
+        {form.links.map((link, index) => (
+          <div key={link.key} id={`${ID}-link-${index}`} className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">{link.title ?? systemLabel(link.system)}</p>
+              <p className="truncate text-xs text-[rgb(var(--color-text-500))]">
+                {link.title ? `${systemLabel(link.system)} · ` : ''}{link.realm ? `${link.realm}/` : ''}{link.external_id}
+              </p>
+            </div>
+            <Button id={`${ID}-link-${index}-up`} type="button" variant="ghost" size="sm" disabled={readOnly || index === 0}
+              aria-label={t('templates.links.moveUp', 'Move up')} onClick={() => moveLink(index, -1)}>
+              <ArrowUp className="h-4 w-4" />
+            </Button>
+            <Button id={`${ID}-link-${index}-down`} type="button" variant="ghost" size="sm" disabled={readOnly || index === form.links.length - 1}
+              aria-label={t('templates.links.moveDown', 'Move down')} onClick={() => moveLink(index, 1)}>
+              <ArrowDown className="h-4 w-4" />
+            </Button>
+            <Button id={`${ID}-link-${index}-remove`} type="button" variant="ghost" size="sm" disabled={readOnly}
+              aria-label={t('templates.links.remove', 'Remove link')}
+              onClick={() => patch({ links: form.links.filter((candidate) => candidate.key !== link.key) })}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        ))}
+        {!readOnly && (
+          <div className="flex flex-wrap items-center gap-2">
+            <Button id={`${ID}-links-add`} type="button" variant="outline" size="sm" onClick={() => openLinkDialog()}>
+              <Plus className="h-4 w-4 mr-1" />
+              {t('templates.links.add', 'Add link')}
+            </Button>
+            <HuduArticlePicker
+              id={`${ID}-links-hudu`}
+              onPick={(article) => openLinkDialog({
+                system: 'hudu',
+                externalId: article.external_id,
+                realm: '',
+                url: article.url,
+                title: article.title,
+              })}
+            />
+          </div>
+        )}
+      </SectionCard>
+
+      <Dialog
+        id={`${ID}-link-dialog`}
+        isOpen={linkDialogOpen}
+        onClose={() => setLinkDialogOpen(false)}
+        title={t('templates.links.dialogTitle', 'Add documentation link')}
+        className="max-w-lg"
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button id={`${ID}-link-dialog-cancel`} type="button" variant="ghost" onClick={() => setLinkDialogOpen(false)}>
+              {t('externalLinks.actions.cancel', 'Cancel')}
+            </Button>
+            <Button id={`${ID}-link-dialog-save`} type="button" onClick={addLinkFromDraft}>
+              {t('templates.links.add', 'Add link')}
+            </Button>
+          </div>
+        )}
+      >
+        <DialogContent>
+          <div className="space-y-4">
+            {linkDialogError && <p id={`${ID}-link-dialog-error`} className="text-sm text-red-600 dark:text-red-400">{linkDialogError}</p>}
+            <ExternalLinkFields
+              id={`${ID}-link-dialog-fields`}
+              systems={linkSystems}
+              systemsLoading={linkSystemsLoading}
+              value={linkDraft}
+              onChange={(changes) => setLinkDraft((current) => ({ ...current, ...changes }))}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <SectionCard id={`${ID}-custom-fields`} title={t('templates.sections.customFields', 'Custom fields')} bodyClassName="space-y-3 md:max-w-3xl">
         {form.customFields.length === 0 && (
