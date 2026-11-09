@@ -2,6 +2,8 @@
 
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
+import { isClientUser } from './mspOutboundEmailAccess';
+import { requireInboundTicketDefaultsAdmin } from './mspInboundTicketDefaultsAccess';
 import type { InboundTicketDefaults } from '@alga-psa/types';
 import {
   actionError,
@@ -75,10 +77,13 @@ const assertTicketStatusBelongsToBoard = async (
 };
 
 export const getInboundTicketDefaults = withAuth(async (
-  _user,
+  user,
   { tenant }
 ): Promise<{ defaults: InboundTicketDefaults[]; error?: string }> => {
+  if (isClientUser(user)) return { defaults: [], error: 'Permission denied' };
   const { knex } = await createTenantKnex();
+  const access = await requireInboundTicketDefaultsAdmin(user, knex, 'read');
+  if (!access.allowed) return { defaults: [], error: access.message };
   
   try {
     const defaults = await tenantDb(knex, tenant).table('inbound_ticket_defaults')
@@ -113,7 +118,7 @@ export const getInboundTicketDefaults = withAuth(async (
 });
 
 export const createInboundTicketDefaults = withAuth(async (
-  _user,
+  user,
   { tenant },
   data: {
     short_name: string;
@@ -130,7 +135,10 @@ export const createInboundTicketDefaults = withAuth(async (
     is_active?: boolean;
   }
 ): Promise<{ defaults: InboundTicketDefaults } | InboundTicketDefaultsActionError> => {
+  if (isClientUser(user)) return actionError('Permission denied', 'errors.permissionDenied');
   const { knex } = await createTenantKnex();
+  const access = await requireInboundTicketDefaultsAdmin(user, knex, 'write');
+  if (!access.allowed) return actionError(access.message, 'errors.permissionDenied');
   
   try {
     // Validate required defaults fields
@@ -197,7 +205,7 @@ export const createInboundTicketDefaults = withAuth(async (
 });
 
 export const updateInboundTicketDefaults = withAuth(async (
-  _user,
+  user,
   { tenant },
   id: string,
   data: {
@@ -215,7 +223,10 @@ export const updateInboundTicketDefaults = withAuth(async (
     is_active?: boolean;
   }
 ): Promise<{ defaults: InboundTicketDefaults } | InboundTicketDefaultsActionError> => {
+  if (isClientUser(user)) return actionError('Permission denied', 'errors.permissionDenied');
   const { knex } = await createTenantKnex();
+  const access = await requireInboundTicketDefaultsAdmin(user, knex, 'write');
+  if (!access.allowed) return actionError(access.message, 'errors.permissionDenied');
   
   try {
     const current = await tenantDb(knex, tenant).table('inbound_ticket_defaults')
@@ -311,11 +322,14 @@ export const updateInboundTicketDefaults = withAuth(async (
 });
 
 export const deleteInboundTicketDefaults = withAuth(async (
-  _user,
+  user,
   { tenant },
   id: string
 ): Promise<{ success: true } | InboundTicketDefaultsActionError> => {
+  if (isClientUser(user)) return actionError('Permission denied', 'errors.permissionDenied');
   const { knex } = await createTenantKnex();
+  const access = await requireInboundTicketDefaultsAdmin(user, knex, 'write');
+  if (!access.allowed) return actionError(access.message, 'errors.permissionDenied');
   
   const outcome = await knex.transaction<
     { referencingProviders: Array<{ provider_name: string | null; mailbox: string | null }> } | { deletedCount: number }
@@ -373,11 +387,14 @@ export const deleteInboundTicketDefaults = withAuth(async (
 });
 
 export const getInboundTicketDefaultsById = withAuth(async (
-  _user,
+  user,
   { tenant },
   id: string
 ): Promise<{ defaults: InboundTicketDefaults | null; error?: string }> => {
+  if (isClientUser(user)) return { defaults: null, error: 'Permission denied' };
   const { knex } = await createTenantKnex();
+  const access = await requireInboundTicketDefaultsAdmin(user, knex, 'read');
+  if (!access.allowed) return { defaults: null, error: access.message };
   
   try {
     const defaults = await tenantDb(knex, tenant).table('inbound_ticket_defaults')
