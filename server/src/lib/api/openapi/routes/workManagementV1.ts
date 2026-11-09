@@ -18,6 +18,11 @@ import {
 } from '../../schemas/timeSheet';
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
 import {
+  recurringSchedulePreviewInputSchema,
+  recurringTicketClientUpdateSchema,
+  recurringTicketDefinitionInputSchema,
+} from '@alga-psa/tickets/lib/recurring/definitionInput';
+import {
   activeStopwatchQuerySchema,
   logStopwatchSchema,
   startStopwatchSchema,
@@ -1265,6 +1270,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     is_required: zOpenApi.boolean().describe('Whether the item gates ticket closure.'),
     checklist_template_id: zOpenApi.string().guid().nullable().optional().describe('Checklist template the item came from; leave null for a plain item.'),
   });
+  // LEVERAGE: friction openapi-mirrored-schemas — this shape hand-mirrors ticketTemplateInputSchema (and server/src/lib/api/schemas/ticketTemplate.ts mirrors it again); the recurring ticket routes below register the real package schemas instead. Templates should move to the same approach.
   const ticketTemplateBodyShape = {
     name: zOpenApi.string().min(1).max(200).describe('Template name, unique among active templates in the tenant.'),
     notes: zOpenApi.string().max(2000).nullable().optional().describe('Note for your team; never copied onto tickets.'),
@@ -1313,7 +1319,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   registry.registerRoute({
     method: 'get', path: '/api/v1/tickets/templates',
     summary: 'List ticket templates',
-    description: 'Returns the tenant ticket templates: the ticket fields, tags, custom fields and checklist each one produces, with how many recurring schedules and tickets use it. Filter with client_id to see what one client can use (its own templates plus the tenant-wide ones). Use a template with POST /api/v1/tickets/templates/{templateId}/instantiate instead of creating a ticket and then adding its checklist item by item.',
+    description: 'Returns the tenant ticket templates: the ticket fields, tags, custom fields and checklist each one produces, with how many recurring schedules and tickets use it. Filter with client_id to see what one client can use (its own templates plus the tenant-wide ones). Use a template with POST /api/v1/tickets/templates/{templateId}/instantiate instead of creating a ticket and then adding its checklist item by item. To create tickets on a schedule (for example a yearly renewal), schedule a template with POST /api/v1/tickets/recurring.',
     tags: [tag], security: [{ ApiKeyAuth: [] }],
     request: { query: TicketTemplateListQuery },
     responses: {
@@ -1412,6 +1418,227 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     },
     extensions: { ...templateExt('read'), 'x-rbac-additional-required': 'ticket:create', 'x-chat-approval-required': true },
     edition: 'both',
+  });
+
+  // ==========================================================================
+  // Recurring ticket definitions (schedules that create tickets from a ticket template)
+  // ==========================================================================
+  // The request bodies are the real package schemas the server actions parse, registered as-is:
+  // nothing is mirrored here, and the field descriptions live next to the schemas.
+  const RecurringDefinitionParams = registry.registerSchema(
+    'WorkV1RecurringTicketParams',
+    zOpenApi.object({
+      definitionId: zOpenApi.string().guid().describe('Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id).'),
+    }),
+  );
+  const RecurringDefinitionClientParams = registry.registerSchema(
+    'WorkV1RecurringTicketClientParams',
+    zOpenApi.object({
+      definitionId: zOpenApi.string().guid().describe('Recurring ticket definition UUID.'),
+      clientId: zOpenApi.string().guid().describe('The client’s client_id (from GET /api/v1/clients), NOT a definition_client_id. The client must already be on this definition, otherwise 404.'),
+    }),
+  );
+  const RecurringListQuery = registry.registerSchema(
+    'WorkV1RecurringTicketListQuery',
+    zOpenApi.object({
+      status: zOpenApi.enum(['active', 'paused', 'archived', 'all']).optional().describe("Filter by state. Default 'all', which includes archived definitions."),
+      search: zOpenApi.string().optional().describe('Case-insensitive substring of the definition name.'),
+      page: zOpenApi.string().optional().describe('1-based page number. Default 1.'),
+      limit: zOpenApi.string().optional().describe('Page size, 1-100. Default 25.'),
+    }),
+  );
+  const RecurringOccurrencesQuery = registry.registerSchema(
+    'WorkV1RecurringTicketOccurrencesQuery',
+    zOpenApi.object({
+      status: zOpenApi.enum(['created', 'skipped', 'missed', 'failed']).optional().describe('Filter by what happened to the occurrence.'),
+      client_id: zOpenApi.string().guid().optional().describe('Only occurrences for this client (client_id).'),
+      page: zOpenApi.string().optional().describe('1-based page number. Default 1.'),
+      limit: zOpenApi.string().optional().describe('Page size, 1-200. Default 25.'),
+    }),
+  );
+  const RecurringDefinitionBody = registry.registerSchema('WorkV1RecurringTicketDefinitionBody', recurringTicketDefinitionInputSchema);
+  const RecurringPreviewBody = registry.registerSchema('WorkV1RecurringTicketPreviewBody', recurringSchedulePreviewInputSchema);
+  const RecurringClientUpdateBody = registry.registerSchema('WorkV1RecurringTicketClientUpdateBody', recurringTicketClientUpdateSchema);
+  const RecurringAddClientsBody = registry.registerSchema(
+    'WorkV1RecurringTicketAddClientsBody',
+    zOpenApi.object({
+      client_ids: zOpenApi.array(zOpenApi.string().guid()).min(1).max(100).describe('client_id values (from GET /api/v1/clients) to add. Clients already on the definition are ignored. Adding a client is what starts ticket generation for it.'),
+    }),
+  );
+
+  const recurringExt = (action: string, opts: { approval?: boolean; template?: boolean } = {}) => ({
+    'x-tenant-scoped': true,
+    'x-rbac-resource': 'recurring_ticket',
+    'x-rbac-action': action,
+    ...(opts.template ? { 'x-rbac-additional-required': 'ticket_template:read' } : {}),
+    ...(opts.approval ? { 'x-chat-approval-required': true } : {}),
+  });
+  const recurringResponses = (
+    success: { code: number; description: string; emptyBody?: boolean; paginated?: boolean },
+    action: string,
+    extra: Record<number, string> = {},
+  ) => ({
+    [success.code]: success.emptyBody
+      ? { description: success.description, emptyBody: true as const }
+      : { description: success.description, schema: success.paginated ? ApiPaginated : ApiSuccess },
+    400: { description: 'Validation failure, an invalid id, or a reference that does not exist.', schema: ApiError },
+    401: { description: 'API key missing/invalid.', schema: ApiError },
+    403: { description: `RBAC denied for recurring_ticket ${action}.`, schema: ApiError },
+    ...Object.fromEntries(Object.entries(extra).map(([code, description]) => [code, { description, schema: ApiError }])),
+    500: { description: 'Unexpected controller/service failure.', schema: ApiError },
+  });
+  const NOT_FOUND_DEFINITION = 'Recurring ticket definition not found.';
+  const ARCHIVED_409 = 'The definition is archived and read-only.';
+  const DETAIL_SHAPE = 'definition, clients (each with client_id, client_name, is_active and asset_ids), next_due_at, time_zone and effective_fields';
+
+  registry.registerRoute({
+    method: 'get', path: '/api/v1/tickets/recurring',
+    summary: 'List recurring ticket definitions',
+    description: 'Lists the schedules that create tickets automatically (for example a yearly certificate renewal): name, status (active, paused or archived), recurrence rule, client_count, next_due_at, time_zone and has_failure. Use it to find a schedule by name (search), to see what is paused (status=paused), or to see which one is failing: has_failure means the latest occurrence for some client failed, and GET /api/v1/tickets/recurring/{definitionId}/occurrences?status=failed gives the reason. status defaults to all, which includes archived definitions. Due and create times are wall-clock in time_zone, the tenant time zone.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { query: RecurringListQuery },
+    responses: recurringResponses({ code: 200, description: 'Recurring ticket definitions.', paginated: true }, 'read'),
+    extensions: recurringExt('read'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post', path: '/api/v1/tickets/recurring',
+    summary: 'Create a recurring ticket definition',
+    description: `Creates a schedule that creates a ticket every time it falls due, for example "every year on 1 March, created 30 days early". What the ticket looks like (title, description, checklist, tags, board, priority) comes from a ticket template: create one first with POST /api/v1/tickets/templates and pass its template_id as ticket_template_id; ticket content fields such as title are rejected here with 400. recurrence.frequency is daily, weekly, monthly or yearly; a yearly rule is { frequency: "yearly", month, day, end } and means every year (it has no interval). A new definition generates nothing until clients are added with POST /api/v1/tickets/recurring/{definitionId}/clients. Use POST /api/v1/tickets/recurring/preview to check the dates first. Requires recurring_ticket:create and ticket_template:read. Returns 201 with ${DETAIL_SHAPE}.`,
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { body: { schema: RecurringDefinitionBody } },
+    responses: recurringResponses({ code: 201, description: 'The created definition (no clients yet).' }, 'create'),
+    extensions: recurringExt('create', { template: true }), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post', path: '/api/v1/tickets/recurring/preview',
+    summary: 'Preview the next due dates of an unsaved recurring schedule',
+    description: 'Computes the next 5 occurrences (nominal date, due date, create_at and due_at instants) of a draft schedule without saving anything, in the tenant time zone and with the business-day calendar the non_business_day_policy uses. Pass ticket_template_id to also get sample_title, the template title rendered for the first occurrence. Use it to check a rule before POST /api/v1/tickets/recurring. For a saved definition use GET /api/v1/tickets/recurring/{definitionId}/upcoming.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { body: { schema: RecurringPreviewBody } },
+    responses: recurringResponses({ code: 200, description: 'The next 5 occurrences, time_zone, calendar and sample_title.' }, 'read'),
+    extensions: recurringExt('read'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get', path: '/api/v1/tickets/recurring/{definitionId}',
+    summary: 'Get a recurring ticket definition',
+    description: `Returns one definition with ${DETAIL_SHAPE}. clients lists every client the schedule runs for; effective_fields is what a client without its own overrides gets (template, then dispatch, then schedule overrides). An archived definition stays readable: definition.archived_at is set.`,
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: RecurringDefinitionParams },
+    responses: recurringResponses({ code: 200, description: 'The recurring ticket definition.' }, 'read', { 404: NOT_FOUND_DEFINITION }),
+    extensions: recurringExt('read'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'put', path: '/api/v1/tickets/recurring/{definitionId}',
+    summary: 'Replace a recurring ticket definition',
+    description: `Replaces the whole definition: every field you omit goes back to its default (create_time 08:00, due_time 17:00, lead_days 0, overrides {}, no assignee), it does not keep its current value. GET the definition first and send it back edited. Clients attached to the definition are not touched. Archived definitions are read-only (409). Requires recurring_ticket:update, and ticket_template:read when the template changes. Returns ${DETAIL_SHAPE}.`,
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: RecurringDefinitionParams, body: { schema: RecurringDefinitionBody } },
+    responses: recurringResponses({ code: 200, description: 'The updated definition.' }, 'update', { 404: NOT_FOUND_DEFINITION, 409: ARCHIVED_409 }),
+    extensions: recurringExt('update', { approval: true, template: true }), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'delete', path: '/api/v1/tickets/recurring/{definitionId}',
+    summary: 'Archive a recurring ticket definition',
+    description: 'Archives the definition: it stops creating tickets and becomes read-only. Occurrence history and the tickets already created are kept, and the definition stays readable with status archived. There is no unarchive, so to pause temporarily use POST /api/v1/tickets/recurring/{definitionId}/pause instead. Returns 204.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: RecurringDefinitionParams },
+    responses: recurringResponses({ code: 204, description: 'Archived; no content.', emptyBody: true }, 'delete', { 404: NOT_FOUND_DEFINITION, 409: 'Already archived.' }),
+    extensions: recurringExt('delete', { approval: true }), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post', path: '/api/v1/tickets/recurring/{definitionId}/pause',
+    summary: 'Pause a recurring ticket definition',
+    description: `Stops the whole definition from creating tickets until it is resumed. Reversible with POST /api/v1/tickets/recurring/{definitionId}/resume. To stop only one client use the client pause endpoint. Returns ${DETAIL_SHAPE}, with definition.is_active false.`,
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: RecurringDefinitionParams },
+    responses: recurringResponses({ code: 200, description: 'The paused definition.' }, 'update', { 404: NOT_FOUND_DEFINITION, 409: ARCHIVED_409 }),
+    extensions: recurringExt('update'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post', path: '/api/v1/tickets/recurring/{definitionId}/resume',
+    summary: 'Resume a recurring ticket definition',
+    description: `Restarts ticket creation for a paused definition. Occurrences that fell due while it was paused are not backfilled: generation continues from now. Returns ${DETAIL_SHAPE}, with definition.is_active true.`,
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: RecurringDefinitionParams },
+    responses: recurringResponses({ code: 200, description: 'The resumed definition.' }, 'update', { 404: NOT_FOUND_DEFINITION, 409: ARCHIVED_409 }),
+    extensions: recurringExt('update', { approval: true }), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get', path: '/api/v1/tickets/recurring/{definitionId}/upcoming',
+    summary: 'Get the next due dates of a recurring ticket definition',
+    description: 'Returns the next 5 due dates of the saved definition: each with nominal date, due date, create_at and due_at instants, plus time_zone, the business-day calendar used and sample_title. The dates are computed from the schedule rule only: they ignore whether the definition or a client is paused and ignore occurrences already generated, so read definition_status (active, paused or archived) before telling someone a ticket will be created. For the per-client next_due_at use GET /api/v1/tickets/recurring/{definitionId}.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: RecurringDefinitionParams },
+    responses: recurringResponses({ code: 200, description: 'The next 5 occurrences with definition_status.' }, 'read', { 404: NOT_FOUND_DEFINITION }),
+    extensions: recurringExt('read'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get', path: '/api/v1/tickets/recurring/{definitionId}/occurrences',
+    summary: 'List the occurrence history of a recurring ticket definition',
+    description: 'The history of what the schedule did, newest first: for each client and due date the status (created, skipped, missed or failed), the ticket_id and ticket_number it created, the reason a skip or failure happened, and the number of attempts. History survives removing a client. Filter with status=failed to see why a schedule is failing, or with client_id for one client.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: RecurringDefinitionParams, query: RecurringOccurrencesQuery },
+    responses: recurringResponses({ code: 200, description: 'Occurrence history.', paginated: true }, 'read', { 404: NOT_FOUND_DEFINITION }),
+    extensions: recurringExt('read'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post', path: '/api/v1/tickets/recurring/{definitionId}/clients',
+    summary: 'Add clients to a recurring ticket definition',
+    description: `Adds clients to the definition; this is what starts ticket generation for them, one ticket per client per occurrence. Resolve client_ids with GET /api/v1/clients first. Clients already on the definition are ignored, so the call is safe to repeat. A new client is not backfilled: tickets start from the next occurrence. Returns ${DETAIL_SHAPE}, plus added (how many were new). A client_id that does not exist is 400.`,
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: RecurringDefinitionParams, body: { schema: RecurringAddClientsBody } },
+    responses: recurringResponses({ code: 200, description: 'The definition with the added count.' }, 'update', { 404: NOT_FOUND_DEFINITION, 409: ARCHIVED_409 }),
+    extensions: recurringExt('update', { approval: true }), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'put', path: '/api/v1/tickets/recurring/{definitionId}/clients/{clientId}',
+    summary: 'Replace a client’s settings on a recurring ticket definition',
+    description: `Replaces the per-client settings (overrides, contact_id, location_id, asset_ids): all four are required, send {}, null or [] to clear one. {clientId} is the client_id, and the client must already be on this definition (404 otherwise). Returns ${DETAIL_SHAPE}.`,
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: RecurringDefinitionClientParams, body: { schema: RecurringClientUpdateBody } },
+    responses: recurringResponses({ code: 200, description: 'The updated definition.' }, 'update', { 404: 'Definition not found, or the client is not on it.', 409: ARCHIVED_409 }),
+    extensions: recurringExt('update', { approval: true }), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post', path: '/api/v1/tickets/recurring/{definitionId}/clients/{clientId}/pause',
+    summary: 'Pause one client on a recurring ticket definition',
+    description: `Stops ticket creation for this client only; the other clients keep running. {clientId} is the client_id and must already be on the definition (404 otherwise). Reversible with the client resume endpoint. Returns ${DETAIL_SHAPE}.`,
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: RecurringDefinitionClientParams },
+    responses: recurringResponses({ code: 200, description: 'The definition with the client paused.' }, 'update', { 404: 'Definition not found, or the client is not on it.', 409: ARCHIVED_409 }),
+    extensions: recurringExt('update'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post', path: '/api/v1/tickets/recurring/{definitionId}/clients/{clientId}/resume',
+    summary: 'Resume one client on a recurring ticket definition',
+    description: `Restarts ticket creation for a paused client; occurrences missed while it was paused are not backfilled. {clientId} is the client_id and must already be on the definition (404 otherwise). Returns ${DETAIL_SHAPE}.`,
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: RecurringDefinitionClientParams },
+    responses: recurringResponses({ code: 200, description: 'The definition with the client resumed.' }, 'update', { 404: 'Definition not found, or the client is not on it.', 409: ARCHIVED_409 }),
+    extensions: recurringExt('update', { approval: true }), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'delete', path: '/api/v1/tickets/recurring/{definitionId}/clients/{clientId}',
+    summary: 'Remove a client from a recurring ticket definition',
+    description: 'Removes the client from the schedule so it no longer gets tickets. Its occurrence history and the tickets already created are kept. To stop a client temporarily use the client pause endpoint instead. {clientId} is the client_id and must be on the definition (404 otherwise). Returns 204.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: RecurringDefinitionClientParams },
+    responses: recurringResponses({ code: 204, description: 'Client removed; no content.', emptyBody: true }, 'update', { 404: 'Definition not found, or the client is not on it.', 409: ARCHIVED_409 }),
+    extensions: recurringExt('update', { approval: true }), edition: 'both',
   });
 
   registry.registerRoute({

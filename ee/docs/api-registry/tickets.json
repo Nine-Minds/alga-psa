@@ -1285,6 +1285,156 @@
         "rbacResource": "ticket_template",
         "approvalRequired": true
       }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/tickets/recurring"
+      },
+      "metadata": {
+        "rbacResource": "recurring_ticket",
+        "approvalRequired": false
+      }
+    },
+    {
+      "match": {
+        "method": "post",
+        "path": "/api/v1/tickets/recurring"
+      },
+      "metadata": {
+        "rbacResource": "recurring_ticket",
+        "approvalRequired": false
+      }
+    },
+    {
+      "match": {
+        "method": "post",
+        "path": "/api/v1/tickets/recurring/preview"
+      },
+      "metadata": {
+        "rbacResource": "recurring_ticket",
+        "approvalRequired": false
+      }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/tickets/recurring/{definitionId}"
+      },
+      "metadata": {
+        "rbacResource": "recurring_ticket",
+        "approvalRequired": false
+      }
+    },
+    {
+      "match": {
+        "method": "put",
+        "path": "/api/v1/tickets/recurring/{definitionId}"
+      },
+      "metadata": {
+        "rbacResource": "recurring_ticket",
+        "approvalRequired": true
+      }
+    },
+    {
+      "match": {
+        "method": "delete",
+        "path": "/api/v1/tickets/recurring/{definitionId}"
+      },
+      "metadata": {
+        "rbacResource": "recurring_ticket",
+        "approvalRequired": true
+      }
+    },
+    {
+      "match": {
+        "method": "post",
+        "path": "/api/v1/tickets/recurring/{definitionId}/pause"
+      },
+      "metadata": {
+        "rbacResource": "recurring_ticket",
+        "approvalRequired": false
+      }
+    },
+    {
+      "match": {
+        "method": "post",
+        "path": "/api/v1/tickets/recurring/{definitionId}/resume"
+      },
+      "metadata": {
+        "rbacResource": "recurring_ticket",
+        "approvalRequired": true
+      }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/tickets/recurring/{definitionId}/upcoming"
+      },
+      "metadata": {
+        "rbacResource": "recurring_ticket",
+        "approvalRequired": false
+      }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/tickets/recurring/{definitionId}/occurrences"
+      },
+      "metadata": {
+        "rbacResource": "recurring_ticket",
+        "approvalRequired": false
+      }
+    },
+    {
+      "match": {
+        "method": "post",
+        "path": "/api/v1/tickets/recurring/{definitionId}/clients"
+      },
+      "metadata": {
+        "rbacResource": "recurring_ticket",
+        "approvalRequired": true
+      }
+    },
+    {
+      "match": {
+        "method": "put",
+        "path": "/api/v1/tickets/recurring/{definitionId}/clients/{clientId}"
+      },
+      "metadata": {
+        "rbacResource": "recurring_ticket",
+        "approvalRequired": true
+      }
+    },
+    {
+      "match": {
+        "method": "post",
+        "path": "/api/v1/tickets/recurring/{definitionId}/clients/{clientId}/pause"
+      },
+      "metadata": {
+        "rbacResource": "recurring_ticket",
+        "approvalRequired": false
+      }
+    },
+    {
+      "match": {
+        "method": "post",
+        "path": "/api/v1/tickets/recurring/{definitionId}/clients/{clientId}/resume"
+      },
+      "metadata": {
+        "rbacResource": "recurring_ticket",
+        "approvalRequired": true
+      }
+    },
+    {
+      "match": {
+        "method": "delete",
+        "path": "/api/v1/tickets/recurring/{definitionId}/clients/{clientId}"
+      },
+      "metadata": {
+        "rbacResource": "recurring_ticket",
+        "approvalRequired": true
+      }
     }
   ]
 }
