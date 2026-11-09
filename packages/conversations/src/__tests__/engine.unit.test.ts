@@ -45,6 +45,8 @@ describe('owner registry', () => {
   it('validates owner type, is process-global, and unknown types are absent', () => {
     const adapter = { canRead: async () => true, canWrite: async () => true };
     expect(() => registerConversationFileOwner('Bad Type', adapter)).toThrow();
+    expect(() => registerConversationFileOwner('half_open', { canWrite: async () => true } as never)).toThrow();
+    expect(getConversationFileOwner('half_open')).toBeUndefined();
     registerConversationFileOwner('unit_owner', adapter);
     expect(getConversationFileOwner('unit_owner')).toBe(adapter);
     expect(unregisterConversationFileOwner('unit_owner')).toBe(true);

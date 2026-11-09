@@ -14,6 +14,7 @@ import {
   registerConversationFileRetention, rehydrateConversationFile, unregisterConversationFileOwner, unregisterConversationFileRetention,
   uploadConversationFile, type ConversationFileStorage,
 } from '@alga-psa/conversations/files';
+import { createConversationFileDownloadHandler } from '@alga-psa/conversations/files/download';
 import { tenantDeletionOrder } from '@alga-psa/db/tenantTableManifest';
 
 let db: Knex;
@@ -130,6 +131,31 @@ describe('conversation file engine', () => {
     await files(T1).where({ file_id: f.fileId }).update({ owner_type: 'gadget', owner_id: widgetA });
     registerConversationFileOwner('gadget', { canRead: async () => false, canWrite: async () => false });
     await rejects(readConversationFile(db, alice, f.fileId, storage), 'FILE_NOT_FOUND');
+  }));
+
+  it('an unauthorized read is indistinguishable from a missing record (engine error and HTTP response)', must(async () => {
+    const storage = memoryStorage();
+    const onB = await stage(storage, 'owner b only', widgetB); // widgetB: alice only
+    const onT1 = await stage(storage, 'tenant one');
+    const missing = randomUUID();
+    const caught = async (p: Promise<unknown>) => p.then(() => { throw new Error('expected a rejection'); }, (e: any) => ({ name: e.name, code: e.code, message: e.message }));
+    const asMissing = await caught(readConversationFile(db, bob, missing, storage));
+    expect(asMissing.code).toBe('FILE_NOT_FOUND');
+    expect(await caught(readConversationFile(db, bob, onB.fileId, storage))).toEqual(asMissing); // cross-owner
+    expect(await caught(readConversationFile(db, carol, onT1.fileId, storage))).toEqual(asMissing); // cross-tenant
+
+    const handler = createConversationFileDownloadHandler({ guard: () => null, resolveActor: async r => ({ alice, bob, carol } as Record<string, typeof bob>)[r.headers.get('x-user') ?? 'bob'], getDb: async () => db, storage: () => storage });
+    const respond = async (fileId: string, who = 'bob') => {
+      const res = await handler(new Request('http://x/f', { headers: { 'x-user': who } }), { params: { fileId } });
+      return { status: res.status, body: await res.text(), headers: [...res.headers.entries()] };
+    };
+    const missingResponse = await respond(missing);
+    expect(missingResponse.status).toBe(404);
+    expect(await respond(onB.fileId)).toEqual(missingResponse);
+    expect(await respond(onT1.fileId, 'carol')).toEqual(missingResponse);
+    // Control: the authorized reader gets the bytes through the same handler.
+    const ok = await respond(onB.fileId, 'alice');
+    expect(ok.status).toBe(200); expect(ok.body).toBe('owner b only');
   }));
 
   it('duplicate operation id returns the original receipt; conflicting reuse is rejected', must(async () => {
