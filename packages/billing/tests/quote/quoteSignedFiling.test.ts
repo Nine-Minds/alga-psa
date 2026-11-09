@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { HTTPRequest } from 'puppeteer';
 
 const TENANT_ID = '22222222-2222-4222-8222-222222222222';
 const QUOTE_ID = '33333333-3333-4333-8333-333333333333';
@@ -127,7 +128,8 @@ const baseViewModel = {
 
 const renderedHtml = async () => {
   const browser = await getBrowserMock.mock.results[0].value;
-  const page = await browser.newPage.mock.results[0].value;
+  const context = await browser.createBrowserContext.mock.results[0].value;
+  const page = await context.newPage.mock.results[0].value;
   return page.setContent.mock.calls[0][0] as string;
 };
 
@@ -135,12 +137,19 @@ describe('signed quote filing', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     existingSigned = undefined;
-    const pageMock = {
-      setContent: vi.fn().mockResolvedValue(undefined),
-      pdf: vi.fn().mockResolvedValue(Buffer.from('%PDF-signed')),
-      close: vi.fn().mockResolvedValue(undefined),
-    };
-    getBrowserMock.mockResolvedValue({ newPage: vi.fn().mockResolvedValue(pageMock) });
+    getBrowserMock.mockResolvedValue({
+      createBrowserContext: vi.fn(async () => ({
+        newPage: vi.fn().mockResolvedValue({
+          setJavaScriptEnabled: vi.fn().mockResolvedValue(undefined),
+          setRequestInterception: vi.fn().mockResolvedValue(undefined),
+          on: vi.fn(),
+          setContent: vi.fn().mockResolvedValue(undefined),
+          pdf: vi.fn().mockResolvedValue(Buffer.from('%PDF-signed')),
+          close: vi.fn().mockResolvedValue(undefined),
+        }),
+        close: vi.fn().mockResolvedValue(undefined),
+      })),
+    });
     releaseBrowserMock.mockResolvedValue(undefined);
     createTenantKnex.mockResolvedValue({ knex: { scope: 'knex', raw: vi.fn().mockResolvedValue(undefined) }, tenant: TENANT_ID });
     mapDbQuoteToViewModel.mockImplementation(async (_k: unknown, _t: string, _id: string, opts?: { acceptance?: typeof acceptance }) => ({
@@ -209,6 +218,35 @@ describe('signed quote filing', () => {
     expect(html).not.toContain('data-quote-acceptance-block');
     expect(documentInsertMock.mock.calls[0][1].document_name).toBe('Proposal.pdf');
     expect(mapDbQuoteToViewModel).toHaveBeenCalledWith(expect.anything(), TENANT_ID, QUOTE_ID, { acceptance: undefined });
+  });
+
+  it('isolates signed and sent exports and closes each context before releasing the pooled browser', async () => {
+    const service = createPDFGenerationService(TENANT_ID);
+    await service.generateAndStore({ quoteId: QUOTE_ID, userId: USER_ID, quoteVariant: 'signed', acceptance });
+    await service.generateAndStore({ quoteId: QUOTE_ID, userId: USER_ID });
+
+    const browser = await getBrowserMock.mock.results[0].value;
+    expect(browser.createBrowserContext).toHaveBeenCalledTimes(2);
+    const contexts = await Promise.all(browser.createBrowserContext.mock.results.map((result: { value: Promise<unknown> }) => result.value));
+    expect(contexts[0]).not.toBe(contexts[1]);
+    for (const [index, result] of browser.createBrowserContext.mock.results.entries()) {
+      const context = await result.value;
+      const page = await context.newPage.mock.results[0].value;
+      expect(page.setJavaScriptEnabled).toHaveBeenCalledWith(false);
+      expect(page.setRequestInterception).toHaveBeenCalledWith(true);
+      expect(page.setRequestInterception.mock.invocationCallOrder[0]).toBeLessThan(page.setContent.mock.invocationCallOrder[0]);
+      const onRequest = page.on.mock.calls.find(([event]: [string]) => event === 'request')![1];
+      const request = { url: () => 'http://127.0.0.1/private', abort: vi.fn(), continue: vi.fn() };
+      onRequest(request as unknown as HTTPRequest);
+      expect(request.abort).toHaveBeenCalledWith('blockedbyclient');
+      expect(request.continue).not.toHaveBeenCalled();
+      expect(page.close).toHaveBeenCalledOnce();
+      expect(context.close).toHaveBeenCalledOnce();
+      expect(context.close.mock.invocationCallOrder[0]).toBeLessThan(releaseBrowserMock.mock.invocationCallOrder[index]);
+    }
+    expect(releaseBrowserMock).toHaveBeenCalledTimes(2);
+    expect(releaseBrowserMock).toHaveBeenNthCalledWith(1, browser);
+    expect(releaseBrowserMock).toHaveBeenNthCalledWith(2, browser);
   });
 
   it('reuses an already-issued signed document instead of filing a second one', async () => {
