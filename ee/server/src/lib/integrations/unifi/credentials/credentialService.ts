@@ -291,7 +291,18 @@ export async function removeCredential(
     for (const row of rows as any[]) {
       const scope = String(row.external_organization_id);
       const parsed = parseUniFiScopeKey(scope);
-      if (parsed && ownedHostIds.has(parsed.hostId)) affectedSites.push(String(row.external_organization_name ?? scope));
+      let affectsCredential = parsed !== null && ownedHostIds.has(parsed.hostId);
+      if (!parsed) {
+        logger.warn('[UniFi] Malformed mapped-site scope during credential removal', {
+          credentialId: credential.credentialId,
+        });
+        // Retain legacy confirmation matches and recognize composite IDs missing a site.
+        const legacyHostId = scope.slice(0, Math.max(scope.indexOf(':'), 0));
+        const incompleteHostId = scope.endsWith(':') ? scope.slice(0, -1) : null;
+        affectsCredential = ownedHostIds.has(legacyHostId)
+          || (incompleteHostId !== null && ownedHostIds.has(incompleteHostId));
+      }
+      if (affectsCredential) affectedSites.push(String(row.external_organization_name ?? scope));
     }
   }
 
