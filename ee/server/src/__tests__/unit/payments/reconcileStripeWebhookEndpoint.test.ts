@@ -146,3 +146,38 @@ describe('migrateStripeWebhookEndpointOnDemand', () => {
       expect(loggerMock.warn).toHaveBeenCalledWith(expect.stringContaining('On-demand migration skipped'), expect.objectContaining({ tenantId: T }));
     });
 });
+
+describe('Stripe client for reconcile', () => {
+  const saved = { base: process.env.STRIPE_API_BASE_URL, env: process.env.NODE_ENV };
+  beforeEach(() => {
+    vi.clearAllMocks();
+    stripeMock.webhookEndpoints.retrieve.mockResolvedValue({ id: 'we_1', url: TENANT_URL, enabled_events: [] });
+  });
+  afterEach(() => {
+    if (saved.base === undefined) delete process.env.STRIPE_API_BASE_URL; else process.env.STRIPE_API_BASE_URL = saved.base;
+    (process.env as any).NODE_ENV = saved.env;
+  });
+
+  it('talks to real Stripe by default', async () => {
+    delete process.env.STRIPE_API_BASE_URL;
+    const { default: StripeCtor } = await import('stripe');
+    await reconcileStripeWebhookEvents(T, { ...opts, scope: 'url' });
+    expect(vi.mocked(StripeCtor).mock.calls.at(-1)?.[1]).not.toHaveProperty('host');
+  });
+
+  it('honours the guarded loopback emulator override (STRIPE_API_BASE_URL) outside production', async () => {
+    process.env.STRIPE_API_BASE_URL = 'http://localhost:4507';
+    (process.env as any).NODE_ENV = 'development';
+    const { default: StripeCtor } = await import('stripe');
+    await reconcileStripeWebhookEvents(T, { ...opts, scope: 'url' });
+    expect(vi.mocked(StripeCtor).mock.calls.at(-1)?.[1]).toMatchObject({ host: 'localhost', port: 4507, protocol: 'http' });
+  });
+
+  it('ignores the override in production without the explicit local-review opt-in', async () => {
+    process.env.STRIPE_API_BASE_URL = 'http://localhost:4507';
+    (process.env as any).NODE_ENV = 'production';
+    const { default: StripeCtor } = await import('stripe');
+    await reconcileStripeWebhookEvents(T, { ...opts, scope: 'url' });
+    expect(vi.mocked(StripeCtor).mock.calls.at(-1)?.[1]).not.toHaveProperty('host');
+  });
+});

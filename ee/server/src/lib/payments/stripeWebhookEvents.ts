@@ -4,6 +4,7 @@ import { tenantDb } from '@alga-psa/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { getConnection } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
+import { stripeApiOverride } from '../stripe/stripeApiOverride';
 import type { IPaymentProviderConfig } from 'server/src/interfaces/payment.interfaces';
 
 /**
@@ -99,7 +100,8 @@ export async function reconcileStripeWebhookEvents(
   const secretProvider = await getSecretProviderInstance();
   const secretKey = await secretProvider.getTenantSecret(tenant, 'stripe_payment_secret_key');
   if (!secretKey) return false;
-  const stripe = new Stripe(secretKey, { apiVersion: '2024-12-18.acacia' as any });
+  // LEVERAGE: pattern stripe-client — tenant Stripe clients are built ad hoc here, in payment-actions.ts and StripePaymentProvider (each with or without the emulator override); a shared tenant-client factory would end the drift.
+  const stripe = new Stripe(secretKey, { apiVersion: '2024-12-18.acacia' as any, ...stripeApiOverride(secretKey) });
   const { tenantUrl } = stripeWebhookUrls(options.baseUrl ?? getStripeBaseUrl(), tenant);
 
   let current: Stripe.WebhookEndpoint | Stripe.DeletedWebhookEndpoint;

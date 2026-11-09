@@ -52,6 +52,9 @@ secret (`secretSource` `hint-tenant` | `tenant`, non-null tenantId), T's Stripe 
   (no readily available helper; each replica may attempt once per TTL, harmless since the update is idempotent).
 - **Base-URL guard** (no Stripe calls, `logger.warn`): host `localhost`/`127.0.0.1`/`::1`, or non-https when
   `NODE_ENV === 'production'`.
-- **Testing limits**: unit-tested only. The emulator does not model `webhookEndpoints`, so Prepare Human Review cannot show a
-  live endpoint URL move unless the emulator gains that API. Recommended canary: run the ops script with `--tenant` on one
-  tenant, then watch Loki for `On-demand migration` log lines.
+- **Testing**: unit tests plus a live run against the Stripe emulator, which now models `/v1/webhook_endpoints`
+  (create/retrieve/list/update/delete, per-endpoint signing secrets, deliveries follow the endpoint's current URL,
+  `webhook_endpoints.*` operation faults). The reconcile Stripe client honours the guarded `stripeApiOverride`
+  (`STRIPE_API_BASE_URL`, loopback + `sk_test_` only, ignored in production without `ALGA_STRIPE_LOCAL_REVIEW`).
+  Recommended prod canary: run the ops script with `--tenant` on one tenant, then watch Loki for `On-demand migration`
+  log lines.
