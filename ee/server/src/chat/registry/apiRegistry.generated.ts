@@ -22142,7 +22142,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/financial/bulk/invoices",
     "displayName": "Run bulk invoice operation",
     "summary": "Run bulk invoice operation",
-    "description": "FinancialService.bulkInvoiceOperation() supports send/finalize/cancel/mark_paid operations.",
+    "description": "FinancialService.bulkInvoiceOperation() runs finalize or cancel against the canonical invoice engines (1–50 ids). finalize requires invoice:finalize; cancel voids eligible invoices through the canonical void engine (invoice:update, plus accounting_integrations:remote_mutate when an accounting integration is connected). Each id runs independently; per-id results carry success, error and outcome (finalized/voided). Bulk send is unsupported until canonical recipient delivery is implemented; standalone invoice send behavior is unchanged. apply_credit is unsupported: use POST /api/v1/financial/invoices/{id}/credit.",
     "tags": [
       "Financial"
     ],
@@ -22166,10 +22166,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "operation": {
           "type": "string",
           "enum": [
-            "send",
             "finalize",
-            "cancel",
-            "mark_paid"
+            "cancel"
           ]
         },
         "invoice_ids": {
@@ -22178,9 +22176,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "type": "string",
             "format": "uuid"
           },
-          "minItems": 1
+          "minItems": 1,
+          "maxItems": 50
         },
-        "options": {
+        "parameters": {
           "type": "object",
           "additionalProperties": {}
         }

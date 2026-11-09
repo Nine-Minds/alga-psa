@@ -172,7 +172,16 @@
     "unnamedTeam": "Equipe sem nome",
     "userPicker": "Seletor de usuários",
     "noUsersFound": "Nenhum usuário encontrado",
-    "contactRemoteLocation": "Remoto"
+    "contactRemoteLocation": "Remoto",
+    "selectBoard": "Selecionar quadro",
+    "activeBoards": "Quadros ativos",
+    "inactiveBoards": "Quadros inativos",
+    "allBoards": "Todos os quadros",
+    "boardPicker": "Seletor de quadros",
+    "filterByStatus": "Filtrar por status",
+    "statusFilter": "Filtro de status",
+    "boards": "Quadros",
+    "inactiveSuffix": "(Inativo)"
   },
   "serviceTypeSelect": {
     "placeholder": "Selecione um tipo de serviço...",
@@ -928,7 +937,8 @@
       "collapse": "Recolher pastas",
       "allDocuments": "Todos os documentos",
       "expand": "Mostrar pastas",
-      "deleteTitle": "Excluir pasta"
+      "deleteTitle": "Excluir pasta",
+      "show": "Mostrar pastas"
     },
     "folderManager": {
       "title": "Criar nova pasta",
@@ -990,6 +1000,28 @@
     "huduTab": {
       "documentsTabLabel": "Documentos",
       "tabLabel": "Hudu"
+    },
+    "fallbackUserName": "Usuário",
+    "selectOrCreate": "Selecione um documento ou crie um novo.",
+    "actions": {
+      "markdown": "Markdown",
+      "print": "Imprimir",
+      "edit": "Editar",
+      "upload": "Carregar",
+      "closePreview": "Fechar visualização",
+      "cancel": "Cancelar",
+      "save": "Salvar",
+      "saving": "Salvando..."
+    },
+    "viewMode": {
+      "grid": "Grade",
+      "list": "Lista"
+    },
+    "unsavedChanges": {
+      "title": "Alterações não salvas",
+      "message": "Tem certeza de que deseja cancelar? Todas as alterações não salvas serão perdidas.",
+      "confirm": "Descartar alterações",
+      "cancel": "Continuar editando"
     }
   },
   "surveys": {
@@ -1727,7 +1759,14 @@
       "assigned": "Atribuído:",
       "performedBy": "por {{name}}",
       "internal": "Interno"
-    }
+    },
+    "title": "Notificações",
+    "reconnectingToServer": "Reconectando ao servidor...",
+    "refresh": "Atualizar",
+    "markAllAsRead": "Marcar todas como lidas",
+    "markAllRead": "Marcar todas como lidas",
+    "emptyTitle": "Nenhuma notificação",
+    "emptyDescription": "Você está em dia!"
   },
   "importConflicts": {
     "title": "Resolver conflitos de importação",

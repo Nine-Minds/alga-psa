@@ -34,8 +34,8 @@
     "loadingExperimental": "Configuratie experimentele functies laden...",
     "loadingInteractions": "Interactie-instellingen laden...",
     "keyboardShortcuts": "Sneltoetsen",
-    "mcpServer": "MCP-server",
     "opportunities": "Verkoopkansen",
+    "mcpServer": "MCP-server",
     "settingsFallback": "Instellingen",
     "tags": "Labels"
   },
@@ -388,13 +388,13 @@
         "removeRoleFailed": "Kan rol niet verwijderen. Probeer het opnieuw.",
         "updateUserNotFound": "Kan gebruiker niet bijwerken. Gebruiker niet gevonden.",
         "updateFailed": "Kan gebruiker niet bijwerken. Probeer het opnieuw.",
-        "passwordTooShort": "Wachtwoord moet minimaal 8 tekens lang zijn",
-        "passwordChangeFailed": "Kan wachtwoord niet wijzigen",
-        "passwordChangeError": "Er is een fout opgetreden bij het wijzigen van het wachtwoord",
         "emailAlreadyExists": "Er bestaat al een gebruiker met dit e-mailadres",
         "reportsToSelf": "Een gebruiker kan niet aan zichzelf rapporteren",
         "reportsToCycle": "Dit zou een circulaire rapportagelijn creëren",
         "invalidTimezone": "Kies een tijdzone op basis van een stad, zoals America/New_York.",
+        "passwordTooShort": "Wachtwoord moet minimaal 8 tekens lang zijn",
+        "passwordChangeFailed": "Kan wachtwoord niet wijzigen",
+        "passwordChangeError": "Er is een fout opgetreden bij het wijzigen van het wachtwoord",
         "permissionDenied": "U heeft geen toestemming om gebruikersrollen te wijzigen.",
         "invalidCapacity": "Wekelijkse capaciteit moet een positief getal zijn.",
         "invalidWorkSchedule": "Werktijden moeten geldige tijdvakken zijn die eindigen na de starttijd."
@@ -714,11 +714,11 @@
         "conflictsTitle": "Importconflicten oplossen",
         "conflictsDescription": "De volgende items hebben conflicten die moeten worden opgelost:",
         "nameConflict": "Naam bestaat al",
+        "orderConflict": "Volgorde {{order}} is al in gebruik",
         "skipItem": "Dit item overslaan",
         "importNewName": "Importeren met een andere naam:",
-        "importWithResolutions": "Importeren met oplossingen",
-        "orderConflict": "Volgorde {{order}} is al in gebruik",
         "importWithOrder": "Importeren met volgorde {{order}}",
+        "importWithResolutions": "Importeren met oplossingen",
         "removesIntro": "Als u dit bord verwijdert, wordt ook het volgende verwijderd:"
       },
       "importTable": {
@@ -816,6 +816,9 @@
         "inactivityDaysLabel": "Dagen inactiviteit",
         "warningDaysLabel": "Waarschuwingsdagen vóór sluiting",
         "warningDaysPlaceholder": "Geen waarschuwing",
+        "suppressContactNotificationsLabel": "Klant niet informeren",
+        "suppressContactNotificationsHelp": "Slaat de waarschuwingsmail, de sluitingsmail, de enquête-uitnodiging en de klantportaalmelding over.",
+        "suppressInternalNotificationsLabel": "Ook agenten en volgers niet informeren",
         "ruleEnabledLabel": "Ingeschakeld",
         "removeRule": "Verwijderen",
         "messages": {
@@ -824,10 +827,7 @@
           "autoCloseDaysInvalid": "Inactiviteitsdagen voor automatisch sluiten moeten een positief geheel getal zijn",
           "autoCloseWarningInvalid": "De waarschuwingstermijn moet kleiner zijn dan het aantal inactiviteitsdagen",
           "autoCloseSuppressionInvalid": "Meldingen aan agenten en volgers kunnen alleen worden overgeslagen als klantmeldingen worden overgeslagen."
-        },
-        "suppressContactNotificationsLabel": "Klant niet informeren",
-        "suppressContactNotificationsHelp": "Slaat de waarschuwingsmail, de sluitingsmail, de enquête-uitnodiging en de klantportaalmelding over.",
-        "suppressInternalNotificationsLabel": "Ook agenten en volgers niet informeren"
+        }
       },
       "editor": {
         "sections": {
@@ -900,14 +900,14 @@
       "empty": "Geen borden gevonden.",
       "searchPlaceholder": "Borden zoeken…",
       "emailSender": {
-        "useDefault": "Ticketstandaard gebruiken",
-        "duplicateRoute": "Deze afzenderroute bestaat al.",
-        "saveFailed": "Ticketafzender opslaan is mislukt. Probeer het opnieuw.",
         "label": "Afzender voor uitgaande e-mail",
         "inboundWarning": "Deze afzender wordt gebruikt voor uitgaande ticket-e-mail. De instellingen voor inkomende e-mail blijven ongewijzigd.",
         "displayName": "Weergavenaam",
         "save": "Afzender opslaan",
-        "saved": "Afzender opgeslagen"
+        "saved": "Afzender opgeslagen",
+        "useDefault": "Ticketstandaard gebruiken",
+        "duplicateRoute": "Deze afzenderroute bestaat al.",
+        "saveFailed": "Ticketafzender opslaan is mislukt. Probeer het opnieuw."
       },
       "deleteDependencies": {
         "categories_one": "categorie",
@@ -1882,7 +1882,8 @@
         "loading": "E-mailsjablonen laden...",
         "templateCount": "({{templateCount}} sjablonen)",
         "usingCustom": "Aangepast sjabloon wordt gebruikt",
-        "usingStandard": "Standaardsjabloon wordt gebruikt"
+        "usingStandard": "Standaardsjabloon wordt gebruikt",
+        "notCurrentlySent": "Wordt momenteel niet verzonden"
       },
       "columns": {
         "name": "Naam",
@@ -1906,7 +1907,8 @@
         "close": "Sluiten",
         "cancel": "Annuleren",
         "saving": "Opslaan...",
-        "save": "Opslaan"
+        "save": "Opslaan",
+        "variableReference": "Variabelenoverzicht"
       },
       "description": "Elk gebeurtenistype heeft een standaardsjabloon dat kan worden aangepast. U kunt het standaardsjabloon gebruiken of een aangepaste versie maken.",
       "filter": {
@@ -1929,7 +1931,8 @@
         "notAvailable": "n.v.t."
       },
       "edit": {
-        "title": "Aangepast sjabloon bewerken: {{name}}"
+        "title": "Aangepast sjabloon bewerken: {{name}}",
+        "variableSuggestions": "Suggesties voor sjabloonvariabelen"
       },
       "languages": {
         "en": "Engels",
@@ -1939,7 +1942,8 @@
         "nl": "Nederlands",
         "it": "Italiaans",
         "pl": "Pools",
-        "pt": "Portugees"
+        "pt": "Portugees",
+        "sv": "Zweeds"
       }
     },
     "emailBranding": {
@@ -2508,7 +2512,9 @@
       },
       "actions": {
         "back": "Terug naar migraties",
-        "upload": "Pakket uploaden"
+        "upload": "Pakket uploaden",
+        "close": "Sluiten",
+        "cancel": "Annuleren"
       },
       "errors": {
         "noImportableRecords": "Dit pakket bevatte geen importeerbare records.",
@@ -2521,10 +2527,48 @@
         "storageRejected": "De server heeft deze upload geweigerd. Vraag uw beheerder de bestandstypeconfiguratie van de opslag te controleren.",
         "spreadsheetFailed": "Het spreadsheet kon niet worden geïmporteerd. Probeer het opnieuw.",
         "uploadFailed": "Het pakket kon niet worden geüpload. Probeer het opnieuw.",
-        "unknown": "De upload is mislukt. Probeer het opnieuw."
+        "unknown": "De upload is mislukt. Probeer het opnieuw.",
+        "loadJobs": "Migratieachtergrondtaken konden niet worden geladen.",
+        "loadJob": "De migratieachtergrondtaak kon niet worden geladen.",
+        "jobNotFound": "Migratieachtergrondtaak niet gevonden."
       },
       "preflight": {
-        "title": "Voorcontrole"
+        "title": "Voorcontrole",
+        "description": "Een proefuitvoering die elk klaargezet record controleert aan de hand van deze tenant en uw configuratie. De voorcontrole maakt niets aan.",
+        "errors": {
+          "loadReport": "Het voorcontrolerapport kon niet worden geladen.",
+          "runFailed": "De voorcontrole kon niet worden uitgevoerd.",
+          "startMigration": "De migratie kon niet worden gestart.",
+          "downloadCsv": "Het CSV-bestand van de voorcontrole kon niet worden gedownload.",
+          "downloadJson": "Het JSON-bestand van de voorcontrole kon niet worden gedownload."
+        },
+        "running": "Voorcontrole wordt uitgevoerd…",
+        "runAgain": "Voorcontrole opnieuw uitvoeren",
+        "run": "Voorcontrole uitvoeren",
+        "empty": "Voor deze configuratie is nog geen voorcontrole uitgevoerd. Voer een voorcontrole uit om het plan per entiteit en eventuele problemen te bekijken.",
+        "plan": "Plan",
+        "preflightedAt": "Voorcontrole uitgevoerd op {{timestamp}}",
+        "downloadCsv": "CSV downloaden",
+        "downloadJson": "JSON downloaden",
+        "columns": {
+          "entity": "Entiteit",
+          "staged": "Klaargezet",
+          "toCreate": "Aan te maken",
+          "toSkip": "Over te slaan (al gemigreerd)",
+          "blocked": "Geblokkeerd"
+        },
+        "noStagedRecords": "Het pakket heeft geen records klaargezet.",
+        "blockingIssues": "Blokkerende problemen ({{count}})",
+        "warnings": "Waarschuwingen ({{count}})",
+        "blockedWithIssues_one": "De migratie kan niet worden uitgevoerd: eerst moet {{count}} blokkerend probleem worden opgelost.",
+        "blockedWithIssues_other": "De migratie kan niet worden uitgevoerd: eerst moeten {{count}} blokkerende problemen worden opgelost.",
+        "blockedNoPreflight": "De migratie kan pas worden uitgevoerd nadat de voorcontrole zonder blokkerende problemen is geslaagd.",
+        "needsConfiguration": "De migratie kan worden uitgevoerd zodra de voorcontrole van de opgeslagen configuratie is geslaagd.",
+        "starting": "Starten…",
+        "runMigration": "Migratie uitvoeren",
+        "recordsAffected_one": "{{count}} betrokken record",
+        "recordsAffected_other": "{{count}} betrokken records",
+        "sampleRecords": "Voorbeeldrecords:"
       },
       "run": {
         "queued": "Migratie in wachtrij",
@@ -2542,14 +2586,58 @@
         "claimedBySamePackage": "Al gemigreerd door dit pakket",
         "claimedByOtherPackage": "Al gemigreerd door {{file}}",
         "claimedByExistingEntity": "Gekoppeld aan een bestaande entiteit",
-        "matchedBySku": "Op SKU gekoppeld aan een bestaand product"
+        "matchedBySku": "Op SKU gekoppeld aan een bestaand product",
+        "title": "Resultaten",
+        "errors": {
+          "loadSummary": "De resultatensamenvatting kon niet worden geladen.",
+          "loadRecords": "De resultaatrecords konden niet worden geladen.",
+          "downloadCsv": "Het CSV-bestand met resultaten kon niet worden gedownload."
+        },
+        "actions": {
+          "created": "Aangemaakt",
+          "skipped": "Overgeslagen",
+          "failed": "Mislukt"
+        },
+        "counts": {
+          "created": "aangemaakt",
+          "skipped": "overgeslagen",
+          "failed": "mislukt"
+        },
+        "finishedAt": "Voltooid op {{timestamp}}.",
+        "noLongerRunning": "De achtergrondtaak wordt niet meer uitgevoerd.",
+        "preparing": "Voorbereiden…",
+        "downloadCsv": "CSV met resultaten downloaden",
+        "failedLabel": "De migratie is mislukt:",
+        "cancelled": "De migratie is bij een controlepunt geannuleerd. Records die vóór de annulering zijn verwerkt, blijven behouden en worden hieronder weergegeven.",
+        "noRecordsWritten": "Er zijn geen resultaatrecords voor deze achtergrondtaak vastgelegd.",
+        "noRecordsMatch": "Er zijn geen resultaatrecords die overeenkomen met deze filters.",
+        "columns": {
+          "entity": "Entiteit",
+          "sourceRecord": "Bronrecord",
+          "action": "Actie",
+          "result": "Resultaat",
+          "at": "Tijdstip"
+        },
+        "filters": {
+          "allEntities": "Alle entiteiten",
+          "allActions": "Alle acties"
+        },
+        "unknownError": "Onbekende fout",
+        "recordLimitNotice": "De eerste {{count}} overeenkomende records worden weergegeven. Download het CSV-bestand met resultaten voor de volledige lijst."
       },
       "spreadsheet": {
         "entities": {
           "products": "Producten (catalogus / prijslijst)",
-          "vendorProducts": "Leveranciersprijslijst (distributiekosten)"
+          "vendorProducts": "Leveranciersprijslijst (distributiekosten)",
+          "assets": "Assets (oude assetimport)",
+          "organizations": "Organisaties",
+          "locations": "Locaties",
+          "contacts": "Contacten",
+          "tickets": "Tickets",
+          "ticketComments": "Ticketopmerkingen"
         },
-        "productsHint": "Prijzen en kosten worden gelezen als decimale bedragen (bijvoorbeeld 1,299.50) met de valutakolom indien aanwezig, anders met de tenantvaluta. Negatieve, niet-numerieke of te nauwkeurige bedragen worden verwijderd en gemeld; de rij wordt toch geïmporteerd. Producten worden op SKU gekoppeld aan bestaande producten; rijen van de leveranciersprijslijst verwijzen via SKU naar een product en maken de leverancier aan of koppelen die op naam."
+        "productsHint": "Prijzen en kosten worden gelezen als decimale bedragen (bijvoorbeeld 1,299.50) met de valutakolom indien aanwezig, anders met de tenantvaluta. Negatieve, niet-numerieke of te nauwkeurige bedragen worden verwijderd en gemeld; de rij wordt toch geïmporteerd. Producten worden op SKU gekoppeld aan bestaande producten; rijen van de leveranciersprijslijst verwijzen via SKU naar een product en maken de leverancier aan of koppelen die op naam.",
+        "headersHint": "Standaardkolomkoppen worden automatisch herkend. Andere kolommen kunnen tijdens de configuratie aan aangepaste velden van assettypen worden gekoppeld. Voor contacten worden gangbare schrijfwijzen geaccepteerd, zoals Name, First Name, Last Name, E-mail, Phone, Title en Client; oude assetkolomkoppen zoals Asset Name, Asset Type en Serial Number blijven in het AMP-proces behouden."
       },
       "configure": {
         "products": {
@@ -2557,7 +2645,92 @@
           "serviceType": "Servicetype voor nieuwe producten",
           "serviceTypePlaceholder": "Selecteer een servicetype",
           "serviceTypeHelp": "Producten waarvan de SKU al bestaat worden gekoppeld en ongewijzigd gelaten; alleen nieuwe producten worden onder dit servicetype geplaatst."
+        },
+        "title": "De migratie configureren",
+        "description": "Koppel de referentiegegevens van het pakket aan deze tenant. De voorcontrole verifieert elke koppeling voordat er iets kan worden uitgevoerd.",
+        "errors": {
+          "loadOptions": "Configuratieopties konden niet worden geladen.",
+          "save": "De configuratie kon niet worden opgeslagen.",
+          "optionsUnavailable": "Configuratieopties zijn niet beschikbaar."
+        },
+        "clientPlaceholder": "Selecteer een klant",
+        "mappingPlaceholder": "Selecteer een koppeling",
+        "tickets": {
+          "title": "Tickets",
+          "board": "Bord",
+          "boardPlaceholder": "Selecteer een bord",
+          "defaultRequester": "Standaardklant voor aanvragers",
+          "defaultRequesterHelp": "Wordt gebruikt wanneer de organisatie van een ticket niet kan worden bepaald.",
+          "defaultAssignee": "Standaardverantwoordelijke",
+          "defaultAssigneePlaceholder": "Tickets niet toewijzen"
+        },
+        "statusMapping": {
+          "title": "Statuskoppeling",
+          "description": "Elke statusnaam in het pakket moet aan een ticketstatus in deze tenant worden gekoppeld.",
+          "empty": "De tickets in het pakket bevatten geen statusnamen."
+        },
+        "priorityMapping": {
+          "title": "Prioriteitskoppeling",
+          "description": "Elke prioriteitsnaam in het pakket moet aan een prioriteit in deze tenant worden gekoppeld.",
+          "empty": "De tickets in het pakket bevatten geen prioriteitsnamen."
+        },
+        "assets": {
+          "title": "Assets"
+        },
+        "assetTypeMapping": {
+          "title": "Koppeling van assettypen",
+          "description": "Elke assettypenaam in het pakket moet aan een assettype in deze tenant worden gekoppeld.",
+          "empty": "De assets in het pakket bevatten geen assettypenamen."
+        },
+        "general": {
+          "title": "Algemeen",
+          "defaultClient": "Standaardklant voor records zonder organisatie",
+          "defaultClientHelp": "Contacten en assets waarvan de organisatie niet kan worden bepaald, worden aan deze klant gekoppeld."
+        },
+        "saved": "Configuratie opgeslagen. Voer de voorcontrole uit om deze te controleren aan de hand van de klaargezette records.",
+        "saving": "Opslaan…",
+        "save": "Configuratie opslaan"
+      },
+      "home": {
+        "title": "Migraties",
+        "description": "Zet gegevens uit een ander PSA-systeem over naar Alga door een AMP-pakket of een CSV/XLSX-spreadsheet te uploaden. Elke upload wordt geïnspecteerd, geconfigureerd en vooraf gecontroleerd voordat er iets wordt aangemaakt.",
+        "columns": {
+          "package": "Pakket",
+          "sourceSystem": "Bronsysteem",
+          "state": "Status",
+          "progress": "Voortgang",
+          "created": "Aangemaakt"
+        },
+        "empty": {
+          "title": "Nog geen migraties",
+          "descriptionPrefix": "Een Alga Migration Package (",
+          "descriptionSuffix": ") is een overdraagbaar, gevalideerd archief met organisaties, locaties, contacten, tickets, opmerkingen en assets die uit een ander systeem zijn geëxporteerd. Upload een pakket om de inhoud te inspecteren, de referentiegegevens aan deze tenant te koppelen en een vooraf gecontroleerde import uit te voeren die veilig kan worden herhaald.",
+          "docsLink": "Lees de documentatie over AMP-pakketten"
         }
+      },
+      "upload": {
+        "title": "Migratiepakket uploaden",
+        "tooLarge": "Migratiepakketten mogen niet groter zijn dan {{megabytes}} MB.",
+        "fileLabel": "Pakket of spreadsheet",
+        "fileHint": "AMP (.amp) of CSV/XLSX, maximaal {{megabytes}} MB. Spreadsheets worden omgezet in een AMP-pakket voordat de records worden klaargezet; er wordt niets geïmporteerd totdat u de migratie uitvoert.",
+        "entityLabel": "Type records in het spreadsheet",
+        "rejected": "Het pakket is afgewezen en er zijn geen records klaargezet. Los deze problemen in het bronpakket op en upload het opnieuw:",
+        "stagedWithDiagnostics": "De records uit het pakket zijn klaargezet, maar sommige brongegevens vereisen uw aandacht voordat u de import uitvoert:",
+        "continueToConfigure": "Doorgaan naar configuratie",
+        "uploading": "Uploaden…",
+        "submit": "Uploaden"
+      },
+      "detail": {
+        "source": "Bron: {{system}}",
+        "sourceNotDeclared": "Bronsysteem niet opgegeven",
+        "producer": "Producent: {{producer}}",
+        "uploaded": "Geüpload op {{timestamp}}",
+        "lifecycleAria": "Migratielevenscyclus",
+        "inspecting": "Het pakket wordt geïnspecteerd en de records worden klaargezet",
+        "packageSuffix": "(pakket {{packageId}})",
+        "inspectingRefresh": ". Deze weergave wordt automatisch vernieuwd.",
+        "rejectedBody": "Dit pakket is tijdens de inspectie afgewezen; er zijn geen records klaargezet en er wordt niets uit geïmporteerd. Corrigeer het pakket in het bronsysteem en upload een nieuw pakket.",
+        "rejectionDetails": "Details van de afwijzing"
       }
     },
     "jobDetails": {
@@ -2936,6 +3109,7 @@
     }
   },
   "profile": {
+    "pageTitle": "Uw profiel",
     "tabs": {
       "profile": "Profiel",
       "security": "Beveiliging",
@@ -2991,8 +3165,7 @@
     "validation": {
       "firstNameRequired": "Voornaam is vereist",
       "lastNameRequired": "Achternaam is vereist"
-    },
-    "pageTitle": "Uw profiel"
+    }
   },
   "password": {
     "changePassword": "Wachtwoord wijzigen",
@@ -3018,7 +3191,8 @@
     "rmmEnterpriseNote": "RMM-integraties zijn beschikbaar in Pro.",
     "categoryHeading": "{{label}}-integraties",
     "loading": {
-      "payments": "Betalingsinstellingen laden..."
+      "payments": "Betalingsinstellingen laden...",
+      "hudu": "Instellingen voor de Hudu-integratie laden..."
     },
     "categories": {
       "accounting": {
@@ -3110,6 +3284,11 @@
         "name": "Telefonie",
         "description": "Leg gesprekken vast als interacties, herken de beller en maak van een gesprek een ticket"
       }
+    },
+    "addOnRequired": {
+      "heading": "{{featureName}} vereist de add-on {{addOnName}}",
+      "manageAddOns": "Add-ons beheren",
+      "entraDescription": "Schaf de Enterprise-add-on aan om Microsoft Entra Sync te activeren, inclusief tenantdetectie, klantkoppeling, contactsynchronisatie en afstemmingsworkflows."
     }
   },
   "orgChart": {
@@ -3127,6 +3306,54 @@
     "messages": {
       "adminLocked": "Machtigingen van de beheerdersrol kunnen niet worden gewijzigd",
       "permissionsUpdated": "Machtigingen succesvol bijgewerkt"
+    },
+    "title": "Machtigingen beheren",
+    "description": "Configureer toegangsmachtigingen voor verschillende rollen en resources",
+    "selectPrompt": "Selecteer een rol of resource om machtigingen te beheren",
+    "unsavedChanges": "U hebt niet-opgeslagen wijzigingen",
+    "adminLockedTooltip": "Machtigingen voor de beheerdersrol zijn door het systeem vastgelegd en kunnen niet worden gewijzigd",
+    "none": "Geen",
+    "actionCount_one": "{{count}} actie",
+    "actionCount_other": "{{count}} acties",
+    "views": {
+      "clientPortal": "Klantenportaal"
+    },
+    "filters": {
+      "allResources": "Alle resources",
+      "allRoles": "Alle rollen",
+      "selectRole": "Selecteer een rol",
+      "filterByResource": "Filteren op resource"
+    },
+    "columns": {
+      "resource": "Resource",
+      "role": "Rol",
+      "create": "Aanmaken",
+      "read": "Lezen",
+      "update": "Bijwerken",
+      "delete": "Verwijderen",
+      "specialActions": "Speciale acties"
+    },
+    "actions": {
+      "cancel": "Annuleren",
+      "saveChanges": "Wijzigingen opslaan",
+      "saving": "Opslaan..."
+    },
+    "confirm": {
+      "title": "Machtigingswijzigingen bevestigen",
+      "message": "Weet u zeker dat u deze machtigingswijzigingen wilt opslaan?",
+      "confirmLabel": "Wijzigingen opslaan"
+    },
+    "stats": {
+      "empty": "Selecteer een rol of resource om machtigingen te bekijken",
+      "rolesForResource_one": "{{count}} rol voor {{resource}}",
+      "rolesForResource_other": "{{count}} rollen voor {{resource}}",
+      "resourcesAndPermissions": "{{count}} resources • {{assigned}}/{{total}} machtigingen"
+    },
+    "errors": {
+      "fetchPermissions": "Machtigingen konden niet worden opgehaald",
+      "fetchRoles": "Rollen konden niet worden opgehaald",
+      "fetchRolePermissions": "Rolmachtigingen konden niet worden opgehaald",
+      "savePermissions": "Machtigingen konden niet worden opgeslagen"
     }
   },
   "sla": {
@@ -3415,6 +3642,91 @@
         "timerPaused": "SLA-timer: gepauzeerd"
       },
       "unknown": "Onbekend"
+    },
+    "businessHours": {
+      "title": "Kantoorurenschema's",
+      "description": "Bepaal wanneer uw supportteam beschikbaar is voor SLA-berekeningen",
+      "loading": "Kantoorurenschema's laden...",
+      "default": "Standaard",
+      "recurring": "Terugkerend",
+      "openMenu": "Menu openen",
+      "workingHours": "Werktijden",
+      "dailyHours": "Dagelijkse werktijden",
+      "closed": "Gesloten",
+      "alwaysOpen": "Dit is een 24/7-schema: de hele dag beschikbaar, elke dag.",
+      "holidays": "Feestdagen",
+      "noHolidays": "Er zijn geen feestdagen ingesteld voor dit schema.",
+      "timezoneLabel": "Tijdzone: {{timezone}}",
+      "days": {
+        "0": "zondag",
+        "1": "maandag",
+        "2": "dinsdag",
+        "3": "woensdag",
+        "4": "donderdag",
+        "5": "vrijdag",
+        "6": "zaterdag"
+      },
+      "columns": {
+        "name": "Naam",
+        "timezone": "Tijdzone",
+        "actions": "Acties",
+        "holidayName": "Naam van de feestdag",
+        "date": "Datum",
+        "day": "Dag",
+        "enabled": "Ingeschakeld",
+        "startTime": "Starttijd",
+        "endTime": "Eindtijd"
+      },
+      "empty": {
+        "title": "Geen kantoorurenschema's",
+        "description": "Maak uw eerste kantoorurenschema aan om SLA-tijden te berekenen."
+      },
+      "actions": {
+        "edit": "Bewerken",
+        "viewDetails": "Details bekijken",
+        "delete": "Verwijderen",
+        "cancel": "Annuleren",
+        "close": "Sluiten",
+        "create": "Aanmaken",
+        "update": "Bijwerken",
+        "saving": "Opslaan...",
+        "adding": "Toevoegen...",
+        "createDefault": "Standaardschema aanmaken",
+        "createCustom": "Aangepast schema aanmaken",
+        "addSchedule": "Schema toevoegen",
+        "addHoliday": "Feestdag toevoegen"
+      },
+      "fields": {
+        "scheduleName": "Schemanaam *",
+        "scheduleNamePlaceholder": "bijv. Standaardkantooruren",
+        "timezone": "Tijdzone *",
+        "is24x7": "24/7-schema (altijd beschikbaar)",
+        "isDefault": "Als standaardschema instellen",
+        "holidayName": "Naam van de feestdag *",
+        "holidayNamePlaceholder": "bijv. eerste kerstdag",
+        "holidayDate": "Datum *",
+        "holidayDatePlaceholder": "Selecteer een datum",
+        "isRecurring": "Wordt jaarlijks herhaald"
+      },
+      "dialog": {
+        "editTitle": "Schema bewerken",
+        "createTitle": "Schema aanmaken",
+        "deleteScheduleTitle": "Schema verwijderen",
+        "deleteScheduleMessage": "Weet u zeker dat u \"{{name}}\" wilt verwijderen? Hiermee worden ook alle bijbehorende feestdagen verwijderd. Deze actie kan niet ongedaan worden gemaakt.",
+        "deleteHolidayTitle": "Feestdag verwijderen",
+        "deleteHolidayMessage": "Weet u zeker dat u \"{{name}}\" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
+      },
+      "errors": {
+        "loadSchedules": "Kantoorurenschema's konden niet worden geladen",
+        "loadScheduleDetails": "Schemadetails konden niet worden geladen",
+        "nameRequired": "De schemanaam is verplicht",
+        "invalidTimeRange": "Ongeldige tijdsperiode voor {{day}}: de eindtijd moet na de starttijd liggen",
+        "saveSchedule": "Het schema kon niet worden opgeslagen",
+        "deleteSchedule": "Het schema kon niet worden verwijderd",
+        "createDefaultSchedule": "Het standaardschema kon niet worden aangemaakt",
+        "addHoliday": "De feestdag kon niet worden toegevoegd",
+        "deleteHoliday": "De feestdag kon niet worden verwijderd"
+      }
     }
   },
   "clientPortalLanguage": {

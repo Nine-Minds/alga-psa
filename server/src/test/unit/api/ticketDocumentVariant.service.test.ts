@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { downloadFileMock, generateDocumentPreviewsMock, canReadCommentAttachmentMock } = vi.hoisted(() => ({
+const { downloadFileMock, generateDocumentPreviewsMock, canReadCommentAttachmentMock, externalFiles } = vi.hoisted(() => ({
   downloadFileMock: vi.fn(),
   generateDocumentPreviewsMock: vi.fn(),
   canReadCommentAttachmentMock: vi.fn(),
+  externalFiles: [] as Array<{ tenant: string; file_id: string; is_deleted: boolean; metadata: Record<string, unknown> }>,
 }));
 
 vi.mock('@alga-psa/storage/StorageService', () => ({
@@ -28,8 +29,20 @@ vi.mock('@alga-psa/db', async () => {
   const actual = await vi.importActual<typeof import('@alga-psa/db')>('@alga-psa/db');
   return {
     ...actual,
-    tenantDb: (conn: any, _tenant: string) => ({
-      table: (t: string) => conn(t),
+    tenantDb: (conn: any, tenant: string) => ({
+      table: (t: string) => {
+        if (t !== 'external_files') return conn(t);
+        const filters: Record<string, unknown> = { tenant };
+        let fileIds: string[] = [];
+        const builder: any = {
+          where: vi.fn((criteria: Record<string, unknown>) => { Object.assign(filters, criteria); return builder; }),
+          whereIn: vi.fn((_column: string, ids: string[]) => { fileIds = ids; return builder; }),
+          select: vi.fn(async () => externalFiles.filter((row) =>
+            Object.entries(filters).every(([key, value]) => (row as any)[key] === value)
+            && fileIds.includes(row.file_id))),
+        };
+        return builder;
+      },
       tenantJoin: (q: any, t: string) => q.join?.(t) ?? q,
     }),
   };
@@ -64,6 +77,7 @@ function setup(doc: Record<string, unknown> | undefined) {
 describe('TicketService.downloadTicketDocumentVariant', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    externalFiles.length = 0;
     canReadCommentAttachmentMock.mockResolvedValue(true);
     downloadFileMock.mockImplementation(async (fileId: string) => ({
       buffer: Buffer.from(`bytes:${fileId}`),
@@ -91,8 +105,12 @@ describe('TicketService.downloadTicketDocumentVariant', () => {
       document_id: 'doc-1', file_id: 'file-1', mime_type: 'image/png', created_by: 'user-1',
       thumbnail_file_id: null, preview_file_id: null, preview_generated_at: null,
     });
-    generateDocumentPreviewsMock.mockResolvedValue({
-      thumbnail_file_id: 'thumb-new', preview_file_id: 'preview-new', preview_generated_at: new Date(),
+    generateDocumentPreviewsMock.mockImplementation(async (document: { document_id: string }) => {
+      externalFiles.push(
+        { tenant: 'tenant-1', file_id: 'thumb-new', is_deleted: false, metadata: { context: 'document_thumbnail', source_document_id: document.document_id } },
+        { tenant: 'tenant-1', file_id: 'preview-new', is_deleted: false, metadata: { context: 'document_preview', source_document_id: document.document_id } },
+      );
+      return { thumbnail_file_id: 'thumb-new', preview_file_id: 'preview-new', preview_generated_at: new Date() };
     });
 
     const result = await service.downloadTicketDocumentVariant(ticketId, 'doc-1', 'preview', context);
@@ -107,6 +125,29 @@ describe('TicketService.downloadTicketDocumentVariant', () => {
     ]);
     expect(downloadFileMock).toHaveBeenNthCalledWith(2, 'preview-new');
     expect(result.fileId).toBe('preview-new');
+  });
+
+  it.each([
+    ['wrong tenant', (documentId: string) => ({ tenant: 'tenant-2', file_id: 'thumb-new', is_deleted: false, metadata: { context: 'document_thumbnail', source_document_id: documentId } })],
+    ['wrong source document', (documentId: string) => ({ tenant: 'tenant-1', file_id: 'thumb-new', is_deleted: false, metadata: { context: 'document_thumbnail', source_document_id: 'another-document' } })],
+    ['wrong derivative role', (documentId: string) => ({ tenant: 'tenant-1', file_id: 'thumb-new', is_deleted: false, metadata: { context: 'document_preview', source_document_id: documentId } })],
+  ])('does not persist or serve generated thumbnails with %s provenance', async (_caseName, makeRecord) => {
+    const { service, updates } = setup({
+      document_id: 'doc-1', file_id: 'file-1', mime_type: 'image/png', created_by: 'user-1',
+      thumbnail_file_id: null, preview_file_id: null, preview_generated_at: null,
+    });
+    generateDocumentPreviewsMock.mockImplementation(async (document: { document_id: string }) => {
+      externalFiles.push(makeRecord(document.document_id));
+      return { thumbnail_file_id: 'thumb-new', preview_file_id: null, preview_generated_at: new Date() };
+    });
+
+    await expect(service.downloadTicketDocumentVariant(ticketId, 'doc-1', 'thumbnail', context))
+      .rejects.toThrow('Document thumbnail not available');
+
+    expect(updates).toEqual([]);
+    expect(downloadFileMock).toHaveBeenCalledTimes(1);
+    expect(downloadFileMock).toHaveBeenCalledWith('file-1');
+    expect(downloadFileMock).not.toHaveBeenCalledWith('thumb-new');
   });
 
   it('returns not found for document types that have no previews', async () => {

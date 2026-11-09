@@ -781,7 +781,8 @@
       "collapse": "Ordner einklappen",
       "allDocuments": "Alle Dokumente",
       "expand": "Ordner anzeigen",
-      "deleteTitle": "Ordner löschen"
+      "deleteTitle": "Ordner löschen",
+      "show": "Ordner anzeigen"
     },
     "folderManager": {
       "title": "Neuen Ordner erstellen",
@@ -843,6 +844,28 @@
     "huduTab": {
       "documentsTabLabel": "Dokumente",
       "tabLabel": "Hudu"
+    },
+    "fallbackUserName": "Benutzer",
+    "selectOrCreate": "Wählen Sie ein Dokument aus oder erstellen Sie ein neues.",
+    "actions": {
+      "markdown": "Markdown",
+      "print": "Drucken",
+      "edit": "Bearbeiten",
+      "upload": "Hochladen",
+      "closePreview": "Vorschau schließen",
+      "cancel": "Abbrechen",
+      "save": "Speichern",
+      "saving": "Wird gespeichert..."
+    },
+    "viewMode": {
+      "grid": "Raster",
+      "list": "Liste"
+    },
+    "unsavedChanges": {
+      "title": "Ungespeicherte Änderungen",
+      "message": "Möchten Sie wirklich abbrechen? Alle ungespeicherten Änderungen gehen verloren.",
+      "confirm": "Änderungen verwerfen",
+      "cancel": "Weiter bearbeiten"
     }
   },
   "fields": {
@@ -1426,7 +1449,16 @@
     "unnamedTeam": "Unbenanntes Team",
     "userPicker": "Benutzerauswahl",
     "noUsersFound": "Keine Benutzer gefunden",
-    "contactRemoteLocation": "Im Homeoffice"
+    "contactRemoteLocation": "Im Homeoffice",
+    "selectBoard": "Board auswählen",
+    "activeBoards": "Aktive Boards",
+    "inactiveBoards": "Inaktive Boards",
+    "allBoards": "Alle Boards",
+    "boardPicker": "Board-Auswahl",
+    "filterByStatus": "Nach Status filtern",
+    "statusFilter": "Statusfilter",
+    "boards": "Boards",
+    "inactiveSuffix": "(Inaktiv)"
   },
   "serviceTypeSelect": {
     "placeholder": "Servicetyp auswählen ...",
@@ -1727,7 +1759,14 @@
       "assigned": "Zugewiesen:",
       "performedBy": "von {{name}}",
       "internal": "Intern"
-    }
+    },
+    "title": "Benachrichtigungen",
+    "reconnectingToServer": "Verbindung zum Server wird wiederhergestellt...",
+    "refresh": "Aktualisieren",
+    "markAllAsRead": "Alle als gelesen markieren",
+    "markAllRead": "Alle gelesen",
+    "emptyTitle": "Keine Benachrichtigungen",
+    "emptyDescription": "Sie sind auf dem neuesten Stand!"
   },
   "importConflicts": {
     "title": "Importkonflikte lösen",

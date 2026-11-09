@@ -1465,7 +1465,14 @@
       "refreshRecordings": "Actualiser les enregistrements",
       "sectionTitle": "Réunion en ligne",
       "transcriptArtifact": "Transcription",
-      "viewTranscript": "Voir la transcription"
+      "viewTranscript": "Voir la transcription",
+      "status": {
+        "noRecording": "Aucun enregistrement",
+        "recordingReady": "Enregistrement prêt",
+        "cancelled": "Réunion annulée",
+        "failed": "Enregistrement indisponible",
+        "recordingPending": "Enregistrement en attente"
+      }
     },
     "quickAdd": {
       "clientRequired": "Sélectionnez un client pour cette interaction",
@@ -1524,6 +1531,86 @@
       "assignedTo": {
         "label": "Attribué à",
         "placeholder": "Sélectionner un utilisateur"
+      },
+      "endBeforeStart": "L'heure de fin doit être égale ou postérieure à l'heure de début.",
+      "endBeforeStartShort": "L'heure de fin doit être égale ou postérieure à l'heure de début",
+      "rangeTooLong": "Les interactions ne peuvent pas durer plus de 24 heures.",
+      "reflectionLabel": "Ajout rapide d'une interaction",
+      "validationIntro": "Veuillez corriger les erreurs suivantes :",
+      "loadingEditor": "Chargement de l'éditeur...",
+      "dialog": {
+        "createTitle": "Ajouter une nouvelle interaction",
+        "editTitle": "Modifier l'interaction"
+      },
+      "actions": {
+        "cancel": "Annuler",
+        "cancelHelper": "Annuler la création ou la modification de cette interaction",
+        "save": "Enregistrer l'interaction",
+        "saveHelper": "Créer cette nouvelle interaction",
+        "update": "Mettre à jour l'interaction",
+        "updateHelper": "Enregistrer les modifications de cette interaction",
+        "close": "Fermer la boîte de dialogue",
+        "closeHelper": "Fermer la boîte de dialogue de l'interaction"
+      },
+      "fields": {
+        "type": {
+          "label": "Type d'interaction",
+          "helper": "Sélectionnez le type d'interaction (appel téléphonique, e-mail, réunion, etc.)",
+          "placeholder": "Sélectionner un type d'interaction"
+        },
+        "title": {
+          "label": "Titre de l'interaction",
+          "helper": "Saisissez un titre descriptif pour cette interaction",
+          "placeholder": "Titre"
+        },
+        "notes": {
+          "label": "Notes sur l'interaction",
+          "helper": "Ajoutez des notes détaillées sur cette interaction"
+        },
+        "notesShort": "Notes",
+        "status": {
+          "label": "Statut de l'interaction",
+          "helper": "Définissez le statut actuel de cette interaction",
+          "placeholder": "Sélectionner un statut"
+        },
+        "user": {
+          "label": "Utilisateur affecté",
+          "helper": "Sélectionnez l'utilisateur responsable de cette interaction",
+          "placeholder": "Sélectionner un utilisateur"
+        },
+        "userShort": "Utilisateur",
+        "client": {
+          "label": "Client associé",
+          "helper": "Sélectionnez le client concerné par cette interaction"
+        },
+        "clientShort": "Client",
+        "contact": {
+          "label": "Contact associé",
+          "helper": "Sélectionnez le contact avec lequel a lieu cette interaction",
+          "placeholder": "Sélectionner un contact"
+        },
+        "contactShort": "Contact",
+        "startTime": {
+          "label": "Heure de début",
+          "helper": "Quand cette interaction a-t-elle commencé ?",
+          "placeholder": "Sélectionner l'heure de début"
+        },
+        "endTime": {
+          "label": "Heure de fin",
+          "helper": "Quand cette interaction s'est-elle terminée ?",
+          "placeholder": "Sélectionner l'heure de fin"
+        },
+        "durationHours": {
+          "label": "Durée en heures",
+          "helper": "Nombre d'heures de l'interaction"
+        },
+        "durationMinutes": {
+          "label": "Durée en minutes",
+          "helper": "Nombre de minutes de l'interaction"
+        },
+        "duration": "Durée",
+        "hours": "heures",
+        "minutes": "minutes"
       }
     },
     "feed": {
@@ -1581,6 +1668,51 @@
       "transcriptTitle": "Transcription de l'appel",
       "loading": "Chargement de la transcription…",
       "loadFailed": "La transcription n'a pas pu être chargée."
+    },
+    "details": {
+      "title": "Détails de l'interaction",
+      "noTitle": "Sans titre",
+      "unknownUser": "Inconnu",
+      "noContact": "Aucun contact associé",
+      "noClient": "Aucun client associé",
+      "deleteConfirm": "Voulez-vous vraiment supprimer cette interaction ? Cette action est irréversible.",
+      "timeEntryFailed": "Impossible de préparer l'entrée de temps. Veuillez réessayer.",
+      "fields": {
+        "title": "Titre :",
+        "notes": "Notes",
+        "status": "Statut :",
+        "startTime": "Heure de début :",
+        "endTime": "Heure de fin :",
+        "duration": "Durée :",
+        "user": "Utilisateur :",
+        "contact": "Contact :",
+        "client": "Client :"
+      },
+      "actions": {
+        "cancel": "Annuler",
+        "editShort": "Modifier",
+        "deleteShort": "Supprimer",
+        "edit": {
+          "label": "Modifier l'interaction",
+          "helper": "Modifier les détails de cette interaction"
+        },
+        "delete": {
+          "label": "Supprimer l'interaction",
+          "helper": "Supprimer définitivement cette interaction"
+        },
+        "back": {
+          "label": "Retour",
+          "helper": "Revenir à la vue précédente"
+        },
+        "addTicket": {
+          "label": "Ajouter un ticket",
+          "helper": "Créer un nouveau ticket lié à cette interaction"
+        },
+        "addTimeEntry": {
+          "label": "Ajouter une entrée de temps",
+          "helper": "Ajouter une entrée de temps pour cette interaction"
+        }
+      }
     }
   },
   "clientDrawer": {

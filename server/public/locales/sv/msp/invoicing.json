@@ -397,6 +397,7 @@
       "helpText": "Lämna tomt för att inte ange något utgångsdatum eller för att använda standardgiltighetstiden"
     },
     "errors": {
+      "CLIENT_CONTRACT_NOT_FOUND": "Det valda avtalet tillhör inte fakturans kund.",
       "selectClient": "Välj kund",
       "invoiceNumberUnique": "Det här fakturanumret används redan.",
       "noTaxRateConfigured": "Ingen skattesats har konfigurerats för regionen.",
@@ -431,9 +432,8 @@
       "SOURCE_ALREADY_BILLED": "Vissa valda poster kan inte längre faktureras (redan fakturerade, inte godkända eller borttagna). Ladda om sidan och försök igen.",
       "SOURCE_NOT_ELIGIBLE": "En vald post hör inte till det här ärendets debiterbara poster eller kan inte längre faktureras. Ladda om sidan och försök igen.",
       "SOURCE_CURRENCY_MISMATCH": "Vissa valda produkter är prissatta i en annan valuta än kundens faktureringsvaluta och kan därför inte läggas till. Fakturera dem separat i deras egen valuta.",
-      "BILLING_PROFILE_NOT_FOUND": "Den valda faktureringsprofilen är inte tillgänglig för kunden. Ladda om sidan och försök igen.",
-      "CLIENT_CONTRACT_NOT_FOUND": "Det valda avtalet tillhör inte fakturans kund.",
       "SERVICE_REQUIRED": "Tilldela en tjänst till avgiften innan du sparar.",
+      "BILLING_PROFILE_NOT_FOUND": "Den valda faktureringsprofilen är inte tillgänglig för kunden. Ladda om sidan och försök igen.",
       "sessionExpired": "Din session har gått ut. Dina ändringar finns kvar här men har inte sparats. Logga in igen på en ny flik och försök sedan spara igen.",
       "saveRefreshFailed": "Dina ändringar sparades, men fakturasidan kunde inte uppdateras helt. Läs in sidan igen för att visa den sparade fakturan."
     },
@@ -446,9 +446,6 @@
     },
     "salesOrderContext": {
       "summary": "Antal poster klara att fakturera: {{quantity}}. Antal rader: {{lineCount}}. Utkastet kommer att länkas till försäljningsordern."
-    },
-    "hints": {
-      "billingProfile": "Fakturan och dess rader faktureras till den här profilen."
     },
     "draftAdjustments": {
       "title": "Fakturajusteringar",
@@ -491,6 +488,9 @@
       "discount": "{{adapter}}: konfigurera rabattmappningen innan du exporterar {{description}}.",
       "service": "{{adapter}}: tilldela en mappad tjänst till {{description}} före export.",
       "unavailable": "Det gick inte att kontrollera om fakturan är klar för bokföringsexport. Kontrollera mappningarna före export."
+    },
+    "hints": {
+      "billingProfile": "Fakturan och dess rader faktureras till den här profilen."
     }
   },
   "quickInvoice": {
@@ -1484,14 +1484,244 @@
       "barcodeCode128": "Code 128",
       "barcodeValue": "Värde",
       "barcodeHintWorkTag": "Text, eller ett fält som {{example}} (länken till posten). Håll koden minst cirka 20 mm bred så att den går att skanna.",
-      "barcodeHint": "Texten som ska kodas. Håll koden minst cirka 20 mm bred så att den går att skanna."
+      "barcodeHint": "Texten som ska kodas. Håll koden minst cirka 20 mm bred så att den går att skanna.",
+      "binding": {
+        "noFieldSelected": "Inget fält valt",
+        "customHint": "Ange en egen bindningssökväg om fältet du behöver inte finns i listan.",
+        "useFieldPicker": "Använd fältväljaren",
+        "current": "Aktuellt fält",
+        "unbound": "Utan bindning",
+        "searchFields": "Sök fält…",
+        "noMatches": "Inga matchande fält.",
+        "useCustomPath": "Använd egen sökväg"
+      },
+      "customCssPreserved": "Eget CSS-värde behålls tills det redigeras:",
+      "pickField": "Välj {{field}}"
     },
     "shell": {
       "selectedLabel": "Markerat:",
       "selectedNone": "Inget",
       "clickBlockHint": "Klicka på ett block på arbetsytan",
       "orUse": "eller använd",
-      "plusInLeftPanelHint": "+ i den vänstra panelen"
+      "plusInLeftPanelHint": "+ i den vänstra panelen",
+      "sectionAlreadyFitted": "Avsnittet är redan anpassat.",
+      "unbound": "Utan bindning",
+      "layoutMode": {
+        "flex": {
+          "label": "Stapel",
+          "tooltip": "Stapel (Flex)"
+        },
+        "grid": {
+          "label": "Rutnät",
+          "tooltip": "Rutnätslayout"
+        }
+      },
+      "direction": {
+        "column": {
+          "label": "Vertikal",
+          "tooltip": "Vertikalt flöde"
+        },
+        "row": {
+          "label": "Horisontell",
+          "tooltip": "Horisontellt flöde"
+        }
+      },
+      "alignItems": {
+        "stretch": {
+          "label": "Sträck ut",
+          "tooltip": "Sträck ut underordnade element"
+        },
+        "start": {
+          "label": "Start",
+          "tooltip": "Justera mot början"
+        },
+        "center": {
+          "label": "Centrera",
+          "tooltip": "Justera mot mitten"
+        },
+        "end": {
+          "label": "Slut",
+          "tooltip": "Justera mot slutet"
+        }
+      },
+      "justify": {
+        "start": {
+          "label": "Start",
+          "tooltip": "Samla i början"
+        },
+        "center": {
+          "label": "Centrera",
+          "tooltip": "Samla i mitten"
+        },
+        "end": {
+          "label": "Slut",
+          "tooltip": "Samla i slutet"
+        },
+        "between": {
+          "label": "Mellan",
+          "tooltip": "Fördela med utrymme mellan elementen"
+        },
+        "around": {
+          "label": "Runt",
+          "tooltip": "Fördela med utrymme runt elementen"
+        },
+        "evenly": {
+          "label": "Jämnt",
+          "tooltip": "Fördela med lika stora mellanrum"
+        }
+      },
+      "mediaHorizontal": {
+        "left": {
+          "label": "Vänster",
+          "tooltip": "Justera bilden åt vänster"
+        },
+        "center": {
+          "label": "Centrera",
+          "tooltip": "Centrera bilden horisontellt"
+        },
+        "right": {
+          "label": "Höger",
+          "tooltip": "Justera bilden åt höger"
+        }
+      },
+      "mediaVertical": {
+        "top": {
+          "label": "Överkant",
+          "tooltip": "Justera bilden mot överkanten"
+        },
+        "center": {
+          "label": "Centrera",
+          "tooltip": "Centrera bilden vertikalt"
+        },
+        "bottom": {
+          "label": "Nederkant",
+          "tooltip": "Justera bilden mot nederkanten"
+        }
+      },
+      "objectFit": {
+        "contain": {
+          "label": "Passa in",
+          "tooltip": "Skala så att bilden ryms i ramen"
+        },
+        "cover": {
+          "label": "Täck",
+          "tooltip": "Fyll ramen och beskär det som hamnar utanför"
+        },
+        "fill": {
+          "label": "Fyll",
+          "tooltip": "Sträck ut bilden så att den fyller ramen"
+        },
+        "none": {
+          "label": "Ingen",
+          "tooltip": "Behåll bildens ursprungliga storlek"
+        },
+        "scaleDown": {
+          "label": "Skala ner",
+          "tooltip": "Använd ursprunglig storlek om bilden inte behöver krympas"
+        }
+      },
+      "widthMode": {
+        "auto": {
+          "label": "Auto",
+          "tooltip": "Låt behållaren avgöra (sträcks ut i en vertikal stapel)"
+        },
+        "fill": {
+          "label": "Fyll",
+          "tooltip": "Fyll behållarens hela bredd"
+        },
+        "fit": {
+          "label": "Anpassa",
+          "tooltip": "Krymp så att innehållet precis får plats"
+        },
+        "fixed": {
+          "label": "Fast",
+          "tooltip": "Använd den exakta bredden som anges nedan"
+        }
+      },
+      "heightMode": {
+        "auto": {
+          "label": "Auto",
+          "tooltip": "Väx med innehållet"
+        },
+        "fixed": {
+          "label": "Fast",
+          "tooltip": "Använd den exakta höjden som anges nedan"
+        }
+      },
+      "flexPreset": {
+        "natural": {
+          "label": "Naturlig",
+          "description": "Använd elementets innehållsstorlek, men tillåt krympning om utrymmet är begränsat."
+        },
+        "fill": {
+          "label": "Fyll",
+          "description": "Ta upp ledigt utrymme med elementets önskade storlek som utgångspunkt."
+        },
+        "share": {
+          "label": "Dela",
+          "description": "Dela det tillgängliga utrymmet jämnt med andra element som delar utrymmet."
+        },
+        "fixed": {
+          "label": "Fast",
+          "description": "Behåll elementets storlek och låt inte flexbox krympa det."
+        }
+      },
+      "groups": {
+        "layout": "Layout",
+        "direction": "Riktning",
+        "alignItems": "Justera element",
+        "justifyContent": "Fördela innehåll",
+        "objectFit": "Bildanpassning",
+        "horizontalAlign": "Horisontell justering",
+        "verticalAlign": "Vertikal justering",
+        "columns": "Kolumner"
+      },
+      "columnsAria": "Kolumner: {{preset}}",
+      "axis": {
+        "width": "Bredd",
+        "height": "Höjd",
+        "widthLower": "bredd",
+        "heightLower": "höjd"
+      },
+      "flexItemHint": "I den här stapeln ({{direction}}) styr inställningarna hur elementet delar utrymme i {{axis}}led med element på samma nivå.",
+      "flexBehavior": "{{axis}} – beteende",
+      "flexBehaviorAria": "{{axis}} – beteende: {{preset}}",
+      "flexCustomNotice": "Det här elementet har anpassade flexvärden. Välj en förinställning för att förenkla dem eller justera de avancerade värdena nedan.",
+      "advancedFlexValues": "Avancerade flexvärden",
+      "flexGrow": "Ta upp extra utrymme",
+      "flexShrink": "Tillåt krympning",
+      "flexBasis": "Önskad {{axis}}",
+      "displayFormat": {
+        "singleLine": {
+          "label": "En rad",
+          "description": "Samla adressen på en rad."
+        },
+        "multiline": {
+          "label": "Flera rader",
+          "description": "Dela upp adressen på flera rader."
+        },
+        "raw": {
+          "label": "Obearbetat",
+          "description": "Använd det lagrade värdet som det är."
+        },
+        "onlyDataField": "Detta gäller endast datafältsnoder.",
+        "aria": "Visningsformat: {{format}}"
+      },
+      "attachments": {
+        "defaultLabel": "Bilaga",
+        "title": "Titel",
+        "items": "Poster",
+        "add": "Lägg till",
+        "empty": "Inga bilagor definierade."
+      },
+      "media": {
+        "altText": "Alternativtext",
+        "aspectRatio": "Bildförhållande",
+        "fitParentSection": "Anpassa överordnat avsnitt till media",
+        "reflowsPrefix": "Anpassar layouten i",
+        "reflowsSuffix": "för att ta bort extra tomrum.",
+        "notInSection": "Det här medieblocket finns inte i ett avsnitt."
+      }
     },
     "pageSetup": {
       "title": "Sidinställningar",
@@ -2106,7 +2336,23 @@
       "cannotInsert": "{{block}} kan inte läggas till här.",
       "insertedOnPage": "{{block}} har lagts till på sidan.",
       "insertedInto": "{{block}} har lagts till i {{parent}}.",
-      "fieldRebound": "{{name}} visar nu {{path}}."
+      "fieldRebound": "{{name}} visar nu {{path}}.",
+      "dropIncompatibleComponent": "Den här komponenten kan inte släppas här.",
+      "dropIncompatible": "Det går inte att släppa här.",
+      "dropIncompatiblePreset": "Den här förinställningen kan inte släppas här.",
+      "dropOnCanvas": "Släpp på arbetsytan för att lägga till den här komponenten.",
+      "addComponentFailed": "Det gick inte att lägga till den här komponenten i det aktuella sammanhanget.",
+      "presetUnavailable": "Definitionen för förinställningen är inte tillgänglig.",
+      "presetPlacementUnresolved": "Det gick inte att avgöra var den här förinställningen ska placeras.",
+      "addPresetFailed": "Det gick inte att lägga till den här förinställningen i det aktuella sammanhanget.",
+      "inserted": "Infogat: {{value}}.",
+      "insertedWithDiagnostic": "Infogat: {{value}}. {{diagnostic}}",
+      "selectTextBlock": "Välj ett textblock och fokusera sedan ett textfält för att infoga variabler.",
+      "focusTextField": "Fokusera ett textfält i egenskapspanelen för att infoga den här variabeln.",
+      "selectSectionToFit": "Välj ett avsnitt att anpassa.",
+      "sectionNoChildren": "Avsnittet saknar underordnat innehåll att anpassa till.",
+      "sectionFitted": "Avsnittet har anpassats till innehållet.",
+      "sectionFittedFixed": "Avsnittet har ställts in på fast storlek och anpassats till innehållet."
     },
     "translation": {
       "translatedAs": "Standardetikett ”{{name}}”, översatt för varje mottagare",

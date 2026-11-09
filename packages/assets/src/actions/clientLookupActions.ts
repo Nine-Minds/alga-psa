@@ -2,10 +2,18 @@
 
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
-import type { IClient, IClientLocation, IContact } from '@alga-psa/types';
+import type { AuthorizationDecision } from '@alga-psa/authorization/kernel';
+import {
+  isClientUserType,
+  type IClient,
+  type IClientLocation,
+  type IContact,
+  type IUserWithRoles,
+} from '@alga-psa/types';
 import { hasPermission, withAuth } from '@alga-psa/auth';
-import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
+import { getClientLogoUrl, getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { assertPsaOnlyTenantAccess } from '@shared/services/productAccessGuard';
+import { createAssetReadContext } from '../lib/assetReadAuthorization';
 
 function tenantScopedTable(conn: Knex | Knex.Transaction, tenant: string, table: string): Knex.QueryBuilder<any, any> {
   return tenantDb(conn, tenant).table(table) as Knex.QueryBuilder<any, any>;
@@ -23,15 +31,119 @@ function withClientSinceDateString<T extends Record<string, any>>(row: T): T {
   return { ...row, client_since: `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}` };
 }
 
+type AssetClientReadAuthorizer = (clientId: string) => Promise<boolean>;
+
+function clientMatchesAssetReadScope(
+  clientId: string,
+  decision: AuthorizationDecision,
+): boolean {
+  // Kernel grants and row constraints are separate; client lookups must enforce
+  // the full conjunction because they do not pass through a scoped SQL adapter.
+  if (!decision.allowed || decision.scope.denied) return false;
+
+  return (decision.scope.constraints ?? []).every((constraint) => {
+    if (!constraint || typeof constraint !== 'object' || constraint.field !== 'client_id') return false;
+
+    if (constraint.operator === 'eq') {
+      return typeof constraint.value === 'string' && clientId === constraint.value;
+    }
+    if (constraint.operator === 'in') {
+      return Array.isArray(constraint.value) &&
+        constraint.value.every((value): value is string => typeof value === 'string') &&
+        constraint.value.includes(clientId);
+    }
+    return false;
+  });
+}
+
+async function createAssetClientReadAuthorizer(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  user: IUserWithRoles,
+): Promise<AssetClientReadAuthorizer> {
+  const context = await createAssetReadContext(trx, tenant, user);
+  return async (clientId) => {
+    const decision = await context.authorizationKernel.authorizeResource({
+      subject: context.subject,
+      resource: { type: 'asset', action: 'read', id: clientId },
+      record: { id: clientId, clientId },
+      requestCache: context.requestCache,
+      knex: trx,
+    });
+    return clientMatchesAssetReadScope(clientId, decision);
+  };
+}
+
+function assertAssetReadPermission(user: IUserWithRoles): Promise<boolean> {
+  return hasPermission(user, 'asset', 'read');
+}
+
+async function assertClientReadAllowed(
+  authorizer: AssetClientReadAuthorizer,
+  clientId: string,
+): Promise<void> {
+  if (!await authorizer(clientId)) {
+    throw new Error('Permission denied: Client is outside the caller\'s asset read scope');
+  }
+}
+
+export const getAllClientsForAssets = withAuth(async (
+  user,
+  { tenant },
+  includeInactive: boolean = true
+): Promise<IClient[]> => {
+  await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
+  if (!await assertAssetReadPermission(user)) {
+    throw new Error('Permission denied: Cannot read asset client options');
+  }
+  if (isClientUserType(user.user_type) && !user.clientId) return [];
+  const { knex } = await createTenantKnex();
+
+  const clients = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const authorizer = await createAssetClientReadAuthorizer(trx, tenant, user);
+    const clientIds = await tenantScopedTable(trx, tenant, 'clients')
+      .select('client_id') as Array<{ client_id: string }>;
+    const allowedClientIds = (await Promise.all(
+      clientIds.map(async ({ client_id }) => await authorizer(client_id) ? client_id : null)
+    )).filter((clientId): clientId is string => clientId !== null);
+
+    if (allowedClientIds.length === 0) return [];
+
+    const query = tenantScopedTable(trx, tenant, 'clients')
+      .select('*')
+      .whereIn('client_id', allowedClientIds)
+      .orderBy('client_name', 'asc');
+
+    if (!includeInactive) {
+      query.andWhere({ is_inactive: false });
+    }
+
+    return query;
+  }) as unknown as IClient[];
+
+  if (clients.length === 0) {
+    return clients;
+  }
+
+  // Batch-resolve logo URLs once (no N+1) so the assets table can show real logos.
+  const logoUrlsMap = await getClientLogoUrlsBatch(clients.map((c) => c.client_id), tenant);
+  return clients.map((c) => withClientSinceDateString({ ...c, logoUrl: logoUrlsMap.get(c.client_id) ?? null }));
+});
+
 export const getClientByIdForAssets = withAuth(async (
-  _user,
+  user,
   { tenant },
   clientId: string
 ): Promise<IClient | null> => {
   await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
+  if (!await assertAssetReadPermission(user)) {
+    throw new Error('Permission denied: Cannot read asset client options');
+  }
   const { knex } = await createTenantKnex();
 
   const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const authorizer = await createAssetClientReadAuthorizer(trx, tenant, user);
+    await assertClientReadAllowed(authorizer, clientId);
     const result = await tenantScopedTable(trx, tenant, 'clients')
       .select('*')
       .where({ client_id: clientId })
@@ -50,14 +162,19 @@ export const getClientByIdForAssets = withAuth(async (
 });
 
 export const getClientLocationsForAssets = withAuth(async (
-  _user,
+  user,
   { tenant },
   clientId: string
 ): Promise<IClientLocation[]> => {
   await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
+  if (!await assertAssetReadPermission(user)) {
+    throw new Error('Permission denied: Cannot read asset client options');
+  }
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
+    const authorizer = await createAssetClientReadAuthorizer(trx, tenant, user);
+    await assertClientReadAllowed(authorizer, clientId);
     return tenantScopedTable(trx, tenant, 'client_locations')
       .where({
         client_id: clientId,
@@ -75,15 +192,20 @@ export const getClientLocationsForAssets = withAuth(async (
  * still show who the asset belongs to.
  */
 export const getClientContactsForAssets = withAuth(async (
-  _user,
+  user,
   { tenant },
   clientId: string,
   currentContactId?: string | null
 ): Promise<IContact[]> => {
   await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
+  if (!await assertAssetReadPermission(user)) {
+    throw new Error('Permission denied: Cannot read asset client options');
+  }
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
+    const authorizer = await createAssetClientReadAuthorizer(trx, tenant, user);
+    await assertClientReadAllowed(authorizer, clientId);
     return tenantScopedTable(trx, tenant, 'contacts')
       .select('contact_name_id', 'tenant', 'client_id', 'full_name', 'email', 'role', 'is_inactive', 'contact_kind')
       .where({ client_id: clientId })
@@ -109,7 +231,9 @@ export const getVendorOptionsForAssets = withAuth(async (
   currentVendorId?: string | null
 ): Promise<Array<{ vendor_id: string; vendor_name: string }>> => {
   await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
-  if (!await hasPermission(user, 'asset', 'read')) return [];
+  if (!await assertAssetReadPermission(user)) {
+    throw new Error('Permission denied: Cannot read asset vendor options');
+  }
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -137,10 +261,14 @@ export const getClientBillingProfilesForAssets = withAuth(async (
   clientId: string
 ): Promise<Array<{ billing_profile_id: string; name: string; is_default: boolean }>> => {
   await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
-  if (!await hasPermission(user, 'asset', 'read')) return [];
+  if (!await assertAssetReadPermission(user)) {
+    throw new Error('Permission denied: Cannot read asset client options');
+  }
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
+    const authorizer = await createAssetClientReadAuthorizer(trx, tenant, user);
+    await assertClientReadAllowed(authorizer, clientId);
     return tenantScopedTable(trx, tenant, 'client_billing_profiles')
       .select('billing_profile_id', 'name', 'is_default')
       .where({ client_id: clientId, is_active: true })

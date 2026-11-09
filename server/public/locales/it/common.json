@@ -883,7 +883,8 @@
       "collapse": "Comprimi cartelle",
       "allDocuments": "Tutti i documenti",
       "expand": "Mostra cartelle",
-      "deleteTitle": "Elimina cartella"
+      "deleteTitle": "Elimina cartella",
+      "show": "Mostra cartelle"
     },
     "folderManager": {
       "title": "Crea nuova cartella",
@@ -945,6 +946,28 @@
     "huduTab": {
       "documentsTabLabel": "Documenti",
       "tabLabel": "Hudu"
+    },
+    "fallbackUserName": "Utente",
+    "selectOrCreate": "Seleziona un documento o creane uno nuovo.",
+    "actions": {
+      "markdown": "Markdown",
+      "print": "Stampa",
+      "edit": "Modifica",
+      "upload": "Carica",
+      "closePreview": "Chiudi anteprima",
+      "cancel": "Annulla",
+      "save": "Salva",
+      "saving": "Salvataggio..."
+    },
+    "viewMode": {
+      "grid": "Griglia",
+      "list": "Elenco"
+    },
+    "unsavedChanges": {
+      "title": "Modifiche non salvate",
+      "message": "Vuoi davvero annullare? Tutte le modifiche non salvate andranno perse.",
+      "confirm": "Annulla modifiche",
+      "cancel": "Continua a modificare"
     }
   },
   "surveys": {
@@ -1426,7 +1449,16 @@
     "unnamedTeam": "Team senza nome",
     "userPicker": "Selettore utenti",
     "noUsersFound": "Nessun utente trovato",
-    "contactRemoteLocation": "Remoto"
+    "contactRemoteLocation": "Remoto",
+    "selectBoard": "Seleziona bacheca",
+    "activeBoards": "Bacheche attive",
+    "inactiveBoards": "Bacheche inattive",
+    "allBoards": "Tutte le bacheche",
+    "boardPicker": "Selettore bacheche",
+    "filterByStatus": "Filtra per stato",
+    "statusFilter": "Filtro per stato",
+    "boards": "Bacheche",
+    "inactiveSuffix": "(Inattiva)"
   },
   "serviceTypeSelect": {
     "placeholder": "Seleziona un tipo di servizio...",
@@ -1727,7 +1759,14 @@
       "assigned": "Assegnato:",
       "performedBy": "da {{name}}",
       "internal": "Interno"
-    }
+    },
+    "title": "Notifiche",
+    "reconnectingToServer": "Riconnessione al server...",
+    "refresh": "Aggiorna",
+    "markAllAsRead": "Segna tutte come lette",
+    "markAllRead": "Segna tutte come lette",
+    "emptyTitle": "Nessuna notifica",
+    "emptyDescription": "Non c'è nulla da leggere!"
   },
   "importConflicts": {
     "title": "Risolvi i conflitti di importazione",

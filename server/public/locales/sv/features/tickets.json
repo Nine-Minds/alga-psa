@@ -34,38 +34,135 @@
     "createdSuccess_other": "{{count}} ärenden har skapats.",
     "rowLimitExceeded": "Radgränsen har överskridits:",
     "rowLimitDescription": "Din CSV-fil har {{original}} rader, men endast de första {{kept}} raderna importeras. Dela upp de återstående raderna i mindre filer.",
-    "createdSuccess_few": "{{count}} ärenden har skapats.",
-    "createdSuccess_many": "{{count}} ärenden har skapats.",
-    "errorCount_few": "{{count}} fel:",
-    "errorCount_many": "{{count}} fel:",
-    "importTickets_few": "Importera {{count}} ärenden",
-    "importTickets_many": "Importera {{count}} ärenden",
-    "skipDropped_few": "Hoppa över ({{count}} ärenden utelämnas)",
-    "skipDropped_many": "Hoppa över ({{count}} ärenden utelämnas)",
-    "skippedCount_few": "{{count}} ärenden hoppades över.",
-    "skippedCount_many": "{{count}} ärenden hoppades över.",
-    "ticketCount_few": "({{count}} ärenden)",
-    "ticketCount_many": "({{count}} ärenden)",
-    "unmatchedAgents_few": "{{count}} handläggare",
-    "unmatchedAgents_many": "{{count}} handläggare",
-    "unmatchedCategories_few": "{{count}} kategorier",
-    "unmatchedCategories_many": "{{count}} kategorier",
-    "unmatchedClients_few": "{{count}} kunder",
-    "unmatchedClients_many": "{{count}} kunder",
-    "unmatchedContacts_few": "{{count}} kontakter",
-    "unmatchedContacts_many": "{{count}} kontakter",
-    "unmatchedDateFormats_few": "{{count}} datumformat",
-    "unmatchedDateFormats_many": "{{count}} datumformat",
-    "unmatchedPriorities_few": "{{count}} prioriteter",
-    "unmatchedPriorities_many": "{{count}} prioriteter",
-    "unmatchedStatuses_few": "{{count}} statusar",
-    "unmatchedStatuses_many": "{{count}} statusar",
-    "unmatchedTeams_few": "{{count}} team",
-    "unmatchedTeams_many": "{{count}} team",
-    "unmatchedValuesIntro_few": "{{count}} värden från din CSV-fil kunde inte matchas automatiskt.",
-    "unmatchedValuesIntro_many": "{{count}} värden från din CSV-fil kunde inte matchas automatiskt.",
-    "warningCount_few": "{{count}} varningar:",
-    "warningCount_many": "{{count}} varningar:"
+    "title": "Importera ärenden",
+    "errors": {
+      "readCsv": "Det gick inte att läsa CSV-filen",
+      "selectDefaultBoard": "Välj en standardtavla",
+      "requiredFieldNotMapped": "Det obligatoriska fältet ”{{field}}” är inte mappat",
+      "processCsv": "Det gick inte att bearbeta CSV-data",
+      "importTickets": "Det gick inte att importera ärenden"
+    },
+    "unnamedBoard": "Tavla utan namn",
+    "boardOptionDefault": "{{board}} (standard)",
+    "resolveUnmatchedData": "Hantera data utan matchning",
+    "actions": {
+      "back": "Tillbaka",
+      "next": "Nästa",
+      "processing": "Bearbetar…",
+      "preview": "Förhandsgranska",
+      "import": "Importera ärenden",
+      "downloadTemplate": "Ladda ner CSV-mall"
+    },
+    "upload": {
+      "prompt": "Ladda upp en CSV-fil med ärendedata",
+      "requiredLabel": "Obligatoriskt:",
+      "optionalLabel": "Valfritt:",
+      "tipLabel": "Tips:",
+      "tip": "Kolumnnamn från andra PSA-system (ConnectWise, Autotask, HaloPSA, Zendesk, Freshdesk) identifieras automatiskt"
+    },
+    "board": {
+      "heading": "Välj tavla",
+      "description": "Alla ärenden importeras till den här tavlan. Statusar och kategorier är specifika för varje tavla, så valet avgör vilka som är tillgängliga.",
+      "placeholder": "Välj en tavla…"
+    },
+    "mapping": {
+      "heading": "Mappa ärendefält till CSV-kolumner",
+      "description": "Välj vilken CSV-kolumn som innehåller data för varje fält. Fält markerade med * är obligatoriska.",
+      "fieldColumn": "Fält",
+      "csvColumn": "Välj CSV-kolumn",
+      "notMapped": "Inte mappat"
+    },
+    "preview": {
+      "heading": "Förhandsgranska import",
+      "totalRows": "Totalt antal rader:",
+      "valid": "Giltiga:",
+      "invalid": "Ogiltiga:",
+      "skipInvalidRows": "Hoppa över ogiltiga rader",
+      "skipInvalidRowsHelp": "Fortsätt importen även om vissa rader har valideringsfel",
+      "yes": "Ja",
+      "no": "Nej",
+      "rowValid": "Giltig",
+      "rowHasErrors": "Har fel",
+      "columns": {
+        "row": "Rad",
+        "issues": "Problem"
+      },
+      "unmatchedCount": "Antal värden: {{count}}",
+      "unmatchedIntro": "från din CSV-fil som inte matchar befintliga data",
+      "unmatchedNextStep": "Du hanterar dessa i nästa steg.",
+      "invalidRowCount": "Antal rader med valideringsfel: {{count}}.",
+      "invalidRowsHelp": "Aktivera ”Hoppa över ogiltiga rader” för att fortsätta eller gå tillbaka och rätta CSV-filen."
+    },
+    "confirmLargeImport": "Bekräfta stor import ({{count}} ärenden)",
+    "confirmLargeImportHelp": "Jag förstår att {{count}} ärenden skapas. Det kan ta en stund.",
+    "confirmLargeImportUpToHelp": "Jag förstår att högst {{count}} ärenden skapas. Det kan ta en stund.",
+    "resolve": {
+      "chooseHandling": "Välj hur varje värde ska hanteras nedan.",
+      "sections": {
+        "clients": "Kunder (utan matchning: {{count}})",
+        "priorities": "Prioriteter (utan matchning: {{count}})",
+        "statuses": "Statusar (utan matchning: {{count}})",
+        "categories": "Kategorier (utan matchning: {{count}})",
+        "agents": "Handläggare (utan matchning: {{count}})",
+        "teams": "Team (utan matchning: {{count}})",
+        "contacts": "Kontakter (utan matchning: {{count}})",
+        "dateFormats": "Datumformat (okända: {{count}})"
+      },
+      "required": "Obligatoriskt",
+      "itilCreateDisabled": "ITIL-tavla – det går inte att skapa nya värden",
+      "needsInterpretation": "Behöver tolkas",
+      "createNew": "Skapa ny",
+      "mapToExisting": "Mappa till befintlig",
+      "useDefault": "Använd standardvärde",
+      "useBoardDefault": "Använd tavlans standardvärde",
+      "skipUncategorized": "Hoppa över (lämna utan kategori)",
+      "skipUnassigned": "Hoppa över (lämna utan tilldelning)",
+      "skipNoTeam": "Hoppa över (inget team tilldelas)",
+      "skipLeaveBlank": "Hoppa över (lämna tomt)",
+      "clientTypeCompany": "Företag",
+      "clientTypeIndividual": "Privatperson",
+      "clientTypePlaceholder": "Kundtyp",
+      "selectClient": "Välj kund…",
+      "selectPriority": "Välj prioritet…",
+      "selectStatus": "Välj status…",
+      "selectCategory": "Välj kategori…",
+      "selectTeam": "Välj team…",
+      "selectContact": "Välj kontakt…",
+      "onClient": "– hos {{client}}",
+      "skippedTicketCount": "Antal ärenden som hoppas över: {{count}}.",
+      "skippedDueToClients": "Det beror på att vissa kunder hoppades över vid matchningen.",
+      "dates": {
+        "help": "Det gick inte att läsa vissa datum i din CSV-fil automatiskt. Ange hur de ska tolkas.",
+        "lookLike": "Dina datum ser ut så här:",
+        "totalCount": "(totalt {{count}})",
+        "thisMeans": "Detta innebär:",
+        "selectFormat": "Välj format…",
+        "formats": {
+          "skip": "Hoppa över dessa datum",
+          "mdySlash": "Månad/dag/år (USA)",
+          "dmySlash": "Dag/månad/år (internationellt)",
+          "mdySlashShort": "Månad/dag/år (tvåsiffrigt år, USA)",
+          "dmySlashShort": "Dag/månad/år (tvåsiffrigt år, internationellt)",
+          "mdyDash": "Månad-dag-år (USA)",
+          "dmyDash": "Dag-månad-år (internationellt)",
+          "ymdDot": "År.månad.dag",
+          "dmyDot": "Dag.månad.år"
+        }
+      }
+    },
+    "importing": {
+      "title": "Importerar ärenden…",
+      "help": "Det kan ta en stund vid stora importer."
+    },
+    "complete": {
+      "heading": "Importen är klar",
+      "ticketNumbers": "Ärendenummer:",
+      "andMore": "… och {{count}} till",
+      "failedHeading": "Det gick inte att importera",
+      "noneCreated": "Inga ärenden skapades.",
+      "allSkipped_one": "{{count}} ärende hoppades över på grund av fel.",
+      "allSkipped_other": "Alla {{count}} ärenden hoppades över på grund av fel."
+    }
   },
   "title": "Supportärenden",
   "subtitle": "Visa och hantera dina supportärenden",
@@ -127,7 +224,8 @@
     "droppedFromLink": "Vissa filter i den här länken är ogiltiga och ignorerades.",
     "clearFilters": "Rensa filter",
     "location": "Plats",
-    "requesterLocation": "Beställarens plats"
+    "requesterLocation": "Beställarens plats",
+    "selectStatus": "Välj status"
   },
   "create": {
     "title": "Skapa supportärende",
@@ -233,7 +331,13 @@
     "linkedAssets": "Kopplade tillgångar",
     "assetName": "Namn",
     "assetTag": "Tillgångstagg",
-    "assetType": "Typ"
+    "assetType": "Typ",
+    "noStatus": "Ingen status",
+    "noPriority": "Ingen prioritet",
+    "noClient": "Ingen kund",
+    "multipleClients": "Flera kunder",
+    "noDueDate": "Inget måldatum",
+    "dueInDays": "om {{count}} dagar"
   },
   "actions": {
     "view": "Visa",
@@ -369,16 +473,6 @@
     "billingProfileUpdated": "Faktureringsprofilen har uppdaterats",
     "updateBillingProfileFailed": "Det gick inte att uppdatera faktureringsprofilen",
     "scheduleOpenFailed": "Det gick inte att öppna schemaläggaren",
-    "commentWithImagesDeleted_few": "Kommentaren och {{count}} inklistrade bilder har raderats.",
-    "commentWithImagesDeleted_many": "Kommentaren och {{count}} inklistrade bilder har raderats.",
-    "deleteCommentWithImages_few": "Den här kommentaren innehåller {{count}} inklistrade bilder som har laddats upp som ärendedokument. Vill du bara radera kommentaren eller även radera de inklistrade bilderna permanent?",
-    "deleteCommentWithImages_many": "Den här kommentaren innehåller {{count}} inklistrade bilder som har laddats upp som ärendedokument. Vill du bara radera kommentaren eller även radera de inklistrade bilderna permanent?",
-    "pastedImageDeleteFailed_few": "Kommentaren har raderats, men {{count}} inklistrade bilder kunde inte raderas.",
-    "pastedImageDeleteFailed_many": "Kommentaren har raderats, men {{count}} inklistrade bilder kunde inte raderas.",
-    "pastedImagesDeleteFailed_few": "Det gick inte att radera {{count}} inklistrade bilder.",
-    "pastedImagesDeleteFailed_many": "Det gick inte att radera {{count}} inklistrade bilder.",
-    "pastedImagesDeleted_few": "{{count}} inklistrade bilder har raderats.",
-    "pastedImagesDeleted_many": "{{count}} inklistrade bilder har raderats.",
     "sharedWorkspaceReadOnly": "Du ser det här ärendet eftersom det gäller en enhet i en delad arbetsplats. Bara den som skapade det kan lägga till något.",
     "loadPartyTagsFailed": "Det gick inte att läsa in beställarens och kundens taggar"
   },
@@ -589,13 +683,7 @@
       "allMatchingSelected_other": "Alla {{count}} ärenden som matchar dina filter är markerade.",
       "clear": "Avmarkera alla",
       "selectAllMatching_one": "Markera {{count}} ärende som matchar dina filter",
-      "selectAllMatching_other": "Markera alla {{count}} ärenden som matchar dina filter",
-      "allMatchingSelected_few": "Alla {{count}} ärenden som matchar dina filter är markerade.",
-      "allMatchingSelected_many": "Alla {{count}} ärenden som matchar dina filter är markerade.",
-      "pageSelected_few": "Alla {{count}} ärenden på den här sidan är markerade.",
-      "pageSelected_many": "Alla {{count}} ärenden på den här sidan är markerade.",
-      "selectAllMatching_few": "Markera alla {{count}} ärenden som matchar dina filter",
-      "selectAllMatching_many": "Markera alla {{count}} ärenden som matchar dina filter"
+      "selectAllMatching_other": "Markera alla {{count}} ärenden som matchar dina filter"
     },
     "spacing": {
       "compact": "Kompakt",
@@ -635,13 +723,7 @@
       },
       "selectedAction": "Skriv ut markerade ({{count}})",
       "selectedTitle": "Markerade ärenden ({{count}})",
-      "subtitle": "{{count}} ärenden",
-      "selectedAction_few": "Skriv ut markerade ({{count}})",
-      "selectedAction_many": "Skriv ut markerade ({{count}})",
-      "selectedTitle_few": "Markerade ärenden ({{count}})",
-      "selectedTitle_many": "Markerade ärenden ({{count}})",
-      "subtitle_few": "{{count}} ärenden",
-      "subtitle_many": "{{count}} ärenden"
+      "subtitle": "{{count}} ärenden"
     },
     "exportSelectedAction": "Exportera markerade ({{count}})",
     "exportAction": "Exportera CSV",
@@ -669,15 +751,7 @@
       "saveFailed": "Det gick inte att spara standardvyn",
       "reset": "Återställ till organisationens standardinställning",
       "resetFailed": "Det gick inte att återställa vyn"
-    },
-    "allMatchingSelected_few": "Alla {{count}} ärenden som matchar dina filter är markerade.",
-    "allMatchingSelected_many": "Alla {{count}} ärenden som matchar dina filter är markerade.",
-    "allPageSelected_few": "Alla {{count}} ärenden på den här sidan är markerade.",
-    "allPageSelected_many": "Alla {{count}} ärenden på den här sidan är markerade.",
-    "exportSelectedTooltip_few": "Exportera {{count}} markerade ärenden till CSV",
-    "exportSelectedTooltip_many": "Exportera {{count}} markerade ärenden till CSV",
-    "selectAllMatching_few": "Markera alla {{count}} ärenden som matchar dina filter",
-    "selectAllMatching_many": "Markera alla {{count}} ärenden som matchar dina filter"
+    }
   },
   "bulk": {
     "bundleTickets": "Gruppera ärenden",
@@ -698,8 +772,6 @@
       "statusResolvingBoards": "Kontrollerar de markerade ärendenas tavlor…",
       "more": "Mer",
       "bundleNeedsOne": "Markera minst 1 ärende att gruppera",
-      "selectedCount_few": "{{count}} markerade",
-      "selectedCount_many": "{{count}} markerade",
       "printLabels": "Skriv ut etiketter",
       "printLabelsLimit": "Du kan skriva ut högst {{max}} etiketter åt gången"
     },
@@ -765,11 +837,7 @@
       "partialFailure": "Det gick inte att flytta vissa ärenden",
       "failure": "Det gick inte att flytta de markerade ärendena",
       "confirm": "Flytta {{count}} ärenden",
-      "success": "{{count}} ärenden har flyttats",
-      "confirm_few": "Flytta {{count}} ärenden",
-      "confirm_many": "Flytta {{count}} ärenden",
-      "success_few": "{{count}} ärenden har flyttats",
-      "success_many": "{{count}} ärenden har flyttats"
+      "success": "{{count}} ärenden har flyttats"
     },
     "delete": {
       "dialogTitle": "Radera markerade ärenden",
@@ -786,13 +854,7 @@
       "partialFailure": "Det gick inte att radera vissa ärenden",
       "failure": "Det gick inte att radera de markerade ärendena",
       "confirm": "Vill du verkligen radera dessa {{count}} ärenden? Åtgärden kan inte ångras.",
-      "success": "{{count}} ärenden har raderats",
-      "button_few": "Radera {{count}} ärenden",
-      "button_many": "Radera {{count}} ärenden",
-      "confirm_few": "Vill du verkligen radera dessa {{count}} ärenden? Åtgärden kan inte ångras.",
-      "confirm_many": "Vill du verkligen radera dessa {{count}} ärenden? Åtgärden kan inte ångras.",
-      "success_few": "{{count}} ärenden har raderats",
-      "success_many": "{{count}} ärenden har raderats"
+      "success": "{{count}} ärenden har raderats"
     },
     "bundle": {
       "dialogTitle": "Gruppera ärenden",
@@ -828,9 +890,7 @@
       "needMoreTickets": "Lägg till minst ett ärende till i gruppen.",
       "unresolvedSelectedTickets_one": "Det gick inte att läsa in {{count}} markerat ärende.",
       "unresolvedSelectedTickets_other": "Det gick inte att läsa in {{count}} markerade ärenden.",
-      "badgeClosed": "Stängt",
-      "unresolvedSelectedTickets_few": "Det gick inte att läsa in {{count}} markerade ärenden.",
-      "unresolvedSelectedTickets_many": "Det gick inte att läsa in {{count}} markerade ärenden."
+      "badgeClosed": "Stängt"
     },
     "auth": {
       "moveRequired": "Du måste vara inloggad för att flytta ärenden",
@@ -853,11 +913,7 @@
       "success_other": "{{count}} ärenden har omtilldelats",
       "partialFailure": "Det gick inte att omtilldela vissa ärenden",
       "failure": "Det gick inte att omtilldela de markerade ärendena",
-      "failedHeading": "Det gick inte att omtilldela följande ärenden:",
-      "confirm_few": "Omtilldela {{count}} ärenden",
-      "confirm_many": "Omtilldela {{count}} ärenden",
-      "success_few": "{{count}} ärenden har omtilldelats",
-      "success_many": "{{count}} ärenden har omtilldelats"
+      "failedHeading": "Det gick inte att omtilldela följande ärenden:"
     },
     "tags": {
       "dialogTitle": "Lägg till taggar i markerade ärenden",
@@ -870,11 +926,7 @@
       "success_other": "Taggar har lagts till i {{count}} ärenden",
       "partialFailure": "Det gick inte att lägga till taggar i vissa ärenden",
       "failure": "Det gick inte att lägga till taggar i de markerade ärendena",
-      "failedHeading": "Det gick inte att lägga till taggar i följande ärenden:",
-      "confirm_few": "Lägg till taggar i {{count}} ärenden",
-      "confirm_many": "Lägg till taggar i {{count}} ärenden",
-      "success_few": "Taggar har lagts till i {{count}} ärenden",
-      "success_many": "Taggar har lagts till i {{count}} ärenden"
+      "failedHeading": "Det gick inte att lägga till taggar i följande ärenden:"
     },
     "dueDate": {
       "dialogTitle": "Ange måldatum för markerade ärenden",
@@ -889,11 +941,7 @@
       "success_other": "Måldatum har uppdaterats för {{count}} ärenden",
       "partialFailure": "Det gick inte att uppdatera måldatum för vissa ärenden",
       "failure": "Det gick inte att uppdatera måldatum för de markerade ärendena",
-      "failedHeading": "Det gick inte att uppdatera måldatum för följande ärenden:",
-      "confirm_few": "Uppdatera {{count}} ärenden",
-      "confirm_many": "Uppdatera {{count}} ärenden",
-      "success_few": "Måldatum har uppdaterats för {{count}} ärenden",
-      "success_many": "Måldatum har uppdaterats för {{count}} ärenden"
+      "failedHeading": "Det gick inte att uppdatera måldatum för följande ärenden:"
     },
     "status": {
       "dialogTitle": "Ändra status för markerade ärenden",
@@ -912,11 +960,7 @@
       "resolutionLabelRequired": "Lösningskommentar",
       "resolutionRequiredHint": "Den här tavlan kräver en lösningskommentar innan ärenden kan stängas.",
       "resolutionPlaceholder": "Beskriv hur dessa ärenden löstes",
-      "resolutionHelper": "Sparas som lösningen på varje markerat ärende och uppfyller tavlor som kräver en innan stängning.",
-      "confirm_few": "Uppdatera {{count}} ärenden",
-      "confirm_many": "Uppdatera {{count}} ärenden",
-      "success_few": "Status har uppdaterats för {{count}} ärenden",
-      "success_many": "Status har uppdaterats för {{count}} ärenden"
+      "resolutionHelper": "Sparas som lösningen på varje markerat ärende och uppfyller tavlor som kräver en innan stängning."
     },
     "priority": {
       "dialogTitle": "Ändra prioritet för markerade ärenden",
@@ -929,24 +973,8 @@
       "success_other": "Prioritet har uppdaterats för {{count}} ärenden",
       "partialFailure": "Det gick inte att uppdatera prioritet för vissa ärenden",
       "failure": "Det gick inte att uppdatera prioritet för de markerade ärendena",
-      "failedHeading": "Det gick inte att uppdatera prioritet för följande ärenden:",
-      "confirm_few": "Uppdatera {{count}} ärenden",
-      "confirm_many": "Uppdatera {{count}} ärenden",
-      "success_few": "Prioritet har uppdaterats för {{count}} ärenden",
-      "success_many": "Prioritet har uppdaterats för {{count}} ärenden"
-    },
-    "deleteConfirm_few": "Radera {{count}} ärenden",
-    "deleteConfirm_many": "Radera {{count}} ärenden",
-    "deleteDialogDescription_few": "Vill du verkligen radera dessa {{count}} ärenden? Åtgärden kan inte ångras.",
-    "deleteDialogDescription_many": "Vill du verkligen radera dessa {{count}} ärenden? Åtgärden kan inte ångras.",
-    "deleteSuccess_few": "{{count}} ärenden har raderats",
-    "deleteSuccess_many": "{{count}} ärenden har raderats",
-    "exportSelectedTooltip_few": "Exportera {{count}} markerade ärenden till CSV",
-    "exportSelectedTooltip_many": "Exportera {{count}} markerade ärenden till CSV",
-    "moveConfirm_few": "Flytta {{count}} ärenden",
-    "moveConfirm_many": "Flytta {{count}} ärenden",
-    "moveSuccess_few": "{{count}} ärenden har flyttats",
-    "moveSuccess_many": "{{count}} ärenden har flyttats"
+      "failedHeading": "Det gick inte att uppdatera prioritet för följande ärenden:"
+    }
   },
   "quickAdd": {
     "dialogTitle": "Snabbregistrera ärende",
@@ -1020,10 +1048,6 @@
     "templateReplaceMessage": "Att använda en mall ersätter rubrik, beskrivning och andra fält du har fyllt i.",
     "templateReplaceConfirm": "Använd mall",
     "templateTokenHint": "Titeln fylls i med vald kund, kontakt och förfallodatum tills du redigerar den.",
-    "tagCreatePartialFailure_few": "{{count}} taggar kunde inte skapas",
-    "tagCreatePartialFailure_many": "{{count}} taggar kunde inte skapas",
-    "tagCreationFailed_few": "{{count}} taggar kunde inte skapas",
-    "tagCreationFailed_many": "{{count}} taggar kunde inte skapas",
     "assets": {
       "heading": "Tillgångar",
       "selectClientFirst": "Välj en kund för att länka tillgångar.",
@@ -1263,13 +1287,6 @@
       "copySelected": "Kopiera markerade",
       "copySuccess": "Kopierade {{created}} kategorier och hoppade över {{skipped}} som redan finns.",
       "copyFailed": "Det gick inte att kopiera kategorierna",
-      "copySourceLabel": "Källtavla",
-      "copyTargetLabel": "Måltavla",
-      "copyEmpty": "Det finns inga kategorier på den här tavlan.",
-      "copying": "Kopierar…",
-      "copyBoardTypeMismatch": "Ärendekategorier kan bara kopieras mellan tavlor med samma kategorityp.",
-      "copyConflicts_one": "{{count}} överhoppad kategori har en annan överordnad kategori på måltavlan.",
-      "copyConflicts_other": "{{count}} överhoppade kategorier har en annan överordnad kategori på måltavlan.",
       "editCategory": "Redigera kategori",
       "categoryName": "Kategorinamn *",
       "enterCategoryName": "Ange kategorinamn",
@@ -1330,8 +1347,13 @@
       "parentHelpWithBoard": "Välj en överordnad kategori för att skapa en underkategori eller lämna tomt för översta nivån",
       "parentHelpWithoutBoard": "Välj först en tavla eller välj en överordnad kategori för att ärva dess tavla",
       "creating": "Skapar…",
-      "copyConflicts_few": "{{count}} överhoppade kategorier har en annan överordnad kategori på måltavlan.",
-      "copyConflicts_many": "{{count}} överhoppade kategorier har en annan överordnad kategori på måltavlan."
+      "copySourceLabel": "Källtavla",
+      "copyTargetLabel": "Måltavla",
+      "copyEmpty": "Det finns inga kategorier på den här tavlan.",
+      "copying": "Kopierar…",
+      "copyBoardTypeMismatch": "Ärendekategorier kan bara kopieras mellan tavlor med samma kategorityp.",
+      "copyConflicts_one": "{{count}} överhoppad kategori har en annan överordnad kategori på måltavlan.",
+      "copyConflicts_other": "{{count}} överhoppade kategorier har en annan överordnad kategori på måltavlan."
     },
     "display": {
       "responseStateTrackingTitle": "Spårning av svarsstatus",
@@ -1412,23 +1434,7 @@
     "appliedFiltersSummary": "(av {{count}} ärende som matchar tillämpade filter)",
     "completeMessage": "{{count}} ärende har exporterats till CSV.",
     "confirm": "Exportera {{count}} ärende",
-    "selectedTicketsSummary": "Exporterar {{count}} markerat ärende",
-    "appliedFiltersSummary_few": "(av {{count}} ärenden som matchar tillämpade filter)",
-    "appliedFiltersSummary_many": "(av {{count}} ärenden som matchar tillämpade filter)",
-    "completeDescription_few": "{{count}} ärenden har exporterats till CSV.",
-    "completeDescription_many": "{{count}} ärenden har exporterats till CSV.",
-    "completeMessage_few": "{{count}} ärenden har exporterats till CSV.",
-    "completeMessage_many": "{{count}} ärenden har exporterats till CSV.",
-    "confirm_few": "Exportera {{count}} ärenden",
-    "confirm_many": "Exportera {{count}} ärenden",
-    "selectedFields_few": "{{count}} av {{total}} fält markerade",
-    "selectedFields_many": "{{count}} av {{total}} fält markerade",
-    "selectedTicketsSummary_few": "Exporterar {{count}} markerade ärenden",
-    "selectedTicketsSummary_many": "Exporterar {{count}} markerade ärenden",
-    "summaryMatching_few": "(av {{total}} ärenden som matchar tillämpade filter)",
-    "summaryMatching_many": "(av {{total}} ärenden som matchar tillämpade filter)",
-    "summary_few": "Exporterar {{selected}} markerade ärenden",
-    "summary_many": "Exporterar {{selected}} markerade ärenden"
+    "selectedTicketsSummary": "Exporterar {{count}} markerat ärende"
   },
   "materials": {
     "title": "Material",
@@ -1559,15 +1565,7 @@
     "excludingCount_other": "utom {{count}} kategorier",
     "excludingPrefix": "utom {{name}}",
     "excludingCount": "utom {{count}} kategori",
-    "selectedCount": "{{count}} kategorier",
-    "categoriesCount_few": "{{count}} kategorier",
-    "categoriesCount_many": "{{count}} kategorier",
-    "excludingCategoriesCount_few": "utom {{count}} kategorier",
-    "excludingCategoriesCount_many": "utom {{count}} kategorier",
-    "excludingCount_few": "utom {{count}} kategorier",
-    "excludingCount_many": "utom {{count}} kategorier",
-    "selectedCount_few": "{{count}} kategorier",
-    "selectedCount_many": "{{count}} kategorier"
+    "selectedCount": "{{count}} kategorier"
   },
   "navigation": {
     "previousTicket": "Föregående ärende",
@@ -1894,9 +1892,7 @@
     "editing": {
       "single": "{{name}} redigerar",
       "multiple_one": "{{name}} och {{count}} annan användare redigerar",
-      "multiple_other": "{{name}} och {{count}} andra användare redigerar",
-      "multiple_few": "{{name}} och {{count}} andra användare redigerar",
-      "multiple_many": "{{name}} och {{count}} andra användare redigerar"
+      "multiple_other": "{{name}} och {{count}} andra användare redigerar"
     },
     "remoteFieldUpdated": "{{name}} uppdaterade {{field}}",
     "connection": {
@@ -1925,11 +1921,7 @@
     "selectedCount": "{{count}} tavlor",
     "statusActive": "Aktiv",
     "statusAll": "Alla",
-    "statusInactive": "Inaktiv",
-    "excludingCount_few": "utom {{count}} tavlor",
-    "excludingCount_many": "utom {{count}} tavlor",
-    "selectedCount_few": "{{count}} tavlor",
-    "selectedCount_many": "{{count}} tavlor"
+    "statusInactive": "Inaktiv"
   },
   "checklist": {
     "addFailed": "Det gick inte att lägga till checklistpunkten",
@@ -2082,8 +2074,6 @@
       },
       "scheduleTime": "Schemalägg tid",
       "openScheduleEntry": "Öppna schemapost",
-      "acrossEntries_few": "fördelat på {{count}} tidposter",
-      "acrossEntries_many": "fördelat på {{count}} tidposter",
       "changeLocation": "Ändra plats",
       "addDescriptionPrompt": "Lägg till en beskrivning – vad är problemet och vad behöver kunden?",
       "projectTasks": "Projektuppgifter",
@@ -2753,6 +2743,13 @@
       "hours": "{{hours}} h",
       "daysHours": "{{days}} d {{hours}} h",
       "days": "{{days}} d"
+    },
+    "cell": {
+      "breached": "SLA-brott",
+      "paused": "SLA-timer pausad",
+      "atRisk": "Risk för överskridande",
+      "onTrack": "Enligt plan",
+      "remaining": "{{magnitude}} kvar"
     }
   },
   "cannedResponses": {
@@ -2963,5 +2960,167 @@
     "notConfigured": "Ingen servicenivå gäller.",
     "empty": "Ingen servicenivå följs ännu upp för det här ärendet.",
     "loadError": "Servicenivån kunde inte laddas."
+  },
+  "activityTimeline": {
+    "actor": {
+      "user": "En användare",
+      "contact": "En kontakt",
+      "apiClient": "API-klient",
+      "workflow": "Arbetsflöde",
+      "system": "System"
+    },
+    "fields": {
+      "status": "status",
+      "priority": "prioritet",
+      "assignee": "ansvarig",
+      "team": "team",
+      "board": "tavla",
+      "category": "kategori",
+      "subcategory": "underkategori",
+      "client": "kund",
+      "contact": "kontakt",
+      "dueDate": "måldatum",
+      "responseState": "svarsstatus",
+      "closedAt": "stängningstid",
+      "closedBy": "stängt av",
+      "title": "titel",
+      "url": "URL"
+    },
+    "externalSystemFallback": "ett externt system",
+    "annotation": {
+      "silentAll": "tyst – inga aviseringar",
+      "silentContact": "tyst – kontakten aviseras inte"
+    },
+    "events": {
+      "created": "{{actor}} skapade ärendet",
+      "createdFromTemplateNamed": "{{actor}} skapade det här ärendet från mallen ”{{templateName}}”",
+      "createdFromTemplate": "{{actor}} skapade det här ärendet från en mall",
+      "duplicatedFromNumber": "{{actor}} skapade det här ärendet som en kopia av #{{ticketNumber}}",
+      "duplicatedFrom": "{{actor}} skapade det här ärendet som en kopia av ett annat ärende",
+      "duplicatedToNumber": "{{actor}} duplicerade det här ärendet som #{{ticketNumber}}",
+      "duplicatedTo": "{{actor}} duplicerade det här ärendet",
+      "closed": "{{actor}} stängde ärendet",
+      "reopened": "{{actor}} öppnade ärendet igen",
+      "reopenedByEmail": "Utlöst av ett inkommande e-postsvar",
+      "bundleReopened": "Gruppens huvudärende öppnades igen",
+      "bundleReopenedSubtitle": "Utlöst av ett svar i ett underärende",
+      "bundleStatusNotPropagated": "{{actor}} ändrade status för gruppens huvudärende (underärendena uppdaterades inte)",
+      "bundleStatusPropagated": "{{actor}} {{action}} gruppens huvudärende samt underärenden (antal: {{count}})",
+      "bundleAction": {
+        "reopened": "öppnade på nytt",
+        "closed": "stängde"
+      },
+      "statusChanged": "{{actor}} ändrade status",
+      "statusChangedSubtitle": "Status ändrades",
+      "priorityChanged": "{{actor}} ändrade prioriteten",
+      "priorityChangedSubtitle": "Prioriteten ändrades",
+      "assigned": "{{actor}} tilldelade ärendet",
+      "unassigned": "{{actor}} tog bort ärendets tilldelning",
+      "boardMoved": "{{actor}} flyttade ärendet till en annan tavla",
+      "responseStateUpdated": "{{actor}} uppdaterade svarsstatusen",
+      "internalNoteAdded": "{{actor}} lade till en intern anteckning",
+      "replied": "{{actor}} svarade",
+      "repliedViaEmail": "Mottaget via inkommande e-post",
+      "repliedViaPortal": "Mottaget via kundportalen",
+      "commentAdded": "{{actor}} lade till en kommentar",
+      "commentEdited": "{{actor}} redigerade en kommentar",
+      "documentAttached": "{{actor}} bifogade ett dokument",
+      "documentRemoved": "{{actor}} tog bort ett dokument",
+      "inboundEmailReceived": "Inkommande e-post mottagen",
+      "updated": "{{actor}} uppdaterade ärendet",
+      "externalLinkAdded": "{{actor}} länkade {{reference}}",
+      "externalLinkUpdated": "{{actor}} uppdaterade länken till {{reference}}",
+      "externalLinkRemoved": "{{actor}} tog bort länken till {{reference}}",
+      "fallback": "{{actor}} • {{eventType}}"
+    },
+    "comment": {
+      "added": "Kommentar tillagd",
+      "internalNoteAdded": "Intern anteckning tillagd",
+      "customerReply": "Kundsvar",
+      "inboundEmailReply": "Inkommande e-postsvar",
+      "actor": "Se konversationsfliken"
+    },
+    "filters": {
+      "events": {
+        "all": "Alla händelser",
+        "created": "Ärende skapat",
+        "updated": "Ärende uppdaterat",
+        "statusChanged": "Status ändrad",
+        "closed": "Stängt",
+        "reopened": "Öppnat igen",
+        "priorityChanged": "Prioritet ändrad",
+        "assigned": "Tilldelat",
+        "unassigned": "Ej tilldelat",
+        "boardMoved": "Flyttat till annan tavla",
+        "responseState": "Svarsstatus",
+        "messageAdded": "Kommentar tillagd",
+        "commentAdded": "Kommentar tillagd",
+        "commentEdited": "Kommentar redigerad",
+        "internalNote": "Intern anteckning",
+        "customerReply": "Kundsvar",
+        "documentAttached": "Dokument bifogat",
+        "documentRemoved": "Dokument borttaget",
+        "inboundEmail": "Inkommande e-post",
+        "createdFromTemplate": "Skapat från mall",
+        "duplicatedFrom": "Duplicerat från",
+        "duplicatedTo": "Duplicerat till",
+        "bundleReopened": "Ärendegrupp öppnad igen",
+        "bundleStatusPropagated": "Gruppstatus överförd till underärenden"
+      },
+      "sources": {
+        "all": "Alla källor",
+        "clientPortal": "Kundportal",
+        "inboundEmail": "Inkommande e-post",
+        "workflow": "Arbetsflöde",
+        "system": "System",
+        "internalNote": "Intern anteckning"
+      },
+      "actors": {
+        "all": "Alla aktörer",
+        "user": "Användare",
+        "contact": "Kontakt",
+        "emailSender": "E-postavsändare",
+        "workflow": "Arbetsflöde",
+        "system": "System"
+      },
+      "entries": {
+        "all": "Alla poster",
+        "activity": "Endast aktivitet",
+        "comments": "Endast kommentarer"
+      },
+      "entryType": "Typ",
+      "eventType": "Händelse",
+      "source": "Källa",
+      "actorType": "Aktör",
+      "reset": "Återställ filter"
+    },
+    "columns": {
+      "when": "När",
+      "event": "Händelse",
+      "source": "Källa",
+      "actor": "Aktör"
+    },
+    "actions": {
+      "hide": "Dölj",
+      "details": "Detaljer"
+    },
+    "errors": {
+      "loadFailed": "Det gick inte att läsa in ärendets aktivitetstidslinje.",
+      "loadFailedPrefix": "Det gick inte att läsa in aktivitetstidslinjen:"
+    },
+    "empty": {
+      "noActivity": "Ingen aktivitet ännu. Nya händelser visas här när ärendet ändras.",
+      "noMatches": "Inga poster matchar de aktuella filtren."
+    }
+  },
+  "bundle": {
+    "toggleChildren": "Visa eller dölj gruppens underärenden",
+    "bundledTo": "Grupperat → {{ticketNumber}}",
+    "master": "Huvudärende",
+    "openChildrenShort": "kvar"
+  },
+  "statusChange": {
+    "title": "Uppdatera ärendestatus",
+    "message": "Vill du ändra status från ”{{from}}” till ”{{to}}”?"
   }
 }

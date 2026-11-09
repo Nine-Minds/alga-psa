@@ -172,7 +172,16 @@
     "unnamedTeam": "Team utan namn",
     "userPicker": "Användarväljare",
     "noUsersFound": "Inga användare hittades",
-    "contactRemoteLocation": "Distans"
+    "contactRemoteLocation": "Distans",
+    "selectBoard": "Välj tavla",
+    "activeBoards": "Aktiva tavlor",
+    "inactiveBoards": "Inaktiva tavlor",
+    "allBoards": "Alla tavlor",
+    "boardPicker": "Tavelväljare",
+    "filterByStatus": "Filtrera efter status",
+    "statusFilter": "Statusfilter",
+    "boards": "Tavlor",
+    "inactiveSuffix": "(Inaktiv)"
   },
   "serviceTypeSelect": {
     "placeholder": "Välj tjänstetyp…",
@@ -928,7 +937,8 @@
       "collapse": "Fäll ihop mappar",
       "allDocuments": "Alla dokument",
       "expand": "Visa mappar",
-      "deleteTitle": "Radera mapp"
+      "deleteTitle": "Radera mapp",
+      "show": "Visa mappar"
     },
     "folderManager": {
       "title": "Skapa ny mapp",
@@ -990,6 +1000,28 @@
     "huduTab": {
       "documentsTabLabel": "Dokument",
       "tabLabel": "Hudu"
+    },
+    "fallbackUserName": "Användare",
+    "selectOrCreate": "Välj ett dokument eller skapa ett nytt.",
+    "actions": {
+      "markdown": "Markdown",
+      "print": "Skriv ut",
+      "edit": "Redigera",
+      "upload": "Ladda upp",
+      "closePreview": "Stäng förhandsgranskning",
+      "cancel": "Avbryt",
+      "save": "Spara",
+      "saving": "Sparar…"
+    },
+    "viewMode": {
+      "grid": "Rutnät",
+      "list": "Lista"
+    },
+    "unsavedChanges": {
+      "title": "Osparade ändringar",
+      "message": "Vill du avbryta? Alla osparade ändringar går förlorade.",
+      "confirm": "Kasta ändringar",
+      "cancel": "Fortsätt redigera"
     }
   },
   "surveys": {
@@ -1727,7 +1759,14 @@
       "assigned": "Tilldelat:",
       "performedBy": "av {{name}}",
       "internal": "Intern"
-    }
+    },
+    "title": "Aviseringar",
+    "reconnectingToServer": "Återansluter till servern…",
+    "refresh": "Uppdatera",
+    "markAllAsRead": "Markera alla som lästa",
+    "markAllRead": "Markera alla som lästa",
+    "emptyTitle": "Inga aviseringar",
+    "emptyDescription": "Du har läst alla aviseringar."
   },
   "importConflicts": {
     "title": "Lös importkonflikter",

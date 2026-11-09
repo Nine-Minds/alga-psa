@@ -397,6 +397,7 @@
       "helpText": "Laat dit veld leeg als er geen vervaldatum is of als u de standaard vervalperiode wilt gebruiken"
     },
     "errors": {
+      "CLIENT_CONTRACT_NOT_FOUND": "Het geselecteerde contract hoort niet bij de klant van deze factuur.",
       "selectClient": "Selecteer een klant",
       "invoiceNumberUnique": "Dit factuurnummer is al in gebruik.",
       "noTaxRateConfigured": "Er is geen belastingtarief geconfigureerd voor de regio.",
@@ -421,6 +422,7 @@
       "salesOrderNotInvoiceable": "Deze verkooporder is niet meer beschikbaar voor facturering.",
       "USAGE_RECORDS_MISSING_ACK_REQUIRED": "Dit factuurvenster bevat factureerbare regels, maar voor {{services}} is geen verbruik gemeld voor de serviceperiode {{periodStart}} tot {{periodEnd}}. Registreer eerst het verbruik, of bevestig uitdrukkelijk het genereren zonder dit verbruik — de niet-gemelde services blijven later factureerbaar.",
       "USAGE_PERIOD_TOTAL_STALE": "De voorvertoning is verouderd: {{details}}. Voer de voorvertoning opnieuw uit om de actuele cijfers te zien en genereer daarna opnieuw.",
+      "RECURRING_PRICING_STALE": "Het voorbeeld is verouderd: {{details}}. Voer het voorbeeld opnieuw uit om de actuele bedragen te zien en genereer daarna opnieuw.",
       "USAGE_CALCULATION_ERROR": "Het verbruik voor {{services}} in de serviceperiode {{periodStart}} tot {{periodEnd}} is geregistreerd maar kon niet worden geprijsd. Corrigeer de serviceprijzen (catalogusprijs in de contractvaluta, een aangepast tarief of tariefschijven) en probeer het opnieuw. Registreer geen vervangend verbruik.",
       "RECURRING_PERIODS_NOT_MATERIALIZED": "Voor dit factureringsvenster zijn nog geen serviceperioden aangemaakt. Gebruik Alles herstellen op de pagina Automatische facturen of maak ze opnieuw aan onder Facturatie > Serviceperioden en bekijk daarna opnieuw het voorbeeld.",
       "NO_ACTIVE_CONTRACT_LINES": "Er is geen contractregel actief in deze factureringsperiode. Controleer de start- en einddatum van het contract en of het contract actief is.",
@@ -430,9 +432,7 @@
       "SOURCE_ALREADY_BILLED": "Sommige geselecteerde items zijn niet meer factureerbaar (al gefactureerd, niet goedgekeurd of verwijderd). Vernieuw en probeer opnieuw.",
       "SOURCE_NOT_ELIGIBLE": "Een geselecteerd item hoort niet bij dit ticket of is niet langer in aanmerking komend. Vernieuw en probeer opnieuw.",
       "SOURCE_CURRENCY_MISMATCH": "Sommige geselecteerde producten zijn geprijsd in een andere valuta dan de factuurvaluta van deze klant en kunnen niet worden toegevoegd. Factureer ze apart in hun eigen valuta.",
-      "CLIENT_CONTRACT_NOT_FOUND": "Het geselecteerde contract hoort niet bij de klant van deze factuur.",
       "SERVICE_REQUIRED": "Wijs een dienst toe aan deze kostenpost voordat u opslaat.",
-      "RECURRING_PRICING_STALE": "Het voorbeeld is verouderd: {{details}}. Voer het voorbeeld opnieuw uit om de actuele bedragen te zien en genereer daarna opnieuw.",
       "BILLING_PROFILE_NOT_FOUND": "Het geselecteerde facturatieprofiel is niet beschikbaar voor deze klant. Vernieuw de pagina en probeer het opnieuw.",
       "sessionExpired": "Uw sessie is verlopen. Uw wijzigingen staan hier nog, maar zijn niet opgeslagen. Meld u opnieuw aan in een nieuw tabblad en probeer daarna opnieuw op te slaan.",
       "saveRefreshFailed": "Uw wijzigingen zijn opgeslagen, maar de factuurpagina kon niet volledig worden vernieuwd. Herlaad de pagina om de opgeslagen factuur te bekijken."
@@ -458,6 +458,9 @@
       "increase": "Verhoging",
       "decrease": "Verlaging (krediet)",
       "units": "Eenheden",
+      "source": "Gefactureerde service selecteren",
+      "effectiveDate": "Ingangsdatum",
+      "sourceRate": "Tarief {{rate}}",
       "unitPrice": "Stukprijs",
       "coveredDays": "Gedekte dagen",
       "fullPeriodDays": "Dagen van de volledige periode",
@@ -468,14 +471,11 @@
       "addCharge": "Kosten toevoegen",
       "creditDescription": "Krediet: {{proration}}",
       "errors": {
+        "source": "Kies een gefactureerde service met een eenduidige serviceperiode.",
         "units": "Eenheden moeten groter dan nul zijn.",
         "unitPrice": "Stukprijs moet een getal zijn.",
-        "invalid": "Voer een geldige deelperiode in.",
-        "source": "Kies een gefactureerde service met een eenduidige serviceperiode."
+        "invalid": "Voer een geldige deelperiode in."
       },
-      "source": "Gefactureerde service selecteren",
-      "effectiveDate": "Ingangsdatum",
-      "sourceRate": "Tarief {{rate}}",
       "permanentChangeNudge": "Is dit een permanente wijziging? Leg deze dan vast in het contract.",
       "overlapConfirm": "Een automatische contractaanpassing overlapt deze periode al. Deze afzonderlijke handmatige aanpassing toch toevoegen?",
       "invoiceDescription": {
@@ -1484,14 +1484,244 @@
       "barcodeCode128": "Code 128",
       "barcodeValue": "Waarde",
       "barcodeHintWorkTag": "Tekst, of een veld zoals {{example}} (de link naar het record). Houd de code minstens ongeveer 20 mm breed zodat hij scanbaar blijft.",
-      "barcodeHint": "De tekst die wordt gecodeerd. Houd de code minstens ongeveer 20 mm breed zodat hij scanbaar blijft."
+      "barcodeHint": "De tekst die wordt gecodeerd. Houd de code minstens ongeveer 20 mm breed zodat hij scanbaar blijft.",
+      "binding": {
+        "noFieldSelected": "Geen veld geselecteerd",
+        "customHint": "Voer een bindingspad in als het gewenste veld niet in de lijst staat.",
+        "useFieldPicker": "Veldkiezer gebruiken",
+        "current": "Huidig",
+        "unbound": "Niet gekoppeld",
+        "searchFields": "Velden zoeken...",
+        "noMatches": "Geen overeenkomende velden.",
+        "useCustomPath": "Aangepast pad gebruiken"
+      },
+      "customCssPreserved": "Aangepaste CSS-waarde blijft behouden tot u deze bewerkt:",
+      "pickField": "{{field}} kiezen"
     },
     "shell": {
       "selectedLabel": "Geselecteerd:",
       "selectedNone": "Geen",
       "clickBlockHint": "Klik op een blok in het canvas",
       "orUse": "of gebruik",
-      "plusInLeftPanelHint": "+ in het linkerpaneel"
+      "plusInLeftPanelHint": "+ in het linkerpaneel",
+      "sectionAlreadyFitted": "Sectie is al op de inhoud aangepast.",
+      "unbound": "Niet gekoppeld",
+      "layoutMode": {
+        "flex": {
+          "label": "Stapel",
+          "tooltip": "Stapel (flex)"
+        },
+        "grid": {
+          "label": "Raster",
+          "tooltip": "Rasterindeling"
+        }
+      },
+      "direction": {
+        "column": {
+          "label": "Verticaal",
+          "tooltip": "Verticale stroomrichting"
+        },
+        "row": {
+          "label": "Horizontaal",
+          "tooltip": "Horizontale stroomrichting"
+        }
+      },
+      "alignItems": {
+        "stretch": {
+          "label": "Uitrekken",
+          "tooltip": "Onderliggende elementen uitrekken"
+        },
+        "start": {
+          "label": "Start",
+          "tooltip": "Uitlijnen aan het begin"
+        },
+        "center": {
+          "label": "Midden",
+          "tooltip": "Uitlijnen in het midden"
+        },
+        "end": {
+          "label": "Einde",
+          "tooltip": "Uitlijnen aan het einde"
+        }
+      },
+      "justify": {
+        "start": {
+          "label": "Start",
+          "tooltip": "Groeperen aan het begin"
+        },
+        "center": {
+          "label": "Midden",
+          "tooltip": "Groeperen in het midden"
+        },
+        "end": {
+          "label": "Einde",
+          "tooltip": "Groeperen aan het einde"
+        },
+        "between": {
+          "label": "Ruimte tussen",
+          "tooltip": "Verdelen met ruimte tussen de items"
+        },
+        "around": {
+          "label": "Ruimte rondom",
+          "tooltip": "Verdelen met ruimte rondom de items"
+        },
+        "evenly": {
+          "label": "Gelijkmatig",
+          "tooltip": "Verdelen met gelijke tussenruimten"
+        }
+      },
+      "mediaHorizontal": {
+        "left": {
+          "label": "Links",
+          "tooltip": "Afbeelding links uitlijnen"
+        },
+        "center": {
+          "label": "Midden",
+          "tooltip": "Afbeelding horizontaal centreren"
+        },
+        "right": {
+          "label": "Rechts",
+          "tooltip": "Afbeelding rechts uitlijnen"
+        }
+      },
+      "mediaVertical": {
+        "top": {
+          "label": "Boven",
+          "tooltip": "Afbeelding bovenaan uitlijnen"
+        },
+        "center": {
+          "label": "Midden",
+          "tooltip": "Afbeelding verticaal centreren"
+        },
+        "bottom": {
+          "label": "Onder",
+          "tooltip": "Afbeelding onderaan uitlijnen"
+        }
+      },
+      "objectFit": {
+        "contain": {
+          "label": "Inpassen",
+          "tooltip": "Schalen zodat de afbeelding binnen het kader past"
+        },
+        "cover": {
+          "label": "Bedekken",
+          "tooltip": "Het kader vullen en uitstekende delen bijsnijden"
+        },
+        "fill": {
+          "label": "Vullen",
+          "tooltip": "Uitrekken om het kader te vullen"
+        },
+        "none": {
+          "label": "Geen",
+          "tooltip": "De oorspronkelijke afbeeldingsgrootte behouden"
+        },
+        "scaleDown": {
+          "label": "Verkleinen",
+          "tooltip": "De oorspronkelijke grootte gebruiken, tenzij verkleinen nodig is"
+        }
+      },
+      "widthMode": {
+        "auto": {
+          "label": "Auto",
+          "tooltip": "De container bepaalt het (rekt uit in een verticale stapel)"
+        },
+        "fill": {
+          "label": "Vullen",
+          "tooltip": "De volledige breedte van de container vullen"
+        },
+        "fit": {
+          "label": "Passend",
+          "tooltip": "Verkleinen tot de grootte van de inhoud"
+        },
+        "fixed": {
+          "label": "Vast",
+          "tooltip": "De hieronder ingevoerde exacte breedte gebruiken"
+        }
+      },
+      "heightMode": {
+        "auto": {
+          "label": "Auto",
+          "tooltip": "Meegroeien met de inhoud"
+        },
+        "fixed": {
+          "label": "Vast",
+          "tooltip": "De hieronder ingevoerde exacte hoogte gebruiken"
+        }
+      },
+      "flexPreset": {
+        "natural": {
+          "label": "Natuurlijk",
+          "description": "De grootte van de iteminhoud gebruiken, maar verkleinen toestaan als de ruimte beperkt is."
+        },
+        "fill": {
+          "label": "Vullen",
+          "description": "Uitbreiden naar de resterende ruimte met behoud van de voorkeursgrootte van het item."
+        },
+        "share": {
+          "label": "Delen",
+          "description": "De beschikbare ruimte gelijkmatig verdelen met andere items die de ruimte delen."
+        },
+        "fixed": {
+          "label": "Vast",
+          "description": "De itemgrootte behouden en niet laten verkleinen door flexbox."
+        }
+      },
+      "groups": {
+        "layout": "Lay-out",
+        "direction": "Richting",
+        "alignItems": "Items uitlijnen",
+        "justifyContent": "Inhoud verdelen",
+        "objectFit": "Afbeelding inpassen",
+        "horizontalAlign": "Horizontaal uitlijnen",
+        "verticalAlign": "Verticaal uitlijnen",
+        "columns": "Kolommen"
+      },
+      "columnsAria": "Kolommen: {{preset}}",
+      "axis": {
+        "width": "Breedte",
+        "height": "Hoogte",
+        "widthLower": "breedte",
+        "heightLower": "hoogte"
+      },
+      "flexItemHint": "Bij stapelrichting {{direction}} bepalen deze instellingen hoe het item de beschikbare {{axis}} deelt met andere items op hetzelfde niveau.",
+      "flexBehavior": "Gedrag voor {{axis}}",
+      "flexBehaviorAria": "Gedrag voor {{axis}}: {{preset}}",
+      "flexCustomNotice": "Dit item heeft aangepaste flexwaarden. Kies een preset om dit te vereenvoudigen, of pas de geavanceerde waarden hieronder aan.",
+      "advancedFlexValues": "Geavanceerde flexwaarden",
+      "flexGrow": "Extra ruimte innemen",
+      "flexShrink": "Verkleinen toestaan",
+      "flexBasis": "Voorkeursgrootte voor {{axis}}",
+      "displayFormat": {
+        "singleLine": {
+          "label": "Eén regel",
+          "description": "Het adres op één regel weergeven."
+        },
+        "multiline": {
+          "label": "Meerdere regels",
+          "description": "Het adres over meerdere regels verdelen."
+        },
+        "raw": {
+          "label": "Onbewerkt",
+          "description": "De opgeslagen waarde ongewijzigd gebruiken."
+        },
+        "onlyDataField": "Dit geldt alleen voor gegevensveldknooppunten.",
+        "aria": "Weergaveformaat: {{format}}"
+      },
+      "attachments": {
+        "defaultLabel": "Bijlage",
+        "title": "Titel",
+        "items": "Items",
+        "add": "Toevoegen",
+        "empty": "Geen bijlagen gedefinieerd."
+      },
+      "media": {
+        "altText": "Alternatieve tekst",
+        "aspectRatio": "Beeldverhouding",
+        "fitParentSection": "Bovenliggende sectie op media aanpassen",
+        "reflowsPrefix": "Past de indeling aan van",
+        "reflowsSuffix": "om extra witruimte te verwijderen.",
+        "notInSection": "Dit mediablok bevindt zich niet in een sectie."
+      }
     },
     "pageSetup": {
       "title": "Pagina-instelling",
@@ -2106,7 +2336,23 @@
       "cannotInsert": "{{block}} kan hier niet worden toegevoegd.",
       "insertedOnPage": "{{block}} aan de pagina toegevoegd.",
       "insertedInto": "{{block}} aan {{parent}} toegevoegd.",
-      "fieldRebound": "{{name}} toont nu {{path}}."
+      "fieldRebound": "{{name}} toont nu {{path}}.",
+      "dropIncompatibleComponent": "Deze component kan niet op deze plek worden neergezet.",
+      "dropIncompatible": "Neerzetten is op deze plek niet mogelijk.",
+      "dropIncompatiblePreset": "Deze preset kan niet op deze plek worden neergezet.",
+      "dropOnCanvas": "Zet deze component op het canvas neer om deze toe te voegen.",
+      "addComponentFailed": "Deze component kan in de huidige context niet worden toegevoegd.",
+      "presetUnavailable": "De presetdefinitie is niet beschikbaar.",
+      "presetPlacementUnresolved": "Kan niet bepalen waar deze preset moet worden geplaatst.",
+      "addPresetFailed": "Deze preset kan in de huidige context niet worden toegevoegd.",
+      "inserted": "{{value}} ingevoegd.",
+      "insertedWithDiagnostic": "{{value}} ingevoegd. {{diagnostic}}",
+      "selectTextBlock": "Selecteer een tekstblok en activeer vervolgens een tekstveld om variabelen in te voegen.",
+      "focusTextField": "Activeer een tekstveld in de inspecteur om deze variabele in te voegen.",
+      "selectSectionToFit": "Selecteer een sectie om op de inhoud aan te passen.",
+      "sectionNoChildren": "Sectie heeft geen inhoud om op aan te passen.",
+      "sectionFitted": "Sectie op de inhoud aangepast.",
+      "sectionFittedFixed": "Sectie op vaste grootte ingesteld en op de inhoud aangepast."
     },
     "translation": {
       "translatedAs": "Standaardlabel \"{{name}}\", vertaald voor elke ontvanger",

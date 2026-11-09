@@ -109,6 +109,24 @@ describe('board mutation guard', () => {
     publishEventMock.mockResolvedValue(undefined);
   });
 
+  it.each(['create', 'update'] as const)(
+    '%s returns permission denial before validating malformed input',
+    async (action) => {
+      const { createBoard, updateBoard } = await import('./boardActions');
+      const malformedInput = { board_name: 42 };
+      const result = action === 'create'
+        ? await createBoard(malformedInput as any)
+        : await updateBoard('board-a', malformedInput as any);
+
+      expect(result).toMatchObject(denied);
+      expect(result).not.toHaveProperty('actionError');
+      expect(refusedBy()).toEqual([PERMISSION]);
+      expect(withTransactionMock).not.toHaveBeenCalled();
+      expect(reads).toHaveLength(0);
+      expect(writes).toHaveLength(0);
+      expect(publishEventMock).not.toHaveBeenCalled();
+    }
+  );
   it.each([
     ['create', 'internal', PERMISSION],
     ['create', 'client', PRINCIPAL],
@@ -118,15 +136,19 @@ describe('board mutation guard', () => {
     currentUser.user_type = userType;
     if (userType === 'client') granted.add(`ticket_settings:${action}`);
     const { createBoard, updateBoard } = await import('./boardActions');
-    const invalidInput = { board_name: 42, tenant: 'other-tenant' } as any;
+    const invalidInputs = [
+      null as any,
+      { board_name: 42, tenant: 'other-tenant' } as any,
+    ];
 
-    const result = action === 'create'
-      ? await createBoard(invalidInput)
-      : await updateBoard('board-a', invalidInput);
-
-    expect(result).toMatchObject(denied);
-    expect(result).not.toHaveProperty('actionError');
-    expect(refusedBy()).toEqual([code]);
+    for (const invalidInput of invalidInputs) {
+      const result = action === 'create'
+        ? await createBoard(invalidInput)
+        : await updateBoard('board-a', invalidInput);
+      expect(result).toMatchObject(denied);
+      expect(result).not.toHaveProperty('actionError');
+    }
+    expect(refusedBy()).toEqual([code, code]);
     expect(withTransactionMock).not.toHaveBeenCalled();
     expect(reads).toEqual([]);
     expect(writes).toEqual([]);
@@ -139,6 +161,8 @@ describe('board mutation guard', () => {
       const { createBoard } = await import('./boardActions');
       const result = await createBoard({ board_name: 'X', is_default: true } as any);
       expect(result).toMatchObject(denied);
+      expect(result).not.toHaveProperty('code');
+      expect(result).not.toHaveProperty('actionError');
       expect(refusedBy()).toEqual([PERMISSION]);
       expect(withTransactionMock).not.toHaveBeenCalled();
       expect(reads).toHaveLength(0);
@@ -191,7 +215,9 @@ describe('board mutation guard', () => {
       const result = await createBoard({ board_name: 'X', ...extra } as any);
       expect(result).toMatchObject({ actionError: expect.stringContaining('Invalid board input') });
       expect(withTransactionMock).not.toHaveBeenCalled();
+      expect(reads).toHaveLength(0);
       expect(writes).toHaveLength(0);
+      expect(refusedBy()).toEqual([]);
     });
   });
 
@@ -200,6 +226,7 @@ describe('board mutation guard', () => {
       const { updateBoard } = await import('./boardActions');
       const result = await updateBoard('board-a', { is_default: true, board_name: 'Hijack' } as any);
       expect(result).toMatchObject(denied);
+      expect(result).not.toHaveProperty('actionError');
       expect(refusedBy()).toEqual([PERMISSION]);
       expect(withTransactionMock).not.toHaveBeenCalled();
       expect(reads).toHaveLength(0);

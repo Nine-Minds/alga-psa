@@ -2,8 +2,10 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { SharedNumberingService } from '@alga-psa/shared/services/numberingService';
 import type { IAssetCustody, IRmaCase, IRmaEvent } from '@alga-psa/types';
-import { recordCustodyEvent } from '@alga-psa/assets/lib/custody/recordCustodyEvent';
-import { closeCustodyEpisode } from '@alga-psa/assets/lib/custody/closeCustodyEpisode';
+import {
+  closeCustodyEpisodeWithAuthorization,
+  recordCustodyEventWithAuthorization,
+} from '@alga-psa/assets/lib/custody/writeAuthorization';
 import { loadCustody } from '@alga-psa/assets/lib/custody/shared';
 import { applyWarrantyReplacement } from '@alga-psa/assets/lib/warranty/applyWarrantyReplacement';
 import { assertWarrantyTransition, isAssetTracked, RmaTransitionError, type WarrantyAction } from './stateMachine';
@@ -30,9 +32,10 @@ import type {
  * writes exactly one `rma_events` row, and returns what the caller must publish after commit.
  *
  * HARD RULE: this module never imports or calls the stock movement primitive, never reads `rmaServiceId`, and
- * never touches `stock_units` / `stock_movements` / `stock_levels`. Custody is written only through C4's cores
- * (`recordCustodyEvent`) and the C5 extension `closeCustodyEpisode` (`'disposed'`, and `'returned_to_vendor'` for
- * the advance-replacement dead-unit leg).
+ * never touches `stock_units` / `stock_movements` / `stock_levels`. Custody updates use transport-neutral
+ * authorization boundaries over C4's custody core and the C5 `closeCustodyEpisode` extension (`'disposed'` and
+ * `'returned_to_vendor'` for the advance-replacement dead-unit leg), keeping record-level authorization in the RMA
+ * transaction.
  */
 
 export type WarrantyErrorCode =
@@ -351,7 +354,7 @@ export async function shipToVendorCore(
   }
   const occurredAt = input.occurred_at ?? new Date().toISOString();
   const custodyNote = [`${input.carrier} ${input.tracking_number}`, `RMA ${rma.rma_number}`, input.note].filter(Boolean).join(' · ');
-  const shipped = await recordCustodyEvent(trx, tenant, actor, custody.custody_id, {
+  const shipped = await recordCustodyEventWithAuthorization(trx, tenant, { user_id: actor, user_type: 'internal' }, custody.custody_id, {
     event_type: 'shipped',
     counterparty: name ?? 'Vendor',
     occurred_at: occurredAt,
@@ -389,7 +392,7 @@ async function receiveBackIfWithVendor(
   }
   const note = [input.inbound_carrier && `${input.inbound_carrier} ${input.inbound_tracking_number ?? ''}`.trim(), `RMA ${rma.rma_number}`, input.note]
     .filter(Boolean).join(' · ');
-  const received = await recordCustodyEvent(trx, tenant, actor, custody.custody_id, {
+  const received = await recordCustodyEventWithAuthorization(trx, tenant, { user_id: actor, user_type: 'internal' }, custody.custody_id, {
     event_type: 'received',
     location_id: input.location_id,
     bin: input.bin ?? null,
@@ -465,7 +468,7 @@ export async function recordVendorCreditCore(
   const custody = await loadOpenCustody(trx, tenant, rma);
   const custodyEffects: WarrantyCustodyEffect[] = [];
   if (custody) {
-    const closed = await closeCustodyEpisode(trx, tenant, actor, custody.custody_id, 'disposed', {
+    const closed = await closeCustodyEpisodeWithAuthorization(trx, tenant, { user_id: actor, user_type: 'internal' }, custody.custody_id, 'disposed', {
       note: input.note, rmaId: rma.rma_id, rmaNumber: rma.rma_number,
     });
     custodyEffects.push({ custody: closed.custody, eventType: 'disposed', occurredAt: closed.occurredAt });
@@ -487,7 +490,7 @@ export async function returnDeviceToClientCore(
   const custodyEffects: WarrantyCustodyEffect[] = [];
   let assetStatusChange: WarrantyCustodyEffect['assetStatusChange'] = null;
   if (custody) {
-    const returned = await recordCustodyEvent(trx, tenant, actor, custody.custody_id, {
+    const returned = await recordCustodyEventWithAuthorization(trx, tenant, { user_id: actor, user_type: 'internal' }, custody.custody_id, {
       event_type: 'returned',
       counterparty: input.counterparty,
       occurred_at: input.occurred_at,
@@ -576,7 +579,7 @@ export async function shipDeadUnitToVendorCore(
   const serial = await deadUnitSerial(trx, tenant, rma.rma_id);
   const occurredAt = input.occurred_at ?? new Date().toISOString();
   const custodyNote = [deadUnitLabel(serial), `${input.carrier} ${input.tracking_number}`, `RMA ${rma.rma_number}`, input.note].filter(Boolean).join(' · ');
-  const shipped = await recordCustodyEvent(trx, tenant, actor, custody.custody_id, {
+  const shipped = await recordCustodyEventWithAuthorization(trx, tenant, { user_id: actor, user_type: 'internal' }, custody.custody_id, {
     event_type: 'shipped',
     counterparty: name ?? 'Vendor',
     occurred_at: occurredAt,
@@ -622,7 +625,7 @@ export async function confirmVendorReceiptCore(
   const recorded = shipped?.payload && typeof shipped.payload === 'object' ? (shipped.payload as { dead_unit_serial_number?: unknown }).dead_unit_serial_number : undefined;
   const serial = typeof recorded === 'string' && recorded ? recorded : null;
   // Closed as returned to the VENDOR. The C4 `returned` event is never used here: it always means returned_to_client.
-  const closed = await closeCustodyEpisode(trx, tenant, actor, custody.custody_id, 'returned_to_vendor', {
+  const closed = await closeCustodyEpisodeWithAuthorization(trx, tenant, { user_id: actor, user_type: 'internal' }, custody.custody_id, 'returned_to_vendor', {
     note: [deadUnitLabel(serial), 'received by vendor', input.note].filter(Boolean).join(' · '),
     rmaId: rma.rma_id,
     rmaNumber: rma.rma_number,

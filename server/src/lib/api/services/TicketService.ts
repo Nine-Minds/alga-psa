@@ -39,7 +39,8 @@ import { displayAudienceForUser } from '@alga-psa/tags/lib/tagDisplayRules';
 import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
 import { ITicket, ITicketWithDetails } from 'server/src/interfaces/ticket.interfaces';
 import type { IUserWithRoles } from '@alga-psa/types';
-import { authorizeTicketRecordAccess } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
+import type { IUserWithRoles as TicketServiceUser } from '@alga-psa/types';
+import { authorizeTicketRecordAccess, authorizeTicketRecordAccessConcealed } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { ITicketMaterial } from 'server/src/interfaces/material.interfaces';
 import { TICKET_ORIGINS, type IExternalEntityLink } from '@alga-psa/types';
@@ -468,7 +469,7 @@ export class TicketService extends BaseService<ITicket> {
   }
 
   private ticketResourceAuthorization(context: ServiceContext, trx: Knex.Transaction) {
-    const user = context.user as IUserWithRoles | undefined;
+    const user = context.user as TicketServiceUser | undefined;
     if (!user || user.user_id !== context.userId || !user.user_type) {
       throw new ForbiddenError('Ticket resource operations require a verified user authorization context');
     }
@@ -557,6 +558,33 @@ export class TicketService extends BaseService<ITicket> {
    */
   async delete(id: string, context: ServiceContext): Promise<void> {
     const { knex } = await this.getKnex();
+    const user = context.user as IUserWithRoles | undefined;
+    if (!user) {
+      throw new ForbiddenError('Authenticated user context is required to delete tickets');
+    }
+
+    const authorizeDelete = async (trx: Knex | Knex.Transaction, tenant: string) => {
+      try {
+        await authorizeTicketRecordAccessConcealed({
+          trx,
+          tenant,
+          user,
+          ticketId: id,
+          action: 'delete',
+        });
+      } catch (error) {
+        if (error instanceof Error && error.message === 'Ticket not found') {
+          throw new NotFoundError('Ticket not found');
+        }
+        if (error instanceof Error && error.message.startsWith('Permission denied')) {
+          if (isClientUserType(user.user_type)) throw new NotFoundError('Ticket not found');
+          throw new ForbiddenError('Permission denied: Cannot delete ticket');
+        }
+        throw error;
+      }
+    };
+
+    await authorizeDelete(knex, context.tenant);
 
     const result = await deleteEntityWithValidation(
       'ticket',
@@ -564,6 +592,8 @@ export class TicketService extends BaseService<ITicket> {
       knex,
       context.tenant,
       async (trx, tenant) => {
+        await authorizeDelete(trx, tenant);
+
         const ticket = await tenantScopedTable(trx, 'tickets', tenant)
           .where({ ticket_id: id })
           .first();
