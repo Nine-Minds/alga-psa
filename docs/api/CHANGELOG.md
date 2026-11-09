@@ -2,6 +2,20 @@
 
 Notable, externally visible changes to the Alga PSA REST API, newest first.
 
+## 2026-11-09 — Time-sheet status changes through PUT follow the approval rules
+
+**Affected endpoint:** `PUT /api/v1/time-sheets/{id}`
+
+`PUT /time-sheets/{id}` used to write `approval_status` like an ordinary field, so a technician could approve their own time sheet through the API. `approval_status` is now derived state. When a `PUT` carries a different `approval_status`, the change goes through the same transition rules as `/submit`, `/approve` and `/request-changes`, in the same transaction as the other fields.
+
+**Changes:**
+
+- `SUBMITTED` is allowed from `DRAFT` or `CHANGES_REQUESTED`, only by the sheet's owner, and only when the sheet has at least one time entry.
+- `APPROVED` is allowed from `SUBMITTED` and requires `time_sheet:approve`. It sets `approved_at` and `approved_by` and approves the sheet's entries.
+- `CHANGES_REQUESTED` is allowed from `SUBMITTED` and requires a non-blank `change_reason`. Without one, the request returns `400` before anything is written.
+- Any other target status returns `409`. A refused transition returns `403`, `400` or `409` and rolls back every field in the request, not just the status.
+- Acting on another user's time sheet requires `time_sheet:manage`, and so does any change to an `APPROVED` sheet. `time_sheet:update` covers only the caller's own sheets. Holding `time_sheet:approve` alone does not allow a status change through `PUT` on someone else's sheet; use `/approve` or `/request-changes` instead.
+
 ## 2026-11-03 — Ticket templates over REST (and MCP)
 
 **New endpoints:** `GET|POST /api/v1/tickets/templates`, `GET|PUT|DELETE /api/v1/tickets/templates/{templateId}`, `POST /api/v1/tickets/templates/{templateId}/instantiate`
