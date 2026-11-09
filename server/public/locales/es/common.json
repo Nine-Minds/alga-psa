@@ -61,7 +61,20 @@
     "trialDaysRemaining_few": "Prueba Pro activa: quedan {{count}} días.",
     "trialDaysRemaining_many": "Prueba Pro activa: quedan {{count}} días.",
     "trialExpiresIn_few": "La prueba Pro vence en {{count}} días. Introduzca una clave de licencia para conservar las funciones Pro.",
-    "trialExpiresIn_many": "La prueba Pro vence en {{count}} días. Introduzca una clave de licencia para conservar las funciones Pro."
+    "trialExpiresIn_many": "La prueba Pro vence en {{count}} días. Introduzca una clave de licencia para conservar las funciones Pro.",
+    "subscriptionEnding": "Su suscripción Pro se ha cancelado. Pro finaliza el {{date}}. Vuelva a suscribirse para conservar Pro.",
+    "subscriptionEndingNoDate": "Su suscripción Pro se ha cancelado. Vuelva a suscribirse para conservar Pro.",
+    "subscriptionLapsed": "Ahora usa la edición gratuita. Vuelva a suscribirse para restaurar Pro.",
+    "resubscribe": "Volver a suscribirse",
+    "termEnds": "Su acceso a Pro termina el {{date}}. Renueve para conservar Pro.",
+    "termEndsNoDate": "Su periodo de Pro está por terminar. Renueve para conservar Pro.",
+    "paymentFailed": "Pago fallido — lo reintentaremos el {{date}}. Actualice su método de pago para conservar Pro.",
+    "paymentFailedNoRetry": "Pago fallido. Actualice su método de pago para conservar Pro.",
+    "paymentFailedEndsOn": "Pro finaliza el {{date}} si el pago sigue fallando.",
+    "paymentFailedEnded": "Pro ha finalizado — pago fallido. Su appliance funciona con Essentials.",
+    "paymentFailedEndedEnding": "Su suscripción Pro ha finalizado — pago fallido. Pro seguirá activo hasta el {{date}}. Vuelva a suscribirse para conservar Pro.",
+    "paymentFailedEndedEndingNoDate": "Su suscripción Pro ha finalizado — pago fallido. Vuelva a suscribirse para conservar Pro.",
+    "updatePaymentMethod": "Actualizar método de pago"
   },
   "nav": {
     "dashboard": "Panel",
@@ -883,7 +896,8 @@
       "collapse": "Contraer carpetas",
       "allDocuments": "Todos los documentos",
       "expand": "Mostrar carpetas",
-      "deleteTitle": "Eliminar carpeta"
+      "deleteTitle": "Eliminar carpeta",
+      "show": "Mostrar carpetas"
     },
     "folderManager": {
       "title": "Crear nueva carpeta",
@@ -945,6 +959,28 @@
     "huduTab": {
       "documentsTabLabel": "Documentos",
       "tabLabel": "Hudu"
+    },
+    "fallbackUserName": "Usuario",
+    "selectOrCreate": "Seleccione un documento o cree uno nuevo.",
+    "actions": {
+      "markdown": "Markdown",
+      "print": "Imprimir",
+      "edit": "Editar",
+      "upload": "Subir",
+      "closePreview": "Cerrar vista previa",
+      "cancel": "Cancelar",
+      "save": "Guardar",
+      "saving": "Guardando..."
+    },
+    "viewMode": {
+      "grid": "Cuadrícula",
+      "list": "Lista"
+    },
+    "unsavedChanges": {
+      "title": "Cambios sin guardar",
+      "message": "¿Está seguro de que desea cancelar? Se perderán los cambios sin guardar.",
+      "confirm": "Descartar cambios",
+      "cancel": "Continuar editando"
     }
   },
   "surveys": {
@@ -1425,7 +1461,17 @@
     "unnamedUser": "Usuario sin nombre",
     "unnamedTeam": "Equipo sin nombre",
     "userPicker": "Selector de usuarios",
-    "noUsersFound": "No se encontraron usuarios"
+    "noUsersFound": "No se encontraron usuarios",
+    "contactRemoteLocation": "Remoto",
+    "selectBoard": "Seleccionar tablero",
+    "activeBoards": "Tableros activos",
+    "inactiveBoards": "Tableros inactivos",
+    "allBoards": "Todos los tableros",
+    "boardPicker": "Selector de tableros",
+    "filterByStatus": "Filtrar por estado",
+    "statusFilter": "Filtro de estado",
+    "boards": "Tableros",
+    "inactiveSuffix": "(Inactivo)"
   },
   "serviceTypeSelect": {
     "placeholder": "Seleccione un tipo de servicio...",
@@ -1633,7 +1679,9 @@
       "ticketTitle": "Imprimir etiquetas de trabajo",
       "tooMany": "Puede imprimir como máximo {{max}} etiquetas a la vez.",
       "unnamedAsset": "Activo sin nombre",
-      "useTemplate": "Usar {{template}}"
+      "useTemplate": "Usar {{template}}",
+      "copiesPerAsset": "Copias por activo",
+      "adjacentCopies": "Las copias de cada activo se imprimen juntas."
     }
   },
   "deleteEntity": {
@@ -1726,7 +1774,14 @@
       "assigned": "Asignado:",
       "performedBy": "por {{name}}",
       "internal": "Interno"
-    }
+    },
+    "title": "Notificaciones",
+    "reconnectingToServer": "Reconectando al servidor...",
+    "refresh": "Actualizar",
+    "markAllAsRead": "Marcar todas como leídas",
+    "markAllRead": "Marcar todas como leídas",
+    "emptyTitle": "No hay notificaciones",
+    "emptyDescription": "¡Está al día!"
   },
   "importConflicts": {
     "title": "Resolver conflictos de importación",
