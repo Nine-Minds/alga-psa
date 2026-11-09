@@ -83,7 +83,13 @@ async function assertCoarse(
 }
 
 /** Per-project record decisions, memoised for the request. */
-function projectDecider(trx: Knex.Transaction, tenant: string, user: IUserWithRoles, recordAction: 'read' | 'update') {
+function projectDecider(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUserWithRoles,
+  recordAction: 'read' | 'update',
+  apiKeyId?: string | null
+) {
   const decisions = new Map<string, Promise<boolean>>();
   let authorizer: ReturnType<typeof createProjectReadAuthorizer> | null = null;
   return (projectId: string): Promise<boolean> => {
@@ -92,7 +98,7 @@ function projectDecider(trx: Knex.Transaction, tenant: string, user: IUserWithRo
       decision = (async () => {
         const project = await ProjectModel.getById(trx, tenant, projectId);
         if (!project) return false;
-        authorizer ??= createProjectReadAuthorizer(trx, tenant, user, recordAction);
+        authorizer ??= createProjectReadAuthorizer(trx, tenant, user, recordAction, apiKeyId);
         return (await authorizer)(project);
       })();
       decisions.set(projectId, decision);
@@ -108,6 +114,7 @@ export async function withTaskCommentAccess<T>(
   target: TaskCommentTarget,
   action: TaskCommentAction,
   work: (ctx: TaskCommentAccessContext) => Promise<T>,
+  apiKeyId?: string | null,
 ): Promise<T> {
   return withTransaction(db, async (trx: Knex.Transaction) => {
     await assertCoarse(trx, user, action);
@@ -129,7 +136,7 @@ export async function withTaskCommentAccess<T>(
     const [task] = await resolveTasks(trx, tenant, [taskId]);
     if (!task) throw new Error(notFound);
 
-    const decide = projectDecider(trx, tenant, user, writes ? 'update' : 'read');
+    const decide = projectDecider(trx, tenant, user, writes ? 'update' : 'read', apiKeyId);
     if (!(await decide(task.project_id))) throw new Error(notFound);
 
     if (comment && (action === 'update' || action === 'delete') && comment.user_id !== user.user_id) {
@@ -153,10 +160,11 @@ export async function withTaskCommentBatchReadAccess<T>(
   target: TaskCommentBatchTarget,
   action: 'read',
   work: (ctx: TaskCommentBatchAccessContext) => Promise<T>,
+  apiKeyId?: string | null,
 ): Promise<T> {
   return withTransaction(db, async (trx: Knex.Transaction) => {
     await assertCoarse(trx, user, action);
-    const decide = projectDecider(trx, tenant, user, 'read');
+    const decide = projectDecider(trx, tenant, user, 'read', apiKeyId);
 
     let allowed: string[];
     if ('taskIds' in target) {

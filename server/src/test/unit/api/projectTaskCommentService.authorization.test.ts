@@ -14,6 +14,7 @@ const svc = vi.hoisted(() => ({
   toggleTaskCommentReactionWithDb: vi.fn(async () => ({ added: true })),
   getTaskCommentById: vi.fn(async (_t: unknown, _tenant: string, id: string) => ({ task_comment_id: id, task_id: 'T1' })),
 }));
+const authorization = vi.hoisted(() => ({ createProjectReadAuthorizer: vi.fn() }));
 
 vi.mock('@alga-psa/db', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@alga-psa/db')>()),
@@ -42,7 +43,10 @@ vi.mock('../../../../../packages/projects/src/models/project', () => ({
   default: { getById: async (_t: unknown, _n: string, id: string) => ({ project_id: id }) },
 }));
 vi.mock('../../../../../packages/projects/src/lib/projectReadAuthorization', () => ({
-  createProjectReadAuthorizer: async () => async (p: { project_id: string }) => state.allowedProjects.has(p.project_id),
+  createProjectReadAuthorizer: (...args: any[]) => {
+    authorization.createProjectReadAuthorizer(...args);
+    return Promise.resolve(async (p: { project_id: string }) => state.allowedProjects.has(p.project_id));
+  },
 }));
 vi.mock('../../../../../packages/projects/src/lib/taskComments/taskCommentService', () => svc);
 
@@ -101,5 +105,19 @@ describe('ProjectTaskCommentService authorization', () => {
     await service.deleteComment('T1', 'C1', context);
     expect(svc.deleteTaskCommentWithDb).toHaveBeenCalledTimes(1);
     expect(await service.toggleReaction('T1', 'C1', '👍', context)).toMatchObject({ added: true });
+  });
+
+  it('passes only the verified service-context API key identity into project authorization', async () => {
+    const service = new ProjectTaskCommentService();
+    await service.listComments('T1', { ...context, apiKeyId: 'key-verified' });
+    expect(authorization.createProjectReadAuthorizer).toHaveBeenCalledWith(
+      expect.anything(), 't1', context.user, 'read', 'key-verified',
+    );
+
+    authorization.createProjectReadAuthorizer.mockClear();
+    await service.listComments('T1', context);
+    expect(authorization.createProjectReadAuthorizer).toHaveBeenCalledWith(
+      expect.anything(), 't1', context.user, 'read', undefined,
+    );
   });
 });

@@ -50,7 +50,8 @@ function extractRoleIdsFromUser(user: IUserWithRoles): string[] {
 async function resolveAuthorizationSubjectForUser(
   conn: Knex | Knex.Transaction,
   tenant: string,
-  user: IUserWithRoles
+  user: IUserWithRoles,
+  apiKeyId?: string | null
 ): Promise<AuthorizationSubject> {
   let roleIds = extractRoleIdsFromUser(user);
   if (roleIds.length === 0) {
@@ -73,6 +74,7 @@ async function resolveAuthorizationSubjectForUser(
     tenant,
     userId: user.user_id,
     userType: user.user_type,
+    apiKeyId: apiKeyId ?? null,
     roleIds,
     teamIds: teamRows.map((row) => row.team_id),
     managedUserIds: managedRows.map((row) => row.user_id),
@@ -103,9 +105,10 @@ export async function createProjectReadAuthorizer(
   conn: Knex | Knex.Transaction,
   tenant: string,
   user: IUserWithRoles,
-  action: 'read' | 'update' = 'read'
+  action: 'read' | 'update' = 'read',
+  apiKeyId?: string | null
 ): Promise<(project: ProjectAuthorizationFields) => Promise<boolean>> {
-  const subject = await resolveAuthorizationSubjectForUser(conn, tenant, user);
+  const subject = await resolveAuthorizationSubjectForUser(conn, tenant, user, apiKeyId);
   const authorizationKernel = createAuthorizationKernel({
     builtinProvider: new BuiltinAuthorizationKernelProvider(),
     bundleProvider: new BundleAuthorizationKernelProvider({
@@ -147,14 +150,15 @@ export async function assertProjectReadAllowed(
   conn: Knex | Knex.Transaction,
   tenant: string,
   user: IUserWithRoles,
-  projectId: string
+  projectId: string,
+  apiKeyId?: string | null
 ): Promise<IProject> {
   const project = await ProjectModel.getById(conn, tenant, projectId);
   if (!project) {
     throw new Error('Project not found');
   }
 
-  const authorize = await createProjectReadAuthorizer(conn, tenant, user);
+  const authorize = await createProjectReadAuthorizer(conn, tenant, user, 'read', apiKeyId);
   if (!(await authorize(project))) {
     throw new Error('Permission denied: Cannot read project');
   }
