@@ -679,15 +679,18 @@ async function assertMayManageScheduledComment(
   if (!(await hasPermission(user as any, 'ticket', 'update', trx))) {
     throw new Error('Permission denied: Cannot manage scheduled comment');
   }
-  if (existing.ticket_id) {
-    await authorizeTicketRecordAccess({
-      trx,
-      tenant,
-      user: user as any,
-      ticketId: existing.ticket_id,
-      action: 'update',
-    });
+  // Fail closed: a scheduled comment with no resolvable owning ticket cannot be
+  // record-authorized, so refuse rather than fall through to an allow.
+  if (!existing.ticket_id) {
+    throw new Error('Permission denied: Cannot manage scheduled comment');
   }
+  await authorizeTicketRecordAccess({
+    trx,
+    tenant,
+    user: user as any,
+    ticketId: existing.ticket_id,
+    action: 'update',
+  });
 }
 
 export const updateComment = withAuth(async (user, { tenant }, id: string, requested: Partial<IComment>) => {

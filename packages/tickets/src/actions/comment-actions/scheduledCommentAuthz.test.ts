@@ -125,6 +125,15 @@ describe('scheduled comment authorization', () => {
     expect(mocks.cancelScheduledJob).toHaveBeenCalledWith('job-1', 'tenant-1');
   });
 
+  it('cancel fails closed when the scheduled comment has no owning ticket', async () => {
+    mocks.comment = { ...scheduledComment(), ticket_id: null };
+    await expect(cancelScheduledComment('comment-1')).rejects.toThrow(unauthorized);
+    expect(mocks.authorizeTicketRecordAccess).not.toHaveBeenCalled();
+    expect(mocks.writes).toEqual([]);
+    expect(mocks.withdrawCommentAttachments).not.toHaveBeenCalled();
+    expect(mocks.cancelScheduledJob).not.toHaveBeenCalled();
+  });
+
   it('reschedule denies even the author when ticket:update is absent', async () => {
     mocks.comment = scheduledComment('internal-user');
     mocks.hasPermission.mockResolvedValue(false);
