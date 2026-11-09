@@ -158,7 +158,7 @@ const ticketAdapter: EntityAdapter = {
     if (!ticket) {
       throw new NotFoundError('Ticket not found');
     }
-    const allowed = await authorizeApiResourceRead({
+    const { allowed } = await authorizeApiResourceRead({
       knex,
       tenant: apiRequest.context.tenant,
       user: apiRequest.context.user,
@@ -224,7 +224,7 @@ const projectTaskAdapter: EntityAdapter = {
       throw new NotFoundError('Task not found');
     }
     // The task is readable iff its parent project is (same rule as the project controller).
-    const allowed = await authorizeApiResourceRead({
+    const { allowed } = await authorizeApiResourceRead({
       knex,
       tenant: apiRequest.context.tenant,
       user: apiRequest.context.user,

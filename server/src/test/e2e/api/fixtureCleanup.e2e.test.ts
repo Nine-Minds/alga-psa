@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { setupE2ETestEnvironment } from '../utils/e2eTestSetup';
+import { ensureDefaultBillingProfile } from '../../../../test-utils/billingProfileTestHelpers';
 
 it('cleans background job dependencies without deleting another tenant’s jobs or users', async () => {
   const observer = await setupE2ETestEnvironment();
@@ -61,5 +62,53 @@ it('cleans stopwatch sessions and suggestion dismissals before deleting the fixt
   } finally {
     // cleanup() closes its connection either way; only fall back if it never ran.
     if (!cleanupAttempted) await target.cleanup();
+  }
+}, 120_000);
+
+it('cleans billing cycles before deleting their client billing profiles', async () => {
+  const observer = await setupE2ETestEnvironment();
+  let target: Awaited<ReturnType<typeof setupE2ETestEnvironment>> | undefined;
+  let billingCycleId: string | undefined;
+  try {
+    target = await setupE2ETestEnvironment();
+    const billingProfileId = await ensureDefaultBillingProfile(
+      { db: target.db, tenantId: target.tenant },
+      target.clientId,
+    );
+    billingCycleId = randomUUID();
+    await target.db('client_billing_cycles').insert({
+      tenant: target.tenant,
+      billing_cycle_id: billingCycleId,
+      billing_profile_id: billingProfileId,
+      client_id: target.clientId,
+      billing_cycle: 'monthly',
+      effective_date: '2026-11-01',
+      period_start_date: '2026-11-01',
+      period_end_date: '2026-12-01',
+      is_active: true,
+    });
+
+    const removedTenant = target.tenant;
+    await target.cleanup();
+    target = undefined;
+
+    expect(await observer.db('client_billing_cycles').where({
+      tenant: removedTenant,
+      billing_cycle_id: billingCycleId,
+    })).toEqual([]);
+    expect(await observer.db('client_billing_profiles').where({ tenant: removedTenant })).toEqual([]);
+    expect(await observer.db('client_billing_cycles').where({ tenant: observer.tenant })).toEqual([]);
+  } finally {
+    // cleanup() closes the target connection even when the pre-fix FK blocks it.
+    if (target) {
+      if (billingCycleId) {
+        await observer.db('client_billing_cycles').where({
+          tenant: target.tenant,
+          billing_cycle_id: billingCycleId,
+        }).delete();
+      }
+      await target.cleanup();
+    }
+    await observer.cleanup();
   }
 }, 120_000);
