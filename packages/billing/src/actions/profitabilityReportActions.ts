@@ -767,7 +767,7 @@ async function fetchMaterialFacts(
         ON pis.tenant = sm.tenant
        AND pis.service_id = sm.service_id
       WHERE sm.tenant = ?
-        AND sm.movement_type = 'consume'
+        AND sm.movement_type IN ('consume', 'return_restock')
         AND sm.source_doc_type = mr.material_type || '_material'
         AND sm.source_doc_id = mr.material_id
         AND sm.cogs_cost IS NOT NULL
