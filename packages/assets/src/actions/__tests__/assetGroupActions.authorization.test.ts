@@ -10,6 +10,7 @@ const h = vi.hoisted(() => ({
   deniedClients: new Set<string>(),
   deniedReadAssets: new Set<string>(),
   deniedUpdateAssets: new Set<string>(),
+  beforeGroupLock: undefined as (() => Promise<void>) | undefined,
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -22,6 +23,7 @@ vi.mock('@alga-psa/db', () => ({
   tenantDb: (_trx: unknown, tenant: string) => ({
     table(name: string) {
       let rows = (h.tables[name] ?? []).filter((row) => row.tenant === tenant);
+      let forUpdate = false;
       const query = {
         where(criteria: Row) {
           rows = rows.filter((row) => Object.entries(criteria).every(([key, value]) => row[key] === value));
@@ -32,7 +34,14 @@ vi.mock('@alga-psa/db', () => ({
           return query;
         },
         select: async () => rows,
-        first: async () => rows[0],
+        forUpdate() {
+          forUpdate = true;
+          return query;
+        },
+        first: async () => {
+          if (forUpdate) await h.beforeGroupLock?.();
+          return rows[0];
+        },
         pluck: async (key: string) => rows.map((row) => row[key]),
       };
       return query;
@@ -40,7 +49,7 @@ vi.mock('@alga-psa/db', () => ({
   }),
 }));
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
-// Exercise the production group service, mocking only the asset authorization boundary.
+// Exercise production group authorization with controlled asset permissions.
 vi.mock('../../lib/assetReadAuthorization', () => ({
   createAssetReadContext: vi.fn(async () => h.context),
   isAssetClientActionAllowed: vi.fn(async (_trx: unknown, _tenant: string, _context: unknown, clientId: string) =>
@@ -50,8 +59,9 @@ vi.mock('../../lib/assetReadAuthorization', () => ({
   isAssetActionAllowed: vi.fn(async (_trx: unknown, _tenant: string, _context: unknown, asset: { asset_id: string }) =>
     !h.deniedUpdateAssets.has(asset.asset_id)),
 }));
-vi.mock('../../lib/assetGroups', () => ({
-  isAssetGroupError: (error: Error) => error.name === 'AssetGroupError',
+vi.mock('../../lib/assetGroups', async (importOriginal) => ({
+  // Keep the production mutation lock so authorization exercises its query and ordering.
+  ...await importOriginal<typeof import('../../lib/assetGroups')>(),
   listGroupMemberIds: vi.fn(async () => ['a1', 'a2']),
   listGroupsForClient: vi.fn(async () => h.groupListing),
   getGroupWithDetails: vi.fn(async () => ({
@@ -127,6 +137,7 @@ describe('asset group record authorization at the action boundary', () => {
     h.deniedClients = new Set();
     h.deniedReadAssets = new Set();
     h.deniedUpdateAssets = new Set();
+    h.beforeGroupLock = undefined;
     h.groupListing = [{ group_id: 'g1' }];
     h.tables = {
       clients: [{ tenant: 't1', client_id: 'c1' }],
@@ -233,6 +244,31 @@ describe('asset group record authorization at the action boundary', () => {
       expect(write).toHaveBeenCalledOnce();
       expect(vi.mocked(write).mock.calls[0][0]).toBe(h.trx);
       expect(revalidatePath).toHaveBeenCalled();
+    });
+
+    it('denies a restricted member committed while waiting for the group lock', async () => {
+      let enterLock!: () => void;
+      let releaseLock!: () => void;
+      const lockEntered = new Promise<void>((resolve) => { enterLock = resolve; });
+      const lockReleased = new Promise<void>((resolve) => { releaseLock = resolve; });
+      h.beforeGroupLock = async () => {
+        enterLock();
+        await lockReleased;
+      };
+
+      const operation = run();
+      await lockEntered;
+      try {
+        expect(createAssetReadContext).not.toHaveBeenCalled();
+        expectNoSideEffects();
+        h.tables.asset_group_members.push({ tenant: 't1', group_id: 'g1', asset_id: 'a3' });
+        h.deniedUpdateAssets.add('a3');
+      } finally {
+        releaseLock();
+      }
+
+      await expect(operation).resolves.toEqual(permissionDenied('update'));
+      expectNoSideEffects();
     });
   });
 
