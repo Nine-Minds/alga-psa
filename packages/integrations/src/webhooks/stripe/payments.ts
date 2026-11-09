@@ -5,11 +5,12 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { tenantDb } from '@alga-psa/db';
 import type { WebhookProcessingResult } from '@alga-psa/types';
 import {
-  extractTenantId,
   peekTenantId,
-  resolveWebhookSecretCandidates,
+  resolveSignatureCandidates,
   verifyStripeSignature,
+  type WebhookSecretSource,
 } from './paymentsSignature';
+import { isStripeTenantEnabled, listEnabledStripeTenants } from './paymentsTenants';
 
 async function loadEnterprisePayments(): Promise<{
   PaymentService: any;
@@ -39,10 +40,13 @@ async function loadEnterprisePayments(): Promise<{
  * - payment_intent.payment_failed: Payment failed
  * - checkout.session.expired: Checkout session expired
  *
+ * Legacy shared endpoint. New endpoints are registered per tenant at
+ * /api/webhooks/stripe/payments/[tenantId]; this route stays live through migration.
+ *
  * Security:
- * - Verifies the Stripe signature against the tenant's own endpoint secret
- *   (stored when the tenant connected Stripe) and/or the platform secret.
- *   See paymentsSignature.ts for the resolution order.
+ * - Verifies the Stripe signature against the hint tenant's secret, then every
+ *   enabled tenant's endpoint secret, then the platform secret.
+ *   See paymentsSignature.ts and handlePaymentsWebhookDelivery.
  * - Uses payment_webhook_events table for idempotency
  *
  * Configuration:
@@ -55,17 +59,58 @@ async function loadEnterprisePayments(): Promise<{
 
 async function hasPlatformWebhookSecret(): Promise<boolean> {
   const secretProvider = await getSecretProviderInstance();
-  const candidates = await resolveWebhookSecretCandidates(secretProvider, null);
+  const candidates = await resolveSignatureCandidates(secretProvider, {});
   return candidates.length > 0;
 }
 
-export async function POST(req: NextRequest) {
+type DeliveryRoute = 'legacy' | 'tenant';
+type DeliveryOutcome =
+  | 'dispatched' | 'dispatch_failed' | 'license_order' | 'ignored_tenant_mismatch'
+  | 'ignored_platform_event' | 'invalid_signature' | 'malformed' | 'missing_signature'
+  | 'unknown_tenant' | 'no_candidates' | 'error';
+
+function logDelivery(fields: {
+  route: DeliveryRoute;
+  tenantId: string | null;
+  secretSource: WebhookSecretSource | null;
+  outcome: DeliveryOutcome;
+  eventType?: string | null;
+  eventId?: string | null;
+}, level: 'info' | 'warn' | 'error' = 'info') {
+  logger[level]('[Stripe Payment Webhook] delivery', {
+    route: fields.route,
+    tenantId: fields.tenantId,
+    secretSource: fields.secretSource,
+    outcome: fields.outcome,
+    eventType: fields.eventType ?? null,
+    eventId: fields.eventId ?? null,
+  });
+}
+
+/**
+ * Shared delivery handler for the legacy shared route and the per-tenant route.
+ *
+ * Tenant identity comes from the route (per-tenant) or from whichever tenant's
+ * secret verified the signature (legacy) -- never from unverified payload
+ * metadata. 401 means only that the signature failed.
+ *
+ * Outcomes for a verified event:
+ * - license order (platform account): license workflow.
+ * - signed by tenant T but metadata.tenant_id names another tenant: 200 ignored.
+ * - signed by tenant T (tagged or untagged): dispatched to T. Untagged events
+ *   are dispatched too because several handled types (payment_method.*,
+ *   setup_intent.*, charge.refunded) are matched by Stripe IDs in T's own
+ *   tables, not by metadata; T's dispatcher ignores what it cannot match.
+ * - signed by the platform secret and not a license order: 200 ignored.
+ */
+export async function handlePaymentsWebhookDelivery(
+  req: NextRequest,
+  route: DeliveryRoute,
+  tenantIdFromRoute?: string
+): Promise<NextResponse> {
   const startTime = Date.now();
 
-  // Check if running Enterprise Edition
-  const isEE = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
-
-  if (!isEE) {
+  if (process.env.NEXT_PUBLIC_EDITION !== 'enterprise') {
     logger.warn('[Stripe Payment Webhook] Only available in Enterprise Edition');
     return NextResponse.json(
       { error: 'Stripe integration is only available in Enterprise Edition' },
@@ -73,144 +118,109 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  let eventId: string | null = null;
+  let eventType: string | null = null;
   try {
-    // Get raw body as text (needed for signature verification)
+    if (route === 'tenant' && (!tenantIdFromRoute || !(await isStripeTenantEnabled(tenantIdFromRoute)))) {
+      logDelivery({ route, tenantId: null, secretSource: null, outcome: 'unknown_tenant' }, 'warn');
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+
     const body = await req.text();
     const signature = req.headers.get('stripe-signature');
-
     if (!signature) {
-      logger.error('[Stripe Payment Webhook] Missing stripe-signature header');
-      return NextResponse.json(
-        { error: 'Missing stripe-signature header' },
-        { status: 400 }
-      );
+      logDelivery({ route, tenantId: tenantIdFromRoute ?? null, secretSource: null, outcome: 'missing_signature' }, 'warn');
+      return NextResponse.json({ error: 'Missing stripe-signature header' }, { status: 400 });
     }
 
-    // Decide which signing secret(s) apply. The tenant id is peeked from the
-    // unverified payload purely to select the tenant's endpoint secret; the
-    // payload is not trusted until a signature verifies.
-    const tenantHint = peekTenantId(body);
     const secretProvider = await getSecretProviderInstance();
-    const candidates = await resolveWebhookSecretCandidates(secretProvider, tenantHint);
+    const candidates = await resolveSignatureCandidates(
+      secretProvider,
+      route === 'tenant'
+        ? { tenantIdFromRoute }
+        : { payloadTenantHint: peekTenantId(body), enabledTenantIds: await listEnabledStripeTenants() }
+    );
 
     if (candidates.length === 0) {
-      logger.error('[Stripe Payment Webhook] Failed to get webhook secret', {
-        tenantHint,
-      });
-      return NextResponse.json(
-        { error: 'Webhook configuration error' },
-        { status: 503 }
-      );
+      if (route === 'tenant') {
+        // Enabled tenant without a stored endpoint secret: nothing to verify against.
+        logDelivery({ route, tenantId: tenantIdFromRoute ?? null, secretSource: null, outcome: 'unknown_tenant' }, 'warn');
+        return NextResponse.json({ error: 'Not found' }, { status: 404 });
+      }
+      logDelivery({ route, tenantId: null, secretSource: null, outcome: 'no_candidates' }, 'error');
+      return NextResponse.json({ error: 'Webhook configuration error' }, { status: 503 });
     }
 
-    // Verify webhook signature
-    const verified = verifyStripeSignature(body, signature, candidates);
-    if (!verified) {
-      logger.error('[Stripe Payment Webhook] Signature verification failed', {
-        tenantHint,
-        candidateSources: candidates.map((c) => c.source),
-      });
-      return NextResponse.json(
-        { error: 'Invalid signature' },
-        { status: 401 }
-      );
+    const result = verifyStripeSignature(body, signature, candidates);
+    if (result.kind === 'invalid') {
+      logDelivery({ route, tenantId: tenantIdFromRoute ?? null, secretSource: null, outcome: 'invalid_signature' }, 'error');
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
-    const event: Stripe.Event = verified.event;
-    logger.info('[Stripe Payment Webhook] Signature verified', {
-      eventId: event.id,
-      eventType: event.type,
-      secretSource: verified.source,
-    });
+    const event: Stripe.Event = result.event;
+    eventId = event.id ?? null;
+    eventType = event.type ?? null;
+    const secretSource = result.secretSource;
 
-    // Check for license-order events FIRST (before tenant_id routing).
-    // License orders carry is_license_order: 'true' in session metadata.
-    if (isLicenseOrderEvent(event)) {
-      const licenseResult = await handleLicenseOrderWebhook(event);
-      const processingTime = Date.now() - startTime;
-      logger.info('[Stripe Payment Webhook] License order event processed', {
-        eventId: event.id,
-        eventType: event.type,
-        success: licenseResult.success,
-        processingTimeMs: processingTime,
-      });
-      return NextResponse.json({
-        received: true,
-        processed: licenseResult.success,
-        purpose: 'license_order',
-        processingTimeMs: processingTime,
-        ...(licenseResult.error ? { error: licenseResult.error } : {}),
-      });
+    if (!event.id || !event.type || !event.data?.object) {
+      logDelivery({ route, tenantId: result.tenantId, secretSource, outcome: 'malformed', eventId, eventType }, 'warn');
+      return NextResponse.json({ error: 'Malformed event' }, { status: 400 });
     }
 
-    // Extract tenant ID from event metadata
-    const tenantId = extractTenantId(event);
-    if (!tenantId) {
-      logger.warn('[Stripe Payment Webhook] No tenant_id in event metadata', {
-        eventId: event.id,
-        eventType: event.type,
-      });
-      // Return 200 to acknowledge - this might be a non-payment event
-      return NextResponse.json({
-        received: true,
-        processed: false,
-        reason: 'no_tenant_id',
-      });
+    if (result.kind === 'ignored') {
+      logDelivery({ route, tenantId: result.tenantId, secretSource, outcome: 'ignored_tenant_mismatch', eventId, eventType }, 'warn');
+      return NextResponse.json({ received: true, processed: false, status: 'ignored', reason: result.reason });
     }
 
-    const result = await processStripePaymentWebhookPayload(tenantId, body);
+    // License orders are signed by the platform account (legacy route only).
+    if (result.tenantId === null) {
+      if (isLicenseOrderEvent(event)) {
+        const licenseResult = await handleLicenseOrderWebhook(event);
+        logDelivery({ route, tenantId: null, secretSource, outcome: 'license_order', eventId, eventType });
+        return NextResponse.json({
+          received: true,
+          processed: licenseResult.success,
+          purpose: 'license_order',
+          processingTimeMs: Date.now() - startTime,
+          ...(licenseResult.error ? { error: licenseResult.error } : {}),
+        });
+      }
+      logDelivery({ route, tenantId: null, secretSource, outcome: 'ignored_platform_event', eventId, eventType });
+      return NextResponse.json({ received: true, processed: false, status: 'ignored', reason: 'no_tenant' });
+    }
 
-    const processingTime = Date.now() - startTime;
-
-    if (result.success) {
-      logger.info('[Stripe Payment Webhook] Event processed successfully', {
-        eventId: event.id,
-        eventType: event.type,
-        tenantId,
-        paymentRecorded: result.paymentRecorded,
-        processingTimeMs: processingTime,
-      });
-
+    const processed = await processStripePaymentWebhookPayload(result.tenantId, body);
+    const processingTimeMs = Date.now() - startTime;
+    if (processed.success) {
+      logDelivery({ route, tenantId: result.tenantId, secretSource, outcome: 'dispatched', eventId, eventType });
       return NextResponse.json({
         received: true,
         processed: true,
         eventId: event.id,
-        paymentRecorded: result.paymentRecorded,
-        processingTimeMs: processingTime,
-      });
-    } else {
-      logger.error('[Stripe Payment Webhook] Event processing failed', {
-        eventId: event.id,
-        eventType: event.type,
-        tenantId,
-        error: result.error,
-        processingTimeMs: processingTime,
-      });
-
-      // Return 200 to acknowledge receipt even if processing failed
-      // This prevents Stripe from retrying immediately
-      return NextResponse.json({
-        received: true,
-        processed: false,
-        error: 'Processing failed (logged)',
+        paymentRecorded: processed.paymentRecorded,
+        processingTimeMs,
       });
     }
+    logger.error('[Stripe Payment Webhook] Event processing failed', {
+      eventId, eventType, tenantId: result.tenantId, error: processed.error, processingTimeMs,
+    });
+    logDelivery({ route, tenantId: result.tenantId, secretSource, outcome: 'dispatch_failed', eventId, eventType }, 'error');
+    // 200 so Stripe does not retry immediately; the failure is logged.
+    return NextResponse.json({ received: true, processed: false, error: 'Processing failed (logged)' });
   } catch (error) {
-    const processingTime = Date.now() - startTime;
-
     logger.error('[Stripe Payment Webhook] Unexpected error:', {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
-      processingTimeMs: processingTime,
+      processingTimeMs: Date.now() - startTime,
     });
-
-    // Return 500 for unexpected errors
-    // This will cause Stripe to retry the webhook
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    logDelivery({ route, tenantId: tenantIdFromRoute ?? null, secretSource: null, outcome: 'error', eventId, eventType }, 'error');
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
+}
+
+/** POST /api/webhooks/stripe/payments (legacy shared endpoint). */
+export async function POST(req: NextRequest) {
+  return handlePaymentsWebhookDelivery(req, 'legacy');
 }
 
 async function processStripePaymentWebhookPayload(tenantId: string, payload: string): Promise<WebhookProcessingResult> {

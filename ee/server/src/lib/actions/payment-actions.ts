@@ -14,7 +14,7 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import logger from '@alga-psa/core/logger';
 import { tenantDb } from '@alga-psa/db';
 import Stripe from 'stripe';
-import { STRIPE_WEBHOOK_EVENTS, reconcileStripeWebhookEvents } from '../payments/stripeWebhookEvents';
+import { STRIPE_WEBHOOK_EVENTS, reconcileStripeWebhookEvents, stripeWebhookUrls } from '../payments/stripeWebhookEvents';
 import * as fs from 'fs';
 import {
   IPaymentProviderConfig,
@@ -115,7 +115,7 @@ export const getPaymentConfigAction = withAuth(async (user, { tenant }): Promise
 
     // Get webhook URL for display
     const baseUrl = getStripeBaseUrl();
-    const webhookUrl = `${baseUrl}/api/webhooks/stripe/payments`;
+    const { tenantUrl: webhookUrl } = stripeWebhookUrls(baseUrl, tenant);
 
     // Determine webhook status - verify the secret actually exists, not just the path
     const configuration = config.configuration as any;
@@ -213,7 +213,7 @@ export const connectStripeAction = withAuth(async (
 
     // Get the webhook URL
     const baseUrl = getStripeBaseUrl();
-    const webhookUrl = `${baseUrl}/api/webhooks/stripe/payments`;
+    const { tenantUrl: webhookUrl, legacyUrl } = stripeWebhookUrls(baseUrl, tenant);
 
     // Check for existing webhook endpoints to avoid duplicates
     let webhookEndpointId: string | null = null;
@@ -224,7 +224,7 @@ export const connectStripeAction = withAuth(async (
       // List existing webhooks to check for duplicates
       const existingWebhooks = await stripe.webhookEndpoints.list({ limit: 100 });
       const existingEndpoint = existingWebhooks.data.find(
-        (endpoint) => endpoint.url === webhookUrl
+        (endpoint) => endpoint.url === webhookUrl || endpoint.url === legacyUrl
       );
 
       if (existingEndpoint) {
@@ -242,6 +242,7 @@ export const connectStripeAction = withAuth(async (
           });
 
           await stripe.webhookEndpoints.update(existingEndpoint.id, {
+            url: webhookUrl,
             enabled_events: STRIPE_WEBHOOK_EVENTS,
             description: `AlgaPSA payment webhook for tenant ${tenant}`,
           });
@@ -566,7 +567,7 @@ export const testStripeConnectionAction = withAuth(async (user, { tenant }): Pro
 export const getStripeWebhookUrlAction = withAuth(async (user, { tenant }): Promise<PaymentActionResult<{ webhookUrl: string }>> => {
   try {
     const baseUrl = getStripeBaseUrl();
-    const webhookUrl = `${baseUrl}/api/webhooks/stripe/payments`;
+    const { tenantUrl: webhookUrl } = stripeWebhookUrls(baseUrl, tenant);
 
     console.log('[PaymentActions] Generated Stripe webhook URL:', webhookUrl);
 
@@ -665,7 +666,7 @@ export const retryStripeWebhookConfigurationAction = withAuth(async (user, { ten
 
     // Get the webhook URL
     const baseUrl = getStripeBaseUrl();
-    const webhookUrl = `${baseUrl}/api/webhooks/stripe/payments`;
+    const { tenantUrl: webhookUrl, legacyUrl } = stripeWebhookUrls(baseUrl, tenant);
 
     let webhookEndpointId: string | null = null;
     let webhookSecret: string | null = null;
@@ -673,7 +674,7 @@ export const retryStripeWebhookConfigurationAction = withAuth(async (user, { ten
     // Check for existing webhook endpoints
     const existingWebhooks = await stripe.webhookEndpoints.list({ limit: 100 });
     const existingEndpoint = existingWebhooks.data.find(
-      (endpoint) => endpoint.url === webhookUrl
+      (endpoint) => endpoint.url === webhookUrl || endpoint.url === legacyUrl
     );
 
     if (existingEndpoint) {
