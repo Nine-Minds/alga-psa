@@ -86,6 +86,7 @@ const externalLinksExternalLinkActionsModule = actionModule(() => import('../act
 const ticketActivityActionsModule = actionModule(() => import('../actions/ticketActivityActions'));
 const emailActionsModule = actionModule(() => import('@alga-psa/email/actions'));
 const materialCatalogActionsModule = actionModule(() => import('../actions/materialCatalogActions'));
+const ticketFixedFeeActionsModule = actionModule(() => import('../actions/ticketFixedFeeActions'));
 const inventoryActionsAvailabilityActionsModule = actionModule(() => import('@alga-psa/inventory/actions/availabilityActions'));
 const ticketBentoActionsModule = actionModule(() => import('../actions/ticketBentoActions'));
 const tagsActionsModule = actionModule(() => import('@alga-psa/tags/actions'));
@@ -221,10 +222,19 @@ export const nativeTicketDataSource: TicketDataSource = Object.freeze({
     listTicketMaterials: lazy(materialCatalogActionsModule, 'listTicketMaterials'),
     addTicketMaterial: lazy(materialCatalogActionsModule, 'addTicketMaterial'),
     deleteTicketMaterial: lazy(materialCatalogActionsModule, 'deleteTicketMaterial'),
+    updateTicketMaterial: lazy(materialCatalogActionsModule, 'updateTicketMaterial'),
     searchServiceCatalogForPicker: lazy(materialCatalogActionsModule, 'searchServiceCatalogForPicker'),
+    getTicketCatalogCategories: lazy(materialCatalogActionsModule, 'getTicketCatalogCategories'),
     getServicePrices: lazy(materialCatalogActionsModule, 'getServicePrices'),
     listAvailableStockUnitsForMaterial: lazy(materialCatalogActionsModule, 'listAvailableStockUnitsForMaterial'),
     getProductAvailability: lazy(inventoryActionsAvailabilityActionsModule, 'getProductAvailability'),
+  }),
+
+  fixedFees: Object.freeze({
+    listTicketFixedFeeServices: lazy(ticketFixedFeeActionsModule, 'listTicketFixedFeeServices'),
+    addTicketFixedFeeService: lazy(ticketFixedFeeActionsModule, 'addTicketFixedFeeService'),
+    deleteTicketFixedFeeService: lazy(ticketFixedFeeActionsModule, 'deleteTicketFixedFeeService'),
+    updateTicketFixedFeeService: lazy(ticketFixedFeeActionsModule, 'updateTicketFixedFeeService'),
   }),
 
   tiles: Object.freeze({

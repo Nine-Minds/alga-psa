@@ -83,6 +83,7 @@ export default function QuickInvoiceTicketDialog({
         const allKeys = new Set<string>([
           ...itemsResult.timeItems.map((item) => `time:${item.id}`),
           ...itemsResult.materialItems.map((item) => `material:${item.id}`),
+          ...itemsResult.fixedFeeItems.map((item) => `fixed:${item.id}`),
         ]);
         setSelectedKeys(allKeys);
       }
@@ -105,6 +106,7 @@ export default function QuickInvoiceTicketDialog({
 
   const timeItems = billable?.timeItems ?? [];
   const materialItems = billable?.materialItems ?? [];
+  const fixedFeeItems = billable?.fixedFeeItems ?? [];
   const currencyCode = billable?.currencyCode ?? 'USD';
 
   const toggle = (key: string) => {
@@ -127,14 +129,17 @@ export default function QuickInvoiceTicketDialog({
     for (const item of materialItems) {
       if (selectedKeys.has(`material:${item.id}`)) total += item.amount;
     }
+    for (const item of fixedFeeItems) {
+      if (selectedKeys.has(`fixed:${item.id}`)) total += item.amount;
+    }
     return total;
-  }, [selectedKeys, timeItems, materialItems]);
+  }, [selectedKeys, timeItems, materialItems, fixedFeeItems]);
 
   const selectedCount = useMemo(() => {
     const timeCount = timeItems.filter((item) => selectedKeys.has(`time:${item.id}`)).length;
     const materialCount = materialItems.filter((item) => selectedKeys.has(`material:${item.id}`)).length;
-    return timeCount + materialCount;
-  }, [selectedKeys, timeItems, materialItems]);
+    return timeCount + materialCount + fixedFeeItems.filter((item) => selectedKeys.has(`fixed:${item.id}`)).length;
+  }, [selectedKeys, timeItems, materialItems, fixedFeeItems]);
 
   const handleCreate = async () => {
     if (!ticketId || selectedCount === 0) return;
@@ -148,7 +153,8 @@ export default function QuickInvoiceTicketDialog({
         .filter((item) => selectedKeys.has(`material:${item.id}`))
         .map((item) => item.id);
 
-      const result = await generateTicketInvoice({ ticketId, timeEntryIds, materialIds });
+      const fixedFeeIds = fixedFeeItems.filter((item) => selectedKeys.has(`fixed:${item.id}`)).map((item) => item.id);
+      const result = await generateTicketInvoice({ ticketId, timeEntryIds, materialIds, fixedFeeIds });
 
       if (result.success) {
         setCreatedInvoiceId(result.invoice.invoice_id);
@@ -175,7 +181,7 @@ export default function QuickInvoiceTicketDialog({
     }
   };
 
-  const hasItems = timeItems.length > 0 || materialItems.length > 0;
+  const hasItems = timeItems.length > 0 || materialItems.length > 0 || fixedFeeItems.length > 0;
 
   const footer = createdInvoiceId ? (
     <div className="flex justify-end gap-2">
@@ -322,6 +328,27 @@ export default function QuickInvoiceTicketDialog({
                 </section>
               ) : null}
 
+              {(billable?.excludedFixedFeeCount ?? 0) > 0 && (
+                <Alert><AlertDescription>{t('quickInvoice.excludedFixedFees', { count: billable!.excludedFixedFeeCount })}</AlertDescription></Alert>
+              )}
+              {fixedFeeItems.length > 0 && (
+                <section>
+                  <h3 className="mb-2 text-sm font-semibold text-[rgb(var(--color-text-800))]">{t('quickInvoice.fixedFeeServices')}</h3>
+                  <div className="divide-y divide-[rgb(var(--color-border-200))] rounded-md border border-[rgb(var(--color-border-200))]">
+                    {fixedFeeItems.map((item, index) => (
+                      <label key={item.id} className="flex cursor-pointer items-center gap-3 px-3 py-2">
+                        <Checkbox id={`${id}-fixed-fee-${index}-checkbox`} data-entry-id={item.id}
+                          checked={selectedKeys.has(`fixed:${item.id}`)} onChange={() => toggle(`fixed:${item.id}`)} skipRegistration />
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm text-[rgb(var(--color-text-900))]">{item.description || item.serviceName}</div>
+                          <div className="text-xs text-[rgb(var(--color-text-500))]">{item.quantity} × {formatCurrency(item.rate / 100, currencyCode)}</div>
+                        </div>
+                        <div className="text-right text-sm font-medium">{formatCurrency(item.amount / 100, currencyCode)}</div>
+                      </label>
+                    ))}
+                  </div>
+                </section>
+              )}
               {materialItems.length > 0 ? (
                 <section>
                   <h3 className="mb-2 text-sm font-semibold text-[rgb(var(--color-text-800))]">

@@ -520,6 +520,7 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'project_task_comments', deletion: 'ordered', export: { rank: 14 }, clientKeyed: { by: 'parent', chain: [{ column: 'task_id', table: 'project_tasks' }, { column: 'phase_id', table: 'project_phases' }, { column: 'project_id', table: 'projects' }] } },
   { table: 'project_materials', deletion: 'ordered', export: { rank: 15 }, clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'ticket_materials', deletion: 'ordered', export: { rank: 6 }, clientKeyed: { by: 'column', column: 'client_id' } },
+  { table: 'ticket_fixed_fee_services', deletion: 'ordered', export: { rank: 6.5 }, clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'project_template_checklist_items', deletion: 'ordered' },
   { table: 'project_template_dependencies', deletion: 'ordered' },
   { table: 'project_template_task_resources', deletion: 'ordered' },

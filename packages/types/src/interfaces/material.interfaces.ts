@@ -26,6 +26,23 @@ export interface ITicketMaterial extends TenantEntity {
   updated_at?: ISO8601String;
 }
 
+export interface ITicketFixedFeeService extends TenantEntity {
+  entry_id: string;
+  ticket_id: string;
+  client_id: string;
+  service_id: string;
+  service_name?: string;
+  quantity: number;
+  rate: number;
+  currency_code: string;
+  description: string | null;
+  is_billed: boolean;
+  billed_invoice_id: string | null;
+  billed_at: ISO8601String | null;
+  created_at: ISO8601String;
+  updated_at: ISO8601String;
+}
+
 export interface IProjectMaterial extends TenantEntity {
   project_material_id: string;
   project_id: string;
