@@ -781,7 +781,8 @@
       "collapse": "Mappen samenvouwen",
       "allDocuments": "Alle documenten",
       "expand": "Mappen tonen",
-      "deleteTitle": "Map verwijderen"
+      "deleteTitle": "Map verwijderen",
+      "show": "Mappen tonen"
     },
     "folderManager": {
       "title": "Nieuwe map maken",
@@ -843,6 +844,28 @@
     "huduTab": {
       "documentsTabLabel": "Documenten",
       "tabLabel": "Hudu"
+    },
+    "fallbackUserName": "Gebruiker",
+    "selectOrCreate": "Selecteer een document of maak een nieuw document aan.",
+    "actions": {
+      "markdown": "Markdown",
+      "print": "Afdrukken",
+      "edit": "Bewerken",
+      "upload": "Uploaden",
+      "closePreview": "Voorbeeld sluiten",
+      "cancel": "Annuleren",
+      "save": "Opslaan",
+      "saving": "Bezig met opslaan..."
+    },
+    "viewMode": {
+      "grid": "Raster",
+      "list": "Lijst"
+    },
+    "unsavedChanges": {
+      "title": "Niet-opgeslagen wijzigingen",
+      "message": "Weet u zeker dat u wilt annuleren? Alle niet-opgeslagen wijzigingen gaan verloren.",
+      "confirm": "Wijzigingen verwerpen",
+      "cancel": "Doorgaan met bewerken"
     }
   },
   "fields": {
@@ -1426,7 +1449,16 @@
     "unnamedTeam": "Naamloos team",
     "userPicker": "Gebruikerskiezer",
     "noUsersFound": "Geen gebruikers gevonden",
-    "contactRemoteLocation": "Op afstand"
+    "contactRemoteLocation": "Op afstand",
+    "selectBoard": "Bord selecteren",
+    "activeBoards": "Actieve borden",
+    "inactiveBoards": "Inactieve borden",
+    "allBoards": "Alle borden",
+    "boardPicker": "Bordkiezer",
+    "filterByStatus": "Filteren op status",
+    "statusFilter": "Statusfilter",
+    "boards": "Borden",
+    "inactiveSuffix": "(Inactief)"
   },
   "serviceTypeSelect": {
     "placeholder": "Servicetype selecteren...",
@@ -1727,7 +1759,14 @@
       "assigned": "Toegewezen:",
       "performedBy": "door {{name}}",
       "internal": "Intern"
-    }
+    },
+    "title": "Meldingen",
+    "reconnectingToServer": "Opnieuw verbinden met de server...",
+    "refresh": "Vernieuwen",
+    "markAllAsRead": "Alles als gelezen markeren",
+    "markAllRead": "Alles als gelezen markeren",
+    "emptyTitle": "Geen meldingen",
+    "emptyDescription": "U bent helemaal op de hoogte!"
   },
   "importConflicts": {
     "title": "Importconflicten oplossen",

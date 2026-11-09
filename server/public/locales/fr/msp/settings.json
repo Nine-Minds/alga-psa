@@ -388,13 +388,13 @@
         "removeRoleFailed": "Échec de la suppression du rôle. Veuillez réessayer.",
         "updateUserNotFound": "Échec de la mise à jour de l'utilisateur. Utilisateur introuvable.",
         "updateFailed": "Échec de la mise à jour de l'utilisateur. Veuillez réessayer.",
-        "passwordTooShort": "Le mot de passe doit contenir au moins 8 caractères",
-        "passwordChangeFailed": "Échec de la modification du mot de passe",
-        "passwordChangeError": "Une erreur est survenue lors de la modification du mot de passe",
         "emailAlreadyExists": "Un utilisateur avec cette adresse e-mail existe déjà",
         "reportsToSelf": "Un utilisateur ne peut pas être son propre responsable",
         "reportsToCycle": "Cela créerait une chaîne hiérarchique circulaire",
         "invalidTimezone": "Choisissez un fuseau horaire basé sur une ville, comme America/New_York.",
+        "passwordTooShort": "Le mot de passe doit contenir au moins 8 caractères",
+        "passwordChangeFailed": "Échec de la modification du mot de passe",
+        "passwordChangeError": "Une erreur est survenue lors de la modification du mot de passe",
         "permissionDenied": "Vous n'avez pas la permission de modifier les rôles des utilisateurs.",
         "invalidCapacity": "La capacité hebdomadaire doit être un nombre positif.",
         "invalidWorkSchedule": "Les heures de travail doivent former une plage valide se terminant après son début."
@@ -714,11 +714,11 @@
         "conflictsTitle": "Résoudre les conflits d'import",
         "conflictsDescription": "Les éléments suivants présentent des conflits qui doivent être résolus :",
         "nameConflict": "Le nom existe déjà",
+        "orderConflict": "L'ordre {{order}} est déjà utilisé",
         "skipItem": "Ignorer cet élément",
         "importNewName": "Importer avec un nom différent :",
-        "importWithResolutions": "Importer avec résolutions",
-        "orderConflict": "L'ordre {{order}} est déjà utilisé",
         "importWithOrder": "Importer avec l'ordre {{order}}",
+        "importWithResolutions": "Importer avec résolutions",
         "removesIntro": "La suppression de ce tableau supprimera également :"
       },
       "importTable": {
@@ -816,6 +816,9 @@
         "inactivityDaysLabel": "Jours d'inactivité",
         "warningDaysLabel": "Avertir avant clôture (jours)",
         "warningDaysPlaceholder": "Aucun avertissement",
+        "suppressContactNotificationsLabel": "Ne pas notifier le client",
+        "suppressContactNotificationsHelp": "Ignore l'e-mail d'avertissement, l'e-mail de clôture, l'invitation à l'enquête et la notification du portail client.",
+        "suppressInternalNotificationsLabel": "Ne pas notifier non plus les agents et observateurs",
         "ruleEnabledLabel": "Activée",
         "removeRule": "Supprimer",
         "messages": {
@@ -824,10 +827,7 @@
           "autoCloseDaysInvalid": "Le nombre de jours d'inactivité pour la clôture automatique doit être un entier positif",
           "autoCloseWarningInvalid": "Le délai d'avertissement doit être inférieur au nombre de jours d'inactivité",
           "autoCloseSuppressionInvalid": "Les notifications aux agents et observateurs ne peuvent être ignorées que si les notifications au client le sont."
-        },
-        "suppressContactNotificationsLabel": "Ne pas notifier le client",
-        "suppressContactNotificationsHelp": "Ignore l'e-mail d'avertissement, l'e-mail de clôture, l'invitation à l'enquête et la notification du portail client.",
-        "suppressInternalNotificationsLabel": "Ne pas notifier non plus les agents et observateurs"
+        }
       },
       "editor": {
         "sections": {
@@ -900,14 +900,14 @@
       "empty": "Aucun tableau trouvé.",
       "searchPlaceholder": "Rechercher des tableaux…",
       "emailSender": {
-        "useDefault": "Utiliser la valeur par défaut du ticket",
-        "duplicateRoute": "Cette route d’expéditeur existe déjà.",
-        "saveFailed": "Impossible d’enregistrer l’expéditeur du ticket. Réessayez.",
         "label": "Expéditeur sortant",
         "inboundWarning": "Cet expéditeur est utilisé pour les e-mails sortants des tickets. Les paramètres des e-mails entrants restent inchangés.",
         "displayName": "Nom affiché",
         "save": "Enregistrer l’expéditeur",
-        "saved": "Expéditeur enregistré"
+        "saved": "Expéditeur enregistré",
+        "useDefault": "Utiliser la valeur par défaut du ticket",
+        "duplicateRoute": "Cette route d’expéditeur existe déjà.",
+        "saveFailed": "Impossible d’enregistrer l’expéditeur du ticket. Réessayez."
       },
       "deleteDependencies": {
         "categories_one": "catégorie",
@@ -1882,7 +1882,8 @@
         "loading": "Chargement des modèles d'e-mail...",
         "templateCount": "({{templateCount}} modèles)",
         "usingCustom": "Utilisation d'un modèle personnalisé",
-        "usingStandard": "Utilisation du modèle standard"
+        "usingStandard": "Utilisation du modèle standard",
+        "notCurrentlySent": "Non envoyé actuellement"
       },
       "columns": {
         "name": "Nom",
@@ -1906,7 +1907,8 @@
         "close": "Fermer",
         "cancel": "Annuler",
         "saving": "Enregistrement...",
-        "save": "Enregistrer"
+        "save": "Enregistrer",
+        "variableReference": "Référence des variables"
       },
       "description": "Chaque type d'événement dispose d'un modèle standard personnalisable. Vous pouvez utiliser le modèle standard ou créer une version personnalisée.",
       "filter": {
@@ -1929,7 +1931,8 @@
         "notAvailable": "N/D"
       },
       "edit": {
-        "title": "Modifier le modèle personnalisé : {{name}}"
+        "title": "Modifier le modèle personnalisé : {{name}}",
+        "variableSuggestions": "Suggestions de variables de modèle"
       },
       "languages": {
         "en": "Anglais",
@@ -1939,7 +1942,8 @@
         "nl": "Néerlandais",
         "it": "Italien",
         "pl": "Polonais",
-        "pt": "Portugais"
+        "pt": "Portugais",
+        "sv": "Suédois"
       }
     },
     "emailBranding": {
@@ -2508,7 +2512,9 @@
       },
       "actions": {
         "back": "Retour aux migrations",
-        "upload": "Téléverser le paquet"
+        "upload": "Téléverser le paquet",
+        "close": "Fermer",
+        "cancel": "Annuler"
       },
       "errors": {
         "noImportableRecords": "Ce paquet ne contenait aucun enregistrement importable.",
@@ -2521,10 +2527,48 @@
         "storageRejected": "Le serveur a rejeté ce téléversement. Demandez à votre administrateur de vérifier la configuration des types de fichiers du stockage.",
         "spreadsheetFailed": "La feuille de calcul n'a pas pu être importée. Veuillez réessayer.",
         "uploadFailed": "Le paquet n'a pas pu être téléversé. Veuillez réessayer.",
-        "unknown": "Le téléversement a échoué. Veuillez réessayer."
+        "unknown": "Le téléversement a échoué. Veuillez réessayer.",
+        "loadJobs": "Impossible de charger les tâches de migration en arrière-plan.",
+        "loadJob": "Impossible de charger la tâche de migration en arrière-plan.",
+        "jobNotFound": "Tâche de migration en arrière-plan introuvable."
       },
       "preflight": {
-        "title": "Vérification préalable"
+        "title": "Vérification préalable",
+        "description": "Une simulation qui valide chaque enregistrement préparé par rapport à ce locataire et à votre configuration. La vérification préalable ne crée rien.",
+        "errors": {
+          "loadReport": "Impossible de charger le rapport de vérification préalable.",
+          "runFailed": "Impossible d’exécuter la vérification préalable.",
+          "startMigration": "Impossible de démarrer la migration.",
+          "downloadCsv": "Impossible de télécharger le fichier CSV de la vérification préalable.",
+          "downloadJson": "Impossible de télécharger le fichier JSON de la vérification préalable."
+        },
+        "running": "Vérification préalable en cours…",
+        "runAgain": "Relancer la vérification préalable",
+        "run": "Exécuter la vérification préalable",
+        "empty": "Aucune vérification préalable n’a encore été exécutée pour cette configuration. Exécutez-en une pour consulter le plan par entité et les éventuels problèmes.",
+        "plan": "Plan",
+        "preflightedAt": "Vérification préalable effectuée le {{timestamp}}",
+        "downloadCsv": "Télécharger le CSV",
+        "downloadJson": "Télécharger le JSON",
+        "columns": {
+          "entity": "Entité",
+          "staged": "Préparés",
+          "toCreate": "À créer",
+          "toSkip": "À ignorer (déjà migrés)",
+          "blocked": "Bloqués"
+        },
+        "noStagedRecords": "Aucun enregistrement n’a été préparé à partir du paquet.",
+        "blockingIssues": "Problèmes bloquants ({{count}})",
+        "warnings": "Avertissements ({{count}})",
+        "blockedWithIssues_one": "La migration ne peut pas être exécutée : {{count}} problème bloquant doit d’abord être résolu.",
+        "blockedWithIssues_other": "La migration ne peut pas être exécutée : {{count}} problèmes bloquants doivent d’abord être résolus.",
+        "blockedNoPreflight": "La migration ne peut pas être exécutée tant qu’une vérification préalable n’a pas réussi sans problème bloquant.",
+        "needsConfiguration": "La migration pourra être exécutée dès qu’une vérification préalable de la configuration enregistrée aura réussi.",
+        "starting": "Démarrage…",
+        "runMigration": "Exécuter la migration",
+        "recordsAffected_one": "{{count}} enregistrement concerné",
+        "recordsAffected_other": "{{count}} enregistrements concernés",
+        "sampleRecords": "Exemples d’enregistrements :"
       },
       "run": {
         "queued": "Migration en file d'attente",
@@ -2542,14 +2586,58 @@
         "claimedBySamePackage": "Déjà migré par ce paquet",
         "claimedByOtherPackage": "Déjà migré par {{file}}",
         "claimedByExistingEntity": "Associé à une entité existante",
-        "matchedBySku": "Associé à un produit existant par SKU"
+        "matchedBySku": "Associé à un produit existant par SKU",
+        "title": "Résultats",
+        "errors": {
+          "loadSummary": "Impossible de charger le résumé des résultats.",
+          "loadRecords": "Impossible de charger les enregistrements de résultats.",
+          "downloadCsv": "Impossible de télécharger le fichier CSV des résultats."
+        },
+        "actions": {
+          "created": "Créé",
+          "skipped": "Ignoré",
+          "failed": "Échec"
+        },
+        "counts": {
+          "created": "créés",
+          "skipped": "ignorés",
+          "failed": "en échec"
+        },
+        "finishedAt": "Terminé le {{timestamp}}.",
+        "noLongerRunning": "La tâche en arrière-plan n’est plus en cours d’exécution.",
+        "preparing": "Préparation…",
+        "downloadCsv": "Télécharger le CSV des résultats",
+        "failedLabel": "La migration a échoué :",
+        "cancelled": "La migration a été annulée à un point de contrôle. Les enregistrements appliqués avant l’annulation sont conservés et répertoriés ci-dessous.",
+        "noRecordsWritten": "Aucun enregistrement de résultat n’a été écrit pour cette tâche en arrière-plan.",
+        "noRecordsMatch": "Aucun enregistrement de résultat ne correspond à ces filtres.",
+        "columns": {
+          "entity": "Entité",
+          "sourceRecord": "Enregistrement source",
+          "action": "Action",
+          "result": "Résultat",
+          "at": "Date et heure"
+        },
+        "filters": {
+          "allEntities": "Toutes les entités",
+          "allActions": "Toutes les actions"
+        },
+        "unknownError": "Erreur inconnue",
+        "recordLimitNotice": "Affichage des {{count}} premiers enregistrements correspondants. Téléchargez le CSV des résultats pour obtenir la liste complète."
       },
       "spreadsheet": {
         "entities": {
           "products": "Produits (catalogue / liste de prix)",
-          "vendorProducts": "Liste de prix fournisseur (coûts du distributeur)"
+          "vendorProducts": "Liste de prix fournisseur (coûts du distributeur)",
+          "assets": "Actifs (ancien import d’actifs)",
+          "organizations": "Organisations",
+          "locations": "Emplacements",
+          "contacts": "Contacts",
+          "tickets": "Tickets",
+          "ticketComments": "Commentaires des tickets"
         },
-        "productsHint": "Les prix et coûts sont lus comme des montants décimaux (par exemple 1,299.50) avec la colonne de devise si elle existe, sinon avec la devise du locataire. Les montants négatifs, non numériques ou trop précis sont supprimés et signalés ; la ligne est tout de même importée. Les produits sont associés aux produits existants par SKU ; les lignes de la liste fournisseur référencent un produit par SKU et créent ou associent le fournisseur par son nom."
+        "productsHint": "Les prix et coûts sont lus comme des montants décimaux (par exemple 1,299.50) avec la colonne de devise si elle existe, sinon avec la devise du locataire. Les montants négatifs, non numériques ou trop précis sont supprimés et signalés ; la ligne est tout de même importée. Les produits sont associés aux produits existants par SKU ; les lignes de la liste fournisseur référencent un produit par SKU et créent ou associent le fournisseur par son nom.",
+        "headersHint": "Les en-têtes canoniques sont reconnus automatiquement. Les autres colonnes peuvent être associées à des champs personnalisés de type d’actif lors de l’étape de configuration. Les contacts acceptent les graphies anglaises courantes, par exemple name, first_name, last_name, email, phone, title et client ; les anciens noms de colonnes d’actifs comme asset_name, asset_type et serial_number sont conservés dans le processus AMP."
       },
       "configure": {
         "products": {
@@ -2557,7 +2645,92 @@
           "serviceType": "Type de service pour les nouveaux produits",
           "serviceTypePlaceholder": "Sélectionnez un type de service",
           "serviceTypeHelp": "Les produits dont le SKU existe déjà sont associés et laissés inchangés ; seuls les nouveaux produits sont classés sous ce type de service."
+        },
+        "title": "Configurer la migration",
+        "description": "Associez les données de référence du paquet à ce locataire. La vérification préalable contrôle chaque correspondance avant toute exécution.",
+        "errors": {
+          "loadOptions": "Impossible de charger les options de configuration.",
+          "save": "Impossible d’enregistrer la configuration.",
+          "optionsUnavailable": "Les options de configuration sont indisponibles."
+        },
+        "clientPlaceholder": "Sélectionner un client",
+        "mappingPlaceholder": "Sélectionner une correspondance",
+        "tickets": {
+          "title": "Tickets",
+          "board": "Tableau",
+          "boardPlaceholder": "Sélectionner un tableau",
+          "defaultRequester": "Client demandeur par défaut",
+          "defaultRequesterHelp": "Utilisé lorsque l’organisation d’un ticket ne peut pas être identifiée.",
+          "defaultAssignee": "Responsable par défaut",
+          "defaultAssigneePlaceholder": "Laisser les tickets non affectés"
+        },
+        "statusMapping": {
+          "title": "Correspondance des statuts",
+          "description": "Chaque nom de statut du paquet doit correspondre à un statut de ticket de ce locataire.",
+          "empty": "Les tickets du paquet ne comportent aucun nom de statut."
+        },
+        "priorityMapping": {
+          "title": "Correspondance des priorités",
+          "description": "Chaque nom de priorité du paquet doit correspondre à une priorité de ce locataire.",
+          "empty": "Les tickets du paquet ne comportent aucun nom de priorité."
+        },
+        "assets": {
+          "title": "Actifs"
+        },
+        "assetTypeMapping": {
+          "title": "Correspondance des types d’actifs",
+          "description": "Chaque nom de type d’actif du paquet doit correspondre à un type d’actif de ce locataire.",
+          "empty": "Les actifs du paquet ne comportent aucun nom de type d’actif."
+        },
+        "general": {
+          "title": "Général",
+          "defaultClient": "Client par défaut pour les enregistrements orphelins",
+          "defaultClientHelp": "Les contacts et actifs dont l’organisation ne peut pas être identifiée sont rattachés à ce client."
+        },
+        "saved": "Configuration enregistrée. Exécutez la vérification préalable pour la valider par rapport aux enregistrements préparés.",
+        "saving": "Enregistrement…",
+        "save": "Enregistrer la configuration"
+      },
+      "home": {
+        "title": "Migrations",
+        "description": "Importez dans Alga les données d’un autre PSA en téléversant un paquet AMP ou une feuille de calcul CSV/XLSX. Chaque fichier téléversé est inspecté et configuré, puis soumis à une vérification préalable avant toute création.",
+        "columns": {
+          "package": "Paquet",
+          "sourceSystem": "Système source",
+          "state": "État",
+          "progress": "Progression",
+          "created": "Créé"
+        },
+        "empty": {
+          "title": "Aucune migration pour le moment",
+          "descriptionPrefix": "Un paquet de migration Alga (",
+          "descriptionSuffix": ") est une archive portable et validée contenant des organisations, emplacements, contacts, tickets, commentaires et actifs exportés d’un autre système. Téléversez-en un pour inspecter son contenu, associer ses données de référence à ce locataire et exécuter un import vérifié au préalable, qui peut être relancé sans créer de doublons.",
+          "docsLink": "Consulter la documentation de référence des paquets AMP"
         }
+      },
+      "upload": {
+        "title": "Téléverser un paquet de migration",
+        "tooLarge": "La taille des paquets de migration ne doit pas dépasser {{megabytes}} Mo.",
+        "fileLabel": "Paquet ou feuille de calcul",
+        "fileHint": "AMP (.amp) ou CSV/XLSX, jusqu’à {{megabytes}} Mo. Les feuilles de calcul sont converties en paquet AMP avant la préparation ; rien n’est importé tant que vous n’exécutez pas la migration.",
+        "entityLabel": "Type d’enregistrements de la feuille de calcul",
+        "rejected": "Le paquet a été rejeté et aucun enregistrement n’a été préparé. Corrigez ces problèmes dans le paquet source et téléversez-le à nouveau :",
+        "stagedWithDiagnostics": "Le paquet a été préparé, mais certaines données sources nécessitent votre attention avant l’exécution de l’import :",
+        "continueToConfigure": "Passer à la configuration",
+        "uploading": "Téléversement…",
+        "submit": "Téléverser"
+      },
+      "detail": {
+        "source": "Source : {{system}}",
+        "sourceNotDeclared": "Système source non déclaré",
+        "producer": "Producteur : {{producer}}",
+        "uploaded": "Téléversé le {{timestamp}}",
+        "lifecycleAria": "Cycle de vie de la migration",
+        "inspecting": "Le paquet est en cours d’inspection et de préparation",
+        "packageSuffix": "(paquet {{packageId}})",
+        "inspectingRefresh": ". Cette vue s’actualise automatiquement.",
+        "rejectedBody": "Ce paquet a été rejeté lors de l’inspection ; aucun enregistrement n’a été préparé et aucune donnée n’en sera importée. Corrigez le paquet dans le système source et téléversez-en un nouveau.",
+        "rejectionDetails": "Détails du rejet"
       }
     },
     "jobDetails": {
@@ -2936,6 +3109,7 @@
     }
   },
   "profile": {
+    "pageTitle": "Votre profil",
     "tabs": {
       "profile": "Profil",
       "security": "Sécurité",
@@ -2991,8 +3165,7 @@
     "validation": {
       "firstNameRequired": "Le prénom est obligatoire",
       "lastNameRequired": "Le nom est obligatoire"
-    },
-    "pageTitle": "Votre profil"
+    }
   },
   "password": {
     "changePassword": "Modifier le mot de passe",
@@ -3018,7 +3191,8 @@
     "rmmEnterpriseNote": "Les intégrations RMM sont disponibles avec Pro.",
     "categoryHeading": "Intégrations {{label}}",
     "loading": {
-      "payments": "Chargement des paramètres de paiement..."
+      "payments": "Chargement des paramètres de paiement...",
+      "hudu": "Chargement des paramètres de l’intégration Hudu..."
     },
     "categories": {
       "accounting": {
@@ -3110,6 +3284,11 @@
         "name": "Téléphonie",
         "description": "Journalisez les appels comme interactions, identifiez l'appelant et transformez un appel en ticket"
       }
+    },
+    "addOnRequired": {
+      "heading": "{{featureName}} nécessite le module complémentaire {{addOnName}}",
+      "manageAddOns": "Gérer les modules complémentaires",
+      "entraDescription": "Achetez le module complémentaire Enterprise pour activer Microsoft Entra Sync, avec la découverte des locataires, la correspondance des clients, la synchronisation des contacts et les workflows de rapprochement."
     }
   },
   "orgChart": {
@@ -3127,6 +3306,54 @@
     "messages": {
       "adminLocked": "Les autorisations du rôle administrateur ne peuvent pas être modifiées",
       "permissionsUpdated": "Autorisations mises à jour avec succès"
+    },
+    "title": "Gérer les autorisations",
+    "description": "Configurez les autorisations d’accès pour les différents rôles et ressources",
+    "selectPrompt": "Veuillez sélectionner un rôle ou une ressource pour gérer les autorisations",
+    "unsavedChanges": "Vous avez des modifications non enregistrées",
+    "adminLockedTooltip": "Les autorisations du rôle administrateur sont définies par le système et ne peuvent pas être modifiées",
+    "none": "Aucune",
+    "actionCount_one": "{{count}} action",
+    "actionCount_other": "{{count}} actions",
+    "views": {
+      "clientPortal": "Portail client"
+    },
+    "filters": {
+      "allResources": "Toutes les ressources",
+      "allRoles": "Tous les rôles",
+      "selectRole": "Sélectionner un rôle",
+      "filterByResource": "Filtrer par ressource"
+    },
+    "columns": {
+      "resource": "Ressource",
+      "role": "Rôle",
+      "create": "Créer",
+      "read": "Lire",
+      "update": "Mettre à jour",
+      "delete": "Supprimer",
+      "specialActions": "Actions spéciales"
+    },
+    "actions": {
+      "cancel": "Annuler",
+      "saveChanges": "Enregistrer les modifications",
+      "saving": "Enregistrement..."
+    },
+    "confirm": {
+      "title": "Confirmer les modifications d’autorisations",
+      "message": "Voulez-vous vraiment enregistrer ces modifications d’autorisations ?",
+      "confirmLabel": "Enregistrer les modifications"
+    },
+    "stats": {
+      "empty": "Sélectionnez un rôle ou une ressource pour consulter les autorisations",
+      "rolesForResource_one": "{{count}} rôle pour {{resource}}",
+      "rolesForResource_other": "{{count}} rôles pour {{resource}}",
+      "resourcesAndPermissions": "{{count}} ressources • {{assigned}}/{{total}} autorisations"
+    },
+    "errors": {
+      "fetchPermissions": "Impossible de récupérer les autorisations",
+      "fetchRoles": "Impossible de récupérer les rôles",
+      "fetchRolePermissions": "Impossible de récupérer les autorisations du rôle",
+      "savePermissions": "Impossible d’enregistrer les autorisations"
     }
   },
   "sla": {
@@ -3415,6 +3642,91 @@
         "timerPaused": "Minuteur SLA : en pause"
       },
       "unknown": "Inconnu"
+    },
+    "businessHours": {
+      "title": "Plannings des heures ouvrées",
+      "description": "Définissez les horaires de disponibilité de votre équipe d’assistance pour le calcul des SLA",
+      "loading": "Chargement des plannings des heures ouvrées...",
+      "default": "Par défaut",
+      "recurring": "Récurrent",
+      "openMenu": "Ouvrir le menu",
+      "workingHours": "Heures de travail",
+      "dailyHours": "Horaires quotidiens",
+      "closed": "Fermé",
+      "alwaysOpen": "Ce planning couvre une disponibilité 24 h/24, 7 j/7, toute l’année.",
+      "holidays": "Jours fériés",
+      "noHolidays": "Aucun jour férié défini pour ce planning.",
+      "timezoneLabel": "Fuseau horaire : {{timezone}}",
+      "days": {
+        "0": "Dimanche",
+        "1": "Lundi",
+        "2": "Mardi",
+        "3": "Mercredi",
+        "4": "Jeudi",
+        "5": "Vendredi",
+        "6": "Samedi"
+      },
+      "columns": {
+        "name": "Nom",
+        "timezone": "Fuseau horaire",
+        "actions": "Actions",
+        "holidayName": "Nom du jour férié",
+        "date": "Date",
+        "day": "Jour",
+        "enabled": "Activé",
+        "startTime": "Heure de début",
+        "endTime": "Heure de fin"
+      },
+      "empty": {
+        "title": "Aucun planning des heures ouvrées",
+        "description": "Créez votre premier planning des heures ouvrées pour commencer à calculer les délais des SLA."
+      },
+      "actions": {
+        "edit": "Modifier",
+        "viewDetails": "Voir les détails",
+        "delete": "Supprimer",
+        "cancel": "Annuler",
+        "close": "Fermer",
+        "create": "Créer",
+        "update": "Mettre à jour",
+        "saving": "Enregistrement...",
+        "adding": "Ajout...",
+        "createDefault": "Créer le planning par défaut",
+        "createCustom": "Créer un planning personnalisé",
+        "addSchedule": "Ajouter un planning",
+        "addHoliday": "Ajouter un jour férié"
+      },
+      "fields": {
+        "scheduleName": "Nom du planning *",
+        "scheduleNamePlaceholder": "Ex. : Heures ouvrées standard",
+        "timezone": "Fuseau horaire *",
+        "is24x7": "Planning 24 h/24, 7 j/7 (toujours disponible)",
+        "isDefault": "Définir comme planning par défaut",
+        "holidayName": "Nom du jour férié *",
+        "holidayNamePlaceholder": "Ex. : Noël",
+        "holidayDate": "Date *",
+        "holidayDatePlaceholder": "Sélectionner une date",
+        "isRecurring": "Répéter chaque année"
+      },
+      "dialog": {
+        "editTitle": "Modifier le planning",
+        "createTitle": "Créer un planning",
+        "deleteScheduleTitle": "Supprimer le planning",
+        "deleteScheduleMessage": "Voulez-vous vraiment supprimer « {{name}} » ? Tous les jours fériés associés seront également supprimés. Cette action est irréversible.",
+        "deleteHolidayTitle": "Supprimer le jour férié",
+        "deleteHolidayMessage": "Voulez-vous vraiment supprimer « {{name}} » ? Cette action est irréversible."
+      },
+      "errors": {
+        "loadSchedules": "Impossible de charger les plannings des heures ouvrées",
+        "loadScheduleDetails": "Impossible de charger les détails du planning",
+        "nameRequired": "Le nom du planning est obligatoire",
+        "invalidTimeRange": "Plage horaire invalide pour {{day}} : l’heure de fin doit être postérieure à l’heure de début",
+        "saveSchedule": "Impossible d’enregistrer le planning",
+        "deleteSchedule": "Impossible de supprimer le planning",
+        "createDefaultSchedule": "Impossible de créer le planning par défaut",
+        "addHoliday": "Impossible d’ajouter le jour férié",
+        "deleteHoliday": "Impossible de supprimer le jour férié"
+      }
     }
   },
   "clientPortalLanguage": {

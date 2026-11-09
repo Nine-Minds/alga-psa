@@ -1447,7 +1447,182 @@
   "maintenanceCommandCenter": {
     "title": "Onderhoudscontrolecentrum",
     "description": "De volgende vervaldatum wordt berekend vanaf de werkelijke voltooiingsdatum.",
-    "assetsLink": "Assets"
+    "assetsLink": "Assets",
+    "notRecorded": "Niet vastgelegd",
+    "system": "Systeem",
+    "checklist": {
+      "complete": "Voltooid",
+      "incomplete": "Onvoltooid"
+    },
+    "weekdays": {
+      "0": "zo",
+      "1": "ma",
+      "2": "di",
+      "3": "wo",
+      "4": "do",
+      "5": "vr",
+      "6": "za"
+    },
+    "cadence": {
+      "custom": "Aangepast",
+      "customSchedule": "Aangepast schema",
+      "everyUnit": "Elke {{unit}}",
+      "everyCountUnit": "Elke {{count}} {{unit}}",
+      "onDays": "{{base}} op {{days}}",
+      "onDatesOfMonth": "{{base}} op de {{dates}}",
+      "frequency": {
+        "daily": "Dagelijks",
+        "weekly": "Wekelijks",
+        "monthly": "Maandelijks",
+        "quarterly": "Driemaandelijks",
+        "yearly": "Jaarlijks"
+      }
+    },
+    "urgency": {
+      "overdue": "{{count}} d achterstallig",
+      "dueToday": "vandaag gepland",
+      "inDays": "over {{count}} d"
+    },
+    "actions": {
+      "cancel": "Annuleren",
+      "refresh": "Vernieuwen",
+      "newPlan": "Nieuw onderhoudsplan",
+      "skip": "Overslaan",
+      "skipTooltip": "Overslaan met een verplichte reden — het plan gaat door naar het volgende onderhoudsmoment",
+      "complete": "Onderhoud voltooien",
+      "createTicket": "Ticket aanmaken",
+      "openTicket": "Ticket openen ↗",
+      "pausePlan": "Plan pauzeren"
+    },
+    "assetPicker": {
+      "title": "Selecteer een asset",
+      "searchPlaceholder": "Zoek op naam, label of serienummer",
+      "loading": "Assets laden…",
+      "loadFailed": "Assets kunnen niet worden geladen.",
+      "empty": "Geen assets gevonden.",
+      "showingFirst": "De eerste {{shown}} van {{total}} worden getoond — verfijn uw zoekopdracht."
+    },
+    "kpi": {
+      "overdue": "Achterstallig",
+      "dueToday": "Vandaag gepland",
+      "upcoming7d": "Komende 7 dagen",
+      "openTickets": "Open tickets",
+      "compliance90d": "Naleving over 90 dagen",
+      "clickToFilter": "klik om te filteren",
+      "allClear": "alles in orde",
+      "quietWeek": "rustige week in het vooruitzicht",
+      "linkedToOccurrences": "gekoppeld aan onderhoudsmomenten",
+      "onTimeCompletion": "tijdige voltooiing"
+    },
+    "tabs": {
+      "queue": "Werkwachtrij",
+      "plans": "Planwachtrij",
+      "history": "Geschiedenis"
+    },
+    "filters": {
+      "searchPlaceholder": "Zoek plannen, assets of klanten",
+      "actionable": "Actie vereist",
+      "allStatuses": "Alle statussen",
+      "completed": "Voltooid",
+      "skipped": "Overgeslagen",
+      "button": "Filters",
+      "allClients": "Alle klanten",
+      "allAssetTypes": "Alle assettypen",
+      "allPlanTypes": "Alle plantypen",
+      "due": "Onderhoudsdatum",
+      "clearAll": "Alles wissen",
+      "done": "Klaar",
+      "clientChip": "Klant"
+    },
+    "viewMode": {
+      "list": "Lijst",
+      "calendar": "Kalender"
+    },
+    "queue": {
+      "actionableTitle": "Onderhoudsmomenten die actie vereisen",
+      "plansTitle": "Actieve planwachtrij (op basis van onderhoudsmomenten)",
+      "loading": "Onderhoud laden…",
+      "empty": "Er zijn geen onderhoudsmomenten die aan deze filters voldoen.",
+      "emptyFiltered": "Er zijn geen onderhoudsmomenten die aan deze filters voldoen. Wis een filter of verruim het datumbereik.",
+      "emptyHistory": "Voltooide en overgeslagen onderhoudsmomenten verschijnen hier zodra het onderhoud is afgesloten.",
+      "emptyPlans": "Openstaande onderhoudsmomenten van plannen verschijnen hier zodra de schema's werk genereren.",
+      "clearBeyond": "Naast deze {{count}} zijn er geen andere onderhoudsmomenten in de wachtrij — verruim het datumbereik of bekijk de planwachtrij.",
+      "allCaughtUp": "Alles afgehandeld",
+      "nextDueIn": "— volgend onderhoud over {{count}} d",
+      "shownCount": "{{shown}} getoond · {{open}} open ·",
+      "inHistory": "{{count}} in de geschiedenis",
+      "itemCount_one": "· {{count}} item",
+      "itemCount_other": "· {{count}} items",
+      "overdueCount": "{{count}} achterstallig",
+      "ticketChip": "ticket"
+    },
+    "miniMonth": {
+      "atAGlance": "{{month}} in één oogopslag",
+      "overdue": "achterstallig",
+      "today": "vandaag",
+      "upcoming": "binnenkort"
+    },
+    "calendar": {
+      "dueCount": "{{count}} gepland",
+      "today": "Vandaag",
+      "moreCount": "+{{count}} meer",
+      "legend": "Legenda",
+      "scheduled": "Gepland"
+    },
+    "fields": {
+      "asset": "Asset",
+      "type": "Type",
+      "cadence": "Herhalingspatroon",
+      "nextDue": "Volgende onderhoudsdatum",
+      "lastDone": "Laatst uitgevoerd",
+      "assignee": "Toegewezen aan",
+      "createdBy": "Aangemaakt door",
+      "linkedTicket": "Gekoppeld ticket"
+    },
+    "detail": {
+      "noSelection": "Geen onderhoudsmoment geselecteerd",
+      "noSelectionHint": "Selecteer een onderhoudsmoment uit de wachtrij om de asset, het plan, het gekoppelde ticket en de uitvoeringsacties te bekijken — of wis de filters om meer werk te zien.",
+      "unassignedClient": "Geen klant toegewezen",
+      "dueSuffix": "· gepland voor {{date}}",
+      "nextDueTooltip": "De volgende onderhoudsdatum wordt berekend vanaf de werkelijke voltooiingsdatum.",
+      "never": "Nooit",
+      "unassigned": "Niet toegewezen",
+      "assignViaTicket": "Toewijzen via ticket",
+      "ticketClosed": "Gesloten",
+      "ticketOpen": "Open",
+      "noTicketYet": "Nog geen",
+      "execution": "Uitvoering",
+      "noChecklistPrefix": "Dit plan heeft geen controlelijst —",
+      "addStepsLink": "voeg stappen toe aan de asset",
+      "noChecklistSuffix": "om technici te begeleiden.",
+      "timeline": "Tijdlijn"
+    },
+    "timeline": {
+      "created": "Onderhoudsmoment aangemaakt",
+      "ticketLinked": "Ticket gekoppeld — {{ticket}}",
+      "dueRepeats": "Gepland — herhaalt zich {{cadence}}",
+      "completedBy": "Voltooid door {{name}}{{notes}}",
+      "skippedBy": "Overgeslagen door {{name}}"
+    },
+    "evidence": {
+      "completionTitle": "Bewijs van voltooiing",
+      "performed": "Uitgevoerd:",
+      "performedBy": "Uitgevoerd door:",
+      "notes": "Notities:",
+      "checklist": "Controlelijst:",
+      "skipTitle": "Verantwoording voor overslaan",
+      "reason": "Reden:",
+      "closedBy": "Afgesloten door:",
+      "closed": "Afgesloten:"
+    },
+    "skip": {
+      "title": "Onderhoud overslaan",
+      "reason": "Reden"
+    },
+    "ticket": {
+      "title": "Onderhoud: {{plan}}",
+      "description": "{{type}}-onderhoud gepland voor {{date}}. Onderhoudsmoment: {{occurrenceId}}"
+    }
   },
   "maintenanceCompletionDialog": {
     "errors": {

@@ -72,7 +72,8 @@ export async function applyChecklistTemplateToTicket(
   ticketId: string,
   templateId: string,
   source: 'template' | 'workflow',
-  auditContext: ChecklistApplyAuditContext = SYSTEM_CHECKLIST_AUDIT_CONTEXT
+  auditContext: ChecklistApplyAuditContext = SYSTEM_CHECKLIST_AUDIT_CONTEXT,
+  authorizedTicketClientId?: string | null,
 ): Promise<ApplyChecklistTemplateResult> {
   const template = await tenantScopedTable(trx, 'checklist_templates', tenant)
     .where({ template_id: templateId })
@@ -83,13 +84,17 @@ export async function applyChecklistTemplateToTicket(
 
   // Client scope. Enforced here, the single apply chokepoint, so no caller can bypass it.
   if (template.client_id) {
-    const ticket = await tenantScopedTable(trx, 'tickets', tenant)
-      .where({ ticket_id: ticketId })
-      .first('client_id') as { client_id: string | null } | undefined;
-    if (!ticket) {
-      throw new Error('Ticket not found');
+    let ticketClientId = authorizedTicketClientId;
+    if (ticketClientId === undefined) {
+      const ticket = await tenantScopedTable(trx, 'tickets', tenant)
+        .where({ ticket_id: ticketId })
+        .first('client_id') as { client_id: string | null } | undefined;
+      if (!ticket) {
+        throw new Error('Ticket not found');
+      }
+      ticketClientId = ticket.client_id;
     }
-    if (!isChecklistTemplateInScopeForClient(template.client_id, ticket.client_id)) {
+    if (!isChecklistTemplateInScopeForClient(template.client_id, ticketClientId)) {
       return { applied: false, itemsAdded: 0, reason: CHECKLIST_TEMPLATE_CLIENT_MISMATCH };
     }
   }

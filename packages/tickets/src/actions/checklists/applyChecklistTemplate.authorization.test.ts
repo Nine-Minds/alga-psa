@@ -70,6 +70,7 @@ describe('manual checklist application authorization', () => {
     expect(applyChecklistTemplateToTicket).toHaveBeenCalledExactlyOnceWith(
       state.trx, 'tenant-1', 'ticket-1', 'template-1', 'template',
       expect.objectContaining({ actor: expect.objectContaining({ userId: 'admin-1' }) }),
+      'client-1',
     );
   });
 

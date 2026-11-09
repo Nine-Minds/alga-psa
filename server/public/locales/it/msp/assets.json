@@ -1447,7 +1447,182 @@
   "maintenanceCommandCenter": {
     "title": "Centro di controllo manutenzione",
     "description": "La prossima scadenza viene calcolata dalla data effettiva di completamento.",
-    "assetsLink": "Asset"
+    "assetsLink": "Asset",
+    "notRecorded": "Non registrato",
+    "system": "Sistema",
+    "checklist": {
+      "complete": "Completo",
+      "incomplete": "Incompleto"
+    },
+    "weekdays": {
+      "0": "dom",
+      "1": "lun",
+      "2": "mar",
+      "3": "mer",
+      "4": "gio",
+      "5": "ven",
+      "6": "sab"
+    },
+    "cadence": {
+      "custom": "Personalizzata",
+      "customSchedule": "Pianificazione personalizzata",
+      "everyUnit": "Ogni {{unit}}",
+      "everyCountUnit": "Ogni {{count}} {{unit}}",
+      "onDays": "{{base}} nei giorni {{days}}",
+      "onDatesOfMonth": "{{base}} nei giorni {{dates}} del mese",
+      "frequency": {
+        "daily": "Giornaliera",
+        "weekly": "Settimanale",
+        "monthly": "Mensile",
+        "quarterly": "Trimestrale",
+        "yearly": "Annuale"
+      }
+    },
+    "urgency": {
+      "overdue": "{{count}} gg di ritardo",
+      "dueToday": "in scadenza oggi",
+      "inDays": "tra {{count}} gg"
+    },
+    "actions": {
+      "cancel": "Annulla",
+      "refresh": "Aggiorna",
+      "newPlan": "Nuovo piano di manutenzione",
+      "skip": "Salta",
+      "skipTooltip": "Salta indicando un motivo obbligatorio — il piano passa all'occorrenza successiva",
+      "complete": "Completa manutenzione",
+      "createTicket": "Crea ticket",
+      "openTicket": "Apri ticket ↗",
+      "pausePlan": "Metti in pausa il piano"
+    },
+    "assetPicker": {
+      "title": "Seleziona un asset",
+      "searchPlaceholder": "Cerca per nome, tag o numero di serie",
+      "loading": "Caricamento degli asset…",
+      "loadFailed": "Impossibile caricare gli asset.",
+      "empty": "Nessun asset trovato.",
+      "showingFirst": "Visualizzati i primi {{shown}} di {{total}} — affina la ricerca."
+    },
+    "kpi": {
+      "overdue": "In ritardo",
+      "dueToday": "In scadenza oggi",
+      "upcoming7d": "Prossimi 7 gg",
+      "openTickets": "Ticket aperti",
+      "compliance90d": "Conformità 90 gg",
+      "clickToFilter": "fai clic per filtrare",
+      "allClear": "tutto in regola",
+      "quietWeek": "settimana tranquilla in arrivo",
+      "linkedToOccurrences": "collegati alle occorrenze",
+      "onTimeCompletion": "completamento entro la scadenza"
+    },
+    "tabs": {
+      "queue": "Coda di lavoro",
+      "plans": "Coda dei piani",
+      "history": "Cronologia"
+    },
+    "filters": {
+      "searchPlaceholder": "Cerca piani, asset o clienti",
+      "actionable": "Da eseguire",
+      "allStatuses": "Tutti gli stati",
+      "completed": "Completato",
+      "skipped": "Saltato",
+      "button": "Filtri",
+      "allClients": "Tutti i clienti",
+      "allAssetTypes": "Tutti i tipi di asset",
+      "allPlanTypes": "Tutti i tipi di piano",
+      "due": "Scadenza",
+      "clearAll": "Rimuovi tutti i filtri",
+      "done": "Fatto",
+      "clientChip": "Cliente"
+    },
+    "viewMode": {
+      "list": "Elenco",
+      "calendar": "Calendario"
+    },
+    "queue": {
+      "actionableTitle": "Occorrenze da eseguire",
+      "plansTitle": "Coda dei piani attivi (con occorrenze generate)",
+      "loading": "Caricamento della manutenzione…",
+      "empty": "Nessuna occorrenza di manutenzione corrisponde a questi filtri.",
+      "emptyFiltered": "Nessuna occorrenza di manutenzione corrisponde a questi filtri. Rimuovi un filtro o amplia l'intervallo delle scadenze.",
+      "emptyHistory": "Le occorrenze completate e saltate appariranno qui una volta chiusa la manutenzione.",
+      "emptyPlans": "Le occorrenze aperte dei piani appariranno qui man mano che le pianificazioni generano attività.",
+      "clearBeyond": "Non ci sono altre occorrenze in coda oltre a queste {{count}} — amplia l'intervallo delle scadenze o controlla la coda dei piani.",
+      "allCaughtUp": "Nessuna occorrenza in sospeso",
+      "nextDueIn": "— prossima scadenza tra {{count}} gg",
+      "shownCount": "{{shown}} visualizzati · {{open}} aperti ·",
+      "inHistory": "{{count}} nella cronologia",
+      "itemCount_one": "· {{count}} elemento",
+      "itemCount_other": "· {{count}} elementi",
+      "overdueCount": "{{count}} in ritardo",
+      "ticketChip": "ticket"
+    },
+    "miniMonth": {
+      "atAGlance": "{{month}} in breve",
+      "overdue": "in ritardo",
+      "today": "oggi",
+      "upcoming": "in arrivo"
+    },
+    "calendar": {
+      "dueCount": "{{count}} in scadenza",
+      "today": "Oggi",
+      "moreCount": "+{{count}} altri",
+      "legend": "Legenda",
+      "scheduled": "Pianificato"
+    },
+    "fields": {
+      "asset": "Asset",
+      "type": "Tipo",
+      "cadence": "Cadenza",
+      "nextDue": "Prossima scadenza",
+      "lastDone": "Ultimo completamento",
+      "assignee": "Assegnatario",
+      "createdBy": "Creato da",
+      "linkedTicket": "Ticket collegato"
+    },
+    "detail": {
+      "noSelection": "Nessuna occorrenza selezionata",
+      "noSelectionHint": "Seleziona un'occorrenza dalla coda per vedere l'asset, il piano, il ticket collegato e le azioni di esecuzione — oppure rimuovi i filtri per vedere altre attività.",
+      "unassignedClient": "Cliente non assegnato",
+      "dueSuffix": "· scadenza {{date}}",
+      "nextDueTooltip": "La prossima scadenza viene calcolata a partire dalla data effettiva di completamento.",
+      "never": "Mai",
+      "unassigned": "Non assegnato",
+      "assignViaTicket": "Assegna tramite ticket",
+      "ticketClosed": "Chiuso",
+      "ticketOpen": "Aperto",
+      "noTicketYet": "Ancora nessuno",
+      "execution": "Esecuzione",
+      "noChecklistPrefix": "Questo piano non ha una lista di controllo —",
+      "addStepsLink": "aggiungi passaggi nell'asset",
+      "noChecklistSuffix": "per guidare i tecnici.",
+      "timeline": "Cronologia"
+    },
+    "timeline": {
+      "created": "Occorrenza creata",
+      "ticketLinked": "Ticket collegato — {{ticket}}",
+      "dueRepeats": "Scadenza — si ripete: {{cadence}}",
+      "completedBy": "Completato da {{name}}{{notes}}",
+      "skippedBy": "Saltato da {{name}}"
+    },
+    "evidence": {
+      "completionTitle": "Documentazione del completamento",
+      "performed": "Eseguito:",
+      "performedBy": "Eseguito da:",
+      "notes": "Note:",
+      "checklist": "Lista di controllo:",
+      "skipTitle": "Documentazione dell'occorrenza saltata",
+      "reason": "Motivo:",
+      "closedBy": "Chiuso da:",
+      "closed": "Chiuso:"
+    },
+    "skip": {
+      "title": "Salta manutenzione",
+      "reason": "Motivo"
+    },
+    "ticket": {
+      "title": "Manutenzione: {{plan}}",
+      "description": "Manutenzione {{type}} in scadenza il {{date}}. Occorrenza: {{occurrenceId}}"
+    }
   },
   "maintenanceCompletionDialog": {
     "errors": {
